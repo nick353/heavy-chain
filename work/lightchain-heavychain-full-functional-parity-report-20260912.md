@@ -3722,3 +3722,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Print input artifacts runtimeは6/6 PASS。6 transformed layersのscope復元、失敗時の旧bytes保持、foreign参照拒否、manual planeのBlob永続化を確認した。
 - Asset-anchored previewは6/6 PASS。source／secondary material保持、presentation filter分離、非画像fail-closed、実result表示を確認した。
 - いずれも外部provider送信やLight本番操作ではないため、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
+## 2026-09-14 Heavy parity behavior ledger回帰
+
+- Parity behavior ledgerは6/6 PASS。31非動画row、8 parity layer、current source readback、local evidence artifact参照、production未解決layerの分離を確認した。
+- Ledger builderは1/1 PASS。current source readbackが明示的に存在する場合のみ生成を許可することを確認した。
+- Pre-source gateは再確認で5/5 PASS。
+- これは差分記録と生成前契約の証拠であり、Light本番の直接pixel比較、実provider receipt、source sync、reconciliation、logout→login回帰は未完了。
