@@ -4024,3 +4024,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run verify:lightchain-local-lifecycle`は`ok:true`。deterministic-local-result、save-once、reload-readback、library-reuse-handoff、cleanupの5段階を確認し、`externalActionExecuted:false`、`networkCalls:0`だった。
 - `npm run verify:lightchain-local-evidence-continuity`は`ok:true`。pre-source-admission、result、save-once、reload-readback、library-reuse、negative-gates、cleanup、negativeCases `5`、downstreamStarts `1`を確認し、`externalActionExecuted:false`、`networkCalls:0`だった。開始時にport 24678使用中の警告が出たが、runは成功終了し、終了後のlisten processは存在しない。
 - これはHeavyのlocal lifecycle証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy asset-anchored preview再検証
+
+- `npm run test:lightchain-asset-anchored-preview`は6/6 PASS。source／secondary materialの埋め込み、表示filter変更時のuploaded asset保持、非画像入力のfail-closed、line-generationの実結果、result controlsのclip防止、workspace／detail handlerのasset優先を確認した。
+- これはHeavyのasset／preview契約証拠であり、Light本番との実画面・成果物同一性、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
