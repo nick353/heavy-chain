@@ -5123,21 +5123,22 @@ export function LightchainWorkbenchPage() {
       >
         <section className="grid min-h-[calc(100vh-102px)] gap-4 xl:grid-cols-[296px_minmax(0,1fr)_420px]">
           {renderLightchainProviderGate()}
-          <aside className="rounded-2xl border border-white/10 bg-[#151a1d] p-4">
+          <aside className="self-start mt-4 h-[84px] overflow-hidden rounded-xl border border-white/10 bg-[#151a1d] p-2 shadow-xl">
             <button
               type="button"
               onClick={() => navigate('/lightchain/marketing-home')}
               data-testid="lightchain-marketing-workspace-home"
-              className="text-sm font-semibold text-neutral-300 transition hover:text-white"
+              className="flex h-5 w-full items-center gap-1 text-left text-sm font-semibold text-neutral-300 transition hover:text-white"
             >
+              <Boxes className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               マーケティングワークスペース
             </button>
-            <div className="mt-4 flex items-center gap-3">
+            <div className="mt-3 flex h-7 items-center gap-2">
               <button
                 type="button"
                 onClick={() => navigate('/lightchain/marketing-home')}
                 data-testid="lightchain-marketing-back"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#20272a] text-neutral-300 transition hover:border-cyan-300/50 hover:text-white"
+                className="flex h-7 w-7 items-center justify-center rounded-lg border-0 bg-transparent text-neutral-300 transition hover:bg-white/5 hover:text-white"
                 aria-label="戻る"
               >
                 <ArrowRight className="h-4 w-4 rotate-180" />
@@ -5160,14 +5161,14 @@ export function LightchainWorkbenchPage() {
                   }}
                   data-testid="lightchain-marketing-project-name-input"
                   aria-label="プロジェクト名"
-                  className="min-w-0 flex-1 rounded-xl border border-[#65d3cf] bg-[#1b2426] px-4 py-3 text-sm font-semibold text-white outline-none shadow-[0_0_18px_rgba(101,211,207,0.18)]"
+                  className="min-w-0 flex-1 rounded-sm border-0 bg-transparent p-1 text-base font-medium text-neutral-200 outline-none"
                 />
               ) : (
                 <button
                   type="button"
                   onClick={() => setMarketingProjectNameEditing(true)}
                   data-testid="lightchain-marketing-project-name"
-                  className="flex-1 rounded-xl border border-[#65d3cf] bg-[#1b2426] px-4 py-3 text-left text-sm font-semibold text-white shadow-[0_0_18px_rgba(101,211,207,0.18)] transition hover:bg-[#243436]"
+                  className="min-w-0 flex-1 rounded-sm border-0 bg-transparent p-1 text-left text-base font-medium text-neutral-200 transition hover:bg-white/5"
                 >
                   {marketingProjectName}
                 </button>
