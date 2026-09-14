@@ -3804,6 +3804,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run lint`と`npm run security:audit`はPASS。security auditはsecret値を出力していない。
 - Light本番操作、外部provider送信、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy成果物local lifecycle fresh監査
+
+- Local evidence continuityは`ok:true`。pre-source admission、result、save-once、reload-readback、library-reuse、negative-gates、cleanupの7段階、negative cases 5、downstream starts 1を確認した。
+- Local lifecycleは`ok:true`。deterministic-local-result、save-once、reload-readback、library-reuse-handoff、cleanupの5段階を確認した。
+- 両runとも`externalActionExecuted=false`、`networkCalls=0`。これはlocal persistence／reuse契約の証拠であり、実provider receiptやLight本番との同一成果物照合ではない。
+
 ## 2026-09-14 Heavy公開基盤・media境界fresh監査
 
 - Zeabur safe readbackは1/1 PASS。retired readback entrypointがlegacy CLIを呼ばないことを確認した。
