@@ -4107,3 +4107,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - 企画デザインカテゴリをfresh readback後、`ウェアデザインラボ`の可視テキストをsemantic clickで1回確認した。Companionのdispatchは1、visual readbackはverifiedだったが、URL・text hash・表示画面に変化はなかった。
 - Light本番の同カードは今回の正規テキスト対象では可視遷移を確認できず、`UNVERIFIED／no visible state change`とする。生成・upload・provider送信・権利確認は行っていない。
+
+## 2026-09-15 Light企画ワークスペース遅延遷移の確定readback
+
+- `企画ワークスペース`クリック直後は同一URL・同一画面だったが、Companionセッションを再バインドして同じprofileのタブ一覧をfresh readbackしたところ、対象タブは`https://jp.linkaigc.com/agent`へ遷移していた。遷移後のvisual／semantic readbackで、企画ワークスペースのサイドバー、最近のプロジェクト、4業務シーン（商品企画、顧客提案、インスピレーション、AIグラフィックデザイン）、入力欄、添付、プロジェクト選択、クイックスタートを確認した。
+- したがって、先行probeの即時readbackだけで「no effect」と確定するのは不適切であり、Lightのカード導線は`DELAYED_NAVIGATION`として訂正する。Heavy側の同等`/agent`画面との内部UI・保存・再表示・再利用比較を継続する。
