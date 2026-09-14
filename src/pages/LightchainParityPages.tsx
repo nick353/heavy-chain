@@ -183,6 +183,11 @@ export function LightchainCreatorPage() {
   const displayName = profile?.name?.trim() || (typeof metadataName === 'string' ? metadataName.trim() : '') || user?.email?.split('@')[0] || 'ユーザー';
 
   useEffect(() => {
+    const video = document.querySelector<HTMLVideoElement>('video[aria-label="インスピレーション動画"]');
+    if (video) video.muted = true;
+  }, []);
+
+  useEffect(() => {
     if (!currentBrand?.id) {
       setHistoryArtifacts([]);
       return;
