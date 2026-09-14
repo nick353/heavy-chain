@@ -1248,10 +1248,10 @@ const workspaceStyleConfig: Record<string, {
   },
   'design-agent': {
     kind: 'agent',
-    title: 'Hello,山内カンナ',
-    subtitle: '今日はどんなデザインが必要ですか?',
-    prompt: 'LOUIS VUITTON の 2026年春夏 コレクションからインスピレーションを得て、ショートジャケット、シャツ、ロングパンツ、ショートパンツで構成するメンズ デザイン企画書を作成する。',
-    tabs: ['企画案', 'インスピレーション', 'AIグラフィックデザイン'],
+    title: '今日は何から始めますか?',
+    subtitle: '業務シーンを選択し、目標を入力してください。Agentが後続ステップを案内します。',
+    prompt: '調査したい市場、カテゴリ、スタイル方向を入力してください…',
+    tabs: ['商品企画', '顧客提案', 'インスピレーション', 'AIグラフィックデザイン'],
     examples: [
       'ZIMMERMANNのRESORT 2026コレクションからインスピレーションを得て、ショートジャケット、シャツワンピース、プリントワンピース、スカートで構成するレディースデザイン企画書を作成する。',
       'PDFの2025年秋冬コレクションからインスピレーションを得て、ブルゾンアウター、ベースボールジャケット、パーカー、ニット、ロングパンツで構成するボーイズデザイン企画書を作成する。',
@@ -2175,7 +2175,7 @@ export function LightchainWorkbenchPage() {
     setWorkspaceTutorialStep(1);
     const nextWorkspaceStyle = workspaceStyleConfig[selectedTool.id];
     const nextWorkspaceTab = nextWorkspaceStyle?.tabs?.[0] ?? '';
-    const nextWorkspaceText = ['agent', 'studio'].includes(nextWorkspaceStyle?.kind ?? '') ? nextWorkspaceStyle?.prompt ?? '' : '';
+    const nextWorkspaceText = nextWorkspaceStyle?.kind === 'studio' ? nextWorkspaceStyle.prompt : '';
     setActiveWorkspaceTab(nextWorkspaceTab);
     setWorkspaceTextDrafts(nextWorkspaceTab ? { [nextWorkspaceTab]: nextWorkspaceText } : {});
     setActiveFittingTaskTab('シングルタスク');
@@ -4747,6 +4747,21 @@ export function LightchainWorkbenchPage() {
     const workspaceTabs = workspaceStyle.tabs ?? [];
     const currentWorkspaceTab = activeWorkspaceTab || workspaceTabs[0] || '';
     const workspaceTabCopy: Record<string, { helper: string; prompt: string; historyLabel: string; examples?: string[] }> = {
+      商品企画: {
+        helper: '',
+        prompt: '調査したい市場、カテゴリ、スタイル方向を入力してください…',
+        historyLabel: '企画履歴',
+        examples: workspaceStyle.examples,
+      },
+      顧客提案: {
+        helper: '',
+        prompt: '提案先、商品カテゴリ、用途、訴求ポイントを入力してください…',
+        historyLabel: '提案履歴',
+        examples: [
+          '顧客向けに、ブランドの強みと商品企画の提案書を作成する。',
+          '展示会向けに、商品特徴と販売ストーリーを整理する。',
+        ],
+      },
       企画案: {
         helper: 'ブランド情報と参考コレクションから、企画書の構成案を作ります。',
         prompt: workspaceStyle.prompt,
@@ -4918,7 +4933,7 @@ export function LightchainWorkbenchPage() {
                 ))}
               </div>
             )}
-            {workspaceTabs.length > 0 && (
+            {workspaceTabs.length > 0 && currentWorkspaceCopy.helper && (
               <p className="mx-auto mt-3 max-w-[560px] text-xs leading-5 text-[#65d3cf]" data-testid="lightchain-workspace-tab-state">
                 {currentWorkspaceCopy.helper}
               </p>
@@ -4955,11 +4970,14 @@ export function LightchainWorkbenchPage() {
                 )}
                 <div className="relative h-full min-h-[112px]">
                   {workspaceStyle.kind === 'agent' && (
-                    <div className="pointer-events-none absolute left-0 top-4 z-10 flex max-w-[520px] flex-wrap gap-1 text-sm">
-                      {['LOUIS VUITTON', '2026年春夏', 'ショートジャケット', 'シャツ', 'ロングパンツ', 'ショートパンツ', 'メンズ'].map((chip) => (
-                        <span key={chip} className="rounded bg-[#244440] px-2 py-0.5 text-[#7ee1d4]">{chip}</span>
-                      ))}
-                    </div>
+                    <button
+                      type="button"
+                      aria-label="新商品企画"
+                      className="absolute left-0 top-4 z-10 rounded-md bg-[#244440] px-2 py-1 text-sm font-semibold text-[#7ee1d4]"
+                      onClick={() => setWorkspaceText('')}
+                    >
+                      新商品企画⌄
+                    </button>
                   )}
                   <textarea
                     value={workspaceText}
