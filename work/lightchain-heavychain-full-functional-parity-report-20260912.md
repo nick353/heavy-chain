@@ -4045,3 +4045,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - npm run test:canvas-source-metadataは6/6 PASS。source bytesのhash、safe readback fields、filename／path／object URL／data URL非保存、legacy／legal safety metadata保持、revision mismatch、size変化拒否、sanitized readbackを確認した。
 - これはHeavyのsource lineage保護契約証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy Canvas local upload persistence再検証
+
+- npm run test:canvas-local-upload-persistenceは11/11 PASS。Blobのreload復元、IndexedDB参照、revision保持、session-only／missing revision／non-local imageのfail-closed、source blob先行保存、server snapshot検証、routed project／working set同期を確認した。
+- provider Canvas handoffのdata-only結果を永続化前にlocalizeすることも確認した。外部provider送信は行っていない。
+- これはHeavyのlocal upload persistence契約証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
