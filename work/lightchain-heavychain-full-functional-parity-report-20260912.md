@@ -4062,6 +4062,15 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 現行worktree変更後に npm run test:lightchain-parity-routes を再実行し、19/19 PASSを確認した。catalog route解決、Light source row対応、カテゴリ／recommendation mapping、printing／vector／design-arrange、素材／事例検索、feature artwork、responsive breakpoint、動画除外を再確認した。
 - これはHeavyのroute契約退行がないことの証拠であり、Light本番との実クリック・全画面pixel一致、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
 
+## 2026-09-15 Lightログイン復帰・カテゴリ構成fresh readback
+
+- ユーザーによるログイン後、同じCompanion task-ownedタブを30秒待機し、`https://jp.linkaigc.com/`のアバター、Lightchainホーム、主要UIをsemantic／visual readbackした。ログイン情報は取得・保存していない。
+- `企画デザインツール`をsemantic clickで1回実行し、ホーム内の9カード（デザインワークスペース、インスピレーション、ウェアデザインラボ、企画ワークスペース、生地プリント、線画から実写、色変更、平絵をベクター化、カスタムスタイル）を確認した。
+- `AIフィッティング`をsemantic clickで1回実行し、6カード（AIフィッティング、モデル企画ライブラリ、ファッションスタジオ、動画ワークステーション、Lightchain Lab、画像修正）を確認した。
+- `グラフィックツール`をsemantic clickで1回実行し、5カード（デザインワークスペース、AIグラフィックデザイン、パターンをベクター画像に変換、デザインアレンジ、プリントデザイン）を確認した。
+- 3カテゴリともURLはホームのまま切替され、選択タブ・カード構成・スクリーンショットの変化を同一タブで確認した。provider送信、生成、upload、権利確認の代行は行っていない。
+- これはLight側のカテゴリ構成と認証復帰のfresh evidenceであり、Heavyとの全画面pixel-level一致、同一run provider receipt、source sync／reconciliation／cleanup、logout→login回帰完了の証拠にはまだ昇格させない。
+
 ## 2026-09-14 Light停止中のHeavy境界・印刷基盤・認証回復再検証
 
 - `npm run test:auth-session-recovery`は3/3 PASS。認証失敗の限定判定、1回だけのrefresh/retry、非認証失敗とsessionなしのfail-closedを確認した。
