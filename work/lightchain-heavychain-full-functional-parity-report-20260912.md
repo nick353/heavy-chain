@@ -4018,3 +4018,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run verify:lightchain-clone-layout`は、開始時に`output/playwright/prod-auth-refresh-20260625/auth-state.json`が存在しないため`auth_state_missing`で終了した。
 - `scripts/verify-lightchain-clone-layout.mjs`はPlaywright `storageState`を前提とする旧検証器であり、ログイン済みCompanionセッションを受け取る実装ではない。方針に反してauth-stateを作成・使用せず、終了結果を未実行として扱う。
 - この未実行はHeavy製品の失敗判定ではないが、視覚検証器が現在のauth-state不使用方針と不整合であることを確認した。Light停止中のため、Companionベースの視覚比較へ置換する作業はLight再開後に行う。
+
+## 2026-09-14 Light停止中のHeavy local lifecycle／evidence continuity再検証
+
+- `npm run verify:lightchain-local-lifecycle`は`ok:true`。deterministic-local-result、save-once、reload-readback、library-reuse-handoff、cleanupの5段階を確認し、`externalActionExecuted:false`、`networkCalls:0`だった。
+- `npm run verify:lightchain-local-evidence-continuity`は`ok:true`。pre-source-admission、result、save-once、reload-readback、library-reuse、negative-gates、cleanup、negativeCases `5`、downstreamStarts `1`を確認し、`externalActionExecuted:false`、`networkCalls:0`だった。開始時にport 24678使用中の警告が出たが、runは成功終了し、終了後のlisten processは存在しない。
+- これはHeavyのlocal lifecycle証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
