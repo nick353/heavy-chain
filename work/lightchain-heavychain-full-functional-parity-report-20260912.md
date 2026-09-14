@@ -4272,6 +4272,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `この素材を使う機能`の選択UIで動画を除く31機能の一覧をfresh readbackし、AIフィッティングを選択状態として確認した。詳細を閉じて一覧へ戻る操作も確認した。
 - 生成・コピー作成・handoff実行、削除、downloadは行っていない。Lightとの全件データ同一性、全画面pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
 
+## 2026-09-15 Heavy企画カテゴリ→インスピレーション実画面readback
+
+- Heavy `/lightchain?category=planning`の`インスピレーション`カードを実クリックし、`/creator`へ遷移した。ログイン画面ではなく、`デザインを選択してください`、`画像をアップロード`、`生成履歴`、`インスピレーション動画`、`キーワードを追加`を含む実画面を確認した。
+- 必須カテゴリ選択を開き、`女性`、`男性`、`キッズ`、`ユニセックス`の4 checkboxを確認した。`女性`を1回選択すると入口表示が`女性`へ更新された。任意キーワード入力欄は`0 /1000`、`全削除`と`生成条件を開く`は初期disabledだった。
+- 生成、画像upload、生成履歴の再利用、外部AI送信、権利確認操作は行っていない。Light側の同一カード実画面・pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
 ## 2026-09-15 Light／Heavy主要カテゴリ・事例共有タブ全件readback
 
 - Light本番ホームで主要カテゴリ4タブ（おすすめ Hot、企画デザインツール、AIフィッティング、グラフィックツール）を実操作し、各タブの選択状態を確認した。事例共有6タブ（おすすめの事例、デザイン修正、柄・プリント、ビジュアル素材、マーケティングコンテンツ、生産）も全件切り替え、選択状態が反映されることを確認した。
