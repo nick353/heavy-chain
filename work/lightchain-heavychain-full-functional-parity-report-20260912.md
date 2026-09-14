@@ -4134,3 +4134,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - ログイン済みLightのtask-ownedタブで`https://jp.linkaigc.com/agent`を正規遷移し、同一Companion世代のsemantic／visual readbackを取得した。
 - Lightの基準構成は、左サイドバー326px、`新規タスク`、`業務プリファレンスプロファイル`、最近の案件一覧、残りクレジット、中央の見出し`今日は何から始めますか？`、4業務タブ（商品企画80px、顧客提案80px、インスピレーション140px、AIグラフィックデザイン163.75px）、`新商品企画`、目標入力欄、`Enterで送信・Shift+Enterで改行`、クイックスタートだった。
 - Heavyは現在も同じCompanionタブで認証確認画面のため、この基準との修正後visual／semantic比較は未実施（`waiting_human／UNVERIFIED`）。
+
+## 2026-09-15 Heavy認証エンドポイントread-only切り分け
+
+- Heavyの同一オリジン`GET /api/auth/ok`はHTTP 200（`{"ok":true}`）で、認証サービスの到達性は確認できた。
+- 同一オリジン`GET /api/auth/get-session`はHTTP 200だがbodyは`null`だった。これはHeavyオリジンに現在の認証cookieが付いていない証拠であり、認証サービス停止の証拠ではない。
+- LightとHeavyは異なるオリジンのため、LightのcookieだけではHeavyのProtectedRouteを通過しない。auth-state.jsonやcookieの移送・偽装は行わず、Heavy側のユーザー操作によるログイン成立を待つ。
