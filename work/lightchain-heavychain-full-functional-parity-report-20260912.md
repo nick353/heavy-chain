@@ -3995,3 +3995,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `npm run test:lightchain-parity-routes`は19/19 PASS。全catalog route解決、Light source row対応、recommendation／category mapping、printing／vector／design-arrange、fabric／print、case search、feature artwork、responsive breakpoint、deferred video除外を確認した。
 - これはHeavyのroute／launcher契約証拠であり、Light本番の実クリック、全画面pixel一致、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy現行typecheck／production build再検証
+
+- `npm run typecheck`は終了コード0でPASS。
+- `npm run build`は終了コード0でPASS。Viteは2550 modulesを変換し、production bundlesを生成した。
+- これはHeavy現行ソースの静的／build証拠であり、Light本番との実操作・全画面pixel一致、実provider receipt、source sync／reconciliation、logout→login回帰の証拠ではない。Lightは停止中。
