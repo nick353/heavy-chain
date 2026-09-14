@@ -3937,3 +3937,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run test:lightchain-parity-behavior-ledger`は6/6 PASS。31件の非動画row、8層のparity、生成artifact、fresh source readback、local evidenceと未解決production layerの分離を確認した。
 - `npm run test:lightchain-provider-adapter`は17/17 PASS。material／print／modelの明示route、動画のfail-closed、未登録feature拒否、source-preserving入力、Cloudflare provenance、durable result actionを確認した。
 - Heavy側の静的・local契約はPASSだが、Light本番の直接比較、実生成、provider receipt、source sync／reconciliation、全画面pixel一致、logout→login回帰は未完了。Lightはユーザー指示どおり操作していない。
+
+## 2026-09-14 Light停止中のHeavy readiness／認証state再監査
+
+- `npm run verify:goal-readiness`は5/5、`ok:true`。Cloudflare runtime、legacy Supabase runtime除去、auth／media adapter、AI adapter、active gateのlegacy entrypoint除外を確認した。
+- `git diff --check`は成功した。workspace内に実ファイルとしての`auth-state.json`／`storageState.json`は存在しない（監査文書中の言及はファイル生成とは扱わない）。
+- readiness監査のproof limitどおり、本番認証済み生成、AI品質、R2永続化、ブラウザ業務完了、Lightとのpixel-level一致は未証明。Lightはユーザー指示どおり停止中であり、未完了ゲートを維持する。
