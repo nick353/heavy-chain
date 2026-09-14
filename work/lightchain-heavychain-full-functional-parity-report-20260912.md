@@ -3962,3 +3962,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run test:provider-persistence-readback`は14/14 PASS。completed persistenceとmaterialized imageの確認前promotion拒否、canonical storage path、provider provenance、History／Canvas再利用、material／model／fabric各経路のreadbackを確認した。
 - `npm run test:workspace-handoff-persistence`は3/3 PASS。artifact persistence未確認時のCanvas promotion拒否、失敗時の遷移・成功表示抑止、ephemeral blobのremote Canvas画像化防止を確認した。
 - これはHeavyの永続化契約証拠であり、Light本番との同一成果物、同一runのprovider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy download／library handoff再検証
+
+- `npm run test:lightchain-download`は6/6 PASS。空URL・非画像レスポンス・形式判定・画像blob・SVG／bitmap decode fallbackを確認した。
+- `npm run test:library-canvas-handoff`は8/8 PASS。Library成果物のCanvas routing、remote image hydration、Gallery ID scope、upload／group controls、fabric／print復元、31非動画featureのsource lineageを確認した。
+- これはHeavyのdownload／handoff契約証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
