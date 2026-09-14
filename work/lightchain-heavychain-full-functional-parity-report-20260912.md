@@ -3649,6 +3649,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run verify:lightchain-local-lifecycle`もPASS。deterministic local result、save-once、reload-readback、library-reuse-handoff、cleanupを確認し、external action 0、network calls 0だった。
 - これはHeavyローカルの保存・再表示・再利用証拠であり、本番provider receipt、Lightとのpixel-level parity、source sync、reconciliation、logout→login回帰を代替しない。
 
+## 2026-09-14 Heavy成果物導線回帰
+
+- Galleryダウンロード境界は6/6 PASS。
+- Library→Canvas／Fabric／Printing handoffは8/8 PASS。31非動画featureのsource lineageを保持する契約を確認した。
+- Workspace handoff persistenceは3/3 PASS、Generate result readbackは4/4 PASS。未永続化・未readbackの成果物を成功扱いにしないfail-closed契約を確認した。
+- 外部provider生成やLight本番操作は行っていないため、provider receipt／source sync／reconciliation／pixel-level parityは未完了。
+
 ## 2026-09-14 Heavy provider契約・route parity回帰
 
 - `npm run test:lightchain-provider-coverage`は22/22 PASS、`npm run test:lightchain-provider-adapter`は17/17 PASS、`npm run test:lightchain-parity-routes`は19/19 PASS。
