@@ -4271,3 +4271,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy最新ライブラリーの先頭カードで`プレビュー`を実操作し、成果物詳細、名前編集、コピー作成、Canvasへ送る、AIフィッティングへ、生地イメージへ、プリント画像へを確認した。
 - `この素材を使う機能`の選択UIで動画を除く31機能の一覧をfresh readbackし、AIフィッティングを選択状態として確認した。詳細を閉じて一覧へ戻る操作も確認した。
 - 生成・コピー作成・handoff実行、削除、downloadは行っていない。Lightとの全件データ同一性、全画面pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Light／Heavy主要カテゴリ・事例共有タブ全件readback
+
+- Light本番ホームで主要カテゴリ4タブ（おすすめ Hot、企画デザインツール、AIフィッティング、グラフィックツール）を実操作し、各タブの選択状態を確認した。事例共有6タブ（おすすめの事例、デザイン修正、柄・プリント、ビジュアル素材、マーケティングコンテンツ、生産）も全件切り替え、選択状態が反映されることを確認した。
+- Heavy `/lightchain`でも主要カテゴリ4タブを実操作し、企画（8導線）、AIフィッティング（6導線）、グラフィック（4導線）のカード／内部pathをreadbackした。事例共有6タブも全件切り替え、選択状態を確認した。
+- Heavyのカテゴリ遷移は`?category=planning`、`?category=fitting`、`?category=graphics`としてURLにも反映された。Lightは同一画面内のタブ状態として反映された。
+- これはカテゴリ切替とカード表示のbrowser evidenceであり、各カード内部の全操作、完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰の完了を意味しない。
