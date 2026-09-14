@@ -3578,6 +3578,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Galleryは「ギャラリー」「7枚の画像」「お気に入り」「新しい順／古い順」「詳細を見る」等19 controls、Jobsは制作キュー・再開／更新／新しく作る・完了成果物等10 controls、Canvasは「未保存の変更」「保存」「画像を置く」「生成する」「素材を見る」「Galleryから追加」等36 controlsをsemantic＋screenshot readbackで確認した。
 - これは公開Heavyの画面到達・描画証拠であり、実生成・provider receipt・source sync・reconciliationは実施していない。session/tabはcleanup receiptで正常終了した。
 
+## 2026-09-14 Heavy Galleryフィルタ操作境界
+
+- Heavy公開`/gallery`で`お気に入り`ボタンをsemantic＋visual preflightした。対象は表示中の一意なbuttonとして確認できたが、authorized visual transactionは`visual_target_proof_invalid`でdispatch前に停止した。
+- `dispatch_count=0`、`browser_mutation_executed=false`、`external_action_executed=false`。proofを再利用した再送は行わず、task-owned session/tabはcleanup receiptで閉鎖した。
+- 判定: Gallery画面描画＝PASS、フィルタ実操作＝NOT_PROVEN。原因はHeavyアプリのfilter handler未確認ではなく、今回のCompanion proof binding失敗として分離する。Light本番には触れていない。
+
 ## 2026-09-14 Heavy現行main desktop/mobile全機能再検証
 
 - `npm run verify:lightchain-all-features -- --mode=local`を現行mainで再実行し、Heavy実装の31機能をdesktop 31/31、mobile 31/31で確認した。`failed: []`、cleanup（context／browser／preview）も完了した。
