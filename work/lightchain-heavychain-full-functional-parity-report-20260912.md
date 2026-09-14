@@ -3584,6 +3584,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `dispatch_count=0`、`browser_mutation_executed=false`、`external_action_executed=false`。proofを再利用した再送は行わず、task-owned session/tabはcleanup receiptで閉鎖した。
 - 判定: Gallery画面描画＝PASS、フィルタ実操作＝NOT_PROVEN。原因はHeavyアプリのfilter handler未確認ではなく、今回のCompanion proof binding失敗として分離する。Light本番には触れていない。
 
+## 2026-09-14 Heavy Gallery fresh-proof再試行の結果保持
+
+- 前回のproof再構成を避けるため、新規Heavy task sessionでfresh visual proofを取得し、返却されたproofをそのまま1回のtransactionへ渡した。transaction後の結果表示処理でローカル変数名エラーが発生し、caller側ではtransaction結果を受領できなかった。
+- 結果を推測して再送せず、Companion statusでpending operationがないことを確認し、session closeのcleanup receipt（closed tab 1、unknown_effectなし、external_action_executed false）を取得した。Galleryフィルタの機能効果はNOT_PROVENのまま維持する。
+- Light Chain本番には触れていない。今後の再確認は別のfresh session・fresh proof・新規idempotencyで行う。
+
 ## 2026-09-14 Heavy現行main desktop/mobile全機能再検証
 
 - `npm run verify:lightchain-all-features -- --mode=local`を現行mainで再実行し、Heavy実装の31機能をdesktop 31/31、mobile 31/31で確認した。`failed: []`、cleanup（context／browser／preview）も完了した。
