@@ -3804,6 +3804,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run lint`と`npm run security:audit`はPASS。security auditはsecret値を出力していない。
 - Light本番操作、外部provider送信、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy unified release gate audit
+
+- `npm run verify:release-gate`は`ok:false`。現行ワークツリーに多数の既存ユーザー変更があり、`git_dirty` blockerとなった。
+- さらにこの統合gateは、今回のparity scopeとは別の古い／別工程のproduction readback（Companion authenticated evidence、mass-market QA、G610／G603／G605／G606／G608／G618／G620／G633、H601／H602、generation scorecard等）を要求している。
+- 既存変更を勝手にcommit／破棄せず、`--allow-dirty`での再実行や古い証跡の捏造も行わない。今回のHeavy parity契約PASSとは分離して、release gateは未完了と記録する。
+
 ## 2026-09-14 Heavy Goal readiness現行監査
 
 - `npm run verify:goal-readiness:incomplete-ok`は`ok:true`、5/5 checks PASS。Cloudflare runtime、legacy Supabase runtime除去、auth／media／AI adapter、active gateを確認した。
