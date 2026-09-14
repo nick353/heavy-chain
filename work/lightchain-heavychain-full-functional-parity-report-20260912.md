@@ -3868,6 +3868,14 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 再接続用の正規reload APIは、旧sessionが既に終了しており`session_not_owned`で実行できなかった。旧leaseの再利用、foreign tabの操作、認証情報入力は行っていない。
 - 判定: Lightログイン後ホームの表示確認＝`PASS`、Companion再接続＝`BLOCKED_EXTERNAL_STATE`。カテゴリ全実操作、全画面pixel-level比較、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
 
+## 2026-09-14 Light再接続後カテゴリ・事例タブ実操作
+
+- Companion復旧後の新規task-owned sessionでLight本番トップをfresh navigateし、右上アカウントアイコン、ログインフォーム不在、ホームのsemantic／visual readbackを再確認した。
+- 上部カテゴリタブ`企画デザインツール`、`AIフィッティング`、`グラフィックツール`を各1回visual proof付きでクリックし、選択状態とカテゴリ固有カードをreadbackした。カテゴリ内容は順に8件、5件、4件相当のカード群を確認し、URLは`https://jp.linkaigc.com/`を維持した。
+- 事例共有タブ`おすすめの事例`、`デザイン修正`、`柄・プリント`、`ビジュアル素材`、`マーケティングコンテンツ`、`生産`を各1回visual proof付きでクリックした。選択状態をreadbackし、Light側データの該当なし状態とカード表示状態を確認した。
+- 全操作は`local_ui`のタブ切替で、外部provider送信、生成、アップロード、保存、削除、権利確認の代行は行っていない。
+- 判定: Light上部カテゴリ3種・事例共有6種のタブ切替＝`PASS`。全カード内部導線、全画面pixel-level比較、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
 ## 2026-09-14 現行Heavy build再検証
 
 - `npm run typecheck`は終了コード0でPASS。
