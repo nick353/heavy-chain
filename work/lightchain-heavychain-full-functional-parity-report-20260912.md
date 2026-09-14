@@ -4153,3 +4153,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyの同一オリジン`GET /api/auth/ok`はHTTP 200（`{"ok":true}`）で、認証サービスの到達性は確認できた。
 - 同一オリジン`GET /api/auth/get-session`はHTTP 200だがbodyは`null`だった。これはHeavyオリジンに現在の認証cookieが付いていない証拠であり、認証サービス停止の証拠ではない。
 - LightとHeavyは異なるオリジンのため、LightのcookieだけではHeavyのProtectedRouteを通過しない。auth-state.jsonやcookieの移送・偽装は行わず、Heavy側のユーザー操作によるログイン成立を待つ。
+
+## 2026-09-15 Light `/asset-center` ライブラリー操作readback
+
+- 新規のtask-owned Lightタブで`https://jp.linkaigc.com/asset-center`へ直接到達し、遅延ロード後に`ライブラリー`、`マイライブラリー`、`履歴アップロード`、`生成履歴`、`ウェアデザインラボ生成結果`、`2026AW`、`新規格`、`ノイズバリュー用ホリゾンカラー`、`ライブラリー`、`一括操作`、多数の`画像／動画`カード、各カードの`プレビュー`／`ボードにコピー`を確認した。
+- `生成履歴`を1回選択し、画面のtext hash変化とvisual readback verifiedを確認した。`2026AW`は同名の外側コンテナと実ボタンが同時に見えるsemantic locator ambiguityがあり、dispatch 0で停止した後、`button`要素へ絞り込んで1回だけ選択し、text hash変化とvisual readback verifiedを確認した。再送や削除操作は行っていない。
+- これはLightライブラリーのカテゴリ表示・カード操作UIのfresh evidenceであり、Heavy側の認証済み画面とのpixel-level一致、カードの詳細／コピー／ダウンロード／削除の成果物確認、provider receipt、source sync／reconciliation／cleanup、logout→login回帰完了の証拠ではない。権利確認・外部AI送信・生成・uploadは行っていない。
