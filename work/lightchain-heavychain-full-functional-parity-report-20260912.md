@@ -4187,3 +4187,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - デプロイ後のHeavy `https://heavy-chain.zeabur.app/designProduction`を同一Companionのログイン済みtask-ownedセッションでfresh readbackし、ログイン画面ではなく実画面が表示されることを確認した。プロジェクト開始側はLightと同じ4カード（`新規ファイル`、`ブリン卜修正`、`生地イメージ`、`企画提案書`）だった。
 - 対話開始側はLightと同じ4シーン（生地パターン適用、線画から実写化、デザインミックス、ブリン卜修正）、選択前の`0 / 4000`・送信無効、シーン選択後の入力文・`32 / 4000`・送信有効を確認した。選択後は`画像1`〜`画像5`の小型参照チップが表示され、`画像1を削除`を1回実操作すると`画像2`〜`画像5`の4チップへ更新された。
 - 以上はHeavy本番の`browser_readback=verified`とdeployment receiptの証拠であり、全画面pixel-level一致、保存・再表示・再利用、実生成のprovider receipt、source sync／reconciliation／cleanup、logout→login回帰完了の証拠ではない。実生成、upload、外部AI送信、権利確認操作は行っていない。
+
+## 2026-09-15 Light／Heavyライブラリーのプレビュー・ボードコピー再確認
+
+- Light本番`/asset-center`でカードの`プレビュー`を実操作し、成果物詳細（戻る、コピー作成、ダウンロード、削除、名前編集、Canvas／各機能への導線）を確認した。詳細から戻った後、同一カードの`ボードにコピー`を実操作し、`コピー完了`通知を確認した。
+- Heavy本番の最新deployment `6aa83e18a6ec7d5555ae5089`（commit `7e9f0c1`、Docker、`RUNNING`）をCompanionで認証済みのまま再読込し、データ反映待機後に7件を確認した。全カードの主操作がLightと同じ`プレビュー`／`ボードにコピー`表示になっていた。
+- Heavyで先頭カードの`プレビュー`を実操作して詳細と31機能の選択UIを確認し、一覧へ戻って`ボードにコピー`を実操作した。操作中の保存処理を経て、パンくず・見出しが`生成履歴`となり、選択済み成果物の詳細と`Canvasへ送る`等の再利用導線がfresh readbackできた。
+- これはライブラリーのカード表示、プレビュー、コピー、再表示のbrowser evidenceである。Light／Heavy間の保存データ件数・内容はユーザー／環境依存の`DATA_SCOPE_DIFF`として扱い、同一runのprovider receipt、source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰、削除・ダウンロード実行の証拠とは分離する。実生成、upload、外部AI送信、権利確認操作は行っていない。
