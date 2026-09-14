@@ -4102,3 +4102,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `企画ワークスペース`カードの中央面（fresh visual point proof）を追加確認したが、Companionが`visual_target_proof_stale_geometry`を返し、dispatch 0で停止した。ページ状態の変化や外部効果はない。
 - これはLightのカード面全体クリックが失敗した証拠ではなく、Companionのスクリーンショット境界とtrusted input dispatch時のgeometry不一致として記録する。追加の座標推測・再送は行わない。
+
+## 2026-09-15 Lightウェアデザインラボカードroute probe
+
+- 企画デザインカテゴリをfresh readback後、`ウェアデザインラボ`の可視テキストをsemantic clickで1回確認した。Companionのdispatchは1、visual readbackはverifiedだったが、URL・text hash・表示画面に変化はなかった。
+- Light本番の同カードは今回の正規テキスト対象では可視遷移を確認できず、`UNVERIFIED／no visible state change`とする。生成・upload・provider送信・権利確認は行っていない。
