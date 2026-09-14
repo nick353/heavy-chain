@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Download, FolderOpen, Grid2X2, Image as ImageIcon, Plus, Search, Trash2, Upload, X } from 'lucide-react';
+import { ChevronRight, Download, FolderOpen, Grid2X2, Image as ImageIcon, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -488,6 +488,11 @@ export function LightchainLibraryPage() {
         </aside>
 
         <main className="min-w-0 flex-1">
+          <nav aria-label="パンくずナビゲーション" className="mb-5 flex items-center gap-2 text-xs text-neutral-500">
+            <span>マイライブラリー</span>
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="text-neutral-300">{activeGroup}</span>
+          </nav>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / LIBRARY</p>
