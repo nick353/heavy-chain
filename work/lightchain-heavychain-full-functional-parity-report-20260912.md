@@ -4323,3 +4323,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `PROJECT + 新規ファイル`から生成前画面へ進み、Gallery素材選択、素材upload案内、モデル／ポーズ／背景候補、生成前インテーク（モデル、ポーズ、背景、小物、商品ライン、参照画像）、生成指示、Canvas保存、Gallery確認の導線を確認した。
 - 3つの表示モードを切り替え、モデル・ポーズ・背景候補を変更したところ、選択状態、ローカル進捗、生成指示リンクのpromptが連動して更新された。実素材のupload、生成、Canvas保存、Gallery確認、外部AI送信、権利確認操作は行っていない。
 - Light同一画面とのpixel-level比較、全参考事例内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Heavyマーケティング入口readback
+
+- Heavy `/marketing`を実画面で開き、`マーケティングワークスペースへようこそ`、prompt entry（`0 / 4000`）、`AI生成`、おすすめシーン6種（EC、SNS、ブランド、店舗・オフライン、ライブ配信、プロモーション）、マイプロジェクト空状態、初回チュートリアルを確認した。
+- `SNS`シーンをクリックし、promptが`SNS向けに商品画像をアップロードして、デザインのリクエストを教えてください`へ更新されることを確認した。画像upload、AI生成、外部AI送信、権利確認操作は行っていない。
+- Light同一画面とのpixel-level比較、チュートリアル全ステップ、生成結果・保存・再表示、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
