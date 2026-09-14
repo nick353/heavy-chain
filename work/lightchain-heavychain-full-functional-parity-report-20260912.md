@@ -3956,3 +3956,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run test:lightchain-permission-parity`は4/4 PASS。legacy plan-lock除外、Creator handoff、Wear Design Labのpersisted project復帰、AI fittingのGallery選択と権利確認前段を確認した。
 - `npm run test:lightchain-material-contract`は28/28 PASS。material／printのtab・入力順・source rail、Gallery素材利用、provider provenance、mask refinement、権利確認modal、auth／brand access fenceを確認した。
 - これらはHeavyの静的／local契約証拠であり、Light本番の再操作、実provider receipt、source sync／reconciliation、全画面pixel一致、logout→login回帰の代替ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy provider persistence／handoff再検証
+
+- `npm run test:provider-persistence-readback`は14/14 PASS。completed persistenceとmaterialized imageの確認前promotion拒否、canonical storage path、provider provenance、History／Canvas再利用、material／model／fabric各経路のreadbackを確認した。
+- `npm run test:workspace-handoff-persistence`は3/3 PASS。artifact persistence未確認時のCanvas promotion拒否、失敗時の遷移・成功表示抑止、ephemeral blobのremote Canvas画像化防止を確認した。
+- これはHeavyの永続化契約証拠であり、Light本番との同一成果物、同一runのprovider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
