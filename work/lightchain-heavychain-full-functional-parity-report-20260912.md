@@ -4180,3 +4180,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyの対話開始パネルは参照画像を常時5分割ボタンで表示していたため、Lightに合わせてシーン未選択時は非表示、シーン選択後は5つの小型チップとして表示し、各チップの削除操作を実装した。シーン再選択時は5チップへ戻す。
 - `npm run typecheck`、`npm run test:lightchain-parity-routes`（19/19）、`npm run lint`、`npm run build`、`git diff --check`をPASS。コードコミットは`8dfb0cd`、GitHub `main`へpush済み。Zeaburの対象deploymentはGit連携で作成され、最終readback時点では`BUILDING`。デプロイ後のHeavy visual／semantic readbackは未実施。
 - provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。実生成、upload、外部AI送信、権利確認操作は行っていない。
+
+## 2026-09-15 Heavy `/designProduction` 最新デプロイ後の認証済み対話readback
+
+- Light基準に合わせた表示ラベル修正（`ブリン卜修正`）を含むcommit `545fa2b`をGitHub `main`へpushし、Zeabur deployment `6aa83b76a6ec7d5555ae501d`が対象commit一致、Docker、`RUNNING`であることを確認した。
+- デプロイ後のHeavy `https://heavy-chain.zeabur.app/designProduction`を同一Companionのログイン済みtask-ownedセッションでfresh readbackし、ログイン画面ではなく実画面が表示されることを確認した。プロジェクト開始側はLightと同じ4カード（`新規ファイル`、`ブリン卜修正`、`生地イメージ`、`企画提案書`）だった。
+- 対話開始側はLightと同じ4シーン（生地パターン適用、線画から実写化、デザインミックス、ブリン卜修正）、選択前の`0 / 4000`・送信無効、シーン選択後の入力文・`32 / 4000`・送信有効を確認した。選択後は`画像1`〜`画像5`の小型参照チップが表示され、`画像1を削除`を1回実操作すると`画像2`〜`画像5`の4チップへ更新された。
+- 以上はHeavy本番の`browser_readback=verified`とdeployment receiptの証拠であり、全画面pixel-level一致、保存・再表示・再利用、実生成のprovider receipt、source sync／reconciliation／cleanup、logout→login回帰完了の証拠ではない。実生成、upload、外部AI送信、権利確認操作は行っていない。
