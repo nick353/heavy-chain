@@ -4329,3 +4329,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy `/marketing`を実画面で開き、`マーケティングワークスペースへようこそ`、prompt entry（`0 / 4000`）、`AI生成`、おすすめシーン6種（EC、SNS、ブランド、店舗・オフライン、ライブ配信、プロモーション）、マイプロジェクト空状態、初回チュートリアルを確認した。
 - `SNS`シーンをクリックし、promptが`SNS向けに商品画像をアップロードして、デザインのリクエストを教えてください`へ更新されることを確認した。画像upload、AI生成、外部AI送信、権利確認操作は行っていない。
 - Light同一画面とのpixel-level比較、チュートリアル全ステップ、生成結果・保存・再表示、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Heavyモデルライブラリー／候補切替readback
+
+- Heavy `/models`を新規Companionタブで開き、認証確認シェルから認証済みの`モデルカスタマイズ`画面へ復帰するまで待機した。顔変更、モデル変更、体型、服のサイズ、ポーズ、背景、アングルの7タブ、候補3件、Gallery素材選択、保存、モデルマトリクス生成導線を確認した。
+- `モデル変更`タブと`Street LOOK 30s`候補を実クリックし、候補、用途、条件プレビュー、生成prompt、保存状態が連動して更新されることを確認した。upload、保存、生成、外部AI送信、権利確認操作は行っていない。
+- Light同一画面とのpixel-level比較、候補・参考事例の全内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
