@@ -3749,3 +3749,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 正規Zeaburサービス`heavy-chain`の公開トップと`/_health`はHTTP 200で、Heavy公開readbackは継続してPASS。
 - Zeaburプロジェクトには`heavy-chain-fism`、`heavy-chain-hen`、`heavy-chain-grater`の同名系サービスが残っている。既存の削除要求後もreadback上は残存しているため、cleanupは`PENDING_READBACK`とし、同一対象への削除再送は行わない。
 - Light本番操作、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
+## 2026-09-14 Heavy現行契約・認証・UX再検証
+
+- All-feature workflow contractは5/5 PASS。local／production mode境界、auth-state入力拒否、fresh output、fail-closedを確認した。
+- Material contractは28/28 PASS、provider adapterは17/17 PASS、parity routeは19/19 PASS。現行ソースの画面契約、provider routing、catalog route integrityを再確認した。
+- Auth bootstrap hydrationは7/7 PASS、session recoveryは3/3 PASS。profile／brand hydration、stale authority無効化、認証失敗時の限定retryを確認した。
+- Internal UX consistencyは`ok: true`。Light Chain本番にはアクセスしていない。
+- これらはHeavy側の現行契約証拠であり、Light本番の直接pixel比較、実provider receipt、source sync、reconciliation、logout→login回帰は未完了。
