@@ -5133,12 +5133,12 @@ export function LightchainWorkbenchPage() {
               <Boxes className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               マーケティングワークスペース
             </button>
-            <div className="mt-3 flex h-7 items-center gap-2">
+            <div className="mt-[19px] flex h-[29px] items-center gap-2">
               <button
                 type="button"
                 onClick={() => navigate('/lightchain/marketing-home')}
                 data-testid="lightchain-marketing-back"
-                className="flex h-7 w-7 items-center justify-center rounded-lg border-0 bg-transparent text-neutral-300 transition hover:bg-white/5 hover:text-white"
+                className="flex h-[29px] w-[29px] items-center justify-center rounded-lg border-0 bg-transparent p-0 text-neutral-300 transition hover:bg-white/5 hover:text-white"
                 aria-label="戻る"
               >
                 <ArrowRight className="h-4 w-4 rotate-180" />
@@ -5161,14 +5161,14 @@ export function LightchainWorkbenchPage() {
                   }}
                   data-testid="lightchain-marketing-project-name-input"
                   aria-label="プロジェクト名"
-                  className="min-w-0 flex-1 rounded-sm border-0 bg-transparent p-1 text-base font-medium text-neutral-200 outline-none"
+                  className="min-w-0 flex-1 rounded-sm border-0 bg-transparent p-0 text-base font-medium text-neutral-200 outline-none"
                 />
               ) : (
                 <button
                   type="button"
                   onClick={() => setMarketingProjectNameEditing(true)}
                   data-testid="lightchain-marketing-project-name"
-                  className="min-w-0 flex-1 rounded-sm border-0 bg-transparent p-1 text-left text-base font-medium text-neutral-200 transition hover:bg-white/5"
+                  className="min-w-0 flex-1 rounded-sm border-0 bg-transparent p-0 text-left text-base font-medium text-neutral-200 transition hover:bg-white/5"
                 >
                   {marketingProjectName}
                 </button>
