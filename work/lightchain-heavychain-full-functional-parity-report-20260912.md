@@ -3889,6 +3889,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - URLは`https://jp.linkaigc.com/`のまま同一ページ内詳細表示となるLightの実装を確認した。生成・upload・保存・外部provider送信・権利確認の代行は行っていない。
 - 判定: 2件目の事例詳細表示＝`PASS`、制作入口の遷移＝前項同様`UNVERIFIED`。全カード内部導線、全画面pixel-level比較、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
 
+## 2026-09-14 Light事例カード3件目詳細再確認
+
+- 事例一覧へ戻り、「【ファッションスタジオ】— ディテールをワンクリックで再現」をvisual proof付きで1回クリックした。
+- 詳細パネルのタイトル、説明、平置き画像・ディテール画像、実現ステップ、長文プロンプト、`同じもの作成`をsemantic／visual readbackした。URLは引き続き`https://jp.linkaigc.com/`で同一ページ内詳細表示だった。
+- 外部provider送信、素材upload、生成、保存、権利確認の代行は行っていない。
+- 判定: 3件目の事例詳細表示＝`PASS`、制作入口の遷移＝`UNVERIFIED`。全カード内部導線、全画面pixel-level比較、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
 ## 2026-09-14 現行Heavy build再検証
 
 - `npm run typecheck`は終了コード0でPASS。
