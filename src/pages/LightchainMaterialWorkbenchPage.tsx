@@ -16,6 +16,7 @@ import {
   Sparkles,
   Trash2,
   Upload,
+  X,
   Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -1553,6 +1554,7 @@ function LightchainMaterialWorkbenchSession() {
   const [fabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [fabricPrompt, setFabricPrompt] = useState('');
   const [fabricImageRatio, setFabricImageRatio] = useState('画像比率自動');
+  const [fabricDeprecationBannerVisible, setFabricDeprecationBannerVisible] = useState(true);
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
   const [printGarmentSelectionMaskUrl, setPrintGarmentSelectionMaskUrl] = useState<string | null>(null);
@@ -6396,21 +6398,27 @@ function LightchainMaterialWorkbenchSession() {
                 ))}
               </nav>
 
-              <div
-                data-testid="lightchain-fabric-deprecation-banner"
-                className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/20 bg-rose-950/25 px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-rose-100">この機能はまもなく終了します。</p>
-                  <p className="mt-1 text-xs leading-5 text-white/55">より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください</p>
-                </div>
-                <Link
-                  to="/designProduction"
-                  className="shrink-0 text-xs font-semibold text-cyan-200 transition hover:text-cyan-100"
+              {fabricDeprecationBannerVisible && (
+                <div
+                  data-testid="lightchain-fabric-deprecation-banner"
+                  className="flex justify-between rounded-lg pl-4 pr-2 py-2 gap-2 bg-linear-to-r from-[#133936] to-[#1A4D48] mt-2 [background:var(--surface-danger)] [&>span]:text-text-primary"
                 >
-                  今すぐ体験
-                </Link>
-              </div>
+                  <span className="text-base text-text-on-brand-white flex-1 leading-6">
+                    この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
+                    <Link to="/designProduction" className="underline text-primary hover:opacity-80" target="_blank">
+                      今すぐ体験
+                    </Link>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="告知を閉じる"
+                    className="flex items-center justify-center size-6 cursor-pointer hover:bg-state-hover rounded transition-colors shrink-0"
+                    onClick={() => setFabricDeprecationBannerVisible(false)}
+                  >
+                    <X className="text-tertiary-foreground text-lg" />
+                  </button>
+                </div>
+              )}
 
               <div className="flex flex-col gap-4">
 
