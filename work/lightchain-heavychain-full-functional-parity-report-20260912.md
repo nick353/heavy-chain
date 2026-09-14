@@ -4128,3 +4128,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - GitHub `main`へpushし、対象Zeabur service `heavy-chain`だけをredeployした。deployment `6aa82a25914b1b47ab2dd425`は対象commit `e01b711`、Docker plan、`RUNNING`を確認した。
 - デプロイ直後のHeavy同一Companionタブは認証確認中となり、10秒待機後も`ログイン状態を確認しています`／`ログイン`表示だった。ログイン操作は代行せず、ユーザーのログイン済み申告を上書きしない。したがって修正後タブ幅のsemantic／visual readbackは、認証済み画面へ復帰するまで未確認（`waiting_human／UNVERIFIED`）とする。
 - これはUI修正のコード検証とdeployment receiptの証拠であり、修正後Heavy画面のLightとのpixel一致、全カテゴリ・全カード内部導線、実生成provider receipt、source sync／reconciliation／cleanup、logout→login回帰完了の証拠ではない。
+
+## 2026-09-15 Light `/agent` 業務ワークスペース基準再取得
+
+- ログイン済みLightのtask-ownedタブで`https://jp.linkaigc.com/agent`を正規遷移し、同一Companion世代のsemantic／visual readbackを取得した。
+- Lightの基準構成は、左サイドバー326px、`新規タスク`、`業務プリファレンスプロファイル`、最近の案件一覧、残りクレジット、中央の見出し`今日は何から始めますか？`、4業務タブ（商品企画80px、顧客提案80px、インスピレーション140px、AIグラフィックデザイン163.75px）、`新商品企画`、目標入力欄、`Enterで送信・Shift+Enterで改行`、クイックスタートだった。
+- Heavyは現在も同じCompanionタブで認証確認画面のため、この基準との修正後visual／semantic比較は未実施（`waiting_human／UNVERIFIED`）。
