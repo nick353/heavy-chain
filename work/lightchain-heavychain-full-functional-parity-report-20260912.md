@@ -4120,3 +4120,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - GitHub `main` push後、対象Zeabur service `heavy-chain`を明示してredeployし、deployment `6aa8267c914b1b47ab2dd41f`が対象commit、Docker plan、`RUNNING`になった。
 - 本番Heavy `https://heavy-chain.zeabur.app/agent`をCompanionでログイン済みセッションのまま30秒待機し、semantic／visual readbackした。見出し、説明、4タブ、入力placeholder、`新商品企画`ボタン、サイドバー、最近のプロジェクト、`AI生成`が確認でき、ログイン画面への再遷移はなかった。
 - これは`browser_readback=verified`とdeployment receiptの証拠であり、Lightとの全画面pixel-level一致、各タブ内部の保存・再表示・再利用、実生成のprovider receipt、source sync／reconciliation／cleanup、logout→login回帰完了を意味しない。権利確認・外部送信・生成の代行は行っていない。
+
+## 2026-09-15 Heavyランチャータブ幅修正・デプロイ後認証再確認
+
+- Light本番の同一viewport実測（1904x884）で、カテゴリタブは内容幅（おすすめ104、企画174、AIフィッティング158.89、グラフィック174）、事例タブは内容幅（146、132、132、146、216、76）だった。Heavy側の`GenerateLightchainEntry`はカテゴリを`flex-1`で均等化し、事例タブの余白も`px-7`としていたため、内容幅方式へ修正した。
+- 変更は`src/components/GenerateLightchainEntry.tsx`の2箇所（カテゴリの均等伸長を除去、事例タブを`px-6`へ変更）に限定し、`npm run typecheck`、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`、`npm run lint`、`git diff --check`をPASSした。コミットは`e01b711`（`fix: match Light launcher tab sizing`）。
+- GitHub `main`へpushし、対象Zeabur service `heavy-chain`だけをredeployした。deployment `6aa82a25914b1b47ab2dd425`は対象commit `e01b711`、Docker plan、`RUNNING`を確認した。
+- デプロイ直後のHeavy同一Companionタブは認証確認中となり、10秒待機後も`ログイン状態を確認しています`／`ログイン`表示だった。ログイン操作は代行せず、ユーザーのログイン済み申告を上書きしない。したがって修正後タブ幅のsemantic／visual readbackは、認証済み画面へ復帰するまで未確認（`waiting_human／UNVERIFIED`）とする。
+- これはUI修正のコード検証とdeployment receiptの証拠であり、修正後Heavy画面のLightとのpixel一致、全カテゴリ・全カード内部導線、実生成provider receipt、source sync／reconciliation／cleanup、logout→login回帰完了の証拠ではない。
