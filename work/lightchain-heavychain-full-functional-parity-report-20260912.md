@@ -4265,3 +4265,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 新規Heavy Companionタブでも認証確認シェルから認証済みライブラリーへ復帰し、hydration完了を待って7件のカードを表示した。
 - fresh DOM readbackでアップロード用hidden input以外の検索欄は0件、`プレビュー`カードは7件であることを確認した。検索面撤去は別の新規タブでもverified。
 - 監査タブは次のカテゴリ確認用にhandoff保持した。完全な全カテゴリ監査、pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は継続中。
+
+## 2026-09-15 Heavy新タブの成果物詳細・31機能handoff再確認
+
+- Heavy最新ライブラリーの先頭カードで`プレビュー`を実操作し、成果物詳細、名前編集、コピー作成、Canvasへ送る、AIフィッティングへ、生地イメージへ、プリント画像へを確認した。
+- `この素材を使う機能`の選択UIで動画を除く31機能の一覧をfresh readbackし、AIフィッティングを選択状態として確認した。詳細を閉じて一覧へ戻る操作も確認した。
+- 生成・コピー作成・handoff実行、削除、downloadは行っていない。Lightとの全件データ同一性、全画面pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
