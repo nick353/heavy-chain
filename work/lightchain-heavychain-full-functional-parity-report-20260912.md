@@ -3985,3 +3985,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Companionのtask-scoped statusをread-onlyで取得し、Light用logical session `0`、exact-tab lease `0`、pending operation `0`、queue `0`、active task tab `0`を確認した。
 - Light対象profileは`connected=false`、recovery stateは`profile_not_connected`／`reconnect_companion_profile_and_read_fresh_status`である。ユーザーの停止指示に従い、再接続、タブ再開、認証入力、Light操作は行わない。
 - これは停止状態とcleanup境界の証拠であり、Light本番の未完了比較・実生成・provider receipt・source sync／reconciliation・logout→login回帰を完了扱いにするものではない。
+
+## 2026-09-14 Light停止中のHeavy catalog／route整合性再監査
+
+- `node --test scripts/verify-heavy-catalog-route-integrity.test.mjs`は2/2 PASS。Heavy product catalogの全routeが現行App routerで解決し、Light source rowが現行Heavy routeまたは明示的pending fallbackへ対応していることを確認した。
+- これはHeavyのroute存在・対応付けの証拠であり、Light本番の実クリック、画面pixel一致、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
