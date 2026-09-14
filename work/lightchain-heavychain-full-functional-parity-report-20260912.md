@@ -4173,3 +4173,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyの同画面にはプロジェクト開始欄にLightにない5枚目の`インスピレーション`カードが存在していたため、`src/pages/LightchainParityPages.tsx`のカード数を4枚、デスクトップ列数を4列へ修正した。Lightで確認できた4カードの順序とHeavyの既存ルート対応は維持した。
 - `npm run typecheck`、`npm run test:lightchain-parity-routes`（19/19）、`npm run lint`、`npm run build`、`git diff --check`をPASS。コミット`554d594`をGitHub `main`へpushし、ZeaburのGit連携deployment`6aa83653a6ec7d5555ae4f0f`（対象commit一致、Docker、`RUNNING`）を確認した。
 - デプロイ後のHeavyタブはCompanion再接続時にDebugger未接続となり、今回の4カード本番visual／semantic readbackは未確認。直前のreadbackでは引き続き`ログイン状態を確認しています`／`ログイン`だった。Lightとの全画面pixel一致、保存・再表示・再利用、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。認証移送、実生成、upload、外部AI送信、権利確認操作は行っていない。
+
+## 2026-09-15 Light対話シーン選択後の参照チップ再確認・Heavy反映
+
+- Lightの`/designProduction`で`対話から開始`へ切り替え、`生地パターン適用`を1回実操作した。選択前は入力欄、`0 / 4000`、送信無効、4シーン、最近のプロジェクト、参考事例（データなし）が表示され、選択後は入力文`服装のデザインを変更せず、異なる生地を服装に適用してください`、`30 / 4000`、送信ボタン、入力欄上部の`画像1`〜`画像5`チップ（各チップに削除×）が表示された。
+- Heavyの対話開始パネルは参照画像を常時5分割ボタンで表示していたため、Lightに合わせてシーン未選択時は非表示、シーン選択後は5つの小型チップとして表示し、各チップの削除操作を実装した。シーン再選択時は5チップへ戻す。
+- `npm run typecheck`、`npm run test:lightchain-parity-routes`（19/19）、`npm run lint`、`npm run build`、`git diff --check`をPASS。コードコミットは`8dfb0cd`、GitHub `main`へpush済み。Zeaburの対象deploymentはGit連携で作成され、最終readback時点では`BUILDING`。デプロイ後のHeavy visual／semantic readbackは未実施。
+- provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。実生成、upload、外部AI送信、権利確認操作は行っていない。
