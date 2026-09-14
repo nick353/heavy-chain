@@ -555,7 +555,7 @@ export function LightchainLibraryPage() {
                       {card.kind === 'local' ? (
                         <button type="button" className="flex-1 rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(card.artifact.id)}`)}>ボードにコピー</button>
                       ) : (
-                        <button type="button" className="flex-1 rounded-lg border border-cyan-200/30 px-2 py-2 text-xs text-cyan-100 hover:bg-cyan-200/10 disabled:opacity-40" onClick={() => void handleImportRemote(card.asset)} disabled={uploading}>ライブラリーに登録</button>
+                        <button type="button" className="flex-1 rounded-lg border border-cyan-200/30 px-2 py-2 text-xs text-cyan-100 hover:bg-cyan-200/10 disabled:opacity-40" onClick={() => void handleImportRemote(card.asset)} disabled={uploading}>ボードにコピー</button>
                       )}
                       <button type="button" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)}>詳細</button>
                     </div>
