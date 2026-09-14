@@ -3949,3 +3949,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run test:lightchain-pre-source-gate`は5/5 PASS。source snapshotの取得・一回保存・reload・hash検証・local stub admissionを確認した。
 - 二重書き換え、欠落・不正形式・hash不一致・cross-run、semantic-empty／visual-blank、selector drift、external-effect snapshotを拒否することを確認した。
 - これは外部provider送信前のHeavy入力ゲート証拠であり、Light本番との画面比較、実生成、provider receipt、source sync／reconciliation、cleanup、logout→login回帰の証拠ではない。
+
+## 2026-09-14 Light停止中のHeavy UI／permission／material契約再検証
+
+- `npm run test:lightchain-ui-control-boundaries`は11/11 PASS。Lightchain identity、認証後root、header／avatar、タイトル、4カテゴリ、stateful settings、detail source category、Heavy-only chrome除外を確認した。
+- `npm run test:lightchain-permission-parity`は4/4 PASS。legacy plan-lock除外、Creator handoff、Wear Design Labのpersisted project復帰、AI fittingのGallery選択と権利確認前段を確認した。
+- `npm run test:lightchain-material-contract`は28/28 PASS。material／printのtab・入力順・source rail、Gallery素材利用、provider provenance、mask refinement、権利確認modal、auth／brand access fenceを確認した。
+- これらはHeavyの静的／local契約証拠であり、Light本番の再操作、実provider receipt、source sync／reconciliation、全画面pixel一致、logout→login回帰の代替ではない。Lightは停止中。
