@@ -3803,3 +3803,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run test:printing-foundation`は244/244 PASS。印刷composition、mask／surface conformer、alpha／decontamination、result readiness、bounded history、ROI／warp境界を確認した。
 - `npm run lint`と`npm run security:audit`はPASS。security auditはsecret値を出力していない。
 - Light本番操作、外部provider送信、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
+## 2026-09-14 Heavy公開基盤・media境界fresh監査
+
+- Zeabur safe readbackは1/1 PASS。retired readback entrypointがlegacy CLIを呼ばないことを確認した。
+- Cloudflare runtime contractは6/6 PASS。現行entrypoint、legacy invocation／package依存拒否、欠落entrypointの明示failを確認した。
+- Media gateway boundaryは9/9 PASS、edge boundaryは2/2 PASS。HTTPS、session、private bucket、object path、owner-scoped read-only gatewayを確認した。
+- いずれもHeavy側のread-only／contract証拠で、Light本番操作、外部provider送信、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
