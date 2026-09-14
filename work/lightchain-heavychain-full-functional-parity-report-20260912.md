@@ -3663,6 +3663,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - View persistenceは5/5 PASS。zoom clamp、remote load／verified save readback、dirty tracking、scope-bound recoveryを確認した。
 - 外部provider送信やLight本番操作は行っていないため、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy Cloudflare／private media境界回帰
+
+- Cloudflare runtime contractは6/6 PASS。現行runtime、legacy invocation拒否、legacy package依存検出を確認した。
+- Media gateway boundaryは9/9 PASS、edge boundaryは2/2 PASS。HTTPS、session、private bucket allowlist、path traversal拒否、token identity検証を確認した。
+- Media inventory reconciliationは5/5 PASS。read-only checksum plan、summary totals照合、safety flag fail-closedを確認した。
+- 外部provider送信・Light本番操作は行っていないため、provider receipt、source sync、reconciliationの実データ完了、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy activity／handoff／source metadata回帰
 
 - Workspace activity routingは13/13 PASS。Jobs／Historyのartifact metadata展開、Cloudflare fallback、認証失敗の限定retry、resume導線を確認した。
