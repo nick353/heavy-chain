@@ -3600,3 +3600,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `npm run verify:lightchain-all-features -- --mode=local`を現行mainで再実行し、Heavy実装の31機能をdesktop 31/31、mobile 31/31で確認した。`failed: []`、cleanup（context／browser／preview）も完了した。
 - これはローカルの独立認証・Cloudflare mock境界によるUI／導線マトリクス証拠であり、Light本番とのpixel-level比較、本番provider receipt、実成果物source sync／reconciliation、logout→login回帰を代替しない。
+
+## 2026-09-14 Heavy Galleryロード前選択ガード修正
+
+- Galleryの現行実装を確認したところ、画像未ロード時もカードbuttonが有効で、ロード前選択を許していた。要件テストの期待（ロード完了またはロード失敗確定まで選択不可）と不一致だったため、`disabled={!isImageLoaded || hasImageLoadFailed}`へ修正した。
+- `verify-gallery-download-boundary.test.ts` と `verify-printing-composition-interactions.test.ts` を再実行し、53/53 PASS。`npm run typecheck` PASS、`npm run build` PASS（2,550 modules）。
+- これはHeavyローカルUI契約の修正であり、Light本番には触れていない。公開反映は次のHeavy-onlyデプロイ後にreadbackする。
