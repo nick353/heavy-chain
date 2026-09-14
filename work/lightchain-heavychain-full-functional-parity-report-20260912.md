@@ -4166,3 +4166,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `e9e1731`をGitHub `main`へpushし、Git連携deployment `6aa83374a6ec7d5555ae4e9a`（commit一致、Docker、`RUNNING`）を確認した。ビルドログは`build completed`で、`/asset-center`のHTTP到達も200だった。
 - デプロイ後のHeavy task-ownedタブをCompanionでfresh readbackしたが、`ログイン状態を確認しています`と`ログイン`が残り、認証済みライブラリー画面には到達しなかった。したがってパンくずのHeavy本番visual readbackは`waiting_human／UNVERIFIED`である。
 - provider receipt、source sync、reconciliation、cleanup、logout→login回帰は今回対象外であり、実生成・upload・外部AI送信・権利確認操作は行っていない。
+
+## 2026-09-15 Light制作ワークスペース再確認・Heavyカード構成修正
+
+- ログイン済みLightの`/designProduction`を再読込し、`プロジェクトから開始`で新規ファイル4種（インスピレーション、ブリン卜修正、生地イメージ、企画提案書）と、マイプロジェクト、ページ送りを確認した。`対話から開始`では入力欄、4シーン、送信無効状態を確認した。
+- Heavyの同画面にはプロジェクト開始欄にLightにない5枚目の`インスピレーション`カードが存在していたため、`src/pages/LightchainParityPages.tsx`のカード数を4枚、デスクトップ列数を4列へ修正した。Lightで確認できた4カードの順序とHeavyの既存ルート対応は維持した。
+- `npm run typecheck`、`npm run test:lightchain-parity-routes`（19/19）、`npm run lint`、`npm run build`、`git diff --check`をPASS。コミット`554d594`をGitHub `main`へpushし、ZeaburのGit連携deployment`6aa83653a6ec7d5555ae4f0f`（対象commit一致、Docker、`RUNNING`）を確認した。
+- デプロイ後のHeavyタブはCompanion再接続時にDebugger未接続となり、今回の4カード本番visual／semantic readbackは未確認。直前のreadbackでは引き続き`ログイン状態を確認しています`／`ログイン`だった。Lightとの全画面pixel一致、保存・再表示・再利用、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。認証移送、実生成、upload、外部AI送信、権利確認操作は行っていない。
