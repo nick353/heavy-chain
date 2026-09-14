@@ -3624,3 +3624,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run verify:internal-ux`は`Untitled`初期表示を検出したため、マーケティングキャンバスの既定名を日本語化して修正し、再実行でfailed 0のPASSになった。
 - `verify:lightchain-clone-layout`はauth-stateファイルを要求する旧検証器だったため、`auth-state.json`を作成・使用せず実行不能として分離した。
 - これらはHeavyのローカルUI／ルート監査であり、Light本番とのpixel-level比較やprovider receiptを証明しない。
+
+## 2026-09-14 Heavy UX修正の公開反映
+
+- commit `64fbc92`をHeavy正規Zeaburサービスへ再デプロイし、success receiptを取得した。
+- Heavyトップ、`/_health`、`/api/auth/ok`はHTTP 200。公開HTMLは更新後のbundle `assets/index.BLVaPRzR.js`を返した。
+- Light本番にはアクセスしていない。provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
