@@ -2331,3 +2331,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: 未生成時の左プロジェクトカード主要矩形はPASS。生成後および計画全体の完了条件は未達のためGoalは継続。
+
+### 2026-09-15 Light／Heavy `/marketing/detail` 中央・右パネル最終geometry
+
+- [x] Light本番の右パネルと中央アップロード面を同一viewportで実測
+- [x] Heavyの外側余白、右パネル高さ、中央アップロード面の上下左右位置を修正
+- [x] typecheck、lint、関連テスト20/20、build、pushを確認
+- [x] Zeabur deployment `6aa8794a9f9bd1aa61482e79`の`RUNNING`を確認し、Companionで15秒待機後にfresh DOMを取得
+- [x] Heavy右パネル`420x802 (x=1468,y=66)`、中央アップロード面`768x490 (x=350,y=222)`を確認
+- [ ] 生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: `/marketing/detail`未生成状態の主要geometryはPASS。生成後および計画全体の完了条件は未達のためGoalは継続。

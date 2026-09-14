@@ -4439,3 +4439,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `d09345c`のZeabur deployment `6aa876149f9bd1aa61482e27`が`RUNNING`であることを確認後、Heavyを15秒待機してfresh DOMを取得した。
 - Heavy実測は外枠`296x84 (x=32,y=82)`、見出し`278x20 (x=41,y=91)`、`Untitled`行`241x29 (x=78,y=128)`で、Lightの実測値と一致した。未生成状態のチュートリアル、Canvasツールバー、生成履歴、補助ナビも非表示を確認した。
 - typecheck、lint、関連テスト20/20、buildはPASS。生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Light／Heavy `/marketing/detail` 中央・右パネルgeometry最終調整・postdeploy readback
+
+- Light本番とHeavy本番を同一Companionセッション・同一viewportで比較し、Heavyの右パネル位置、外側余白、中央アップロード面の位置に残っていた差分を特定した。
+- `src/pages/LightchainWorkbenchPage.tsx`と`src/index.css`を調整し、右パネル高さ、ページ右余白、アップロード面の`margin-top`／`margin-left`をLight基準へ合わせた。
+- `12e60eb`のZeabur deployment `6aa8794a9f9bd1aa61482e79`が`RUNNING`であることを確認後、Heavyを15秒待機してfresh DOMを取得した。
+- Heavy右パネルは`420x802 (x=1468,y=66)`、中央アップロード面は`768x490 (x=350,y=222)`となり、Lightの実測値と一致した。外部送信、生成、upload、権利確認操作は行っていない。
+- typecheck、lint、関連テスト20/20、buildはPASS。生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
