@@ -3902,6 +3902,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 同カードへの`page.click`は`no_dispatch`となり、URL・表示状態とも変化しなかった。外部効果はなく、同一対象への座標推測・再クリックは行わない。カード本文がクリック可能な実操作ターゲットとして成立していることは`UNVERIFIED`とする。
 - 判定: 4件目カード詳細導線＝`UNVERIFIED`（no dispatch）。外部provider送信、素材upload、生成、保存、権利確認の代行は行っていない。
 
+## 2026-09-14 Light利用停止・認証エラー後cleanup
+
+- 事例検索キーワード入力後の検索実行で、Light本番が「ログイン環境に異常が検出されたため、ログインできませんでした。再度ログインしてください。」という可視ダイアログを表示した。検索結果の実業務完了とは扱わず、provider送信・生成・保存は行っていない。
+- ユーザーがLight利用停止を指示したため、旧タブを再利用せず新規Light URLを開いて認証状態を確認するところで停止した。新規遷移の事前URLは`https://jp.linkaigc.com/login?redirect=/?`であり、認証情報入力は行っていない。
+- Companionのtask-ownedセッションを`taskTerminal=true`で閉鎖し、cleanup receiptは`ok=true`、closed tab `[1980921429]`、leases released `1`、retained／missing／skipped／unknown_effectは空と確認した。
+- 判定: Light今回レーン＝`STOPPED_BY_USER`、cleanup＝`PASS`。Lightの残り比較・成果物フローは次回再開待ちとし、Heavy側のGoalは継続する。
+
 ## 2026-09-14 現行Heavy build再検証
 
 - `npm run typecheck`は終了コード0でPASS。
