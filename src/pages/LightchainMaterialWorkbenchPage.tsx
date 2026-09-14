@@ -6454,7 +6454,7 @@ function LightchainMaterialWorkbenchSession() {
                   />
                 </section>
 
-                <section className="order-4 block rounded-xl border border-white/10 bg-[#202629] p-3">
+                <section className="order-3 block rounded-xl border border-white/10 bg-[#202629] p-3">
                   <h6 className="text-sm font-semibold text-white">キーワードを追加してください（任意）</h6>
                   <textarea
                     id="lightchain-fabric-prompt"
@@ -6478,7 +6478,7 @@ function LightchainMaterialWorkbenchSession() {
                   </div>
                 </section>
 
-                <div className="order-2 relative h-[73px]">
+                <div className="order-4 relative h-[73px]">
                   <select
                     aria-label="画像比率"
                     value={fabricImageRatio}
