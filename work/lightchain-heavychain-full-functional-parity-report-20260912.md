@@ -3883,6 +3883,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 外部provider送信、素材upload、生成、保存、権利確認の代行は行っていない。
 - 判定: 事例詳細表示＝`PASS`、事例→制作入口＝`UNVERIFIED`。Light/Heavy全画面pixel-level比較、全カード内部導線、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
 
+## 2026-09-14 Light事例カード2件目詳細再確認
+
+- 事例一覧から「【ファッションスタジオ】— モデル着用画像のアパレルパターンをワンクリックで高精度生成」をvisual proof付きで1回クリックし、詳細パネル、日付、説明文、実現ステップ、操作ガイド画像、`同じもの作成`をfresh semantic／visual readbackした。
+- URLは`https://jp.linkaigc.com/`のまま同一ページ内詳細表示となるLightの実装を確認した。生成・upload・保存・外部provider送信・権利確認の代行は行っていない。
+- 判定: 2件目の事例詳細表示＝`PASS`、制作入口の遷移＝前項同様`UNVERIFIED`。全カード内部導線、全画面pixel-level比較、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
 ## 2026-09-14 現行Heavy build再検証
 
 - `npm run typecheck`は終了コード0でPASS。
