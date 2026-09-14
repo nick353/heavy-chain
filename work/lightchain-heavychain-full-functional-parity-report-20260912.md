@@ -4403,3 +4403,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - DOM比較でLightのインスピレーション動画は`autoplay=true`、`controls=true`、`muted=true`、Heavy修正前は`muted=false`だったため、Heavyをmuted再生へ変更した。右側の購入前プレースホルダーもLightのOSS画像へ合わせた。
 - commit `9696a62`のZeabur deployment `6aa860a19f9bd1aa61482c39`が`RUNNING`であることを確認後、Heavy `/creator`をreloadして15秒待機し、動画`muted=true`、`controls=true`、`autoplay=true`をfresh DOMで確認した。
 - Lightの購入前ボタンは`権限がありません`、Heavyはカテゴリ選択後に利用可能な`生成条件を開く`であり、Heavyの機能利用を残す状態差として記録する。生成、upload、外部AI送信、権利確認操作、全画面pixel-level一致、生成後receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Light／Heavyプリント画面比較・動画媒体修正
+
+- Light本番`/printing`とHeavy本番`/printing`を同一Companionセッションで開き、15秒待機後にfresh DOMを比較した。見出し`AIグラフィックデザイン`、`画像をアップロード`、動画、ヘルプ／生成履歴の主要構造を確認した。
+- Light基準では動画が`autoplay=true`、`controls=true`、`muted=true`、表示領域`1056x340`（x=424）だった。Heavy修正前は`muted=false`、`1088x340`（x=408）だったため、`src/pages/LightchainParityPages.tsx`の動画ラッパーを`max-w-[1056px]`、動画を`muted`へ修正した。
+- commit `d215f01`をpushし、Zeabur deployment `6aa862a79f9bd1aa61482c62`（同commit由来）が`RUNNING`であることを確認した。Heavyをreloadして15秒待機後、fresh DOMで動画`autoplay=true`、`controls=true`、`muted=true`、`1056x340`、x=424を確認し、Lightの基準値と一致した。
+- upload、生成、外部AI送信、権利確認操作は行っていない。provider receipt／source sync／reconciliation／cleanup、全画面完全pixel-level比較、生成成果物の保存・再表示・再利用、logout→login回帰は未完了。
