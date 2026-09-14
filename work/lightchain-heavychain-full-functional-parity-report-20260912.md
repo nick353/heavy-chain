@@ -3876,6 +3876,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 全操作は`local_ui`のタブ切替で、外部provider送信、生成、アップロード、保存、削除、権利確認の代行は行っていない。
 - 判定: Light上部カテゴリ3種・事例共有6種のタブ切替＝`PASS`。全カード内部導線、全画面pixel-level比較、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
 
+## 2026-09-14 Light事例詳細・制作入口再確認
+
+- `おすすめの事例`から「ファッションスタジオ - アウトドアジャケット実物から線画化」をvisual proof付きで1回クリックし、同一ページ内の詳細パネル、実現ステップ、参照画像、`同じもの作成`導線をsemantic／visualで確認した。
+- `同じもの作成`のリンクを1回クリックしたが、URLは`https://jp.linkaigc.com/`のままで、表示も事例詳細パネルから変化しなかった。transaction自体は`browser_effect=known_effect`だが、制作画面への遷移はreadbackで確認できないため`UNVERIFIED`とし、再クリックは行わない。
+- 外部provider送信、素材upload、生成、保存、権利確認の代行は行っていない。
+- 判定: 事例詳細表示＝`PASS`、事例→制作入口＝`UNVERIFIED`。Light/Heavy全画面pixel-level比較、全カード内部導線、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
 ## 2026-09-14 現行Heavy build再検証
 
 - `npm run typecheck`は終了コード0でPASS。
