@@ -4213,3 +4213,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - deployment `6aa84194a6ec7d5555ae510e`（commit `40d05c5`、Docker、`RUNNING`）後の新規Heavy Historyタブで、初期の`生成履歴を準備しています`から10秒待機して認証済みHistoryへ復帰した。
 - 復帰後に完了8件、失敗1件、保存済み7件、完了ジョブのプロンプト・生成条件・Lightchain機能／task／状態・成果物リンクを再度readbackした。認証移送やauth-state.jsonは使用していない。
 - 認証確認シェルからの復帰とデータhydrationはverified。ただしLightのroute scope差、全画面pixel-level一致、同一runのprovider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了として維持する。
+
+## 2026-09-15 Heavy Gallery→Canvas保存・再表示readback
+
+- Heavy Galleryの成果物詳細で`provider receiptを読む`を実操作し、`state: completed`、`persistence: completed`、provider request IDをfresh readbackした。`Canvasで再編集`リンクから`/canvas/new?galleryImageId=...`へ遷移し、5秒待機後に成果物画像とCanvas操作群が復元された。
+- Canvasで`保存`を実操作し、保存中からCanvas ID付きURL`/canvas/ba921f80-85ed-4fcc-96d1-fff7fa4e81f9`へ遷移した。追加待機後に`キャンバス・サーバー確認済み`を確認した。
+- 同じURLをreloadし、`サーバーから読込中`を経て`サーバー確認済み`へ戻ること、Canvasのズーム、グリッド、スナップ、テキスト・図形・フレーム、エクスポート等の操作群が再表示されることを確認した。権利確認チェックは表示されたまま変更していない。
+- これはprovider receipt、Canvas保存、サーバー再表示の同一成果物browser evidenceである。Light側との同一データ・pixel-level一致、Gallery／History／Jobs全経路のreconciliation、cleanup receipt、logout→login回帰の完了を意味しない。
