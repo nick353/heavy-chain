@@ -3631,6 +3631,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyトップ、`/_health`、`/api/auth/ok`はHTTP 200。公開HTMLは更新後のbundle `assets/index.BLVaPRzR.js`を返した。
 - Light本番にはアクセスしていない。provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy release readiness監査
+
+- `npm run verify:goal-readiness:incomplete-ok`は静的契約5/5 PASS。Cloudflare runtime、legacy Supabase runtime除去、auth/media/AI adapter、active gateのlegacy edge除去を確認した。
+- `npm run release:doctor`は、既存の大量の未コミット／未追跡変更を理由に`git clean`でSTOPした。無関係な変更の削除・退避・一括コミットは行っていない。
+- release doctorのSTOPは、今回のHeavy修正や公開デプロイの失敗を示すものではない。production generation、provider receipt、R2 persistence、source sync、reconciliation、Light比較は別ゲートとして未完了。
+
 ## 2026-09-14 Heavy UX修正後Companion再readback
 
 - Heavy公開トップをCompanionのtask-owned sessionでfresh navigateし、最終URL `/lightchain`、タイトル `Lightchain AI`、認証済みavatar、4カテゴリtab、事例共有6タブ、主要ランチャー6件をnative accessibility＋screenshotで確認した。
