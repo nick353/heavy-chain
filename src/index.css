@@ -411,8 +411,14 @@
     flex: none;
     width: 768px;
     height: 490px;
-    margin-top: 163px;
+    margin-top: 156px;
     margin-left: 6px;
+  }
+
+  [data-testid="lightchain-marketing-detail-page"] > section > aside[data-testid="lightchain-marketing-assistant-panel"] {
+    height: calc(100vh - 82px);
+    max-height: none;
+    align-self: start;
   }
 
   [data-testid="lightchain-marketing-detail-page"] > section > section[data-testid="lightchain-marketing-canvas"] > div:nth-of-type(2) {
