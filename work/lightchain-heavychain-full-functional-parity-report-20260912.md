@@ -3742,3 +3742,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Printing design handoff／shortcutsは15/15 PASS。bundled blank garment、Gallery／upload handoff、brand readiness、失敗時保持、重複防止、Patterns由来のguarded print handoffを確認した。
 - Workspace style previewは1/1 PASS。fashion-studio workspaceに限定されることを確認した。
 - いずれもHeavyローカル契約の証拠であり、Light本番の操作、外部provider送信、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
+## 2026-09-14 Heavy認証state／デプロイcleanup現況
+
+- 現行Heavyワークツリー内に実ファイルとしての`auth-state.json`／`storageState.json`は存在しない。認証stateを作成・取得・利用していない。
+- 正規Zeaburサービス`heavy-chain`の公開トップと`/_health`はHTTP 200で、Heavy公開readbackは継続してPASS。
+- Zeaburプロジェクトには`heavy-chain-fism`、`heavy-chain-hen`、`heavy-chain-grater`の同名系サービスが残っている。既存の削除要求後もreadback上は残存しているため、cleanupは`PENDING_READBACK`とし、同一対象への削除再送は行わない。
+- Light本番操作、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
