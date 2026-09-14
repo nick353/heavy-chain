@@ -4079,3 +4079,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run test:lab-provider-boundary`は1/1 PASS。Lab workspaceが承認済みLightchain provider routeへ引き渡される契約を確認した。
 - `npm run test:printing-foundation`は244/244 PASS。印刷素材・マスク・表面適合・レイヤー編集・Gallery／履歴・生成readiness・provider handoff・モーダル境界を確認した。
 - いずれもHeavyのlocal/source契約証拠であり、Light本番の実操作、全画面pixel-level一致、同一run provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠には昇格させない。Lightはユーザー指示どおり停止中。
+
+## 2026-09-15 Light事例共有タブfresh readback
+
+- 認証済みCompanionタブで事例共有の6タブ（おすすめの事例、デザイン修正、柄・プリント、ビジュアル素材、マーケティングコンテンツ、生産）を、各タブ1回ずつsemantic clickし、同一URL内の選択状態と画面更新を確認した。各操作は同じtask-owned tab、同じgeneration、固有idempotency keyで実行し、Companionのvisual readbackはverifiedだった。
+- `デザイン修正`と`生産`は、選択後に「該当する結果が見つかりません」と表示される空状態を確認した。`柄・プリント`、`ビジュアル素材`、`マーケティングコンテンツ`もタブ切替に伴うtext hash変化とvisual readbackを確認した。ログイン状態は維持され、URLは`https://jp.linkaigc.com/`のままだった。
+- グラフィックツール内の`デザインワークスペース`カードは、表示要素をsemantic clickで1回だけ実操作したが、URL・text hash・画面に可視変化はなかったため、カード導線は`UNVERIFIED／no visible state change`として記録し、再クリックはしていない。
+- これはLight本番のホーム分類・事例共有UIのfresh evidenceであり、カード先画面の全機能、Heavyとの全画面pixel-level一致、生成・upload・provider receipt、source sync／reconciliation／cleanup、logout→login回帰完了の証拠にはまだ昇格させない。権利確認や外部送信の代行は行っていない。
