@@ -3925,3 +3925,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run typecheck`は終了コード0でPASS。
 - `npm run build`は`tsc -b`およびVite production buildを完了し、2550 modules transformed、終了コード0でPASS。
 - これはHeavy現行ソースの静的検証であり、Light本番のCompanion接続、全画面比較、provider receipt、source sync／reconciliation、logout→login回帰の証拠には昇格させない。
+
+## 2026-09-14 Light停止中のHeavyワークフロー／provider契約再検証
+
+- `npm run test:lightchain-unified-workflow-contract`は6/6 PASS。動画を除く全機能の共通workflow契約、優先入力role、決定的なlifecycle語彙、Workbench共有契約、動画定義の除外を確認した。
+- `npm run test:lightchain-provider-coverage`は22/22 PASS。非動画goalのprovider route、動画のfail-closed、feature別prompt、brief-only分岐、素材保持、権利確認後の継続、重複submit防止、Gallery／History／Jobs接続、save／continuation markerを確認した。
+- いずれもHeavyのlocal／source contract証拠であり、Light本番の再操作、画面・成果物の同一性、実provider receipt、source sync／reconciliation、logout→login回帰の代替にはしない。Lightはユーザー指示どおり停止中。
