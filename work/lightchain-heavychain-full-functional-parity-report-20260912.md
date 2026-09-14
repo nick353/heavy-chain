@@ -4091,3 +4091,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `企画ワークスペース`カードの追加probeは、事例共有タブで下方向にスクロールされた同一タブをそのまま対象にしたため、先行するカテゴリタブがviewport外となり`visual_target_outside_viewport`で停止した。Companionのdispatchは0で、クリックや外部効果は発生していない。
 - この結果はログイン失敗やカード導線の不成立とは判定せず、viewportを正規に上端へ戻してから再確認が必要な`BLOCKED_UI／UNVERIFIED`として扱う。同じ未成立操作は再送していない。
+
+## 2026-09-15 Lightカードviewport復旧・企画ワークスペースroute probe
+
+- 事例共有の下部表示から`visual.scroll`（fresh visual point proof付き、`deltaY=-1000`）を1回実行し、企画デザインカード群がviewport内に戻ることをvisual readbackで確認した。外部送信やprovider操作は発生していない。
+- 企画デザイン9カードを再表示し、`企画ワークスペース`をfresh visual target proof付きで1回クリックした。Companionはdispatch 1、visual readback verifiedだったが、URL・text hash・表示画面は変化しなかったため、Light本番の同カードrouteは`UNVERIFIED／no visible state change`として扱う。
+- 追加クリックや座標推測は行っていない。Heavyの同カードdirect-entryをPASSとする既存証拠だけでは、Light本番カードの実遷移同一性を証明できないため、Heavyとの完全parityは未完了のままとする。
