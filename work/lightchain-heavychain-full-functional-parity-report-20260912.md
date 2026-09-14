@@ -4029,3 +4029,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `npm run test:lightchain-asset-anchored-preview`は6/6 PASS。source／secondary materialの埋め込み、表示filter変更時のuploaded asset保持、非画像入力のfail-closed、line-generationの実結果、result controlsのclip防止、workspace／detail handlerのasset優先を確認した。
 - これはHeavyのasset／preview契約証拠であり、Light本番との実画面・成果物同一性、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy parity ledger builder再検証
+
+- `npm run test:lightchain-parity-ledger-builder`は1/1 PASS。台帳生成時に、明示された現行source readbackが存在することを必須にする契約を確認した。
+- これはHeavyの証拠生成器契約であり、Light本番との実操作・全画面pixel一致、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の代替ではない。Lightは停止中。
