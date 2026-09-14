@@ -713,6 +713,7 @@ export function LightchainDesignProductionPage() {
 function LightchainDialogueParityPanel({ onProjectStart }: { onProjectStart: () => void }) {
   const [prompt, setPrompt] = useState('');
   const [selectedScene, setSelectedScene] = useState<string | null>(null);
+  const [selectedReferenceImages, setSelectedReferenceImages] = useState<boolean[]>(() => Array.from({ length: 5 }, () => true));
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
   const currentBrandId = currentBrand?.id;
@@ -739,7 +740,7 @@ function LightchainDialogueParityPanel({ onProjectStart }: { onProjectStart: () 
           </div>
           <div className="mt-5 flex flex-wrap gap-3" aria-label="デザインシーン">
             {dialogueScenes.map(([title, scenePrompt, iconLabel]) => (
-              <button key={title} type="button" onClick={() => { setSelectedScene(title); setPrompt(scenePrompt); }} className={`rounded-2xl border bg-white/5 px-4 py-3 text-left transition hover:border-white/40 ${selectedScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}>
+              <button key={title} type="button" onClick={() => { setSelectedScene(title); setPrompt(scenePrompt); setSelectedReferenceImages(Array.from({ length: 5 }, () => true)); }} className={`rounded-2xl border bg-white/5 px-4 py-3 text-left transition hover:border-white/40 ${selectedScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}>
                 <span className="block text-xs font-semibold text-neutral-300">{iconLabel}</span>
                 <span className="mt-2 block text-xs text-neutral-400">使ってみる</span>
                 <span className="mt-1 block text-sm font-semibold">{title}</span>
@@ -747,11 +748,13 @@ function LightchainDialogueParityPanel({ onProjectStart }: { onProjectStart: () 
             ))}
           </div>
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="grid grid-cols-5 gap-2" aria-label="参照画像">
-              {Array.from({ length: 5 }, (_, index) => (
-                <button key={index} type="button" className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-xs text-neutral-300 hover:border-white/40">画像 {index + 1}</button>
+            {selectedScene && <div className="flex flex-wrap gap-2" aria-label="参照画像">
+              {selectedReferenceImages.map((isSelected, index) => isSelected && (
+                <button key={index} type="button" aria-label={`画像${index + 1}を削除`} onClick={() => setSelectedReferenceImages((current) => current.map((value, currentIndex) => currentIndex === index ? false : value))} className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-200/60 bg-cyan-200/10 px-2.5 py-1.5 text-xs text-neutral-200 hover:border-cyan-100">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/15">画像{index + 1}</span><span aria-hidden="true">×</span>
+                </button>
               ))}
-            </div>
+            </div>}
             <textarea aria-label="デザインのリクエスト" value={prompt} onChange={(event) => setPrompt(event.target.value)} className="mt-4 min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/60" placeholder="デザインのリクエストを入力してください" />
             <div className="mt-2 flex items-center justify-between text-xs text-neutral-500"><span>{prompt.length} / 4000</span><button type="button" disabled={!prompt.trim()} onClick={() => navigate(buildGenerationIntentHref({ feature: 'design-gacha', prompt, sourceWorkspace: 'design-production', workflowVersion: 'design-production-brief-local-v1', sourceLabel: workspaceSourceConfig['design-production'].label, sourceResumePath: workspaceSourceConfig['design-production'].resumePath, sourceMode: 'local-workflow-intake' }))} className="rounded-lg bg-white px-4 py-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40">送信</button></div>
           </div>
