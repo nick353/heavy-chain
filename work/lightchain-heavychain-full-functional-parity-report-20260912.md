@@ -3804,6 +3804,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run lint`と`npm run security:audit`はPASS。security auditはsecret値を出力していない。
 - Light本番操作、外部provider送信、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy Asset Center一括操作Companion実操作
+
+- Heavy公開`/asset-center`で`一括操作`をfresh screenshotに基づくvisual proof付きで1回クリックした。
+- 同一タブのreadbackで`全選択`、`キャンバスをコピー`、`ダウンロード`、`削除`、`一括操作を閉じる`の表示を確認した。削除・download・Canvasコピーは実行していない。
+- Companion cleanup receiptは`ok=true`、tab closed、lease release confirmed、`foreign_tabs_mutated=false`、`external_action_executed=false`。今回の操作はHeavyローカルUIの実操作証拠である。
+- Light本番操作、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy persistence／reuse fresh監査
 
 - Canvas document persistenceは7/7 PASS。legacy migrationの重複防止、source validation、invalid snapshot拒否、server save未確認時の非acknowledgementを確認した。
