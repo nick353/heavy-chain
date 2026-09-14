@@ -3990,3 +3990,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `node --test scripts/verify-heavy-catalog-route-integrity.test.mjs`は2/2 PASS。Heavy product catalogの全routeが現行App routerで解決し、Light source rowが現行Heavy routeまたは明示的pending fallbackへ対応していることを確認した。
 - これはHeavyのroute存在・対応付けの証拠であり、Light本番の実クリック、画面pixel一致、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy主要route parityスイート再検証
+
+- `npm run test:lightchain-parity-routes`は19/19 PASS。全catalog route解決、Light source row対応、recommendation／category mapping、printing／vector／design-arrange、fabric／print、case search、feature artwork、responsive breakpoint、deferred video除外を確認した。
+- これはHeavyのroute／launcher契約証拠であり、Light本番の実クリック、全画面pixel一致、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
