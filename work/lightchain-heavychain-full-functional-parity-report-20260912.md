@@ -3572,6 +3572,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 認証ロック、profile／brandのbootstrap完了待ち、認証失敗時の1回限定refresh、Light互換入口のルーティング契約を現行checkoutで再確認した。
 - これは外部provider receipt、成果物source sync、Light本番とのpixel-level比較、ユーザー操作による再ログインの証跡ではないため、それらの判定は未完了のまま維持する。
 
+## 2026-09-14 Heavy公開主要成果物ルート再readback
+
+- Light本番にはアクセスせず、Heavy公開環境の同一Companion task tabで`/gallery`、`/jobs`、`/canvas/new`を直接URL遷移して確認した。
+- Galleryは「ギャラリー」「7枚の画像」「お気に入り」「新しい順／古い順」「詳細を見る」等19 controls、Jobsは制作キュー・再開／更新／新しく作る・完了成果物等10 controls、Canvasは「未保存の変更」「保存」「画像を置く」「生成する」「素材を見る」「Galleryから追加」等36 controlsをsemantic＋screenshot readbackで確認した。
+- これは公開Heavyの画面到達・描画証拠であり、実生成・provider receipt・source sync・reconciliationは実施していない。session/tabはcleanup receiptで正常終了した。
+
 ## 2026-09-14 Heavy現行main desktop/mobile全機能再検証
 
 - `npm run verify:lightchain-all-features -- --mode=local`を現行mainで再実行し、Heavy実装の31機能をdesktop 31/31、mobile 31/31で確認した。`failed: []`、cleanup（context／browser／preview）も完了した。
