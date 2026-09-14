@@ -5110,7 +5110,7 @@ export function LightchainWorkbenchPage() {
 
     return (
       <main
-        className="dark min-h-screen bg-[#0b0f10] px-4 py-4 pr-4 text-white sm:px-6 lg:pl-8 lg:pr-4"
+        className="dark min-h-screen bg-[#0b0f10] px-4 py-4 pr-4 text-white sm:px-6 lg:pl-8 lg:pr-[10px]"
         data-testid="lightchain-marketing-detail-page"
         data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
         data-workflow-feature={selectedTool.id}

@@ -411,8 +411,8 @@
     flex: none;
     width: 768px;
     height: 490px;
-    margin-top: 156px;
-    margin-left: 6px;
+    margin-top: 155px;
+    margin-left: 5px;
   }
 
   [data-testid="lightchain-marketing-detail-page"] > section > aside[data-testid="lightchain-marketing-assistant-panel"] {
