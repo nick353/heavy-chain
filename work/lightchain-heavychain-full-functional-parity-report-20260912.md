@@ -4201,3 +4201,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy `https://heavy-chain.zeabur.app/asset-center`を新規Companionタブで開き、認証状態を30秒待機して確認した。認証済みライブラリーが表示され、初期ロード直後の0件からデータ反映後に7件へ更新された。
 - 7件すべてのカードで`プレビュー`、`ボードにコピー`、`詳細`が表示されることを確認し、Lightで実測したカード操作契約と一致した。認証確認画面への再遷移は発生しなかった。
 - レポートcommit `2c4bd94`のZeabur deploymentも対象commit一致、Docker、`RUNNING`となった。今回のbrowser readbackはコード変更deploymentのruntime証拠として扱い、provider receipt、source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰とは分離する。
+
+## 2026-09-15 Heavy History／Jobs最新データreadback
+
+- Heavy `https://heavy-chain.zeabur.app/history`をログイン済みCompanionタブで30秒待機後に確認した。`生成履歴`、`ギャラリーへ`、`続きから再開`（進行中0件）、`失敗を確認`（失敗1件）、`保存済みを見る`（保存済み7件）、完了タイムライン8件、プロンプト、生成条件、Lightchain機能・task・状態、成果物を開く導線をreadbackした。
+- 同一タブでHeavy `https://heavy-chain.zeabur.app/jobs`へ遷移し、30秒待機後に`制作キュー`を確認した。`再開できる作業`0件、`止まった作業`1件、`完了した成果物`7件、要確認1件、完了ジョブのLightchain機能／task／状態、成果物リンクが表示された。
+- これはHeavy内部の履歴・キュー・成果物再表示のfresh browser evidenceであり、Lightの`/history`／`/jobs`が404であるroute scope差、全画面pixel-level一致、同一run provider receipt、source sync／reconciliation／cleanup、logout→login回帰の完了を意味しない。再開・失敗確認リンクは表示確認に留め、実生成や外部送信は行っていない。
