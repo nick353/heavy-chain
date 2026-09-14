@@ -4220,3 +4220,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Canvasで`保存`を実操作し、保存中からCanvas ID付きURL`/canvas/ba921f80-85ed-4fcc-96d1-fff7fa4e81f9`へ遷移した。追加待機後に`キャンバス・サーバー確認済み`を確認した。
 - 同じURLをreloadし、`サーバーから読込中`を経て`サーバー確認済み`へ戻ること、Canvasのズーム、グリッド、スナップ、テキスト・図形・フレーム、エクスポート等の操作群が再表示されることを確認した。権利確認チェックは表示されたまま変更していない。
 - これはprovider receipt、Canvas保存、サーバー再表示の同一成果物browser evidenceである。Light側との同一データ・pixel-level一致、Gallery／History／Jobs全経路のreconciliation、cleanup receipt、logout→login回帰の完了を意味しない。
+
+## 2026-09-15 最新デプロイ後のCanvas画像表示visual readback
+
+- 最新Git連携deployment `6aa8432ba6ec7d5555ae514a`（`47af5aa`）が`RUNNING`になったことを確認した。
+- 保存済みHeavy Canvas URLを同一Companionセッションで再読込し、`キャンバス・サーバー確認済み`、ブランド`Nisen`、Canvas／派生ツリー、保存、画像を置く、生成する、素材を見る、Galleryから追加、エクスポート等の操作UIを確認した。
+- スクリーンショットでも、保存対象の人物画像が中央キャンバスに表示され、右下のミニマップも表示されていることを確認した。保存・再表示後のvisual evidenceとして記録する。
+- 実生成、upload、外部AI送信、権利確認チェックの変更、削除は行っていない。Lightとの完全pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
