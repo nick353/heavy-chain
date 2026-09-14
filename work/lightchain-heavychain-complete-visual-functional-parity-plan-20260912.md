@@ -2313,3 +2313,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Light／Heavyの生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: 未生成状態の主要表示差分はPASS。生成後および計画全体の完了条件は未達のためGoalは継続。
+
+### 2026-09-15 Light／Heavy `/marketing/detail` アシスタント定型文parity
+
+- [x] Light本番で実測した3件の定型文をHeavyへ反映
+- [x] typecheck、lint、marketing-detail controls／route関連テスト20/20、build、push、Zeabur deployment `6aa86e7a9f9bd1aa61482d63`の`RUNNING`を確認
+- [x] deploy後Heavyを15秒待機し、3件の文言をfresh DOMで確認し、1件目の実クリックでtextareaへ反映されることを確認
+- [ ] Light／Heavyの生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: アシスタント定型文と入力反映はPASS。生成後および計画全体の完了条件は未達のためGoalは継続。

@@ -4422,3 +4422,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `src/pages/LightchainWorkbenchPage.tsx`を修正し、Light基準の未生成状態ではチュートリアル、Canvasツールバー、生成履歴パネル、補助ナビゲーションを隠し、初期名を`Untitled`へ統一した。生成後に必要な保存・ダウンロード・Canvas操作の実装は残した。
 - `0dec8e9`のZeabur deployment `6aa86ccc9f9bd1aa61482d29`が`RUNNING`であることを確認後、Heavyを15秒待機してfresh DOMを取得した。`tutorial=false`、`toolbar=false`、`resultPanel=false`、`assetNav=false`、`layerNav=false`、名称`Untitled`を確認した。
 - typecheck、lint、route tests 19/19、buildは修正前後でPASS。生成、upload、外部AI送信、権利確認操作は行っていない。生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Light／Heavy `/marketing/detail` アシスタント定型文修正・postdeploy readback
+
+- Light本番のfresh画面で確認した3件の定型文をHeavyへ反映した。
+  - `商品メイン画像 / 商品サブ画像 / カラー別詳細画像`
+  - `招待状 / 電子チケット / 参加登録用画像`
+  - `コーディネートルックブック`
+- `src/pages/LightchainWorkbenchPage.tsx`を修正し、定型文クリック時のtextarea反映ロジックは維持した。`6cfc2a5`をpushし、Zeabur deployment `6aa86e7a9f9bd1aa61482d63`が`RUNNING`であることを確認した。
+- deploy後Heavyを15秒待機し、3件の文言をfresh DOMで確認した。1件目を実クリックし、textarea値が同一文言になることを確認した。外部送信、生成、upload、権利確認操作は行っていない。
+- typecheck、lint、関連テスト20/20、buildはPASS。全画面完全pixel-level比較、生成後成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
