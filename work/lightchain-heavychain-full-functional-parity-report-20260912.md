@@ -4410,3 +4410,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Light基準では動画が`autoplay=true`、`controls=true`、`muted=true`、表示領域`1056x340`（x=424）だった。Heavy修正前は`muted=false`、`1088x340`（x=408）だったため、`src/pages/LightchainParityPages.tsx`の動画ラッパーを`max-w-[1056px]`、動画を`muted`へ修正した。
 - commit `d215f01`をpushし、Zeabur deployment `6aa862a79f9bd1aa61482c62`（同commit由来）が`RUNNING`であることを確認した。Heavyをreloadして15秒待機後、fresh DOMで動画`autoplay=true`、`controls=true`、`muted=true`、`1056x340`、x=424を確認し、Lightの基準値と一致した。
 - upload、生成、外部AI送信、権利確認操作は行っていない。provider receipt／source sync／reconciliation／cleanup、全画面完全pixel-level比較、生成成果物の保存・再表示・再利用、logout→login回帰は未完了。
+
+## 2026-09-15 現行HEADリリースゲート再確認
+
+- `/printing`動画修正を含む現行HEADで`npm run typecheck`、`npm run lint`、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`（2550 modules）を再実行し、すべてPASSした。
+- これはローカルの静的・回帰ゲートの証跡であり、本番の全画面pixel-level一致、実成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰を完了したことを意味しない。
