@@ -475,7 +475,11 @@ export function LightchainLibraryPage() {
         <aside className="hidden w-[312px] shrink-0 border-r border-white/10 bg-[#262b2c] p-4 lg:block">
           <div className="flex items-center justify-between px-0 py-2 text-lg font-semibold text-neutral-100">
             <span>ライブラリー</span>
-            <button type="button" aria-label="ライブラリーを検索" className="rounded-full p-2 text-neutral-200 hover:bg-white/10">⌕</button>
+            <div className="flex items-center gap-1">
+              <button type="button" aria-label="ライブラリーを検索" className="rounded-full p-2 text-neutral-200 hover:bg-white/10">⌕</button>
+              <button type="button" aria-label="アップロード" className="rounded-full p-2 text-neutral-200 hover:bg-white/10" onClick={() => uploadInputRef.current?.click()} disabled={uploading}><Upload className="h-4 w-4" /></button>
+              <button type="button" aria-label="新規グループ作成" className="rounded-full p-2 text-neutral-200 hover:bg-white/10" onClick={() => setNewGroupOpen(true)}><Plus className="h-4 w-4" /></button>
+            </div>
           </div>
           {allGroups.map((group) => (
             <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`flex w-full items-center rounded-lg px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'}`}>
@@ -484,13 +488,13 @@ export function LightchainLibraryPage() {
           ))}
         </aside>
 
-        <main className="min-w-0 flex-1 px-4 py-4 sm:px-5">
+        <main className="relative min-w-0 flex-1 px-4 py-4 sm:px-4">
           <nav aria-label="パンくずナビゲーション" className="mb-5 flex items-center gap-2 text-xs text-neutral-500">
             <span>マイライブラリー</span>
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             <span className="text-neutral-300">{activeGroup}</span>
           </nav>
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 lg:hidden">
             <div>
               <p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / LIBRARY</p>
               <h1 className="mt-3 text-3xl font-semibold">{activeGroup}</h1>
