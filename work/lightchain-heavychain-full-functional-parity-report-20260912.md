@@ -3860,3 +3860,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Cloudflare runtime contractは6/6 PASS。現行entrypoint、legacy invocation／package依存拒否、欠落entrypointの明示failを確認した。
 - Media gateway boundaryは9/9 PASS、edge boundaryは2/2 PASS。HTTPS、session、private bucket、object path、owner-scoped read-only gatewayを確認した。
 - いずれもHeavy側のread-only／contract証拠で、Light本番操作、外部provider送信、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
+## 2026-09-14 Lightログイン後Companion再接続監査
+
+- ユーザーのログイン完了報告後、Light本番`https://jp.linkaigc.com/`を同一task-owned tabでfresh readbackし、ホーム画面、右上アカウントアイコン、ログインフォーム不在をsemantic／visualで確認した。認証情報および`auth-state.json`は取得・保存・使用していない。
+- その後のカテゴリ操作前にCompanionが`extension_transport_disconnected`／`profile generation changed`を返し、外部dispatchは0件。fresh statusでは`connected=false`、session／lease／pending operationは0件、task recoveryのprimary blockerは`profile_not_connected`となった。
+- 再接続用の正規reload APIは、旧sessionが既に終了しており`session_not_owned`で実行できなかった。旧leaseの再利用、foreign tabの操作、認証情報入力は行っていない。
+- 判定: Lightログイン後ホームの表示確認＝`PASS`、Companion再接続＝`BLOCKED_EXTERNAL_STATE`。カテゴリ全実操作、全画面pixel-level比較、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
