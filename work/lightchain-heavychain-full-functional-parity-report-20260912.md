@@ -4040,3 +4040,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - npm run test:canvas-save-recoveryは23/23 PASS。project identity、lost response後のGET-only reconciliation、draftのlocal保持、同一saveのdedupe、foreign scope拒否、revision conflict、cache validation、view persistence、stable ID／revision transportを確認した。
 - 401／403／409／503やlost responseでPOST／PATCHを再送しないこと、late token／route changeをfenceすることも確認した。
 - これはHeavyのCanvas回復契約証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy Canvas source metadata再検証
+
+- npm run test:canvas-source-metadataは6/6 PASS。source bytesのhash、safe readback fields、filename／path／object URL／data URL非保存、legacy／legal safety metadata保持、revision mismatch、size変化拒否、sanitized readbackを確認した。
+- これはHeavyのsource lineage保護契約証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
