@@ -3606,3 +3606,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Galleryの現行実装を確認したところ、画像未ロード時もカードbuttonが有効で、ロード前選択を許していた。要件テストの期待（ロード完了またはロード失敗確定まで選択不可）と不一致だったため、`disabled={!isImageLoaded || hasImageLoadFailed}`へ修正した。
 - `verify-gallery-download-boundary.test.ts` と `verify-printing-composition-interactions.test.ts` を再実行し、53/53 PASS。`npm run typecheck` PASS、`npm run build` PASS（2,550 modules）。
 - これはHeavyローカルUI契約の修正であり、Light本番には触れていない。公開反映は次のHeavy-onlyデプロイ後にreadbackする。
+
+## 2026-09-14 Heavy Gallery選択ガード公開反映
+
+- commit `f5b7100`をHeavy正規Zeaburサービスへ再デプロイし、success receiptを取得した。
+- `https://heavy-chain.zeabur.app/`、`/_health`、`/api/auth/ok`はいずれもHTTP 200。公開HTMLはGallerySelectorの更新bundle参照を返した。
+- Light本番にはアクセスしていない。provider receipt、source sync、reconciliation、pixel-level parityは引き続き未検証。
