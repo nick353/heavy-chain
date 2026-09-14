@@ -3804,6 +3804,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run lint`と`npm run security:audit`はPASS。security auditはsecret値を出力していない。
 - Light本番操作、外部provider送信、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy persistence／reuse fresh監査
+
+- Canvas document persistenceは7/7 PASS。legacy migrationの重複防止、source validation、invalid snapshot拒否、server save未確認時の非acknowledgementを確認した。
+- Provider persistence readbackは14/14 PASS。image-edit／model-matrix／material／fabricのdurable readback、provider provenance、History、Gallery、Canvas reuse guardを確認した。
+- Workspace handoff persistenceは3/3 PASS。未永続化成果物のCanvas昇格拒否、navigation／success誤表示防止、ephemeral blobのremote保存防止を確認した。
+- これはHeavy側の契約証拠であり、Light本番の同一成果物、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy parity ledger fresh再検証
 
 - Parity behavior ledgerは6/6 PASS。31 non-video rows、8 parity layers、local evidence artifact参照、production layerの未昇格、unresolved notesの完全性を確認した。
