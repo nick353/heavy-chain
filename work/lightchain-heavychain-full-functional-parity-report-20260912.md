@@ -4363,3 +4363,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - postdeployにHeavyを15秒待って再読込し、fresh AX tree・同一viewport screenshot・DOM計測を取得した。Heavyはselected `104x32`、非selected`174x32`／`158.890625x32`／`174x32`、tab間隔8px、font `14px / 21px`、Hotバッジ表示`21.71875x12`となり、Lightの計測値と一致した。主要4カテゴリ、ログイン済みホーム、6カードの2段配置も表示確認した。
 - `npm run typecheck`、`npm run lint`、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`（2550 modules）をPASS。生成、upload、外部AI送信、権利確認操作、provider receipt／source sync／reconciliation／cleanupはこの検証では行っていない。
 - 画面全体の完全pixel-level一致、ユーザー固有データ／画像の同一性、全カード内部操作、全生成成果物の保存・再表示・再利用、logout→本人login回帰、provider receipt／source sync／reconciliation／cleanupは未完了。
+
+## 2026-09-15 Light／Heavyライブラリーdesktop layout parity修正・postdeploy readback
+
+- 同一viewportでLight本番`/asset-center`を再確認し、左312pxサイドバー、Light背景、横幅いっぱいのカード領域、6列カード、サイドバーの8グループを基準として取得した。Heavy修正前は中央寄せの4列カードと大きい上下余白で、明確な`PARITY_GAP`だった。
+- `src/pages/LightchainLibraryPage.tsx`を修正し、Heavyのデスクトップを左312px固定サイドバー、Light準拠の背景・余白・角丸、2xl 6列カード、画像高さ256pxへ変更した。アップロード／新規グループ作成はサイドバーの操作ボタンへ移し、既存の選択・詳細・Canvas handoff・一括操作機能は維持した。
+- commit `9beed7c`のZeabur deployment `6aa859a89f9bd1aa61482b67`が`RUNNING`であることを確認後、Heavyを15秒待って再読込した。fresh AX／screenshotでサイドバー`312px`、カード7件、6列、Lightと同じ横方向のライブラリー配置を確認した。
+- Heavyで`一括操作`を実クリックし、`全選択`、`キャンバスをコピー`、`ダウンロード`、`削除`、`一括操作を閉じる`をfresh AXで確認して通常表示へ戻した。削除・ダウンロード・外部送信は実行していない。
+- `npm run typecheck`、`npm run lint`、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`（2550 modules）をPASS。画像・ユーザー別データの同一性、全画面pixel-level一致、生成成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
