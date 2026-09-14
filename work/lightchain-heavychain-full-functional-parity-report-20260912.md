@@ -3810,6 +3810,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Parity ledger builderは1/1 PASS。既存のcurrent source readbackがある場合だけ生成を許可することを確認した。
 - local証拠をproduction証拠へ昇格する処理やLight本番操作は行っていない。実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy launcher／unified workflow fresh再検証
+
+- Launcher parityは14/14 PASS。Light準拠のカテゴリ別カード数、順序、表示名、ケース共有tab、wide-desktop grid、medium幅可読性を確認した。
+- Unified workflow contractは6/6 PASS。video除外featureの共通契約、入力role、deterministic lifecycle、historical production readback非昇格、Workbench接続を確認した。
+- video providerは未承認のためfail-closedを維持している。Light本番操作、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy unified release gate audit
 
 - `npm run verify:release-gate`は`ok:false`。現行ワークツリーに多数の既存ユーザー変更があり、`git_dirty` blockerとなった。
