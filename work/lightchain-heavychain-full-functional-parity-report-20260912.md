@@ -3763,6 +3763,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 現行ソースで`npm run typecheck`と`npm run build`を再実行し、いずれもPASS。今回の差分は監査文書のみで、デプロイ済みHeavyコードからの追加変更はない。
 - Light本番が利用中のため、Light側の実操作を必要とする比較・同一run成果物照合・logout→loginは引き続き未完了。
 
+## 2026-09-14 Heavy全31機能fresh local回帰
+
+- `npm run verify:lightchain-all-features -- --mode=local`をfresh実行し、desktop 31/31、mobile 31/31、合計347 assertions、failed 0を確認した。
+- local verifierの生成物は`output/playwright/lightchain-all-feature-workflows-20260914T103613Z-pig6h5/SUMMARY.json`。context／browser／preview停止のcleanupも完了した。
+- `auth-state.json`／`storageState.json`は使用していない。local proofは本番認証stateの代替ではなく、Heavy画面・導線回帰の証拠に限定する。
+- Light本番操作、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy公開Companion fresh readback
 
 - 新規task-owned Companion sessionでHeavy正規URLをfresh navigateし、URL`https://heavy-chain.zeabur.app/`、title`Heavy Chain | AI制作ワークスペース`、same-run semantic snapshot＋screenshotを確認した。
