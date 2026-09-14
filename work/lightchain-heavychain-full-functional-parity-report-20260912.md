@@ -4240,3 +4240,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightのアバターを開き、`マイアカウント`、`デザインドキュメント`（`/board`）、`ライブラリー`、`チーム管理`、`透かし（ウォーターマーク）表示`、`ログアウト`を確認した。ユーザー名表示もreadbackした。
 - Heavyのアバターを開き、`マイアカウント`、`デザインドキュメント`（`/designProduction`）、`ライブラリー`（`/asset-center`）、`チーム管理`（`/brand/settings`）、`透かし（ウォーターマーク）表示`、`ログアウト`を確認した。
 - 共通メニュー項目と操作導線はreadback済み。ただしLightのユーザー名・表示文言・遷移先URLがHeavyと完全一致する証拠ではなく、logout→loginは本人操作境界のため未実施。
+
+## 2026-09-15 Light検索面の再監査とHeavy差分修正
+
+- 現行Light `/asset-center` のfresh AX／DOM readbackでは、ライブラリー検索のtext field／`input`が存在しなかった。検索欄を表示しているHeavyだけが余分なUIを持っていた。
+- Heavy `src/pages/LightchainLibraryPage.tsx`から検索欄表示と未使用の検索状態を削除し、Lightの現行ライブラリー画面の表示面に合わせた。カード一覧・選択・一括操作・詳細・handoffは維持した。
+- `npm run typecheck`、`npm run lint`、`npm run build`、`npm run test:lightchain-parity-routes`（19/19）、`git diff --check`をPASS。commit `a02159a`をGitHub `main`へpush済み。デプロイ後のCompanion readbackはこれから実施する。
