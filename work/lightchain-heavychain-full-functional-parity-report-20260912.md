@@ -4252,3 +4252,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 検索面修正と監査記録を含むcommit `9e43e2c`をGitHub `main`へpushし、Zeabur deployment `6aa847349f9bd1aa614828a0`（commit一致、Docker）が`RUNNING`になったことを確認した。
 - 旧Heavyログイン済みタブはCompanionのDebugger未接続、新規Heavyタブはログイン画面だったため、認証済み本番UIの検索欄消失readbackは未確定。auth-state.jsonやcookie移送は行っていない。
 - 新規Heavyタブはユーザーによるログイン後に再読込・待機して確認できるようhandoff状態を保持した。provider receipt／source sync／reconciliation／cleanup、完全pixel-level比較、logout→login回帰は未完了。
+
+## 2026-09-15 検索面修正後Heavy本番Companion再読込
+
+- Heavyの新しいCompanionタブで既存の認証セッションが復帰し、`/lightchain`のカテゴリ画面と`/asset-center`の認証済みライブラリーを表示できた。
+- `/asset-center`で認証・hydration完了まで待機し、検索欄がなく、8グループ、7件のカード、`プレビュー`、`ボードにコピー`、`詳細`、`一括操作`を確認した。DOM上の`input`はアップロード用のhidden inputのみで、検索ラベルは0件だった。
+- `一括操作`→`全選択`を実操作し、`7 / 7`、`キャンバスをコピー`、`ダウンロード`、`削除`の有効化を確認した。削除等の外部効果操作は実行していない。
+- これは検索面修正のdeployment後browser readback=verified。Lightの22件との差はユーザー別成果物データ差であり、同一データ同期の証拠ではない。完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
