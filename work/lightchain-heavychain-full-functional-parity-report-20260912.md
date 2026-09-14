@@ -4001,3 +4001,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run typecheck`は終了コード0でPASS。
 - `npm run build`は終了コード0でPASS。Viteは2550 modulesを変換し、production bundlesを生成した。
 - これはHeavy現行ソースの静的／build証拠であり、Light本番との実操作・全画面pixel一致、実provider receipt、source sync／reconciliation、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy lint再検証
+
+- `npm run lint`は終了コード0でPASS。Light停止中の現行Heavy worktreeについて静的lintが完了した。
+- lint成功はコード品質の証拠であり、Light本番との実操作、全画面pixel一致、実provider receipt、source sync／reconciliation、logout→login回帰の証拠ではない。Lightは停止中。
