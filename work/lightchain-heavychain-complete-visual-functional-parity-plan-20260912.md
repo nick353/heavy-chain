@@ -2353,3 +2353,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/tools/fabric`の入力後・生成後状態、全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: `/tools/fabric`未選択状態の下部操作geometryはPASS。入力後・生成後および計画全体の完了条件は未達のためGoalは継続。
+-
+### 2026-09-15 Light／Heavy `/tools/fabric` 終了告知バナーparity
+
+- [x] Light本番の告知バナー構造・実寸・文字領域・閉じる操作をCompanionで実測
+- [x] Heavyの告知バナーをLightの横並び構造・余白・表示高さへ修正
+- [x] typecheck、lint、関連route tests 17/17、build、pushを確認
+- [x] Zeabur deployment `6aa880db9f9bd1aa61482f36`の`RUNNING`を確認し、Companion同一ログイン済みタブでfresh DOMを取得
+- [x] Heavyバナー`564x64 (x=128,y=134)`、文言領域`508x48`、閉じる操作`24x24`、下部操作のLight一致を確認
+- [ ] 生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: `/tools/fabric`未選択状態の告知バナー・下部操作geometryはPASS。入力後・生成後および計画全体の完了条件は未達のためGoalは継続。

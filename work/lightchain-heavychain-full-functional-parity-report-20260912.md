@@ -4455,3 +4455,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `12e60eb`のZeabur deployment `6aa8794a9f9bd1aa61482e79`が`RUNNING`であることを確認後、Heavyを15秒待機してfresh DOMを取得した。
 - Heavy右パネルは`420x802 (x=1468,y=66)`、中央アップロード面は`768x490 (x=350,y=222)`となり、Lightの実測値と一致した。外部送信、生成、upload、権利確認操作は行っていない。
 - typecheck、lint、関連テスト20/20、buildはPASS。生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+-
+## 2026-09-15 Light／Heavy `/tools/fabric` 終了告知バナーparity修正・postdeploy readback
+
+- Light本番のDOMを実測し、告知バナーが外枠`564x64 (x=128,y=134)`、文言領域`508x48`、閉じる操作`24x24`であることを確認した。Heavyは旧構造の縦積みバナーで高さ`70px`となり、下の入力位置にも差が出ていた。
+- `src/pages/LightchainMaterialWorkbenchPage.tsx`のHeavyバナーをLightと同じ横並び構造・余白・文言サイズへ変更し、閉じる操作も追加した。権利確認ゲートや生成導線は変更していない。
+- `5b996c3`をpushし、Zeabur deployment `6aa880db9f9bd1aa61482f36`が`RUNNING`であることを確認した。
+- deploy後HeavyをCompanionの同一ログイン済みタブで10秒待機し、外枠`564x64 (x=128,y=134)`、文言領域`508x48`、閉じる操作`24x24`、比率`202x42 (x=128,y=810)`、生成`288x40 (x=404,y=812)`をfresh DOMで確認した。
+- typecheck、lint、関連route tests 17/17、build（2550 modules）はPASS。スクリーンショットでも主要カード・右プレビュー・タブ・下部操作を確認した。upload、生成、外部AI送信、権利確認操作は行っていない。
+- 生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、残りの全画面・全導線は未完了。
