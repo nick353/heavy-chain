@@ -4473,3 +4473,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - deploy後HeavyをCompanionの同一ログイン済みタブで10秒待機し、fresh DOM／screenshotを取得した。左パネル`596x802`、告知`564x64 (x=128,y=134)`、参考画像カード`564x280 (x=128,y=216)`、AI生成`288x40 (x=404,y=812)`、右パネル`1158x802 (x=724,y=66)`、動画`605x340`を確認した。
 - typecheck、lint、関連route tests 19/19、build（2550 modules）はPASS。upload、生成、外部AI送信、権利確認操作は行っていない。
 - `/tools/printing`の入力後・生成後状態、実成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰、残りの全画面・全導線は未完了。
+
+## 2026-09-15 Light／Heavy `/tools/line-draft-to-tile` 未生成状態確認
+
+- Light本番は同一Companionセッションで約8秒待機後に通常画面を表示できた。Heavyは初回30秒以上「ワークスペースを準備しています」となったが、同じタブで追加待機すると本画面へ到達した。認証情報・`auth-state.json`は使用していない。
+- 到達後のHeavyは素材選択、カラー線画／モノクロ線画、平置き画像／モデル図、カスタム説明、AI生成、生成履歴の操作を表示した。一方、Light基準との差分として告知バナー欠落、未生成時の右側黒いプレースホルダー、タイトルの`線画から実写へ変換`（Lightは`線画の実写化`）を確認した。
+- 初期化遅延と上記表示差分は未修正。入力素材のupload、生成、外部AI送信、権利確認操作は行っていない。次の実装対象はこのルートの初期化安定化と未生成DOM／文言／geometryのLight一致。

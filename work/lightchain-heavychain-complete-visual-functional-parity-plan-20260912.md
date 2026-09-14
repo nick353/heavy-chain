@@ -2376,3 +2376,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/tools/printing`入力後・生成後、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面parity
 
 判定: `/tools/printing`未生成状態の主要レイアウトはPASS。入力後・生成後および計画全体の完了条件は未達のためGoalは継続。
+
+### 2026-09-15 Light／Heavy `/tools/line-draft-to-tile` 未生成状態確認
+
+- [x] Light本番の線画実写化画面をCompanionで確認
+- [x] Heavyを同一タブで追加待機し、初期化後の本画面へ到達
+- [x] Heavyの入力項目、選択肢、AI生成、履歴導線をfresh AX／screenshotで確認
+- [x] Heavyの未生成状態差分（告知バナー欠落、右プレースホルダー、タイトル差分）を記録
+- [ ] Heavyの初期化遅延、未生成DOM／文言／geometryをLightへ修正し、typecheck、build、deploy、Companion再読込で確認
+- [ ] 入力後・生成後、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: Heavyは追加待機後に本画面へ到達したが、未生成状態の表示parityと初期化安定性は未達。Goalは継続。
