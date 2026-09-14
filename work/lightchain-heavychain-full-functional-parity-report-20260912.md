@@ -4141,6 +4141,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 顧客提案では顧客要望入力とファイル／画像アップロード、インスピレーションではスタイル入力と画像アップロード、AIグラフィックデザインでは柄のスタイル・要素・使用シーン入力と画像アップロードが表示された。各タブのクイックスタート例も対応内容へ切り替わった。
 - クリック後のCompanion visual readbackはverified。生成、ファイルupload、provider送信、権利確認操作は行っていない。
 
+## 2026-09-15 Light `/designProduction` 遅延遷移・開始タブreadback
+
+- Lightの`/agent`から`/designProduction`への遷移は初回receiptが不確定だったが、同じtask-ownedタブを再読込して`https://jp.linkaigc.com/designProduction`への到達を確認した。再送は行っていない。
+- 遅延ロード完了後、見出し`デザインワークスペースへようこそ`、開始タブ（プロジェクトから開始／対話から開始）、新規ファイル・インスピレーション・プリント修正・生地イメージ・企画提案書、マイプロジェクトの`Untitled`案件とページ送りを確認した。
+- `対話から開始`を1回実操作し、`0 / 4000`入力、4シーン（生地パターン適用、線画から実写化、デザインミックス、プリント修正）、最近のプロジェクト、参考事例（データなし）、送信ボタン無効状態を確認した。生成・upload・provider送信は行っていない。
+- これはLightのデザインワークスペース基準と遅延遷移の証拠であり、Heavy側の同画面pixel一致、保存済み案件の内容一致、provider receipt／source sync／reconciliation／cleanupの証拠ではない。
+
 ## 2026-09-15 Heavy認証エンドポイントread-only切り分け
 
 - Heavyの同一オリジン`GET /api/auth/ok`はHTTP 200（`{"ok":true}`）で、認証サービスの到達性は確認できた。
