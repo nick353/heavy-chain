@@ -1386,8 +1386,8 @@ export function LightchainWorkbenchPage() {
   const [printDesignPrompt, setPrintDesignPrompt] = useState('');
   const [printDesignStyle, setPrintDesignStyle] = useState('ファッション');
   const [marketingDetailTab, setMarketingDetailTab] = useState<'assistant' | 'layers'>('assistant');
-  const [marketingProjectName, setMarketingProjectName] = useState('マーケティングキャンバス');
-  const [marketingProjectNameDraft, setMarketingProjectNameDraft] = useState('マーケティングキャンバス');
+  const [marketingProjectName, setMarketingProjectName] = useState('Untitled');
+  const [marketingProjectNameDraft, setMarketingProjectNameDraft] = useState('Untitled');
   const [marketingProjectNameEditing, setMarketingProjectNameEditing] = useState(false);
   const [marketingCanvasTool, setMarketingCanvasTool] = useState('選択');
   const [marketingCanvasZoom, setMarketingCanvasZoom] = useState(20);
@@ -2134,8 +2134,8 @@ export function LightchainWorkbenchPage() {
     setPrintDesignStyle('ファッション');
     setMarketingDetailTab('assistant');
     setMarketingDetailPrompt('');
-    setMarketingProjectName('マーケティングキャンバス');
-    setMarketingProjectNameDraft('マーケティングキャンバス');
+    setMarketingProjectName('Untitled');
+    setMarketingProjectNameDraft('Untitled');
     setMarketingProjectNameEditing(false);
     setMarketingCanvasTool('選択');
     setMarketingCanvasZoom(20);
@@ -5239,7 +5239,7 @@ export function LightchainWorkbenchPage() {
                 </>
               )}
             </label>
-            <div className="mx-auto mt-[-24px] flex items-center gap-2 rounded-2xl border border-white/10 bg-[#181f22] p-2 shadow-xl">
+            {lightchainResult && <div className="mx-auto mt-[-24px] flex items-center gap-2 rounded-2xl border border-white/10 bg-[#181f22] p-2 shadow-xl">
               {canvasTools.map((tool) => (
                 <button
                   key={tool}
@@ -5286,7 +5286,7 @@ export function LightchainWorkbenchPage() {
               >
                 <Search className="h-4 w-4" />
               </button>
-            </div>
+            </div>}
           </section>
 
           <aside className="flex max-h-[calc(100vh-102px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#171c1f]" data-testid="lightchain-marketing-assistant-panel">
@@ -5354,7 +5354,7 @@ export function LightchainWorkbenchPage() {
                 </div>
               </div>
             )}
-            <section className="max-h-[42%] shrink-0 overflow-y-auto border-t border-white/10 bg-[#0f1416] p-3" data-testid="lightchain-marketing-detail-readback" data-preview-title="マーケティング詳細プレビュー">
+            {lightchainResult && <section className="max-h-[42%] shrink-0 overflow-y-auto border-t border-white/10 bg-[#0f1416] p-3" data-testid="lightchain-marketing-detail-readback" data-preview-title="マーケティング詳細プレビュー">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-white">生成履歴</p>
                 <div className="flex items-center gap-2">
@@ -5372,7 +5372,7 @@ export function LightchainWorkbenchPage() {
               ) : (
                 <p className="mt-2 text-xs leading-5 text-neutral-500">プリセットまたはチャットから更新すると、ここにプレビューが表示されます。</p>
               )}
-            </section>
+            </section>}
           </aside>
         </section>
         {lightchainResultModal}
