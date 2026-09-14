@@ -3943,3 +3943,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run verify:goal-readiness`は5/5、`ok:true`。Cloudflare runtime、legacy Supabase runtime除去、auth／media adapter、AI adapter、active gateのlegacy entrypoint除外を確認した。
 - `git diff --check`は成功した。workspace内に実ファイルとしての`auth-state.json`／`storageState.json`は存在しない（監査文書中の言及はファイル生成とは扱わない）。
 - readiness監査のproof limitどおり、本番認証済み生成、AI品質、R2永続化、ブラウザ業務完了、Lightとのpixel-level一致は未証明。Lightはユーザー指示どおり停止中であり、未完了ゲートを維持する。
+
+## 2026-09-14 Light停止中のHeavy pre-source gate再検証
+
+- `npm run test:lightchain-pre-source-gate`は5/5 PASS。source snapshotの取得・一回保存・reload・hash検証・local stub admissionを確認した。
+- 二重書き換え、欠落・不正形式・hash不一致・cross-run、semantic-empty／visual-blank、selector drift、external-effect snapshotを拒否することを確認した。
+- これは外部provider送信前のHeavy入力ゲート証拠であり、Light本番との画面比較、実生成、provider receipt、source sync／reconciliation、cleanup、logout→login回帰の証拠ではない。
