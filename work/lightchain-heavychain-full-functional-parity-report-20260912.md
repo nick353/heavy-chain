@@ -3770,6 +3770,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `auth-state.json`／`storageState.json`は使用していない。local proofは本番認証stateの代替ではなく、Heavy画面・導線回帰の証拠に限定する。
 - Light本番操作、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy Asset Center全選択Companion実操作
+
+- Heavy公開`/asset-center`で一括操作モードを開いた後、`全選択`をvisual proof付きで1回クリックした。
+- 同一タブのreadbackで選択件数`7 / 7`、`キャンバスをコピー`と`ダウンロード`の有効化、`削除`のdisabled状態、`一括操作を閉じる`を確認した。
+- 削除・download・Canvasコピー・外部provider送信は実行していない。Companion cleanupは`ok=true`、tab closed、lease release confirmed、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+
 ## 2026-09-14 Heavy parity test entrypoints整備
 
 - 既存の`verify-lightchain-ui-control-boundaries.test.ts`と`verify-lightchain-permission-parity.test.ts`を正式なnpm scriptsとして登録した。
