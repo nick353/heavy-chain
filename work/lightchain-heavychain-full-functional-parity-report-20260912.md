@@ -4112,3 +4112,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `企画ワークスペース`クリック直後は同一URL・同一画面だったが、Companionセッションを再バインドして同じprofileのタブ一覧をfresh readbackしたところ、対象タブは`https://jp.linkaigc.com/agent`へ遷移していた。遷移後のvisual／semantic readbackで、企画ワークスペースのサイドバー、最近のプロジェクト、4業務シーン（商品企画、顧客提案、インスピレーション、AIグラフィックデザイン）、入力欄、添付、プロジェクト選択、クイックスタートを確認した。
 - したがって、先行probeの即時readbackだけで「no effect」と確定するのは不適切であり、Lightのカード導線は`DELAYED_NAVIGATION`として訂正する。Heavy側の同等`/agent`画面との内部UI・保存・再表示・再利用比較を継続する。
+
+## 2026-09-15 Heavy `/agent` Light parity correction・本番反映
+
+- Light本番のfresh readbackで確認した`今日は何から始めますか?`、説明文、4業務シーン（商品企画、顧客提案、インスピレーション、AIグラフィックデザイン）、`調査したい市場、カテゴリ、スタイル方向を入力してください…`、`新商品企画⌄`をHeavyの`/agent`へ反映した。従来のHeavy固有の挨拶文、3タブ、LOUIS VUITTON固定chip表示、初期入力値は削除した。
+- 変更は`src/pages/LightchainWorkbenchPage.tsx`のみに限定し、`npm run typecheck`、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`、`npm run lint`をPASSした。コミットは`8c78a98`（`fix: align agent workspace with Light`）。
+- GitHub `main` push後、対象Zeabur service `heavy-chain`を明示してredeployし、deployment `6aa8267c914b1b47ab2dd41f`が対象commit、Docker plan、`RUNNING`になった。
+- 本番Heavy `https://heavy-chain.zeabur.app/agent`をCompanionでログイン済みセッションのまま30秒待機し、semantic／visual readbackした。見出し、説明、4タブ、入力placeholder、`新商品企画`ボタン、サイドバー、最近のプロジェクト、`AI生成`が確認でき、ログイン画面への再遷移はなかった。
+- これは`browser_readback=verified`とdeployment receiptの証拠であり、Lightとの全画面pixel-level一致、各タブ内部の保存・再表示・再利用、実生成のprovider receipt、source sync／reconciliation／cleanup、logout→login回帰完了を意味しない。権利確認・外部送信・生成の代行は行っていない。
