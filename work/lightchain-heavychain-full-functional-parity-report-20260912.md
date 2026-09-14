@@ -3804,6 +3804,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run lint`と`npm run security:audit`はPASS。security auditはsecret値を出力していない。
 - Light本番操作、外部provider送信、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy parity ledger fresh再検証
+
+- Parity behavior ledgerは6/6 PASS。31 non-video rows、8 parity layers、local evidence artifact参照、production layerの未昇格、unresolved notesの完全性を確認した。
+- Parity ledger builderは1/1 PASS。既存のcurrent source readbackがある場合だけ生成を許可することを確認した。
+- local証拠をproduction証拠へ昇格する処理やLight本番操作は行っていない。実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy unified release gate audit
 
 - `npm run verify:release-gate`は`ok:false`。現行ワークツリーに多数の既存ユーザー変更があり、`git_dirty` blockerとなった。
