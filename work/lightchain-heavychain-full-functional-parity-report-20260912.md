@@ -4432,3 +4432,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `src/pages/LightchainWorkbenchPage.tsx`を修正し、定型文クリック時のtextarea反映ロジックは維持した。`6cfc2a5`をpushし、Zeabur deployment `6aa86e7a9f9bd1aa61482d63`が`RUNNING`であることを確認した。
 - deploy後Heavyを15秒待機し、3件の文言をfresh DOMで確認した。1件目を実クリックし、textarea値が同一文言になることを確認した。外部送信、生成、upload、権利確認操作は行っていない。
 - typecheck、lint、関連テスト20/20、buildはPASS。全画面完全pixel-level比較、生成後成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Light／Heavy `/marketing/detail` 左プロジェクトカード最終調整・postdeploy readback
+
+- Light本番の同一viewport実測値を基準に、Heavy左カードの外枠、見出し、`Untitled`行を調整した。旧CSSがカードを縦ストレッチさせていたため、その上書きルールも除去した。
+- `d09345c`のZeabur deployment `6aa876149f9bd1aa61482e27`が`RUNNING`であることを確認後、Heavyを15秒待機してfresh DOMを取得した。
+- Heavy実測は外枠`296x84 (x=32,y=82)`、見出し`278x20 (x=41,y=91)`、`Untitled`行`241x29 (x=78,y=128)`で、Lightの実測値と一致した。未生成状態のチュートリアル、Canvasツールバー、生成履歴、補助ナビも非表示を確認した。
+- typecheck、lint、関連テスト20/20、buildはPASS。生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。

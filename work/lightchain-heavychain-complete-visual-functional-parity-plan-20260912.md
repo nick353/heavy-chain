@@ -2322,3 +2322,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Light／Heavyの生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: アシスタント定型文と入力反映はPASS。生成後および計画全体の完了条件は未達のためGoalは継続。
+
+### 2026-09-15 Light／Heavy `/marketing/detail` 左プロジェクトカード最終調整
+
+- [x] Light実測のカード矩形（`296x84`、`x=32,y=82`）、見出し（`278x20`、`x=41,y=91`）、`Untitled`行（`241x29`、`x=78,y=128`）をHeavyへ反映
+- [x] 旧CSS上書きと行位置差分を修正し、typecheck、lint、関連テスト20/20、build、pushを確認
+- [x] Zeabur deployment `6aa876149f9bd1aa61482e27`の`RUNNING`を確認し、Companionで15秒待機後に同じ矩形をfresh readback
+- [ ] 生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: 未生成時の左プロジェクトカード主要矩形はPASS。生成後および計画全体の完了条件は未達のためGoalは継続。
