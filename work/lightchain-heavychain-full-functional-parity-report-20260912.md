@@ -4056,3 +4056,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - Heavy公開入口 `https://heavy-chain.zeabur.app/`、`/_health`、`/api/auth/ok`をGET-onlyで確認し、すべてHTTP 200だった。
 - これは公開到達性・health・auth endpointのread-only証拠であり、認証済み画面、Light本番とのpixel一致、実生成、provider receipt、source sync／reconciliation、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy route退行再確認
+
+- 現行worktree変更後に npm run test:lightchain-parity-routes を再実行し、19/19 PASSを確認した。catalog route解決、Light source row対応、カテゴリ／recommendation mapping、printing／vector／design-arrange、素材／事例検索、feature artwork、responsive breakpoint、動画除外を再確認した。
+- これはHeavyのroute契約退行がないことの証拠であり、Light本番との実クリック・全画面pixel一致、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
