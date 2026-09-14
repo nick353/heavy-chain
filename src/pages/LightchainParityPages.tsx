@@ -242,6 +242,7 @@ export function LightchainPrintingPage() {
   const [printImage, setPrintImage] = useState<{ url: string; file?: File; referenceType: 'pattern' } | null>(null);
   const [coverage, setCoverage] = useState<'spot' | 'full'>('spot');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [printingBannerVisible, setPrintingBannerVisible] = useState(true);
   const [message, setMessage] = useState('');
   const [restored, setRestored] = useState(false);
   const { user, currentBrand } = useAuthStore();
@@ -427,34 +428,29 @@ export function LightchainPrintingPage() {
         </nav>
 
         <div className="mt-0 grid gap-4 lg:grid-cols-[minmax(0,596px)_minmax(0,1fr)]">
-          <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-7">
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<button type="button" className="ml-2 font-semibold underline" onClick={() => navigate('/generate')}>今すぐ体験</button>
-            </div>
-            <div className="mt-7 grid gap-6 md:grid-cols-2">
-              <label className="block rounded-2xl border border-dashed border-neutral-300 p-5">
-                <span className="font-semibold">参考画像をアップロードしてください</span>
-                <span className="mt-2 block text-xs text-neutral-500">20MB以下の画像アップロードしてください</span>
-                <input className="mt-4 block w-full text-sm" type="file" accept="image/*" onChange={(event) => handleFile(event, 'base')} />
-                {referenceImage && <span className="mt-2 block truncate text-xs text-neutral-600">{referenceImage.file?.name ?? '保存済みの参考画像'}</span>}
-              </label>
-              <label className="block rounded-2xl border border-dashed border-neutral-300 p-5">
-                <span className="font-semibold">プリントをアップロード</span>
-                <span className="mt-2 block text-xs text-neutral-500">20MB以下の画像アップロードしてください</span>
-                <input className="mt-4 block w-full text-sm" type="file" accept="image/*" onChange={(event) => handleFile(event, 'pattern')} />
-                {printImage && <span className="mt-2 block truncate text-xs text-neutral-600">{printImage.file?.name ?? '保存済みのプリント画像'}</span>}
-              </label>
-            </div>
-            <div className="mt-7 flex items-center justify-between"><h2 className="font-semibold">プリント範囲</h2><button type="button" className="text-sm text-neutral-500 underline" onClick={() => { setReferenceImage(null); setPrintImage(null); setMessage(''); if (user?.id && currentBrand?.id && persistenceScope) void persistPrintInputState(currentBrand.id, null, [], { garment: null, designs: [] }, { scope: persistenceScope }).catch(() => undefined); }}>リセット</button></div>
-            <div className="mt-3 grid grid-cols-2 rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+          <section className="relative rounded-2xl border border-neutral-200 bg-white p-4 pt-[68px] shadow-sm">
+            {printingBannerVisible && <div className="flex h-16 items-start justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2 text-base leading-6 text-amber-900">
+              <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<button type="button" className="underline" onClick={() => navigate('/designProduction')}>今すぐ体験</button></span>
+              <button type="button" aria-label="告知を閉じる" className="flex size-6 shrink-0 items-center justify-center rounded transition hover:bg-black/10" onClick={() => setPrintingBannerVisible(false)}>×</button>
+            </div>}
+            <label className="mt-2 flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
+              <input className="sr-only" type="file" accept="image/*" onChange={(event) => handleFile(event, 'base')} />
+              {referenceImage ? <img src={referenceImage.url} alt="参考画像" className="max-h-56 max-w-full rounded-lg object-contain" /> : <><Upload className="h-8 w-8 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">参考画像をアップロードしてください</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
+            </label>
+            <div className="mt-4 flex items-center justify-between"><h2 className="font-semibold">プリントをアップロード</h2><button type="button" className="text-sm text-neutral-500 underline" onClick={() => { setReferenceImage(null); setPrintImage(null); setMessage(''); if (user?.id && currentBrand?.id && persistenceScope) void persistPrintInputState(currentBrand.id, null, [], { garment: null, designs: [] }, { scope: persistenceScope }).catch(() => undefined); }}>リセット</button></div>
+            <div className="mt-3 grid w-[244px] grid-cols-2 rounded-xl border border-neutral-200 bg-neutral-50 p-1">
               {(['spot', 'full'] as const).map((value) => <button key={value} type="button" aria-pressed={coverage === value} className={`rounded-lg px-4 py-3 text-sm font-semibold ${coverage === value ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500'}`} onClick={() => setCoverage(value)}>{value === 'spot' ? 'スポット' : '全体'}</button>)}
             </div>
-            <button type="button" className="mt-8 w-full rounded-xl bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800" onClick={() => void handleGenerate()}>AI生成</button>
+            <label className="mt-3 flex h-[120px] w-[120px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
+              <input className="sr-only" type="file" accept="image/*" onChange={(event) => handleFile(event, 'pattern')} />
+              {printImage ? <img src={printImage.url} alt="プリント画像" className="h-full w-full rounded-lg object-contain" /> : <><Upload className="h-6 w-6 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">画像をアップロード</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
+            </label>
+            <button type="button" className="absolute bottom-4 right-4 h-10 w-[288px] rounded-xl bg-neutral-950 px-4 text-sm font-semibold text-white transition hover:bg-neutral-800" onClick={() => void handleGenerate()}>AI生成</button>
             {message && <p className="mt-3 text-sm text-neutral-600" role="status">{message}</p>}
           </section>
 
           <aside className="space-y-4">
-            <section className="flex min-h-[852px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#151a1c] p-5 text-center shadow-sm"><h2 className="text-2xl font-semibold text-cyan-300">プリントイメージ</h2><p className="mt-3 text-sm leading-6 text-neutral-400">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p><div className="mt-5 flex w-full flex-1 items-center justify-center overflow-hidden rounded-lg bg-[#0d1113]"><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="h-[340px] w-full max-w-[1052px] object-cover" autoPlay controls playsInline aria-label="プリントイメージ動画" /></div></section>
+            <section className="flex min-h-[802px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#151a1c] p-5 text-center shadow-sm"><h2 className="text-xl font-bold text-white">プリントイメージ</h2><p className="mt-2 text-sm leading-[21px] text-neutral-400">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="mt-4 h-[340px] w-[605px] max-w-full rounded-lg object-cover" autoPlay controls muted playsInline aria-label="プリントイメージ動画" /></section>
             <section className="rounded-2xl border border-white/10 bg-[#252a2d] p-5 shadow-sm"><h2 className="font-semibold">詳細設定</h2><p className="mt-3 text-sm text-neutral-400">配置・マスク・複数素材を使う場合はこちら。</p><button type="button" className="mt-4 w-full rounded-lg border border-white/10 px-4 py-2 text-sm text-neutral-300 hover:border-cyan-300/50" onClick={() => navigate('/lightchain/printing-image')}>高度な印刷ワークスペース</button></section>
           </aside>
         </div>
