@@ -3612,3 +3612,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - commit `f5b7100`をHeavy正規Zeaburサービスへ再デプロイし、success receiptを取得した。
 - `https://heavy-chain.zeabur.app/`、`/_health`、`/api/auth/ok`はいずれもHTTP 200。公開HTMLはGallerySelectorの更新bundle参照を返した。
 - Light本番にはアクセスしていない。provider receipt、source sync、reconciliation、pixel-level parityは引き続き未検証。
+
+## 2026-09-14 Heavy印刷基盤ローカル回帰
+
+- `npm run test:printing-foundation`を実行し、印刷基盤・素材選択・マスク・配置・履歴・Gallery境界を含む244/244 PASS。
+- 外部AI provider送信、アップロード、課金、Light本番操作は行っていないため、provider receipt／source sync／reconciliation／pixel-level parityの証明には使用しない。
