@@ -5133,7 +5133,7 @@ export function LightchainWorkbenchPage() {
               <Boxes className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               マーケティングワークスペース
             </button>
-            <div className="mt-[19px] flex h-[29px] items-center gap-2">
+            <div className="mt-[17px] flex h-[29px] items-center gap-2">
               <button
                 type="button"
                 onClick={() => navigate('/lightchain/marketing-home')}
