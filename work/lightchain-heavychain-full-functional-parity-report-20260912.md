@@ -4207,3 +4207,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy `https://heavy-chain.zeabur.app/history`をログイン済みCompanionタブで30秒待機後に確認した。`生成履歴`、`ギャラリーへ`、`続きから再開`（進行中0件）、`失敗を確認`（失敗1件）、`保存済みを見る`（保存済み7件）、完了タイムライン8件、プロンプト、生成条件、Lightchain機能・task・状態、成果物を開く導線をreadbackした。
 - 同一タブでHeavy `https://heavy-chain.zeabur.app/jobs`へ遷移し、30秒待機後に`制作キュー`を確認した。`再開できる作業`0件、`止まった作業`1件、`完了した成果物`7件、要確認1件、完了ジョブのLightchain機能／task／状態、成果物リンクが表示された。
 - これはHeavy内部の履歴・キュー・成果物再表示のfresh browser evidenceであり、Lightの`/history`／`/jobs`が404であるroute scope差、全画面pixel-level一致、同一run provider receipt、source sync／reconciliation／cleanup、logout→login回帰の完了を意味しない。再開・失敗確認リンクは表示確認に留め、実生成や外部送信は行っていない。
+
+## 2026-09-15 最新deployment後のHeavy History hydration再確認
+
+- deployment `6aa84194a6ec7d5555ae510e`（commit `40d05c5`、Docker、`RUNNING`）後の新規Heavy Historyタブで、初期の`生成履歴を準備しています`から10秒待機して認証済みHistoryへ復帰した。
+- 復帰後に完了8件、失敗1件、保存済み7件、完了ジョブのプロンプト・生成条件・Lightchain機能／task／状態・成果物リンクを再度readbackした。認証移送やauth-state.jsonは使用していない。
+- 認証確認シェルからの復帰とデータhydrationはverified。ただしLightのroute scope差、全画面pixel-level一致、同一runのprovider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了として維持する。
