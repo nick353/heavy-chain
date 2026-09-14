@@ -4383,3 +4383,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `c4cf5c4`の本番反映後、Heavyのfresh AXでサイドバーに`アップロード`と`新規グループ作成`が各1件存在することを確認した。
 - `一括操作`を開いて無選択時のdisabled状態（`キャンバスをコピー`、`ダウンロード`、`削除`）、`全選択`、`一括操作を閉じる`を確認し、閉じて通常状態へ戻した。
 - 先頭カードの`プレビュー`を実クリックし、選択済み素材、名前編集、コピー、Canvas／AIフィッティング／生地／プリントへのhandoff、31機能selectを確認後、`選択した素材を閉じる`で一覧へ戻した。外部送信、削除、download、生成は実行していない。
+
+### 2026-09-15 ライブラリーカード媒体表示の最終調整
+
+- Light基準のカード媒体領域を再測定し、Heavyの画像領域を`320px`、`object-contain`、チェッカー背景へ変更した。これにより人物・Tシャツ等の画像がcover cropされず、Lightと同じ縦方向のカード構造になった。
+- `7283e5a`のZeabur deploymentが`RUNNING`であることを確認後、Heavy `/asset-center`をreloadして15秒待機した。fresh DOMでgrid`x=328`、幅`1554`、先頭画像`320px`、`object-fit=contain`、カード7件、6列を確認した。
+- 画像・ユーザー別保存データそのものは`DATA_SCOPE_DIFF`として残る。全画面の完全pixel-level比較、実生成成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰は引き続き未完了。
