@@ -3723,6 +3723,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Asset-anchored previewは6/6 PASS。source／secondary material保持、presentation filter分離、非画像fail-closed、実result表示を確認した。
 - いずれも外部provider送信やLight本番操作ではないため、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy全31機能マトリクス修正後再検証
+
+- Fabricレスポンシブ修正後に`npm run verify:lightchain-all-features -- --mode=local`を再実行し、desktop 31/31、mobile 31/31、failed 0を確認した。
+- 検証器のcleanup（context／browser／preview停止）も完了した。
+- これはHeavyローカルの画面・導線回帰証拠であり、Light本番との直接pixel比較、実provider receipt、source sync、reconciliation、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy parity behavior ledger回帰
 
 - Parity behavior ledgerは6/6 PASS。31非動画row、8 parity layer、current source readback、local evidence artifact参照、production未解決layerの分離を確認した。
