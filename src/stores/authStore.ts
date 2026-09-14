@@ -61,6 +61,10 @@ const AUTH_SESSION_TIMEOUT_MS = 12_000;
 const AUTH_OPERATION_TIMEOUT_MS = 12_000;
 const AUTH_PROFILE_TIMEOUT_MS = 10_000;
 let authStateListenerRegistered = false;
+// getSession() emits SIGNED_IN from the browser adapter. initialize() admits
+// that same session explicitly, so suppress the notification in this narrow
+// window to avoid racing duplicate profile/brand hydration requests.
+let authInitializationInFlight = false;
 let activeInitializeToken = 0;
 let activeAdmitUser: ((user: User) => Promise<void>) | null = null;
 let activeInvalidateAdmission: (() => void) | null = null;
@@ -217,11 +221,13 @@ export const useAuthStore = create<AuthState>((set, get) => {
     activeInvalidateAdmission = invalidateAdmission;
 
     try {
+      authInitializationInFlight = true;
       set({ isLoading: true, authRecoveryRequired: false });
       if (!authStateListenerRegistered) {
         authStateListenerRegistered = true;
         auth.onAuthStateChange((event, session) => {
           if (session?.user && ['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
+            if (authInitializationInFlight && event === 'SIGNED_IN') return;
             void activeAdmitUser?.(session.user);
           } else if (event === 'SIGNED_OUT') {
             activeInvalidateAdmission?.();
@@ -259,6 +265,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         authRecoveryRequired: !state.user,
       }));
     } finally {
+      authInitializationInFlight = false;
       if (initializeToken === activeInitializeToken) {
         set({ isLoading: false, isInitialized: true });
       }
