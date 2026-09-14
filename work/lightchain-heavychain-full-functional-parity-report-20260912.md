@@ -3770,6 +3770,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `auth-state.json`／`storageState.json`は使用していない。local proofは本番認証stateの代替ではなく、Heavy画面・導線回帰の証拠に限定する。
 - Light本番操作、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy公開Asset Center Companion readback
+
+- 新規task-owned Companion sessionで`https://heavy-chain.zeabur.app/asset-center`をnavigateし、URL／title、semantic snapshot、screenshotを取得した。transactionは`verified`、`external_action_executed=false`、cleanup／lease release完了。
+- 待機actionはbrokerのbounded delayとして実測250msで完了した。これはprovider処理待ちの証拠ではなく、公開画面readbackの補助情報として扱う。
+- Light本番の操作、成果物の削除／download、外部provider送信は行っていない。provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy公開Companion fresh readback
 
 - 新規task-owned Companion sessionでHeavy正規URLをfresh navigateし、URL`https://heavy-chain.zeabur.app/`、title`Heavy Chain | AI制作ワークスペース`、same-run semantic snapshot＋screenshotを確認した。
