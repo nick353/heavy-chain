@@ -4479,3 +4479,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Light本番は同一Companionセッションで約8秒待機後に通常画面を表示できた。Heavyは初回30秒以上「ワークスペースを準備しています」となったが、同じタブで追加待機すると本画面へ到達した。認証情報・`auth-state.json`は使用していない。
 - 到達後のHeavyは素材選択、カラー線画／モノクロ線画、平置き画像／モデル図、カスタム説明、AI生成、生成履歴の操作を表示した。一方、Light基準との差分として告知バナー欠落、未生成時の右側黒いプレースホルダー、タイトルの`線画から実写へ変換`（Lightは`線画の実写化`）を確認した。
 - 初期化遅延と上記表示差分は未修正。入力素材のupload、生成、外部AI送信、権利確認操作は行っていない。次の実装対象はこのルートの初期化安定化と未生成DOM／文言／geometryのLight一致。
+## 2026-09-15 Light／Heavy `/tools/line-draft-to-tile` 未生成状態parity修正・postdeploy readback
+
+- `src/pages/LightchainWorkbenchPage.tsx`の告知バナー、画面タイトル、未生成時の右側プレースホルダーをLight基準へ修正した。素材upload、生成、外部AI送信、権利確認ゲートは変更していない。
+- `68b59e7`をpushし、Zeabur deployment `6aa888e49f9bd1aa61482ff7`が`RUNNING`であることを確認した。
+- 同一のログイン済みCompanionタブを再読込し、fresh DOM／screenshotで告知バナー、`線画の実写化`、主要入力項目、AI生成、生成履歴を確認した。未生成時の黒い右側プレースホルダーは表示されなくなった。
+- typecheck、lint、関連route tests 19/19、build（2550 modules）はPASS。初回表示にはHeavy固有のワークスペース初期化待ちがあり、追加待機後に本画面へ到達したため、初期化安定性は継続確認とする。
+- 入力後・生成後の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、残りの全画面・全導線は未完了。

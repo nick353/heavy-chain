@@ -2387,3 +2387,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 入力後・生成後、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: Heavyは追加待機後に本画面へ到達したが、未生成状態の表示parityと初期化安定性は未達。Goalは継続。
+### 2026-09-15 Light／Heavy `/tools/line-draft-to-tile` 未生成状態parity修正
+
+- [x] Light基準の告知バナー、タイトル、未生成時プレースホルダー差分を特定
+- [x] Heavyの告知バナー、タイトル、未生成DOMをLightへ合わせて修正
+- [x] typecheck、lint、関連route tests 19/19、build、pushを確認
+- [x] Zeabur deployment `6aa888e49f9bd1aa61482ff7`の`RUNNING`を確認し、Companion同一ログイン済みタブを再読込
+- [x] Heavyで告知バナー、`線画の実写化`、主要入力項目、AI生成、生成履歴、右側プレースホルダー非表示をfresh DOM／screenshotで確認
+- [ ] 初回ワークスペース初期化の待ち時間を短縮・安定化し、入力後・生成後のLight一致を確認
+- [ ] provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面parity
+
+判定: `/tools/line-draft-to-tile`未生成状態の主要表示差分はPASS。初期化遅延、入力後・生成後および計画全体の完了条件は未達のためGoalは継続。
