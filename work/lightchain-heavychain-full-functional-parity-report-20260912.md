@@ -3867,3 +3867,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - その後のカテゴリ操作前にCompanionが`extension_transport_disconnected`／`profile generation changed`を返し、外部dispatchは0件。fresh statusでは`connected=false`、session／lease／pending operationは0件、task recoveryのprimary blockerは`profile_not_connected`となった。
 - 再接続用の正規reload APIは、旧sessionが既に終了しており`session_not_owned`で実行できなかった。旧leaseの再利用、foreign tabの操作、認証情報入力は行っていない。
 - 判定: Lightログイン後ホームの表示確認＝`PASS`、Companion再接続＝`BLOCKED_EXTERNAL_STATE`。カテゴリ全実操作、全画面pixel-level比較、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-14 現行Heavy build再検証
+
+- `npm run typecheck`は終了コード0でPASS。
+- `npm run build`は`tsc -b`およびVite production buildを完了し、2550 modules transformed、終了コード0でPASS。
+- これはHeavy現行ソースの静的検証であり、Light本番のCompanion接続、全画面比較、provider receipt、source sync／reconciliation、logout→login回帰の証拠には昇格させない。
