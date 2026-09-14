@@ -4342,3 +4342,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `Texture Close-up`を実クリックし、12秒／4:5、ショット構成、字幕CTA、素材、ローカル進捗が連動して更新されることを確認した。
 - `動画生成（provider未接続）`はdisabledで、`video_provider_not_admitted`と画像生成への代替禁止が表示された。生成、書き出し、素材upload、Canvas保存、外部AI送信、権利確認操作は行っていない。
 - Light同一画面とのpixel-level比較、動画詳細の全内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Heavy色変更ワークベンチreadback
+
+- Heavy `/editor/changeColor`を実画面で開き、戻る、対話編集、計画、作業モード、詳細操作、デザイン作成、Gallery素材選択、素材upload、色変更の対象画像、色と柄の詳細設定、生成モデル、生成導線を確認した。
+- 画像未選択状態では`入力不足`、`まだ送信できません`、`生成する` disabledが表示され、権利・許可確認checkboxも未選択であることを確認した。生成、upload、外部AI送信、権利確認操作は行っていない。
+- Light同一画面とのpixel-level比較、色変更の入力後フロー、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
