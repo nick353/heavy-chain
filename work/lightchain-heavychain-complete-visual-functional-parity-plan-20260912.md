@@ -2342,3 +2342,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: `/marketing/detail`未生成状態の主要geometryはPASS。生成後および計画全体の完了条件は未達のためGoalは継続。
+
+### 2026-09-15 Light／Heavy `/tools/fabric` 下部操作geometry修正
+
+- [x] Lightのキーワード見出しと下部操作の実測位置を取得
+- [x] Heavyの比率選択・生成操作を左入力パネル内の固定領域へ配置し、入力順をLightへ統一
+- [x] typecheck、lint、関連テスト20/20、build、pushを確認
+- [x] Zeabur deployment `6aa87e009f9bd1aa61482eee`の`RUNNING`を確認し、Companionで15秒待機後にfresh DOMを取得
+- [x] Heavy controls`564x56 (x=128,y=796)`、比率`202x42 (x=128,y=810)`、生成`288x40 (x=404,y=812)`を確認
+- [ ] `/tools/fabric`の入力後・生成後状態、全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: `/tools/fabric`未選択状態の下部操作geometryはPASS。入力後・生成後および計画全体の完了条件は未達のためGoalは継続。

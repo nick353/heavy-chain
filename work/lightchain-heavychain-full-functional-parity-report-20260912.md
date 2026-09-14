@@ -4440,6 +4440,14 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy実測は外枠`296x84 (x=32,y=82)`、見出し`278x20 (x=41,y=91)`、`Untitled`行`241x29 (x=78,y=128)`で、Lightの実測値と一致した。未生成状態のチュートリアル、Canvasツールバー、生成履歴、補助ナビも非表示を確認した。
 - typecheck、lint、関連テスト20/20、buildはPASS。生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
 
+## 2026-09-15 Light／Heavy `/tools/fabric` 下部操作geometry修正・postdeploy readback
+
+- Light本番のfresh screenshot／DOMを基準に、キーワード見出しの後ろに比率選択と生成操作が固定表示される構造を確認した。Heavyは当初、操作バーが全幅に出る誤ったCSSセレクタで、画面下へ流れていた。
+- `src/pages/LightchainMaterialWorkbenchPage.tsx`の表示順をLightへ合わせ、`src/index.css`で正しい親階層へ固定領域をスコープした。権利確認ボタンは外部送信前ゲートとして維持した。
+- `c351849`のZeabur deployment `6aa87e009f9bd1aa61482eee`が`RUNNING`であることを確認後、Heavyを15秒待機してfresh DOMを取得した。
+- Heavy controls`564x56 (x=128,y=796)`、比率`202x42 (x=128,y=810)`、生成`288x40 (x=404,y=812)`、キーワード見出し`y=743`を確認し、Lightの実測値と一致した。生成・upload・外部送信・権利確認操作は行っていない。
+- typecheck、lint、関連テスト20/20、buildはPASS。入力後・生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
 ## 2026-09-15 Light／Heavy `/marketing/detail` 中央・右パネルgeometry最終調整・postdeploy readback
 
 - Light本番とHeavy本番を同一Companionセッション・同一viewportで比較し、Heavyの右パネル位置、外側余白、中央アップロード面の位置に残っていた差分を特定した。
