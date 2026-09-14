@@ -3896,6 +3896,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 外部provider送信、素材upload、生成、保存、権利確認の代行は行っていない。
 - 判定: 3件目の事例詳細表示＝`PASS`、制作入口の遷移＝`UNVERIFIED`。全カード内部導線、全画面pixel-level比較、provider receipt、source sync／reconciliation／cleanup、logout→login回帰は未完了。
 
+## 2026-09-14 Light事例カード4件目クリック境界
+
+- 事例一覧へ戻り、マーケティング系カード「【マーケティングワークスペース】は、既存のランジェリー商品画像やモデル着用画像を活用し、異なるモデルによる新しい販促ビジュアルを一括生成します。」をsemantic text locatorで対象化し、visual proofを取得した。
+- 同カードへの`page.click`は`no_dispatch`となり、URL・表示状態とも変化しなかった。外部効果はなく、同一対象への座標推測・再クリックは行わない。カード本文がクリック可能な実操作ターゲットとして成立していることは`UNVERIFIED`とする。
+- 判定: 4件目カード詳細導線＝`UNVERIFIED`（no dispatch）。外部provider送信、素材upload、生成、保存、権利確認の代行は行っていない。
+
 ## 2026-09-14 現行Heavy build再検証
 
 - `npm run typecheck`は終了コード0でPASS。
