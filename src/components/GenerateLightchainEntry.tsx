@@ -462,8 +462,8 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   data-state={active ? 'active' : 'inactive'}
                   onClick={() => handleCategoryChange(category.id)}
                   style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, sans-serif' }}
-                  className={`group relative flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-transparent px-6 py-1 text-base font-normal transition ${
-                    active ? 'bg-[#63cbc7] text-neutral-950 shadow-[0_0_20px_rgba(99,203,199,0.18)]' : 'text-neutral-400 hover:bg-white/[0.08] hover:text-white'
+                  className={`group relative flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-transparent px-6 py-1 text-sm transition ${
+                    active ? 'bg-[#63cbc7] font-medium text-neutral-950 shadow-[0_0_20px_rgba(99,203,199,0.18)]' : 'font-normal text-neutral-400 hover:bg-white/[0.08] hover:text-white'
                   }`}
                 >
                   {category.label}
