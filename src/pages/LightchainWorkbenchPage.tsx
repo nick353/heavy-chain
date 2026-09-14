@@ -5196,7 +5196,7 @@ export function LightchainWorkbenchPage() {
                 </button>
               </div>
             )}
-            <div className="mt-6 grid gap-3">
+            {lightchainResult && <div className="mt-6 grid gap-3">
               {[
                 { label: 'レイヤー', icon: Layers3, onClick: () => setMarketingDetailTab('layers'), testId: 'lightchain-marketing-layers-nav' },
                 { label: 'アセット', icon: Boxes, onClick: () => openMaterialModalForSlot('primary'), testId: 'lightchain-marketing-assets-nav' },
@@ -5212,7 +5212,7 @@ export function LightchainWorkbenchPage() {
                   {label}
                 </button>
               ))}
-            </div>
+            </div>}
           </aside>
 
           <section
