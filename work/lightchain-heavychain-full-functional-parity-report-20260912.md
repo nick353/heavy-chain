@@ -3565,3 +3565,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 同一reloadのnetwork observationでは`/api/auth/get-session`＝200、`/v1/profile`＝200が1回、`/v1/brands`＝200が1回。前回のプロフィール二重取得（2回）を再現せず、今回の修正が公開bundleで動作していることを確認した。provider receiptや成果物生成を伴わないため、provider completion／source sync／business completionは未検証のままとする。
 - task-owned Companion session/tab/leaseはcleanup receiptで正常終了（closed tab 1、lease release confirmed、foreign_tabs_mutated false、external_action_executed false）。Light Chain本番には触れていない。
 - 判定: 認証hydrationの公開反映とHeavy直接ルートの認証API／profile重複抑制＝PASS。実生成・保存・再利用、Lightとの同一画面比較、logout→login回帰、重複Zeaburサービスの消失readbackは未完了／未確認。
+
+## 2026-09-14 現行checkoutの認証・入口契約再検証
+
+- `npm run test:auth-lock`＝4/4、`npm run test:auth-bootstrap-hydration`＝7/7、`npm run test:auth-session-recovery`＝3/3、`npm run test:lightchain-entry-routing`＝17/17 PASS。
+- 認証ロック、profile／brandのbootstrap完了待ち、認証失敗時の1回限定refresh、Light互換入口のルーティング契約を現行checkoutで再確認した。
+- これは外部provider receipt、成果物source sync、Light本番とのpixel-level比較、ユーザー操作による再ログインの証跡ではないため、それらの判定は未完了のまま維持する。
