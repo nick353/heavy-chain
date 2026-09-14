@@ -428,7 +428,7 @@
     margin: 0;
   }
 
-  [data-testid="lightchain-fabric-parity-view"] > div > section:first-child {
+  [data-testid="lightchain-fabric-parity-view"] > div > div > section:first-child {
     position: relative;
   }
 
