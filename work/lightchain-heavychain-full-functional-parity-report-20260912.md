@@ -4278,3 +4278,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy `/lightchain`でも主要カテゴリ4タブを実操作し、企画（8導線）、AIフィッティング（6導線）、グラフィック（4導線）のカード／内部pathをreadbackした。事例共有6タブも全件切り替え、選択状態を確認した。
 - Heavyのカテゴリ遷移は`?category=planning`、`?category=fitting`、`?category=graphics`としてURLにも反映された。Lightは同一画面内のタブ状態として反映された。
 - これはカテゴリ切替とカード表示のbrowser evidenceであり、各カード内部の全操作、完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰の完了を意味しない。
+
+## 2026-09-15 Light／Heavy事例検索・clear・モーダル開閉readback
+
+- Lightホームで事例共有の`検索`を開き、検索キーワード入力欄を表示した。未一致語を入力して検索し、`該当する結果が見つかりません`を確認した後、入力をclearした。
+- Heavy `/lightchain?category=graphics`でも同じ`検索`を開き、未一致語による空結果、`事例検索をクリア`、検索UIの開閉を実操作で確認した。clear後は通常の事例カード表示へ戻った。
+- 両環境で外部送信や生成は行っていない。検索結果カードの詳細・作成導線全件、完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
