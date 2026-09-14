@@ -534,12 +534,12 @@ export function LightchainLibraryPage() {
               <button type="button" className="mt-4 rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => uploadInputRef.current?.click()}>最初の素材を追加</button>
             </div>
           ) : (
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
+            <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
               {visibleArtifacts.map((card) => (
                 <article key={card.kind === 'local' ? card.artifact.id : card.asset.id} className={`overflow-hidden rounded-lg border bg-[#151a1c] ${selectedAssetId === (card.kind === 'local' ? card.artifact.id : card.asset.id) || selectedIds.has(getCardId(card)) ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>
                   {selectMode && <button type="button" className="w-full border-b border-white/10 px-3 py-2 text-left text-xs text-neutral-300" onClick={() => toggleSelected(getCardId(card))} aria-pressed={selectedIds.has(getCardId(card))}>{selectedIds.has(getCardId(card)) ? '✓ 選択中' : '選択'}</button>}
-                  <button type="button" className="flex h-64 w-full items-center justify-center bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.22),transparent_24%),linear-gradient(135deg,#263438,#111719)]" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)} aria-label={`${cardTitle(card)}を選択`}>
-                    {cardImageUrl(card) ? <img src={cardImageUrl(card)} alt="" className="h-full w-full object-cover" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}
+                  <button type="button" className="flex h-80 w-full items-center justify-center bg-[linear-gradient(45deg,#1d2324_25%,transparent_25%,transparent_75%,#1d2324_75%),linear-gradient(45deg,#1d2324_25%,transparent_25%,transparent_75%,#1d2324_75%)] bg-[length:16px_16px] bg-[position:0_0,8px_8px]" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)} aria-label={`${cardTitle(card)}を選択`}>
+                    {cardImageUrl(card) ? <img src={cardImageUrl(card)} alt="" className="h-full w-full object-contain" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}
                   </button>
                   <div className="p-2.5">
                     <p className="truncate text-sm font-medium">{cardTitle(card)}</p>
