@@ -3914,6 +3914,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Light Chainには触れず、Heavy正規Zeabur公開入口をread-onlyで確認した。`https://heavy-chain.zeabur.app/`、`/_health`、`/api/auth/ok`はいずれもHTTP 200だった。
 - これはHeavyの公開到達性・ヘルス確認であり、Lightとの画面比較、認証回帰、provider receipt、source sync／reconciliation、成果物フローの完了証拠には昇格させない。
 
+## 2026-09-14 Light停止中のHeavy事例／ランチャー契約再検証
+
+- Heavyの`同じもの作成`実装をソース確認し、事例詳細から`buildLightchainFeatureHref(...)`へ遷移する正規`Link`であることを確認した。Light本番でカード本文を対象化したクリックが`no_dispatch`だった事象とは分離して扱う。
+- `npm run test:lightchain-entry-routing`は17/17 PASS。`node --experimental-strip-types --test scripts/verify-lightchain-launcher-parity.test.ts`は14/14 PASS。カテゴリカード、事例タブ、表示ラベル、ルート対応、カード画像、レスポンシブ列数、遅延動画の除外契約を再確認した。
+- Light利用停止中のため、これらはHeavyの現行ソース契約証拠であり、Lightとの再実操作比較やprovider成果物証跡の代替にはしない。
+
 ## 2026-09-14 現行Heavy build再検証
 
 - `npm run typecheck`は終了コード0でPASS。
