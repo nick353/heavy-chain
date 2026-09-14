@@ -3590,6 +3590,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 結果を推測して再送せず、Companion statusでpending operationがないことを確認し、session closeのcleanup receipt（closed tab 1、unknown_effectなし、external_action_executed false）を取得した。Galleryフィルタの機能効果はNOT_PROVENのまま維持する。
 - Light Chain本番には触れていない。今後の再確認は別のfresh session・fresh proof・新規idempotencyで行う。
 
+## 2026-09-14 Heavy Companion Gallery操作の追加境界
+
+- Heavy Galleryの`お気に入り`操作について、fresh sessionを2回用意した。1回目はinspect結果のpayload抽出前に停止し、2回目は直接URL hydration直後に対象がまだsemantic locatorへ現れず、`semantic_locator_not_found`で停止した。いずれもclick transactionのdispatchは発生していない。
+- 各sessionはtask-owned cleanup receiptで閉鎖済み（各closed tab 1、unknown_effectなし、foreign_tabs_mutated false、external_action_executed false）。
+- 判定: Gallery本体の表示はPASS、フィルタの実操作効果は引き続きNOT_PROVEN。Heavyの遅延hydrationとCompanion target bindingの追加readbackが必要で、Light本番は未操作。
+
 ## 2026-09-14 Heavy現行main desktop/mobile全機能再検証
 
 - `npm run verify:lightchain-all-features -- --mode=local`を現行mainで再実行し、Heavy実装の31機能をdesktop 31/31、mobile 31/31で確認した。`failed: []`、cleanup（context／browser／preview）も完了した。
