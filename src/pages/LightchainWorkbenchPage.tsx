@@ -1365,6 +1365,7 @@ export function LightchainWorkbenchPage() {
   const [fabricNotice, setFabricNotice] = useState('');
   const [lineDraftType, setLineDraftType] = useState<'カラー線画' | 'モノクロ線画'>('カラー線画');
   const [lineToRealImageType, setLineToRealImageType] = useState<'平置き画像' | 'モデル図'>('平置き画像');
+  const [lineDeprecationBannerVisible, setLineDeprecationBannerVisible] = useState(true);
   const [lineGenerationImageType, setLineGenerationImageType] = useState<'平置き画像' | 'モデル図'>('平置き画像');
   const [patternVectorLayers, setPatternVectorLayers] = useState<Array<'積み重ね' | '分割'>>(['積み重ね']);
   const [lineToRealPrompt, setLineToRealPrompt] = useState('');
@@ -1659,7 +1660,7 @@ export function LightchainWorkbenchPage() {
     '/model-base/style': 'custom-style',
   };
   const directRouteTitleOverride: Record<string, string> = {
-    '/tools/line-draft-to-tile': '線画から実写へ変換',
+    '/tools/line-draft-to-tile': '線画の実写化',
     '/printing': 'AIグラフィックデザイン',
     '/editor/pattern': 'デザインアレンジ',
     '/editor/patternDesign': 'プリントデザイン',
@@ -6296,7 +6297,7 @@ export function LightchainWorkbenchPage() {
 
   return (
     <main
-      className={`dark min-h-screen ${isFeatureDetail ? 'bg-[#0b0f10] px-4 py-4 text-white sm:px-6' : 'bg-surface-50 px-4 py-5 dark:bg-surface-950 sm:px-6 lg:px-8'}`}
+      className={`relative dark min-h-screen ${isFeatureDetail ? 'bg-[#0b0f10] px-4 py-4 text-white sm:px-6' : 'bg-surface-50 px-4 py-5 dark:bg-surface-950 sm:px-6 lg:px-8'}`}
       data-flow-state={unifiedFlowState}
       data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
       data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
@@ -6317,6 +6318,12 @@ export function LightchainWorkbenchPage() {
       data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
       data-lightchain-generation-error={lightchainGenerationError ?? ''}
     >
+      {isFeatureDetail && selectedTool.id === 'line-to-real' && lineDeprecationBannerVisible && (
+        <div className="absolute left-[128px] top-[84px] z-30 flex h-16 w-[564px] justify-between gap-2 rounded-lg bg-[#5b1f2a] px-4 py-2 text-base leading-6 text-white">
+          <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<Link to="/designProduction" className="underline">今すぐ体験</Link></span>
+          <button type="button" aria-label="告知を閉じる" className="flex size-6 shrink-0 items-center justify-center rounded hover:bg-white/10" onClick={() => setLineDeprecationBannerVisible(false)}>×</button>
+        </div>
+      )}
       {isFeatureDetail && (
         <aside className="fixed left-4 top-[66px] z-20 hidden w-20 flex-col gap-3 lg:flex" aria-label="ツールバー">
           {[
@@ -7816,7 +7823,7 @@ export function LightchainWorkbenchPage() {
                           ? currentModelPanel.subtitle ?? selectedTool.description
                         : selectedTool.description}
                     </p>
-                    <div className={`mx-auto mt-10 flex max-w-[520px] items-center justify-center bg-black/30 p-4 ${lightchainResult ? 'min-h-[420px] overflow-visible' : 'aspect-[16/9] overflow-hidden'}`}>
+                    {selectedTool.id === 'line-to-real' && !lightchainResult ? null : <div className={`mx-auto mt-10 flex max-w-[520px] items-center justify-center bg-black/30 p-4 ${lightchainResult ? 'min-h-[420px] overflow-visible' : 'aspect-[16/9] overflow-hidden'}`}>
                       {lightchainResult ? (
 	                        <div className="w-full">
 	                          {renderLightchainResultPreviewImage('mx-auto max-h-56 w-full rounded-lg object-contain', '生成結果プレビュー')}
@@ -7892,7 +7899,7 @@ export function LightchainWorkbenchPage() {
                           <p className="mt-2 text-sm font-semibold text-neutral-500 dark:text-neutral-400">素材選択後に表示</p>
                         </div>
                       )}
-                    </div>
+                    </div>}
                   </div>
                 </section>
               </aside>
