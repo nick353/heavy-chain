@@ -3649,6 +3649,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run verify:lightchain-local-lifecycle`もPASS。deterministic local result、save-once、reload-readback、library-reuse-handoff、cleanupを確認し、external action 0、network calls 0だった。
 - これはHeavyローカルの保存・再表示・再利用証拠であり、本番provider receipt、Lightとのpixel-level parity、source sync、reconciliation、logout→login回帰を代替しない。
 
+## 2026-09-14 Heavy Canvas／provider／Fitting readback回帰
+
+- Canvas generation readbackは10/10 PASS。配置完了、provider storage path、Gallery→Canvas handoff、再利用のreadback guardを確認した。
+- Provider persistence readbackは14/14 PASS。永続artifact readback前のpromotion禁止、provider provenance、History／Canvas lineage保持を確認した。
+- Fitting history readbackは12/12 PASS。persisted provider／local previewからの再構築、Library参照、reload recovery、Canvas resumeを確認した。
+- いずれも外部providerの新規送信やLight本番操作ではないため、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy成果物導線回帰
 
 - Galleryダウンロード境界は6/6 PASS。
