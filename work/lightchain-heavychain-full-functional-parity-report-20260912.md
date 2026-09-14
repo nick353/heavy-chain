@@ -4061,3 +4061,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - 現行worktree変更後に npm run test:lightchain-parity-routes を再実行し、19/19 PASSを確認した。catalog route解決、Light source row対応、カテゴリ／recommendation mapping、printing／vector／design-arrange、素材／事例検索、feature artwork、responsive breakpoint、動画除外を再確認した。
 - これはHeavyのroute契約退行がないことの証拠であり、Light本番との実クリック・全画面pixel一致、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy境界・印刷基盤・認証回復再検証
+
+- `npm run test:auth-session-recovery`は3/3 PASS。認証失敗の限定判定、1回だけのrefresh/retry、非認証失敗とsessionなしのfail-closedを確認した。
+- `npm run test:media-gateway-boundary`は9/9 PASS。Cloudflare限定、token送信条件、private media bucket制限、HTTPS・object path検証、sessionなしのfail-closedを確認した。
+- `npm run test:video-provider-boundary`は1/1 PASS。Video Workstationが画像生成へ誤ルーティングしないことを確認した。
+- `npm run test:lab-provider-boundary`は1/1 PASS。Lab workspaceが承認済みLightchain provider routeへ引き渡される契約を確認した。
+- `npm run test:printing-foundation`は244/244 PASS。印刷素材・マスク・表面適合・レイヤー編集・Gallery／履歴・生成readiness・provider handoff・モーダル境界を確認した。
+- いずれもHeavyのlocal/source契約証拠であり、Light本番の実操作、全画面pixel-level一致、同一run provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠には昇格させない。Lightはユーザー指示どおり停止中。
