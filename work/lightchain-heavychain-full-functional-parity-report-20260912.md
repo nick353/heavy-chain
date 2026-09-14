@@ -4097,3 +4097,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 事例共有の下部表示から`visual.scroll`（fresh visual point proof付き、`deltaY=-1000`）を1回実行し、企画デザインカード群がviewport内に戻ることをvisual readbackで確認した。外部送信やprovider操作は発生していない。
 - 企画デザイン9カードを再表示し、`企画ワークスペース`をfresh visual target proof付きで1回クリックした。Companionはdispatch 1、visual readback verifiedだったが、URL・text hash・表示画面は変化しなかったため、Light本番の同カードrouteは`UNVERIFIED／no visible state change`として扱う。
 - 追加クリックや座標推測は行っていない。Heavyの同カードdirect-entryをPASSとする既存証拠だけでは、Light本番カードの実遷移同一性を証明できないため、Heavyとの完全parityは未完了のままとする。
+
+## 2026-09-15 Lightカード面全体probeの安全停止
+
+- `企画ワークスペース`カードの中央面（fresh visual point proof）を追加確認したが、Companionが`visual_target_proof_stale_geometry`を返し、dispatch 0で停止した。ページ状態の変化や外部効果はない。
+- これはLightのカード面全体クリックが失敗した証拠ではなく、Companionのスクリーンショット境界とtrusted input dispatch時のgeometry不一致として記録する。追加の座標推測・再送は行わない。
