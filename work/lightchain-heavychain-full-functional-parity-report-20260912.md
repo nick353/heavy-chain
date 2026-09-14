@@ -3630,3 +3630,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - commit `64fbc92`をHeavy正規Zeaburサービスへ再デプロイし、success receiptを取得した。
 - Heavyトップ、`/_health`、`/api/auth/ok`はHTTP 200。公開HTMLは更新後のbundle `assets/index.BLVaPRzR.js`を返した。
 - Light本番にはアクセスしていない。provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
+## 2026-09-14 Heavy UX修正後Companion再readback
+
+- Heavy公開トップをCompanionのtask-owned sessionでfresh navigateし、最終URL `/lightchain`、タイトル `Lightchain AI`、認証済みavatar、4カテゴリtab、事例共有6タブ、主要ランチャー6件をnative accessibility＋screenshotで確認した。
+- ブラウザ操作は`local_ui`のnavigateのみで、外部効果・provider送信はなし。session/tab/leaseはcleanup receiptで閉鎖済み（foreign_tabs_mutated false、external_action_executed false）。
+- 公開Companion readbackはPASS。ただしLight本番との直接pixel比較、provider receipt、source sync、reconciliation、logout→login回帰は未完了。
