@@ -4086,3 +4086,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `デザイン修正`と`生産`は、選択後に「該当する結果が見つかりません」と表示される空状態を確認した。`柄・プリント`、`ビジュアル素材`、`マーケティングコンテンツ`もタブ切替に伴うtext hash変化とvisual readbackを確認した。ログイン状態は維持され、URLは`https://jp.linkaigc.com/`のままだった。
 - グラフィックツール内の`デザインワークスペース`カードは、表示要素をsemantic clickで1回だけ実操作したが、URL・text hash・画面に可視変化はなかったため、カード導線は`UNVERIFIED／no visible state change`として記録し、再クリックはしていない。
 - これはLight本番のホーム分類・事例共有UIのfresh evidenceであり、カード先画面の全機能、Heavyとの全画面pixel-level一致、生成・upload・provider receipt、source sync／reconciliation／cleanup、logout→login回帰完了の証拠にはまだ昇格させない。権利確認や外部送信の代行は行っていない。
+
+## 2026-09-15 Lightカード導線追加probeのviewport blocker
+
+- `企画ワークスペース`カードの追加probeは、事例共有タブで下方向にスクロールされた同一タブをそのまま対象にしたため、先行するカテゴリタブがviewport外となり`visual_target_outside_viewport`で停止した。Companionのdispatchは0で、クリックや外部効果は発生していない。
+- この結果はログイン失敗やカード導線の不成立とは判定せず、viewportを正規に上端へ戻してから再確認が必要な`BLOCKED_UI／UNVERIFIED`として扱う。同じ未成立操作は再送していない。
