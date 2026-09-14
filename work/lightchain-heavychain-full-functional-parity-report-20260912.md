@@ -3769,3 +3769,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - transactionは`verified`、`browser_readback=verified`、`external_action_executed=false`、provider completion／source syncは未実施、tab close／lease releaseは完了した。
 - 初回のaction schema誤入力はdispatch前のvalidation rejectionであり、外部効果はない。正しい`tabs.navigate`を新規idempotency keyで一度だけ実行した。
 - Light本番操作、外部provider送信、同一成果物のprovider receipt／source sync／reconciliation、pixel-level parity、logout→login回帰は未完了。
+
+## 2026-09-14 Heavy provider／media／permission境界追加監査
+
+- Lab provider boundaryは1/1 PASS、video provider boundaryは1/1 PASS。未承認videoをimage generationへ誤送信しないfail-closedを確認した。
+- Print mask candidatesは39/39 PASS。候補選択、背景除去、manual alpha編集、fabric modulation、結果履歴のrun grouping／clear-allを確認した。
+- Provider coverageは22/22 PASS、image downloadは6/6 PASS。feature-specific route、rights confirmation継続、Gallery／History／Jobs接続、入力形式検証を確認した。
+- UI control boundariesは11/11 PASS、permission parityは4/4 PASS。Lightchain identity、root routing、header controls、persisted settings、rights gateを確認した。
+- `test:*` npm script未登録の2件は対応するテストファイルを直接実行し、いずれもPASS。npm script欠落を実装失敗とは扱っていない。
+- すべてHeavy側のローカル契約証拠であり、Light本番操作、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
