@@ -167,12 +167,8 @@ type PendingRightsGeneration =
 
 const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
 const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspace-tutorial-dismissed-v1';
-const MARKETING_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-detail-tutorial-dismissed-v1';
 const getWorkspaceTutorialStorageKey = (userId?: string | null) => (
   userId ? `${WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY}:${userId}` : WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY
-);
-const getMarketingTutorialStorageKey = (userId?: string | null) => (
-  userId ? `${MARKETING_TUTORIAL_DISMISSED_STORAGE_KEY}:${userId}` : MARKETING_TUTORIAL_DISMISSED_STORAGE_KEY
 );
 
 function readWorkspaceTutorialDismissed(userId?: string | null): boolean {
@@ -228,24 +224,6 @@ function persistWorkspaceTutorialDismissed(userId?: string | null): void {
     document.cookie = `${storageKey}=true; Max-Age=31536000; Path=/; SameSite=Lax`;
   } catch {
     // Tutorial dismissal is a convenience preference; cookie failures are non-fatal.
-  }
-}
-
-function readMarketingTutorialDismissed(userId?: string | null): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    return window.localStorage.getItem(getMarketingTutorialStorageKey(userId)) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function persistMarketingTutorialDismissed(userId?: string | null): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(getMarketingTutorialStorageKey(userId), 'true');
-  } catch {
-    // Tutorial persistence is a convenience preference; storage failures are non-fatal.
   }
 }
 
@@ -1416,7 +1394,8 @@ export function LightchainWorkbenchPage() {
   const [marketingCanvasHistory, setMarketingCanvasHistory] = useState<MarketingCanvasViewState[]>([]);
   const [marketingCanvasFuture, setMarketingCanvasFuture] = useState<MarketingCanvasViewState[]>([]);
   const [marketingTutorialStep, setMarketingTutorialStep] = useState(1);
-  const [marketingTutorialDismissed, setMarketingTutorialDismissed] = useState(false);
+  // Light's canonical marketing detail opens without an onboarding banner.
+  const [marketingTutorialDismissed, setMarketingTutorialDismissed] = useState(true);
   const [workspaceTutorialStep, setWorkspaceTutorialStep] = useState(1);
   const [workspaceTutorialDismissed, setWorkspaceTutorialDismissed] = useState(false);
   const dismissWorkspaceTutorial = () => {
@@ -1424,7 +1403,6 @@ export function LightchainWorkbenchPage() {
     setWorkspaceTutorialDismissed(true);
   };
   const dismissMarketingTutorial = () => {
-    persistMarketingTutorialDismissed(user?.id);
     setMarketingTutorialDismissed(true);
   };
   useEffect(() => {
@@ -1437,14 +1415,6 @@ export function LightchainWorkbenchPage() {
     if (!isAuthInitialized || isAuthLoading) return;
     setWorkspaceTutorialDismissed(readWorkspaceTutorialDismissed(user?.id));
   }, [isAuthInitialized, isAuthLoading, user?.id]);
-  useEffect(() => {
-    if (marketingTutorialDismissed) persistMarketingTutorialDismissed(user?.id);
-  }, [marketingTutorialDismissed, user?.id]);
-  useEffect(() => {
-    if (!isAuthInitialized || isAuthLoading) return;
-    setMarketingTutorialDismissed(readMarketingTutorialDismissed(user?.id));
-  }, [isAuthInitialized, isAuthLoading, user?.id]);
-
   const [workspaceArtifacts, setWorkspaceArtifacts] = useState<WorkspaceArtifact[]>([]);
   const [remoteMaterialTabItems, setRemoteMaterialTabItems] = useState<Record<MaterialTab, MaterialTabItem[]>>(emptyMaterialTabItems);
 
