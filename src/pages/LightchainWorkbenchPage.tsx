@@ -5077,7 +5077,11 @@ export function LightchainWorkbenchPage() {
   }
 
   if (selectedTool.id === 'marketing-detail') {
-    const assistantPresets = ['詳細ページの画像ギャラリー', '画像付きノート／ブログ', 'ブランドストーリーの構築'];
+    const assistantPresets = [
+      '商品メイン画像 / 商品サブ画像 / カラー別詳細画像',
+      '招待状 / 電子チケット / 参加登録用画像',
+      'コーディネートルックブック',
+    ];
     const marketingTutorialSteps = [
       'ここをクリックしてプロジェクト名を変更できます',
       'レイヤーから編集対象を選択できます',
