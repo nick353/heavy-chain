@@ -4051,3 +4051,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - npm run test:canvas-local-upload-persistenceは11/11 PASS。Blobのreload復元、IndexedDB参照、revision保持、session-only／missing revision／non-local imageのfail-closed、source blob先行保存、server snapshot検証、routed project／working set同期を確認した。
 - provider Canvas handoffのdata-only結果を永続化前にlocalizeすることも確認した。外部provider送信は行っていない。
 - これはHeavyのlocal upload persistence契約証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy公開入口read-only再確認
+
+- Heavy公開入口 `https://heavy-chain.zeabur.app/`、`/_health`、`/api/auth/ok`をGET-onlyで確認し、すべてHTTP 200だった。
+- これは公開到達性・health・auth endpointのread-only証拠であり、認証済み画面、Light本番とのpixel一致、実生成、provider receipt、source sync／reconciliation、logout→login回帰の証拠ではない。Lightは停止中。
