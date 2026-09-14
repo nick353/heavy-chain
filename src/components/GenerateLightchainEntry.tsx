@@ -449,7 +449,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             />
           </form>
 
-          <div role="tablist" aria-label="Light Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] overflow-hidden rounded-lg border border-white/15 bg-white/[0.07] p-1">
+          <div role="tablist" aria-label="Light Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] items-center justify-center rounded-lg border border-white/15 bg-white/[0.07] p-1">
             {lightchainCategories.map((category) => {
               const active = category.id === activeCategory;
               return (
@@ -460,12 +460,12 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   aria-selected={active}
                   aria-pressed={active}
                   onClick={() => handleCategoryChange(category.id)}
-                  className={`shrink-0 whitespace-nowrap rounded-md px-3 py-0 text-xs font-semibold transition sm:px-5 sm:text-sm ${
+                  className={`group relative flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-transparent px-6 py-1 text-base font-normal transition ${
                     active ? 'bg-[#63cbc7] text-neutral-950 shadow-[0_0_20px_rgba(99,203,199,0.18)]' : 'text-neutral-400 hover:bg-white/[0.08] hover:text-white'
                   }`}
                 >
                   {category.label}
-                  {category.id === 'recommended' && <><span aria-hidden="true">{' '}</span><span className="ml-1 text-[10px]">Hot</span></>}
+                  {category.id === 'recommended' && <span aria-hidden="true" className="pointer-events-none absolute -right-1.5 -top-1 hidden min-w-[21px] items-center justify-center rounded-lg bg-gradient-to-l from-[#FF00F6] to-[#FF2929] px-0.5 py-0 text-[10px] font-medium leading-3 text-white group-data-[state=active]:flex">Hot</span>}
                 </button>
               );
             })}
