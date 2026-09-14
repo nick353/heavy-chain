@@ -3968,3 +3968,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run test:lightchain-download`は6/6 PASS。空URL・非画像レスポンス・形式判定・画像blob・SVG／bitmap decode fallbackを確認した。
 - `npm run test:library-canvas-handoff`は8/8 PASS。Library成果物のCanvas routing、remote image hydration、Gallery ID scope、upload／group controls、fabric／print復元、31非動画featureのsource lineageを確認した。
 - これはHeavyのdownload／handoff契約証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy Canvas generation／document persistence再検証
+
+- `npm run test:canvas-generation-readback`は10/10 PASS。画像配置完了前の成功報告抑止、provider storage path復元、実配置結果のみのhandoff、部分batch、Galleryのscoped identity／idempotencyを確認した。
+- `npm run test:canvas-document-persistence`は7/7 PASS。legacy migrationの重複・quota安全性、canonical source検証、空／不正画像拒否、invalid scheme拒否、server save未確認時の非acknowledgementを確認した。
+- これはHeavyのCanvas契約証拠であり、Light本番との画面・成果物同一性、同一run provider receipt、source sync／reconciliation／cleanup、logout→login回帰の証拠ではない。Lightは停止中。
