@@ -449,7 +449,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             />
           </form>
 
-          <div role="tablist" aria-label="Light Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] items-center justify-center rounded-lg border border-white/15 bg-white/[0.07] p-1">
+          <div role="tablist" aria-label="Light Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.07] p-1">
             {lightchainCategories.map((category) => {
               const active = category.id === activeCategory;
               return (
@@ -461,8 +461,8 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   aria-pressed={active}
                   data-state={active ? 'active' : 'inactive'}
                   onClick={() => handleCategoryChange(category.id)}
-                  style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, sans-serif' }}
-                  className={`group relative flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-transparent px-6 py-1 text-sm transition ${
+                  style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
+                  className={`group relative flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border-0 px-6 py-1 text-sm leading-[21px] transition ${
                     active ? 'bg-[#63cbc7] font-medium text-neutral-950 shadow-[0_0_20px_rgba(99,203,199,0.18)]' : 'font-normal text-neutral-400 hover:bg-white/[0.08] hover:text-white'
                   }`}
                 >
