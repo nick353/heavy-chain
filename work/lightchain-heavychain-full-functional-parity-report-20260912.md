@@ -4335,3 +4335,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy `/models`を新規Companionタブで開き、認証確認シェルから認証済みの`モデルカスタマイズ`画面へ復帰するまで待機した。顔変更、モデル変更、体型、服のサイズ、ポーズ、背景、アングルの7タブ、候補3件、Gallery素材選択、保存、モデルマトリクス生成導線を確認した。
 - `モデル変更`タブと`Street LOOK 30s`候補を実クリックし、候補、用途、条件プレビュー、生成prompt、保存状態が連動して更新されることを確認した。upload、保存、生成、外部AI送信、権利確認操作は行っていない。
 - Light同一画面とのpixel-level比較、候補・参考事例の全内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Heavy動画ワークステーションreadback
+
+- Heavy `/flow/GenerateShortVideo`を認証済みCompanionタブで開き、`構成`／`編集`／`書き出し`、動画レーン3種（Launch Reel、Texture Close-up、Fit Check CTA）、尺・比率、ショット構成、字幕CTA、素材欄、Storyboardプレビュー、Canvas保存、Gallery導線を確認した。
+- `Texture Close-up`を実クリックし、12秒／4:5、ショット構成、字幕CTA、素材、ローカル進捗が連動して更新されることを確認した。
+- `動画生成（provider未接続）`はdisabledで、`video_provider_not_admitted`と画像生成への代替禁止が表示された。生成、書き出し、素材upload、Canvas保存、外部AI送信、権利確認操作は行っていない。
+- Light同一画面とのpixel-level比較、動画詳細の全内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
