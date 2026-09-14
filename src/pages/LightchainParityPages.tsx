@@ -353,8 +353,8 @@ export function LightchainPrintingPage() {
             <section className="flex flex-1 flex-col items-center justify-center">
               <h2 className="text-2xl font-semibold text-neutral-100">AIグラフィックデザイン</h2>
               <p className="mt-2 text-sm text-neutral-400">AIでグラフィックを作成</p>
-              <div className="mt-6 h-[340px] w-full max-w-[1088px] overflow-hidden rounded-lg bg-[#0d1113]">
-                <video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="h-full w-full object-cover" autoPlay controls playsInline aria-label="AIグラフィックデザイン動画" />
+              <div className="mt-6 h-[340px] w-full max-w-[1056px] overflow-hidden rounded-lg bg-[#0d1113]">
+                <video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="h-full w-full object-cover" autoPlay controls muted playsInline aria-label="AIグラフィックデザイン動画" />
               </div>
               {(referenceImage || printImage) && <button type="button" className="mt-6 rounded-xl bg-cyan-300 px-6 py-3 text-sm font-semibold text-neutral-950" onClick={() => void handleGenerate()}>AI生成</button>}
               {message && <p className="mt-3 text-sm text-neutral-300" role="status">{message}</p>}
