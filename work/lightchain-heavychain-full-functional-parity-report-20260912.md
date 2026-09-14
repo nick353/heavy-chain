@@ -4194,3 +4194,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy本番の最新deployment `6aa83e18a6ec7d5555ae5089`（commit `7e9f0c1`、Docker、`RUNNING`）をCompanionで認証済みのまま再読込し、データ反映待機後に7件を確認した。全カードの主操作がLightと同じ`プレビュー`／`ボードにコピー`表示になっていた。
 - Heavyで先頭カードの`プレビュー`を実操作して詳細と31機能の選択UIを確認し、一覧へ戻って`ボードにコピー`を実操作した。操作中の保存処理を経て、パンくず・見出しが`生成履歴`となり、選択済み成果物の詳細と`Canvasへ送る`等の再利用導線がfresh readbackできた。
 - これはライブラリーのカード表示、プレビュー、コピー、再表示のbrowser evidenceである。Light／Heavy間の保存データ件数・内容はユーザー／環境依存の`DATA_SCOPE_DIFF`として扱い、同一runのprovider receipt、source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰、削除・ダウンロード実行の証拠とは分離する。実生成、upload、外部AI送信、権利確認操作は行っていない。
+
+## 2026-09-15 ライブラリーラベル修正の最新本番readback
+
+- `7e9f0c1`（`fix: match library board copy label`）のZeabur deployment `6aa83e18a6ec7d5555ae5089`が対象commit一致、Docker、`RUNNING`であることを確認した。
+- Heavy `https://heavy-chain.zeabur.app/asset-center`を新規Companionタブで開き、認証状態を30秒待機して確認した。認証済みライブラリーが表示され、初期ロード直後の0件からデータ反映後に7件へ更新された。
+- 7件すべてのカードで`プレビュー`、`ボードにコピー`、`詳細`が表示されることを確認し、Lightで実測したカード操作契約と一致した。認証確認画面への再遷移は発生しなかった。
+- レポートcommit `2c4bd94`のZeabur deploymentも対象commit一致、Docker、`RUNNING`となった。今回のbrowser readbackはコード変更deploymentのruntime証拠として扱い、provider receipt、source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰とは分離する。
