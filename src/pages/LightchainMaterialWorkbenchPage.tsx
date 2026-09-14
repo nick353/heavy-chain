@@ -6375,7 +6375,7 @@ function LightchainMaterialWorkbenchSession() {
           className="h-[calc(100vh-50px)] min-h-0 overflow-hidden bg-[#0b1113] px-4 py-4 pl-28 text-white"
         >
           <div className="h-full w-full">
-            <div className="grid h-full grid-cols-[minmax(0,596px)_minmax(360px,1fr)] gap-4">
+            <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,596px)_minmax(360px,1fr)]">
 
             <section className="min-w-0 overflow-y-auto scrollbar-hide rounded-lg bg-[#171d20] p-4 shadow-2xl shadow-black/20">
 
