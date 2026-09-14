@@ -428,12 +428,12 @@ export function LightchainPrintingPage() {
         </nav>
 
         <div className="mt-0 grid gap-4 lg:grid-cols-[minmax(0,596px)_minmax(0,1fr)]">
-          <section className="relative rounded-2xl border border-neutral-200 bg-white p-4 pt-[68px] shadow-sm">
+          <section className="relative h-[802px] min-h-0 overflow-hidden rounded-2xl bg-white p-4 pt-[68px] shadow-sm">
             {printingBannerVisible && <div className="flex h-16 items-start justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2 text-base leading-6 text-amber-900">
               <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<button type="button" className="underline" onClick={() => navigate('/designProduction')}>今すぐ体験</button></span>
               <button type="button" aria-label="告知を閉じる" className="flex size-6 shrink-0 items-center justify-center rounded transition hover:bg-black/10" onClick={() => setPrintingBannerVisible(false)}>×</button>
             </div>}
-            <label className="mt-2 flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
+            <label className="mt-[18px] flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
               <input className="sr-only" type="file" accept="image/*" onChange={(event) => handleFile(event, 'base')} />
               {referenceImage ? <img src={referenceImage.url} alt="参考画像" className="max-h-56 max-w-full rounded-lg object-contain" /> : <><Upload className="h-8 w-8 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">参考画像をアップロードしてください</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
             </label>
