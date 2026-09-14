@@ -4034,3 +4034,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `npm run test:lightchain-parity-ledger-builder`は1/1 PASS。台帳生成時に、明示された現行source readbackが存在することを必須にする契約を確認した。
 - これはHeavyの証拠生成器契約であり、Light本番との実操作・全画面pixel一致、実provider receipt、source sync／reconciliation／cleanup、logout→login回帰の代替ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy Canvas save recovery再検証
+
+- npm run test:canvas-save-recoveryは23/23 PASS。project identity、lost response後のGET-only reconciliation、draftのlocal保持、同一saveのdedupe、foreign scope拒否、revision conflict、cache validation、view persistence、stable ID／revision transportを確認した。
+- 401／403／409／503やlost responseでPOST／PATCHを再送しないこと、late token／route changeをfenceすることも確認した。
+- これはHeavyのCanvas回復契約証拠であり、Light本番との同一成果物、実provider receipt、source sync／reconciliation／cleanup、全画面pixel一致、logout→login回帰の証拠ではない。Lightは停止中。
