@@ -4296,3 +4296,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy企画カテゴリの`ウェアデザインラボ`を実クリックし、`/flow/orientedDesign`へ到達した。`新規ファイル`から`/flow/orientedDesign/detail?boardProjectCode=新規ファイル&boardProjectType=orientedDesignSystem`へ遷移した。
 - 詳細画面でメイン画像、参考画像、必須の指示テキスト、強化モードswitch、生成設定（自動）、解像度（4K／2K）、生成権限ボタン、Canvas操作（選択、手のひら、画像を追加、元に戻す、やり直す、25%表示）を確認した。生成設定・解像度メニューの開閉、手のひら／選択モード切替を実操作した。
 - 生成権限ボタンは`権限がありません`でdisabledだったため、権利確認・権限付与・生成・upload・外部AI送信は行っていない。Light同一画面とのpixel-level比較、全内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Heavy AIフィッティング入力・Gallery選択readback
+
+- Heavy `/lightchain?category=fitting`からAIフィッティングを実クリックし、`/model`へ到達した。AIフィッティングタスクの`シングルタスク`／`マルチタスク`を切り替え、入力タブの`説明生成`、`参考画像`、`モデルのセット写真`を切り替えた。
+- 衣服画像の`0 / 4`、自動変換checkbox、`Gallery素材を選択`、モデル条件のentry area、`Canvasに注文票を保存` disabled、`スマート 1K`、`AI生成` disabled、生成履歴導線を確認した。
+- `Gallery素材を選択`を開き、`履歴アップロード`、`生成履歴`、`マイライブラリー`、`チームライブラリー`、`プラットフォームアセット`の5カテゴリと、権利確認済みサンプル素材、`使用`を確認した。モーダルは閉じてシングルタスクへ復帰した。
+- 素材使用、upload、生成、外部AI送信、権利確認操作は行っていない。Light同一画面とのpixel-level比較、全内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
