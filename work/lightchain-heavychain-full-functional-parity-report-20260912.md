@@ -3735,3 +3735,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Ledger builderは1/1 PASS。current source readbackが明示的に存在する場合のみ生成を許可することを確認した。
 - Pre-source gateは再確認で5/5 PASS。
 - これは差分記録と生成前契約の証拠であり、Light本番の直接pixel比較、実provider receipt、source sync、reconciliation、logout→login回帰は未完了。
+
+## 2026-09-14 Heavyポイント選択・印刷ショートカット・スタイルプレビュー回帰
+
+- Point-guided selection／prompt segmentationは19/19 PASS。bounded garment mask、texture保持、chest／sleeve収束、WASM workerのretryable契約、unsafe candidateのfail-closedを確認した。
+- Printing design handoff／shortcutsは15/15 PASS。bundled blank garment、Gallery／upload handoff、brand readiness、失敗時保持、重複防止、Patterns由来のguarded print handoffを確認した。
+- Workspace style previewは1/1 PASS。fashion-studio workspaceに限定されることを確認した。
+- いずれもHeavyローカル契約の証拠であり、Light本番の操作、外部provider送信、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
