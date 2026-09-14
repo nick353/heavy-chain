@@ -3656,6 +3656,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Fitting history readbackは12/12 PASS。persisted provider／local previewからの再構築、Library参照、reload recovery、Canvas resumeを確認した。
 - いずれも外部providerの新規送信やLight本番操作ではないため、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy activity／handoff／source metadata回帰
+
+- Workspace activity routingは13/13 PASS。Jobs／Historyのartifact metadata展開、Cloudflare fallback、認証失敗の限定retry、resume導線を確認した。
+- Design production handoffは2/2 PASS。canonical generation handoffとsource summaryを確認した。
+- Canvas source metadataは6/6 PASS。byte hash、revision mismatch、サイズ変化拒否、機微なfilename/path/data URLを保存しないreadbackを確認した。
+- これらはHeavyローカル契約の証拠であり、Light本番との直接比較、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy成果物導線回帰
 
 - Galleryダウンロード境界は6/6 PASS。
