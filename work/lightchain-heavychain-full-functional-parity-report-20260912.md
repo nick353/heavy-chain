@@ -4227,3 +4227,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 保存済みHeavy Canvas URLを同一Companionセッションで再読込し、`キャンバス・サーバー確認済み`、ブランド`Nisen`、Canvas／派生ツリー、保存、画像を置く、生成する、素材を見る、Galleryから追加、エクスポート等の操作UIを確認した。
 - スクリーンショットでも、保存対象の人物画像が中央キャンバスに表示され、右下のミニマップも表示されていることを確認した。保存・再表示後のvisual evidenceとして記録する。
 - 実生成、upload、外部AI送信、権利確認チェックの変更、削除は行っていない。Lightとの完全pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Light／Heavyライブラリー一括操作fresh readback
+
+- Light `/asset-center`で`一括操作`を開き、`選択済み：0 / 22`、`全選択`、`キャンバスをコピー`、`ダウンロード`、`削除`、`一括操作を閉じる`を確認した。`全選択`を1回実操作すると`22 / 22`となり、後3者が有効化された。
+- Heavy `/asset-center`でも同じ一括操作を開き、`全選択`を1回実操作すると`7 / 7`となり、`キャンバスをコピー`、`ダウンロード`、`削除`が有効化された。選択チェックボックスと`選択中`表示も確認した。
+- 一括操作の主要コントロールとdisabled→enabled遷移は両環境で確認済み。成果物件数はLight 22件、Heavy 7件で異なるため、これは同一ユーザー／同一データ集合の同期証拠ではなく、ユーザー別データ差として分離して扱う。
+- 削除、ダウンロード、キャンバスコピーの一括実行は行っていない。provider receipt／source sync／reconciliation／cleanup、完全pixel-level比較、logout→login回帰は未完了。
