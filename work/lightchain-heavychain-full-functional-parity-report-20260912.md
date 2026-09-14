@@ -4259,3 +4259,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `/asset-center`で認証・hydration完了まで待機し、検索欄がなく、8グループ、7件のカード、`プレビュー`、`ボードにコピー`、`詳細`、`一括操作`を確認した。DOM上の`input`はアップロード用のhidden inputのみで、検索ラベルは0件だった。
 - `一括操作`→`全選択`を実操作し、`7 / 7`、`キャンバスをコピー`、`ダウンロード`、`削除`の有効化を確認した。削除等の外部効果操作は実行していない。
 - これは検索面修正のdeployment後browser readback=verified。Lightの22件との差はユーザー別成果物データ差であり、同一データ同期の証拠ではない。完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Heavy新Companionタブでの検索面再readback
+
+- 新規Heavy Companionタブでも認証確認シェルから認証済みライブラリーへ復帰し、hydration完了を待って7件のカードを表示した。
+- fresh DOM readbackでアップロード用hidden input以外の検索欄は0件、`プレビュー`カードは7件であることを確認した。検索面撤去は別の新規タブでもverified。
+- 監査タブは次のカテゴリ確認用にhandoff保持した。完全な全カテゴリ監査、pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は継続中。
