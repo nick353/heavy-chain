@@ -3979,3 +3979,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `npm run test:lightchain-all-feature-workflows-contract`は5/5 PASS。明示mode必須、local modeのremote base URL／auth-state入力拒否、production modeのloopback拒否、coverage下限、出力ディレクトリ再利用防止、fail-closed／fresh-output guardを確認した。
 - この検証はHeavy verifierの安全境界を示すもので、Light本番の全画面実操作、実生成、provider receipt、source sync／reconciliation／cleanup、pixel-level一致、logout→login回帰の代替ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のCompanion status再確認
+
+- Companionのtask-scoped statusをread-onlyで取得し、Light用logical session `0`、exact-tab lease `0`、pending operation `0`、queue `0`、active task tab `0`を確認した。
+- Light対象profileは`connected=false`、recovery stateは`profile_not_connected`／`reconnect_companion_profile_and_read_fresh_status`である。ユーザーの停止指示に従い、再接続、タブ再開、認証入力、Light操作は行わない。
+- これは停止状態とcleanup境界の証拠であり、Light本番の未完了比較・実生成・provider receipt・source sync／reconciliation・logout→login回帰を完了扱いにするものではない。
