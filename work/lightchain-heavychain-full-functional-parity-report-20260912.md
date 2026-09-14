@@ -3757,3 +3757,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Auth bootstrap hydrationは7/7 PASS、session recoveryは3/3 PASS。profile／brand hydration、stale authority無効化、認証失敗時の限定retryを確認した。
 - Internal UX consistencyは`ok: true`。Light Chain本番にはアクセスしていない。
 - これらはHeavy側の現行契約証拠であり、Light本番の直接pixel比較、実provider receipt、source sync、reconciliation、logout→login回帰は未完了。
+
+## 2026-09-14 Heavy最終現行build確認
+
+- 現行ソースで`npm run typecheck`と`npm run build`を再実行し、いずれもPASS。今回の差分は監査文書のみで、デプロイ済みHeavyコードからの追加変更はない。
+- Light本番が利用中のため、Light側の実操作を必要とする比較・同一run成果物照合・logout→loginは引き続き未完了。
