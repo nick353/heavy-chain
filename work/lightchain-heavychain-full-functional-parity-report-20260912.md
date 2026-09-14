@@ -4246,3 +4246,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 現行Light `/asset-center` のfresh AX／DOM readbackでは、ライブラリー検索のtext field／`input`が存在しなかった。検索欄を表示しているHeavyだけが余分なUIを持っていた。
 - Heavy `src/pages/LightchainLibraryPage.tsx`から検索欄表示と未使用の検索状態を削除し、Lightの現行ライブラリー画面の表示面に合わせた。カード一覧・選択・一括操作・詳細・handoffは維持した。
 - `npm run typecheck`、`npm run lint`、`npm run build`、`npm run test:lightchain-parity-routes`（19/19）、`git diff --check`をPASS。commit `a02159a`をGitHub `main`へpush済み。デプロイ後のCompanion readbackはこれから実施する。
+
+## 2026-09-15 検索面修正の本番反映状態
+
+- 検索面修正と監査記録を含むcommit `9e43e2c`をGitHub `main`へpushし、Zeabur deployment `6aa847349f9bd1aa614828a0`（commit一致、Docker）が`RUNNING`になったことを確認した。
+- 旧Heavyログイン済みタブはCompanionのDebugger未接続、新規Heavyタブはログイン画面だったため、認証済み本番UIの検索欄消失readbackは未確定。auth-state.jsonやcookie移送は行っていない。
+- 新規Heavyタブはユーザーによるログイン後に再読込・待機して確認できるようhandoff状態を保持した。provider receipt／source sync／reconciliation／cleanup、完全pixel-level比較、logout→login回帰は未完了。
