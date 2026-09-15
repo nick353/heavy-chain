@@ -107,7 +107,7 @@ export function LightchainLibraryPage() {
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  const [activeGroup, setActiveGroup] = useState<string>('マイライブラリー');
+  const [activeGroup, setActiveGroup] = useState<string>('履歴アップロード');
   const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
   const [remoteAssets, setRemoteAssets] = useState<RemoteLibraryAsset[]>([]);
   const [customGroups, setCustomGroups] = useState<string[]>([]);
