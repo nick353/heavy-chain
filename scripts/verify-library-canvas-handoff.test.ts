@@ -27,8 +27,10 @@ test('Library Canvas hydration uses the readable remote-image path', () => {
   assert.match(canvasPage, /const resolvedSource = localResolution\?\.source \|\| await resolveGeneratedImageUrl\(source\)/);
   assert.match(canvasPage, /const response = await fetch\(resolvedSource\)/);
   assert.match(canvasPage, /const blob = await response\.blob\(\)/);
-  assert.match(canvasPage, /const source = getWorkspaceArtifactCanonicalStoragePath\(artifact\.metadata\) \|\| artifact\.imageUrl/);
-  assert.match(canvasPage, /const image = await loadLibraryCanvasImage\(source\)/);
+  assert.match(canvasPage, /const canonicalSource = getWorkspaceArtifactCanonicalStoragePath\(artifact\.metadata\)/);
+  assert.match(canvasPage, /const source = canonicalSource \|\| artifact\.imageUrl/);
+  assert.match(canvasPage, /image = await loadLibraryCanvasImage\(source\)/);
+  assert.match(canvasPage, /if \(!fallbackSource\) throw primaryError/);
   assert.match(canvasPage, /src: source,/);
 });
 

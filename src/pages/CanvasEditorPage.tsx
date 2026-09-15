@@ -817,7 +817,11 @@ export function CanvasEditorPage() {
 
     importedLibraryArtifactRef.current = sourceArtifactId;
     let cancelled = false;
-    const source = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata) || artifact.imageUrl;
+    const canonicalSource = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
+    const source = canonicalSource || artifact.imageUrl;
+    const fallbackSource = canonicalSource && artifact.imageUrl && artifact.imageUrl !== canonicalSource
+      ? artifact.imageUrl
+      : null;
     if (!source) {
       toast.error('ライブラリー素材の保存先を復元できません');
       return;
@@ -825,7 +829,13 @@ export function CanvasEditorPage() {
 
     void (async () => {
       try {
-        const image = await loadLibraryCanvasImage(source);
+        let image;
+        try {
+          image = await loadLibraryCanvasImage(source);
+        } catch (primaryError) {
+          if (!fallbackSource) throw primaryError;
+          image = await loadLibraryCanvasImage(fallbackSource);
+        }
         if (cancelled) return;
 
         const sourceWorkspace = typeof artifact.metadata.sourceWorkspace === 'string'
