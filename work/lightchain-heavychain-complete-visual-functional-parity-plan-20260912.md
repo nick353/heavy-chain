@@ -2407,3 +2407,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 同一成果物によるGallery／History／Jobsの保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: Lightのカテゴリ・アカウントメニューはreadback済み。履歴の正規URLは未特定で、成果物ライフサイクルと計画全体の完了条件は未達。
+### 2026-09-15 Light／Heavy `/asset-center` 初期選択parity修正
+
+- [x] Light本番の正規`/asset-center`で初期選択とパンくずを確認
+- [x] Heavyの初期`activeGroup`を`履歴アップロード`へ修正（ユーザーデータは変更しない）
+- [x] typecheck、lint、関連route tests 19/19、build、pushを確認
+- [x] Zeabur deployment `6aa88c0c9f9bd1aa61483083`の`RUNNING`を確認し、Companion同一ログイン済みタブでfresh DOM／screenshotを取得
+- [x] Heavyの初期選択`履歴アップロード`とパンくずをLightへ一致確認
+- [ ] 保存データの正本同期・同一成果物による保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: `/asset-center`の初期選択UIはPASS。ユーザーデータ差、成果物ライフサイクル、全画面parity、logout→login回帰は未完了。

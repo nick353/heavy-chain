@@ -4492,3 +4492,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightのavatarメニューを実クリックし、`マイアカウント`、`デザインドキュメント`、`ライブラリー`、`チーム管理`、透かし表示、`ログアウト`を確認した。ログアウトは実行していない。
 - Lightの推測URL `/history` は404だった。一方Heavyの`/history`は生成履歴、`/gallery`、`/jobs`、`/lightchain`への再開導線を表示したため、Lightの履歴は正規導線／URLを追加特定する必要がある。これはHeavyの実装不具合と断定せず、route scope差として記録する。
 - 生成、upload、外部AI送信、権利確認、削除、ログアウトは行っていない。provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、成果物の保存・再表示・再利用は未完了。
+## 2026-09-15 Light／Heavy `/asset-center` 初期選択parity修正・postdeploy readback
+
+- Light本番の正規`/asset-center`を開き、初期選択が`履歴アップロード`、パンくずも`マイライブラリー > 履歴アップロード`であることを確認した。Heavyは修正前に`マイライブラリー`が初期選択だった。
+- `src/pages/LightchainLibraryPage.tsx`の初期`activeGroup`だけを`履歴アップロード`へ変更した。ユーザーデータ、画像、生成履歴の削除・移動・同期は行っていない。
+- `f7ff7f1`をpushし、Zeabur deployment `6aa88c0c9f9bd1aa61483083`が`RUNNING`であることを確認した。Heavyを同一ログイン済みCompanionタブで再読込し、fresh DOM／screenshotで`履歴アップロード`選択とパンくずを確認した。
+- typecheck、lint、関連route tests 19/19、build（2550 modules）はPASS。LightとHeavyの保存データ件数・画像内容はアカウント／データソース差があるため、UI parityとは分離して扱う。
+- provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、成果物の保存・再表示・再利用、logout→login回帰は未完了。
