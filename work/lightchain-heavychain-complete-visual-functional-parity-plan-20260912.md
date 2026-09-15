@@ -2454,3 +2454,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Light再ログイン後に同一成果物のLight→Heavy handoff、保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanupを確認
 
 判定: handoffルート遷移はPASSだが、Canvasへの実画像配置は今回`not_proven`。Goalは継続。
+### 2026-09-15 Canvas handoff canonical-path fallback修正・postdeploy再確認
+
+- [x] canonical pathを優先し、同一artifactの画像参照だけへ限定したfallbackを実装
+- [x] typecheck、lint、library handoff 9/9、Canvas save/recovery 23/23、build、pushを確認
+- [x] Zeabur deployment `6aa892169f9bd1aa6148314e`の`RUNNING`を確認し、Companion本番で16秒待機後にreadback
+- [ ] scope／canonical pathの正規readbackとCanvas実画像配置を確認
+- [ ] Light再ログイン後、同一成果物のLight／Heavy比較、保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: fallback実装とデプロイはPASSだが、対象artifactの実画像配置は未証明。Goalは継続。

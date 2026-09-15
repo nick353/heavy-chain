@@ -4522,3 +4522,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Canvasはブランド表示、保存、権利確認チェック、Canvas操作群を表示したが、5秒追加待機後のfresh DOMで`canvasRenderState.totalImageObjects=0`、`loadedImageObjects=0`、画像要素0件だった。画面上にも画像配置を確認できなかったため、今回のhandoffは`not_proven`と判定する。
 - 既存のローカル契約テストはPASSしているが、現行本番のこのアーティファクトでは実画像復元を証明できなかった。原因切り分け（artifact scope／canonical storage path／認証済みgateway readback）が必要で、外部送信・生成・権利確認チェック・保存クリックは行っていない。
 - Light側は別デバイスログイン競合で`/login`のため、同一成果物によるLight→Heavy比較は再ログイン後に再実施する。
+## 2026-09-15 Canvas handoff canonical-path fallback修正・postdeploy再確認
+
+- `src/pages/CanvasEditorPage.tsx`で、artifactのcanonical storage pathを優先し、同じartifactに別の画像参照が保存されている場合だけ、その参照へフォールバックする処理を追加した。scope外検索や別ユーザーartifactの採用は行わない。
+- `62c8ffe`をpushし、Zeabur deployment `6aa892169f9bd1aa6148314e`が`RUNNING`であることを確認した。typecheck、lint、library handoff 9/9、Canvas save/recovery 23/23、build（2550 modules）はPASS。
+- Heavyの同一handoff URLを本番で再読込し、16秒待機後も`canvasRenderState.totalImageObjects=0`、`loadedImageObjects=0`だった。今回の対象artifactには実用可能な別画像参照がない、またはscope／canonical pathのreadbackが成立していないため、実画像配置は引き続き`not_proven`とする。
+- Lightは別デバイスログイン競合で`/login`のまま。Light同一成果物との比較、実生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
