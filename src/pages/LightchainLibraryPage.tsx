@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ChevronRight, Download, FolderOpen, Grid2X2, Image as ImageIcon, Plus, Trash2, Upload, X } from 'lucide-react';
+import { ChevronRight, Download, FolderOpen, Grid2X2, Image as ImageIcon, MoreVertical, Plus, Trash2, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -551,7 +551,7 @@ export function LightchainLibraryPage() {
                       ) : (
                         <button type="button" className="flex-1 rounded-lg border border-cyan-200/30 px-2 py-2 text-xs text-cyan-100 hover:bg-cyan-200/10 disabled:opacity-40" onClick={() => void handleImportRemote(card.asset)} disabled={uploading}>ボードにコピー</button>
                       )}
-                      <button type="button" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)}>詳細</button>
+                      <button type="button" aria-label="詳細" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)}><MoreVertical className="h-4 w-4" /></button>
                     </div>
                   </div>
                 </article>
