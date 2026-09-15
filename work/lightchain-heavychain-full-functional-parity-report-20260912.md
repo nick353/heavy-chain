@@ -4528,3 +4528,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `62c8ffe`をpushし、Zeabur deployment `6aa892169f9bd1aa6148314e`が`RUNNING`であることを確認した。typecheck、lint、library handoff 9/9、Canvas save/recovery 23/23、build（2550 modules）はPASS。
 - Heavyの同一handoff URLを本番で再読込し、16秒待機後も`canvasRenderState.totalImageObjects=0`、`loadedImageObjects=0`だった。今回の対象artifactには実用可能な別画像参照がない、またはscope／canonical pathのreadbackが成立していないため、実画像配置は引き続き`not_proven`とする。
 - Lightは別デバイスログイン競合で`/login`のまま。Light同一成果物との比較、実生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 動画アセット再照合
+
+- Heavyの`/creator`および`/printing`が参照するLight正規OSS動画URLを再取得し、いずれも`200 video/mp4`であることを確認した。
+- 既存のLight／Heavy実測で同一動画URL・同一内容を確認済みであり、失効poster／代替アセットへの差し替えは不要と判定した。
+- Lightは今回のfresh readbackでも`/login?redirect=/?`を表示したため、追加の本番比較は本人の再ログイン後に継続する。

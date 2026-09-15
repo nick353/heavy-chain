@@ -57,6 +57,14 @@ Light Chainの全画面、全カテゴリ、全主要導線、成果物フロー
 
 判定: Heavyの既存成果物receipt・永続化・Canvas再編集handoffはPASS。Light`/gallery` 404、データ件数差、同一runのsource sync／reconciliation／cleanup、全画面一致、logout→loginは未完了。Goalは継続。
 
+## 2026-09-15 動画アセット再照合
+
+- [x] インスピレーション動画のLight正規OSS URLを再取得し、失効状態でないことを確認する。
+- [x] Heavyの`/creator`および`/printing`が同じ正規動画URLを参照していることをソース照合する。
+- [x] 失効posterへの差し替えは不要と判定する（正規URLが`200 video/mp4`で取得可能）。
+
+判定: 失効外部動画は再現せず、Heavy側の既存正規アセット参照で充足。Lightのログイン状態が未成立のため、追加の実画面比較とlogout→login回帰は継続保留。
+
 ## 2026-09-14 正規ライブラリーroute再特定と一括操作parity
 
 - [x] Lightアカウントメニューから正規ライブラリーroute`/asset-center`を実測する。
