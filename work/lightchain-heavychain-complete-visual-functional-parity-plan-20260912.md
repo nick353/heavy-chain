@@ -2445,3 +2445,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 認証済みCompanionで実成果物を使ったprovider receipt／source sync／reconciliation／cleanupと保存・再表示・再利用
 
 判定: ローカルライフサイクル契約はPASS。production同一runの実成果物証跡はLight再ログイン待ちのため未完了。
+### 2026-09-15 Heavyライブラリー→Canvas handoff再確認（未証明）
+
+- [x] Heavyライブラリーの先頭カードをプレビューし、Canvas handoff URLへの遷移を確認
+- [x] Canvasのブランド、保存、権利確認、編集操作群を確認
+- [x] 追加待機後もCanvas画像オブジェクトが0件であることをfresh DOM／diagnosticで確認
+- [ ] artifact scope／canonical storage path／認証済みgatewayを切り分け、実画像復元・選択状態を確認
+- [ ] Light再ログイン後に同一成果物のLight→Heavy handoff、保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanupを確認
+
+判定: handoffルート遷移はPASSだが、Canvasへの実画像配置は今回`not_proven`。Goalは継続。

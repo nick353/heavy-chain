@@ -4516,3 +4516,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `test:provider-persistence-readback` 14/14、`test:library-canvas-handoff` 9/9、`test:canvas-save-recovery` 23/23、`test:generated-image-identity` 8/8、`test:gallery-download-boundary` 2/2を実行し、provider receipt保持、保存前readback、同一成果物のCanvas／Gallery handoff、重複抑止、再読込復旧、ダウンロード境界をPASSした。
 - これらはコード契約とローカル／モック境界の証跡であり、Light本番とHeavy本番の同一runによるprovider receipt、source sync、reconciliation、cleanupを証明するものではない。
 - Light本番の認証競合でCompanionが`/login`へ戻っているため、実成果物を使う次工程（プレビュー、保存、再表示、再利用、実生成）は本人の再ログイン後に継続する。
+## 2026-09-15 Heavyライブラリー→Canvas handoff再確認（未証明）
+
+- Heavyのログイン済み`/asset-center`で先頭カードの`プレビュー`を実クリックし、`Canvasへ送る`を実クリックした。URLは`/canvas/new?sourceArtifactId=local-b9c3fbda-6b36-4a29-bad3-acdb8e33c627`へ遷移した。
+- Canvasはブランド表示、保存、権利確認チェック、Canvas操作群を表示したが、5秒追加待機後のfresh DOMで`canvasRenderState.totalImageObjects=0`、`loadedImageObjects=0`、画像要素0件だった。画面上にも画像配置を確認できなかったため、今回のhandoffは`not_proven`と判定する。
+- 既存のローカル契約テストはPASSしているが、現行本番のこのアーティファクトでは実画像復元を証明できなかった。原因切り分け（artifact scope／canonical storage path／認証済みgateway readback）が必要で、外部送信・生成・権利確認チェック・保存クリックは行っていない。
+- Light側は別デバイスログイン競合で`/login`のため、同一成果物によるLight→Heavy比較は再ログイン後に再実施する。
