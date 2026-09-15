@@ -2435,3 +2435,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] ユーザー操作によるLight再ログイン後、カードプレビュー、保存・再表示・再利用、logout→login回帰を再開
 
 判定: 現在の実機認証セッションはLight側で失効しており、本人ログインが必要。これは初回の再認証待ちであり、Goalは継続。
+### 2026-09-15 成果物ライフサイクルのローカル契約検証
+
+- [x] provider persistence/readback契約 14/14
+- [x] library／Canvas handoff契約 9/9
+- [x] Canvas save/recovery/view persistence契約 23/23
+- [x] generated image identity契約 8/8
+- [x] Gallery download boundary契約 2/2
+- [ ] 認証済みCompanionで実成果物を使ったprovider receipt／source sync／reconciliation／cleanupと保存・再表示・再利用
+
+判定: ローカルライフサイクル契約はPASS。production同一runの実成果物証跡はLight再ログイン待ちのため未完了。

@@ -4511,3 +4511,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightのライブラリーカードを実クリック確認しようとした際、Light本番が「別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました」と表示した。
 - 通知を閉じた後、Lightは`/login`のアカウントID・パスワード入力画面へ遷移した。現在のCompanionセッションは認証済みとは証明できないため、認証情報入力・ログイン操作は行わず、タブをhandoff状態として保持した。
 - これはLight正本のカードプレビュー、Light／Heavy同一成果物による保存・再表示・再利用、logout→login回帰を続行するための人間操作待ちである。Heavy側の既存実装確認とローカル検証は継続可能。
+## 2026-09-15 成果物ライフサイクルのローカル契約検証
+
+- `test:provider-persistence-readback` 14/14、`test:library-canvas-handoff` 9/9、`test:canvas-save-recovery` 23/23、`test:generated-image-identity` 8/8、`test:gallery-download-boundary` 2/2を実行し、provider receipt保持、保存前readback、同一成果物のCanvas／Gallery handoff、重複抑止、再読込復旧、ダウンロード境界をPASSした。
+- これらはコード契約とローカル／モック境界の証跡であり、Light本番とHeavy本番の同一runによるprovider receipt、source sync、reconciliation、cleanupを証明するものではない。
+- Light本番の認証競合でCompanionが`/login`へ戻っているため、実成果物を使う次工程（プレビュー、保存、再表示、再利用、実生成）は本人の再ログイン後に継続する。
