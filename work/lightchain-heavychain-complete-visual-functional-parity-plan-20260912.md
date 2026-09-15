@@ -2427,3 +2427,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 全カテゴリのカード内部操作、成果物の保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: ライブラリーカテゴリ切替とカード操作の主要UIはPASS。データライフサイクル、全画面parity、logout→login回帰は未完了。
+### 2026-09-15 Companionログイン競合によるLight再認証待ち
+
+- [x] Lightカード操作の直前に認証状態をfresh readback
+- [x] 別デバイスログイン競合によるLightの`/login`遷移を確認
+- [x] 認証情報を取得・保存・入力せず、Companionタブをhandoff状態で保持
+- [ ] ユーザー操作によるLight再ログイン後、カードプレビュー、保存・再表示・再利用、logout→login回帰を再開
+
+判定: 現在の実機認証セッションはLight側で失効しており、本人ログインが必要。これは初回の再認証待ちであり、Goalは継続。

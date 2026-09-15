@@ -4506,3 +4506,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `30c702b`をpushし、Zeabur deployment `6aa88dca9f9bd1aa614830d0`が`RUNNING`であることを確認した。Heavyを同一ログイン済みCompanionタブで再読込し、`履歴アップロード`の初期選択、カード操作の縦三点表示をfresh DOM／screenshotで確認した。
 - typecheck、lint、関連route tests 19/19、build（2550 modules）はPASS。データ件数・画像内容はLightとHeavyでアカウント／データソースが異なるため、UI parityとは分離した。
 - カードのコピー、ダウンロード、削除、外部送信、生成、権利確認は行っていない。成果物のprovider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰は未完了。
+## 2026-09-15 Companionログイン競合によるLight再認証待ち
+
+- Lightのライブラリーカードを実クリック確認しようとした際、Light本番が「別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました」と表示した。
+- 通知を閉じた後、Lightは`/login`のアカウントID・パスワード入力画面へ遷移した。現在のCompanionセッションは認証済みとは証明できないため、認証情報入力・ログイン操作は行わず、タブをhandoff状態として保持した。
+- これはLight正本のカードプレビュー、Light／Heavy同一成果物による保存・再表示・再利用、logout→login回帰を続行するための人間操作待ちである。Heavy側の既存実装確認とローカル検証は継続可能。
