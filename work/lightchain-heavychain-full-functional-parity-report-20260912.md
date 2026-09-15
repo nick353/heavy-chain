@@ -4486,3 +4486,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 同一のログイン済みCompanionタブを再読込し、fresh DOM／screenshotで告知バナー、`線画の実写化`、主要入力項目、AI生成、生成履歴を確認した。未生成時の黒い右側プレースホルダーは表示されなくなった。
 - typecheck、lint、関連route tests 19/19、build（2550 modules）はPASS。初回表示にはHeavy固有のワークスペース初期化待ちがあり、追加待機後に本画面へ到達したため、初期化安定性は継続確認とする。
 - 入力後・生成後の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、残りの全画面・全導線は未完了。
+## 2026-09-15 Light正本カテゴリ・アカウント・履歴route readback
+
+- ログイン済みCompanionタブでLight本番トップを再読込し、`おすすめ`、`企画デザインツール`、`AIフィッティング`、`グラフィックツール`のカテゴリタブを確認した。企画デザインカテゴリではデザインワークスペース、インスピレーション、ラボ、企画、素材シミュレーション、線画実写化、色変更、ベクター化、カスタムスタイルを表示した。
+- Lightのavatarメニューを実クリックし、`マイアカウント`、`デザインドキュメント`、`ライブラリー`、`チーム管理`、透かし表示、`ログアウト`を確認した。ログアウトは実行していない。
+- Lightの推測URL `/history` は404だった。一方Heavyの`/history`は生成履歴、`/gallery`、`/jobs`、`/lightchain`への再開導線を表示したため、Lightの履歴は正規導線／URLを追加特定する必要がある。これはHeavyの実装不具合と断定せず、route scope差として記録する。
+- 生成、upload、外部AI送信、権利確認、削除、ログアウトは行っていない。provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、成果物の保存・再表示・再利用は未完了。

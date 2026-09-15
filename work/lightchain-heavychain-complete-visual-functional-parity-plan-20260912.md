@@ -2398,3 +2398,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面parity
 
 判定: `/tools/line-draft-to-tile`未生成状態の主要表示差分はPASS。初期化遅延、入力後・生成後および計画全体の完了条件は未達のためGoalは継続。
+### 2026-09-15 Light正本カテゴリ・アカウント・履歴route readback
+
+- [x] Light本番の4カテゴリタブと企画デザインカテゴリ内の主要カードを実操作確認
+- [x] Lightのavatarメニューとライブラリー導線を確認（ログアウトは未実行）
+- [x] Lightの推測URL `/history` が404であること、Heavyの`/history`が履歴・Gallery・Jobs・再開導線を持つことを確認
+- [ ] Lightの履歴に到達する正規導線／URLを特定し、Heavyとのscope差を仕様化
+- [ ] 同一成果物によるGallery／History／Jobsの保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: Lightのカテゴリ・アカウントメニューはreadback済み。履歴の正規URLは未特定で、成果物ライフサイクルと計画全体の完了条件は未達。
