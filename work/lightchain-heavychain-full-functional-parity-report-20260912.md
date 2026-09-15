@@ -4499,3 +4499,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `f7ff7f1`をpushし、Zeabur deployment `6aa88c0c9f9bd1aa61483083`が`RUNNING`であることを確認した。Heavyを同一ログイン済みCompanionタブで再読込し、fresh DOM／screenshotで`履歴アップロード`選択とパンくずを確認した。
 - typecheck、lint、関連route tests 19/19、build（2550 modules）はPASS。LightとHeavyの保存データ件数・画像内容はアカウント／データソース差があるため、UI parityとは分離して扱う。
 - provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、成果物の保存・再表示・再利用、logout→login回帰は未完了。
+## 2026-09-15 Light／Heavyライブラリーカテゴリ切替・カード操作parity修正
+
+- Light本番`/asset-center`で`生成履歴`を実クリックし、active状態、パンくず、画像カード、`プレビュー`、`ボードにコピー`、右端の縦三点操作を確認した。
+- Heavyでも同じカテゴリ切替を確認し、カード右端が文字`詳細`だったため、`MoreVertical`アイコン＋アクセシブルな`詳細`ラベルへ修正した。操作の選択動作は維持した。
+- `30c702b`をpushし、Zeabur deployment `6aa88dca9f9bd1aa614830d0`が`RUNNING`であることを確認した。Heavyを同一ログイン済みCompanionタブで再読込し、`履歴アップロード`の初期選択、カード操作の縦三点表示をfresh DOM／screenshotで確認した。
+- typecheck、lint、関連route tests 19/19、build（2550 modules）はPASS。データ件数・画像内容はLightとHeavyでアカウント／データソースが異なるため、UI parityとは分離した。
+- カードのコピー、ダウンロード、削除、外部送信、生成、権利確認は行っていない。成果物のprovider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰は未完了。

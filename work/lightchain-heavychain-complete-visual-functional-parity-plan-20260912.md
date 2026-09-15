@@ -2417,3 +2417,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 保存データの正本同期・同一成果物による保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: `/asset-center`の初期選択UIはPASS。ユーザーデータ差、成果物ライフサイクル、全画面parity、logout→login回帰は未完了。
+### 2026-09-15 Light／Heavyライブラリーカテゴリ切替・カード操作parity修正
+
+- [x] Lightの`生成履歴`カテゴリ切替とカード操作を実クリック確認
+- [x] Heavyのカード右端操作をLightの縦三点アイコンへ修正
+- [x] typecheck、lint、関連route tests 19/19、build、pushを確認
+- [x] Zeabur deployment `6aa88dca9f9bd1aa614830d0`の`RUNNING`を確認し、Companion同一ログイン済みタブで再読込
+- [x] Heavyの初期選択、activeカテゴリ、縦三点カード操作をfresh DOM／screenshotで確認
+- [ ] 全カテゴリのカード内部操作、成果物の保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: ライブラリーカテゴリ切替とカード操作の主要UIはPASS。データライフサイクル、全画面parity、logout→login回帰は未完了。
