@@ -4919,7 +4919,7 @@ export function LightchainWorkbenchPage() {
                       const nextCopy = workspaceTabCopy[tab];
                       setWorkspaceText(workspaceTextDrafts[tab] ?? nextCopy?.prompt ?? '');
                     }}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${tab === 'インスピレーション' ? 'w-[140px]' : tab === 'AIグラフィックデザイン' ? 'w-[164px]' : 'w-20'} ${currentWorkspaceTab === tab ? 'bg-[#3b4247] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${tab === 'インスピレーション' ? 'w-[140px]' : tab === 'AIグラフィックデザイン' ? 'w-[176px]' : 'w-20'} ${currentWorkspaceTab === tab ? 'bg-[#3b4247] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>
@@ -4951,7 +4951,7 @@ export function LightchainWorkbenchPage() {
             )}
 
             <div className={`${workspaceStyle.kind === 'marketing' ? 'mt-6 min-h-[232px] border-[#0bcabc]' : workspaceStyle.kind === 'agent' ? 'mt-6 min-h-[160px] border-cyan-300/80' : 'mt-4 min-h-[160px] border-cyan-300/80'} ${workspaceStyle.kind === 'agent' ? 'ml-[36px] w-[720px]' : ''} rounded-2xl border bg-[#1a1f22]/95 p-3 shadow-[0_0_28px_rgba(101,211,207,0.18)]`}>
-              <div className={`${workspaceStyle.kind === 'marketing' ? 'grid min-h-[206px] grid-cols-[120px_1fr_52px]' : 'grid min-h-[136px] grid-cols-[1fr_52px]'} items-center gap-4 rounded-2xl bg-[#1d2326] ${workspaceStyle.kind === 'agent' ? 'px-0' : 'px-4'} text-left`}>
+              <div className={`${workspaceStyle.kind === 'marketing' ? 'grid min-h-[206px] grid-cols-[120px_1fr_52px]' : workspaceStyle.kind === 'agent' ? 'relative grid min-h-[136px] grid-cols-1' : 'grid min-h-[136px] grid-cols-[1fr_52px]'} items-center gap-4 rounded-2xl bg-[#1d2326] ${workspaceStyle.kind === 'agent' ? 'px-0' : 'px-4'} text-left`}>
                 {workspaceStyle.kind === 'marketing' && (
                   <button
                     type="button"
@@ -4991,7 +4991,7 @@ export function LightchainWorkbenchPage() {
                   onClick={handleWorkspaceStyleGenerate}
                   disabled={specialProviderGenerationLocked}
                   data-testid="lightchain-workspace-generate"
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-[#253034] text-[#65d3cf] transition hover:bg-[#65d3cf] hover:text-neutral-950"
+                  className={`${workspaceStyle.kind === 'agent' ? 'absolute right-3 top-1/2 -translate-y-1/2' : 'relative'} flex h-11 w-11 items-center justify-center rounded-full bg-[#253034] text-[#65d3cf] transition hover:bg-[#65d3cf] hover:text-neutral-950`}
                   aria-label="AI生成"
                 >
                   <ArrowRight className="h-5 w-5 -rotate-45" />

@@ -2834,3 +2834,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
 
 判定: `/agent`初期画面の主要geometry差分を解消する最終調整。成果物フローと全画面監査は引き続き未完了。
+
+### 2026-09-17 `/agent` textarea overlay geometry修正
+
+- [x] Lightのtextareaが送信ボタン用の固定列で縮まないことを実測
+- [x] Heavyのagent入力を単一列＋送信ボタンoverlayへ変更し、Lightの`694px`入力幅へ反映
+- [x] AIグラフィックデザインタブ幅を`176px`へ調整し、折返しを解消
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、git diff checkをPASS
+- [ ] 本番deploy後にHeavy`/agent`の最終geometryを再照合
+- [ ] 入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
+
+判定: 入力欄の幅契約をLight正本へ合わせるローカル修正は完了。本番反映後のfresh readbackと成果物フロー確認が残る。
