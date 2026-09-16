@@ -850,8 +850,21 @@ export function CanvasEditorPage() {
       ? artifact.imageUrl
       : null;
     if (!source) {
+      if (canvasDebugEnabled) {
+        libraryHandoffDebugRef.current = { ...libraryHandoffDebugRef.current, phase: 'source_missing' };
+      }
       toast.error('ライブラリー素材の保存先を復元できません');
       return;
+    }
+
+    if (canvasDebugEnabled) {
+      libraryHandoffDebugRef.current = {
+        ...libraryHandoffDebugRef.current,
+        phase: 'load_start',
+        sourceKind: /^data:/i.test(source) ? 'data_url' : /^https?:/i.test(source) ? 'http_url' : 'storage_path',
+        canonicalSourcePresent: Boolean(canonicalSource),
+        fallbackSourcePresent: Boolean(fallbackSource),
+      };
     }
 
     void (async () => {
@@ -864,6 +877,15 @@ export function CanvasEditorPage() {
           image = await loadLibraryCanvasImage(fallbackSource);
         }
         if (cancelled) return;
+
+        if (canvasDebugEnabled) {
+          libraryHandoffDebugRef.current = {
+            ...libraryHandoffDebugRef.current,
+            phase: 'image_loaded',
+            naturalWidth: image.naturalWidth || image.width || 0,
+            naturalHeight: image.naturalHeight || image.height || 0,
+          };
+        }
 
         const sourceWorkspace = typeof artifact.metadata.sourceWorkspace === 'string'
           ? artifact.metadata.sourceWorkspace
@@ -922,6 +944,13 @@ export function CanvasEditorPage() {
         selectObject(newId);
         toast.success('ライブラリー素材をCanvasへ追加しました');
       } catch (error) {
+        if (canvasDebugEnabled) {
+          libraryHandoffDebugRef.current = {
+            ...libraryHandoffDebugRef.current,
+            phase: 'load_error',
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
         if (!cancelled) toast.error(error instanceof Error ? error.message : 'ライブラリー素材を復元できませんでした');
       }
     })();
