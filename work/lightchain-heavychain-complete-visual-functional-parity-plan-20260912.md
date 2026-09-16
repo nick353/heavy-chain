@@ -2763,3 +2763,30 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 入力後・プレビュー後・生成後・保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致
 
 判定: `/tools/fabric`の主要レイアウト座標は差が約2px以内となり`UI_PASS`。ただしLightのdisabled権限表示とHeavyの本人確認ゲートは状態契約が異なるため、完全parityと機能成果物フローは`NOT_PROVEN`。
+
+### 2026-09-17 Light／Heavy 企画ワークスペース入口再確認
+
+- [x] Light本番の企画デザインカテゴリをログイン済みCompanionで表示し、企画ワークスペースカードの親要素（`data-track-tool-item-path="/agent"`）を特定
+- [x] Lightの企画ワークスペース親要素をsemantic clickし、同じカードのインスピレーション親要素も一回ずつ実クリック
+- [x] Lightの企画ワークスペース親要素をCompanionのtrusted `visual.click`でも一回だけ実クリックし、15秒待機後に同じカードが残ることを確認
+- [x] いずれもdispatchは一回、visual readbackは成功したが、LightのURL・画面表示は`/`のままで、カードクリック遷移は`NOT_PROVEN`として記録
+- [x] 表示カードに記載された正規`/agent`をLightの別Companionタブで直接開き、15秒待機後も画面が空（semantic要素0、黒画面）であることを確認
+- [x] Lightの企画カテゴリ9カードについて、表示名・alias・正規pathを一覧readback（`/designProduction`、`/creator`、`/flow/orientedDesign`、`/agent`、`/tools/fabric`、`/tools/line-draft-to-tile`、`/editor/changeColor`、`/tools/svg-convert`、`/model-base/style`）
+- [x] Lightの`/creator`も別Companionタブで直接開き、semantic要素0・黒画面となることを確認し、`/agent`だけのHeavy実装差分と混同しないよう記録
+- [x] Heavyは同カテゴリから企画ワークスペースを実クリックし、`/agent`へ遷移、`今日は何から始めますか?`、4タブ、サンプルカード、企画履歴をfresh semantic readback
+- [ ] Lightのカードクリックが遷移しない原因（本番側イベント／セッション状態／Companion入力差）を正規UIで切り分け、Lightの実画面を取得
+- [ ] Lightの実画面取得後にHeavyの`/agent`内部UIを同一viewportで一致させ、入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanupを確認
+
+判定: Heavyの`/agent`ルーティングと内部初期UIは確認済み。Lightのカードクリックと`/agent`直接表示が現時点で成立せず、入口・内部画面のLight正本証拠が不足しているため、完全parityは未完了。Heavyの画面をLightの空画面へ合わせる変更は行わない。
+
+### 2026-09-17 Lightchainホーム内部scroll parity修正・本番readback
+
+- [x] Light正本とHeavy本番の企画カードfresh geometryを比較し、Heavyだけ右スクロールバー分の幅差（448.5px）と列位置差を特定
+- [x] Lightchain routeのHeavy shellを`header + flex内部scroll + scrollbar-hide`構造へ修正し、通常Heavy画面のscroll挙動は変更しない
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、build、`git diff --check`をPASS
+- [x] Zeabur deployment `6aab03eb05af289f92f9783f`を`docker` planでdeployし、`RUNNING`をfresh readback
+- [x] 同じログイン済みCompanionタブをreloadし、Heavy企画カテゴリ9カードのhrefとgeometryがLightと一致（カード幅450px、列x=40/498/956/1414、y=314/444/574）することをfresh semantic／visual readback
+- [ ] Lightの実カードクリック遷移不成立を解消／正規画面取得し、カード内部UIと成果物フローを比較
+- [ ] provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
+
+判定: Heavyホームのカード外形・列位置・9ルート対応は`UI_PASS`。Lightの深い正規画面がCompanion fresh tabでは空画面となるため、カード内部と成果物の完全parityは継続未完了。

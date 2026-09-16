@@ -109,7 +109,7 @@ export function Layout() {
       {showSidebar && !isLightchainRoute && <KeyboardShortcuts shortcuts={defaultShortcuts} />}
       
       {showSidebar ? (
-        <div className="dark min-h-screen bg-[#070b0d] text-white">
+        <div className={`dark min-h-screen bg-[#070b0d] text-white ${isLightchainRoute ? 'flex h-screen flex-col overflow-hidden' : ''}`}>
           <header className={`sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl ${isLightchainRoute ? 'h-[50px]' : ''} ${isLightchainPrintRoute ? 'lightchain-route-header' : ''}`}>
             <div className={`mx-auto flex items-center justify-between gap-4 lightchain-route-header-inner ${isLightchainRoute ? 'h-[49px] max-w-none px-6' : 'h-[70px] max-w-[1800px] px-4 sm:px-6 lg:px-8'}`}>
               <div className={`flex items-center ${isLightchainRoute ? 'gap-4' : 'gap-7'}`}>
@@ -238,7 +238,7 @@ export function Layout() {
             )}
           </header>
 
-          <main id="main-content" className={`${isLightchainPrintRoute ? 'min-h-[calc(100vh-48px)] bg-[#070b0d]' : isLightchainRoute ? 'min-h-[calc(100vh-50px)] bg-[#171b1c]' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
+          <main id="main-content" className={`${isLightchainPrintRoute ? 'min-h-[calc(100vh-48px)] bg-[#070b0d]' : isLightchainRoute ? 'min-h-0 flex-1 overflow-y-auto scrollbar-hide bg-[#171b1c]' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
