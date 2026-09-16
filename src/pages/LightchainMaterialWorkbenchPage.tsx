@@ -22,6 +22,7 @@ import {
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Button, ImageCompare } from '../components/ui';
+import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import { Modal } from '../components/ui/Modal';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { PrintingCompositionStage } from '../components/workspace/PrintingCompositionStage';
@@ -6499,19 +6500,11 @@ function LightchainMaterialWorkbenchSession() {
                     <option>横長 16:9</option>
                   </select>
                   {!providerRightsConfirmed ? (
-                    <button
-                      type="button"
-                      data-testid="lightchain-fabric-generate"
-                      onClick={() => {
-                        pendingRightsGenerationRef.current = true;
-                        setRightsConfirmationDraft(false);
-                        setRightsConfirmationOpen(true);
-                      }}
-                      disabled={isGenerating}
-                      className="absolute right-0 top-[25px] h-[40px] w-[288px] rounded-md bg-[#343a3d] px-4 text-sm font-semibold text-white/65 transition hover:bg-[#40484c] hover:text-white disabled:cursor-wait disabled:opacity-50"
-                    >
-                      権利を確認してAI生成
-                    </button>
+                    <PermissionLockedButton
+                      testId="lightchain-fabric-generate"
+                      marginClass="absolute right-0 top-[25px]"
+                      className="h-[40px] w-[288px] rounded-md px-4"
+                    />
                   ) : (
                     <Button
                       data-testid="lightchain-fabric-generate"
