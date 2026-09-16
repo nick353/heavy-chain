@@ -33,8 +33,8 @@ export function FashionStudioDetailPage() {
         data-testid="fashion-studio-detail-upload"
       >
         <Upload className="h-8 w-8 text-white" />
-        <span className="relative top-[7px] mt-5 text-sm leading-[21px] text-neutral-300">ここをクリックまたはドラッグして画像を追加</span>
-        <span className="relative top-[7px] mt-1 text-xs leading-[17.14px] text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</span>
+        <p className="relative top-[8px] mt-5 text-sm leading-[21px] text-neutral-300">ここをクリックまたはドラッグして画像を追加</p>
+        <p className="relative top-[8px] mt-1 text-xs leading-[17.14px] text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</p>
         <input className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" />
       </label>
     </main>
