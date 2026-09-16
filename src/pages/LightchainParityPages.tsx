@@ -392,7 +392,7 @@ export function LightchainPrintingPage() {
         .lightchain-printing-parity input[type="file"] { color: rgba(255, 255, 255, 0.7); }
       `}</style>
       <div className="relative mx-auto w-full px-4 py-4 sm:px-5 lg:px-4">
-        <aside className="absolute left-4 top-4 hidden w-20 flex-col gap-3 lg:flex" aria-label="ツールバー">
+        <aside className="hidden" aria-label="ツールバー">
           {[
             ['ツールバー', Grid2X2],
             ['デザインツール', WandSparkles],
@@ -404,14 +404,14 @@ export function LightchainPrintingPage() {
             return <div key={label as string} className={`flex min-h-20 flex-col items-center justify-center rounded-xl border border-white/10 bg-[#252a2d] px-1 text-center text-[10px] leading-4 ${label === 'グラフィックデザインツール' ? 'text-cyan-300' : 'text-neutral-400'}`}><ToolIcon className="mb-1 h-7 w-7" /><span>{label as string}</span></div>;
           })}
         </aside>
-        <div className="relative lg:pl-24">
+        <div className="relative">
         <div className="absolute inset-x-0 top-4 z-10 flex items-center justify-end gap-4">
           <div className="hidden">
             <p className="text-xs font-semibold tracking-[0.25em] text-neutral-500">LIGHTCHAIN AI / GRAPHIC TOOLS</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">プリントイメージ</h1>
             <p className="mt-2 max-w-2xl text-sm text-neutral-500">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p>
           </div>
-          <button type="button" className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm text-neutral-700 transition hover:border-neutral-400" onClick={() => setHistoryOpen((open) => !open)}>
+          <button type="button" className="absolute right-6 top-4 h-8 w-[102px] rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-sm text-neutral-700 transition hover:border-neutral-400" onClick={() => setHistoryOpen((open) => !open)}>
             生成履歴
           </button>
         </div>
@@ -423,15 +423,15 @@ export function LightchainPrintingPage() {
             ['線画の実写化', '/tools/line-draft-to-tile'],
             ['平絵生成', '/tools/line'],
           ].map(([label, href]) => (
-            <button key={label} type="button" className={`rounded-lg px-4 py-2 text-xs font-semibold transition ${href === '/tools/printing' ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`} onClick={() => navigate(href)}>{label}</button>
+            <button key={label} type="button" className={`rounded-sm px-1 py-1 text-[15px] leading-[23px] font-medium transition ${href === '/tools/printing' ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`} onClick={() => navigate(href)}>{label}</button>
           ))}
         </nav>
 
         <div className="mt-0 grid gap-4 lg:grid-cols-[minmax(0,596px)_minmax(0,1fr)]">
-          <section className="relative h-[802px] min-h-0 overflow-hidden rounded-2xl bg-white p-4 pt-[68px] shadow-sm">
-            {printingBannerVisible && <div className="flex h-16 items-start justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2 text-base leading-6 text-amber-900">
-              <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<button type="button" className="underline" onClick={() => navigate('/designProduction')}>今すぐ体験</button></span>
-              <button type="button" aria-label="告知を閉じる" className="flex size-6 shrink-0 items-center justify-center rounded transition hover:bg-black/10" onClick={() => setPrintingBannerVisible(false)}>×</button>
+          <section className="relative h-[746px] min-h-0 overflow-hidden rounded-2xl bg-white p-4 pt-[68px] shadow-sm">
+            {printingBannerVisible && <div className="flex h-16 items-start gap-2 rounded-lg bg-amber-50 px-4 py-5 text-sm leading-5 text-amber-900">
+              <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<button type="button" className="ml-7 underline" onClick={() => navigate('/designProduction')}>今すぐ体験</button></span>
+              <button type="button" aria-label="告知を閉じる" className="hidden" onClick={() => setPrintingBannerVisible(false)}>×</button>
             </div>}
             <label className="mt-[18px] flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
               <input className="sr-only" type="file" accept="image/*" onChange={(event) => handleFile(event, 'base')} />
@@ -451,7 +451,7 @@ export function LightchainPrintingPage() {
 
           <aside className="space-y-4">
             <section className="flex min-h-[802px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#151a1c] p-5 text-center shadow-sm"><h2 className="text-xl font-bold text-white">プリントイメージ</h2><p className="mt-2 text-sm leading-[21px] text-neutral-400">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="mt-4 h-[340px] w-[605px] max-w-full rounded-lg object-cover" autoPlay controls muted playsInline aria-label="プリントイメージ動画" /></section>
-            <section className="rounded-2xl border border-white/10 bg-[#252a2d] p-5 shadow-sm"><h2 className="font-semibold">詳細設定</h2><p className="mt-3 text-sm text-neutral-400">配置・マスク・複数素材を使う場合はこちら。</p><button type="button" className="mt-4 w-full rounded-lg border border-white/10 px-4 py-2 text-sm text-neutral-300 hover:border-cyan-300/50" onClick={() => navigate('/lightchain/printing-image')}>高度な印刷ワークスペース</button></section>
+            <section className="hidden" aria-label="詳細設定"><h2 className="font-semibold">詳細設定</h2><p>配置・マスク・複数素材を使う場合はこちら。</p><button type="button" onClick={() => navigate('/lightchain/printing-image')}>高度な印刷ワークスペース</button></section>
           </aside>
         </div>
         {historyOpen && <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"><h2 className="font-semibold">生成履歴</h2><p className="mt-3 text-sm text-neutral-500">生成履歴はここに表示されます。</p><button type="button" className="mt-3 text-sm font-semibold text-neutral-700 underline" onClick={() => navigate('/history')}>履歴を開く</button></section>}

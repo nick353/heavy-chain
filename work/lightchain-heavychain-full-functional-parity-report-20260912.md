@@ -4747,3 +4747,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyにはサイドバー、可視の`告知を閉じる`、`画像比率`というaria label、`権利を確認してAI生成`が表示された。一方、Lightはサイドバーと閉じるボタンが可視ではなく、比率ラベルは`画像比率自動`、生成操作は`権限がありません`のdisabled表示だった。
 - 外部生成、素材アップロード、権利確認チェック、provider送信は行っていない。Companionのexact-tab leaseはreadback後に解放した。
 - 判定: 入力構造は`PASS`、初期権限表示・周辺シェル・告知表示・比率ラベルの完全一致は`NOT_PROVEN`。権利確認の自動承認・ゲート撤廃は実施しない。
+
+## 2026-09-17 `/tools/fabric` spacing修正・本番再読込
+
+- HeavyのLightchainロゴ、告知バナー、素材入力セクション、キーワードtextareaの位置・高さをLight実測に合わせて修正した。権利確認ゲートと実生成経路は維持した。
+- `npm run typecheck`、素材契約テスト28/28、UI境界テスト11/11、`npm run build`、`git diff --check`をPASS。commit `34b36d3`をpushし、Zeabur deployment `6aaaf8aa05af289f92f97727`の`RUNNING`を確認した。
+- 本番HeavyをCompanionで再読込し、Light／Heavyを同一viewportでfresh readbackした。h6は`222/220`、`478/476`、`734/732`、textareaは`787/785`、告知リンクは`(326,177)/(325.31,175)`、ロゴ幅は`124/125.75`で、主要レイアウト差は約2px以内だった。
+- Lightの生成操作は`権限がありません`、Heavyは`権利を確認してAI生成`であり、権利確認ゲートを自動承認・撤廃していない。アップロード、生成、外部送信、provider receiptは未実行。
+- 判定: `/tools/fabric`主要レイアウトは`UI_PASS`、権限状態の完全一致と入力後／生成後／成果物フローは`NOT_PROVEN`。provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。

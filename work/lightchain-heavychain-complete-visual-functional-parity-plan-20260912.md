@@ -2751,3 +2751,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 入力後・プレビュー後・生成後・保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致
 
 判定: Light／Heavyの主要入力構造は`PASS`だが、初期権限表示・周辺シェル・告知表示・比率ラベルに差分があり、`/tools/fabric`完全parityは`NOT_PROVEN`。権利確認を自動承認する変更は行わない。
+
+### 2026-09-17 `/tools/fabric` spacing修正・本番再読込
+
+- [x] HeavyのLightchainロゴ、告知バナー、素材入力セクション、キーワードtextareaの座標をLight実測へ調整
+- [x] 権利確認ゲートと実生成経路は維持し、権利確認の自動承認・アップロード・外部送信は行わない
+- [x] typecheck、素材契約テスト28/28、UI境界テスト11/11、build、`git diff --check`をPASS
+- [x] commit `34b36d3`をpushし、Zeabur deployment `6aaaf8aa05af289f92f97727`が`RUNNING`になったことを確認
+- [x] 同じCompanionログイン済みタブを本番再読込し、Light／Heavyのh6、textarea、告知リンク、ロゴ幅をfresh semantic・visual readback
+- [ ] `権限がありません`とHeavyの権利確認ボタンの利用権限判定差分を特定し、権利確認ゲートを自動承認せずに整合
+- [ ] 入力後・プレビュー後・生成後・保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致
+
+判定: `/tools/fabric`の主要レイアウト座標は差が約2px以内となり`UI_PASS`。ただしLightのdisabled権限表示とHeavyの本人確認ゲートは状態契約が異なるため、完全parityと機能成果物フローは`NOT_PROVEN`。
