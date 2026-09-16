@@ -423,8 +423,14 @@ export function CanvasEditorPage() {
   const confirmedCanvasFingerprintRef = useRef<string | null>(null);
   const canvasReadbackDebugRef = useRef<Record<string, unknown> | null>(null);
   const libraryHandoffDebugRef = useRef<Record<string, unknown> | null>(null);
+  const [, setLibraryHandoffDebugVersion] = useState(0);
   const [canvasPersistenceStatus, setCanvasPersistenceStatus] = useState<'unsaved' | 'loading' | 'saving' | 'verifying' | 'saved' | 'conflict' | 'failed'>('unsaved');
   const [canvasDebugResolution, setCanvasDebugResolution] = useState<unknown[]>([]);
+
+  const updateLibraryHandoffDebug = (next: Record<string, unknown> | null) => {
+    libraryHandoffDebugRef.current = next;
+    setLibraryHandoffDebugVersion((version) => version + 1);
+  };
 
   // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -822,13 +828,13 @@ export function CanvasEditorPage() {
 
   useEffect(() => {
     if (canvasDebugEnabled) {
-      libraryHandoffDebugRef.current = {
+      updateLibraryHandoffDebug({
         projectId: projectId ?? null,
         sourceArtifactId: sourceArtifactId ?? null,
         brandId: currentBrand?.id ?? null,
         userIdPresent: Boolean(user?.id),
         phase: projectId !== 'new' || !sourceArtifactId || !currentBrand?.id ? 'guard_return' : 'lookup',
-      };
+      });
     }
     if (projectId !== 'new' || !sourceArtifactId || !currentBrand?.id) return;
     if (importedLibraryArtifactRef.current === sourceArtifactId) return;
@@ -842,7 +848,7 @@ export function CanvasEditorPage() {
     const artifact = [...scopedArtifacts, ...activityArtifacts]
       .find((candidate) => candidate.id === sourceArtifactId);
     if (canvasDebugEnabled) {
-      libraryHandoffDebugRef.current = {
+      updateLibraryHandoffDebug({
         ...libraryHandoffDebugRef.current,
         phase: 'lookup_complete',
         scopedCount: scopedArtifacts.length,
@@ -850,7 +856,7 @@ export function CanvasEditorPage() {
         artifactFound: Boolean(artifact),
         artifactBrandId: artifact?.brandId ?? null,
         artifactScopeIdPresent: Boolean(artifact?.scopeId),
-      };
+      });
     }
     if (!artifact) return;
 
@@ -863,20 +869,20 @@ export function CanvasEditorPage() {
       : null;
     if (!source) {
       if (canvasDebugEnabled) {
-        libraryHandoffDebugRef.current = { ...libraryHandoffDebugRef.current, phase: 'source_missing' };
+        updateLibraryHandoffDebug({ ...libraryHandoffDebugRef.current, phase: 'source_missing' });
       }
       toast.error('ライブラリー素材の保存先を復元できません');
       return;
     }
 
     if (canvasDebugEnabled) {
-      libraryHandoffDebugRef.current = {
+      updateLibraryHandoffDebug({
         ...libraryHandoffDebugRef.current,
         phase: 'load_start',
         sourceKind: /^data:/i.test(source) ? 'data_url' : /^https?:/i.test(source) ? 'http_url' : 'storage_path',
         canonicalSourcePresent: Boolean(canonicalSource),
         fallbackSourcePresent: Boolean(fallbackSource),
-      };
+      });
     }
 
     void (async () => {
@@ -891,12 +897,12 @@ export function CanvasEditorPage() {
         if (cancelled) return;
 
         if (canvasDebugEnabled) {
-          libraryHandoffDebugRef.current = {
+          updateLibraryHandoffDebug({
             ...libraryHandoffDebugRef.current,
             phase: 'image_loaded',
             naturalWidth: image.naturalWidth || image.width || 0,
             naturalHeight: image.naturalHeight || image.height || 0,
-          };
+          });
         }
 
         const sourceWorkspace = typeof artifact.metadata.sourceWorkspace === 'string'
@@ -957,11 +963,11 @@ export function CanvasEditorPage() {
         toast.success('ライブラリー素材をCanvasへ追加しました');
       } catch (error) {
         if (canvasDebugEnabled) {
-          libraryHandoffDebugRef.current = {
+          updateLibraryHandoffDebug({
             ...libraryHandoffDebugRef.current,
             phase: 'load_error',
             error: error instanceof Error ? error.message : String(error),
-          };
+          });
         }
         if (!cancelled) toast.error(error instanceof Error ? error.message : 'ライブラリー素材を復元できませんでした');
       }
