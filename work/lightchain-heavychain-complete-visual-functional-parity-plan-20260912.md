@@ -2917,3 +2917,18 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Heavyとのカテゴリ選択後UI、生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup比較
 
 判定: Light`/creator`の未選択初期状態は`UI_PASS`。カテゴリメニューのLight側選択肢と選択後状態は`NOT_PROVEN`。
+
+### 2026-09-17 Light／Heavy `/creator`カテゴリメニュー・選択後状態の実操作比較
+
+- [x] Light本番のカテゴリトリガーを同一Companionタブでvisual proof付き一回クリックし、中央パネルを実際に開いた
+- [x] Lightの中央パネルで検索欄、`レディース／メンズ／女の子／男の子`タブ、`トップス／ボトムス／ワンピース/セットアップ`分類、カテゴリ項目群をfresh semantic・visual readback
+- [x] Lightの`ニット`をvisual proof付きで一回選択し、カテゴリパネルを維持したまま左側の選択表示と`画像／生地画像`入力タブへ変化することを確認
+- [x] Heavyの旧実装が4つの簡易ボタンだけでLightと不一致であることを同一viewportのfresh readbackで確認
+- [x] HeavyへLight準拠のカテゴリパネル、検索フィルタ、4分類タブ、3グループ、選択variant表示、選択後の入力タブを実装（commit `e73cc7c`, `5957fdd`）
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、`git diff --check`をPASS
+- [x] Zeabur deployment `6aab1b4805af289f92f97b0c`（plan `docker`）が`RUNNING`となったことを確認
+- [x] Heavy本番をCompanionで再読込後、カテゴリパネルを一回開き、`ニット`を一回選択。`レディース` selected、`ニット` pressed、`画像／生地画像`ボタン、`レディース・トップス・ニット編み`をfresh semantic readback
+- [ ] LightとHeavyの各4分類タブ・全カテゴリ項目を一つずつ選択して選択後状態を比較
+- [ ] `/creator`のアップロード、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: `/creator`カテゴリ入口・カテゴリパネル・代表カテゴリ選択後の画面構造は`UI_PASS`。全カテゴリの選択状態、外部生成、成果物ライフサイクルは未完了。
