@@ -2977,7 +2977,8 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavyのタブ群へLightと同じ`tablist`／`tab`／`aria-selected`契約を追加
 - [x] Heavyの告知導線をLightと同じSPA`Link`へ、AI生成をLightと同じ`submit`ボタンへ調整。スポット／全体にも選択状態を付与（commit `33d2ab3`）
 - [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、`git diff --check`をPASS
-- [ ] デプロイ`6aab2232dc088f64d1813c22`の`RUNNING`到達後、Heavy本番を再読込しsemantic／visual差分をfresh確認
+- [x] 5.3GBの未追跡QA成果物を含む元ワークツリーを本番ビルドコンテキストにせず、commit `3abb5b3`だけを含む126MBのクリーンステージングから再デプロイを開始（deployment `6aab2465dc088f64d1813c37`、plan `docker`）
+- [ ] デプロイ`6aab2465dc088f64d1813c37`の`RUNNING`到達後、Heavy本番を再読込しsemantic／visual差分をfresh確認。現時点のHeavy fresh readbackは旧semantic（タブ・リンク・AI生成がbutton）で、新修正の本番反映を未確認
 - [ ] Printingの入力アップロード、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
 
-判定: `/tools/printing`のLight実測差分を特定し、Heavy側の表示・操作semantic修正とローカル検証を完了。最新本番反映と成果物フローは未完了。
+判定: `/tools/printing`のLight実測差分を特定し、Heavy側の表示・操作semantic修正とローカル検証を完了。クリーンデプロイは`BUILDING`後`DEPLOYING`で継続中、最新本番反映と成果物フローは未完了。
