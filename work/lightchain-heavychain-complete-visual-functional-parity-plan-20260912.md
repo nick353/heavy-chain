@@ -2945,3 +2945,16 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/creator`の全カテゴリ選択後UI、アップロード、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: Lightの4対象タブ差分を取得し、Heavy側のカテゴリデータ修正とローカル検証・デプロイ開始まで完了。本番反映後の再読込確認と成果物フローは未完了。
+
+### 2026-09-17 Heavy `/creator`全4対象タブ本番fresh readback
+
+- [x] Zeabur deployment `6aab1e6605af289f92f97b65` が `RUNNING` であることをCLI fresh readback
+- [x] Heavy `/creator`を同一Companionタブで再読込し、タイトルが`Heavy Chain | AI制作ワークスペース`へ更新されたことを確認
+- [x] Heavy`レディース`でLight実測どおりトップス14、ボトムス4、ワンピース/セットアップ4項目をsemantic readback
+- [x] Heavy`メンズ`を1回semantic clickし、トップス12、ボトムス3、ワンピース/セットアップ1項目をfresh readback
+- [x] Heavy`女の子`を1回semantic clickし、レディースと同じ全カテゴリ構成をfresh readback
+- [x] Heavy`男の子`を1回semantic clickし、メンズと同じ縮約カテゴリ構成をfresh readback
+- [x] 4対象タブで`権限がありません` disabled状態を維持し、外部生成・送信を実行していないことを確認
+- [ ] 各カテゴリ項目の選択後表示、検索フィルタ、画像／生地画像入力、生成・保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: Heavyの4対象タブの項目構成はLight実測と一致し、本番`UI_PASS`。成果物ライフサイクルと外部プロバイダー完了証跡は未完了。
