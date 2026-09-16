@@ -3008,3 +3008,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Agentの添付入力、生成、保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
 
 判定: Agent初期UI差分を特定し、修正とローカル検証はPASS。本番deploymentは現在`DEPLOYING`のため、post-deploy readbackと成果物フローは未完了。
+
+追記: 2026-09-17のfresh deployment readbackでもdeploymentは`DEPLOYING`継続。Heavy `/agent`は旧状態（展開サイドバー、生成control名`AI生成`）を返しており、修正版の本番反映は未確認。
