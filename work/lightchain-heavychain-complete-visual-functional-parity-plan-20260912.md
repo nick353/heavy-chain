@@ -2855,7 +2855,9 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavy `/creator`をLightの権限状態へ合わせ、未選択時は`PermissionLockedButton`を表示するよう修正
 - [x] Heavy左右パネルのmin-height制約をLightのviewport内レイアウトへ近づけ、見出しのsemantic構造を調整
 - [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、git diff checkをPASS
-- [ ] 本番deploy後に`/creator`の同一viewport visual／semantic再照合
+- [x] Zeabur deployment `6aab133105af289f92f97a25`を`RUNNING`へ到達させ、Heavy`/creator`をfresh reload
+- [x] Heavy本番で`権限がありません` disabled button（`creator-permission`）をfresh semantic readbackし、Light正本の権限ロック状態と一致確認
+- [x] Heavy本番の中央見出しを`h5`へ調整し、viewport内の左右パネル高さをvisual readback
 - [ ] `/creator`のカテゴリ選択、履歴、キーワード辞典、生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
 
-判定: `/creator`のLight正本との差分を実画面で特定し、権限状態と主要レイアウトをローカル修正済み。本番反映と成果物フロー確認が残る。
+判定: `/creator`の権限状態と主要レイアウト調整は本番反映済み。残りはカテゴリ選択以降の成果物フロー、保存／再利用、全画面監査。
