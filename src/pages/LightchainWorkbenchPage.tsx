@@ -1344,7 +1344,10 @@ export function LightchainWorkbenchPage() {
   const [lightchainGenerationError, setLightchainGenerationError] = useState<string | null>(null);
   const [resumeInputReadback, setResumeInputReadback] = useState<'restored' | 'unavailable' | null>(null);
   const [workspaceText, setWorkspaceText] = useState('');
-  const [agentSidebarOpen, setAgentSidebarOpen] = useState(true);
+  // Light Chain opens the Agent workspace with the compact rail visible.
+  // Keep the Heavy implementation on the same initial state; users can still
+  // expand the full project sidebar with the rail control.
+  const [agentSidebarOpen, setAgentSidebarOpen] = useState(false);
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
@@ -4992,7 +4995,7 @@ export function LightchainWorkbenchPage() {
                   disabled={specialProviderGenerationLocked}
                   data-testid="lightchain-workspace-generate"
                   className={`${workspaceStyle.kind === 'agent' ? 'absolute right-3 top-1/2 -translate-y-1/2' : 'relative'} flex h-11 w-11 items-center justify-center rounded-full bg-[#253034] text-[#65d3cf] transition hover:bg-[#65d3cf] hover:text-neutral-950`}
-                  aria-label="AI生成"
+                  aria-label={workspaceStyle.kind === 'agent' ? '送信' : 'AI生成'}
                 >
                   <ArrowRight className="h-5 w-5 -rotate-45" />
                 </button>
