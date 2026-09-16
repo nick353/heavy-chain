@@ -411,7 +411,7 @@ export function LightchainPrintingPage() {
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">プリントイメージ</h1>
             <p className="mt-2 max-w-2xl text-sm text-neutral-500">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p>
           </div>
-          <button type="button" className="absolute right-[10px] top-4 h-8 w-[102px] rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-sm text-neutral-700 transition hover:border-neutral-400" onClick={() => setHistoryOpen((open) => !open)}>
+          <button type="button" className="absolute right-[10px] top-0 h-8 w-[102px] rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-sm text-neutral-700 transition hover:border-neutral-400" onClick={() => setHistoryOpen((open) => !open)}>
             生成履歴
           </button>
         </div>
