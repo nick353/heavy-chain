@@ -4898,7 +4898,7 @@ export function LightchainWorkbenchPage() {
               />
             )}
             <div className={workspaceStyle.kind === 'agent' ? 'ml-[52px] w-[456px]' : undefined}>
-              <h1 className={`${workspaceStyle.kind === 'marketing' ? 'text-3xl sm:text-4xl' : workspaceStyle.kind === 'agent' ? 'w-fit text-[32px] leading-10' : 'text-3xl'} font-semibold tracking-tight text-white`}>
+              <h1 className={`${workspaceStyle.kind === 'marketing' ? 'text-3xl sm:text-4xl' : workspaceStyle.kind === 'agent' ? 'w-[456px] text-[32px] leading-10' : 'text-3xl'} font-semibold tracking-tight text-white`}>
                 {workspaceStyle.title}
               </h1>
               <p className={`${workspaceStyle.kind === 'agent' ? 'mt-2 leading-5' : 'mt-4'} text-sm text-neutral-400`}>{workspaceStyle.subtitle}</p>
@@ -4906,7 +4906,7 @@ export function LightchainWorkbenchPage() {
             {renderLightchainProviderGate()}
 
             {workspaceStyle.tabs && (
-              <div className={`${workspaceStyle.kind === 'agent' ? 'ml-[44px]' : 'mx-auto'} mt-6 inline-flex rounded-xl border border-white/10 bg-[#1a1f22] p-1`} role="tablist" aria-label="業務シーン">
+              <div className={`${workspaceStyle.kind === 'agent' ? 'ml-[44px] mt-4 h-10' : 'mx-auto mt-6'} inline-flex rounded-xl border border-white/10 bg-[#1a1f22] p-1`} role="tablist" aria-label="業務シーン">
                 {workspaceTabs.map((tab) => (
                   <button
                     key={tab}
@@ -4932,7 +4932,7 @@ export function LightchainWorkbenchPage() {
               </p>
             )}
 
-            {visibleExamples && (
+            {visibleExamples && workspaceStyle.kind !== 'agent' && (
               <div className="mt-7 text-left">
                 <p className="text-sm text-neutral-300">こちらをお試しください</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -4983,7 +4983,7 @@ export function LightchainWorkbenchPage() {
                     }}
                     placeholder={currentWorkspaceCopy.prompt}
                     maxLength={4000}
-                    className={`h-full min-h-[112px] w-full resize-none border-0 bg-transparent ${workspaceStyle.kind === 'agent' ? 'pt-[74px]' : 'py-5'} text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400`}
+                    className={`${workspaceStyle.kind === 'agent' ? 'h-14 min-h-14 pt-2' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400`}
                   />
                 </div>
                 <button
@@ -5047,7 +5047,7 @@ export function LightchainWorkbenchPage() {
             )}
           </div>
 
-          <section className={`relative mx-auto mt-8 ${workspaceStyle.kind === 'marketing' ? 'max-w-[1130px]' : 'max-w-[720px]'}`}>
+          {workspaceStyle.kind !== 'agent' && <section className={`relative mx-auto mt-8 ${workspaceStyle.kind === 'marketing' ? 'max-w-[1130px]' : 'max-w-[720px]'}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{currentWorkspaceCopy.historyLabel}</h2>
               {lightchainResult && (
@@ -5087,12 +5087,7 @@ export function LightchainWorkbenchPage() {
                 保存済みの履歴はありません。生成結果を保存すると、ここに表示されます。
               </div>
             )}
-          </section>
-          {workspaceStyle.kind === 'agent' && (
-            <div className="absolute bottom-6 right-14 rounded-xl border border-white/10 bg-[#171c1f] px-4 py-3 text-sm text-neutral-300">
-              ✦ 残り生成回数 9
-            </div>
-          )}
+          </section>}
         </section>
         {lightchainRightsConfirmationModal}
       </main>

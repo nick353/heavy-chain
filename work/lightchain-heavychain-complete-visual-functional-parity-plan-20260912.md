@@ -2813,3 +2813,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/agent`入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
 
 判定: `/agent`の本番ルーティング・初期表示・開閉操作・画像表示は`UI_PASS`。入力後の成果物フローと全画面一致は未完了。
+
+### 2026-09-17 `/agent` Light状態契約差分の追加修正
+
+- [x] Light正本に存在しないHeavyの`こちらをお試しください`カード、企画履歴、残り生成回数表示を`/agent`初期状態から除外
+- [x] Lightのヘッダー幅・タイトル幅・サブタイトル折返し・タブ開始位置・入力textarea高さを実測し、Heavyへ反映
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、git diff checkをPASS
+- [ ] 本番deploy後の同一viewport geometry再確認
+- [ ] `/agent`入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
+
+判定: Lightの現行`/agent`状態契約へさらに近づけた。変更はローカル検証済みで、本番反映と生成後フローが残る。
