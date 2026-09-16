@@ -404,14 +404,14 @@ export function LightchainPrintingPage() {
             return <div key={label as string} className={`flex min-h-20 flex-col items-center justify-center rounded-xl border border-white/10 bg-[#252a2d] px-1 text-center text-[10px] leading-4 ${label === 'グラフィックデザインツール' ? 'text-cyan-300' : 'text-neutral-400'}`}><ToolIcon className="mb-1 h-7 w-7" /><span>{label as string}</span></div>;
           })}
         </aside>
-        <div className="relative">
+        <div className="relative lg:pl-24">
         <div className="absolute inset-x-0 top-4 z-10 flex items-center justify-end gap-4">
           <div className="hidden">
             <p className="text-xs font-semibold tracking-[0.25em] text-neutral-500">LIGHTCHAIN AI / GRAPHIC TOOLS</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">プリントイメージ</h1>
             <p className="mt-2 max-w-2xl text-sm text-neutral-500">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p>
           </div>
-          <button type="button" className="absolute right-6 top-4 h-8 w-[102px] rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-sm text-neutral-700 transition hover:border-neutral-400" onClick={() => setHistoryOpen((open) => !open)}>
+          <button type="button" className="absolute right-6 h-8 w-[102px] rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-sm text-neutral-700 transition hover:border-neutral-400" onClick={() => setHistoryOpen((open) => !open)}>
             生成履歴
           </button>
         </div>
@@ -430,7 +430,7 @@ export function LightchainPrintingPage() {
         <div className="mt-0 grid gap-4 lg:grid-cols-[minmax(0,596px)_minmax(0,1fr)]">
           <section className="relative h-[746px] min-h-0 overflow-hidden rounded-2xl bg-white p-4 pt-[68px] shadow-sm">
             {printingBannerVisible && <div className="flex h-16 items-start gap-2 rounded-lg bg-amber-50 px-4 py-5 text-sm leading-5 text-amber-900">
-              <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<button type="button" className="ml-7 underline" onClick={() => navigate('/designProduction')}>今すぐ体験</button></span>
+              <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<button type="button" className="ml-3 underline" onClick={() => navigate('/designProduction')}>今すぐ体験</button></span>
               <button type="button" aria-label="告知を閉じる" className="hidden" onClick={() => setPrintingBannerVisible(false)}>×</button>
             </div>}
             <label className="mt-[18px] flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
