@@ -457,21 +457,21 @@ export function LightchainPrintingPage() {
           </button>
         </div>
 
-        <nav className="absolute left-28 top-4 z-10 grid w-[564px] grid-cols-4 rounded-xl border border-neutral-200 bg-neutral-50 p-[2px]" aria-label="素材ツール">
+        <nav className="absolute left-28 top-4 z-10 grid w-[564px] grid-cols-4 rounded-xl border border-neutral-200 bg-neutral-50 p-[2px]" aria-label="素材ツール" role="tablist">
           {[
             ['生地イメージ', '/tools/fabric'],
             ['プリントイメージ', '/tools/printing'],
             ['線画の実写化', '/tools/line-draft-to-tile'],
             ['平絵生成', '/tools/line'],
           ].map(([label, href]) => (
-            <button key={label} type="button" className={`rounded-sm px-1 py-1 text-[15px] leading-[23px] font-medium transition ${href === '/tools/printing' ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`} onClick={() => navigate(href)}>{label}</button>
+            <button key={label} type="button" role="tab" aria-selected={href === '/tools/printing'} className={`rounded-sm px-1 py-1 text-[15px] leading-[23px] font-medium transition ${href === '/tools/printing' ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`} onClick={() => navigate(href)}>{label}</button>
           ))}
         </nav>
 
         <div className="mt-0 grid gap-4 lg:grid-cols-[minmax(0,596px)_minmax(0,1fr)]">
           <section className="relative h-[746px] min-h-0 overflow-hidden rounded-2xl bg-white p-4 pt-[68px] shadow-sm">
             {printingBannerVisible && <div className="flex h-16 items-start gap-2 rounded-lg bg-amber-50 px-4 py-[15px] text-sm leading-5 text-amber-900">
-              <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<button type="button" className="ml-[15px] underline" onClick={() => navigate('/designProduction')}>今すぐ体験</button></span>
+              <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<Link className="ml-[15px] underline" to="/designProduction">今すぐ体験</Link></span>
               <button type="button" aria-label="告知を閉じる" className="hidden" onClick={() => setPrintingBannerVisible(false)}>×</button>
             </div>}
             <label className="mt-[18px] flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
@@ -480,13 +480,13 @@ export function LightchainPrintingPage() {
             </label>
             <div className="mt-4 flex items-center justify-between"><h2 className="font-semibold">プリントをアップロード</h2><button type="button" className="text-sm text-neutral-500 underline" onClick={() => { setReferenceImage(null); setPrintImage(null); setMessage(''); if (user?.id && currentBrand?.id && persistenceScope) void persistPrintInputState(currentBrand.id, null, [], { garment: null, designs: [] }, { scope: persistenceScope }).catch(() => undefined); }}>リセット</button></div>
             <div className="mt-3 grid w-[244px] grid-cols-2 rounded-xl border border-neutral-200 bg-neutral-50 p-1">
-              {(['spot', 'full'] as const).map((value) => <button key={value} type="button" aria-pressed={coverage === value} className={`rounded-lg px-4 py-3 text-sm font-semibold ${coverage === value ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500'}`} onClick={() => setCoverage(value)}>{value === 'spot' ? 'スポット' : '全体'}</button>)}
+              {(['spot', 'full'] as const).map((value) => <button key={value} type="button" aria-pressed={coverage === value} aria-selected={coverage === value} className={`rounded-lg px-4 py-3 text-sm font-semibold ${coverage === value ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500'}`} onClick={() => setCoverage(value)}>{value === 'spot' ? 'スポット' : '全体'}</button>)}
             </div>
             <label className="mt-3 flex h-[120px] w-[120px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
               <input className="sr-only" type="file" accept="image/*" onChange={(event) => handleFile(event, 'pattern')} />
               {printImage ? <img src={printImage.url} alt="プリント画像" className="h-full w-full rounded-lg object-contain" /> : <><Upload className="h-6 w-6 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">画像をアップロード</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
             </label>
-            <button type="button" className="absolute bottom-4 right-4 h-10 w-[288px] rounded-xl bg-neutral-950 px-4 text-sm font-semibold text-white transition hover:bg-neutral-800" onClick={() => void handleGenerate()}>AI生成</button>
+            <button type="submit" className="absolute bottom-4 right-4 h-10 w-[288px] rounded-xl bg-neutral-950 px-4 text-sm font-semibold text-white transition hover:bg-neutral-800" onClick={() => void handleGenerate()}>AI生成</button>
             {message && <p className="mt-3 text-sm text-neutral-600" role="status">{message}</p>}
           </section>
 
