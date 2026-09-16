@@ -410,6 +410,7 @@ export function CanvasEditorPage() {
   const suppressPersistenceDirtyRef = useRef(false);
   const confirmedCanvasFingerprintRef = useRef<string | null>(null);
   const canvasReadbackDebugRef = useRef<Record<string, unknown> | null>(null);
+  const libraryHandoffDebugRef = useRef<Record<string, unknown> | null>(null);
   const [canvasPersistenceStatus, setCanvasPersistenceStatus] = useState<'unsaved' | 'loading' | 'saving' | 'verifying' | 'saved' | 'conflict' | 'failed'>('unsaved');
   const [canvasDebugResolution, setCanvasDebugResolution] = useState<unknown[]>([]);
 
@@ -808,6 +809,15 @@ export function CanvasEditorPage() {
   }, [projectId, user?.id, currentBrand?.id, loadProject, hydrateProject, clearCanvas, navigate]);
 
   useEffect(() => {
+    if (canvasDebugEnabled) {
+      libraryHandoffDebugRef.current = {
+        projectId: projectId ?? null,
+        sourceArtifactId: sourceArtifactId ?? null,
+        brandId: currentBrand?.id ?? null,
+        userIdPresent: Boolean(user?.id),
+        phase: projectId !== 'new' || !sourceArtifactId || !currentBrand?.id ? 'guard_return' : 'lookup',
+      };
+    }
     if (projectId !== 'new' || !sourceArtifactId || !currentBrand?.id) return;
     if (importedLibraryArtifactRef.current === sourceArtifactId) return;
 
@@ -819,6 +829,17 @@ export function CanvasEditorPage() {
     const activityArtifacts = listWorkspaceArtifactsForActivity(currentBrand.id, user?.id);
     const artifact = [...scopedArtifacts, ...activityArtifacts]
       .find((candidate) => candidate.id === sourceArtifactId);
+    if (canvasDebugEnabled) {
+      libraryHandoffDebugRef.current = {
+        ...libraryHandoffDebugRef.current,
+        phase: 'lookup_complete',
+        scopedCount: scopedArtifacts.length,
+        activityCount: activityArtifacts.length,
+        artifactFound: Boolean(artifact),
+        artifactBrandId: artifact?.brandId ?? null,
+        artifactScopeIdPresent: Boolean(artifact?.scopeId),
+      };
+    }
     if (!artifact) return;
 
     importedLibraryArtifactRef.current = sourceArtifactId;
@@ -3537,6 +3558,7 @@ export function CanvasEditorPage() {
         : [],
     })),
     resolution: canvasDebugResolution,
+    libraryHandoff: libraryHandoffDebugRef.current,
     readback: canvasReadbackDebugRef.current,
   }) : '';
 
