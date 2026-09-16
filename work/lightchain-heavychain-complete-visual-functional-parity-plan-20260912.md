@@ -2932,3 +2932,16 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/creator`のアップロード、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: `/creator`カテゴリ入口・カテゴリパネル・代表カテゴリ選択後の画面構造は`UI_PASS`。全カテゴリの選択状態、外部生成、成果物ライフサイクルは未完了。
+
+### 2026-09-17 Light `/creator`全4対象タブのカテゴリ差分取得とHeavy修正
+
+- [x] Light本番で`メンズ`を開き、トップス12項目、ボトムス3項目、ワンピース/セットアップ1項目をvisual・semantic readback
+- [x] Light本番で`女の子`を開き、レディースと同じカテゴリ構成をvisual readback
+- [x] Light本番で`男の子`を開き、メンズと同じカテゴリ構成をvisual readback
+- [x] Heavyの全対象タブ共通リストを、Lightの実測どおり`レディース／女の子`と`メンズ／男の子`のタブ別データへ修正（commit `7b666f3`）
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、`git diff --check`をPASS
+- [x] `main`へpushし、Zeaburへ対象project/service/environmentを明示して再デプロイ開始
+- [ ] 新デプロイ`6aab1e6605af289f92f97b65`の`RUNNING`到達とHeavy本番の再読込・4タブfresh readback（現在`DEPLOYING`）
+- [ ] `/creator`の全カテゴリ選択後UI、アップロード、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: Lightの4対象タブ差分を取得し、Heavy側のカテゴリデータ修正とローカル検証・デプロイ開始まで完了。本番反映後の再読込確認と成果物フローは未完了。
