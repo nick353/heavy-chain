@@ -3011,3 +3011,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 判定: Agent初期UI差分を特定し、修正とローカル検証はPASS。本番deploymentは現在`DEPLOYING`のため、post-deploy readbackと成果物フローは未完了。
 
 追記: 2026-09-17のfresh deployment readbackでもdeploymentは`DEPLOYING`継続。Heavy `/agent`は旧状態（展開サイドバー、生成control名`AI生成`）を返しており、修正版の本番反映は未確認。
+
+追記: 2026-09-18のfresh readbackでも対象deployment `6aab2b9505af289f92f97e6b` は`DEPLOYING`継続。runtime logは同deploymentのPod image pull開始までを返し、現在稼働中のHeavy `/agent`はログイン済みで、コンパクトレールと`送信`を確認できた。最新コミットのAgent添付controlsは、deployment完了後に同じCompanionタブを再読込して確認する。再デプロイや添付操作の再送は行っていない。
