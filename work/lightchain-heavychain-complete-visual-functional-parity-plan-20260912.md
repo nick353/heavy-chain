@@ -2493,3 +2493,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Light再ログイン後、同一成果物のLight／Heavy比較、保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: fallback実装とデプロイはPASSだが、対象artifactの実画像配置は未証明。Goalは継続。
+
+### 2026-09-17 ライブラリー詳細parity post-deploy readback
+
+- [x] Heavy本番`/asset-center`を同一Companion task-owned tabで再読込
+- [x] Lightにない追加handoff UI（Canvas／AIフィッティング／生地／プリント／機能select）がHeavy詳細から消えたことをfresh queryで確認
+- [x] 基本操作（プレビュー、ボードにコピー、詳細、名前を編集、コピーを作成します、閉じる）をreadback
+- [x] 本番画面の変更がprovider外部送信を伴わないローカルUI変更であることをtransaction receiptで確認
+- [ ] GitHub連携の正規deployment `6aaadb4205af289f92f972c4`が`RUNNING`になったことの確認
+- [ ] 同一成果物の保存・再表示・再利用、Canvas実画像復元、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: 現在到達しているHeavy本番ではライブラリー詳細parity修正を`UI_PASS`として確認。GitHub連携deploymentの状態、成果物ライフサイクル、Canvas実画像復元、全画面parityは未完了。

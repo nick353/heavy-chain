@@ -4565,3 +4565,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run typecheck`、`npm run test:library-canvas-handoff`（9/9）、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`（2550 modules）をPASSした。
 - Zeabur fresh target readback後、既存`heavy-chain` service（service `6a318803302ffbcd03a92935`）へdeployment `6aaada4705af289f92f97289`を実行した。plan typeは`docker`。本記録時点のdeployment stateは`BUILDING`であり、Heavy本番の修正版readbackは未完了。
 - 判定: local implementation／tests／buildは`PASS`、production deploymentは`BUILDING`、Companion post-deploy readback・provider receipt・source sync・reconciliation・cleanupは未完了。
+
+## 2026-09-17 Heavyライブラリー詳細parity post-deploy readback
+
+- Heavy本番`https://heavy-chain.zeabur.app/asset-center`を、既存のログイン済みCompanion task-owned tabでfresh navigation後にreadbackした。`マイライブラリー`、`履歴アップロード`、`生成履歴`、カード、`プレビュー`、`ボードにコピー`、`詳細`を確認した。
+- 先頭カードの`プレビュー`を1回実クリックし、選択素材詳細をfresh queryした。詳細画面にLight正本と同じ基本操作（`名前を編集`、`コピーを作成します`、閉じる）が表示され、Lightに存在しない`Canvasへ送る`、`AIフィッティングへ`、`生地イメージへ`、`プリント画像へ`、`この機能で開く`は表示されなかった。
+- Companion transaction receiptはブラウザreadbackを`verified`とし、ライブラリー遷移は`externalActionExecuted:false`。プレビューは同一画面内の既存成果物表示であり、provider receipt／source sync／business completionは未検証として分離した。二重クリックは行っていない。
+- Zeabur deploymentのfresh listでは、修正commit `0a5d6fddcdbade3ce4588d2c10b554633f905e35`に紐づくGitHub deployment `6aaadb4205af289f92f972c4`がなお`BUILDING`。今回の本番readbackは現在稼働中のservice表示で修正UIを確認した証跡であり、GitHub deployment完了の証明とは分離する。
+- 判定: ライブラリー詳細parity修正は本番画面で`UI_PASS`。GitHub deployment完了、同一成果物の保存・再表示・再利用、Canvas実画像復元、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致は未完了。
