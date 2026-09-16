@@ -2981,6 +2981,8 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] クリーンデプロイ`6aab2465dc088f64d1813c37`が`RUNNING`へ到達したことをCLI fresh readback
 - [x] 同じログイン済みCompanion Heavyタブを15秒待機後に再読込し、4つの`role=tab`、`今すぐ体験`の`link`、`AI生成`の`controlType=submit`をsemantic readback
 - [x] Heavyで`全体`を一回選択し、選択状態をfresh readback。`生成履歴`を開いて履歴領域と`履歴を開く`導線を確認後、閉じた
+- [x] Heavyで参照画像アップロードを一回dispatchし、Companionの不明効果後に同一タブをfresh semantic／visual readback。`garment-source.png`（fileCount=1）が反映済みであることを確認
+- [ ] 上記アップロードのCompanion reconciliation capsuleを完了する（可視状態は反映済みだが、完了APIの再検証で`reconciliation_readback_changed`となり保留）
 - [ ] Printingの入力アップロード、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
 
-判定: `/tools/printing`のLight実測差分を特定し、Heavy側の表示・操作semantic修正を本番`UI_PASS`まで確認。入力・外部生成・成果物ライフサイクルは未完了。
+判定: `/tools/printing`のLight実測差分を特定し、Heavy側の表示・操作semantic修正を本番`UI_PASS`まで確認。参照画像はHeavy画面へ反映済みだが、Companion reconciliation capsuleが完了していないため、プリント画像追加・生成・成果物ライフサイクルは保留。
