@@ -2885,3 +2885,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 権限確認後の生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: 差分の原因特定とコード修正・ローカル検証は完了。本番反映と生成後フローは未完了。
+
+### 2026-09-17 `/tools/fabric`権限状態の本番反映確認
+
+- [x] 先行デプロイ`6aab158f05af289f92f97a74`が`RUNNING`となり、`d93bf46`の修正コードが本番へ反映されたことを確認
+- [x] Heavy本番`/tools/fabric`をCompanionで再読込し、body semantic readbackで`権限がありません`が表示されることを確認
+- [x] Light本番の同一画面body readbackと比較し、初期権限状態・主要入力項目・画像比率選択肢・履歴表示が一致することを確認
+- [x] 再読込後のHeavy画面で権利確認導線が表示されないことを確認
+- [ ] 最新自動デプロイ`6aab165205af289f92f97a98`（計画MD反映分）の`RUNNING`確認
+- [ ] 権限状態が解除された実アカウントでの生成・provider receipt／source sync／保存・再表示・再利用・cleanup
+
+判定: `/tools/fabric`の初期権限状態は本番`UI_PASS`。生成後フローと最新自動デプロイの完了readbackは未完了。
