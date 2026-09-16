@@ -2802,3 +2802,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/agent`入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
 
 判定: Lightの実画面取得により、従来の「黒画面」判定を更新できた。Heavyの初期UI差分修正はローカル検証済みで、本番反映と成果物フロー確認が残る。
+
+### 2026-09-17 `/agent`初期レイアウト本番readback
+
+- [x] deployment `6aab06e1dc088f64d1813b48`が`RUNNING`となったことを確認
+- [x] Heavy本番`/agent`をCompanionで再読込し、15秒以内にLight準拠タイトル、企画画像、4タブ、入力、企画履歴を確認
+- [x] Heavyでサイドバーを一回閉じ、細い操作レール、企画画像、初期画面をvisual readback
+- [x] Heavyの初期UIがLightの実画面構造へ更新されたことを確認
+- [ ] ヘッダー・タブ・入力・履歴の全geometryをLightと完全一致させる追加調整
+- [ ] `/agent`入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
+
+判定: `/agent`の本番ルーティング・初期表示・開閉操作・画像表示は`UI_PASS`。入力後の成果物フローと全画面一致は未完了。

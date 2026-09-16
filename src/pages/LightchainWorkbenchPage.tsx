@@ -4894,17 +4894,19 @@ export function LightchainWorkbenchPage() {
                 src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-product-planning.png"
                 alt=""
                 aria-hidden="true"
-                className="pointer-events-none absolute right-0 top-[-4px] h-[172px] w-[240px] object-contain"
+                className="pointer-events-none absolute right-[-36px] top-[-4px] h-[172px] w-[240px] object-contain"
               />
             )}
-            <h1 className={`${workspaceStyle.kind === 'marketing' ? 'text-3xl sm:text-4xl' : 'text-3xl'} font-semibold tracking-tight text-white`}>
-              {workspaceStyle.title}
-            </h1>
-            <p className="mt-4 text-sm text-neutral-400">{workspaceStyle.subtitle}</p>
+            <div className={workspaceStyle.kind === 'agent' ? 'ml-[52px] w-[456px]' : undefined}>
+              <h1 className={`${workspaceStyle.kind === 'marketing' ? 'text-3xl sm:text-4xl' : workspaceStyle.kind === 'agent' ? 'w-fit text-[32px] leading-10' : 'text-3xl'} font-semibold tracking-tight text-white`}>
+                {workspaceStyle.title}
+              </h1>
+              <p className={`${workspaceStyle.kind === 'agent' ? 'mt-2 leading-5' : 'mt-4'} text-sm text-neutral-400`}>{workspaceStyle.subtitle}</p>
+            </div>
             {renderLightchainProviderGate()}
 
             {workspaceStyle.tabs && (
-              <div className="mx-auto mt-6 inline-flex rounded-xl border border-white/10 bg-[#1a1f22] p-1" role="tablist" aria-label={`${workspaceStyle.title}タブ`}>
+              <div className={`${workspaceStyle.kind === 'agent' ? 'ml-[44px]' : 'mx-auto'} mt-6 inline-flex rounded-xl border border-white/10 bg-[#1a1f22] p-1`} role="tablist" aria-label="業務シーン">
                 {workspaceTabs.map((tab) => (
                   <button
                     key={tab}
@@ -4948,8 +4950,8 @@ export function LightchainWorkbenchPage() {
               </div>
             )}
 
-            <div className={`${workspaceStyle.kind === 'marketing' ? 'mt-6 min-h-[232px] border-[#0bcabc]' : 'mt-4 min-h-[160px] border-cyan-300/80'} rounded-2xl border bg-[#1a1f22]/95 p-3 shadow-[0_0_28px_rgba(101,211,207,0.18)]`}>
-              <div className={`${workspaceStyle.kind === 'marketing' ? 'grid min-h-[206px] grid-cols-[120px_1fr_52px]' : 'grid min-h-[136px] grid-cols-[1fr_52px]'} items-center gap-4 rounded-2xl bg-[#1d2326] px-4 text-left`}>
+            <div className={`${workspaceStyle.kind === 'marketing' ? 'mt-6 min-h-[232px] border-[#0bcabc]' : 'mt-4 min-h-[160px] border-cyan-300/80'} ${workspaceStyle.kind === 'agent' ? 'ml-[36px]' : ''} rounded-2xl border bg-[#1a1f22]/95 p-3 shadow-[0_0_28px_rgba(101,211,207,0.18)]`}>
+              <div className={`${workspaceStyle.kind === 'marketing' ? 'grid min-h-[206px] grid-cols-[120px_1fr_52px]' : 'grid min-h-[136px] grid-cols-[1fr_52px]'} items-center gap-4 rounded-2xl bg-[#1d2326] ${workspaceStyle.kind === 'agent' ? 'px-0' : 'px-4'} text-left`}>
                 {workspaceStyle.kind === 'marketing' && (
                   <button
                     type="button"
