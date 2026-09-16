@@ -1226,7 +1226,7 @@ const workspaceStyleConfig: Record<string, {
   },
   'design-agent': {
     kind: 'agent',
-    title: '今日は何から始めますか?',
+    title: '今日は何から始めますか？',
     subtitle: '業務シーンを選択し、目標を入力してください。Agentが後続ステップを案内します。',
     prompt: '調査したい市場、カテゴリ、スタイル方向を入力してください…',
     tabs: ['商品企画', '顧客提案', 'インスピレーション', 'AIグラフィックデザイン'],
@@ -1344,6 +1344,7 @@ export function LightchainWorkbenchPage() {
   const [lightchainGenerationError, setLightchainGenerationError] = useState<string | null>(null);
   const [resumeInputReadback, setResumeInputReadback] = useState<'restored' | 'unavailable' | null>(null);
   const [workspaceText, setWorkspaceText] = useState('');
+  const [agentSidebarOpen, setAgentSidebarOpen] = useState(true);
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
@@ -4817,7 +4818,7 @@ export function LightchainWorkbenchPage() {
         data-lightchain-brand-error={brandState.error ?? ''}
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
-        {workspaceStyle.kind === 'agent' && (
+        {workspaceStyle.kind === 'agent' && agentSidebarOpen && (
           <aside
             aria-label="企画ワークスペースサイドバー"
             className="absolute left-3 top-3 z-10 hidden h-[calc(100vh-94px)] w-[326px] overflow-hidden rounded-2xl border border-white/10 bg-[#24282a] text-neutral-100 shadow-xl md:block"
@@ -4829,7 +4830,7 @@ export function LightchainWorkbenchPage() {
               </button>
               <div className="flex items-center gap-2">
                 <button type="button" aria-label="検索" className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
-                <button type="button" aria-label="サイドバーを閉じる" className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><LayoutGrid className="h-4 w-4" /></button>
+                <button type="button" aria-label="サイドバーを閉じる" onClick={() => setAgentSidebarOpen(false)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><LayoutGrid className="h-4 w-4" /></button>
               </div>
             </div>
             <div className="space-y-2 px-4 py-3">
@@ -4859,7 +4860,18 @@ export function LightchainWorkbenchPage() {
             <div className="absolute inset-x-0 bottom-0 border-t border-white/10 px-4 py-4 text-xs text-neutral-300">残りクレジット <span aria-hidden="true">✦</span> 378911</div>
           </aside>
         )}
-        <section className="relative min-h-[calc(100vh-70px)] overflow-hidden px-4 py-14 sm:px-8">
+        {workspaceStyle.kind === 'agent' && !agentSidebarOpen && (
+          <aside
+            aria-label="企画ワークスペースサイドバー"
+            className="absolute left-3 top-3 z-10 flex h-[calc(100vh-94px)] w-12 flex-col items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#24282a] py-3 text-neutral-100 shadow-xl"
+          >
+            <button type="button" aria-label="サイドバーを開く" onClick={() => setAgentSidebarOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><LayoutGrid className="h-4 w-4" /></button>
+            <button type="button" aria-label="新規タスク" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><MessageSquareText className="h-4 w-4" /></button>
+            <button type="button" aria-label="業務プリファレンスプロファイル" onClick={() => setWorkspaceTutorialDismissed(false)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><ClipboardList className="h-4 w-4" /></button>
+            <button type="button" aria-label="最近" onClick={() => setAgentSidebarOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
+          </aside>
+        )}
+        <section className={`relative min-h-[calc(100vh-70px)] overflow-hidden px-4 sm:px-8 ${workspaceStyle.kind === 'agent' ? 'pt-[116px] pb-14' : 'py-14'}`}>
           <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_52%_20%,rgba(101,211,207,0.22),transparent_38%),linear-gradient(90deg,rgba(15,23,42,0.15),rgba(34,197,94,0.1),rgba(59,130,246,0.12))]" />
           {workspaceStyle.kind === 'marketing' && (
             <div className="absolute right-4 top-4 rounded-lg border border-white/10 bg-[#1b2125] px-4 py-3 text-sm font-semibold text-neutral-200">
@@ -4876,7 +4888,15 @@ export function LightchainWorkbenchPage() {
               <ClipboardList className="h-5 w-5" />
             </Link>
           )}
-          <div className={`relative mx-auto ${workspaceStyle.kind === 'marketing' ? 'max-w-[980px]' : 'max-w-[720px]'} text-center`}>
+          <div className={`relative mx-auto ${workspaceStyle.kind === 'marketing' ? 'max-w-[980px]' : 'max-w-[720px]'} ${workspaceStyle.kind === 'agent' ? 'text-left' : 'text-center'}`}>
+            {workspaceStyle.kind === 'agent' && (
+              <img
+                src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-product-planning.png"
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute right-0 top-[-4px] h-[172px] w-[240px] object-contain"
+              />
+            )}
             <h1 className={`${workspaceStyle.kind === 'marketing' ? 'text-3xl sm:text-4xl' : 'text-3xl'} font-semibold tracking-tight text-white`}>
               {workspaceStyle.title}
             </h1>
@@ -4897,7 +4917,7 @@ export function LightchainWorkbenchPage() {
                       const nextCopy = workspaceTabCopy[tab];
                       setWorkspaceText(workspaceTextDrafts[tab] ?? nextCopy?.prompt ?? '');
                     }}
-                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${currentWorkspaceTab === tab ? 'bg-[#3b4247] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${currentWorkspaceTab === tab ? 'bg-[#3b4247] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>

@@ -2790,3 +2790,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
 
 判定: Heavyホームのカード外形・列位置・9ルート対応は`UI_PASS`。Lightの深い正規画面がCompanion fresh tabでは空画面となるため、カード内部と成果物の完全parityは継続未完了。
+
+### 2026-09-17 Light／Heavy `/agent`実画面取得と初期UI差分修正
+
+- [x] 既存のログイン済みLight Companionタブから`/agent`の実画面を取得（サイドバー、4タブ、入力、企画履歴、商品企画ヘッダー画像）
+- [x] Lightのサイドバーを閉じる操作を一回だけ実行し、細い操作レールとメイン画面をvisual／semantic readback
+- [x] Light／Heavyの`/agent`主要geometryを比較し、Heavyのタイトル表記、サイドバー閉じる動作、ヘッダー画像、タブ寸法・縦位置の差分を特定
+- [x] Heavyへサイドバー開閉状態、Light正本ヘッダー画像、左寄せ初期レイアウト、Light準拠タイトル・タブ寸法を実装
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、git diff checkをPASS
+- [ ] 本番deploy後にHeavy`/agent`を15秒待機してLightと同一viewportで再readbackし、サイドバー開閉・画像・geometryを確認
+- [ ] `/agent`入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
+
+判定: Lightの実画面取得により、従来の「黒画面」判定を更新できた。Heavyの初期UI差分修正はローカル検証済みで、本番反映と成果物フロー確認が残る。
