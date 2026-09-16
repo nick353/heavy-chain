@@ -2504,3 +2504,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 同一成果物の保存・再表示・再利用、Canvas実画像復元、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: 現在到達しているHeavy本番ではライブラリー詳細parity修正を`UI_PASS`として確認。GitHub連携deploymentの状態、成果物ライフサイクル、Canvas実画像復元、全画面parityは未完了。
+
+### 2026-09-17 Canvas handoff実画像復元修正・deploy待ち
+
+- [x] Heavy本番の`ボードにコピー`で`/canvas/new?sourceArtifactId=...`への遷移をfresh readback
+- [x] 15秒待機後、debug readbackで`objectCount: 0`を確認し、Canvas実画像復元が未達であることを確定
+- [x] Canvas handoffの成果物検索を、ユーザー別キーに加えて同一ブランドのactivity view（ブランドスコープを含む）から解決するよう修正
+- [x] typecheck、library test 9/9、route test 19/19、build（2550 modules）をPASS
+- [x] commit `95ad04f`をGitHubへpush
+- [ ] deployment `6aaadd6505af289f92f97313`の`RUNNING`確認後、同一成果物のCanvasで`objectCount >= 1`と画像表示をreadback
+- [ ] Canvas保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: 原因候補に対する修正とローカル検証はPASS。修正deploymentは現在`BUILDING`で、本番Canvas実画像復元は未完了。

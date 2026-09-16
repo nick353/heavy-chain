@@ -4573,3 +4573,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Companion transaction receiptはブラウザreadbackを`verified`とし、ライブラリー遷移は`externalActionExecuted:false`。プレビューは同一画面内の既存成果物表示であり、provider receipt／source sync／business completionは未検証として分離した。二重クリックは行っていない。
 - Zeabur deploymentのfresh listでは、修正commit `0a5d6fddcdbade3ce4588d2c10b554633f905e35`に紐づくGitHub deployment `6aaadb4205af289f92f972c4`がなお`BUILDING`。今回の本番readbackは現在稼働中のservice表示で修正UIを確認した証跡であり、GitHub deployment完了の証明とは分離する。
 - 判定: ライブラリー詳細parity修正は本番画面で`UI_PASS`。GitHub deployment完了、同一成果物の保存・再表示・再利用、Canvas実画像復元、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致は未完了。
+
+## 2026-09-17 Heavyライブラリー→Canvas実画像復元修正
+
+- Heavy本番の先頭カードで`ボードにコピー`を1回実クリックし、`/canvas/new?sourceArtifactId=local-b9c3fbda-6b36-4a29-bad3-acdb8e33c627`への遷移を確認した。クリックは再送していない。
+- debug readbackを有効にして15秒待機後、`status: unsaved`、`objectCount: 0`、`resolution: []`を確認した。ルーティングは成功しているが、実画像配置は未達と判定した。
+- `CanvasEditorPage`のhandoff検索を、従来の`listWorkspaceArtifacts(currentBrand.id, user?.id)`だけでなく、同一ブランド内のユーザー別／ブランド別activity viewでも解決するよう修正した。これは別ブランドや未認証データを読む変更ではない。
+- `npm run typecheck`、`npm run test:library-canvas-handoff`（9/9）、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`（2550 modules）をPASS。commit `95ad04f`をGitHubへpushした。
+- 修正commitのZeabur deploymentは`6aaadd6505af289f92f97313`として作成され、fresh readback時点で`BUILDING`。本番Canvasの再確認はdeployment完了後に実施する。
+- 判定: Canvas handoffの問題を本番証拠で特定し、修正を実装・検証・デプロイ開始まで完了。実画像復元、Canvas保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致は未完了。
