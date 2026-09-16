@@ -341,9 +341,15 @@ const loadLibraryCanvasImage = async (source: string) => {
     );
     if (!/^https?:/i.test(resolvedSource)) return await loadLocalUploadImage(resolvedSource);
 
-    const response = await fetch(resolvedSource);
+    const response = await withLocalUploadTimeout(
+      fetch(resolvedSource),
+      'canvas_library_fetch_timeout',
+    );
     if (!response.ok) throw new Error('画像を読み込めませんでした');
-    const blob = await response.blob();
+    const blob = await withLocalUploadTimeout(
+      response.blob(),
+      'canvas_library_blob_timeout',
+    );
     if (/svg|xml/i.test(blob.type || '')) throw new Error('SVG画像はCanvas処理に使用できません');
     const objectUrl = window.URL.createObjectURL(blob);
     try {
