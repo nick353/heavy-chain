@@ -2861,3 +2861,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/creator`のカテゴリ選択、履歴、キーワード辞典、生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: `/creator`の権限状態と主要レイアウト調整は本番反映済み。残りはカテゴリ選択以降の成果物フロー、保存／再利用、全画面監査。
+
+### 2026-09-17 `/creator`カテゴリ選択メニューの実操作確認
+
+- [x] Heavy本番`/creator`で`＋ カテゴリを選択してください`をCompanionから一回だけsemantic click
+- [x] クリック後に`女性`、`男性`、`キッズ`、`ユニセックス`の4選択肢が表示されることをfresh semantic readback
+- [x] カテゴリメニュー表示中も右側の`権限がありません` disabled状態を確認し、未承認の外部送信・生成へ進まないことを確認
+- [x] 本操作の画面状態をスクショ確認し、Companion leaseを解放
+- [ ] Light本番の同一カテゴリメニューをfresh取得し、選択後の表示・ルーティング・生成可否をHeavyと比較
+- [ ] `/creator`生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: Heavyのカテゴリ選択入口と選択肢表示は`UI_PASS`。Lightとの選択後状態および成果物フローは未確認。
