@@ -4975,8 +4975,8 @@ export function LightchainWorkbenchPage() {
                       新商品企画⌄
                     </button>
                   )}
-                  <textarea
-                    value={workspaceText}
+                <textarea
+                  value={workspaceText}
                     onChange={(event) => {
                       const nextValue = event.target.value;
                       setWorkspaceText(nextValue);
@@ -4989,6 +4989,34 @@ export function LightchainWorkbenchPage() {
                     className={`${workspaceStyle.kind === 'agent' ? 'h-14 min-h-14 pt-2' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400`}
                   />
                 </div>
+                {workspaceStyle.kind === 'agent' && (
+                  <>
+                    <label
+                      htmlFor="lightchain-agent-attachment-file"
+                      role="button"
+                      tabIndex={0}
+                      aria-label="添付を追加"
+                      className="absolute bottom-3 left-3 rounded-md px-2 py-1 text-xs font-semibold text-neutral-300 transition hover:bg-white/10"
+                    >
+                      添付を追加
+                    </label>
+                    <input
+                      id="lightchain-agent-attachment-file"
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt,image/*"
+                      aria-label="アップロードするファイルを選択"
+                      className="sr-only"
+                      onChange={(event) => handleMaterialSlotUpload('primary', event)}
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      aria-label="アップロードする画像を選択"
+                      className="sr-only"
+                      onChange={(event) => handleMaterialSlotUpload('primary', event)}
+                    />
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={handleWorkspaceStyleGenerate}
