@@ -65,6 +65,28 @@ Light Chainの全画面、全カテゴリ、全主要導線、成果物フロー
 
 判定: 失効外部動画は再現せず、Heavy側の既存正規アセット参照で充足。Lightのログイン状態が未成立のため、追加の実画面比較とlogout→login回帰は継続保留。
 
+## 2026-09-17 Light再認証後のライブラリー詳細比較
+
+- [x] Light本番ホームのログイン済み状態をfresh Companion readback
+- [x] Light正規`/asset-center`の8グループ、初期選択、カード、基本操作をfresh readback
+- [x] Light先頭カードの`プレビュー`をfresh visual proof付きで1回実クリックし、詳細表示を確認
+- [x] Heavy同画面のカード・詳細表示と比較
+- [ ] Heavy詳細の追加handoff UI（Canvas／AIフィッティング／生地／プリント／機能select）をLight正本と一致させる、またはLightの別正規導線で同等機能を特定
+- [ ] 同一成果物での保存・再表示・再利用とprovider receipt／source sync／reconciliation／cleanup
+
+判定: Light再認証により本番比較を再開できた。基本ライブラリー操作はPASS。Light詳細にはHeavyの追加handoff UIが存在せず、`UI_SCOPE_DIFF`として未解決。データ件数差は`DATA_SCOPE_DIFF`として分離。
+
+## 2026-09-17 ライブラリー詳細parity修正・deploy待ち
+
+- [x] Light正本にないHeavy詳細handoff UIを特定
+- [x] Heavyのデフォルトライブラリー詳細から追加handoff UIを非表示化
+- [x] typecheck、library／route tests、buildをPASS
+- [x] Zeabur既存`heavy-chain` serviceへdeployment `6aaada4705af289f92f97289`を投入
+- [ ] deployment `RUNNING`確認後、Heavy `/asset-center`をCompanionで再読込し、追加handoff UIが消えたことを確認
+- [ ] 同一成果物の保存・再表示・再利用、Canvas実画像復元、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: ローカル修正と検証はPASS。deploymentは現在`BUILDING`で、post-deploy readback待ち。
+
 ## 2026-09-14 正規ライブラリーroute再特定と一括操作parity
 
 - [x] Lightアカウントメニューから正規ライブラリーroute`/asset-center`を実測する。

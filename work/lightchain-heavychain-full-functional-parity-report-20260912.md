@@ -4534,3 +4534,34 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyの`/creator`および`/printing`が参照するLight正規OSS動画URLを再取得し、いずれも`200 video/mp4`であることを確認した。
 - 既存のLight／Heavy実測で同一動画URL・同一内容を確認済みであり、失効poster／代替アセットへの差し替えは不要と判定した。
 - Lightは今回のfresh readbackでも`/login?redirect=/?`を表示したため、追加の本番比較は本人の再ログイン後に継続する。
+
+## 2026-09-17 Light再認証後のライブラリー実測・Heavy詳細UI差分
+
+- 同一Companion task-owned tabをfresh readbackし、Light本番ホーム`https://jp.linkaigc.com/`がログイン済みであることを確認した。ログインフォームは表示されず、4カテゴリ、事例共有6カテゴリ、検索、主要カードをsemantic／visualで取得した。
+- Lightの正規`/asset-center`へ同一タブで遷移し、8グループ、`履歴アップロード`の初期選択、保存カード22件以上、`一括操作`、各カードの`プレビュー`／`ボードにコピー`／縦三点操作を確認した。これはLight側の現在の保存データ件数のfresh証拠である。
+- Light先頭カードの`プレビュー`をfresh visual proof付きで1回実クリックし、詳細状態をreadbackした。Light詳細には`戻る`、`コピーを作成します`、`ダウンロード`、`削除`、`名前を編集`が表示された。
+- 同じ`/asset-center`のHeavy fresh readbackでは7カードと、`Canvasへ送る`、`AIフィッティングへ`、`生地イメージへ`、`プリント画像へ`、`この機能で開く`を含む追加handoff UIが表示された。Light側を同じ詳細状態でqueryした結果、これら5つの追加導線は0件だった。
+- 判定: ルート／基本カード操作はLight／Heavyとも`PASS`。保存データ件数は`DATA_SCOPE_DIFF`。詳細handoff UIは`UI_SCOPE_DIFF`として未解決であり、Heavyの追加機能をLight正本へ合わせるか、Lightの別正規導線で同等機能を特定するまで完全parityとは判定しない。
+- Lightプレビュークリックは`known_effect`、provider外部効果なし、reconciliation不要。前段の期限切れvisual proofはdispatch 0で、再送・外部効果は発生していない。
+
+## 2026-09-17 Light再認証後の`/tools/fabric` fresh readback
+
+- Light本番`/tools/fabric`へ同一Companion task-owned tabで遷移し、ログイン画面へ戻らず本画面を取得した。
+- 4タブ（`生地イメージ`、`プリントイメージ`、`線画の実写化`、`平絵生成`）、終了告知、モデル／デザイン画像入力、生地画像入力、任意キーワード、`画像比率自動`、`権限がありません`、`生成履歴`をsemantic／visualで確認した。
+- `生地イメージ`の主要矩形はタブリスト`564x36 (x=128,y=82)`、比率`202x42 (x=128,y=754)`、生成ボタン`288x40 (x=404,y=756)`。既存Heavy post-deploy実測の同等geometryと一致する。
+- 判定: Lightの制作入口とHeavyの既存geometryは`UI_PASS`。入力後・生成後の実成果物、provider receipt、source sync、reconciliation、cleanupは未実施。待機条件は同名候補3件のためambiguousとなったが、dispatch 0で、最終readbackは成功した。
+
+## 2026-09-17 Heavy`/tools/fabric`再読込・権利ゲート差分
+
+- Heavy本番`/tools/fabric`を同一Companion task-owned tabで再読込し、追加待機後に本画面へ到達した。4タブ、終了告知、2つの画像入力、キーワード、比率、生成履歴を確認した。
+- Lightのfresh実測と同じ主要geometry（タブリスト`564x36 (x=128,y=82)`、比率`202x42 (x=128,y=754)`、生成`288x40 (x=404,y=756)`）を確認した。
+- 文言差はLightの`権限がありません`に対しHeavyが`権利を確認してAI生成`であること。これは外部AI送信前の一律権利確認ゲートであり、安全境界として削除・自動承認しない。
+- 判定: geometry／主要入力は`PASS`、生成後フローと実成果物receiptは未確認、権利ゲート文言は`UI_DIFF (安全境界)`として分離。
+
+## 2026-09-17 Heavyライブラリー詳細のLight正本parity修正
+
+- `src/pages/LightchainLibraryPage.tsx`で、Light本番の選択素材詳細には存在しない追加handoff UI（Canvas／AIフィッティング／生地／プリントの個別ボタン、31機能select）をデフォルト表示しないよう変更した。
+- 追加機能の実装とホーム／各ワークベンチの導線は削除せず、Lightが同じ契約を公開するまでライブラリー詳細の比較面だけから隠した。基本操作（名前編集、コピー、削除、ダウンロード、戻る／閉じる）は維持した。
+- `npm run typecheck`、`npm run test:library-canvas-handoff`（9/9）、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`（2550 modules）をPASSした。
+- Zeabur fresh target readback後、既存`heavy-chain` service（service `6a318803302ffbcd03a92935`）へdeployment `6aaada4705af289f92f97289`を実行した。plan typeは`docker`。本記録時点のdeployment stateは`BUILDING`であり、Heavy本番の修正版readbackは未完了。
+- 判定: local implementation／tests／buildは`PASS`、production deploymentは`BUILDING`、Companion post-deploy readback・provider receipt・source sync・reconciliation・cleanupは未完了。

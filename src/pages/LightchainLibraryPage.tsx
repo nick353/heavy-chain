@@ -236,6 +236,12 @@ export function LightchainLibraryPage() {
     card.kind === 'local' ? card.artifact.id === selectedAssetId : card.asset.id === selectedAssetId
   )) ?? null;
 
+  // Light production's selected-asset panel exposes the copy/name/basic lifecycle
+  // actions only. Keep the extended handoff implementation available to the
+  // launcher/workbench flows, but do not add Heavy-only controls to this parity
+  // surface until Light exposes the same contract.
+  const showExtendedLibraryHandoffs = false;
+
   const visibleArtifacts = libraryCards;
 
   const handleImportRemote = async (
@@ -571,7 +577,7 @@ export function LightchainLibraryPage() {
               <button type="button" className="mt-4 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.06]" onClick={() => void handleCopySelected()} disabled={uploading}>
                 {selectedAsset.kind === 'remote' ? 'ライブラリーに登録してコピー' : 'コピーを作成します'}
               </button>
-              {selectedAsset.kind === 'local' ? (
+              {showExtendedLibraryHandoffs ? (selectedAsset.kind === 'local' ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className="rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}`)}>Canvasへ送る</button>
                   <button type="button" className="rounded-lg border border-cyan-200/30 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-200/10" onClick={() => navigate(`/fitting?libraryArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}`)}>AIフィッティングへ</button>
@@ -585,8 +591,8 @@ export function LightchainLibraryPage() {
                   <button type="button" className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.06] hover:text-white disabled:opacity-40" onClick={() => void handleImportRemote(selectedAsset.asset, 'fabric')} disabled={uploading}>登録して生地イメージへ</button>
                   <button type="button" className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.06] hover:text-white disabled:opacity-40" onClick={() => void handleImportRemote(selectedAsset.asset, 'printing')} disabled={uploading}>登録してプリント画像へ</button>
                 </div>
-              )}
-              <div className="mt-5 rounded-xl border border-white/10 bg-black/15 p-4" data-testid="library-all-feature-handoff">
+              )) : null}
+              {showExtendedLibraryHandoffs && <div className="mt-5 rounded-xl border border-white/10 bg-black/15 p-4" data-testid="library-all-feature-handoff">
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="min-w-64 flex-1 text-xs font-semibold text-neutral-300">
                     この素材を使う機能
@@ -612,7 +618,7 @@ export function LightchainLibraryPage() {
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-neutral-500">動画を除く{lightchainUnifiedFeatureCatalog.length}機能から選択できます。素材の系譜を保ったままワークベンチへ引き継ぎます。</p>
-              </div>
+              </div>}
             </aside>
           )}
         </main>
