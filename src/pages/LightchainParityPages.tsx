@@ -164,7 +164,9 @@ function SegmentedTabs({
   );
 }
 
-const creatorCategoryGroups = [
+type CreatorCategoryGroup = { label: string; items: readonly string[] };
+
+const creatorCategoryGroups: readonly CreatorCategoryGroup[] = [
   { label: 'トップス', items: ['ニット', 'ルームウェア', 'Tシャツ', 'パーカー', 'シャツ', 'タンクトップ', 'ベスト', 'スーツ', 'ブルゾン', 'トレンチコート', 'オーバーコート', 'ダウン', '下着', 'スイムウェア'] },
   { label: 'ボトムス', items: ['ルームウェア', 'ニットボトムス', 'ハーフスカート', 'パンツ'] },
   { label: 'ワンピース/セットアップ', items: ['ルームウェア', 'ウールワンピース', 'ワンピース', 'つなぎ'] },
@@ -172,10 +174,25 @@ const creatorCategoryGroups = [
 
 const creatorCategoryTabs = ['レディース', 'メンズ', '女の子', '男の子'] as const;
 
+const creatorCategoryGroupsByTab: Record<(typeof creatorCategoryTabs)[number], readonly CreatorCategoryGroup[]> = {
+  レディース: creatorCategoryGroups,
+  女の子: creatorCategoryGroups,
+  メンズ: [
+    { label: 'トップス', items: ['ニット', 'ルームウェア', 'Tシャツ', 'パーカー', 'シャツ', 'タンクトップ', 'ベスト', 'スーツ', 'ブルゾン', 'トレンチコート', 'オーバーコート', 'ダウン'] },
+    { label: 'ボトムス', items: ['ルームウェア', 'スイムウェア', 'パンツ'] },
+    { label: 'ワンピース/セットアップ', items: ['つなぎ'] },
+  ],
+  男の子: [
+    { label: 'トップス', items: ['ニット', 'ルームウェア', 'Tシャツ', 'パーカー', 'シャツ', 'タンクトップ', 'ベスト', 'スーツ', 'ブルゾン', 'トレンチコート', 'オーバーコート', 'ダウン'] },
+    { label: 'ボトムス', items: ['ルームウェア', 'スイムウェア', 'パンツ'] },
+    { label: 'ワンピース/セットアップ', items: ['つなぎ'] },
+  ],
+};
+
 function CreatorCategoryPicker({ selectedCategory, onSelect }: { selectedCategory: string; onSelect: (category: string) => void }) {
   const [activeTab, setActiveTab] = useState<(typeof creatorCategoryTabs)[number]>('レディース');
   const [query, setQuery] = useState('');
-  const visibleGroups = creatorCategoryGroups
+  const visibleGroups = creatorCategoryGroupsByTab[activeTab]
     .map((group) => ({ ...group, items: group.items.filter((item) => !query.trim() || item.includes(query.trim())) }))
     .filter((group) => group.items.length > 0);
 
