@@ -2906,3 +2906,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 権限状態が解除された実アカウントでの生成・provider receipt／source sync／保存・再表示・再利用・cleanup
 
 判定: 最新デプロイ後の初期化待機を含む`/tools/fabric`初期画面は`UI_PASS`。成果物フローは未完了。
+
+### 2026-09-17 Light `/creator`カテゴリ初期状態fresh readback
+
+- [x] Light本番`/creator`を同じCompanionセッションで開き、初期化後のbody semantic readbackを取得
+- [x] `デザインを選択してください`、`カテゴリを選択してください`、`画像をアップロード`、`生成履歴`、`インスピレーション`、右側`権限がありません`を確認
+- [x] Lightの右側権限ボタンがdisabledであることを確認し、Heavyの最新`/creator`状態契約と照合可能な証拠を追加
+- [x] カテゴリトリガーはLight DOM上で一意なsemantic button locatorとして取得できず、誤クリック・座標推測を行わずに停止
+- [ ] Lightの正規カテゴリトリガーを同じDOM／visual証拠から再特定し、4選択肢をfresh readback
+- [ ] Heavyとのカテゴリ選択後UI、生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup比較
+
+判定: Light`/creator`の未選択初期状態は`UI_PASS`。カテゴリメニューのLight側選択肢と選択後状態は`NOT_PROVEN`。
