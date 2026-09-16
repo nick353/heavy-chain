@@ -2986,3 +2986,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Printingの入力アップロード、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
 
 判定: `/tools/printing`のLight実測差分を特定し、Heavy側の表示・操作semantic修正を本番`UI_PASS`まで確認。参照画像はHeavy画面へ反映済みだが、Companion reconciliation capsuleが完了していないため、プリント画像追加・生成・成果物ライフサイクルは保留。
+
+### 2026-09-17 `/creator` Light／Heavy fresh state comparison
+
+- [x] Light／Heavyの既存ログイン済みCompanionタブを同時にfresh semantic readback
+- [x] Lightは`レディース-トップス-ニット-ニット編み`、Heavyは前回検証状態の`男の子・トップス・ニット編み`を保持していることを確認
+- [x] Heavyは生成履歴の既存`Fashion Studio: スタジオ案`と`Canvasへ再利用`を表示し、Lightは履歴表示なしであることを確認
+- [x] 両方で画像／生地画像、キーワード、辞典、権限導線の主要controlを確認
+- [ ] ユーザー別の選択状態・履歴データ差を除外した同一初期状態でのpixel-level比較と、生成・保存・再利用の同一run証跡
+
+判定: `/creator`の主要control契約は両環境で確認済み。選択状態と履歴は環境依存状態差として分離し、実生成ライフサイクルは未完了。
