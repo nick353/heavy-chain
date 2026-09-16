@@ -2841,7 +2841,9 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavyのagent入力を単一列＋送信ボタンoverlayへ変更し、Lightの`694px`入力幅へ反映
 - [x] AIグラフィックデザインタブ幅を`176px`へ調整し、折返しを解消
 - [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、git diff checkをPASS
-- [ ] 本番deploy後にHeavy`/agent`の最終geometryを再照合
+- [x] Zeabur deployment `6aab0ecd05af289f92f979bc`を`RUNNING`へ到達させ、Heavy本番をfresh reload
+- [x] 15秒待機後、Heavy`/agent`のタイトル`456x40`、tablist`486x40`、textarea`694x56`、商品企画画像`240x172`をfresh semantic readback
+- [x] 同一Companionタブのvisual readbackで、Lightと同じ初期サイドバー表示・入力カード・ヘッダー画像を確認
 - [ ] 入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
 
-判定: 入力欄の幅契約をLight正本へ合わせるローカル修正は完了。本番反映後のfresh readbackと成果物フロー確認が残る。
+判定: 入力欄の幅契約をLight正本へ合わせ、本番`/agent`へ反映済み。初期画面のgeometry／visualは`UI_PASS`だが、成果物フローと全画面監査は未完了。
