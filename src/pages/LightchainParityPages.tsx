@@ -164,12 +164,43 @@ function SegmentedTabs({
   );
 }
 
-const creatorCategories = [
-  ['女性', 'bg-gradient-to-br from-rose-200 to-orange-100'],
-  ['男性', 'bg-gradient-to-br from-sky-200 to-indigo-200'],
-  ['キッズ', 'bg-gradient-to-br from-lime-200 to-emerald-200'],
-  ['ユニセックス', 'bg-gradient-to-br from-neutral-100 to-neutral-300'],
+const creatorCategoryGroups = [
+  { label: 'トップス', items: ['ニット', 'ルームウェア', 'Tシャツ', 'パーカー', 'シャツ', 'タンクトップ', 'ベスト', 'スーツ', 'ブルゾン', 'トレンチコート', 'オーバーコート', 'ダウン', '下着', 'スイムウェア'] },
+  { label: 'ボトムス', items: ['ルームウェア', 'ニットボトムス', 'ハーフスカート', 'パンツ'] },
+  { label: 'ワンピース/セットアップ', items: ['ルームウェア', 'ウールワンピース', 'ワンピース', 'つなぎ'] },
 ] as const;
+
+const creatorCategoryTabs = ['レディース', 'メンズ', '女の子', '男の子'] as const;
+
+function CreatorCategoryPicker({ onSelect }: { onSelect: (category: string) => void }) {
+  const [activeTab, setActiveTab] = useState<(typeof creatorCategoryTabs)[number]>('レディース');
+  const [query, setQuery] = useState('');
+  const visibleGroups = creatorCategoryGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => !query.trim() || item.includes(query.trim())) }))
+    .filter((group) => group.items.length > 0);
+
+  return (
+    <section className="flex min-h-full flex-col rounded-xl border border-cyan-300/70 bg-[#252a2d] p-4" data-testid="creator-category-picker">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-2 rounded-full bg-white/[0.06] px-4 py-2 text-xs text-neutral-300">
+          <Sparkles className="h-4 w-4 text-cyan-300" />
+          <span>カテゴリを選択してください</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-44 border-b border-white/20 bg-transparent px-2 py-2 text-xs text-neutral-200 outline-none placeholder:text-neutral-500" placeholder="カテゴリー名を入力..." aria-label="カテゴリー名を入力" />
+          <button type="button" className="rounded-lg border border-white/10 bg-white/[0.05] p-2 text-neutral-300" aria-label="カテゴリーを検索"><Search className="h-4 w-4" /></button>
+        </div>
+      </div>
+      <div className="mt-5 flex gap-7 border-b border-white/10 text-xs text-neutral-400" role="tablist" aria-label="カテゴリ対象">
+        {creatorCategoryTabs.map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={`relative pb-3 ${activeTab === tab ? 'font-semibold text-cyan-300 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-1 after:rounded-full after:bg-cyan-300' : ''}`} onClick={() => setActiveTab(tab)}>{tab}</button>)}
+      </div>
+      <div className="mt-4 flex-1 overflow-auto pr-1">
+        {visibleGroups.map((group) => <div key={group.label} className="mb-4"><button type="button" className="mb-3 flex items-center gap-1 text-xs font-semibold text-neutral-200" aria-expanded="true"><span className="text-neutral-400">▾</span>{group.label}</button><div className="grid grid-cols-4 gap-2 xl:grid-cols-8">{group.items.map((item, index) => <button key={`${group.label}-${item}-${index}`} type="button" className="flex min-h-[52px] items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-center text-xs text-neutral-300 transition hover:border-cyan-300/70 hover:text-white" onClick={() => onSelect(`${activeTab}・${item}`)}>{item}</button>)}</div></div>)}
+        {visibleGroups.length === 0 && <p className="py-10 text-center text-sm text-neutral-500">該当するカテゴリがありません。</p>}
+      </div>
+    </section>
+  );
+}
 
 export function LightchainCreatorPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -208,7 +239,8 @@ export function LightchainCreatorPage() {
           <section className="rounded-xl bg-[#252a2d] p-4">
             <div className="flex w-full items-center gap-2"><h6 className="w-full text-sm font-semibold">デザインを選択してください</h6><span className="shrink-0 rounded bg-rose-400 px-2 py-1 text-[11px] font-bold text-white">必須項目</span></div>
             <button type="button" className="mt-4 w-full rounded-lg border border-dashed border-white/30 bg-[#171b1d] px-3 py-2 text-sm text-neutral-300" onClick={() => setCategoryPickerOpen((open) => !open)}>＋ {selectedCategory || 'カテゴリを選択してください'}</button>
-            {categoryPickerOpen && <div className="mt-3 grid grid-cols-2 gap-2">{creatorCategories.map(([label]) => <button key={label} type="button" aria-pressed={selectedCategory === label} className={`rounded-lg border px-2 py-2 text-xs ${selectedCategory === label ? 'border-cyan-300 bg-cyan-300/20 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-neutral-300'}`} onClick={() => { setSelectedCategory(label); setCategoryPickerOpen(false); }}>{label}</button>)}</div>}
+            {categoryPickerOpen && <p className="mt-2 text-xs text-neutral-500">中央のカテゴリ一覧から選択してください。</p>}
+            {categoryPickerOpen && <div className="fixed inset-x-[352px] bottom-4 top-[67px] z-20"><CreatorCategoryPicker onSelect={(category) => { setSelectedCategory(category); setCategoryPickerOpen(false); }} /></div>}
           </section>
           <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center gap-2"><h6 className="text-sm font-semibold">画像をアップロード</h6><span className="text-xs text-neutral-400">オプション</span></div><div className="flex flex-1 items-center justify-center"><button type="button" className="rounded-full bg-white/[0.08] px-5 py-3 text-sm text-neutral-300" onClick={() => navigate('/asset-center')}><Sparkles className="mr-2 inline h-4 w-4" />デザインを先に選択してください。</button></div></section>
         </aside>
