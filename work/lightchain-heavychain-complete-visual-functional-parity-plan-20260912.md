@@ -2996,3 +2996,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] ユーザー別の選択状態・履歴データ差を除外した同一初期状態でのpixel-level比較と、生成・保存・再利用の同一run証跡
 
 判定: `/creator`の主要control契約は両環境で確認済み。選択状態と履歴は環境依存状態差として分離し、実生成ライフサイクルは未完了。
+
+### 2026-09-17 `/agent` Light／Heavy fresh comparison and parity patch
+
+- [x] Light／Heavyのログイン済みAgent画面を同一Companionセッションでfresh semantic・visual readback
+- [x] Heavyは初期サイドバーが展開状態で、Lightのコンパクトレール初期状態と異なることを確認
+- [x] HeavyのAgent生成controlが`AI生成`、Lightが`送信`として公開されている差分を確認
+- [x] HeavyのAgent初期サイドバーをコンパクトレールへ変更し、Agent生成controlのアクセシブル名を`送信`へ修正（commit `12cb391`）
+- [x] typecheck、route tests 19/19、UI boundary tests 11/11、build、`git diff --check`をPASS
+- [ ] deployment `6aab28e405af289f92f97dbc`の`RUNNING`確認後、Heavy `/agent`をCompanionで再読込してLight geometry・controlをfresh再確認
+- [ ] Agentの添付入力、生成、保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
+
+判定: Agent初期UI差分を特定し、修正とローカル検証はPASS。本番deploymentは現在`DEPLOYING`のため、post-deploy readbackと成果物フローは未完了。
