@@ -2823,3 +2823,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/agent`入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
 
 判定: Lightの現行`/agent`状態契約へさらに近づけた。変更はローカル検証済みで、本番反映と生成後フローが残る。
+
+### 2026-09-17 `/agent`入力カード・タブ幅の最終UI調整
+
+- [x] Lightの入力カード幅`720px`、textarea`694px`、開始位置`x=641,y=347`を実測
+- [x] Heavyのagent入力カードを固定`720px`、textarea幅をLight相当に修正し、入力開始位置を8px調整
+- [x] Lightの長い2タブの幅を`140px`／`164px`へ固定し、タブリスト幅契約を反映
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、git diff checkをPASS
+- [ ] 本番deploy後にHeavy`/agent`の最終geometryをLightへ再照合
+- [ ] 入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
+
+判定: `/agent`初期画面の主要geometry差分を解消する最終調整。成果物フローと全画面監査は引き続き未完了。
