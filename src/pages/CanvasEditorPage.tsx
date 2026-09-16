@@ -330,9 +330,15 @@ const loadLocalUploadImage = (source: string) => new Promise<HTMLImageElement>((
 // path through the authenticated gateway and load remote bytes before adding
 // them to Konva, matching the Gallery selector's readable Canvas path.
 const loadLibraryCanvasImage = async (source: string) => {
-  const localResolution = await resolveLocalCanvasAsset(source);
+  const localResolution = await withLocalUploadTimeout(
+    resolveLocalCanvasAsset(source),
+    'canvas_library_local_asset_resolution_timeout',
+  );
   try {
-    const resolvedSource = localResolution?.source || await resolveGeneratedImageUrl(source);
+    const resolvedSource = localResolution?.source || await withLocalUploadTimeout(
+      resolveGeneratedImageUrl(source),
+      'canvas_library_source_resolution_timeout',
+    );
     if (!/^https?:/i.test(resolvedSource)) return await loadLocalUploadImage(resolvedSource);
 
     const response = await fetch(resolvedSource);
