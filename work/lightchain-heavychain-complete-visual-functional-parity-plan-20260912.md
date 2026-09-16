@@ -2872,3 +2872,16 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/creator`生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: Heavyのカテゴリ選択入口と選択肢表示は`UI_PASS`。Lightとの選択後状態および成果物フローは未確認。
+
+### 2026-09-17 `/tools/fabric`初期権限状態差分と修正
+
+- [x] Light本番`/tools/fabric`のbody／semantic readbackで、初期生成操作が`権限がありません` disabledであることを確認
+- [x] Heavy本番`/tools/fabric`の同一readbackで、`権利を確認してAI生成`が表示される差分を確認
+- [x] Heavyの未確認時生成導線をLightと同じ`PermissionLockedButton`へ変更し、権利確認導線を初期画面から除外
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、git diff checkをPASS
+- [x] commit `d93bf46`をpush
+- [ ] Zeabur deployment `6aab158f05af289f92f97a74`の`RUNNING`確認（現在`BUILDING`）
+- [ ] Heavy本番を再読込し、Lightと同じdisabled権限状態をfresh semantic／visual readback
+- [ ] 権限確認後の生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: 差分の原因特定とコード修正・ローカル検証は完了。本番反映と生成後フローは未完了。
