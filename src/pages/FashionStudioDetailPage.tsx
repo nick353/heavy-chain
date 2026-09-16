@@ -29,12 +29,12 @@ export function FashionStudioDetailPage() {
       </aside>
 
       <label
-        className="absolute left-1/2 top-[190px] flex h-[496px] w-[780px] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-xl bg-[#25292b] text-center transition hover:bg-[#2a2e30]"
+        className="absolute left-1/2 top-[190.93px] flex h-[496.14px] w-[781.59px] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-xl bg-[#25292b] text-center transition hover:bg-[#2a2e30]"
         data-testid="fashion-studio-detail-upload"
       >
         <Upload className="h-8 w-8 text-white" />
-        <span className="mt-5 text-base text-neutral-300">ここをクリックまたはドラッグして画像を追加</span>
-        <span className="mt-1 text-sm text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</span>
+        <span className="mt-5 text-sm text-neutral-300">ここをクリックまたはドラッグして画像を追加</span>
+        <span className="mt-1 text-xs text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</span>
         <input className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" />
       </label>
     </main>
