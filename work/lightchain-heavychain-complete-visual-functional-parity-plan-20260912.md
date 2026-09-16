@@ -2896,3 +2896,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 権限状態が解除された実アカウントでの生成・provider receipt／source sync／保存・再表示・再利用・cleanup
 
 判定: `/tools/fabric`の初期権限状態は本番`UI_PASS`。生成後フローと最新自動デプロイの完了readbackは未完了。
+
+### 2026-09-17 `/tools/fabric`最新デプロイ後の待機・再読込readback
+
+- [x] 最新自動デプロイ`6aab165205af289f92f97a98`が`RUNNING`となったことをfresh readback
+- [x] 同じログイン済みCompanionタブを再読込し、直後に`WORKSPACE ワークスペースを準備しています`を確認
+- [x] 画面を閉じずにCompanionで最大15秒待機し、`権限がありません` disabled button（`h=40,w=564,x=128,y=756`）が表示されることを確認
+- [x] 待機後も`権利を確認してAI生成`が出現せず、Lightの初期権限状態と一致することを確認
+- [ ] 権限状態が解除された実アカウントでの生成・provider receipt／source sync／保存・再表示・再利用・cleanup
+
+判定: 最新デプロイ後の初期化待機を含む`/tools/fabric`初期画面は`UI_PASS`。成果物フローは未完了。
