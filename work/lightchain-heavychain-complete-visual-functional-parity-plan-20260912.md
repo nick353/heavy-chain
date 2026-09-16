@@ -2516,3 +2516,238 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Canvas保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: 原因候補に対する修正とローカル検証はPASS。修正deploymentは現在`BUILDING`で、本番Canvas実画像復元は未完了。
+
+### 2026-09-17 Canvas handoff source resolution timeout修正・継続待ち
+
+- [x] `loadLibraryCanvasImage`のローカルasset解決と生成画像URL解決に、既存の8秒上限付き待機を適用
+- [x] `npm run typecheck`、library handoff 9/9、route tests 19/19、build（2550 modules）を確認済み
+- [x] commit `f661599`がGitHub `main`へpush済みであることを確認
+- [x] Zeaburのbuild logでVite成果物生成とOCI image layer exportまで到達したことを確認
+- [ ] deployment `6aaae17405af289f92f973f5`が`RUNNING`になったことを確認
+- [ ] 同一CompanionタブでCanvas handoffをfresh readbackし、`objectCount >= 1`と実画像表示を確認
+- [ ] Canvas保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致
+
+判定: timeout修正の実装・ローカル検証・pushは完了。deploymentは引き続き`BUILDING`であり、本番Canvas実画像復元は未完了。次の再開点は同じdeploymentのfresh status readbackであり、再デプロイは行わない。
+
+### 2026-09-17 Canvas remote fetch/blob timeout修正・自動deploy待ち
+
+- [x] remote画像の`fetch`と`Response.blob()`にも8秒上限を追加し、メディア応答0バイトで無期限待機しないよう修正
+- [x] `npm run typecheck`、library handoff 9/9、route tests 19/19、build、`git diff --check`をPASS
+- [x] commit `78a86bb`をGitHub `main`へpush
+- [ ] 自動deployment `6aaae36d05af289f92f97467`の`RUNNING`確認
+- [ ] 同一Companion Canvasタブで`load_error`または`image_loaded`のfresh debug readbackを取得し、画像表示を確認
+- [ ] Canvas保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致
+
+判定: 画像取得の無期限待機を追加修正し、ローカル検証とpushまで完了。自動deploymentは現在`BUILDING`で、本番再読込は完了後に行う。
+
+### 2026-09-17 postdeploy継続点
+
+- [x] 自動deployment `6aaae36d05af289f92f97467`の`RUNNING`と対象commitをfresh readback
+- [x] 同一Companion Canvasタブの再読込と15秒待機後のfresh debug readback
+- [x] `artifactFound: true`、canonical `storage_path`解決開始、`objectCount: 0`を記録
+- [ ] `libraryHandoffDebugRef`を再描画可能なstateへ移し、`load_error`／`image_loaded`の実結果を観測可能にする
+- [ ] Heavy media gatewayの所有者D1行・R2 objectとの対応を、認証済みCompanion readbackまたは正規provider証跡で確認
+- [ ] `objectCount >= 1`と実画像表示を確認してからCanvas保存・再表示・再利用へ進む
+- [ ] provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致を別証跡として完了
+
+判定: deploymentは完了したが、Canvas実画像復元は`NOT_PROVEN`。登録・ログインなどユーザー本人の工程はユーザー操作を待つ。
+
+### 2026-09-17 Canvas debug-state再描画修正・deployment後の再開点
+
+- [x] `libraryHandoffDebugRef`をstate version更新経由へ変更し、非同期handoff結果のdebug readbackを再描画可能にした
+- [x] `ac80af9`をGitHub `main`へpushし、typecheck、library handoff 9/9、build、diff checkを確認
+- [x] Zeabur deployment `6aaae54805af289f92f974b2`の対象commit一致、`docker`、`RUNNING`をfresh readback
+- [ ] 修正後HeavyタブをCompanionで再取得し、`load_error`／`image_loaded`と`objectCount`をreadback
+- [ ] `objectCount >= 1`と実画像表示を確認してからCanvas保存・再表示・再利用へ進む
+- [ ] provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致を別証跡として完了
+
+再開点: 現在のCompanion sessionではHeavyの旧task tabが消滅し、新規タブ作成が`task_target_unavailable`・`no_dispatch`で止まった。ユーザーの登録・認証タブは触らず、Heavyタブが同じsessionで再取得可能になった時点から続行する。
+
+### 2026-09-17 stale lease cleanup
+
+- [x] `pageInstanceId: null`のHeavy旧tab／空tabに残っていた所有leaseをrelease
+- [ ] Heavy ChainタブがCompanionで再取得可能になったら、修正版Canvasのfresh readbackを再開
+
+### 2026-09-17 Goal再開後の再取得試行
+
+- [x] 新しいCompanion logical sessionを作成
+- [x] 拡張機能ページtabへのHeavy navigateを準備
+- [ ] `pageInstanceId: null`による`task_target_unavailable`を解消し、Heavyタブを取得
+- [ ] 修正版Canvasの`load_error`／`image_loaded`、実画像表示、保存・再表示・再利用を確認
+
+### 2026-09-17 Heavyタブ再取得・15秒待機後のCanvas readback
+
+- [x] 新しいCompanion sessionでHeavy本番のtask-owned tab `1980922369`を作成し、対象Canvas URLを開いた
+- [x] exact-tab leaseを取得し、ログイン状態（`userIdPresent: true`）とCanvas画面の表示を確認
+- [x] 15秒待機後、debug readbackを再取得し、`status: unsaved`、`objectCount: 0`、`resolution: []`、`libraryHandoff.phase: lookup`を記録
+- [x] visual screenshotでCanvas UI、権利確認チェックボックス未選択、保存ボタン、各操作導線を確認
+- [x] current-page network timingでsession、profile、brands、media gateway readが発生していることを確認。media readは転送サイズ0であり、provider完了とは扱わない
+- [ ] Heavy media gatewayの認証済み応答と対象R2 objectの対応を正規readbackで確認し、`image_loaded`または明示的`load_error`を取得
+- [ ] `objectCount >= 1`と実画像表示を確認してからCanvas保存・再表示・再利用へ進む
+- [ ] provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致を別証跡として完了
+
+判定: Heavy画面は自動で開け、ログイン済み状態とUIは確認できた。Canvas handoffはartifact lookup後も実画像0件で、media gatewayの転送サイズ0が残るため、実画像復元は`NOT_PROVEN`。権利確認ゲートは未選択のまま維持した。
+
+### 2026-09-17 Heavy実ライブラリーカード→Canvas→保存→再表示
+
+- [x] Heavyライブラリーの実カードで`ボードにコピー`を一度だけ実クリックし、`/canvas/new?sourceArtifactId=local-b9c3fbda-6b36-4a29-bad3-acdb8e33c627`へ遷移
+- [x] 15秒待機後、Canvas画面のスクリーンショットとCanvas要素を確認し、実画像が表示されることを確認
+- [x] 実画像入りCanvasを一度だけ保存し、`/canvas/d7c9dc28-7587-4d83-9c64-9ef33d58bf4d`へ遷移
+- [x] 保存直後に`キャンバス · サーバー確認済み · ブランド: Nisen`とCanvas要素をfresh readback
+- [x] `/asset-center`へ移動してから、保存URLへ戻る2段階navigationで再表示・再利用を確認
+- [x] 再表示後も保存URL、サーバー確認済み表示、Canvas要素をfresh readback
+- [ ] 再表示時のメインCanvas画像位置・表示内容をLight正本と比較し、必要なら復元処理を修正
+- [ ] provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致
+
+判定: 実ライブラリーカードからのhandoff、Canvas保存、保存済みURLの再表示は`PASS`。ただし再表示スクリーンショットではメイン領域の画像が画面外に復元されたように見え、右下ミニマップには存在するため、Canvas viewport／画像位置の完全parityは未確定。外部provider receipt・source sync・reconciliation・cleanupは別証跡として未完了。
+
+### 2026-09-17 保存済みCanvasの追加待機後visual readback
+
+- [x] 保存済みCanvasを同じtask-owned tabで再取得し、Canvas要素`1848x772`を確認
+- [x] 追加待機後にスクリーンショットを再取得し、保存済み実画像がメインCanvas中央に表示されることを確認
+- [x] 先の空に見えたスクリーンショットは画像ロード完了前のreadbackと切り分け、viewport／画像位置の修正は不要と判定
+- [ ] provider receipt／source sync／reconciliation／cleanup、logout→login回帰、Lightとの全画面pixel-level一致
+
+判定: Canvas保存・再表示・実画像ロード完了後のvisual readbackは`PASS`。初回readbackの空表示は待機不足であり、コード修正対象ではない。
+
+### 2026-09-17 Light Chainホーム全カテゴリ・事例カテゴリ実操作
+
+- [x] task-owned Companion tabでLight Chainホームを開き、ログイン済み画面をvisual確認
+- [x] 上段カテゴリ`企画デザインツール`、`AIフィッティング`、`グラフィックツール`を各一回のsemantic clickで切替
+- [x] 各カテゴリの`aria-selected`、tabpanel、カード表示をfresh readback。グラフィックツールは5カードを確認
+- [x] 下段事例カテゴリ`デザイン修正`を一回のsemantic clickで切替し、選択状態と空結果表示をvisual確認
+- [ ] 残りの事例カテゴリ、各カードからの主要導線、Light→Heavy差分比較を継続
+- [ ] provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致
+
+判定: Lightホームの上段4カテゴリと事例カテゴリの切替操作は`PASS`。`デザイン修正`は選択状態が反映され、画面は「該当する結果が見つかりません」と表示。provider完了やHeavy parityは未判定。
+
+### 2026-09-17 Light Chain事例カテゴリ残り4種
+
+- [x] `柄・プリント`をsemantic clickし、選択状態と空結果表示をvisual確認
+- [x] `ビジュアル素材`をsemantic clickし、選択状態と実カード群（人物、商品、動画サムネイル等）をvisual確認
+- [x] `マーケティングコンテンツ`をsemantic clickし、選択状態と実カード群をvisual確認
+- [x] `生産`をsemantic clickし、選択状態と空結果表示をvisual確認
+- [ ] Lightカードからの安全な主要導線、Heavy同等画面の差分、保存・再表示・再利用の比較
+- [ ] provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面pixel-level一致
+
+判定: Lightホーム下段6事例カテゴリは全て一回ずつ操作し、選択状態とvisual表示を確認済み。`ビジュアル素材`と`マーケティングコンテンツ`はカード群あり、`デザイン修正`・`柄・プリント`・`生産`は空結果表示。Heavy parityは未判定。
+
+### 2026-09-17 Heavy Asset Center visual差分
+
+- [x] Heavy task-owned tabで`/asset-center`を開き、サイドバー・カード・プレビュー・ボードにコピー導線をfresh readback
+- [x] Asset Centerの実カード群とカテゴリ（履歴アップロード、生成履歴、ウェアデザインラボ生成結果、2026AW、新規格、ライブラリー等）を確認
+- [x] visual screenshotで画面上部のブランド表示が`LIGHTCHAIN`のままであることを確認
+- [ ] Heavy固有ブランド／ヘッダー／Light正本との差分を修正し、各画面で再読込・再確認
+- [ ] provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致
+
+判定: Heavy Asset Centerの機能導線とカードUIが表示され、ヘッダー`LIGHTCHAIN`もLight正本と一致することを確認した。この画面についてはLight visual parityのブラウザ証拠を取得済み。カード主要導線と他画面のpixel-level比較は未完了。
+
+### 2026-09-17 Heavy Asset Center全サイドカテゴリ実操作
+
+- [x] `マイライブラリー`を開き、7カードと各カードの`プレビュー`／`ボードにコピー`／`詳細`を確認
+- [x] `履歴アップロード`、`生成履歴`、`ウェアデザインラボ生成結果`、`2026AW`、`新規格`、`ノイズバリュー用ホリゾンカラー`、`ライブラリー`を各一回のsemantic clickで切替
+- [x] 各切替後に同じtask-owned tabを再reserveし、URL・対象ボタン・visual screenshotをfresh readback
+- [ ] 各カテゴリ内カードの主要導線、Light正本との画面・成果物比較を継続
+- [ ] provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致
+
+判定: Heavy Asset Centerの全サイドカテゴリは実操作とvisual readbackまで`PASS`。これはブラウザ表示の証拠であり、外部provider完了・同期・照合・cleanup・Lightとの完全一致を意味しない。
+
+### 2026-09-17 Lightおすすめ事例カード→詳細→同じもの作成導線
+
+- [x] Lightの`おすすめの事例`を開き、画像カード群と選択状態をvisual確認
+- [x] 先頭カード`ファッションスタジオ - アウトドアジャケット実物から線画化`を一回だけクリックし、事例詳細表示へ遷移
+- [x] 詳細画面の実画像、実現ステップ、`同じもの作成`導線を確認
+- [x] `同じもの作成`を一回だけクリックし、URL・画面・権利確認チェックボックスの変化をfresh readback（URLは同一、チェックボックス0件、表示は詳細画面のまま）
+- [ ] Lightのカードごとの遷移先仕様とHeavy対応画面の比較、保存・再表示・再利用を継続
+- [ ] provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致
+
+判定: Lightの事例カード→詳細表示は`PASS`。`同じもの作成`は一回dispatchしたが、同一URL・同一詳細画面で追加のブラウザ状態変化は確認できず、生成・外部送信・権利確認は未実行。
+
+### 2026-09-17 Light／Heavy線画化ツール待機後readback
+
+- [x] Heavy `/tools/line-draft-to-tile`を開き、初期化画面を確認して15秒待機
+- [x] 待機後にHeavyの未生成画面、告知バナー、`線画の実写化`、カラー／モノクロ線画、平置き／モデル図、`AI生成`、`生成履歴`、右側プレースホルダーをfresh visual readback
+- [x] 権利確認チェックボックス、アップロード、生成、外部送信は未実行
+- [x] Light側は既存のホーム／印刷タブから同一ルートへの直接遷移がCompanion preconditionでdispatchされず、画面を変更しなかったことを記録（既存のLight実測を正本として扱う）
+- [ ] Lightの正規UIカードから線画化ツールへ到達する導線を特定し、Heavy未生成状態の文言・geometry・入力後／生成後状態を同一条件で比較
+- [ ] provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致
+
+判定: Heavy線画化ツールは15秒待機後の未生成UI表示を`PASS`。Light同一ツールの今回直接navigateはdispatchされず、正規カード導線からの比較は`NOT_PROVEN`。コード変更・再デプロイは今回不要。
+
+### 2026-09-17 関連契約テスト・build再確認
+
+- [x] Light/Heavy parity route tests 19/19
+- [x] unified workflow contract tests 6/6
+- [x] UI control boundary tests 11/11
+- [x] provider coverage tests 22/22
+- [x] `npm run typecheck`
+- [x] `npm run build`（Vite 2550 modules）
+- [ ] 本番provider receipt／source sync／reconciliation／cleanup、Lightとの全画面pixel-level一致、logout→login回帰
+
+判定: 関連する静的契約・typecheck・production buildは`PASS`。今回のCompanion差分確認ではHeavyコードを変更していないため、追加deployは不要。未完了項目は本番実成果物証跡と全画面比較として継続する。
+
+### 2026-09-17 Light／Heavy Fashion Studio内部画面比較
+
+- [x] Lightの事例詳細リンクの実測`href=/flow/integration`を確認
+- [x] Light `/flow/integration`を直接開き、12秒待機後に`ファッションスタジオ`、`新規ファイル`、既存プロジェクトグリッド、参考カードをvisual確認
+- [x] Heavy `/flow/integration`を開き、12秒待機後にLightと同じ新規ファイル＋既存プロジェクトグリッド構造をvisual確認
+- [x] Heavyの`PROJECT + 新規ファイル`を一回クリックし、スタジオ案／コーディネート／360度表示、素材・モデル・撮影セット、Canvas／Gallery導線をfresh visual readback
+- [x] Lightの新規ファイルカードは実測上divの`cursor-pointer`で、同一タブのsemantic click後もURL・表示に変化がなく、内部画面遷移は`NOT_PROVEN`として記録
+- [x] Lightの新規ファイルカードの見出しを一回クリックし、正規遷移先を特定してHeavyの内部画面と同一viewportで比較
+- [ ] 入力後・生成後・Canvas保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致
+
+判定: Light／HeavyのFashion Studio一覧画面の大枠と、Light新規ファイル→詳細Canvasの正規導線は`PASS`。Heavyの新規ファイルから内部ワークベンチまでのローカル導線も確認済み。既存プロジェクト名称・件数はユーザーデータスコープ差として分離する。
+
+### 2026-09-17 Heavy Fashion Studio→Canvas保存→再表示
+
+- [x] Heavy Fashion Studioの`Canvasへ保存`を一度だけ実行
+- [x] 保存後URL `https://heavy-chain.zeabur.app/canvas/v4utyunlmpa` を確認
+- [x] 保存直後の準備中表示から待機し、Canvas画面の`キャンバス`・`保存`をfresh semantic readback
+- [x] 同じtask-owned Companionタブを再度開いた状態でvisual screenshotを取得
+- [ ] Light側の同一条件Canvas保存・再表示・再利用との比較
+- [ ] provider receipt／source sync／reconciliation／cleanup（今回の保存はHeavyブラウザ内のローカル成果物作成として記録）
+
+判定: Heavy Fashion StudioからCanvas保存→Canvasルート再表示は`PASS`。保存成果物のprovider完了・外部同期・cleanupは未実施／未証明。
+
+### 2026-09-17 Light／Heavy線画化ツール正規URL比較
+
+- [x] Lightの正規URL `/tools/line-draft-to-tile` を同じログイン済みCompanionプロファイルで直接開き、初期化後に待機
+- [x] Lightのタブ、左側入力・カラー／モノクロ線画・平置き／モデル図・`生成履歴`・右側`線画の実写化`・`権限がありません`をvisual／semantic readback
+- [x] Heavyの同一URLを開き、15秒待機後に同じ主要要素をvisual／semantic readback
+- [x] 両方の同一viewportで`AI生成`のgeometry（x=137、width=562、height=44）と主要配置を比較
+- [ ] 入力後・生成後・成果物保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: Light正規URLが取得でき、Heavy未生成画面と主要操作・geometryは`PASS`。権限ゲートは未操作。生成後状態と実成果物の完全parityは未完了。
+
+### 2026-09-17 Heavy Fashion Studio新規ファイル詳細ルート修正・本番readback
+
+- [x] Lightの`新規ファイル`正規遷移先`/flow/integration/detail?boardProjectCode=&boardProjectType=`を実測
+- [x] Heavyの同deep-linkが修正前は`/lightchain`へ戻る差分を確認
+- [x] HeavyにLight準拠の空Canvas詳細画面と同deep-link routeを実装
+- [x] typecheck、関連契約テスト、build、git diff checkを通過
+- [x] commit `b0b4825`をpushし、Zeabur deployment `6aaaf19a05af289f92f97673`が`RUNNING`になったことをfresh readback
+- [x] 同じログイン済みCompanionタブでHeavy詳細URLを開き、`Fashion Studio`、`Untitled`、画像追加文言、file input、visual screenshotをfresh readback
+- [ ] 入力後・生成後・保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
+
+判定: Lightの新規ファイル詳細ルートに対するHeavyのルーティングと未生成空Canvasは`PASS`。本番反映も`RUNNING`を確認済み。外部生成・アップロード・権利確認は未実行で、成果物とprovider系証跡は未完了。
+
+### 2026-09-17 Fashion Studio空Canvas typography再修正・本番readback
+
+- [x] Light実測のupload card geometry（約`x=561.20,y=190.93,w=781.59,h=496.14`）にHeavyを合わせる
+- [x] Lightの文言要素を`p`、行高、縦位置までHeavyに反映
+- [x] typecheck、parity route tests 19/19、build、git diff checkを通過
+- [x] commit `8221b29`をpushし、Zeabur deployment `6aaaf53505af289f92f976d9`が`RUNNING`になったことをfresh readback
+- [x] 本番HeavyをCompanionで再読込し、upload cardと2つの`p`のgeometryをLightと比較（位置・高さは約0.02px以内）
+- [ ] 入力後・生成後・保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
+
+判定: Fashion Studio新規ファイルの空Canvas外形・文言要素・縦位置はLight正本と`PASS`。文字幅にはフォントレンダリング由来の約1.5px差が残るため、全画面pixel-level一致は未完了扱いとする。
+
+### 2026-09-17 Light／Heavy `/tools/fabric`初期状態比較
+
+- [x] ログイン済みCompanionの同一タスク所有プロファイルでLight／Heavyの`/tools/fabric`を開き、初期化後にsemantic・visual readback
+- [x] 4つの素材タブ、2つの画像入力、キーワード欄、比率セレクト、生成履歴を確認
+- [x] Heavy側だけのサイドバー、告知閉じるボタン、`画像比率`ラベル、`権利を確認してAI生成`を確認
+- [ ] Lightの現在の`権限がありません`状態に対応するHeavyの利用権限判定を特定し、権利確認ゲートを自動承認せずに初期UIを一致させる
+- [ ] 入力後・プレビュー後・生成後・保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致
+
+判定: Light／Heavyの主要入力構造は`PASS`だが、初期権限表示・周辺シェル・告知表示・比率ラベルに差分があり、`/tools/fabric`完全parityは`NOT_PROVEN`。権利確認を自動承認する変更は行わない。

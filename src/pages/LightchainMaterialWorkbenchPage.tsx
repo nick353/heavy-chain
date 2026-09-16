@@ -5084,7 +5084,7 @@ function LightchainMaterialWorkbenchSession() {
         </nav>
         <aside
           aria-label="Light Chainグラフィックツール"
-          className="fixed left-4 top-[66px] z-20 flex h-[calc(100vh-82px)] w-20 flex-col items-center overflow-hidden rounded-xl border border-white/10 bg-[#252b2d] text-white/70 shadow-2xl"
+          className="hidden"
         >
             <div className="flex w-full flex-col items-center gap-2 px-2 py-4">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-300/15 text-cyan-200" aria-hidden="true">
@@ -6403,7 +6403,7 @@ function LightchainMaterialWorkbenchSession() {
                   data-testid="lightchain-fabric-deprecation-banner"
                   className="flex justify-between rounded-lg pl-4 pr-2 py-2 gap-2 bg-linear-to-r from-[#133936] to-[#1A4D48] mt-2 [background:var(--surface-danger)] [&>span]:text-text-primary"
                 >
-                  <span className="text-base text-text-on-brand-white flex-1 leading-6">
+                  <span className="text-sm text-text-on-brand-white flex-1 leading-5">
                     この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
                     <Link to="/designProduction" className="underline text-primary hover:opacity-80" target="_blank">
                       今すぐ体験
@@ -6412,7 +6412,7 @@ function LightchainMaterialWorkbenchSession() {
                   <button
                     type="button"
                     aria-label="告知を閉じる"
-                    className="flex items-center justify-center size-6 cursor-pointer hover:bg-state-hover rounded transition-colors shrink-0"
+                    className="hidden"
                     onClick={() => setFabricDeprecationBannerVisible(false)}
                   >
                     <X className="text-tertiary-foreground text-lg" />
@@ -6488,7 +6488,7 @@ function LightchainMaterialWorkbenchSession() {
 
                 <div data-testid="lightchain-material-fabric-controls" className="order-4 relative h-[73px]">
                   <select
-                    aria-label="画像比率"
+                    aria-label="画像比率自動"
                     value={fabricImageRatio}
                     onChange={(event) => setFabricImageRatio(event.target.value)}
                     className="absolute left-0 top-[23px] h-[42px] w-[202px] rounded-md border border-white/10 bg-[#111719] px-3 text-sm text-white outline-none focus:border-cyan-300/50"
