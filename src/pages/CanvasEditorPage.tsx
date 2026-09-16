@@ -37,7 +37,7 @@ import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { resolveGeneratedImageUrl, resolveGeneratedImageUrlWithStatus } from '../lib/storage';
-import { getWorkspaceArtifactCanonicalStoragePath, listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
+import { getWorkspaceArtifactCanonicalStoragePath, listWorkspaceArtifacts, listWorkspaceArtifactsForActivity } from '../lib/localWorkspaceArtifacts';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import {
   isLocalCanvasAssetReference,
@@ -811,7 +811,13 @@ export function CanvasEditorPage() {
     if (projectId !== 'new' || !sourceArtifactId || !currentBrand?.id) return;
     if (importedLibraryArtifactRef.current === sourceArtifactId) return;
 
-    const artifact = listWorkspaceArtifacts(currentBrand.id, user?.id)
+    // Library cards can legitimately come from either the authenticated
+    // user-scoped key or the older brand-scoped key. Resolve the handoff from
+    // the same brand-partitioned activity view so a route change or auth
+    // hydration cannot strand an otherwise visible library artifact.
+    const scopedArtifacts = listWorkspaceArtifacts(currentBrand.id, user?.id);
+    const activityArtifacts = listWorkspaceArtifactsForActivity(currentBrand.id, user?.id);
+    const artifact = [...scopedArtifacts, ...activityArtifacts]
       .find((candidate) => candidate.id === sourceArtifactId);
     if (!artifact) return;
 
