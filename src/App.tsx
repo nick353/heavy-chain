@@ -21,6 +21,7 @@ const GenerateLightchainEntry = lazy(() => import('./components/GenerateLightcha
 const WorkflowBoardPage = lazy(() => import('./pages/WorkflowBoardPage').then((module) => ({ default: module.WorkflowBoardPage })));
 const FittingPage = lazy(() => import('./pages/FittingPage').then((module) => ({ default: module.FittingPage })));
 const FashionStudioPage = lazy(() => import('./pages/FashionStudioPage').then((module) => ({ default: module.FashionStudioPage })));
+const FashionStudioDetailPage = lazy(() => import('./pages/FashionStudioDetailPage').then((module) => ({ default: module.FashionStudioDetailPage })));
 const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
 const PatternWorkspacePage = lazy(() => import('./pages/PatternWorkspacePage').then((module) => ({ default: module.PatternWorkspacePage })));
 const PatternProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PatternProjectDashboardPage })));
@@ -1165,6 +1166,20 @@ function AppRoutes() {
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
                     <FashionStudioPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/flow/integration/detail"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <FashionStudioDetailPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

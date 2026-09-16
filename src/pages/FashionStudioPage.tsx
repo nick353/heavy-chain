@@ -588,7 +588,7 @@ export function FashionStudioPage() {
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
             <button
               type="button"
-              onClick={() => setStudioOverview(false)}
+              onClick={() => navigate('/flow/integration/detail?boardProjectCode=&boardProjectType=')}
               data-testid="lightchain-fashion-studio-new-file"
               className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
             >
