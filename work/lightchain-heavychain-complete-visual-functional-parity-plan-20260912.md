@@ -3004,7 +3004,7 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] HeavyのAgent生成controlが`AI生成`、Lightが`送信`として公開されている差分を確認
 - [x] HeavyのAgent初期サイドバーをコンパクトレールへ変更し、Agent生成controlのアクセシブル名を`送信`へ修正（commit `12cb391`）
 - [x] Light Agentに存在する`添付を追加`、ファイル入力2系統をHeavy Agentへ既存の素材アップロード処理で接続（commit `d5a4a60`）
-- [x] typecheck、route tests 19/19、UI boundary tests 11/11、build、`git diff --check`をPASS
+- [x] typecheck、route tests 19/19、UI boundary tests 12/12、build、`git diff --check`をPASS
 - [ ] deployment `6aab28e405af289f92f97dbc`の`RUNNING`確認後、Heavy `/agent`をCompanionで再読込してLight geometry・controlをfresh再確認
 - [ ] Agentの添付入力、生成、保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
 

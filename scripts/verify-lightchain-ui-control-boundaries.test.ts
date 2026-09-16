@@ -60,6 +60,8 @@ test('Lightchain header uses the avatar identity instead of Heavy account chrome
 
   assert.match(source, /aria-label="avatar"/);
   assert.match(source, /alt="avatar"/);
+  assert.match(source, /bg-\[#62666a\]\/90/);
+  assert.match(source, /<User className="h-4 w-4" strokeWidth=\{2\.25\}/);
   assert.doesNotMatch(source, /aria-label="アカウント"[\s\S]{0,220}isLightAccountMenuOpen/);
 });
 
@@ -99,9 +101,42 @@ test('material workbench does not add a Heavy-only toolbar to direct Lightchain 
   assert.doesNotMatch(source, /MATERIAL_TOOLBAR_ROUTES/);
   assert.doesNotMatch(source, /LightchainMaterialToolbar/);
   assert.doesNotMatch(source, /data-testid="lightchain-material-toolbar"/);
-  assert.doesNotMatch(workbench, /デザインツール/);
-  assert.doesNotMatch(workbench, /フィッティングツール/);
-  assert.doesNotMatch(workbench, /グラフィックツール/);
+  assert.doesNotMatch(workbench, /data-testid="lightchain-material-toolbar"/);
+});
+
+test('Lightchain workbench keeps the production four-category visible taxonomy', async () => {
+  const workbench = await readFile(workbenchSourcePath, 'utf8');
+  const categoryBlock = workbench.match(/const categories:[\s\S]*?\n\];/)?.[0] ?? '';
+
+  assert.match(categoryBlock, /label: 'おすすめ'/);
+  assert.match(categoryBlock, /label: '企画デザインツール'/);
+  assert.match(categoryBlock, /label: 'AIフィッティング'/);
+  assert.match(categoryBlock, /label: 'グラフィックツール'/);
+  assert.doesNotMatch(categoryBlock, /マーケティング|モデル企画|動画|Lab/);
+  assert.match(workbench, /getLightchainTopLevelCategory\(tool\.category\)/);
+});
+
+test('Lightchain detail workbench marks the selected source category as active', async () => {
+  const [workbench, material] = await Promise.all([
+    readFile(workbenchSourcePath, 'utf8'),
+    readFile(materialSourcePath, 'utf8'),
+  ]);
+
+  assert.match(workbench, /const getLightchainVisibleCategoryId = \(category: ToolCategory\)/);
+  assert.match(workbench, /const activeSourceCategory = getLightchainVisibleCategoryId\(selectedTool\.category\)/);
+  assert.match(workbench, /aria-current=\{item\.category === activeSourceCategory \? 'page' : undefined\}/);
+  assert.match(workbench, /item\.category === activeSourceCategory \? 'bg-white\/\[0\.08\] text-white' : ''/);
+  assert.match(material, /aria-current=\{item\.category === 'graphics' \? 'page' : undefined\}/);
+});
+
+test('Agent parity starts with the compact rail and exposes Lightchain attachment controls', async () => {
+  const source = await readFile(workbenchSourcePath, 'utf8');
+
+  assert.match(source, /const \[agentSidebarOpen, setAgentSidebarOpen\] = useState\(false\)/);
+  assert.match(source, /aria-label="添付を追加"/);
+  assert.match(source, /aria-label="アップロードするファイルを選択"/);
+  assert.match(source, /aria-label="アップロードする画像を選択"/);
+  assert.match(source, /aria-label=\{workspaceStyle\.kind === 'agent' \? '送信' : 'AI生成'\}/);
 });
 
 test('parity runtime captures feature-specific settings in the comparison key', async () => {
