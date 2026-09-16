@@ -2969,3 +2969,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Light同一操作との完全な履歴件数・辞典項目・入力保持比較、実画像アップロード、生成・provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
 
 判定: Heavy`/creator`のカテゴリ選択後UI、検索、履歴、辞典は本番`UI_PASS`。実生成・保存ライフサイクルとprovider/source証跡は未完了。
+
+### 2026-09-17 `/tools/printing` Light／Heavy fresh比較とsemantic修正
+
+- [x] Light本番`/tools/printing`をCompanionでfresh semantic・visual readbackし、4タブ、参考画像／プリント画像入力、スポット／全体、AI生成、生成履歴を確認
+- [x] Heavy本番`/tools/printing`を同一Companionセッションでfresh semantic・visual readbackし、主要配置・文言・入力項目を確認
+- [x] Heavyのタブ群へLightと同じ`tablist`／`tab`／`aria-selected`契約を追加
+- [x] Heavyの告知導線をLightと同じSPA`Link`へ、AI生成をLightと同じ`submit`ボタンへ調整。スポット／全体にも選択状態を付与（commit `33d2ab3`）
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、`git diff --check`をPASS
+- [ ] デプロイ`6aab2232dc088f64d1813c22`の`RUNNING`到達後、Heavy本番を再読込しsemantic／visual差分をfresh確認
+- [ ] Printingの入力アップロード、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
+
+判定: `/tools/printing`のLight実測差分を特定し、Heavy側の表示・操作semantic修正とローカル検証を完了。最新本番反映と成果物フローは未完了。
