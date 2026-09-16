@@ -2958,3 +2958,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 各カテゴリ項目の選択後表示、検索フィルタ、画像／生地画像入力、生成・保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: Heavyの4対象タブの項目構成はLight実測と一致し、本番`UI_PASS`。成果物ライフサイクルと外部プロバイダー完了証跡は未完了。
+
+### 2026-09-17 Heavy `/creator`カテゴリ後続UI・履歴・辞典確認
+
+- [x] Heavy`男の子`で`ニット`を一回選択し、左側の選択表示`男の子・トップス・ニット編み`へ更新
+- [x] 選択後に`画像／生地画像`入力タブとdisabled`権限がありません`をfresh semantic readback
+- [x] カテゴリー検索欄へ`ニット`を入力し、該当カテゴリだけに絞り込まれることをfresh readback
+- [x] 選択後にカテゴリパネルを閉じ、`生成履歴`を開いて履歴領域と`Canvasへ再利用`導線を確認
+- [x] `キーワード辞典`を開き、dialog、閉じる操作、9分類（シルエット、素材感、カラー、柄・プリント、シーン、ディテール、季節、雰囲気、アイテム）を確認後に閉じた
+- [ ] Light同一操作との完全な履歴件数・辞典項目・入力保持比較、実画像アップロード、生成・provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
+
+判定: Heavy`/creator`のカテゴリ選択後UI、検索、履歴、辞典は本番`UI_PASS`。実生成・保存ライフサイクルとprovider/source証跡は未完了。
