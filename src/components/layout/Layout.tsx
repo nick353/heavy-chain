@@ -114,7 +114,7 @@ export function Layout() {
             <div className={`mx-auto flex items-center justify-between gap-4 lightchain-route-header-inner ${isLightchainRoute ? 'h-[49px] max-w-none px-6' : 'h-[70px] max-w-[1800px] px-4 sm:px-6 lg:px-8'}`}>
               <div className={`flex items-center ${isLightchainRoute ? 'gap-4' : 'gap-7'}`}>
                 {isLightchainRoute ? (
-                  <Link to="/" aria-label="Lightchain AI" className="flex h-6 shrink-0 items-center gap-2 text-[12px] font-semibold tracking-[0.12em] text-white">
+                  <Link to="/" aria-label="Lightchain AI" className="flex h-6 shrink-0 items-center gap-2 text-[12px] font-semibold tracking-[0.16em] text-white">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-white text-[10px] font-black tracking-normal text-neutral-950">◌</span>
                     LIGHTCHAIN
                   </Link>

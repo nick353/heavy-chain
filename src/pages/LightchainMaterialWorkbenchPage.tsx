@@ -6401,11 +6401,11 @@ function LightchainMaterialWorkbenchSession() {
               {fabricDeprecationBannerVisible && (
                 <div
                   data-testid="lightchain-fabric-deprecation-banner"
-                  className="flex justify-between rounded-lg pl-4 pr-2 py-2 gap-2 bg-linear-to-r from-[#133936] to-[#1A4D48] mt-2 [background:var(--surface-danger)] [&>span]:text-text-primary"
+                  className="flex justify-between rounded-lg pl-4 pr-2 py-5 gap-2 bg-linear-to-r from-[#133936] to-[#1A4D48] mt-2 [background:var(--surface-danger)] [&>span]:text-text-primary"
                 >
                   <span className="text-sm text-text-on-brand-white flex-1 leading-5">
                     この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
-                    <Link to="/designProduction" className="underline text-primary hover:opacity-80" target="_blank">
+                    <Link to="/designProduction" className="ml-7 underline text-primary hover:opacity-80" target="_blank">
                       今すぐ体験
                     </Link>
                   </span>
@@ -6422,7 +6422,7 @@ function LightchainMaterialWorkbenchSession() {
 
               <div className="flex flex-col gap-4">
 
-                <section data-testid="lightchain-fabric-design-input" className="order-1 mt-0.5 rounded-none bg-transparent p-0">
+                <section data-testid="lightchain-fabric-design-input" className="order-1 mt-[6px] rounded-none bg-transparent p-0">
                   <h6 className="mb-4 text-base font-semibold text-white">モデル/デザイン画像*</h6>
                   <ImageSelector
                     label="モデル/デザイン画像"
@@ -6462,7 +6462,7 @@ function LightchainMaterialWorkbenchSession() {
                   />
                 </section>
 
-                <section className="order-3 block rounded-xl border border-white/10 bg-[#202629] p-3">
+                <section className="order-3 -mt-[9px] block rounded-xl border border-white/10 bg-[#202629] p-3">
                   <h6 className="text-sm font-semibold text-white">キーワードを追加してください（任意）</h6>
                   <textarea
                     id="lightchain-fabric-prompt"
@@ -6471,7 +6471,7 @@ function LightchainMaterialWorkbenchSession() {
                     placeholder="素材はシルクサテンで、柔らかく光沢感があります。それを上衣またはパンツに置き換えてください。"
                     maxLength={500}
                     rows={3}
-                    className="mt-3 w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
+                    className="mt-[33px] h-[100px] w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
                   />
                   <div className="mt-1 flex items-center justify-between text-xs text-white/45">
                     <span>{fabricPrompt.length} / 500</span>
