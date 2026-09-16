@@ -2847,3 +2847,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 入力・生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
 
 判定: 入力欄の幅契約をLight正本へ合わせ、本番`/agent`へ反映済み。初期画面のgeometry／visualは`UI_PASS`だが、成果物フローと全画面監査は未完了。
+
+### 2026-09-17 `/creator` Light／Heavy実画面比較・権限状態修正
+
+- [x] Light本番`/creator`をログイン済みCompanionで取得し、左右パネル、中央動画、生成履歴、キーワード辞典、`権限がありません`をfresh readback
+- [x] Heavy本番`/creator`を同一Companionセッションで取得し、Heavyだけ`生成条件を開く`無効ボタンになっている差分を確認
+- [x] Heavy `/creator`をLightの権限状態へ合わせ、未選択時は`PermissionLockedButton`を表示するよう修正
+- [x] Heavy左右パネルのmin-height制約をLightのviewport内レイアウトへ近づけ、見出しのsemantic構造を調整
+- [x] typecheck、Lightchain route tests 19/19、UI boundary tests 11/11、production build、git diff checkをPASS
+- [ ] 本番deploy後に`/creator`の同一viewport visual／semantic再照合
+- [ ] `/creator`のカテゴリ選択、履歴、キーワード辞典、生成・保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: `/creator`のLight正本との差分を実画面で特定し、権限状態と主要レイアウトをローカル修正済み。本番反映と成果物フロー確認が残る。

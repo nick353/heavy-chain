@@ -28,6 +28,7 @@ import {
   getLightchainUnifiedFeatureWorkflowContract,
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
+import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 
 const darkPanel = 'rounded-2xl border border-white/10 bg-[#151a1c]';
 const mutedButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-300 transition hover:border-cyan-200/50 hover:bg-white/[0.08] hover:text-white';
@@ -199,31 +200,22 @@ export function LightchainCreatorPage() {
     );
   }, [currentBrand?.id, user?.id]);
 
-  const openGenerationWorkspace = () => {
-    const params = new URLSearchParams({
-      source: 'lightchain-creator-heavy-fallback',
-      prompt: keywords.trim() || 'アパレル新作のデザイン方向性を複数案で比較',
-      category: selectedCategory || 'ユニセックス',
-    });
-    navigate(`/generate?feature=design-gacha&${params.toString()}`);
-  };
-
   return (
     <ParityShell workflowFeature="design-agent" className="bg-[#151a1c] text-white">
       <span className="sr-only" aria-label={`${displayName}さんのデザイン作成`} />
       <div className="mx-auto grid min-h-[calc(100vh-70px)] max-w-[1904px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)_320px]">
-        <aside className="flex min-h-[780px] flex-col gap-4">
+        <aside className="flex min-h-0 flex-col gap-4">
           <section className="rounded-xl bg-[#252a2d] p-4">
-            <div className="flex items-center gap-2"><h1 className="text-base font-semibold">デザインを選択してください</h1><span className="rounded bg-rose-400 px-2 py-1 text-[11px] font-bold text-white">必須項目</span></div>
+            <div className="flex w-full items-center gap-2"><h6 className="w-full text-sm font-semibold">デザインを選択してください</h6><span className="shrink-0 rounded bg-rose-400 px-2 py-1 text-[11px] font-bold text-white">必須項目</span></div>
             <button type="button" className="mt-4 w-full rounded-lg border border-dashed border-white/30 bg-[#171b1d] px-3 py-2 text-sm text-neutral-300" onClick={() => setCategoryPickerOpen((open) => !open)}>＋ {selectedCategory || 'カテゴリを選択してください'}</button>
             {categoryPickerOpen && <div className="mt-3 grid grid-cols-2 gap-2">{creatorCategories.map(([label]) => <button key={label} type="button" aria-pressed={selectedCategory === label} className={`rounded-lg border px-2 py-2 text-xs ${selectedCategory === label ? 'border-cyan-300 bg-cyan-300/20 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-neutral-300'}`} onClick={() => { setSelectedCategory(label); setCategoryPickerOpen(false); }}>{label}</button>)}</div>}
           </section>
-          <section className="flex min-h-[580px] flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center gap-2"><Upload className="h-5 w-5 text-neutral-400" /><h2 className="text-base font-semibold">画像をアップロード</h2><span className="text-xs text-neutral-400">オプション</span></div><div className="flex flex-1 items-center justify-center"><button type="button" className="rounded-full bg-white/[0.08] px-5 py-3 text-sm text-neutral-300" onClick={() => navigate('/asset-center')}><Sparkles className="mr-2 inline h-4 w-4" />デザインを先に選択してください。</button></div></section>
+          <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center gap-2"><h6 className="text-sm font-semibold">画像をアップロード</h6><span className="text-xs text-neutral-400">オプション</span></div><div className="flex flex-1 items-center justify-center"><button type="button" className="rounded-full bg-white/[0.08] px-5 py-3 text-sm text-neutral-300" onClick={() => navigate('/asset-center')}><Sparkles className="mr-2 inline h-4 w-4" />デザインを先に選択してください。</button></div></section>
         </aside>
 
         <main className="relative min-h-[780px] rounded-xl bg-[#151a1c] px-2 py-4 lg:px-8"><button type="button" className="absolute right-2 top-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-200" onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button><section className="flex min-h-[700px] flex-col items-center justify-center pt-8"><h2 className="text-2xl font-semibold text-cyan-300">インスピレーション</h2><p className="mt-2 text-sm text-neutral-400">AIで素早くデザイン開発、効率向上・コスト削減</p><div className="mt-6 h-[340px] w-full max-w-[1088px] overflow-hidden rounded-lg border border-white/10 bg-[#0d1113]"><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1.mp4" className="h-full w-full object-cover" autoPlay controls playsInline aria-label="インスピレーション動画" /></div></section></main>
 
-        <aside className="flex min-h-[780px] flex-col gap-4"><section className="min-h-[260px] rounded-xl bg-[#252a2d] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><p className="mt-4 text-sm text-neutral-300">このモジュールは購入後に使用可能。</p><p className="mt-2 text-xs text-neutral-400">ご担当の営業担当者にご連絡ください</p></div></div></section><section className="flex min-h-[540px] flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center justify-between gap-3"><h2 className="text-base font-semibold">キーワードを追加</h2><span className="text-xs text-neutral-400">オプション</span></div><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="mt-4 min-h-[360px] flex-1 resize-y rounded-lg border border-white/10 bg-[#252a2d] p-3 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます\n\n例1：オートミール色、H型カット、チェック柄生地、通勤用ワンピース…" maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="mt-2 flex items-center justify-between text-xs text-neutral-400"><span>文字数: {keywords.length}/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div><button type="button" className="mt-4 w-full rounded-lg bg-white/[0.08] px-4 py-3 text-sm font-semibold text-neutral-500" onClick={openGenerationWorkspace} disabled={!selectedCategory}>生成条件を開く</button></section></aside>
+        <aside className="flex min-h-0 flex-col gap-4"><section className="min-h-[264px] rounded-xl bg-[#252a2d] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><p className="mt-4 text-sm text-neutral-300">このモジュールは購入後に使用可能。</p><p className="mt-2 text-xs text-neutral-400">ご担当の営業担当者にご連絡ください</p></div></div></section><section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center justify-between gap-3"><h6 className="text-sm font-semibold">キーワードを追加</h6><span className="text-xs text-neutral-400">オプション</span></div><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="mt-4 min-h-0 flex-1 resize-y rounded-lg border border-white/10 bg-[#252a2d] p-3 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます\n\n例1：オートミール色、H型カット、チェック柄生地、通勤用ワンピース…" maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="mt-2 flex items-center justify-between text-xs text-neutral-400"><span>文字数: {keywords.length}/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div><PermissionLockedButton testId="creator-permission" marginClass="mt-4" /></section></aside>
       </div>
 
       {historyOpen && <section className="mx-4 mb-4 rounded-xl border border-white/10 bg-[#252a2d] p-5" data-testid="creator-persisted-history"><h2 className="font-semibold">生成履歴</h2><PersistedHistoryPanel artifacts={historyArtifacts} emptyMessage="保存確認できたデザイン成果物はまだありません。provider生成後に保存すると、ここから再利用できます。" reuseLabel="Canvasへ再利用" onReuse={(artifact) => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)} /></section>}
