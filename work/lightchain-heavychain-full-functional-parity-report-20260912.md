@@ -5590,3 +5590,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 残りカテゴリのHeavy実クリックでは、`柄・プリント`4件、`ビジュアル素材`4件、`マーケティングコンテンツ`3件、`生産`4件のカテゴリ対応カードを確認した。
 - Light本番は再読込後の`柄・プリント`で選択状態は切り替わったがカード0件の空状態だった。これはHeavyの無関係成果物混入とは別の`DATA_SCOPE_DIFF`として残す。
 - 判定: Heavyの保存成果物カテゴリ混入は修正済み。Light本番のカテゴリ別事例在庫との1対1一致、実成果物lifecycle、provider receipt、source sync、reconciliation、logout→login回帰は未完了。
+
+## 2026-09-18 Heavy major-route unauthenticated probe
+
+- 新しいtask-owned Companionタブで、Heavyの主要17 route（`/model`、`/fitting`、`/creator`、`/asset-center`、`/gallery`、`/canvas/new`、`/marketing`、`/marketing/detail`、`/studio`、`/models`、`/patterns`、`/printing`、`/agent`、`/designProduction`、`/jobs`、`/history`、`/credits`）をread-only巡回した。
+- 全routeはHTTP／ページ到達自体は成立したが、今回の新規タブでは認証済みworkspaceではなく、ログイン導線またはHeavyの準備中placeholderが表示された。外部効果は0件。
+- 判定: route存在・未認証fallbackの確認はできたが、ログイン済みLight／Heavyの画面parityの証拠には使用しない。認証済みCompanionセッションでの同じ17 route readback、全画面比較、成果物lifecycle、provider receipt、source sync、reconciliation、logout→loginは未完了。
