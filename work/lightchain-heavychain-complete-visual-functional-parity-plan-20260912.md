@@ -3812,3 +3812,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] デプロイ後Heavy `/model`をfresh Companion readbackし、修正文言、未選択ラベルなし、説明パネルなしを確認
 - [x] cleanup receipt: leases released 2、unknown effectなし、foreign tabs mutatedなし、external actionなし
 - [ ] Light本番は同一アカウントの別デバイスログインによりログアウト表示となり、再ログイン後のfresh比較が必要
+
+### 2026-09-17 continuation checkpoint — Heavy major-route read-only batch
+- [x] Heavy `/dashboard`, `/workspace`, `/generate`, `/fitting`, `/marketing`, `/asset-center`を同時に開き、30秒待機後にCompanion semantic・visual readback
+- [x] 全6 routeで`readyState=complete`を確認。`/generate`は正規に`/lightchain`へ解決
+- [x] `/fitting`は素材未選択・AI生成disabled・権利確認前、`/marketing`は保存済み履歴なし、`/asset-center`は保存カードと`ボードにコピー`表示を確認
+- [x] cleanup receipt: leases released 6、unknown effectなし、foreign tabs mutatedなし、external actionなし
+- [ ] Light同一routeのfresh比較、全route／全カテゴリのpixel・interaction parity、成果物lifecycle、provider receipt/source sync/reconciliation

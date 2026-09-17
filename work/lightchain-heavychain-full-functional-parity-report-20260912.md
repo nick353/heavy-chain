@@ -5474,3 +5474,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 同じrunでLightを再読しようとしたところ、Light本番が`別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました。`を表示した。Lightの再ログイン後fresh比較は未完了であり、これはHeavyのデプロイ失敗ではない。
 - cleanup receiptは`leases_released=2`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: Heavyのマルチタスク初期コピー差分は修正・デプロイ済み。Light再ログイン後比較、素材選択後、全カテゴリ、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Heavy major-route read-only batch
+
+- Heavyの`/dashboard`、`/workspace`、`/generate`、`/fitting`、`/marketing`、`/asset-center`を同時に開き、30秒待機後にCompanion semantic・visual readbackした。全routeで`readyState=complete`。
+- `/generate`は`/lightchain`へ正規解決。`/fitting`は衣服未選択・AI生成disabled・権利確認前、`/marketing`はプロンプト入力とAI生成導線・保存履歴なし、`/asset-center`は保存カードと`ボードにコピー`を表示した。
+- `/dashboard`はLightchainのおすすめ／企画／フィッティング／グラフィックカテゴリを表示し、`/workspace`は入口一覧と生成履歴を表示した。
+- cleanup receiptは`leases_released=6`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。アップロード・権利確認・生成・保存実行は未操作。
+- 判定: Heavy主要routeのhydration・read-only surfaceは`UI_PASS`。Light同一route比較、全カテゴリpixel／interaction parity、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。
