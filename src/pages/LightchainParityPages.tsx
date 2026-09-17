@@ -174,6 +174,29 @@ const creatorCategoryGroups: readonly CreatorCategoryGroup[] = [
 
 const creatorCategoryTabs = ['レディース', 'メンズ', '女の子', '男の子'] as const;
 
+const creatorCategoryIconUrls: Record<string, string> = {
+  ニット: 'https://static-cn.linkaigc.com/workbenches/2024-10/ecf9304d38373c510311b381e6f83f14.png',
+  ルームウェア: 'https://static-cn.linkaigc.com/workbenches/2024-10/179467f0a6d621a1e5146e05cd546b4d.png',
+  'Tシャツ': 'https://static-cn.linkaigc.com/workbenches/2024-10/014d9c8ed5b8e67a918084eca488b5a0.png',
+  パーカー: 'https://static-cn.linkaigc.com/workbenches/2024-10/a46a140a96fe20f412f58cb6ebb4357e.png',
+  シャツ: 'https://static-cn.linkaigc.com/workbenches/2024-10/c8538e358a987edb5b5c36a3a450004b.png',
+  タンクトップ: 'https://static-cn.linkaigc.com/workbenches/2024-10/0af7b907592e56a486c5d011d43ab69e.png',
+  ベスト: 'https://static-cn.linkaigc.com/workbenches/2024-10/8a1e54929d849904fa9715e37f8802a8.png',
+  スーツ: 'https://static-cn.linkaigc.com/workbenches/2024-10/006ae2e5f6c04ef7c827fa6f3add6c40.png',
+  ブルゾン: 'https://static-cn.linkaigc.com/workbenches/2024-10/2f560ff3729b6dde4e2c86e6db34dc80.png',
+  トレンチコート: 'https://static-cn.linkaigc.com/workbenches/2024-10/b5d60b777d507658bff5567f0c74f299.png',
+  オーバーコート: 'https://static-cn.linkaigc.com/workbenches/2024-10/ca3a101dd5bbb413f5b0f90983d20311.png',
+  ダウン: 'https://static-cn.linkaigc.com/workbenches/2024-10/39b9130a16a50ca0e7bc234373101139.png',
+  下着: 'https://static-cn.linkaigc.com/workbenches/2024-10/bf75c0efb8f7591e5b1dc8517011419f.png',
+  スイムウェア: 'https://static-cn.linkaigc.com/workbenches/2024-10/96dbb676c206525bc9b44b7e24aebb71.png',
+  ニットボトムス: 'https://static-cn.linkaigc.com/workbenches/2024-10/879bb772276b314fbff3ba80a772b963.png',
+  ハーフスカート: 'https://static-cn.linkaigc.com/workbenches/2024-10/06c509ae03d96d32e94caef4890b2aaf.png',
+  パンツ: 'https://static-cn.linkaigc.com/workbenches/2024-10/831f13660f35b70d9d8fe0f8f1b4dc3a.png',
+  ウールワンピース: 'https://static-cn.linkaigc.com/workbenches/2024-10/13871137b70c31a2312f8913b05db6b6.png',
+  ワンピース: 'https://static-cn.linkaigc.com/workbenches/2024-10/d4b5ba7dd4eb40dffdee170660ea6682.png',
+  つなぎ: 'https://static-cn.linkaigc.com/workbenches/2024-10/f3ef3598b08d624e4eecff4c81dd0048.png',
+};
+
 const creatorCategoryGroupsByTab: Record<(typeof creatorCategoryTabs)[number], readonly CreatorCategoryGroup[]> = {
   レディース: creatorCategoryGroups,
   女の子: creatorCategoryGroups,
@@ -212,7 +235,7 @@ function CreatorCategoryPicker({ selectedCategory, onSelect }: { selectedCategor
         {creatorCategoryTabs.map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={`relative pb-3 ${activeTab === tab ? 'font-semibold text-cyan-300 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-1 after:rounded-full after:bg-cyan-300' : ''}`} onClick={() => setActiveTab(tab)}>{tab}</button>)}
       </div>
       <div className="mt-4 flex-1 overflow-auto pr-1">
-        {visibleGroups.map((group) => <div key={group.label} className="mb-4"><button type="button" className="mb-3 flex items-center gap-1 text-xs font-semibold text-neutral-200" aria-expanded="true"><span className="text-neutral-400">▾</span>{group.label}</button><div className="grid grid-cols-4 gap-2 xl:grid-cols-8">{group.items.map((item, index) => <button key={`${group.label}-${item}-${index}`} type="button" aria-pressed={selectedCategory === `${activeTab}・${group.label}・${item}編み`} className={`flex min-h-[52px] items-center justify-center rounded-lg border px-2 py-2 text-center text-xs transition hover:border-cyan-300/70 hover:text-white ${selectedCategory === `${activeTab}・${group.label}・${item}編み` ? 'border-cyan-300 bg-cyan-300/20 text-cyan-100' : 'border-white/10 bg-white/[0.04] text-neutral-300'}`} onClick={() => onSelect(`${activeTab}・${group.label}・${item}編み`)}>{item}</button>)}</div>{selectedCategory.startsWith(`${activeTab}・${group.label}・`) && <div className="mt-2 flex flex-wrap gap-2 rounded-lg bg-white/[0.04] p-2"><span className="rounded-full bg-cyan-300 px-3 py-1 text-[11px] font-semibold text-neutral-950">必ず選択してください</span><button type="button" className="rounded-full bg-cyan-300 px-3 py-1 text-[11px] font-semibold text-neutral-950">{selectedCategory.split('・').at(-1)}</button><button type="button" className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-neutral-300">{group.items[0]}</button></div>}</div>)}
+        {visibleGroups.map((group) => <div key={group.label} className="mb-4"><button type="button" className="mb-3 flex items-center gap-1 text-xs font-semibold text-neutral-200" aria-expanded="true"><span className="text-neutral-400">▾</span>{group.label}</button><div className="grid grid-cols-4 gap-2 xl:grid-cols-8">{group.items.map((item, index) => <button key={`${group.label}-${item}-${index}`} type="button" aria-pressed={selectedCategory === `${activeTab}・${group.label}・${item}編み`} className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs transition hover:border-cyan-300/70 hover:text-white ${selectedCategory === `${activeTab}・${group.label}・${item}編み` ? 'border-cyan-300 bg-cyan-300/20 text-cyan-100' : 'border-white/10 bg-white/[0.04] text-neutral-300'}`} onClick={() => onSelect(`${activeTab}・${group.label}・${item}編み`)}><>{creatorCategoryIconUrls[item] && <img src={creatorCategoryIconUrls[item]} alt="" className="h-7 w-7 object-contain" loading="lazy" />}<span>{item}</span></></button>)}</div>{selectedCategory.startsWith(`${activeTab}・${group.label}・`) && <div className="mt-2 flex flex-wrap gap-2 rounded-lg bg-white/[0.04] p-2"><span className="rounded-full bg-cyan-300 px-3 py-1 text-[11px] font-semibold text-neutral-950">必ず選択してください</span><button type="button" className="rounded-full bg-cyan-300 px-3 py-1 text-[11px] font-semibold text-neutral-950">{selectedCategory.split('・').at(-1)}</button><button type="button" className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-neutral-300">{group.items[0]}</button></div>}</div>)}
         {visibleGroups.length === 0 && <p className="py-10 text-center text-sm text-neutral-500">該当するカテゴリがありません。</p>}
       </div>
     </section>
