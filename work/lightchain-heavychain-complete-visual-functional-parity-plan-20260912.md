@@ -3337,3 +3337,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Heavyだけに付く`?category=planning`／`?category=fitting`のURL差を仕様として統一するか判断
 - [ ] カード本文・事例データ、上部`グラフィックツール`、下部6カテゴリ、カード遷移をLight正本と比較
 - [ ] 成果物の保存／再表示／再利用、外部生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+### 2026-09-17 Home graphic and gallery-category interaction readback
+
+- [x] `グラフィックツール`をLight／Heavy双方で押下し、5カードの主要構造を確認
+- [x] 下部6カテゴリをLight／Heavy双方で順番に押下し、全6操作のtransaction `verified`を確認
+- [ ] Heavyだけに付くカテゴリquery URLの扱いをLight正本と統一
+- [ ] 下部カテゴリの事例データ、検索状態、スクロール位置、pixel-level一致を比較
+- [ ] カード遷移、成果物の保存／再表示／再利用、外部生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰

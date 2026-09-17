@@ -5008,3 +5008,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `AIフィッティング`はLight／Heavyとも6カード（AIフィッティング、モデル企画ライブラリ、ファッションスタジオ、動画ワークステーション、Lightchain Lab、画像修正）を同じ順序で表示した。Heavyは`?category=fitting`をURLへ付与するが、LightはURLを変更しない。主要カード構造は`UI_PASS`、本文・事例データの完全一致は`NOT_PROVEN`。
 - 前回のHeavyタブはLight URLへ誤って再バインドされ、読取が空になったため、Heavyを別のtask-ownedタブで開き直して比較した。この誤操作は外部効果なしで、再送・既存タブのclaim/adoptは行っていない。
 - 上部`グラフィックツール`、下部6カテゴリ、カード遷移、成果物の保存／再表示／再利用、外部生成、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未確認。
+
+## 2026-09-17 Home graphic and gallery-category interaction readback
+
+- `グラフィックツール`をLight／Heavy双方で実押下し、両方で5カード（AIグラフィックデザイン、ベクター変換、デザイン修正、プリントデザイン等）の主要文言・配置を確認した。Heavyは`?category=graphics`をURLへ付与し、LightはURLを変更しなかった。
+- 下部の`おすすめの事例`、`デザイン修正`、`柄・プリント`、`ビジュアル素材`、`マーケティングコンテンツ`、`生産`をLight／Heavy双方で順番に実押下し、6操作すべてがCompanion transaction `verified`となった。
+- 最終`生産`選択後も両方で同じ下部タブ群が表示された。Lightは検索結果が空になり、Heavyは事例カードが残ったため、下部カテゴリのデータ内容・スクロール位置・pixel-level一致は`NOT_PROVEN`。
+- この区間ではアップロード、外部生成、権利確認、成果物保存／再表示／再利用は実行していない。
