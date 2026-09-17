@@ -5290,3 +5290,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 本番CompanionでLight詳細URLを同一プロフィールから開こうとしたが、タブが`loading`のままDOM queryが`operation_timeout`、screenshotが`screenshot_target_changed`になった。これはLight本番の画面一致を証明しないため、同じ操作を再送せず停止した。
 - cleanup receiptはtask-owned tab 1件をclose、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。外部生成、アップロード、権利確認、provider送信は実行していない。
 - 判定: デプロイは`DEPLOY_PASS`、Heavy詳細シェルの本番visual readbackは`NOT_PROVEN`。残る正確な blockerはLight詳細URLのCompanion読み込み／DOM・スクリーンショット応答であり、provider receipt、source sync、reconciliation、成果物保存／再表示／再利用も未完了。
+
+## 2026-09-17 Fashion Studio detail canvas shell final deployment readback
+
+- 最終調整後のHeavy detail shellを本番へデプロイし、deployment `6aabd40556a7d809491d5bb3`が`RUNNING`になった。buildログはDocker/zbpack-v2、Vite工程、blob upload完了を示した。
+- 新規ログイン済みCompanion sessionでHeavyの`/flow/integration/detail?boardProjectCode=e394897b-5246-45bc-84a0-09abab91760c&boardProjectType=integrationCustom`をfresh screenshotした。グローバルヘッダー、左プロジェクトパネル、点線キャンバス、3ノード、左下生成パネル、下部ツールバー、右下ズームを確認し、Light実画面のシェル構成と一致した。
+- AI生成、アップロード、権利確認、provider送信は実行していない。Companion session closeでlease解放・`external_action_executed=false`を確認した。
+- 判定: Fashion Studio detail shellの本番visual parityは`UI_PASS`。全画面・全カテゴリ・全主要導線、入力値・preview・履歴・成果物保存／再表示／再利用、provider receipt／source sync／reconciliationは引き続き`NOT_PROVEN`。

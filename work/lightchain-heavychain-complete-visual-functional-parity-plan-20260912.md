@@ -3581,6 +3581,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 残りroute、desktop/mobile、logout→再ログインを監査
 - [ ] provider receipt、source sync、reconciliation、成果物保存／再表示／再利用を個別に証明
 
+### 2026-09-17 continuation checkpoint — Fashion Studio detail canvas shell final deployment readback
+- [x] Light実スクリーンショットを基準に、Heavyのノード寸法、生成パネル位置、下部操作部、キャンバス外枠を最終調整
+- [x] 関連テスト11/11、`npm run typecheck`、`npm run build`（2553 modules）、`git diff --check`を確認
+- [x] Zeabur deployment `6aabd40556a7d809491d5bb3`のDocker/Vite build、blob upload完了、`RUNNING`を確認
+- [x] 本番Heavyの同じdetail URLを新規Companionセッションでfresh screenshotし、Light同等のヘッダー、左プロジェクトパネル、点線キャンバス、3ノード、左下生成パネル、下部ツールバー、右下ズームを確認
+- [x] セッションを閉じ、lease解放・外部操作なしを確認
+- [ ] 全画面・全カテゴリ・全主要導線、保存成果物の完全一致、provider receipt/source sync/reconciliationは未完了
+
 ### 2026-09-17 continuation checkpoint — Creator permission lock visual parity
 - [x] 同一runのLight／Heavyで権利ボタンが両方disabledであることを確認し、権利ゲートを維持
 - [x] Heavyの旧クラス・`aria-disabled`・高さ差分をLight実測へ合わせる実装を追加
