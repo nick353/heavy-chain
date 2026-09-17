@@ -134,6 +134,7 @@ test('Agent parity starts with the expanded project sidebar and exposes Lightcha
 
   assert.match(source, /const \[agentSidebarOpen, setAgentSidebarOpen\] = useState\(true\)/);
   assert.match(source, /aria-label="添付を追加"/);
+  assert.match(source, /data-testid=\{workspaceStyle\.kind === 'agent' \? 'lightchain-agent-quick-start' : undefined\}/);
   assert.match(source, /aria-label="アップロードするファイルを選択"/);
   assert.match(source, /aria-label="アップロードする画像を選択"/);
   assert.match(source, /aria-label=\{workspaceStyle\.kind === 'agent' \? '送信' : 'AI生成'\}/);

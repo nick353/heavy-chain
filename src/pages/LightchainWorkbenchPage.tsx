@@ -4939,8 +4939,11 @@ export function LightchainWorkbenchPage() {
               </p>
             )}
 
-            {visibleExamples && workspaceStyle.kind !== 'agent' && (
-              <div className="mt-7 text-left">
+            {visibleExamples && (
+              <div
+                className={`mt-7 text-left ${workspaceStyle.kind === 'agent' ? 'ml-[36px] w-[720px]' : ''}`}
+                data-testid={workspaceStyle.kind === 'agent' ? 'lightchain-agent-quick-start' : undefined}
+              >
                 <p className="text-sm text-neutral-300">こちらをお試しください</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {visibleExamples.map((example) => (
