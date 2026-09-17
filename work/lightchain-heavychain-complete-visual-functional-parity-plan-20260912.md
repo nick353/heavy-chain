@@ -3013,3 +3013,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 追記: 2026-09-17のfresh deployment readbackでもdeploymentは`DEPLOYING`継続。Heavy `/agent`は旧状態（展開サイドバー、生成control名`AI生成`）を返しており、修正版の本番反映は未確認。
 
 追記: 2026-09-18のfresh readbackでも対象deployment `6aab2b9505af289f92f97e6b` は`DEPLOYING`継続。runtime logは同deploymentのPod image pull開始までを返し、現在稼働中のHeavy `/agent`はログイン済みで、コンパクトレールと`送信`を確認できた。最新コミットのAgent添付controlsは、deployment完了後に同じCompanionタブを再読込して確認する。再デプロイや添付操作の再送は行っていない。
+
+追記: 2026-09-18の独立ローカル検証として、`test:lightchain-all-feature-workflows-contract` 5/5、`test:lightchain-provider-coverage` 22/22、`test:lightchain-unified-workflow-contract` 6/6をPASS。これらはルーティング・provider分岐・保存／継続マーカーの契約証拠であり、本番provider receipt、source sync、reconciliation、cleanup、Companion post-deploy UI証拠の代替にはしない。
