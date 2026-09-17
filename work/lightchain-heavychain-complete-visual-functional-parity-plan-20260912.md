@@ -3513,3 +3513,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Heavy API→画面の取得・統合・表示差分を特定
 - [ ] Light APIの保存データと安全な正規readbackで同一性を比較
 - [ ] 同期方針確定後にのみ修正・テスト・deploy・Companion再確認
+
+### 2026-09-17 Fashion Studio count correction after hydration wait
+- [x] Hydration完了を待ってHeavy一覧を再readback
+- [x] 保存22件（D1 20件＋local 2件）、新規1件、参考事例5件を確認
+- [x] 以前のHeavy18件というカウントを誤測定として訂正
+- [ ] Lightの30件＋14ページと名称・内容・ページ総数を比較
+- [ ] 保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanupを検証

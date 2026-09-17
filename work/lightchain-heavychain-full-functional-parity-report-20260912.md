@@ -5170,3 +5170,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 20件のタイトル、更新日時、snapshot byte数を取得し、最新は`Fashion Studio: スタジオ案`、最古は`制作: AIフィッティング`だった。クエリの`changes=0`、`rows_written=0`で、データ変更は行っていない。
 - したがってHeavy APIの一覧不足はD1に18件しかないことが原因ではなく、Companion画面での取得・統合・表示差分として追加調査が必要。Light側の30件＋14ページとの同一性は、Light APIの応答本文を正規ログインセッションから安全にreadbackできるまで未証明。
 - 判定: 保存データのsource-of-truth境界を更新。Lightデータの推測コピー、D1への移送、既存データの上書きは実施していない。
+
+## 2026-09-17 Fashion Studio count correction after hydration wait
+
+- Heavy本番をfresh reloadし、`プロジェクトを読み込んでいます…`のdetachedをCompanionで待ってから一覧を再読込した。
+- Hydration完了後のsemantic card countは28件で、内訳は新規ファイル1件、保存プロジェクト22件、参考事例5件。保存プロジェクト22件はD1の20件＋local artifact 2件と整合した。
+- 以前のreadbackに記載したHeavy保存プロジェクト18件は、Hydration途中またはsemantic範囲の誤カウントだったため訂正する。Lightは引き続き現在ページ30件＋ページ表示14ページで、保存データの名称・内容・ページ総数の完全一致は未証明。
+- 判定: Heavyの一覧欠落という仮説は撤回。残る差分はLight側の保存データ契約・ページング・カード内容比較であり、D1への変更やデータ移送は不要な状態を確認した。
