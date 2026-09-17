@@ -504,11 +504,12 @@ export function LightchainPrintingPage() {
 }
 
 export function LightchainVectorSpecialPage() {
-  const [activeTab, setActiveTab] = useState<'通常版' | 'プロフェッショナル版'>(() => window.location.pathname === '/tools/vector-special' ? 'プロフェッショナル版' : '通常版');
+  const [activeTab] = useState<'通常版' | 'プロフェッショナル版'>(() => window.location.pathname === '/tools/vector-special' ? 'プロフェッショナル版' : '通常版');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [layerModes, setLayerModes] = useState<Array<'stack' | 'split'>>(['stack']);
   const [usage, setUsage] = useState(7);
   const navigate = useNavigate();
+  const isProfessionalFlow = activeTab === 'プロフェッショナル版';
 
   const handleReferenceImage = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -547,7 +548,7 @@ export function LightchainVectorSpecialPage() {
           <section className="relative min-h-[746px] overflow-hidden rounded-xl bg-[#171b1c] p-4 pt-[68px] shadow-2xl shadow-black/20">
             <nav className="absolute left-4 right-4 top-4 grid h-[36px] grid-cols-2 rounded-lg border border-white/10 bg-[#111719] p-1" role="tablist" aria-label="ベクター化モード">
               <button type="button" role="tab" aria-selected={activeTab === '通常版'} className={`rounded-md px-2 text-sm font-medium ${activeTab === '通常版' ? 'bg-[#737d84] text-white' : 'text-white/45'}`} onClick={() => navigate('/tools/pattern-to-vector')}>パターンをベクター画像に変換（通常版）</button>
-              <button type="button" role="tab" aria-selected={activeTab === 'プロフェッショナル版'} className={`rounded-md px-2 text-sm font-medium ${activeTab === 'プロフェッショナル版' ? 'bg-[#737d84] text-white' : 'text-white/45'}`} onClick={() => setActiveTab('プロフェッショナル版')}>パターンをベクター画像に変換（プロフェッショナル版）</button>
+              <button type="button" role="tab" aria-selected={activeTab === 'プロフェッショナル版'} className={`rounded-md px-2 text-sm font-medium ${activeTab === 'プロフェッショナル版' ? 'bg-[#737d84] text-white' : 'text-white/45'}`} onClick={() => navigate('/tools/vector-special')}>パターンをベクター画像に変換（プロフェッショナル版）</button>
             </nav>
             <div className="flex h-16 items-start gap-2 rounded-lg bg-[#5b1f2a] px-4 py-3 text-sm leading-5 text-white">
               <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください <Link className="underline" to="/designProduction">今すぐ体験</Link></span>
@@ -557,15 +558,21 @@ export function LightchainVectorSpecialPage() {
               <input className="sr-only" type="file" accept="image/*" onChange={handleReferenceImage} />
               {referenceImage ? <img src={referenceImage} alt="参考画像" className="max-h-56 max-w-full rounded-lg object-contain" /> : <><Upload className="h-8 w-8 text-white/70" /><span className="mt-2 text-base text-white/85">参考画像をアップロードしてください</span><span className="mt-2 text-xs text-white/45">20MB以下の画像アップロードしてください</span></>}
             </label>
-            <div className="mt-4 flex items-center justify-between text-sm text-white/85"><span>レイヤー分け方法を選択してください（複数選択可）</span><button type="button" className="text-xs font-semibold text-white/65 underline" onClick={reset}>リセット</button></div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {([['stack', '積み重ね'], ['split', '分割']] as const).map(([mode, label]) => (
-                <button key={mode} type="button" aria-pressed={layerModes.includes(mode)} className={`h-[164px] rounded-xl border px-4 py-3 text-sm font-semibold ${layerModes.includes(mode) ? 'border-cyan-300 bg-cyan-300/10 text-white' : 'border-white/10 bg-[#111719] text-white/45'}`} onClick={() => toggleLayerMode(mode)}>
-                  <span className="mx-auto mb-3 block h-16 w-20 rounded-lg bg-cyan-300/15" aria-hidden="true" />{label}
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 flex items-center justify-end gap-4 text-xs text-white/75"><span>使用回数 {usage} / 30</span><button type="button" className="h-10 w-[288px] rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950" onClick={() => { setUsage((count) => Math.min(30, count + 1)); navigate('/tools/pattern-to-vector'); }}>AI生成 <span className="ml-1">1</span></button></div>
+            {isProfessionalFlow ? (
+              <>
+                <div className="mt-4 flex items-center justify-between text-sm text-white/85"><span>レイヤー分け方法を選択してください（複数選択可）</span><button type="button" className="text-xs font-semibold text-white/65 underline" onClick={reset}>リセット</button></div>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {([['stack', '積み重ね'], ['split', '分割']] as const).map(([mode, label]) => (
+                    <button key={mode} type="button" aria-pressed={layerModes.includes(mode)} className={`h-[164px] rounded-xl border px-4 py-3 text-sm font-semibold ${layerModes.includes(mode) ? 'border-cyan-300 bg-cyan-300/10 text-white' : 'border-white/10 bg-[#111719] text-white/45'}`} onClick={() => toggleLayerMode(mode)}>
+                      <span className="mx-auto mb-3 block h-16 w-20 rounded-lg bg-cyan-300/15" aria-hidden="true" />{label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 flex items-center justify-end gap-4 text-xs text-white/75"><span>使用回数 {usage} / 30</span><button type="button" className="h-10 w-[288px] rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950" onClick={() => { setUsage((count) => Math.min(30, count + 1)); navigate('/tools/vector-special'); }}>AI生成 <span className="ml-1">1</span></button></div>
+              </>
+            ) : (
+              <PermissionLockedButton testId="pattern-vector-permission" />
+            )}
           </section>
           <section className="relative flex min-h-[746px] flex-col rounded-xl bg-[#232728] p-4">
             <button type="button" className="absolute right-4 top-4 rounded-lg border border-white/15 bg-[#171b1c]/80 px-3 py-2 text-sm text-white/80" onClick={() => navigate('/history')}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button>
