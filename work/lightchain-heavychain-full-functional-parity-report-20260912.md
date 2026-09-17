@@ -5543,3 +5543,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 別fresh Light `/model` tabで30秒待機しても、`別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました。`が再現した。
 - cleanup receiptは`leases_released=1`、`unknown_effect=[]`、外部操作なし。
 - 残りの必須工程はLightのauthenticated source readbackを前提とするため、ユーザーが同一Chromeセッションで再ログインするまで進行不能。完了判定は`NOT_PROVEN`。
+
+## 2026-09-18 Heavy multitask parity fix deployed
+
+- Light／Heavy `/model`の`マルチタスク`を同一Companion runで実操作し、HeavyにLightの一括試着タスク空状態パネルが欠けていることを確認した。
+- `src/pages/LightchainWorkbenchPage.tsx`を修正し、マルチタスク時だけ`追加`、`一括試着タスク（0/8）`、無効な`すべて削除`、`閉じる`、空状態文言、最大8件説明を表示するようにした。シングルタスクの権利確認ゲートと生成境界は維持した。
+- 関連47テスト、typecheck、production build（2553 modules）がPASS。Zeabur deployment `6aac16c4e6c365d6264ad8fb`は`RUNNING`。
+- デプロイ後Heavy `/model`を再読み込みし、認証・ブランド準備画面から通常UIへ遷移するまで待機。マルチタスクを押すとLight相当の空状態UIがsemantic・visual readbackで確認でき、`閉じる`でシングルタスクへ戻ることも確認した。
+- この確認でHeavyのマルチタスク空状態UI parityは`UI_PASS`。Light全画面との再比較、素材投入後の同一状態、成果物lifecycle、provider receipt、source sync、reconciliation、logout→再ログイン回帰は`NOT_PROVEN`。

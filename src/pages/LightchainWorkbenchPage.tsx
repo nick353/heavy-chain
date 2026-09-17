@@ -4502,7 +4502,16 @@ export function LightchainWorkbenchPage() {
                     {control}
                   </span>
                 ))}
-                {showModelPermissionGate ? (
+                {activeFittingTaskTab === 'マルチタスク' ? (
+                  <button
+                    type="button"
+                    data-testid="lightchain-fitting-batch-add"
+                    onClick={() => toast('衣服の画像を追加してから一括試着タスクに追加してください')}
+                    className="inline-flex items-center justify-center rounded-lg bg-[#65d3cf] px-5 py-3 text-sm font-semibold text-neutral-950 hover:bg-[#78e0dc]"
+                  >
+                    追加
+                  </button>
+                ) : showModelPermissionGate ? (
                   <PermissionLockedButton
                     testId="lightchain-model-permission"
                     marginClass=""
@@ -4528,7 +4537,33 @@ export function LightchainWorkbenchPage() {
             >
               生成履歴
             </Link>
-            <div className="text-center">
+            {activeFittingTaskTab === 'マルチタスク' ? (
+              <section className="absolute inset-0 flex flex-col text-left" data-testid="lightchain-fitting-batch-panel">
+                <div className="flex items-center gap-3 border-b border-white/10 px-4 py-4">
+                  <h2 className="text-lg font-semibold text-white">一括試着タスク（0/8）</h2>
+                  <button
+                    type="button"
+                    disabled
+                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-neutral-500"
+                  >
+                    すべて削除
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="閉じる"
+                    onClick={() => setActiveFittingTaskTab('シングルタスク')}
+                    className="ml-auto rounded-lg px-2 py-1 text-2xl leading-none text-neutral-400 hover:text-white"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#27363a] text-3xl text-cyan-300">⌁</div>
+                  <p className="text-sm text-neutral-400">ロット試着の任務はまだありません,先に左側から配置してください</p>
+                  <p className="text-xs text-neutral-500">最大8つのタスクの追加をサポートします。</p>
+                </div>
+              </section>
+            ) : <div className="text-center">
               <h2 className="text-xl font-semibold text-[#6ee7df]">AIフィッティング</h2>
               <p className="mt-3 text-sm text-neutral-400">AIでモデル着用イメージを素早く実現</p>
               {lightchainResult ? (
@@ -4567,7 +4602,7 @@ export function LightchainWorkbenchPage() {
               ) : garmentImageUrl ? (
                 <img src={garmentImageUrl} alt="右側プレビュー" className="mx-auto mt-8 max-h-[58vh] max-w-[50vw] rounded-xl object-contain" />
               ) : null}
-            </div>
+            </div>}
           </aside>
         </div>
         {materialModalOpen && (

@@ -3875,3 +3875,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] LightのAIフィッティングカードから個別ワークベンチへ遷移する実操作、Light／Heavy全画面・全カテゴリ比較、同一artifact lifecycle、provider receipt/source sync/reconciliationは未完了
 - [ ] Companionのauthorized clickは同じLightタブを`task_target_unavailable`として拒否したため、外部効果のないタブ切替のみ通常ブラウザ操作で補完。生成・アップロード・権利確認・provider送信は未操作
 - 判定: Lightログイン状態は`RECOVERED_HOME_UI_PASS`。Lightの個別ワークベンチとGoal全体は`NOT_PROVEN`。
+
+### 2026-09-18 continuation checkpoint — Heavy multitask parity fix deployed
+- [x] Light／Heavy `/model`で`マルチタスク`を実操作し、Lightにある一括試着タスク空状態パネルがHeavyに欠けていたことを特定
+- [x] `LightchainWorkbenchPage.tsx`に`追加`ボタン、`一括試着タスク（0/8）`、無効な`すべて削除`、`閉じる`、空状態説明を追加
+- [x] 関連47テスト、`npm run typecheck`、`npm run build`をPASS
+- [x] Heavy Chain Zeabur deployment `6aac16c4e6c365d6264ad8fb`を`RUNNING`まで確認
+- [x] デプロイ後に30秒相当のhydration待機を行い、CompanionでHeavy本番のシングル→マルチ→シングル往復をfresh semantic／visual readback
+- [x] HeavyマルチタスクでLight相当の`追加`、`一括試着タスク（0/8）`、`すべて削除`、`閉じる`、空状態文言、最大8件説明を確認
+- [ ] Light同一状態の再読、全画面／全カテゴリのpixel・interaction parity、素材投入後・成果物lifecycle、provider receipt/source sync/reconciliationは未完了
