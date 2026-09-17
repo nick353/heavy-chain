@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react';
 
-const lockedPermissionButton = 'w-full rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-neutral-500';
+const lockedPermissionButton = 'inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-brand-primary px-5 py-2.5 text-base font-medium text-text-on-brand-black opacity-40 shadow-xs transition-all disabled:pointer-events-none disabled:bg-control-fill-disabled disabled:text-text-disabled disabled:cursor-not-allowed';
 
 type PermissionLockedButtonProps = {
   testId: string;
@@ -19,7 +19,6 @@ export function PermissionLockedButton({
     <button
       type="button"
       disabled
-      aria-disabled="true"
       aria-label="権限がありません"
       data-testid={testId}
       title={title}
