@@ -4761,3 +4761,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Zeabur deployment `6aab3ef0dc088f64d1813dae` が`RUNNING`であることを確認した。
 - Heavy本番の`LightchainLibraryPage.BZ5eUrwy.js`をread-onlyで取得し、Light正本に合わせた`プレビュー`、`ダウンロード`、`削除`、`名前を編集`、`コピーを作成します`の文言を確認した。
 - 判定: 修正版chunkの配信は`PASS`。ただしCompanionの同一タブreload・Hydration後visual readbackは、未解決のPrinting upload unknown-effect reconciliationが解消されるまで実施しない。provider receipt、source sync、reconciliation、cleanup、実成果物の再利用は未完了。
+
+## 2026-09-17 Printing unknown-effect 同一タブ添付状態再照合
+
+- 保持中のHeavy `/tools/printing` を再readbackし、`input[type=file]`に`garment-source.png`が1件保持され、画面内プレビューも表示されていることを確認した。
+- 可視provider成功テキストは存在せず、正規`companion_inspect_reconciliation`は`reconciliation_success_evidence_not_found`。ブラウザ添付状態とprovider receiptは分離して扱う。
+- 判定: browser attachment readbackは`PASS`、provider completion／source sync／reconciliation／cleanupは`NOT_PROVEN`。再アップロードや外部送信の再実行はしていない。

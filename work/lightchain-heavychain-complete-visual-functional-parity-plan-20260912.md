@@ -3122,3 +3122,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 追記: 2026-09-17、Light Chain本番`https://jp.linkaigc.com/tools/printing`を既存のログイン済みCompanion task-owned tabで再オープンし、fresh semantic・visual readbackを取得。`生地イメージ`、`プリントイメージ`、`線画の実写化`、`平絵生成`の4タブ、左側5カテゴリのツールレール、`参考画像をアップロードしてください`、`プリントをアップロード`、`AI生成`、`生成履歴`を確認した。これはHeavy再読込比較の正本証拠であり、外部生成・provider receipt・source sync・reconciliation・cleanupの完了証拠ではない。
 
 追記: 同日、Zeabur deployment `6aab3ef0dc088f64d1813dae` が`RUNNING`であることをfresh readback。Heavy本番の`LightchainLibraryPage.BZ5eUrwy.js`をread-only取得し、`プレビュー`、`ダウンロード`、`削除`、`名前を編集`、`コピーを作成します`を確認した。これはAsset Center修正chunkの配信証拠だが、Companionの画面reload・Hydration後visual readback、provider receipt・source sync・reconciliation・cleanupの代替にはしない。
+
+追記: 同一Heavy Printing保持タブを再readbackし、`input[type=file]`の`fileCount=1`、`fileNames=["garment-source.png"]`、画面内の画像プレビューを確認した。これは元の`page.upload`によるブラウザ添付状態のreadback証拠であり、provider receiptではない。`companion_inspect_reconciliation`は、可視provider成功テキストがないため`reconciliation_success_evidence_not_found`。再アップロードは行わず、外部効果unknownとreconciliation gateを維持する。
