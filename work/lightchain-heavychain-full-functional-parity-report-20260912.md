@@ -5156,3 +5156,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 初期状態と各タブ切替後とも、右側の`権限がありません`ボタンはdisabledで、外部生成・アップロード・権利確認・保存は実行していない。
 - Companion cleanup receiptはlease解放済み、foreign tabs mutated=false、external_action_executed=false。
 - 判定: Creatorの4タブ・カテゴリ分岐・権限ロックは`UI_PASS`。カテゴリ項目選択後の入力・生成・保存／再表示／再利用とprovider lifecycleは未完了。
+
+## 2026-09-17 Creator category selection post-state comparison
+
+- Light本番で`レディース→トップス→ニット`を実クリックし、`レディース-トップス-ニット-ニット編み`、画像／生地画像、最大3枚・20M、生成履歴、権限表示を確認した。
+- Heavy本番でも同じ選択を実クリックし、同じ選択パンくず、画像／生地画像、カテゴリ一覧、生成履歴、権限表示を確認した。
+- 差分として、Lightは選択後の`権限がありません`ボタンがsemantic上`disabled=false`、Heavyの同ボタンは`disabled=true`だった。外部生成・権利確認・送信は行わず、Lightボタンのクリック後挙動は未確定のまま再送していない。
+- 判定: カテゴリ選択後の入力面は`UI_PASS`、権限ボタンのpost-stateは`NOT_PROVEN`。Heavyを単純に有効化すると外部生成境界を変えるため、Lightの権限ボタンが案内／無効果なのかを追加readbackしてから修正する。

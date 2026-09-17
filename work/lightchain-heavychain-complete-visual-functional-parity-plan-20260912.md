@@ -3500,3 +3500,9 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] カテゴリ契約テスト5/5 PASS（commit `9f4e786`）
 - [ ] 全カテゴリ項目を個別選択し、入力後状態・エラー状態をLightと比較
 - [ ] 実入力、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+### 2026-09-17 Creator category selection post-state comparison
+- [x] Lightで`レディース→トップス→ニット`を選択し、選択後UIをfresh readback
+- [x] Heavyで同じカテゴリを選択し、選択後UIをfresh readback
+- [ ] Light／Heavyの`権限がありません`ボタンpost-state差分（Light enabled／Heavy disabled）の意味を追加確認
+- [ ] 外部生成境界を維持したまま、必要ならHeavyのpost-stateを修正・テスト・deploy
