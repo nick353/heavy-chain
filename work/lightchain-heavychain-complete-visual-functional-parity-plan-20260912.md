@@ -3771,3 +3771,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavy sourceにはLight本番で観測したアカウントentitlement（`権限がありません`）を判定するフィールド／API／条件が存在しないことを確認
 - [x] 権利確認状態`providerRightsConfirmed`は生成前の明示確認用であり、entitlement状態の代替ではないことを確認。自動承認や推測によるロック変更は行わない
 - [ ] Light本番とHeavy本番で同一entitlement条件をreadbackできる正式な権限データ契約を特定し、表示差を解消
+
+### 2026-09-17 continuation checkpoint — Entitlement backend contract audit
+- [x] `src/lib/cloudflareApi.ts`のHeavy利用量read pathと`cloudflare/heavy-api/src/image-ai.ts`の`GET /v1/image-ai/usage`実装を追跡
+- [x] Heavy側はブランド単位のquota／使用量と`imageAIEnabled`を返すが、`planName`は`内部Free枠`の固定値で、機能別entitlement／Lightの`権限がありません`に対応するフィールドは返さないことを確認
+- [x] `providerRightsConfirmed`は外部生成前の明示的な権利確認であり、プラン権限・entitlementではないことを再確認。自動承認、ロック除去、推測による表示変更は行わない
+- [x] したがって、現状のLight／Heavy表示差はログイン遅延ではなく、同一entitlementをreadbackする正式なデータ契約が未接続であることを確定
+- [ ] Light本番のentitlement readback源とHeavy側の機能別entitlement契約を、同一アカウント・同一ブランド条件で追加特定して実装・検証

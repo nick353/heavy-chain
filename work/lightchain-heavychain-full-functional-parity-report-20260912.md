@@ -5431,3 +5431,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `src/pages/LightchainWorkbenchPage.tsx`の`/model`入口を追跡した結果、Heavyの初期`AI生成`表示は`aiGenerateDisabled`による認証・ブランド状態・素材不足のdisabled制御であり、Light本番の`権限がありません`を生成するアカウントentitlement判定は実装されていない。
 - `providerRightsConfirmed`は生成前の明示的な権利確認状態であり、entitlementやプラン権限ではない。したがって、この差を権利確認済み扱いに変更したり、単純にロック表示へ置換したりするのは証拠に基づくparity修正にならない。
 - 判定: entitlement差の原因は`NOT_PROVEN`。現時点で確認できる安全な次工程は、Light／Heavy双方から同一アカウント・ブランド・権限条件をreadbackできる正式なデータ契約を特定すること。外部生成、権利確認、provider送信は実行していない。
+
+## 2026-09-17 Entitlement backend contract audit
+
+- `src/lib/cloudflareApi.ts`からHeavyの利用量read pathを追跡し、`GET /v1/image-ai/usage?brand_id=...`がブランド単位のquota、使用量、`imageAIEnabled`を返すことを確認した。
+- `cloudflare/heavy-api/src/image-ai.ts`の実装では`planName: '内部Free枠'`が固定値で、機能別entitlementやLight本番の`権限がありません`に対応する判定フィールドは返していない。現行の利用量APIをentitlementの代用にはできない。
+- `providerRightsConfirmed`は外部provider送信前の明示的な権利確認であり、プラン権限・entitlementではない。この境界を維持し、自動承認・ゲート撤廃・推測によるHeavy表示変更は行っていない。
+- 判定: 認証失敗やログイン反映待ちではなく、Light／Heavy間で同一entitlementをreadbackする正式なデータ契約が未接続。entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
