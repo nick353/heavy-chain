@@ -3172,6 +3172,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 
 追記: 同日、Heavy Asset Centerで先頭成果物をプレビューし、詳細アクションの`ダウンロード`をfresh readback後に一回実行した。形式ダイアログの`JPG`を選択し、`ダウンロードを確認`を一回実行。`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案.jpg`を取得し、`file`で`JPEG image data, 960x640`を確認した。AVIF、削除、コピー、名前編集、provider receipt／source sync／reconciliation／cleanupは未完了。
 
+追記: 同日、同じ導線でHeavyの`AVIF`を選択・確認したが、DownloadsにAVIFファイルは生成されなかった。続けてLight側でも同じ先頭成果物の`AVIF`を選択・確認したが、同じく新規ファイルは生成されなかった。AVIFはLight／HeavyともUI選択は存在するが実ファイル生成を証明できないため、形式parityは`PASS`、AVIF機能実効性は`NOT_PROVEN`として扱う。削除、コピー、名前編集、provider receipt／source sync／reconciliation／cleanupは未完了。
+
+追記: Heavy先頭成果物を一回コピーし、9件になったことを確認。コピー名を`Parity copy verification 2026-09-17`へ変更してfresh readbackし、削除ボタンの確認ダイアログを正規にacceptした。ローカル成果物削除メッセージと8件への復帰をfresh readback。コピー／名前編集／削除のライフサイクルは`PASS`。
+
 ### 2026-09-17 Asset Center成果物ダウンロード本番確認
 
 - [x] Light先頭成果物を`プレビュー`で開き、Heavyと同じ詳細アクション（戻る／コピー／ダウンロード／削除／名前編集）を確認

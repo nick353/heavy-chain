@@ -4875,3 +4875,7 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - 追加確認: 同じログイン済みCompanionセッションでHeavy先頭成果物をプレビューし、詳細の`ダウンロード`を一回実行。形式ダイアログで`JPG`を選択し、`ダウンロードを確認`を一回実行した。`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案.jpg`を取得し、`file`で`JPEG image data, 960x640`を確認した。
 - 判定更新: HeavyのJPG実ファイル生成は`PASS`。AVIF、削除、コピー、名前編集、provider receipt、source sync、reconciliation、cleanup、全画面 parityは未完了。
+- 追加確認: 同じ導線で`AVIF`を選択・確認したが、DownloadsにAVIFファイルは生成されなかった。UI上の形式選択は表示されるものの、HeavyのAVIF実生成は`NOT_PROVEN/FAIL`として扱う。Light側の同一操作結果を取得してから、必要な実装修正を判断する。
+- 比較更新: 同じログイン済みCompanionセッションでLight先頭成果物にも同じAVIF操作を行ったが、新規AVIFファイルは生成されなかった。Light／HeavyのAVIF選択UIと実ファイル未生成の挙動は一致しているため、形式parityは`PASS`、AVIF機能実効性は両環境とも`NOT_PROVEN`として記録する。
+- 追加確認: Heavy先頭成果物を一回コピーし、一覧が8件から9件になったことを確認。コピーを`Parity copy verification 2026-09-17`へ名前変更し、fresh readback後に削除確認ダイアログを正規acceptした。画面の`ローカル成果物を削除しました`と一覧8件への復帰を確認した。
+- 判定更新: Heavyのコピー・名前編集・削除ライフサイクルは`PASS`。provider receipt、source sync、reconciliation、cleanup、全画面 parityは未完了。
