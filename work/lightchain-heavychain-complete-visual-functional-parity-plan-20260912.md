@@ -3580,3 +3580,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Light側の同一routeとの画面・操作・保存成果物を1対1で比較
 - [ ] 残りroute、desktop/mobile、logout→再ログインを監査
 - [ ] provider receipt、source sync、reconciliation、成果物保存／再表示／再利用を個別に証明
+
+### 2026-09-17 continuation checkpoint — Creator permission lock visual parity
+- [x] 同一runのLight／Heavyで権利ボタンが両方disabledであることを確認し、権利ゲートを維持
+- [x] Heavyの旧クラス・`aria-disabled`・高さ差分をLight実測へ合わせる実装を追加
+- [x] permission parity test 5/5、typecheck、production build、diff check
+- [x] 1回目のデプロイRUNNINGとHeavy反映後のクラス／DOM readbackを確認
+- [x] 反映後の高さ差分を特定し、`h-10`を追加してコミット`dce70ca`
+- [ ] `dce70ca`のproduction deploy（Zeabur upload prepare timeoutで未作成）
+- [ ] デプロイ後Heavyの高さ40pxとLightの完全一致をCompanionで再readback
+- [ ] 全route、全カテゴリ、保存／再表示／再利用、desktop/mobile、logout→再ログインの最終監査
+- [ ] provider receipt、source sync、reconciliation、cleanupを外部生成とは分離して証明

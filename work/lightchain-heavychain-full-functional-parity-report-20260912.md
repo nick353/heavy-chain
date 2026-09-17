@@ -5233,3 +5233,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - これはHeavy側のroute到達・画面シェル・一部保存カードのブラウザ証拠であり、Light側との全画面pixel-level一致、全カード詳細・preview・更新時刻突合、外部生成、provider receipt、source sync、reconciliation、成果物の完全な保存／再表示／再利用を証明しない。権利確認・アップロード・provider送信は実行していない。
 - Companion cleanup receiptは`closed=[1980922900]`、`missing=[]`、`retained=[]`、`unknown_effect=[]`、`leases_released=1`、`lease_release_confirmed=true`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
 - 判定: 8主要routeの到達は`UI_PASS`。Lightとの完全parityおよびprovider lifecycleは`NOT_PROVEN`。
+
+## 2026-09-17 Creator permission-lock visual parity continuation
+
+- 同一ログイン済みCompanionのLight／Heavy `/creator`で、`権限がありません`は両方ともネイティブ`disabled`だった。Heavy側の権利ゲートを有効化したり自動承認したりはしていない。
+- Heavyの旧表示は44px・`bg-white/10`・`aria-disabled=true`だったため、Lightの実測クラス（brand disabled styling、40px、`aria-disabled`なし）へ`PermissionLockedButton`を合わせた。ネイティブ`disabled`、aria-label、既存の外部送信ゲートは保持した。
+- 1回目のデプロイ`6aabc285a61819c1c58e3ffb`はRUNNINGになり、反映後readbackでクラスと`aria-disabled=null`はLight相当になったが、高さは44pxだったため`h-10`を追加した。修正コミットは`dce70ca`。
+- 追加修正後のpermission parity test 5/5、typecheck、production build（2553 modules）、diff checkはPASS。
+- 追加修正版のZeabur uploadは2回とも`/v2/upload/.../prepare`の`context deadline exceeded`で開始前に失敗し、新しいdeploymentは作成されていない。既存のRUNNING版は維持されている。
+- 追加修正後の本番Heavy readbackは未実施。Companion sessionはcleanup receiptでlease解放・tab close・external_action_executed=falseを確認済み。
+- 判定: ローカル実装と安全ゲートは`PASS`、追加修正の本番反映は`BLOCKED_BY_DEPLOY_UPLOAD_TIMEOUT`。外部生成・アップロード・権利確認・provider送信は実行していない。
