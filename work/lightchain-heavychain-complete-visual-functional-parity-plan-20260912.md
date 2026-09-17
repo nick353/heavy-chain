@@ -3317,3 +3317,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] レイヤーカードの実イラスト画像をLightと一致させる
 - [ ] 権限差分を同一entitlement条件で比較する（自動承認・ゲート撤廃はしない）
 - [ ] provider receipt／source sync／reconciliation／cleanup、外部生成、全画面pixel-level一致、logout→login回帰
+
+### 2026-09-17 Creator category icon parity deployment readback
+
+- [x] Light本番DOMからカテゴリ実アイコン参照を取得し、Heavyのカテゴリカードへ反映（commit `9e4006f`）
+- [x] UI boundary 13/13、route parity 19/19、typecheck、production build、diff check
+- [x] Zeabur deployment `6aab9bbdc9ceb1539716429a`の対象SHA一致・`RUNNING`を確認
+- [x] Heavy／Light `/creator`のカテゴリ一覧をCompanionでfresh screenshot・semantic readback
+- [x] Heavy／Light双方で`ニット`を選択し、選択後の主要導線を確認
+- [ ] アップロード案内、サブカテゴリ表現、権限ボタンのsemantic／pixel-level完全一致
+- [ ] 全カテゴリタブ・全画面・保存／再表示／再利用、外部生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰

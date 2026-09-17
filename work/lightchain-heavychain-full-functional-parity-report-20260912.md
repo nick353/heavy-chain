@@ -4992,3 +4992,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 両方でレディース→トップス→ニットを選択した。Lightは選択後パンくず、画像／生地画像切替、カテゴリメニュー、キーワード、権限ロックを表示し、Heavyは同じカテゴリ選択・補助選択・画像／生地画像・キーワード・権限ロックを表示した。
 - 差分として、Heavyは左側の補助選択チップとアップロードプレースホルダーを明示表示し、Lightは選択後のパンくずとアイコン付きカテゴリカードの表現が異なる。カテゴリ選択自体は可逆操作として確認した。
 - アップロード、外部生成、権利確認、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanupは実行していない。Creatorのpixel-level一致と成果物フローは未完了。
+
+## 2026-09-17 Creator category icon parity deployment readback
+
+- Light本番`/creator`のカテゴリメニューをCompanionの同一ログイン済みプロフィールでDOM確認し、カテゴリごとの実アイコンURLを取得した。Heavyのカテゴリカードへ同じLight参照アセットを追加した。
+- Heavy／Light双方でカテゴリ一覧を開き、トップス・ボトムス・ワンピース/セットアップのカテゴリ数と並び、カテゴリアイコン、検索欄、4つの対象タブをfresh screenshot・semantic readbackで確認した。
+- 両方で`ニット`を選択し、Heavyの選択パス`レディース・トップス・ニット編み`、Lightの選択パス`レディース-トップス-ニット-ニット編み`、サブカテゴリ、画像／生地画像切替、アップロード領域、キーワード、権限表示を確認した。
+- source commit `9e4006f`、Zeabur deployment `6aab9bbdc9ceb1539716429a`（Docker、対象SHA一致）が`RUNNING`となったことを確認した。UI boundary 13/13、route parity 19/19、typecheck、production build、diff checkをPASSした。
+- 判定: カテゴリアイコンと主要選択導線は`UI_PASS`。HeavyとLightにはアップロード案内、選択後のサブカテゴリ表現、権限ボタンのsemantic／pixel差が残るため、Creator全画面の完全一致は`NOT_PROVEN`。アップロード、権利確認、外部生成、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未実施。
