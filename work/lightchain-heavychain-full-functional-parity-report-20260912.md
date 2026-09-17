@@ -4811,6 +4811,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightは`権限がありません`、Heavyは`AI生成`を表示しており、同一権限状態ではない。外部生成・素材アップロード・provider送信は実行していない。
 - 判定: ルート到達・主要入力は`PASS`、生成操作の権限表示一致は`NOT_PROVEN`。生成後成果物の保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanupは未完了。
 
+## 2026-09-17 `/tools/line-draft-to-tile` 本番再読込比較
+
+- 同じログイン済みCompanionセッションでLight／Heavyを`/tools/line-draft-to-tile`へ遷移し、15秒待機後にfresh semantic readbackした。
+- 両方で4つの素材ツールタブ、終了予定の案内、参考画像入力、カラー線画／モノクロ線画、生成画像の種類、カスタム説明、生成履歴、線画の実写化の説明を確認した。
+- Heavyは`AI生成`、Lightはdisabledの`権限がありません`を表示した。これはLightのアカウント権限差として扱い、自動承認・権利ゲート撤廃・Heavyへの推測適用は行っていない。
+- 判定: ルート到達・主要入力・履歴導線は`PASS`。権限表示の完全一致は`NOT_PROVEN`。画像アップロード、外部生成、provider receipt、source sync、保存／再表示／再利用、reconciliation、cleanupは未完了。
+
 ### ソース照合
 
 - Heavy `LightchainWorkbenchPage`では、`line-to-real`／`line-generation`を含む複数ツールで、ブランド解決完了後の`aiGenerateDisabled`を素材未入力だけで判定し、機能別の契約権限を参照していない。

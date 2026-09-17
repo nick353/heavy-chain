@@ -3102,6 +3102,8 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 
 追記: `/tools/line`をLight／Heavyで390×844のmobile viewportに設定してfresh readback後、双方をrestore。Heavyは`素材を選択`／`AI生成`、Lightはツールレール／`権限がありません`を表示し、mobileでも権限・周辺UI差分が残ることを確認。
 
+追記: 同じログイン済みCompanionセッションでLight／Heavyの`/tools/line-draft-to-tile`を15秒待機後にfresh readback。両方に4タブ、終了予定案内、参考画像、線画種別、生成画像種別、カスタム説明、生成履歴を確認。Heavyは`AI生成`、Lightは`権限がありません`で、権限差はLight固有状態として保持し、自動承認・ゲート撤廃は行わない。
+
 追記: Heavy Creator履歴を開いて既存成果物と`Canvasへ再利用`を確認したが、再利用ボタンがviewport外（y約962）で、対象スクロール後もscroll positionが変わらずクリック未実行。履歴カードのviewport到達性を修正・再確認する。
 
 追記: 履歴を固定オーバーレイ化する修正をcommit `8ad0f07`でpushし、deployment `6aab6ca8432b03fb1ac5be41`の`RUNNING`を確認。Heavy本番で`Canvasへ再利用`がviewport内（y約221）となり、`/canvas/new?sourceArtifactId=local-handoff-v4utyunlmpa`へ遷移することを確認。Canvas保存・provider成果物証跡は未完了。
