@@ -5417,3 +5417,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - デプロイ後のHeavy `/creator`をHydration後にCompanion readbackし、`生成履歴`、`キーワード辞典`、disabled `権限がありません`を確認した。`/tools/pattern-to-vector`でも`今すぐ体験`、disabled `権限がありません`、`生成履歴`、`プリントパターンをベクター画像に変換します`を確認した。
 - cleanup receiptはtask-owned lease解放、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。アップロード、権利確認、AI生成、provider送信は行っていない。
 - 判定: 今回の対象ソース変更とHeavy本番反映・主要画面readbackは`PASS`。Light mobile本体のfresh readback、全画面pixel-level一致、同一artifactのLight／Heavy lifecycle、entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Light mobile fresh readback
+
+- 新規Companion sessionでLight正本の`https://jp.linkaigc.com/model`を開き、390幅相当のモバイル表示をfresh semantic・visual readbackした。`readyState=complete`、control count=`23`だった。
+- `AIフィッティング`、`シングルタスク`、`マルチタスク`、`衣服の画像 (0/4)`、説明生成、参考画像、モデルのセット写真、スマート、1K、`権限がありません`、生成履歴を確認した。前回のreload transactionでtabを先にcleanupしたため未取得だったLight mobile本体の証拠を補完した。
+- Lightの`権限がありません`は表示されていたが、Companion semantic stateではdisabled=falseとして返った。Heavyの同位置はdisabled `AI生成`だったため、entitlement／状態差は引き続き同一権限条件での突合が必要であり、権利確認の自動承認とは扱わない。
+- cleanup receiptはlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。アップロード、権利確認、AI生成、provider送信は行っていない。
+- 判定: Light mobileの主要初期UI readbackは`UI_PASS`。Light／Heavyのpixel-level完全一致、同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。

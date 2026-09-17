@@ -3757,3 +3757,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] デプロイ後Heavy `/tools/pattern-to-vector`で`今すぐ体験`、disabled `権限がありません`、生成履歴、正規文言をfresh semantic・visual readback
 - [x] Companion cleanup receiptでtask-owned lease解放、foreign tab mutationなし、external actionなしを確認
 - [ ] Light mobile本体のfresh readback、Light／Heavy同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliation
+
+### 2026-09-17 continuation checkpoint — Light mobile fresh readback
+- [x] 新規Companion sessionでLight `/model`をログイン済み状態のままfresh semantic・visual readback
+- [x] 画面幅390相当でAIフィッティング、single／multi task、衣服0/4、説明生成、参考画像、モデルのセット写真、スマート、1K、権限表示、生成履歴を確認
+- [x] Light mobileの主要control count=23、Hydration待機なしで`readyState=complete`を確認
+- [x] lease解放・session close後のcleanup receiptでunknown effectなし、foreign tab mutationなし、external actionなしを確認
+- [ ] Light／Heavy同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliation
