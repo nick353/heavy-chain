@@ -3861,3 +3861,8 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 実provider receipt、source-of-truth sync、reconciliationの同一artifact証明
 - [ ] logout→ユーザー再ログイン回帰と最終差分レポートの完了判定
 - [ ] 完了条件の未充足はLightログイン復旧後にのみ再判定する
+
+### 2026-09-17 continuation checkpoint — Repeated Light login blocker audit
+- [x] 別fresh Light `/model` tabで30秒待機し、同じログアウトメッセージを再確認
+- [x] Companion cleanup receipt: lease released 1、unknown effectなし、外部操作なし
+- [ ] 同一ChromeセッションでユーザーがLightへ再ログインするまで、残りの本番parity工程は進行不能

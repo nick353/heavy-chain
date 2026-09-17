@@ -5528,3 +5528,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 外部生成、アップロード、権利確認、provider送信は未操作として分離記録済み。
 - 未証明の必須項目は、Lightのfresh authenticated readback、Light／Heavy全画面・全カテゴリの同一run比較、同一artifactの実保存／再表示／再利用、provider receipt、source-of-truth sync、reconciliation、logout→再ログイン回帰。
 - 完了判定: `NOT_PROVEN`。Light本番の再ログイン後にのみ、上記未証明項目を再判定する。
+
+## 2026-09-17 Repeated Light login blocker audit
+
+- 別fresh Light `/model` tabで30秒待機しても、`別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました。`が再現した。
+- cleanup receiptは`leases_released=1`、`unknown_effect=[]`、外部操作なし。
+- 残りの必須工程はLightのauthenticated source readbackを前提とするため、ユーザーが同一Chromeセッションで再ログインするまで進行不能。完了判定は`NOT_PROVEN`。
