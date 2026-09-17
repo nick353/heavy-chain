@@ -5050,3 +5050,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Canvasには`生成する`、`素材を見る`、`Galleryから追加`、`派生ツリー`、`エクスポート`の主要導線が表示された。実生成・素材追加・エクスポート効果、Light側の同一プロジェクト内容、provider receipt、source sync、reconciliation、cleanupは未確認。
 - `Galleryから追加`を実押下し、`ギャラリーから画像を選択`モーダル、検索欄、履歴アップロード／生成履歴／マイライブラリー／チームライブラリー／プラットフォームアセットの5タブ、既存素材カードを確認した。素材選択・Canvasへの実配置は行わず、モーダルを閉じて保存済みCanvasへ戻った。
 - 続けて既存の`lightchain-design-agent`素材を1件選択し、モーダルが閉じてCanvas上の画像・プロパティ操作（背景削除、カラバリ、アップスケール、バリエーション、複製、ダウンロード、削除）が有効化されることを確認した。既存Canvasを変更したままにしないため、`元に戻す`を一度実行し、保存済みの空Canvas状態へ復帰した。
+
+## 2026-09-17 Existing project detail parity implementation and production readback
+
+- Light本番の既存Fashion Studioカードを実クリックし、正規deep-link `/flow/integration/detail?boardProjectCode=2099496584913432577&boardProjectType=integrationCustom`と、画像検索・メイン画像・参考画像・指示テキスト・AI生成・生成結果の構造をfresh readbackした。
+- Heavyの同deep-linkが新規ファイル用の空アップロード画面を表示する差分を修正し、`boardProjectCode`がある場合は既存プロジェクト用の画像検索ワークベンチを表示するよう分岐した。新規ファイルの空Canvasルートは維持した。commit `31486cc`。
+- typecheck、Lightchain entry routing 18/18、production build（2552 modules）、`git diff --check`をPASSした。対象Zeabur deployment `6aaba596a61819c1c58e3ac2`が`RUNNING`へ到達した。
+- デプロイ後にHeavyの同deep-linkを同じCompanionセッションで再読込し、ファッションスタジオ、Untitled、アセット、プロジェクトツール、タスク0、進行中、30%、画像検索、メイン画像、参考画像、指示入力、AI生成80、生成結果をfresh semantic readbackした。
+- 判定: 既存プロジェクト詳細の主要UI構造・ルーティングは`UI_PASS`。Light／Heavyの実プロジェクト内容・Canvas object・生成結果、外部生成、provider receipt、source sync、reconciliation、cleanupは未確認。

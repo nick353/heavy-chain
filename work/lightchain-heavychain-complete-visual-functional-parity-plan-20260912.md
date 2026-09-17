@@ -3387,3 +3387,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] `Galleryから追加`モーダルと5つの素材ライブラリータブを表示確認
 - [x] 既存Gallery素材の選択→Canvas配置→元に戻すを実操作確認
 - [ ] Light側との同一素材・Canvas object比較、エクスポート実効果
+
+### 2026-09-17 Existing project detail parity implementation and production readback
+
+- [x] Light既存プロジェクトの正規detail deep-linkと主要UI構造をfresh readback
+- [x] Heavyで`boardProjectCode`付きdetail routeを既存プロジェクト画面へ分岐（commit `31486cc`）
+- [x] typecheck、entry routing 18/18、production build、diff check
+- [x] Zeabur deployment `6aaba596a61819c1c58e3ac2`の`RUNNING`確認
+- [x] Heavy同deep-linkの本番Companion再読込と主要UI readback
+- [ ] Light／Heavyの同一プロジェクト内容・Canvas object・pixel-level完全一致
+- [ ] 入力後生成、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanup
