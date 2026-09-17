@@ -3097,3 +3097,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 追記: 2026-09-18の本番反映確認では、修正版デプロイ`6aab372cdc088f64d1813d3f`のbuild完了ログは存在するが、Zeabur serviceは`STARTING`、deploymentは`DEPLOYING`継続。`https://heavy-chain.zeabur.app`の静的MaterialWorkbench chunkには修正版レール文言が未反映で、Companion本番再読込の証拠はまだ作成できない。
 
 追記: 同日、対象デプロイとserviceが`RUNNING`へ到達した後、Heavy `/tools/fabric`を同じログイン済みCompanionタブで再読込し、Hydration後に`ツールバー`、`デザインツール`、`フィッティングツール`、`グラフィックデザインツール`、`衣類生産ツール`をsemantic readback。visual screenshotでも左レールとデザインツール選択状態を確認した。Light側の同URLもfresh readbackし、主要入力・4タブ・権限表示を比較した。本番`UI_PASS`（Fabricレール反映）だが、権限ボタンのenabled状態、生成・成果物ライフサイクル、provider/source証跡は未完了。
+
+### 2026-09-18 `/tools/printing` 左ツールレール修正と本番切替待ち
+
+- [x] Light／Heavy `/tools/printing`をCompanionでfresh readbackし、Heavy側の左ツールレール欠落を確認
+- [x] `LightchainPrintingPage`へLightと同じ5カテゴリの可視レールと遷移リンクを追加（commit `8369cd0`）
+- [x] UI boundary 13/13、route 19/19、typecheck、production build、`git diff --check`をPASS
+- [x] クリーンステージングからZeabur deployment `6aab3be605af289f92f981fc`を開始
+- [ ] deployment／serviceが`RUNNING`へ到達し、Heavy `/tools/printing`を同じCompanionタブで再読込してレールをsemantic・visual readback
+- [ ] 印刷画像追加、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
+
+判定: Printingのソース修正とローカル検証はPASS。現在の本番はdeployment=`DEPLOYING`、service=`STARTING`で、既存ヘルスチェックは`ok`だが新しいレールの本番反映は未証明。新デプロイの切替完了後に再読込確認を継続する。
