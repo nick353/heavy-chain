@@ -3826,3 +3826,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] `/video`のStoryboard／比率／尺／CTAとprovider admission待ち、`/lab`の仮説／評価／採用候補導線を確認。外部生成は未操作
 - [x] cleanup receipt: leases released 6、unknown effectなし、foreign tabs mutatedなし、external actionなし
 - [ ] Light同一routeのfresh比較、`/models`のHydration再取得、全route／全カテゴリのpixel・interaction parity、成果物lifecycle、provider receipt/source sync/reconciliation
+
+### 2026-09-17 continuation checkpoint — Heavy models hydration recheck
+- [x] Heavy `/models`をfresh tabで開き、30秒待機後にCompanion semantic・visual readback
+- [x] `readyState=complete`、`LIGHTCHAIN / MODELS`、モデル候補3種、顔／モデル／体型／サイズ／ポーズ／背景／アングル、Gallery・Canvas・権利確認前説明を確認
+- [x] 前回の空readbackは一時的なHydration観測不足と切り分け、現在の画面不全とは断定しない
+- [x] cleanup receipt: lease released 1、unknown effectなし、foreign tabs mutatedなし、external actionなし
+- [ ] Light同一route比較、全カテゴリparity、成果物lifecycle、provider receipt/source sync/reconciliation

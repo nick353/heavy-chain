@@ -5491,3 +5491,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `/models`は同時readback時点でテキストが空で、Hydration完了の証拠が不足したため`NOT_PROVEN`とした。
 - cleanup receiptは`leases_released=6`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: Heavy canonical routeのread-only surfaceは部分的に`UI_PASS`、Light同一route比較、`/models`再取得、全route／全カテゴリparity、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Heavy models hydration recheck
+
+- 前回本文が空だったHeavy `/models`をfresh tabで再取得し、30秒待機後にCompanion semantic・visual readbackした。
+- 今回は`readyState=complete`、`LIGHTCHAIN / MODELS`、モデル候補3種、顔・モデル・体型・服サイズ・ポーズ・背景・アングル、Gallery／Canvas導線、権利確認前説明、`model-library-save-to-canvas`を確認した。
+- したがって前回の空readbackは一時的なHydration観測不足であり、画面不全の証拠ではない。外部生成・アップロード・権利確認・保存実行は未操作。
+- cleanup receiptは`leases_released=1`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: Heavy `/models` read-only surfaceは`UI_PASS`、Light同一route比較、全カテゴリparity、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。
