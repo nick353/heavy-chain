@@ -3903,3 +3903,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Git連携Docker `service redeploy`でHeavyをHTTP 200／Companion表示へ復旧
 - [ ] ローカル事例inventoryを連携先mainへ反映し、正しいDocker deployment後にHeavy本番で件数・タイトル・visualを再確認
 - [ ] 全画面／全カテゴリのpixel・interaction parity、成果物lifecycle、provider receipt/source sync/reconciliation、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — production gallery readback after 0182192
+- [x] GitHub `main` commit `0182192`のDocker deployment `6aac20795d5c4d600cbce9a9`を`RUNNING`まで確認
+- [x] 正規`/`入口からHeavyを30秒待機後にCompanion readback
+- [x] Light `img`総数33、Heavy `img`総数22を同一sessionでquery
+- [x] 主要6ランチャー枠のvisual parityを確認
+- [ ] 事例カードの画像・保存データ集合をLight正本と1対1で同期・再検証
+- [ ] 全画面／全カテゴリ、同一artifact lifecycle、provider receipt/source sync/reconciliation、最終cleanupを完了

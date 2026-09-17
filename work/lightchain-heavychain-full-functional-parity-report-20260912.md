@@ -5567,3 +5567,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 一度`/hea`から誤ってローカルdeployしたため、Zeaburで空static deployment `6aac1de74ec58b92baa76d68`が`RUNNING`となり、rootとdirect routeがHTTP 404になった。原因を作業ディレクトリ誤りとして特定し、`service redeploy`でGit連携Docker deployment `6aac1f2be6c365d6264ada22`（remote main）を`RUNNING`へ復旧した。
 - 復旧後、HTTP rootは200、Companion rootは30秒待機後にHeavy入口が`readyState=complete`で表示された。誤static deploymentを成功扱いにはしていない。
 - 判定: home gallery parity changeは`LOCAL_READY_REMOTE_DEPLOY_PENDING`。Light／Heavy全画面・全カテゴリ比較、実成果物lifecycle、provider receipt、source sync、reconciliation、logout→login回帰は`NOT_PROVEN`。
+
+## 2026-09-18 Home gallery production readback after commit 0182192
+
+- GitHub `main` commit `0182192`のZeabur Docker deployment `6aac20795d5c4d600cbce9a9`が`RUNNING`になった。
+- 30秒待機後のHeavy入口は`readyState=complete`で表示され、直接`/lightchain`ではなく正規の`/`入口からSPA遷移することでHTTP／Companion readbackが安定した。
+- 同一Companion sessionの`page.query(img)`でLightは総画像33件、Heavyは22件。主要6ランチャーカードとレイアウト枠は一致したが、事例カードの画像・保存データ集合はLightと1対1一致していない。
+- 判定: launcher frame parityは`UI_PASS`、gallery data/artifact parityは`NOT_PROVEN`。実成果物lifecycle、provider receipt、source sync、reconciliation、全画面／全カテゴリ、logout→login回帰も未完了。
