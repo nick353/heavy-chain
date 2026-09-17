@@ -3352,3 +3352,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavyの同名カードを押下し、`/printing`への遷移とreadbackを確認
 - [ ] Light側カードの実遷移先または未遷移仕様を追加確認し、Heavyのカード遷移方針を確定
 - [ ] 全カードの遷移、成果物の保存／再表示／再利用、外部生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+### 2026-09-17 Local save/reuse contract verification
+
+- [x] unified workflow contract 6/6
+- [x] provider coverage 22/22
+- [x] provider persistence readback 14/14
+- [x] workspace handoff persistence 3/3
+- [x] Canvas view persistence 5/5
+- [x] typecheck、production build（2552 modules）、`git diff --check`
+- [ ] 本番Companionでの実成果物の保存／再表示／再利用
+- [ ] 実プロバイダーreceipt、source sync、reconciliation、cleanup
+- [ ] Light／Heavyの成果物・データ・pixel-level完全一致、logout→login回帰

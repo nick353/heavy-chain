@@ -5021,3 +5021,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightを再読込して先頭へ戻し、`AIグラフィックデザイン`の表示文字をvisual proof付きで実押下した。クリックtransaction自体は`verified`だが、URL・画面内容は変わらず、Light側で遷移効果を確認できなかった。
 - Heavyの同名カードは実押下後に`https://heavy-chain.zeabur.app/printing`へ遷移し、`verified` readbackを取得した。Heavyのカタログ定義でも同カードのrouteは`/printing`。
 - 判定: Heavyのカードは遷移機能を持つ一方、Lightの同カードは今回の実操作では遷移しなかったため、カード遷移の完全一致は`NOT_PROVEN`。HeavyをLightの未遷移状態へ戻す変更は、Light側の外部サイト挙動が再現不能なため実施していない。
+
+## 2026-09-17 Local save/reuse contract verification
+
+- `test:lightchain-unified-workflow-contract`: 6/6 PASS。
+- `test:lightchain-provider-coverage`: 22/22 PASS。
+- `test:provider-persistence-readback`: 14/14 PASS。
+- `test:workspace-handoff-persistence`: 3/3 PASS。
+- `test:canvas-view-persistence`: 5/5 PASS。
+- `typecheck`、`npm run build`（2552 modules）、`git diff --check`もPASS。
+- これはローカルの構造・契約・永続化テストの証拠であり、実プロバイダーのreceipt、source sync、reconciliation、cleanup、または本番Light／Heavy成果物の完全一致を証明するものではない。外部生成・アップロード・権利確認は実行していない。
