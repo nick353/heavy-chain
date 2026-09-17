@@ -2968,6 +2968,8 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] `キーワード辞典`を開き、dialog、閉じる操作、9分類（シルエット、素材感、カラー、柄・プリント、シーン、ディテール、季節、雰囲気、アイテム）を確認後に閉じた
 - [ ] Light同一操作との完全な履歴件数・辞典項目・入力保持比較、実画像アップロード、生成・provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
 
+追記: Heavy本番でカテゴリトリガーを一回操作し、4対象タブ、検索、3分類、配下カテゴリ群をfresh readbackした。Lightは同じ表示文言はあるが、semantic snapshot上で操作可能なカテゴリコントロールを取得できず、同一操作の成立は未証明。クリックの再試行はしていない。
+
 判定: Heavy`/creator`のカテゴリ選択後UI、検索、履歴、辞典は本番`UI_PASS`。実生成・保存ライフサイクルとprovider/source証跡は未完了。
 
 ### 2026-09-17 `/tools/printing` Light／Heavy fresh比較とsemantic修正
@@ -3057,7 +3059,7 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavy `/asset-center` をfresh readbackし、同じ先頭成果物の`プレビュー`を1回操作。Heavyの詳細に`ダウンロード`／`削除`が欠けている差分を確認
 - [x] Heavy `LightchainLibraryPage`へLight実測どおりの詳細アクションを追加。ローカル成果物削除、remote生成画像削除、検証済み画像ダウンロードを実装（commit `0dc6856`）
 - [x] `test:library-canvas-handoff` 10/10、typecheck、production build（2552 modules）、`git diff --check`をPASS
-- [ ] deployment `6aab337005af289f92f9802c` の`RUNNING`到達、Heavy `/asset-center`再読込、同じプレビュー詳細アクションのfresh semantic／visual readback
+- [x] 最新`RUNNING` deployment後、Heavy `/asset-center`を再読込し、先頭成果物のプレビュー詳細で`戻る`、`コピーを作成します`、`ダウンロード`、`削除`、`名前を編集`をfresh semantic／visual readback
 - [ ] 削除・ダウンロードのprovider receipt／source sync／reconciliation／cleanup、同一成果物のCanvas再利用と再表示
 
 判定: Asset Centerプレビュー詳細のUI差分をLight本番実測から特定し、Heavy source修正とローカル検証はPASS。本番反映と外部成果物ライフサイクル証跡は未完了。
@@ -3091,6 +3093,16 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Lightの`権限がありません`をvisual target確認後に一回操作し、provider送信なしで`画像をアップロードしてください`の画面内通知が出ることをreadback
 - [ ] Heavyの同一権限状態・入力条件での生成ボタン表示とクリック後状態の一致
 - [ ] 実画像アップロード、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
+
+追記: 2026-09-17、Light／Heavyを正規`/tools/line`へ再読込し、HeavyはHydration完了後に比較した。Lightは`権限がありません`、Heavyは`AI生成`で、主要入力は両方にあるが権限表示は未一致。外部生成は行っていない。
+
+追記: Heavy sourceでは`line-to-real`／`line-generation`の`aiGenerateDisabled`が素材・ブランド解決中心で、Light本番の機能権限表示とは別契約だった。同一権限条件の実測なしにボタンを自動承認・撤廃する変更は行わない。
+
+追記: 旧Creator handoff／旧plan-lock期待値を現行Light実測のカテゴリ選択・明示的権限ゲート契約へ更新。権限Parity 4/4、route 19/19、UI boundary 13/13、Library handoff 10/10、typecheck、production build（2552 modules）をPASS。これらは本番provider成果物証跡の代替ではない。
+
+追記: `/tools/line`をLight／Heavyで390×844のmobile viewportに設定してfresh readback後、双方をrestore。Heavyは`素材を選択`／`AI生成`、Lightはツールレール／`権限がありません`を表示し、mobileでも権限・周辺UI差分が残ることを確認。
+
+追記: Heavy Creator履歴を開いて既存成果物と`Canvasへ再利用`を確認したが、再利用ボタンがviewport外（y約962）で、対象スクロール後もscroll positionが変わらずクリック未実行。履歴カードのviewport到達性を修正・再確認する。
 
 判定: `/tools/line`の主要画面は両環境で確認済みだが、生成ボタンの権限状態が一致していない。Lightの操作はブラウザUI readbackのみで、外部生成は実行していない。
 
@@ -3126,3 +3138,7 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 追記: 同一Heavy Printing保持タブを再readbackし、`input[type=file]`の`fileCount=1`、`fileNames=["garment-source.png"]`、画面内の画像プレビューを確認した。これは元の`page.upload`によるブラウザ添付状態のreadback証拠であり、provider receiptではない。`companion_inspect_reconciliation`は、可視provider成功テキストがないため`reconciliation_success_evidence_not_found`。再アップロードは行わず、外部効果unknownとreconciliation gateを維持する。
 
 追記: 旧本番deploymentがcommit `7b666f3`のままで修正sourceを含んでいないことを確認したため、未pushだったparity修正・検証・計画更新39コミットを`origin/main`へpush。Zeaburに最新commit `ac8fac0f0bb9aca9334415c9a34a7305153cac3e`のdeployment `6aab425d05af289f92f98354`が生成され、現在`BUILDING`。旧deploymentの静的chunk証拠を修正版本番証拠とは扱わず、最新deploymentの`RUNNING`到達後にCompanion再読込を行う。
+
+追記: その後deployment/serviceが`RUNNING`へ到達したため、同一ログイン済みCompanionセッションでLight／Heavyの`/tools/printing`と`/asset-center`を新規task-owned tabとしてfresh semantic・visual readbackした。Printingは修正版左レールの本番反映を確認したが、HeavyにはLightにないskip link/avatar/file inputのsemantic差が残る。Asset CenterはHeavyがHydration後に一覧表示まで到達した一方、Light `controlCount=141`に対してHeavy `controlCount=49`で、カード・グループ・履歴操作の一致は未証明。生成・保存再表示再利用・provider receipt/source sync/reconciliation/cleanupは引き続き未完了。
+
+追記: 同じログイン済みCompanionセッションでLight／Heavyの`/model`をfresh readbackした。Heavyは主要入力、`Canvasに注文票を保存`、`AI生成`、`生成履歴`まで表示されたが、Lightは`権限がありません`のdisabled表示だった。Heavyのskip link/avatar/見出しといった共通シェル差分も残る。生成・保存・再表示・再利用、provider receipt/source sync/reconciliation/cleanupは未完了。

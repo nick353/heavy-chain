@@ -8,7 +8,7 @@ const workbenchSourcePath = new URL('../src/pages/LightchainWorkbenchPage.tsx', 
 const modelLibrarySourcePath = new URL('../src/pages/ModelLibraryPage.tsx', import.meta.url);
 const fittingSourcePath = new URL('../src/pages/FittingPage.tsx', import.meta.url);
 
-test('the integrated beta does not expose the legacy plan-lock affordance', async () => {
+test('Lightchain parity keeps rights gates explicit on provider-bound surfaces', async () => {
   const [parityPages, materialWorkbench, workbench, modelLibrary] = await Promise.all([
     readFile(parityPagesSourcePath, 'utf8'),
     readFile(materialWorkbenchSourcePath, 'utf8'),
@@ -17,19 +17,30 @@ test('the integrated beta does not expose the legacy plan-lock affordance', asyn
   ]);
   const source = [parityPages, materialWorkbench, workbench, modelLibrary].join('\n');
 
-  assert.doesNotMatch(source, /PermissionLockedButton/);
-  assert.doesNotMatch(source, /権限がありません/);
+  assert.match(source, /PermissionLockedButton/);
+  assert.match(source, /testId="creator-permission"/);
+  assert.match(source, /providerRightsConfirmed/);
   assert.match(source, /data-testid="lightchain-fabric-design-input"/);
   assert.match(source, /data-testid="lightchain-material-rights-confirmation"/);
 });
 
-test('Creator permission surface keeps a Lightchain-native handoff with captured intent', async () => {
+test('Creator keeps the Lightchain category picker and permission surface', async () => {
   const source = await readFile(parityPagesSourcePath, 'utf8');
 
-  assert.match(source, /source:\s*'lightchain-creator-heavy-fallback'/);
-  assert.match(source, /feature=design-gacha/);
-  assert.match(source, /category:\s*selectedCategory \|\| 'ユニセックス'/);
-  assert.match(source, /生成条件を開く/);
+  assert.match(source, /CreatorCategoryPicker/);
+  assert.match(source, /creatorCategoryTabs/);
+  assert.match(source, /カテゴリを選択してください/);
+  assert.match(source, /data-testid="creator-persisted-history"/);
+  assert.match(source, /testId="creator-permission"/);
+  assert.doesNotMatch(source, /Hello,山内カンナ/);
+});
+
+test('Wear Design Lab resumes through current persisted projects instead of a seeded project id', async () => {
+  const source = await readFile(parityPagesSourcePath, 'utf8');
+
+  assert.match(source, /既存プロジェクトを続ける/);
+  assert.match(source, /index === 1 \? '\/designProduction'/);
+  assert.doesNotMatch(source, /boardProjectCode=2088009465900642306/);
 });
 
 test('AI fitting exposes Gallery selection and the rights gate before generation', async () => {

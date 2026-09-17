@@ -4773,3 +4773,65 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 旧`RUNNING` deploymentがcommit `7b666f3`で、Printingレール・Asset Center修正を含まないことを確認した。
 - parity修正と計画／レポート更新を含むcommit `ac8fac0`を`origin/main`へpushし、Zeabur deployment `6aab425d05af289f92f98354`を生成した。
 - 現時点のdeployment状態は`BUILDING`。`RUNNING`到達とCompanion再読込後のvisual readbackまでは未完了。provider receipt／source sync／reconciliation／cleanupも未完了。
+
+## 2026-09-17 最新deploymentのPrinting／Asset Center本番比較
+
+- Zeabur deployment/serviceが`RUNNING`へ到達した後、同一のログイン済みCompanionセッションでLight／Heavyの正規URLを新規task-owned tabとして開き、semantic・visual readbackを取得した。
+- `/tools/printing`はLight／Heavyとも4タブ（`生地イメージ`、`プリントイメージ`、`線画の実写化`、`平絵生成`）、`生成履歴`、`AI生成`、アップロード導線、`スポット`／`全体`を確認した。Heavyには修正した5カテゴリ左レールが本番反映され、主要geometryはLightとほぼ一致した。
+- Printingは完全一致ではなく、Heavy側にはLight側にないsemantic上の`メインコンテンツへスキップ`、`avatar`、5つの左レールリンク、2つのfile inputがある。これは見た目差・アクセシビリティ差として追加調査対象に残す。
+- `/asset-center`はHeavyが待機表示からHydration後にLibraryカード一覧へ遷移し、検索、アップロード、新規グループ、`マイライブラリー`、`履歴アップロード`、`生成履歴`、既存カード、`プレビュー`、`ボードにコピー`を確認した。Lightも同URLでLibrary一覧とカード操作を確認した。
+- Asset Centerの同一fresh readbackでは、Lightが`controlCount=141`／`textChars=1165`、Heavyが`controlCount=49`／`textChars=924`で、カード件数・操作数・履歴/グループ表示が一致していない。ユーザーデータ件数差とUI構造差を分離する追加比較が必要。
+- 画面遷移・Hydration・スクリーンショットは`PASS`。外部生成、provider receipt、source sync、保存→再表示→再利用、reconciliation、cleanup、logout→login回帰は未完了。
+
+## 2026-09-17 `/model`本番比較
+
+- 同じログイン済みCompanionセッションでLight／Heavyの`/model`を新規task-owned tabとして開き、semantic・visual readbackを取得した。
+- Heavyは`AIフィッティングタスク`、`シングルタスク`／`マルチタスク`、`自動変換`、Gallery素材、衣服入力、`説明生成`、`参考画像`、`モデルのセット写真`、背景入力、`Canvasに注文票を保存`、`AI生成`、`生成履歴`を確認した。
+- Lightは同じ主要入力と`生成履歴`を確認したが、生成操作は`権限がありません`のdisabled表示だった。Heavyは`AI生成`が表示されるため、権限状態は一致していない。
+- Heavyのsemantic control countは18、Lightは16。Heavy固有のskip link、avatar、AIフィッティング見出し等が含まれる。これは共通シェル差分として、権限差とは別に扱う。
+- 判定: 主要入力・ルート到達は`PASS`、権限状態・共通シェルの完全一致は`NOT_PROVEN`。入力後生成、provider receipt、source sync、保存・再表示・再利用、reconciliation、cleanup、logout→login回帰は未完了。
+
+## 2026-09-17 `/creator`カテゴリメニュー実操作比較
+
+- Heavy本番で`カテゴリを選択してください`を一回だけ実操作し、カテゴリパネルを開いた。`レディース`、`メンズ`、`女の子`、`男の子`、検索欄、トップス／ボトムス／ワンピース・セットアップの分類、配下カテゴリ群をfresh semantic・visual readbackした。
+- Light本番は同じ表示文言を確認したが、fresh semantic snapshotでは操作可能なカテゴリコントロールとして取得できず、同じカテゴリパネルを開く操作性は`NOT_PROVEN`だった。クリックの再試行はしていない。
+- 判定: Heavyのカテゴリ一覧表示は`PASS`。LightとHeavyの同一操作契約は`NOT_PROVEN`で、入力後アップロード、生成、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanupは未完了。
+
+## 2026-09-17 Heavy Asset Centerプレビュー詳細の本番再確認
+
+- 最新`RUNNING` deployment後のHeavy `/asset-center`を同じログイン済みCompanionセッションでfresh readbackした。
+- 先頭成果物の`プレビュー`を一回操作し、選択済み成果物の詳細で`戻る`、`コピーを作成します`、`ダウンロード`、`削除`、`名前を編集`を確認した。
+- この操作はアプリ内の詳細表示確認で、ダウンロード・削除・名前変更・外部AI生成は実行していない。provider receipt、source sync、reconciliation、cleanupとは分離して扱う。
+- 判定: Asset Center詳細アクションの本番UI反映は`PASS`。成果物の実削除・ダウンロード結果・Canvas再利用・同一runの保存／再表示証跡は未完了。
+
+## 2026-09-17 `/tools/line` 本番再読込比較
+
+- Light／Heavyを同じログイン済みCompanionセッションで`/tools/line`へ遷移し、HeavyはHydration完了を待ってからfresh semantic・visual readbackした。
+- 両方にツールレール、4つの素材タブ、参考画像入力、平置き画像／モデル図、生成履歴を確認した。
+- Lightは`権限がありません`、Heavyは`AI生成`を表示しており、同一権限状態ではない。外部生成・素材アップロード・provider送信は実行していない。
+- 判定: ルート到達・主要入力は`PASS`、生成操作の権限表示一致は`NOT_PROVEN`。生成後成果物の保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanupは未完了。
+
+### ソース照合
+
+- Heavy `LightchainWorkbenchPage`では、`line-to-real`／`line-generation`を含む複数ツールで、ブランド解決完了後の`aiGenerateDisabled`を素材未入力だけで判定し、機能別の契約権限を参照していない。
+- そのためHeavyの`AI生成`表示は、今回のログイン済みLight本番の`権限がありません`表示と同じアカウント権限を表しているとは言えない。権限モデルを推測して自動承認・ゲート撤廃する修正は行わず、同一権限条件のprovider／アカウント証拠が必要な未完了項目として残す。
+
+## 2026-09-17 現行Parity契約の再検証
+
+- 旧Creator handoff／旧plan-lock期待値を前提にしていた`test:lightchain-permission-parity`を、Light本番で確認済みのカテゴリ選択・明示的権限ゲート・履歴導線の契約へ更新した。権利確認ゲートの自動承認や撤廃は行っていない。
+- 現行ワークツリーで`test:lightchain-permission-parity` 4/4、`test:lightchain-parity-routes` 19/19、`test:lightchain-ui-control-boundaries` 13/13、`test:library-canvas-handoff` 10/10、`typecheck`、`build`（2552 modules）を再実行し、すべてPASS。
+- これはローカル契約・ビルドの証拠であり、本番の生成、provider receipt、source sync、保存／再表示／再利用、reconciliation、cleanupの完了証拠ではない。
+
+## 2026-09-17 `/tools/line` mobile viewport比較
+
+- Light／Heavyを同じCompanionセッションで幅390×高さ844のモバイルviewportへ変更し、両方をfresh readbackした後、viewportをrestoreした。
+- Heavyは`素材を選択`、`AI生成`、`生成履歴`を表示した。Lightはツールレール、告知文、`権限がありません`、`生成履歴`を表示した。
+- モバイルでも権限表示と周辺UIが一致していない。外部生成・アップロードは行っていない。
+- 判定: モバイルviewport操作と復元は`PASS`。Light準拠のモバイル完全一致は`NOT_PROVEN`。生成成果物の保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanupは未完了。
+
+## 2026-09-17 Heavy Creator履歴再利用の到達性確認
+
+- Heavy `/creator`で`生成履歴`を一回開き、既存成果物`Fashion Studio: スタジオ案`と`Canvasへ再利用`をfresh semantic readbackした。
+- `Canvasへ再利用`は現在のviewport外（semantic rectのy約962、viewport高さ828）にあり、対象指定のスクロールを実行してもscroll positionが変化せず、Companionの可視対象条件を満たさなかった。
+- クリック・Canvas遷移・外部送信は実行していない。これはprovider／reconciliation問題ではなく、履歴カードのviewport到達性・スクロール構造の未確認／未修正である。
+- 判定: 履歴表示は`PASS`、履歴からの再利用操作は`NOT_PROVEN`。保存→再表示→再利用の完全フローは未完了。
