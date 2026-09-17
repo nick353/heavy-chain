@@ -5602,3 +5602,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 新しいCompanion sessionで接続プロファイルのtask-owned tab inventoryを再確認したが、Light／Heavyの既存ログイン済みタブは存在せず、Extensions・Reddit・Xのみだった。
 - ローカルの`verify:goal-readiness:incomplete-ok`はruntime/auth/media/provider adapterの静的契約をPASSしたが、同ツール自身のproof limitどおり、authenticated production generation、R2 persistence、browser business completionの証明には使わない。
 - 判定: 認証済みCompanionセッションの再取得が必要な状態。auth-state.jsonは使用せず、ユーザー操作または既存ログイン済みtask tabの復帰後に本番parity監査を再開する。
+
+## 2026-09-18 Local parity gates while authenticated tabs are absent
+
+- 認証済み本番readbackの代替にはしない前提で、route integrity 20件、UI control boundary 13件、auth session recovery 3件を実行し、全36件PASSした。
+- これらはルーティング契約、Lightchain identity／control境界、認証失敗時のbounded retryを確認する静的証拠であり、ログイン済み本番の画面・成果物・provider receipt・source sync・reconciliationの証明ではない。
