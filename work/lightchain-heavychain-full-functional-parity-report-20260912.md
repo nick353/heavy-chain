@@ -5607,3 +5607,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - 認証済み本番readbackの代替にはしない前提で、route integrity 20件、UI control boundary 13件、auth session recovery 3件を実行し、全36件PASSした。
 - これらはルーティング契約、Lightchain identity／control境界、認証失敗時のbounded retryを確認する静的証拠であり、ログイン済み本番の画面・成果物・provider receipt・source sync・reconciliationの証明ではない。
+
+## 2026-09-18 Local feature/provider coverage continuation
+
+- Lightchain all-feature workflow contract 5件、provider coverage 22件を追加実行し、全27件PASSした。
+- provider coverageでは、非video feature-specific route、video fail-closed、model prompt分離、rights confirmation後の継続、durable result／Canvas lineage、Gallery／History／Jobs接続、重複submit防止を確認した。
+- これは本番の外部生成・保存・provider receipt・source sync・reconciliationの実証ではなく、ログイン済みCompanionタブ復帰後に実操作を再開するためのローカル契約証拠として扱う。
