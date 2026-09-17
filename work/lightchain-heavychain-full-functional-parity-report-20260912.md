@@ -4860,3 +4860,6 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `find`によるread-only確認で、`/Users/nichikatanaka/Downloads/履歴アップロード-1cc023860972014f75974278e8e6275d-20260917134029.png`を取得。`file`で`PNG image data, 5152 x 3438, 8-bit/color RGBA`を確認した。
 - Heavy Asset Centerでも同じ詳細アクションがfresh visual・semantic readbackで表示されることを確認した。Heavy側の実ダウンロードは重複保存を避けるため未実行。
 - 判定: Lightのダウンロード導線は形式選択から実ファイル生成まで`PASS`。Heavyは操作面表示が`PASS`、実ファイル生成は未確認。削除・コピー・名前編集、provider receipt、source sync、reconciliation、cleanupとは分離して扱う。
+
+- 追加確認: Heavyでも`ダウンロード`を一回実行し、`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案.png`を取得。`file`で`PNG image data, 960 x 640, 8-bit/color RGBA`を確認した。Heavyは形式ダイアログなしの即時PNG保存で、LightのPNG／JPG／AVIF選択導線とは操作仕様が異なる。
+- 判定更新: Light／Heavyとも実ファイル生成は`PASS`。ただし形式選択UIのparityは`FAIL/未修正`。削除、コピー、名前編集、provider receipt、source sync、reconciliation、cleanupは未完了。

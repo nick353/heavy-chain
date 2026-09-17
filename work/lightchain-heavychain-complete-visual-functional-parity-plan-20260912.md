@@ -3168,3 +3168,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] provider receipt／source sync／reconciliation／cleanupと同一成果物のLight／Heavy比較
 
 判定: LightのAsset Centerダウンロードはブラウザ操作から実ファイル生成まで`PASS`。Heavyは操作面の表示一致までで、実効果と成果物ライフサイクルは未完了。削除は実行していない。
+
+追記: Heavyでも`ダウンロード`を一回実行し、`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案.png`（960×640、RGBA）の生成を確認。ただしLightはPNG／JPG／AVIFの形式選択ダイアログ、Heavyは即時PNG保存であり、ダウンロードUI仕様は未一致。
