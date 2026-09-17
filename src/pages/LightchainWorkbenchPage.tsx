@@ -6951,14 +6951,7 @@ export function LightchainWorkbenchPage() {
                           {control}
                         </span>
                       ))}
-                      <button
-                        type="button"
-                        disabled={aiGenerateDisabled || lightchainGenerationRunning}
-                        onClick={() => void handleLightchainPreviewGenerate()}
-                        className="inline-flex items-center justify-center rounded-lg bg-[#65d3cf] px-5 py-3 text-sm font-semibold text-neutral-950 hover:bg-[#78e0dc] disabled:bg-[#3a484b] disabled:text-neutral-500"
-                      >
-                        AI生成 <Sparkles className="ml-2 h-4 w-4" />
-                      </button>
+                      <PermissionLockedButton testId="lightchain-model-permission" marginClass="" className="rounded-lg bg-[#65d3cf] text-neutral-950" />
                     </div>
                   </section>
                 ) : isFeatureDetail && selectedTool.id === 'printing-image' ? (
