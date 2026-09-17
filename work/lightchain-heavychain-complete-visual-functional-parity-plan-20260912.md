@@ -3719,6 +3719,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 実装変更なし。auth-state不使用、provider生成・アップロード・権利確認は未操作
 - [ ] 本番Light／Heavyの同一artifactでの再表示／再利用、provider receipt、source sync、reconciliation
 
+### 2026-09-17 continuation checkpoint — Heavy canonical model artifact reuse
+- [x] Heavyの同一`local-b9c3fbda-6b36-4a29-bad3-acdb8e33c627`を`/model?libraryArtifactId=...`へ渡し、`衣服の画像 (1/4)`として保存素材が復元されることをreadback
+- [x] 同じartifact IDを互換`/fitting?libraryArtifactId=...`へ渡し、Fitting側は空の衣服入力・権利確認・生成disabledを表示することをreadback
+- [x] `/model`はgeneric library artifactを復元し、`/fitting`はfeature種別がFitting入力に適合するartifactを要求する契約差として記録。route故障やauth-state問題とは断定しない
+- [x] 外部生成・アップロード・権利確認は未操作、tab close・lease解放・unknown effectなしをcleanup receiptで確認
+- [ ] Fitting専用`model-matrix` artifactをLight／Heavy双方で同一ID・同一保存段階に揃えた再利用比較、provider receipt、source sync、reconciliation
+
 ### 2026-09-17 continuation checkpoint — Current source verification
 - [x] `npm run typecheck` PASS
 - [x] `npm run build` PASS（Vite 8.0.16、2553 modules、production dist生成）

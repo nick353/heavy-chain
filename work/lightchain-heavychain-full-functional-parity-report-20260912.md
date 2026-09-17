@@ -5382,3 +5382,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run build`を実行し、Vite `8.0.16`、`2553 modules transformed`、production `dist`生成、exit code 0を確認した。
 - 今回はドキュメントのみの変更でソース差分がないため、再デプロイは行っていない。既存の本番deployment／Companion readback証跡とは分離して扱う。
 - 判定: current source verificationは`PASS`。本番Light／Heavyの同一artifact lifecycle、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Heavy canonical model artifact reuse
+
+- Heavy本番で同じ`local-b9c3fbda-6b36-4a29-bad3-acdb8e33c627`を`/model?libraryArtifactId=...`へ渡し、`衣服の画像 (1/4)`、Gallery素材、説明生成、参考画像、Canvas保存、生成履歴を含むcanonical model workbenchをreadbackした。
+- 同じartifact IDを`/fitting?libraryArtifactId=...`へ渡すと、Fitting互換画面は「まず衣服素材を選択」と表示し、衣服画像は復元されず、権利checkboxは未選択、`AI生成`と`条件プレビューを保存`はdisabledだった。
+- これは同一routeが全artifactを無条件に復元する契約ではなく、`/model`のgeneric library artifact復元と`/fitting`のFitting専用feature種別復元の差である。auth-state、認証失敗、provider生成失敗とは扱わない。
+- 外部生成、アップロード、権利確認、provider送信は実行していない。cleanup receiptは`closed=[1980922988]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: canonical `/model`のartifact復元は`UI_PASS`、互換`/fitting`のfeature-specific復元も契約どおりの`UI_PASS`。Fitting専用artifactでのLight／Heavy同一性、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
