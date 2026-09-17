@@ -35,6 +35,18 @@ test('Creator keeps the Lightchain category picker and permission surface', asyn
   assert.doesNotMatch(source, /Hello,山内カンナ/);
 });
 
+test('Creator mirrors the Lightchain full and compact category sets', async () => {
+  const source = await readFile(parityPagesSourcePath, 'utf8');
+
+  assert.match(source, /レディース: creatorCategoryGroups/);
+  assert.match(source, /女の子: creatorCategoryGroups/);
+  const compactTop = "items: ['ニット', 'ルームウェア', 'Tシャツ', 'パーカー', 'シャツ', 'タンクトップ', 'ベスト', 'スーツ', 'ブルゾン', 'トレンチコート', 'オーバーコート', 'ダウン']";
+  assert.ok(source.includes(`メンズ: [\n    { label: 'トップス', ${compactTop}`));
+  assert.ok(source.includes(`男の子: [\n    { label: 'トップス', ${compactTop}`));
+  assert.ok(source.includes("{ label: 'ボトムス', items: ['ルームウェア', 'スイムウェア', 'パンツ'] }"));
+  assert.ok(source.includes("{ label: 'ワンピース/セットアップ', items: ['つなぎ'] }"));
+});
+
 test('Wear Design Lab resumes through current persisted projects instead of a seeded project id', async () => {
   const source = await readFile(parityPagesSourcePath, 'utf8');
 
