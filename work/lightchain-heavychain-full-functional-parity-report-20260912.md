@@ -4909,3 +4909,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Light／Heavy双方で`/tools/fabric`をfresh screenshot・semantic readbackした。4タブ、終了告知、2入力、比率、権限表示、生成履歴、右結果領域の主要geometryは一致した。Lightには実サンプル動画、Heavyには別フレームの同系統動画が表示されるため、画素完全一致は`NOT_PROVEN`。
 - Heavyの実生成、アップロード、外部送信、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は実行・証明していない。権利確認ゲートの自動承認・撤廃も行っていない。
 - 判定: レールの本番route parityは`PASS`、主要初期画面は`UI_PASS`、pixel-level一致と成果物/provider lifecycleは未完了。
+
+## 2026-09-17 Vector ordinary/pro permission parity deployment readback
+
+- Light本番を同じログイン済みCompanionプロフィールで確認した結果、`/tools/pattern-to-vector`（通常版）は`権限がありません`のみを表示し、レイヤー選択・使用回数・AI生成を表示しない一方、`/tools/vector-special`（プロ版）はレイヤー選択・使用回数`7 / 30`・`AI生成 1`を表示していた。
+- Heavy `LightchainVectorSpecialPage`をURL別に修正し、通常版はLightと同じ`PermissionLockedButton`、プロ版は既存のレイヤー／使用回数／AI生成フローを維持するようにした。タブ遷移も通常版`/tools/pattern-to-vector`、プロ版`/tools/vector-special`へ統一した。
+- commit `b909144`をpush。permission parity 4/4、parity routes 19/19、UI control boundaries 13/13、typecheck、production build（2552 modules）、diff checkをPASSした。
+- Zeabur deployment `6aab88d2c9ceb15397163dc0`が`RUNNING`になった後、Heavy通常版をCompanionで認証Hydration完了まで待機し、fresh semantic readbackで`権限がありません`、レイヤー非表示、使用回数非表示、正しい2タブを確認した。Light通常版も同条件で同じ状態を確認した。
+- 判定: 通常版の権限表示・主要構造は`UI_PASS`。プロ版はLightの機能表示を維持。実生成、provider receipt、source sync、reconciliation、cleanup、全画面pixel-level一致、logout→login回帰は未完了。

@@ -3202,6 +3202,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] deployment `6aab7d9f806ea25ad0915b00`のRUNNING到達後、Heavy通常版をCompanionで再読込・比較
 - [ ] provider receipt／source sync／reconciliation／cleanup、外部生成、全画面pixel-level一致、logout→login回帰
 
+### 2026-09-17 Vector ordinary/pro permission parity deployment readback
+
+- [x] Light本番で通常版とプロ版の権限・操作表示差をfresh semantic／visual readback
+- [x] Heavy通常版を権限ロック、プロ版をレイヤー／使用回数／AI生成表示へURL別に修正（commit `b909144`）
+- [x] permission parity 4/4、route parity 19/19、UI control boundaries 13/13、typecheck、build、diff check
+- [x] deployment `6aab88d2c9ceb15397163dc0`のRUNNINGとHeavy通常版Companion readback
+- [x] Light／Heavy通常版で`権限がありません`とレイヤー非表示を確認
+- [ ] 実生成後の同一成果物比較、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
+
 ### 2026-09-17 Material workbench rail parity deployment readback
 
 - [x] Material workbenchの可視レールをLightの実`routeIcons`絶対URLへ修正（commit `07db6f7`）
