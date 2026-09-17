@@ -3853,3 +3853,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] `readyState=complete`だが、`別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました。`のみを表示
 - [x] session cleanup receipt: lease released 1、unknown effectなし、外部操作なし
 - [ ] ユーザーがLight本番の同一Chromeセッションで再ログインするまで、Light正本とのfresh比較・同一artifact比較は開始しない
+
+### 2026-09-17 completion-audit snapshot
+- [x] Heavy側: 最新production deployment、主要canonical route read-only、権利確認／生成前ゲート、local route／workflow／artifact contract、Companion cleanupを個別に確認
+- [x] 外部生成・アップロード・権利確認・provider送信は未操作として明示分離
+- [ ] Light側: fresh authenticated readback、同一runの全画面／全カテゴリ比較、同一artifactの実保存・再表示・再利用比較
+- [ ] 実provider receipt、source-of-truth sync、reconciliationの同一artifact証明
+- [ ] logout→ユーザー再ログイン回帰と最終差分レポートの完了判定
+- [ ] 完了条件の未充足はLightログイン復旧後にのみ再判定する

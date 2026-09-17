@@ -5521,3 +5521,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - fresh Light `/model`を開いて30秒待機したが、`readyState=complete`後も`別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました。`だけを表示した。
 - Companion cleanup receiptは`leases_released=1`、`unknown_effect=[]`、外部操作なし。ログイン回避、auth-state作成、Cookie／token取得は行っていない。
 - 判定: 本番Light正本のfresh semantic／visual readbackと同一artifact比較は、同一Chromeセッションでのユーザー再ログイン待ち。Heavy側のローカル契約・read-only監査は継続済みだが、Goal全体は`NOT_PROVEN`。
+
+## 2026-09-17 Completion-audit snapshot
+
+- Heavy側でproduction deployment、主要canonical route read-only、rights／generation前ゲート、local route／workflow／artifact contract、Companion cleanupを個別に確認済み。
+- 外部生成、アップロード、権利確認、provider送信は未操作として分離記録済み。
+- 未証明の必須項目は、Lightのfresh authenticated readback、Light／Heavy全画面・全カテゴリの同一run比較、同一artifactの実保存／再表示／再利用、provider receipt、source-of-truth sync、reconciliation、logout→再ログイン回帰。
+- 完了判定: `NOT_PROVEN`。Light本番の再ログイン後にのみ、上記未証明項目を再判定する。
