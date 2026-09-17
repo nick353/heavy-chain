@@ -3520,3 +3520,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 以前のHeavy18件というカウントを誤測定として訂正
 - [ ] Lightの30件＋14ページと名称・内容・ページ総数を比較
 - [ ] 保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanupを検証
+
+### 2026-09-17 Current verification gate
+- [x] `npm run typecheck`
+- [x] `npm run build`
+- [x] 直近コミットがdocs／testのみであることを確認し、production deployを保留
+- [ ] 実装差分確定後のproduction deploy・Companion再読込
+- [ ] 最終差分レポート、provider receipt、source sync、reconciliation、cleanup

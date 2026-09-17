@@ -5177,3 +5177,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Hydration完了後のsemantic card countは28件で、内訳は新規ファイル1件、保存プロジェクト22件、参考事例5件。保存プロジェクト22件はD1の20件＋local artifact 2件と整合した。
 - 以前のreadbackに記載したHeavy保存プロジェクト18件は、Hydration途中またはsemantic範囲の誤カウントだったため訂正する。Lightは引き続き現在ページ30件＋ページ表示14ページで、保存データの名称・内容・ページ総数の完全一致は未証明。
 - 判定: Heavyの一覧欠落という仮説は撤回。残る差分はLight側の保存データ契約・ページング・カード内容比較であり、D1への変更やデータ移送は不要な状態を確認した。
+
+## 2026-09-17 Current verification gate
+
+- 現行HEADで`npm run typecheck`を実行し、エラーなしで完了した。
+- 現行HEADで`npm run build`を実行し、TypeScript buildとVite production buildが完了した。
+- 今回の直近コミットはdocsとparity testのみで、本番UI／APIのproduction source変更は含まれない。そのため、直近のHeavy本番deploymentを不要に再実行せず、次のproduction deployは実装差分が確定した時点に限定する。
+- 判定: ローカル検証ゲートはPASS。Light／Heavy保存データ契約、権限post-state、成果物保存／再利用、provider receipt／source sync／reconciliation／cleanup、最終本番readbackは未完了。
