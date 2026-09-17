@@ -18,7 +18,7 @@ import {
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
-import { mergeFashionStudioProjectCards } from '../lib/fashionStudioProjects';
+import { buildFashionStudioProjectHref, mergeFashionStudioProjectCards } from '../lib/fashionStudioProjects';
 import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import {
@@ -598,14 +598,7 @@ export function FashionStudioPage() {
               <button
                 key={project.id}
                 type="button"
-                onClick={() => {
-                  const canvasProjectId = project.source === 'remote' ? project.id : project.canvasProjectId;
-                  if (canvasProjectId) {
-                    navigate(`/canvas/${encodeURIComponent(canvasProjectId)}`);
-                    return;
-                  }
-                  setStudioOverview(false);
-                }}
+                onClick={() => navigate(buildFashionStudioProjectHref(project))}
                 className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
               >
                 <div className="flex h-40 items-center justify-center bg-[#171c1f]">

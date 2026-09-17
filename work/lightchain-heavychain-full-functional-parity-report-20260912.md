@@ -5267,3 +5267,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - ただしLight側には同名タイトルがなく、Lightは`Untitled`中心の別データ契約だった。したがって、Lightとの完全一致の根拠なしにremote同名dedupeを追加するのは行わず、現時点は`DATA_SCOPE_DIFF`／`NOT_PROVEN`として保持した。
 - 直前のLightタブ作成`operation_effect_unknown`は、同一タブを読み戻して`/flow/integration`への到達を確認した。再送はせず、最終cleanup receiptでHeavy／Lightのtask-owned tabをclose、leaseを2件解放、`unknown_effect=[]`、`external_action_executed=false`を確認した。
 - 判定: Light正規ルートの再確認とCompanion cleanupは`UI_PASS`。Heavy全カードとLight全14ページの名称・preview・更新時刻・詳細／再利用の1対1突合、およびprovider receipt／source sync／reconciliationは未完了。
+
+## 2026-09-17 Saved-card detail-route parity deployment
+
+- 同一CompanionセッションでLight保存カードを実クリックし、`/flow/integration/detail?boardProjectCode=2099697581958967298&boardProjectType=integrationCustom`へ遷移することを確認した。詳細画面には`画像検索`、`テキストで生成`、`メイン画像`、`参考画像`、`指示テキスト`、`生成設定`、`AI生成`が表示された。
+- Heavyでは同じ保存カードが従来`/canvas/e394897b-5246-45bc-84a0-09abab91760c`へ遷移していたため、保存カードのクリック先を`buildFashionStudioProjectHref`でLight互換detail routeへ変更した。新規制作後のCanvas handoff（`navigate(/canvas/${projectId})`）は変更していない。
+- 関連テスト9/9、`npm run typecheck`、`npm run build`（2553 modules）、`git diff --check`を確認した。Zeabur deployment `6aabcaaffa283769e51c21b4`はDocker laneでVite build、`heavy-chain-model-asset-ready:44173029`、image layer upload完了後に`RUNNING`となった。
+- デプロイ後Heavyの同じカードをfresh Companionで実クリックし、`https://heavy-chain.zeabur.app/flow/integration/detail?boardProjectCode=e394897b-5246-45bc-84a0-09abab91760c&boardProjectType=integrationCustom`へ遷移した。exportにはLightと同じ主要UI構造（画像検索、指令と参考画像、メイン画像、参考画像、指示テキスト、生成設定、AI生成、生成結果）が出現した。
+- クリックtransactionはブラウザのroute遷移としてverifiedだが、Companionの`provider_completion`／`source_sync`は未確認で、外部AI生成・アップロード・権利確認・保存送信は実行していない。cleanup receiptはtab close、lease release、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: 保存カード→Light互換detail routeと主要詳細UIシェルは`UI_PASS`。詳細画面の入力値・preview・履歴・成果物保存／再表示／再利用、provider receipt／source sync／reconciliationは`NOT_PROVEN`。

@@ -15,6 +15,14 @@ export type FashionStudioProjectCard = FashionStudioRemoteProject & {
 };
 
 /**
+ * Light's saved Fashion Studio cards reopen in the feature detail route.
+ * Keep this route contract independent from the Heavy Canvas handoff used by
+ * a newly generated workspace.
+ */
+export const buildFashionStudioProjectHref = (project: Pick<FashionStudioProjectCard, 'id'>): string =>
+  `/flow/integration/detail?boardProjectCode=${encodeURIComponent(project.id)}&boardProjectType=integrationCustom`;
+
+/**
  * Merge the authenticated Canvas index with the browser-local handoff index.
  * A local handoff whose canvasProjectId is already present remotely is the
  * same persisted project and must not be rendered as a second card.

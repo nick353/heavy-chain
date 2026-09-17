@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mergeFashionStudioProjectCards } from '../src/lib/fashionStudioProjects.ts';
+import { buildFashionStudioProjectHref, mergeFashionStudioProjectCards } from '../src/lib/fashionStudioProjects.ts';
+
+test('saved project cards reopen the Light-compatible Fashion Studio detail route', () => {
+  assert.equal(
+    buildFashionStudioProjectHref({ id: '2099697581958967298' }),
+    '/flow/integration/detail?boardProjectCode=2099697581958967298&boardProjectType=integrationCustom',
+  );
+});
 
 test('remote Canvas project wins over its local handoff duplicate', () => {
   const cards = mergeFashionStudioProjectCards(

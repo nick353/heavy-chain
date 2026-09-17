@@ -3616,3 +3616,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Light/HeavyのCompanion task-owned tabをcloseし、lease解放・unknown effectなし・external actionなしをreceiptで確認
 - [ ] Light保存カードの正規名称・preview・更新時刻・詳細遷移を全14ページ分readbackし、Heavy全カードと1対1で突合
 - [ ] provider receipt、source sync、reconciliation、成果物保存／再表示／再利用を個別に証明
+
+### 2026-09-17 continuation checkpoint — Saved-card detail-route parity
+- [x] 同一CompanionセッションでLight保存カードを実クリックし、`/flow/integration/detail?boardProjectCode=...&boardProjectType=integrationCustom`への遷移と詳細UIをreadback
+- [x] Heavy保存カードが従来`/canvas/:id`へ遷移していた差分を実測し、Light互換のdetail routeへ変更する実装とroute回帰テストを追加
+- [x] 関連テスト9/9、`npm run typecheck`、`npm run build`、`git diff --check`を確認
+- [x] Zeabur deployment `6aabcaaffa283769e51c21b4`のDocker build、Vite build、model asset、layer upload、`RUNNING`を確認
+- [x] デプロイ後Heavyの同じ保存カードを実クリックし、Lightと同じdetail route、画像検索／参考画像／指示テキスト／生成設定／AI生成の主要構造をfresh readback
+- [x] Companion session/tab/lease cleanup receiptを確認し、foreign tab・外部生成・provider送信を実行していないことを確認
+- [ ] Light／Heavy詳細画面の入力値・preview・履歴・保存成果物の完全一致を突合
+- [ ] provider receipt、source sync、reconciliation、成果物保存／再表示／再利用を個別に証明
