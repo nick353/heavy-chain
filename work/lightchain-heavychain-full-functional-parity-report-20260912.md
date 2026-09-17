@@ -5425,3 +5425,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightの`権限がありません`は表示されていたが、Companion semantic stateではdisabled=falseとして返った。Heavyの同位置はdisabled `AI生成`だったため、entitlement／状態差は引き続き同一権限条件での突合が必要であり、権利確認の自動承認とは扱わない。
 - cleanup receiptはlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。アップロード、権利確認、AI生成、provider送信は行っていない。
 - 判定: Light mobileの主要初期UI readbackは`UI_PASS`。Light／Heavyのpixel-level完全一致、同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Entitlement condition source audit
+
+- `src/pages/LightchainWorkbenchPage.tsx`の`/model`入口を追跡した結果、Heavyの初期`AI生成`表示は`aiGenerateDisabled`による認証・ブランド状態・素材不足のdisabled制御であり、Light本番の`権限がありません`を生成するアカウントentitlement判定は実装されていない。
+- `providerRightsConfirmed`は生成前の明示的な権利確認状態であり、entitlementやプラン権限ではない。したがって、この差を権利確認済み扱いに変更したり、単純にロック表示へ置換したりするのは証拠に基づくparity修正にならない。
+- 判定: entitlement差の原因は`NOT_PROVEN`。現時点で確認できる安全な次工程は、Light／Heavy双方から同一アカウント・ブランド・権限条件をreadbackできる正式なデータ契約を特定すること。外部生成、権利確認、provider送信は実行していない。

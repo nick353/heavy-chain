@@ -3765,3 +3765,9 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Light mobileの主要control count=23、Hydration待機なしで`readyState=complete`を確認
 - [x] lease解放・session close後のcleanup receiptでunknown effectなし、foreign tab mutationなし、external actionなしを確認
 - [ ] Light／Heavy同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliation
+
+### 2026-09-17 continuation checkpoint — Entitlement condition source audit
+- [x] `LightchainWorkbenchPage.tsx`の`/model`生成入口を追跡し、Heavyは`aiGenerateDisabled`（認証／ブランド／素材不足）で`AI生成`をdisabled化する実装であることを確認
+- [x] Heavy sourceにはLight本番で観測したアカウントentitlement（`権限がありません`）を判定するフィールド／API／条件が存在しないことを確認
+- [x] 権利確認状態`providerRightsConfirmed`は生成前の明示確認用であり、entitlement状態の代替ではないことを確認。自動承認や推測によるロック変更は行わない
+- [ ] Light本番とHeavy本番で同一entitlement条件をreadbackできる正式な権限データ契約を特定し、表示差を解消
