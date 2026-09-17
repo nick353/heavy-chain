@@ -76,6 +76,7 @@ import {
 import { LIGHTCHAIN_MATERIAL_LIBRARY_TABS } from '../lib/lightchainMaterialContract';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
+import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import { buildAssetAnchoredPreviewDataUrl, type AssetAnchoredPreviewMode } from '../features/lightchain/assetAnchoredPreview';
 import {
   buildLightchainProviderPrompt,
@@ -1904,7 +1905,7 @@ export function LightchainWorkbenchPage() {
     ? printingCutoutBlocked
     : modelSourceRequired
       ? materialRequirementsMissing
-      : ['fabric-image', 'line-to-real', 'line-generation', 'pattern-vector', 'pattern-vector-pro', 'image-repair'].includes(selectedTool.id)
+      : ['fabric-image', 'pattern-vector', 'pattern-vector-pro', 'image-repair'].includes(selectedTool.id)
       ? false
       : materialRequirementsMissing;
   const lightchainToolPanelConfig = useMemo(() => {
@@ -7415,18 +7416,22 @@ export function LightchainWorkbenchPage() {
                             {lightchainToolPanelConfig.bottomControl}
                           </div>
                         )}
-                        <button
-                          type="button"
-                          disabled={aiGenerateDisabled || lightchainGenerationRunning}
-                          onClick={() => void handleLightchainPreviewGenerate()}
-                          className={`flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition disabled:bg-[#3a484b] disabled:text-neutral-500 ${
-                            selectedTool.id === 'image-repair' && imageRepairGenerating
-                              ? 'bg-gradient-to-r from-[#65d3cf] via-[#9df3ef] to-[#65d3cf] text-neutral-950 shadow-[0_0_22px_rgba(101,211,207,0.22)]'
-                              : 'bg-[#65d3cf] text-neutral-950 hover:bg-[#78e0dc]'
-                          }`}
-                        >
-                          AI生成 {selectedTool.id === 'image-repair' && imageRepairGenerating ? <span className="ml-2 text-xs">生成中...</span> : isPatternVectorProFlow ? <span className="ml-1">1</span> : <Sparkles className="ml-2 h-4 w-4" />}
-                        </button>
+                        {['line-to-real', 'line-generation'].includes(selectedTool.id) ? (
+                          <PermissionLockedButton testId={`lightchain-${selectedTool.id}-permission`} marginClass="" className="rounded-xl bg-[#65d3cf] text-neutral-950" />
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={aiGenerateDisabled || lightchainGenerationRunning}
+                            onClick={() => void handleLightchainPreviewGenerate()}
+                            className={`flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition disabled:bg-[#3a484b] disabled:text-neutral-500 ${
+                              selectedTool.id === 'image-repair' && imageRepairGenerating
+                                ? 'bg-gradient-to-r from-[#65d3cf] via-[#9df3ef] to-[#65d3cf] text-neutral-950 shadow-[0_0_22px_rgba(101,211,207,0.22)]'
+                                : 'bg-[#65d3cf] text-neutral-950 hover:bg-[#78e0dc]'
+                            }`}
+                          >
+                            AI生成 {selectedTool.id === 'image-repair' && imageRepairGenerating ? <span className="ml-2 text-xs">生成中...</span> : isPatternVectorProFlow ? <span className="ml-1">1</span> : <Sparkles className="ml-2 h-4 w-4" />}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </section>
