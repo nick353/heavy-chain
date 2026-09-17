@@ -129,10 +129,10 @@ test('Lightchain detail workbench marks the selected source category as active',
   assert.match(material, /aria-current=\{item\.category === 'graphics' \? 'page' : undefined\}/);
 });
 
-test('Agent parity starts with the compact rail and exposes Lightchain attachment controls', async () => {
+test('Agent parity starts with the expanded project sidebar and exposes Lightchain attachment controls', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 
-  assert.match(source, /const \[agentSidebarOpen, setAgentSidebarOpen\] = useState\(false\)/);
+  assert.match(source, /const \[agentSidebarOpen, setAgentSidebarOpen\] = useState\(true\)/);
   assert.match(source, /aria-label="添付を追加"/);
   assert.match(source, /aria-label="アップロードするファイルを選択"/);
   assert.match(source, /aria-label="アップロードする画像を選択"/);

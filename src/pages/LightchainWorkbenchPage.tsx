@@ -1345,10 +1345,10 @@ export function LightchainWorkbenchPage() {
   const [lightchainGenerationError, setLightchainGenerationError] = useState<string | null>(null);
   const [resumeInputReadback, setResumeInputReadback] = useState<'restored' | 'unavailable' | null>(null);
   const [workspaceText, setWorkspaceText] = useState('');
-  // Light Chain opens the Agent workspace with the compact rail visible.
-  // Keep the Heavy implementation on the same initial state; users can still
-  // expand the full project sidebar with the rail control.
-  const [agentSidebarOpen, setAgentSidebarOpen] = useState(false);
+  // Light Chain opens the Agent workspace with the project sidebar expanded.
+  // Keep Heavy on the same initial state; users can still collapse it with the
+  // same control without changing the underlying task input flow.
+  const [agentSidebarOpen, setAgentSidebarOpen] = useState(true);
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
