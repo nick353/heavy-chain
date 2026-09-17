@@ -3447,3 +3447,21 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Light／Heavyの履歴件数、クイックスタート、中央レイアウトの完全一致
 - [ ] 実入力、外部生成、provider receipt、source sync、reconciliation、cleanup
 - [ ] 成果物の保存／再表示／再利用、pixel-level完全一致、logout→login回帰
+
+### 2026-09-17 Agent tab interaction continuation readback
+- [x] `顧客提案`タブをCompanionで実クリックし、例文・入力・添付・送信disabledを確認
+- [x] `インスピレーション`タブをCompanionで実クリックし、選択状態の切替を確認
+- [x] task-owned Companion tab cleanup
+- [ ] `AIグラフィックデザイン`を含む全タブのLightとの例文・レイアウト完全比較
+- [ ] 実入力、外部生成、provider receipt、source sync、reconciliation、cleanup
+- [ ] 成果物の保存／再表示／再利用、pixel-level完全一致、logout→login回帰
+
+### 2026-09-17 Agent quick-start parity post-deploy readback
+- [x] Agentクイックスタート例をLight相当の初期表示へ修正（commit `5c46e43`）
+- [x] 関連37テスト、typecheck、production build、diff check
+- [x] Zeabur deployment `6aabaf42fa283769e51c1c60`の`RUNNING`確認
+- [x] デプロイ後CompanionでAgentクイックスタート2件、4タブ、添付導線、送信disabledをfresh確認
+- [x] task-owned Companion tab／lease cleanup
+- [ ] 4タブ全てのLight／Heavy例文・履歴・中央レイアウト完全比較
+- [ ] 実入力、外部生成、provider receipt、source sync、reconciliation、cleanup
+- [ ] 成果物の保存／再表示／再利用、pixel-level完全一致、logout→login回帰

@@ -5104,3 +5104,17 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - デプロイ後、ログイン済みCompanionでHeavy `/agent`をfresh semantic・visual readbackし、Lightchain AIのAgent画面、4タブ、添付導線、`data-testid=lightchain-workspace-generate`の`送信` disabledを確認した。外部生成、送信、アップロード、権利確認は行っていない。
 - Companion cleanup receiptは対象タブ1件を閉じ、lease解放済み、foreign tabs mutated=false、external_action_executed=false。
 - 判定: Agentの初期送信権限状態は`UI_PASS`。Heavy／Lightの履歴件数、クイックスタート内容、中央レイアウトの完全一致は未完了。実入力後生成、provider receipt、source sync、reconciliation、cleanup、成果物完全一致、logout→login回帰も未完了。
+
+## 2026-09-17 Agent quick-start parity post-deploy readback
+
+- HeavyのAgent画面で、Lightの初期画面に存在するクイックスタート例が非表示になる条件を修正し、Agentでも初期商品企画タブの2つの例を表示するようにした。Agent以外のワークスペース配置は維持している。commit `5c46e43`。
+- `typecheck`、関連37テスト、production build（2552 modules）、`git diff --check`をPASSした。Zeabur deployment `6aabaf42fa283769e51c1c60`（commit `5c46e43`）が`RUNNING`へ到達した。
+- デプロイ後、ログイン済みCompanionでHeavy `/agent`をfresh semantic・visual readbackし、見出し、4タブ、Agentクイックスタート2件、添付導線、disabledの`送信`を確認した。外部生成、アップロード、権利確認は実行していない。
+- Companion cleanup receiptは対象タブを閉じ、lease解放済み、foreign tabs mutated=false、external_action_executed=false。
+- 判定: Agent初期クイックスタートの表示は`UI_PASS`。Light／Heavyの履歴データ、4タブ全ての例文・中央レイアウト、実入力後生成、provider receipt、source sync、reconciliation、成果物保存／再利用、pixel-level完全一致、logout→login回帰は未完了。
+
+## 2026-09-17 Agent tab interaction continuation readback
+
+- 同一ログイン済みCompanionセッションでAgentの`顧客提案`、`インスピレーション`を実クリックし、各タブが選択状態へ切り替わることを確認した。`顧客提案`では顧客向け提案書／展示会ストーリーの2例、入力プレースホルダー、添付導線、disabledの`送信`までfresh readbackした。
+- タブ切替はブラウザ上のUI状態変更として完了し、外部AI生成・アップロード・権利確認は実行していない。Companion cleanup receiptは対象タブを閉じ、foreign tabs mutated=false、external_action_executed=false。
+- 判定: Agentのタブ切替と顧客提案UIは`UI_PASS`。インスピレーション／AIグラフィックデザインの例文・全タブのLightとの同一性、入力後生成、成果物保存／再利用、provider receipt、source sync、reconciliation、pixel-level完全一致は未完了。
