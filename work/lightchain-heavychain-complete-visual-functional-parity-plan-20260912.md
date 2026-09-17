@@ -3370,6 +3370,7 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 保存事例のタイトルとfeature typeが不一致になるfallbackを確認
 - [x] `artifact.featureType`を再利用先判定に利用（commit `fccc729`）
 - [x] workflow 6/6、provider persistence 14/14、typecheck、production build、diff check
+- [x] Lightchain entry routing regression suite 18/18
 - [x] Zeabur deployment `6aaba21ec9ceb15397164434`の`RUNNING`確認
 - [x] Heavy／Lightの同じCompanionセッションで保存事例→ファッションスタジオ再利用先を実クリック確認
 - [ ] 保存データ件数・名称・プロジェクト内容・pixel-level完全一致

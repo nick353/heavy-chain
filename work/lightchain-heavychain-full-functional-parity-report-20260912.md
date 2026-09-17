@@ -5037,6 +5037,7 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyの保存事例「Fashion Studio: スタジオ案」を実際に開いたところ、表示タイトルはFashion Studioでも、metadataのtoolIdが欠ける場合にテンプレートの`inspiration-design`へフォールバックし、再利用先が`/creator`になる差分を確認した。
 - `resolveArtifactFeatureId`が`metadata.toolId`だけでなく、正規化済み`artifact.featureType`も候補に使うよう修正した。これにより保存成果物自身のfeature typeを優先して再利用先を復元する。commit `fccc729`。
 - workflow 6/6、provider persistence 14/14、typecheck、production build（2552 modules）、`git diff --check`をPASSした。
+- Lightchain entry routing regression suiteも18/18 PASSし、保存成果物の`featureType` fallbackを固定した。test commit `bd7c9d7`。
 - Zeaburの対象`heavy-chain` service IDをfresh確認し、Docker deployment `6aaba21ec9ceb15397164434`が`RUNNING`へ到達した。Heavyを同じCompanionタブで再読込し、ログイン済みCreator画面を確認した。
 - デプロイ後のHeavyホームで同じ保存事例を開き、`同じもの作成`のhrefがLightの`/flow/integration`に対応する`/flow/integration?lcFeature=fashion-studio...`となり、実クリック後にHeavyのファッションスタジオ画面へ到達することを確認した。Light側も同じCompanionセッションで`/flow/integration`のファッションスタジオ画面を確認した。
 - 判定: 保存事例→再利用先のfeature routingは`UI_PASS`。保存データ件数・名称・プロジェクト内容はLightとHeavyで異なるため、成果物データの完全一致は`NOT_PROVEN`。外部生成、実プロバイダーreceipt、source sync、reconciliation、cleanupは未実行。
