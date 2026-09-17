@@ -5499,3 +5499,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - したがって前回の空readbackは一時的なHydration観測不足であり、画面不全の証拠ではない。外部生成・アップロード・権利確認・保存実行は未操作。
 - cleanup receiptは`leases_released=1`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: Heavy `/models` read-only surfaceは`UI_PASS`、Light同一route比較、全カテゴリparity、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Local parity contract sweep
+
+- Lightchain all-feature workflow contractは5/5 PASS。auth-state入力拒否、local／production target境界、fresh output directory、外部効果fail-closedを確認した。
+- Unified workflow contract 6/6、pre-source gate 5/5、parity behavior ledger 6/6 PASS。
+- Provider coverageは当初、旧`/fitting#fitting-history`を期待して失敗した。現行canonical entrypointが`/model#fitting-history`であることをsourceと既存alias contractで確認し、テスト期待値を更新後22/22 PASS。
+- これはlocal source／contract evidenceであり、本番Lightの同一画面比較、provider receipt、source sync、reconciliationを証明しない。外部生成・送信は未操作。
+- 判定: local contract layerは`PASS`、production visual／interaction parityと成果物lifecycleは`NOT_PROVEN`。

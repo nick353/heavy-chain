@@ -3833,3 +3833,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 前回の空readbackは一時的なHydration観測不足と切り分け、現在の画面不全とは断定しない
 - [x] cleanup receipt: lease released 1、unknown effectなし、foreign tabs mutatedなし、external actionなし
 - [ ] Light同一route比較、全カテゴリparity、成果物lifecycle、provider receipt/source sync/reconciliation
+
+### 2026-09-17 continuation checkpoint — Local parity contract sweep
+- [x] Lightchain all-feature workflow contract 5/5 PASS（auth-state入力拒否、local／production境界、fresh output guard）
+- [x] Unified workflow contract 6/6 PASS、pre-source gate 5/5 PASS、parity behavior ledger 6/6 PASS
+- [x] Provider coverage initially exposed a stale test expectation for `/fitting#fitting-history`; current canonical route is `/model#fitting-history` and the contract was corrected
+- [x] Provider coverage after correction 22/22 PASS
+- [ ] これらはlocal契約証拠であり、本番Light同一画面、provider receipt、source sync、reconciliationの代替にはしない
