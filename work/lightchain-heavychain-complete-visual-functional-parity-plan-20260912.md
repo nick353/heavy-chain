@@ -3364,3 +3364,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 本番Companionでの実成果物の保存／再表示／再利用
 - [ ] 実プロバイダーreceipt、source sync、reconciliation、cleanup
 - [ ] Light／Heavyの成果物・データ・pixel-level完全一致、logout→login回帰
+
+### 2026-09-17 Saved artifact reuse routing fix and production readback
+
+- [x] 保存事例のタイトルとfeature typeが不一致になるfallbackを確認
+- [x] `artifact.featureType`を再利用先判定に利用（commit `fccc729`）
+- [x] workflow 6/6、provider persistence 14/14、typecheck、production build、diff check
+- [x] Zeabur deployment `6aaba21ec9ceb15397164434`の`RUNNING`確認
+- [x] Heavy／Lightの同じCompanionセッションで保存事例→ファッションスタジオ再利用先を実クリック確認
+- [ ] 保存データ件数・名称・プロジェクト内容・pixel-level完全一致
+- [ ] 外部生成、実プロバイダーreceipt、source sync、reconciliation、cleanup、logout→login回帰
