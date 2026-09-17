@@ -5243,3 +5243,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 追加修正版のZeabur uploadは2回とも`/v2/upload/.../prepare`の`context deadline exceeded`で開始前に失敗し、新しいdeploymentは作成されていない。既存のRUNNING版は維持されている。
 - 追加修正後の本番Heavy readbackは未実施。Companion sessionはcleanup receiptでlease解放・tab close・external_action_executed=falseを確認済み。
 - 判定: ローカル実装と安全ゲートは`PASS`、追加修正の本番反映は`BLOCKED_BY_DEPLOY_UPLOAD_TIMEOUT`。外部生成・アップロード・権利確認・provider送信は実行していない。
+
+## 2026-09-17 Creator permission-lock visual parity deployment readback
+
+- Zeabur deployment `6aabc65ca61819c1c58e4083`（`planType=docker`）が`RUNNING`へ到達した。buildログはVite production build、`heavy-chain-model-asset-ready:44173029`、イメージlayer upload完了を示した。
+- 新規ログイン済みCompanionセッションでHeavy `/creator`をfresh navigateし、権限ボタンをsemantic readbackした。`disabled=true`、`aria-disabled=null`、classに`h-10`を含み、rect heightは40pxだった。
+- Light同一run readbackの40px、brand disabled styling、`aria-disabled=null`と一致した。権利ゲートをクリック・自動承認・外部送信していない。
+- Companion cleanup receiptは`closed=[1980922908]`、`missing=[]`、`retained=[]`、`unknown_effect=[]`、`leases_released=1`、`lease_release_confirmed=true`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
+- 判定: Creator権限ロックの本番見た目／DOM parityは`UI_PASS`。全画面・全カテゴリ・成果物保存／再利用、provider receipt、source sync、reconciliationは引き続き未完了。

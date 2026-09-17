@@ -3591,3 +3591,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] デプロイ後Heavyの高さ40pxとLightの完全一致をCompanionで再readback
 - [ ] 全route、全カテゴリ、保存／再表示／再利用、desktop/mobile、logout→再ログインの最終監査
 - [ ] provider receipt、source sync、reconciliation、cleanupを外部生成とは分離して証明
+
+### 2026-09-17 continuation checkpoint — Creator permission lock deployment resolved
+- [x] Zeabur upload timeout後、同一対象へ再デプロイしdeployment `6aabc65ca61819c1c58e4083`を作成
+- [x] Docker build、Vite build、model asset、image upload完了ログを確認
+- [x] Heavy `/creator`を新規Companionセッションでfresh readback
+- [x] Lightと同じ40px、native disabled、`aria-disabled`なし、brand disabled stylingを確認
+- [x] Companion session/tab/lease cleanup receiptを確認
+- [ ] Light全画面・全カテゴリ・全主要導線とHeavyのpixel/interaction parityを完了
+- [ ] 成果物の生成・保存・再表示・再利用、およびprovider receipt/source sync/reconciliationを個別に証明
