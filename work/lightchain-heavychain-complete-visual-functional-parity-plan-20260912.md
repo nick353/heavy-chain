@@ -3104,6 +3104,8 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 
 追記: Heavy Creator履歴を開いて既存成果物と`Canvasへ再利用`を確認したが、再利用ボタンがviewport外（y約962）で、対象スクロール後もscroll positionが変わらずクリック未実行。履歴カードのviewport到達性を修正・再確認する。
 
+追記: 履歴を固定オーバーレイ化する修正をcommit `8ad0f07`でpushし、deployment `6aab6ca8432b03fb1ac5be41`の`RUNNING`を確認。Heavy本番で`Canvasへ再利用`がviewport内（y約221）となり、`/canvas/new?sourceArtifactId=local-handoff-v4utyunlmpa`へ遷移することを確認。Canvas保存・provider成果物証跡は未完了。
+
 判定: `/tools/line`の主要画面は両環境で確認済みだが、生成ボタンの権限状態が一致していない。Lightの操作はブラウザUI readbackのみで、外部生成は実行していない。
 
 追記: 2026-09-18の本番反映確認では、修正版デプロイ`6aab372cdc088f64d1813d3f`のbuild完了ログは存在するが、Zeabur serviceは`STARTING`、deploymentは`DEPLOYING`継続。`https://heavy-chain.zeabur.app`の静的MaterialWorkbench chunkには修正版レール文言が未反映で、Companion本番再読込の証拠はまだ作成できない。

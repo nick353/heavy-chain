@@ -4835,3 +4835,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `Canvasへ再利用`は現在のviewport外（semantic rectのy約962、viewport高さ828）にあり、対象指定のスクロールを実行してもscroll positionが変化せず、Companionの可視対象条件を満たさなかった。
 - クリック・Canvas遷移・外部送信は実行していない。これはprovider／reconciliation問題ではなく、履歴カードのviewport到達性・スクロール構造の未確認／未修正である。
 - 判定: 履歴表示は`PASS`、履歴からの再利用操作は`NOT_PROVEN`。保存→再表示→再利用の完全フローは未完了。
+
+### 修正後の本番再確認
+
+- 履歴パネルをviewport内スクロール可能な固定オーバーレイへ修正し、commit `8ad0f07`をpush。Zeabur deployment `6aab6ca8432b03fb1ac5be41`が`RUNNING`になったことを確認した。
+- Heavy本番を同じCompanionタブで再読込し、`生成履歴`を開いた後、`Canvasへ再利用`のrectがviewport内（y約221）に移動したことをfresh readbackした。
+- `Canvasへ再利用`を一回操作し、`/canvas/new?sourceArtifactId=local-handoff-v4utyunlmpa`へ遷移。Canvas画面、`保存`、Gallery、権利確認チェックボックス、生成導線をfresh readbackした。
+- 判定: 履歴表示→再利用クリック→Canvas遷移とsource identity保持は`PASS`。Canvas保存・実生成・provider receipt、source sync、reconciliation、cleanupは未完了。
