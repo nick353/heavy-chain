@@ -3405,3 +3405,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] `画像検索`見出し、`全削除`、`生成設定`=`自動`、`画像品質`=`1K`、`AI生成 80`を両方で確認
 - [ ] 実生成、provider receipt、source sync、reconciliation、cleanup
 - [ ] 実成果物・Canvas object・pixel-level完全一致、logout→login回帰
+
+### 2026-09-17 Fashion Studio home project-data parity readback
+
+- [x] 同一ログイン済みCompanionプロフィールでHeavy／Light `/flow/integration`をfresh readback
+- [x] Heavyの新規ファイル＋保存プロジェクト2件＋参考事例5件を確認
+- [x] Lightの新規ファイル＋保存プロジェクト30件＋ページ表示`1 2 3 4 5 … 14`＋参考事例5件を確認
+- [ ] Heavyのbrand／scope／remote Canvas documentsとLightの保存データ件数・名称・更新日時・プレビューを一致させる
+- [ ] 保存データ同期後に全ページ、カード遷移、再表示、再利用を再検証

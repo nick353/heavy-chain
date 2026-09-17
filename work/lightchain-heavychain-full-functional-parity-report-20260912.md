@@ -5066,3 +5066,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy／Light双方で`画像検索`（見出しlevel 3）、指示テキスト、同一プロンプト、文字数表示、`全削除`、`生成設定`=`自動`、`画像品質`=`1K`、`AI生成 80`、`生成結果`を確認した。
 - `全削除`などの外部効果を持たないUI部品は表示・構造まで一致した。`AI生成`は外部プロバイダー送信を伴うため押下していない。
 - 判定: 既存プロジェクト詳細の主要コントロールは`UI_PASS`。実入力後生成、実プロバイダーreceipt、source sync、reconciliation、cleanup、Light／Heavyの実成果物・Canvas object・pixel-level完全一致、logout→login回帰は未完了。
+
+## 2026-09-17 Fashion Studio home project-data parity readback
+
+- 同じログイン済みCompanionプロフィールで、Heavy／Lightの`/flow/integration`をそれぞれ新規task-ownedタブからfresh semantic・visual readbackした。
+- Heavyは新規ファイル＋保存プロジェクト2件＋参考事例5件を表示した。Lightは新規ファイル＋保存プロジェクト30件（ページ表示は`1 2 3 4 5 … 14`）＋参考事例5件を表示した。
+- Heavy側の実装はremote Canvas documentsとlocal artifactsを統合し、1ページ30件のページングを持つ。しかし今回の同一ログイン比較ではHeavyのデータ取得結果自体がLightより少なく、保存データ件数・名称・更新日時・プレビューの完全一致は未達。
+- 判定: 共通シェルと参考事例導線は`UI_PASS`、保存プロジェクトのデータ／ページネーション内容は`NOT_PROVEN`。Lightの保存データを推測で複製する変更は行わず、バックエンドのbrand／scope／データ同期差分を次の調査対象とする。
