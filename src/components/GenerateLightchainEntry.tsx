@@ -316,7 +316,17 @@ const resolveArtifactFeatureId = (artifact: WorkspaceArtifact, fallback: string)
   const matched = candidates.find((candidate): candidate is string => (
     typeof candidate === 'string' && lightchainFeatureCatalog.some((feature) => feature.id === candidate)
   ));
-  return matched ?? fallback;
+  if (matched) return matched;
+
+  const normalizedFeatureType = candidates.find((candidate): candidate is string => (
+    typeof candidate === 'string' && candidate.trim().length > 0
+  ))
+    ?.trim()
+    .replace(/^lightchain-/, '')
+    .replace(/-provider-result$/, '');
+  return normalizedFeatureType && lightchainFeatureCatalog.some((feature) => feature.id === normalizedFeatureType)
+    ? normalizedFeatureType
+    : fallback;
 };
 
 const isBetaFeature = (feature: LightchainFeature | undefined): feature is LightchainFeature => Boolean(feature && feature.betaIncluded !== false);
@@ -429,7 +439,15 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   const commandHref = buildLightchainFeatureHref(commandFeature);
   const galleryItems = useMemo<GalleryCase[]>(() => {
     const templates = galleryCasesByTab[galleryTab];
-    const persistedItems = galleryArtifacts.slice(0, templates.length).flatMap((artifact, index) => {
+    // Keep saved results in the category where their tool belongs. Positional
+    // injection makes unrelated local artifacts appear in every tab.
+    const persistedCandidates = galleryTab === 'recommended'
+      ? galleryArtifacts
+      : galleryArtifacts.filter((artifact) => {
+        const featureId = resolveArtifactFeatureId(artifact, '');
+        return templates.some((template) => template.featureId === featureId);
+      });
+    const persistedItems = persistedCandidates.slice(0, templates.length).flatMap((artifact, index) => {
       const template = templates[index];
       const imageUrl = artifact.imageUrl.trim();
       if (!imageUrl) return [];
