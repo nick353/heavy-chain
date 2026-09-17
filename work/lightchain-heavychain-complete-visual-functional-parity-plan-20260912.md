@@ -3211,6 +3211,16 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Light／Heavy通常版で`権限がありません`とレイヤー非表示を確認
 - [ ] 実生成後の同一成果物比較、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
 
+### 2026-09-17 Line generation permission parity deployment readback
+
+- [x] Light／Heavy `/tools/line`の初期画面をCompanionで同条件比較
+- [x] Heavy `line-to-real`／`line-generation`をLightと同じ権限ロックへ修正（commit `e0933fa`）
+- [x] permission parity 4/4、route parity 19/19、typecheck、build、diff check
+- [x] deployment `6aab8ac197cf5a01c801838e`のRUNNINGとHeavy画面readback
+- [x] `権限がありません`表示をLight／Heavy双方で確認
+- [ ] 終了告知・共通レール・semantic role・右プレビューのpixel-level一致
+- [ ] 実生成後の同一成果物比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
 ### 2026-09-17 Material workbench rail parity deployment readback
 
 - [x] Material workbenchの可視レールをLightの実`routeIcons`絶対URLへ修正（commit `07db6f7`）

@@ -4917,3 +4917,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - commit `b909144`をpush。permission parity 4/4、parity routes 19/19、UI control boundaries 13/13、typecheck、production build（2552 modules）、diff checkをPASSした。
 - Zeabur deployment `6aab88d2c9ceb15397163dc0`が`RUNNING`になった後、Heavy通常版をCompanionで認証Hydration完了まで待機し、fresh semantic readbackで`権限がありません`、レイヤー非表示、使用回数非表示、正しい2タブを確認した。Light通常版も同条件で同じ状態を確認した。
 - 判定: 通常版の権限表示・主要構造は`UI_PASS`。プロ版はLightの機能表示を維持。実生成、provider receipt、source sync、reconciliation、cleanup、全画面pixel-level一致、logout→login回帰は未完了。
+
+## 2026-09-17 Line generation permission parity deployment readback
+
+- Light／Heavy `/tools/line`を同じCompanionプロフィールで実操作遷移し、Hydration完了後にfresh semantic・screenshot readbackした。
+- Lightは`平絵生成`の素材入力、平置き／モデル図、線画選択、`権限がありません`を表示。Heavyは同じ主要入力・履歴・右側プレースホルダーを表示し、修正後は`権限がありません`（disabled）へ切り替わった。
+- Heavy側では`line-to-real`／`line-generation`の通常生成ボタンを権限ロックへ変更し、`aiGenerateDisabled`の通常生成許可も除去した。アップロード・外部送信・生成は実行していない。
+- commit `e0933fa`をpush。permission parity 4/4、route parity 19/19、typecheck、production build（2552 modules）、diff checkをPASS。deployment `6aab8ac197cf5a01c801838e`が`RUNNING`になったことを確認した。
+- 判定: 権限表示は`UI_PASS`。HeavyにはLightにない共通レールリンク、終了告知・動画／プレースホルダー、semantic role差が残り、全画面pixel-level一致は`NOT_PROVEN`。provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。
