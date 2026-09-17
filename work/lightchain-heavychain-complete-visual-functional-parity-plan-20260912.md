@@ -3083,3 +3083,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 生成、保存、再表示、再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: Fabric画面の主要入力は両環境に存在するが、Heavyの左ツールレール欠落をソース上で修正済み。権限表示はLightがenabled、Heavyがdisabledという状態差も残っており、同一権限条件での生成比較は未完了。
+
+### 2026-09-18 `/tools/line` 平絵生成の権限導線比較
+
+- [x] Light／HeavyをCompanionでfresh readbackし、4タブ、参考画像入力、平置き画像／モデル図、生成画像の種類、生成履歴を確認
+- [x] Lightは`権限がありません`ボタン、Heavyは`AI生成`ボタンを表示する差分を確認
+- [x] Lightの`権限がありません`をvisual target確認後に一回操作し、provider送信なしで`画像をアップロードしてください`の画面内通知が出ることをreadback
+- [ ] Heavyの同一権限状態・入力条件での生成ボタン表示とクリック後状態の一致
+- [ ] 実画像アップロード、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
+
+判定: `/tools/line`の主要画面は両環境で確認済みだが、生成ボタンの権限状態が一致していない。Lightの操作はブラウザUI readbackのみで、外部生成は実行していない。
