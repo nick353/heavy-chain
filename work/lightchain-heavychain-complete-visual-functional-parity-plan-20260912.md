@@ -3327,3 +3327,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavy／Light双方で`ニット`を選択し、選択後の主要導線を確認
 - [ ] アップロード案内、サブカテゴリ表現、権限ボタンのsemantic／pixel-level完全一致
 - [ ] 全カテゴリタブ・全画面・保存／再表示／再利用、外部生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+### 2026-09-17 Home top-category live interaction readback
+
+- [x] 同一CompanionセッションのLight／Heavyホームをfresh readback
+- [x] `企画デザインツール`をLight／Heavy双方で押下し、9カードの順序と主要構造を確認
+- [x] `AIフィッティング`をLight／Heavy双方で押下し、6カードの順序と主要構造を確認
+- [x] Heavyを別task-ownedタブで再オープンし、誤ったLight URL再バインドによる空読取を解消
+- [ ] Heavyだけに付く`?category=planning`／`?category=fitting`のURL差を仕様として統一するか判断
+- [ ] カード本文・事例データ、上部`グラフィックツール`、下部6カテゴリ、カード遷移をLight正本と比較
+- [ ] 成果物の保存／再表示／再利用、外部生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰

@@ -5000,3 +5000,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 両方で`ニット`を選択し、Heavyの選択パス`レディース・トップス・ニット編み`、Lightの選択パス`レディース-トップス-ニット-ニット編み`、サブカテゴリ、画像／生地画像切替、アップロード領域、キーワード、権限表示を確認した。
 - source commit `9e4006f`、Zeabur deployment `6aab9bbdc9ceb1539716429a`（Docker、対象SHA一致）が`RUNNING`となったことを確認した。UI boundary 13/13、route parity 19/19、typecheck、production build、diff checkをPASSした。
 - 判定: カテゴリアイコンと主要選択導線は`UI_PASS`。HeavyとLightにはアップロード案内、選択後のサブカテゴリ表現、権限ボタンのsemantic／pixel差が残るため、Creator全画面の完全一致は`NOT_PROVEN`。アップロード、権利確認、外部生成、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未実施。
+
+## 2026-09-17 Home top-category live interaction readback
+
+- 同一Companionセッションのログイン済みLight／Heavyタブで、ホームの上部カテゴリを実際に押下し、押下後にfresh semantic・screenshot readbackした。
+- `企画デザインツール`はLight／Heavyともカード9件を同じ順序で表示した。Heavyは`?category=planning`をURLへ付与するが、LightはURLを変更しない。カード本文と事例データは一部異なるため、見た目・データの完全一致は`NOT_PROVEN`。
+- `AIフィッティング`はLight／Heavyとも6カード（AIフィッティング、モデル企画ライブラリ、ファッションスタジオ、動画ワークステーション、Lightchain Lab、画像修正）を同じ順序で表示した。Heavyは`?category=fitting`をURLへ付与するが、LightはURLを変更しない。主要カード構造は`UI_PASS`、本文・事例データの完全一致は`NOT_PROVEN`。
+- 前回のHeavyタブはLight URLへ誤って再バインドされ、読取が空になったため、Heavyを別のtask-ownedタブで開き直して比較した。この誤操作は外部効果なしで、再送・既存タブのclaim/adoptは行っていない。
+- 上部`グラフィックツール`、下部6カテゴリ、カード遷移、成果物の保存／再表示／再利用、外部生成、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未確認。
