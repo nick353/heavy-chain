@@ -4956,3 +4956,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 両方でカテゴリパス、画像／生地画像の入力切替、サブカテゴリ、履歴、キーワード、右側の購入後モジュールが表示される主要導線は確認できた。
 - 差分として、Heavyはカテゴリカードをcheckbox/buttonとして公開し、Lightはカードを表示主体の構造として公開している。カテゴリ画像アイコン、文字組み、選択後のサブカテゴリ表示、権利確認ボタンの有効状態にも差がある。
 - カテゴリ選択自体は外部送信を伴わないため実操作したが、アップロード・権利確認・外部生成は実行していない。判定は主要導線`UI_PARTIAL`、pixel-level・操作role完全一致`NOT_PROVEN`。
+
+## 2026-09-17 Asset Center list and preview readback
+
+- Light／Heavy `/asset-center`を新規Companionタブで開き、Light側の読み込み完了後にfresh semantic・screenshot readbackを取得した。
+- 両方で同じ8件の履歴アップロード素材、同じ画像順、左カテゴリ、パンくず、一括操作、プレビュー／ボードにコピー導線を確認した。初回のLight読み込み中表示は待機後に解消したため、差分とは扱っていない。
+- 同じ先頭素材の`プレビュー`を両方で開き、画像表示と`戻る`で一覧へ復帰する導線を実操作確認した。Heavyは選択素材のメタデータ本文と`選択した素材を閉じる`を追加表示し、Lightは名前中心の詳細表示だった。
+- 判定: Asset Centerの一覧・画像順・プレビュー・戻りは`UI_PASS`。詳細パネルのsemantic／pixel-level完全一致、アップロード・コピー・削除・名前変更の外部状態readback、生成成果物のprovider receipt／source sync／reconciliation／cleanupは未完了。

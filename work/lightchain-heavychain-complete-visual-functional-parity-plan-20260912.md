@@ -3210,6 +3210,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] deployment `6aab7d9f806ea25ad0915b00`のRUNNING到達後、Heavy通常版をCompanionで再読込・比較
 - [ ] provider receipt／source sync／reconciliation／cleanup、外部生成、全画面pixel-level一致、logout→login回帰
 
+### 2026-09-17 Asset Center list and preview readback
+
+- [x] Light／Heavy `/asset-center`でLightの読み込み完了を待って同じ8件の一覧を比較
+- [x] 先頭素材のプレビュー表示と`戻る`による一覧復帰を両方で実操作確認
+- [ ] 詳細パネルのメタデータ・semantic role・pixel-level完全一致
+- [ ] アップロード、ボードコピー、削除、名前変更の外部状態readback
+- [ ] 生成成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
 ### 2026-09-17 Creator inspiration video geometry parity deployment readback
 
 - [x] Light／Heavy `/creator`をfresh screenshot・semantic readbackし、中央動画幅の差分を特定
