@@ -5375,3 +5375,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 検証範囲はCanvasの`sourceArtifactId`、remote image hydration、全31 non-video featureの`libraryArtifactId` lineage、fabric／printing slot、Fitting履歴・再開・rights gate、重複submit防止である。
 - これは静的・契約レベルの証拠であり、本番Light／Heavyの同一artifact再表示、再利用結果、provider receipt、source sync、reconciliationを証明しない。外部生成・アップロード・権利確認は行っていない。
 - 判定: library-to-workbench契約は`PASS`、本番成果物lifecycleは`NOT_PROVEN`。
+
+## 2026-09-17 Current source verification
+
+- 現行worktreeで`npm run typecheck`を実行しPASSした。
+- `npm run build`を実行し、Vite `8.0.16`、`2553 modules transformed`、production `dist`生成、exit code 0を確認した。
+- 今回はドキュメントのみの変更でソース差分がないため、再デプロイは行っていない。既存の本番deployment／Companion readback証跡とは分離して扱う。
+- 判定: current source verificationは`PASS`。本番Light／Heavyの同一artifact lifecycle、provider receipt、source sync、reconciliationは`NOT_PROVEN`。

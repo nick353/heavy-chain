@@ -3718,3 +3718,9 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Canvas source identity、remote image hydration、31機能のlibraryArtifactId handoff、fabric／printing slot、Fitting履歴・再開・rights gateを含む32/32 PASS
 - [x] 実装変更なし。auth-state不使用、provider生成・アップロード・権利確認は未操作
 - [ ] 本番Light／Heavyの同一artifactでの再表示／再利用、provider receipt、source sync、reconciliation
+
+### 2026-09-17 continuation checkpoint — Current source verification
+- [x] `npm run typecheck` PASS
+- [x] `npm run build` PASS（Vite 8.0.16、2553 modules、production dist生成）
+- [x] 今回はソース変更なしのため、本番再デプロイは行わず、既存deployment readbackと分離
+- [ ] 本番Light／Heavyの同一artifactでの再表示／再利用、provider receipt、source sync、reconciliation
