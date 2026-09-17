@@ -5118,3 +5118,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 同一ログイン済みCompanionセッションでAgentの`顧客提案`、`インスピレーション`を実クリックし、各タブが選択状態へ切り替わることを確認した。`顧客提案`では顧客向け提案書／展示会ストーリーの2例、入力プレースホルダー、添付導線、disabledの`送信`までfresh readbackした。
 - タブ切替はブラウザ上のUI状態変更として完了し、外部AI生成・アップロード・権利確認は実行していない。Companion cleanup receiptは対象タブを閉じ、foreign tabs mutated=false、external_action_executed=false。
 - 判定: Agentのタブ切替と顧客提案UIは`UI_PASS`。インスピレーション／AIグラフィックデザインの例文・全タブのLightとの同一性、入力後生成、成果物保存／再利用、provider receipt、source sync、reconciliation、pixel-level完全一致は未完了。
+
+## 2026-09-17 Agent AI graphic design tab readback
+
+- Heavy本番のログイン済みCompanionで`AIグラフィックデザイン`タブを実クリックし、選択状態を確認した。
+- クイックスタート2件（チェーンモチーフの2色プリント、黒地に銀のモノグラム総柄）、入力プレースホルダー、添付導線、2つのfile input、disabledの`送信`をfresh semantic・visual readbackした。
+- 外部AI生成、アップロード、権利確認、provider送信は実行していない。Companion cleanup receiptは対象タブを閉じ、lease解放済み、foreign tabs mutated=false、external_action_executed=false。
+- 判定: Agentの4タブの実クリック・初期UI確認は前進した。Lightとの履歴データ／pixel-level完全一致、実入力後生成、成果物保存・再表示・再利用、provider receipt、source sync、reconciliationは未完了。

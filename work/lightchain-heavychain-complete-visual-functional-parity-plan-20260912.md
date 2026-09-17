@@ -3448,6 +3448,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 実入力、外部生成、provider receipt、source sync、reconciliation、cleanup
 - [ ] 成果物の保存／再表示／再利用、pixel-level完全一致、logout→login回帰
 
+### 2026-09-17 Agent AI graphic design tab readback
+- [x] `AIグラフィックデザイン`タブをCompanionで実クリック
+- [x] 2つのクイックスタート、入力プレースホルダー、添付導線、file input、送信disabledを確認
+- [x] task-owned Companion tab／lease cleanup
+- [ ] Lightとの履歴データ・pixel-level完全一致
+- [ ] 実入力、外部生成、provider receipt、source sync、reconciliation、cleanup
+- [ ] 成果物の保存／再表示／再利用、logout→login回帰
+
 ### 2026-09-17 Agent tab interaction continuation readback
 - [x] `顧客提案`タブをCompanionで実クリックし、例文・入力・添付・送信disabledを確認
 - [x] `インスピレーション`タブをCompanionで実クリックし、選択状態の切替を確認
