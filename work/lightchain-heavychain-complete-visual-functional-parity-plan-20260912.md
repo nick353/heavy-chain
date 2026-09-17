@@ -3050,3 +3050,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Agentの入力後生成、生成結果の保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
 
 判定: Heavy `/agent` の修正版は本番`UI_PASS`。Lightの4カテゴリ導線と主要表示契約に追いついたことをCompanionで確認したが、外部生成と成果物ライフサイクルは未実施・未証明。Printingの不明効果reconciliationも別件として残る。
+
+### 2026-09-18 Light／Heavy Asset Centerプレビュー詳細差分と修正
+
+- [x] Light `/asset-center` をfresh readbackし、先頭成果物の`プレビュー`を1回操作。`戻る`、`コピーを作成します`、`ダウンロード`、`削除`、`名前を編集`を確認
+- [x] Heavy `/asset-center` をfresh readbackし、同じ先頭成果物の`プレビュー`を1回操作。Heavyの詳細に`ダウンロード`／`削除`が欠けている差分を確認
+- [x] Heavy `LightchainLibraryPage`へLight実測どおりの詳細アクションを追加。ローカル成果物削除、remote生成画像削除、検証済み画像ダウンロードを実装（commit `0dc6856`）
+- [x] `test:library-canvas-handoff` 10/10、typecheck、production build（2552 modules）、`git diff --check`をPASS
+- [ ] deployment `6aab337005af289f92f9802c` の`RUNNING`到達、Heavy `/asset-center`再読込、同じプレビュー詳細アクションのfresh semantic／visual readback
+- [ ] 削除・ダウンロードのprovider receipt／source sync／reconciliation／cleanup、同一成果物のCanvas再利用と再表示
+
+判定: Asset Centerプレビュー詳細のUI差分をLight本番実測から特定し、Heavy source修正とローカル検証はPASS。本番反映と外部成果物ライフサイクル証跡は未完了。
