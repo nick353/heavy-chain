@@ -3108,3 +3108,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 印刷画像追加、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
 
 判定: Printingのソース修正とローカル検証はPASS。現在の本番はdeployment=`DEPLOYING`、service=`STARTING`で、既存ヘルスチェックは`ok`だが新しいレールの本番反映は未証明。新デプロイの切替完了後に再読込確認を継続する。
+
+追記: 旧deployment `6aab3be605af289f92f981fc` のイメージPull待ちが継続したため、サービス再起動後に再デプロイを実行。新deployment `6aab3ef0dc088f64d1813dae` はbuild完了後も`DEPLOYING`、serviceは`STARTING`で、runtime logは新イメージのPull開始まで確認できている。既存公開エンドポイントの`/_health`は`ok`だが、修正版の本番UI証拠は未取得。
