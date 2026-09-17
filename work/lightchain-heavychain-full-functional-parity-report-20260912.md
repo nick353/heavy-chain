@@ -5581,3 +5581,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightは選択状態が`デザイン修正`となり、本文は「該当する結果が見つかりません」「別のキーワードで検索してください」。表示ボタンはヘッダー・検索のみで、事例カードは0件だった。
 - Heavyも選択状態とタブ順は一致したが、保存済み成果物4件（AIフィッティング入力2系統、Fashion Studio、Create a polished...）が同じカテゴリ表示領域に残った。Heavyのボタンqueryは8件（ヘッダー2、avatar、検索、成果物4）だった。
 - 判定: tab geometry／selectionは`UI_PASS`、カテゴリ別のデータスコープと成果物表示は`NOT_PROVEN`。これはLight本番の空状態とHeavyのローカル成果物永続化を統合する必要があるため、画像やカード在庫の追加だけでは完了扱いにしない。
+
+## 2026-09-18 Category-scoped artifact fix deployed and read back
+
+- `src/components/GenerateLightchainEntry.tsx`を修正し、保存済み成果物を選択中の事例タブのfeatureIdに一致する場合だけ表示するようにした。`lightchain-<feature>-provider-result`形式も正規化して照合する。
+- `npm run typecheck`、関連50テスト、`npm run build`（2553 modules）がPASS。コミットは`4ba25d6`、Zeabur Docker deploymentは`6aac237d0f50de6ff52c168f`で`RUNNING`。
+- 30秒待機後のHeavy本番readbackで、ホームおすすめから無関係なAIフィッティング保存成果物が消え、`デザイン修正`には同カテゴリの4事例だけが表示された。
+- 残りカテゴリのHeavy実クリックでは、`柄・プリント`4件、`ビジュアル素材`4件、`マーケティングコンテンツ`3件、`生産`4件のカテゴリ対応カードを確認した。
+- Light本番は再読込後の`柄・プリント`で選択状態は切り替わったがカード0件の空状態だった。これはHeavyの無関係成果物混入とは別の`DATA_SCOPE_DIFF`として残す。
+- 判定: Heavyの保存成果物カテゴリ混入は修正済み。Light本番のカテゴリ別事例在庫との1対1一致、実成果物lifecycle、provider receipt、source sync、reconciliation、logout→login回帰は未完了。
