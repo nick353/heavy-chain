@@ -3473,3 +3473,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 4タブ全てのLight／Heavy例文・履歴・中央レイアウト完全比較
 - [ ] 実入力、外部生成、provider receipt、source sync、reconciliation、cleanup
 - [ ] 成果物の保存／再表示／再利用、pixel-level完全一致、logout→login回帰
+### 2026-09-17 Fashion Studio same-profile source re-readback
+
+- [x] 同一ログイン済みCompanionプロフィールでHeavy／Light`/flow/integration`を再読込
+- [x] Heavyのprofile／brands後に`/v1/canvas-documents?brand_id=...`へ到達し、18件を確認
+- [x] Lightの`drawingBoardProject/page`と`caseList`へ到達し、30件＋ページ表示`1 2 3 4 5 … 14`を確認
+- [ ] Heavyの保存データ供給元・件数・名称・更新日時・previewをLight正本と一致させる
+- [ ] 一覧の全ページ、カード遷移、再表示、再利用を同期後に再検証

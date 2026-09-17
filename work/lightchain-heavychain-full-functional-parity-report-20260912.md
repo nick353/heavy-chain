@@ -5125,3 +5125,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - クイックスタート2件（チェーンモチーフの2色プリント、黒地に銀のモノグラム総柄）、入力プレースホルダー、添付導線、2つのfile input、disabledの`送信`をfresh semantic・visual readbackした。
 - 外部AI生成、アップロード、権利確認、provider送信は実行していない。Companion cleanup receiptは対象タブを閉じ、lease解放済み、foreign tabs mutated=false、external_action_executed=false。
 - 判定: Agentの4タブの実クリック・初期UI確認は前進した。Lightとの履歴データ／pixel-level完全一致、実入力後生成、成果物保存・再表示・再利用、provider receipt、source sync、reconciliationは未完了。
+## 2026-09-17 Fashion Studio same-profile source re-readback
+
+- 同一ログイン済みCompanionプロフィールでHeavy／Lightの`/flow/integration`を再読込した。
+- Heavyは`/v1/profile`、`/v1/brands`の後に`/v1/canvas-documents?brand_id=98718413-7ea3-4a1f-87b1-1804ae2ec957`へ到達し、画面上の保存プロジェクトは18件だった。
+- Lightは`/api/light-chain-yunxiang-saas-server/drawingBoardProject/page?current=1&size=31&boardProjectType=integrationCustom`と`caseList?boardProjectType=integrationSystem`へ到達し、保存プロジェクト30件、ページ表示`1 2 3 4 5 … 14`を確認した。
+- 両方とも認証済み画面と参考事例5件は表示できたが、保存データの供給元、件数、ページングが一致していない。Resource Timingは取得経路の証拠であり、provider receiptや業務完了の証拠ではない。
+- 判定: Heavyの画面表示は動作しているが、Light正本との保存データ完全一致は未達。Heavy APIのデータ同期またはLight互換の一覧・ページング契約を確定してから再検証が必要。
