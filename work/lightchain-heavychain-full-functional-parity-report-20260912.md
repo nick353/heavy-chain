@@ -5447,3 +5447,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - デプロイ後、ログイン済みCompanion sessionでHeavy `/model`を30秒待機後にreadbackした。`readyState=complete`、AIフィッティング、single／multi task、衣服0/4、Gallery素材、説明生成、参考画像、モデル写真、履歴、およびdisabled `権限がありません`をsemantic・visual双方で確認した。
 - cleanup receiptはlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。provider生成、アップロード、権利確認クリック、provider receiptは発生していない。
 - 判定: Heavy canonical `/model`初期permission surfaceはLight観測に一致し`UI_PASS`。素材選択後のLight／Heavy完全一致、全カテゴリpixel-level一致、機能別entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Initial model control parity
+
+- 同一ログイン済みCompanion runでLight／Heavyの`/model`初期状態を比較した。Lightはcontrol count=`23`、Heavyは`18`で、Heavyだけ`Gallery素材を選択`と`Canvasに注文票を保存`が初期表示されていた。
+- Heavyは素材未選択時にこの2導線を表示しない条件付き表示へ修正した。素材選択後のGallery／Canvas機能自体は削除していない。
+- permission／alias／fitting history testsは22/22 PASS、`npm run typecheck` PASS、`npm run build` PASS（Vite 8.0.16、2553 modules）。
+- Zeabur deployment `6aabea3ee6c365d6264ad1fc`はDocker planで`RUNNING`。デプロイ後に30秒待機してHeavy `/model`をreadbackし、control count=`16`、Light初期画面にない2つの追加controlが消え、disabled `権限がありません`が存在することをsemantic・visual双方で確認した。
+- cleanup receiptはlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。アップロード、権利確認、生成、provider送信は行っていない。
+- 判定: Heavy `/model`初期control parityは`UI_PASS`。素材選択後、マルチタスク、全カテゴリpixel-level一致、同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。

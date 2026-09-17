@@ -3786,3 +3786,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] デプロイ後のログイン済みCompanion sessionでHeavy `/model`を30秒待機後にreadbackし、AIフィッティング、single／multi task、主要入力、履歴、disabled `権限がありません`をvisual・semantic双方で確認
 - [x] Companion cleanup receiptでlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`を確認
 - [ ] Lightの素材選択後状態、全カテゴリ、同一artifact lifecycle、機能別entitlement契約、provider receipt、source sync、reconciliationを追加突合
+
+### 2026-09-17 continuation checkpoint — Initial model control parity
+- [x] 同一ログイン済みCompanion runでLight／Heavyの`/model`初期状態をfresh readbackし、Light control count=23、Heavy control count=18でHeavyだけ`Gallery素材を選択`と`Canvasに注文票を保存`が出る差分を特定
+- [x] Heavyの素材未選択状態では上記2導線を表示せず、素材選択後の機能は保持する条件付き表示へ修正
+- [x] permission／alias／fitting history tests 22/22 PASS、`npm run typecheck` PASS、`npm run build` PASS（Vite 8.0.16、2553 modules）
+- [x] Zeabur Docker deployment `6aabea3ee6c365d6264ad1fc`を実行し、fresh readbackで`RUNNING`を確認
+- [x] デプロイ後Heavy `/model`を30秒待機後にCompanion readbackし、control count=16、`Gallery素材を選択`なし、`Canvasに注文票を保存`なし、disabled `権限がありません`ありを確認
+- [x] Companion cleanup receiptでlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`を確認
+- [ ] 素材選択後・マルチタスク・全カテゴリでLight／Heavyのcontrol差分と成果物lifecycleを追加突合
