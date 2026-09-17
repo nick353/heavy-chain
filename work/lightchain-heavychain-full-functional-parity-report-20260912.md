@@ -5438,3 +5438,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `cloudflare/heavy-api/src/image-ai.ts`の実装では`planName: '内部Free枠'`が固定値で、機能別entitlementやLight本番の`権限がありません`に対応する判定フィールドは返していない。現行の利用量APIをentitlementの代用にはできない。
 - `providerRightsConfirmed`は外部provider送信前の明示的な権利確認であり、プラン権限・entitlementではない。この境界を維持し、自動承認・ゲート撤廃・推測によるHeavy表示変更は行っていない。
 - 判定: 認証失敗やログイン反映待ちではなく、Light／Heavy間で同一entitlementをreadbackする正式なデータ契約が未接続。entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Heavy model permission surface deployment
+
+- `src/pages/LightchainWorkbenchPage.tsx`のcanonical `/model`初期状態に、Light本番で実測した`権限がありません` disabled gateを追加した。条件は衣服素材未選択時だけで、素材選択後の生成導線は残している。これは権利確認の自動承認でも、機能別entitlementの実装完了でもない。
+- permission／alias parity testsは10/10 PASS、`npm run typecheck` PASS、`npm run build` PASS（Vite 8.0.16、2553 modules）。
+- Zeaburの既存`heavy-chain` serviceへDocker deployment `6aabe7894ec58b92baa765a2`を実行し、deployment status=`RUNNING`、planType=`docker`をfresh readbackした。
+- デプロイ後、ログイン済みCompanion sessionでHeavy `/model`を30秒待機後にreadbackした。`readyState=complete`、AIフィッティング、single／multi task、衣服0/4、Gallery素材、説明生成、参考画像、モデル写真、履歴、およびdisabled `権限がありません`をsemantic・visual双方で確認した。
+- cleanup receiptはlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。provider生成、アップロード、権利確認クリック、provider receiptは発生していない。
+- 判定: Heavy canonical `/model`初期permission surfaceはLight観測に一致し`UI_PASS`。素材選択後のLight／Heavy完全一致、全カテゴリpixel-level一致、機能別entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。

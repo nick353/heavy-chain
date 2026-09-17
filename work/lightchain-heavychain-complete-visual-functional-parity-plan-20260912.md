@@ -3778,3 +3778,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] `providerRightsConfirmed`は外部生成前の明示的な権利確認であり、プラン権限・entitlementではないことを再確認。自動承認、ロック除去、推測による表示変更は行わない
 - [x] したがって、現状のLight／Heavy表示差はログイン遅延ではなく、同一entitlementをreadbackする正式なデータ契約が未接続であることを確定
 - [ ] Light本番のentitlement readback源とHeavy側の機能別entitlement契約を、同一アカウント・同一ブランド条件で追加特定して実装・検証
+
+### 2026-09-17 continuation checkpoint — Heavy model permission surface deployment
+- [x] Heavy `/model`の初期状態（衣服0/4）に限り、Light本番でfresh readbackした`権限がありません` disabled gateを表示する実装へ変更。衣服素材選択後の生成導線は残した
+- [x] permission／alias parity tests 10/10 PASS、`npm run typecheck` PASS、`npm run build` PASS（Vite 8.0.16、2553 modules）
+- [x] Zeaburの既存`heavy-chain` serviceへDocker deployment `6aabe7894ec58b92baa765a2`を実行し、fresh readbackで`RUNNING`、Docker planを確認
+- [x] デプロイ後のログイン済みCompanion sessionでHeavy `/model`を30秒待機後にreadbackし、AIフィッティング、single／multi task、主要入力、履歴、disabled `権限がありません`をvisual・semantic双方で確認
+- [x] Companion cleanup receiptでlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`を確認
+- [ ] Lightの素材選択後状態、全カテゴリ、同一artifact lifecycle、機能別entitlement契約、provider receipt、source sync、reconciliationを追加突合
