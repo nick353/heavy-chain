@@ -5596,3 +5596,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 新しいtask-owned Companionタブで、Heavyの主要17 route（`/model`、`/fitting`、`/creator`、`/asset-center`、`/gallery`、`/canvas/new`、`/marketing`、`/marketing/detail`、`/studio`、`/models`、`/patterns`、`/printing`、`/agent`、`/designProduction`、`/jobs`、`/history`、`/credits`）をread-only巡回した。
 - 全routeはHTTP／ページ到達自体は成立したが、今回の新規タブでは認証済みworkspaceではなく、ログイン導線またはHeavyの準備中placeholderが表示された。外部効果は0件。
 - 判定: route存在・未認証fallbackの確認はできたが、ログイン済みLight／Heavyの画面parityの証拠には使用しない。認証済みCompanionセッションでの同じ17 route readback、全画面比較、成果物lifecycle、provider receipt、source sync、reconciliation、logout→loginは未完了。
+
+## 2026-09-18 Authenticated-session availability recheck
+
+- 新しいCompanion sessionで接続プロファイルのtask-owned tab inventoryを再確認したが、Light／Heavyの既存ログイン済みタブは存在せず、Extensions・Reddit・Xのみだった。
+- ローカルの`verify:goal-readiness:incomplete-ok`はruntime/auth/media/provider adapterの静的契約をPASSしたが、同ツール自身のproof limitどおり、authenticated production generation、R2 persistence、browser business completionの証明には使わない。
+- 判定: 認証済みCompanionセッションの再取得が必要な状態。auth-state.jsonは使用せず、ユーザー操作または既存ログイン済みtask tabの復帰後に本番parity監査を再開する。
