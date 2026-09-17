@@ -5515,3 +5515,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Fitting history readback 12/12 PASS。persisted artifact由来の履歴、reload、Gallery source、canonical storage pathを確認した。
 - Generated image identity 8/8、source readback persistence 5/5 PASS。canonical identity、signed URL rotation、byte hash、ownership-neutral reconciliationを確認した。
 - 判定: local artifact lifecycle contractは`PASS`。本番Light／Heavyの同一artifact readback、provider receipt、source sync、reconciliationは`NOT_PROVEN`。外部生成・送信は未操作。
+
+## 2026-09-17 Light login gate recheck
+
+- fresh Light `/model`を開いて30秒待機したが、`readyState=complete`後も`別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました。`だけを表示した。
+- Companion cleanup receiptは`leases_released=1`、`unknown_effect=[]`、外部操作なし。ログイン回避、auth-state作成、Cookie／token取得は行っていない。
+- 判定: 本番Light正本のfresh semantic／visual readbackと同一artifact比較は、同一Chromeセッションでのユーザー再ログイン待ち。Heavy側のローカル契約・read-only監査は継続済みだが、Goal全体は`NOT_PROVEN`。

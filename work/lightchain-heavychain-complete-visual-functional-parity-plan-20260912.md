@@ -3847,3 +3847,9 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Fitting history readback 12/12 PASS（persisted artifact由来、reload、Gallery source、canonical storage path）
 - [x] Generated image identity 8/8 PASS、source readback persistence 5/5 PASS（canonical identity、signed URL rotation、byte hash、ownership-neutral reconciliation）
 - [ ] これはlocal lifecycle contract evidenceであり、Light／Heavy本番の同一artifact、provider receipt、source sync、reconciliationの実データ証明ではない
+
+### 2026-09-17 continuation checkpoint — Light login gate recheck
+- [x] fresh Light `https://jp.linkaigc.com/model` tabを開き、30秒待機後にCompanion readback
+- [x] `readyState=complete`だが、`別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました。`のみを表示
+- [x] session cleanup receipt: lease released 1、unknown effectなし、外部操作なし
+- [ ] ユーザーがLight本番の同一Chromeセッションで再ログインするまで、Light正本とのfresh比較・同一artifact比較は開始しない
