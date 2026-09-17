@@ -3684,3 +3684,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 再利用先で権利チェックは未選択、生成ボタンは外部効果ゲートとして未操作。provider送信・生成・アップロードなし
 - [x] Companion cleanup receiptでtab close、lease解放、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`を確認
 - [ ] Light側の同じ保存カード契約について、ボードコピー後のCanvas到達とsource identityを同一条件でreadbackし、provider receipt／source sync／reconciliationと分離して突合
+
+### 2026-09-17 continuation checkpoint — Light remote-card board-copy boundary
+- [x] Light本番の先頭remoteカードで`ボードにコピー`を1回実操作
+- [x] URLは`/asset-center`のまま、カード件数・表示変化なしをfresh readback。Companion transactionはbrowser effect known、replay不可として終了
+- [x] transaction statusで`state=completed`、`reconciliation_required=false`、`providerReceipt=null`、`sourceSync=null`を確認。provider成功・保存完了とは断定しない
+- [x] 同じrunのtab close、lease解放、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`をcleanup receiptで確認
+- [ ] Light remote-cardのprovider receipt／source syncが得られる正式な保存契約と、Heavy local-cardのCanvas handoffを同一データ種別で突合

@@ -5339,3 +5339,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Canvas Hydration後に、プロジェクト名、`保存`、`素材を見る`、保存素材を起点にした機能入口、`新しく生成`、`生成する`、権利確認チェックをreadbackした。sourceArtifactId付きで次工程のCanvasへ引き継ぐブラウザルーティングは`UI_PASS`。
 - 権利確認チェックは未選択のまま、`生成する`は押していない。provider送信、外部生成、アップロード、保存送信は実行していない。Companion cleanup receiptは`closed=[1980922978]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: Heavyの保存カード→Canvas handoff到達は`UI_PASS`。Light同一カードのCanvas到達、source identity完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Light remote-card board-copy boundary
+
+- Light本番`/asset-center`の先頭remoteカードで`ボードにコピー`を1回実クリックした。URLは`https://jp.linkaigc.com/asset-center`のままで、カード一覧の表示・件数に変化はなかった。
+- Companion transactionはbrowser effectを`known_effect`、`reconciliation_required=false`、`safe_fresh_retry_allowed=false`として記録した。transaction statusは`state=completed`だが、`providerReceipt=null`、`sourceSync=null`、`reconciliation=null`であり、provider保存成功や業務完了とは扱わない。
+- Heavyの同名ボタンはlocal保存カードなら`/canvas/new?sourceArtifactId=...`へ遷移し、remoteカードならLightと同じ`handleImportRemote`経路になる。今回のHeavy先頭カードはlocal、Light先頭カードはremoteであり、観測差はまず`DATA_SCOPE_DIFF`／カード種別差として保持する。
+- 外部生成、ファイルアップロード、権利確認、provider生成送信は行っていない。Light task-owned tabのcleanup receiptは`closed=[1980922980]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: Light remote-cardのブラウザ操作境界は`UI_PASS`、provider receipt／source sync／保存完了は`NOT_PROVEN`。Heavyとの完全な同一性は、同じremoteまたは同じlocalデータ種別での比較が必要。
