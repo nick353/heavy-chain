@@ -3061,3 +3061,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 削除・ダウンロードのprovider receipt／source sync／reconciliation／cleanup、同一成果物のCanvas再利用と再表示
 
 判定: Asset Centerプレビュー詳細のUI差分をLight本番実測から特定し、Heavy source修正とローカル検証はPASS。本番反映と外部成果物ライフサイクル証跡は未完了。
+
+### 2026-09-18 `/tools/line-draft-to-tile` Light／Heavy fresh比較
+
+- [x] Light本番をCompanionでfresh readbackし、`線画の実写化`、参考画像入力、`カラー線画`／`モノクロ線画`、生成画像の種類、スタイル入力、`権限がありません`、生成履歴を確認
+- [x] Heavy本番を同じログイン済みCompanionセッションで開き、Hydration完了まで待機してからfresh readback
+- [x] HeavyはLightに対応する主要導線を表示し、`素材を選択`、参考画像入力、線画種別、`平置き画像`／`モデル図`、スタイル入力、`AI生成`、生成履歴を確認
+- [ ] Light側が現在`権限がありません`、Heavy側が`AI生成`を表示する状態差の原因確認と、同一権限・同一入力条件での生成比較
+- [ ] 実画像アップロード、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
+
+判定: `/tools/line-draft-to-tile` は両環境で画面表示・主要入力導線までCompanion確認済み。HeavyはLightより操作可能な生成導線が見えているが、Lightの権限状態差を含むため、機能同一性と成果物ライフサイクルは未完了。
