@@ -5297,3 +5297,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 新規ログイン済みCompanion sessionでHeavyの`/flow/integration/detail?boardProjectCode=e394897b-5246-45bc-84a0-09abab91760c&boardProjectType=integrationCustom`をfresh screenshotした。グローバルヘッダー、左プロジェクトパネル、点線キャンバス、3ノード、左下生成パネル、下部ツールバー、右下ズームを確認し、Light実画面のシェル構成と一致した。
 - AI生成、アップロード、権利確認、provider送信は実行していない。Companion session closeでlease解放・`external_action_executed=false`を確認した。
 - 判定: Fashion Studio detail shellの本番visual parityは`UI_PASS`。全画面・全カテゴリ・全主要導線、入力値・preview・履歴・成果物保存／再表示／再利用、provider receipt／source sync／reconciliationは引き続き`NOT_PROVEN`。
+
+## 2026-09-17 Same-run Light／Heavy full route audit and hydration boundary
+
+- 同一ログイン済みCompanion sessionでLight／Heavyの主要routeと追加routeを順にnavigateし、各画面で準備中表示が消えるまで待ってからsemantic・visual readbackを取得した。対象には`/creator`、`/model`、`/tools/fabric`、`/tools/printing`、`/fitting`、`/agent`、`/asset-center`、`/gallery`、`/model-library/model-custom-form`、`/model-base/style`、`/designProduction`、`/printing`、`/tools/pattern-to-vector`、`/tools/vector-special`、`/tools/reactor`、`/tools/svg-convert`、`/tools/line-draft-to-tile`を含めた。
+- Heavy `/fitting` は初期の`AIフィッティング画面を準備しています`を15秒以内に待つと本体UIへ移行した。`/fitting?tab=参考図`も同じ待機後に本体UIへ移行し、衣服素材、モデル参照、条件・権利確認、AI生成disabled、履歴の導線をreadbackした。これはログイン失敗ではなく、認証・currentBrand hydration待ちの境界である。
+- Lightの正規AIフィッティング画面は`/model`であり、ソースcatalogではHeavyの別名導線を`/fitting`へ対応付けている。実画面上はHeavy `/model`にもLight類似のworkbenchがあり、Heavy `/fitting`には追加の権利確認・保存プレビュー・履歴フローがあるため、単一の完全一致routeとしては未確定である。Heavyの`/model`／`/fitting`の役割を推測で統合せず、routing contractの修正対象として残す。
+- Lightの`/fitting`、`/gallery`、`/models`、`/patterns`は404だった一方、Heavyでは`/fitting`と`/gallery`が実画面、`/models`と`/patterns`が準備中placeholderを表示した。これは「Lightのcanonical routeに対するHeavy alias差分」であり、route parityは`NOT_PROVEN`。Heavy側の追加routeを勝手に削除せず、canonical／aliasの仕様決定後に修正する。
+- 権利checkbox、アップロード、AI生成、外部provider送信、保存送信はこの監査では実行していない。Heavy Fittingは権利checkbox未選択かつ`AI生成`／`条件プレビューを保存`がdisabledで、外部効果ゲートは維持されている。
+- 判定: Hydration待機を含む画面到達・主要control readbackは`UI_PASS`。Light canonical routeとの完全なrouting／pixel／interaction parity、全カテゴリの入力後状態、成果物の保存・再表示・再利用、provider receipt、source sync、reconciliationは`NOT_PROVEN`。Companion lease解放後に外部効果なしで監査を終了した。

@@ -3644,3 +3644,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Companion task-owned tabをcloseし、foreign tab未変更・external action未実行のcleanup receiptを取得
 - [ ] Light／Heavy詳細画面の入力値・preview・履歴・保存成果物の完全一致を突合
 - [ ] provider receipt、source sync、reconciliation、成果物保存／再表示／再利用を個別に証明
+
+### 2026-09-17 continuation checkpoint — Same-run full route audit and hydration boundary
+- [x] 同一ログイン済みCompanion sessionでLight／Heavyの主要画面・追加カテゴリ・ツール・ライブラリ・Agent・ギャラリーを実操作遷移し、Hydration完了後のsemantic／visual readbackを取得
+- [x] Heavy `/fitting` および `/fitting?tab=参考図` は準備中表示がdetachedになるまで待つことで本体UIを表示できることを確認
+- [x] Lightの正規AIフィッティングは`/model`、Heavyのroute catalog上の別名導線は`/fitting`であり、ルート契約が一致していないことを記録
+- [x] Lightの`/fitting`、`/gallery`、`/models`、`/patterns`が404である一方、Heavyには実画面または準備中のaliasが存在する差分を記録
+- [x] 権利確認・アップロード・外部AI生成・provider送信は操作せず、Heavy Fittingの権利checkbox未選択、AI生成disabledをreadback
+- [x] Companion leaseを解放し、外部効果なしで同一runのroute監査を終了
+- [ ] Light正規routeを基準にHeavy `/model` と `/fitting` の役割を確定し、必要なalias／routing／UI差分を修正
+- [ ] 全routeのLight／Heavy semantic・visual差分、保存成果物の再表示／再利用、provider receipt／source sync／reconciliation／cleanupを最終報告へ反映
