@@ -5551,3 +5551,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 関連47テスト、typecheck、production build（2553 modules）がPASS。Zeabur deployment `6aac16c4e6c365d6264ad8fb`は`RUNNING`。
 - デプロイ後Heavy `/model`を再読み込みし、認証・ブランド準備画面から通常UIへ遷移するまで待機。マルチタスクを押すとLight相当の空状態UIがsemantic・visual readbackで確認でき、`閉じる`でシングルタスクへ戻ることも確認した。
 - この確認でHeavyのマルチタスク空状態UI parityは`UI_PASS`。Light全画面との再比較、素材投入後の同一状態、成果物lifecycle、provider receipt、source sync、reconciliation、logout→再ログイン回帰は`NOT_PROVEN`。
+
+## 2026-09-18 Light/Heavy fitting counter parity follow-up
+
+- Light `/model` fresh readbackで説明欄下の`0/2000`文字数表示を確認し、Heavy旧稼働版との差分を特定した。
+- `src/pages/LightchainWorkbenchPage.tsx`に文字数表示を追加。関連47テスト、`npm run typecheck`、`npm run build`（2553 modules）はPASS。
+- Zeabur deployment `6aac1b03e6c365d6264ad9b3`を開始したが、確認時点では`BUILDING`。Heavy本番への反映は未確認で、旧稼働版のreadbackでは`0/2000`未表示。
+- 判定: counter parityは`FIX_READY_DEPLOY_PENDING`。`RUNNING`後のHeavy再読込、全画面／全カテゴリ比較、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。

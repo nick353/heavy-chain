@@ -3884,3 +3884,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] デプロイ後に30秒相当のhydration待機を行い、CompanionでHeavy本番のシングル→マルチ→シングル往復をfresh semantic／visual readback
 - [x] HeavyマルチタスクでLight相当の`追加`、`一括試着タスク（0/8）`、`すべて削除`、`閉じる`、空状態文言、最大8件説明を確認
 - [ ] Light同一状態の再読、全画面／全カテゴリのpixel・interaction parity、素材投入後・成果物lifecycle、provider receipt/source sync/reconciliationは未完了
+
+### 2026-09-18 continuation checkpoint — fitting counter parity follow-up
+- [x] Light `/model` fresh readbackで説明欄の`0/2000`表示を確認
+- [x] Heavy旧稼働版との同一画面readbackで文字数表示の欠落を特定
+- [x] `LightchainWorkbenchPage.tsx`に`{referenceNote.length}/2000`表示を追加
+- [x] 関連47テスト、`npm run typecheck`、`npm run build`をPASS
+- [x] Zeabur deployment `6aac1b03e6c365d6264ad9b3`を開始
+- [ ] deploymentが`RUNNING`になった後のHeavy本番再読込で`0/2000`表示を確認
+- [ ] 全画面／全カテゴリのpixel・interaction parity、素材投入後・成果物lifecycle、provider receipt/source sync/reconciliation、最終cleanupを完了

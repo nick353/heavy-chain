@@ -4445,6 +4445,9 @@ export function LightchainWorkbenchPage() {
                 className="min-h-[114px] w-full resize-none rounded-2xl border border-white/5 bg-[#181d1f] px-4 py-4 text-sm text-white outline-none placeholder:text-neutral-500"
                 placeholder={activeFittingInputTab === '説明生成' ? '背景の説明をここに記入してください' : activeFittingInputTab === '参考画像' ? '参考画像で残したい雰囲気や衣服の条件を記入してください' : 'モデルセット写真で合わせたいポーズ、背景、小物を記入してください'}
               />
+              <div className="flex justify-end text-xs text-neutral-500" aria-live="polite">
+                {referenceNote.length}/2000
+              </div>
               {garmentImageUrl && (
                 <details
                   className="rounded-xl border border-white/10 bg-[#181d1f] p-3"
