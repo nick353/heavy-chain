@@ -3840,3 +3840,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Provider coverage initially exposed a stale test expectation for `/fitting#fitting-history`; current canonical route is `/model#fitting-history` and the contract was corrected
 - [x] Provider coverage after correction 22/22 PASS
 - [ ] これらはlocal契約証拠であり、本番Light同一画面、provider receipt、source sync、reconciliationの代替にはしない
+
+### 2026-09-17 continuation checkpoint — Artifact lifecycle contract sweep
+- [x] provider persistence/readback 14/14 PASS（provider result、durable artifact、History／Canvas promotion、provenance分離）
+- [x] Canvas document persistence 7/7 PASS（source validation、invalid payload拒否、server save acknowledgement分離）
+- [x] Fitting history readback 12/12 PASS（persisted artifact由来、reload、Gallery source、canonical storage path）
+- [x] Generated image identity 8/8 PASS、source readback persistence 5/5 PASS（canonical identity、signed URL rotation、byte hash、ownership-neutral reconciliation）
+- [ ] これはlocal lifecycle contract evidenceであり、Light／Heavy本番の同一artifact、provider receipt、source sync、reconciliationの実データ証明ではない

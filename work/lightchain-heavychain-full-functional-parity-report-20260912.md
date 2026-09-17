@@ -5507,3 +5507,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Provider coverageは当初、旧`/fitting#fitting-history`を期待して失敗した。現行canonical entrypointが`/model#fitting-history`であることをsourceと既存alias contractで確認し、テスト期待値を更新後22/22 PASS。
 - これはlocal source／contract evidenceであり、本番Lightの同一画面比較、provider receipt、source sync、reconciliationを証明しない。外部生成・送信は未操作。
 - 判定: local contract layerは`PASS`、production visual／interaction parityと成果物lifecycleは`NOT_PROVEN`。
+
+## 2026-09-17 Artifact lifecycle contract sweep
+
+- provider persistence/readback 14/14 PASS。provider結果のdurable artifact化、History／Canvas promotion、provider provenanceとGallery identityの分離を確認した。
+- Canvas document persistence 7/7 PASS。source validation、invalid payload拒否、server save acknowledgementの未混同を確認した。
+- Fitting history readback 12/12 PASS。persisted artifact由来の履歴、reload、Gallery source、canonical storage pathを確認した。
+- Generated image identity 8/8、source readback persistence 5/5 PASS。canonical identity、signed URL rotation、byte hash、ownership-neutral reconciliationを確認した。
+- 判定: local artifact lifecycle contractは`PASS`。本番Light／Heavyの同一artifact readback、provider receipt、source sync、reconciliationは`NOT_PROVEN`。外部生成・送信は未操作。
