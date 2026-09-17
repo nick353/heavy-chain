@@ -5361,3 +5361,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 署名付きmedia URLを持つHeavyカードの`ボードにコピー`を1回実クリックした結果、`https://heavy-chain.zeabur.app/canvas/new?sourceArtifactId=local-b9c3fbda-6b36-4a29-bad3-acdb8e33c627`へ遷移した。したがって、URLのremote性だけでremote未登録カードと判定できず、Heavy側ではlocal artifact handoffとして扱われている。
 - Canvasで保存、素材表示、権利確認チェック、生成入口をfresh readbackした。権利確認・生成・provider送信は行っていない。cleanup receiptは`closed=[1980922982]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: Heavyのカード→Canvas handoffは`UI_PASS`。Light先頭remoteカードとの完全同一性は保存段階・artifact IDが異なるため`NOT_PROVEN`。provider receipt、source sync、reconciliationも未確認。
+
+## 2026-09-17 Light remote-copy delayed readback
+
+- 前回のLight remote-card `ボードにコピー`操作後、同じ操作を再送せず、新しいログイン済みCompanion sessionでHydration後の`/asset-center`をfresh readbackした。
+- 前回と同じカードID列、control count `137`、`ボードにコピー` count `26`で、画面上の非同期反映は確認できなかった。これは保存失敗の断定でも成功の証明でもない。
+- 前回transactionの`providerReceipt=null`、`sourceSync=null`、`reconciliation=null`を維持したまま、再送なしで終了した。cleanup receiptは`closed=[1980922985]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: Lightの遅延readbackは`NO_VISIBLE_CHANGE`。provider receipt／source sync／保存完了は`NOT_PROVEN`であり、Heavyとの完全な成果物同一性も未確認。

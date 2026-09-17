@@ -3705,3 +3705,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Canvas Hydration後に保存・素材表示・権利確認・生成入口をreadbackし、権利確認・生成は未操作
 - [x] 画像URLがremoteでも、Heavyの保存カード契約上はlocal artifact handoffとして動作しているため、Light先頭remoteカードとの直接同一性は成立しないと確定
 - [ ] 同一artifact ID／同一保存段階をLight／Heavy双方で用意できる正式なread-only比較条件、provider receipt、source sync、reconciliation
+
+### 2026-09-17 continuation checkpoint — Light remote-copy delayed readback
+- [x] 前回のLight remote-card `ボードにコピー`操作後、再実行せず時間を置いた新規Companion sessionでfresh readback
+- [x] Light `/asset-center`のカードID表示、control count=137、`ボードにコピー` count=26を再確認し、前回と画面差分なし
+- [x] 前回transactionの`providerReceipt=null`／`sourceSync=null`を維持し、非同期反映・保存完了を推測しないことを確認
+- [x] tab close、lease解放、`unknown_effect=[]`、foreign mutationなしをcleanup receiptで確認
+- [ ] 正式なprovider/source-sync receiptまたは同一artifact IDを使ったLight／Heavy比較条件
