@@ -4755,3 +4755,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 本番HeavyをCompanionで再読込し、Light／Heavyを同一viewportでfresh readbackした。h6は`222/220`、`478/476`、`734/732`、textareaは`787/785`、告知リンクは`(326,177)/(325.31,175)`、ロゴ幅は`124/125.75`で、主要レイアウト差は約2px以内だった。
 - Lightの生成操作は`権限がありません`、Heavyは`権利を確認してAI生成`であり、権利確認ゲートを自動承認・撤廃していない。アップロード、生成、外部送信、provider receiptは未実行。
 - 判定: `/tools/fabric`主要レイアウトは`UI_PASS`、権限状態の完全一致と入力後／生成後／成果物フローは`NOT_PROVEN`。provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。
+
+## 2026-09-17 Heavy Asset Center修正版の配信確認
+
+- Zeabur deployment `6aab3ef0dc088f64d1813dae` が`RUNNING`であることを確認した。
+- Heavy本番の`LightchainLibraryPage.BZ5eUrwy.js`をread-onlyで取得し、Light正本に合わせた`プレビュー`、`ダウンロード`、`削除`、`名前を編集`、`コピーを作成します`の文言を確認した。
+- 判定: 修正版chunkの配信は`PASS`。ただしCompanionの同一タブreload・Hydration後visual readbackは、未解決のPrinting upload unknown-effect reconciliationが解消されるまで実施しない。provider receipt、source sync、reconciliation、cleanup、実成果物の再利用は未完了。
