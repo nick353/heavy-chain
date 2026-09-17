@@ -18,6 +18,7 @@ import {
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { mergeFashionStudioProjectCards } from '../lib/fashionStudioProjects';
 import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import {
@@ -541,18 +542,9 @@ export function FashionStudioPage() {
       title: artifact.title || 'Untitled',
       updatedAt: artifact.createdAt,
       imageUrl: artifact.imageUrl,
-      source: 'local' as const,
+      canvasProjectId: artifact.canvasProjectId,
     }));
-    const remoteProjectCards = remoteProjects.map((project) => ({
-      ...project,
-      source: 'remote' as const,
-    }));
-    const seenProjectIds = new Set<string>();
-    const allProjectCards = [...remoteProjectCards, ...localProjectCards].filter((project) => {
-      if (seenProjectIds.has(project.id)) return false;
-      seenProjectIds.add(project.id);
-      return true;
-    });
+    const allProjectCards = mergeFashionStudioProjectCards(remoteProjects, localProjectCards);
     const projectsPerPage = 30;
     const projectPageCount = Math.max(1, Math.ceil(allProjectCards.length / projectsPerPage));
     const visibleProjectCards = allProjectCards.slice((projectPage - 1) * projectsPerPage, projectPage * projectsPerPage);
