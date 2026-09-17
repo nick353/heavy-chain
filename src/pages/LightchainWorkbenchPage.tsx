@@ -6375,14 +6375,13 @@ export function LightchainWorkbenchPage() {
       {isFeatureDetail && (
         <aside className="fixed left-4 top-[66px] z-20 hidden w-20 flex-col gap-3 lg:flex" aria-label="ツールバー">
           {[
-            ['ツールバー', LayoutGrid],
-            ['デザインツール', WandSparkles],
-            ['フィッティングツール', Shirt],
-            ['グラフィックデザインツール', ImagePlus],
-            ['衣類生産ツール', Boxes],
-          ].map(([label, Icon]) => {
-            const ToolIcon = Icon as typeof LayoutGrid;
-            return <div key={label as string} className={`flex min-h-20 flex-col items-center justify-center rounded-xl border border-white/10 bg-[#252a2d] px-1 text-center text-[10px] leading-4 ${activeSourceCategory === 'graphics' ? 'text-cyan-300' : 'text-neutral-400'}`}><ToolIcon className="mb-1 h-7 w-7" /><span>{label as string}</span></div>;
+            ['ツールバー', 'https://jp.linkaigc.com/routeIcons/ic_工具.svg', '/lightchain?category=recommended', 'recommended'],
+            ['デザインツール', `https://jp.linkaigc.com/routeIcons/服装设计工具-${location.pathname === '/tools/fabric' ? '选中' : '未选'}.svg`, '/tools/fabric', 'planning'],
+            ['フィッティングツール', `https://jp.linkaigc.com/routeIcons/模特试衣工具-${location.pathname === '/model' ? '选中' : '未选'}.svg`, '/model', 'fitting'],
+            ['グラフィックデザインツール', `https://jp.linkaigc.com/routeIcons/图案创作工具-${activeSourceCategory === 'graphics' ? '选中' : '未选'}.svg`, '/tools/pattern-to-vector', 'graphics'],
+            ['衣類生産ツール', 'https://jp.linkaigc.com/routeIcons/生产工具-未选.svg', '/tools/fabric', 'planning'],
+          ].map(([label, iconUrl, to, category]) => {
+            return <Link key={label} to={to} aria-current={category === activeSourceCategory ? 'page' : undefined} className={`flex min-h-20 flex-col items-center justify-center rounded-xl border border-white/10 bg-[#252a2d] px-1 text-center text-[10px] leading-4 ${category === activeSourceCategory ? 'text-cyan-300' : 'text-neutral-400'}`}><img src={iconUrl} alt="" className="mb-1 h-7 w-7 object-contain" /><span>{label}</span></Link>;
           })}
         </aside>
       )}
