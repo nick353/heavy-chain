@@ -5390,3 +5390,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - これは同一routeが全artifactを無条件に復元する契約ではなく、`/model`のgeneric library artifact復元と`/fitting`のFitting専用feature種別復元の差である。auth-state、認証失敗、provider生成失敗とは扱わない。
 - 外部生成、アップロード、権利確認、provider送信は実行していない。cleanup receiptは`closed=[1980922988]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: canonical `/model`のartifact復元は`UI_PASS`、互換`/fitting`のfeature-specific復元も契約どおりの`UI_PASS`。Fitting専用artifactでのLight／Heavy同一性、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Fitting-specific artifact reuse
+
+- Heavy `/asset-center`で`fitting-background-draft`カードを一意に特定し、`ボードにコピー`を1回だけ実操作した。`https://heavy-chain.zeabur.app/canvas/new?sourceArtifactId=fitting-draft-98718413-7ea3-4a1f-87b1-1804ae2ec957`への遷移とvisual readbackを確認した。
+- 同一artifactを`/fitting?libraryArtifactId=fitting-draft-98718413-7ea3-4a1f-87b1-1804ae2ec957`へ渡すと、Hydration後に`AIフィッティング入力`、衣服画像、Fitting入力、`高精度AIで切り抜く`、モデル画像、条件設定、権利確認、`AI生成`、`条件プレビューを保存`、`生成履歴`をreadbackした。権利確認は未選択、AI生成と保存は未操作。
+- 同一artifactを`/model?libraryArtifactId=fitting-draft-98718413-7ea3-4a1f-87b1-1804ae2ec957`へ渡すと、`衣服の画像 (1/4)`、Gallery素材、説明生成、参考画像、`Canvasに注文票を保存`、`AI生成`、`生成履歴`をreadbackした。Fitting専用artifactはcanonical model workbenchでも衣服入力として復元されることを確認した。
+- これはHeavy内部の同一artifactに対するFitting／Model両routeの再表示・再利用`UI_PASS`である。ただしLight側で同一artifact ID・同一保存段階を揃えた比較、provider receipt、source sync、reconciliationは未確認であり`NOT_PROVEN`。
+- 外部生成、アップロード、権利確認、provider送信は実行していない。Companion cleanup receiptは`closed=[1980922990]`、lease解放、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。

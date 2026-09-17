@@ -3731,3 +3731,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] `npm run build` PASS（Vite 8.0.16、2553 modules、production dist生成）
 - [x] 今回はソース変更なしのため、本番再デプロイは行わず、既存deployment readbackと分離
 - [ ] 本番Light／Heavyの同一artifactでの再表示／再利用、provider receipt、source sync、reconciliation
+
+### 2026-09-17 continuation checkpoint — Fitting-specific artifact reuse
+- [x] Heavy `/asset-center`で`fitting-background-draft`カードを一意に特定し、`ボードにコピー`を1回だけ実操作
+- [x] `/canvas/new?sourceArtifactId=fitting-draft-98718413-7ea3-4a1f-87b1-1804ae2ec957`への到達を確認
+- [x] 同一artifactを`/fitting?libraryArtifactId=...`へ渡し、衣服入力、Fitting入力、切り抜き、モデル画像、条件、権利確認、AI生成、生成履歴をfresh semantic・visual readback
+- [x] 同一artifactを`/model?libraryArtifactId=...`へ渡し、`衣服の画像 (1/4)`、Gallery素材、説明生成、参考画像、Canvas保存、AI生成、生成履歴をfresh semantic・visual readback
+- [x] 権利確認チェックは未選択、AI生成・条件プレビュー保存・provider送信は未操作。Companion cleanup receiptはtab close、lease解放、unknown effectなし、foreign mutationなしで完了
+- [ ] Light側で同一Fitting専用artifactを取得できる条件、provider receipt、source sync、reconciliation
