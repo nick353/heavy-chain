@@ -5251,3 +5251,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Light同一run readbackの40px、brand disabled styling、`aria-disabled=null`と一致した。権利ゲートをクリック・自動承認・外部送信していない。
 - Companion cleanup receiptは`closed=[1980922908]`、`missing=[]`、`retained=[]`、`unknown_effect=[]`、`leases_released=1`、`lease_release_confirmed=true`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
 - 判定: Creator権限ロックの本番見た目／DOM parityは`UI_PASS`。全画面・全カテゴリ・成果物保存／再利用、provider receipt、source sync、reconciliationは引き続き未完了。
+
+## 2026-09-17 Same-run post-deploy asset-center comparison
+
+- 同一ログイン済みCompanion sessionでLight／Heavyの`/asset-center`をfresh navigateし、Heavyは`ワークスペースを準備しています`のdetachedを待ってからexportした。
+- Light側は`ライブラリー／マイライブラリー／履歴アップロード／生成履歴／一括操作／画像／動画`を表示し、Heavy側も同じ主要ライブラリー・一括操作・`プレビュー／ボードにコピー`構造を表示した。
+- Heavy側のHydration後表示には保存カード9件相当が確認できた一方、Light側は別ユーザー／正本データとして多数のカードIDを表示した。件数・カード内容の差は`DATA_SCOPE_DIFF`であり、Lightデータの推測同期は行っていない。
+- Light／Heavyとも外部生成、アップロード、削除、権利確認、provider送信は実行していない。Companion cleanup receiptは2タブclose、2 lease release、foreign tabs mutated=false、external_action_executed=falseで完了した。
+- 判定: ライブラリー主要シェル・一括操作表示は`UI_PASS`、保存データ完全一致・全カード詳細／再利用・provider receipt／source sync／reconciliationは`NOT_PROVEN`。

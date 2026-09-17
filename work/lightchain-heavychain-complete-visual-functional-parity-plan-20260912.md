@@ -3600,3 +3600,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Companion session/tab/lease cleanup receiptを確認
 - [ ] Light全画面・全カテゴリ・全主要導線とHeavyのpixel/interaction parityを完了
 - [ ] 成果物の生成・保存・再表示・再利用、およびprovider receipt/source sync/reconciliationを個別に証明
+
+### 2026-09-17 continuation checkpoint — Asset-center post-deploy comparison
+- [x] Light／Heavyの`/asset-center`を同一Companion sessionでfresh navigate
+- [x] HeavyのHydration待機後に主要ライブラリー・一括操作・preview／Canvas copy導線をreadback
+- [x] 保存カード件数・内容のユーザー別差を`DATA_SCOPE_DIFF`として記録し、推測同期をしないことを確認
+- [x] 外部効果なし、2タブclose、2 lease releaseのcleanup receiptを確認
+- [ ] Light／Heavy全カードの正規データ同一性、詳細遷移、再表示／再利用を証明
