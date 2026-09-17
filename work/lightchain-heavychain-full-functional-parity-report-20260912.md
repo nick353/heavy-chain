@@ -4767,3 +4767,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 保持中のHeavy `/tools/printing` を再readbackし、`input[type=file]`に`garment-source.png`が1件保持され、画面内プレビューも表示されていることを確認した。
 - 可視provider成功テキストは存在せず、正規`companion_inspect_reconciliation`は`reconciliation_success_evidence_not_found`。ブラウザ添付状態とprovider receiptは分離して扱う。
 - 判定: browser attachment readbackは`PASS`、provider completion／source sync／reconciliation／cleanupは`NOT_PROVEN`。再アップロードや外部送信の再実行はしていない。
+
+## 2026-09-17 最新parity sourceの本番deployment開始
+
+- 旧`RUNNING` deploymentがcommit `7b666f3`で、Printingレール・Asset Center修正を含まないことを確認した。
+- parity修正と計画／レポート更新を含むcommit `ac8fac0`を`origin/main`へpushし、Zeabur deployment `6aab425d05af289f92f98354`を生成した。
+- 現時点のdeployment状態は`BUILDING`。`RUNNING`到達とCompanion再読込後のvisual readbackまでは未完了。provider receipt／source sync／reconciliation／cleanupも未完了。
