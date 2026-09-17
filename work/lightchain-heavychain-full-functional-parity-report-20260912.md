@@ -5087,3 +5087,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyのfresh semantic readbackは新規ファイル＋保存プロジェクト18件＋参考事例5件、Lightは新規ファイル＋保存プロジェクト30件＋ページング`1 2 3 4 5 … 14`＋参考事例5件を表示した。Heavy側のCanvas API到達は確認できたが、返却データの件数・名称・ページング内容はLightと一致していない。
 - `Cloudflare API`の実装はCanvas文書を`brand_id`単位で最大100件取得するため、Heavyフロントの1ページ30件制限が原因ではない。Lightの30件はLight固有の`drawingBoardProject/page`応答であり、Heavyの実データ同期／スコープ差分が残る。
 - 判定: 認証・currentBrand hydration・Canvas API到達は`UI_PASS`／`NOT_PROVEN`から前進。実データの完全一致、Lightデータの移送、provider receipt、source sync、reconciliation、cleanupは未完了。Lightのデータを推測でハードコードする変更は行わない。
+
+## 2026-09-17 Creator all-category tab and selection readback
+
+- Heavy本番`/creator`をログイン済みCompanionの新規task-ownedタブで開き、カテゴリパネルを一度開いた。
+- `レディース`、`メンズ`、`女の子`、`男の子`の4タブをそれぞれ一回ずつ実操作し、選択状態とカテゴリ項目群をfresh semantic・visual readbackした。Lightの実測済み構成に対応し、レディース／女の子は同じ構成、メンズ／男の子は同じ縮約構成であることを確認した。
+- `レディース`で`ニット`を一度選択し、`レディース・トップス・ニット編み`、選択状態、`画像`／`生地画像`入力、disabled`権限がありません`を確認した。外部生成、アップロード、権利確認、保存、provider送信は実行していない。
+- 判定: Heavyの4対象タブ切替と代表カテゴリ選択後UIは`UI_PASS`。全カテゴリ項目の個別選択、実入力、生成・保存・再表示・再利用、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。

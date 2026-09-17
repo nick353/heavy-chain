@@ -3428,3 +3428,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavy 18件とLight 30件＋ページング`1 2 3 4 5 … 14`をfresh比較
 - [ ] Heavy APIの返却データ件数・名称・更新日時・previewをLight正本と一致させる
 - [ ] 一致後に全ページ、カード遷移、再表示、再利用を再検証
+
+### 2026-09-17 Creator all-category tab and selection readback
+- [x] Heavy本番`/creator`のカテゴリパネルをCompanionで表示
+- [x] `レディース／メンズ／女の子／男の子`を各1回実操作し、カテゴリ構成をfresh readback
+- [x] `レディース`の`ニット`を選択し、選択パンくず・画像／生地画像・権限ロックを確認
+- [ ] Light側の同4タブ・全カテゴリ項目を同一初期状態で個別比較
+- [ ] 実入力、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
