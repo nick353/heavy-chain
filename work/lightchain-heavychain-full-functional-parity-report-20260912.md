@@ -5259,3 +5259,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy側のHydration後表示には保存カード9件相当が確認できた一方、Light側は別ユーザー／正本データとして多数のカードIDを表示した。件数・カード内容の差は`DATA_SCOPE_DIFF`であり、Lightデータの推測同期は行っていない。
 - Light／Heavyとも外部生成、アップロード、削除、権利確認、provider送信は実行していない。Companion cleanup receiptは2タブclose、2 lease release、foreign tabs mutated=false、external_action_executed=falseで完了した。
 - 判定: ライブラリー主要シェル・一括操作表示は`UI_PASS`、保存データ完全一致・全カード詳細／再利用・provider receipt／source sync／reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Fashion Studio duplicate readback boundary
+
+- Light正規ルート`https://jp.linkaigc.com/flow/integration`を同一ログイン済みCompanion sessionで再表示し、Hydration後の保存カード約30件、14ページ、参考事例5件を画面テキストで確認した。`/studio`は404だったため比較対象から除外した。
+- Heavyで観測した`Fashion Studio: スタジオ案`は同じ画面内の別DOM位置に2件あり、単なるexport上の文字重複ではなく別カードとして確認できた。
+- ただしLight側には同名タイトルがなく、Lightは`Untitled`中心の別データ契約だった。したがって、Lightとの完全一致の根拠なしにremote同名dedupeを追加するのは行わず、現時点は`DATA_SCOPE_DIFF`／`NOT_PROVEN`として保持した。
+- 直前のLightタブ作成`operation_effect_unknown`は、同一タブを読み戻して`/flow/integration`への到達を確認した。再送はせず、最終cleanup receiptでHeavy／Lightのtask-owned tabをclose、leaseを2件解放、`unknown_effect=[]`、`external_action_executed=false`を確認した。
+- 判定: Light正規ルートの再確認とCompanion cleanupは`UI_PASS`。Heavy全カードとLight全14ページの名称・preview・更新時刻・詳細／再利用の1対1突合、およびprovider receipt／source sync／reconciliationは未完了。

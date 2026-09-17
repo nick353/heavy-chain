@@ -3607,3 +3607,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 保存カード件数・内容のユーザー別差を`DATA_SCOPE_DIFF`として記録し、推測同期をしないことを確認
 - [x] 外部効果なし、2タブclose、2 lease releaseのcleanup receiptを確認
 - [ ] Light／Heavy全カードの正規データ同一性、詳細遷移、再表示／再利用を証明
+
+### 2026-09-17 continuation checkpoint — Fashion Studio duplicate readback boundary
+- [x] 直前のLightタブ作成結果不明（`operation_effect_unknown`）を同一タブのfresh readbackで確認し、再実行せず安全に解消
+- [x] Light正規ルート`/flow/integration`を表示待ちし、保存カード約30件・14ページ・参考事例5件を再確認
+- [x] Lightでは`Fashion Studio: スタジオ案`は存在せず、同名重複の比較対象は未成立であることを確認
+- [x] Heavy側の同名カード2件は別DOM位置の別カードとして観測したが、Lightのデータ契約と異なるため推測で重複排除実装を追加しないと判断
+- [x] Light/HeavyのCompanion task-owned tabをcloseし、lease解放・unknown effectなし・external actionなしをreceiptで確認
+- [ ] Light保存カードの正規名称・preview・更新時刻・詳細遷移を全14ページ分readbackし、Heavy全カードと1対1で突合
+- [ ] provider receipt、source sync、reconciliation、成果物保存／再表示／再利用を個別に証明
