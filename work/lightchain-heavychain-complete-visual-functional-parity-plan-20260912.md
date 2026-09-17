@@ -3384,3 +3384,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 同じCanvas URLを再読込し、再び`サーバー確認済み`を確認
 - [ ] Light側の同一プロジェクト内容・Canvas object・pixel-level完全一致
 - [ ] Canvasの生成・素材追加・エクスポート実効果、provider receipt、source sync、reconciliation、cleanup
+- [x] `Galleryから追加`モーダルと5つの素材ライブラリータブを表示確認
+- [ ] 素材選択・Canvas配置・エクスポート実効果、Lightとの同一成果物比較
