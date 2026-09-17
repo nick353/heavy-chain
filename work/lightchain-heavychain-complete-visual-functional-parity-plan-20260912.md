@@ -3480,3 +3480,9 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Lightの`drawingBoardProject/page`と`caseList`へ到達し、30件＋ページ表示`1 2 3 4 5 … 14`を確認
 - [ ] Heavyの保存データ供給元・件数・名称・更新日時・previewをLight正本と一致させる
 - [ ] 一覧の全ページ、カード遷移、再表示、再利用を同期後に再検証
+
+### 2026-09-17 Light Creator initial category readback
+- [x] Light本番`/creator`の初期状態をCompanionでfresh readback
+- [x] デザイン選択、カテゴリ選択、画像アップロード、生成履歴、インスピレーション、権限disabledを確認
+- [ ] Lightの4カテゴリを個別選択し、全項目をHeavyと比較
+- [ ] 実入力、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup

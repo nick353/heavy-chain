@@ -5132,3 +5132,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightは`/api/light-chain-yunxiang-saas-server/drawingBoardProject/page?current=1&size=31&boardProjectType=integrationCustom`と`caseList?boardProjectType=integrationSystem`へ到達し、保存プロジェクト30件、ページ表示`1 2 3 4 5 … 14`を確認した。
 - 両方とも認証済み画面と参考事例5件は表示できたが、保存データの供給元、件数、ページングが一致していない。Resource Timingは取得経路の証拠であり、provider receiptや業務完了の証拠ではない。
 - 判定: Heavyの画面表示は動作しているが、Light正本との保存データ完全一致は未達。Heavy APIのデータ同期またはLight互換の一覧・ページング契約を確定してから再検証が必要。
+
+## 2026-09-17 Light Creator initial category readback
+
+- Light本番`/creator`を同一ログイン済みCompanionプロフィールでfresh readbackした。
+- 初期状態で「デザインを選択してください」「カテゴリを選択してください」「画像をアップロード」、生成履歴、インスピレーション、権限がありません（disabled）を確認した。
+- Heavy側で既に確認済みの4カテゴリ切替・代表選択と、Light側の初期選択前状態を比較する基礎証拠を追加した。Lightのカテゴリ選択コントロールはsemantic locatorで一意に解決できず、選択操作は再送していない。
+- Companion cleanup receiptはlease解放済み、foreign tabs mutated=false、external_action_executed=false。
+- 判定: Light初期Creatorシェルは確認済み。4カテゴリ個別選択と全項目比較、実入力・生成・保存・再利用は未完了。
