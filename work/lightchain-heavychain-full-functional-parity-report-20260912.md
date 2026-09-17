@@ -5276,3 +5276,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - デプロイ後Heavyの同じカードをfresh Companionで実クリックし、`https://heavy-chain.zeabur.app/flow/integration/detail?boardProjectCode=e394897b-5246-45bc-84a0-09abab91760c&boardProjectType=integrationCustom`へ遷移した。exportにはLightと同じ主要UI構造（画像検索、指令と参考画像、メイン画像、参考画像、指示テキスト、生成設定、AI生成、生成結果）が出現した。
 - クリックtransactionはブラウザのroute遷移としてverifiedだが、Companionの`provider_completion`／`source_sync`は未確認で、外部AI生成・アップロード・権利確認・保存送信は実行していない。cleanup receiptはtab close、lease release、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: 保存カード→Light互換detail routeと主要詳細UIシェルは`UI_PASS`。詳細画面の入力値・preview・履歴・成果物保存／再表示／再利用、provider receipt／source sync／reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Fashion Studio detail canvas shell implementation
+
+- Lightの実スクリーンショット／semantic readbackで確認した詳細画面の主要構造（ドット背景、左プロジェクトパネル、浮遊ツールレール、キャンバス上のノード、左下生成パネル、下部ツールバー、ズーム操作）をHeavyへ実装した。
+- Heavyの入力欄、文字数表示、全削除、生成設定、AI生成ボタンは維持した。AI生成ボタンは入力保持のnoticeだけを表示し、権利確認前の外部生成・アップロード・provider送信は実行しない。
+- 詳細シェル回帰テスト6/6（関連テスト合計11/11）、`npm run typecheck`、`npm run build`、`git diff --check`はPASS。実装は本番デプロイ前の状態。
+- 判定: ローカルの詳細画面シェル構造は`PASS`。本番反映後のLight／Heavy visual readback、入力値・preview・履歴・成果物保存／再表示／再利用、provider receipt／source sync／reconciliationは未確認。
