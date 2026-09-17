@@ -3631,7 +3631,8 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Light実画面の詳細スクリーンショットとsemantic readbackで、ドット背景・左パネル・ツールレール・ノード・左下生成パネル・下部ツールバー・ズームUIを確認
 - [x] Heavy詳細画面を中央フォームカードからLight互換キャンバス型シェルへ変更（入力保持と権利確認前の外部生成停止は維持）
 - [x] 詳細シェルの回帰テスト、typecheck、production build、diff checkを実行
-- [ ] Zeabur本番デプロイとRUNNING確認
-- [ ] 同一CompanionでLight／Heavyのdesktop・900px幅のvisual/semantic readbackとcleanup receiptを取得
+- [x] Zeabur本番デプロイ `6aabcdf1a61819c1c58e4170`、Docker/Vite/model asset/uploadログ、`RUNNING`を確認
+- [ ] 同一CompanionでLight／Heavyのdesktop・900px幅のvisual/semantic readbackを取得（Light詳細URLが読み込み中のままCompanion query/screenshot timeout）
+- [x] Companion task-owned tabをcloseし、foreign tab未変更・external action未実行のcleanup receiptを取得
 - [ ] Light／Heavy詳細画面の入力値・preview・履歴・保存成果物の完全一致を突合
 - [ ] provider receipt、source sync、reconciliation、成果物保存／再表示／再利用を個別に証明

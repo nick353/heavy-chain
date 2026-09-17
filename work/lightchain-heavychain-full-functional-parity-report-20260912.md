@@ -5283,3 +5283,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyの入力欄、文字数表示、全削除、生成設定、AI生成ボタンは維持した。AI生成ボタンは入力保持のnoticeだけを表示し、権利確認前の外部生成・アップロード・provider送信は実行しない。
 - 詳細シェル回帰テスト6/6（関連テスト合計11/11）、`npm run typecheck`、`npm run build`、`git diff --check`はPASS。実装は本番デプロイ前の状態。
 - 判定: ローカルの詳細画面シェル構造は`PASS`。本番反映後のLight／Heavy visual readback、入力値・preview・履歴・成果物保存／再表示／再利用、provider receipt／source sync／reconciliationは未確認。
+
+## 2026-09-17 Fashion Studio detail canvas shell deployment
+
+- コミット`cb5d0e1`をZeaburの正規対象（workspace `personal`、project `automation-wiled`、service `heavy-chain`）へデプロイし、deployment `6aabcdf1a61819c1c58e4170`が`RUNNING`になった。buildログはDocker/zbpack-v2、Vite build、`heavy-chain-model-asset-ready:44173029`、blob upload完了を示した。
+- 本番CompanionでLight詳細URLを同一プロフィールから開こうとしたが、タブが`loading`のままDOM queryが`operation_timeout`、screenshotが`screenshot_target_changed`になった。これはLight本番の画面一致を証明しないため、同じ操作を再送せず停止した。
+- cleanup receiptはtask-owned tab 1件をclose、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。外部生成、アップロード、権利確認、provider送信は実行していない。
+- 判定: デプロイは`DEPLOY_PASS`、Heavy詳細シェルの本番visual readbackは`NOT_PROVEN`。残る正確な blockerはLight詳細URLのCompanion読み込み／DOM・スクリーンショット応答であり、provider receipt、source sync、reconciliation、成果物保存／再表示／再利用も未完了。
