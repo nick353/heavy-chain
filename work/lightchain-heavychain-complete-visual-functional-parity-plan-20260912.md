@@ -3421,3 +3421,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Lightの`drawingBoardProject/page?current=1&size=31&boardProjectType=integrationCustom`と`caseList`取得を確認
 - [ ] Heavyのprofile／brands応答、currentBrand hydration、Canvas document API到達を修正・再確認
 - [ ] remote project一覧取得後に件数・ページング・カード再利用をLight正本と比較
+
+### 2026-09-17 Fashion Studio project-data hydration re-readback
+- [x] Zeabur最新deployment `6aaba731fa283769e51c1a5a`の`RUNNING`を確認
+- [x] HeavyでHydration後の`/v1/canvas-documents?brand_id=...`到達を確認
+- [x] Heavy 18件とLight 30件＋ページング`1 2 3 4 5 … 14`をfresh比較
+- [ ] Heavy APIの返却データ件数・名称・更新日時・previewをLight正本と一致させる
+- [ ] 一致後に全ページ、カード遷移、再表示、再利用を再検証
