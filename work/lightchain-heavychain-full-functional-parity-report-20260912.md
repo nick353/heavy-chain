@@ -5324,3 +5324,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyは`選択済み：0 / 9`と、Fashion Studio、design-agent、model-matrix、campaign-image、generate-image等の9件相当の保存カードを表示した。Lightは多数の正本カードIDと`画像／動画`表示を返し、Heavyとカード名称・件数が一致しないため、これは実装差と断定せず`DATA_SCOPE_DIFF`とした。
 - 保存カードのpreview／board copy controlsの存在は`UI_PASS`。ただし、全カードの正規データ同一性、詳細遷移、入力値、保存状態、再表示／再利用、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
 - 外部生成、アップロード、削除、権利確認、provider送信は実行していない。cleanup receiptはtask-owned tabs `[1980922970,1980922971]` close、2 lease release、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
+
+## 2026-09-17 Saved-card preview detail readback
+
+- Lightの`/asset-center`先頭カード（ID表示）で`プレビュー`を1回実クリックした。URLは変わらず、`SELECTED ASSET`、`戻る`、`コピーを作成します`、`ダウンロード`、`削除`、`名前を編集`、保存カードIDとプレビュー表示をreadbackした。
+- Heavyの`/asset-center`先頭カード（`Fashion Studio: スタジオ案`）でも同じ`プレビュー`を1回実クリックした。`Primary input`、`Model`、`Pose`、`Background`、`Props`、`Product line`、`Reference`、`Next step`を含む詳細パネルとLight同等の操作群をreadbackした。
+- 両方ともブラウザ内の選択・詳細表示であり、外部生成・アップロード・削除・権利確認・provider送信は実行していない。Companion transactionはbrowser readback verified、provider completion／source syncはunverified。cleanup receiptは`closed=[1980922974,1980922975]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- `scripts/verify-library-canvas-handoff.test.ts`は11/11 PASS。別のalias suiteには既存dirty sourceに起因する2失敗（`PermissionLockedButton` import、dialogue prompt期待値）が残るため、全体greenとは扱わない。
+- 判定: 保存カードのpreview→詳細パネル構造は`UI_PASS`。LightとHeavyの保存データ同一性、`ボードにコピー`／`コピーを作成します`の保存・再利用効果、provider receipt、source sync、reconciliationは`NOT_PROVEN`。

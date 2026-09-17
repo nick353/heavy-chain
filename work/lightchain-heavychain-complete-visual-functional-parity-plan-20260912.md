@@ -3670,3 +3670,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavyは`選択済み：0 / 9`と9件相当の保存カードを表示し、Lightは別ユーザー／正本側の多数のカードIDと`画像／動画`を表示したため、カード内容・件数は`DATA_SCOPE_DIFF`として扱った
 - [x] 外部生成、アップロード、削除、権利確認、provider送信は行わず、2 lease解放・2 tab close・`unknown_effect=[]`・`external_action_executed=false`をcleanup receiptで確認
 - [ ] 全カードの正規名称、詳細、preview、保存状態、再表示／再利用の1対1突合、およびprovider receipt／source sync／reconciliation
+
+### 2026-09-17 continuation checkpoint — Saved-card preview detail readback
+- [x] Lightの先頭保存カードで`プレビュー`を1回実クリックし、同一`/asset-center`内の`SELECTED ASSET`詳細パネルをreadback
+- [x] Heavyの先頭保存カードでも`プレビュー`を1回実クリックし、Lightと同じ戻る・コピー作成・ダウンロード・削除・名前編集、入力情報、次工程表示をreadback
+- [x] LightはID表示、HeavyはFashion Studioタイトル表示であり、カードデータの一致ではなく`DATA_SCOPE_DIFF`。詳細UI構造は`UI_PASS`
+- [x] `verify-library-canvas-handoff.test.ts` 11/11 PASS、外部生成／アップロード／削除／権利確認／provider送信なし、2 tab close・lease解放・unknown effectなしを確認
+- [ ] `ボードにコピー`／`コピーを作成します`の保存・再利用効果を、外部送信とprovider receiptを分離した承認済み対象で突合
