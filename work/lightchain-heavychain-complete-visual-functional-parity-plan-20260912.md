@@ -3218,6 +3218,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] アップロード、ボードコピー、削除、名前変更の外部状態readback
 - [ ] 生成成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
+### 2026-09-17 Printing initial-state readback
+
+- [x] Light／Heavy `/tools/printing`を同じCompanionプロフィールでHydration完了後に比較
+- [x] ツールレール、4タブ、終了告知、入力欄、スポット／全体、履歴、右プレビューの主要構造を確認
+- [ ] ユーザー保持状態を壊さず、同一入力条件でpixel-level比較
+- [ ] 印刷画像のアップロード、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
 ### 2026-09-17 Creator inspiration video geometry parity deployment readback
 
 - [x] Light／Heavy `/creator`をfresh screenshot・semantic readbackし、中央動画幅の差分を特定

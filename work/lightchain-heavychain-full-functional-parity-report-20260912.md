@@ -4963,3 +4963,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 両方で同じ8件の履歴アップロード素材、同じ画像順、左カテゴリ、パンくず、一括操作、プレビュー／ボードにコピー導線を確認した。初回のLight読み込み中表示は待機後に解消したため、差分とは扱っていない。
 - 同じ先頭素材の`プレビュー`を両方で開き、画像表示と`戻る`で一覧へ復帰する導線を実操作確認した。Heavyは選択素材のメタデータ本文と`選択した素材を閉じる`を追加表示し、Lightは名前中心の詳細表示だった。
 - 判定: Asset Centerの一覧・画像順・プレビュー・戻りは`UI_PASS`。詳細パネルのsemantic／pixel-level完全一致、アップロード・コピー・削除・名前変更の外部状態readback、生成成果物のprovider receipt／source sync／reconciliation／cleanupは未完了。
+
+## 2026-09-17 Printing initial-state readback
+
+- Light／Heavy `/tools/printing`を新規Companionタブで開き、Hydration完了後にfresh semantic・screenshot readbackを取得した。
+- 両方でツールレール、素材ツール4タブ、終了告知、`今すぐ体験`、プリント入力、スポット／全体、リセット、生成履歴、右側プリントイメージ領域を確認した。主要ルーティングと構造は`UI_PASS`。
+- Heavyには既存セッションの参考画像が保持され、Lightは未入力だったため、入力プレビューとAI生成ボタンの見た目が異なった。既存入力を勝手にリセットせず、ユーザー状態差として扱った。
+- Light／Heavyともにアップロード・外部生成・provider receipt・source sync・保存／再表示／再利用・reconciliation・cleanupはこのreadbackでは実行していない。入力なしの同一初期状態でのpixel-level比較は`NOT_PROVEN`。
