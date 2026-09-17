@@ -3571,3 +3571,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Light全14ページとHeavy全カードの詳細・preview・更新時刻・再利用を完全突合
 - [ ] 全画面・全route・desktop/mobile・logout→再ログインを監査
 - [ ] provider receipt、source sync、reconciliation、成果物保存／再利用を個別に証明
+
+### 2026-09-17 continuation checkpoint — Heavy major-route audit
+- [x] ログイン済みCompanionの同一task-owned tabでHeavy主要8 routeへ遷移
+- [x] 各routeのURL・タイトルをfresh readback
+- [x] `/gallery`の見出し、filter、selection、保存カード情報をsemantic readback
+- [x] 権利確認・アップロード・provider送信を実行していないことを確認
+- [ ] Light側の同一routeとの画面・操作・保存成果物を1対1で比較
+- [ ] 残りroute、desktop/mobile、logout→再ログインを監査
+- [ ] provider receipt、source sync、reconciliation、成果物保存／再表示／再利用を個別に証明

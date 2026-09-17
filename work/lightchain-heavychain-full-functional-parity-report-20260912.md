@@ -5225,3 +5225,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy本番のログイン済みCompanionでHydration完了後に保存カードをreadbackし、`Fashion Studio: スタジオ案`を1回だけクリックした。post-readbackは`https://heavy-chain.zeabur.app/canvas/e394897b-5246-45bc-84a0-09abab91760c`、タイトルは`Heavy Chain | AI制作ワークスペース`で、保存カードからCanvas再利用先へ遷移するブラウザUI効果を確認した。
 - Companion cleanup receiptは`closed=[1980922898]`、`missing=[]`、`retained=[]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
 - 判定: 保存カード→Canvasルーティングは`UI_PASS`。このクリックはブラウザ遷移の証拠であり、成果物のprovider receipt、source sync、reconciliation、保存内容の完全一致を意味しない。外部生成、アップロード、権利確認、provider送信は実行していない。
+
+## 2026-09-17 Heavy major-route continuation audit
+
+- 同一ログイン済みCompanionのtask-owned tabで、`/creator`、`/model`、`/tools/fabric`、`/tools/printing`、`/fitting`、`/agent`、`/asset-center`、`/gallery`へ順番にnavigateし、各遷移のURL・タイトルをfresh readbackした。全8ルートが`https://heavy-chain.zeabur.app/...`で表示され、タイトルは`Heavy Chain | AI制作ワークスペース`だった。
+- 最終`/gallery`では見出し`ギャラリー`、`すべて`／`お気に入り`、`選択`、保存カード3件のsemantic controlsをreadbackした。保存カードにはPrimary input、モデル、ポーズ、背景、次工程の情報が表示され、成果物を次工程へ渡す情報面の存在を確認した。
+- これはHeavy側のroute到達・画面シェル・一部保存カードのブラウザ証拠であり、Light側との全画面pixel-level一致、全カード詳細・preview・更新時刻突合、外部生成、provider receipt、source sync、reconciliation、成果物の完全な保存／再表示／再利用を証明しない。権利確認・アップロード・provider送信は実行していない。
+- Companion cleanup receiptは`closed=[1980922900]`、`missing=[]`、`retained=[]`、`unknown_effect=[]`、`leases_released=1`、`lease_release_confirmed=true`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
+- 判定: 8主要routeの到達は`UI_PASS`。Lightとの完全parityおよびprovider lifecycleは`NOT_PROVEN`。
