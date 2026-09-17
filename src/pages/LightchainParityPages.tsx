@@ -433,16 +433,17 @@ export function LightchainPrintingPage() {
         .lightchain-printing-parity input[type="file"] { color: rgba(255, 255, 255, 0.7); }
       `}</style>
       <div className="relative mx-auto w-full px-4 py-4 sm:px-5 lg:px-4">
-        <aside className="hidden" aria-label="ツールバー">
+        <aside className="absolute inset-y-0 left-0 hidden w-24 flex-col items-center gap-2 border-r border-white/10 bg-[#171b1c] px-2 py-4 lg:flex" aria-label="ツールバー">
           {[
-            ['ツールバー', Grid2X2],
-            ['デザインツール', WandSparkles],
-            ['フィッティングツール', Sparkles],
-            ['グラフィックデザインツール', ImageIcon],
-            ['衣類生産ツール', FolderOpen],
-          ].map(([label, Icon]) => {
+            ['ツールバー', Grid2X2, '/lightchain?category=recommended'],
+            ['デザインツール', WandSparkles, '/tools/fabric'],
+            ['フィッティングツール', Sparkles, '/model'],
+            ['グラフィックデザインツール', ImageIcon, '/tools/printing'],
+            ['衣類生産ツール', FolderOpen, '/tools/fabric'],
+          ].map(([label, Icon, to]) => {
             const ToolIcon = Icon as typeof Grid2X2;
-            return <div key={label as string} className={`flex min-h-20 flex-col items-center justify-center rounded-xl border border-white/10 bg-[#252a2d] px-1 text-center text-[10px] leading-4 ${label === 'グラフィックデザインツール' ? 'text-cyan-300' : 'text-neutral-400'}`}><ToolIcon className="mb-1 h-7 w-7" /><span>{label as string}</span></div>;
+            const active = label === 'グラフィックデザインツール';
+            return <Link key={label as string} to={to as string} aria-current={active ? 'page' : undefined} className={`flex min-h-20 w-full flex-col items-center justify-center gap-1 rounded-xl border px-1 text-center text-[10px] leading-4 transition ${active ? 'border-cyan-200/30 bg-cyan-300/15 text-cyan-100' : 'border-transparent text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}><ToolIcon className="mb-1 h-7 w-7" /><span>{label as string}</span></Link>;
           })}
         </aside>
         <div className="relative lg:pl-24">
