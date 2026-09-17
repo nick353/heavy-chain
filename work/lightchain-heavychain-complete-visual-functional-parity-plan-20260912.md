@@ -3677,3 +3677,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] LightはID表示、HeavyはFashion Studioタイトル表示であり、カードデータの一致ではなく`DATA_SCOPE_DIFF`。詳細UI構造は`UI_PASS`
 - [x] `verify-library-canvas-handoff.test.ts` 11/11 PASS、外部生成／アップロード／削除／権利確認／provider送信なし、2 tab close・lease解放・unknown effectなしを確認
 - [ ] `ボードにコピー`／`コピーを作成します`の保存・再利用効果を、外部送信とprovider receiptを分離した承認済み対象で突合
+
+### 2026-09-17 continuation checkpoint — Heavy saved-card Canvas handoff
+- [x] Heavy本番の保存カード先頭「ボードにコピー」を1回実クリック
+- [x] `/canvas/new?sourceArtifactId=local-handoff-y5zknt4eud`へ遷移し、Canvasのプロジェクト名、保存、素材表示、素材を見る、生成入口、権利確認チェックをHydration後にreadback
+- [x] 再利用先で権利チェックは未選択、生成ボタンは外部効果ゲートとして未操作。provider送信・生成・アップロードなし
+- [x] Companion cleanup receiptでtab close、lease解放、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`を確認
+- [ ] Light側の同じ保存カード契約について、ボードコピー後のCanvas到達とsource identityを同一条件でreadbackし、provider receipt／source sync／reconciliationと分離して突合

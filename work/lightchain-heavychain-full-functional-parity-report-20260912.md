@@ -5332,3 +5332,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 両方ともブラウザ内の選択・詳細表示であり、外部生成・アップロード・削除・権利確認・provider送信は実行していない。Companion transactionはbrowser readback verified、provider completion／source syncはunverified。cleanup receiptは`closed=[1980922974,1980922975]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - `scripts/verify-library-canvas-handoff.test.ts`は11/11 PASS。別のalias suiteには既存dirty sourceに起因する2失敗（`PermissionLockedButton` import、dialogue prompt期待値）が残るため、全体greenとは扱わない。
 - 判定: 保存カードのpreview→詳細パネル構造は`UI_PASS`。LightとHeavyの保存データ同一性、`ボードにコピー`／`コピーを作成します`の保存・再利用効果、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Heavy saved-card Canvas handoff readback
+
+- Heavy本番の`/asset-center`で先頭保存カードの`ボードにコピー`を1回実クリックし、`https://heavy-chain.zeabur.app/canvas/new?sourceArtifactId=local-handoff-y5zknt4eud`へ遷移した。
+- Canvas Hydration後に、プロジェクト名、`保存`、`素材を見る`、保存素材を起点にした機能入口、`新しく生成`、`生成する`、権利確認チェックをreadbackした。sourceArtifactId付きで次工程のCanvasへ引き継ぐブラウザルーティングは`UI_PASS`。
+- 権利確認チェックは未選択のまま、`生成する`は押していない。provider送信、外部生成、アップロード、保存送信は実行していない。Companion cleanup receiptは`closed=[1980922978]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: Heavyの保存カード→Canvas handoff到達は`UI_PASS`。Light同一カードのCanvas到達、source identity完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
