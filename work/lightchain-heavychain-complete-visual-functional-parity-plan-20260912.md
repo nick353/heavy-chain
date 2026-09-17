@@ -3506,3 +3506,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavyで同じカテゴリを選択し、選択後UIをfresh readback
 - [ ] Light／Heavyの`権限がありません`ボタンpost-state差分（Light enabled／Heavy disabled）の意味を追加確認
 - [ ] 外部生成境界を維持したまま、必要ならHeavyのpost-stateを修正・テスト・deploy
+
+### 2026-09-17 Heavy Canvas D1 read-only source audit
+- [x] production D1の対象brandをread-only SQLで照合
+- [x] `canvas_documents` 20件、タイトル・更新日時・snapshot sizeを確認、変更0件
+- [ ] Heavy API→画面の取得・統合・表示差分を特定
+- [ ] Light APIの保存データと安全な正規readbackで同一性を比較
+- [ ] 同期方針確定後にのみ修正・テスト・deploy・Companion再確認

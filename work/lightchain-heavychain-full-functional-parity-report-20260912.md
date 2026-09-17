@@ -5163,3 +5163,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy本番でも同じ選択を実クリックし、同じ選択パンくず、画像／生地画像、カテゴリ一覧、生成履歴、権限表示を確認した。
 - 差分として、Lightは選択後の`権限がありません`ボタンがsemantic上`disabled=false`、Heavyの同ボタンは`disabled=true`だった。外部生成・権利確認・送信は行わず、Lightボタンのクリック後挙動は未確定のまま再送していない。
 - 判定: カテゴリ選択後の入力面は`UI_PASS`、権限ボタンのpost-stateは`NOT_PROVEN`。Heavyを単純に有効化すると外部生成境界を変えるため、Lightの権限ボタンが案内／無効果なのかを追加readbackしてから修正する。
+
+## 2026-09-17 Heavy Canvas D1 read-only source audit
+
+- Cloudflare D1 production `heavy-chain-production-db`をread-only SQLで照合し、対象brand `98718413-7ea3-4a1f-87b1-1804ae2ec957`の`canvas_documents`は20件だった。
+- 20件のタイトル、更新日時、snapshot byte数を取得し、最新は`Fashion Studio: スタジオ案`、最古は`制作: AIフィッティング`だった。クエリの`changes=0`、`rows_written=0`で、データ変更は行っていない。
+- したがってHeavy APIの一覧不足はD1に18件しかないことが原因ではなく、Companion画面での取得・統合・表示差分として追加調査が必要。Light側の30件＋14ページとの同一性は、Light APIの応答本文を正規ログインセッションから安全にreadbackできるまで未証明。
+- 判定: 保存データのsource-of-truth境界を更新。Lightデータの推測コピー、D1への移送、既存データの上書きは実施していない。
