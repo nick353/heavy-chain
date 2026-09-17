@@ -5306,3 +5306,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightの`/fitting`、`/gallery`、`/models`、`/patterns`は404だった一方、Heavyでは`/fitting`と`/gallery`が実画面、`/models`と`/patterns`が準備中placeholderを表示した。これは「Lightのcanonical routeに対するHeavy alias差分」であり、route parityは`NOT_PROVEN`。Heavy側の追加routeを勝手に削除せず、canonical／aliasの仕様決定後に修正する。
 - 権利checkbox、アップロード、AI生成、外部provider送信、保存送信はこの監査では実行していない。Heavy Fittingは権利checkbox未選択かつ`AI生成`／`条件プレビューを保存`がdisabledで、外部効果ゲートは維持されている。
 - 判定: Hydration待機を含む画面到達・主要control readbackは`UI_PASS`。Light canonical routeとの完全なrouting／pixel／interaction parity、全カテゴリの入力後状態、成果物の保存・再表示・再利用、provider receipt、source sync、reconciliationは`NOT_PROVEN`。Companion lease解放後に外部効果なしで監査を終了した。
+
+## 2026-09-17 Canonical AI fitting entrypoint post-deploy readback
+
+- Light正本のAIフィッティング入口が`https://jp.linkaigc.com/model`であることを基準に、HeavyのAIフィッティングカード、参考画像、衣服／背景素材、履歴再利用の主導線を`/model`系へ変更した。Heavy固有の`/fitting`は権利確認・保存プレビュー・履歴を持つ互換フローとして削除していない。
+- 関連回帰テスト、`npm run typecheck`、`npm run build`（2553 modules）、`git diff --check`をPASSした。変更コミットは`e924567`。
+- Zeaburのfresh target readbackでworkspace `personal`、project `automation-wiled`、service `heavy-chain`を確認後、deployment `6aabda33fa283769e51c241c`を作成した。`planType=docker`、zbpack-v2、Vite production build、`heavy-chain-model-asset-ready:44173029`、image layer upload完了、status=`RUNNING`を確認した。
+- 同一ログイン済みCompanion sessionでLight／Heavyの`/model`を開き、両方でAIフィッティング、シングル／マルチタスク、衣服画像0/4、説明生成、参考画像、モデルのセット写真、スマート、1K、生成履歴をfresh semantic・visual readbackした。Heavy側のURLは`https://heavy-chain.zeabur.app/model`でcanonical entrypointが一致した。
+- Lightはアカウントentitlementにより`権限がありません`、Heavyは同位置に`AI生成`（disabled、素材未選択）を表示した。この差はroute／UI実装差ではなく、同一権限条件の比較証拠がないentitlement差として残す。権利確認や外部生成の自動承認・迂回はしていない。
+- Companion cleanup receiptは両task-owned tabをclose、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
+- 判定: canonical `/model` routeと主要初期UIの本番readbackは`UI_PASS`。Light／Heavyのentitlement完全一致、pixel-level全画面一致、入力後生成、成果物保存・再表示・再利用、provider receipt、source sync、reconciliationは`NOT_PROVEN`。

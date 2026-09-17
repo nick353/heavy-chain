@@ -3654,3 +3654,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Companion leaseを解放し、外部効果なしで同一runのroute監査を終了
 - [ ] Light正規routeを基準にHeavy `/model` と `/fitting` の役割を確定し、必要なalias／routing／UI差分を修正
 - [ ] 全routeのLight／Heavy semantic・visual差分、保存成果物の再表示／再利用、provider receipt／source sync／reconciliation／cleanupを最終報告へ反映
+
+### 2026-09-17 continuation checkpoint — Canonical AI fitting entrypoint post-deploy
+- [x] Light正本のAIフィッティング入口を`/model`として、Heavyの主導線・参考画像・素材準備・履歴再利用を`/model`系へ変更し、Heavy固有の`/fitting`互換フローは保持
+- [x] canonical route回帰テスト、typecheck、production build、git diff checkをPASS
+- [x] Zeabur deployment `6aabda33fa283769e51c241c`を正規Heavy Chain serviceへdeployし、planType=`docker`、Vite build、model asset、image upload、`RUNNING`をfresh readback
+- [x] 同一ログイン済みCompanion sessionでLight／Heavy `/model`をfresh semantic・visual readbackし、AIフィッティング、タブ、主要入力、履歴入口を確認
+- [x] Companion cleanup receiptで両task-owned tabをclose、unknown effectなし、foreign mutationなし、external actionなしを確認
+- [ ] Lightの権限ロックとHeavyのAI生成表示のentitlement差を、同一権限条件で突合
+- [ ] 外部AI生成、成果物保存／再表示／再利用、provider receipt、source sync、reconciliationを最終監査で証明
