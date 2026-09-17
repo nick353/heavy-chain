@@ -3116,3 +3116,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 追記: その後、serviceとdeployment `6aab3ef0dc088f64d1813dae` がともに`RUNNING`へ到達したことをfresh readback。Companion側には過去のPrinting upload unknown-effect reconciliationが1件残っており、provider効果を再送せず、まず同一カプセルの正規reconciliation readbackを完了させてからHeavy `/tools/printing`の修正版再読込へ進む。
 
 追記: 正規reconciliation inspectを再実行したが、保持タブには`garment-source.png`等の可視成功証拠が存在せず、`reconciliation_success_evidence_not_found`となった。保持タブのtext readbackは旧Printing UIのみで、uploadを再送せず、unknown-effectを解消できないまま修正版タブのreloadへ進まない。
+
+追記: 本番の静的配信物をread-onlyで確認し、`LightchainParityPages.0XYtv4AW.js`に`ツールバー`、`グラフィックデザインツール`、`プリントをアップロード`が含まれることを確認。これは修正版chunkの配信証拠だが、Companionの画面reload・hydration後visual readbackの代替にはしない。
