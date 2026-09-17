@@ -3802,3 +3802,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Lightにはない`未選択`と補足説明がHeavyに残り、初期タブ以外にも表示差があることを記録
 - [x] Companion cleanup receipt: leases released 2、unknown effectなし、foreign tabs mutatedなし、external actionなし
 - [ ] マルチタスク内の素材投入後状態、全カテゴリ、履歴・保存・再利用、成果物provider receipt/source sync/reconciliation
+
+### 2026-09-17 continuation checkpoint — Multitask copy parity correction
+- [x] 同一シングルタスク状態でLight／Heavyを再読し、Lightの入力カード文言が`複数のコーディネートのアップロードに対応`、Heavyが別文言である差分を特定
+- [x] Heavyの常時表示だった未選択ラベルを素材名存在時だけに限定し、Heavy固有の説明パネルを削除
+- [x] 入力カード文言をLight実表示に合わせて固定し、権利確認ゲート・生成境界は維持
+- [x] 関連47テストPASS、typecheck PASS、build PASS（2553 modules）
+- [x] Zeabur deployment `6aabf0624ec58b92baa766fa`が`RUNNING`
+- [x] デプロイ後Heavy `/model`をfresh Companion readbackし、修正文言、未選択ラベルなし、説明パネルなしを確認
+- [x] cleanup receipt: leases released 2、unknown effectなし、foreign tabs mutatedなし、external actionなし
+- [ ] Light本番は同一アカウントの別デバイスログインによりログアウト表示となり、再ログイン後のfresh比較が必要

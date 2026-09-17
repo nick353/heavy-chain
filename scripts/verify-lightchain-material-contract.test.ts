@@ -139,7 +139,9 @@ test('Lightchain AI fitting readback reflects the selected garment state', () =>
   assert.match(lightchainWorkbench, /data-count=\{`\$\{fittingGarmentCount\}\/4`\}/);
   assert.match(lightchainWorkbench, /衣服の画像 \(\{fittingGarmentCount\}\/4\)/);
   assert.match(lightchainWorkbench, /data-testid="lightchain-fitting-garment-selection"/);
-  assert.match(lightchainWorkbench, /materialSlotFiles\.primary\?\.name \?\? '未選択'/);
+  assert.match(lightchainWorkbench, /materialSlotFiles\.primary\?\.name &&/);
+  assert.match(lightchainWorkbench, /\{materialSlotFiles\.primary\.name\}/);
+  assert.doesNotMatch(lightchainWorkbench, /materialSlotFiles\.primary\?\.name \?\? '未選択'/);
   assert.doesNotMatch(lightchainWorkbench, /衣服の画像 \(0\/4\)/);
 });
 

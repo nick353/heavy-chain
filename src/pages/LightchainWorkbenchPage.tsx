@@ -4302,12 +4302,14 @@ export function LightchainWorkbenchPage() {
                       衣服の画像 ({fittingGarmentCount}/4)
                     </p>
                     <p className="mt-2 text-sm text-neutral-400">自動でアパレル平置き画像に変換</p>
-                    <p
-                      className="mt-1 truncate text-xs text-neutral-500"
-                      data-testid="lightchain-fitting-garment-selection"
-                    >
-                      {materialSlotFiles.primary?.name ?? '未選択'}
-                    </p>
+                    {materialSlotFiles.primary?.name && (
+                      <p
+                        className="mt-1 truncate text-xs text-neutral-500"
+                        data-testid="lightchain-fitting-garment-selection"
+                      >
+                        {materialSlotFiles.primary.name}
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -4325,7 +4327,7 @@ export function LightchainWorkbenchPage() {
                   <div className="flex flex-col items-center justify-center px-5 text-center">
                     <ImagePlus className="h-6 w-6 text-neutral-300" />
                     <p className="mt-5 text-base font-semibold leading-7 text-neutral-100">
-                      {activeFittingTaskTab === 'マルチタスク' ? '複数のコーディネートのアップロードに対応' : '1つの衣服画像から着用画像を作成'}
+                      複数のコーディネートのアップロードに対応
                     </p>
                     <p className="mt-2 text-xs leading-5 text-neutral-400">
                       {activeFittingInputTab === '説明生成'
@@ -4443,12 +4445,6 @@ export function LightchainWorkbenchPage() {
                 className="min-h-[114px] w-full resize-none rounded-2xl border border-white/5 bg-[#181d1f] px-4 py-4 text-sm text-white outline-none placeholder:text-neutral-500"
                 placeholder={activeFittingInputTab === '説明生成' ? '背景の説明をここに記入してください' : activeFittingInputTab === '参考画像' ? '参考画像で残したい雰囲気や衣服の条件を記入してください' : 'モデルセット写真で合わせたいポーズ、背景、小物を記入してください'}
               />
-              <div className="rounded-2xl border border-white/5 bg-[#181d1f] px-4 py-3 text-left text-xs leading-5 text-neutral-400">
-                {activeFittingTaskTab === 'マルチタスク'
-                  ? 'マルチタスクでは複数コーディネートを同時に管理し、各参考条件を履歴にまとめます。'
-                  : 'シングルタスクでは1つの衣服画像から最短で着用イメージを作ります。'}
-                <span className="mt-1 block text-[#65d3cf]">{activeFittingInputTab}</span>
-              </div>
               {garmentImageUrl && (
                 <details
                   className="rounded-xl border border-white/10 bg-[#181d1f] p-3"

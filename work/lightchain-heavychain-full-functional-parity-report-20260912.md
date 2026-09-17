@@ -5464,3 +5464,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - ただしHeavyにはLightにない`未選択`とマルチタスク説明文が残った。素材投入後の同一状態や視覚完全一致はまだ証明していない。
 - cleanup receiptは`leases_released=2`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: マルチタスクのタブ選択・共通permission surfaceは`UI_PASS`、マルチタスク全体・成果物lifecycle・provider receipt/source sync/reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Multitask copy parity correction and deployment
+
+- 同一シングルタスク状態のLight／Heavyを再読し、Lightの入力カードは`複数のコーディネートのアップロードに対応`、Heavyは`1つの衣服画像から着用画像を作成`だったことを確認した。
+- Heavyから常時表示の`未選択`ラベルとマルチタスク説明パネルを除去し、入力カード文言をLightの実表示に合わせて固定した。権利確認ゲートとprovider-bound生成境界は変更していない。
+- 関連47テスト、typecheck、production build（2553 modules）がPASS。Zeabur deployment `6aabf0624ec58b92baa766fa`はDocker planで`RUNNING`。
+- デプロイ後Heavy `/model`を30秒待機してfresh readbackし、`複数のコーディネートのアップロードに対応`、`未選択`なし、説明パネルなし、disabled `権限がありません`を確認した。
+- 同じrunでLightを再読しようとしたところ、Light本番が`別のデバイスで既にあなたのアカウントがログイン中。現在のデバイスはログアウトされました。`を表示した。Lightの再ログイン後fresh比較は未完了であり、これはHeavyのデプロイ失敗ではない。
+- cleanup receiptは`leases_released=2`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: Heavyのマルチタスク初期コピー差分は修正・デプロイ済み。Light再ログイン後比較、素材選択後、全カテゴリ、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。
