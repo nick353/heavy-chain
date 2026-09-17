@@ -4970,3 +4970,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 両方でツールレール、素材ツール4タブ、終了告知、`今すぐ体験`、プリント入力、スポット／全体、リセット、生成履歴、右側プリントイメージ領域を確認した。主要ルーティングと構造は`UI_PASS`。
 - Heavyには既存セッションの参考画像が保持され、Lightは未入力だったため、入力プレビューとAI生成ボタンの見た目が異なった。既存入力を勝手にリセットせず、ユーザー状態差として扱った。
 - Light／Heavyともにアップロード・外部生成・provider receipt・source sync・保存／再表示／再利用・reconciliation・cleanupはこのreadbackでは実行していない。入力なしの同一初期状態でのpixel-level比較は`NOT_PROVEN`。
+
+## 2026-09-17 Design Production start-card parity implementation
+
+- Fresh hydrated readbackで、Lightは「新規ファイル／インスピレーション／ブリン卜修正／生地イメージ／企画提案書」の5導線、Heavyは4導線で「インスピレーション」が欠落していることを確認した。
+- HeavyのDesign Productionに「インスピレーション」カード（`/creator`遷移）を追加し、広幅レイアウトを5列へ修正した。commit `4fcade1`をpush済み。
+- UI control boundaries 13/13、route parity 19/19、typecheck、production build、diff checkはPASS。
+- Zeaburの手動デプロイはdeployment `6aab977c967ae3497db9015e`で`BUILDING`（ログはbuilder初期化まで）であり、現時点のHeavy本番画面はまだ旧4枚構成。RUNNING後のfresh Companion readbackが残っている。
+- Lightのプロジェクト一覧は多数、Heavyは1件であり、一覧データの件数・内容・pixel-level一致、カード操作後のCanvas handoff、生成・保存・再表示・再利用、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。

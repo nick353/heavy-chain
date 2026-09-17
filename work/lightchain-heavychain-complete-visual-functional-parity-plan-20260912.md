@@ -2789,6 +2789,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Lightの実カードクリック遷移不成立を解消／正規画面取得し、カード内部UIと成果物フローを比較
 - [ ] provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
 
+### 2026-09-17 Design Production start-card parity implementation
+
+- [x] Fresh Light／Heavy比較でHeavyの「インスピレーション」導線欠落を確認
+- [x] Heavyに「インスピレーション」カードと`/creator`遷移を追加し、5列レイアウトへ修正（commit `4fcade1`）
+- [x] UI control boundaries 13/13、route parity 19/19、typecheck、production build、diff check
+- [ ] Zeabur deployment `6aab977c967ae3497db9015e`のRUNNING到達
+- [ ] デプロイ後のHeavy／Light fresh Companion readbackで5カード・順序・遷移を確認
+- [ ] Lightのプロジェクト一覧データ、カード操作後Canvas handoff、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
+
 ### 2026-09-17 Creator category interaction readback
 
 - [x] Light／HeavyでCreatorカテゴリ一覧を開き、レディース／トップス／ニットを選択
