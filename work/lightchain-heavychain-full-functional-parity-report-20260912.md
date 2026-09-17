@@ -5574,3 +5574,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 30秒待機後のHeavy入口は`readyState=complete`で表示され、直接`/lightchain`ではなく正規の`/`入口からSPA遷移することでHTTP／Companion readbackが安定した。
 - 同一Companion sessionの`page.query(img)`でLightは総画像33件、Heavyは22件。主要6ランチャーカードとレイアウト枠は一致したが、事例カードの画像・保存データ集合はLightと1対1一致していない。
 - 判定: launcher frame parityは`UI_PASS`、gallery data/artifact parityは`NOT_PROVEN`。実成果物lifecycle、provider receipt、source sync、reconciliation、全画面／全カテゴリ、logout→login回帰も未完了。
+
+## 2026-09-18 Category tab readback: design-revision data scope mismatch
+
+- 同一CompanionセッションでLight／Heavyのホーム事例タブ「デザイン修正」を実クリックし、直後にsemantic・visual readbackした。
+- Lightは選択状態が`デザイン修正`となり、本文は「該当する結果が見つかりません」「別のキーワードで検索してください」。表示ボタンはヘッダー・検索のみで、事例カードは0件だった。
+- Heavyも選択状態とタブ順は一致したが、保存済み成果物4件（AIフィッティング入力2系統、Fashion Studio、Create a polished...）が同じカテゴリ表示領域に残った。Heavyのボタンqueryは8件（ヘッダー2、avatar、検索、成果物4）だった。
+- 判定: tab geometry／selectionは`UI_PASS`、カテゴリ別のデータスコープと成果物表示は`NOT_PROVEN`。これはLight本番の空状態とHeavyのローカル成果物永続化を統合する必要があるため、画像やカード在庫の追加だけでは完了扱いにしない。
