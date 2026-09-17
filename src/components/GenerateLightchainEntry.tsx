@@ -235,10 +235,11 @@ type GalleryCase = {
 };
 
 const resolveArtifactFeatureId = (artifact: WorkspaceArtifact, fallback: string) => {
-  const candidate = artifact.metadata.toolId;
-  return typeof candidate === 'string' && lightchainFeatureCatalog.some((feature) => feature.id === candidate)
-    ? candidate
-    : fallback;
+  const candidates = [artifact.metadata.toolId, artifact.featureType];
+  const matched = candidates.find((candidate): candidate is string => (
+    typeof candidate === 'string' && lightchainFeatureCatalog.some((feature) => feature.id === candidate)
+  ));
+  return matched ?? fallback;
 };
 
 const isBetaFeature = (feature: LightchainFeature | undefined): feature is LightchainFeature => Boolean(feature && feature.betaIncluded !== false);
