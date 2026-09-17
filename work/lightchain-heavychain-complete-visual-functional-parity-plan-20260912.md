@@ -3893,3 +3893,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Zeabur deployment `6aac1b03e6c365d6264ad9b3`を開始
 - [ ] deploymentが`RUNNING`になった後のHeavy本番再読込で`0/2000`表示を確認
 - [ ] 全画面／全カテゴリのpixel・interaction parity、素材投入後・成果物lifecycle、provider receipt/source sync/reconciliation、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — home gallery parity and deployment recovery
+- [x] Light／Heavy入口の同一Companion visual・semantic readbackで主要カード、4カテゴリ、6事例タブの枠を比較
+- [x] Lightの多数事例カードとHeavy旧版5件固定テンプレートの差分を特定
+- [x] Light fresh readbackの事例タイトルをHeavy recommended inventoryへ追加
+- [x] typecheck、関連48テスト、production build（2553 modules）をPASS
+- [x] `/hea`からの誤static deployによる404をHTTP readbackで検出
+- [x] Git連携Docker `service redeploy`でHeavyをHTTP 200／Companion表示へ復旧
+- [ ] ローカル事例inventoryを連携先mainへ反映し、正しいDocker deployment後にHeavy本番で件数・タイトル・visualを再確認
+- [ ] 全画面／全カテゴリのpixel・interaction parity、成果物lifecycle、provider receipt/source sync/reconciliation、最終cleanupを完了

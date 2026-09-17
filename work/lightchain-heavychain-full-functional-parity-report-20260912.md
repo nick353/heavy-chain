@@ -5558,3 +5558,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `src/pages/LightchainWorkbenchPage.tsx`に文字数表示を追加。関連47テスト、`npm run typecheck`、`npm run build`（2553 modules）はPASS。
 - Zeabur deployment `6aac1b03e6c365d6264ad9b3`を開始したが、確認時点では`BUILDING`。Heavy本番への反映は未確認で、旧稼働版のreadbackでは`0/2000`未表示。
 - 判定: counter parityは`FIX_READY_DEPLOY_PENDING`。`RUNNING`後のHeavy再読込、全画面／全カテゴリ比較、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。
+
+## 2026-09-18 Home gallery parity follow-up and deployment recovery
+
+- Light本番とHeavy本番の入口を同一Companion sessionでfresh visual／semantic readbackした。主要6ワークスペースカード、4カテゴリ、6事例タブの枠は一致した。
+- Lightの事例共有は多数の実カード（現fresh readbackで20件超のタイトル）を表示する一方、Heavy旧版は5件の固定テンプレートだけだった。差分は`GenerateLightchainEntry.tsx`の`galleryCasesByTab.recommended`に限定されたテンプレート在庫として特定した。
+- Lightでfresh readbackした事例タイトルをHeavyのrecommended inventoryへ追加し、 deferred video featureをランチャー契約へ混入させない既存テストを維持した。typecheck、関連48テスト、production build（2553 modules）はPASS。
+- 一度`/hea`から誤ってローカルdeployしたため、Zeaburで空static deployment `6aac1de74ec58b92baa76d68`が`RUNNING`となり、rootとdirect routeがHTTP 404になった。原因を作業ディレクトリ誤りとして特定し、`service redeploy`でGit連携Docker deployment `6aac1f2be6c365d6264ada22`（remote main）を`RUNNING`へ復旧した。
+- 復旧後、HTTP rootは200、Companion rootは30秒待機後にHeavy入口が`readyState=complete`で表示された。誤static deploymentを成功扱いにはしていない。
+- 判定: home gallery parity changeは`LOCAL_READY_REMOTE_DEPLOY_PENDING`。Light／Heavy全画面・全カテゴリ比較、実成果物lifecycle、provider receipt、source sync、reconciliation、logout→login回帰は`NOT_PROVEN`。
