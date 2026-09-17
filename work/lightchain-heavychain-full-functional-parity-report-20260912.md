@@ -4949,3 +4949,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - UI boundary 13/13、route 19/19、typecheck、production build（2552 modules）、`git diff --check`をPASSした。follow-up deployment `6aab9387967ae3497db900e6`が`RUNNING`へ到達したことを確認した。
 - デプロイ後にHeavy／Lightを再読込し、両方の中央動画領域が同じ約605px幅で表示されることをスクリーンショットで確認した。初期カテゴリ・入力・履歴・キーワード・権限ロックの主要構造も両方で確認した。
 - 判定: Creator初期画面の動画geometryは`UI_PASS`。カテゴリ選択後の全操作、アップロード、外部生成、成果物保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanup、全画面pixel-level一致、logout→login回帰は未完了。
+
+## 2026-09-17 Creator category interaction readback
+
+- Light／Heavy `/creator`でカテゴリ一覧を開き、レディースのトップスから`ニット`を選択して選択後状態を比較した。
+- 両方でカテゴリパス、画像／生地画像の入力切替、サブカテゴリ、履歴、キーワード、右側の購入後モジュールが表示される主要導線は確認できた。
+- 差分として、Heavyはカテゴリカードをcheckbox/buttonとして公開し、Lightはカードを表示主体の構造として公開している。カテゴリ画像アイコン、文字組み、選択後のサブカテゴリ表示、権利確認ボタンの有効状態にも差がある。
+- カテゴリ選択自体は外部送信を伴わないため実操作したが、アップロード・権利確認・外部生成は実行していない。判定は主要導線`UI_PARTIAL`、pixel-level・操作role完全一致`NOT_PROVEN`。

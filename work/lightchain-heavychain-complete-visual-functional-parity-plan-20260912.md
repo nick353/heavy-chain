@@ -2789,6 +2789,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Lightの実カードクリック遷移不成立を解消／正規画面取得し、カード内部UIと成果物フローを比較
 - [ ] provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
 
+### 2026-09-17 Creator category interaction readback
+
+- [x] Light／HeavyでCreatorカテゴリ一覧を開き、レディース／トップス／ニットを選択
+- [x] 選択後のカテゴリパス、入力切替、サブカテゴリ、履歴、キーワード導線をfresh readback
+- [ ] Heavyのカテゴリカードrole、アイコン、文字組み、選択後サブカテゴリ表示をLightと一致させる
+- [ ] 権利確認ボタンの表示・操作境界をLightの実仕様と照合し、外部送信直前の明示確認を維持
+- [ ] アップロード、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
+
 判定: Heavyホームのカード外形・列位置・9ルート対応は`UI_PASS`。Lightの深い正規画面がCompanion fresh tabでは空画面となるため、カード内部と成果物の完全parityは継続未完了。
 
 ### 2026-09-17 Light／Heavy `/agent`実画面取得と初期UI差分修正
