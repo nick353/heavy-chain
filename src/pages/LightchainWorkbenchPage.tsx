@@ -3417,7 +3417,10 @@ export function LightchainWorkbenchPage() {
     setMarketingProjectNameEditing(false);
   };
 
-  const specialProviderGenerationLocked = !lightchainProviderSupported || brandResolutionPending || lightchainGenerationRunning;
+  const specialProviderGenerationLocked = !lightchainProviderSupported
+    || brandResolutionPending
+    || lightchainGenerationRunning
+    || (workspaceStyle?.kind === 'agent' && !providerRightsConfirmed);
   const handleBrandRefresh = async () => {
     if (brandRefreshRunning) return;
     setBrandRefreshRunning(true);

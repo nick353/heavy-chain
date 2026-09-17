@@ -128,6 +128,15 @@ test('keeps an uploaded workspace source on the edit-image route even when the U
   );
 });
 
+test('keeps the two explicit custom-model entries source-free without weakening image-edit/model-matrix input gates', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(workbench, /explicitBriefOnlyModel = lightchainProviderRoute === 'model-matrix'/);
+  assert.match(workbench, /currentModelPanel\?\.variant === 'custom'/);
+  assert.match(workbench, /overrides\?\.allowBriefOnly === true \|\| explicitBriefOnlyModel/);
+  assert.match(workbench, /effectiveProviderRoute === 'edit-image' && !providerSourceImageUrl && !briefOnlyProviderRequest/);
+  assert.match(workbench, /if \(effectiveProviderRoute === 'model-matrix'\)/);
+});
+
 test('exposes generation-time rights confirmation without a persistent Lightchain gate', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const branches = [
@@ -148,7 +157,11 @@ test('exposes generation-time rights confirmation without a persistent Lightchai
     assert.match(branch, /renderLightchainProviderGate\(\)/, `${label} must expose the rights gate`);
   }
 
-  assert.match(workbench, /const specialProviderGenerationLocked = !lightchainProviderSupported \|\| lightchainGenerationRunning/);
+  assert.match(
+    workbench,
+    /const specialProviderGenerationLocked = !lightchainProviderSupported[\s\S]*brandResolutionPending[\s\S]*lightchainGenerationRunning[\s\S]*workspaceStyle\?\.kind === 'agent' && !providerRightsConfirmed/,
+    'special provider generation must remain locked while the brand resolution state is pending',
+  );
   assert.match(workbench, /data-testid="lightchain-special-provider-gate"/);
   assert.match(workbench, /const lightchainRightsConfirmationModal =/);
   assert.match(workbench, /isOpen=\{rightsConfirmationOpen\}/);
@@ -156,6 +169,17 @@ test('exposes generation-time rights confirmation without a persistent Lightchai
   assert.match(workbench, /data-testid="lightchain-rights-confirmation"/);
   assert.doesNotMatch(workbench, /data-testid="lightchain-provider-gate"/);
   assert.match(workbench, /data-testid="lightchain-generation-error"/);
+});
+
+test('keeps the marketing detail provider flow able to render its rights confirmation modal', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  const startIndex = workbench.indexOf("if (selectedTool.id === 'marketing-detail')");
+  const endIndex = workbench.indexOf("if (selectedTool.id === 'print-design-project')", startIndex + 1);
+  assert.ok(startIndex >= 0 && endIndex > startIndex, 'marketing detail branch boundaries must remain discoverable');
+  const branch = workbench.slice(startIndex, endIndex);
+  assert.match(branch, /renderLightchainProviderGate\(\)/);
+  assert.match(branch, /\{lightchainResultModal\}/);
+  assert.match(branch, /\{lightchainRightsConfirmationModal\}/);
 });
 
 test('continues the generation that opened rights confirmation after the user confirms', () => {
@@ -218,6 +242,30 @@ test('keeps non-model catalog prompts feature-specific instead of using the gene
   }
 });
 
+test('keeps every non-video generation route on a feature-specific prompt branch', () => {
+  const videoRows = new Set(['video-workstation', 'video-detail']);
+  const nonVideoRows = GOAL_CANDIDATE_ROW_IDS.filter((rowId) => !videoRows.has(rowId));
+
+  for (const rowId of nonVideoRows) {
+    const prompt = buildLightchainProviderPrompt({
+      toolId: rowId,
+      toolTitle: rowId,
+      summary: `${rowId} settings`,
+      primaryName: 'source.png',
+      secondaryName: 'reference.png',
+      brief: `${rowId} brief`,
+      briefOnly: rowId === 'model-library' || rowId === 'model-custom',
+    });
+    assert.match(prompt, new RegExp(`LIGHTCHAIN ROUTE: ${rowId}`), rowId);
+    assert.match(prompt, /Do not invent text, logos, trademarks/, rowId);
+    assert.doesNotMatch(
+      prompt,
+      /Create the requested .* result using the supplied references and workflow summary/u,
+      `feature ${rowId} must not use the generic provider fallback`,
+    );
+  }
+});
+
 test('keeps direct provider promotion behind durable result and Canvas lineage guards', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
@@ -264,7 +312,10 @@ test('keeps direct provider promotion behind durable result and Canvas lineage g
     );
   }
   assert.match(fitting, /id="fitting-history"/);
-  assert.match(fitting, /try \{\s*response = await generateModelMatrix\([\s\S]*?\}\s*catch \(error\) \{\s*setIsGenerating\(false\);\s*setErrorMessage\(getErrorMessage/);
+  assert.match(
+    fitting,
+    /const authBrandFence = captureCurrentAuthBrandFence\(\)[\s\S]*?const generationBrandId = authBrandFence\.brandId[\s\S]*?assertCurrentAuthBrandFence\(authBrandFence, 'before_provider'\)[\s\S]*?response = await generateModelMatrix\([\s\S]*?generationBrandId[\s\S]*?\}\s*catch \(error\) \{\s*setIsGenerating\(false\);\s*setErrorMessage\(getErrorMessage/,
+  );
   assert.match(persistence, /provider_result_persistence_unverified/);
 });
 
@@ -338,6 +389,39 @@ test('special Lightchain result surfaces keep the shared workspace destinations'
   assert.match(workbench, /data-testid="lightchain-special-result-history-link"/);
   assert.match(workbench, /data-testid="lightchain-special-result-jobs-link"/);
   assert.match(workbench, /data-testid="lightchain-special-result-canvas-link"/);
+});
+
+test('all non-video result and model-library surfaces expose stable save and continuation markers', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  const canvas = readFileSync(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
+  const modelLibrary = readFileSync(new URL('../src/pages/ModelLibraryPage.tsx', import.meta.url), 'utf8');
+
+  for (const marker of [
+    'lightchain-fitting-result-save',
+    'lightchain-lab-result-save',
+    'lightchain-workspace-result-save',
+    'marketing-detail-result-save',
+    'lightchain-print-design-project-result-save',
+    'lightchain-print-design-detail-result-save',
+    'lightchain-wear-design-lab-result-save',
+    'lightchain-wear-design-detail-result-save',
+    'lightchain-custom-style-result-save',
+    'lightchain-feature-input-save',
+  ]) {
+    assert.match(workbench, new RegExp(`data-testid="${marker}"`), marker);
+  }
+
+  assert.match(canvas, /data-testid="canvas-save"/);
+  assert.match(canvas, /data-testid="canvas-persistence-status"/);
+
+  for (const marker of [
+    'model-library-save-to-canvas',
+    'model-library-model-matrix-link',
+    'model-library-save-and-stack',
+    'model-library-gallery-link',
+  ]) {
+    assert.match(modelLibrary, new RegExp(`data-testid="${marker}"`), marker);
+  }
 });
 
 test('material result cards expose connected Gallery, History, and Jobs destinations', () => {
