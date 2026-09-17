@@ -3110,3 +3110,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 判定: Printingのソース修正とローカル検証はPASS。現在の本番はdeployment=`DEPLOYING`、service=`STARTING`で、既存ヘルスチェックは`ok`だが新しいレールの本番反映は未証明。新デプロイの切替完了後に再読込確認を継続する。
 
 追記: 旧deployment `6aab3be605af289f92f981fc` のイメージPull待ちが継続したため、サービス再起動後に再デプロイを実行。新deployment `6aab3ef0dc088f64d1813dae` はbuild完了後も`DEPLOYING`、serviceは`STARTING`で、runtime logは新イメージのPull開始まで確認できている。既存公開エンドポイントの`/_health`は`ok`だが、修正版の本番UI証拠は未取得。
+
+追記: 切替待ちの間に、全機能workflow contract 5/5、provider coverage 22/22、unified workflow 6/6、pre-source gate 5/5、provider persistence/readback 14/14、material contract 28/28を再実行し、すべてPASS。これらはローカル契約・fail-closed境界の証拠であり、未取得の本番Companion再読込・provider同一run証跡の代替にはしない。
