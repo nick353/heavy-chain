@@ -5508,6 +5508,15 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - これはlocal source／contract evidenceであり、本番Lightの同一画面比較、provider receipt、source sync、reconciliationを証明しない。外部生成・送信は未操作。
 - 判定: local contract layerは`PASS`、production visual／interaction parityと成果物lifecycleは`NOT_PROVEN`。
 
+## 2026-09-18 Light home recovered
+
+- ユーザーが「今使えます」と申告した後、fresh Light `/model` tabを開き30秒待機した。以前のログアウトメッセージは再現せず、Lightホームが`readyState=complete`で表示された。
+- Lightホームの`AIフィッティング`カテゴリを通常ブラウザ操作で選択し、Companion fresh readbackで、AIフィッティング、モデル企画ライブラリ、ファッションスタジオ、動画ワークステーション、Lightchain Lab、画像修正の6カテゴリと説明文を確認した。URLはホームのままで、個別ワークベンチ遷移は未証明。
+- 同一runでHeavy `/model`をfresh readbackし、初期入力文言`複数のコーディネートのアップロードに対応`、未選択ラベルなし、disabled `権限がありません`、生成履歴リンクを確認した。
+- Companionのauthorized clickはLightタブを`task_target_unavailable`としてno-dispatchで拒否した。タブ切替は外部効果のないため通常ブラウザ操作で補完し、Companionで結果を再読込した。生成、アップロード、権利確認、provider送信は未操作。
+- cleanup receiptは`leases_released=2`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: Lightログイン状態とホームカテゴリは`RECOVERED_HOME_UI_PASS`。個別ワークベンチ遷移、全画面／全カテゴリのLight／Heavy比較、同一artifact lifecycle、provider receipt、source sync、reconciliation、logout→再ログイン回帰は`NOT_PROVEN`。Goal全体は未完了。
+
 ## 2026-09-17 Artifact lifecycle contract sweep
 
 - provider persistence/readback 14/14 PASS。provider結果のdurable artifact化、History／Canvas promotion、provider provenanceとGallery identityの分離を確認した。

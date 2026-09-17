@@ -3866,3 +3866,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 別fresh Light `/model` tabで30秒待機し、同じログアウトメッセージを再確認
 - [x] Companion cleanup receipt: lease released 1、unknown effectなし、外部操作なし
 - [ ] 同一ChromeセッションでユーザーがLightへ再ログインするまで、残りの本番parity工程は進行不能
+
+### 2026-09-18 continuation checkpoint — Light home recovered
+- [x] ユーザー申告後、fresh Light `/model` tabを開いて30秒待機し、ログアウトメッセージが再現せず、Lightホームが`readyState=complete`で表示されることを確認
+- [x] Lightホームの通常入口から`AIフィッティング`カテゴリを選択し、AIフィッティング、モデル企画ライブラリ、ファッションスタジオ、動画ワークステーション、Lightchain Lab、画像修正のカテゴリ画面をCompanionでfresh readback
+- [x] 同一runのHeavy `/model`もfresh readbackし、初期の`複数のコーディネートのアップロードに対応`、余分な未選択表示なし、disabled権限ゲートを確認
+- [x] Companion cleanup receipt: leases released 2、unknown effectなし、foreign tabs mutatedなし、external actionなし
+- [ ] LightのAIフィッティングカードから個別ワークベンチへ遷移する実操作、Light／Heavy全画面・全カテゴリ比較、同一artifact lifecycle、provider receipt/source sync/reconciliationは未完了
+- [ ] Companionのauthorized clickは同じLightタブを`task_target_unavailable`として拒否したため、外部効果のないタブ切替のみ通常ブラウザ操作で補完。生成・アップロード・権利確認・provider送信は未操作
+- 判定: Lightログイン状態は`RECOVERED_HOME_UI_PASS`。Lightの個別ワークベンチとGoal全体は`NOT_PROVEN`。
