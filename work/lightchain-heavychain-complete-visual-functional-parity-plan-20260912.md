@@ -3561,3 +3561,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Lightの保存一覧全14ページとHeavyの全カードの名称・preview・更新時刻・詳細遷移を完全に突合する
 - [ ] provider receipt、source-of-truth sync、reconciliation、成果物保存／再利用を、権利確認を含む各ケースで個別に証明する
 - [ ] 全route、desktop/mobile、logout→再ログインの最終監査を完了する
+
+### 2026-09-17 continuation checkpoint — Fashion Studio local handoff reuse
+- [x] merged cardへCanvas IDを保持し、保存カードクリックを`/canvas/:id`へ接続
+- [x] 関連テスト4/4、typecheck、production build、diff checkを確認
+- [x] Zeabur deployment `6aabbf05a61819c1c58e3f8f`の`RUNNING`を確認
+- [x] ログイン済みCompanionで保存カードを1回クリックし、Canvas URL・タイトルをfresh readback
+- [x] task-owned tabをcleanupし、foreign tab・外部効果がないことをreceiptで確認
+- [ ] Light全14ページとHeavy全カードの詳細・preview・更新時刻・再利用を完全突合
+- [ ] 全画面・全route・desktop/mobile・logout→再ログインを監査
+- [ ] provider receipt、source sync、reconciliation、成果物保存／再利用を個別に証明

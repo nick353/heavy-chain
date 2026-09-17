@@ -5217,3 +5217,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 同一ログイン済みCompanionのHeavy `/flow/integration`を本番でreloadし、`プロジェクトを読み込んでいます…`のdetachedを待ってからreadbackした。`Fashion Studio: スタジオ案`のsemantic countは修正前3件から修正後1件へ減少し、新規ファイル、保存カード群、参考事例5件は維持された。
 - これはブラウザUIとデプロイのreadbackであり、provider receipt、source sync、reconciliation、業務成果物の保存／再利用完了を意味しない。外部生成、アップロード、権利確認、provider送信は実行していない。Companion transactionの`external_action_executed=false`を確認した。
 - 判定: Heavy Fashion Studioの同一タイトル重複排除は`UI_PASS`。Lightの30件×14ページとの保存データ完全一致、全カード詳細遷移、成果物生成・再表示・再利用、provider receipt／source sync／reconciliationは引き続き`NOT_PROVEN`。
+
+## 2026-09-17 Fashion Studio local handoff reuse routing
+
+- `src/pages/FashionStudioPage.tsx`でmerged cardの`canvasProjectId`を保持し、保存カードのクリック時にCanvas IDがあれば`/canvas/:id`へ戻るよう修正した。Canvas IDがないlocal-onlyカードは従来どおり新規スタジオ表示へフォールバックする。
+- `scripts/verify-fashion-studio-project-merge.test.ts`は4/4 PASS、`npm run typecheck`、`npm run build`、`git diff --check`を確認した。実装コミットは`6d766fd`、Zeabur deploymentは`6aabbf05a61819c1c58e3f8f`で`RUNNING`を確認した。
+- Heavy本番のログイン済みCompanionでHydration完了後に保存カードをreadbackし、`Fashion Studio: スタジオ案`を1回だけクリックした。post-readbackは`https://heavy-chain.zeabur.app/canvas/e394897b-5246-45bc-84a0-09abab91760c`、タイトルは`Heavy Chain | AI制作ワークスペース`で、保存カードからCanvas再利用先へ遷移するブラウザUI効果を確認した。
+- Companion cleanup receiptは`closed=[1980922898]`、`missing=[]`、`retained=[]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
+- 判定: 保存カード→Canvasルーティングは`UI_PASS`。このクリックはブラウザ遷移の証拠であり、成果物のprovider receipt、source sync、reconciliation、保存内容の完全一致を意味しない。外部生成、アップロード、権利確認、provider送信は実行していない。
