@@ -534,11 +534,11 @@ export function LightchainVectorSpecialPage() {
       <div className="relative mx-auto min-h-[calc(100vh-70px)] max-w-[1904px] px-4 py-4 lg:pl-[112px]">
         <aside className="absolute inset-y-4 left-4 hidden w-20 flex-col items-center gap-2 rounded-xl bg-[#171b1c] px-2 py-3 lg:flex" aria-label="ツールバー">
           {[
-            ['ツールバー', '/routeIcons/ic_工具.svg', '/lightchain?category=recommended', false],
-            ['デザインツール', '/routeIcons/服装设计工具-未选.svg', '/tools/fabric', false],
-            ['フィッティング\nツール', '/routeIcons/模特试衣工具-未选.svg', '/model', false],
-            ['グラフィックデザイン\nツール', '/routeIcons/图案创作工具-选中.svg', '/tools/pattern-to-vector', true],
-            ['衣類生産\nツール', '/routeIcons/生产工具-未选.svg', '/tools/fabric', false],
+            ['ツールバー', 'https://jp.linkaigc.com/routeIcons/ic_工具.svg', '/lightchain?category=recommended', false],
+            ['デザインツール', 'https://jp.linkaigc.com/routeIcons/服装设计工具-未选.svg', '/tools/fabric', false],
+            ['フィッティング\nツール', 'https://jp.linkaigc.com/routeIcons/模特试衣工具-未选.svg', '/model', false],
+            ['グラフィックデザイン\nツール', 'https://jp.linkaigc.com/routeIcons/图案创作工具-选中.svg', '/tools/pattern-to-vector', true],
+            ['衣類生産\nツール', 'https://jp.linkaigc.com/routeIcons/生产工具-未选.svg', '/tools/fabric', false],
           ].map(([label, iconUrl, to, active]) => {
             return <Link key={label as string} to={to as string} aria-current={active ? 'page' : undefined} className={`flex min-h-20 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 text-center text-[10px] leading-4 transition ${active ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30' : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}><img src={iconUrl as string} alt="" className="mb-1 h-7 w-7 object-contain" /><span className="whitespace-pre-line">{label as string}</span></Link>;
           })}
