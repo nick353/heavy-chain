@@ -3493,3 +3493,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] レディース・女の子のフルカテゴリ、メンズ・男の子の縮約カテゴリをfresh readback
 - [ ] Heavy側の同4タブ・全項目・選択後状態をLightと比較し、必要なUI修正を実装
 - [ ] 実入力、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+### 2026-09-17 Heavy Creator four-tab category parity readback
+- [x] Heavy本番でカテゴリ選択を開き、4タブを実クリック
+- [x] Lightと同じフル／縮約カテゴリ分岐、aria-selected、権限disabledを確認
+- [x] カテゴリ契約テスト5/5 PASS（commit `9f4e786`）
+- [ ] 全カテゴリ項目を個別選択し、入力後状態・エラー状態をLightと比較
+- [ ] 実入力、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup

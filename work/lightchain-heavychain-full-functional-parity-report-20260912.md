@@ -5148,3 +5148,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `メンズ`／`男の子`は同じ3グループだが、下着・ニットボトムス・ハーフスカート等を含まない縮約カテゴリを表示した。
 - 各タブ切替はbrowser readbackまで確認し、外部生成・アップロード・権利確認・保存は実行していない。cleanup receiptはlease解放済み、foreign tabs mutated=false、external_action_executed=false。
 - 判定: Light側4タブのカテゴリ分岐は`UI_PASS`。Heavy側との全項目・選択後状態・実入力／生成／保存／再利用比較は未完了。
+
+## 2026-09-17 Heavy Creator four-tab category parity readback
+
+- Heavy本番`/creator`でカテゴリ選択を開き、`レディース／メンズ／女の子／男の子`を同一Companionセッションで実クリックした。
+- `レディース`／`女の子`はLightと同じフルカテゴリ、`メンズ`／`男の子`はLightと同じ縮約カテゴリを表示した。各タブの`aria-selected`状態もfresh readbackした。
+- 初期状態と各タブ切替後とも、右側の`権限がありません`ボタンはdisabledで、外部生成・アップロード・権利確認・保存は実行していない。
+- Companion cleanup receiptはlease解放済み、foreign tabs mutated=false、external_action_executed=false。
+- 判定: Creatorの4タブ・カテゴリ分岐・権限ロックは`UI_PASS`。カテゴリ項目選択後の入力・生成・保存／再表示／再利用とprovider lifecycleは未完了。
