@@ -3156,3 +3156,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 判定: Creator履歴→Canvas→保存→サーバー確認済みのHeavy本番ブラウザフローは`PASS`。provider completion/source syncは未確認で、外部生成は未実行。
 
 追記: 保存後に同じCompanionタブを`/creator`へ一度移動し、保存済みCanvas URLへ戻した。`プロジェクト名`の表示を待ってfresh readbackし、`サーバー確認済み`、`ブランド: Nisen`、同じCanvas URL、保存ボタン再有効化を確認。保存済みCanvasの再表示は`PASS`。
+
+### 2026-09-17 Asset Center成果物ダウンロード本番確認
+
+- [x] Light先頭成果物を`プレビュー`で開き、Heavyと同じ詳細アクション（戻る／コピー／ダウンロード／削除／名前編集）を確認
+- [x] Lightの`ダウンロード`を一回実行し、形式選択ダイアログ（PNG／JPG／AVIF）を確認
+- [x] PNGを選択して確認し、ダイアログ消失を待機
+- [x] Downloadsに実PNG（5152×3438、RGBA）が生成されたことをread-onlyで確認
+- [x] Heavy側にも同一詳細アクションが表示されることをfresh readback
+- [ ] Heavyでの同一ダウンロード実効果、削除、コピー、名前編集の確認
+- [ ] provider receipt／source sync／reconciliation／cleanupと同一成果物のLight／Heavy比較
+
+判定: LightのAsset Centerダウンロードはブラウザ操作から実ファイル生成まで`PASS`。Heavyは操作面の表示一致までで、実効果と成果物ライフサイクルは未完了。削除は実行していない。

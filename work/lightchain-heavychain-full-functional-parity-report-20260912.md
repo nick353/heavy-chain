@@ -4852,3 +4852,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - 保存後、同じCompanionタブを`/creator`へ一度移動してから保存済みCanvas URLへ戻した。`プロジェクト名`の表示を待ち、fresh readbackで`サーバー確認済み`、`ブランド: Nisen`、同じCanvas URL、保存ボタン再有効化を確認した。
 - 判定: 保存→離脱→保存済みCanvas再表示は`PASS`。外部生成・権利確認チェック・provider receipt・source sync・reconciliation・cleanupは未実施／未証明。
+
+## 2026-09-17 Asset Center成果物ダウンロード本番確認
+
+- Light Asset Centerの先頭成果物をCompanionで`プレビュー`し、詳細画面の`戻る`、`コピーを作成します`、`ダウンロード`、`削除`、`名前を編集`を確認した。
+- `ダウンロード`を一回だけ操作した後、PNG／JPG／AVIFの形式選択ダイアログを確認。PNG選択と`ダウンロードを確認`をそれぞれ一回実行し、ダイアログ消失を待機した。
+- `find`によるread-only確認で、`/Users/nichikatanaka/Downloads/履歴アップロード-1cc023860972014f75974278e8e6275d-20260917134029.png`を取得。`file`で`PNG image data, 5152 x 3438, 8-bit/color RGBA`を確認した。
+- Heavy Asset Centerでも同じ詳細アクションがfresh visual・semantic readbackで表示されることを確認した。Heavy側の実ダウンロードは重複保存を避けるため未実行。
+- 判定: Lightのダウンロード導線は形式選択から実ファイル生成まで`PASS`。Heavyは操作面表示が`PASS`、実ファイル生成は未確認。削除・コピー・名前編集、provider receipt、source sync、reconciliation、cleanupとは分離して扱う。
