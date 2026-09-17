@@ -3118,3 +3118,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 追記: 正規reconciliation inspectを再実行したが、保持タブには`garment-source.png`等の可視成功証拠が存在せず、`reconciliation_success_evidence_not_found`となった。保持タブのtext readbackは旧Printing UIのみで、uploadを再送せず、unknown-effectを解消できないまま修正版タブのreloadへ進まない。
 
 追記: 本番の静的配信物をread-onlyで確認し、`LightchainParityPages.0XYtv4AW.js`に`ツールバー`、`グラフィックデザインツール`、`プリントをアップロード`が含まれることを確認。これは修正版chunkの配信証拠だが、Companionの画面reload・hydration後visual readbackの代替にはしない。
+
+追記: 2026-09-17、Light Chain本番`https://jp.linkaigc.com/tools/printing`を既存のログイン済みCompanion task-owned tabで再オープンし、fresh semantic・visual readbackを取得。`生地イメージ`、`プリントイメージ`、`線画の実写化`、`平絵生成`の4タブ、左側5カテゴリのツールレール、`参考画像をアップロードしてください`、`プリントをアップロード`、`AI生成`、`生成履歴`を確認した。これはHeavy再読込比較の正本証拠であり、外部生成・provider receipt・source sync・reconciliation・cleanupの完了証拠ではない。
