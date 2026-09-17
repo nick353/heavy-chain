@@ -5191,3 +5191,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 同じ時点のログイン済みCompanion画面では、Lightの現在ページ30件とページ表示14ページを確認済みであるため、未認証probeの空応答はLightの正本データではなく、認証済みセッションが必要な境界を示す。
 - Cookie、auth-state、認証情報の抽出・保存・再利用は行っていない。空応答をHeavyへ同期したり、Lightの保存データと推測してD1へ複製したりしていない。
 - 判定: 未認証APIのprobeは完了したが、認証済みLight応答本文の安全なreadbackは未完了。Heavyの保存一覧同期・ページング修正は、正規ログインセッションで取得できる応答契約またはユーザー確認済みエクスポートが得られるまで保留する。
+
+## 2026-09-17 Light saved-project pagination full readback
+
+- 同一ログイン済みCompanionセッションでLight `/flow/integration` のページングを実操作し、ページ2〜5は番号クリック、ページ6〜14は次ページ操作で到達した。
+- 各遷移でactive pagination itemをfresh semantic readbackし、ページ14まで到達した。ページ1〜14の現在ページ表示はブラウザ上で確認済み。各ページのUIテキストには保存カードと参考事例5件が表示され、ページ14は最終ページの短いカード集合だった。
+- Companionのsanitized exportは画面テキストのみで、認証済みAPIのJSON本文やCookieは取得していない。したがってページングと画面件数の証拠であり、Light保存データの完全な名称・内容・previewのsource sync証拠ではない。
+- ページ遷移はブラウザUI効果としてreadbackできたが、provider receipt、外部AI生成、アップロード、権利確認、業務成果物の完了を意味しない。各transactionの`provider_completion`と`source_sync`は`unverified`のまま維持した。
+- 判定: Light保存一覧の14ページ到達は`UI_PASS`。Heavyの22件表示とのデータ完全一致、カード遷移、再表示、再利用、provider receipt／source sync／reconciliation／cleanupは未完了。未認証APIの空応答を同期元にはしない。

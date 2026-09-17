@@ -3534,3 +3534,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 未認証空応答をLight正本と扱わず、Heavyへ同期しないことを確認
 - [ ] ログイン済みCompanionの正規セッションで、保存一覧の応答契約・全ページ・カード内容を安全にreadback
 - [ ] 正本データのreadback後にのみHeavyの一覧／ページング／保存再利用差分を実装・deploy・再検証
+
+### 2026-09-17 Light saved-project pagination full readback
+- [x] Light保存一覧のページ2〜5を番号クリックでfresh readback
+- [x] ページ6〜14を次ページ操作でfresh readbackし、最終ページ14への到達を確認
+- [x] 各ページのactive pagination stateと画面テキストをCompanionで確認
+- [x] API JSON本文・Cookie・auth-stateを抽出せず、画面readbackとprovider/source-sync証拠を分離
+- [ ] Heavyの22件一覧とLight14ページの名称・内容・previewを正規データ境界で比較
+- [ ] カード遷移、保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanupを検証
