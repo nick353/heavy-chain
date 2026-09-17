@@ -5184,3 +5184,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 現行HEADで`npm run build`を実行し、TypeScript buildとVite production buildが完了した。
 - 今回の直近コミットはdocsとparity testのみで、本番UI／APIのproduction source変更は含まれない。そのため、直近のHeavy本番deploymentを不要に再実行せず、次のproduction deployは実装差分が確定した時点に限定する。
 - 判定: ローカル検証ゲートはPASS。Light／Heavy保存データ契約、権限post-state、成果物保存／再利用、provider receipt／source sync／reconciliation／cleanup、最終本番readbackは未完了。
+
+## 2026-09-17 Light API unauthenticated probe boundary
+
+- Lightの保存一覧APIを認証情報なしでread-only probeしたところ、HTTP 200は返ったが、`records=[]`、`total=0`、`pages=0`、`size=10`だった。要求URLの`size=31`は未認証応答に反映されなかった。
+- 同じ時点のログイン済みCompanion画面では、Lightの現在ページ30件とページ表示14ページを確認済みであるため、未認証probeの空応答はLightの正本データではなく、認証済みセッションが必要な境界を示す。
+- Cookie、auth-state、認証情報の抽出・保存・再利用は行っていない。空応答をHeavyへ同期したり、Lightの保存データと推測してD1へ複製したりしていない。
+- 判定: 未認証APIのprobeは完了したが、認証済みLight応答本文の安全なreadbackは未完了。Heavyの保存一覧同期・ページング修正は、正規ログインセッションで取得できる応答契約またはユーザー確認済みエクスポートが得られるまで保留する。

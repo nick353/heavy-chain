@@ -3527,3 +3527,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 直近コミットがdocs／testのみであることを確認し、production deployを保留
 - [ ] 実装差分確定後のproduction deploy・Companion再読込
 - [ ] 最終差分レポート、provider receipt、source sync、reconciliation、cleanup
+
+### 2026-09-17 Light API unauthenticated probe boundary
+- [x] 認証情報なしでLight保存一覧APIをread-only probe
+- [x] HTTP 200だが空データ（`records=[]`、`total=0`、`pages=0`、`size=10`）であることを記録
+- [x] 未認証空応答をLight正本と扱わず、Heavyへ同期しないことを確認
+- [ ] ログイン済みCompanionの正規セッションで、保存一覧の応答契約・全ページ・カード内容を安全にreadback
+- [ ] 正本データのreadback後にのみHeavyの一覧／ページング／保存再利用差分を実装・deploy・再検証
