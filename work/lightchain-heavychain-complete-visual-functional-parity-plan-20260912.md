@@ -3095,3 +3095,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 判定: `/tools/line`の主要画面は両環境で確認済みだが、生成ボタンの権限状態が一致していない。Lightの操作はブラウザUI readbackのみで、外部生成は実行していない。
 
 追記: 2026-09-18の本番反映確認では、修正版デプロイ`6aab372cdc088f64d1813d3f`のbuild完了ログは存在するが、Zeabur serviceは`STARTING`、deploymentは`DEPLOYING`継続。`https://heavy-chain.zeabur.app`の静的MaterialWorkbench chunkには修正版レール文言が未反映で、Companion本番再読込の証拠はまだ作成できない。
+
+追記: 同日、対象デプロイとserviceが`RUNNING`へ到達した後、Heavy `/tools/fabric`を同じログイン済みCompanionタブで再読込し、Hydration後に`ツールバー`、`デザインツール`、`フィッティングツール`、`グラフィックデザインツール`、`衣類生産ツール`をsemantic readback。visual screenshotでも左レールとデザインツール選択状態を確認した。Light側の同URLもfresh readbackし、主要入力・4タブ・権限表示を比較した。本番`UI_PASS`（Fabricレール反映）だが、権限ボタンのenabled状態、生成・成果物ライフサイクル、provider/source証跡は未完了。
