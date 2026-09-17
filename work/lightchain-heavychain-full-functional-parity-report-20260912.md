@@ -4842,3 +4842,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy本番を同じCompanionタブで再読込し、`生成履歴`を開いた後、`Canvasへ再利用`のrectがviewport内（y約221）に移動したことをfresh readbackした。
 - `Canvasへ再利用`を一回操作し、`/canvas/new?sourceArtifactId=local-handoff-v4utyunlmpa`へ遷移。Canvas画面、`保存`、Gallery、権利確認チェックボックス、生成導線をfresh readbackした。
 - 判定: 履歴表示→再利用クリック→Canvas遷移とsource identity保持は`PASS`。Canvas保存・実生成・provider receipt、source sync、reconciliation、cleanupは未完了。
+
+## 2026-09-17 Creator履歴再利用後のCanvas保存本番確認
+
+- Heavy本番の同じログイン済みCompanionタブで、`/canvas/new?sourceArtifactId=local-handoff-v4utyunlmpa`をfresh readbackした。
+- `保存`を一回だけ実操作し、transactionは`verified`／`known_effect`、browser readback verified、dispatch count 1、replay not allowedとして記録された。
+- 画面は`/canvas/2e602e8e-373a-4735-a1a6-24f249a2f5ec`へ遷移し、保存中の完了を待った後、`サーバー確認済み`、`保存`ボタン再有効化、`ブランド: Nisen`、権利確認チェック未選択をfresh semantic・visual readbackした。
+- 判定: 履歴成果物のCanvas再利用からサーバー保存確認まで`PASS`。provider receipt、source sync、外部生成、reconciliation、cleanup、Light同一成果物の再表示比較は未完了。生成ボタン・権利確認チェック・外部送信は操作していない。

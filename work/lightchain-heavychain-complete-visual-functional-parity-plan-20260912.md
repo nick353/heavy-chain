@@ -3144,3 +3144,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 追記: その後deployment/serviceが`RUNNING`へ到達したため、同一ログイン済みCompanionセッションでLight／Heavyの`/tools/printing`と`/asset-center`を新規task-owned tabとしてfresh semantic・visual readbackした。Printingは修正版左レールの本番反映を確認したが、HeavyにはLightにないskip link/avatar/file inputのsemantic差が残る。Asset CenterはHeavyがHydration後に一覧表示まで到達した一方、Light `controlCount=141`に対してHeavy `controlCount=49`で、カード・グループ・履歴操作の一致は未証明。生成・保存再表示再利用・provider receipt/source sync/reconciliation/cleanupは引き続き未完了。
 
 追記: 同じログイン済みCompanionセッションでLight／Heavyの`/model`をfresh readbackした。Heavyは主要入力、`Canvasに注文票を保存`、`AI生成`、`生成履歴`まで表示されたが、Lightは`権限がありません`のdisabled表示だった。Heavyのskip link/avatar/見出しといった共通シェル差分も残る。生成・保存・再表示・再利用、provider receipt/source sync/reconciliation/cleanupは未完了。
+
+### 2026-09-17 Creator履歴再利用後のCanvas保存
+
+- [x] 同じログイン済みCompanionセッションでCanvasをfresh readback
+- [x] `保存`を同一タブで一回だけ実行し、Heavy本番が`/canvas/2e602e8e-373a-4735-a1a6-24f249a2f5ec`へ遷移したことを確認
+- [x] 保存処理完了後、`サーバー確認済み`、保存ボタン再有効化、`ブランド: Nisen`、権利確認チェック未選択をfresh readback
+- [ ] 保存済みCanvasの離脱→再表示（fresh route reload）とLight正本との同一成果物比較
+- [ ] 実生成、provider receipt、source sync、reconciliation、cleanup、ダウンロード／削除の実効果
+
+判定: Creator履歴→Canvas→保存→サーバー確認済みのHeavy本番ブラウザフローは`PASS`。provider completion/source syncは未確認で、外部生成は未実行。
