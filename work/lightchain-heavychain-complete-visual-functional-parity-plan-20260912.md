@@ -3691,3 +3691,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] transaction statusで`state=completed`、`reconciliation_required=false`、`providerReceipt=null`、`sourceSync=null`を確認。provider成功・保存完了とは断定しない
 - [x] 同じrunのtab close、lease解放、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`をcleanup receiptで確認
 - [ ] Light remote-cardのprovider receipt／source syncが得られる正式な保存契約と、Heavy local-cardのCanvas handoffを同一データ種別で突合
+
+### 2026-09-17 continuation checkpoint — Remote/local card contract audit
+- [x] `LightchainLibraryPage.tsx`のremote/local分岐と本番操作を突合
+- [x] remoteカードの`ボードにコピー`は`handleImportRemote`（成果物登録）へ進み、localカードの同ボタンは`/canvas/new?sourceArtifactId=...`へ進むことを確認
+- [x] Heavy本番で観測した先頭カードはlocal、Light本番で観測した先頭カードはremoteであり、同一データ種別でない比較を実装差と断定しない方針を確定
+- [x] workspace内に`auth-state.json`／類似auth-stateファイルがないことを再確認
+- [ ] 同一remoteカードまたは同一localカードをLight／Heavyの両方で取得できる条件を整え、provider receipt／source sync／reconciliationを含む保存契約を突合

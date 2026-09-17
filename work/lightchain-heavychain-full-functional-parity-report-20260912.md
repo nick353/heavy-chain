@@ -5347,3 +5347,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyの同名ボタンはlocal保存カードなら`/canvas/new?sourceArtifactId=...`へ遷移し、remoteカードならLightと同じ`handleImportRemote`経路になる。今回のHeavy先頭カードはlocal、Light先頭カードはremoteであり、観測差はまず`DATA_SCOPE_DIFF`／カード種別差として保持する。
 - 外部生成、ファイルアップロード、権利確認、provider生成送信は行っていない。Light task-owned tabのcleanup receiptは`closed=[1980922980]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: Light remote-cardのブラウザ操作境界は`UI_PASS`、provider receipt／source sync／保存完了は`NOT_PROVEN`。Heavyとの完全な同一性は、同じremoteまたは同じlocalデータ種別での比較が必要。
+
+## 2026-09-17 Remote/local card contract audit
+
+- `src/pages/LightchainLibraryPage.tsx`の実装をreadbackし、remoteカードの`ボードにコピー`は`handleImportRemote`を通じて成果物登録を行い、localカードの同ボタンは`/canvas/new?sourceArtifactId=...`へ直接handoffする分岐を確認した。
+- 本番実測ではHeavy先頭カードがlocal保存カード、Light先頭カードがremote生成カードだった。したがって、HeavyのCanvas遷移とLightのremote登録結果の差は、現時点では同一カード契約の差ではなく`DATA_SCOPE_DIFF`／データ種別差として扱う。
+- workspace scanは`auth-state.json`および類似auth-stateファイル0件。認証state、Cookie、tokenを作成・保存・抽出していない。
+- 判定: 分岐契約の静的・実操作整合は`UI_PASS`、同一カードデータでのLight／Heavy保存・再利用完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
