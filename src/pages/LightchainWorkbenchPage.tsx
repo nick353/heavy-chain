@@ -381,7 +381,7 @@ const tools: CompatTool[] = [
     description: '衣服画像0/4、シングル/マルチタスク、説明生成、参考画像、モデルセット写真、1K品質を持つ着用生成。',
     inputs: ['衣服画像', '説明文', 'モデル画像', 'ポーズ', '背景'],
     outputs: ['モデル着用画像', 'EC素材', '履歴'],
-    heavyChainHref: '/fitting',
+    heavyChainHref: '/model',
     runLabel: '着用画像を作る',
     promptTemplate: '平置き商品画像を、自然なモデル着用EC画像に変換してください。',
   },
@@ -394,7 +394,7 @@ const tools: CompatTool[] = [
     description: 'モデル画像、ポーズ、背景を個別アップロードまたは参考画像ライブラリから選ぶ高精度モード。',
     inputs: ['衣服画像', 'モデル参照', 'ポーズ参照', '背景参照'],
     outputs: ['参照準拠の着用画像', '比較候補'],
-    heavyChainHref: '/fitting',
+    heavyChainHref: '/model?tab=参考図',
     runLabel: '参照付きで作る',
     promptTemplate: '商品画像、モデル参照、ポーズ参照、背景参照を維持して、自然な着用画像を作成してください。',
   },
@@ -407,7 +407,7 @@ const tools: CompatTool[] = [
     description: '衣服画像をアップロードし、平置き変換や複数コーディネートの元素材として管理。',
     inputs: ['衣服画像', 'カテゴリ', '説明文'],
     outputs: ['衣服参照', 'フィッティング素材'],
-    heavyChainHref: '/fitting',
+    heavyChainHref: '/model?tab=衣服',
     runLabel: '衣服素材を準備',
     promptTemplate: '衣服画像をAIフィッティング用の参照素材として整理し、説明文も生成してください。',
   },
@@ -420,7 +420,7 @@ const tools: CompatTool[] = [
     description: '背景参考画像を登録し、モデル着用画像や撮影シーンの背景条件として使う導線。',
     inputs: ['背景画像', '背景説明', '用途'],
     outputs: ['背景参照', '撮影シーン条件'],
-    heavyChainHref: '/fitting',
+    heavyChainHref: '/model?tab=参考図',
     runLabel: '背景素材を準備',
     promptTemplate: '背景参考画像をもとに、EC着用画像へ使える撮影シーン条件を作成してください。',
   },
@@ -4507,7 +4507,7 @@ export function LightchainWorkbenchPage() {
           </section>
           <aside className="relative flex min-h-[calc(100vh-70px)] items-center justify-center bg-[#151515]">
             <Link
-              to="/fitting#fitting-history"
+              to="/model#fitting-history"
               className="absolute right-4 top-4 rounded-xl border border-white/15 bg-[#181b1d] px-4 py-2 text-sm font-semibold text-white"
               data-testid="lightchain-fitting-history-link"
             >

@@ -648,7 +648,7 @@ export function LightchainModelPage() {
       selectGallery: '1',
     });
     if (prompt.trim()) params.set('prompt', prompt.trim());
-    navigate(`/fitting?${params.toString()}#fitting-material-workbench`);
+    navigate(`/model?${params.toString()}#fitting-material-workbench`);
   };
 
   return (
@@ -673,7 +673,7 @@ export function LightchainModelPage() {
               artifacts={historyArtifacts}
               emptyMessage="保存確認できたフィッティング成果物はまだありません。AI生成後に保存すると、ここから再利用できます。"
               reuseLabel="フィッティングへ再利用"
-              onReuse={(artifact) => navigate(`/fitting?resumeJob=${encodeURIComponent(artifact.sourceJobId ?? artifact.id)}`)}
+              onReuse={(artifact) => navigate(`/model?resumeJob=${encodeURIComponent(artifact.sourceJobId ?? artifact.id)}`)}
             />
           </section>
         )}

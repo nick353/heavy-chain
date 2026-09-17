@@ -637,7 +637,7 @@ export function LightchainLibraryPage() {
               {showExtendedLibraryHandoffs ? (selectedAsset.kind === 'local' ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className="rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}`)}>Canvasへ送る</button>
-                  <button type="button" className="rounded-lg border border-cyan-200/30 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-200/10" onClick={() => navigate(`/fitting?libraryArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}`)}>AIフィッティングへ</button>
+                  <button type="button" className="rounded-lg border border-cyan-200/30 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-200/10" onClick={() => navigate(`/model?libraryArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}`)}>AIフィッティングへ</button>
                   <button type="button" className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.06] hover:text-white" onClick={() => navigate(`/tools/fabric?libraryArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}&librarySlot=fabric-design`)}>生地イメージへ</button>
                   <button type="button" className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/[0.06] hover:text-white" onClick={() => navigate(`/tools/printing?libraryArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}&librarySlot=printing-design`)}>プリント画像へ</button>
                 </div>
