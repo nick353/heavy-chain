@@ -3397,3 +3397,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavy同deep-linkの本番Companion再読込と主要UI readback
 - [ ] Light／Heavyの同一プロジェクト内容・Canvas object・pixel-level完全一致
 - [ ] 入力後生成、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanup
+
+### 2026-09-17 Existing project detail controls parity readback
+
+- [x] `99e831d`を本番デプロイし`RUNNING`を確認
+- [x] Heavy／Lightの同じdetail deep-linkをCompanionで再表示
+- [x] `画像検索`見出し、`全削除`、`生成設定`=`自動`、`画像品質`=`1K`、`AI生成 80`を両方で確認
+- [ ] 実生成、provider receipt、source sync、reconciliation、cleanup
+- [ ] 実成果物・Canvas object・pixel-level完全一致、logout→login回帰

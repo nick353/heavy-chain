@@ -5058,3 +5058,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - typecheck、Lightchain entry routing 18/18、production build（2552 modules）、`git diff --check`をPASSした。対象Zeabur deployment `6aaba596a61819c1c58e3ac2`が`RUNNING`へ到達した。
 - デプロイ後にHeavyの同deep-linkを同じCompanionセッションで再読込し、ファッションスタジオ、Untitled、アセット、プロジェクトツール、タスク0、進行中、30%、画像検索、メイン画像、参考画像、指示入力、AI生成80、生成結果をfresh semantic readbackした。
 - 判定: 既存プロジェクト詳細の主要UI構造・ルーティングは`UI_PASS`。Light／Heavyの実プロジェクト内容・Canvas object・生成結果、外部生成、provider receipt、source sync、reconciliation、cleanupは未確認。
+
+## 2026-09-17 Existing project detail controls parity readback
+
+- Heavyの最新コミット`99e831d`（`fix: align fashion detail controls`）をZeaburへデプロイし、対象deploymentが`RUNNING`となったことを確認した。
+- ログイン済みCompanionでHeavyの同じdetail deep-linkを再表示し、Lightのfresh readbackと比較した。
+- Heavy／Light双方で`画像検索`（見出しlevel 3）、指示テキスト、同一プロンプト、文字数表示、`全削除`、`生成設定`=`自動`、`画像品質`=`1K`、`AI生成 80`、`生成結果`を確認した。
+- `全削除`などの外部効果を持たないUI部品は表示・構造まで一致した。`AI生成`は外部プロバイダー送信を伴うため押下していない。
+- 判定: 既存プロジェクト詳細の主要コントロールは`UI_PASS`。実入力後生成、実プロバイダーreceipt、source sync、reconciliation、cleanup、Light／Heavyの実成果物・Canvas object・pixel-level完全一致、logout→login回帰は未完了。
