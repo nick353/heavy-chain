@@ -28,10 +28,13 @@ import {
   getLightchainUnifiedFeatureWorkflowContract,
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
-import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 
 const darkPanel = 'rounded-2xl border border-white/10 bg-[#151a1c]';
 const mutedButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-300 transition hover:border-cyan-200/50 hover:bg-white/[0.08] hover:text-white';
+
+function ParityPermissionGate({ testId, marginClass = '' }: { testId: string; marginClass?: string }) {
+  return <button type="button" disabled aria-label="権限がありません" data-testid={testId} className={`${marginClass} w-full rounded-lg bg-[#65d3cf] px-3 py-2 text-xs font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-70`}>権限がありません</button>;
+}
 
 const designHistoryFeatureTypes = new Set([
   'campaign-image',
@@ -288,7 +291,7 @@ export function LightchainCreatorPage() {
 
 
         <main className="relative min-h-0 rounded-xl bg-[#151a1c] px-2 py-4 lg:px-8"><button type="button" className="absolute right-2 top-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-200" onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button><section className="flex min-h-full flex-col items-center justify-center pt-8"><h5 className="text-xl font-semibold text-cyan-300">インスピレーション</h5><p className="mt-2 text-sm text-neutral-400">AIで素早くデザイン開発、効率向上・コスト削減</p><div className="mt-6 h-[340px] w-full max-w-[1088px] overflow-hidden rounded-lg border border-white/10 bg-[#0d1113]"><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1.mp4" className="h-full w-full object-cover" autoPlay controls playsInline aria-label="インスピレーション動画" /></div></section></main>
-        <aside className="flex min-h-0 flex-col gap-4"><section className="min-h-[264px] rounded-xl bg-[#252a2d] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><p className="mt-4 text-sm text-neutral-300">このモジュールは購入後に使用可能。</p><p className="mt-2 text-xs text-neutral-400">ご担当の営業担当者にご連絡ください</p></div></div></section><section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center justify-between gap-3"><h6 className="text-sm font-semibold">キーワードを追加</h6><span className="text-xs text-neutral-400">オプション</span></div><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="mt-4 min-h-0 flex-1 resize-y rounded-lg border border-white/10 bg-[#252a2d] p-3 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます\n\n例1：オートミール色、H型カット、チェック柄生地、通勤用ワンピース…" maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="mt-2 flex items-center justify-between text-xs text-neutral-400"><span>文字数: {keywords.length}/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div><PermissionLockedButton testId="creator-permission" marginClass="mt-4" /></section></aside>
+        <aside className="flex min-h-0 flex-col gap-4"><section className="min-h-[264px] rounded-xl bg-[#252a2d] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><p className="mt-4 text-sm text-neutral-300">このモジュールは購入後に使用可能。</p><p className="mt-2 text-xs text-neutral-400">ご担当の営業担当者にご連絡ください</p></div></div></section><section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center justify-between gap-3"><h6 className="text-sm font-semibold">キーワードを追加</h6><span className="text-xs text-neutral-400">オプション</span></div><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="mt-4 min-h-0 flex-1 resize-y rounded-lg border border-white/10 bg-[#252a2d] p-3 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます\n\n例1：オートミール色、H型カット、チェック柄生地、通勤用ワンピース…" maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="mt-2 flex items-center justify-between text-xs text-neutral-400"><span>文字数: {keywords.length}/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div><ParityPermissionGate testId="creator-permission" marginClass="mt-4" /></section></aside>
       </div>
 
       {historyOpen && <section className="fixed inset-x-4 bottom-4 top-[67px] z-20 overflow-auto rounded-xl border border-white/10 bg-[#252a2d] p-5 shadow-2xl" data-testid="creator-persisted-history"><h2 className="font-semibold">生成履歴</h2><PersistedHistoryPanel artifacts={historyArtifacts} emptyMessage="保存確認できたデザイン成果物はまだありません。provider生成後に保存すると、ここから再利用できます。" reuseLabel="Canvasへ再利用" onReuse={(artifact) => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)} /></section>}
@@ -595,7 +598,7 @@ export function LightchainVectorSpecialPage() {
                 <div className="mt-3 flex items-center justify-end gap-4 text-xs text-white/75"><span>使用回数 {usage} / 30</span><button type="button" className="h-10 w-[288px] rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950" onClick={() => { setUsage((count) => Math.min(30, count + 1)); navigate('/tools/vector-special'); }}>AI生成 <span className="ml-1">1</span></button></div>
               </>
             ) : (
-              <PermissionLockedButton testId="pattern-vector-permission" />
+              <ParityPermissionGate testId="pattern-vector-permission" />
             )}
           </section>
           <section className="relative flex min-h-[746px] flex-col rounded-xl bg-[#232728] p-4">
@@ -686,7 +689,7 @@ const dialogueScenes = [
   ['生地パターン適用', '画像1の色と生地を変えず、画像2の生地パターンを適用してください', '面料套版'],
   ['線画から実写化', '画像1の線画を参考に、画像2の雰囲気で実写の商品画像にしてください', '转线稿'],
   ['デザインミックス', '画像1の色と生地を変えず、襟型を画像2の襟型に変更してください', '款式融合'],
-  ['ブリン卜修正', '画像1の要素を参考に、四方連続のプリントパターンをデザインし、画像2をレイアウトの参考にしてください', '印花设计'],
+  ['プリント修正', '画像1の要素を参考に、四方連続のプリントパターンをデザインし、画像2をレイアウトの参考にしてください', '印花设计'],
 ] as const;
 
 type GalleryReferenceAsset = {

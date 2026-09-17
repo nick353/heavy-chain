@@ -3747,3 +3747,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Lightも同じ390x844へ切り替えてreload transactionを実行し、browser effectをknown、external actionなし、cleanup verifiedとして記録した
 - [ ] Light mobile本体のfresh semantic readbackは、transactionがcleanupでtask-owned tabをcloseしたため未取得。pixel-level一致は`NOT_PROVEN`のまま維持
 - [ ] Light／Heavyのentitlement差（Light=`権限がありません`、Heavy=`AI生成`）を同一権限条件で突合し、provider receipt／source sync／reconciliationと分離して判断
+
+### 2026-09-17 continuation checkpoint — Parity boundary cleanup and post-deploy readback
+- [x] `LightchainParityPages.tsx`のlegacy `PermissionLockedButton`依存を画面内の同等disabled gateへ整理し、権利確認・外部生成境界は維持
+- [x] `ブリン卜修正`を正規表記の`プリント修正`へ修正
+- [x] alias route suite 5/5 PASS、`npm run typecheck` PASS、`npm run build` PASS（Vite 8.0.16、2553 modules）
+- [x] Zeabur対象をfresh readbackし、project `automation-wiled`、service `heavy-chain`、Docker deployment `6aabe366a61819c1c58e4456`を確認。status=`RUNNING`
+- [x] デプロイ後Heavy `/creator`で生成履歴、キーワード辞典、disabled `権限がありません`をfresh semantic・visual readback
+- [x] デプロイ後Heavy `/tools/pattern-to-vector`で`今すぐ体験`、disabled `権限がありません`、生成履歴、正規文言をfresh semantic・visual readback
+- [x] Companion cleanup receiptでtask-owned lease解放、foreign tab mutationなし、external actionなしを確認
+- [ ] Light mobile本体のfresh readback、Light／Heavy同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliation

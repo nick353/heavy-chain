@@ -5407,3 +5407,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Light desktopでは`権限がありません`、Heavy desktop／mobileでは素材未選択の`AI生成`（disabled）が表示されるentitlement差を再確認した。これは権利確認の自動承認・外部生成の実行を意味しない。
 - Light／Heavyともviewport変更・reload以外の外部効果はなく、provider receipt、source sync、reconciliationは未取得。Companion sessionはforeign tabを変更せず終了した。
 - 判定: Heavy mobileの主要UI readbackは`UI_PASS`、Light／Heavyのdesktop主要UIは既存証拠と合わせて`UI_PASS`。Light mobile本体のfresh readback、pixel-level全画面一致、entitlement完全一致、成果物lifecycle、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Parity boundary cleanup and post-deploy readback
+
+- `src/pages/LightchainParityPages.tsx`でlegacy `PermissionLockedButton`の依存を画面内の同等disabled gateへ置き換えた。表示上の`権限がありません`とdisabled状態は維持しており、権利確認・外部provider生成ゲートを自動承認した変更ではない。
+- dialogue sceneの誤記`ブリン卜修正`を`プリント修正`へ修正した。
+- alias route suiteは5/5 PASS、`npm run typecheck` PASS、`npm run build` PASS（Vite 8.0.16、2553 modules）。
+- Zeabur fresh target readbackでproject `automation-wiled`、service `heavy-chain`、Docker deployment `6aabe366a61819c1c58e4456`を確認し、build完了後status=`RUNNING`へ移行した。build logにはVite production buildと`heavy-chain-model-asset-ready:44173029`が記録された。
+- デプロイ後のHeavy `/creator`をHydration後にCompanion readbackし、`生成履歴`、`キーワード辞典`、disabled `権限がありません`を確認した。`/tools/pattern-to-vector`でも`今すぐ体験`、disabled `権限がありません`、`生成履歴`、`プリントパターンをベクター画像に変換します`を確認した。
+- cleanup receiptはtask-owned lease解放、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。アップロード、権利確認、AI生成、provider送信は行っていない。
+- 判定: 今回の対象ソース変更とHeavy本番反映・主要画面readbackは`PASS`。Light mobile本体のfresh readback、全画面pixel-level一致、同一artifactのLight／Heavy lifecycle、entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
