@@ -4849,3 +4849,6 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `保存`を一回だけ実操作し、transactionは`verified`／`known_effect`、browser readback verified、dispatch count 1、replay not allowedとして記録された。
 - 画面は`/canvas/2e602e8e-373a-4735-a1a6-24f249a2f5ec`へ遷移し、保存中の完了を待った後、`サーバー確認済み`、`保存`ボタン再有効化、`ブランド: Nisen`、権利確認チェック未選択をfresh semantic・visual readbackした。
 - 判定: 履歴成果物のCanvas再利用からサーバー保存確認まで`PASS`。provider receipt、source sync、外部生成、reconciliation、cleanup、Light同一成果物の再表示比較は未完了。生成ボタン・権利確認チェック・外部送信は操作していない。
+
+- 保存後、同じCompanionタブを`/creator`へ一度移動してから保存済みCanvas URLへ戻した。`プロジェクト名`の表示を待ち、fresh readbackで`サーバー確認済み`、`ブランド: Nisen`、同じCanvas URL、保存ボタン再有効化を確認した。
+- 判定: 保存→離脱→保存済みCanvas再表示は`PASS`。外部生成・権利確認チェック・provider receipt・source sync・reconciliation・cleanupは未実施／未証明。

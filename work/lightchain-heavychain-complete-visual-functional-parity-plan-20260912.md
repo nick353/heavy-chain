@@ -3154,3 +3154,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 実生成、provider receipt、source sync、reconciliation、cleanup、ダウンロード／削除の実効果
 
 判定: Creator履歴→Canvas→保存→サーバー確認済みのHeavy本番ブラウザフローは`PASS`。provider completion/source syncは未確認で、外部生成は未実行。
+
+追記: 保存後に同じCompanionタブを`/creator`へ一度移動し、保存済みCanvas URLへ戻した。`プロジェクト名`の表示を待ってfresh readbackし、`サーバー確認済み`、`ブランド: Nisen`、同じCanvas URL、保存ボタン再有効化を確認。保存済みCanvasの再表示は`PASS`。
