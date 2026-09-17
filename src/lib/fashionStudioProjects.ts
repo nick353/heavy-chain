@@ -38,7 +38,7 @@ export const mergeFashionStudioProjectCards = (
     // Older browser-local handoffs may not retain the remote Canvas ID. When
     // the authenticated Canvas index already owns the same title, it is the
     // canonical card and the local fallback must not render a duplicate.
-    if (!project.canvasProjectId && remoteTitles.has(project.title.trim())) continue;
+    if (remoteTitles.has(project.title.trim())) continue;
     if (seenIds.has(project.id)) continue;
     seenIds.add(project.id);
     cards.push({ ...project, source: 'local' });

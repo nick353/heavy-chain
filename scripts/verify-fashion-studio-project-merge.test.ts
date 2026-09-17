@@ -24,8 +24,8 @@ test('remote title is the fallback identity for legacy local handoffs', () => {
   const cards = mergeFashionStudioProjectCards(
     [{ id: 'canvas-1', title: '保存済み', updatedAt: '2026-09-17T01:00:00Z', imageUrl: '' }],
     [
-      { id: 'legacy-local-1', title: '保存済み', updatedAt: '2026-09-17T01:00:00Z', imageUrl: '' },
-      { id: 'legacy-local-2', title: '保存済み', updatedAt: '2026-09-16T01:00:00Z', imageUrl: '' },
+      { id: 'legacy-local-1', canvasProjectId: 'old-canvas-1', title: '保存済み', updatedAt: '2026-09-17T01:00:00Z', imageUrl: '' },
+      { id: 'legacy-local-2', canvasProjectId: 'old-canvas-2', title: '保存済み', updatedAt: '2026-09-16T01:00:00Z', imageUrl: '' },
       { id: 'local-only', title: '別のローカル', updatedAt: '2026-09-17T01:00:00Z', imageUrl: '' },
     ],
   );
