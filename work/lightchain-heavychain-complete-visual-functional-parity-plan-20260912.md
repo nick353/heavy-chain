@@ -3150,7 +3150,7 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 同じログイン済みCompanionセッションでCanvasをfresh readback
 - [x] `保存`を同一タブで一回だけ実行し、Heavy本番が`/canvas/2e602e8e-373a-4735-a1a6-24f249a2f5ec`へ遷移したことを確認
 - [x] 保存処理完了後、`サーバー確認済み`、保存ボタン再有効化、`ブランド: Nisen`、権利確認チェック未選択をfresh readback
-- [ ] 保存済みCanvasの離脱→再表示（fresh route reload）とLight正本との同一成果物比較
+- [x] 保存済みCanvasの離脱→再表示（fresh route reload）をHeavy本番で確認（Light正本との同一成果物比較は別未完了）
 - [ ] 実生成、provider receipt、source sync、reconciliation、cleanup、ダウンロード／削除の実効果
 
 判定: Creator履歴→Canvas→保存→サーバー確認済みのHeavy本番ブラウザフローは`PASS`。provider completion/source syncは未確認で、外部生成は未実行。
