@@ -3375,3 +3375,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavy／Lightの同じCompanionセッションで保存事例→ファッションスタジオ再利用先を実クリック確認
 - [ ] 保存データ件数・名称・プロジェクト内容・pixel-level完全一致
 - [ ] 外部生成、実プロバイダーreceipt、source sync、reconciliation、cleanup、logout→login回帰
+
+### 2026-09-17 Existing project to Canvas save and reload readback
+
+- [x] Heavy既存Fashion Studioプロジェクトを開く
+- [x] `Canvasへ保存`→`保存`を実操作
+- [x] `サーバー確認済み`の保存readback
+- [x] 同じCanvas URLを再読込し、再び`サーバー確認済み`を確認
+- [ ] Light側の同一プロジェクト内容・Canvas object・pixel-level完全一致
+- [ ] Canvasの生成・素材追加・エクスポート実効果、provider receipt、source sync、reconciliation、cleanup

@@ -5041,3 +5041,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Zeaburの対象`heavy-chain` service IDをfresh確認し、Docker deployment `6aaba21ec9ceb15397164434`が`RUNNING`へ到達した。Heavyを同じCompanionタブで再読込し、ログイン済みCreator画面を確認した。
 - デプロイ後のHeavyホームで同じ保存事例を開き、`同じもの作成`のhrefがLightの`/flow/integration`に対応する`/flow/integration?lcFeature=fashion-studio...`となり、実クリック後にHeavyのファッションスタジオ画面へ到達することを確認した。Light側も同じCompanionセッションで`/flow/integration`のファッションスタジオ画面を確認した。
 - 判定: 保存事例→再利用先のfeature routingは`UI_PASS`。保存データ件数・名称・プロジェクト内容はLightとHeavyで異なるため、成果物データの完全一致は`NOT_PROVEN`。外部生成、実プロバイダーreceipt、source sync、reconciliation、cleanupは未実行。
+
+## 2026-09-17 Existing project to Canvas save and reload readback
+
+- Heavyのログイン済みCompanionセッションで既存の`Fashion Studio: スタジオ案`プロジェクトを開き、`Canvasへ保存`を一度実行した。外部AI生成・アップロード・権利確認は実行していない。
+- Canvas URL `https://heavy-chain.zeabur.app/canvas/e394897b-5246-45bc-84a0-09abab91760c`へ遷移し、`保存`を実行後、表示が`キャンバス・サーバー確認済み`へ変化した。
+- 同じCanvas URLを再読込し、サーバー読込中を経て再び`キャンバス・サーバー確認済み`となることを確認した。保存後の再表示readbackは`UI_PASS`。
+- Canvasには`生成する`、`素材を見る`、`Galleryから追加`、`派生ツリー`、`エクスポート`の主要導線が表示された。実生成・素材追加・エクスポート効果、Light側の同一プロジェクト内容、provider receipt、source sync、reconciliation、cleanupは未確認。
