@@ -5094,3 +5094,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `レディース`、`メンズ`、`女の子`、`男の子`の4タブをそれぞれ一回ずつ実操作し、選択状態とカテゴリ項目群をfresh semantic・visual readbackした。Lightの実測済み構成に対応し、レディース／女の子は同じ構成、メンズ／男の子は同じ縮約構成であることを確認した。
 - `レディース`で`ニット`を一度選択し、`レディース・トップス・ニット編み`、選択状態、`画像`／`生地画像`入力、disabled`権限がありません`を確認した。外部生成、アップロード、権利確認、保存、provider送信は実行していない。
 - 判定: Heavyの4対象タブ切替と代表カテゴリ選択後UIは`UI_PASS`。全カテゴリ項目の個別選択、実入力、生成・保存・再表示・再利用、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。
+
+## 2026-09-17 Agent send permission parity patch and production readback
+
+- Fresh same-profile Light／Heavyの`/agent`比較で、Lightは初期状態の`送信`がdisabled、Heavyだけenabledだった差分を確認した。Light側の業務シーン4タブ、添付導線、最近の履歴、業務プリファレンスプロファイルも比較対象として記録した。
+- Heavyの`specialProviderGenerationLocked`に、Agentでは`providerRightsConfirmed`が未確認の間も送信をdisabledにする条件を追加した。権利確認を自動承認したり、外部生成を実行したりする変更ではない。
+- typecheck、認証／ブランド2件、UI境界13件、provider coverage22件の関連テスト（合計37件）、production build（2552 modules）、`git diff --check`をPASS。commitは`873327b`。
+- Zeabur deployment `6aabad06fa283769e51c1bd0`（commit `873327b`）が`RUNNING`に到達した。
+- デプロイ後、ログイン済みCompanionでHeavy `/agent`をfresh semantic・visual readbackし、Lightchain AIのAgent画面、4タブ、添付導線、`data-testid=lightchain-workspace-generate`の`送信` disabledを確認した。外部生成、送信、アップロード、権利確認は行っていない。
+- Companion cleanup receiptは対象タブ1件を閉じ、lease解放済み、foreign tabs mutated=false、external_action_executed=false。
+- 判定: Agentの初期送信権限状態は`UI_PASS`。Heavy／Lightの履歴件数、クイックスタート内容、中央レイアウトの完全一致は未完了。実入力後生成、provider receipt、source sync、reconciliation、cleanup、成果物完全一致、logout→login回帰も未完了。

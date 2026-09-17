@@ -3435,3 +3435,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] `レディース`の`ニット`を選択し、選択パンくず・画像／生地画像・権限ロックを確認
 - [ ] Light側の同4タブ・全カテゴリ項目を同一初期状態で個別比較
 - [ ] 実入力、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+### 2026-09-17 Agent send permission parity patch and production readback
+
+- [x] Light／Heavy `/agent`初期状態で`送信` enabled/disabled差分をfresh比較
+- [x] Heavy Agentを権利確認前disabledへ修正（commit `873327b`）
+- [x] 関連37テスト、typecheck、production build、diff check
+- [x] Zeabur deployment `6aabad06fa283769e51c1bd0`の`RUNNING`確認
+- [x] デプロイ後Heavy AgentのCompanion semantic・visual readbackで`送信` disabledを確認
+- [x] task-owned Companion tab／lease cleanup
+- [ ] Light／Heavyの履歴件数、クイックスタート、中央レイアウトの完全一致
+- [ ] 実入力、外部生成、provider receipt、source sync、reconciliation、cleanup
+- [ ] 成果物の保存／再表示／再利用、pixel-level完全一致、logout→login回帰
