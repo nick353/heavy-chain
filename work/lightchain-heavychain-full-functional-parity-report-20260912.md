@@ -4893,3 +4893,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy `/tools/pattern-to-vector`が旧`LightchainWorkbenchPage`を使っていたため、Lightと同じ`LightchainVectorSpecialPage`へルーティングを変更した。commit `a639f7e`をpushし、typecheck、production build、`git diff --check`をPASS。
 - デプロイID `6aab7d9f806ea25ad0915b00`は現在BUILDING。buildログはDocker image build中でエラーなし。RUNNING後にHeavy通常版のfresh Companion readbackが必要。
 - Lightの`権限がありません`とHeavyの生成可能表示の差はアカウントentitlementとして扱い、自動承認・権利ゲート撤廃は行わない。外部生成・provider receipt・source sync・reconciliation・cleanupは未実施。
+
+## 2026-09-17 Vector / Pattern route assets 本番再確認
+
+- Heavyの左ツールレールで相対`/routeIcons/...`が壊れた画像になっていたため、Light本番の`https://jp.linkaigc.com/routeIcons/...`を参照する修正をcommit `de16b27`としてpushした。
+- typecheck、production build、`git diff --check`をPASSし、最新deployment `6aab806f806ea25ad0915b5c`がRUNNINGになったことを確認した。
+- 同じCompanionログイン済みHeavy／Lightタブを再読込し、Heavy通常版で左レール、通常／プロタブ、告知、参考画像入力、レイヤー選択、履歴、結果パネルのfresh semantic・visual readbackを実施した。画像の壊れた表示は解消した。
+- 判定: 通常版のルーティング・主要画面構造・アセット参照は`PASS`。Lightの`権限がありません`とHeavyの`AI生成`はアカウントentitlement差であり、表示完全一致は`NOT_PROVEN`。レイヤーカード画像のpixel-level一致、外部生成、provider receipt、source sync、reconciliation、cleanup、全画面監査は未完了。

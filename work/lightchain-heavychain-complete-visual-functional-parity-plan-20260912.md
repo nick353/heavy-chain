@@ -3201,3 +3201,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] typecheck、production build、diff checkをPASS
 - [ ] deployment `6aab7d9f806ea25ad0915b00`のRUNNING到達後、Heavy通常版をCompanionで再読込・比較
 - [ ] provider receipt／source sync／reconciliation／cleanup、外部生成、全画面pixel-level一致、logout→login回帰
+
+### 2026-09-17 Vector / Pattern route assets 本番再確認
+
+- [x] Heavy左ツールレールのLight実アセット参照を絶対URLへ修正（commit `de16b27`）
+- [x] typecheck、production build、diff check、deployment `6aab806f806ea25ad0915b5c` RUNNINGを確認
+- [x] 同じCompanionログイン済みHeavy／Light通常版を再読込し、主要構造・ルーティング・履歴導線をfresh readback
+- [ ] レイヤーカードの実イラスト画像をLightと一致させる
+- [ ] 権限差分を同一entitlement条件で比較する（自動承認・ゲート撤廃はしない）
+- [ ] provider receipt／source sync／reconciliation／cleanup、外部生成、全画面pixel-level一致、logout→login回帰
