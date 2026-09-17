@@ -5456,3 +5456,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Zeabur deployment `6aabea3ee6c365d6264ad1fc`はDocker planで`RUNNING`。デプロイ後に30秒待機してHeavy `/model`をreadbackし、control count=`16`、Light初期画面にない2つの追加controlが消え、disabled `権限がありません`が存在することをsemantic・visual双方で確認した。
 - cleanup receiptはlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。アップロード、権利確認、生成、provider送信は行っていない。
 - 判定: Heavy `/model`初期control parityは`UI_PASS`。素材選択後、マルチタスク、全カテゴリpixel-level一致、同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Multitask tab readback
+
+- 同一Companion runでLight／Heavyの`/model`を開き、各タブの`マルチタスク`をsemantic clickで一度ずつ選択した。transactionはknown browser effect、visual readback verified、provider/source sync unverifiedとして返った。
+- fresh readbackではLight／Heavyとも正規の`/model`、readyState=`complete`、`マルチタスク` selected、`権限がありません` disabledで一致した。
+- ただしHeavyにはLightにない`未選択`とマルチタスク説明文が残った。素材投入後の同一状態や視覚完全一致はまだ証明していない。
+- cleanup receiptは`leases_released=2`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: マルチタスクのタブ選択・共通permission surfaceは`UI_PASS`、マルチタスク全体・成果物lifecycle・provider receipt/source sync/reconciliationは`NOT_PROVEN`。

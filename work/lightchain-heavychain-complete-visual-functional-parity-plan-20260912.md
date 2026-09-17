@@ -3795,3 +3795,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] デプロイ後Heavy `/model`を30秒待機後にCompanion readbackし、control count=16、`Gallery素材を選択`なし、`Canvasに注文票を保存`なし、disabled `権限がありません`ありを確認
 - [x] Companion cleanup receiptでlease解放、session close、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`を確認
 - [ ] 素材選択後・マルチタスク・全カテゴリでLight／Heavyのcontrol差分と成果物lifecycleを追加突合
+
+### 2026-09-17 continuation checkpoint — Multitask tab readback
+- [x] 同一runのCompanion authorized transactionでLight／Heavyの`マルチタスク`を一度ずつ選択
+- [x] fresh readbackで両方とも`マルチタスク` selected、permission gate disabledを確認
+- [x] Lightにはない`未選択`と補足説明がHeavyに残り、初期タブ以外にも表示差があることを記録
+- [x] Companion cleanup receipt: leases released 2、unknown effectなし、foreign tabs mutatedなし、external actionなし
+- [ ] マルチタスク内の素材投入後状態、全カテゴリ、履歴・保存・再利用、成果物provider receipt/source sync/reconciliation
