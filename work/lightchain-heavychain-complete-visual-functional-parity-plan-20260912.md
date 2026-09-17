@@ -3027,3 +3027,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 判定: Lightの`顧客提案`カテゴリ遷移はCompanion実操作でPASS。Heavyの初期UIは反映済みだが、添付機能を含む最新ソースの本番反映待ち。
 
 追記: Lightの`インスピレーション`と`AIグラフィックデザイン`もfresh visual target確認後に各1回クリックし、selected state、カテゴリ固有placeholder、クイックスタート／参考事例をreadbackした。4カテゴリのLight側タブ切替は画面証拠としてPASS。Heavy側同一4カテゴリの操作比較と成果物ライフサイクルは、最新デプロイ反映後に継続する。
+
+### 2026-09-18 Heavy Agentカテゴリcopy差分修正
+
+- [x] Heavyの`顧客提案／インスピレーション／AIグラフィックデザイン`をCompanionで各1回操作し、selected stateとカテゴリ固有placeholderをreadback
+- [x] Lightの実測値に合わせ、Heavy sourceの3カテゴリplaceholderを修正し、Lightに無かった補助文言を除去
+- [x] UI boundary tests 13/13、typecheck、production build、`git diff --check`をPASS
+- [ ] 修正sourceの本番デプロイとHeavy post-deploy readback（既存deployment `6aab2b9505af289f92f97e6b` は`DEPLOYING`継続）
+- [ ] 添付、入力後生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: HeavyのAgentカテゴリcopy差分はsource上でLight正本へ修正済み。デプロイ反映と成果物ライフサイクルは未完了。

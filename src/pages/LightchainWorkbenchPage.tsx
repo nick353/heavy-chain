@@ -4730,7 +4730,7 @@ export function LightchainWorkbenchPage() {
       },
       顧客提案: {
         helper: '',
-        prompt: '提案先、商品カテゴリ、用途、訴求ポイントを入力してください…',
+        prompt: '顧客要望を入力するか、brief、メール、議事録をアップロードしてください…',
         historyLabel: '提案履歴',
         examples: [
           '顧客向けに、ブランドの強みと商品企画の提案書を作成する。',
@@ -4744,8 +4744,8 @@ export function LightchainWorkbenchPage() {
         examples: workspaceStyle.examples,
       },
       インスピレーション: {
-        helper: 'ムード、素材、色、シルエットの参照を集めるモードです。',
-        prompt: '参考ブランド、年代、素材感、色、シルエットを入力してください。',
+        helper: '',
+        prompt: 'デザインしたい服のスタイルを入力するか、参考画像をアップロードしてください…',
         historyLabel: 'インスピレーション履歴',
         examples: [
           'メタリック素材、ショート丈、都会的な春夏スタイリングを集める。',
@@ -4753,8 +4753,8 @@ export function LightchainWorkbenchPage() {
         ],
       },
       AIグラフィックデザイン: {
-        helper: '企画からプリント、柄、配置案へ展開するモードです。',
-        prompt: '服に入れたいグラフィック、柄、配置、色数を入力してください。',
+        helper: '',
+        prompt: '生成したい柄のスタイル、要素、使用シーンを入力してください…',
         historyLabel: 'グラフィック履歴',
         examples: [
           'チェーンモチーフを胸元と袖に配置した2色プリントを作る。',

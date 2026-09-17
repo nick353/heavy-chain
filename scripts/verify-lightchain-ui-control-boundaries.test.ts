@@ -139,6 +139,16 @@ test('Agent parity starts with the compact rail and exposes Lightchain attachmen
   assert.match(source, /aria-label=\{workspaceStyle\.kind === 'agent' \? '送信' : 'AI生成'\}/);
 });
 
+test('Agent category copy matches the Lightchain production controls', async () => {
+  const source = await readFile(workbenchSourcePath, 'utf8');
+
+  assert.match(source, /顧客要望を入力するか、brief、メール、議事録をアップロードしてください…/);
+  assert.match(source, /デザインしたい服のスタイルを入力するか、参考画像をアップロードしてください…/);
+  assert.match(source, /生成したい柄のスタイル、要素、使用シーンを入力してください…/);
+  assert.match(source, /インスピレーション:\s*\{\s*helper: ''/s);
+  assert.match(source, /AIグラフィックデザイン:\s*\{\s*helper: ''/s);
+});
+
 test('parity runtime captures feature-specific settings in the comparison key', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 
