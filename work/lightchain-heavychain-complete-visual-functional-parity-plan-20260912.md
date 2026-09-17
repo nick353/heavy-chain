@@ -3191,3 +3191,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 判定: LightのAsset Centerダウンロードはブラウザ操作から実ファイル生成まで`PASS`。Heavyは操作面の表示一致までで、実効果と成果物ライフサイクルは未完了。削除は実行していない。
 
 追記: Heavyでも`ダウンロード`を一回実行し、`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案.png`（960×640、RGBA）の生成を確認。ただしLightはPNG／JPG／AVIFの形式選択ダイアログ、Heavyは即時PNG保存であり、ダウンロードUI仕様は未一致。
+### 2026-09-17 Vector / Pattern route parity continuation
+
+- [x] `/tools/vector-special`をLightの暗色レール、タブ、告知、入力、レイヤー、使用回数、AI生成、履歴、結果パネルへ寄せる
+- [x] Light本番の実ルートアイコンと`今すぐ体験`リンクをHeavyへ反映
+- [x] `/tools/vector-special`をCompanionでログイン済み同一セッション比較し、主要構造をfresh readback
+- [ ] レイヤーカードの実イラスト画像をLightと一致させる
+- [x] `/tools/pattern-to-vector`を旧WorkbenchからVector parity pageへルーティング変更（commit `a639f7e`）
+- [x] typecheck、production build、diff checkをPASS
+- [ ] deployment `6aab7d9f806ea25ad0915b00`のRUNNING到達後、Heavy通常版をCompanionで再読込・比較
+- [ ] provider receipt／source sync／reconciliation／cleanup、外部生成、全画面pixel-level一致、logout→login回帰

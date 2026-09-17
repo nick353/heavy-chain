@@ -4886,3 +4886,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 比較更新: 同じログイン済みCompanionセッションでLight先頭成果物にも同じAVIF操作を行ったが、新規AVIFファイルは生成されなかった。Light／HeavyのAVIF選択UIと実ファイル未生成の挙動は一致しているため、形式parityは`PASS`、AVIF機能実効性は両環境とも`NOT_PROVEN`として記録する。
 - 追加確認: Heavy先頭成果物を一回コピーし、一覧が8件から9件になったことを確認。コピーを`Parity copy verification 2026-09-17`へ名前変更し、fresh readback後に削除確認ダイアログを正規acceptした。画面の`ローカル成果物を削除しました`と一覧8件への復帰を確認した。
 - 判定更新: Heavyのコピー・名前編集・削除ライフサイクルは`PASS`。provider receipt、source sync、reconciliation、cleanup、全画面 parityは未完了。
+## 2026-09-17 Vector / Pattern route parity continuation
+
+- Heavy `/tools/vector-special`をLight本番の暗色レイアウト、左ツールレール、通常／プロタブ、終了告知、入力カード、レイヤー選択、使用回数、AI生成、履歴、結果パネルへ寄せた。Lightの実ルートアイコンと`今すぐ体験`リンクも採用した。
+- commit `7e1f422`（画面構造）と`aba3603`（実ルートアイコン・リンク）をpushし、Companionのログイン済みHeavy／Lightタブでfresh semantic・visual readbackした。主要構造は一致したが、Heavyのレイヤーカード画像はプレースホルダーで、Lightの実イラスト画像との一致は`NOT_PROVEN`。
+- Heavy `/tools/pattern-to-vector`が旧`LightchainWorkbenchPage`を使っていたため、Lightと同じ`LightchainVectorSpecialPage`へルーティングを変更した。commit `a639f7e`をpushし、typecheck、production build、`git diff --check`をPASS。
+- デプロイID `6aab7d9f806ea25ad0915b00`は現在BUILDING。buildログはDocker image build中でエラーなし。RUNNING後にHeavy通常版のfresh Companion readbackが必要。
+- Lightの`権限がありません`とHeavyの生成可能表示の差はアカウントentitlementとして扱い、自動承認・権利ゲート撤廃は行わない。外部生成・provider receipt・source sync・reconciliation・cleanupは未実施。
