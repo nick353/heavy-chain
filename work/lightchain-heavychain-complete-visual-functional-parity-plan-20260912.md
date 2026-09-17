@@ -2798,6 +2798,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] デプロイ後のHeavy／Light fresh Companion readbackで5カード・順序・遷移を確認
 - [ ] Lightのプロジェクト一覧データ、カード操作後Canvas handoff、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
 
+### 2026-09-17 Design Production start-card post-deploy readback
+
+- [x] 修正コミット f39db7a で対話シーン4列・開始カード5列を正しく分離
+- [x] UI control boundaries 13/13、route parity 19/19、typecheck、production build、diff check
+- [x] deployment 6aab98b5c9ceb153971641c1 のRUNNING確認
+- [x] 新規CompanionタブでHeavy／Lightの開始カード5件・順序をfresh readback
+- [ ] プロジェクト一覧データ、カードクリック後Canvas handoff、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
+
 ### 2026-09-17 Creator category interaction readback
 
 - [x] Light／HeavyでCreatorカテゴリ一覧を開き、レディース／トップス／ニットを選択

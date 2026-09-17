@@ -4978,3 +4978,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - UI control boundaries 13/13、route parity 19/19、typecheck、production build、diff checkはPASS。
 - Zeaburの手動デプロイはdeployment `6aab977c967ae3497db9015e`で`BUILDING`（ログはbuilder初期化まで）であり、現時点のHeavy本番画面はまだ旧4枚構成。RUNNING後のfresh Companion readbackが残っている。
 - Lightのプロジェクト一覧は多数、Heavyは1件であり、一覧データの件数・内容・pixel-level一致、カード操作後のCanvas handoff、生成・保存・再表示・再利用、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。
+
+## 2026-09-17 Design Production start-card post-deploy readback
+
+- 修正コミット f39db7a で、対話シーンの4列を維持しつつ開始カードだけを5列へ修正した。UI control boundaries 13/13、route parity 19/19、typecheck、production build、diff checkを再度PASS。
+- Zeabur deployment 6aab98b5c9ceb153971641c1（commit f39db7a）がRUNNINGへ到達した。
+- 新規CompanionタブでHydration後のHeavy／Light /designProductionをfresh semantic・visual readbackした。両方で開始カード5件が同じ順序（新規ファイル、インスピレーション、ブリン卜修正、生地イメージ、企画提案書）で表示された。
+- Heavyはマイプロジェクト1件、Lightは多数ページの既存プロジェクトであり、これは保存データ差として分離した。カードクリック後のCanvas handoff、一覧データの完全一致、入力後生成、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanup、全画面pixel-level一致、logout→login回帰は未完了。
