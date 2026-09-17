@@ -3745,7 +3745,7 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavyを390x844へ切り替え、Hydration完了後にAIフィッティング、single／multi tab、Gallery、説明生成、参考画像、モデル写真、Canvas保存、履歴、AI生成の主要controlをreadback
 - [x] Heavyのmobile readback後にviewportを1904x828へrestoreし、browser effectをknown、external actionなし、cleanup verifiedとして記録
 - [x] Lightも同じ390x844へ切り替えてreload transactionを実行し、browser effectをknown、external actionなし、cleanup verifiedとして記録した
-- [ ] Light mobile本体のfresh semantic readbackは、transactionがcleanupでtask-owned tabをcloseしたため未取得。pixel-level一致は`NOT_PROVEN`のまま維持
+- [x] Light mobile本体のfresh semantic・visual readbackは後続Companion sessionで補完済み。pixel-level一致は`NOT_PROVEN`のまま維持
 - [ ] Light／Heavyのentitlement差（Light=`権限がありません`、Heavy=`AI生成`）を同一権限条件で突合し、provider receipt／source sync／reconciliationと分離して判断
 
 ### 2026-09-17 continuation checkpoint — Parity boundary cleanup and post-deploy readback
@@ -3756,7 +3756,8 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] デプロイ後Heavy `/creator`で生成履歴、キーワード辞典、disabled `権限がありません`をfresh semantic・visual readback
 - [x] デプロイ後Heavy `/tools/pattern-to-vector`で`今すぐ体験`、disabled `権限がありません`、生成履歴、正規文言をfresh semantic・visual readback
 - [x] Companion cleanup receiptでtask-owned lease解放、foreign tab mutationなし、external actionなしを確認
-- [ ] Light mobile本体のfresh readback、Light／Heavy同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliation
+- [x] Light mobile本体のfresh readbackは後続checkpointで完了
+- [ ] Light／Heavy同一artifact lifecycle、entitlement完全一致、provider receipt、source sync、reconciliation
 
 ### 2026-09-17 continuation checkpoint — Light mobile fresh readback
 - [x] 新規Companion sessionでLight `/model`をログイン済み状態のままfresh semantic・visual readback
