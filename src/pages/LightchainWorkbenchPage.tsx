@@ -4346,18 +4346,20 @@ export function LightchainWorkbenchPage() {
                     )}
                   </div>
                 </label>
-                <button
-                  type="button"
-                  data-testid="fitting-model-gallery-select"
-                  onClick={() => {
-                    setActiveMaterialSlot('primary');
-                    setActiveMaterialTab('platform-assets');
-                    setMaterialModalOpen(true);
-                  }}
-                  className="mt-2 w-full rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-300/20"
-                >
-                  Gallery素材を選択
-                </button>
+                {garmentImageUrl && (
+                  <button
+                    type="button"
+                    data-testid="fitting-model-gallery-select"
+                    onClick={() => {
+                      setActiveMaterialSlot('primary');
+                      setActiveMaterialTab('platform-assets');
+                      setMaterialModalOpen(true);
+                    }}
+                    className="mt-2 w-full rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-300/20"
+                  >
+                    Gallery素材を選択
+                  </button>
+                )}
               </div>
               {garmentImageUrl && (
                 <section
@@ -4485,16 +4487,18 @@ export function LightchainWorkbenchPage() {
                   </label>
                 </details>
               )}
-              <button
-                type="button"
-                onClick={handleSaveToCanvas}
-                disabled={brandResolutionPending || !currentBrand || !garmentImageUrl || isSaving}
-                data-testid="lightchain-fitting-canvas-save"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/40 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-300/20 disabled:opacity-50"
-              >
-                <Layers3 className="h-4 w-4" />
-                Canvasに注文票を保存
-              </button>
+              {garmentImageUrl && (
+                <button
+                  type="button"
+                  onClick={handleSaveToCanvas}
+                  disabled={brandResolutionPending || !currentBrand || isSaving}
+                  data-testid="lightchain-fitting-canvas-save"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/40 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-300/20 disabled:opacity-50"
+                >
+                  <Layers3 className="h-4 w-4" />
+                  Canvasに注文票を保存
+                </button>
+              )}
             </div>
             <div className="absolute bottom-0 left-0 grid w-full gap-2 border-t border-white/10 bg-[#141717] p-2 sm:grid-cols-[1fr_1fr_2fr] lg:w-[432px]">
               {['スマート', '1K'].map((control) => (
