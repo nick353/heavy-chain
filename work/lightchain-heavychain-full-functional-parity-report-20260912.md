@@ -5398,3 +5398,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 同一artifactを`/model?libraryArtifactId=fitting-draft-98718413-7ea3-4a1f-87b1-1804ae2ec957`へ渡すと、`衣服の画像 (1/4)`、Gallery素材、説明生成、参考画像、`Canvasに注文票を保存`、`AI生成`、`生成履歴`をreadbackした。Fitting専用artifactはcanonical model workbenchでも衣服入力として復元されることを確認した。
 - これはHeavy内部の同一artifactに対するFitting／Model両routeの再表示・再利用`UI_PASS`である。ただしLight側で同一artifact ID・同一保存段階を揃えた比較、provider receipt、source sync、reconciliationは未確認であり`NOT_PROVEN`。
 - 外部生成、アップロード、権利確認、provider送信は実行していない。Companion cleanup receiptは`closed=[1980922990]`、lease解放、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
+
+## 2026-09-17 Desktop/mobile viewport readback
+
+- 同一ログイン済みCompanion sessionでLight／Heavyのcanonical `/model`をdesktop幅でfresh semantic・visual readbackし、主要なAIフィッティング操作群と履歴入口を確認した。
+- Heavyは390x844へviewportを変更し、Hydration完了後にsingle／multi task、衣服入力、Gallery素材、説明生成、参考画像、モデルのセット写真、Canvas保存、生成履歴、AI生成をreadbackした。mobile幅でも主要導線は画面内に存在し、viewport restore transactionは`visual_readback=verified`、`external_action_executed=false`、cleanup verifiedだった。
+- Lightも同じ390x844へviewportを変更してreload transactionを完了したが、transactionがtask-owned tabをcleanupでcloseする契約のため、Light mobile本体のfresh semantic snapshotは取得できなかった。したがってpixel-level一致やLight mobileのcontrol-by-control一致は`NOT_PROVEN`とする。
+- Light desktopでは`権限がありません`、Heavy desktop／mobileでは素材未選択の`AI生成`（disabled）が表示されるentitlement差を再確認した。これは権利確認の自動承認・外部生成の実行を意味しない。
+- Light／Heavyともviewport変更・reload以外の外部効果はなく、provider receipt、source sync、reconciliationは未取得。Companion sessionはforeign tabを変更せず終了した。
+- 判定: Heavy mobileの主要UI readbackは`UI_PASS`、Light／Heavyのdesktop主要UIは既存証拠と合わせて`UI_PASS`。Light mobile本体のfresh readback、pixel-level全画面一致、entitlement完全一致、成果物lifecycle、provider receipt、source sync、reconciliationは`NOT_PROVEN`。

@@ -3739,3 +3739,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 同一artifactを`/model?libraryArtifactId=...`へ渡し、`衣服の画像 (1/4)`、Gallery素材、説明生成、参考画像、Canvas保存、AI生成、生成履歴をfresh semantic・visual readback
 - [x] 権利確認チェックは未選択、AI生成・条件プレビュー保存・provider送信は未操作。Companion cleanup receiptはtab close、lease解放、unknown effectなし、foreign mutationなしで完了
 - [ ] Light側で同一Fitting専用artifactを取得できる条件、provider receipt、source sync、reconciliation
+
+### 2026-09-17 continuation checkpoint — Desktop/mobile viewport readback
+- [x] 同一ログイン済みCompanion sessionでLight／Heavyのcanonical `/model`をdesktop幅でfresh semantic・visual readback
+- [x] Heavyを390x844へ切り替え、Hydration完了後にAIフィッティング、single／multi tab、Gallery、説明生成、参考画像、モデル写真、Canvas保存、履歴、AI生成の主要controlをreadback
+- [x] Heavyのmobile readback後にviewportを1904x828へrestoreし、browser effectをknown、external actionなし、cleanup verifiedとして記録
+- [x] Lightも同じ390x844へ切り替えてreload transactionを実行し、browser effectをknown、external actionなし、cleanup verifiedとして記録した
+- [ ] Light mobile本体のfresh semantic readbackは、transactionがcleanupでtask-owned tabをcloseしたため未取得。pixel-level一致は`NOT_PROVEN`のまま維持
+- [ ] Light／Heavyのentitlement差（Light=`権限がありません`、Heavy=`AI生成`）を同一権限条件で突合し、provider receipt／source sync／reconciliationと分離して判断
