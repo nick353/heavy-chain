@@ -3165,9 +3165,12 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavy対象サービスへdeployment `6aab70c4806ea25ad0915912`を実行し、RUNNINGを確認する。
 - [x] 本番Heavy Asset Centerを再読込し、先頭成果物の詳細から形式選択ダイアログ（PNG／JPG／AVIF／キャンセル／ダウンロードを確認）をfresh readbackする。
 - [x] PNGを一回選択・確認し、`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案 (1).png`（960×640、RGBA）の実生成を確認する。
-- [ ] JPG／AVIFの実生成、削除、コピー、名前編集、provider receipt、source sync、reconciliation、cleanupを確認する。
+- [x] JPGを一回選択・確認し、`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案.jpg`（960×640、JPEG）の実生成を確認する。
+- [ ] AVIFの実生成、削除、コピー、名前編集、provider receipt、source sync、reconciliation、cleanupを確認する。
 
 判定: Heavyの単体ダウンロード形式UIとPNG実生成はLightと同じ導線で`PASS`。残りの成果物ライフサイクル、同一runのprovider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰は未完了。Goalは継続。
+
+追記: 同日、Heavy Asset Centerで先頭成果物をプレビューし、詳細アクションの`ダウンロード`をfresh readback後に一回実行した。形式ダイアログの`JPG`を選択し、`ダウンロードを確認`を一回実行。`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案.jpg`を取得し、`file`で`JPEG image data, 960x640`を確認した。AVIF、削除、コピー、名前編集、provider receipt／source sync／reconciliation／cleanupは未完了。
 
 ### 2026-09-17 Asset Center成果物ダウンロード本番確認
 

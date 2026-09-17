@@ -4872,3 +4872,6 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 本番Heavy `/asset-center`を再読込し、先頭成果物を`プレビュー`で開いて`ダウンロード`を操作。PNG／JPG／AVIF、`キャンセル`、`ダウンロードを確認`のダイアログをfresh semantic・visual readbackした。
 - PNGの確認操作後、`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案 (1).png`を取得し、`file`で`PNG image data, 960 x 640, 8-bit/color RGBA`を確認した。
 - 判定: Heavyの単体ダウンロード形式UIとPNG実ファイル生成は`PASS`。前記の「形式選択UI FAIL」はこの修正で解消した。JPG／AVIF実生成、削除、コピー、名前編集、provider receipt、source sync、reconciliation、cleanupは未完了。
+
+- 追加確認: 同じログイン済みCompanionセッションでHeavy先頭成果物をプレビューし、詳細の`ダウンロード`を一回実行。形式ダイアログで`JPG`を選択し、`ダウンロードを確認`を一回実行した。`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案.jpg`を取得し、`file`で`JPEG image data, 960x640`を確認した。
+- 判定更新: HeavyのJPG実ファイル生成は`PASS`。AVIF、削除、コピー、名前編集、provider receipt、source sync、reconciliation、cleanup、全画面 parityは未完了。
