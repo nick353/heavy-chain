@@ -5140,3 +5140,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy側で既に確認済みの4カテゴリ切替・代表選択と、Light側の初期選択前状態を比較する基礎証拠を追加した。Lightのカテゴリ選択コントロールはsemantic locatorで一意に解決できず、選択操作は再送していない。
 - Companion cleanup receiptはlease解放済み、foreign tabs mutated=false、external_action_executed=false。
 - 判定: Light初期Creatorシェルは確認済み。4カテゴリ個別選択と全項目比較、実入力・生成・保存・再利用は未完了。
+
+## 2026-09-17 Light Creator four-tab category readback
+
+- Lightのカテゴリ選択部をHTMLの`.select-category-button`から正確に特定し、4タブを同一Companionセッションで実クリックした。
+- `レディース`／`女の子`はトップス、ボトムス、ワンピース／セットアップ配下のフルカテゴリ（ニット、ルームウェア、Tシャツ、パーカー、シャツ、タンクトップ、ベスト、スーツ、ブルゾン、トレンチコート、オーバーコート、ダウン、下着、スイムウェア、ニットボトムス、ハーフスカート、パンツ、ワンピース等）を表示した。
+- `メンズ`／`男の子`は同じ3グループだが、下着・ニットボトムス・ハーフスカート等を含まない縮約カテゴリを表示した。
+- 各タブ切替はbrowser readbackまで確認し、外部生成・アップロード・権利確認・保存は実行していない。cleanup receiptはlease解放済み、foreign tabs mutated=false、external_action_executed=false。
+- 判定: Light側4タブのカテゴリ分岐は`UI_PASS`。Heavy側との全項目・選択後状態・実入力／生成／保存／再利用比較は未完了。

@@ -3486,3 +3486,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] デザイン選択、カテゴリ選択、画像アップロード、生成履歴、インスピレーション、権限disabledを確認
 - [ ] Lightの4カテゴリを個別選択し、全項目をHeavyと比較
 - [ ] 実入力、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+### 2026-09-17 Light Creator four-tab category readback
+- [x] HTML構造からカテゴリ選択部の正確なlocatorを特定
+- [x] `レディース／メンズ／女の子／男の子`を同一Companionセッションで実クリック
+- [x] レディース・女の子のフルカテゴリ、メンズ・男の子の縮約カテゴリをfresh readback
+- [ ] Heavy側の同4タブ・全項目・選択後状態をLightと比較し、必要なUI修正を実装
+- [ ] 実入力、生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
