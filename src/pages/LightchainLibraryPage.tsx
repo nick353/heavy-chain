@@ -118,6 +118,8 @@ export function LightchainLibraryPage() {
   const [renameValue, setRenameValue] = useState('');
   const [uploading, setUploading] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<'png' | 'jpeg' | 'avif'>('png');
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedFeatureId, setSelectedFeatureId] = useState('ai-fitting');
@@ -475,15 +477,25 @@ export function LightchainLibraryPage() {
     toast.success('コピーを作成しました');
   };
 
-  const handleDownloadSelected = async () => {
+  const handleDownloadSelected = () => {
     if (!selectedAsset) return;
     const imageUrl = cardImageUrl(selectedAsset);
     if (!imageUrl) {
       toast.error('ダウンロード可能な画像がありません');
       return;
     }
+    setDownloadFormat('png');
+    setDownloadOpen(true);
+  };
+
+  const handleConfirmDownloadSelected = async () => {
+    if (!selectedAsset) return;
+    const imageUrl = cardImageUrl(selectedAsset);
+    if (!imageUrl) return;
+    const extension = downloadFormat === 'jpeg' ? 'jpg' : downloadFormat;
     try {
-      await downloadValidatedImage(imageUrl, `${cardTitle(selectedAsset) || getCardId(selectedAsset)}.png`, 'library_single_download');
+      await downloadValidatedImage(imageUrl, `${cardTitle(selectedAsset) || getCardId(selectedAsset)}.${extension}`, 'library_single_download', downloadFormat);
+      setDownloadOpen(false);
     } catch {
       toast.error('ダウンロードに失敗しました');
     }
@@ -675,6 +687,31 @@ export function LightchainLibraryPage() {
             <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">新規グループ作成</h2><button type="button" onClick={() => setNewGroupOpen(false)} aria-label="閉じる"><X className="h-5 w-5 text-neutral-400" /></button></div>
             <label className="mt-5 block text-sm text-neutral-300">グループ名<input autoFocus value={newGroupName} onChange={(event) => setNewGroupName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') handleCreateGroup(); }} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-cyan-200/60" placeholder="例：2026AWサンプル" /></label>
             <div className="mt-5 flex justify-end gap-2"><button type="button" className={mutedButton} onClick={() => setNewGroupOpen(false)}>キャンセル</button><button type="button" className="rounded-xl bg-cyan-200 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={!newGroupName.trim()} onClick={handleCreateGroup}>作成</button></div>
+          </div>
+        </div>
+      )}
+
+      {downloadOpen && selectedAsset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5" role="dialog" aria-modal="true" aria-label="ダウンロード">
+          <div className={`${darkPanel} w-full max-w-md p-6`}>
+            <h2 className="text-lg font-semibold">ダウンロード</h2>
+            <p className="mt-2 text-sm text-neutral-400">保存形式を選択してください。</p>
+            <div className="mt-5 flex gap-3">
+              {(['png', 'jpeg', 'avif'] as const).map((format) => (
+                <button
+                  key={format}
+                  type="button"
+                  className={`rounded-lg border px-4 py-2 text-sm ${downloadFormat === format ? 'border-cyan-200 bg-cyan-200 text-neutral-950' : 'border-white/10 text-neutral-300'}`}
+                  onClick={() => setDownloadFormat(format)}
+                >
+                  {format === 'jpeg' ? 'JPG' : format.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" className={mutedButton} onClick={() => setDownloadOpen(false)}>キャンセル</button>
+              <button type="button" className="rounded-xl bg-cyan-200 px-4 py-2 text-sm font-semibold text-neutral-950" onClick={() => void handleConfirmDownloadSelected()}>ダウンロードを確認</button>
+            </div>
           </div>
         </div>
       )}

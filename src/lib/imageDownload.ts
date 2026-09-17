@@ -1,15 +1,18 @@
-export type ImageDownloadFormat = 'png' | 'jpeg' | 'webp';
+export type ImageDownloadFormat = 'png' | 'jpeg' | 'webp' | 'avif';
 
 const IMAGE_DOWNLOAD_MIME_TYPES: Record<ImageDownloadFormat, string> = {
   png: 'image/png',
   jpeg: 'image/jpeg',
   webp: 'image/webp',
+  avif: 'image/avif',
 };
 
 export const getImageDownloadFormat = (filename: string): ImageDownloadFormat => {
   const extension = filename.trim().toLowerCase().split('.').pop();
   return extension === 'jpeg' || extension === 'jpg'
     ? 'jpeg'
+    : extension === 'avif'
+      ? 'avif'
     : extension === 'webp'
       ? 'webp'
       : 'png';
