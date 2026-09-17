@@ -5316,3 +5316,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightはアカウントentitlementにより`権限がありません`、Heavyは同位置に`AI生成`（disabled、素材未選択）を表示した。この差はroute／UI実装差ではなく、同一権限条件の比較証拠がないentitlement差として残す。権利確認や外部生成の自動承認・迂回はしていない。
 - Companion cleanup receiptは両task-owned tabをclose、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。
 - 判定: canonical `/model` routeと主要初期UIの本番readbackは`UI_PASS`。Light／Heavyのentitlement完全一致、pixel-level全画面一致、入力後生成、成果物保存・再表示・再利用、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Same-run Asset Center saved-card readback
+
+- 同一ログイン済みCompanion sessionでLight／Heavyの`/asset-center`をfresh readbackし、HeavyはHydration完了後のsemantic／visual snapshotを取得した。
+- 両環境で`ライブラリー`、`マイライブラリー`、`履歴アップロード`、`生成履歴`、`ウェアデザインラボ生成結果`、グループ、`一括操作`、`プレビュー`、`ボードにコピー`を確認した。Heavyのcontrol countは53、Lightは137で、表示される保存データの量・UI exportはユーザー別に異なる。
+- Heavyは`選択済み：0 / 9`と、Fashion Studio、design-agent、model-matrix、campaign-image、generate-image等の9件相当の保存カードを表示した。Lightは多数の正本カードIDと`画像／動画`表示を返し、Heavyとカード名称・件数が一致しないため、これは実装差と断定せず`DATA_SCOPE_DIFF`とした。
+- 保存カードのpreview／board copy controlsの存在は`UI_PASS`。ただし、全カードの正規データ同一性、詳細遷移、入力値、保存状態、再表示／再利用、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+- 外部生成、アップロード、削除、権利確認、provider送信は実行していない。cleanup receiptはtask-owned tabs `[1980922970,1980922971]` close、2 lease release、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`で完了した。

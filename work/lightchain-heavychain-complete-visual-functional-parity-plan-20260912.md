@@ -3663,3 +3663,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Companion cleanup receiptで両task-owned tabをclose、unknown effectなし、foreign mutationなし、external actionなしを確認
 - [ ] Lightの権限ロックとHeavyのAI生成表示のentitlement差を、同一権限条件で突合
 - [ ] 外部AI生成、成果物保存／再表示／再利用、provider receipt、source sync、reconciliationを最終監査で証明
+
+### 2026-09-17 continuation checkpoint — Asset Center saved-card readback
+- [x] 同一ログイン済みCompanion sessionでLight／Heavyの`/asset-center`をHydration待機後に再readback
+- [x] 両方でライブラリー、4つの主要履歴／生成カテゴリ、一括操作、`プレビュー`、`ボードにコピー`を確認
+- [x] Heavyは`選択済み：0 / 9`と9件相当の保存カードを表示し、Lightは別ユーザー／正本側の多数のカードIDと`画像／動画`を表示したため、カード内容・件数は`DATA_SCOPE_DIFF`として扱った
+- [x] 外部生成、アップロード、削除、権利確認、provider送信は行わず、2 lease解放・2 tab close・`unknown_effect=[]`・`external_action_executed=false`をcleanup receiptで確認
+- [ ] 全カードの正規名称、詳細、preview、保存状態、再表示／再利用の1対1突合、およびprovider receipt／source sync／reconciliation
