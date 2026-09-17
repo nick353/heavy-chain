@@ -5368,3 +5368,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 前回と同じカードID列、control count `137`、`ボードにコピー` count `26`で、画面上の非同期反映は確認できなかった。これは保存失敗の断定でも成功の証明でもない。
 - 前回transactionの`providerReceipt=null`、`sourceSync=null`、`reconciliation=null`を維持したまま、再送なしで終了した。cleanup receiptは`closed=[1980922985]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
 - 判定: Lightの遅延readbackは`NO_VISIBLE_CHANGE`。provider receipt／source sync／保存完了は`NOT_PROVEN`であり、Heavyとの完全な成果物同一性も未確認。
+
+## 2026-09-17 Library-to-workbench contract suite
+
+- `scripts/verify-library-canvas-handoff.test.ts`、`scripts/verify-fitting-reference-lifecycle-contract.test.ts`、`scripts/verify-fitting-history-readback.test.ts`を現行worktreeで実行し、32 tests / 32 PASSを確認した。
+- 検証範囲はCanvasの`sourceArtifactId`、remote image hydration、全31 non-video featureの`libraryArtifactId` lineage、fabric／printing slot、Fitting履歴・再開・rights gate、重複submit防止である。
+- これは静的・契約レベルの証拠であり、本番Light／Heavyの同一artifact再表示、再利用結果、provider receipt、source sync、reconciliationを証明しない。外部生成・アップロード・権利確認は行っていない。
+- 判定: library-to-workbench契約は`PASS`、本番成果物lifecycleは`NOT_PROVEN`。

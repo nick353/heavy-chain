@@ -3712,3 +3712,9 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 前回transactionの`providerReceipt=null`／`sourceSync=null`を維持し、非同期反映・保存完了を推測しないことを確認
 - [x] tab close、lease解放、`unknown_effect=[]`、foreign mutationなしをcleanup receiptで確認
 - [ ] 正式なprovider/source-sync receiptまたは同一artifact IDを使ったLight／Heavy比較条件
+
+### 2026-09-17 continuation checkpoint — Library-to-workbench contract suite
+- [x] `verify-library-canvas-handoff.test.ts`、`verify-fitting-reference-lifecycle-contract.test.ts`、`verify-fitting-history-readback.test.ts`を同一runで実行
+- [x] Canvas source identity、remote image hydration、31機能のlibraryArtifactId handoff、fabric／printing slot、Fitting履歴・再開・rights gateを含む32/32 PASS
+- [x] 実装変更なし。auth-state不使用、provider生成・アップロード・権利確認は未操作
+- [ ] 本番Light／Heavyの同一artifactでの再表示／再利用、provider receipt、source sync、reconciliation
