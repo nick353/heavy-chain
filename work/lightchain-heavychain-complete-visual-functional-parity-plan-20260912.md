@@ -3413,3 +3413,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Lightの新規ファイル＋保存プロジェクト30件＋ページ表示`1 2 3 4 5 … 14`＋参考事例5件を確認
 - [ ] Heavyのbrand／scope／remote Canvas documentsとLightの保存データ件数・名称・更新日時・プレビューを一致させる
 - [ ] 保存データ同期後に全ページ、カード遷移、再表示、再利用を再検証
+
+### 2026-09-17 Fashion Studio project-data source audit
+
+- [x] HeavyのCompanion networkで`/v1/profile`、`/v1/brands`を確認
+- [x] Heavyの初期表示区間で`/v1/canvas-documents`が発生していないことを確認
+- [x] Lightの`drawingBoardProject/page?current=1&size=31&boardProjectType=integrationCustom`と`caseList`取得を確認
+- [ ] Heavyのprofile／brands応答、currentBrand hydration、Canvas document API到達を修正・再確認
+- [ ] remote project一覧取得後に件数・ページング・カード再利用をLight正本と比較

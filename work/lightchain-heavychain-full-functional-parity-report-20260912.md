@@ -5073,3 +5073,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavyは新規ファイル＋保存プロジェクト2件＋参考事例5件を表示した。Lightは新規ファイル＋保存プロジェクト30件（ページ表示は`1 2 3 4 5 … 14`）＋参考事例5件を表示した。
 - Heavy側の実装はremote Canvas documentsとlocal artifactsを統合し、1ページ30件のページングを持つ。しかし今回の同一ログイン比較ではHeavyのデータ取得結果自体がLightより少なく、保存データ件数・名称・更新日時・プレビューの完全一致は未達。
 - 判定: 共通シェルと参考事例導線は`UI_PASS`、保存プロジェクトのデータ／ページネーション内容は`NOT_PROVEN`。Lightの保存データを推測で複製する変更は行わず、バックエンドのbrand／scope／データ同期差分を次の調査対象とする。
+
+## 2026-09-17 Fashion Studio project-data source audit
+
+- HeavyのCompanion `read_network`で、認証セッション取得後に`https://heavy-chain-api.nichika2000823.workers.dev/v1/profile`と`/v1/brands`へのfetchを確認したが、同じ初期表示区間に`/v1/canvas-documents`のfetchは確認できなかった。Heavyの`FashionStudioPage`は`currentBrand?.id`が存在する場合だけCanvas document一覧を取得する。
+- Lightの同じCompanion `read_network`では、`/api/light-chain-system/saas/user/info`に加え、`/api/light-chain-yunxiang-saas-server/drawingBoardProject/page?current=1&size=31&boardProjectType=integrationCustom`と`caseList?boardProjectType=integrationSystem`を確認した。Lightの30件＋ページング表示はこの取得経路の結果である。
+- 判定: Heavyのremote project不足は表示上限の差ではなく、Heavy側のprofile／brands→currentBrand hydrationまたはCloudflare Canvas API到達前段の差分が未解決。Lightデータを画面へハードコードする変更は行わない。
