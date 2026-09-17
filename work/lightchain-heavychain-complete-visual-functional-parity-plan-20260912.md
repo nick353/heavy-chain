@@ -3025,3 +3025,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Light／Heavy全4カテゴリの同一操作比較、入力後生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: Lightの`顧客提案`カテゴリ遷移はCompanion実操作でPASS。Heavyの初期UIは反映済みだが、添付機能を含む最新ソースの本番反映待ち。
+
+追記: Lightの`インスピレーション`と`AIグラフィックデザイン`もfresh visual target確認後に各1回クリックし、selected state、カテゴリ固有placeholder、クイックスタート／参考事例をreadbackした。4カテゴリのLight側タブ切替は画面証拠としてPASS。Heavy側同一4カテゴリの操作比較と成果物ライフサイクルは、最新デプロイ反映後に継続する。
