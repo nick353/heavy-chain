@@ -2806,6 +2806,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 新規CompanionタブでHeavy／Lightの開始カード5件・順序をfresh readback
 - [ ] プロジェクト一覧データ、カードクリック後Canvas handoff、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
 
+### 2026-09-17 Creator category selection readback
+
+- [x] 新規CompanionタブでHeavy／Light /creator のカテゴリメニューをfresh readback
+- [x] 両方でレディース→トップス→ニットを選択し、選択後UIを比較
+- [ ] Heavyのカテゴリカード画像・アイコン・パンくず・補助選択UIをLightとpixel-level一致
+- [ ] 全カテゴリ選択、入力後生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
 ### 2026-09-17 Creator category interaction readback
 
 - [x] Light／HeavyでCreatorカテゴリ一覧を開き、レディース／トップス／ニットを選択

@@ -4985,3 +4985,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Zeabur deployment 6aab98b5c9ceb153971641c1（commit f39db7a）がRUNNINGへ到達した。
 - 新規CompanionタブでHydration後のHeavy／Light /designProductionをfresh semantic・visual readbackした。両方で開始カード5件が同じ順序（新規ファイル、インスピレーション、ブリン卜修正、生地イメージ、企画提案書）で表示された。
 - Heavyはマイプロジェクト1件、Lightは多数ページの既存プロジェクトであり、これは保存データ差として分離した。カードクリック後のCanvas handoff、一覧データの完全一致、入力後生成、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanup、全画面pixel-level一致、logout→login回帰は未完了。
+
+## 2026-09-17 Creator category selection readback
+
+- 新規CompanionタブでHeavy／Lightの /creator を同時に開き、カテゴリ選択を開いた。Lightのカテゴリメニューには衣類アイコン付きカード、Heavyにはテキスト中心の同等カテゴリボタンが表示された。
+- 両方でレディース→トップス→ニットを選択した。Lightは選択後パンくず、画像／生地画像切替、カテゴリメニュー、キーワード、権限ロックを表示し、Heavyは同じカテゴリ選択・補助選択・画像／生地画像・キーワード・権限ロックを表示した。
+- 差分として、Heavyは左側の補助選択チップとアップロードプレースホルダーを明示表示し、Lightは選択後のパンくずとアイコン付きカテゴリカードの表現が異なる。カテゴリ選択自体は可逆操作として確認した。
+- アップロード、外部生成、権利確認、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanupは実行していない。Creatorのpixel-level一致と成果物フローは未完了。
