@@ -3015,3 +3015,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 追記: 2026-09-18のfresh readbackでも対象deployment `6aab2b9505af289f92f97e6b` は`DEPLOYING`継続。runtime logは同deploymentのPod image pull開始までを返し、現在稼働中のHeavy `/agent`はログイン済みで、コンパクトレールと`送信`を確認できた。最新コミットのAgent添付controlsは、deployment完了後に同じCompanionタブを再読込して確認する。再デプロイや添付操作の再送は行っていない。
 
 追記: 2026-09-18の独立ローカル検証として、`test:lightchain-all-feature-workflows-contract` 5/5、`test:lightchain-provider-coverage` 22/22、`test:lightchain-unified-workflow-contract` 6/6をPASS。これらはルーティング・provider分岐・保存／継続マーカーの契約証拠であり、本番provider receipt、source sync、reconciliation、cleanup、Companion post-deploy UI証拠の代替にはしない。
+
+### 2026-09-18 Light／Heavy Agentカテゴリ実操作差分
+
+- [x] Light `/agent` をCompanionでfresh readbackし、4カテゴリtab、添付 controls 2系統、送信、クイックスタートを確認
+- [x] Light `顧客提案` tabをfresh visual target確認後に一回だけクリックし、selected state、顧客提案用placeholder・テンプレート・添付 controls をreadback
+- [x] Heavy `/agent` を同一Companionセッションでfresh readbackし、初期`商品企画`、送信、4カテゴリtab、compact railを確認
+- [ ] Heavyの最新添付 controls は対象deployment `6aab2b9505af289f92f97e6b` が`DEPLOYING`継続のため、本番readback未確認
+- [ ] Light／Heavy全4カテゴリの同一操作比較、入力後生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: Lightの`顧客提案`カテゴリ遷移はCompanion実操作でPASS。Heavyの初期UIは反映済みだが、添付機能を含む最新ソースの本番反映待ち。
