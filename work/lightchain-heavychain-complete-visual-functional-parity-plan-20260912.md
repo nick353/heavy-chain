@@ -3698,3 +3698,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavy本番で観測した先頭カードはlocal、Light本番で観測した先頭カードはremoteであり、同一データ種別でない比較を実装差と断定しない方針を確定
 - [x] workspace内に`auth-state.json`／類似auth-stateファイルがないことを再確認
 - [ ] 同一remoteカードまたは同一localカードをLight／Heavyの両方で取得できる条件を整え、provider receipt／source sync／reconciliationを含む保存契約を突合
+
+### 2026-09-17 continuation checkpoint — Heavy signed-image card handoff classification
+- [x] Heavy `/asset-center`のDOM資産をread-only queryし、先頭2カードがlocal SVG、後続カードが署名付きmedia URLであることを確認
+- [x] 署名付きmedia URLのカードを1件実操作し、`/canvas/new?sourceArtifactId=local-b9c3fbda-6b36-4a29-bad3-acdb8e33c627`へ遷移することを確認
+- [x] Canvas Hydration後に保存・素材表示・権利確認・生成入口をreadbackし、権利確認・生成は未操作
+- [x] 画像URLがremoteでも、Heavyの保存カード契約上はlocal artifact handoffとして動作しているため、Light先頭remoteカードとの直接同一性は成立しないと確定
+- [ ] 同一artifact ID／同一保存段階をLight／Heavy双方で用意できる正式なread-only比較条件、provider receipt、source sync、reconciliation

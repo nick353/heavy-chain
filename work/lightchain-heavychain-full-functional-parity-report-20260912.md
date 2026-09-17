@@ -5354,3 +5354,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 本番実測ではHeavy先頭カードがlocal保存カード、Light先頭カードがremote生成カードだった。したがって、HeavyのCanvas遷移とLightのremote登録結果の差は、現時点では同一カード契約の差ではなく`DATA_SCOPE_DIFF`／データ種別差として扱う。
 - workspace scanは`auth-state.json`および類似auth-stateファイル0件。認証state、Cookie、tokenを作成・保存・抽出していない。
 - 判定: 分岐契約の静的・実操作整合は`UI_PASS`、同一カードデータでのLight／Heavy保存・再利用完全一致、provider receipt、source sync、reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Heavy signed-image card handoff classification
+
+- Heavy `/asset-center`のread-only DOM queryで、先頭2カードは`data:image/svg+xml`のlocal preview、後続カードはHeavy APIの署名付きmedia URLであることを確認した。
+- 署名付きmedia URLを持つHeavyカードの`ボードにコピー`を1回実クリックした結果、`https://heavy-chain.zeabur.app/canvas/new?sourceArtifactId=local-b9c3fbda-6b36-4a29-bad3-acdb8e33c627`へ遷移した。したがって、URLのremote性だけでremote未登録カードと判定できず、Heavy側ではlocal artifact handoffとして扱われている。
+- Canvasで保存、素材表示、権利確認チェック、生成入口をfresh readbackした。権利確認・生成・provider送信は行っていない。cleanup receiptは`closed=[1980922982]`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: Heavyのカード→Canvas handoffは`UI_PASS`。Light先頭remoteカードとの完全同一性は保存段階・artifact IDが異なるため`NOT_PROVEN`。provider receipt、source sync、reconciliationも未確認。
