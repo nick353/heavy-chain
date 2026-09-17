@@ -3202,6 +3202,16 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] deployment `6aab7d9f806ea25ad0915b00`のRUNNING到達後、Heavy通常版をCompanionで再読込・比較
 - [ ] provider receipt／source sync／reconciliation／cleanup、外部生成、全画面pixel-level一致、logout→login回帰
 
+### 2026-09-17 Creator inspiration video geometry parity deployment readback
+
+- [x] Light／Heavy `/creator`をfresh screenshot・semantic readbackし、中央動画幅の差分を特定
+- [x] Heavy Creatorの動画と親領域をLightの約605pxへ揃えるスコープCSSを追加（commit `1e7e8c5`）
+- [x] UI boundary 13/13、route 19/19、typecheck、production build、diff check
+- [x] follow-up deployment `6aab9387967ae3497db900e6`のRUNNINGを確認
+- [x] デプロイ後のHeavy／Lightスクリーンショットで中央動画geometryを再確認
+- [ ] カテゴリ選択後の全画面・全操作、アップロード、生成、保存／再表示／再利用
+- [ ] provider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰
+
 ### 2026-09-17 Vector ordinary/pro permission parity deployment readback
 
 - [x] Light本番で通常版とプロ版の権限・操作表示差をfresh semantic／visual readback
