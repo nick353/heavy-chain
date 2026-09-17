@@ -11,6 +11,7 @@ export type FashionStudioLocalProject = FashionStudioRemoteProject & {
 
 export type FashionStudioProjectCard = FashionStudioRemoteProject & {
   source: 'remote' | 'local';
+  canvasProjectId?: string;
 };
 
 /**

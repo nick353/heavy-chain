@@ -11,6 +11,15 @@ test('remote Canvas project wins over its local handoff duplicate', () => {
   assert.deepEqual(cards.map(({ id, source }) => ({ id, source })), [{ id: 'canvas-1', source: 'remote' }]);
 });
 
+test('preserves a local handoff Canvas ID for reuse routing', () => {
+  const cards = mergeFashionStudioProjectCards(
+    [],
+    [{ id: 'local-1', canvasProjectId: 'canvas-1', title: '保存済み', updatedAt: '2026-09-17T01:00:00Z', imageUrl: '' }],
+  );
+
+  assert.equal(cards[0]?.canvasProjectId, 'canvas-1');
+});
+
 test('local-only handoffs remain available for reuse', () => {
   const cards = mergeFashionStudioProjectCards(
     [],

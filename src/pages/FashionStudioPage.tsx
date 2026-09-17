@@ -598,7 +598,14 @@ export function FashionStudioPage() {
               <button
                 key={project.id}
                 type="button"
-                onClick={() => project.source === 'remote' ? navigate(`/canvas/${encodeURIComponent(project.id)}`) : setStudioOverview(false)}
+                onClick={() => {
+                  const canvasProjectId = project.source === 'remote' ? project.id : project.canvasProjectId;
+                  if (canvasProjectId) {
+                    navigate(`/canvas/${encodeURIComponent(canvasProjectId)}`);
+                    return;
+                  }
+                  setStudioOverview(false);
+                }}
                 className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
               >
                 <div className="flex h-40 items-center justify-center bg-[#171c1f]">
