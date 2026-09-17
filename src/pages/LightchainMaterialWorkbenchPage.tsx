@@ -236,11 +236,11 @@ const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; category: 're
 void lightchainMaterialSourceRailItems;
 
 const LIGHTCHAIN_MATERIAL_SOURCE_RAIL = [
-  { label: 'ツールバー', to: '/lightchain?category=recommended', iconUrl: '/assets/lightchain-toolbar.svg' },
-  { label: 'デザインツール', to: '/tools/fabric', iconUrl: '/assets/lightchain-design.svg' },
-  { label: 'フィッティングツール', to: '/model', iconUrl: '/assets/lightchain-fitting.svg' },
-  { label: 'グラフィックデザインツール', to: '/tools/printing', iconUrl: '/assets/lightchain-graphic.svg' },
-  { label: '衣類生産ツール', to: '/tools/fabric', iconUrl: '/assets/lightchain-production.svg' },
+  { label: 'ツールバー', to: '/lightchain?category=recommended', iconUrl: 'https://jp.linkaigc.com/routeIcons/ic_%E5%B7%A5%E5%85%B7.svg' },
+  { label: 'デザインツール', to: '/tools/fabric', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1%E5%B7%A5%E5%85%B7-%E9%81%B8%E4%B8%AD.svg' },
+  { label: 'フィッティングツール', to: '/model', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%A8%A1%E7%89%B9%E8%AF%95%E8%A1%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
+  { label: 'グラフィックデザインツール', to: '/tools/pattern-to-vector', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E5%9B%BE%E6%A1%88%E5%88%9B%E4%BD%9C%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
+  { label: '衣類生産ツール', to: '/tools/fabric', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E7%94%9F%E4%BA%A7%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
 ] as const;
 
 function LightchainMaterialSourceRail({ active }: { active: 'design' | 'graphics' }) {
