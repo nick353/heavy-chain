@@ -5015,3 +5015,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 下部の`おすすめの事例`、`デザイン修正`、`柄・プリント`、`ビジュアル素材`、`マーケティングコンテンツ`、`生産`をLight／Heavy双方で順番に実押下し、6操作すべてがCompanion transaction `verified`となった。
 - 最終`生産`選択後も両方で同じ下部タブ群が表示された。Lightは検索結果が空になり、Heavyは事例カードが残ったため、下部カテゴリのデータ内容・スクロール位置・pixel-level一致は`NOT_PROVEN`。
 - この区間ではアップロード、外部生成、権利確認、成果物保存／再表示／再利用は実行していない。
+
+## 2026-09-17 Home graphic-card routing readback
+
+- Lightを再読込して先頭へ戻し、`AIグラフィックデザイン`の表示文字をvisual proof付きで実押下した。クリックtransaction自体は`verified`だが、URL・画面内容は変わらず、Light側で遷移効果を確認できなかった。
+- Heavyの同名カードは実押下後に`https://heavy-chain.zeabur.app/printing`へ遷移し、`verified` readbackを取得した。Heavyのカタログ定義でも同カードのrouteは`/printing`。
+- 判定: Heavyのカードは遷移機能を持つ一方、Lightの同カードは今回の実操作では遷移しなかったため、カード遷移の完全一致は`NOT_PROVEN`。HeavyをLightの未遷移状態へ戻す変更は、Light側の外部サイト挙動が再現不能なため実施していない。

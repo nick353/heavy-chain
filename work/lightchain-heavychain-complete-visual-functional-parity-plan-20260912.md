@@ -3345,3 +3345,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] Heavyだけに付くカテゴリquery URLの扱いをLight正本と統一
 - [ ] 下部カテゴリの事例データ、検索状態、スクロール位置、pixel-level一致を比較
 - [ ] カード遷移、成果物の保存／再表示／再利用、外部生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+### 2026-09-17 Home graphic-card routing readback
+
+- [x] Lightを再読込して`AIグラフィックデザイン`をvisual proof付きで押下
+- [x] Heavyの同名カードを押下し、`/printing`への遷移とreadbackを確認
+- [ ] Light側カードの実遷移先または未遷移仕様を追加確認し、Heavyのカード遷移方針を確定
+- [ ] 全カードの遷移、成果物の保存／再表示／再利用、外部生成、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
