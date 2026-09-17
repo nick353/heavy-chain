@@ -475,6 +475,48 @@ export function LightchainLibraryPage() {
     toast.success('コピーを作成しました');
   };
 
+  const handleDownloadSelected = async () => {
+    if (!selectedAsset) return;
+    const imageUrl = cardImageUrl(selectedAsset);
+    if (!imageUrl) {
+      toast.error('ダウンロード可能な画像がありません');
+      return;
+    }
+    try {
+      await downloadValidatedImage(imageUrl, `${cardTitle(selectedAsset) || getCardId(selectedAsset)}.png`, 'library_single_download');
+    } catch {
+      toast.error('ダウンロードに失敗しました');
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!selectedAsset) return;
+    if (!window.confirm(`「${cardTitle(selectedAsset)}」を削除しますか？`)) return;
+
+    if (selectedAsset.kind === 'remote') {
+      try {
+        if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+        await cloudflareDataPlane.deleteGeneratedImage(selectedAsset.asset.remoteImageId);
+        setRemoteAssets((current) => current.filter((asset) => asset.id !== selectedAsset.asset.id));
+        setSelectedAssetId(null);
+        toast.success('画像を削除しました');
+      } catch {
+        toast.error('削除に失敗しました');
+      }
+      return;
+    }
+
+    if (!currentBrand?.id) return;
+    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, [selectedAsset.artifact.id], user?.id);
+    if (!result.ok) {
+      toast.error('ローカル成果物を削除できませんでした');
+      return;
+    }
+    setArtifacts(listWorkspaceArtifacts(currentBrand.id, user?.id));
+    setSelectedAssetId(null);
+    toast.success('ローカル成果物を削除しました');
+  };
+
   return (
     <div className="min-h-[calc(100vh-70px)] bg-[#222627] text-white">
       <div className="flex min-h-[calc(100vh-70px)] w-full gap-0">
@@ -569,14 +611,17 @@ export function LightchainLibraryPage() {
             <aside className="mt-6 rounded-2xl border border-cyan-200/20 bg-cyan-200/[0.05] p-5" aria-live="polite">
               <div className="flex items-center justify-between gap-4">
                 <div><p className="text-xs font-semibold tracking-[0.2em] text-cyan-200">SELECTED ASSET</p><h2 className="mt-2 font-semibold">{cardTitle(selectedAsset)}</h2></div>
-                <button type="button" className="text-sm text-neutral-400 hover:text-white" onClick={() => { setRenameValue(cardTitle(selectedAsset)); setRenameOpen(true); }}>名前を編集</button>
-                <button type="button" className="text-sm text-neutral-400 hover:text-white" onClick={() => setSelectedAssetId(null)} aria-label="選択した素材を閉じる"><X className="h-4 w-4" /></button>
+                <div className="flex flex-wrap items-center justify-end gap-3 text-sm text-neutral-400">
+                  <button type="button" className="hover:text-white" onClick={() => setSelectedAssetId(null)}>戻る</button>
+                  <button type="button" className="hover:text-white" onClick={() => void handleCopySelected()}>コピーを作成します</button>
+                  <button type="button" className="hover:text-white" onClick={() => void handleDownloadSelected()}>ダウンロード</button>
+                  <button type="button" className="hover:text-white" onClick={() => void handleDeleteSelected()}>削除</button>
+                  <button type="button" className="hover:text-white" onClick={() => { setRenameValue(cardTitle(selectedAsset)); setRenameOpen(true); }}>名前を編集</button>
+                  <button type="button" className="hover:text-white" onClick={() => setSelectedAssetId(null)} aria-label="選択した素材を閉じる"><X className="h-4 w-4" /></button>
+                </div>
               </div>
               {renameOpen && <div className="mt-4 flex flex-wrap gap-2"><input value={renameValue} onChange={(event) => setRenameValue(event.target.value)} className="min-w-56 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-cyan-200/60" aria-label="素材名" /><button type="button" className="rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950 disabled:opacity-40" disabled={!renameValue.trim()} onClick={handleRenameSelected}>保存</button><button type="button" className="rounded-lg border border-white/10 px-3 py-2 text-xs text-neutral-300" onClick={() => setRenameOpen(false)}>キャンセル</button></div>}
               <p className="mt-3 text-sm text-neutral-400">{cardPrompt(selectedAsset) || '保存済み素材'}</p>
-              <button type="button" className="mt-4 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.06]" onClick={() => void handleCopySelected()} disabled={uploading}>
-                {selectedAsset.kind === 'remote' ? 'ライブラリーに登録してコピー' : 'コピーを作成します'}
-              </button>
               {showExtendedLibraryHandoffs ? (selectedAsset.kind === 'local' ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className="rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}`)}>Canvasへ送る</button>

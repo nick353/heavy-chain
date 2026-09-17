@@ -71,6 +71,18 @@ test('Lightchain library starts on the canonical history-upload group and uses t
   assert.match(libraryPage, /aria-label="詳細"[\s\S]*<MoreVertical/);
 });
 
+test('Library selected-asset detail exposes the Light production actions', () => {
+  assert.match(libraryPage, /handleDownloadSelected/);
+  assert.match(libraryPage, /handleDeleteSelected/);
+  assert.match(libraryPage, />戻る<\/button>/);
+  assert.match(libraryPage, />コピーを作成します<\/button>/);
+  assert.match(libraryPage, />ダウンロード<\/button>/);
+  assert.match(libraryPage, />削除<\/button>/);
+  assert.match(libraryPage, />名前を編集<\/button>/);
+  assert.match(libraryPage, /deleteGeneratedImage\(selectedAsset\.asset\.remoteImageId\)/);
+  assert.match(libraryPage, /downloadValidatedImage\(imageUrl/);
+});
+
 test('Library handoff restores a canonical asset into the fabric or print workbench', () => {
   const materialWorkbench = readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
 
