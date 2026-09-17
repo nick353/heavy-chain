@@ -3037,3 +3037,16 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 添付、入力後生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup
 
 判定: HeavyのAgentカテゴリcopy差分はsource上でLight正本へ修正済み。デプロイ反映と成果物ライフサイクルは未完了。
+
+### 2026-09-18 Heavy Agent修正版デプロイ後のCompanion再確認
+
+- [x] クリーンステージングからの修正版デプロイ `6aab302e05af289f92f97f84` が `RUNNING` へ到達したことをZeabur CLIでfresh readback
+- [x] Heavy `/agent` を同じログイン済みCompanionタブでreloadし、Hydration完了（`今日は何から始めますか？`）まで待機
+- [x] Hydration後に初期`商品企画`、compact rail、`添付を追加`、ファイル／画像入力2系統、`送信`、Light一致の商品企画placeholderをfresh semantic readback
+- [x] `顧客提案`、`インスピレーション`、`AIグラフィックデザイン`を各1回だけvisual target確認後にクリックし、selected stateとカテゴリ別表示をfresh readback
+- [x] 顧客提案placeholderをLightと同じ`顧客要望を入力するか、brief、メール、議事録をアップロードしてください…`として確認
+- [x] インスピレーションplaceholderをLightと同じ`デザインしたい服のスタイルを入力するか、参考画像をアップロードしてください…`として確認
+- [x] AIグラフィックデザインの添付controls（`添付を追加`、ファイル／画像入力2系統）を確認
+- [ ] Agentの入力後生成、生成結果の保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、mobile、logout→login回帰
+
+判定: Heavy `/agent` の修正版は本番`UI_PASS`。Lightの4カテゴリ導線と主要表示契約に追いついたことをCompanionで確認したが、外部生成と成果物ライフサイクルは未実施・未証明。Printingの不明効果reconciliationも別件として残る。
