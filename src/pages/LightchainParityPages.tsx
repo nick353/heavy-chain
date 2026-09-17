@@ -249,7 +249,8 @@ export function LightchainCreatorPage() {
   }, [currentBrand?.id, user?.id]);
 
   return (
-    <ParityShell workflowFeature="design-agent" className="bg-[#151a1c] text-white">
+    <ParityShell workflowFeature="design-agent" className="lightchain-creator-parity bg-[#151a1c] text-white">
+      <style>{`.lightchain-creator-parity main section > div:has(video[aria-label="インスピレーション動画"]) { width: 605px; max-width: 100%; } .lightchain-creator-parity video[aria-label="インスピレーション動画"] { width: 605px; max-width: 100%; }`}</style>
       <span className="sr-only" aria-label={`${displayName}さんのデザイン作成`} />
       <div className="mx-auto grid min-h-[calc(100vh-70px)] max-w-[1904px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)_320px]">
         <aside className="flex min-h-0 flex-col gap-4">
