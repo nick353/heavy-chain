@@ -3221,6 +3221,16 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 終了告知・共通レール・semantic role・右プレビューのpixel-level一致
 - [ ] 実生成後の同一成果物比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
+### 2026-09-17 Model permission parity deployment readback
+
+- [x] Light／Heavy `/model`の初期画面を同一Companionセッションで比較
+- [x] Heavyのmodel生成操作をLightと同じ`権限がありません`へ修正（commit `c9f1a0a`）
+- [x] permission parity 4/4、route parity 19/19、typecheck、build、diff check
+- [x] deployment `6aab8ce197cf5a01c80183c7`のRUNNINGとHeavy／Light本番readback
+- [x] Heavy／Light双方で`権限がありません`、入力タブ、履歴導線を確認
+- [ ] 入力カードのsemantic role・例示画像・アイコン・pixel-level一致
+- [ ] 実生成後の同一成果物比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
 ### 2026-09-17 Material workbench rail parity deployment readback
 
 - [x] Material workbenchの可視レールをLightの実`routeIcons`絶対URLへ修正（commit `07db6f7`）

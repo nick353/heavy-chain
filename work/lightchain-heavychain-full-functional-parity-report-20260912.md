@@ -4925,3 +4925,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy側では`line-to-real`／`line-generation`の通常生成ボタンを権限ロックへ変更し、`aiGenerateDisabled`の通常生成許可も除去した。アップロード・外部送信・生成は実行していない。
 - commit `e0933fa`をpush。permission parity 4/4、route parity 19/19、typecheck、production build（2552 modules）、diff checkをPASS。deployment `6aab8ac197cf5a01c801838e`が`RUNNING`になったことを確認した。
 - 判定: 権限表示は`UI_PASS`。HeavyにはLightにない共通レールリンク、終了告知・動画／プレースホルダー、semantic role差が残り、全画面pixel-level一致は`NOT_PROVEN`。provider receipt、source sync、reconciliation、cleanup、logout→login回帰は未完了。
+
+## 2026-09-17 Model permission parity deployment readback
+
+- Light／Heavy `/model`を同じログイン済みCompanionプロフィールでfresh semantic readbackした。Lightは`権限がありません`、Heavyは修正前に`AI生成`（disabled）を表示していた。
+- Heavyのmodel導線を`PermissionLockedButton`へ変更し、入力・タブ・履歴・Canvas保存の構造は維持した。commit `c9f1a0a`をpushした。
+- permission parity 4/4、route parity 19/19、typecheck、production build（2552 modules）、`git diff --check`をPASSした。Zeabur deployment `6aab8ce197cf5a01c80183c7`は`RUNNING`をfresh readbackした。
+- デプロイ後の同一Companionセッションで、Heavy／Light双方の`/model`を再読込し、両方に`権限がありません`が表示されること、主要な入力タブ・履歴導線が存在することを確認した。
+- 判定: model権限表示と主要初期導線は`UI_PASS`。入力カードのsemantic role、例示画像・アイコン、外部生成、provider receipt、source sync、reconciliation、cleanup、全画面pixel-level一致、logout→login回帰は未完了。
