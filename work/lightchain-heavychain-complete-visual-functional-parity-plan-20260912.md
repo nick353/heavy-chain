@@ -3071,3 +3071,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 実画像アップロード、生成、provider receipt／source sync／保存／再表示／再利用／reconciliation／cleanup
 
 判定: `/tools/line-draft-to-tile` は両環境で画面表示・主要入力導線までCompanion確認済み。HeavyはLightより操作可能な生成導線が見えているが、Lightの権限状態差を含むため、機能同一性と成果物ライフサイクルは未完了。
+
+### 2026-09-18 `/tools/fabric` 左ツールレール差分と修正
+
+- [x] Light／HeavyをCompanionで同時にfresh semantic・visual readbackし、入力欄、比率選択、権限導線、生成履歴を比較
+- [x] Light本番に表示される左側の`ツールバー`、`デザインツール`、`フィッティングツール`、`グラフィックデザインツール`、`衣類生産ツール`を確認
+- [x] Heavyでは同じ画面の左ツールレールが欠落していることをvisual readbackで確認
+- [x] HeavyのFabric／Printing parity viewにLight同一系統のツールレールと遷移リンクを追加
+- [x] material contract 28/28、UI boundary 13/13、route 19/19、typecheck、production build、`git diff --check`をPASS
+- [ ] 修正版の本番デプロイとCompanion再読込後のvisual readback
+- [ ] 生成、保存、再表示、再利用、provider receipt／source sync／reconciliation／cleanup
+
+判定: Fabric画面の主要入力は両環境に存在するが、Heavyの左ツールレール欠落をソース上で修正済み。権限表示はLightがenabled、Heavyがdisabledという状態差も残っており、同一権限条件での生成比較は未完了。

@@ -235,6 +235,40 @@ const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; category: 're
 
 void lightchainMaterialSourceRailItems;
 
+const LIGHTCHAIN_MATERIAL_SOURCE_RAIL = [
+  { label: 'ツールバー', to: '/lightchain?category=recommended', iconUrl: '/assets/lightchain-toolbar.svg' },
+  { label: 'デザインツール', to: '/tools/fabric', iconUrl: '/assets/lightchain-design.svg' },
+  { label: 'フィッティングツール', to: '/model', iconUrl: '/assets/lightchain-fitting.svg' },
+  { label: 'グラフィックデザインツール', to: '/tools/printing', iconUrl: '/assets/lightchain-graphic.svg' },
+  { label: '衣類生産ツール', to: '/tools/fabric', iconUrl: '/assets/lightchain-production.svg' },
+] as const;
+
+function LightchainMaterialSourceRail({ active }: { active: 'design' | 'graphics' }) {
+  return (
+    <aside
+      aria-label="ツールバー"
+      className="absolute inset-y-0 left-0 hidden w-24 flex-col items-center gap-2 border-r border-white/10 bg-[#171b1c] px-2 py-4 lg:flex"
+    >
+      {LIGHTCHAIN_MATERIAL_SOURCE_RAIL.map((item, index) => {
+        const isActive = (active === 'design' && index === 1) || (active === 'graphics' && index === 3);
+        return (
+          <Link
+            key={item.label}
+            to={item.to}
+            aria-current={isActive ? 'page' : undefined}
+            className={`flex min-h-20 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 text-center text-[10px] font-semibold leading-4 transition ${isActive ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30' : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
+          >
+            <span aria-hidden="true" className={`flex h-8 w-8 items-center justify-center rounded-xl ${isActive ? 'bg-cyan-200/25' : 'bg-white/10'}`}>
+              <img src={item.iconUrl} alt="" className="h-7 w-7 object-contain" />
+            </span>
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+    </aside>
+  );
+}
+
 const LIGHTCHAIN_FABRIC_EMPTY_PREVIEW_VIDEO =
   'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E9%9D%A2%E6%96%99%E4%B8%8A%E8%BA%AB.mp4';
 
@@ -6090,8 +6124,9 @@ function LightchainMaterialWorkbenchSession() {
       {isPrinting && (
         <div
           data-testid="lightchain-print-parity-view"
-          className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
+          className="relative min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6 lg:pl-28"
         >
+          <LightchainMaterialSourceRail active="graphics" />
           <div className="mx-auto max-w-[1680px]">
             {printInputStorageError && <p role="alert" data-testid="print-input-storage-error" className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">{printInputStorageError}</p>}
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
@@ -6375,8 +6410,9 @@ function LightchainMaterialWorkbenchSession() {
       {!isPrinting && (
         <div
           data-testid="lightchain-fabric-parity-view"
-          className="h-[calc(100vh-50px)] min-h-0 overflow-hidden bg-[#0b1113] px-4 py-4 pl-28 text-white"
+          className="relative h-[calc(100vh-50px)] min-h-0 overflow-hidden bg-[#0b1113] px-4 py-4 pl-28 text-white"
         >
+          <LightchainMaterialSourceRail active="design" />
           <div className="h-full w-full">
             <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,596px)_minmax(360px,1fr)]">
 
