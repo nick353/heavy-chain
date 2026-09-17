@@ -3112,3 +3112,5 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 追記: 旧deployment `6aab3be605af289f92f981fc` のイメージPull待ちが継続したため、サービス再起動後に再デプロイを実行。新deployment `6aab3ef0dc088f64d1813dae` はbuild完了後も`DEPLOYING`、serviceは`STARTING`で、runtime logは新イメージのPull開始まで確認できている。既存公開エンドポイントの`/_health`は`ok`だが、修正版の本番UI証拠は未取得。
 
 追記: 切替待ちの間に、全機能workflow contract 5/5、provider coverage 22/22、unified workflow 6/6、pre-source gate 5/5、provider persistence/readback 14/14、material contract 28/28を再実行し、すべてPASS。これらはローカル契約・fail-closed境界の証拠であり、未取得の本番Companion再読込・provider同一run証跡の代替にはしない。
+
+追記: その後、serviceとdeployment `6aab3ef0dc088f64d1813dae` がともに`RUNNING`へ到達したことをfresh readback。Companion側には過去のPrinting upload unknown-effect reconciliationが1件残っており、provider効果を再送せず、まず同一カプセルの正規reconciliation readbackを完了させてからHeavy `/tools/printing`の修正版再読込へ進む。
