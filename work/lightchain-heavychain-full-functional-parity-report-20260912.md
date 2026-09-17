@@ -5207,3 +5207,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightは同じrunで現在ページ1を表示し、保存カード30件、`1 2 3 4 5 … 14`、参考事例5件を確認した。前回の全14ページ実読みに加え、Hydration後のfresh page-1 readbackである。
 - Heavyのカード名・日付・preview・保存供給元はLightの`Untitled`カード契約と一致せず、同一タイトルのremote/local重複も画面テキスト上で観測された。これはLightのデータを推測して上書きすべき根拠ではない。
 - 判定: 両環境の認証済みHydrationと参考事例シェルは`UI_PASS`。保存データ統合、重複排除、カード詳細遷移、再表示／再利用は`NOT_PROVEN`。外部生成・アップロード・権利確認・provider receiptは実行していない。
+
+## 2026-09-17 Fashion Studio duplicate-card fix and production readback
+
+- 原因を、認証済みCanvas一覧とブラウザローカルhandoff一覧を`id`だけで結合していたため、旧handoffの`canvasProjectId`が現在のリモートCanvas IDと一致しない場合に同じカードを重ねていたことと特定した。
+- `src/lib/fashionStudioProjects.ts`へ統合ロジックを切り出し、Canvas ID一致を優先しつつ、旧形式ではリモートCanvasの同一タイトルを正本としてローカルfallbackを抑止するようにした。ローカル専用タイトルは引き続き保持する。
+- 追加した回帰テスト3件（remote ID重複、local-only保持、legacy title fallback）はPASS。`npm run typecheck`、`npm run build`、`git diff --check`もPASS。コミットは`1c5f96c`と`a6877d6`。
+- Zeaburの最新deployment `6aabbcbefa283769e51c1f78`は`RUNNING`へ到達した。buildログはDocker/zbpack-v2、Vite build、`heavy-chain-model-asset-ready:44173029`、upload完了を示した。
+- 同一ログイン済みCompanionのHeavy `/flow/integration`を本番でreloadし、`プロジェクトを読み込んでいます…`のdetachedを待ってからreadbackした。`Fashion Studio: スタジオ案`のsemantic countは修正前3件から修正後1件へ減少し、新規ファイル、保存カード群、参考事例5件は維持された。
+- これはブラウザUIとデプロイのreadbackであり、provider receipt、source sync、reconciliation、業務成果物の保存／再利用完了を意味しない。外部生成、アップロード、権利確認、provider送信は実行していない。Companion transactionの`external_action_executed=false`を確認した。
+- 判定: Heavy Fashion Studioの同一タイトル重複排除は`UI_PASS`。Lightの30件×14ページとの保存データ完全一致、全カード詳細遷移、成果物生成・再表示・再利用、provider receipt／source sync／reconciliationは引き続き`NOT_PROVEN`。

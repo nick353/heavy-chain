@@ -3550,3 +3550,14 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] Heavyのremote/local混在と同一タイトル重複を観測し、Lightデータの推測同期・上書きを行わないことを確認
 - [ ] Heavyの保存データ統合・重複排除・カード詳細遷移の契約を確定
 - [ ] 保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanupを検証
+
+### 2026-09-17 continuation checkpoint — Fashion Studio card integration
+- [x] Heavy本番のFashion StudioをHydration完了後に再読込し、Light正本との差分（同一タイトルのremote/local重複）を再現
+- [x] Canvas ID一致とlegacy title fallbackを分離した統合関数、回帰テスト、source wiringを追加
+- [x] typecheck、production build、関連テスト、diff checkを実行
+- [x] Zeaburへ本番デプロイし、最新deploymentの`RUNNING`とbuild/model asset/uploadログを確認
+- [x] 同一Companionプロフィールで本番reload、Hydration待機、semantic count・画面テキスト・visual readbackを確認。対象カードは3件から1件へ収束
+- [x] task-owned Companion tabをcleanupし、foreign tab・外部効果を変更していないことをreadback
+- [ ] Lightの保存一覧全14ページとHeavyの全カードの名称・preview・更新時刻・詳細遷移を完全に突合する
+- [ ] provider receipt、source-of-truth sync、reconciliation、成果物保存／再利用を、権利確認を含む各ケースで個別に証明する
+- [ ] 全route、desktop/mobile、logout→再ログインの最終監査を完了する
