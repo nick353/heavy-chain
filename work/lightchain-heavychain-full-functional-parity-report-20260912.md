@@ -5199,3 +5199,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Companionのsanitized exportは画面テキストのみで、認証済みAPIのJSON本文やCookieは取得していない。したがってページングと画面件数の証拠であり、Light保存データの完全な名称・内容・previewのsource sync証拠ではない。
 - ページ遷移はブラウザUI効果としてreadbackできたが、provider receipt、外部AI生成、アップロード、権利確認、業務成果物の完了を意味しない。各transactionの`provider_completion`と`source_sync`は`unverified`のまま維持した。
 - 判定: Light保存一覧の14ページ到達は`UI_PASS`。Heavyの22件表示とのデータ完全一致、カード遷移、再表示、再利用、provider receipt／source sync／reconciliation／cleanupは未完了。未認証APIの空応答を同期元にはしない。
+
+## 2026-09-17 Same-run Light／Heavy Fashion Studio hydration comparison
+
+- 同一ログイン済みCompanionプロフィールの新規task-owned tabsでHeavy／Lightの`/flow/integration`を再読込した。
+- HeavyはHydration完了後に保存カードを表示し、画面テキスト上はD1由来の`canvas_documents`とlocal handoffが混在する約22件、参考事例5件を確認した。保存件数が30件未満のためページナビゲーションは表示されなかった。
+- Lightは同じrunで現在ページ1を表示し、保存カード30件、`1 2 3 4 5 … 14`、参考事例5件を確認した。前回の全14ページ実読みに加え、Hydration後のfresh page-1 readbackである。
+- Heavyのカード名・日付・preview・保存供給元はLightの`Untitled`カード契約と一致せず、同一タイトルのremote/local重複も画面テキスト上で観測された。これはLightのデータを推測して上書きすべき根拠ではない。
+- 判定: 両環境の認証済みHydrationと参考事例シェルは`UI_PASS`。保存データ統合、重複排除、カード詳細遷移、再表示／再利用は`NOT_PROVEN`。外部生成・アップロード・権利確認・provider receiptは実行していない。

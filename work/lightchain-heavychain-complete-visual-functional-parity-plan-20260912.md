@@ -3542,3 +3542,11 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] API JSON本文・Cookie・auth-stateを抽出せず、画面readbackとprovider/source-sync証拠を分離
 - [ ] Heavyの22件一覧とLight14ページの名称・内容・previewを正規データ境界で比較
 - [ ] カード遷移、保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanupを検証
+
+### 2026-09-17 Same-run Light／Heavy Fashion Studio hydration comparison
+- [x] 同一ログイン済みCompanionプロフィールの新規task-owned tabsでHeavy／Lightを再読込
+- [x] HeavyのHydration完了後の保存カード約22件と参考事例5件を確認
+- [x] LightのHydration後ページ1の保存カード30件、ページ表示14ページ、参考事例5件を確認
+- [x] Heavyのremote/local混在と同一タイトル重複を観測し、Lightデータの推測同期・上書きを行わないことを確認
+- [ ] Heavyの保存データ統合・重複排除・カード詳細遷移の契約を確定
+- [ ] 保存・再表示・再利用、provider receipt／source sync／reconciliation／cleanupを検証
