@@ -3231,6 +3231,16 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 入力カードのsemantic role・例示画像・アイコン・pixel-level一致
 - [ ] 実生成後の同一成果物比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
+### 2026-09-17 Agent expanded-sidebar parity deployment readback
+
+- [x] Light／Heavy `/agent`の初期状態を同じCompanionセッションでfresh比較
+- [x] HeavyのAgentサイドバー初期値を展開状態へ修正（commit `3a6d9fb`）
+- [x] UI boundary 13/13、route 19/19、typecheck、build、diff check
+- [x] deployment `6aab9036967ae3497db90075`のRUNNING確認
+- [x] Heavy／Light本番で展開サイドバー、最近の企画、業務シーン、添付・送信導線をfresh readback
+- [ ] Lightの履歴件数・日付・サイドバー内データ量とpixel-level一致
+- [ ] 入力後生成、保存／再表示／再利用、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
 ### 2026-09-17 Material workbench rail parity deployment readback
 
 - [x] Material workbenchの可視レールをLightの実`routeIcons`絶対URLへ修正（commit `07db6f7`）

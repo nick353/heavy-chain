@@ -4933,3 +4933,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - permission parity 4/4、route parity 19/19、typecheck、production build（2552 modules）、`git diff --check`をPASSした。Zeabur deployment `6aab8ce197cf5a01c80183c7`は`RUNNING`をfresh readbackした。
 - デプロイ後の同一Companionセッションで、Heavy／Light双方の`/model`を再読込し、両方に`権限がありません`が表示されること、主要な入力タブ・履歴導線が存在することを確認した。
 - 判定: model権限表示と主要初期導線は`UI_PASS`。入力カードのsemantic role、例示画像・アイコン、外部生成、provider receipt、source sync、reconciliation、cleanup、全画面pixel-level一致、logout→login回帰は未完了。
+
+## 2026-09-17 Agent expanded-sidebar parity deployment readback
+
+- Light本番`/agent`をfresh readbackしたところ、企画ワークスペースの展開サイドバー、最近の企画一覧、クイックスタート、4つの業務シーン、添付・送信導線が初期表示されていた。Heavyは同時点でコンパクトレールのみだった。
+- Heavyの`agentSidebarOpen`初期値を`true`へ変更し、展開サイドバーを初期表示するようにした。既存の添付・入力・送信・権利ゲートは変更していない。commit `3a6d9fb`をpushした。
+- UI boundary test 13/13、route test 19/19、typecheck、production build（2552 modules）、`git diff --check`をPASSした。
+- deployment `6aab9036967ae3497db90075`が`RUNNING`へ到達した後、fresh CompanionタブでHeavy／Light`/agent`を再読込した。Heavyにも展開サイドバー、最近の企画、残りクレジット、4業務シーン、クイックスタート、添付・送信導線が表示された。
+- 判定: Agentの初期サイドバー展開と主要入力導線は`UI_PASS`。Lightの完全な履歴件数・日付・サイドバー内データ量、入力後生成、保存／再表示／再利用、provider receipt、source sync、reconciliation、cleanup、pixel-level一致、logout→login回帰は未完了。
