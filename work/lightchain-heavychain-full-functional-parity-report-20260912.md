@@ -5482,3 +5482,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `/dashboard`はLightchainのおすすめ／企画／フィッティング／グラフィックカテゴリを表示し、`/workspace`は入口一覧と生成履歴を表示した。
 - cleanup receiptは`leases_released=6`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。アップロード・権利確認・生成・保存実行は未操作。
 - 判定: Heavy主要routeのhydration・read-only surfaceは`UI_PASS`。Light同一route比較、全カテゴリpixel／interaction parity、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。
+
+## 2026-09-17 Heavy canonical route batch
+
+- Heavyの`/studio`、`/models`、`/model-library`、`/patterns`、`/video`、`/lab`を30秒待機後にCompanion semantic・visual readbackした。
+- `/studio`はFashion Studioのproject／参考事例、`/model-library`はモデル候補・保存・Canvas／Gallery再利用説明と権利確認前境界、`/patterns`はグラフィック／総柄／ベクター化とCanvas保存導線を表示した。
+- `/video`はStoryboard、比率、尺、CTA、provider admission待ちを表示し、`/lab`は仮説・評価軸・採用候補・Canvas／Gallery導線を表示した。provider生成、アップロード、権利確認は未操作。
+- `/models`は同時readback時点でテキストが空で、Hydration完了の証拠が不足したため`NOT_PROVEN`とした。
+- cleanup receiptは`leases_released=6`、`unknown_effect=[]`、`foreign_tabs_mutated=false`、`external_action_executed=false`。
+- 判定: Heavy canonical routeのread-only surfaceは部分的に`UI_PASS`、Light同一route比較、`/models`再取得、全route／全カテゴリparity、成果物lifecycle、provider receipt/source sync/reconciliationは`NOT_PROVEN`。

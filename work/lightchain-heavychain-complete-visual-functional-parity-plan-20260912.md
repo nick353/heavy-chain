@@ -3819,3 +3819,10 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] `/fitting`は素材未選択・AI生成disabled・権利確認前、`/marketing`は保存済み履歴なし、`/asset-center`は保存カードと`ボードにコピー`表示を確認
 - [x] cleanup receipt: leases released 6、unknown effectなし、foreign tabs mutatedなし、external actionなし
 - [ ] Light同一routeのfresh比較、全route／全カテゴリのpixel・interaction parity、成果物lifecycle、provider receipt/source sync/reconciliation
+
+### 2026-09-17 continuation checkpoint — Heavy canonical route batch
+- [x] Heavy `/studio`, `/models`, `/model-library`, `/patterns`, `/video`, `/lab`を30秒待機後にCompanion semantic・visual readback
+- [x] `/studio`のFashion Studio project／参考事例、`/model-library`のモデル候補・保存・権利確認前説明、`/patterns`のグラフィック／総柄／ベクター化導線を確認
+- [x] `/video`のStoryboard／比率／尺／CTAとprovider admission待ち、`/lab`の仮説／評価／採用候補導線を確認。外部生成は未操作
+- [x] cleanup receipt: leases released 6、unknown effectなし、foreign tabs mutatedなし、external actionなし
+- [ ] Light同一routeのfresh比較、`/models`のHydration再取得、全route／全カテゴリのpixel・interaction parity、成果物lifecycle、provider receipt/source sync/reconciliation
