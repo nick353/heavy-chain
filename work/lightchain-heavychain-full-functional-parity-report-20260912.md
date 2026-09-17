@@ -4900,3 +4900,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - typecheck、production build、`git diff --check`をPASSし、最新deployment `6aab806f806ea25ad0915b5c`がRUNNINGになったことを確認した。
 - 同じCompanionログイン済みHeavy／Lightタブを再読込し、Heavy通常版で左レール、通常／プロタブ、告知、参考画像入力、レイヤー選択、履歴、結果パネルのfresh semantic・visual readbackを実施した。画像の壊れた表示は解消した。
 - 判定: 通常版のルーティング・主要画面構造・アセット参照は`PASS`。Lightの`権限がありません`とHeavyの`AI生成`はアカウントentitlement差であり、表示完全一致は`NOT_PROVEN`。レイヤーカード画像のpixel-level一致、外部生成、provider receipt、source sync、reconciliation、cleanup、全画面監査は未完了。
+
+## 2026-09-17 Material workbench rail parity deployment readback
+
+- `src/pages/LightchainMaterialWorkbenchPage.tsx`の可視レールを、Light本番の実`routeIcons`絶対URLへ切り替え、グラフィック導線を`/tools/pattern-to-vector`へ修正した。commit `07db6f7`をpushした。
+- typecheck、production build（2552 modules）、`git diff --check`をPASSした。Zeabur deployment `6aab852997cf5a01c80182ff`はOCI upload完了後に`RUNNING`へ遷移した。
+- Heavy本番をログイン済みChrome Companionプロフィールで新規に開き、認証状態のHydration完了まで約45秒待機した。fresh semantic readbackで、左レールのグラフィックリンクが`/tools/pattern-to-vector`になり、Lightと同じ5カテゴリ構成を確認した。
+- Light／Heavy双方で`/tools/fabric`をfresh screenshot・semantic readbackした。4タブ、終了告知、2入力、比率、権限表示、生成履歴、右結果領域の主要geometryは一致した。Lightには実サンプル動画、Heavyには別フレームの同系統動画が表示されるため、画素完全一致は`NOT_PROVEN`。
+- Heavyの実生成、アップロード、外部送信、provider receipt、source sync、reconciliation、cleanup、logout→login回帰は実行・証明していない。権利確認ゲートの自動承認・撤廃も行っていない。
+- 判定: レールの本番route parityは`PASS`、主要初期画面は`UI_PASS`、pixel-level一致と成果物/provider lifecycleは未完了。

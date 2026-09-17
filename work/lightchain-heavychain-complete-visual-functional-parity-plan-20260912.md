@@ -3202,6 +3202,17 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] deployment `6aab7d9f806ea25ad0915b00`のRUNNING到達後、Heavy通常版をCompanionで再読込・比較
 - [ ] provider receipt／source sync／reconciliation／cleanup、外部生成、全画面pixel-level一致、logout→login回帰
 
+### 2026-09-17 Material workbench rail parity deployment readback
+
+- [x] Material workbenchの可視レールをLightの実`routeIcons`絶対URLへ修正（commit `07db6f7`）
+- [x] グラフィック導線を`/tools/pattern-to-vector`へ統一
+- [x] typecheck、production build（2552 modules）、diff check
+- [x] Zeabur deployment `6aab852997cf5a01c80182ff`のOCI upload完了・`RUNNING`を確認
+- [x] CompanionでHeavyを約45秒待機後に再読込し、ログイン済み画面と修正後レールをfresh readback
+- [x] Light／Heavy `/tools/fabric`をsemantic・screenshotで比較し、主要初期geometryを確認
+- [ ] レイヤー／結果動画の実サンプルをLightと同一成果物で一致確認
+- [ ] provider receipt／source sync／reconciliation／cleanup、外部生成、全画面pixel-level一致、logout→login回帰
+
 ### 2026-09-17 Vector / Pattern route assets 本番再確認
 
 - [x] Heavy左ツールレールのLight実アセット参照を絶対URLへ修正（commit `de16b27`）
