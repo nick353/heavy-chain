@@ -3157,6 +3157,18 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 
 追記: 保存後に同じCompanionタブを`/creator`へ一度移動し、保存済みCanvas URLへ戻した。`プロジェクト名`の表示を待ってfresh readbackし、`サーバー確認済み`、`ブランド: Nisen`、同じCanvas URL、保存ボタン再有効化を確認。保存済みCanvasの再表示は`PASS`。
 
+### 2026-09-17 Asset Centerダウンロード形式parity修正・本番確認
+
+- [x] Heavyの単体ダウンロードをLightと同じPNG／JPG／AVIF選択ダイアログへ変更する。
+- [x] `imageDownload`のAVIF形式・拡張子推定を追加し、既存の一括ダウンロード契約は変更しない。
+- [x] download契約テスト6/6、Library→Canvas handoff 10/10、typecheck、production build（2552 modules）をPASSする。
+- [x] Heavy対象サービスへdeployment `6aab70c4806ea25ad0915912`を実行し、RUNNINGを確認する。
+- [x] 本番Heavy Asset Centerを再読込し、先頭成果物の詳細から形式選択ダイアログ（PNG／JPG／AVIF／キャンセル／ダウンロードを確認）をfresh readbackする。
+- [x] PNGを一回選択・確認し、`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案 (1).png`（960×640、RGBA）の実生成を確認する。
+- [ ] JPG／AVIFの実生成、削除、コピー、名前編集、provider receipt、source sync、reconciliation、cleanupを確認する。
+
+判定: Heavyの単体ダウンロード形式UIとPNG実生成はLightと同じ導線で`PASS`。残りの成果物ライフサイクル、同一runのprovider receipt／source sync／reconciliation／cleanup、全画面pixel-level一致、logout→login回帰は未完了。Goalは継続。
+
 ### 2026-09-17 Asset Center成果物ダウンロード本番確認
 
 - [x] Light先頭成果物を`プレビュー`で開き、Heavyと同じ詳細アクション（戻る／コピー／ダウンロード／削除／名前編集）を確認

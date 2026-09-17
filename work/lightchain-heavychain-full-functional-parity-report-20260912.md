@@ -4863,3 +4863,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - 追加確認: Heavyでも`ダウンロード`を一回実行し、`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案.png`を取得。`file`で`PNG image data, 960 x 640, 8-bit/color RGBA`を確認した。Heavyは形式ダイアログなしの即時PNG保存で、LightのPNG／JPG／AVIF選択導線とは操作仕様が異なる。
 - 判定更新: Light／Heavyとも実ファイル生成は`PASS`。ただし形式選択UIのparityは`FAIL/未修正`。削除、コピー、名前編集、provider receipt、source sync、reconciliation、cleanupは未完了。
+
+## 2026-09-17 Asset Centerダウンロード形式parity修正後の本番確認
+
+- `src/pages/LightchainLibraryPage.tsx`の単体ダウンロードを、Light本番と同じPNG／JPG／AVIF選択→確認導線へ修正した。`src/lib/imageDownload.ts`へAVIF MIME・拡張子対応を追加した。
+- download契約テスト6/6、Library→Canvas handoff 10/10、typecheck、production build（2552 modules）をPASSし、commit `01391b1`をpushした。
+- Zeaburの対象Heavy serviceへdeployment `6aab70c4806ea25ad0915912`を実行し、RUNNINGをfresh readbackした。
+- 本番Heavy `/asset-center`を再読込し、先頭成果物を`プレビュー`で開いて`ダウンロード`を操作。PNG／JPG／AVIF、`キャンセル`、`ダウンロードを確認`のダイアログをfresh semantic・visual readbackした。
+- PNGの確認操作後、`/Users/nichikatanaka/Downloads/Fashion Studio_ スタジオ案 (1).png`を取得し、`file`で`PNG image data, 960 x 640, 8-bit/color RGBA`を確認した。
+- 判定: Heavyの単体ダウンロード形式UIとPNG実ファイル生成は`PASS`。前記の「形式選択UI FAIL」はこの修正で解消した。JPG／AVIF実生成、削除、コピー、名前編集、provider receipt、source sync、reconciliation、cleanupは未完了。
