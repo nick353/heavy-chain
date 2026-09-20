@@ -13,10 +13,16 @@ root-routing assertion was updated accordingly. Typecheck, build, route parity
 Lightchain verifier passed: 31/31 desktop, 31/31 mobile, 2 desktop video
 routes, 4 mobile/source routes, and cleanup complete with `ok=true`.
 
-This source/runtime correction is not yet deployed or production-read back in
-this entry. Provider generation/save/reuse, billing, credential/token, and
-strict release-gate evidence remain separate lanes; no auth token or secret was
-extracted or added.
+The corrected Web Worker was deployed to Cloudflare as version
+`f3009de6-6d8a-428d-b674-535c99218b7e`. After the deployment, the same
+Companion session waited 30 seconds and read back both roots with semantic and
+visual evidence: Light remained at `/` with its authenticated avatar and
+launcher, while Heavy remained at `/` and rendered the same launcher rather
+than redirecting to `/designProduction`. Heavy `/_health` returned the
+Cloudflare response, and the served `index.CswgIqRB.js` SHA-256 matched the
+local build exactly. Provider generation/save/reuse, billing, credential/token,
+and strict release-gate evidence remain separate lanes; no auth token or
+secret was extracted or added.
 
 # Light source readback corrected fitting-tab verifier and full 31-feature gate — 2026-09-21 r89
 
