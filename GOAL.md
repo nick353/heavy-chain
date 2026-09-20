@@ -1,3 +1,25 @@
+# Canonical Light launcher route correction and Zeabur readback — 2026-09-21 r82
+
+Commit `520ffcb` routes the launcher’s AI-fitting card to the canonical
+Lightchain `/model` entry and the model-planning card to
+`/model-library/model-custom-form`; the generic
+`/generate?feature=model-matrix` query remains an internal adapter only. The
+route contract suite passed `9/9`, the broader Lightchain route suite passed
+`25/25`, typecheck, lint, and production build passed.
+
+The exact Heavy Chain Zeabur service accepted deployment
+`6ab004c3342483d22ad8a4d9` and fresh readback reached `RUNNING`. Public
+readback returned HTTP 200 for `/_health`, `/model`, and
+`/model-library/model-custom-form`; the served bundle contains the canonical
+model-library route and no legacy model-matrix launcher query. No provider
+request, save, payment, publish, credential, or token action was performed.
+
+The full Goal remains active. Provider admission is still intentionally
+fail-closed (`権限がありません`), and the strict release-gate blockers for
+current production monitor/UI, launch operations, mass-market/33-feature
+production evidence, G608/G618/G633/H602, and generation scorecard remain
+open.
+
 # Fresh authenticated Light/Heavy route and provider-gate readback — 2026-09-21 r81
 
 Using a new task-owned Chrome Companion tab, `/lightchain` rendered the
