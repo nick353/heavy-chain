@@ -1,3 +1,19 @@
+# Production deploy and public bundle readback — 2026-09-20 r68
+
+The five omitted parity runtime modules were committed as `448cbb7` and
+pushed. The official Zeabur CLI redeployed the resolved `heavy-chain` service;
+its Docker build completed, deployment `6aafc154342483d22ad88cc7` is
+`RUNNING`, `/_health` and `/lightchain` return 200, and the public bundle
+matches a local build with the exact Zeabur Vite environment. Cloudflare Web
+was also rebuilt and deployed as version `a386799c-8574-4e77-9619-24cddfd432ae`
+with exact local bundle readback. Evidence:
+`work/heavy-chain-production-deploy-readback-20260920-r68.md`.
+
+The Goal remains active: `HEAVY_CHAIN_MONITOR_TOKEN` and provider credentials
+are still absent, so authenticated provider receipt/result/save/reuse,
+source-sync/reconciliation, operations evidence, and strict release acceptance
+are not claimed. No secret was guessed or extracted.
+
 # Authenticated production surface readback and Zeabur build blocker — 2026-09-20 r67
 
 Fresh same-session Companion readback now reaches the authenticated Cloudflare

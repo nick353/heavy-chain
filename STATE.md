@@ -1,3 +1,20 @@
+# Production deploy and public bundle readback — 2026-09-20 r68
+
+Commit `448cbb7` is pushed. Zeabur deployment `6aafc154342483d22ad88cc7`
+completed the Docker build and is `RUNNING`; `heavy-chain.zeabur.app/_health`
+and `/lightchain` returned 200. A local build with the exact Zeabur Docker
+environment matched its public bundle at 716,759 bytes and SHA-256
+`39e727e37a13002c82f9f0b999e58d5df3351b97c3693866bdacb2498bc1aed6`.
+Cloudflare Web version `a386799c-8574-4e77-9619-24cddfd432ae` also returned
+health/route 200 and matched its local bundle exactly. Evidence:
+`work/heavy-chain-production-deploy-readback-20260920-r68.md`.
+
+No `HEAVY_CHAIN_MONITOR_TOKEN` or provider credential exists in the Zeabur
+service. The management CLI credential cannot mint a live consumer-auth
+session; no secret was extracted, guessed, or assigned. Provider receipt,
+persistence/reuse, reconciliation, operations, and strict release acceptance
+remain open.
+
 # Authenticated production surface readback and Zeabur build blocker — 2026-09-20 r67
 
 One task-owned Companion session reached authenticated production states for
