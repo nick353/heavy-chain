@@ -6693,3 +6693,12 @@ launch-operations, mass-market, production feature-workflow, G608, G618,
 G633, and H602 readbacks; the command-skipped run also correctly remains
 non-release-accepting. No auth token or provider receipt was created or
 substituted.
+
+# Goal progress — 2026-09-21 r97
+
+The normal release-gate run completed after the route-matrix integration. All
+syntax checks, security audit, G614/G632/H601/H602 static checks, typecheck,
+build, lint, and git-diff checks passed. The remaining failures are exactly
+the eight current production/operator readbacks plus the missing real-
+generation visual scorecard and the dependent G633 baseline command. The
+working tree is clean and the route-matrix readback itself passes.
