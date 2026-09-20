@@ -1,3 +1,16 @@
+# Strict release-gate recheck after canonical launcher deployment — 2026-09-21 r83
+
+Fresh `npm run verify:release-gate --silent` on clean `main` remains
+`ok=false` with the same ten concrete failures: production monitor/UI pair,
+launch operations, current mass-market QA, production Lightchain all-feature
+order previews, G608 security audit, G618 scale baseline, G633 scale/alerting,
+production H602 billing completion, generation scorecard, and the dependent
+G633 command. The canonical launcher change introduced no new gate failure.
+
+The worktree and `origin/main` are clean and equal at `152693f`. These strict
+readback artifacts require real current production/operator/provider evidence;
+they were not fabricated or downgraded to local proof.
+
 # Canonical Light launcher route correction and Zeabur readback — 2026-09-21 r82
 
 Commit `520ffcb` routes the launcher’s AI-fitting card to the canonical
