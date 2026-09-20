@@ -39,7 +39,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'Companion authenticated production UI evidence',
-    path: 'work/heavy-chain-companion-authenticated-evidence-20260912.json',
+    path: 'work/heavy-chain-companion-authenticated-evidence-20260921.json',
     validate: validateCompanionAuthenticatedEvidence,
     expect: 'fresh Companion same-session production evidence for /model, /gallery, /history, /jobs, and /canvas/new with semantic+visual readback and no exported auth secret',
   },

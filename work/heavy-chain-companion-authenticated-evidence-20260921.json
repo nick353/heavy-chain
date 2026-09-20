@@ -1,0 +1,82 @@
+{
+  "schema": "heavy-chain.companion-authenticated-production-evidence.v1",
+  "capturedAt": "2026-09-20T15:17:06.451Z",
+  "source": "aos_chrome_companion_profile_instance",
+  "taskId": "01a0b8d1-3935-75c1-8cea-b58769f7fb15",
+  "sessionId": "session_0949915d-eee2-472c-b099-52f3ba65583f",
+  "tabId": 1980925928,
+  "generation": "gen_5b29dab5-e026-4ab3-97df-9a999893065f",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "authSecretExported": false,
+  "routes": [
+    {
+      "path": "/model",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["AIフィッティング", "衣服の画像 (0/4)", "権限がありません", "生成履歴"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "rightsConfirmationUi": "not_visible"
+    },
+    {
+      "path": "/gallery",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["ギャラリー", "10枚の画像", "すべて", "詳細を見る"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "rightsConfirmationUi": "not_visible"
+    },
+    {
+      "path": "/history",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["生成履歴", "続きから再開", "失敗を確認", "保存済みを見る", "TIMELINE"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "rightsConfirmationUi": "not_visible"
+    },
+    {
+      "path": "/jobs",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["制作キュー", "再開できる作業", "止まった作業", "完了した成果物", "QUEUE SUMMARY"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "rightsConfirmationUi": "not_visible"
+    },
+    {
+      "path": "/canvas/new",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "canvas-save",
+      "routeMarkers": ["CANVAS", "ブランド: Nisen", "キャンバス", "権限がありません", "保存", "Galleryから追加"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "rightsConfirmationUi": "not_visible"
+    }
+  ],
+  "businessCompletion": {
+    "providerReceipt": "unverified",
+    "sourceSync": "unverified",
+    "reconciliation": "unverified",
+    "cleanup": "verified"
+  },
+  "blockers": [
+    "provider_receipt_and_source_sync_not_proven",
+    "current_cloudflare_release_readback_contract_not_proven"
+  ],
+  "cleanup": {
+    "sessionClosed": true,
+    "ownerCleanupOk": true,
+    "closedTabs": [1980925928],
+    "foreignTabsMutated": false,
+    "externalActionExecuted": false,
+    "leasesReleased": 1,
+    "unknownEffectTabs": []
+  }
+}

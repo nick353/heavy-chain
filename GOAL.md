@@ -1,3 +1,37 @@
+# Current authenticated Companion route evidence and local gate refresh — 2026-09-21 r76
+
+The current logged-in Companion profile was read back in one task-owned tab for
+`/model`, `/gallery`, `/history`, `/jobs`, and `/canvas/new`. Final semantic and
+visual readback verified the Lightchain-shaped AI fitting workspace, 10-image
+Gallery, 10 saved / 11 timeline History, production queue, and Canvas editor.
+The readbacks showed the avatar/auth marker and no Light-missing rights
+confirmation checkbox, modal, or badge. Canvas initially disagreed between a
+preparation semantic snapshot and its rendered editor; the exact tab was kept,
+read again after hydration, and the semantic/visual state then agreed.
+
+The sanitized current evidence is
+`work/heavy-chain-companion-authenticated-evidence-20260921.json`, and
+`npm run verify:companion-auth -- --evidence
+work/heavy-chain-companion-authenticated-evidence-20260921.json` passed with
+`ok=true`. The unified release-gate UI evidence now points at this current
+artifact instead of the superseded 2026-09-12 artifact. A long read-only wait
+attempt timed out with zero dispatch and known-no-effect; it was not replayed,
+and the final exact-tab readback completed normally.
+
+The terminal cleanup receipt closed the task-owned tab, released its lease,
+reported no unknown-effect tabs, `foreign_tabs_mutated=false`, and
+`externalActionExecuted=false`. The refreshed local acceptance layer also
+passed: non-video parity ledger `6/6`, video ledger `4/4`, parity builder `1/1`,
+pre-source gate `5/5`, provider persistence/readback `14/14`, Cloudflare runtime
+`6/6`, and Light Chain release-contract `9/9`; lifecycle and evidence
+continuity both returned `ok=true` with `externalActionExecuted=false`.
+
+This advances current authenticated UI proof only. Provider receipt, source
+sync, reconciliation, durable production provider save/reuse, current
+Cloudflare release-readback contract, and strict release acceptance remain
+open. No provider, generation, save, billing, publish, deploy, or secret
+operation was performed.
+
 # Authenticated Light Chain launcher readback and cleanup — 2026-09-21 r75
 
 The canonical AOS Chrome Companion transaction path succeeded on one
