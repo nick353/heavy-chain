@@ -1,5 +1,25 @@
 # Heavy Chain local parity completion and Zeabur boundary — 2026-09-20 r43
 
+## Cloudflare Web parity deployment and authenticated readback — 2026-09-20 r49
+
+- The current tracked parity build passed the Cloudflare Web tests `8/8`, the
+  build, and Wrangler dry-run. Two existing large R2 app assets were uploaded
+ /readied and 104 changed static assets were deployed.
+- Cloudflare Web version `603551a8-c9b6-4df8-92b9-d299ed33463f` deployed at
+  100% to `heavy-chain-web.nichika2000823.workers.dev`.
+- Fresh public readback returned health 200 and `/lightchain` HTTP 200. The
+  served `assets/index.DnyV_Ymg.js` matched the local build byte-for-byte:
+  `716759` bytes, SHA-256
+  `b5c37151bd6b42325dfdc7bc22969f70ed62c3fcec195a0c059c35870fe7dcbb`.
+- After a real 30-second authenticated same-tab wait, `/lightchain` showed
+  the canonical Lightchain launcher, category tabs, and feature cards. DOM
+  readback reported one header, zero checkbox controls, and zero rights-related
+  text.
+- This is a production UI deployment/readback improvement, not full Goal
+  completion. Authenticated provider generation/result/save/reuse,
+  reconciliation, operations evidence, and strict release acceptance remain
+  open; Zeabur still serves its old bundle.
+
 ## Result
 
 The local Heavy Chain parity implementation and verifier suite are green. The

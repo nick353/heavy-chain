@@ -1,5 +1,23 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-20 r49
+
+Version `603551a8-c9b6-4df8-92b9-d299ed33463f` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev` from the current tracked Heavy
+parity build. Web tests passed 8/8, the Cloudflare build and Wrangler dry-run
+passed, two existing large R2 app assets were uploaded/readied, and 104 changed
+static assets were deployed. Fresh public readback returned health 200 and
+`/lightchain` HTTP 200. Served `assets/index.DnyV_Ymg.js` matched the local
+build byte-for-byte: 716759 bytes, SHA-256
+`b5c37151bd6b42325dfdc7bc22969f70ed62c3fcec195a0c059c35870fe7dcbb`.
+
+After a real 30-second authenticated same-tab wait, `/lightchain` showed the
+canonical Lightchain launcher, category tabs, and feature cards. The DOM
+readback reported one header, zero checkbox controls, and zero rights-related
+text. This proves the production UI deployment/readback only; authenticated
+provider generation/result/save/reuse, reconciliation, operations evidence,
+and strict release acceptance remain open.
+
 ## Latest Web release — 2026-09-20
 
 Version `bea34181-9d09-4876-9444-17358cacf0ba` is deployed at 100% to

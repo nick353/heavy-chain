@@ -1,3 +1,19 @@
+# Cloudflare Web parity deployment and authenticated readback — 2026-09-20 r49
+
+The current tracked Heavy parity build was deployed to the existing Cloudflare
+Web surface as version `603551a8-c9b6-4df8-92b9-d299ed33463f`. Fresh public
+readback returned Cloudflare health 200, `/lightchain` HTTP 200, and the served
+`assets/index.DnyV_Ymg.js` matched the local build byte-for-byte
+(`716759` bytes, SHA-256
+`b5c37151bd6b42325dfdc7bc22969f70ed62c3fcec195a0c059c35870fe7dcbb`). After a
+real 30-second wait, an authenticated same-tab readback showed the canonical
+Lightchain launcher with category tabs and feature cards; checkbox count was
+0, header count 1, and rights-text count 0. This is a real production UI
+deployment/readback improvement, but not full Goal completion: authenticated
+provider generation/result/save/reuse, reconciliation, operations evidence,
+and the strict release gate remain open. Zeabur still serves its old bundle and
+its variable/deploy permission boundary is unchanged.
+
 # Source push and fresh token-permission audit — 2026-09-20 r48
 
 The reviewed tracked parity slice was committed as `0952aa5` and pushed to
