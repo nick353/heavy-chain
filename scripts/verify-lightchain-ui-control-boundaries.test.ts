@@ -8,6 +8,7 @@ const canvasSourcePath = new URL('../src/pages/CanvasEditorPage.tsx', import.met
 const layoutSourcePath = new URL('../src/components/layout/Layout.tsx', import.meta.url);
 const appSourcePath = new URL('../src/App.tsx', import.meta.url);
 const publicHeaderSourcePath = new URL('../src/components/layout/Header.tsx', import.meta.url);
+const landingSourcePath = new URL('../src/pages/LandingPage.tsx', import.meta.url);
 const loginSourcePath = new URL('../src/pages/LoginPage.tsx', import.meta.url);
 const parityPagesSourcePath = new URL('../src/pages/LightchainParityPages.tsx', import.meta.url);
 
@@ -36,11 +37,15 @@ test('public and auth recovery shells use the Lightchain identity without extra 
 });
 
 test('the root keeps the Lightchain launcher URL for authenticated users', async () => {
-  const source = await readFile(appSourcePath, 'utf8');
+  const [source, landing] = await Promise.all([
+    readFile(appSourcePath, 'utf8'),
+    readFile(landingSourcePath, 'utf8'),
+  ]);
 
   assert.match(source, /path="\/"[\s\S]*?element=\{lazyPage\(<LandingPage \/>\)\}/);
   assert.match(source, /Lightchain keeps its authenticated launcher at the root/);
   assert.match(source, /path="\/login"[\s\S]*?<PublicRoute>[\s\S]*?lazyPage\(<LoginPage \/>\)/);
+  assert.match(landing, /document\.title = 'Lightchain AI'/);
 });
 
 test('Lightchain routes do not expose the Heavy global keyboard shortcut affordance', async () => {

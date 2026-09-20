@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { GenerateLightchainEntry } from '../components/GenerateLightchainEntry';
 import { Header } from '../components/layout/Header';
 
@@ -7,6 +8,14 @@ import { Header } from '../components/layout/Header';
  * make the first screen diverge before a user could reach the shared tools.
  */
 export function LandingPage() {
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = 'Lightchain AI';
+    return () => {
+      document.title = previousTitle;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#171b1c] text-white">
       <div className="fixed left-0 right-0 top-0 z-50 bg-[#05090b]/95">
