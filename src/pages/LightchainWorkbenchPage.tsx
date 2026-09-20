@@ -4646,7 +4646,7 @@ export function LightchainWorkbenchPage() {
                   )}
                 </section>
               )}
-              <div className="!mt-[33px] flex h-auto w-full items-center justify-start gap-2 border-b border-white/10" role="tablist">
+              <div className="!mt-[37px] flex h-[34px] w-full items-center justify-start gap-2 border-b border-white/10" role="tablist">
                 {['説明生成', '参考画像', 'モデルのセット写真'].map((tab) => (
                   <button
                     key={tab}
@@ -4718,13 +4718,8 @@ export function LightchainWorkbenchPage() {
                   {FITTING_REFERENCE_SLOT_CONFIG.map((slot) => {
                     const selectedFile = fittingReferenceSlots[slot.key];
                     return (
-                      <section key={slot.key} className="grid gap-2" data-testid={`lightchain-fitting-reference-slot-${slot.key}`}>
-                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-100">
-                          <span>{slot.label}</span>
-                          {slot.required && <span className="rounded border border-white/10 bg-cyan-500 px-2 py-0.5 text-[11px] font-semibold text-neutral-950">必須項目</span>}
-                        </div>
-                        <div className="flex h-40 min-h-0 gap-2 rounded-2xl border border-dashed border-white/15 bg-[#181d1f] p-2">
-                          <label className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-[#20272a] px-3 text-center transition hover:border-cyan-300/70">
+                      <section key={slot.key} className="flex h-40 min-h-0 gap-2 rounded-2xl border border-dashed border-white/15 bg-[#181d1f] p-2" data-testid={`lightchain-fitting-reference-slot-${slot.key}`}>
+                          <label className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center px-3 text-center transition hover:text-cyan-100">
                             <input
                               type="file"
                               accept=".png,.jpg,.jpeg,.avif,.webp"
@@ -4735,8 +4730,10 @@ export function LightchainWorkbenchPage() {
                               <img src={selectedFile.imageUrl} alt={`${slot.label}選択済み`} className="max-h-28 rounded-lg object-contain" />
                             ) : (
                               <>
+                                <span className="text-sm font-semibold text-neutral-100">{slot.label}</span>
                                 <Upload className="size-5 text-neutral-300" />
                                 <span className="mt-2 text-sm font-semibold text-neutral-100">アップロード</span>
+                                {slot.required && <span className="mt-2 rounded border border-white/10 bg-cyan-500 px-2 py-0.5 text-[11px] font-semibold text-neutral-950">必須項目</span>}
                               </>
                             )}
                           </label>
@@ -4753,10 +4750,9 @@ export function LightchainWorkbenchPage() {
                             </button>
                             <span className="text-[11px] text-neutral-500">選択</span>
                           </div>
-                          <div className="flex w-[96px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#20272a]">
+                          <div className="aspect-[96/128] h-full w-[106px] shrink-0 overflow-hidden rounded-xl bg-[#20272a]">
                             <img src={selectedFile?.imageUrl ?? slot.demoImageUrl} alt="demo" className="size-full max-h-[128px] object-cover" />
                           </div>
-                        </div>
                       </section>
                     );
                   })}
