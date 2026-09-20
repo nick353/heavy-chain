@@ -1,3 +1,16 @@
+# Zeabur deployment/readback after Companion proof wiring — 2026-09-21 r80
+
+Pushed `main` at commit `aa0c882` and observed the exact Zeabur deployment
+`6aaffe2a342483d22ad8a1e9` advance to `RUNNING`. Fresh public readback returned
+HTTP 200 for `/_health` with `status=ok`, `hosting=zeabur`, and Cloudflare
+API/Auth enabled; `/lightchain` also returned HTTP 200. The served Vite asset
+references and fresh SHA-256 readback were present, and local `HEAD` matched
+`origin/main`.
+
+This proves transport/runtime delivery of the Companion-proof wiring only. It
+does not promote UI evidence to provider receipt, durable save/reuse,
+source-sync/reconciliation, monitor, billing, or strict release completion.
+
 # Companion UI proof connected to release doctor — 2026-09-21 r79
 
 Commit `ffa7e49` connects the current sanitized Companion authenticated UI
