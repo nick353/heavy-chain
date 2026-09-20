@@ -1,3 +1,25 @@
+# Unified release-gate result after current UI evidence — 2026-09-21 r77
+
+The current unified release-gate run completed against commit `62096d6`. The
+new 2026-09-21 Companion artifact passed as the required authenticated
+production UI evidence, with fresh timestamp and no exported auth secret. The
+gate remains `ok=false`, but the UI proof is no longer the failing layer.
+
+The remaining strict-gate failures are concrete and separate: the current
+production monitor/UI pair is absent, current launch-operations and
+mass-market/33-feature production artifacts are absent, the G608 audit artifact
+does not satisfy its current requirement contract, the G618 scale artifact is
+stale, and current G633 scale/alerting plus H602 production completion
+readbacks are not passing. The run performed no generation, payment, publish,
+destructive cleanup, or deploy.
+
+The read-only `release:doctor` run passes release blockers and git cleanliness
+at current commit `62096d6`, then stops at `proof target` because no current
+Browser Use or other accepted doctor proof surface is configured. The current
+Companion proof is accepted by the unified UI gate, but does not silently
+substitute for the doctor’s separate proof contract or for provider/business
+completion.
+
 # Current authenticated Companion route evidence and local gate refresh — 2026-09-21 r76
 
 The current logged-in Companion profile was read back in one task-owned tab for
