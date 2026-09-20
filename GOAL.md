@@ -1,3 +1,18 @@
+# Fresh authenticated Light/Heavy route and provider-gate readback — 2026-09-21 r81
+
+Using a new task-owned Chrome Companion tab, `/lightchain` rendered the
+authenticated Lightchain launcher with avatar and user-specific assets. After
+hydration, `/model` rendered the AI-fitting input tabs, material controls,
+existing result navigation to Gallery/History/Jobs/Canvas, and no rights
+confirmation checkbox, modal, or badge. The same tab's `/brand/settings`
+readback showed brand `Nisen` and the signed-in user as owner.
+
+The provider gate remains intentionally fail-closed: `/model` visibly exposes
+`権限がありません`, and an existing result's `保存` control was disabled.
+No generation, provider request, save, payment, publish, token extraction, or
+credential entry occurred. This confirms the current blocker is provider
+admission/receipt, not login or brand ownership.
+
 # Zeabur deployment/readback after Companion proof wiring — 2026-09-21 r80
 
 Pushed `main` at commit `aa0c882` and observed the exact Zeabur deployment
