@@ -1,3 +1,31 @@
+# Fitting reference-library control parity and final Companion readback — 2026-09-21 r88
+
+The final fitting input parity residual was fixed in commits `d8e3e21` and
+`aa130fe`: the three `参考画像ライブラリ` controls now use the Light-shaped
+17px semantic/visual height instead of the overriding `height:auto!important`
+class. Local typecheck, build, focused fitting lifecycle tests, route/permission
+parity tests, lint, and `git diff --check` passed. The exact Zeabur local-source
+deployment `6ab02ab5342483d22ad8af88` reached `RUNNING`, and public `/_health`
+returned HTTP 200.
+
+After a real 30-second authenticated Companion wait on the deployed Heavy
+`/model`, same-tab readback confirmed the Light-shaped workbench,
+`権限がありません` provider gate, zero rights checkbox/modal/badge, and all three library
+controls at `width=108px` and `height=17px`. One visual Companion click opened
+the `参考画像ライブラリ` dialog; the post-click readback showed its `使用`
+controls. The Companion session then closed with the task-owned tab closed,
+lease/pending/queue/active-reconciliation counts at zero, and
+`external_action_executed=false`. A deliberately invalid multi-navigation
+transaction was rejected before dispatch by the Companion checkpoint and was
+not replayed.
+
+The fresh unified release gate remains fail-closed with the same ten failures:
+production monitor/UI pair, launch operations, current mass-market QA,
+production Lightchain all-feature order previews, G608, G618, G633, production
+H602 billing completion, generation scorecard, and the dependent G633 command.
+No provider generation/save/reuse, payment, publish, credential/token, or
+rights-bypass action was performed. The full Goal remains active.
+
 # Release-gate recheck after fitting parity deployment — 2026-09-21 r87
 
 Fresh `npm run verify:release-gate --silent` remains fail-closed with the same
