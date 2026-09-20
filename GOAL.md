@@ -1,3 +1,26 @@
+# Zeabur and Cloudflare secret-boundary refresh — 2026-09-21 r74
+
+Fresh official CLI readback resolves the personal Zeabur workspace and the
+exact `heavy-chain` service. Its service variables remain only
+`VITE_CLOUDFLARE_API_ENABLED` and `VITE_CLOUDFLARE_API_BASE_URL`; no
+`HEAVY_CHAIN_MONITOR_TOKEN` or provider credential is present. The associated
+readonly cross-service values were not reused as Heavy consumer credentials.
+
+Fresh Wrangler read-only authentication reaches the intended Cloudflare
+account. The current `heavy-chain-api` secret-name list contains no
+`HEAVY_CHAIN_MONITOR_TOKEN`; the `consumer-auth` secret-name list also contains
+no monitor token. Values were never printed, copied, or changed. The local
+Cloudflare implementation remains healthy: Heavy API typecheck passed, the
+Heavy API suite passed `97/97`, and the Cloudflare runtime contract passed
+`6/6`.
+
+This strengthens the implementation and credential-boundary evidence but does
+not create a valid live consumer session. Provider generation/receipt,
+durable save/reuse/readback, source-sync/reconciliation, current release proof,
+and strict release acceptance remain open. The next safe action is secure
+provisioning or an operator-owned authenticated session; there is no valid
+token that can be derived from the Zeabur or Wrangler management credentials.
+
 # Release proof boundary and authenticated-tab retry — 2026-09-21 r73
 
 The completed local implementation and verifier changes are fixed in commit
