@@ -1,3 +1,29 @@
+# Readiness boundary after tracked-tooling push — 2026-09-20 r69
+
+Commit `525e806` tracks the readiness scripts/contracts/docs and ignores only
+generated local evidence directories; the worktree is clean and the commit is
+pushed. The GitHub-triggered Zeabur deployment is `RUNNING`; Zeabur and
+Cloudflare Web health both return HTTP 200, and the public Zeabur bundle is
+716,759 bytes with SHA-256
+`39e727e37a13002c82f9f0b999e58d5df3351b97c3693866bdacb2498bc1aed6`.
+
+Fresh Zeabur variable-name readback found only
+`VITE_CLOUDFLARE_API_BASE_URL` and `VITE_CLOUDFLARE_API_ENABLED`; neither
+`HEAVY_CHAIN_MONITOR_TOKEN` nor provider secret names are present. The Zeabur
+management credential cannot mint or substitute the live Heavy consumer-auth
+bearer required by the monitor. No secret was extracted, guessed, or added.
+
+With the current commit/date/environment and the public runtime settings
+injected only for the read-only check, `release:doctor` passes release
+blockers, git-clean, proof-target, and env-check, then stops at
+`cloudflare_release_readback_contract_missing`: the local contract's required
+workspace artifacts are not materialized for this run. The old Browser Use
+proof is dated 2026-06-18 and was not promoted. Cloudflare release-contract
+tests 10/10, doctor-contract tests 3/3, security audit, typecheck, lint, and
+build pass. The Goal remains active for secure token/provider provisioning and
+the same-run generation, persistence, reuse, reconciliation, scorecard,
+operations, and strict release evidence.
+
 # Production deploy and public bundle readback — 2026-09-20 r68
 
 The five omitted parity runtime modules were committed as `448cbb7` and

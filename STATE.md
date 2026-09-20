@@ -1,3 +1,26 @@
+# Readiness boundary after tracked-tooling push — 2026-09-20 r69
+
+Commit `525e806` is pushed with readiness scripts/contracts/docs tracked and
+generated local evidence directories ignored; the worktree is clean. The
+GitHub-triggered Zeabur deployment is `RUNNING`; Zeabur and Cloudflare Web
+health both return HTTP 200. The public Zeabur bundle remains the exact local
+build readback at 716,759 bytes and SHA-256
+`39e727e37a13002c82f9f0b999e58d5df3351b97c3693866bdacb2498bc1aed6`.
+
+Fresh Zeabur variable-name readback finds only the two public Cloudflare
+frontend variables. `HEAVY_CHAIN_MONITOR_TOKEN` and provider secret names are
+absent. A Zeabur management login cannot mint or replace the live Heavy
+consumer-auth bearer; no secret was extracted, guessed, or written.
+
+Read-only `release:doctor` with the current release target passes release
+blockers, git-clean, proof-target, and env-check, then stops at
+`cloudflare_release_readback_contract_missing` because the required local
+workspace evidence artifacts are not materialized for this run. The dated
+2026-06-18 Browser Use proof was not reused. Contract tests 10/10 and 3/3,
+security audit, typecheck, lint, build, and public health/bundle readback pass.
+Provider receipt/persistence/reuse, source-sync/reconciliation, operations,
+and strict release acceptance remain unverified.
+
 # Production deploy and public bundle readback — 2026-09-20 r68
 
 Commit `448cbb7` is pushed. Zeabur deployment `6aafc154342483d22ad88cc7`
