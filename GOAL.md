@@ -1,3 +1,29 @@
+# Light source readback corrected fitting-tab verifier and full 31-feature gate — 2026-09-21 r89
+
+Fresh authenticated AOS Chrome Companion readback of deployed Heavy `/model`
+confirmed the Light source behavior for both remaining fitting tabs: `参考画像`
+renders image upload/reference-library slots without a textarea, while
+`モデルのセット写真` renders the `すべて表示` / `メンズ` / `レディース` /
+`キッズ` category controls and model grid without a textarea. The local
+all-feature verifier had been asserting stale textarea/helper copy for these
+tabs; it now asserts the observed source UI instead. Its blocking-overlay
+dismissal also uses exact button-name matching, preventing a gallery card title
+containing `OK` from being mistaken for the modal close control.
+
+`npm run verify:lightchain-all-features` now passes with `ok=true`,
+`failed=[]`, 31/31 desktop features, 31/31 mobile features, 2 desktop video
+routes, 4 mobile/source parity routes, and completed cleanup. Typecheck,
+route parity `25/25`, permission parity `8/8`, fitting lifecycle `10/10`, and
+model-library direct-route `3/3` also pass. This is local UI/interaction parity
+proof plus authenticated source readback; it is not provider generation,
+durable save/reuse, billing, credential/token, or strict release completion.
+
+The Companion session closed with the task-owned production tab closed,
+leases released, no retained/unknown-effect tabs, and
+`external_action_executed=false`. No auth token was extracted or added.
+The full Goal remains active; the existing ten external/operator/provider
+release blockers remain fail-closed.
+
 # Fitting reference-library control parity and final Companion readback — 2026-09-21 r88
 
 The final fitting input parity residual was fixed in commits `d8e3e21` and

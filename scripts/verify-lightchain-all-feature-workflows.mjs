@@ -765,14 +765,12 @@ async function verifyVisibleTabInteractions(page, tool, result) {
       {
         tab: '参考画像',
         expected: '参考画像',
-        placeholder: '参考画像で残したい雰囲気や衣服の条件を記入してください',
-        helper: '衣服と一緒に使う参考画像の条件を指定します。',
+        bodyIncludes: ['モデル画像', '参考画像ライブラリ'],
       },
       {
         tab: 'モデルのセット写真',
         expected: 'モデルのセット写真',
-        placeholder: 'モデルセット写真で合わせたいポーズ、背景、小物を記入してください',
-        helper: 'モデルのセット写真に合わせた条件を指定します。',
+        bodyIncludes: ['すべて表示', 'メンズ', 'レディース', 'キッズ'],
       },
       {
         tab: '説明生成',
@@ -791,13 +789,16 @@ async function verifyVisibleTabInteractions(page, tool, result) {
       const placeholderOk = !check.placeholder || placeholder === check.placeholder;
       const headlineOk = !check.headline || body.includes(check.headline);
       const helperOk = !check.helper || body.includes(check.helper);
-      recordFeatureAssertion(result, `fitting_tab_click_updates_state:${check.tab}`, ariaSelected === 'true' && body.includes(check.expected) && placeholderOk && headlineOk && helperOk, {
+      const bodyIncludesOk = !check.bodyIncludes || check.bodyIncludes.every((text) => body.includes(text));
+      recordFeatureAssertion(result, `fitting_tab_click_updates_state:${check.tab}`, ariaSelected === 'true' && body.includes(check.expected) && placeholderOk && headlineOk && helperOk && bodyIncludesOk, {
         expected: check.expected,
         ariaSelected,
         placeholder,
         expectedPlaceholder: check.placeholder ?? null,
         expectedHeadline: check.headline ?? null,
         expectedHelper: check.helper ?? null,
+        expectedBodyIncludes: check.bodyIncludes ?? [],
+        bodyIncludesOk,
         bodyExcerpt: body.slice(0, 700),
       });
     }
@@ -1481,7 +1482,7 @@ async function dismissBlockingOverlays(page) {
     await page.waitForTimeout(150);
   }
   for (const text of ['スキップ', '閉じる', 'あとで', '完了', 'OK']) {
-    const button = page.getByRole('button', { name: text }).first();
+    const button = page.getByRole('button', { name: text, exact: true }).first();
     if (await button.isVisible({ timeout: 500 }).catch(() => false)) {
       await button.click().catch(() => {});
       await page.waitForTimeout(250);
