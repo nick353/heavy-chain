@@ -245,14 +245,15 @@ test('uses a saved artifact feature type when resolving its reuse route', async 
   assert.match(resolver, /candidates\.find/);
 });
 
-test('uses Heavy-owned artwork per launcher feature instead of remote fixed fixtures', async () => {
+test('uses the current Lightchain launcher artwork and gallery fixtures', async () => {
   const source = await readFile(entryPath, 'utf8');
   assert.match(source, /const launcherFeatureImages: Partial<Record<string, string>>/);
-  assert.match(source, /'design-workspace': '\/assets\/lightchain-cards\/design-v1\.png'/);
-  assert.match(source, /'virtual-fitting': '\/assets\/lightchain-cards\/fitting-v1\.png'/);
-  assert.match(source, /'fashion-studio': '\/assets\/lightchain-cards\/design-v1\.png'/);
+  assert.match(source, /'design-workspace': 'https:\/\/lightchain-qlxy-prod\.oss-cn-hangzhou\.aliyuncs\.com\/light-chain-platform\/home5_0_1\/designProduction\.png/);
+  assert.match(source, /'virtual-fitting': 'https:\/\/lightchain-qlxy-prod\.oss-cn-hangzhou\.aliyuncs\.com\/light-chain-platform\/home5_0_1\/VirtualFittingCover\.png/);
+  assert.match(source, /'fashion-studio': 'https:\/\/lightchain-qlxy-prod\.oss-cn-hangzhou\.aliyuncs\.com\/light-chain-platform\/home5_0_1\/integrationCover\.png/);
+  assert.match(source, /const canonicalRecommendedGalleryImages = \[/);
+  assert.match(source, /https:\/\/static-cn\.linkaigc\.com\/workbenches\/2026-02\/d81b55aa18721b86c37b96a36223a936\.jpeg/);
   assert.match(source, /launcherFeatureImages\[feature\.id\] \?\?/);
-  assert.doesNotMatch(source, /https?:\/\//);
   assert.doesNotMatch(source, /const buildLauncherFeatureImage = \(feature: LightchainFeature\) => launcherCategoryImages\[feature\.category\];/);
 });
 

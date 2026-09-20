@@ -292,35 +292,57 @@ const isHomepageVisibleFeature = (_feature: LightchainFeature): boolean => true;
 
 /** Heavy-owned artwork for the shared Lightchain-shaped launcher chrome. */
 const launcherCategoryImages: Record<LightchainCategoryId, string> = {
-  recommended: '/assets/lightchain-cards/design-v1.png',
-  planning: '/assets/lightchain-cards/design-v1.png',
-  fitting: '/assets/lightchain-cards/fitting-v1.png',
-  graphics: '/assets/lightchain-cards/graphics-v1.png',
+  recommended: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  planning: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  fitting: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  graphics: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
 };
 
 const launcherFeatureImages: Partial<Record<string, string>> = {
-  'design-workspace': '/assets/lightchain-cards/design-v1.png',
-  'video-workstation': '/assets/lightchain-cards/marketing-v1.png',
-  'marketing-workspace': '/assets/lightchain-cards/marketing-v1.png',
-  'virtual-fitting': '/assets/lightchain-cards/fitting-v1.png',
-  'image-repair': '/assets/lightchain-cards/fitting-v1.png',
-  'remove-background': '/assets/lightchain-cards/fitting-v1.png',
-  'wear-design-lab': '/assets/lightchain-cards/design-v1.png',
-  'model-library': '/assets/lightchain-cards/fitting-v1.png',
-  'fashion-studio': '/assets/lightchain-cards/design-v1.png',
-  'design-agent': '/assets/lightchain-cards/marketing-v1.png',
-  'heavychain-lab': '/assets/lightchain-cards/design-v1.png',
-  'inspiration-design': '/assets/lightchain-cards/design-v1.png',
-  'fabric-simulation': '/assets/lightchain-cards/fitting-v1.png',
-  'lineart-to-real': '/assets/lightchain-cards/design-v1.png',
-  'change-color': '/assets/lightchain-cards/design-v1.png',
-  'flat-vector': '/assets/lightchain-cards/graphics-v1.png',
-  'custom-style': '/assets/lightchain-cards/design-v1.png',
-  'graphic-design': '/assets/lightchain-cards/graphics-v1.png',
-  'pattern-vector-pro': '/assets/lightchain-cards/graphics-v1.png',
-  'design-arrange': '/assets/lightchain-cards/graphics-v1.png',
-  'print-design': '/assets/lightchain-cards/graphics-v1.png',
+  'design-agent': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'design-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'marketing-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateMarketingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'fashion-studio': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/integrationCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'video-workstation': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateShortVideoCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'virtual-fitting': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'image-repair': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'remove-background': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'wear-design-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'model-library': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'heavychain-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'inspiration-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'fabric-simulation': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'lineart-to-real': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'change-color': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'flat-vector': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'custom-style': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'graphic-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'pattern-vector-pro': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'design-arrange': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'print-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
 };
+
+const canonicalRecommendedGalleryImages = [
+  'https://static-cn.linkaigc.com/workbenches/2026-02/d81b55aa18721b86c37b96a36223a936.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/a25e632441de5b1198f4e20ae7040568.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/3266745d3f905fc8c770cd0894438279.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/6051a3df009110d3de23c3af3173e418.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/1b69b85c8eba09e87fbae86a8f98b3b5.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/workbenches/2026-03/8a0819ffd465485fca3826a8daa55e52.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/3012bf485d2fcf846ea006975040b91d.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/19fa690cf8a20c07f5e289464d676f59.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/5d67da9df9be3f548f1cc425a1f84280.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/b8ec2a7a0c4568e30b842f7f6b116474.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/a15e92993792273cb5a65d4387f84692.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/8e27567f4e2e95a129348ccbaabec8d7.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/workbenches/2026-03/dfec176704c22897d7d90cec933e117f.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/886d82e0b698aae745d4ba2ead9b92c5.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/d2c7f4a20364316cbf0549b3a81e5cae.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/1483b69c2c945b0ef7c366374430edc8.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/workbenches/2026-03/02e6be67a4d3e7a7cded82c1e82eccb4.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/a38a76f61065a395382e94a9cd9b8bd4.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  'https://static-cn.linkaigc.com/saas/2026-06/b9db6ef4425f19e9ed865fd88e6e6115.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+];
 
 const buildGalleryExampleImage = (featureId: string) => {
   const feature = lightchainFeatureCatalog.find((candidate) => candidate.id === featureId);
@@ -419,10 +441,12 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   const commandHref = buildLightchainFeatureHref(commandFeature);
   const galleryItems = useMemo<GalleryCase[]>(() => {
     const templates = galleryCasesByTab[galleryTab];
-    const exampleItems = templates.map((template) => ({
+    const exampleItems = templates.map((template, index) => ({
       ...template,
       id: `example-${template.id}`,
-      imageUrl: buildGalleryExampleImage(template.featureId),
+      imageUrl: galleryTab === 'recommended'
+        ? (canonicalRecommendedGalleryImages[index] ?? buildGalleryExampleImage(template.featureId))
+        : buildGalleryExampleImage(template.featureId),
     }));
     const persistedCandidates = galleryTab === 'recommended'
       ? savedArtifacts

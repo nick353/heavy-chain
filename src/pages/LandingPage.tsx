@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { GenerateLightchainEntry } from '../components/GenerateLightchainEntry';
-import { Header } from '../components/layout/Header';
+import { LightchainLauncherHeader } from '../components/layout/LightchainLauncherHeader';
 
 /**
  * Keep the public entry on the same Lightchain launcher frame as the
@@ -19,9 +19,9 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-[#171b1c] text-white">
       <div className="fixed left-0 right-0 top-0 z-50 bg-[#05090b]/95">
-        <Header />
+        <LightchainLauncherHeader />
       </div>
-      <main className="pt-[70px]">
+      <main className="pt-[50px]">
         <GenerateLightchainEntry />
       </main>
     </div>
