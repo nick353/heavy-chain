@@ -1,3 +1,21 @@
+# Authenticated production surface readback and Zeabur build blocker — 2026-09-20 r67
+
+One task-owned Companion session reached authenticated production states for
+`/lightchain`, `/model`, `/flow/GenerateShortVideo`, `/gallery`, `/history`,
+`/jobs`, `/canvas/new`, `/designProduction`, and
+`/model-library/model-custom-form`. `/generate?feature=campaign-image` stayed in
+the preparation shell. No rights checkbox was visible, no provider action was
+submitted, and cleanup completed with no retained/unknown-effect tabs or
+foreign-tab mutation. Evidence:
+`work/heavy-chain-companion-authenticated-production-readback-20260920-r67.md`.
+
+Zeabur CLI login and target resolution are valid. The latest deployment failed
+because commit `12fa010` omitted the newly referenced parity source modules;
+the five source files are selected for the corrective commit. The service still
+has no `HEAVY_CHAIN_MONITOR_TOKEN` or provider credential. No secret was
+extracted, guessed, or assigned. Provider receipt, persistence/reuse,
+reconciliation, operations evidence, and strict release acceptance remain open.
+
 # Companion route readback and authentication boundary — 2026-09-20 r51
 
 Fresh task-owned AOS Chrome Companion read-only coverage reached 10/10

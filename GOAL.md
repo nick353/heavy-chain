@@ -1,3 +1,24 @@
+# Authenticated production surface readback and Zeabur build blocker — 2026-09-20 r67
+
+Fresh same-session Companion readback now reaches the authenticated Cloudflare
+Web business states: Lightchain launcher, AI fitting, video workstation,
+Gallery, History, Jobs, Canvas, Design Production, and model customization.
+The routes show source-shaped controls and no visible Light-missing rights
+checkbox. The campaign-image generation route remains in its preparation shell
+after the bounded wait, so no provider completion is claimed. Evidence:
+`work/heavy-chain-companion-authenticated-production-readback-20260920-r67.md`.
+
+The official Zeabur CLI is authenticated and resolves the target service, but
+the latest build failed because commit `12fa010` omitted the newly referenced
+`SourceModelLibrarySurface.tsx` and related parity source files. Those five
+source files are selected for the corrective commit. `HEAVY_CHAIN_MONITOR_TOKEN`
+and provider credentials remain absent; a Zeabur management credential cannot
+mint a live consumer-auth session, so no guessed or extracted secret was added.
+
+The Goal remains active pending corrective deploy/readback, provider
+receipt/persistence/reuse/reconciliation, operations evidence, and the strict
+release gate.
+
 # Companion route readback and authentication boundary — 2026-09-20 r51
 
 Fresh task-owned AOS Chrome Companion read-only coverage reached 10/10
