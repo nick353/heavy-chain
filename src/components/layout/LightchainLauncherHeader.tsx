@@ -1,5 +1,7 @@
-import { ChevronDown, CircleUserRound, Globe2, HelpCircle, Link2 } from 'lucide-react';
+import { ChevronDown, Globe2, HelpCircle, Link2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const LIGHTCHAIN_AVATAR_URL = 'https://ql-hangzhou-oss.oss-cn-hangzhou.aliyuncs.com/AIDesign/saas-avatar-new.png?x-oss-process=image/resize,m_lfit,w_64,limit_1/format,webp';
 
 /** The public launcher header observed on the current Lightchain home. */
 export function LightchainLauncherHeader() {
@@ -25,8 +27,8 @@ export function LightchainLauncherHeader() {
             <HelpCircle className="h-3.5 w-3.5" />
             ヘルプセンター
           </button>
-          <button type="button" aria-label="ユーザーメニュー" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-neutral-300 transition hover:bg-white/15 hover:text-white">
-            <CircleUserRound className="h-5 w-5" />
+          <button type="button" aria-label="avatar" className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 transition hover:bg-white/15">
+            <img src={LIGHTCHAIN_AVATAR_URL} alt="avatar" className="h-full w-full object-cover" />
           </button>
         </div>
       </div>
