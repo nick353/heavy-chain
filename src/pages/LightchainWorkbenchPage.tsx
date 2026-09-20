@@ -166,6 +166,7 @@ type LightchainPreviewOverrides = {
 const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
 const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspace-tutorial-dismissed-v1';
 const LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL = 'https://static-jp.linkaigc.com/saas/2026-08/7c9021b93516cd2edfe4e2f7059bf20f.jpeg';
+const LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL = 'https://jp.linkaigc.com/static/default.png';
 const FITTING_PROMPT_TEMPLATES = [
   {
     title: 'EC商品写真',
@@ -4667,14 +4668,17 @@ export function LightchainWorkbenchPage() {
             {activeFittingTaskTab === 'マルチタスク' ? (
               <section className="absolute inset-0 flex flex-col text-left" data-testid="lightchain-fitting-batch-panel">
                 <div className="flex items-center gap-3 border-b border-white/10 px-4 py-4">
-                  <h2 className="text-lg font-semibold text-white">一括試着タスク（0/8）</h2>
-                  <button
-                    type="button"
-                    disabled
-                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-neutral-500"
-                  >
-                    すべて削除
-                  </button>
+                  <div className="flex flex-1 items-center gap-3">
+                    <h2 className="text-lg font-semibold text-white">一括試着タスク（0/8）</h2>
+                    <span className="h-6 w-px bg-white/10" aria-hidden="true" />
+                    <button
+                      type="button"
+                      disabled
+                      className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-neutral-500"
+                    >
+                      すべて削除
+                    </button>
+                  </div>
                   <button
                     type="button"
                     aria-label="閉じる"
@@ -4685,7 +4689,14 @@ export function LightchainWorkbenchPage() {
                   </button>
                 </div>
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#27363a] text-3xl text-cyan-300">⌁</div>
+                  <div className="relative size-32">
+                    <img
+                      src={LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL}
+                      alt="タスクなし"
+                      className="size-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
                   <p className="text-sm text-neutral-400">ロット試着の任務はまだありません,先に左側から配置してください</p>
                   <p className="text-xs text-neutral-500">最大8つのタスクの追加をサポートします。</p>
                 </div>

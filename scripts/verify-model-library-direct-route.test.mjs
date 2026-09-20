@@ -51,6 +51,8 @@ test('new fitting entrypoints use canonical /model while retaining the legacy re
   assert.match(workbench, /data-testid="lightchain-fitting-reference-image-modal"/);
   assert.match(workbench, /data-testid="lightchain-fitting-prompt-template-modal"/);
   assert.match(workbench, /data-testid="lightchain-fitting-batch-permission"/);
+  assert.match(workbench, /alt="タスクなし"/);
+  assert.match(workbench, /LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL/);
   assert.match(workbench, /LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL/);
   assert.match(library, /destination === 'fitting'[\s\S]*?`\/model\?libraryArtifactId=/);
   assert.match(app, /path="\/fitting"/);
