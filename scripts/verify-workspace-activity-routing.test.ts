@@ -145,11 +145,11 @@ test('Lightchain workbench accepts a resumeJob readback without a legacy source 
   assert.match(source, /sourceResumePath: `\/lightchain\/\$\{selectedTool\.id\}`/);
 });
 
-test('model-matrix Fitting jobs resume to the Fitting lane with saved conditions', async () => {
+test('model-matrix Fitting jobs resume to the canonical model lane with saved conditions', async () => {
   const activity = await read('../src/lib/workspaceActivity.ts');
   const fitting = await read('../src/pages/FittingPage.tsx');
-  assert.match(activity, /sourceResumePath === '\/fitting'/);
-  assert.match(activity, /return `\/fitting\?\$\{params\.toString\(\)\}`/);
+  assert.match(activity, /sourceResumePath === '\/fitting' \|\| sourceResumePath === '\/model'/);
+  assert.match(activity, /return `\/model\?\$\{params\.toString\(\)\}`/);
   assert.match(activity, /getMetadataStringList\(metadata, 'bodyTypes'\)/);
   assert.match(activity, /getMetadataStringList\(metadata, 'ageGroups'\)/);
   assert.match(fitting, /useSearchParams/);

@@ -25,3 +25,27 @@ test('launcher routes model planning through the canonical Light entrypoint', as
   assert.match(generate, /title: 'モデル企画ライブラリ', to: '\/model-library\/model-custom-form'/);
   assert.doesNotMatch(modelLibraryEntry, /heavyChainHref: '\/generate\?feature=model-matrix'/);
 });
+
+test('new fitting entrypoints use canonical /model while retaining the legacy resume alias', async () => {
+  const [app, navigation, handoff, activity, mapping, parityCatalog, workbench, library] = await Promise.all([
+    readFile(new URL('../src/App.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/layout/navigation.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/lightchainLibraryHandoff.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/workspaceActivity.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/features/lightchain/heavyRouteMapping.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/lightchainParityCatalog.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/LightchainLibraryPage.tsx', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(navigation, /label: 'AIフィッティング',[\s\S]*?path: '\/model'/);
+  assert.match(handoff, /feature\.id === 'ai-fitting' \|\| feature\.id === 'ai-fitting-reference'[\s\S]*?\? '\/model'/);
+  assert.match(activity, /sourceResumePath === '\/fitting' \|\| sourceResumePath === '\/model'/);
+  assert.match(activity, /return `\/model\?\$\{params\.toString\(\)\}`/);
+  assert.match(mapping, /'virtual-fitting': '\/model'/);
+  assert.match(mapping, /'flat-to-model': '\/model'/);
+  assert.match(parityCatalog, /id: 'flat-to-model',[\s\S]*?route: '\/model'/);
+  assert.match(workbench, /const selectedToolActionHref = isFittingDetail \? '\/model#fitting-material-workbench'/);
+  assert.match(library, /destination === 'fitting'[\s\S]*?`\/model\?libraryArtifactId=/);
+  assert.match(app, /path="\/fitting"/);
+});

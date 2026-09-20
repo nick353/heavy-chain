@@ -262,7 +262,7 @@ test('keeps deep-route and library-handoff contexts distinct while retaining lib
   assert.ok(referenceFeature);
   assert.equal(
     buildLightchainLibraryFeatureHref(referenceFeature, artifactId),
-    `/fitting?libraryArtifactId=${artifactId}`,
+    `/model?libraryArtifactId=${artifactId}`,
   );
   assert.equal(resolveHeavyRouteForRow('ai-fitting-reference', '/fitting'), '/model?tab=参考図');
   assert.notEqual('/model?tab=参考図', '/fitting');

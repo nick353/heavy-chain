@@ -23,7 +23,7 @@ export interface WorkspaceNavItem {
 export const workspaceNavItems: WorkspaceNavItem[] = [
   { icon: IconHome, label: 'ホーム', mobileLabel: 'ホーム', path: '/dashboard', group: 'main', showInMobileNav: true },
   { icon: IconSparkles, label: '制作ワークスペース', mobileLabel: '制作', path: '/designProduction', group: 'main', showInMobileNav: true },
-  { icon: IconUsers, label: 'AIフィッティング', mobileLabel: 'フィット', path: '/fitting', group: 'main', showInMobileNav: true },
+  { icon: IconUsers, label: 'AIフィッティング', mobileLabel: 'フィット', path: '/model', group: 'main', showInMobileNav: true },
   { icon: IconShoppingBag, label: 'マーケティング', mobileLabel: '販促', path: '/marketing', group: 'main', showInMobileNav: true },
   { icon: Shirt, label: 'スタジオ', mobileLabel: 'スタジオ', path: '/studio', group: 'main' },
   { icon: UserRound, label: 'モデルライブラリ', mobileLabel: 'モデル', path: '/model-library', group: 'main' },

@@ -139,7 +139,7 @@ export const workspaceSourceConfig: Record<WorkspaceSource, { label: string; res
   video: { label: 'Video Workstation', resumePath: '/flow/GenerateShortVideo/detail' },
   lab: { label: 'Lab', resumePath: '/lab' },
   marketing: { label: 'マーケティングワークスペース', resumePath: '/marketing' },
-  fitting: { label: 'AIフィッティング', resumePath: '/fitting' },
+  fitting: { label: 'AIフィッティング', resumePath: '/model' },
   'design-production': { label: 'デザインワークスペース', resumePath: '/designProduction' },
 };
 

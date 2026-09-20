@@ -1733,7 +1733,7 @@ export function LightchainWorkbenchPage() {
     ?? selectedTool.title;
   const isModelToolDetail = isFeatureDetail && Boolean(currentModelPanel);
   const workspaceStyle = selectedTool.id === 'custom-style' ? null : workspaceStyleConfig[selectedTool.id] ?? null;
-  const selectedToolActionHref = isFittingDetail ? '/fitting#fitting-material-workbench' : selectedTool.heavyChainHref;
+  const selectedToolActionHref = isFittingDetail ? '/model#fitting-material-workbench' : selectedTool.heavyChainHref;
   const workbenchLabels = categoryWorkbenchLabels[selectedTool.category] ?? categoryWorkbenchLabels.home;
   const workbenchEnabled = selectedTool.status !== 'coming-soon';
   const layerIds = workbenchLabels.layers.map(([layer]) => layer);

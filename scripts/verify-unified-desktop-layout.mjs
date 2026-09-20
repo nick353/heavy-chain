@@ -53,7 +53,7 @@ const baseRouteSpecs = [
   { id: 'hub', path: '/designProduction' },
   { id: 'source-shaped-legacy-404', path: '/lightchain' },
   { id: 'dashboard-home', path: '/dashboard' },
-  { id: 'ai-fitting', path: '/fitting' },
+  { id: 'ai-fitting', path: '/model' },
   { id: 'model', path: '/model' },
   { id: 'fabric-image', path: '/lightchain/fabric-image' },
   { id: 'printing-image', path: '/lightchain/printing-image' },

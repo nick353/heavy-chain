@@ -4,7 +4,7 @@ import type { ProductCatalogObjectId } from './parityContract.ts';
 /** Route projection of the Heavy product catalog, kept free of React imports. */
 export const HEAVY_PRODUCT_ROUTE_BY_FEATURE_ID: Readonly<Record<ProductCatalogObjectId, string>> = Object.freeze({
   'marketing-workspace': '/marketing',
-  'virtual-fitting': '/fitting',
+  'virtual-fitting': '/model',
   'wear-design-lab': '/lab',
   'video-workstation': '/flow/GenerateShortVideo',
   'model-library': '/model-library/model-custom-form',
@@ -20,7 +20,7 @@ export const HEAVY_PRODUCT_ROUTE_BY_FEATURE_ID: Readonly<Record<ProductCatalogOb
   'custom-style': '/model-base/style',
   'model-change-background': '/flow/integration',
   'model-body-shape': '/model-library/model-custom-form',
-  'flat-to-model': '/fitting',
+  'flat-to-model': '/model',
   'graphic-design': '/printing',
   'pattern-vector-pro': '/tools/vector-special',
   'design-arrange': '/editor/pattern',

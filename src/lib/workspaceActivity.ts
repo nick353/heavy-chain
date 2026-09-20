@@ -247,7 +247,7 @@ const buildResumeHref = (job: GenerationJob) => {
   if (!job.feature_type) return '/designProduction';
 
   const sourceResumePath = getMetadataString(metadata, 'sourceResumePath');
-  if (sourceResumePath === '/fitting') {
+  if (sourceResumePath === '/fitting' || sourceResumePath === '/model') {
     const params = new URLSearchParams({ resumeJob: job.id });
     const prompt = getJobPrompt(job);
     const bodyTypes = getMetadataStringList(metadata, 'bodyTypes');
@@ -257,7 +257,7 @@ const buildResumeHref = (job: GenerationJob) => {
     if (bodyTypes.length) params.set('bodyTypes', bodyTypes.join(','));
     if (ageGroups.length) params.set('ageGroups', ageGroups.join(','));
     if (gender) params.set('gender', gender);
-    return `/fitting?${params.toString()}`;
+    return `/model?${params.toString()}`;
   }
 
   const persistedLightchainFeatureId = getLightchainCompatFeatureId(metadata);
@@ -495,7 +495,7 @@ const getLocalArtifactSourceReadback = (artifact: ReturnType<typeof listWorkspac
   if (artifact.featureType === 'model-matrix' || artifact.featureType === 'model-matrix-local-preview') {
     return {
       sourceLabel: sourceLabel ?? 'AIフィッティング',
-      sourceResumePath: sourceResumePath ?? '/fitting',
+      sourceResumePath: sourceResumePath ?? '/model',
     };
   }
   return {

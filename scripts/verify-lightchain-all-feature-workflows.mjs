@@ -1406,7 +1406,7 @@ async function waitForDirectFeatureDestination(page, href) {
     await page.getByText('画像を置いて、機能を選ぶ').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
     return;
   }
-  if (href === '/fitting' || href.startsWith('/fitting#')) {
+  if (href === '/model' || href.startsWith('/model#') || href === '/fitting' || href.startsWith('/fitting#')) {
     await page.getByText(/高精度AI(で)?切り抜き?/).first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
     return;
   }

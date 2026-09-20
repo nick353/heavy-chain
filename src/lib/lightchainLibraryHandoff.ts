@@ -11,7 +11,7 @@ export function buildLightchainLibraryFeatureHref(
   artifactId: string,
 ): string {
   const pathname = feature.id === 'ai-fitting' || feature.id === 'ai-fitting-reference'
-    ? '/fitting'
+    ? '/model'
     : feature.id === 'fabric-image'
       ? '/tools/fabric'
       : feature.id === 'printing-image'

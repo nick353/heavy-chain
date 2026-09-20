@@ -100,7 +100,7 @@ export const workflowMetadata: WorkflowMetadata[] = [
         }, '1:1'),
         variant: 'primary',
       },
-      { label: 'Fitting workspace', href: '/fitting', variant: 'secondary' },
+      { label: 'Fitting workspace', href: '/model', variant: 'secondary' },
       { label: 'Canvasで編集', href: '/canvas/new', variant: 'secondary' },
     ],
     prefill: {

@@ -28,8 +28,8 @@ const pages = [
     expected: ['制作レーンから始める', '制作ワークフローへ戻る', '運用状態'],
   },
   {
-    name: 'fitting',
-    path: '/fitting',
+    name: 'model',
+    path: '/model',
     expected: ['着用ワークフローを選ぶ', '衣服画像'],
   },
   {

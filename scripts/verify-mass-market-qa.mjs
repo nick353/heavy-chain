@@ -25,7 +25,7 @@ const routeSpecs = [
   { key: 'generate-home', path: '/generate', expected: ['素材', '生成'] },
   { key: 'generate-campaign', path: '/generate?feature=campaign-image', expected: ['キャンペーン画像'], upload: true, generateReady: true },
   { key: 'marketing', path: '/marketing', expected: ['マーケティング'], upload: true },
-  { key: 'fitting', path: '/fitting', expected: ['AIフィッティング'], upload: true },
+  { key: 'fitting', path: '/model', expected: ['AIフィッティング'], upload: true },
   { key: 'studio', path: '/studio', expected: ['Fashion Studio'], upload: true },
   { key: 'models', path: '/model-library', expected: ['モデルカスタマイズ'], upload: true },
   { key: 'patterns', path: '/patterns', expected: ['柄'], upload: true },

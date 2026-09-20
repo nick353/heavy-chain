@@ -1097,7 +1097,7 @@ const run = async () => {
     // Wait on its active visible tab so the performance fixture follows the
     // current route contract instead of a retired workbench test id.
     routes.push(await measureRoute(page, '/tools/printing', '[role="tab"][aria-selected="true"]'));
-    routes.push(await measureRoute(page, '/fitting', '[data-testid="fitting-action-panel"]'));
+    routes.push(await measureRoute(page, '/model', '[data-testid="fitting-action-panel"]'));
     routes.push(await measureRoute(page, '/gallery', 'text=ギャラリー'));
     await page.waitForFunction(
       () => document.querySelectorAll('[data-g606-gallery-tile], .group.relative.aspect-square').length >= 60,

@@ -288,7 +288,7 @@ export function LightchainLibraryPage() {
             return feature ? buildLightchainLibraryFeatureHref(feature, result.artifact.id) : null;
           })()
           : destination === 'fitting'
-            ? `/fitting?libraryArtifactId=${encodeURIComponent(result.artifact.id)}`
+            ? `/model?libraryArtifactId=${encodeURIComponent(result.artifact.id)}`
             : destination === 'fabric'
               ? `/tools/fabric?libraryArtifactId=${encodeURIComponent(result.artifact.id)}&librarySlot=fabric-design`
               : `/tools/printing?libraryArtifactId=${encodeURIComponent(result.artifact.id)}&librarySlot=printing-design`;
