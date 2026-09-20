@@ -44,3 +44,24 @@ test('doctor guidance does not turn local or historical evidence into approval',
   assert.match(check, /passed: false/);
   assert.doesNotMatch(check, /releaseApproval:\s*true|businessCompletion:\s*['"]completed['"]/);
 });
+
+test('release doctor accepts only one current Companion UI proof surface and keeps business completion separate', () => {
+  const source = readFileSync(doctorPath, 'utf8');
+
+  assert.match(source, /RELEASE_COMPANION_EVIDENCE/);
+  assert.match(source, /verify:companion-auth/);
+  assert.match(source, /releaseCompanionEvidenceValid/);
+  assert.match(source, /releaseProofSurfaceCount[\s\S]*=== 1/);
+  assert.match(source, /provider receipt\/source sync\/reconciliationは別ゲートです/);
+  assert.match(source, /Companionの認証済みview-only UI証跡/);
+});
+
+test('release doctor still requires exactly one proof surface across Browser Use, retired Chrome Plugin, and Companion', () => {
+  const source = readFileSync(doctorPath, 'utf8');
+
+  assert.match(
+    source,
+    /Number\(releaseBrowserUseProofDirValid\)[\s\S]*Number\(releaseChromePluginEvidenceValid\)[\s\S]*Number\(releaseCompanionEvidenceValid\)/,
+  );
+  assert.match(source, /RELEASE_BROWSER_USE_PROOF_DIR \/ RELEASE_CHROME_PLUGIN_EVIDENCE \/ RELEASE_COMPANION_EVIDENCE/);
+});

@@ -107,9 +107,14 @@ const releaseEnvironment = proofTargetValue('RELEASE_ENVIRONMENT', 'staging', va
 const currentGitCommit = proofTargetValue('RELEASE_GIT_COMMIT', gitCommit(), validGitCommit);
 const releaseBrowserUseProofDir = process.env.RELEASE_BROWSER_USE_PROOF_DIR || '';
 const releaseChromePluginEvidence = process.env.RELEASE_CHROME_PLUGIN_EVIDENCE || '';
+const releaseCompanionEvidence = process.env.RELEASE_COMPANION_EVIDENCE || '';
 const releaseBrowserUseProofDirValid = releaseBrowserUseProofDir.trim().length > 0;
 const releaseChromePluginEvidenceValid = releaseChromePluginEvidence.trim().length > 0;
-const releaseProofSurfaceCount = Number(releaseBrowserUseProofDirValid) + Number(releaseChromePluginEvidenceValid);
+const releaseCompanionEvidenceValid = releaseCompanionEvidence.trim().length > 0;
+const releaseProofSurfaceCount =
+  Number(releaseBrowserUseProofDirValid) +
+  Number(releaseChromePluginEvidenceValid) +
+  Number(releaseCompanionEvidenceValid);
 const proofTargetValid =
   [releaseDate, releaseEnvironment, currentGitCommit].every((target) => target.valid) &&
   releaseProofSurfaceCount === 1;
@@ -124,6 +129,8 @@ if (releaseDate.value) currentChromePluginArgs.push('--expect-release-date', rel
 if (releaseEnvironment.value) currentChromePluginArgs.push('--expect-environment', releaseEnvironment.value);
 if (currentGitCommit.value) currentChromePluginArgs.push('--expect-git-commit', currentGitCommit.value);
 
+const currentCompanionArgs = ['run', 'verify:companion-auth', '--silent', '--', '--evidence', releaseCompanionEvidence];
+
 const releaseProofCheck = releaseChromePluginEvidenceValid
   ? {
       name: 'verify:chrome-plugin-proof',
@@ -131,6 +138,14 @@ const releaseProofCheck = releaseChromePluginEvidenceValid
       args: currentChromePluginArgs,
       stop: 'Chrome Pluginのdated proof verifierは退役済みです（historical_chrome_plugin_proof_retired）。historical-onlyのためrelease proofとして受理できません。',
       next: 'このproof branchには自動の次アクションはありません。歴史的証跡はそのまま保持してください。',
+    }
+  : releaseCompanionEvidenceValid
+    ? {
+      name: 'verify:companion-auth',
+      command: 'npm',
+      args: currentCompanionArgs,
+      stop: 'Companionの認証済みview-only UI証跡が足りないか壊れています。',
+      next: '同一task-owned Companion tabでview-onlyの現行UI証跡を取り直し、RELEASE_COMPANION_EVIDENCEにサニタイズ済みJSONを指定してください。provider receipt/source sync/reconciliationは別ゲートです。',
     }
   : {
       name: 'verify:browser-use',
@@ -201,7 +216,7 @@ const checks = [
     command: 'node',
     args: ['-e', 'process.exit(0)'],
     stop: 'release proof target の override 値が不正です。',
-    next: 'RELEASE_DATE は YYYY-MM-DD、RELEASE_ENVIRONMENT は staging/prod/production/preview/development/local、RELEASE_GIT_COMMIT は40桁 hex、RELEASE_BROWSER_USE_PROOF_DIR または RELEASE_CHROME_PLUGIN_EVIDENCE のどちらか一方を今回の証跡として指定してください。',
+    next: 'RELEASE_DATE は YYYY-MM-DD、RELEASE_ENVIRONMENT は staging/prod/production/preview/development/local、RELEASE_GIT_COMMIT は40桁 hex、RELEASE_BROWSER_USE_PROOF_DIR / RELEASE_CHROME_PLUGIN_EVIDENCE / RELEASE_COMPANION_EVIDENCE のいずれか一つだけを今回の証跡として指定してください。',
     validate: () => proofTargetValid,
   },
   {
@@ -328,9 +343,13 @@ console.log('Release doctor: read-only/local checks only.');
 console.log('禁止: send / submit / publish / delete / auth / payment / PII / DB mutation / deploy');
 const selectedProofSurface = releaseChromePluginEvidenceValid
   ? 'chrome-plugin'
+  : releaseCompanionEvidenceValid
+    ? 'companion'
   : releaseBrowserUseProofDirValid
     ? 'browser-use'
-    : 'missing';
+    : releaseProofSurfaceCount > 1
+      ? 'multiple'
+      : 'missing';
 console.log(
   `Current proof target: release_date=${releaseDate.display} environment=${releaseEnvironment.display} git_commit=${currentGitCommit.display} proof_surface=${selectedProofSurface}`,
 );
