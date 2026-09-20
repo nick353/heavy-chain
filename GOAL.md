@@ -6388,3 +6388,30 @@ The Goal remains active. Protected provider receipt/source sync/save/reuse/
 reconciliation, scorecard, operations/billing, and strict release acceptance
 still require the real consumer-auth Secret and the remaining fresh production
 artifacts.
+# Canonical fitting flow alignment and authenticated production readback — 2026-09-21 r84
+
+The new Light-shaped fitting entrypoints now use the canonical `/model` route:
+navigation, Heavy feature mapping, Lightchain library handoff, Jobs/History
+resume links, workflow CTAs, and fitting-reference actions were aligned. The
+legacy `/fitting` route remains registered only for backwards-compatible
+resume/readback of older artifacts. The route contract suite passed, including
+workspace activity `13/13`, route parity `25/25`, fitting lifecycle `10/10`,
+entry routing `23/23`, direct-route `3/3`, typecheck, lint, and production
+build. No rights-confirmation checkbox was added.
+
+The change was committed as `e0527a8` and deployed to the exact existing
+Zeabur `heavy-chain` service as deployment `6ab00916342483d22ad8a64a`, which
+reached `RUNNING` on the Docker plan. Fresh public readback returned HTTP 200
+for `/_health`, `/model`, and `/model-library/model-custom-form`; the served
+bundle contains the canonical model-library route and zero stale
+`generate?feature=model-matrix` launcher references.
+
+After a real 30-second wait in the authenticated Chrome profile, `/model`
+rendered the AI-fitting workspace with avatar, upload area, single/multi-task
+tabs, description/reference/model-set tabs, generation history, and no rights
+checkbox. The visible provider gate remains `権限がありません`; no provider
+generation, save, payment, publish, token extraction, or credential entry was
+performed. The Goal remains active because provider receipt/result/save/reuse,
+source-sync/reconciliation, current production operations and scorecard,
+G608/G618/G633/H602, and strict release acceptance still require their own
+fresh evidence.
