@@ -64,7 +64,7 @@ test('keeps the current fresh source readback attached to the ledger artifact', 
   };
   assert.equal(
     artifact.evidenceBoundary?.sourceReadback,
-    'work/heavy-lightchain-heavy-paired-readback-20260826-r125.md',
+    'work/lightchain-source-readback-20260920-r5.md',
   );
 });
 

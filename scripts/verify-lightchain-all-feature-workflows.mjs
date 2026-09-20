@@ -1181,6 +1181,11 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
     await page.waitForFunction(() => document.body.innerText.trim().length > 0, null, { timeout: 10_000 });
     await waitForLightchainCategory(page, categoryId);
     await dismissBlockingOverlays(page);
+    // Gallery thumbnails hydrate independently of the category tabs. Give a
+    // late-rendered example dialog one bounded pass before exercising the
+    // launcher card itself.
+    await page.waitForTimeout(500);
+    await dismissBlockingOverlays(page);
     await page.locator('[data-testid="lightchain-tool-card"]').first().waitFor({ state: 'visible', timeout: 10_000 });
     const linksForCategory = await page
       .locator('a[href]')
@@ -1225,6 +1230,14 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
     const link = page.locator(`a[href="${href}"]`).first();
     const visible = await link.isVisible({ timeout: 1500 }).catch(() => false);
     if (visible) {
+      const explicitCloseButton = page.locator('[role="dialog"]:visible button[aria-label="閉じる"]');
+      if (await explicitCloseButton.count() > 0) {
+        await explicitCloseButton.first().click({ force: true }).catch(() => {});
+        await page.waitForTimeout(250);
+      }
+      await dismissBlockingOverlays(page);
+      const residualDialogCount = await page.locator('[role="dialog"]:visible').count();
+      if (residualDialogCount > 0) throw new Error(`blocking_dialog_before_feature_link:${href}`);
       await link.click();
       await page.waitForLoadState('networkidle').catch(() => {});
       await waitForDirectFeatureDestination(page, href);
@@ -1446,7 +1459,27 @@ function wirePageDiagnostics(page, route) {
 }
 
 async function dismissBlockingOverlays(page) {
-  await page.keyboard.press('Escape').catch(() => {});
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const dialogs = page.locator('[role="dialog"]:visible');
+    const dialogCount = await dialogs.count();
+    if (dialogCount === 0) break;
+    let dismissed = false;
+    for (let index = 0; index < dialogCount; index += 1) {
+      const dialog = dialogs.nth(index);
+      // Light Chain's case dialog uses an icon-only close control. Prefer its
+      // explicit accessible contract over a broad role/name lookup, which can
+      // miss the control while React is settling the dialog subtree.
+      const closeButton = dialog.locator('button[aria-label="閉じる"], button').first();
+      if (await closeButton.isVisible({ timeout: 500 }).catch(() => false)) {
+        await closeButton.click({ force: true }).catch(() => {});
+        dismissed = true;
+        await page.waitForTimeout(150);
+      }
+    }
+    await page.keyboard.press('Escape').catch(() => {});
+    if (!dismissed) break;
+    await page.waitForTimeout(150);
+  }
   for (const text of ['スキップ', '閉じる', 'あとで', '完了', 'OK']) {
     const button = page.getByRole('button', { name: text }).first();
     if (await button.isVisible({ timeout: 500 }).catch(() => false)) {

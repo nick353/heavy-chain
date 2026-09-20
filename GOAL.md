@@ -1,3 +1,59 @@
+# Full local feature workflow verification — 2026-09-21 r72
+
+The local parity verifier now passes the complete 31-feature desktop and mobile
+workflow set, both video routes in each viewport, and four source-route parity
+checks. The successful evidence artifact is
+`output/playwright/lightchain-all-feature-workflows-20260920T145414Z-YS3eVK/SUMMARY.json`;
+it reports `ok=true`, `featureCount=31`, `verifiedFeatureCount=31`, no failed
+assertions, and cleanup completed for the isolated preview/browser context.
+
+The verifier was strengthened only at its test boundary: it semantically closes
+the Light Chain example dialog through its accessible close control after async
+gallery hydration, and fails with an explicit residual-dialog error if the
+overlay is still present before a launcher navigation. The Light Chain modal
+itself remains unchanged. The behavior ledger test now follows the current
+source readback `work/lightchain-source-readback-20260920-r5.md` instead of the
+superseded August paired-readback artifact.
+
+Post-change typecheck, lint, build, and all-feature verifier contract tests
+passed. Provider receipt, durable production save/reuse, source sync,
+reconciliation, and strict release acceptance remain unverified until the
+secure `HEAVY_CHAIN_MONITOR_TOKEN` and same-run provider evidence are available;
+no token or provider secret was guessed, extracted, or mutated.
+
+# Authenticated route readback and local contract refresh — 2026-09-20 r71
+
+The existing logged-in Companion profile was reused in one task-owned tab. After
+hydration, fresh semantic and visual readback reached the current Heavy
+production business surfaces for `/flow/GenerateShortVideo`, `/gallery`,
+`/history`, `/jobs`, `/canvas/new`, `/designProduction`,
+`/model-library/model-custom-form`, and
+`/generate?feature=campaign-image`; the previously settled `/lightchain` and
+`/model` readbacks remain valid. The surfaces showed source-shaped controls,
+save/reuse/navigation destinations, and fail-closed `権限がありません`
+states where provider admission is unavailable. No Light-missing visible rights
+checkbox, modal, or badge was introduced. No generation, save, billing, or
+provider request was dispatched. The task-owned tabs were closed successfully
+with `foreign_tabs_mutated=false`, no unknown effect, and the lease released.
+
+The local baseline for this readback was clean at `a299a62`; the current worktree
+now also contains the verifier/test/doc updates recorded in the next section.
+Fresh local checks passed:
+typecheck, lint, build, provider coverage `22/22`, unified workflow contract
+`6/6`, provider persistence/readback `14/14`, Canvas source metadata `6/6`,
+video provider boundary `1/1`, and goal-readiness static checks `ok=true`.
+These checks strengthen route/UI and fail-closed evidence only; they do not
+promote provider receipt, durable production save/reuse, source sync,
+reconciliation, or strict release acceptance.
+
+The Goal remains active. The next independent work is to run the remaining
+local parity-ledger/lifecycle/source-gate suites and refresh the exact
+Light/Heavy fixed-viewport diff where current source fixtures are available.
+The external completion boundary remains the securely provisioned
+`HEAVY_CHAIN_MONITOR_TOKEN` plus a same-run provider receipt and production
+save/reuse/source-sync/reconciliation artifact; no secret is guessed or
+extracted from the logged-in browser.
+
 # Readiness boundary after tracked-tooling push — 2026-09-20 r69
 
 Commit `525e806` tracks the readiness scripts/contracts/docs and ignores only
