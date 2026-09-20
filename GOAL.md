@@ -1,3 +1,27 @@
+# Release proof boundary and authenticated-tab retry — 2026-09-21 r73
+
+The completed local implementation and verifier changes are fixed in commit
+`93bbcde` (`test: complete Light Chain local parity workflow verification`),
+with a clean worktree afterward. `verify:goal-readiness:incomplete-ok` remains
+`ok=true`, and the strict Light Chain release-gate contract suite is `9/9`.
+
+The read-only `release:doctor` check passes release blockers and git cleanliness
+but stops at `proof target` because this run has no current dated Browser Use or
+official Chrome proof surface configured. Existing historical release-prep
+proof is intentionally not promoted to current proof. A same-profile Companion
+retry against `/lightchain` and `/gallery` ended before page readback with
+`extension_operation_failed: Tabs can only be moved to and from normal windows`;
+both rows were `known_no_effect`, `externalActionExecuted=false`, and cleanup
+completed with `foreign_tabs_mutated=false`.
+
+Remaining production completion gates are unchanged: securely provisioned
+`HEAVY_CHAIN_MONITOR_TOKEN`, a same-run provider receipt, durable production
+save/reuse and Gallery/Canvas/History/Jobs readback, source-sync and
+reconciliation evidence, a current Cloudflare release-readback contract, and
+the current authenticated release proof. No secret or token was guessed,
+extracted, or mutated, and no provider generation, billing, payment, publish,
+or deploy was attempted.
+
 # Full local feature workflow verification — 2026-09-21 r72
 
 The local parity verifier now passes the complete 31-feature desktop and mobile
