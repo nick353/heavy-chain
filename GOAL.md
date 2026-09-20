@@ -6778,3 +6778,18 @@ This strengthens the evidence for the requested Lightchain flow, state,
 input, retry, persistence, Gallery, Canvas, History, Jobs, and video parity.
 It does not promote local or UI-only proof to provider completion. The seven
 external/operator release-gate blockers recorded in r99 remain unchanged.
+
+# Goal progress — 2026-09-21 r101
+
+The current production root and `/dashboard` were re-read through a fresh
+task-owned Companion session. Both reached `readyState=complete`, returned
+the current Lightchain AI shell and launcher content, and had same-operation
+visual readback. The session performed navigation/read-only queries only;
+`external_action_executed=false`. Its terminal cleanup closed tab `1980926072`,
+released one lease, retained no tab, and reported no unknown effect.
+
+The local parity audit changed no source code because all tested contracts
+passed. The working tree remains clean and the latest commit is `4cca85a` on
+`origin/main`. The full end-state is still not complete because provider
+completion, production API/UI monitor evidence, approved real-generation
+readback, and billing/operator evidence are still not proven.
