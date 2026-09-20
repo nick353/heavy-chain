@@ -6754,3 +6754,27 @@ No token export, generation submit, payment/checkout, purchase, publish,
 deployment, or destructive cleanup was performed. The release gate therefore
 remains correctly fail-closed; these are external/provider/operator evidence
 blockers, not unresolved current-Lightchain route QA failures.
+
+# Goal progress — 2026-09-21 r100
+
+The code-side parity and persistence audit was expanded without using the
+production provider. All selected Lightchain contract suites passed,
+including provider coverage (22), unified workflow (6), pre-source gate (5),
+non-video behavior ledger (6), video behavior ledger (4), route integrity
+(25), permission parity (8), material contract (28), and the workspace
+handoff guard (3).
+
+The saved-result and cross-surface suites also passed: Generate result
+readback (4), provider persistence (14), Fitting history (12), Gallery
+download (2), workspace activity/Jobs/History (13), Design Production handoff
+(2), Library-to-Canvas (10), Canvas source/document/local upload/view/save
+recovery/generation/partial-edit/identity/brand suites (all passing), and
+image input normalization. The isolated local all-feature verifier then
+passed 31 desktop features, 2 desktop video routes, 4 source-parity routes,
+31 mobile features, 4 mobile video/source routes, and cleanup, with summary
+at `output/playwright/lightchain-all-feature-workflows-20260920T215707Z-Nvsg46/SUMMARY.json`.
+
+This strengthens the evidence for the requested Lightchain flow, state,
+input, retry, persistence, Gallery, Canvas, History, Jobs, and video parity.
+It does not promote local or UI-only proof to provider completion. The seven
+external/operator release-gate blockers recorded in r99 remain unchanged.
