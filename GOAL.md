@@ -21,8 +21,13 @@ durable save/reuse, billing, credential/token, or strict release completion.
 The Companion session closed with the task-owned production tab closed,
 leases released, no retained/unknown-effect tabs, and
 `external_action_executed=false`. No auth token was extracted or added.
-The full Goal remains active; the existing ten external/operator/provider
-release blockers remain fail-closed.
+Fresh `npm run verify:release-gate --silent` at commit `2a74c8c` confirms the
+same ten external/operator/provider release blockers remain fail-closed:
+current production monitor/UI pair, launch operations, current mass-market QA,
+production Lightchain order previews, G608, G618, G633, production H602
+billing completion, generation scorecard, and the dependent G633 command.
+G633 is specifically missing the current mass-market baseline proof, while the
+generation scorecard is missing the real-generation visual-scorecard artifact.
 
 # Fitting reference-library control parity and final Companion readback — 2026-09-21 r88
 
