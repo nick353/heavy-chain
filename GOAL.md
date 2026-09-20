@@ -1,3 +1,23 @@
+# Canonical Light launcher root parity correction — 2026-09-21 r90
+
+Fresh authenticated Chrome Companion readback of the actual Light source
+`https://jp.linkaigc.com/` confirmed that `/` is the Lightchain launcher with
+the search entry, workspace categories, feature cards, and case-sharing tabs.
+The deployed Heavy root had been redirecting authenticated users to
+`/designProduction`, so its root URL did not match the Light source.
+
+`src/App.tsx` now keeps the Lightchain launcher at `/` while preserving the
+protected boundary on feature routes and the public login route. The stale
+root-routing assertion was updated accordingly. Typecheck, build, route parity
+`25/25`, permission parity `8/8`, UI-control boundaries `14/14`, and the full
+Lightchain verifier passed: 31/31 desktop, 31/31 mobile, 2 desktop video
+routes, 4 mobile/source routes, and cleanup complete with `ok=true`.
+
+This source/runtime correction is not yet deployed or production-read back in
+this entry. Provider generation/save/reuse, billing, credential/token, and
+strict release-gate evidence remain separate lanes; no auth token or secret was
+extracted or added.
+
 # Light source readback corrected fitting-tab verifier and full 31-feature gate — 2026-09-21 r89
 
 Fresh authenticated AOS Chrome Companion readback of deployed Heavy `/model`

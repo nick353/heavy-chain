@@ -451,13 +451,10 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
+      {/* Lightchain keeps its authenticated launcher at the root; feature routes below remain protected. */}
       <Route
         path="/"
-        element={(
-          <PublicRoute>
-            {lazyPage(<LandingPage />)}
-          </PublicRoute>
-        )}
+        element={lazyPage(<LandingPage />)}
       />
       <Route
         path="/login"

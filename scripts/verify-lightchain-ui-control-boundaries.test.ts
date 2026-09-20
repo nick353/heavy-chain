@@ -35,11 +35,12 @@ test('public and auth recovery shells use the Lightchain identity without extra 
   assert.doesNotMatch(login, /HEAVY CHAIN|Heavy Chain/);
 });
 
-test('authenticated root enters the Lightchain home instead of the Heavy landing page', async () => {
+test('the root keeps the Lightchain launcher URL for authenticated users', async () => {
   const source = await readFile(appSourcePath, 'utf8');
 
-  assert.match(source, /path="\/"[\s\S]*?<PublicRoute>[\s\S]*?lazyPage\(<LandingPage \/>\)/);
-  assert.match(source, /if \(user\) \{[\s\S]*?return <Navigate to="\/designProduction" replace \/>/);
+  assert.match(source, /path="\/"[\s\S]*?element=\{lazyPage\(<LandingPage \/>\)\}/);
+  assert.match(source, /Lightchain keeps its authenticated launcher at the root/);
+  assert.match(source, /path="\/login"[\s\S]*?<PublicRoute>[\s\S]*?lazyPage\(<LoginPage \/>\)/);
 });
 
 test('Lightchain routes do not expose the Heavy global keyboard shortcut affordance', async () => {
