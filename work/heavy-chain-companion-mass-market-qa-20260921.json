@@ -1,0 +1,2251 @@
+{
+  "schema": "heavy-chain.companion-mass-market-qa.v1",
+  "workflow": "mass-market-user-journey-qa",
+  "source": "aos_chrome_companion_profile_instance",
+  "browserPath": "aos_chrome_companion_profile_instance",
+  "taskId": "01a0b8d1-3935-75c1-8cea-b58769f7fb15",
+  "sessionId": "session_cf2c72d7-ae87-4047-a44d-6dba7220a72b",
+  "generation": "gen_2847f802-c1b8-4334-875e-64e3ad42cedb",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "capturedAt": "2026-09-20T21:45:23.535Z",
+  "authState": "companion-session-no-export",
+  "authSecretExported": false,
+  "routeCount": 16,
+  "mobileRouteCount": 10,
+  "routes": [
+    {
+      "key": "dashboard",
+      "path": "/dashboard",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/dashboard",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 1844,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター LIGHTCHAIN AI アパレル特化のAIデザインワークスペース ✦ おすすめ Hot 企画デザインツール AIフィッティング グラフィックツール Beta 企画ワークスペース トレンド企画アシスタント 最新トレンドを分析し、アイデアを具体的な企画書やデザイン案へ。企画の「勝ち筋」を瞬時に可視化。 デザインワークスペース スマート対話、高解像度画像生成、部分修正、AI試着、生地差し替え、ベクター変換などの機能を備えた、服装デザイン制作のためのオールインワンワークスペースです。デザインから制作までの全工程をスムーズに進められます マーケティングワークスペース 販促コンテンツのオールインワン制作 バナー、キャッチコピー、商品ページまで。AIがあらゆるマーケティング素材を自動生成します。 ファッションスタジオ スマート・スタイリング 衣服、シーン、小物を自在に組み合わせ。AIが自然に融合させ、独自のコーディネート案を形にします。 動画ワークステーション AIプロモーション動画生成 製品紹介や着せ替えエフェクトなど、動的なマーケティング動画をクイックに生成。 AIフィッティング バーチャル撮影アシスタント 場所を選ばず、高品質なモデル着用画像を生成。スタジオ撮影の手間とコストを大幅に削減。 事例共有 おすすめの事例 デザイン修正 柄・プリント ビジュアル素材 マーケティングコンテンツ 生産 ファッションスタジオ - アウトドアジャケット実物から線画化 【ファッションスタジオ】— モデル着用画像のアパレルパターンをワンクリックで高精度生成 【ファッションスタジオ】— ディテールをワンクリックで再現 【マーケティングワークスペース】は、既存のランジェリー商品画像やモデル着用画像を活用し、異なるモデルによる新しい販促ビジュアルを一括生成します。 ファッションスタジオ（テキスト生成）：人気モデルのスタイルDNAを維持しながら、AIが人気デザインのバリエーション展開をスピーディーに実現 ファッションスタジオ： 平絵＋生地 【ファッションス",
+      "expected": [
+        "おすすめ",
+        "AIフィッティング",
+        "企画デザインツール"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": false,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-tool-grid",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-tool-card",
+          "matchCount": 6,
+          "visibleCount": 6,
+          "hrefs": [
+            "/agent",
+            "/designProduction",
+            "/marketing",
+            "/flow/integration",
+            "/flow/GenerateShortVideo",
+            "/model"
+          ]
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "current_lightchain_launcher_visible",
+          "passed": true,
+          "details": {
+            "launcherTestId": "lightchain-tool-grid",
+            "route": "/dashboard"
+          }
+        },
+        {
+          "name": "current_lightchain_feature_cards_are_linked",
+          "passed": true,
+          "details": {
+            "cardCount": 6,
+            "allInternalRoutes": true
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:18:46.651Z"
+    },
+    {
+      "key": "design-production",
+      "path": "/designProduction",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/designProduction",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 472,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター デザインワークスペースへようこそ アイデアを形にし、制作をスムーズに プロジェクトから開始 対話から開始 新規ファイル インスピレーション デザインプロジェクトを新規作成 ブリン卜修正 プリントプロジェクトを新規作成 生地イメージ 生地プロジェクトを新規作成 企画提案書 企画提案書を新規作成 マイプロジェクト 9件 Untitled model-matrix ・ 2026/09/19 19:44 Untitled lightchain-design-agent ・ 2026/09/14 04:31 Untitled lightchain-design-agent ・ 2026/09/13 23:27 Untitled model-matrix ・ 2026/09/12 14:50 📌 キャンペーン画像 campaign-image ・ 2026/09/12 04:01 Untitled campaign-image ・ 2026/09/12 04:01 前へ 1 2 次へ 1 / 2",
+      "expected": [
+        "デザインワークスペースへようこそ",
+        "インスピレーション",
+        "ブリン卜修正"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-parity-shell",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "design-production-page",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "design-production-persisted-projects",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "design-production-pagination",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "design_production_source_entry_is_complete",
+          "passed": true,
+          "details": {
+            "pageTestId": "design-production-page",
+            "newFileVisible": true,
+            "sourceCards": [
+              "生地イメージ",
+              "企画提案書"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:19:23.105Z"
+    },
+    {
+      "key": "generate-home",
+      "path": "/generate",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/generate",
+      "resolvedUrl": "https://heavy-chain-web.nichika2000823.workers.dev/designProduction",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 472,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター デザインワークスペースへようこそ アイデアを形にし、制作をスムーズに プロジェクトから開始 対話から開始 新規ファイル インスピレーション デザインプロジェクトを新規作成 ブリン卜修正 プリントプロジェクトを新規作成 生地イメージ 生地プロジェクトを新規作成 企画提案書 企画提案書を新規作成 マイプロジェクト 9件 Untitled model-matrix ・ 2026/09/19 19:44 Untitled lightchain-design-agent ・ 2026/09/14 04:31 Untitled lightchain-design-agent ・ 2026/09/13 23:27 Untitled model-matrix ・ 2026/09/12 14:50 📌 キャンペーン画像 campaign-image ・ 2026/09/12 04:01 Untitled campaign-image ・ 2026/09/12 04:01 前へ 1 2 次へ 1 / 2",
+      "expected": [
+        "デザインワークスペースへようこそ",
+        "新規ファイル"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-parity-shell",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "design-production-page",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "design-production-persisted-projects",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "design-production-pagination",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [],
+      "capturedAt": "2026-09-20T21:19:58.753Z"
+    },
+    {
+      "key": "marketing",
+      "path": "/marketing",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/marketing",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 187,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター ✦ 33607 マーケティングワークスペースへようこそ 今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！ 0 / 4000 おすすめのシーン👉 EC SNS ブランド 店舗・オフライン ライブ配信 プロモーション マイプロジェクト 保存済みの履歴はありません。生成結果を保存すると、ここに表示されます。",
+      "expected": [
+        "マーケティング"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-workspace-marketing",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-workspace-generate",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 187
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "マーケティング"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:22:45.303Z"
+    },
+    {
+      "key": "fitting",
+      "path": "/model",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/model",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 375,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター AIフィッティング シングルタスク マルチタスク 衣服の画像 (0/4) 自動でアパレル平置き画像に変換 複数のコーディネートのアップロードに対応 ここをクリック/ドラッグしてアイテムを追加します。 必須項目 例 説明生成 参考画像 モデルのセット写真 0/2000 スマート ⌄ 1K ⌄ 権限がありません 生成履歴 AIフィッティング AIでモデル着用イメージを素早く実現 拡大 AIフィッティング 平置き商品画像を、自然なモデル着用EC画像に変換してください。 依頼: 黒のチェーン柄フーディーを、ECとSNSで使える高級ストリート系ビジュアルに展開したい。 参考: 素材: Tシャツ / auto / 胸中央 / 46% 保存 ダウンロード Gallery History Jobs Canvas",
+      "expected": [
+        "AIフィッティング"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-fitting-input-flow",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fitting-garment-count",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fitting-prompt-actions",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-model-permission",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fitting-history-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fitting-result-save",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fitting-result-download",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-special-result-destinations",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-special-result-gallery-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-special-result-history-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-special-result-jobs-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-special-result-canvas-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 375
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "AIフィッティング"
+            ]
+          }
+        },
+        {
+          "name": "fitting_preview_has_model_matrix_context_when_visible",
+          "passed": true,
+          "details": {
+            "hasPreviewSource": false,
+            "fitting-brief-local-v1": false,
+            "selected-fitting-workflow": false,
+            "patternCount": false,
+            "Next%20step": false
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:23:46.697Z"
+    },
+    {
+      "key": "studio",
+      "path": "/studio",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/studio",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 682,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター ファッションスタジオ PROJECT + 新規ファイル プロジェクト名 1日前 修正 プロジェクト名 1日前 修正 プロジェクト名 3日前 修正 プロジェクト名 3日前 修正 プロジェクト名 3日前 修正 プロジェクト名 3日前 修正 プロジェクト名 3日前 修正 📌 プロジェクト名 3日前 修正 PROJECT Fashion Studio: スタジオ案 3日前 修正 PROJECT プロジェクト名 3日前 修正 プロジェクト名 4日前 修正 プロジェクト名 6日前 修正 プロジェクト名 7日前 修正 制作: デザインエージェント 7日前 修正 プロジェクト名 7日前 修正 制作: デザインエージェント 7日前 修正 プロジェクト名 7日前 修正 PROJECT Video Workstation: 構成 8日前 修正 プロジェクト名 8日前 修正 PROJECT プロジェクト名 8日前 修正 プロジェクト名 8日前 修正 プロジェクト名 8日前 修正 プロジェクト名 9日前 修正 プロジェクト名 9日前 修正 プロジェクト名 9日前 修正 プロジェクト名 10日前 修正 PROJECT プロジェクト名 11日前 修正 PROJECT 制作: AIフィッティング 12日前 修正 参考事例 スタジオ撮影を屋外風の写真に変える 参考事例 スマート画像検索＋コーデ調整 参考事例 新作Look‐SNSマーケティング 参考事例 着用画像を物画像に変換 参考事例 モデルの雰囲気マーケティング画像 参考事例",
+      "expected": [
+        "Fashion Studio"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-fashion-studio-overview",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fashion-studio-new-file",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 682
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "Fashion Studio"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:24:36.781Z"
+    },
+    {
+      "key": "models",
+      "path": "/model-library",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/model-library",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 178,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター モデルカスタマイズ 顔変更 モデル変更 体型 服のサイズ ポーズ 背景 アングル モデルカスタマイズ ラベル カスタム 性別 男性 女性 年齢 スマート 国籍 スマート ハーフ 肌の色 スマート 体型 スマート 権限がありません 生成履歴 モデルカスタマイズ ワンクリックで専用のバーチャルモデルイメージを生成",
+      "expected": [
+        "モデルカスタマイズ"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-source-model-surface",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-source-model-rail",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-source-model-controls",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-source-model-gender",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-model-permission",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-source-model-history",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 178
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "モデルカスタマイズ"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:25:21.425Z"
+    },
+    {
+      "key": "patterns",
+      "path": "/patterns",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/patterns",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 1241,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター パターン作業台 グラフィック、総柄、ベクター化の入口を、Canvas に渡せるローカルワークスペースです。 保存してCanvasへ グラフィック 総柄 ベクター化 LIGHTCHAIN PARITY / GRAPHICS START 柄、用途、ベクター化の順に制作条件を組み立てます グラフィック、総柄、ベクター化を最初に選び、服モックやロゴを必要な時だけ追加します。制作条件は生成とCanvasへ同じ形で渡されます。 柄 → 用途 → ベクター / Canvas モード グラフィック 用途 ブラックのヘビーウェイトTシャツ / 胸元ワンポイントと背面総柄 素材 ロゴ・服モックは後から追加できます 次の操作 生成またはCanvasへ保存 PRINT FLOW 新規ファイル、最近の案件、事例から入って、生成かCanvasへ進む 候補 Emblem Lockup 用途 グラフィック 素材 参照なしでも開始可 生成へ 保存して重ねる Galleryで結果を見る 制作ボード 素材・柄・配置・色・版下の順に、生成と入稿へ使う条件を組み立てます。 グラフィック / Emblem Lockup 制作ワークベンチ 柄画像、ロゴ、服モックをアップロードし、カット、レイヤー、配置を先に決めます。 素材を追加 既存素材を優先 Galleryから選ぶ 柄・ロゴ・服モックをアップロード 素材を置くと、保存時にCanvasへ実画像レイヤーとして渡せます 認識 画像待ち 処理 素材後に設定 レイヤー 素材後に設定 まず1枚、素材写真を入れてください 入れたら、切り抜きとレイヤー調整の操作がそのまま続きます。 素材スロット Galleryまたはアップロードから実素材を選択してください。固定サンプルは使用しません。 Galleryを開く モチーフ 鎖モチーフ ロゴ中心 和柄ミックス 配置 余白あり 全面総柄 ワンポイント 対象アイテム Tシャツ パーカー 小物 配色 黒赤 藍白 単色 現在の制作Brief 版下 2色版下 パス整理 総柄タイル モチーフ 鎖モチー",
+      "expected": [
+        "柄"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "pattern-readiness-entry",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "workspace-readiness-strip",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "workspace-readiness-step",
+          "matchCount": 4,
+          "visibleCount": 4,
+          "hrefs": []
+        },
+        {
+          "id": "pattern-action-panel",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "pattern-readiness-item",
+          "matchCount": 3,
+          "visibleCount": 3,
+          "hrefs": []
+        },
+        {
+          "id": "pattern-next-actions",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "material-gallery-select",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "pattern-preview-candidates",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "pattern-preview-image",
+          "matchCount": 3,
+          "visibleCount": 3,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 1241
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "柄"
+            ]
+          }
+        },
+        {
+          "name": "pattern_workspace_has_clear_generation_flow",
+          "passed": true,
+          "details": {
+            "actionPanelVisible": true,
+            "readinessItemCount": 3,
+            "nextActionLinks": [
+              "/generate",
+              "/gallery"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:26:30.967Z"
+    },
+    {
+      "key": "video",
+      "path": "/flow/GenerateShortVideo",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/flow/GenerateShortVideo",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 264,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター 動画ワークステーション 新規ファイル Untitled 3ヶ月前 修正 Untitled 4ヶ月前 修正 Untitled 4ヶ月前 修正 Untitled 4ヶ月前 修正 Untitled 7ヶ月前 修正 Untitled 7ヶ月前 修正 参考事例 ストーリーボード作成と映像複製 8ヶ月前 修正 ECモデルの展示のレプリカ 8ヶ月前 修正 ミニマルなルックブック動画 8ヶ月前 修正 動画生成 + 服の置き換え 8ヶ月前 修正 ファッションショートフィルムの復元 8ヶ月前 修正",
+      "expected": [
+        "動画ワークステーション",
+        "新規ファイル",
+        "参考事例"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-video-project-dashboard",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "video-project-edit-label",
+          "matchCount": 11,
+          "visibleCount": 11,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 264
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "動画ワークステーション",
+              "新規ファイル",
+              "参考事例"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:27:06.864Z"
+    },
+    {
+      "key": "lab",
+      "path": "/lab",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/lab",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 1290,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター ウェアデザインラボ 服の方向性、素材感、採用候補を比べて、生成指示かCanvasへそのまま渡す場所です。 保存してCanvasへ プロンプト実験 品質評価 採用候補 実験レーンを選ぶ 候補を見比べながら、仮説・評価軸・採用判断を先に選びます。 score 84 Material Lighting 硬めのスタジオ光を採用し、素材ディテールを優先する 素材感比較 光の採用判断 EC転用 Retail Readiness Use the gray retail setup for the next EC detail generation 店頭想定 輪郭確認 詳細生成へ Campaign Transfer CTA余白を残してラボの販促転用候補へ渡す SNS転用 CTA余白 販促画像へ LIGHTCHAIN PARITY / LAB START 仮説と評価軸を先に揃え、採用候補を決めます ラボは実験室であることを明示し、生成前に比較対象・評価軸・次のアクションを確認できる入口にしています。 仮説 → 評価 → 出力 仮説 シアー素材は自然光より硬めのスタジオ光で高級感が出る 評価軸 素材感 / 顔の自然さ / 商品識別性 / EC転用しやすさ 採用候補 候補A: 白背景スタジオ、候補B: グレー背景寄り 次の操作 生成、Canvas、Galleryへ渡す WEAR DESIGN LAB まず素材や候補を置き、良い方向だけを生成へ進める 仮説 何を比較するかを先に決める 評価 scoreと評価軸で採用判断を残す 出力 生成、Canvas、Galleryへ同じ条件で渡す ラボで試す Canvasへ保存 Galleryで確認 実験ワークベンチ 生成候補、物撮り素材、参考LOOKを置き、評価対象と比較レイヤーを視覚的に決めます。 素材を追加 既存素材を優先 Galleryから選ぶ 実験素材・生成候補をアップロード 素材を置くと、Canvasへ評価対象の実画像レイヤーとして渡せます 認識 画像待ち 処理 素材後に設定 レイヤー 素材後に設定 ",
+      "expected": [
+        "ウェアデザインラボ"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lab-readiness-entry",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "workspace-readiness-strip",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "workspace-readiness-step",
+          "matchCount": 4,
+          "visibleCount": 4,
+          "hrefs": []
+        },
+        {
+          "id": "lab-action-panel",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lab-readiness-item",
+          "matchCount": 3,
+          "visibleCount": 3,
+          "hrefs": []
+        },
+        {
+          "id": "lab-next-actions",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "material-gallery-select",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lab-preview-image",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 1290
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "ウェアデザインラボ"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:27:43.259Z"
+    },
+    {
+      "key": "jobs",
+      "path": "/jobs",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/jobs",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 5374,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター PRODUCTION QUEUE 制作キュー 進行中、止まった作業、完了した成果物をまとめて見て、次の操作へそのまま進めます。 更新 新しく作る 再開できる作業 進行中の生成や直近の制作レーンへ戻ります。 0件 止まった作業 原因と次の操作を確認し、入力を保ったまま再開します。 1件 完了した成果物 保存済み画像を開き、Canvas再編集や共有へ進みます。 8件 QUEUE SUMMARY 8 完了成果物と進行中の作業を先に出し、古い失敗は必要な時だけ確認します。 要確認 1件を表示 完了 2026/9/19 19:44:26 モデルマトリクス 着用画像 素材あり 成果物を確認 白Tシャツ（プラットフォーム素材）の着用イメージ。20代の標準体型モデル、正面立ち、ニュートラルなスタジオ背景、EC用の自然な照明。 1 outputs 成果物を開く 完了 2026/9/14 4:31:10 lightchain design agent 制作 素材なし 成果物を確認 Create a polished Hello,山内カンナ result from the workflow brief and selected settings. If optional references are present, use them as inspiration or context only; return a coherent production-ready image without claiming pixel-preserving editing. LIGHTCHAIN ROUTE: design-agent (Hello,山内カンナ) PRIMARY INPUT: no required source image (brief-only workflow) SECONDARY INPUT: optional references only WORKFLOW SUMMARY: LOUIS VUITTON の 2026年春夏 コレクシ",
+      "expected": [
+        "制作キュー"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "jobs-list",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "jobs-list-item",
+          "matchCount": 8,
+          "visibleCount": 8,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 5374
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "制作キュー"
+            ]
+          }
+        },
+        {
+          "name": "mobile_jobs_initial_list_is_bounded",
+          "passed": true,
+          "details": {
+            "bodyLength": 5374
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:28:14.813Z"
+    },
+    {
+      "key": "history",
+      "path": "/history",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/history",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 813,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター 生成履歴 ジョブ、失敗、保存済み成果物をタイムラインで確認します。 ギャラリーへ 続きから再開 進行中または直近のワークフローを開きます。 進行中 0件 失敗を確認 止まった生成を見て、入力や承認状態から再開します。 失敗 1件 保存済みを見る Galleryに残った成果物を開き、Canvas再編集や共有へ進みます。 保存済み 10件 TIMELINE 11 生成ジョブとギャラリー保存の最新状況です。 完了 9月19日 19:44 モデルマトリクス 1 outputs PROMPT 白Tシャツ（プラットフォーム素材）の着用イメージ。20代の標準体型モデル、正面立ち、ニュートラルなスタジオ背景、EC用の自然な照明。 生成条件 実行記録: 候補1・AI処理=完了 / 候補1・private保存=完了 プロンプトコピー 開く 完了 9月14日 04:31 lightchain design agent 1 outputs 完了 9月13日 23:27 lightchain design agent 1 outputs 保存済み 9月12日 15:17 Video Workstation ローカル成果物を保存済み 保存済み 9月12日 15:11 Video Workstation ローカル成果物を保存済み 完了 9月12日 14:50 モデルマトリクス 1 outputs 完了 9月12日 04:01 キャンペーン画像 1 outputs 完了 9月12日 02:13 画像生成 1 outputs 失敗 9月10日 23:24 モデルマトリクス image_outcome_unknown 完了 9月9日 02:13 lightchain print design detail 1 outputs 完了 9月8日 18:47 モデルマトリクス 1 outputs",
+      "expected": [
+        "生成履歴"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "history-action-panel",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "history-action-resume",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/generate"
+          ]
+        },
+        {
+          "id": "history-action-jobs",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/lightchain/ai-fitting"
+          ]
+        },
+        {
+          "id": "history-action-gallery",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/gallery"
+          ]
+        },
+        {
+          "id": "history-timeline-panel",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "activity-timeline-item",
+          "matchCount": 11,
+          "visibleCount": 11,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 813
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "生成履歴"
+            ]
+          }
+        },
+        {
+          "name": "history_has_reuse_action_panel",
+          "passed": true,
+          "details": {
+            "actionPanelVisible": true,
+            "timelinePanelVisible": true,
+            "actionLinks": [
+              "/generate",
+              "/lightchain/ai-fitting",
+              "/gallery"
+            ]
+          }
+        },
+        {
+          "name": "desktop_history_timeline_is_bounded",
+          "passed": true,
+          "details": {
+            "visibleTimelineCount": 11,
+            "showAllVisible": false
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:29:16.313Z"
+    },
+    {
+      "key": "gallery",
+      "path": "/gallery",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/gallery",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 183,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター ギャラリー 10枚の画像 選択 すべて お気に入り 新しい順 古い順 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る",
+      "expected": [
+        "ギャラリー"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 183
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "ギャラリー"
+            ]
+          }
+        },
+        {
+          "name": "gallery_no_scary_remote_failure_toast",
+          "passed": true,
+          "details": {
+            "toastTextVisible": false
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:29:52.115Z"
+    },
+    {
+      "key": "canvas",
+      "path": "/canvas/new",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/canvas/new",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 282,
+      "domExcerpt": "プロジェクト名 キャンバス · 未保存の変更 · ブランド: Nisen キャンバス 派生ツリー 田 招待 保存 100% CANVAS 画像を置いて、機能を選ぶ 商品画像や生成結果を置くと、背景削除、色変更、高解像度化、派生生成、指示編集を画像に直接かけられます。 背景を消す 選択画像を切り抜く 色を変える カラバリを派生 高解像度 掲載用に拡大 派生させる 近い案を4つ作る 指示で編集 文章で直す 新しく生成 生成 画像を選択すると、背景削除・色変更・派生などを直接かけられます。 権限がありません 画像を置く 生成する 素材を見る Galleryから追加",
+      "expected": [
+        "画像を置く",
+        "Galleryから追加"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "canvas-persistence-status",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-current-brand",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-save",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-toolbar",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-toolbar-scroll",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "mobile-canvas-fit-proof",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-generation-state",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-local-upload-readback",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 282
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "画像を置く",
+              "Galleryから追加"
+            ]
+          }
+        },
+        {
+          "name": "mobile_canvas_content_fits_initial_view",
+          "passed": true,
+          "details": {
+            "bodyFit": true,
+            "hasGalleryAdd": true,
+            "visibleButtonCount": 35
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:30:27.723Z"
+    },
+    {
+      "key": "brand-settings",
+      "path": "/brand/settings",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/brand/settings",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Heavy Chain | AI制作ワークスペース",
+      "readyState": "complete",
+      "bodyLength": 318,
+      "domExcerpt": "メインコンテンツへスキップ HEAVY CHAIN おすすめ 企画デザインツール AIフィッティング グラフィックツール 生成履歴 ジョブ ブランド設定 ブランド情報とチームメンバーを管理 ブランド情報 Heavy Chain側の月間 quota は通常アカウントの生成条件に含まれ、Apple sandbox tester は実請求なしの検証アカウントとして扱われます。 N ロゴをアップロード 推奨: 512x512px, PNG/JPG ブランド名 世界観・トーン ターゲット層 ブランドカラー プライマリ セカンダリ 保存 チームメンバー 招待 田 田中二千(あなた) okinawa2000823@gmail.com オーナー",
+      "expected": [
+        "ブランド"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "brand-logo-fallback",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 318
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "ブランド"
+            ]
+          }
+        },
+        {
+          "name": "brand_settings_hides_removed_readiness_blocks",
+          "passed": true,
+          "details": {
+            "readinessPanelVisible": false,
+            "readinessItemCount": 0,
+            "nextActionLinks": []
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:31:00.214Z"
+    },
+    {
+      "key": "generate-campaign",
+      "path": "/generate?feature=campaign-image",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/generate?feature=campaign-image",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 986,
+      "domExcerpt": "LIGHTCHAIN 日本語 ヘルプセンター 戻る おすすめ 計画 キャンペーン画像 おすすめ 入口一覧へ戻る 販促ワークベンチ テキストから開始できます 作業モードを変更 詳細操作: 選択 / ドラッグ / 前にステップ / 次のステップ 履歴から選ぶ 入力素材 先に画像や素材を入れてから、必要な生成条件だけを調整します。 素材を置くと編集を始められます。 デザイン作成 プロンプトと生成計画 販促ワークベンチ 商品、ロゴ、背景を置いてから、広告レイヤーとコピー位置を決めます。 素材あり 重要な選択だけ先に見せ、細かい設定は下の詳細から開けます。 素材タイプ 商品画像 レイヤー 商品 配置 中央大きめ 切り抜き 自動カット 次の一手 切り抜き / 抽出 既存素材を優先 Galleryから選ぶ 商品 S__4235312(1).jpg 認識 商品画像 処理 自動カット レイヤー 商品 次にやること 服だけをAIで切り抜きます。細かい設定は必要になった時だけ開けます。 自動で切り抜く 詳細設定 素材メモ Canvas保存時の構造 商品画像 / 商品 中央大きめ / 自動カット / 58% ベースコンセプト タイトル サブコピー 割引率 期間 CTA ブランドカラー テキスト位置 上 中央 下 アスペクト比（用途ラベル付き） 正方形 Instagram投稿・汎用 横長 Webバナー・LP ポートレート Instagram縦投稿・EC特集 縦長 Pinterest/フライヤー ワイド YouTubeサムネ/ヒーロー ストーリー IG/LINEストーリー・縦動画 画像内テキスト 言語・位置・色を指定して生成時に文字を入れます 無効 生成数 1 枚 Cloudflare FLUX.2 Klein 4B（品質検証中）。参照は最大4枚・長辺512pxで送信し、元画像は保持します。範囲編集は参照ガイド＋元画素の合成で対応し、新しい透過出力は未対応です。 入力不足 まだ送信できません。必要な入力がそろったら準備完了になります。 入力待ち 生成モデル 現在: FLUX.2 Klein 4B ",
+      "expected": [
+        "キャンペーン画像",
+        "生成"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "heavy-generate-workspace",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "mobile-generate-assistant-prompt-bar",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-project-panel",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-canvas-toolbar",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-input-material-panel",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "material-gallery-select",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "generation-model-option-@cf/black-forest-labs/flux-2-klein-4b",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "lightchain_permission_surface_visible",
+          "passed": true,
+          "details": {
+            "rightsCheckboxVisible": false,
+            "permissionSurfaceVisible": true
+          }
+        },
+        {
+          "name": "upload_first_generation_screen_hides_advanced_controls",
+          "passed": true,
+          "details": {
+            "bodyContainsFirstScreen": true,
+            "containsGenerationPhrase": true,
+            "generationPhrasePreview": "X.2 Klein 4B / 実行後に利用量表示（請求額ではありません） 必要な時だけ変更 権限がありません 生成する 詳細情報 FLUX.2 Klein 4Bで生成します",
+            "visibleButtonTexts": [
+              "日本語",
+              "ヘルプセンター",
+              "avatar",
+              "戻る",
+              "計画",
+              "素材合成",
+              "デザイン作成",
+              "選択",
+              "ドラッグ",
+              "前にステップ",
+              "次のステップ",
+              "履歴から選ぶ",
+              "生成計画を作る",
+              "フォームへ反映",
+              "既存Gallery素材を選択",
+              "上",
+              "中央",
+              "下",
+              "正方形 Instagram投稿・汎用",
+              "横長 Webバナー・LP",
+              "ポートレート Instagram縦投稿・EC特集",
+              "縦長 Pinterest/フライヤー",
+              "ワイド YouTubeサムネ/ヒーロー",
+              "ストーリー IG/LINEストーリー・縦動画",
+              "無効",
+              "Cloudflare候補FLUX.2 Klein 4B実行後に利用量表示（請求額ではありません）品質検証中・参照512px",
+              "生成する"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:39:20.166Z"
+    }
+  ],
+  "mobile": [
+    {
+      "key": "mobile-dashboard",
+      "path": "/dashboard",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/dashboard",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 1832,
+      "domExcerpt": "LIGHTCHAIN LIGHTCHAIN AI アパレル特化のAIデザインワークスペース ✦ おすすめ Hot 企画デザインツール AIフィッティング グラフィックツール Beta 企画ワークスペース トレンド企画アシスタント 最新トレンドを分析し、アイデアを具体的な企画書やデザイン案へ。企画の「勝ち筋」を瞬時に可視化。 デザインワークスペース スマート対話、高解像度画像生成、部分修正、AI試着、生地差し替え、ベクター変換などの機能を備えた、服装デザイン制作のためのオールインワンワークスペースです。デザインから制作までの全工程をスムーズに進められます マーケティングワークスペース 販促コンテンツのオールインワン制作 バナー、キャッチコピー、商品ページまで。AIがあらゆるマーケティング素材を自動生成します。 ファッションスタジオ スマート・スタイリング 衣服、シーン、小物を自在に組み合わせ。AIが自然に融合させ、独自のコーディネート案を形にします。 動画ワークステーション AIプロモーション動画生成 製品紹介や着せ替えエフェクトなど、動的なマーケティング動画をクイックに生成。 AIフィッティング バーチャル撮影アシスタント 場所を選ばず、高品質なモデル着用画像を生成。スタジオ撮影の手間とコストを大幅に削減。 事例共有 おすすめの事例 デザイン修正 柄・プリント ビジュアル素材 マーケティングコンテンツ 生産 ファッションスタジオ - アウトドアジャケット実物から線画化 【ファッションスタジオ】— モデル着用画像のアパレルパターンをワンクリックで高精度生成 【ファッションスタジオ】— ディテールをワンクリックで再現 【マーケティングワークスペース】は、既存のランジェリー商品画像やモデル着用画像を活用し、異なるモデルによる新しい販促ビジュアルを一括生成します。 ファッションスタジオ（テキスト生成）：人気モデルのスタイルDNAを維持しながら、AIが人気デザインのバリエーション展開をスピーディーに実現 ファッションスタジオ： 平絵＋生地 【ファッションスタジオ】— モデルの体型",
+      "expected": [
+        "おすすめ",
+        "AIフィッティング"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-tool-grid",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-tool-card",
+          "matchCount": 6,
+          "visibleCount": 6,
+          "hrefs": [
+            "/agent",
+            "/designProduction",
+            "/marketing",
+            "/flow/integration",
+            "/flow/GenerateShortVideo",
+            "/model"
+          ]
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 1832
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "おすすめ",
+              "AIフィッティング"
+            ]
+          }
+        },
+        {
+          "name": "mobile_no_intrusive_floating_help_buttons",
+          "passed": true,
+          "details": {
+            "helpLike": []
+          }
+        },
+        {
+          "name": "current_lightchain_launcher_compact",
+          "passed": true,
+          "details": {
+            "launcherTestId": "lightchain-tool-grid",
+            "visibleCardCount": 6,
+            "viewport": {
+              "width": 390,
+              "height": 844
+            }
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:32:01.569Z"
+    },
+    {
+      "key": "mobile-design-production",
+      "path": "/designProduction",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/designProduction",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 460,
+      "domExcerpt": "LIGHTCHAIN デザインワークスペースへようこそ アイデアを形にし、制作をスムーズに プロジェクトから開始 対話から開始 新規ファイル インスピレーション デザインプロジェクトを新規作成 ブリン卜修正 プリントプロジェクトを新規作成 生地イメージ 生地プロジェクトを新規作成 企画提案書 企画提案書を新規作成 マイプロジェクト 9件 Untitled model-matrix ・ 2026/09/19 19:44 Untitled lightchain-design-agent ・ 2026/09/14 04:31 Untitled lightchain-design-agent ・ 2026/09/13 23:27 Untitled model-matrix ・ 2026/09/12 14:50 📌 キャンペーン画像 campaign-image ・ 2026/09/12 04:01 Untitled campaign-image ・ 2026/09/12 04:01 前へ 1 2 次へ 1 / 2",
+      "expected": [
+        "デザインワークスペースへようこそ"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-parity-shell",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "design-production-page",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "design-production-persisted-projects",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "design-production-pagination",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 460
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "デザインワークスペースへようこそ"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:33:31.369Z"
+    },
+    {
+      "key": "mobile-marketing",
+      "path": "/marketing",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/marketing",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 175,
+      "domExcerpt": "LIGHTCHAIN ✦ 33607 マーケティングワークスペースへようこそ 今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！ 0 / 4000 おすすめのシーン👉 EC SNS ブランド 店舗・オフライン ライブ配信 プロモーション マイプロジェクト 保存済みの履歴はありません。生成結果を保存すると、ここに表示されます。",
+      "expected": [
+        "マーケティング"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-workspace-marketing",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-workspace-generate",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 175
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "マーケティング"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:34:16.367Z"
+    },
+    {
+      "key": "mobile-fitting",
+      "path": "/model",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/model",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 363,
+      "domExcerpt": "LIGHTCHAIN AIフィッティング シングルタスク マルチタスク 衣服の画像 (0/4) 自動でアパレル平置き画像に変換 複数のコーディネートのアップロードに対応 ここをクリック/ドラッグしてアイテムを追加します。 必須項目 例 説明生成 参考画像 モデルのセット写真 0/2000 スマート ⌄ 1K ⌄ 権限がありません 生成履歴 AIフィッティング AIでモデル着用イメージを素早く実現 拡大 AIフィッティング 平置き商品画像を、自然なモデル着用EC画像に変換してください。 依頼: 黒のチェーン柄フーディーを、ECとSNSで使える高級ストリート系ビジュアルに展開したい。 参考: 素材: Tシャツ / auto / 胸中央 / 46% 保存 ダウンロード Gallery History Jobs Canvas",
+      "expected": [
+        "AIフィッティング"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-fitting-input-flow",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fitting-garment-count",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fitting-prompt-actions",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-model-permission",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fitting-history-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/model#fitting-history"
+          ]
+        },
+        {
+          "id": "lightchain-fitting-result-save",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-fitting-result-download",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-special-result-destinations",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-special-result-gallery-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/gallery"
+          ]
+        },
+        {
+          "id": "lightchain-special-result-history-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/history"
+          ]
+        },
+        {
+          "id": "lightchain-special-result-jobs-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/jobs"
+          ]
+        },
+        {
+          "id": "lightchain-special-result-canvas-link",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/canvas/new"
+          ]
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 363
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "AIフィッティング"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:34:46.714Z"
+    },
+    {
+      "key": "mobile-jobs",
+      "path": "/jobs",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/jobs",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 3640,
+      "domExcerpt": "LIGHTCHAIN PRODUCTION QUEUE 制作キュー 進行中、止まった作業、完了した成果物をまとめて見て、次の操作へそのまま進めます。 更新 新しく作る 再開できる作業 進行中の生成や直近の制作レーンへ戻ります。 0件 止まった作業 原因と次の操作を確認し、入力を保ったまま再開します。 1件 完了した成果物 保存済み画像を開き、Canvas再編集や共有へ進みます。 8件 QUEUE SUMMARY 8 完了成果物と進行中の作業を先に出し、古い失敗は必要な時だけ確認します。 要確認 1件を表示 完了 2026/9/19 19:44:26 モデルマトリクス 着用画像 素材あり 成果物を確認 白Tシャツ（プラットフォーム素材）の着用イメージ。20代の標準体型モデル、正面立ち、ニュートラルなスタジオ背景、EC用の自然な照明。 1 outputs 成果物を開く 完了 2026/9/14 4:31:10 lightchain design agent 制作 素材なし 成果物を確認 Create a polished Hello,山内カンナ result from the workflow brief and selected settings. If optional references are present, use them as inspiration or context only; return a coherent production-ready image without claiming pixel-preserving editing. LIGHTCHAIN ROUTE: design-agent (Hello,山内カンナ) PRIMARY INPUT: no required source image (brief-only workflow) SECONDARY INPUT: optional references only WORKFLOW SUMMARY: LOUIS VUITTON の 2026年春夏 コレクションからインスピレーショ",
+      "expected": [
+        "制作キュー"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "jobs-list",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "jobs-list-item",
+          "matchCount": 5,
+          "visibleCount": 5,
+          "hrefs": []
+        },
+        {
+          "id": "mobile-jobs-show-all",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 3640
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "制作キュー"
+            ]
+          }
+        },
+        {
+          "name": "mobile_no_intrusive_floating_help_buttons",
+          "passed": true,
+          "details": {
+            "helpLike": []
+          }
+        },
+        {
+          "name": "mobile_jobs_initial_list_is_bounded",
+          "passed": true,
+          "details": {
+            "visibleJobCount": 5,
+            "showAllVisible": true
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:36:38.170Z"
+    },
+    {
+      "key": "mobile-history",
+      "path": "/history",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/history",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 676,
+      "domExcerpt": "LIGHTCHAIN 生成履歴 ジョブ、失敗、保存済み成果物をタイムラインで確認します。 ギャラリーへ 続きから再開 進行中または直近のワークフローを開きます。 進行中 0件 失敗を確認 止まった生成を見て、入力や承認状態から再開します。 失敗 1件 保存済みを見る Galleryに残った成果物を開き、Canvas再編集や共有へ進みます。 保存済み 10件 TIMELINE 11 生成ジョブとギャラリー保存の最新状況です。 完了 9月19日 19:44 モデルマトリクス 1 outputs PROMPT 白Tシャツ（プラットフォーム素材）の着用イメージ。20代の標準体型モデル、正面立ち、ニュートラルなスタジオ背景、EC用の自然な照明。 生成条件 実行記録: 候補1・AI処理=完了 / 候補1・private保存=完了 プロンプトコピー 開く 完了 9月14日 04:31 lightchain design agent 1 outputs 完了 9月13日 23:27 lightchain design agent 1 outputs 保存済み 9月12日 15:17 Video Workstation ローカル成果物を保存済み 保存済み 9月12日 15:11 Video Workstation ローカル成果物を保存済み 完了 9月12日 14:50 モデルマトリクス 1 outputs 完了 9月12日 04:01 キャンペーン画像 1 outputs 完了 9月12日 02:13 画像生成 1 outputs さらに3件を表示",
+      "expected": [
+        "生成履歴"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "history-action-panel",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "history-action-resume",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/generate"
+          ]
+        },
+        {
+          "id": "history-action-jobs",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/lightchain/ai-fitting"
+          ]
+        },
+        {
+          "id": "history-action-gallery",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": [
+            "/gallery"
+          ]
+        },
+        {
+          "id": "history-timeline-panel",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "activity-timeline-item",
+          "matchCount": 8,
+          "visibleCount": 8,
+          "hrefs": []
+        },
+        {
+          "id": "mobile-history-show-all",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 676
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "生成履歴"
+            ]
+          }
+        },
+        {
+          "name": "mobile_no_intrusive_floating_help_buttons",
+          "passed": true,
+          "details": {
+            "helpLike": []
+          }
+        },
+        {
+          "name": "history_has_reuse_action_panel",
+          "passed": true,
+          "details": {
+            "actionPanelVisible": true,
+            "timelinePanelVisible": true,
+            "actionLinks": [
+              "/generate",
+              "/lightchain/ai-fitting",
+              "/gallery"
+            ]
+          }
+        },
+        {
+          "name": "mobile_history_timeline_is_bounded",
+          "passed": true,
+          "details": {
+            "visibleTimelineCount": 8,
+            "showAllVisible": true
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:37:07.197Z"
+    },
+    {
+      "key": "mobile-gallery",
+      "path": "/gallery",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/gallery",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 171,
+      "domExcerpt": "LIGHTCHAIN ギャラリー 10枚の画像 選択 すべて お気に入り 新しい順 古い順 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る 詳細を見る",
+      "expected": [
+        "ギャラリー"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 171
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "ギャラリー"
+            ]
+          }
+        },
+        {
+          "name": "mobile_no_intrusive_floating_help_buttons",
+          "passed": true,
+          "details": {
+            "helpLike": []
+          }
+        },
+        {
+          "name": "gallery_no_scary_remote_failure_toast",
+          "passed": true,
+          "details": {
+            "toastTextVisible": false
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:37:45.541Z"
+    },
+    {
+      "key": "mobile-canvas",
+      "path": "/canvas/new",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/canvas/new",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 262,
+      "domExcerpt": "プロジェクト名 キャンバス · 未保存の変更 · ブランド: Nisen 100% CANVAS 画像を置いて、機能を選ぶ 商品画像や生成結果を置くと、背景削除、色変更、高解像度化、派生生成、指示編集を画像に直接かけられます。 背景を消す 選択画像を切り抜く 色を変える カラバリを派生 高解像度 掲載用に拡大 派生させる 近い案を4つ作る 指示で編集 文章で直す 新しく生成 生成 画像を選択すると、背景削除・色変更・派生などを直接かけられます。 権限がありません 画像を置く 生成する 素材を見る Galleryから追加",
+      "expected": [
+        "画像を置く",
+        "Galleryから追加"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "canvas-persistence-status",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-current-brand",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-save",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-toolbar",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-toolbar-scroll",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "mobile-canvas-fit-proof",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-generation-state",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "canvas-local-upload-readback",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 262
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "画像を置く",
+              "Galleryから追加"
+            ]
+          }
+        },
+        {
+          "name": "mobile_no_intrusive_floating_help_buttons",
+          "passed": true,
+          "details": {
+            "helpLike": []
+          }
+        },
+        {
+          "name": "mobile_canvas_content_fits_initial_view",
+          "passed": true,
+          "details": {
+            "proofPresent": true,
+            "bodyFit": true
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:38:20.702Z"
+    },
+    {
+      "key": "mobile-lightchain",
+      "path": "/lightchain",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/lightchain",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 1522,
+      "domExcerpt": "LIGHTCHAIN LIGHTCHAIN AI アパレル特化のAIデザインワークスペース ✦ おすすめ Hot 企画デザインツール AIフィッティング グラフィックツール Beta 企画ワークスペース トレンド企画アシスタント 最新トレンドを分析し、アイデアを具体的な企画書やデザイン案へ。企画の「勝ち筋」を瞬時に可視化。 デザインワークスペース スマート対話、高解像度画像生成、部分修正、AI試着、生地差し替え、ベクター変換などの機能を備えた、服装デザイン制作のためのオールインワンワークスペースです。デザインから制作までの全工程をスムーズに進められます マーケティングワークスペース 販促コンテンツのオールインワン制作 バナー、キャッチコピー、商品ページまで。AIがあらゆるマーケティング素材を自動生成します。 ファッションスタジオ スマート・スタイリング 衣服、シーン、小物を自在に組み合わせ。AIが自然に融合させ、独自のコーディネート案を形にします。 動画ワークステーション AIプロモーション動画生成 製品紹介や着せ替えエフェクトなど、動的なマーケティング動画をクイックに生成。 AIフィッティング バーチャル撮影アシスタント 場所を選ばず、高品質なモデル着用画像を生成。スタジオ撮影の手間とコストを大幅に削減。 事例共有 おすすめの事例 デザイン修正 柄・プリント ビジュアル素材 マーケティングコンテンツ 生産 ファッションスタジオ - アウトドアジャケット実物から線画化 【ファッションスタジオ】— モデル着用画像のアパレルパターンをワンクリックで高精度生成 【ファッションスタジオ】— ディテールをワンクリックで再現 【マーケティングワークスペース】は、既存のランジェリー商品画像やモデル着用画像を活用し、異なるモデルによる新しい販促ビジュアルを一括生成します。 ファッションスタジオ（テキスト生成）：人気モデルのスタイルDNAを維持しながら、AIが人気デザインのバリエーション展開をスピーディーに実現 ファッションスタジオ： 平絵＋生地 【ファッションスタジオ】— モデルの体型",
+      "expected": [
+        "ツール",
+        "デザイン"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "lightchain-tool-grid",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-tool-card",
+          "matchCount": 6,
+          "visibleCount": 6,
+          "hrefs": [
+            "/agent",
+            "/designProduction",
+            "/marketing",
+            "/flow/integration",
+            "/flow/GenerateShortVideo",
+            "/model"
+          ]
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 1522
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "ツール",
+              "デザイン"
+            ]
+          }
+        },
+        {
+          "name": "mobile_no_intrusive_floating_help_buttons",
+          "passed": true,
+          "details": {
+            "helpLike": []
+          }
+        },
+        {
+          "name": "mobile_lightchain_category_entry_is_compact",
+          "passed": true,
+          "details": {
+            "bodyLength": 1522,
+            "testIdCount": 7
+          }
+        },
+        {
+          "name": "mobile_lightchain_category_cards_open_real_feature_routes",
+          "passed": true,
+          "details": {
+            "linkCount": 7,
+            "realFeatureLinkCount": 7,
+            "realFeatureLinks": [
+              "/",
+              "/agent",
+              "/designProduction",
+              "/marketing",
+              "/flow/integration",
+              "/flow/GenerateShortVideo",
+              "/model"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:38:46.439Z"
+    },
+    {
+      "key": "mobile-generate-campaign",
+      "path": "/generate?feature=campaign-image",
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/generate?feature=campaign-image",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "bodyLength": 844,
+      "domExcerpt": "LIGHTCHAIN 戻る おすすめ 履歴から選ぶ 入力素材 先に画像や素材を入れてから、必要な生成条件だけを調整します。 素材を置くと編集を始められます。 デザイン作成 プロンプトと生成計画 販促ワークベンチ 商品、ロゴ、背景を置いてから、広告レイヤーとコピー位置を決めます。 素材を追加 重要な選択だけ先に見せ、細かい設定は下の詳細から開けます。 素材タイプ 商品画像 レイヤー 商品 配置 中央大きめ 切り抜き 自動カット 次の一手 切り抜き / 抽出 既存素材を優先 Galleryから選ぶ 商品・ロゴ・背景をアップロード 素材を置くとキャンペーン画像の主役として反映できます 認識 画像待ち 処理 素材後に設定 レイヤー 素材後に設定 まず1枚、素材写真を入れてください 入れたら、切り抜きとレイヤー調整の操作がそのまま続きます。 ベースコンセプト タイトル サブコピー 割引率 期間 CTA ブランドカラー テキスト位置 上 中央 下 アスペクト比（用途ラベル付き） 正方形 Instagram投稿・汎用 横長 Webバナー・LP ポートレート Instagram縦投稿・EC特集 縦長 Pinterest/フライヤー ワイド YouTubeサムネ/ヒーロー ストーリー IG/LINEストーリー・縦動画 画像内テキスト 言語・位置・色を指定して生成時に文字を入れます 無効 生成数 1 枚 Cloudflare FLUX.2 Klein 4B（品質検証中）。参照は最大4枚・長辺512pxで送信し、元画像は保持します。範囲編集は参照ガイド＋元画素の合成で対応し、新しい透過出力は未対応です。 入力不足 まだ送信できません。必要な入力がそろったら準備完了になります。 入力待ち 生成モデル 現在: FLUX.2 Klein 4B / 実行後に利用量表示（請求額ではありません） 必要な時だけ変更 権限がありません 生成する 詳細情報 FLUX.2 Klein 4Bで生成します",
+      "expected": [
+        "キャンペーン画像",
+        "生成"
+      ],
+      "expectedVisible": true,
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "navOk": true,
+      "loginShell": false,
+      "loadingVisible": false,
+      "testIds": [
+        {
+          "id": "heavy-generate-workspace",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "lightchain-input-material-panel",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "material-gallery-select",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        },
+        {
+          "id": "generation-model-option-@cf/black-forest-labs/flux-2-klein-4b",
+          "matchCount": 1,
+          "visibleCount": 1,
+          "hrefs": []
+        }
+      ],
+      "consoleCount": 0,
+      "assertions": [
+        {
+          "name": "meaningful_page_content",
+          "passed": true,
+          "details": {
+            "bodyLength": 844
+          }
+        },
+        {
+          "name": "expected_text_visible",
+          "passed": true,
+          "details": {
+            "expected": [
+              "キャンペーン画像",
+              "生成"
+            ]
+          }
+        },
+        {
+          "name": "mobile_no_intrusive_floating_help_buttons",
+          "passed": true,
+          "details": {
+            "helpLike": []
+          }
+        },
+        {
+          "name": "lightchain_permission_surface_visible",
+          "passed": true,
+          "details": {
+            "permissionSurfaceVisible": true,
+            "rightsCheckboxVisible": false
+          }
+        },
+        {
+          "name": "mobile_generate_hides_canvas_toolbar",
+          "passed": true,
+          "details": {
+            "toolbarVisible": false
+          }
+        },
+        {
+          "name": "mobile_generate_starts_at_material_form",
+          "passed": true,
+          "details": {
+            "assistantPromptBarVisible": false,
+            "projectPanelVisible": false,
+            "inputMaterialPanelVisible": true
+          }
+        },
+        {
+          "name": "upload_first_generation_screen_hides_advanced_controls",
+          "passed": true,
+          "details": {
+            "bodyContainsFirstScreen": true,
+            "containsGenerationPhrase": true,
+            "generationPhrasePreview": "X.2 Klein 4B / 実行後に利用量表示（請求額ではありません） 必要な時だけ変更 権限がありません 生成する 詳細情報 FLUX.2 Klein 4Bで生成します",
+            "visibleButtonTexts": [
+              "avatar",
+              "戻る",
+              "履歴から選ぶ",
+              "生成計画を作る",
+              "フォームへ反映",
+              "既存Gallery素材を選択",
+              "上",
+              "中央",
+              "下",
+              "正方形 Instagram投稿・汎用",
+              "横長 Webバナー・LP",
+              "ポートレート Instagram縦投稿・EC特集",
+              "縦長 Pinterest/フライヤー",
+              "ワイド YouTubeサムネ/ヒーロー",
+              "ストーリー IG/LINEストーリー・縦動画",
+              "無効",
+              "Cloudflare候補FLUX.2 Klein 4B実行後に利用量表示（請求額ではありません）品質検証中・参照512px",
+              "生成する"
+            ]
+          }
+        }
+      ],
+      "capturedAt": "2026-09-20T21:32:46.709Z"
+    }
+  ],
+  "failed": [],
+  "consoleMessages": [],
+  "pageErrors": [],
+  "requestFailures": [],
+  "failureObservation": {
+    "scope": "Companion bounded console plus one network-observer route sample",
+    "sampleRoute": "/designProduction",
+    "responseCount": 72,
+    "non2xxResponseCount": 0,
+    "droppedEntries": 0,
+    "truncated": true,
+    "doesNotProve": "all-route network zero or provider/business completion"
+  },
+  "irreversibleActions": {
+    "generationSubmit": "not_clicked",
+    "purchasePaymentCheckout": "not_touched",
+    "externalPublish": "not_touched",
+    "destructiveDelete": "not_touched"
+  },
+  "externalActionExecuted": false,
+  "businessCompletion": {
+    "providerReceipt": "unverified",
+    "sourceSync": "unverified",
+    "reconciliation": "unverified"
+  },
+  "cleanup": {
+    "contextClosed": true,
+    "browserClosed": true,
+    "sessionClosed": true,
+    "leasesReleased": 0,
+    "mode": "companion_session_terminal"
+  },
+  "companionCleanup": {
+    "ok": true,
+    "retained": [],
+    "unknown_effect": [],
+    "sessionsClosed": 2,
+    "closedTabs": [
+      1980926062,
+      1980926067
+    ]
+  },
+  "legacyExpectationNote": "The retired Playwright mass-market assertions targeted the former /workspace dashboard and non-canonical Heavy workspace panels. Current acceptance is scoped to the deployed Lightchain launcher and current route surfaces.",
+  "ok": true
+}

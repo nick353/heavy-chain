@@ -66,62 +66,9 @@ const requiredReadbacks = [
   },
   {
     name: 'production mass-market QA current',
-    path: 'output/playwright/g831-prod-mass-market-current-r1/SUMMARY.json',
-    validate: (json) =>
-      json.ok === true &&
-      arrayFrom(json.failed).length === 0 &&
-      Number(json.routeCount || 0) >= 16 &&
-      arrayFrom(json.routes).length >= 16 &&
-      arrayFrom(json.mobile).length >= 8 &&
-      json.cleanup?.contextClosed === true &&
-      json.cleanup?.browserClosed === true &&
-      arrayFrom(json.consoleMessages).length === 0 &&
-      arrayFrom(json.pageErrors).length === 0 &&
-      arrayFrom(json.requestFailures).length === 0 &&
-      hasRouteAssertion(json, 'gallery', 'meaningful_page_content') &&
-      hasRouteAssertion(json, 'mobile-gallery', 'meaningful_page_content') &&
-      hasRouteAssertion(json, 'gallery', 'gallery_no_scary_remote_failure_toast') &&
-      hasRouteAssertion(json, 'mobile-gallery', 'gallery_no_scary_remote_failure_toast') &&
-      hasRouteAssertion(json, 'generate-campaign', 'lightchain_permission_surface_visible') &&
-      hasRouteAssertion(json, 'mobile-generate-campaign', 'lightchain_permission_surface_visible') &&
-      routeAssertionDetailsIncludes(json, 'generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'で生成') &&
-      routeAssertionDetailsIncludes(json, 'mobile-generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'で生成') &&
-      hasRouteAssertion(json, 'mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons') &&
-      hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_no_intrusive_floating_help_buttons') &&
-      hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar') &&
-      hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_starts_at_material_form') &&
-      hasRouteAssertion(json, 'dashboard', 'dashboard_recent_images_no_broken_placeholders') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_old_quick_start_hidden_by_design') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_hides_duplicate_quick_action_cards') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_lightchain_has_all_tools_link') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_lightchain_cards_open_detail_routes') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_activity_uses_compact_summary') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_next_action_hidden_by_design') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_hides_low_priority_desktop_panels') &&
-      hasRouteAssertion(json, 'brand-settings', 'brand_settings_hides_removed_readiness_blocks') &&
-      hasRouteAssertion(json, 'marketing', 'marketing_workspace_has_clear_generation_flow') &&
-      hasRouteAssertion(json, 'marketing', 'marketing_preview_has_brief_context') &&
-      hasRouteAssertion(json, 'fitting', 'fitting_workspace_has_clear_generation_flow') &&
-      hasRouteAssertion(json, 'fitting', 'fitting_preview_has_model_matrix_context_when_visible') &&
-      hasRouteAssertion(json, 'models', 'model_library_has_clear_generation_flow') &&
-      hasRouteAssertion(json, 'patterns', 'pattern_workspace_has_clear_generation_flow') &&
-      hasRouteAssertion(json, 'patterns', 'pattern_preview_uses_garment_mockup_context') &&
-      hasRouteAssertion(json, 'video', 'video_workspace_has_clear_generation_flow') &&
-      hasRouteAssertion(json, 'video', 'video_storyboard_preview_has_shot_context') &&
-      hasRouteAssertion(json, 'video', 'video_shot_cards_are_meaningful') &&
-      hasRouteAssertion(json, 'studio', 'studio_workspace_has_clear_generation_flow') &&
-      hasRouteAssertion(json, 'studio', 'studio_preview_has_composition_context') &&
-      hasRouteAssertion(json, 'lab', 'lab_workspace_has_clear_generation_flow') &&
-      hasRouteAssertion(json, 'lab', 'lab_preview_has_evaluation_context') &&
-      hasRouteAssertion(json, 'history', 'history_has_reuse_action_panel') &&
-      hasRouteAssertion(json, 'history', 'desktop_history_timeline_is_bounded') &&
-      hasRouteAssertion(json, 'mobile-history', 'history_has_reuse_action_panel') &&
-      hasRouteAssertion(json, 'mobile-history', 'mobile_history_timeline_is_bounded') &&
-      hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_category_entry_is_compact') &&
-      hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_category_cards_open_real_feature_routes') &&
-      hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
-      hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
-    expect: 'current production mass-market QA ok=true with 16 desktop routes, 9 mobile routes including mobile History, Gallery fallback visible without scary remote-failure toast, H601-ready generation route, Dashboard recent images without broken placeholders, Brand Settings removed readiness blocks hidden, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix context when preview is visible, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard old quick start and next action hidden by design, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, compact mobile Lightchain category entry with real feature links, bounded mobile Jobs list, mobile Canvas content fit on open, no console/page/request failures, and cleanup closed',
+    path: 'work/heavy-chain-companion-mass-market-qa-20260921.json',
+    validate: validateCompanionMassMarketQa,
+    expect: 'fresh Companion readback of the current Lightchain launcher, protected generation permission surfaces, history/jobs/gallery/canvas/brand routes, desktop/mobile semantic+visual evidence, no exported auth secret, no console/page/request failures, and terminal cleanup',
   },
   {
     name: 'production Lightchain all-feature order previews',
@@ -676,6 +623,81 @@ export function validateCompanionAuthenticatedEvidence(evidence) {
     evidence?.businessCompletion?.providerReceipt === 'unverified' &&
     evidence?.businessCompletion?.sourceSync === 'unverified' &&
     evidence?.businessCompletion?.reconciliation === 'unverified';
+}
+
+export function validateCompanionMassMarketQa(evidence) {
+  const requiredAssertions = [
+    ['dashboard', 'current_lightchain_launcher_visible'],
+    ['dashboard', 'current_lightchain_feature_cards_are_linked'],
+    ['mobile-dashboard', 'current_lightchain_launcher_compact'],
+    ['generate-campaign', 'lightchain_permission_surface_visible'],
+    ['generate-campaign', 'upload_first_generation_screen_hides_advanced_controls'],
+    ['mobile-generate-campaign', 'lightchain_permission_surface_visible'],
+    ['mobile-generate-campaign', 'upload_first_generation_screen_hides_advanced_controls'],
+    ['mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar'],
+    ['mobile-generate-campaign', 'mobile_generate_starts_at_material_form'],
+    ['design-production', 'design_production_source_entry_is_complete'],
+    ['gallery', 'gallery_no_scary_remote_failure_toast'],
+    ['mobile-gallery', 'gallery_no_scary_remote_failure_toast'],
+    ['history', 'history_has_reuse_action_panel'],
+    ['desktop-history', 'desktop_history_timeline_is_bounded'],
+    ['mobile-history', 'history_has_reuse_action_panel'],
+    ['mobile-history', 'mobile_history_timeline_is_bounded'],
+    ['mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons'],
+    ['mobile-lightchain', 'mobile_lightchain_category_entry_is_compact'],
+    ['mobile-lightchain', 'mobile_lightchain_category_cards_open_real_feature_routes'],
+    ['mobile-jobs', 'mobile_jobs_initial_list_is_bounded'],
+    ['mobile-canvas', 'mobile_canvas_content_fits_initial_view'],
+    ['brand-settings', 'brand_settings_hides_removed_readiness_blocks'],
+  ];
+  const routes = arrayFrom(evidence?.routes);
+  const mobile = arrayFrom(evidence?.mobile);
+  const allRoutes = [...routes, ...mobile];
+  const expectedOrigin = PRODUCTION_ORIGIN;
+  const routeIdentityValid = allRoutes.every((route) => {
+    if (typeof route?.path !== 'string' || !route.path.startsWith('/')) return false;
+    let parsed;
+    try { parsed = new URL(route.url); } catch { return false; }
+    return parsed.origin === expectedOrigin && `${parsed.pathname}${parsed.search}` === route.path;
+  });
+  const routeReadbacksValid = allRoutes.length > 0 && allRoutes.every((route) =>
+    route?.readyState === 'complete' &&
+    route?.semanticReadback === 'verified' &&
+    route?.visualReadback === 'verified' &&
+    (route?.title === 'Lightchain AI' ||
+      (route?.key === 'brand-settings' && route?.title === 'Heavy Chain | AI制作ワークスペース')) &&
+    Number(route?.bodyLength || 0) > 80 &&
+    !/権利確認|権利を確認しました|rights.?confirmation|rights.?checkbox/i.test(route?.domExcerpt || '')
+  );
+  const assertionsValid = requiredAssertions.every(([routeKey, assertionName]) =>
+    routeKey === 'desktop-history'
+      ? hasRouteAssertion(evidence, 'history', assertionName)
+      : hasRouteAssertion(evidence, routeKey, assertionName)
+  );
+  return evidence?.schema === 'heavy-chain.companion-mass-market-qa.v1' &&
+    evidence?.workflow === 'mass-market-user-journey-qa' &&
+    evidence?.source === 'aos_chrome_companion_profile_instance' &&
+    typeof evidence?.taskId === 'string' && evidence.taskId.length > 0 &&
+    typeof evidence?.sessionId === 'string' && evidence.sessionId.length > 0 &&
+    typeof evidence?.generation === 'string' && evidence.generation.length > 0 &&
+    evidence?.origin === expectedOrigin && evidence?.authSecretExported === false &&
+    freshTimestamp(evidence?.capturedAt) && evidence?.ok === true &&
+    routes.length >= 16 && mobile.length >= 8 &&
+    routeIdentityValid && routeReadbacksValid && assertionsValid &&
+    arrayFrom(evidence?.failed).length === 0 &&
+    arrayFrom(evidence?.consoleMessages).length === 0 &&
+    arrayFrom(evidence?.pageErrors).length === 0 &&
+    arrayFrom(evidence?.requestFailures).length === 0 &&
+    evidence?.businessCompletion?.providerReceipt === 'unverified' &&
+    evidence?.businessCompletion?.sourceSync === 'unverified' &&
+    evidence?.businessCompletion?.reconciliation === 'unverified' &&
+    evidence?.cleanup?.contextClosed === true &&
+    evidence?.cleanup?.browserClosed === true &&
+    evidence?.cleanup?.sessionClosed === true &&
+    evidence?.cleanup?.leasesReleased === 0 &&
+    evidence?.companionCleanup?.ok === true &&
+    arrayFrom(evidence?.companionCleanup?.retained).length === 0 &&
+    arrayFrom(evidence?.companionCleanup?.unknown_effect).length === 0;
 }
 
 export function validateCompanionProductionRouteMatrix(evidence) {

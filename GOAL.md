@@ -6702,3 +6702,26 @@ build, lint, and git-diff checks passed. The remaining failures are exactly
 the eight current production/operator readbacks plus the missing real-
 generation visual scorecard and the dependent G633 baseline command. The
 working tree is clean and the route-matrix readback itself passes.
+
+# Goal progress — 2026-09-21 r98
+
+The current production mass-market surface was read back through two
+task-owned AOS Chrome Companion sessions. Desktop coverage reached 16 routes
+and mobile coverage 10 routes, each with same-tab semantic and visual
+readback. The current Lightchain launcher, protected generation surfaces,
+History, Jobs, Gallery, Canvas, Brand Settings, mobile category entry, and
+mobile layout assertions were recorded. Generation submission, payment,
+publish, destructive actions, provider receipt, source sync, and reconciliation
+were not started and remain unverified.
+
+The Companion evidence is recorded at
+`work/heavy-chain-companion-mass-market-qa-20260921.json` (with a local
+release-gate mirror under `output/playwright/g831-prod-mass-market-current-r1/SUMMARY.json`). The old
+mass-market assertions targeted the retired `/workspace` dashboard shape, so
+the release gate now consumes a versioned current-Lightchain Companion
+contract instead of silently treating those stale selectors as production
+failures. The new Companion contract tests pass 13/13; its validator passes
+the fresh evidence with `authSecretExported=false`, no retained/unknown-effect
+tabs, and terminal cleanup complete. A bounded network-observer sample on
+`/designProduction` saw 72 responses with zero non-2xx responses; this is
+explicitly marked as a sample and does not prove provider/business completion.

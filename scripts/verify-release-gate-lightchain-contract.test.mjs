@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validateCompanionAuthenticatedEvidence,
+  validateCompanionMassMarketQa,
   validateCompanionProductionRouteMatrix,
   validateLightchainProductionReadback,
   readCurrentLightchainManifest,
@@ -173,6 +174,99 @@ test('does not promote Companion UI evidence to provider completion', () => {
     },
   });
   assert.equal(validateCompanionAuthenticatedEvidence(promoted), false);
+});
+
+function companionMassMarketFixture(overrides = {}) {
+  const route = (key, path, assertions = []) => ({
+    key,
+    path,
+    url: `${productionOrigin}${path}`,
+    title: 'Lightchain AI',
+    readyState: 'complete',
+    bodyLength: 120,
+    domExcerpt: 'Lightchain route',
+    semanticReadback: 'verified',
+    visualReadback: 'verified',
+    assertions,
+  });
+  const passing = (name, details = {}) => ({ name, passed: true, details });
+  const routes = [
+    route('dashboard', '/dashboard', [passing('current_lightchain_launcher_visible'), passing('current_lightchain_feature_cards_are_linked')]),
+    route('design-production', '/designProduction', [passing('design_production_source_entry_is_complete')]),
+    route('generate-campaign', '/generate?feature=campaign-image', [
+      passing('lightchain_permission_surface_visible'),
+      passing('upload_first_generation_screen_hides_advanced_controls', { phrase: 'で生成' }),
+    ]),
+    route('marketing', '/marketing'),
+    route('fitting', '/model'),
+    route('studio', '/studio'),
+    route('models', '/model-library'),
+    route('patterns', '/patterns'),
+    route('video', '/flow/GenerateShortVideo'),
+    route('lab', '/lab'),
+    route('jobs', '/jobs'),
+    route('history', '/history', [passing('history_has_reuse_action_panel'), passing('desktop_history_timeline_is_bounded')]),
+    route('gallery', '/gallery', [passing('gallery_no_scary_remote_failure_toast')]),
+    route('canvas', '/canvas/new', [passing('mobile_canvas_content_fits_initial_view')]),
+    route('brand-settings', '/brand/settings', [passing('brand_settings_hides_removed_readiness_blocks')]),
+    route('launcher', '/lightchain'),
+  ];
+  const mobile = [
+    route('mobile-dashboard', '/dashboard', [passing('current_lightchain_launcher_compact')]),
+    route('mobile-generate-campaign', '/generate?feature=campaign-image', [
+      passing('lightchain_permission_surface_visible'),
+      passing('upload_first_generation_screen_hides_advanced_controls', { phrase: 'で生成' }),
+      passing('mobile_generate_hides_canvas_toolbar'),
+      passing('mobile_generate_starts_at_material_form'),
+    ]),
+    route('mobile-design-production', '/designProduction'),
+    route('mobile-marketing', '/marketing'),
+    route('mobile-fitting', '/model'),
+    route('mobile-jobs', '/jobs', [passing('mobile_jobs_initial_list_is_bounded')]),
+    route('mobile-history', '/history', [passing('history_has_reuse_action_panel'), passing('mobile_history_timeline_is_bounded')]),
+    route('mobile-gallery', '/gallery', [passing('gallery_no_scary_remote_failure_toast')]),
+    route('mobile-canvas', '/canvas/new', [passing('mobile_canvas_content_fits_initial_view')]),
+    route('mobile-lightchain', '/lightchain', [
+      passing('mobile_no_intrusive_floating_help_buttons'),
+      passing('mobile_lightchain_category_entry_is_compact'),
+      passing('mobile_lightchain_category_cards_open_real_feature_routes'),
+    ]),
+  ];
+  return {
+    schema: 'heavy-chain.companion-mass-market-qa.v1',
+    workflow: 'mass-market-user-journey-qa',
+    source: 'aos_chrome_companion_profile_instance',
+    taskId: 'task_123',
+    sessionId: 'session_123',
+    generation: 'generation_123',
+    origin: productionOrigin,
+    authSecretExported: false,
+    capturedAt: new Date().toISOString(),
+    ok: true,
+    routes,
+    mobile,
+    failed: [],
+    consoleMessages: [],
+    pageErrors: [],
+    requestFailures: [],
+    businessCompletion: { providerReceipt: 'unverified', sourceSync: 'unverified', reconciliation: 'unverified' },
+    cleanup: { contextClosed: true, browserClosed: true, sessionClosed: true, leasesReleased: 0 },
+    companionCleanup: { ok: true, retained: [], unknown_effect: [] },
+    ...overrides,
+  };
+}
+
+test('accepts current Lightchain Companion mass-market evidence', () => {
+  assert.equal(validateCompanionMassMarketQa(companionMassMarketFixture()), true);
+});
+
+test('rejects promoted or uncleared Companion mass-market evidence', () => {
+  assert.equal(validateCompanionMassMarketQa(companionMassMarketFixture({
+    businessCompletion: { providerReceipt: 'verified', sourceSync: 'verified', reconciliation: 'verified' },
+  })), false);
+  assert.equal(validateCompanionMassMarketQa(companionMassMarketFixture({
+    cleanup: { contextClosed: true, browserClosed: true, sessionClosed: true, leasesReleased: 1 },
+  })), false);
 });
 
 function companionRouteMatrixFixture(overrides = {}) {
