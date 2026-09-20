@@ -6661,3 +6661,19 @@ current mass-market and 33-feature production previews, G608, stale G618,
 dependent G633, production H602, generation scorecard, and the G633 command;
 the extra `blocker:git_dirty` is only the not-yet-committed evidence file and
 will be removed by the next clean commit. No secret or token was extracted.
+
+# Goal progress — 2026-09-21 r95
+
+Using the same Companion generation, a fresh production route matrix was
+read back across all 31 non-video feature routes, both video routes, and the
+Lightchain launcher: 34 unique routes total. Each route was navigated in the
+task-owned tab, allowed to stabilize, and verified with semantic plus visual
+readback; all 34 reached readyState=complete and no route remained in the
+loading/login fallback state after the bounded wait. The evidence is recorded
+at work/heavy-chain-companion-production-route-matrix-20260921.json.
+
+This proves current authenticated browser route reachability only. Provider
+receipt, generation/save/reuse source sync, reconciliation, billing, and
+production monitor completion remain unverified. Companion cleanup completed:
+the task session closed, the task tab closed, leases were released, foreign
+tabs were untouched, and external_action_executed=false.
