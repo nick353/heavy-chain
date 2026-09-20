@@ -1,11 +1,11 @@
 {
   "schema": "heavy-chain.companion-authenticated-production-evidence.v1",
-  "capturedAt": "2026-09-20T15:17:06.451Z",
+  "capturedAt": "2026-09-20T20:27:37.693Z",
   "source": "aos_chrome_companion_profile_instance",
   "taskId": "01a0b8d1-3935-75c1-8cea-b58769f7fb15",
-  "sessionId": "session_0949915d-eee2-472c-b099-52f3ba65583f",
-  "tabId": 1980925928,
-  "generation": "gen_5b29dab5-e026-4ab3-97df-9a999893065f",
+  "sessionId": "session_dfe10199-8daa-4e7b-9d26-e0d25cde707f",
+  "tabId": 1980926044,
+  "generation": "gen_2847f802-c1b8-4334-875e-64e3ad42cedb",
   "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
   "authSecretExported": false,
   "routes": [
@@ -14,50 +14,50 @@
       "title": "Lightchain AI",
       "readyState": "complete",
       "authMarker": "avatar",
-      "routeMarkers": ["AIフィッティング", "衣服の画像 (0/4)", "権限がありません", "生成履歴"],
+      "routeMarkers": ["AIフィッティング", "参考画像", "権限がありません", "生成履歴"],
       "semanticReadback": "verified",
       "visualReadback": "verified",
-      "rightsConfirmationUi": "not_visible"
+      "hydrationWait": "30 seconds completed before same-tab readback"
     },
     {
       "path": "/gallery",
       "title": "Lightchain AI",
       "readyState": "complete",
       "authMarker": "avatar",
-      "routeMarkers": ["ギャラリー", "10枚の画像", "すべて", "詳細を見る"],
+      "routeMarkers": ["ギャラリー", "10枚の画像", "詳細を見る"],
       "semanticReadback": "verified",
       "visualReadback": "verified",
-      "rightsConfirmationUi": "not_visible"
+      "hydrationWait": "30 seconds completed before same-tab readback"
     },
     {
       "path": "/history",
       "title": "Lightchain AI",
       "readyState": "complete",
       "authMarker": "avatar",
-      "routeMarkers": ["生成履歴", "続きから再開", "失敗を確認", "保存済みを見る", "TIMELINE"],
+      "routeMarkers": ["生成履歴", "続きから再開", "失敗を確認", "保存済みを見る", "TIMELINE 11"],
       "semanticReadback": "verified",
       "visualReadback": "verified",
-      "rightsConfirmationUi": "not_visible"
+      "hydrationWait": "30 seconds completed before same-tab readback"
     },
     {
       "path": "/jobs",
       "title": "Lightchain AI",
       "readyState": "complete",
       "authMarker": "avatar",
-      "routeMarkers": ["制作キュー", "再開できる作業", "止まった作業", "完了した成果物", "QUEUE SUMMARY"],
+      "routeMarkers": ["制作キュー", "再開できる作業", "止まった作業 1件", "完了した成果物 8件"],
       "semanticReadback": "verified",
       "visualReadback": "verified",
-      "rightsConfirmationUi": "not_visible"
+      "hydrationWait": "30 seconds completed before same-tab readback"
     },
     {
       "path": "/canvas/new",
       "title": "Lightchain AI",
       "readyState": "complete",
-      "authMarker": "canvas-save",
-      "routeMarkers": ["CANVAS", "ブランド: Nisen", "キャンバス", "権限がありません", "保存", "Galleryから追加"],
+      "authMarker": "avatar",
+      "routeMarkers": ["CANVAS", "ブランド: Nisen", "画像を置いて、機能を選ぶ", "保存", "権限がありません"],
       "semanticReadback": "verified",
       "visualReadback": "verified",
-      "rightsConfirmationUi": "not_visible"
+      "hydrationWait": "30 seconds completed before same-tab readback"
     }
   ],
   "businessCompletion": {
@@ -68,15 +68,13 @@
   },
   "blockers": [
     "provider_receipt_and_source_sync_not_proven",
-    "current_cloudflare_release_readback_contract_not_proven"
+    "generation_save_reuse_reconciliation_not_proven"
   ],
   "cleanup": {
-    "sessionClosed": true,
-    "ownerCleanupOk": true,
-    "closedTabs": [1980925928],
     "foreignTabsMutated": false,
-    "externalActionExecuted": false,
-    "leasesReleased": 1,
-    "unknownEffectTabs": []
+    "taskTabRetained": false,
+    "leaseReleasedAfterReadback": true,
+    "sessionClosed": true,
+    "closedTabIds": [1980926044, 1980926045, 1980926046, 1980926047, 1980926048]
   }
 }

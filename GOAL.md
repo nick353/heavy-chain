@@ -6637,3 +6637,27 @@ reached `readyState=complete` with `Lightchain AI`, the observed launcher
 controls, canonical card/gallery fixtures, and no rights UI. Visual and
 semantic readback passed; terminal cleanup closed the task-owned tab and
 released its lease with no external action.
+
+# Goal progress — 2026-09-21 r94
+
+Using one fresh AOS Chrome Companion session, Heavy `/model`, `/gallery`,
+`/history`, `/jobs`, and `/canvas/new` were each opened, stabilized for 30
+seconds, and read back on the same task-owned tabs. All five reached
+`readyState=complete` with semantic and visual readback verified. Current
+markers include AI fitting controls and `生成履歴`, 10 Gallery images, an 11
+item History timeline, 8 completed Jobs, and the Canvas save surface. The
+Canvas and model surfaces show the fail-closed `権限がありません` state, with
+no Light-missing rights checkbox/modal/badge. The session closed cleanly:
+five tabs closed, five leases released, no foreign tab mutation, and
+`external_action_executed=false`.
+
+The fresh evidence is recorded at
+`work/heavy-chain-companion-authenticated-evidence-20260921.json` and its
+validator returns `ok=true`; provider receipt, source sync, and
+generation/save/reuse reconciliation remain explicitly `unverified`.
+The refreshed strict gate now consumes this evidence successfully. Its
+remaining failures are the production monitor/UI pair, launch operations,
+current mass-market and 33-feature production previews, G608, stale G618,
+dependent G633, production H602, generation scorecard, and the G633 command;
+the extra `blocker:git_dirty` is only the not-yet-committed evidence file and
+will be removed by the next clean commit. No secret or token was extracted.
