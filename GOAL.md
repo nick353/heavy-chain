@@ -1,3 +1,34 @@
+# Light reference/model-set input parity and final Companion production readback — 2026-09-21 r86
+
+Fresh authenticated Companion readback compared Light `/model` and the
+deployed Heavy `/model` after the fitting input implementation was completed.
+Heavy now mirrors the Light tabs `説明生成` / `参考画像` / `モデルのセット写真`,
+the Light clothing helper text, the reference-slot card geometry, the three
+Light demo image URLs, and the model-set category/grid adapter. The Heavy-only
+rights checkbox, modal, and explanatory badge remain absent from the clone
+surface. The final production readback confirmed the authenticated Light-shaped
+workbench, source-matching tab positions, reference slots at x=16/width=399
+with 160px cards at y=449/625/801, and the deployed library controls. The
+library hit areas are now 108px wide and 34px high; Light's current semantic
+button rect is 17px high, so this small hit-area difference remains recorded
+as a visual/accessibility residual rather than being claimed byte-identical.
+
+Commits `084a652`, `3551b7f`, `b419dca`, and `342a1b5` are pushed to
+`origin/main`. Local typecheck, lint, build, route parity `25/25`, permission
+parity `8/8`, direct-route `3/3`, and `git diff --check` passed. The exact
+Zeabur local-source deployment `6ab02438342483d22ad8ae4a` reached `RUNNING`,
+and public `/_health` returned `{"status":"ok","hosting":"zeabur"...}`.
+No provider generation, save, payment, publish, credential, token, or
+rights-bypass action was performed.
+
+The full Goal remains active. The strict release gate still has the same ten
+external/evidence failures: production monitor/UI pair, launch operations,
+current mass-market QA, production Lightchain all-feature order previews,
+G608, G618, G633, production H602 billing completion, generation scorecard,
+and the dependent G633 command. Provider receipt/result/save/reuse,
+source-sync/reconciliation, operations/billing, and release acceptance remain
+separate lanes.
+
 # Light fitting prompt-action parity and authenticated production readback — 2026-09-21 r85
 
 Fresh authenticated DOM readback of Lightchain `/model` fixed the remaining
