@@ -1,3 +1,27 @@
+# Authenticated Light Chain launcher readback and cleanup — 2026-09-21 r75
+
+The canonical AOS Chrome Companion transaction path succeeded on one
+task-owned normal tab for `https://heavy-chain-web.nichika2000823.workers.dev/lightchain`
+using the existing logged-in profile. Fresh semantic and visual readback
+showed the Light Chain launcher (`Lightchain AI`), avatar control, category
+tabs, workspace cards, and user-specific Gallery/AI fitting/video/history
+items after hydration. This is current authenticated UI-state evidence; it is
+not a provider receipt or a claim that generation, save, reuse, or
+reconciliation completed.
+
+The transaction was explicitly read-only: `externalActionExecuted=false`,
+`effect_state=known_no_effect`, and no provider, generation, save, billing, or
+publish request was dispatched. The exact task-owned tab was then closed by
+the terminal cleanup receipt with `closed=[1980925925]`, no retained or
+unknown-effect tabs, released lease, and `foreign_tabs_mutated=false`.
+
+This confirms the user is logged in for the current Light Chain production
+surface, but the remaining production boundary is unchanged: securely
+provisioned `HEAVY_CHAIN_MONITOR_TOKEN`, same-run provider receipt, durable
+save/reuse and Gallery/Canvas/History/Jobs readback, source-sync and
+reconciliation evidence, current Cloudflare release-readback proof, and
+strict release acceptance. No secret was guessed, extracted, or mutated.
+
 # Zeabur and Cloudflare secret-boundary refresh — 2026-09-21 r74
 
 Fresh official CLI readback resolves the personal Zeabur workspace and the
