@@ -6594,3 +6594,35 @@ performed. The Goal remains active because provider receipt/result/save/reuse,
 source-sync/reconciliation, current production operations and scorecard,
 G608/G618/G633/H602, and strict release acceptance still require their own
 fresh evidence.
+
+# Goal progress — 2026-09-21 r92
+
+The public launcher was brought closer to the current Lightchain production
+surface. The root now serves the Lightchain initial document title, uses a
+50px launcher header with language/help/avatar controls, and uses the current
+Lightchain launcher and gallery image fixtures observed through AOS Chrome
+Companion. No Light-missing rights-confirmation checkbox, modal, or badge was
+added. Changes are `e562205` and `33669a7`, pushed to `origin/main`.
+
+Cloudflare Web deployment and readback completed successfully. The deployed
+versions were `39349d0e-fa0c-4e21-a4be-710df7cb5478`,
+`f3b58a37-40e7-4c91-b06f-182e927a3634`, and the final launcher deployment
+`a7b177b6-3ed9-4343-9df1-d14bb3847537`. Build, dry-run, Web tests `8/8`,
+typecheck, UI boundary `14/14`, route parity `25/25`, permission parity `8/8`,
+and diff-check passed.
+
+A fresh Companion session waited 30 seconds, then read both
+`https://heavy-chain-web.nichika2000823.workers.dev/` and
+`https://jp.linkaigc.com/`. Both reached `readyState=complete`, root URL and
+title `Lightchain AI`, and matching launcher/gallery semantics; Heavy had no
+rights checkbox/modal/badge. Semantic and visual readback agreed, and
+task-owned tabs/leases were cleaned with `external_action_executed=false`.
+
+The strict release gate remains `ok=false` with the same ten blockers:
+production monitor/UI pair, launch operations, current mass-market QA,
+current 33-feature production previews, G608, stale G618, dependent G633,
+production H602, generation scorecard, and the G633 command. The public
+launcher is improved and deployed, but provider generation/result/save/reuse,
+source sync/reconciliation, billing/operations evidence, and the real
+consumer-auth monitor token are still not proven. No secret was extracted,
+guessed, or substituted.
