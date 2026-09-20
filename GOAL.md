@@ -1,3 +1,29 @@
+# Companion UI proof connected to release doctor — 2026-09-21 r79
+
+Commit `ffa7e49` connects the current sanitized Companion authenticated UI
+evidence to `release:doctor` through the new `RELEASE_COMPANION_EVIDENCE`
+proof surface. Browser Use, retired Chrome Plugin, and Companion remain an
+exactly-one choice; the Companion verifier stays view-only and explicitly
+keeps provider receipt, source sync, reconciliation, monitor, billing, and
+publish completion separate.
+
+The focused contract suite passed `5/5`, Companion evidence verification passed,
+typecheck and lint passed, and `test:release-gate-lightchain` passed `9/9`.
+With public values sourced only from `.env.example` for the read-only doctor,
+the doctor now passes release blockers, git clean, proof target, and env-check,
+then stops at `cloudflare_release_readback_contract_missing` as intended.
+
+Fresh unified gate readback remains `ok=false` with ten concrete failures:
+production monitor/UI pair, launch operations, current mass-market QA,
+production Lightchain 33-feature order previews, G608 strict artifact,
+G618 scale baseline, G633 scale/alerting, production H602 completion,
+generation scorecard, and the dependent G633 command. No artifact was
+fabricated and no provider, billing, publish, or destructive action was run.
+
+The currently open Printify browser tab was also read back after the requested
+30-second wait and still showed the login form; the Google auth tab had no
+readable completion state. No password, OTP, CAPTCHA, or token was entered.
+
 # Zeabur latest-main deployment and public runtime readback — 2026-09-21 r78
 
 After pushing `main` through commit `c765de5`, the exact Zeabur
