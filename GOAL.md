@@ -1,3 +1,19 @@
+# Source push and fresh token-permission audit — 2026-09-20 r48
+
+The reviewed tracked parity slice was committed as `0952aa5` and pushed to
+`origin/main`. The public Zeabur service still serves the pre-change bundle
+`assets/index.D3l-ZRq8.js` after the initial wait, so GitHub push is not yet a
+production deployment receipt; the deployment trigger/readback remains open.
+The authenticated Cloudflare Heavy session was confirmed after a real
+30-second wait and its session cookie was handled without printing the value.
+An official `zeabur variable create` attempt was made once for the target
+`heavy-chain` environment, followed by fresh value-free readback. The readback
+still returns server-side `FORBIDDEN permission denied`; no successful token
+assignment is claimed and no chat/agent secret workaround was used. The Goal
+remains active. Re-entry requires Zeabur variable/deploy permission, then
+variable readback, deploy receipt, authenticated production provider/result/save
+readback, reconciliation, and the strict release gate.
+
 # Fresh release-gate audit — 2026-09-20 r47
 
 The fresh unified gate remains non-accepting for the production monitor/UI

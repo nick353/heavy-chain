@@ -1,3 +1,16 @@
+# Source push and fresh token-permission audit — 2026-09-20 r48
+
+Commit `0952aa5` was pushed to `origin/main` with the reviewed tracked
+Lightchain parity slice. The Zeabur public service still returns the prior
+`assets/index.D3l-ZRq8.js` bundle after the initial wait, so the push is not
+treated as a deployment receipt. The authenticated Cloudflare Heavy session
+was confirmed after a real 30-second wait. A single official CLI variable
+creation attempt used the session credential without printing it; fresh
+value-free readback still returns `FORBIDDEN permission denied`. The token was
+not claimed to be installed, and no secret was sent to an Agent chat. The
+Goal remains active pending Zeabur variable/deploy permission and the remaining
+production/provider/reconciliation/release evidence.
+
 # Fresh release-gate audit — 2026-09-20 r47
 
 The current unified gate is still `ok:false` on production readbacks,
