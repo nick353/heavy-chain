@@ -46,6 +46,11 @@ test('new fitting entrypoints use canonical /model while retaining the legacy re
   assert.match(mapping, /'flat-to-model': '\/model'/);
   assert.match(parityCatalog, /id: 'flat-to-model',[\s\S]*?route: '\/model'/);
   assert.match(workbench, /const selectedToolActionHref = isFittingDetail \? '\/model#fitting-material-workbench'/);
+  assert.match(workbench, /data-track-id="desc:reference-image"/);
+  assert.match(workbench, /title="プロンプトテンプレート"/);
+  assert.match(workbench, /data-testid="lightchain-fitting-reference-image-modal"/);
+  assert.match(workbench, /data-testid="lightchain-fitting-prompt-template-modal"/);
+  assert.match(workbench, /LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL/);
   assert.match(library, /destination === 'fitting'[\s\S]*?`\/model\?libraryArtifactId=/);
   assert.match(app, /path="\/fitting"/);
 });
