@@ -32,6 +32,23 @@ production H602 billing completion readback, generation scorecard, and the
 dependent G633 command. These require fresh operator/provider/billing evidence
 and were not replaced with local or UI-only proof.
 
+# Current release-evidence revalidation — 2026-09-21 r91
+
+The read-only G620 static security-operations verifier passed all five local
+Cloudflare checks, but this is not the separate G608 production-readback
+artifact required by the release gate. G618 did not start because the explicit
+Cloudflare API origin, brand ID, live monitor session, and valid baseline limits
+are absent; no secret was requested or inferred. G633 still fails only because
+the current mass-market baseline artifact is missing. The goal-readiness static
+verifier passes its five source/runtime checks while explicitly limiting its
+claim to non-authenticated production proof.
+
+A fresh Companion auth recheck could not provision a task tab: the extension
+returned `Tabs can only be moved to and from normal windows` before the page
+query, with `dispatch_count=0`, `external_action_executed=false`, and complete
+cleanup. The same idempotency was not replayed. This is a Companion/Chrome
+window precondition, not evidence of an application or provider result.
+
 # Light source readback corrected fitting-tab verifier and full 31-feature gate — 2026-09-21 r89
 
 Fresh authenticated AOS Chrome Companion readback of deployed Heavy `/model`
