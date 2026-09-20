@@ -1,5 +1,14 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Companion route readback — 2026-09-20 r51
+
+Fresh task-owned Companion read-only coverage reached 10/10 Cloudflare Web
+routes with failed=0 and cleanup complete. Temporary protected-route tabs
+remained in the workspace-preparation shell, so this proves route reachability
+and cleanup only; it does not prove stable authenticated business state,
+provider generation, private-media persistence, reconciliation, or release
+acceptance. No auth cookie, token, or storage state was exported.
+
 ## Latest readback — 2026-09-20 r50
 
 Fresh Web `/_health` and Heavy API `/v1/health` readbacks returned HTTP 200.

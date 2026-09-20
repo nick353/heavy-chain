@@ -1,3 +1,12 @@
+# Companion route readback and authentication boundary — 2026-09-20 r51
+
+Fresh task-owned AOS Chrome Companion read-only coverage reached 10/10
+Cloudflare Web routes with failed=0 and cleanup complete. Protected routes
+remained in the workspace-preparation shell in temporary tabs, so this is
+route reachability/cleanup evidence only. No auth cookie, token, or storage
+state was exported. Evidence:
+`work/heavy-chain-companion-route-readback-20260920-r51.md`.
+
 # Cloudflare readback and Zeabur boundary — 2026-09-20 r50
 
 Fresh Cloudflare Web `/_health` and Heavy API `/v1/health` readbacks returned
