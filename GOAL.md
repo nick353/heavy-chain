@@ -1,3 +1,20 @@
+# Cloudflare readback and Zeabur boundary — 2026-09-20 r50
+
+Fresh Cloudflare readback keeps Web version `603551a8-c9b6-4df8-92b9-d299ed33463f`
+live. Web `/_health` and Heavy API `/v1/health` both returned HTTP 200. The
+authenticated video detail flow accepted a Heavy-owned `fitting-v1.png` input,
+then kept `動画生成（provider未接続）` disabled with the explicit provider
+admission message; no provider request was submitted. Unauthenticated API
+readbacks returned the expected 401/400 fail-closed responses. The official
+Zeabur CLI resolves the personal workspace and target service, but the prior
+environment-variable mutation/readback and deploy path remain server-side
+`FORBIDDEN permission denied`; no token is claimed installed. Evidence:
+`work/heavy-chain-cloudflare-readback-20260920-r50.md`.
+
+The Goal remains active. Authenticated provider receipt/persistence/reuse,
+source sync/reconciliation, current production operations artifacts, and the
+strict release gate remain open.
+
 # Cloudflare Web parity deployment and authenticated readback — 2026-09-20 r49
 
 The current tracked Heavy parity build was deployed to the existing Cloudflare

@@ -1,5 +1,15 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest readback — 2026-09-20 r50
+
+Fresh Web `/_health` and Heavy API `/v1/health` readbacks returned HTTP 200.
+The authenticated video detail flow accepted the Heavy-owned `fitting-v1.png`
+input while keeping `動画生成（provider未接続）` disabled; no provider request
+was submitted. The API's unauthenticated readbacks remained fail-closed with
+401/400 responses. This does not prove provider generation, private-media
+business completion, reconciliation, or release acceptance. Zeabur's
+environment-variable/deploy permission boundary remains separately open.
+
 ## Latest Web release — 2026-09-20 r49
 
 Version `603551a8-c9b6-4df8-92b9-d299ed33463f` is deployed at 100% to
