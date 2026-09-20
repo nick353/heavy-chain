@@ -3871,9 +3871,9 @@ export function GeneratePage() {
           <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-2 xl:grid-cols-3">
             {[
               { title: 'マーケティングワークスペース', to: '/marketing', desc: '販促画像とコピーを作る' },
-              { title: 'AIフィッティング', to: '/fitting', desc: '衣服画像から着用画像へ進む' },
+              { title: 'AIフィッティング', to: '/model', desc: '衣服画像から着用画像へ進む' },
               { title: 'ファッションスタジオ', to: '/studio', desc: 'モデル、背景、小物を組む' },
-              { title: 'モデル企画ライブラリ', to: '/generate?feature=model-matrix', desc: 'モデル条件を渡す' },
+              { title: 'モデル企画ライブラリ', to: '/model-library/model-custom-form', desc: 'モデル条件を渡す' },
               { title: '柄・グラフィック', to: '/patterns/workbench', desc: '新規や事例から開く' },
               { title: '動画ワークステーション', to: '/flow/GenerateShortVideo', desc: 'プロジェクトから始める' },
             ].map((item) => (

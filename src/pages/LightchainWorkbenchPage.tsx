@@ -480,7 +480,11 @@ const tools: CompatTool[] = [
     description: '顔、モデル変更、体型、服サイズ、ポーズ、背景、アングル、カスタムモデルをまとめるモデル操作群。',
     inputs: ['モデル条件', '年齢', '国籍', '肌色', '体型'],
     outputs: ['モデル候補', 'model-matrix条件'],
-    heavyChainHref: '/generate?feature=model-matrix',
+    // Keep the launcher on the canonical Light Chain model-library route.
+    // The route owns the staged model-planning flow; the generic Generate
+    // query is only an internal provider adapter and is not a user-facing
+    // Light entrypoint.
+    heavyChainHref: '/model-library/model-custom-form',
     runLabel: 'モデルを設計',
     promptTemplate: 'ターゲット顧客に合うモデル条件を設計し、EC着用画像に使える候補を作ってください。',
   },
