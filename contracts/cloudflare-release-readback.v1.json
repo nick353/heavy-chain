@@ -1,0 +1,120 @@
+{
+  "schema": "heavy-chain.cloudflare-release-readback-contract.v1",
+  "mode": "local_only",
+  "releaseApproval": false,
+  "businessCompletion": "not_verified",
+  "releaseContext": {
+    "runId": "cloudflare-release-readback-local",
+    "commit": "0000000000000000000000000000000000000000",
+    "environment": "local",
+    "apiOrigin": "https://fixture.invalid",
+    "ownerId": "owner",
+    "brandId": "brand",
+    "observation": {
+      "since": "2026-09-08T00:00:00.000Z",
+      "until": "2026-09-08T00:00:00.000Z"
+    },
+    "jobs": [
+      {
+        "id": "job",
+        "requestId": "request",
+        "candidateCount": 1,
+        "protectedEdit": false
+      }
+    ]
+  },
+  "requiredEvidence": [
+    {
+      "id": "workspace_readback",
+      "schema": "heavy-chain.workspace-readback.v2",
+      "validator": "verifyWorkspaceEvidence",
+      "status": "required",
+      "inputPath": "output/release-prep/cloudflare-workspace-readback.json",
+      "expectationsPath": "output/release-prep/cloudflare-workspace-expectations.json",
+      "scope": {
+        "apiOrigin": "https://fixture.invalid",
+        "ownerId": "owner",
+        "brandId": "brand",
+        "observation": "releaseContext.observation",
+        "jobs": "releaseContext.jobs"
+      },
+      "freshness": "15_minutes"
+    },
+    {
+      "id": "provider_receipt_readback",
+      "schema": "heavy-chain.cloudflare-provider-receipt.v1",
+      "validator": "unsupported",
+      "status": "not_verified",
+      "inputPath": null,
+      "scope": {
+        "status": "not_verified",
+        "reason": "No provider receipt validator is admitted by this local contract."
+      },
+      "freshness": "15_minutes"
+    },
+    {
+      "id": "authenticated_production_readback",
+      "schema": "heavy-chain.cloudflare-authenticated-production-readback.v1",
+      "validator": "unsupported",
+      "status": "not_verified",
+      "inputPath": null,
+      "scope": {
+        "status": "not_verified",
+        "reason": "No authenticated production validator is admitted by this local contract."
+      },
+      "freshness": "15_minutes"
+    }
+  ],
+  "supportingEvidence": [
+    {
+      "id": "g618_local",
+      "schema": "heavy-chain.g618.scale-ops-baseline.v2",
+      "validator": "verifyG618LocalEvidence",
+      "status": "supporting",
+      "inputPath": "output/release-prep/cloudflare-g618-local.json",
+      "scope": {
+        "apiOrigin": "https://fixture.invalid",
+        "brandId": "brand",
+        "windowHours": 96,
+        "maxFailureRate": 0,
+        "minStorageImages": 1
+      },
+      "freshness": "15_minutes"
+    },
+    {
+      "id": "h602_local",
+      "schema": "heavy-chain.h602.cloudflare-billing-readiness.v1",
+      "validator": "verifyH602LocalEvidence",
+      "status": "supporting",
+      "inputPath": "output/release-prep/cloudflare-h602-local.json",
+      "scope": {
+        "apiOrigin": "https://fixture.invalid",
+        "brandId": "brand",
+        "status": "verified_local"
+      },
+      "freshness": "15_minutes"
+    }
+  ],
+  "artifactRefs": [
+    {
+      "evidenceId": "workspace_readback",
+      "path": "output/release-prep/cloudflare-workspace-readback.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "evidenceId": "workspace_readback.expectations",
+      "path": "output/release-prep/cloudflare-workspace-expectations.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "evidenceId": "g618_local",
+      "path": "output/release-prep/cloudflare-g618-local.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "evidenceId": "h602_local",
+      "path": "output/release-prep/cloudflare-h602-local.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

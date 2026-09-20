@@ -1,0 +1,5 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heavy Canvas保存・実リロード検証</title>
+<style>body{margin:0;background:#111820;color:#fff}.probe{position:relative;z-index:30;padding:10px;font:13px system-ui;background:#173444}.probe button{border:1px solid white;padding:6px;margin:4px;border-radius:5px}#probe-result{white-space:pre-wrap}</style>
+<div class="probe"><strong>実CanvasEditorPage・保存応答喪失とページ再読み込み（ローカルfixture）</strong><p>復旧2回 → 保存 → 実リロード → 復旧1回 → 保存 → 実リロード → 保存 → 検証結果を記録。保存中の注記2個と元画像・4候補を保持します。</p><div id="probe-result" role="status">準備中</div><button id="reload" type="button">ページを実リロード</button><button id="record" type="button">検証結果を記録</button></div>
+<div id="root"></div><script type="module" src="/scripts/browser/canvas-save-reload-probe.tsx"></script></html>

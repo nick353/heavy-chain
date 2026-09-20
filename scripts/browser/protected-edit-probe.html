@@ -1,0 +1,8 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heavy 範囲編集・ブラウザ検証</title>
+<style>body{font:16px system-ui;background:#111820;color:#f4f8fa;margin:28px}button{padding:12px 20px;background:#155e75;color:white;border:1px solid #67e8f9;border-radius:8px;cursor:pointer}button:disabled{opacity:.5}#pictures{display:flex;gap:18px;flex-wrap:wrap;margin:20px 0}figure{margin:0}img{width:230px;image-rendering:pixelated;background:repeating-conic-gradient(#bbb 0% 25%,#eee 0% 50%) 50% / 20px 20px}pre{white-space:pre-wrap;font-size:13px}.pass{color:#86efac}.fail{color:#fda4af}</style>
+<h1>Heavy 範囲編集・ブラウザ検証</h1>
+<p>ローカル合成画像のみ。実際のCanvas・PNG変換・IndexedDB・再読み込みを使います。API/AIは障害注入用fixtureで、本番品質の証明ではありません。</p>
+<button id="run">ブラウザ検証を開始</button> <button id="reload" hidden>再読み込みして復旧を検証</button>
+<div id="pictures"></div><pre id="result" role="status">開始待ち</pre>
+<script type="module" src="/scripts/browser/protected-edit-probe.ts"></script></html>

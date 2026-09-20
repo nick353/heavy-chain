@@ -41,6 +41,16 @@ output/
 test-results/
 artifacts/
 
+# Codex-generated local evidence and tool caches. Canonical release evidence is
+# committed under tracked docs/work files; transient runs remain local and are
+# never sent to production builds.
+work/
+heavy-chain/work/
+verification/
+recordings/
+.wrangler/
+**/.wrangler/
+
 # Heavy generated proof media
 *.mp4
 *.mov

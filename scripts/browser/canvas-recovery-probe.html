@@ -1,0 +1,5 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heavy Canvas復旧 UI検証</title>
+<style>body{margin:0;background:#111820;color:#fff}.probe{position:relative;z-index:30;padding:12px;font:14px system-ui;background:#173444}.probe button{border:1px solid white;padding:8px;margin:6px;border-radius:5px}#probe-result{white-space:pre-wrap}</style>
+<div class="probe"><strong>実CanvasEditorPage・復旧UIの検証（ローカルfixture）</strong><p>認証・画像配信・保存APIはfixtureです。2候補から復旧を2回 → 保存を3回 → 検証結果を記録。1回目は読戻し失敗、2回目は保存中の追加編集、3回目で確定します。</p><div id="probe-result" role="status">準備中</div><button id="record" type="button">検証結果を記録</button></div>
+<div id="root"></div><script type="module" src="/scripts/browser/canvas-recovery-probe.tsx"></script></html>
