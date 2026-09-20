@@ -4745,6 +4745,7 @@ export function LightchainWorkbenchPage() {
                               data-track-target={slot.trackTarget}
                               onClick={() => setFittingReferenceLibrarySlot(slot.key)}
                               className="!h-auto !min-h-0 w-[108px] px-0 py-0 text-sm font-semibold leading-[17px] text-cyan-200 underline underline-offset-2 transition hover:text-cyan-100"
+                              style={{ height: 17, minHeight: 17, lineHeight: '17px', padding: 0 }}
                             >
                               参考画像ライブラリ
                             </button>
