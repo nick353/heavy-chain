@@ -1,3 +1,31 @@
+# Light fitting prompt-action parity and authenticated production readback — 2026-09-21 r85
+
+Fresh authenticated DOM readback of Lightchain `/model` fixed the remaining
+code-level fitting input gap: the description area now has the reference-image
+action, prompt-template action, clear action, and the current example image.
+Heavy preserves the Light layout and does not render a rights-confirmation
+checkbox, modal, or badge. The reference-image modal accepts jpg/png/webp
+files up to 20MB, but its `画像から単語への変換` action remains disabled while
+provider admission is unavailable; no provider request or credential action was
+performed.
+
+Commit `e0c380d` passed the focused direct-route contract test, typecheck,
+build, lint, and `git diff --check`. The exact Zeabur service
+`heavy-chain` accepted local-source Docker deployment
+`6ab00e2a342483d22ad8a7e5` and reached `RUNNING`. Public `/_health` returned
+HTTP 200. After a real 30-second authenticated-session wait, the production
+Heavy `/model` screen showed the new controls; opening the reference-image
+modal showed the disabled conversion button, and selecting `EC商品写真`
+populated the prompt and closed the template modal. This is UI/runtime parity
+evidence only, not provider generation, save, reconciliation, billing, or
+strict release completion.
+
+The full Goal remains active. The strict release gate still has the same ten
+external/evidence failures: production monitor/UI pair, launch operations,
+current mass-market QA, production Lightchain all-feature order previews,
+G608, G618, G633, production H602 billing completion, generation scorecard,
+and the dependent G633 command.
+
 # Strict release-gate recheck after canonical launcher deployment — 2026-09-21 r83
 
 Fresh `npm run verify:release-gate --silent` on clean `main` remains
