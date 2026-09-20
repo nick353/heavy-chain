@@ -1,3 +1,22 @@
+# Zeabur latest-main deployment and public runtime readback — 2026-09-21 r78
+
+After pushing `main` through commit `c765de5`, the exact Zeabur
+`heavy-chain` service created deployment `6aaffa28342483d22ad8a0a0` from that
+commit. Fresh deployment readback advanced it from `BUILDING` to `DEPLOYING`
+to `RUNNING`; the prior deployment remained healthy during the transition.
+
+Fresh public readback then returned HTTP 200 for `/_health` with
+`status=ok`, `hosting=zeabur`, and Cloudflare API/Auth enabled, and HTTP 200
+for `/lightchain`. The served HTML referenced the expected Vite bundle, whose
+fresh SHA-256 was
+`39e727e37a13002c82f9f0b999e58d5df3351b97c3693866bdacb2498bc1aed6`.
+
+This closes the latest-main Zeabur transport/runtime deployment readback only.
+It does not prove provider receipt, durable save/reuse, source sync,
+reconciliation, monitor/UI pair, current Browser Use proof, or strict release
+acceptance. No secret, provider request, billing, payment, publish, or
+destructive action was performed.
+
 # Unified release-gate result after current UI evidence — 2026-09-21 r77
 
 The current unified release-gate run completed against commit `62096d6`. The
