@@ -4689,6 +4689,19 @@ export function LightchainWorkbenchPage() {
                   <p className="text-sm text-neutral-400">ロット試着の任務はまだありません,先に左側から配置してください</p>
                   <p className="text-xs text-neutral-500">最大8つのタスクの追加をサポートします。</p>
                 </div>
+                <div className="flex shrink-0 items-center justify-end gap-2 border-t border-white/10 px-4 py-3 pr-15">
+                  <button
+                    type="button"
+                    disabled
+                    data-testid="lightchain-fitting-batch-permission"
+                    data-track-id="GENERATE_CLICK"
+                    aria-label="権限がありません"
+                    className="inline-flex h-10 w-full max-w-60 flex-1 items-center justify-center gap-2 rounded-lg bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 opacity-40 transition-colors disabled:cursor-not-allowed"
+                  >
+                    権限がありません
+                    <Sparkles className="size-4" aria-hidden="true" />
+                  </button>
+                </div>
               </section>
             ) : <div className="text-center">
               <h2 className="text-xl font-semibold text-[#6ee7df]">AIフィッティング</h2>
