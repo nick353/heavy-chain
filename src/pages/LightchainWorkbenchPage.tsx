@@ -4508,8 +4508,8 @@ export function LightchainWorkbenchPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-4 p-4 pb-32">
-              <div>
+            <div className="flex flex-1 flex-col overflow-hidden px-4 py-2">
+              <div className="flex flex-col gap-2 shrink-0">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p
@@ -4541,7 +4541,7 @@ export function LightchainWorkbenchPage() {
                     </span>
                   </button>
                 </div>
-                <label className="mt-4 grid min-h-[200px] cursor-pointer grid-cols-[1fr_140px] overflow-hidden rounded-2xl border border-white/5 bg-[#202527] p-2 transition hover:border-cyan-300/40">
+                <label className="grid h-[200px] shrink-0 cursor-pointer grid-cols-[1fr_140px] overflow-hidden rounded-2xl border border-white/5 bg-[#202527] p-2 transition hover:border-cyan-300/40">
                   <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
                   <div className="flex flex-col items-center justify-center px-5 text-center">
                     <ImagePlus className="h-6 w-6 text-neutral-300" />
@@ -4549,11 +4549,7 @@ export function LightchainWorkbenchPage() {
                       複数のコーディネートのアップロードに対応
                     </p>
                     <p className="mt-2 text-xs leading-5 text-neutral-400">
-                      {activeFittingInputTab === '説明生成'
-                        ? 'ここをクリック/ドラッグしてアイテムを追加します。'
-                        : activeFittingInputTab === '参考画像'
-                          ? '衣服と一緒に使う参考画像の条件を指定します。'
-                          : 'モデルのセット写真に合わせた条件を指定します。'}
+                      ここをクリック/ドラッグしてアイテムを追加します。
                     </p>
                     <span className="mt-3 rounded-full bg-cyan-400 px-3 py-1 text-xs font-bold text-neutral-950">必須項目</span>
                   </div>
@@ -4650,7 +4646,7 @@ export function LightchainWorkbenchPage() {
                   )}
                 </section>
               )}
-              <div className="!mt-[19px] flex h-auto w-full items-center justify-start gap-2 border-b border-white/10" role="tablist">
+              <div className="!mt-[33px] flex h-auto w-full items-center justify-start gap-2 border-b border-white/10" role="tablist">
                 {['説明生成', '参考画像', 'モデルのセット写真'].map((tab) => (
                   <button
                     key={tab}
@@ -4665,7 +4661,7 @@ export function LightchainWorkbenchPage() {
                 ))}
               </div>
               {activeFittingInputTab === '説明生成' && (
-                <div className="mx-[17px] !mt-[28px] flex min-h-[220px] w-[calc(100%-34px)] flex-col rounded-2xl border border-white/5 bg-[#181d1f] px-4 pt-4 pb-2 focus-within:border-cyan-300/60">
+                <div className="mx-0 !mt-2 flex min-h-[220px] w-full flex-col rounded-2xl border border-white/5 bg-[#181d1f] px-4 pt-4 pb-2 focus-within:border-cyan-300/60">
                   <textarea
                     value={referenceNote}
                     onChange={(event) => setReferenceNote(event.target.value)}
@@ -4718,7 +4714,7 @@ export function LightchainWorkbenchPage() {
                 </div>
               )}
               {activeFittingInputTab === '参考画像' && (
-                <div className="mx-[17px] !mt-[28px] grid gap-5" data-testid="lightchain-fitting-reference-input">
+                <div className="mx-0 !mt-2 grid gap-4 overflow-y-auto py-1" data-testid="lightchain-fitting-reference-input">
                   {FITTING_REFERENCE_SLOT_CONFIG.map((slot) => {
                     const selectedFile = fittingReferenceSlots[slot.key];
                     return (
@@ -4727,7 +4723,7 @@ export function LightchainWorkbenchPage() {
                           <span>{slot.label}</span>
                           {slot.required && <span className="rounded border border-white/10 bg-cyan-500 px-2 py-0.5 text-[11px] font-semibold text-neutral-950">必須項目</span>}
                         </div>
-                        <div className="flex min-h-[150px] gap-2 rounded-2xl border border-white/5 bg-[#181d1f] p-3">
+                        <div className="flex h-40 min-h-0 gap-2 rounded-2xl border border-dashed border-white/15 bg-[#181d1f] p-2">
                           <label className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-[#20272a] px-3 text-center transition hover:border-cyan-300/70">
                             <input
                               type="file"
@@ -4767,7 +4763,7 @@ export function LightchainWorkbenchPage() {
                 </div>
               )}
               {activeFittingInputTab === 'モデルのセット写真' && (
-                <div className="mx-[17px] !mt-[28px] grid gap-4" data-testid="lightchain-fitting-model-set-input">
+                <div className="mx-0 !mt-2 grid gap-4 overflow-y-auto py-1" data-testid="lightchain-fitting-model-set-input">
                   <div className="flex items-center gap-2 overflow-x-auto border-b border-white/10 pb-2">
                     {([
                       ['all', 'すべて表示'],
