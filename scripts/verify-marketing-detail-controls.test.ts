@@ -26,7 +26,8 @@ test('marketing-detail navigation, project naming, asset/layer controls, and can
   assert.match(source, /setWorkspaceTutorialStep/);
   assert.match(source, /setWorkspaceTutorialDismissed/);
   assert.match(source, /searchParams\.get\('category'\)/);
-  assert.match(source, /to=\{isModelToolDetail \? `\/lightchain\/\$\{id\}` : `\/lightchain\?category=\$\{id\}`\}/);
+  assert.match(source, /lightchainSourceToolbarItems/);
+  assert.match(source, /to=\{item\.to\}/);
 
   assert.match(source, /testId: 'lightchain-marketing-layers-nav'/);
   assert.match(source, /testId: 'lightchain-marketing-assets-nav'/);
@@ -35,7 +36,11 @@ test('marketing-detail navigation, project naming, asset/layer controls, and can
   assert.match(source, /data-testid="lightchain-marketing-canvas"/);
   assert.match(source, /data-active-tool=\{marketingCanvasTool\}/);
   assert.match(source, /data-testid=\{`lightchain-marketing-canvas-tool-\$\{tool\}`\}/);
-  assert.match(source, /setMarketingCanvasTool\(tool\)/);
+  assert.match(source, /commitMarketingCanvasState\(\{ tool, zoom: marketingCanvasZoom \}\)/);
+  assert.match(source, /handleMarketingCanvasUndo/);
+  assert.match(source, /handleMarketingCanvasRedo/);
+  assert.match(source, /marketingCanvasHistory\.length === 0/);
+  assert.match(source, /marketingCanvasFuture\.length === 0/);
   assert.match(source, /data-testid="lightchain-marketing-zoom-value"/);
   assert.match(source, /setMarketingCanvasZoom/);
   assert.match(source, /data-testid=\{`lightchain-marketing-layer-\$\{layer\.id\}`\}/);

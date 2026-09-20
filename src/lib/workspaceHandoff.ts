@@ -134,9 +134,9 @@ const featureAccent: Record<WorkspaceHandoffFeatureType, string> = {
 
 export const workspaceSourceConfig: Record<WorkspaceSource, { label: string; resumePath: string }> = {
   studio: { label: 'Fashion Studio', resumePath: '/studio' },
-  models: { label: 'モデルライブラリ', resumePath: '/models' },
+  models: { label: 'モデルライブラリ', resumePath: '/model-library' },
   patterns: { label: '柄・グラフィック', resumePath: '/patterns/workbench' },
-  video: { label: 'Video Workstation', resumePath: '/video' },
+  video: { label: 'Video Workstation', resumePath: '/flow/GenerateShortVideo/detail' },
   lab: { label: 'Lab', resumePath: '/lab' },
   marketing: { label: 'マーケティングワークスペース', resumePath: '/marketing' },
   fitting: { label: 'AIフィッティング', resumePath: '/fitting' },

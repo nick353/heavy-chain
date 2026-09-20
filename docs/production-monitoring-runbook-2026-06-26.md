@@ -2,6 +2,11 @@
 
 Updated: 2026-06-26
 
+> Historical Supabase/Zeabur runbook. The active production monitor is the
+> Cloudflare authenticated GET-only v2 contract documented in
+> `cloudflare/heavy-api/MONITORING.md`; do not use the legacy defaults below
+> for current release evidence.
+
 ## Daily Command
 
 Run this from the Heavy Chain root:

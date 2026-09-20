@@ -76,19 +76,26 @@ test('a non-displayable remote row does not shadow a displayable local fallback'
 test('signed URL rotation does not create a duplicate Gallery item', () => {
   const remote = image({
     id: 'remote-image-2',
-    storage_path: 'brand-1/job-2/result.png',
-    image_url: 'https://project.supabase.co/storage/v1/object/sign/generated-images/brand-1/job-2/result.png?token=fresh',
+    storage_path: 'generated-images/remote-image-2',
+    image_url: 'https://heavy-chain-api.test/v1/media/read?token=cloudflare-fresh',
   });
   const local = image({
     id: 'local-artifact-2',
     storage_path: 'local/local-artifact-2',
     image_url: '',
     metadata: {
-      remoteStoragePath: 'https://project.supabase.co/storage/v1/object/sign/generated-images/brand-1/job-2/result.png?token=old',
+      remoteStoragePath: 'generated-images/remote-image-2',
     },
   });
 
-  assert.ok(getGeneratedImageIdentityKeys(local).some((key) => key === 'storage:brand-1/job-2/result.png'));
+  assert.ok(getGeneratedImageIdentityKeys(local).some((key) => key === 'storage:generated-images/remote-image-2'));
+  assert.equal(mergeGeneratedImagesByCanonicalIdentity([remote], [local]).length, 1);
+});
+
+test('Cloudflare keys merge a remote row with the corresponding local artifact', () => {
+  const remote = image({ id: 'wa-image-1', storage_path: 'generated-images/wa-image-1' });
+  const local = image({ id: 'local-artifact', storage_path: 'local/artifact', metadata: { remoteStoragePath: 'generated-images/wa-image-1' } });
+  assert.equal(getGeneratedImageSelectionKey(remote), 'storage:generated-images/wa-image-1');
   assert.equal(mergeGeneratedImagesByCanonicalIdentity([remote], [local]).length, 1);
 });
 

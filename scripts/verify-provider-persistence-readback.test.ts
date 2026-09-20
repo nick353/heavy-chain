@@ -102,10 +102,10 @@ test('direct provider result history promotion requires a durable artifact readb
 });
 
 test('provider persistence reuses an owned canonical storage path and fails closed when remote persistence is required', async () => {
-  const [artifacts, persistence, edge, workbench, material] = await Promise.all([
+  const [artifacts, persistence, client, workbench, material] = await Promise.all([
     readFile(new URL('../src/lib/localWorkspaceArtifacts.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/lib/providerResultPersistence.ts', import.meta.url), 'utf8'),
-    readFile(new URL('../supabase/functions/marketing-workspace-artifact/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/cloudflareApi.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8'),
   ]);
@@ -119,20 +119,19 @@ test('provider persistence reuses an owned canonical storage path and fails clos
   assert.match(persistence, /reuseCanonicalRemoteArtifact\?: boolean/);
   assert.match(persistence, /providerStoragePath/);
   assert.match(artifacts, /reuseCanonicalRemoteArtifact === false/);
-  assert.match(edge, /normalizeGeneratedImageStoragePath/);
-  assert.match(edge, /Source storage path is outside the current brand scope/);
-  assert.match(edge, /existingImage/);
-  assert.match(edge, /storagePath:\s*canonicalSourceStoragePath/);
-  assert.match(edge, /storage_path:\s*storagePath/);
-  assert.match(edge, /\.eq\('id', generatedImageId\)/);
-  assert.match(edge, /if \(storageUploaded && storagePath\)/);
-  assert.doesNotMatch(edge, /if \(storageUploaded && storagePath\)\s*\{[\s\S]*\.from\('generation_jobs'\)/);
+  assert.match(client, /saveWorkspaceArtifact/);
+  assert.match(client, /\/v1\/workspace-artifacts/);
+  assert.match(client, /sourceStoragePath/);
+  assert.match(client, /storage_path/);
+  assert.match(client, /brand_id/);
+  assert.match(client, /revision/);
   assert.equal((workbench.match(/requireRemote: true/g) ?? []).length, 2);
   assert.match(material, /requireRemote: true/);
-  assert.match(material, /reuseCanonicalRemoteArtifact: false/);
+  assert.match(material, /reuseCanonicalRemoteArtifact: Boolean\(cloudflareDataPlane && providerResult\.protectedRegionComposited\)/);
+  assert.match(material, /providerResult\.protectedRegionComposited === true\s*\? \{ dataUrl:providerResult\.imageUrl \}/);
   assert.match(material, /jobId: persistedProviderArtifact\.remote\?\.jobId/);
   assert.match(material, /storagePath: persistedProviderArtifact\.remote\?\.storagePath/);
-  assert.match(material, /const canvasArtifactImageUrl = result\.storagePath \? '' : result\.imageUrl/);
+  assert.match(material, /const canvasArtifactImageUrl = result\.storagePath \? '' : canvasSource/);
   assert.match(material, /imageUrl: canvasArtifactImageUrl/);
   assert.match(material, /remoteStoragePath: result\.storagePath \?\? null/);
   assert.match(workbench, /jobId: persistedResult\.remote\?\.jobId/);
@@ -153,18 +152,27 @@ test('derived protected composites keep provider provenance separate from Galler
   assert.match(persistence, /storagePath: reuseCanonicalRemoteArtifact \? providerStoragePath : null/);
 });
 
-test('model-matrix provider provenance survives the Edge response, Fitting history, and Canvas reuse', async () => {
-  const [imageApi, edge, fitting, workbench] = await Promise.all([
+test('model-matrix provider provenance survives the Cloudflare response, Fitting history, and Canvas reuse', async () => {
+  const [imageApi, client, fitting, workbench, imageAi] = await Promise.all([
     readFile(new URL('../src/lib/imageApi.ts', import.meta.url), 'utf8'),
-    readFile(new URL('../supabase/functions/model-matrix/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/cloudflareApi.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../cloudflare/heavy-api/src/image-ai.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(imageApi, /providerTaskId/);
-  assert.match(edge, /providerTaskId: generatedImage\.taskId/);
+  assert.match(client, /listGenerationJobs/);
+  assert.match(client, /listGeneratedImages/);
+  assert.match(imageAi, /providerModel/);
   assert.match(fitting, /providerModel: item\.modelUsed \?\? null/);
   assert.match(fitting, /providerTaskId: item\.providerTaskId \?\? null/);
   assert.match(fitting, /providerModels: matrix\.map\(\(item\) => item\.modelUsed \?\? null\)/);
+  assert.match(fitting, /resultKind: 'fitting'/);
+  assert.match(fitting, /generationMode: 'provider'/);
+  assert.match(fitting, /providerResultArtifact: true/);
+  assert.match(fitting, /persistenceStatus: item\.persistenceStatus \?\? response\.persistenceStatus \?\? null/);
+  assert.match(fitting, /resultKind: item\.resultKind \?\? 'fitting'/);
+  assert.match(fitting, /generationMode: item\.generationMode \?\? 'provider'/);
   assert.match(workbench, /providerModel = modelResult\.matrix\[0\]\.modelUsed/);
   assert.match(workbench, /providerTaskId: lightchainResult\.providerTaskId \?\? null/);
 });
@@ -181,10 +189,21 @@ test('material provider parity runtime survives result, remote artifact, History
   assert.match(material, /sourceStoragePath: fabricBase\?\.storagePath \?\? null/);
   assert.match(material, /inputLineage: result\.inputLineage \?\? \[\]/);
   assert.match(material, /const parityRuntimeJson = result\.parityRuntime \?\?/);
-  const canvasPromotion = material.lastIndexOf("feature: 'lightchain-material-provider'");
+  const canvasPromotion = material.lastIndexOf('feature: isLocalMaterialPreview');
   assert.ok(canvasPromotion >= 0);
   assert.match(material.slice(canvasPromotion, canvasPromotion + 1800), /parityRuntime: parityRuntimeJson/);
   assert.match(history, /parityRuntime\?: PersistedParityRuntime/);
+});
+
+test('Canvas persistence accepts the same material input lineage on client and Cloudflare API', async () => {
+  const [clientPersistence, cloudflareClient] = await Promise.all([
+    readFile(new URL('../src/lib/canvasDocumentPersistence.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/cloudflareApi.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(clientPersistence, /'galleryImageUrl', 'inputLineage', 'parityRuntime'/);
+  assert.match(cloudflareClient, /createCanvasDocument/);
+  assert.match(cloudflareClient, /updateCanvasDocument/);
+  assert.match(cloudflareClient, /snapshot/);
 });
 
 test('fabric provider artifacts restore the same result contract into History and can be cleared durably', async () => {
@@ -245,7 +264,7 @@ test('GeneratePage direct provider results preserve the provider receipt into ar
 test('fitting model-matrix promotion requires local artifact readback before result or history promotion', async () => {
   const fitting = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
   assert.match(fitting, /saveWorkspaceArtifactPersisted/);
-  assert.match(fitting, /deleteWorkspaceArtifactsPersisted\(currentBrand\.id, attemptedArtifactIds, user\?\.id\)/);
+  assert.match(fitting, /deleteWorkspaceArtifactsPersisted\(generationBrandId, attemptedArtifactIds, user\?\.id\)/);
   assert.match(fitting, /if \(!persisted\.ok\)/);
 
   const persistenceGate = fitting.indexOf('if (!persisted.ok)');

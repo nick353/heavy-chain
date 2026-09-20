@@ -8,7 +8,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { OFFICIAL_CLOTH_MODEL } from './verify-rembg-cloth-model-compatibility.mjs';
 
-const DEFAULT_BROWSER_ORIGIN = 'https://heavy-chain.zeabur.app';
+const DEFAULT_BROWSER_ORIGIN = 'https://heavy-chain-web.nichika2000823.workers.dev';
 const ALLOWED_CONTENT_TYPES = new Set([
   'application/octet-stream',
   'application/onnx',

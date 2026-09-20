@@ -11,7 +11,7 @@ import {
 } from './rembg-cloth-model-build-contract.mjs';
 
 const DEFAULT_PROOF_PATH = 'output/rembg-cloth-model-external-host-build.json';
-const DEFAULT_BROWSER_ORIGIN = 'https://heavy-chain.zeabur.app';
+const DEFAULT_BROWSER_ORIGIN = 'https://heavy-chain-web.nichika2000823.workers.dev';
 const STALE_SAME_ORIGIN_MODEL_PATH = 'public/models/u2net_cloth_seg.onnx';
 const MAX_REDIRECTS = 3;
 

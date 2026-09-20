@@ -45,7 +45,8 @@ test('GeneratePage stages generated images and commits them only after artifact 
   assert.ok(commitStart > persistenceStart);
   assert.doesNotMatch(source.slice(replaceStart, prependStart), /setGeneratedImages/);
   assert.match(source.slice(commitStart, commitStart + 700), /setGeneratedImages/);
-  assert.match(source, /saveLocalArtifactsWithReadback\(geminiResults\.map/);
+  assert.match(source, /const providerResults: GeneratedResult\[\] = \[\];/);
+  assert.match(source, /saveLocalArtifactsWithReadback\(providerResults\.map/);
   assert.match(source, /saveLocalArtifactsWithReadback\(newGeneratedImages\.map/);
   assert.match(source, /saveLocalArtifactsWithReadback\(newGeneratedImages\.map/);
   assert.match(source, /commitGeneratedImagesAfterReadback\(\);/);

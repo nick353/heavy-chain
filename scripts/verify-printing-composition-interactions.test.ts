@@ -66,18 +66,18 @@ test('confirmed single Gallery selection resolves only one live image with a usa
   assert.equal(
     getGallerySelectionStoragePath({
       id: 'signed-path',
-      storage_path: 'https://project.supabase.co/storage/v1/object/sign/generated-images/brand/job/result.png?token=fresh',
-      image_url: 'https://signed.example/display.png',
+      storage_path: 'generated-images/print-result-1',
+      image_url: 'https://heavy-chain-api.test/v1/media/read?token=cloudflare-fresh-1',
     }),
-    'brand/job/result.png',
+    'generated-images/print-result-1',
   );
   assert.equal(
     getGallerySelectionStoragePath({
       id: 'signed-image',
-      storage_path: 'https://cdn.example/legacy-direct-url.png',
-      image_url: 'https://project.supabase.co/storage/v1/object/sign/generated-images/brand/job/result-2.png?token=fresh',
+      storage_path: 'generated-images/print-result-2',
+      image_url: 'https://heavy-chain-api.test/v1/media/read?token=cloudflare-fresh-2',
     }),
-    'brand/job/result-2.png',
+    'generated-images/print-result-2',
   );
   assert.equal(getGalleryPendingImageUrl(images[1]), 'data:image/png;base64,AAAA');
   assert.equal(resolveGalleryPendingSelection(images, ' first ')?.image.id, 'first');
@@ -153,8 +153,8 @@ test('Gallery folder membership filters only the selected direct folder', () => 
 });
 
 test('Gallery folder UI is brand-scoped, read-only, pending-safe, and request-revision guarded', () => {
-  assert.match(gallerySelector, /\.from\('folders'\)\s*\.select\('\*'\)\s*\.eq\('brand_id', currentBrand\.id\)/);
-  assert.match(gallerySelector, /\.from\('image_folders'\)\s*\.select\('image_id,folder_id'\)\s*\.in\('folder_id', folderIds\)/);
+  assert.match(gallerySelector, /cloudflareDataPlane\.listFolders\(currentBrand\.id\)/);
+  assert.match(gallerySelector, /cloudflareDataPlane\.listImageFolderMemberships\(currentBrand\.id\)/);
   assert.match(gallerySelector, /data-testid="gallery-folder-breadcrumb"/);
   assert.match(gallerySelector, /data-testid="gallery-folder-grid"/);
   assert.match(gallerySelector, /const handleFolderChange = \(folderId: string \| null\) => \{\s*if \(getGalleryFolderPath\(folderNavigation, folderId\) == null\) return;\s*setSelectedImages\(new Set\(\)\);/);
@@ -358,7 +358,11 @@ test('desktop printing keeps the primary composition and generate action pinned 
   assert.doesNotMatch(page, /画像のプリント領域を調整/);
   assert.match(page, /data-testid=\{`print-coverage-\$\{coverage\.value\}`\}/);
   assert.match(page, /data-testid="print-result-run-history"/);
-  assert.doesNotMatch(page, /この機能はまもなく終了します/);
+  const printingStart = page.indexOf('data-testid="lightchain-print-parity-view"');
+  const fabricStart = page.indexOf('data-testid="lightchain-fabric-parity-view"');
+  assert.ok(printingStart >= 0 && fabricStart > printingStart, 'printing and fabric branches must remain ordered');
+  assert.doesNotMatch(page.slice(printingStart, fabricStart), /この機能はまもなく終了します/);
+  assert.match(page.slice(fabricStart), /この機能はまもなく終了します/);
   assert.match(layout, /overflow-x-clip/);
   assert.doesNotMatch(layout, /overflow-x-hidden/);
   const results = page.indexOf('data-testid="print-result-run-history"');
@@ -852,7 +856,7 @@ test('Gallery favorite mutation is limited to printing results and closes filter
   assert.match(galleryPage, /if \(image\.feature_type !== 'printing-result'\)/);
   assert.match(galleryPage, /このローカル成果物は、現在の保存形式ではお気に入りを変更できません/);
   assert.match(galleryPage, /if \(filter === 'favorites' && !newValue\) \{\s*selectImage\(null\);\s*\} else \{\s*setSelectedImage\(updatedImage\);/);
-  assert.match(galleryPage, /const selectImage = useCallback\(\(image: GeneratedImage \| null\) => \{[\s\S]*?setSearchParams\(image \? \{ image: getGeneratedImageSelectionKey\(image\) \} : \{\}\);/);
+  assert.match(galleryPage, /const selectImage = useCallback\(\(image: GalleryImage \| null\) => \{[\s\S]*?setSearchParams\(image \? \{ image: getGeneratedImageSelectionKey\(image\) \} : \{\}\);/);
 });
 
 test('design mask editor commits by stable layer identity instead of a stale array index', () => {

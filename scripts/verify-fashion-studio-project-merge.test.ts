@@ -9,6 +9,13 @@ test('saved project cards reopen the Light-compatible Fashion Studio detail rout
   );
 });
 
+test('local handoff cards reopen through their durable Canvas ID', () => {
+  assert.equal(
+    buildFashionStudioProjectHref({ id: 'local-1', canvasProjectId: 'canvas-1' }),
+    '/flow/integration/detail?boardProjectCode=canvas-1&boardProjectType=integrationCustom',
+  );
+});
+
 test('remote Canvas project wins over its local handoff duplicate', () => {
   const cards = mergeFashionStudioProjectCards(
     [{ id: 'canvas-1', title: '保存済み', updatedAt: '2026-09-17T01:00:00Z', imageUrl: '' }],

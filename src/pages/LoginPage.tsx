@@ -65,7 +65,7 @@ export function LoginPage() {
     try {
       await signInWithEmail(email, password);
       toast.success('ログインしました');
-      navigate('/lightchain', { replace: true });
+      navigate('/designProduction', { replace: true });
     } catch (error: any) {
       const message = getAuthErrorMessage(error, 'ログインに失敗しました');
       setAuthError(message);

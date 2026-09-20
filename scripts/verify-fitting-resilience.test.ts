@@ -37,16 +37,22 @@ test('Fitting shows the retained-result status only while generating with an old
 
 test('Fitting promotes result and history only after the all-item persistence loop', () => {
   const persistenceLoopIndex = generationSource.indexOf('for (const [index, item] of matrix.entries())');
+  const persistenceLoopCloseIndex = generationSource.indexOf(
+    '\n    }\n\n    try {',
+    persistenceLoopIndex,
+  );
+  const authBrandFenceIndex = generationSource.indexOf(
+    "assertCurrentAuthBrandFence(authBrandFence, 'before_ui_commit');",
+    persistenceLoopCloseIndex,
+  );
   const resultPromotionIndex = generationSource.indexOf('setResultMatrix(matrix)', persistenceLoopIndex);
   const historyPromotionIndex = generationSource.indexOf('setHistory((items)', persistenceLoopIndex);
 
   assert.notEqual(persistenceLoopIndex, -1);
-  assert.ok(resultPromotionIndex > persistenceLoopIndex);
+  assert.ok(persistenceLoopCloseIndex > persistenceLoopIndex);
+  assert.ok(authBrandFenceIndex > persistenceLoopCloseIndex);
+  assert.ok(resultPromotionIndex > authBrandFenceIndex);
   assert.ok(historyPromotionIndex > resultPromotionIndex);
-  assert.match(
-    generationSource,
-    /artifactIds\.push\(persisted\.artifact\.id\);\n\s{4}\}\n\n\s{4}setResultMatrix\(matrix\);/,
-  );
   assert.match(generationSource, /saveWorkspaceArtifactPersisted\(/);
 });
 

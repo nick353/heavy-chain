@@ -22,10 +22,9 @@ import { getErrorMessage } from '../lib/errorMessages';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
-  GENERATION_LEGAL_COPY,
-  UPLOAD_RIGHTS_CONFIRMATION_LABEL,
   validateLegalSafetyInput,
 } from '../lib/legalSafetyGuard';
+import { getLightchainSourceGenerationAccess } from '../features/lightchain/sourceFeatureAccess';
 import {
   deleteWorkspaceArtifactsPersisted,
   getWorkspaceArtifactCanonicalStoragePath,
@@ -526,7 +525,7 @@ const buildGenerationBlockers = ({
   ) {
     blockers.push('高精度AI切り抜き');
   }
-  if (!rightsConfirmed) blockers.push('権利確認');
+  if (!rightsConfirmed) blockers.push('権限がありません');
   if (!productDescription.trim()) blockers.push('生成brief');
   if (!selectedBodyTypesCount) blockers.push('体型');
   if (!selectedAgeGroupsCount) blockers.push('年代');
@@ -640,7 +639,11 @@ export function FittingPage() {
   const fittingDraftRestoredRef = useRef(false);
   const fittingDraftPersistenceErrorRef = useRef(false);
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
-  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  // Light Chain's current /model readback exposes the input surface but denies
+  // generation permission without rendering an upload-rights checkbox. Keep
+  // the API safety field fail-closed until a fresh source permission readback
+  // admits this feature.
+  const rightsConfirmed = getLightchainSourceGenerationAccess('model-matrix') === 'permitted';
   const [showGallerySelector, setShowGallerySelector] = useState(false);
   const [showModelGallerySelector, setShowModelGallerySelector] = useState(false);
   const resumeJob = searchParams.get('resumeJob');
@@ -827,7 +830,7 @@ export function FittingPage() {
       setErrorMessage('');
       setResumeInputReadback('restored');
       setFittingDraftPersistenceStatus('restored');
-      setFittingDraftPersistenceMessage('Library素材を読み込みました。切り抜きと権利確認を完了して次へ進めます。');
+      setFittingDraftPersistenceMessage('Library素材を読み込みました。入力条件を確認して次へ進めます。');
     };
 
     void restoreLibraryArtifact();
@@ -1160,7 +1163,7 @@ export function FittingPage() {
       return;
     }
     if (!rightsConfirmed) {
-      setErrorMessage('保存前に、素材を利用する権利確認へ同意してください。');
+      setErrorMessage('権限がありません。');
       return;
     }
 
@@ -1370,7 +1373,7 @@ export function FittingPage() {
 
     if (!rightsConfirmed) {
       setIsGenerating(false);
-      setErrorMessage('素材と生成指示の権利確認にチェックしてください。');
+      setErrorMessage('権限がありません。');
       return;
     }
     const legalSafetyAssessment = validateLegalSafetyInput([
@@ -1870,7 +1873,7 @@ export function FittingPage() {
             <WorkspaceReadinessStrip
               eyebrow="共通フロー / AIフィッティング"
               title="素材を選び、条件を整えて着用結果へ"
-              description="Galleryまたはアップロードから衣服とモデル参照を選び、権利確認後に生成します。生成後は履歴からGallery・Canvasへ戻れます。"
+              description="Galleryまたはアップロードから衣服とモデル参照を選び、条件を整えて生成します。生成後は履歴からGallery・Canvasへ戻れます。"
               steps={[
                 {
                   label: '衣服・モデル素材',
@@ -1878,8 +1881,8 @@ export function FittingPage() {
                   ready: Boolean(garmentImageUrl),
                 },
                 {
-                  label: '条件・権利確認',
-                  detail: rightsConfirmed ? '商品説明と権利確認が完了' : '商品説明を確認し、権利確認に同意',
+                  label: '条件',
+                  detail: rightsConfirmed ? '商品説明と生成条件が完了' : '商品説明と生成条件を確認',
                   ready: Boolean(productDescription.trim()) && rightsConfirmed,
                 },
                 {
@@ -1893,7 +1896,7 @@ export function FittingPage() {
                   ready: history.length > 0,
                 },
               ]}
-              nextAction={isGenerating ? '生成中' : resultMatrix.length > 0 ? '結果を確認して保存' : garmentImageUrl ? '条件と権利確認を完了' : 'まず衣服素材を選択'}
+              nextAction={isGenerating ? '生成中' : resultMatrix.length > 0 ? '結果を確認して保存' : garmentImageUrl ? '生成条件を確認' : 'まず衣服素材を選択'}
             />
           </div>
 
@@ -1992,7 +1995,7 @@ export function FittingPage() {
               {[
                 ['1', '衣服画像', '服の写真を入れる'],
                 ['2', '高精度AI切り抜き', '背景を抜いて品質確認'],
-                ['3', '生成確認', '権利確認後にAI生成'],
+                ['3', '生成確認', '入力条件を確認してAI生成'],
               ].map(([step, title, description]) => (
                 <div
                   key={step}
@@ -2027,7 +2030,7 @@ export function FittingPage() {
             <div className="rounded-2xl border border-white/60 bg-white/50 p-4 dark:border-white/10 dark:bg-surface-900/40">
               <h2 className="text-base font-semibold text-neutral-950 dark:text-white">生成する</h2>
               <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                服の画像を入れて切り抜いたら、権利確認にチェックして生成します。
+                服の画像を入れて切り抜いたら、生成条件を確認します。
               </p>
               <div className="mt-4 rounded-xl bg-white/75 p-3 dark:bg-surface-950/60">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">現在の設定</p>
@@ -2236,22 +2239,14 @@ export function FittingPage() {
                       </button>
                     ))}
                   </div>
-                  <label className="flex max-w-xl items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100">
-                    <input
-                      type="checkbox"
-                      checked={rightsConfirmed}
-                      onChange={(event) => setRightsConfirmed(event.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                      disabled={isGenerating}
-                    />
-                    <span>
-                      <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
-                      <details className="mt-1">
-                        <summary className="cursor-pointer font-semibold">注意事項</summary>
-                        <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
-                      </details>
-                    </span>
-                  </label>
+                  {!rightsConfirmed && (
+                    <div
+                      role="status"
+                      className="flex max-w-xl items-center rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100"
+                    >
+                      権限がありません
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={handleGenerate}

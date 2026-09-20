@@ -2,37 +2,50 @@
 
 import fs from 'node:fs';
 
-const generationFunctions = [
-  'generate-image', 'remove-background', 'upscale', 'colorize',
-  'generate-variations', 'design-gacha', 'product-shots',
-  'model-matrix', 'multilingual-banner',
+const sourceRoots = ['src', 'cloudflare/heavy-api/src', 'cloudflare/heavy-web/src'];
+const required = [
+  'src/lib/cloudflareApi.ts',
+  'src/lib/cloudflareBrowserAuth.ts',
+  'src/lib/mediaGateway.ts',
+  'cloudflare/heavy-api/src/index.ts',
 ];
-const failures = [];
-const read = (file) => fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
-
-for (const name of generationFunctions) {
-  const text = read(`supabase/functions/${name}/index.ts`);
-  if (!text) failures.push(`${name}: missing function`);
-  if (!text.includes('requireBrandRole')) failures.push(`${name}: missing brand-role guard`);
-  if (!text.includes('reserveBrandUsage')) failures.push(`${name}: missing usage reservation`);
-  if (!text.includes('completeBrandUsage')) failures.push(`${name}: missing usage completion`);
-  if (!text.includes('recordEdgeFunctionRun')) failures.push(`${name}: missing edge-run audit`);
-  if (/runway|runway_mcp|local-runway/i.test(text)) failures.push(`${name}: retired provider reference remains`);
-}
-
-const shared = read('supabase/functions/_shared/imageProvider.ts');
-if (!shared.includes('generateOpenAiImage') || !shared.includes('editOpenAiImage')) failures.push('OpenAI provider adapter is incomplete');
-for (const file of ['src/pages/GeneratePage.tsx', 'src/pages/AdminDashboard.tsx', 'src/lib/errorMessages.ts', 'src/lib/imageApi.ts']) {
-  if (/runway|runway_mcp|local-runway/i.test(read(file))) failures.push(`${file}: retired provider reference remains`);
-}
-
+const forbidden = [
+  /@supabase\//i,
+  /\.supabase\.co/i,
+  /\/auth\/v1\//i,
+  /\/rest\/v1\//i,
+  /\/functions\/v1\//i,
+  /SUPABASE_(?:URL|ANON_KEY|SERVICE_ROLE_KEY)/i,
+];
+const walk = (root) => {
+  if (!fs.existsSync(root)) return [];
+  return fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const file = `${root}/${entry.name}`;
+    if (entry.isDirectory()) return walk(file);
+    return /\.(?:ts|tsx|js|jsx|mjs)$/.test(entry.name) ? [file] : [];
+  });
+};
+const files = sourceRoots.flatMap(walk);
+const legacy = files.flatMap((file) => {
+  const text = fs.readFileSync(file, 'utf8');
+  return forbidden.filter((pattern) => pattern.test(text)).map((pattern) => `${file}:${pattern}`);
+});
+const checks = [
+  ['cloudflare_entrypoints_exist', required.every((file) => fs.existsSync(file))],
+  ['legacy_runtime_markers_absent', legacy.length === 0],
+  ['private_media_route_present', files.some((file) => fs.readFileSync(file, 'utf8').includes('/v1/media'))],
+  ['provider_action_route_present', files.some((file) => fs.readFileSync(file, 'utf8').includes('provider-actions'))],
+  ['runtime_auth_boundary_present', files.some((file) => fs.readFileSync(file, 'utf8').includes('consumer-auth'))],
+];
 const report = {
-  schema: 'heavy-chain.g620.security-operations.v2',
+  schema: 'heavy-chain.g620.security-ops.v3',
   capturedAt: new Date().toISOString(),
-  mode: 'read-only-static-no-submit-no-payment-no-deploy',
+  mode: 'read-only-static-cloudflare-no-submit-no-payment-no-deploy',
   irreversibleActions: { generationSubmit: 'not_clicked', purchasePaymentCheckout: 'not_touched', deploy: 'not_run' },
-  ok: failures.length === 0,
-  failures,
+  checks: checks.map(([id, passed]) => ({ id, passed })),
+  failures: legacy,
+  ok: checks.every(([, passed]) => passed),
+  proofLimits: ['This gate does not prove production traffic-zero, provider quality, or authenticated browser completion.'],
 };
 console.log(JSON.stringify(report, null, 2));
 process.exit(report.ok ? 0 : 1);

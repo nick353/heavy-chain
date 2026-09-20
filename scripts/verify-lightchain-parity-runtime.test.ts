@@ -123,12 +123,15 @@ test('keeps reverse feature mapping explicit and rejects cross-feature evidence'
 test('derives Heavy entry routes from the mapped product catalog', () => {
   assert.deepEqual(Object.keys(HEAVY_PRODUCT_ROUTE_BY_FEATURE_ID), [...PRODUCT_CATALOG_OBJECT_IDS]);
   assert.equal(resolveHeavyRouteForRow('marketing-home', '/invalid'), '/marketing');
-  assert.equal(resolveHeavyRouteForRow('line-generation', '/invalid'), '/tools/line-draft-to-tile');
-  assert.equal(resolveHeavyRouteForRow('pattern-vector', '/invalid'), '/tools/svg-convert');
+  assert.equal(resolveHeavyRouteForRow('line-generation', '/invalid'), '/tools/line');
+  assert.equal(resolveHeavyRouteForRow('pattern-vector', '/invalid'), '/tools/pattern-to-vector');
   assert.equal(resolveHeavyRouteForRow('custom-style', '/invalid'), '/model-base/style');
   assert.equal(resolveHeavyRouteForRow('model-library', '/invalid'), '/model-library/model-custom-form');
-  assert.equal(resolveHeavyRouteForRow('model-change', '/models'), '/models');
-  assert.equal(resolveHeavyRouteForRow('angle-change', '/studio'), '/studio');
+  assert.equal(resolveHeavyRouteForRow('model-change', '/model-library'), '/model-library/model-change-form');
+  assert.equal(resolveHeavyRouteForRow('angle-change', '/studio'), '/model-library/perspective-form');
+  assert.equal(resolveHeavyRouteForRow('marketing-detail', '/marketing'), '/marketing/detail');
+  assert.equal(resolveHeavyRouteForRow('wear-design-detail', '/lab'), '/flow/orientedDesign/detail');
+  assert.equal(resolveHeavyRouteForRow('print-design-detail', '/patterns/workbench'), '/editor/patternDesign/detail');
   assert.equal(resolveHeavyRouteForRow('unknown-row', '/safe-fallback'), '/safe-fallback');
 });
 

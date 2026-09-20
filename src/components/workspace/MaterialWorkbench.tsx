@@ -235,7 +235,7 @@ export function MaterialWorkbench({
         toast('確認用プレビューを作りました。生成には高精度AI切り抜きが必要です。', { id: 'ai-cloth-cutout', icon: '!' });
         return;
       }
-      toast.success('服だけを高精度AIで切り抜きました。権利確認後にAI生成できます。', { id: 'ai-cloth-cutout' });
+        toast.success('服だけを高精度AIで切り抜きました。入力条件を確認して次へ進めます。', { id: 'ai-cloth-cutout' });
     } catch (error) {
       const message = error instanceof Error ? error.message : '切り抜きに失敗しました';
       setCutoutError(message);
@@ -289,7 +289,7 @@ export function MaterialWorkbench({
                 value: state.nextStepReady
                   ? 'AI生成へ'
                   : state.extractedLayerReady
-                    ? '権利確認 / 次へ'
+                    ? '次へ'
                     : '切り抜き / 抽出',
               },
             ].map((item) => (
@@ -417,7 +417,7 @@ export function MaterialWorkbench({
             )}
             {state.extractedLayerReady && !isPreviewOnlyCutout(state.maskEngine) && (
               <p className="mt-2 rounded-xl border border-cyan-300/30 bg-[#050707] px-3 py-2 text-xs font-semibold leading-5 text-cyan-100">
-                高精度AI切り抜き済みです。権利確認後にAI生成できます。
+                高精度AI切り抜き済みです。入力条件を確認して次へ進めます。
               </p>
             )}
             {cutoutError && (

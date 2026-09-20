@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 
+const RETIREMENT_MESSAGE = 'G701 legacy fitting E2E is retired: use npm run qa:cloudflare-image -- --mode readback with a fresh Cloudflare auth state; no Supabase or Zeabur fallback is available.';
+console.error(RETIREMENT_MESSAGE);
+process.exit(1);
+
+/*
+ * HISTORICAL SOURCE — inert and retained for audit/rollback review only.
+ * It must not be executed or treated as current Cloudflare evidence.
+ */
+/*
+#!/usr/bin/env node
+
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import https from 'node:https';
@@ -678,3 +689,4 @@ function trimTrailingSlash(value) {
 function dateStamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');
 }
+*/

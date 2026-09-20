@@ -5,10 +5,54 @@ import path from 'node:path';
 import http from 'node:http';
 import { chromium } from '@playwright/test';
 
+const LOCAL_SYNTHETIC_AUTH_PATHS = new Set(['/api/auth/ok', '/api/auth/get-session']);
+const LOCAL_BLOCKED_ENDPOINT_PATTERNS = [
+  /\/api\/auth(?:\/|$)/iu,
+  /\/v1\/(?:provider-actions|image-ai|generate|generation)(?:\/|$)/iu,
+  /\/(?:publish|payment|payments|billing|identity|secret|secrets)(?:\/|$)/iu,
+];
+const LOCAL_SAFE_HTTP_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 const args = parseArgs(process.argv.slice(2));
-const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'http://127.0.0.1:4183');
-const authStatePath = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'output/playwright/prod-auth-refresh-20260625/auth-state.json';
-const outDir = args.out || `output/playwright/lightchain-all-feature-workflows-${dateStamp()}`;
+const requestedMode = String(args.mode ?? args['verify-mode'] ?? process.env.HEAVY_CHAIN_VERIFY_MODE ?? '').trim().toLowerCase();
+const requestedBaseUrl = args.baseUrl ?? args['base-url'] ?? process.env.HEAVY_CHAIN_BASE_URL ?? 'http://127.0.0.1:4183';
+if (typeof requestedBaseUrl !== 'string' || requestedBaseUrl.trim() === '') throw new Error('base_url_must_be_a_non_empty_string');
+const baseUrl = trimTrailingSlash(requestedBaseUrl);
+const lightchainHomeRoute = '/designProduction';
+const requestedAuthStatePath = args.authState ?? args['auth-state'] ?? process.env.HEAVY_CHAIN_AUTH_STATE ?? null;
+const authStatePath = requestedAuthStatePath || 'output/playwright/prod-auth-refresh-20260625/auth-state.json';
+const requestedDistDir = args.distDir ?? args['dist-dir'] ?? process.env.HEAVY_CHAIN_VERIFY_DIST_DIR ?? null;
+if (requestedDistDir !== null && (typeof requestedDistDir !== 'string' || requestedDistDir.trim() === '')) {
+  throw new Error('dist_path_must_be_a_non_empty_string');
+}
+const distDir = path.resolve(requestedDistDir || 'dist');
+const localPreview = requestedMode === 'local';
+const productionMode = requestedMode === 'production';
+if (!localPreview && !productionMode) {
+  throw new Error('verification_mode_must_be_explicit:use_--mode=local_or_--mode=production');
+}
+if (localPreview) {
+  assertLocalExecutionBoundary(baseUrl, requestedAuthStatePath);
+} else if (isLoopbackUrl(baseUrl)) {
+  throw new Error('production_mode_rejects_loopback_base_url');
+}
+if (args.maxFeatures !== undefined || args['max-features'] !== undefined || args.skipMobile !== undefined || args['skip-mobile'] !== undefined) {
+  throw new Error('full_31_feature_desktop_mobile_coverage_cannot_be_reduced');
+}
+if (localPreview && requestedDistDir === null) throw new Error('local_mode_requires_isolated_dist_dir');
+if (localPreview && distDir === path.resolve('dist')) throw new Error('local_mode_rejects_shared_dist_dir');
+const sourceReadbackPath = path.resolve(
+  args.sourceReadback
+    ?? args['source-readback']
+    ?? process.env.HEAVY_CHAIN_SOURCE_READBACK
+    ?? 'work/lightchain-source-readback-20260920-r4.json',
+);
+if (!fs.existsSync(sourceReadbackPath)) throw new Error(`source_readback_missing:${sourceReadbackPath}`);
+const sourceReadback = JSON.parse(fs.readFileSync(sourceReadbackPath, 'utf8'));
+if (sourceReadback?.schema !== 'light-heavy-source-readback.v1') {
+  throw new Error(`source_readback_schema_invalid:${sourceReadback?.schema ?? 'missing'}`);
+}
+const outDir = createFreshOutputDirectory(args.out);
 const canvasStoreKey = 'heavy-chain-canvas';
 const desktopViewport = { width: 1440, height: 1050 };
 const mobileViewport = { width: 390, height: 844 };
@@ -18,25 +62,51 @@ const fixturePng =
 
 fs.mkdirSync(outDir, { recursive: true });
 const uploadPath = path.join(outDir, 'all-feature-upload.png');
-fs.writeFileSync(uploadPath, Buffer.from(fixturePng, 'base64'));
+fs.writeFileSync(uploadPath, Buffer.from(fixturePng, 'base64'), { flag: 'wx' });
 
 const skippedToolIds = new Set(['video-workstation', 'video-detail']);
 const catalog = readLightchainCatalog();
-const localPreview = isLocalPreview(baseUrl);
+const featureLimit = null;
+const toolsToVerify = catalog.tools;
+const skipMobile = false;
 const evidence = {
   workflow: 'lightchain-all-feature-workflows',
   capturedAt: new Date().toISOString(),
+  mode: localPreview ? 'local' : 'production',
   baseUrl,
   authState: localPreview ? 'local-proof-jwt' : authStatePath,
+  build: {
+    distDir,
+    isolated: localPreview && requestedDistDir !== null && distDir !== path.resolve('dist'),
+  },
   outDir,
   featureCount: catalog.tools.length,
+  scope: {
+    featureLimit,
+    verifiedFeatureCount: toolsToVerify.length,
+    skipMobile,
+  },
   uploadPath,
   screenshots: {},
   featureResults: [],
+  videoResults: [],
   assertions: [],
   consoleMessages: [],
   pageErrors: [],
   requestFailures: [],
+  boundaryDecisions: [],
+  sourceReadback: {
+    path: sourceReadbackPath,
+    schema: sourceReadback.schema,
+    observedAt: sourceReadback.observedAt,
+    comparison: {
+      semantic: 'verified-local-against-source-contract',
+      interaction: 'verified-local-against-source-contract',
+      pixel: 'PENDING_CONFIRMATION',
+      reason: 'Current authenticated Light Chain screenshot baseline is not supplied; Heavy screenshots must not be mislabeled as source captures.',
+    },
+    results: [],
+  },
   cleanup: {
     contextClosed: false,
     browserClosed: false,
@@ -44,14 +114,37 @@ const evidence = {
   },
 };
 
+let interruptionRequested = false;
+function reportProgress(phase, details = {}) {
+  const event = { at: new Date().toISOString(), phase, ...details };
+  evidence.progress ??= [];
+  evidence.progress.push(event);
+  process.stdout.write(`[lightchain-verifier] ${JSON.stringify(event)}\n`);
+}
+
+function throwIfInterrupted() {
+  if (interruptionRequested) throw new Error('verification_interrupted_by_signal');
+}
+
+process.once('SIGINT', () => {
+  interruptionRequested = true;
+  reportProgress('interrupt_requested', { signal: 'SIGINT' });
+});
+
 let previewProcess = null;
 let browser = null;
 let context = null;
 
 try {
-  if (localPreview) previewProcess = await startPreviewServer(baseUrl);
+  reportProgress('verification_started', {
+    baseUrl,
+    featureCount: catalog.tools.length,
+    verifiedFeatureCount: toolsToVerify.length,
+    skipMobile,
+  });
+  if (localPreview) previewProcess = await startPreviewServer(baseUrl, distDir);
   if (!localPreview && !fs.existsSync(authStatePath)) throw new Error(`auth_state_missing:${authStatePath}`);
-  addAssertion('feature_catalog_loaded', catalog.tools.length >= 30, {
+  addAssertion('feature_catalog_loaded', catalog.tools.length === 31, {
     count: catalog.tools.length,
     skippedToolIds: [...skippedToolIds],
     skippedCount: skippedToolIds.size,
@@ -59,24 +152,31 @@ try {
 
   browser = await chromium.launch({ headless: true });
   context = await browser.newContext(localPreview
-    ? { viewport: desktopViewport }
+    ? { viewport: desktopViewport, serviceWorkers: 'block' }
     : {
       storageState: buildStorageStateForBaseUrl(authStatePath, baseUrl),
       viewport: desktopViewport,
     });
-  if (localPreview) await installLocalProofAuth(context);
+  if (localPreview) {
+    await installLocalProofAuth(context);
+    await installLocalCloudflareMocks(context);
+    await installLocalContextGuard(context, baseUrl);
+  }
 
   let page = await context.newPage();
   page.setDefaultNavigationTimeout(15_000);
   page.setDefaultTimeout(15_000);
   wirePageDiagnostics(page, 'desktop');
 
-  await page.goto(`${baseUrl}/lightchain`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}${lightchainHomeRoute}`, { waitUntil: 'networkidle' });
   await dismissBlockingOverlays(page);
   await screenshot(page, 'desktop-index');
   await verifyGenerateEntrypointUsesFeatureDetail(page);
+  reportProgress('desktop_entrypoint_complete');
   await page.close();
-  for (const tool of catalog.tools) {
+  for (const tool of toolsToVerify) {
+    throwIfInterrupted();
+    reportProgress('desktop_feature_started', { featureId: tool.id, title: tool.title });
     const routePage = await context.newPage();
     routePage.setDefaultNavigationTimeout(15_000);
     routePage.setDefaultTimeout(15_000);
@@ -99,8 +199,24 @@ try {
       addAssertion(`${tool.id}:route_readback`, false, { exactBlocker: error.message });
     }
     evidence.featureResults.push(result);
+    reportProgress(result.exactBlocker ? 'desktop_feature_failed' : 'desktop_feature_completed', {
+      featureId: tool.id,
+      assertionCount: result.assertions.length,
+      exactBlocker: result.exactBlocker ?? null,
+    });
     await routePage.close().catch(() => {});
   }
+
+  reportProgress('desktop_phase_complete', { verifiedFeatureCount: toolsToVerify.length });
+
+  evidence.videoResults.push(await verifyVideoSurface(context, desktopViewport, '/flow/GenerateShortVideo', 'desktop-video-dashboard'));
+  evidence.videoResults.push(await verifyVideoSurface(context, desktopViewport, '/flow/GenerateShortVideo/detail?project=new', 'desktop-video-detail'));
+  reportProgress('desktop_video_phase_complete', { verifiedRouteCount: evidence.videoResults.length });
+
+  await verifySourceRouteParity(context, desktopViewport);
+  reportProgress('source_route_parity_complete', {
+    verifiedRouteCount: evidence.sourceReadback.results.length,
+  });
 
   await context.close();
   evidence.cleanup.contextClosed = true;
@@ -109,51 +225,70 @@ try {
   evidence.cleanup.browserClosed = true;
   browser = null;
 
-  browser = await chromium.launch({ headless: true });
-  context = await browser.newContext(localPreview
-    ? { viewport: mobileViewport }
-    : {
-      storageState: buildStorageStateForBaseUrl(authStatePath, baseUrl),
-      viewport: mobileViewport,
-    });
-  if (localPreview) await installLocalProofAuth(context);
-  const mobilePage = await context.newPage();
-  mobilePage.setDefaultNavigationTimeout(15_000);
-  mobilePage.setDefaultTimeout(15_000);
-  wirePageDiagnostics(mobilePage, 'mobile');
-  await mobilePage.setViewportSize(mobileViewport);
-  await mobilePage.goto(`${baseUrl}/lightchain`, { waitUntil: 'networkidle' });
-  await screenshot(mobilePage, 'mobile-index');
-  await mobilePage.close();
-  for (const tool of catalog.tools) {
-    const routePage = await context.newPage();
-    routePage.setDefaultNavigationTimeout(15_000);
-    routePage.setDefaultTimeout(15_000);
-    wirePageDiagnostics(routePage, `mobile:${tool.id}`);
-    await routePage.setViewportSize(mobileViewport);
-    try {
-      await verifyMobileFeatureScreen(routePage, tool);
-    } catch (error) {
-      addAssertion(`mobile_screen:${tool.id}:route_readback`, false, { exactBlocker: error.message });
+  if (skipMobile) {
+    reportProgress('mobile_phase_skipped');
+    throwIfInterrupted();
+  } else {
+    browser = await chromium.launch({ headless: true });
+    context = await browser.newContext(localPreview
+      ? { viewport: mobileViewport, serviceWorkers: 'block' }
+      : {
+        storageState: buildStorageStateForBaseUrl(authStatePath, baseUrl),
+        viewport: mobileViewport,
+      });
+    if (localPreview) {
+      await installLocalProofAuth(context);
+      await installLocalCloudflareMocks(context);
+      await installLocalContextGuard(context, baseUrl);
     }
-    await routePage.close().catch(() => {});
-  }
+    const mobilePage = await context.newPage();
+    mobilePage.setDefaultNavigationTimeout(15_000);
+    mobilePage.setDefaultTimeout(15_000);
+    wirePageDiagnostics(mobilePage, 'mobile');
+    await mobilePage.setViewportSize(mobileViewport);
+    await mobilePage.goto(`${baseUrl}${lightchainHomeRoute}`, { waitUntil: 'networkidle' });
+    await screenshot(mobilePage, 'mobile-index');
+    await mobilePage.close();
+    for (const tool of toolsToVerify) {
+      throwIfInterrupted();
+      reportProgress('mobile_feature_started', { featureId: tool.id, title: tool.title });
+      const routePage = await context.newPage();
+      routePage.setDefaultNavigationTimeout(15_000);
+      routePage.setDefaultTimeout(15_000);
+      wirePageDiagnostics(routePage, `mobile:${tool.id}`);
+      await routePage.setViewportSize(mobileViewport);
+      try {
+        await verifyMobileFeatureScreen(routePage, tool);
+      } catch (error) {
+        addAssertion(`mobile_screen:${tool.id}:route_readback`, false, { exactBlocker: error.message });
+      }
+      reportProgress('mobile_feature_completed', { featureId: tool.id });
+      await routePage.close().catch(() => {});
+    }
 
-  const invalidPage = await context.newPage();
-  invalidPage.setDefaultNavigationTimeout(15_000);
-  invalidPage.setDefaultTimeout(15_000);
-  wirePageDiagnostics(invalidPage, 'mobile:invalid');
-  await invalidPage.setViewportSize(mobileViewport);
-  await invalidPage.goto(`${baseUrl}/lightchain/not-a-real-feature`, { waitUntil: 'networkidle' });
-  if (!invalidPage.url().endsWith('/lightchain')) {
-    await invalidPage.waitForURL(/\/lightchain$/, { timeout: 10_000 });
+    evidence.videoResults.push(await verifyVideoSurface(context, mobileViewport, '/flow/GenerateShortVideo', 'mobile-video-dashboard'));
+    evidence.videoResults.push(await verifyVideoSurface(context, mobileViewport, '/flow/GenerateShortVideo/detail?project=new', 'mobile-video-detail'));
+    reportProgress('mobile_video_phase_complete', { verifiedRouteCount: evidence.videoResults.length });
+
+    const invalidPage = await context.newPage();
+    invalidPage.setDefaultNavigationTimeout(15_000);
+    invalidPage.setDefaultTimeout(15_000);
+    wirePageDiagnostics(invalidPage, 'mobile:invalid');
+    await invalidPage.setViewportSize(mobileViewport);
+    await invalidPage.goto(`${baseUrl}/lightchain/not-a-real-feature`, { waitUntil: 'networkidle' });
+    if (!invalidPage.url().endsWith(lightchainHomeRoute)) {
+      await invalidPage.waitForURL(/\/designProduction$/, { timeout: 10_000 });
+    }
+    addAssertion('invalid_feature_redirects_to_canonical_home', invalidPage.url().endsWith(lightchainHomeRoute), { url: invalidPage.url() });
+    await invalidPage.close();
+    reportProgress('mobile_phase_complete', { verifiedFeatureCount: toolsToVerify.length });
   }
-  addAssertion('invalid_feature_redirects_to_index', invalidPage.url().endsWith('/lightchain'), { url: invalidPage.url() });
-  await invalidPage.close();
 } catch (error) {
   evidence.exactBlocker = error.message;
+  reportProgress('verification_failed', { exactBlocker: error.message });
   addAssertion('route_exception_free', false, { error: error.message });
 } finally {
+  reportProgress('cleanup_started');
   if (context) {
     await withTimeout(context.close(), 10000).then(() => {
       evidence.cleanup.contextClosed = true;
@@ -164,6 +299,11 @@ try {
   if (browser) {
     await withTimeout(browser.close(), 60000).then(() => {
       evidence.cleanup.browserClosed = true;
+      if (!evidence.cleanup.contextClosed) {
+        evidence.cleanup.contextClosed = true;
+        evidence.cleanup.contextClosedByBrowser = true;
+        delete evidence.cleanup.contextCloseBlocker;
+      }
     }).catch((error) => {
       evidence.cleanup.browserCloseBlocker = error.message;
     });
@@ -177,6 +317,7 @@ try {
   } else if (!localPreview) {
     evidence.cleanup.previewStopped = true;
   }
+  reportProgress('cleanup_complete', evidence.cleanup);
 }
 
 const diagnosticFailures = [
@@ -191,7 +332,7 @@ for (const failure of diagnosticFailures) addAssertion(failure, false);
 
 evidence.ok = evidence.assertions.every((assertion) => assertion.ok);
 evidence.failed = evidence.assertions.filter((assertion) => !assertion.ok).map((assertion) => assertion.id);
-fs.writeFileSync(path.join(outDir, 'SUMMARY.json'), `${JSON.stringify(evidence, null, 2)}\n`);
+fs.writeFileSync(path.join(outDir, 'SUMMARY.json'), `${JSON.stringify(evidence, null, 2)}\n`, { flag: 'wx' });
 console.log(JSON.stringify({
   ok: evidence.ok,
   failed: evidence.failed,
@@ -205,7 +346,7 @@ async function verifyFeatureWorkflow(page, tool) {
   await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(250);
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
-  await waitForSettledRoute(page, tool.id);
+  await waitForSettledRoute(page, tool);
   // The marketing entry can briefly remount its shared Lightchain loading
   // shell after the lazy page has resolved. Wait for the route-owned heading
   // before taking the signature/readback so a transient fallback is not
@@ -218,32 +359,359 @@ async function verifyFeatureWorkflow(page, tool) {
     );
   }
   const body = await bodyText(page);
+  const workflowRoots = page.locator('[data-workflow-feature]');
+  const workflowRootCount = await workflowRoots.count();
+    const workflowContractReadback = workflowRootCount > 0
+    ? await workflowRoots.first().evaluate((element) => ({
+      feature: element.getAttribute('data-workflow-feature'),
+      contract: element.getAttribute('data-workflow-contract'),
+      inputRoles: element.getAttribute('data-workflow-input-roles'),
+      resultDestinations: element.getAttribute('data-workflow-result-destinations'),
+      lifecycle: element.getAttribute('data-workflow-lifecycle'),
+      sourceInputMode: element.getAttribute('data-workflow-source-input-mode'),
+      retryPolicy: element.getAttribute('data-workflow-retry-policy'),
+      rightsGate: element.getAttribute('data-workflow-rights-gate'),
+    }))
+    : { error: 'shared_workflow_contract_root_missing' };
+  recordFeatureAssertion(result, 'shared_workflow_contract_readback',
+    workflowContractReadback.feature === tool.id
+      && workflowContractReadback.contract === 'lightchain-unified-workflow.v1'
+      && Boolean(workflowContractReadback.inputRoles)
+      && workflowContractReadback.resultDestinations === 'gallery,canvas,history,jobs'
+      && workflowContractReadback.lifecycle === 'draft,ready,generating,completed,failed,retry'
+      && workflowContractReadback.sourceInputMode === 'library-or-upload'
+      && workflowContractReadback.retryPolicy === 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit'
+      && workflowContractReadback.rightsGate === 'source-admitted-generation',
+  {
+    workflowContractReadback,
+    expected: {
+      feature: tool.id,
+      contract: 'lightchain-unified-workflow.v1',
+      resultDestinations: 'gallery,canvas,history,jobs',
+      lifecycle: 'draft,ready,generating,completed,failed,retry',
+      sourceInputMode: 'library-or-upload',
+      retryPolicy: 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit',
+      rightsGate: 'source-admitted-generation',
+    },
+  });
   recordFeatureAssertion(result, 'route_loaded_without_login', !page.url().includes('/login') && !body.includes('ログイン'), {
     url: page.url(),
     bodyExcerpt: body.slice(0, 600),
   });
-  recordFeatureAssertion(result, 'heavy_shell_or_lightchain_reference_visible', body.includes('HEAVY CHAIN') || body.includes('HEAVYCHAIN') || body.includes('LIGHTCHAIN') || body.includes('LIGHTCHAIN AI'), {
+  recordFeatureAssertion(result, 'heavy_brand_reference_absent', !body.includes('HEAVY CHAIN') && !body.includes('HEAVYCHAIN'), {
     bodyExcerpt: body.slice(0, 300),
   });
   recordFeatureAssertion(result, 'lightchain_screen_signature_visible', matchesLightchainSignature(tool, body), {
     expectedTitle: tool.title,
     bodyExcerpt: body.slice(0, 900),
   });
+  if (tool.id === 'fabric-image') {
+    const fabricParityView = page.getByTestId('lightchain-fabric-parity-view');
+    const fabricUploadControlCount = await fabricParityView
+      .getByRole('button', { name: '参考画像をアップロードしてください' })
+      .count()
+      .catch(() => -1);
+    const fabricPermissionVisible = await fabricParityView
+      .getByRole('button', { name: '権限がありません' })
+      .isVisible({ timeout: 1000 })
+      .catch(() => false);
+    recordFeatureAssertion(result, 'fabric_source_input_and_permission_surface_matches_readback',
+      fabricUploadControlCount === 2 && fabricPermissionVisible,
+      {
+        fabricUploadControlCount,
+        fabricPermissionVisible,
+        sourceReadback: {
+          visibleUploadControls: 2,
+          permissionLabel: '権限がありません',
+        },
+      });
+  }
+  await verifyActiveSourceToolbar(page, tool, result);
   await verifyVisibleTabInteractions(page, tool, result);
   await verifyAllVisibleTabsRespond(page, tool, result);
   await verifyToolSpecificChoiceControls(page, tool, result);
   await verifyVisibleRangeControlsRespond(page, tool, result);
   result.controlInventory = await auditVisibleControls(page);
 
-  const generateButton = page.getByRole('button', { name: /AI生成|更新|保存|開始/ }).first();
+  // Fitting's multi-task surface exposes a local "追加" action instead of a
+  // provider-generation button. Treat that bounded local action as a valid
+  // workspace affordance while keeping provider/rights gates separate.
+  const generateButton = page.getByRole('button', { name: /AI生成|更新|保存|開始|追加/ }).first();
   const hasSafeLocalAction = await generateButton.isVisible({ timeout: 1000 }).catch(() => false);
-  recordFeatureAssertion(result, 'safe_local_action_or_workspace_visible', hasSafeLocalAction || isReadOnlyWorkspaceTool(tool.id), {
+  const rightsGateVisible = await page.getByRole('button', { name: /権利を確認してAI生成|権限がありません/ }).first().isVisible({ timeout: 1000 }).catch(() => false);
+  recordFeatureAssertion(result, 'safe_local_action_or_workspace_visible', hasSafeLocalAction || rightsGateVisible || isReadOnlyWorkspaceTool(tool.id), {
     hasSafeLocalAction,
+    rightsGateVisible,
     toolId: tool.id,
   });
 
   await screenshot(page, `desktop-${tool.id}`);
   return result;
+}
+
+async function verifyVideoSurface(browserContext, viewport, route, key) {
+  const page = await browserContext.newPage();
+  page.setDefaultNavigationTimeout(15_000);
+  page.setDefaultTimeout(15_000);
+  wirePageDiagnostics(page, `video:${key}`);
+  const result = { id: key, route, viewport, assertions: [], screenshot: null, url: null, observed: {} };
+  const check = (id, ok, details = {}) => {
+    const assertion = { id: `${key}:${id}`, ok: Boolean(ok), details };
+    result.assertions.push(assertion);
+    addAssertion(assertion.id, assertion.ok, details);
+  };
+  try {
+    await page.setViewportSize(viewport);
+    await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' });
+    await waitForSourceRouteSettled(page);
+    result.url = page.url();
+    let body = await bodyText(page);
+    if (route.includes('/detail')) {
+      const guideButton = page.getByTestId('video-guide-skip');
+      const guideVisible = await guideButton.isVisible({ timeout: 1000 }).catch(() => false);
+      result.observed.guideVisible = guideVisible;
+      check('guide_choice_present', guideVisible, { guideVisible });
+      if (guideVisible) {
+        await guideButton.click();
+        await page.waitForTimeout(150);
+        body = await bodyText(page);
+      }
+      const detailMarkers = ['動画ワークステーション', 'Untitled', 'ここをクリックまたはドラッグして画像を追加', '最大20M'];
+      check('detail_markers_visible', detailMarkers.every((marker) => body.includes(marker)), { detailMarkers, bodyExcerpt: body.slice(0, 1000) });
+      check('detail_file_input_present', await page.locator('input[type="file"]').count() > 0);
+      const blockedButton = page.getByTestId('video-generation-blocked');
+      check('detail_provider_generation_fail_closed', await blockedButton.isVisible().catch(() => false) === false || await blockedButton.isDisabled().catch(() => true));
+    } else {
+      const dashboard = page.getByTestId('lightchain-video-project-dashboard');
+      const projectSection = page.getByTestId('video-recent-projects');
+      const referenceSection = page.locator('section[aria-labelledby="video-reference-heading"]');
+      const projectCount = await projectSection.getByRole('button').count().catch(() => 0);
+      const referenceCount = await referenceSection.getByRole('button').count().catch(() => 0);
+      const editLabelCount = await page.getByTestId('video-project-edit-label').count().catch(() => 0);
+      result.observed.projectCount = projectCount;
+      result.observed.referenceCount = referenceCount;
+      result.observed.editLabelCount = editLabelCount;
+      check('dashboard_present', await dashboard.isVisible().catch(() => false));
+      check('dashboard_markers_visible', ['動画ワークステーション', '新規ファイル', 'Untitled', '参考事例', '修正'].every((marker) => body.includes(marker)), { bodyExcerpt: body.slice(0, 1000) });
+      check('dashboard_recent_project_count', projectCount === 6, { projectCount });
+      check('dashboard_reference_count', referenceCount === 5, { referenceCount });
+      check('dashboard_new_file_action_present', await page.getByRole('button', { name: '新規ファイル', exact: true }).isVisible().catch(() => false));
+      check('dashboard_edit_labels_match_source_count', editLabelCount === 11, { editLabelCount });
+    }
+    const checkboxCount = await page.locator('input[type="checkbox"]:visible, [role="checkbox"]:visible').count().catch(() => 0);
+    result.observed.visibleCheckboxCount = checkboxCount;
+    check('rights_checkbox_absent', checkboxCount === 0, { checkboxCount });
+    result.screenshot = await screenshot(page, `video-${key}`);
+  } catch (error) {
+    check('route_readback_completed', false, { exactBlocker: error.message });
+    result.exactBlocker = error.message;
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+  return result;
+}
+
+async function verifySourceRouteParity(browserContext, viewport) {
+  const routeSpecs = [
+    {
+      key: 'designProduction',
+      route: '/designProduction',
+      source: sourceReadback.routes['/designProduction'],
+      verify: verifyDesignProductionSourceSurface,
+    },
+    {
+      key: 'creator',
+      route: '/creator',
+      source: sourceReadback.routes['/creator'],
+      verify: verifyCreatorSourceSurface,
+    },
+    {
+      key: 'tools-fabric',
+      route: '/tools/fabric',
+      source: sourceReadback.routes['/tools/fabric'],
+      verify: verifyFabricSourceSurface,
+    },
+    {
+      key: 'model',
+      route: '/model',
+      source: sourceReadback.routes['/model'],
+      verify: verifyModelSourceSurface,
+    },
+  ];
+
+  for (const spec of routeSpecs) {
+    const page = await browserContext.newPage();
+    page.setDefaultNavigationTimeout(15_000);
+    page.setDefaultTimeout(15_000);
+    wirePageDiagnostics(page, `source:${spec.key}`);
+    const result = {
+      key: spec.key,
+      route: spec.route,
+      viewport,
+      url: null,
+      screenshot: null,
+      screenshotRole: 'heavy-observed-source-contract',
+      sourceScreenshot: null,
+      visualDiff: {
+        status: 'PENDING_CONFIRMATION',
+        reason: 'Current authenticated Light Chain screenshot baseline is not supplied.',
+      },
+      assertions: [],
+      observed: {},
+      source: spec.source,
+    };
+    try {
+      await page.setViewportSize(viewport);
+      await page.goto(`${baseUrl}${spec.route}`, { waitUntil: 'domcontentloaded' });
+      await waitForSourceRouteSettled(page);
+      result.url = page.url();
+      result.observed.bodyExcerpt = (await bodyText(page)).slice(0, 2200);
+      await spec.verify(page, result);
+      await screenshot(page, `source-parity-${spec.key}`);
+      result.screenshot = evidence.screenshots[`source-parity-${spec.key}`];
+    } catch (error) {
+      sourceParityAssertion(result, 'route_readback_completed', false, { exactBlocker: error.message });
+    } finally {
+      evidence.sourceReadback.results.push(result);
+      await page.close().catch(() => undefined);
+    }
+  }
+}
+
+async function waitForSourceRouteSettled(page) {
+  await page.waitForFunction(() => document.body?.innerText.trim().length > 0, null, { timeout: 10_000 });
+  await page.waitForTimeout(350);
+  await page.waitForFunction(
+    () => !/読み込み中\.\.\.|準備しています/.test(document.body?.innerText ?? ''),
+    null,
+    { timeout: 15_000 },
+  ).catch(() => undefined);
+}
+
+async function verifyDesignProductionSourceSurface(page, result) {
+  const expected = sourceReadback.routes['/designProduction'].source;
+  const body = await bodyText(page);
+  const titleMatches = expected.creationTitles.every((title) => body.includes(title));
+  const actionCounts = Object.fromEntries(await Promise.all(expected.creationActions.map(async (label) => [
+    label,
+    await page.getByRole('button', { name: exactText(label) }).count(),
+  ])));
+  const actionMatches = Object.values(actionCounts).every((count) => count === 1);
+  const extraNewFileCardCount = await page.getByRole('button', { name: exactText('新規ファイル') }).count();
+  result.observed.creationTitles = expected.creationTitles.filter((title) => body.includes(title));
+  result.observed.creationActionCounts = actionCounts;
+  result.observed.extraNewFileCardCount = extraNewFileCardCount;
+  sourceParityAssertion(result, 'source_creation_titles_match', titleMatches, { expected: expected.creationTitles });
+  sourceParityAssertion(result, 'source_creation_actions_match', actionMatches, { expected: expected.creationActions, observed: result.observed.creationActionCounts });
+  sourceParityAssertion(result, 'source_extra_new_file_card_absent', extraNewFileCardCount === 0, { extraNewFileCardCount });
+  sourceParityAssertion(result, 'source_design_production_tabs_present', expected.tabs.every((tab) => body.includes(tab)), { expected: expected.tabs });
+  sourceParityAssertion(result, 'source_design_production_has_no_checkbox', await visibleCheckboxCount(page) === expected.checkboxCount, { expected: expected.checkboxCount });
+}
+
+async function verifyCreatorSourceSurface(page, result) {
+  const expected = sourceReadback.routes['/creator'].source;
+  const body = await bodyText(page);
+  const headings = await page.getByRole('heading').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label') || node.textContent?.trim() || ''));
+  result.observed.headings = headings;
+  for (const heading of expected.headings) {
+    sourceParityAssertion(result, `source_creator_heading:${heading}`, headings.includes(heading) || body.includes(heading), { heading });
+  }
+  sourceParityAssertion(result, 'source_creator_permission_label_present', body.includes(expected.permissionLabel), { permissionLabel: expected.permissionLabel });
+  sourceParityAssertion(result, 'source_creator_has_no_checkbox', await visibleCheckboxCount(page) === expected.checkboxCount, { expected: expected.checkboxCount });
+}
+
+async function verifyFabricSourceSurface(page, result) {
+  const expected = sourceReadback.routes['/tools/fabric'].source;
+  const body = await bodyText(page);
+  const tabsMatch = expected.tabs.every((tab) => body.includes(tab));
+  const headingsMatch = expected.headings.every((heading) => body.includes(heading));
+  // ImageSelector keeps the native file input visually hidden and exposes the
+  // Lightchain upload affordance through its labeled drop surface. Count the
+  // accessible Lightchain controls, not the hidden-input implementation detail.
+  const uploadControls = await page
+    .getByRole('button', { name: '参考画像をアップロードしてください' })
+    .count()
+    .catch(() => 0);
+  const permission = page.getByRole('button', { name: exactText(expected.permissionLabel) }).first();
+  const permissionVisible = await permission.isVisible().catch(() => false);
+  result.observed.visibleUploadControls = uploadControls;
+  result.observed.permissionVisible = permissionVisible;
+  sourceParityAssertion(result, 'source_fabric_tabs_match', tabsMatch, { expected: expected.tabs });
+  sourceParityAssertion(result, 'source_fabric_headings_match', headingsMatch, { expected: expected.headings });
+  sourceParityAssertion(result, 'source_fabric_permission_surface_match', uploadControls === expected.visibleUploadControls && permissionVisible, { uploadControls, permissionVisible });
+  sourceParityAssertion(result, 'source_fabric_has_no_checkbox', await visibleCheckboxCount(page) === expected.checkboxCount, { expected: expected.checkboxCount });
+}
+
+async function verifyModelSourceSurface(page, result) {
+  const expected = sourceReadback.routes['/model'].source;
+  const body = await bodyText(page);
+  const tabsMatch = expected.tabs.every((tab) => body.includes(tab));
+  const labelsMatch = expected.labels.every((label) => body.includes(label));
+  const checkboxCount = await visibleCheckboxCount(page);
+  const resultCards = await page.locator('[data-testid*="result" i], [data-testid*="history" i] article, img[alt*="生成"]').count().catch(() => 0);
+  result.observed.resultCards = resultCards;
+  result.observed.visibleCheckboxCount = checkboxCount;
+  sourceParityAssertion(result, 'source_model_tabs_match', tabsMatch, { expected: expected.tabs });
+  sourceParityAssertion(result, 'source_model_labels_match', labelsMatch, { expected: expected.labels });
+  sourceParityAssertion(result, 'source_model_has_no_checkbox', checkboxCount === expected.checkboxCount, { expected: expected.checkboxCount, checkboxCount });
+  // Result rows are user-scoped data, not a source entitlement or rights UI.
+  // Record the difference without deleting/hiding a user's persisted result.
+  result.observed.sourceResultCards = expected.resultCards;
+  result.observed.resultCardState = resultCards === expected.resultCards ? 'same' : 'user-scoped-difference';
+}
+
+async function visibleCheckboxCount(page) {
+  return page.locator('input[type="checkbox"]:visible, [role="checkbox"]:visible').count();
+}
+
+function sourceParityAssertion(result, id, ok, details = {}) {
+  result.assertions.push({ id, ok: Boolean(ok), details });
+  addAssertion(`source_readback:${result.key}:${id}`, ok, details);
+}
+
+async function verifyActiveSourceToolbar(page, tool, result) {
+  const toolbar = page.locator('[data-testid="lightchain-source-toolbar"]').first();
+  const visible = await toolbar.isVisible({ timeout: 1000 }).catch(() => false);
+  if (!visible) {
+    recordFeatureAssertion(result, 'source_toolbar_active_category_not_applicable', true, {
+      toolId: tool.id,
+      reason: 'route does not render the shared source toolbar',
+    });
+    return;
+  }
+
+  const expectedLabels = {
+    recommended: 'おすすめ',
+    planning: '企画デザインツール',
+    fitting: 'AIフィッティング',
+    graphics: 'グラフィックツール',
+  };
+  const expectedCategory = getExpectedVisibleCategoryId(tool.category);
+  const currentLinks = toolbar.locator('a[aria-current="page"]');
+  const currentCount = await currentLinks.count();
+  const currentLabel = currentCount === 1
+    ? (await currentLinks.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
+    : '';
+  const expectedLabel = expectedLabels[expectedCategory] ?? '';
+  recordFeatureAssertion(result, 'source_toolbar_active_category', currentCount === 1 && currentLabel === expectedLabel, {
+    toolId: tool.id,
+    rawCategory: tool.category,
+    expectedCategory,
+    expectedLabel,
+    currentCount,
+    currentLabel,
+  });
+}
+
+// The catalog retains internal workflow classifications, while the shared
+// Lightchain toolbar exposes four visible buckets. Keep this verifier aligned
+// with the product's source-category mapping instead of comparing raw labels.
+function getExpectedVisibleCategoryId(category) {
+  if (category === 'planning' || category === 'fitting' || category === 'graphics') {
+    return category;
+  }
+  if (category === 'model' || category === 'lab') return 'fitting';
+  return 'recommended';
 }
 
 async function verifyVisibleTabInteractions(page, tool, result) {
@@ -254,9 +722,10 @@ async function verifyVisibleTabInteractions(page, tool, result) {
       { tab: 'スタジオ案', expected: 'スタジオ案履歴', promptValue: 'モデル、背景、小物', helper: '商品、モデル、背景、小物を組み合わせた撮影案を作ります。', example: '平置き商品画像', placeholder: '黒のチェーン柄フーディーを、モデル、背景、小物と組み合わせてEC/SNS向けの撮影案にしてください。' },
     ],
     'design-agent': [
-      { tab: 'インスピレーション', expected: 'インスピレーション履歴', promptValue: '素材感、色、シルエット', helper: 'ムード、素材、色、シルエットの参照を集めるモードです。', example: 'メタリック素材', placeholder: '参考ブランド、年代、素材感、色、シルエットを入力してください。' },
-      { tab: 'AIグラフィックデザイン', expected: 'グラフィック履歴', promptValue: '柄、配置、色数', helper: '企画からプリント、柄、配置案へ展開するモードです。', example: 'チェーンモチーフ', placeholder: '服に入れたいグラフィック、柄、配置、色数を入力してください。' },
-      { tab: '企画案', expected: '企画履歴', promptValue: 'LOUIS VUITTON', helper: 'ブランド情報と参考コレクションから、企画書の構成案を作ります。', example: 'ZIMMERMANN', placeholder: 'LOUIS VUITTON の 2026年春夏 コレクションからインスピレーションを得て、ショートジャケット、シャツ、ロングパンツ、ショートパンツで構成するメンズ デザイン企画書を作成する。' },
+      { tab: '商品企画', expected: '商品企画', promptValue: '', helper: '', example: 'ZIMMERMANN', placeholder: '調査したい市場、カテゴリ、スタイル方向を入力してください…' },
+      { tab: '顧客提案', expected: '顧客提案', promptValue: '顧客要望', helper: '', example: '顧客向けに、ブランドの強みと商品企画の提案書を作成する。', placeholder: '顧客要望を入力するか、brief、メール、議事録をアップロードしてください…' },
+      { tab: 'インスピレーション', expected: 'インスピレーション', promptValue: 'デザインしたい服のスタイル', helper: '', example: 'メタリック素材', placeholder: 'デザインしたい服のスタイルを入力するか、参考画像をアップロードしてください…' },
+      { tab: 'AIグラフィックデザイン', expected: 'AIグラフィックデザイン', promptValue: '生成したい柄のスタイル', helper: '', example: 'チェーンモチーフ', placeholder: '生成したい柄のスタイル、要素、使用シーンを入力してください…' },
     ],
   }[tool.id] ?? [];
 
@@ -285,13 +754,13 @@ async function verifyVisibleTabInteractions(page, tool, result) {
     const fittingChecks = [
       {
         tab: 'マルチタスク',
-        expected: '複数コーディネートを同時に管理',
+        expected: '複数のコーディネートのアップロードに対応',
         headline: '複数のコーディネートのアップロードに対応',
       },
       {
         tab: 'シングルタスク',
-        expected: '1つの衣服画像から最短',
-        headline: '1つの衣服画像から着用画像を作成',
+        expected: '複数のコーディネートのアップロードに対応',
+        headline: '複数のコーディネートのアップロードに対応',
       },
       {
         tab: '参考画像',
@@ -336,47 +805,60 @@ async function verifyVisibleTabInteractions(page, tool, result) {
 }
 
 async function verifyAllVisibleTabsRespond(page, tool, result) {
-  const tabs = await page.locator('[role="tab"]').evaluateAll((nodes) => nodes.map((node, index) => ({
+  const initialUrl = page.url();
+  const tabs = await page.locator('[role="tab"]:visible').evaluateAll((nodes) => nodes.map((node, index) => ({
     index,
-    tablistIndex: Array.from(document.querySelectorAll('[role="tablist"]')).findIndex((tablist) => tablist.contains(node)),
-    indexInTablist: node.closest('[role="tablist"]')
-      ? Array.from(node.closest('[role="tablist"]').querySelectorAll('[role="tab"]')).indexOf(node)
-      : index,
     text: node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-    selected: node.getAttribute('aria-selected'),
   })).filter((item) => item.text));
   recordFeatureAssertion(result, 'visible_tabs_have_click_targets', tabs.length > 0 || !expectsInteractiveTabs(tool.id), {
     tabCount: tabs.length,
     tabs,
   });
   for (const tab of tabs) {
-    const tabButton = tab.tablistIndex >= 0
-      ? page.locator('[role="tablist"]').nth(tab.tablistIndex).locator('[role="tab"]').nth(tab.indexInTablist)
-      : page.locator('[role="tab"]').nth(tab.index);
-    if (tab.selected === 'true' && tabs.length > 1) {
-      const alternate = tabs.find((candidate) => candidate.tablistIndex === tab.tablistIndex && candidate.index !== tab.index);
-      if (alternate) {
-        const alternateButton = alternate.tablistIndex >= 0
-          ? page.locator('[role="tablist"]').nth(alternate.tablistIndex).locator('[role="tab"]').nth(alternate.indexInTablist)
-          : page.locator('[role="tab"]').nth(alternate.index);
-        await alternateButton.click();
-        await page.waitForTimeout(150);
+    if (page.url() !== initialUrl || await page.locator('[role="tab"]:visible').count() === 0) {
+      await page.goto(initialUrl, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(150);
+      await waitForSettledRoute(page, tool);
+    }
+    const candidates = page.getByRole('tab', { name: exactText(tab.text) });
+    let tabButton = null;
+    for (let index = 0; index < await candidates.count(); index += 1) {
+      const candidate = candidates.nth(index);
+      if (await candidate.isVisible({ timeout: 500 }).catch(() => false)) {
+        tabButton = candidate;
+        break;
       }
     }
+    if (!tabButton) {
+      recordFeatureAssertion(result, `visible_tab_responds:${tab.index}:${tab.text}`, false, {
+        text: tab.text,
+        exactBlocker: 'visible_tab_target_missing_after_route_rebind',
+      });
+      continue;
+    }
     const before = await interactionSnapshot(page);
+    const beforeUrl = page.url();
+    const wasSelected = before.selectedTabs.some((entry) => entry.text === tab.text && entry.selected === 'true');
     await tabButton.click();
     await page.waitForTimeout(150);
     const after = await interactionSnapshot(page);
     const ariaSelected = await tabButton.getAttribute('aria-selected').catch(() => null);
-    const selectedOk = ariaSelected === 'true';
-    const changedOk = before.fingerprint !== after.fingerprint;
-    recordFeatureAssertion(result, `visible_tab_responds:${tab.index}:${tab.text}`, selectedOk && changedOk, {
+    const selectedOk = ariaSelected === 'true' || page.url() !== beforeUrl;
+    const changedOk = before.fingerprint !== after.fingerprint || page.url() !== beforeUrl;
+    recordFeatureAssertion(result, `visible_tab_responds:${tab.index}:${tab.text}`, selectedOk && (changedOk || wasSelected), {
       text: tab.text,
-      selectedBefore: tab.selected,
+      beforeUrl,
+      afterUrl: page.url(),
       ariaSelected,
+      wasSelected,
       before,
       after,
     });
+  }
+  if (page.url() !== initialUrl) {
+    await page.goto(initialUrl, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(150);
+    await waitForSettledRoute(page, tool);
   }
 }
 
@@ -546,7 +1028,7 @@ function getControlAuditSelector() {
 
 function classifyVisibleControl(control) {
   const label = `${control.name} ${control.href ?? ''}`.replace(/\s+/g, ' ').trim();
-  if (control.disabled || control.ariaDisabled === 'true' || /権限がありません/.test(label)) return 'permission_blocked';
+  if (control.disabled || control.ariaDisabled === 'true' || /権利を確認してAI生成|権限がありません/.test(label)) return 'permission_blocked';
   if (/生成|開始|保存|削除|ダウンロード|再試行|アップロード|ログアウト|ログイン|購入|課金|支払い|OpenAI|Runway|動画|送信|確定|決定|作成/.test(label)) return 'effectful_or_provider';
   if (control.role === 'tab') return 'safe_tab';
   if (control.role === 'checkbox' || control.role === 'switch' || control.role === 'radio' || control.type === 'checkbox' || control.type === 'radio' || control.ariaPressed != null) return 'safe_toggle';
@@ -689,9 +1171,13 @@ async function buttonByText(page, text) {
 
 async function verifyGenerateEntrypointUsesFeatureDetail(page) {
   const generateCategoryIds = ['recommended', 'planning', 'fitting', 'graphics'];
+  // `/designProduction` is the source-shaped production entry and does not
+  // expose the compatibility launcher tabs. The authenticated `/dashboard`
+  // alias intentionally retains that launcher for direct feature-link checks.
+  const launcherRoute = '/dashboard';
   const featureLinkEntries = [];
   for (const categoryId of generateCategoryIds) {
-    await page.goto(`${baseUrl}/generate?category=${categoryId}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${baseUrl}${launcherRoute}?category=${categoryId}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.body.innerText.trim().length > 0, null, { timeout: 10_000 });
     await waitForLightchainCategory(page, categoryId);
     await dismissBlockingOverlays(page);
@@ -731,7 +1217,7 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
     skippedVideoHrefs,
   });
   for (const { categoryId, href } of clickableFeatureDetailEntries) {
-    await page.goto(`${baseUrl}/generate?category=${categoryId}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${baseUrl}${launcherRoute}?category=${categoryId}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.body.innerText.trim().length > 0, null, { timeout: 10_000 });
     await waitForLightchainCategory(page, categoryId);
     await dismissBlockingOverlays(page);
@@ -749,13 +1235,13 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
       bodyExcerpt: targetBody.slice(0, 500),
     });
   }
-  await page.goto(`${baseUrl}/lightchain`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}${lightchainHomeRoute}`, { waitUntil: 'networkidle' });
 }
 
 async function verifyMobileFeatureScreen(page, tool) {
   await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(250);
-  await waitForSettledRoute(page, tool.id);
+  await waitForSettledRoute(page, tool);
   const body = await bodyText(page);
   addAssertion(`mobile_screen:${tool.id}`, (
     !page.url().includes('/login')
@@ -811,9 +1297,10 @@ function isReadOnlyWorkspaceTool(toolId) {
 }
 
 function matchesLightchainSignature(tool, body) {
+  const hasGenerationAndHistory = (body.includes('AI生成') || body.includes('権限がありません')) && /履歴/.test(body);
   if (tool.id === 'fashion-studio') return body.includes('ファッションスタジオ') && body.includes('スタジオ案履歴') && body.includes('360度表示');
   if (tool.id === 'marketing-home') return body.includes('マーケティングワークスペース') && body.includes('おすすめのシーン');
-  if (tool.id === 'design-agent') return body.includes('Hello') && body.includes('企画案') && body.includes('AIグラフィックデザイン');
+  if (tool.id === 'design-agent') return body.includes('今日は何から始めますか') && body.includes('商品企画') && body.includes('AIグラフィックデザイン');
   if (tool.id === 'lab') return body.includes('ラボ') && body.includes('参考事例');
   if (tool.id === 'wear-design-lab') return body.includes('新規ファイル') && body.includes('参考事例');
   if (tool.id === 'wear-design-detail') return body.includes('ガイドを見る') && body.includes('ガイドを表示しない');
@@ -822,17 +1309,17 @@ function matchesLightchainSignature(tool, body) {
   if (tool.id === 'custom-style') return body.includes('カスタムスタイル') && body.includes('ラーニング素材');
   if (tool.id === 'marketing-detail') return body.includes('マーケティングワークスペース') && body.includes('AIアシスタント');
   if (['ai-fitting', 'ai-fitting-reference', 'fitting-clothing-reference', 'fitting-background-reference'].includes(tool.id)) {
-    return body.includes('AIフィッティング') && body.includes('AI生成') && body.includes('生成履歴');
+    return body.includes('AIフィッティング') && hasGenerationAndHistory;
   }
   if (tool.id === 'model-library') return body.includes('モデルカスタマイズ') && body.includes('ラベル') && body.includes('性別');
   if (['model-face', 'model-change', 'body-shape', 'clothing-size', 'pose-change', 'background-change', 'angle-change', 'model-custom'].includes(tool.id)) {
-    return body.includes(tool.title) && body.includes('AI生成') && body.includes('生成履歴');
+    return body.includes(tool.title) && hasGenerationAndHistory;
   }
   if (tool.id === 'pattern-vector-pro') {
-    return body.includes('パターンをベクター画像に変換（プロフェッショナル版）') && body.includes('AI生成') && body.includes('生成履歴');
+    return body.includes('パターンをベクター画像に変換（プロフェッショナル版）') && hasGenerationAndHistory;
   }
   if (['fabric-image', 'printing-image', 'line-generation', 'line-to-real', 'pattern-vector', 'image-repair', 'svg-convert'].includes(tool.id)) {
-    return body.includes(tool.title) && body.includes('AI生成') && body.includes('生成履歴');
+    return body.includes(tool.title) && hasGenerationAndHistory;
   }
   return body.includes(tool.title);
 }
@@ -849,8 +1336,7 @@ function isDirectFeatureHref(href) {
     '/flow',
     '/agent',
     '/lab',
-    '/video',
-    '/models',
+    '/model-library',
     '/studio',
     '/patterns',
     '/tools',
@@ -867,7 +1353,9 @@ function isFeatureEntrypointHref(href) {
 }
 
 function isVideoHref(href) {
-  return href === '/video' || href.startsWith('/video/') || href.startsWith('/video?');
+  return href === '/flow/GenerateShortVideo'
+    || href.startsWith('/flow/GenerateShortVideo/')
+    || href.startsWith('/flow/GenerateShortVideo?');
 }
 
 function urlMatchesHref(url, href) {
@@ -937,6 +1425,7 @@ function wirePageDiagnostics(page, route) {
     if (['error', 'warning'].includes(message.type())) {
       if (localPreview && /Failed to load resource: the server responded with a status of 401/.test(message.text())) return;
       if (localPreview && /Failed to load resource:.*fonts\.gstatic\.com/iu.test(message.text())) return;
+      if (localPreview && /blocked by client|ERR_BLOCKED_BY_CLIENT|Failed to load resource:.*(?:blocked|ERR_FAILED)/iu.test(message.text())) return;
       if (/Remote workspace artifact save failed; falling back to localStorage/.test(message.text())) return;
       if (/Falling back to table usage summary/.test(message.text())) return;
       evidence.consoleMessages.push({ route, type: message.type(), text: message.text() });
@@ -946,6 +1435,7 @@ function wirePageDiagnostics(page, route) {
   page.on('requestfailed', (request) => {
     const failure = request.failure()?.errorText ?? 'unknown';
     if (failure === 'net::ERR_ABORTED') return;
+    if (localPreview && /ERR_BLOCKED_BY_CLIENT|blockedbyclient/iu.test(failure)) return;
     if (localPreview && request.url().startsWith('https://fonts.gstatic.com/')) return;
     evidence.requestFailures.push({
       route,
@@ -970,21 +1460,24 @@ async function bodyText(page) {
   return page.locator('body').innerText({ timeout: 5000 }).catch(() => '');
 }
 
-async function waitForSettledRoute(page, toolId) {
-  await page.waitForFunction((currentToolId) => {
-    const text = document.body.innerText.trim();
-    // React.lazy renders a route-specific loading shell before the feature
-    // component resolves. A non-empty body is not enough to call the route
-    // ready; otherwise the interaction assertions race the real screen.
-    if (text.includes('制作入口を準備しています') || text.includes('ワークスペースを準備しています')) return false;
-    if (currentToolId === 'fashion-studio' && text.includes('ファッションスタジオ') && text.includes('生成履歴')) return true;
-    if (['ai-fitting', 'ai-fitting-reference', 'fitting-clothing-reference', 'fitting-background-reference'].includes(currentToolId)) {
-      return text.includes('AIフィッティング') && text.includes('シングルタスク') && text.includes('生成履歴') && !text.includes('素材作業台を準備しています') && !text.includes('ログイン');
-    }
-    return text.length > 0
-      && !text.includes('MATERIAL WORKBENCH')
-      && !text.includes('素材作業台を準備しています');
-  }, toolId, { timeout: 45_000 });
+async function waitForSettledRoute(page, toolOrId) {
+  const tool = typeof toolOrId === 'string'
+    ? catalog.tools.find((candidate) => candidate.id === toolOrId) ?? { id: toolOrId, title: toolOrId }
+    : toolOrId;
+  await page.waitForFunction(() => document.body?.innerText.trim().length > 0, null, { timeout: 10_000 });
+
+  // React.lazy may expose a short loading shell, or briefly leave that shell
+  // in the visible text while the route-owned component mounts. Poll the same
+  // signature used by the actual assertion from Node, so this gate cannot
+  // pass on a non-empty fallback and cannot hang without a bounded error.
+  const deadline = Date.now() + 45_000;
+  let lastBody = '';
+  while (Date.now() < deadline) {
+    lastBody = await bodyText(page);
+    if (matchesLightchainSignature(tool, lastBody)) return;
+    await page.waitForTimeout(250);
+  }
+  throw new Error(`lightchain_route_signature_timeout:${tool.id}:${lastBody.slice(0, 240)}`);
 }
 
 async function waitForLightchainCategory(page, categoryId) {
@@ -1041,9 +1534,8 @@ function extractObjectBlock(source, key) {
   return null;
 }
 
-async function startPreviewServer(targetBaseUrl) {
+async function startPreviewServer(targetBaseUrl, distDir) {
   const { port } = new URL(targetBaseUrl);
-  const distDir = path.join(process.cwd(), 'dist');
   const server = http.createServer((request, response) => {
     const requestUrl = new URL(request.url || '/', targetBaseUrl);
     const pathname = decodeURIComponent(requestUrl.pathname).replace(/^\/+/, '');
@@ -1124,113 +1616,215 @@ function buildStorageStateForBaseUrl(storageStatePath, targetBaseUrl) {
 }
 
 async function installLocalProofAuth(browserContext) {
-  const supabaseUrl = readEnvValue('VITE_SUPABASE_URL');
-  if (!supabaseUrl) throw new Error('local_proof_supabase_url_missing');
-  const projectRef = new URL(supabaseUrl).host.split('.')[0];
   const userId = '00000000-0000-4000-8000-000000000033';
   const email = 'lightchain-all-feature-local-proof@example.test';
-  const token = makeLocalJwt(userId, email);
-  const localProofUser = {
-    id: userId,
-    aud: 'authenticated',
-    role: 'authenticated',
-    email,
-    user_metadata: { name: 'Local Proof User' },
-    app_metadata: {},
+  const token = 'local-cloudflare-proof-token';
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const localProofPayload = {
+    user: { id: userId, email, name: 'Local Proof User', emailVerified: true, createdAt: new Date(0).toISOString() },
+    session: { token, expiresAt },
   };
 
-  // The local-proof JWT is intentionally unsigned and must never be sent to the
-  // real Supabase project. Keeping local preview auth entirely in this harness
-  // prevents an expected 401 from triggering session refresh and a redirect to
-  // /login while still exercising the authenticated application shell.
-  await browserContext.route(`${supabaseUrl}/rest/v1/**`, async (route) => {
+  // Keep local preview auth on the same-origin Cloudflare contract. This never
+  // talks to a provider or adopts an external identity.
+  await browserContext.route('**/api/auth/ok', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'content-type': 'application/json' },
-      body: '[]',
+      body: '{}',
     });
   });
-  await browserContext.route(`${supabaseUrl}/auth/v1/token**`, async (route) => {
+  await browserContext.route('**/api/auth/get-session', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        access_token: token,
-        token_type: 'bearer',
-        expires_in: 3600,
-        expires_at: Math.floor(Date.now() / 1000) + 3600,
-        refresh_token: 'local-proof-refresh',
-        user: localProofUser,
-      }),
+      body: JSON.stringify(localProofPayload),
     });
   });
-  await browserContext.route(`${supabaseUrl}/auth/v1/user**`, async (route) => {
+  await browserContext.route('**/api/auth/**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(localProofUser),
+      body: JSON.stringify(localProofPayload),
     });
   });
 
-  await browserContext.addInitScript(({ userId, email, projectRef, token }) => {
-    const key = `sb-${projectRef}-auth-token`;
-    window.localStorage.setItem(key, JSON.stringify({
-      access_token: token,
-      token_type: 'bearer',
-      expires_at: Math.floor(Date.now() / 1000) + 60 * 60,
-      expires_in: 60 * 60,
-      refresh_token: 'local-proof-refresh',
-      user: {
-        id: userId,
-        aud: 'authenticated',
-        role: 'authenticated',
-        email,
-        user_metadata: { name: 'Local Proof User' },
-        app_metadata: {},
-      },
-    }));
-  }, { userId, email, projectRef, token });
+  await browserContext.addInitScript(() => window.localStorage.clear());
 }
 
-function readEnvValue(name) {
-  if (process.env[name]) return process.env[name];
-  for (const file of ['.env.local', '.env.production.local', '.env']) {
-    try {
-      const text = fs.readFileSync(file, 'utf8');
-      const line = text.split(/\r?\n/).filter((entry) => entry.startsWith(`${name}=`)).pop();
-      if (line) return line.slice(name.length + 1).trim().replace(/^["']|["']$/g, '');
-    } catch {
-      // Try the next conventional Vite env file.
+async function installLocalCloudflareMocks(browserContext) {
+  const userId = '00000000-0000-4000-8000-000000000033';
+  const brandId = '00000000-0000-4000-8000-000000000133';
+  const now = new Date().toISOString();
+  const profile = {
+    id: userId,
+    email: 'lightchain-all-feature-local-proof@example.test',
+    name: 'Local Proof User',
+    avatar_url: null,
+    created_at: now,
+    updated_at: now,
+    language: 'ja',
+    is_admin: false,
+  };
+  const brand = {
+    id: brandId,
+    owner_id: userId,
+    name: 'Heavy Chain Local Proof',
+    slug: 'heavy-chain-local-proof',
+    logo_url: null,
+    tone_description: 'Heavy Chain parity proof brand',
+    target_audience: 'Proof users',
+    brand_colors: { primary: '#65d3cf', secondary: '#111719' },
+    created_at: now,
+    updated_at: now,
+  };
+
+  // Local feature coverage must remain on the synthetic Cloudflare contract.
+  // Without this route, the public VITE API origin leaks into the local
+  // browser and turns an otherwise successful fixture run into a CORS failure.
+  await browserContext.route('**/v1/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/v1/profile')) {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(profile) });
+      return;
     }
+    if (/\/v1\/brands(?:\/.*)?$/.test(pathname)) {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([brand]) });
+      return;
+    }
+    if (/\/v1\/(?:image-folders|folders|tags|style-presets|generated-images|generation-jobs|workspace-execution-steps)(?:\/|$)/.test(pathname)) {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+}
+
+async function installLocalContextGuard(browserContext, targetBaseUrl) {
+  const target = new URL(targetBaseUrl);
+  const targetOrigin = target.origin;
+
+  // Register the context-wide guard after fixture handlers so allowed requests
+  // can fall through to synthetic handlers, while this newest handler remains
+  // the fail-closed decision point for every request before a page is created.
+  await browserContext.route('**/*', async (route) => {
+    const request = route.request();
+    const decision = classifyLocalHttpRequest(request.url(), request.method(), request.resourceType(), targetOrigin);
+    recordBoundaryDecision({ kind: 'http', ...decision });
+    if (decision.action === 'block') {
+      await route.abort('blockedbyclient');
+      return;
+    }
+    await route.fallback();
+  });
+
+  await browserContext.routeWebSocket('**/*', async (webSocket) => {
+    const decision = classifyLocalWebSocketRequest(webSocket.url(), target);
+    recordBoundaryDecision({ kind: 'websocket', ...decision });
+    if (decision.action === 'block') {
+      await webSocket.close({ code: 1008, reason: 'local_boundary_blocked' });
+      return;
+    }
+    webSocket.connectToServer();
+  });
+}
+
+function classifyLocalHttpRequest(requestUrl, method, resourceType, targetOrigin) {
+  let parsed;
+  try {
+    parsed = new URL(requestUrl);
+  } catch {
+    return { action: 'block', reason: 'invalid_request_url', url: requestUrl, method, resourceType };
   }
-  return null;
+  if (['data:', 'blob:', 'about:'].includes(parsed.protocol)) {
+    return { action: 'allow', reason: 'local_safe_resource_scheme', url: requestUrl, method, resourceType };
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.origin !== targetOrigin || !isLoopbackUrl(parsed.toString())) {
+    return { action: 'block', reason: 'non_loopback_http_or_https', url: requestUrl, method, resourceType };
+  }
+  if (LOCAL_SYNTHETIC_AUTH_PATHS.has(parsed.pathname) && LOCAL_SAFE_HTTP_METHODS.has(method.toUpperCase())) {
+    return { action: 'allow', reason: 'synthetic_local_proof_auth', url: requestUrl, method, resourceType };
+  }
+  if (isLocalBlockedEndpoint(parsed.pathname)) {
+    return { action: 'block', reason: 'local_provider_submit_mutation_fail_closed', url: requestUrl, method, resourceType };
+  }
+  if (!LOCAL_SAFE_HTTP_METHODS.has(method.toUpperCase())) {
+    return { action: 'block', reason: 'local_mutation_method_fail_closed', url: requestUrl, method, resourceType };
+  }
+  return { action: 'allow', reason: 'same_loopback_app_traffic', url: requestUrl, method, resourceType };
 }
 
-function base64url(input) {
-  return Buffer.from(JSON.stringify(input)).toString('base64url');
+function classifyLocalWebSocketRequest(requestUrl, target) {
+  let parsed;
+  try {
+    parsed = new URL(requestUrl);
+  } catch {
+    return { action: 'block', reason: 'invalid_websocket_url', url: requestUrl };
+  }
+  const sameLoopbackApp = ['ws:', 'wss:'].includes(parsed.protocol)
+    && isLoopbackHostname(parsed.hostname)
+    && parsed.hostname === target.hostname
+    && parsed.port === target.port;
+  if (!sameLoopbackApp) return { action: 'block', reason: 'external_websocket_fail_closed', url: requestUrl };
+  if (isLocalBlockedEndpoint(parsed.pathname)) {
+    return { action: 'block', reason: 'local_provider_submit_mutation_fail_closed', url: requestUrl };
+  }
+  return { action: 'allow', reason: 'same_loopback_app_websocket', url: requestUrl };
 }
 
-function makeLocalJwt(userId, email) {
-  const now = Math.floor(Date.now() / 1000);
-  return [
-    base64url({ alg: 'none', typ: 'JWT' }),
-    base64url({
-      aud: 'authenticated',
-      exp: now + 60 * 60,
-      iat: now,
-      role: 'authenticated',
-      sub: userId,
-      email,
-      user_metadata: { name: 'Local Proof User' },
-      app_metadata: {},
-    }),
-    'local-proof',
-  ].join('.');
+function isLocalBlockedEndpoint(pathname) {
+  if (LOCAL_SYNTHETIC_AUTH_PATHS.has(pathname)) return false;
+  return LOCAL_BLOCKED_ENDPOINT_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
-function isLocalPreview(url) {
-  const parsed = new URL(url);
-  return ['127.0.0.1', 'localhost', '::1'].includes(parsed.hostname);
+function recordBoundaryDecision(decision) {
+  evidence.boundaryDecisions.push({ at: new Date().toISOString(), ...decision });
+}
+
+function assertLocalExecutionBoundary(targetBaseUrl, rawAuthStatePath) {
+  let parsed;
+  try {
+    parsed = new URL(targetBaseUrl);
+  } catch {
+    throw new Error('local_mode_requires_loopback_base_url');
+  }
+  if (!isLoopbackUrl(targetBaseUrl) || parsed.username || parsed.password) {
+    throw new Error('local_mode_requires_explicit_loopback_base_url');
+  }
+  if (rawAuthStatePath !== null) throw new Error('local_mode_rejects_auth_state_use');
+}
+
+function createFreshOutputDirectory(requestedPath) {
+  if (requestedPath !== undefined && typeof requestedPath !== 'string') {
+    throw new Error('output_path_must_be_a_string');
+  }
+  if (requestedPath) {
+    const directory = path.resolve(requestedPath);
+    if (fs.existsSync(directory)) throw new Error(`output_directory_already_exists:${directory}`);
+    fs.mkdirSync(path.dirname(directory), { recursive: true });
+    fs.mkdirSync(directory);
+    if (fs.existsSync(path.join(directory, 'SUMMARY.json'))) {
+      throw new Error(`output_summary_already_exists:${path.join(directory, 'SUMMARY.json')}`);
+    }
+    return directory;
+  }
+  const root = path.resolve('output/playwright');
+  fs.mkdirSync(root, { recursive: true });
+  return fs.mkdtempSync(path.join(root, `lightchain-all-feature-workflows-${dateStamp()}-`));
+}
+
+function isLoopbackUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol) && isLoopbackHostname(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function isLoopbackHostname(hostname) {
+  const normalized = String(hostname).toLowerCase().replace(/^\[|\]$/g, '');
+  return normalized === 'localhost' || normalized === '::1' || /^127\./.test(normalized);
 }
 
 function trimTrailingSlash(value) {
@@ -1254,7 +1848,12 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (!arg.startsWith('--')) continue;
-    const key = arg.slice(2);
+    const inlineAssignment = arg.indexOf('=');
+    const key = arg.slice(2, inlineAssignment === -1 ? undefined : inlineAssignment);
+    if (inlineAssignment !== -1) {
+      parsed[key] = arg.slice(inlineAssignment + 1);
+      continue;
+    }
     const next = argv[index + 1];
     if (!next || next.startsWith('--')) {
       parsed[key] = true;

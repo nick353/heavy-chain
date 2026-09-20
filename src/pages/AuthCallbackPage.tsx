@@ -28,7 +28,7 @@ export function AuthCallbackPage() {
           }
           adoptAuthenticatedSession(session.user, profile);
 
-          navigate('/lightchain', { replace: true });
+          navigate('/designProduction', { replace: true });
         } else {
           navigate('/login');
         }

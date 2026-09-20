@@ -32,7 +32,7 @@ const checks = {
     && (library.match(/postProcessMask: false/g) || []).length >= 2,
   print_garment_uses_same_origin_model: library.includes("modelName = 'silueta'")
     && library.includes('const rembgSiluetaModelUrl = String(')
-    && /VITE_REMBG_SILUETA_MODEL_URL\s*\n\s*\|\| '\/models\/silueta\.onnx'/.test(library)
+    && /VITE_REMBG_SILUETA_MODEL_URL\s*\n\s*\|\| '\/assets\/silueta\.onnx'/.test(library)
     && library.includes("rembgConfig.setCustomModelPath('silueta', rembgSiluetaModelUrl)")
     && page.includes("resolvePrintGarmentCutoutModel({ selectionSource: printGarmentSelectionSource })"),
   rembg_avoids_unreliable_webgl_provider: library.includes("executionProviders: ['wasm']")
@@ -86,7 +86,7 @@ const checks = {
     && garmentSegmentationPolicy.includes('!hasTransparentPixels')
     && library.includes('&& !shouldPreferConfiguredClothModel'),
   production_model_does_not_silently_fall_back_to_huggingface: library.includes("VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL\n  || ''")
-    && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'")
+    && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/assets/silueta.onnx'")
     && !library.includes('https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx'),
   ai_result_records_actual_model_engine: library.includes('engine: `browser-ai-${modelName}-v1`'),
   cutout_timeout_allows_ai_fallback_to_finish: page.includes('const CUTOUT_TIMEOUT_MS = 75_000')

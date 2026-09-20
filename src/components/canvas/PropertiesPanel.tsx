@@ -75,6 +75,14 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
   const sourceReadback = selectedObject?.metadata?.sourceReadback;
   const localSourceReadback = sourceReadback && 'status' in sourceReadback ? sourceReadback : null;
   const lightchainSourceReadback = sourceReadback && 'sourceWorkspace' in sourceReadback ? sourceReadback : null;
+  const galleryImageId = selectedObject?.metadata?.galleryImageId ?? parameters.galleryImageId ?? null;
+  const provider = selectedObject?.metadata?.provider ?? parameters.provider ?? null;
+  const backendProvider = selectedObject?.metadata?.backendProvider ?? parameters.backendProvider ?? null;
+  const providerModel = selectedObject?.metadata?.providerModel ?? parameters.providerModel ?? null;
+  const providerRequestId = parameters.providerRequestId ?? null;
+  const providerJobId = parameters.providerJobId ?? selectedObject?.metadata?.providerTaskId ?? null;
+  const generationJobId = parameters.generationJobId ?? selectedObject?.metadata?.jobId ?? null;
+  const hasSourceLineage = Boolean(galleryImageId || provider || backendProvider || providerModel || providerRequestId || providerJobId || generationJobId);
 
   useEffect(() => {
     if (selectedObject) {
@@ -372,6 +380,21 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
         </div>
       )}
 
+      {selectedObject.type === 'image' && hasSourceLineage && (
+        <div className="pt-4 border-t border-neutral-100" data-testid="canvas-source-lineage">
+          <h4 className="text-xs font-semibold text-neutral-500 mb-2">生成・保存の照合情報</h4>
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600 space-y-1">
+            {galleryImageId && <p className="break-all">Gallery image ID: {String(galleryImageId)}</p>}
+            {provider && <p>provider: {String(provider)}</p>}
+            {backendProvider && <p>backend provider: {String(backendProvider)}</p>}
+            {providerModel && <p>provider model: {String(providerModel)}</p>}
+            {providerRequestId && <p className="break-all">provider request: {String(providerRequestId)}</p>}
+            {providerJobId && <p className="break-all">provider job: {String(providerJobId)}</p>}
+            {generationJobId && <p className="break-all">generation job: {String(generationJobId)}</p>}
+          </div>
+        </div>
+      )}
+
       {selectedObject.type === 'image' && sourceReadback && (
         <div className="pt-4 border-t border-neutral-100" data-testid="canvas-source-readback">
           <h4 className="text-xs font-semibold text-neutral-500 mb-2">素材の検証情報</h4>
@@ -379,7 +402,6 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
             {localSourceReadback ? (
               <>
                 <p>状態: {localSourceReadback.status === 'verified' ? '確認済み' : localSourceReadback.status}</p>
-                <p>出所: 権利・所有の証明ではありません</p>
                 <p>形式: {localSourceReadback.mimeType}</p>
                 <p>寸法: {localSourceReadback.width} × {localSourceReadback.height}</p>
                 <p>サイズ: {localSourceReadback.sizeBytes.toLocaleString()} bytes</p>

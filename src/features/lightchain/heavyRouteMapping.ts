@@ -6,7 +6,7 @@ export const HEAVY_PRODUCT_ROUTE_BY_FEATURE_ID: Readonly<Record<ProductCatalogOb
   'marketing-workspace': '/marketing',
   'virtual-fitting': '/fitting',
   'wear-design-lab': '/lab',
-  'video-workstation': '/video',
+  'video-workstation': '/flow/GenerateShortVideo',
   'model-library': '/model-library/model-custom-form',
   'fashion-studio': '/flow/integration',
   'design-agent': '/agent',

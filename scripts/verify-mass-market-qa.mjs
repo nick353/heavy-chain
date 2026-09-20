@@ -5,7 +5,7 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 
 const args = parseArgs(process.argv.slice(2));
-const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain.zeabur.app');
+const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain-web.nichika2000823.workers.dev');
 const authStatePath = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'output/playwright/prod-auth-refresh-20260625/auth-state.json';
 const outDir = args.out || `output/playwright/mass-market-qa-${dateStamp()}`;
 const imagePath = args.image || process.env.HEAVY_CHAIN_QA_IMAGE || '/Users/nichikatanaka/Downloads/S__4235312(1).jpg';
@@ -21,28 +21,27 @@ const mobileViewport = { width: 390, height: 844 };
 
 const routeSpecs = [
   { key: 'dashboard', path: '/dashboard', expected: ['制作ワークフロー', 'おすすめ', 'AIフィッティング'] },
-  { key: 'lightchain', path: '/lightchain', expected: ['HEAVY CHAIN AI', 'おすすめ', 'AIフィッティング'] },
+  { key: 'design-production', path: '/designProduction', expected: ['デザインワークスペースへようこそ', 'インスピレーション', 'ブリン卜修正'] },
   { key: 'generate-home', path: '/generate', expected: ['素材', '生成'] },
   { key: 'generate-campaign', path: '/generate?feature=campaign-image', expected: ['キャンペーン画像'], upload: true, generateReady: true },
   { key: 'marketing', path: '/marketing', expected: ['マーケティング'], upload: true },
   { key: 'fitting', path: '/fitting', expected: ['AIフィッティング'], upload: true },
   { key: 'studio', path: '/studio', expected: ['Fashion Studio'], upload: true },
-  { key: 'models', path: '/models', expected: ['モデル'], upload: true },
+  { key: 'models', path: '/model-library', expected: ['モデルカスタマイズ'], upload: true },
   { key: 'patterns', path: '/patterns', expected: ['柄'], upload: true },
-  { key: 'video', path: '/video', expected: ['動画'], upload: true },
+  { key: 'video', path: '/flow/GenerateShortVideo', expected: ['動画ワークステーション', '新規ファイル', '参考事例'] },
   { key: 'lab', path: '/lab', expected: ['ウェアデザインラボ'], upload: true },
   { key: 'jobs', path: '/jobs', expected: ['制作キュー'], jobsToggle: true },
   { key: 'history', path: '/history', expected: ['生成履歴'] },
   { key: 'gallery', path: '/gallery', expected: ['ギャラリー'], galleryDetail: true },
   { key: 'canvas', path: '/canvas/new', expected: ['画像を置く', 'Galleryから追加'], upload: true, canvasGallery: true, minBodyLength: 40 },
   { key: 'brand-settings', path: '/brand/settings', expected: ['ブランド'] },
-  { key: 'credits', path: '/credits', expected: ['利用状況'] },
 ];
 
 const mobileSpecs = [
   'dashboard',
   'generate-campaign',
-  'lightchain',
+  'design-production',
   'marketing',
   'fitting',
   'jobs',
@@ -209,19 +208,6 @@ async function runRoute(spec, context, viewport) {
         brokenRecentPlaceholderVisible,
         failedRecentImageCards,
         recoveryVisible,
-      });
-    }
-    if (spec.key === 'credits') {
-      const workspacePanelVisible = await page.locator('[data-testid="credits-workspace-panel"]').isVisible().catch(() => false);
-      const nextActionsVisible = await page.locator('[data-testid="credits-next-actions"]').isVisible().catch(() => false);
-      const nextActionLinks = await page
-        .locator('[data-testid="credits-next-actions"] a')
-        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
-        .catch(() => []);
-      addAssertion(routeEvidence, 'credits_has_actionable_workspace_panel', workspacePanelVisible && nextActionsVisible && nextActionLinks.includes('/generate') && nextActionLinks.includes('/jobs'), {
-        workspacePanelVisible,
-        nextActionsVisible,
-        nextActionLinks,
       });
     }
     if (spec.key === 'history' || spec.key === 'mobile-history') {
@@ -630,34 +616,16 @@ async function runRoute(spec, context, viewport) {
         },
       );
     }
-    if (spec.key === 'lightchain') {
-      const visibleToolLinks = await page
-        .locator('[data-testid="lightchain-tool-card"]')
-        .evaluateAll((items) =>
-          items
-            .filter((item) => {
-              const style = window.getComputedStyle(item);
-              const rect = item.getBoundingClientRect();
-              return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
-            })
-            .map((item) => item.getAttribute('href')),
-        )
-        .catch(() => []);
+    if (spec.key === 'design-production') {
+      const sourceEntryVisible = await page.locator('[data-testid="design-production-page"]').isVisible().catch(() => false);
+      const creationCardsVisible = await page.locator('[data-testid="design-production-page"] [aria-label="新規ファイル"]').isVisible().catch(() => false);
       addAssertion(
         routeEvidence,
-        'lightchain_category_cards_open_real_feature_routes',
-        body.includes('おすすめ') &&
-          body.includes('企画デザインツール') &&
-          body.includes('AIフィッティング') &&
-          body.includes('グラフィックツール') &&
-          visibleToolLinks.length > 0 &&
-          visibleToolLinks.every((href) =>
-            typeof href === 'string' &&
-            href !== '/lightchain' &&
-            !href.startsWith('/lightchain/')
-          ),
+        'design_production_source_entry_is_complete',
+        sourceEntryVisible && creationCardsVisible && body.includes('生地イメージ') && body.includes('企画提案書'),
         {
-          visibleToolLinks,
+          sourceEntryVisible,
+          creationCardsVisible,
         },
       );
     }
@@ -790,7 +758,7 @@ async function runRoute(spec, context, viewport) {
           dashboardLightchainVisibleFeatureCount > 0 &&
             dashboardLightchainVisibleFeatureCount <= 4 &&
             allToolsLinkVisible &&
-            allToolsHref === '/lightchain',
+            allToolsHref === '/designProduction',
           {
             dashboardLightchainVisibleFeatureCount,
             dashboardLightchainVisibleFeatureLinks,
@@ -823,8 +791,7 @@ async function runRoute(spec, context, viewport) {
           !nextActionVisible &&
             nextActionPrimaryHref === null &&
             managementLinks.includes('/history') &&
-            managementLinks.includes('/canvas') &&
-            managementLinks.includes('/credits'),
+            managementLinks.includes('/canvas'),
           {
             nextActionVisible,
             nextActionPrimaryHref,
@@ -857,46 +824,13 @@ async function runRoute(spec, context, viewport) {
           showAllVisible,
         });
       }
-      if (spec.key === 'mobile-lightchain') {
-        const visibleToolCards = page.locator('[data-testid="lightchain-tool-card"]');
-        const visibleToolCount = await visibleToolCards
-          .evaluateAll((items) =>
-            items.filter((item) => {
-              const style = window.getComputedStyle(item);
-              const rect = item.getBoundingClientRect();
-              return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
-            }).length,
-          )
-          .catch(() => 0);
-        const visibleToolLinks = await visibleToolCards
-          .evaluateAll((items) =>
-            items
-              .filter((item) => {
-                const style = window.getComputedStyle(item);
-                const rect = item.getBoundingClientRect();
-                return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
-              })
-              .map((item) => item.getAttribute('href')),
-          )
-          .catch(() => []);
-        const showAllVisible = await page.locator('[data-testid="mobile-lightchain-show-all-tools"]').isVisible().catch(() => false);
-        addAssertion(routeEvidence, 'mobile_lightchain_category_entry_is_compact', visibleToolCount <= 9, {
-          visibleToolCount,
-          showAllVisible,
+      if (spec.key === 'mobile-design-production') {
+        const sourceEntryVisible = await page.locator('[data-testid="design-production-page"]').isVisible().catch(() => false);
+        const creationCardsVisible = await page.locator('[data-testid="design-production-page"] [aria-label="新規ファイル"]').isVisible().catch(() => false);
+        addAssertion(routeEvidence, 'mobile_design_production_source_entry_is_complete', sourceEntryVisible && creationCardsVisible, {
+          sourceEntryVisible,
+          creationCardsVisible,
         });
-        addAssertion(
-          routeEvidence,
-          'mobile_lightchain_category_cards_open_real_feature_routes',
-          visibleToolLinks.length > 0 &&
-            visibleToolLinks.every((href) =>
-              typeof href === 'string' &&
-              href !== '/lightchain' &&
-              !href.startsWith('/lightchain/')
-            ),
-          {
-            visibleToolLinks,
-          },
-        );
       }
       if (spec.key === 'mobile-canvas') {
         await page.waitForTimeout(350);
@@ -1001,26 +935,23 @@ async function interactGenerateReady(page, routeEvidence) {
   await page.getByPlaceholder(/最大50% OFF/).fill('Visual workflow proof').catch(() => undefined);
   const rightsCheckbox = page.getByRole('checkbox').first();
   const rightsCheckboxVisible = await rightsCheckbox.isVisible().catch(() => false);
-  if (rightsCheckboxVisible) {
-    await rightsCheckbox.check().catch(() => undefined);
-  }
   const body = await bodyText(page);
   const button = page.getByRole('button', { name: /生成する/ }).first();
   const visible = await button.isVisible().catch(() => false);
   const enabled = await button.isEnabled().catch(() => false);
-  const h601CopyVisible = /権利・許可|商用デザイン制作|商標クリアランス/.test(body);
+  const permissionSurfaceVisible = body.includes('権限がありません');
   routeEvidence.interactions.push({
-    type: 'generate-ready-no-submit',
+    type: 'generate-permission-surface-no-submit',
     visible,
     enabled,
     rightsCheckboxVisible,
-    h601CopyVisible,
+    permissionSurfaceVisible,
   });
-  addAssertion(routeEvidence, 'h601_rights_confirmation_visible', rightsCheckboxVisible && h601CopyVisible, {
+  addAssertion(routeEvidence, 'lightchain_permission_surface_visible', !rightsCheckboxVisible && permissionSurfaceVisible, {
     rightsCheckboxVisible,
-    h601CopyVisible,
+    permissionSurfaceVisible,
   });
-  addAssertion(routeEvidence, 'generate_button_ready_without_submit', visible && enabled);
+  addAssertion(routeEvidence, 'generate_button_blocked_without_source_permission', visible && !enabled);
 }
 
 async function interactJobsToggle(page, routeEvidence) {
@@ -1122,14 +1053,14 @@ async function waitForRouteReady(page, spec) {
 
 async function installSafeMocks(context) {
   if (!mockFunctions) return;
-  await context.route('**/functions/v1/generate-image', async (route) => {
+  await context.route('**/v1/provider-actions/*', async (route) => {
     await route.fulfill({
       status: 202,
       contentType: 'application/json',
       body: JSON.stringify({ job: { id: 'mock-mass-market-job', status: 'pending' }, message: 'mocked by verify-mass-market-qa' }),
     });
   });
-  await context.route('**/functions/v1/marketing-workspace-artifact', async (route) => {
+  await context.route('**/v1/workspace-artifacts', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -1142,7 +1073,7 @@ function buildStorageStateForBaseUrl(filePath, targetBaseUrl) {
   const state = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   const targetOrigin = new URL(targetBaseUrl).origin;
   if (/^https?:\/\/(127\.0\.0\.1|localhost)/.test(targetOrigin)) {
-    const prodOrigin = state.origins?.find((origin) => origin.origin === 'https://heavy-chain.zeabur.app')
+    const prodOrigin = state.origins?.find((origin) => origin.origin === 'https://heavy-chain-web.nichika2000823.workers.dev')
       ?? state.origins?.[0];
     if (prodOrigin?.localStorage) {
       state.origins = [

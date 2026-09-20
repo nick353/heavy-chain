@@ -5,6 +5,18 @@
 操作面: AOS Chrome Companion のログイン済み task-owned session  
 認証設計: `auth-state.json` 不使用。Cookie、token、パスワード、OTPは取得・保存しない。
 
+## 2026-09-20 current boundary
+
+同一task-owned認証プロフィールで30秒待機後の本番readbackが成立した。
+`/flow/GenerateShortVideo`のHeavyはLightの現行Dashboard形状、source snapshot
+asset、最近6件、参考5件、`修正`表示に揃い、権利確認checkbox／badge／modalは表示しない。
+証跡は`work/heavy-chain-production-video-dashboard-readback-20260920-r8.md`。
+
+残りは、動画Dashboard以外の全route/stateの現行Light観測、同一fixtureの機械的pixel diff、
+provider生成・結果・保存・再利用・receipt、Gallery／Canvas／History／Jobsの本番readback、
+source sync／reconciliation／cleanup、generation scorecard、strict release gateである。
+Goalは継続中であり、未確認のprovider効果やscorecardは作らない。
+
 ## 1. 目的
 
 Light Chainの全画面、全カテゴリ、全主要導線、成果物フローを実際に操作して確認し、その結果を基準にHeavy Chainの以下を揃える。
@@ -3911,3 +3923,1371 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] 主要6ランチャー枠のvisual parityを確認
 - [ ] 事例カードの画像・保存データ集合をLight正本と1対1で同期・再検証
 - [ ] 全画面／全カテゴリ、同一artifact lifecycle、provider receipt/source sync/reconciliation、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Fashion Studio route and new-file parity readback
+- [x] Lightホームの表示カードから観測済み`/flow/integration`へ遷移し、30秒待機後にファッションスタジオの保存プロジェクト一覧、`新規ファイル`、参考事例をfresh semantic／visual readback
+- [x] Lightの`新規ファイル`カードを実クリックし、観測済み`/flow/integration/detail?boardProjectCode=&boardProjectType=`へ遷移。画像追加前のタイトル、アップロード説明、対応形式・最大20M表示を確認
+- [x] Heavyの同一routeを30秒待機後にfresh readbackし、ファッションスタジオ見出し、戻る導線、同じ画像追加前説明、同じ対応形式・最大20M表示を確認
+- [x] Lightホームの`ファッションスタジオ`ランチャーはAX、DOM locator、画面位置の各クリックで変化せず、エラー0件だったため、クリックno-effect境界を別途記録。推測再送は行わない
+- [ ] Light／Heavyの保存プロジェクト集合を同一artifact条件で1対1突合し、詳細・入力後状態・保存／再利用を確認
+- [ ] 全画面／全カテゴリのpixel・interaction parity、provider receipt/source sync/reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Fashion Studio saved-card detail comparison
+- [x] Lightの保存カードを1回実クリックし、`/flow/integration/detail?boardProjectCode=2099697581958967298&boardProjectType=integrationCustom`へ遷移。画像検索、メイン／参考画像、生成結果、指示文、文字数、生成設定、AI生成をfresh readback
+- [x] Heavyの保存カードを1回実クリックし、同じroute契約（HeavyのCanvas IDを`boardProjectCode`に使用）へ遷移。入力、生成設定、文字数、AI生成、タスク、ツール群、ズームをfresh readback
+- [x] route・主要操作モデルは対応しているが、Lightは保存プロジェクトの実画像／実指示文を表示し、Heavyはプレースホルダー画像と別の初期指示文を表示するDATA／VISUAL_DIFFを確定
+- [ ] Heavyが保存Canvas／source artifactの実画像・指示文・生成結果を詳細画面へ復元し、Lightの同一保存段階と1対1で突合
+- [ ] 保存カードのメニュー（ピン留め、アセットライブラリ保存、削除）のHeavy対応契約、provider receipt/source sync/reconciliation、logout→loginを確認
+
+### 2026-09-18 continuation checkpoint — Heavy保存詳細の実データ復元後readback
+- [x] Heavy詳細画面で保存Canvas documentを読み戻し、利用可能な画像sourceを認証付きメディアURLへ解決して実画像表示する実装を追加
+- [x] snapshot metadataのprompt復元、メイン／参考／生成結果の表示slotと静的parityテストマーカーを追加
+- [x] 関連テスト、typecheck、production build、Cloudflare build、R2 upload、Wrangler dry-run、本番deployを完了
+- [x] デプロイ後のログイン済みCompanionで30秒待機し、Heavy詳細に実メディア画像1件が表示されることをvisual／DOM readback
+- [ ] Light同一保存詳細の実画像3件・実prompt71文字と、Heavy同一artifactの3件・promptを1対1で揃える
+- [ ] Heavyカードメニューのピン留め／アセットライブラリ保存／削除の実効性、provider receipt、source sync、reconciliation、logout→login回帰、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — `/model` entitlement・初期状態の再突合
+- [x] 同一ログイン済みCompanion runでLight／Heavy `/model`を各30秒待機し、主要入力・タスク切替・設定・生成履歴をfresh readback
+- [x] Lightは`権限がありません`がdisabled=false、Heavyはdisabled=trueであることを確定。ログイン待ちではなく、機能別entitlement readback契約の未接続差分として記録
+- [x] Heavyの既存保存済み生成結果と移動先導線を確認し、Light初期画面との差は同一artifact未成立のDATA_SCOPE_DIFFとして分離
+- [x] Lightの権限表示buttonを1回だけ観測クリックし、確認モーダル・外部送信・権利確認が発生しないことを確認。再送なし、Heavyのrights gate変更なし
+- [ ] Lightの正規entitlement sourceとHeavyの機能別entitlement契約を特定し、同一アカウント・同一ブランド条件で表示差を解消
+- [ ] Light／Heavyの素材選択後・マルチタスク・全カテゴリ、同一artifact lifecycle、provider receipt、source sync、reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — `/history` route readback
+- [x] Light／Heavyの`/history`を各30秒待機してfresh readback
+- [x] Lightは404、Heavyは生成履歴・進行中0・失敗1・保存済み9・タイムライン・再開／Gallery／成果物open導線を確認
+- [x] 履歴項目の再開・削除・ダウンロードは未操作。Heavy新規タブの認証表示差があるため同一認証条件の比較は`NOT_PROVEN`
+- [ ] Lightの正規履歴routeまたは同等画面を特定し、Light／Heavyの履歴・再利用・保存成果物を同一条件で突合
+- [ ] 全カテゴリ・全画面、同一artifact lifecycle、provider receipt、source sync、reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — `/gallery` route readback
+- [x] Light／Heavyの`/gallery`を各30秒待機してfresh readback
+- [x] Lightは404、Heavyは9枚の画像、選択／お気に入り／並び替え、各カード詳細導線を確認
+- [x] Galleryカードの詳細クリック、削除、選択、ダウンロードは未操作
+- [ ] Lightの正規Gallery routeを特定し、同一成果物集合・詳細・Canvas再利用を突合
+- [ ] 全カテゴリ・全画面、同一artifact lifecycle、provider receipt、source sync、reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Light本番カテゴリroute inventory
+- [x] ログイン済みCompanionでLightホームを30秒待機し、企画デザイン／AIフィッティング／グラフィックのカテゴリタブを実クリック
+- [x] 画面上の`data-track-tool-item-path`から、Lightの正規主要入口を取得
+- [x] 企画デザイン9入口、AIフィッティング6入口、グラフィック5入口をroute inventoryとしてレポート化
+- [x] inventory全routeをHeavyで開き、30秒待機を含む準備完了／認証表示、画面構造、主要入口、visual/semantic parityを同条件でreadback（入力後操作・外部効果は別gate）
+- [ ] 全route・全カテゴリ、保存成果物lifecycle、provider receipt、source sync、reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Heavy `designProduction`カードメニューparity
+- [x] Light正規`/designProduction`の32件・6ページ・カードメニューをfresh readbackし、3メニュー項目を確定
+- [x] Heavy保存カードへ`ピン留め`、`アセットライブラリに保存`、`削除`、カード遷移分離、ブランド単位ピン永続化を実装
+- [x] parityテスト1/1、typecheck、build、Cloudflare build、R2 upload、dry-run、本番deployを完了
+- [x] デプロイ後Heavyを30秒待機し、avatar／ready／メニュー3項目／ピン留め後の再読込表示をCompanionで確認
+- [ ] Light32件／6ページとHeavy保存集合の1対1データ同期、正規アセット保存／削除の外部効果、provider receipt、source sync、reconciliationを確認
+- [ ] 全route・全カテゴリ、成果物lifecycle、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — `creator`・`tools/fabric` route readback
+- [x] Light／Heavyの`/creator`を各30秒待機し、主要入力、履歴、キーワード、権限ゲートを比較
+- [x] Light／Heavyの`/tools/fabric`を各30秒待機し、4タブ、2素材slot、任意キーワード、比率、権限、履歴、プレビューを比較
+- [x] `creator`のカテゴリ選択semantic差、FabricのHeavy追加素材選択導線、権限button state差を記録
+- [ ] Light／Heavyの素材選択後状態、各routeの入力保持・保存・再利用、provider receipt、source sync、reconciliationを同一artifactで突合
+- [ ] 全route・全カテゴリ、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — `agent`・`tools/line-draft-to-tile` route readback
+- [x] Light／Heavyの`/agent`を各30秒待機し、4業務タブ、新規タスク、最近一覧、添付、送信導線を比較
+- [x] Light／Heavyの`/tools/line-draft-to-tile`を各30秒待機し、終了告知、線画種別、平置き画像、説明、権限、履歴を比較
+- [x] Agent最近一覧件数差、Line-to-realのHeavy追加`モデル図`・素材選択・History導線、権限button state差を記録
+- [ ] 全routeの入力後状態、素材投入・保存・再利用、provider receipt、source sync、reconciliationを同一artifactで突合
+- [ ] 全カテゴリ、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — `editor/changeColor`・`tools/svg-convert`・`model-base/style`・`printing`
+- [x] Light本番の`editor/changeColor`、`tools/svg-convert`、`model-base/style`、`printing`を正規inventory routeとして開き、Heavy対応routeと画面構造をfresh readback
+- [x] `editor/changeColor`のLight保存一覧対Heavy入力ワークベンチ、`tools/svg-convert`のLight終了／権限表示対Heavy素材選択／disabled生成、`printing`のLight初期説明対Heavy入力ワークベンチ差を記録
+- [x] `model-base/style`の主要一覧データ集合がLight／Heavyで一致することを確認。ただしsemantic操作差は残す
+- [x] アップロード、生成、権利確認、保存送信は実行せず、provider receipt/source sync/reconciliationをUI readbackと分離
+- [ ] Light／Heavyの全inventory routeの入力後状態、保存／再利用、同一artifact、provider receipt、source sync、reconciliationを完了
+- [ ] 全カテゴリ、logout→login回帰、最終cleanup、最終差分監査を完了
+
+### 2026-09-18 continuation checkpoint — AIフィッティング追加3route
+- [x] Light／Heavyの`model-library/model-custom-form`をfresh readbackし、カテゴリ、初期フォーム、権限／保存／Canvas／Gallery導線を比較
+- [x] Light／Heavyの`flow/GenerateShortVideo`をfresh readbackし、保存一覧対Video Workstation、動画レーン、Storyboard、provider未接続状態を比較
+- [x] Light／Heavyの`flow/laboratory`をfresh readbackし、Light Lab一覧対Heavyウェアデザインラボ、評価score、Canvas／Gallery導線を比較。Heavyは30秒待機後にログイン済み画面を確認
+- [x] 選択変更、素材アップロード、保存送信、生成、権利確認は行わず、provider receipt/source sync/reconciliationと分離
+- [ ] 残りinventory route（`tools/reactor`、`tools/vector-special`、`editor/pattern`、`editor/patternDesign`等）の同条件readback
+- [ ] 全route・全カテゴリの入力後状態、同一artifact lifecycle、provider receipt、source sync、reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — グラフィック系残り4route
+- [x] Light／Heavyの`tools/reactor`をreadbackし、画像修正、マスク、素材選択、権限／生成導線を比較
+- [x] Light／Heavyの`tools/vector-special`をreadbackし、通常／プロ版、終了告知、レイヤー分け、使用回数、素材入力を比較
+- [x] Light／Heavyの`editor/pattern`をreadbackし、Light保存一覧とHeavy保存プロジェクト／参考事例集合を比較
+- [x] Light／Heavyの`editor/patternDesign`をreadbackし、Light保存一覧とHeavy新規／生成／参考サンプル導線を比較。Heavyは30秒待機後にreadyを確認
+- [x] AI生成、アップロード、保存、削除、権利確認は行わず、provider receipt/source sync/reconciliationを別状態として維持
+- [ ] 全routeの入力後状態、同一artifact lifecycle、外部効果のreadback、logout→login回帰、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Heavy Fashion Studioカードメニュー parity
+- [x] Lightの保存カードメニュー項目をfresh readback（ピン留め／アセットライブラリに保存／削除）
+- [x] Heavy保存カードへ同じメニュー項目と開閉UIを追加
+- [x] ブランド単位のピン状態localStorage永続化を追加し、初期hydrationと保存の競合を修正
+- [x] 関連テスト3/3、typecheck、build、Cloudflare build、R2 upload、dry-run、本番deployを完了
+- [x] Heavy一覧でメニューを実クリックし、ピン留め後のカード表示と30秒待機後の再読込で`📌`を確認
+- [ ] アセットライブラリ保存／削除の正規外部効果を、対象・承認・結果readback付きで確認
+- [ ] Heavy保存documentへLight相当の3画像・実promptを正規の保存フローで持たせ、同一artifactとして1対1突合
+- [ ] provider receipt、source sync、reconciliation、logout→login回帰、最終cleanup、全画面最終差分監査を完了
+
+### 2026-09-18 continuation checkpoint — ローカルhandoff再利用routeと最終readback
+- [x] `canvasProjectId`を持つローカルFashion Studioカードがdurable Canvas IDで詳細routeを開くよう修正
+- [x] route／merge関連テスト9/9、typecheck、build、Cloudflare build、R2 upload、dry-run、本番deployを完了
+- [x] 新規CompanionタブでHeavy一覧を開き、準備表示後30秒待機してログイン済み、カード、メニュー、ピン留め再表示、参考事例をfresh readback
+- [ ] Light同一artifactの3画像・実promptとHeavy保存documentを1対1で一致させる
+- [ ] アセットライブラリ保存／削除の正規外部効果、provider receipt、source sync、reconciliation、logout→login回帰、全画面最終監査を完了
+
+### 2026-09-18 continuation checkpoint — Heavy詳細のlocal artifact fallback
+- [x] `boardProjectCode`／`canvasProjectId`で同一ユーザー・ブランドのbrowser-local artifactを照合する詳細fallbackを追加
+- [x] 保存画像（data imageを含む）とpromptをfallback表示対象に追加
+- [x] 関連テスト9/9、typecheck、build、Cloudflare build、R2 upload、dry-run、本番deployを完了
+- [x] 最新Companionタブで30秒待機後、Heavy詳細のログイン済みready状態、実画像1件、prompt24/2000をfresh readback
+- [ ] Light同一artifactの3画像・実prompt71文字とHeavy保存document/local artifactを1対1で一致させる
+- [ ] アセットライブラリ保存／削除の正規外部効果、provider receipt、source sync、reconciliation、logout→login回帰、全画面最終監査を完了
+
+### 2026-09-18 continuation checkpoint — Heavy保存source経路の拡張と同条件比較
+- [x] `src`以外のCanvas保存メタデータsource（gallery URL／storage path／image ID／parameters）を詳細復元対象へ拡張
+- [x] 関連テスト、typecheck、通常build、Cloudflare build、R2 upload、dry-run、本番deployを完了
+- [x] Heavyを新規Companionタブで30秒待機し、ログイン済み・実画像1件・prompt24/2000をfresh readback
+- [x] Lightを同条件で30秒待機し、実画像3件・prompt71/2000をfresh readback
+- [ ] Heavy保存documentへLight相当の3画像・実promptを正規の保存フローで持たせ、同一artifactとして1対1突合
+- [ ] Heavyカードメニューのピン留め／アセットライブラリ保存／削除の実効性、provider receipt、source sync、reconciliation、logout→login回帰、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — カードメニュー保存／削除配線と本番反映
+- [x] Heavy `designProduction`／Fashion Studioカードの保存メニューを既存のライブラリ保存APIへ接続
+- [x] Heavyカードの削除メニューを永続artifact削除APIと確認ダイアログへ接続
+- [x] 関連テスト4/4、typecheck、通常build、diff check、Cloudflare Webテスト8/8、Cloudflare build、R2 upload、Wrangler dry-run、本番deployを完了
+- [ ] 新規Companionタブへログイン済みセッションを引き継いだ状態で、デプロイ後カードメニューの実表示をreadback
+- [ ] 保存／削除の実効性を対象・承認・結果readback付きで確認し、provider receipt、source sync、reconciliation、logout→login、最終cleanup、全画面最終差分監査を完了
+
+### 2026-09-18 continuation checkpoint — 公開環境・parity contract追加検証
+- [x] 保存／Canvas／provider provenance／履歴復元のruntime test 43/43をPASS
+- [x] route integrity 20/20、unified workflow contract 6/6、behavior ledger 6/6、provider coverage 22/22、permission parity 5/5をPASS
+- [x] 公開Heavy `/_health`でCloudflare hosting/auth providerをfresh readback
+- [ ] ログイン済みCompanionでの全route実操作、同一artifact 1対1突合、保存／削除の実効性、provider receipt/source sync/reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 全機能契約・操作境界追加監査
+- [x] 全機能workflow contract 5/5をPASSし、local／production mode境界とauth-state入力拒否を確認
+- [x] UI control boundaries 13/13をPASSし、Lightchain identity、4カテゴリtaxonomy、Agent controls、stateful settingsを確認
+- [x] material／print contract 28/28をPASSし、source metadata、権利確認モーダル、provider provenance、Gallery→Canvas lineageを確認
+- [ ] ログイン済みCompanionで全画面・全カテゴリ・全主要導線を実操作し、同一artifactの保存／再表示／再利用とprovider receipt/source sync/reconciliationを完了
+
+### 2026-09-18 continuation checkpoint — 認証済みCompanion実操作再開
+- [x] Heavy `/lightchain`を30秒待機し、avatar、4カテゴリ、主要ワークスペース、事例共有、保存成果物一覧をfresh readback
+- [x] `/designProduction`カードメニューの3項目を実クリックでreadback（保存／削除は外部効果のため未実行）
+- [x] `/tools/svg-convert`の素材選択面とライブラリータブを実操作し、保存素材なし状態を確認
+- [x] `/model`のシングル／マルチタスク、追加導線、説明生成／参考画像タブを実操作。未入力のため生成送信は未実行
+- [x] `/editor/patternDesign`の生成・新規ファイル・参考サンプル導線を認証済み状態でreadback
+- [ ] 全inventory routeの入力後状態、同一Light artifactの保存／再表示／再利用、provider receipt/source sync/reconciliation、logout→login、最終cleanupを完了
+- [x] 同じ認証済みタブでホームの企画デザイン／AIフィッティング／グラフィック各カテゴリをクリックし、正規入口とquery遷移をreadback
+- [x] avatarメニューのアカウント／ライブラリー／チーム管理／ウォーターマーク／ログアウト項目をreadback（ログアウト実行は未承認のため未実施）
+- [x] 保存事例の詳細modalと`同じもの作成`の再利用遷移を実操作し、線画routeの素材・生成種類・説明・権限状態を確認
+- [x] 認証済み`/asset-center`で保存成果物15件、カード操作、詳細メニュー、名前編集モーダルをreadback。名前変更はキャンセルし、コピー／削除／ダウンロードは未実行
+- [x] Library→Canvas遷移後、`Galleryから追加`で`campaign-image`を選択し、Canvas画像操作が有効化されることを確認。Canvas保存は未実行
+- [x] `campaign-image`をCanvas保存し、`/canvas/4167dd2a-5ddb-4dc8-85e7-d3fb3c24060b`でサーバー確認済みをreadback。30秒後の再読込で画像再表示と画像操作の再有効化を確認
+- [x] 後続Companion turnで同Canvasを再取得し、プロパティの素材・レイヤー情報に`生成元 gallery-import`をreadback。source lineageを確認し、provider receipt／reconciliationとは分離
+- [ ] 各入口の入力後状態・保存／再利用・同一artifact突合、外部効果のreceipt、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — provider receipt付きCanvas lifecycle
+- [x] AIフィッティング`model-matrix`成果物のGallery詳細と`provider receiptを読む`を実操作し、completed／persistence completed／job IDをreadback
+- [x] `Canvasで再編集`から実画像をCanvasへ復元し、編集操作群を確認
+- [x] provider成果物をCanvas保存し、`/canvas/e9253d2d-a32c-4bd8-a47c-d61a7b3cb474`でサーバー確認済み、30秒後の再表示を確認
+- [x] provider receipt、Canvas保存、Gallery→Canvas source syncを個別証明。完全reconciliation、削除／cleanup、logout→login、全route最終監査は未完了
+- [x] provider job ID、Gallery image ID、Canvas document IDを同一runで記録し、部分reconciliationを確認。Canvasプロパティへprovider job IDが出ないため完全reconciliationとは扱わない
+
+### 2026-09-18 continuation checkpoint — provider lineage metadataの本番反映
+- [x] Gallery→Canvas復元時の既存provider metadata／generation job／Gallery image IDの引き継ぎを追加し、欠損値を推測しない実装にした
+- [x] CanvasプロパティへGallery image ID、provider、backend provider、provider model、provider request／job、generation jobのread-only表示を追加
+- [x] 関連テスト30/30、typecheck、build、Cloudflare Webテスト8/8、R2 upload、Wrangler dry-run、本番deployを完了。Version `68f5dcd9-a9ba-4e37-a640-01daad2473ee`
+- [x] 認証済みCompanionでprovider receipt completed／persistence completedを再確認し、Canvas `/canvas/bd5fe6ca-61e8-4d91-807c-6efd44a239f5`の保存→30秒後再表示を確認
+- [x] 再読込後のプロパティでGallery image ID、workers_ai、Cloudflare Workers AI、Flux model、generation jobを確認し、partial reconciliationを実データでreadback
+- [ ] provider request専用IDを含む完全reconciliation、アセット保存／削除の外部効果、logout→login、全route最終差分監査、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — provider request/jobの意味分離
+- [x] Gallery metadataの`requestId`をprovider requestとして復元し、Cloudflare image-aiの`generated_images.job_id`をprovider成果物に限定してprovider jobへ表示
+- [x] request IDをjob IDとして誤表示しないfallbackへ修正
+- [x] 関連テスト20/20、typecheck、build、Cloudflare Webテスト8/8、R2 upload、dry-run、本番deployを完了。Version `08dfb5ac-ec06-43e5-9c31-97c723341b12`
+- [x] 認証済みCompanionでreceipt completed／persistence completed、Canvas再編集、保存、30秒後再読込を実操作
+- [x] Canvas `/canvas/62690dd1-6d71-4563-80ff-fcdaef85a0eb`のプロパティでprovider request、provider job、generation job、Gallery image ID、provider/modelを同時readback
+- [ ] Light／Heavy全route最終差分監査、アセット保存／削除の外部効果、logout→login、cleanupを完了
+
+### 2026-09-18 continuation checkpoint — アセットライブラリ保存の実効性
+- [x] 認証済みCompanionでHeavy `designProduction`の既存カードメニューを開き、`アセットライブラリに保存`を1回実行
+- [x] 成功通知`アセットライブラリーに保存しました`とマイプロジェクト`1件→2件`をreadback
+- [x] `/asset-center`を再読込し、`キャンペーン画像`／`campaign-image`カードとプレビュー／ボードコピー／詳細導線をreadback
+- [ ] 保存で追加された対象の正規削除を、対象・確認・結果readback付きで実行
+- [ ] 同名`campaign-image` 2件から今回保存分の正規対象IDをreadbackし、誤削除なしで削除対象を確定
+- [x] 追加保存候補`local-5b8ae14d-3246-4ebf-b569-077e37166e26`と既存元`local-generated-ai-2f1f8c00-ca08-43a5-a72d-bd5741a5c20b-0`をreadbackし、削除対象を確定
+- [x] 最新公開`/asset-center`でID表示chunkとCloudflare healthをread-only確認
+- [ ] logout→login、Light／Heavy全route最終差分監査、cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 現行契約テスト再実行
+- [x] route integrity 20/20、unified workflow contract 6/6、全機能workflow contract 5/5を再実行
+- [x] provider persistence/readback 14/14、Canvas source metadata 6/6、Library→Canvas handoff 10/10を再実行
+- [x] UI control boundaries 13/13、permission parity 5/5、material／print contract 28/28を再実行
+- [x] typecheck、production build（2553 modules）、git diff checkを再実行
+- [ ] 削除対象`local-5b8ae14d-3246-4ebf-b569-077e37166e26`のaction-time confirmation付き削除と結果readback
+- [ ] logout→login、Light／Heavy全route最終差分監査、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 30秒待機後の認証済み主要route再確認
+- [x] `/model`を30秒待機し、AIフィッティング実画面・既存結果・Gallery／History／Jobs／Canvas導線をreadback
+- [x] `/lightchain`を30秒待機し、4カテゴリ・主要入口・事例共有・保存成果物一覧をreadback
+- [x] `/designProduction`を30秒待機し、新規導線・マイプロジェクト2件・カードメニューをreadback
+- [x] `/asset-center`で一時的な接続切断後に再取得し、avatar・15件・キャンペーン画像2件をreadback
+- [ ] 全inventory routeについて同じ30秒待機後のready readbackを揃え、Light同一routeとの最終差分監査を完了
+- [ ] logout→login、削除のaction-time confirmation付き実行、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Lightchain catalog 30 route ready巡回
+- [x] Lightchain catalogの30 routeを同一Companionタブで30秒待機後に一巡し、ログイン済みready画面とroute固有主要UIをreadback
+- [x] `/video`、`/model`、`/canvas/new`、`/agent`の主要導線・保存先・provider fail-closed境界を確認
+- [x] route巡回中の一時的な`ERR_CONNECTION_CLOSED`は再取得後に復旧し、永続的な認証失敗・404ではないことを確認
+- [ ] Light同一routeとのpixel／interaction差分を最終比較表へ反映
+- [ ] 削除のaction-time confirmation付き実行、logout→login、provider receipt／source sync／reconciliationの残差分、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Companion証跡validator再確認
+- [x] `npm run verify:companion-auth`をPASS（ok=true、authStateRequired=false、5 route証跡）
+- [x] Playwright／auth-state前提の旧verifierは現行制約に反するため実行しないことを確認
+- [ ] provider receipt／source sync／reconciliation、削除、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 削除確認UIの安定化と本番反映
+- [x] ブラウザネイティブ `window.confirm` 依存を廃止し、削除・一括削除を画面内のアクセシブルな確認ダイアログへ統一
+- [x] `npm run typecheck`、`npm run build`（2553 modules）、`git diff --check`をPASS
+- [x] provider persistence/readback 14/14、Lightchain launcher parity 16/16を再実行してPASS
+- [x] Cloudflare build、R2 upload（2 unique objects）、Wrangler dry-run、本番deployを完了。Version `c4fe22e1-6edd-44b9-9fe6-fbac0ab0bbd9`
+- [x] 公開 `/_health` と `/asset-center` のHTTP 200をreadback
+- [ ] ログイン済みCompanionの対象タブ取得が30秒でタイムアウトし、その後ブラウザ一覧が空になったため、対象IDの削除クリック・再読込結果readbackは未完了
+- [ ] provider receipt／source sync／reconciliation、logout→login、pixel-level最終監査、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Goal readiness監査
+- [x] `npm run verify:goal-readiness:incomplete-ok`を実行し、Cloudflare runtime／auth／media／AI adapterの全チェックPASSを確認
+- [x] readiness監査のproof limit（production generation、AI品質、R2 persistence、browser business completionは別証拠）を最終判定へ反映
+- [ ] provider receipt／source sync／reconciliation、削除、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 現行最終判定マトリクス
+- [x] catalog 30route、全カテゴリ、主要workflow、Canvasの30秒待機後ready証跡を最終判定へ反映
+- [x] route／UI／保存再利用／provider receipt／source sync／auth-state不使用／deploy healthを根拠範囲付きで分類
+- [x] reconciliationは対象成果物の部分証明、pixel-level完全一致は未証明として過大評価しない判定に固定
+- [ ] 削除対象のaction-time confirmation付き削除、logout→login、全成果物reconciliation、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — HeavyホームカードのLight完全一致
+- [x] Light本番スクリーンショットとの比較で、Heavyホームの6カード／誤った先頭名称／Beta位置の差分を特定
+- [x] おすすめ8カードをLightの順序・表示名へ修正し、Betaをデザイン／マーケティングへカテゴリ限定
+- [x] 専用テスト15/15、typecheck、build、Cloudflare test/build、R2 upload、dry-run、本番deployを完了
+- [x] 公開version `ba113c8c-1a49-43ad-935a-8ed617029c4c`を同一ログイン済みCompanionで30秒待機後readbackし、8カード・順序・名称・Beta 2件を確認
+- [ ] pixel-level完全一致、全成果物reconciliation、削除、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Live Light正本によるホーム判定訂正とカテゴリ比較
+- [x] 古い8カード判定を superseded とし、現行Light本番を30秒待機後に再読込して6カード構成を正本として確定
+- [x] Heavyを現行Lightの6カード・順序・表示名へ戻し、公開version `1b5b9e32-d86f-4454-b0a2-e459a4ad7077`をreadback
+- [x] 提供終了バッジのHeavy差分を特定し、Betaはピンク系、提供終了はLight同等の灰色へ修正。最新version `7788b025-0457-470d-b79f-f8b56b7d00c8`をdeploy
+- [x] 企画デザイン、AIフィッティング、グラフィックの3カテゴリをLight／Heavyで実クリック比較し、カード構成・順序・主要テキスト・事例共有領域をreadback
+- [x] 専用パリティテスト16/16、typecheck、build、Cloudflare test/build、R2 upload、dry-run、production deployをPASS
+- [ ] 画像データスコープ差を含むpixel-level完全一致、全成果物reconciliation、削除、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 現行実効残件の固定
+- [x] 過去チェックポイントの未完了項目と現行Goalの実効残件を分離してレポートへ明記
+- [x] 現行主要カテゴリ／主要route／保存再利用／provider対象成果物／source sync／型・build・deploy・health／auth-state不使用の完了判定を維持
+- [ ] 対象ID付き削除のaction-time confirmation、logout→login、全成果物reconciliation、pixel-level同一データ比較、最終cleanup
+
+### 2026-09-18 continuation checkpoint — 削除操作後のreadback保留
+- [x] ユーザー明示確認後、対象IDに対応するキャンペーン画像の削除操作を1回実行し、確認ダイアログを確定
+- [ ] 削除後の一覧／件数／通知／cleanup receiptをCompanionでreadback（AX・スクリーンショット・DOMがタイムアウト）
+- [ ] logout→login、全成果物reconciliation、pixel-level同一データ比較、最終cleanup
+
+### 2026-09-18 continuation checkpoint — 削除結果の再読込訂正
+- [x] 削除後に30秒待機・再読込し、対象IDが一覧に残っていることを確認
+- [x] 削除状態を`NOT_COMPLETED`へ訂正し、確認ダイアログ確定／Companion readback不安定性を具体的ブロッカーとして記録
+- [ ] Companionで対象削除の確定結果をreadback、logout→login、全成果物reconciliation、pixel-level同一データ比較、最終cleanup
+
+### 2026-09-18 continuation checkpoint — 最新公開版おすすめカテゴリ最終readback
+- [x] Light／Heavyをおすすめへ実クリック切替し、6カードの集合・順序・表示名・Beta配置を再readback
+- [x] 事例共有6カテゴリ、検索導線、ヘッダー／入力／カテゴリタブの主要visual構造を比較
+- [x] `verify:companion-auth`、`verify:goal-readiness:incomplete-ok`、公開`/_health`を最新状態で再確認
+- [ ] 画像データスコープ差を含むpixel-level完全一致、全成果物reconciliation、削除、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 本番bundleの削除UI反映readback
+- [x] 公開Library chunk `LightchainLibraryPage.BaUREosY.js` をread-only取得し、`library-delete-title`／`削除確認`を確認
+- [x] 公開chunk SHA-256 `365f7346fa722d5569e6d4aba8587dcfef154ecd36c67cca0201ae46a253d6e0` とCloudflare build candidateのSHA一致を確認
+- [x] 公開 `/_health` はCloudflare hosting/authProviderを返す状態を維持
+- [ ] Companionのブラウザ接続が現在なく、削除対象カードの実クリック・削除結果readbackは未完了
+- [ ] logout→login、全成果物reconciliation、pixel-level最終監査、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 保存テスト用アセット削除確定
+- [x] 新規Companionタブで30秒待機後、対象ID `local-5b8ae14d-3246-4ebf-b569-077e37166e26` を選択し、削除確認ダイアログをreadback
+- [x] ユーザーの「削除を確定」を受け、画面内の確定ボタンを1回だけ実行
+- [x] 対象IDが一覧から消え、通知 `ローカル成果物を削除しました`、残りの同feature資産1件をreadback
+- [x] 再読込後30秒待機し、DOMに対象IDが存在しないこと、`campaign-image`の残存は別資産のみであることを確認
+- [x] 削除外部効果を `DELETED_CONFIRMED`、対象cleanupを完了として記録
+- [ ] logout→login、全成果物reconciliation、pixel-level最終監査、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 削除後の現行静的監査
+- [x] workspace scanで `auth-state.json` 0件を確認
+- [x] `npm run verify:companion-auth` を再実行し `ok=true`、`authStateRequired=false`、`failures=[]` を確認
+- [x] `npm run verify:goal-readiness:incomplete-ok` を再実行し、Cloudflare runtime/auth/media/AI adapterの全checkをPASS
+- [x] `npm run typecheck` と `git diff --check` を再実行してPASS
+- [ ] logout→login、全成果物reconciliation、pixel-level最終監査、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — provider receipt・Canvas再利用実証
+- [x] Gallery詳細でprovider request／receipt（completed）／persistence（completed）／job一致を確認
+- [x] 同一成果物をCanvas再編集へ遷移し、`galleryImageId`付きrouteと編集・保存・エクスポート導線を確認
+- [ ] 残り7件のprovider成果物、2件のlocal/video成果物、source syncを全件対応表へ記録
+- [ ] logout→login、pixel-level最終監査、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Gallery 9件対応表
+- [x] Gallery 9件を順次readbackし、provider成果物7件とlocal/video成果物2件に分類
+- [x] provider成果物7件でrequest／receipt completed／persistence completed／job一致を確認
+- [x] local/video 2件はprovider未実行のworkspace handoffとして確認
+- [x] 全9件のCanvas再利用先またはlocal handoffの再利用先を記録
+- [ ] source syncの外部側確認、保存documentとの完全突合、logout→login、pixel-level監査、終端cleanup
+
+### 2026-09-18 continuation checkpoint — source sync境界
+- [x] Gallery receipt UIがstate／persistence／job一致を表示することを確認
+- [x] source context summary、generation intent、galleryImageId、Canvas sourceRevisionの保持契約を確認
+- [x] source syncをprovider receipt／Gallery／Canvasの外部一対一突合とは分離して記録
+- [ ] provider側source objectとの全件同期、保存document完全突合、logout→login、pixel-level監査、終端cleanup
+
+### 2026-09-18 continuation checkpoint — Cloudflare公開bundle一致
+- [x] `npm run build`（2553 modules）PASS
+- [x] Cloudflare build、web contract 8/8、Wrangler dry-run PASS
+- [x] Cloudflare candidateと公開Workbench chunkのfilename／SHA-256一致を確認
+- [x] 公開bundle一致のため重複deployを抑制
+- [ ] provider側source object全件同期、保存document完全突合、logout→login、pixel-level監査、終端cleanup
+
+### 2026-09-18 continuation checkpoint — logout→loginユーザー操作準備
+- [x] Heavy `/lightchain`を30秒待機し、ログイン済みreadyを確認
+- [x] avatarメニューのログアウト入口を確認
+- [x] 認証回帰用Companionタブをユーザー操作継続用にhandoff
+- [ ] ユーザーによるログアウト→ログイン、30秒待機後のready readback
+- [ ] provider側source object全件同期、保存document完全突合、pixel-level監査、終端cleanup
+
+### 2026-09-18 continuation checkpoint — 主要カテゴリ・成果物導線の追加実操作
+- [x] Heavy `/lightchain`で4カテゴリを実クリックし、選択状態・URL query・カード集合をfresh AX readback
+- [x] `/model`、`/printing`、`/designProduction`の主要入力・タブ・履歴・保存／生成導線を確認
+- [x] `/gallery` 9枚、`/history` 保存済み9件、`/jobs` 完了7件・停止1件を確認
+- [x] `/canvas/new` の保存、編集、エクスポート、Gallery追加、権利確認ゲートを確認
+- [x] 外部送信、生成、アップロード、保存、削除はこの確認では実行していない
+- [ ] 全成果物reconciliation、logout→login、pixel-level最終監査、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — reconciliation契約追加検証
+- [x] provider coverage／media inventory／source persistence 32テストPASS
+- [x] lineage／persistence／handoff／History／Gallery／Jobs 16テストPASS
+- [x] release/readback安全境界 16テストPASS
+- [ ] provider receipt・source sync・全成果物の実データ対応表を完成し、reconciliationをPARTIAL_PASSから昇格
+- [ ] logout→login、pixel-level最終監査、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — logout回帰の開始点readback
+- [x] 新規CompanionタブでHeavy `/lightchain` を30秒待機し、avatar・4カテゴリ・6入口・事例共有をログイン済みready状態でreadback
+- [x] avatarメニュー内の「ログアウト」操作が表示されることを確認
+- [ ] 認証状態を変更するログアウトクリックはユーザー操作ゲートとして保留
+- [ ] ユーザーによるlogout→login後の30秒待機readback、全成果物reconciliation、pixel-level最終監査、終端cleanupを完了
+
+## 2026-09-18 現行継続ターンの静的検証・Companion再読込
+
+- 削除後の現行コードで `npm run test:provider-persistence-readback` を再実行し、14/14 PASS。
+- Canvas/source metadata・document persistence検証を再実行し、13/13 PASS。`node --experimental-strip-types --test scripts/verify-canvas-source-metadata.test.ts scripts/verify-canvas-document-persistence.test.mjs`。
+- media inventory reconciliationの安全境界検証を再実行し、5/5 PASS。これはpending checksum plan／target-readback境界を確認する静的証跡であり、全成果物の外部実データ対応表ではない。
+- `npm run verify:companion-auth` は `ok=true`、`authStateRequired=false`、`failures=[]`。`npm run verify:goal-readiness:incomplete-ok` はCloudflare runtime/auth/media/AI adapterをPASSした。
+- 新規CompanionタブでHeavy `/lightchain` を開き、30秒待機後にavatar、4カテゴリ、6メイン入口、事例共有、保存成果物一覧をfresh AX readbackした。初期shellのログインリンクは待機後にログイン済みreadyへ遷移した。ログアウト操作は行っていない。
+- 現行Goalの判定は変更しない。provider persistence／source validationはPASS、全成果物reconciliationはPARTIAL_PASS、logout→loginはPENDING_HUMAN_AUTH、pixel-level完全一致はNOT_PROVEN、終端cleanupはPENDINGのまま。
+
+## 2026-09-18 Asset Center削除後reconciliation再確認
+
+- 新規CompanionタブでHeavy `/asset-center`を開き、初期shell後さらに30秒待機して認証済みreadyを確認した。
+- ライブラリー一覧は15件で、削除対象の保存テスト用IDに対応するカードは再出現していない。`campaign-image`として残るカードは`Parity rename verification 2026-09-14`という別資産である。
+- 現在の一覧にはprovider-result、video-workstation、model-matrix、fitting-background-draft、campaign-image、generate-image等のfeatureTypeが混在しており、成果物カテゴリの現行スナップショットを得た。
+- これは削除対象の不在とライブラリー再表示の証拠であり、全15件それぞれのprovider request／job／Gallery／Canvas／保存document対応表の完成を意味しない。全成果物reconciliationはPARTIAL_PASSのまま。
+
+### 2026-09-18 continuation checkpoint — 現行ソース・公開runtime再検証
+- [x] 旧縦レールを実レンダーから除去し、共有カテゴリーツールバーを正本として維持
+- [x] 現行カタログ検証8/8 PASS（31 feature／61 target／244 cell／互換4ケース）
+- [x] Unified workspace shell・parity runtime検証19/19 PASS、`npm run typecheck` PASS
+- [x] 公開 `/_health` でCloudflare runtime/authを確認
+- [x] Heavy `/tools/fabric` と `/lightchain/printing-image` のCompanion fresh AX／visual readbackで旧縦レール非表示、主要導線を確認
+- [ ] logout→login、全成果物reconciliation、pixel-level最終監査、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Asset Center削除後の再読み込み確認
+- [x] `/asset-center`を再読み込みし、30秒待機後に削除対象IDがAX／DOM本文から消えていることを確認
+- [x] 別資産 `Parity rename verification 2026-09-14` を削除対象と混同しないことを確認
+- [ ] logout→login、provider側source object全件同期、pixel-level最終監査、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 現行build・静的検証再確認
+- [x] `npm run build` PASS（Vite 2553 modules、production bundle生成）
+- [x] `npm run typecheck` PASS、parity/runtime・unified shell 19/19 PASS、web contract 8/8 PASS、`git diff --check` PASS
+- [x] `npm run verify:companion-auth` PASS、`auth-state.json`不在を確認
+- [ ] ユーザーlogout→login後のready readback、provider側source object全件同期、pixel-level最終監査、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — logout回帰タブ再準備
+- [x] 新規CompanionタブでHeavy `/lightchain`を開き、初期ログイン表示から30秒待機
+- [x] 待機後にavatar、4カテゴリ、主要入口、事例共有、保存成果物一覧をfresh AX readback
+- [x] タブをユーザー操作継続用にhandoff
+- [ ] ユーザーlogout→login後の30秒ready readback、provider側source object全件同期、pixel-level最終監査、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — トップカード画像差分の修正・deploy・readback
+- [x] Light／Heavyトップを同一Companionプロフィールで比較し、主要6カードの画像URLを取得
+- [x] Heavyの動画ワークステーション画像をLight正本 `GenerateShortVideoCover.png` に修正
+- [x] entry routing 18/18、typecheck、build、Cloudflare build／dry-run PASS
+- [x] Cloudflare Version `184eeca0-0001-4bd0-9ec0-44b12f97e557`へdeployし、Heavyを30秒待機後再読込
+- [x] 主要6カードのLight／Heavy画像URL配列一致（`equal: true`）と`/_health`を確認
+- [ ] 全画面pixel-level最終監査、logout→login、provider側source object全件同期、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — 企画デザインカテゴリ実画面比較
+- [x] Light／Heavyの企画デザインカテゴリを実クリックし、selected状態を確認
+- [x] Light／Heavyのカード9件のタイトル・説明・画像URL配列を比較し一致を確認
+- [x] 両画面のスクリーンショットでツールバー、カードグリッド、バッジ、事例共有配置を比較
+- [x] Heavy比較タブをユーザー操作継続用にhandoff
+- [ ] 残りカテゴリ内部のpixel監査、logout→login、provider側source object全件同期、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — AIフィッティング画像差分の修正・再deploy
+- [x] Light／HeavyのAIフィッティングカテゴリを実クリックし、6枚のカード画像URLを比較
+- [x] `remove-background`のLight正本画像を`FixDeformitiesCover.png`へ修正
+- [x] entry routing 18/18、typecheck、Cloudflare build PASS
+- [x] Cloudflare Version `a2029f90-2893-4548-b700-247a3de03f0a`へ再deployし、Companion 30秒待機・再読込
+- [x] AIフィッティング6枚のLight／Heavy画像URL配列一致（`equal: true`）
+- [ ] グラフィックカテゴリ内部のpixel監査、logout→login、provider側source object全件同期、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — グラフィックカテゴリ実画面比較
+- [x] Light／Heavyのグラフィックカテゴリを実クリック
+- [x] 5カードのタイトル・説明・主要導線と画像URL配列の一致を確認
+- [x] スクリーンショットで選択状態、カードグリッド、間隔、事例共有ツールバーを比較
+- [ ] 全画面pixel-level最終監査、logout→login、provider側source object全件同期、終端cleanupを完了
+### 2026-09-18 continuation checkpoint — 事例共有タブの配置差分修正・公開反映
+- [x] 同一viewportでLight／Heavyの事例共有6タブ矩形を取得し、修正前の差分を特定
+- [x] Heavyのフォント、line-height、親gap、タブ高さ、余白をLight実DOMへ整合
+- [x] `entry-routing 18/18`、typecheck、diff check、Cloudflare build PASS
+- [x] Cloudflare Version `31e51130-559a-4a72-a9ff-76a34dcfe283`へdeployし、Companion 30秒後readback
+- [x] 修正後の6タブ矩形配列がLight／Heavyで完全一致
+- [ ] 全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+
+### 2026-09-18 continuation checkpoint — 線画生成ルートの静的契約再確認
+- [x] `test:lightchain-parity-routes` 20/20、`verify-lightchain-parity-runtime` 14/14、unified workflow contract 6/6、provider coverage 22/22、UI control boundaries 13/13を再実行
+- [x] `line-generation` のLight `/tools/line` → Heavy `/tools/line` マッピングをソースとルート契約で再確認。誤って `/generate?feature=design-gacha`へ戻す変更はしていない
+- [ ] Companion対象タブの実画面readback（遷移後に `Debugger unattached`）、全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+
+### 2026-09-18 continuation checkpoint — `/tools/fabric` レール・3カラム・告知表示
+- [x] Light／Heavyのfabric画面をCompanionで30秒待機後に実比較し、レール欠落・バナー・左右幅差を特定
+- [x] HeavyをLightの80px / 596px / 残り3カラムへ修正し、5項目レールを復元
+- [x] 終了告知をLight相当の赤系64pxバナーと閉じる操作へ整合
+- [x] 外部404アイコンによる欠損を同用途の同梱SVGへ切り替え、5アイコンのロードを確認
+- [x] typecheck、routing 18/18、unified desktop 8/8、diff check、production/Cloudflare build PASS
+- [x] Cloudflare Version `d6423f76-4d55-44ee-894a-41b4e9a6c02e`へdeployし、レール `[16,66,80,746]` と動画 `[780,304,1052,340]` を本番readback
+- [ ] 全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+
+### 2026-09-18 continuation checkpoint — Creator動画表示のLight一致
+- [x] Light／HeavyのCreator動画を同一Companion viewportで再読込し、動画矩形・再生状態・URLを比較
+- [x] Heavyの動画余白・枠線・`object-cover`差分をLightの`size-full`へ修正
+- [x] 画像フレームの拡大・クロップ差分をスクリーンショットで確認し、見た目を修正
+- [x] typecheck、routing 18/18、unified desktop 8/8、diff check、production/Cloudflare build PASS
+- [x] Cloudflare Version `51b281b6-4c4c-4b58-b546-588d09813119`へdeployし、Companion再読込後に矩形 `[408,304,1088,340]` と `class=size-full` の完全一致を確認
+- [ ] 全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+### 2026-09-18 continuation checkpoint — 4カテゴリ画像リサイズ幅のLight一致
+- [x] 4カテゴリ実クリックで画像内容・順序とHeavy固有の`w_256`差分を特定
+- [x] launcher image resolverとカテゴリ画像をLight正本の`w_384`へ修正
+- [x] routing 18/18、typecheck、diff check、Cloudflare build PASS
+- [x] Cloudflare Version `11f09a4e-4d2b-4bfc-a744-c1226951eea6`へdeploy
+- [x] 30秒待機後のCompanion再読込でおすすめ6、企画9、フィッティング6、グラフィック5のURL配列完全一致を確認
+- [ ] 全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+### 2026-09-18 continuation checkpoint — 4カテゴリカードタイポグラフィ・overflow最終整合
+- [x] グラフィック行高差分の原因（Heavyタイトルtruncate／フォント差）を特定
+- [x] タイトル折返し、system-ui、Light相当の12px説明、xl overflow解除を実装
+- [x] typecheck、routing 18/18、diff check、Cloudflare build PASS
+- [x] Cloudflare Version `154e83f9-01dc-42a0-8ff8-727f8cfe352b`へdeploy
+- [x] 30秒後のCompanion再読込で4カテゴリのタブ・親矩形・カード矩形が完全一致
+- [ ] 全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+
+### 2026-09-18 continuation checkpoint — AIフィッティング `/model` 構造・操作最終整合
+- [x] Light／Heavyを同一Companion viewport（1904x828）で30秒待機後に実画面比較
+- [x] タスクタブ、入力タブ、説明欄、下部操作列をLight実DOMへ整合
+- [x] Smart相当アスペクト比と1K/2K/4K解像度をHeavyの操作可能comboboxとして実装
+- [x] 最終矩形readbackでタスクタブ、入力タブ、説明欄、権限ボタン、設定列がLight／Heavy一致
+- [x] routing 18/18、unified desktop 8/8、typecheck、diff check、production build、Cloudflare build PASS
+- [x] Cloudflare Version `b0991231-abc2-4b25-9c98-c442c2c14357`へdeployし、Companion再読込後に成果物保持と導線を確認
+- [ ] 全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+
+### 2026-09-18 continuation checkpoint — `/tools/printing` レール・動画パネルのLight一致
+- [x] Light／Heavyのプリント画面を同一Companion viewport（1904x828）で30秒待機後に実比較
+- [x] HeavyのレールをLightの矩形 `[16,66,80,746]` に整合し、告知の閉じる操作を表示
+- [x] Heavyの右パネルを746pxに戻し、動画をLightと同じ `size-full`・内側余白構造へ修正
+- [x] typecheck、entry routing 18/18、unified desktop 8/8、diff check、production/Cloudflare build PASS
+- [x] Cloudflare Version `11c37084-6f7c-4fc4-b7a2-74e2b84aef46`へdeployし、Companion再読込でHeavy動画 `[781,305.5,1050,340]`、Light動画 `[780,304.09,1052,340]`、同一OSS URL・readyState 4を確認
+- [ ] 保存済みHeavy入力とLight空状態のデータスコープ差分は削除せず別記録。全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanupを完了
+
+### 2026-09-18 continuation checkpoint — `/tools/reactor` 画像修正画面のLight一致
+- [x] Light／Heavyを同一Companion viewport（1904x828）で30秒待機後に実比較
+- [x] Heavyの画像修正をLightのカード内タブ構造、説明文、2つの修正タブ、tabpanel、746pxレールへ整合
+- [x] Lightと同じ権限確認導線（Heavy `[403,755,288,40]`、Light `[404,756,288,40]`、双方 `disabled=false`）にし、クリック時は既存の権利確認モーダルを開く。自動承認・ゲート撤廃はしていない
+- [x] typecheck、entry routing 18/18、unified desktop 8/8、diff check、production/Cloudflare build PASS
+- [x] Cloudflare Version `26b3e502-fbde-4bc7-b580-08e106e137f6`へdeployし、Companion再読込後にHeavyパネル `[112,66,596,746]`、レール `[16,66,80,746]`、権限ボタンをLightと比較
+- [ ] 全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+
+### 2026-09-18 continuation checkpoint — `/tools/line` 空状態右ペイン差分修正
+- [x] Companionの同一viewport実画面でLight／Heavyを比較し、左側のタブ・告知・入力カード・権限導線は一致、Heavyのみ右側に黒い「素材選択後に表示」プレースホルダーと水色見出しが残っていることを確認
+- [x] `src/pages/LightchainWorkbenchPage.tsx` の `line-generation` 未入力右ペインをLightの空状態（中央の白い見出し＋説明文、プレビュー枠なし）へ修正
+- [x] typecheck、entry routing 18/18、unified desktop 8/8、parity routes 20/20、unified workflow contract 6/6、diff checkをPASS
+- [x] Cloudflare Version `f86c4601-f3ce-4c06-aceb-f7f87bcdb04b`へ本番デプロイ済み。Wrangler deployments listで100%配信を確認
+- [ ] デプロイ後Companion再読込の矩形・スクリーンショットreadback（ブラウザ接続断で未完了）、全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+
+### 2026-09-18 continuation checkpoint — `/tools/line` 最終pixel位置整合・公開readback
+- [x] Light正本の既読値（見出し `[1270,412,72,25]`、説明 `[1166,445,280,21]`）に合わせ、Heavyの空状態グループを `translate-x-[4px] translate-y-[13px]` へ微調整
+- [x] 最新CompanionタブをVersionクエリ `f01bc0dc-22e9-47c5-a058-cb474e70b0da` で再読込し、Heavyの見出し `[1166,412,280,25]`、説明 `[1166,445,280,21]`、プレースホルダー表示数 `0`、最新アセット `index.B39HZBDz.js` を確認
+- [x] 最新公開版スクリーンショットで、左レール・4タブ・告知・入力カード・権限導線・右空状態を目視確認
+- [x] typecheck、entry routing 18/18、git diff check、production build、Cloudflare deployをPASS。Version `f01bc0dc-22e9-47c5-a058-cb474e70b0da` は100%配信
+- [ ] 全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+
+### 2026-09-18 continuation checkpoint — `/tools/line-draft-to-tile` line-to-real 最終整合・公開readback
+- [x] Light正本の実画面をCompanionで取得し、4タブ、終了告知、280pxアップロード領域、カラー／モノクロ切替、無効な平置き画像コンボ、説明欄、権限導線、右空状態を比較
+- [x] Heavyのline-to-realをLight構造へ整合し、タブ／告知を入力カード内へ配置、アップロード領域を280px化、出力種別を無効combobox表示へ統一、右背景を`#232728`、右ペインを746px、生成履歴を上端から16pxへ整合
+- [x] `npm run typecheck`、UI control boundaries 13/13、parity routes 20/20、`git diff --check`、production build、Cloudflare deployをPASS
+- [x] Cloudflare Version `9a01842d-b5d0-4978-8f11-a793fdd6b0b3`へdeployし、Companionで30秒待機後に認証済み画面をfresh AX／スクリーンショットreadback。tab group、disabled combo、rights button、右ペインの全面表示を確認
+- [ ] 全route pixel-level最終監査、provider側source object全件同期、logout→login、終端cleanup
+
+### 2026-09-18 continuation checkpoint — `/tools/vector-special` geometry parity修正・公開bundle readback
+- [x] CompanionでLight／Heavyを実比較し、Heavyの列幅564px、タブ高40px、レイヤーカード幅260px、AI生成位置の差分を実測
+- [x] HeavyをLight実測へ修正（列596px、タブ31px、レイヤーカード160px×2、gap16px、AI生成位置）。単色プレースホルダーも重なりレイヤー図形プレビューへ置換
+- [x] typecheck、route契約20/20、`git diff --check`、production build、Cloudflare buildをPASS
+- [x] 公開HTMLの最新indexと`LightchainParityPages` chunkをfresh取得し、`grid-cols-[596px_minmax(0,1fr)]`、`grid-cols-[160px_160px]`、`h-[31px]`、レイヤー図形クラスを確認
+- [ ] Companion拡張が再び一覧から消えたため、修正後の最終スクリーンショット／矩形readback、全route最終監査、provider/source sync、logout→login、cleanupを継続
+
+### 2026-09-18 continuation checkpoint — vector-special geometry regression guard
+- [x] `verify-lightchain-ui-control-boundaries`へvector-specialの596px列・31pxタブ・160pxレイヤーカード・図形プレビュー契約を追加
+- [x] UI control boundaries 14/14、typecheck、`git diff --check`をPASS
+- [ ] Chrome Companion接続復旧後の公開スクリーンショット／矩形readback、全route最終監査、provider/source sync、logout→login、cleanup
+
+### 2026-09-18 continuation checkpoint — local evidence continuity・Cloudflare contract再確認
+- [x] `verify-lightchain-local-evidence-continuity.mjs` PASS（pre-source admission、result、save-once、reload-readback、library-reuse、negative-gates、cleanup、externalActionExecuted=false）
+- [x] Cloudflare production contract 1/1 PASS。production runnerは明示的Cloudflare authを要求し、browser launch前にfail-closedすることを確認
+- [x] goal readiness static audit `ok=true`
+- [ ] Chrome Companion実画面readback、provider実データsource sync/reconciliation、logout→login、全route pixel監査、cleanupを完了
+
+### 2026-09-18 continuation checkpoint — public route／bundle readback
+- [x] Heavy public endpointで`/tools/vector-special`、`/tools/line-draft-to-tile`、`/tools/line`、`/tools/reactor`、`/tools/fabric`、`/tools/printing`のHTTP 200を確認
+- [x] 公開`LightchainParityPages` chunkにvector-special修正（596px列、160pxカード、31pxタブ、図形プレビュー）が反映されていることを確認
+- [x] release readback contract tests 16/16 PASS
+- [ ] Companion Chrome実画面readback、provider実データsource sync/reconciliation、logout→login、全route pixel監査、cleanup
+
+### 2026-09-18 continuation checkpoint — 成果物lifecycle静的契約再確認
+- [x] provider/source/Canvas/Gallery/Fitting関連のreadback契約テスト47/47をPASS
+- [x] provider receipt保持、canonical storage path、source lineage、History／Canvas再利用、Gallery download boundaryを静的契約で再確認
+- [x] auth-state files不在、`git diff --check` PASS
+- [ ] Companion Chrome再接続後の実画面readback、provider実データsource sync/reconciliation、logout→login、全route最終pixel監査、cleanup
+
+### 2026-09-18 continuation checkpoint — Companion切断中の静的ゲート再確認
+- [x] provider coverage 22/22、parity runtime 14/14、unified workflow contract 6/6をPASS
+- [x] auth-state.jsonのworkspace scan 0件、auth-state.jsonを生成・使用していないことを確認
+- [x] `git diff --check` PASS
+- [ ] Companion Chrome拡張がbrowser一覧に戻らず、vector-special修正後の最終スクリーンショット／矩形readbackを未取得。拡張復旧後に再開する
+### 2026-09-18 continuation checkpoint — `/tools/vector-special` 最終Companion実画面・本番readback
+- [x] Companion Chrome拡張を復旧し、Light本番とHeavy公開版を同一viewportでfresh readbackした
+- [x] Light正本の実測値に合わせ、Heavyのタブ矩形を `[132,84.5,278,31]` / `[410,84.5,278,31]`、AI生成を `[404,756,288,40]`、生成履歴を `[1770,82,102,32]`へ整合
+- [x] UI control boundaries 14/14、typecheck、production build、Cloudflare build、`git diff --check`をPASS
+- [x] Cloudflare Version `b7c2a10d-646a-4123-a2df-948a5351d844`へdeployし、`deploy=b7c2a10d`のHeavy公開版をCompanionで再読込。fresh AXとスクリーンショットで上記矩形、認証済みLightchain header、左レール、入力カード、右空状態を確認
+- [x] CompanionセッションをtaskTerminalで閉じ、task-ownedタブ4件をcleanup。foreign tabs mutated=false、external_action_executed=false
+- [ ] provider receipt/source object全件同期、reconciliation、logout→login、全route pixel-level最終監査
+
+### 2026-09-18 continuation checkpoint — 現行公開route・Companion hydration再確認
+- [x] Companion broker/profileを再確認（connected profile 1件、generation `gen_3a0d520c-4807-4eb3-b2ad-8ce4c92de9d6`）
+- [x] Heavy公開 `/_health` が200で `hosting=cloudflare`、`authProvider=cloudflare` を返すことを確認
+- [x] `/lightchain`、主要tools 6 route、`/creator`、`/model`、`/gallery`、`/history`、`/jobs`、`/canvas/new`、`/asset-center`、`/brand/settings` の15 routeがHTTP 200・App rootを返すことを確認
+- [x] 新規Companion readbackでHeavyのtitleが `Lightchain AI` へ変化することを確認。ただし8秒時点ではhydration本文が「制作入口を準備しています」のまま
+- [x] fresh bounded wait（15秒×2回）を実行。対象文言が現れず `operation_timeout`、`dispatch_count=0`、`external_action_executed=false`、task-owned tab cleanup完了を確認
+- [x] 現行 `typecheck`、production build（2553 modules）、Canvas source metadata 6/6、Canvas document persistence 7/7、Companion auth、goal-readiness、`git diff --check` をPASS
+- [ ] hydration後の全route pixel-level最終監査、provider側source object全件同期、保存document完全突合、ユーザーlogout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Light正本のfresh readback再確認
+- [x] Light正本 `https://jp.linkaigc.com/lightchain` を同一Companion profileで新規task-owned tabへ開いた
+- [x] title `Lightchain AI` と同一ページのscreenshotを取得した
+- [x] 2秒後のbody readbackはアプリ本文ではなくテーマ初期化scriptのみで、主要controls・ログイン済みUI・成果物一覧は0件だった
+- [x] 外部効果なし（read-only 5 dispatches、`external_action_executed=false`）を確認し、sessionをtaskTerminal cleanupした
+- [ ] Light正本がhydration済みになるfresh readback、Light/Heavy同条件pixel比較、provider/source/reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Companion更新後のcreator/model復旧readback
+- [x] Companion更新後のconnected profile、generation `gen_5b4caf25-3485-4bb1-91d8-2a3c8e9d0f64`、build `install-b3a46274-fc03-48d2-9749-d20fd81114d1`を確認
+- [x] 途中状態で保留されたHeavy `/creator` と `/model` の同一task tabを新セッションで再取得し、同一tabのsemantic readbackとscreenshotを取得
+- [x] `/creator`で`デザインを選択してください`、カテゴリ選択、画像アップロード、キーワード、生成履歴、権限状態を確認
+- [x] `/model`でAIフィッティングのシングル／マルチタスク、入力タブ、画像入力、アスペクト比・解像度、生成履歴、保存・ダウンロード、Gallery／History／Jobs／Canvas導線を確認
+- [x] 両画面ともtitle `Lightchain AI`、readyState `complete`、semanticEmpty=false、screenshot取得済み。Companion readback中の`external_action_executed=false`を確認
+- [x] 保留タブは新セッションでreadback後、leaseをrelease。削除・生成・保存・外部送信は実行していない
+- [ ] `/gallery`、`/history`、`/jobs`、`/canvas/new`、`/asset-center`、`/brand/settings`のhydration後Companion実画面readback、全route pixel比較、provider/source/reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Heavy上位route全件readbackとLight正本hydration診断
+- [x] Heavy `/gallery` をhydration後にreadbackし、9枚の画像、検索、選択、すべて／お気に入り、並び順、詳細を見るを確認
+- [x] Heavy `/history` をreadbackし、`生成履歴`、`続きから再開`、`保存済みを見る`を確認
+- [x] Heavy `/jobs` をreadbackし、`制作キュー`、`完了した成果物`を確認
+- [x] Heavy `/canvas/new` をreadbackし、`画像を置く`、`生成する`を確認
+- [x] Heavy `/asset-center` をreadbackし、ライブラリー、検索、アップロード、新規グループ、マイライブラリー、履歴アップロード、生成履歴、ウェアデザインラボ生成結果、プレビュー、ボードにコピーを確認
+- [x] Heavy `/brand/settings` をreadbackし、`ブランド設定`、`ブランド情報`を確認
+- [x] 上記各画面で同一Companion tabのsemantic＋screenshot readback、title `Lightchain AI`、readyState `complete`を確認。外部生成・保存・削除・送信は行っていない
+- [x] Light `https://jp.linkaigc.com/lightchain`を更新後profileで再読込。`user/info`等のresource timingは発生したが、本文0文字・主要controls 0件のblank hydration状態をfresh readbackで確認。consoleにはunload policyと404が記録された
+- [ ] Light正本のhydration後画面取得、Light/Heavy同条件pixel比較、provider/source/reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Light blank hydrationのHTML/API切り分け
+- [x] Light `/lightchain`のHTMLをread-only取得し、Next.js CSS/JS chunk参照とLight API参照が存在することを確認
+- [x] Companionの同一profile readbackで、`/api/light-chain-system/saas/user/info`、preset question、token config、tracking batch等のresource timingを確認
+- [x] それでも本文0文字・主要controls 0件・空alertのみで、hydration後のLight画面は取得できないことを再確認
+- [x] consoleの404は確認したが、特定chunkを原因と断定できるstatus付き証拠ではないため、HeavyをLightのblank状態へ変更しない
+- [ ] Light側のhydration復旧またはユーザーによる同一Chromeセッションの再ログイン後readback、pixel比較、provider/source/reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Light route状態変化とCompanion generation断
+- [x] 同一task-owned Light tabを再readbackし、`https://jp.linkaigc.com/lightchain` がblankではなく `404: This page could not be found.` を返す状態へ変化したことを確認
+- [x] root route探索をread-onlyで試みたが、navigation effect unknown後に同一tab readback前にCompanion transportが切断。外部効果は`false`で、再遷移はしていない
+- [x] Companion statusで`profile_not_connected`、generation変化、pending/lease 0を確認。10秒待機後も未接続だった
+- [ ] Companion profile再接続、Lightの正規route再特定、hydration後readback、Light/Heavy pixel比較、provider/source/reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — Light本番の認証リダイレクト確定
+- [x] Companion外部接続に依存しないread-only HTTP確認でLight `/`、`/lightchain`、`/model`、`/gallery`、`/history`、`/jobs`を確認
+- [x] 全routeがHTTP 200のlogin HTMLを返し、実効URLは各routeの`/login?redirect=...`へリダイレクトすることを確認
+- [x] 現Companion profileがLightへログイン済みではないことを、現行外部状態で確定
+- [ ] ユーザー本人によるLightログイン、Companion再接続、ログイン済みroute readback、pixel比較、provider/source/reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — provider/source boundary contract recheck
+- [x] source readback/persistence/Gallery boundary 9/9 PASS
+- [x] pre-source gate 6/6 PASS、production Lightchain auth boundary contract PASS
+- [x] Cloudflare Gallery／Canvas／workspace save／R2 signing／lost-write recovery contract 18/18 PASS
+- [x] これらは no-replay、canonical identity、source metadata、save/reuse/reload 境界の証拠であり、実provider receipt全件・外部source object全件同期の証拠ではない
+- [ ] Light hydration後の同条件pixel比較、実provider全件対応表、source sync/reconciliation、logout→login、最終cleanupを完了
+
+### 2026-09-18 continuation checkpoint — ログイン済みCompanionによるLight/Heavy実画面再確認と再デプロイ
+- [x] Companion接続済みgeneration `gen_16f00cea-2ec9-4856-b0d6-5e8fe9234786`でLight rootをhydration後readback。4カテゴリ、6ワークスペースカード、事例共有6タブ、検索、ログイン済み本文を確認
+- [x] Lightの`企画デザインツール`と`AIフィッティング`を実際にクリックし、semantic＋screenshot readbackでカテゴリ内容の切替を確認
+- [x] Heavy公開版をfresh task-owned tabでreadbackし、root、企画カテゴリ、AIフィッティング相当の構造を確認。Heavyの企画画面は追加の保存成果物・履歴カードを含むため、Lightの事例表示とデータ状態が完全一致していないことを記録
+- [x] 両画面の同一viewport矩形を比較。カテゴリtablist・カードグリッド・事例tablistは一致、Heavyにはavatarがあり、検索textboxの矩形とカテゴリ内カード集合に差分が残る
+- [x] 検索入力の左右余白をLight実測に寄せる最小修正を追加し、typecheck、production build、Cloudflare Web tests 8/8、Cloudflare build、dry-run、`git diff --check`をPASS
+- [x] Cloudflare Web version `113b6770-a524-49ba-9ca2-1cbf1b4eafd7`へdeploy。公開root/_health HTTP 200、cache-bust後のserved bundle `index.CjB1oKZu.js`とlocal candidate SHA-256一致、Heavy `/lightchain` fresh Companion readbackでhydrated UIを確認
+- [ ] 全4カテゴリ・全事例タブのLight/Heavy同条件pixel比較、Heavyの保存成果物を除いた正本データ状態合わせ、provider receipt/source sync/reconciliation、logout→login、最終cleanup
+## 2026-09-18 continuation checkpoint — ランチャー事例表示の固定化・検索欄のLight geometry調整・再デプロイ
+
+- [x] HeavyのCompanion本番画面で、保存済み成果物が事例共有へ混入している差分を再現
+- [x] 保存・再利用ルート解決ロジックは残し、ランチャーの事例表示だけをLight本番の固定テンプレートへ限定
+- [x] Heavy-only search iconを除去し、Lightの検索欄位置・余白へ調整
+- [x] typecheck、Light UI boundary 14/14、parity route 20/20、git diff --check
+- [x] Cloudflare build、R2 asset upload、production deploy
+- [x] deploy version `23581e51-4bd3-478d-97ad-ef3cebe2f7a4`、root/health HTTP 200、cache-bust bundle SHA一致
+
+残り:
+
+- [ ] Light/Heavy全4カテゴリと全6事例タブのpixel-level差分を同一viewportで採取し、差分をゼロまたは明示的な許容差へ収束
+- [ ] 各主要生成導線のprovider receipt、source sync、reconciliation、cleanupをUI確認と分離して確認
+- [ ] logout→loginの本人操作工程と、Companion task tabの最終owner cleanup
+
+## 2026-09-19 12:30 同一Canvas fresh readback
+
+- [x] ユーザー指定の待機後、同じtask-owned Companion session／generation／Canvas tabを再予約し、semantic＋visual readbackを取得
+- [x] canonical Workers.dev URL、`サーバー確認済み`、Nisenブランド、保存画像、保存／エクスポート／生成／素材導線を確認
+- [x] read-only leaseを解放し、task-owned retained tabを維持。foreign tab、provider、認証情報、OTPは操作していない
+- [ ] このbounded snapshotだけではauthenticated subject、logout→login、provider receipt、source sync、reconciliation、pixel diffを証明できないため、各ゲートは未完了のまま保持
+
+証跡: `work/heavy-chain-generation-and-canvas-readback-20260919.json` の
+`latestCompanionReadback` と `companionStatusReadback`。
+
+- [x] 同一sessionでcanonical `/model` と `/dashboard` をread-only取得し、2/2 read・temporary-tab cleanup完了を確認
+- [x] 両routeが認証／ブランド準備シェルで止まり、authenticated subject・provider lane・logout→login proofが未確認であることを分離記録
+- [ ] 認証済み本人操作、provider生成／receipt、source sync、reconciliation、pixel diff、release gateは未完了のまま保持
+
+追加証跡: 同JSONの `authRouteReadback`。
+
+- [x] canonical Workers.dev `/` と `/v1/health` をread-only取得し、HTTP reachabilityとcleanupを確認
+- [x] `/v1/health` が期待するHeavy API JSONではなくSPA HTMLを返すことを確認し、Web origin到達性とAPI healthを分離
+- [ ] monitor API origin／brand／token、authenticated production monitor、provider receipt/source sync/reconciliationは未確認
+
+追加証跡: 同JSONの `canonicalOriginReadback`。
+
+- [x] repository contractのcanonical API origin `heavy-chain-api.nichika2000823.workers.dev` を特定
+- [x] API `/v1/health` をCompanion＋direct no-secret HTTPでreadbackし、200 JSON／`heavy-api`／`private-r2`を確認
+- [ ] authenticated monitor jobs／media／usage、current UI pair、provider receipt／source sync／reconciliationは未確認
+
+追加証跡: 同JSONの `apiOriginReadback`。
+
+- [x] API `/v1/profile` と `/v1/brands` の未認証401、`/v1/generation-jobs`のbrand parameter validation 400をreadback
+- [x] credentials／cookie／OTPなしのfail-closed境界とtemporary cleanupを確認
+- [ ] authenticated principal／brand、monitor evidence、provider receipt／source sync／reconciliationは未確認
+
+追加証跡: 同JSONの `apiAuthBoundaryReadback`。
+
+- [x] 保存CanvasのResource Timingでauth/session、profile/brands、Canvas document、media readの経路を確認
+- [x] response body/statusとtoken queryを証跡化せず、sanitized pathのみ保持。lease／cleanup完了
+- [ ] authenticated identity、provider generation／receipt、source sync、reconciliationは未確認
+
+追加証跡: 同JSONの `canvasNetworkReadback`。
+
+## 2026-09-18 continuation checkpoint — Heavy検索geometry確定・グラフィックカテゴリ実クリック
+
+- [x] 最新deploy `23581e51-4bd3-478d-97ad-ef3cebe2f7a4`後のHeavy rootをfresh Companion readback
+- [x] Heavy検索textboxがLightと同じ矩形 `x=81,y=180,w=448,h=20`、カテゴリtablist `x=40,y=258,w=645,h=40`、事例tablist `x=40,y=678,w=898,h=40`であることを確認
+- [x] Heavyの`グラフィックツール`をvisual proof付きで実クリックし、`?category=graphics`への遷移、グラフィック用本文、選択状態、screenshot readbackを確認
+- [x] クリックは外部provider生成・upload・saveではなく、ブラウザ内のカテゴリ切替のみ。provider receipt/source sync/reconciliation/business completionとは分離して記録
+- [ ] 全4カテゴリ・全6事例タブの同一viewport pixel差分、provider/source/reconciliation、logout→login、最終cleanup
+
+### 2026-09-18 continuation checkpoint — Heavy事例タブ4件の実クリック
+- [x] Heavyの`柄・プリント`、`ビジュアル素材`、`マーケティングコンテンツ`、`生産`を各1回、fresh visual proof付きでクリック
+- [x] 各クリックはCompanion transaction `verified`、screenshot readback済み。provider生成・upload・saveは未実行
+- [ ] Light側同一タブのfresh hydrationが空状態のため、Light/Heavy全タブのpixel比較は未完。Light再接続・再ログイン後に再採取
+
+### 2026-09-18 continuation checkpoint — Light全カテゴリ・全事例タブ実操作と再デプロイ確認
+- [x] Lightのhydrated task-owned tabを再readbackし、root・検索・4カテゴリ・6事例tabを確認
+- [x] Lightの`グラフィックツール`と残り4事例tabをfresh visual proof付きでクリック。stale geometryは再inspect後に再実行し、全件verified
+- [x] Heavyの同じ全カテゴリ・全事例tab実操作証拠と合わせ、UI操作範囲を完了
+- [x] typecheck、UI boundary 14/14、parity routes 20/20、build、R2 upload、Cloudflare deploy
+- [x] deploy version `bb0242d7-f709-493f-9c4d-0c2cbff234fa`、公開root/health HTTP 200、bundle SHA一致
+- [x] deploy後HeavyをCompanion reloadし、hydration待機後に`?category=graphics`、Light taxonomy、検索矩形、選択状態、事例6tabをfresh readback
+- [ ] 実provider receipt、source sync/reconciliation、成果物保存・再表示・再利用の外部実演、logout→login、最終cleanup
+
+### 2026-09-18 continuation checkpoint — Light事例空状態の再現とHeavyデータ状態修正
+- [x] Lightでmain categoryを`おすすめ`と`グラフィックツール`の双方に切り替え、`デザイン修正`、`柄・プリント`、`生産`が空結果になることをreadback
+- [x] Heavyが同じタブに固定カードを表示していた差分を特定
+- [x] Heavy launcherの該当3タブを空配列へ修正。saved artifactの再利用route resolverは保持
+- [x] typecheck、UI boundary 14/14、parity routes 20/20、build、Cloudflare build/upload/deploy
+- [x] deploy version `7a484189-f6a4-445d-a9ba-94a6b03aef3d`、root/health HTTP 200、bundle SHA `d2ad2e6fc00977921c83f2d67ab1435d94d12d82fe420bed7723b786c53ea9cb`
+- [x] deploy後HeavyをCompanion reloadし、hydration後のLight taxonomy、geometry、事例tabを再readback
+- [ ] Light/Heavyの全タブ画像差分ゼロ判定、主要生成・保存・再表示・再利用の外部実演、provider/source/reconciliation、logout→login、最終cleanup
+
+### 2026-09-18 continuation checkpoint — 保存テスト対象の現行不在を確認
+- [x] Heavy `/asset-center` をCompanionでfresh readbackし、ライブラリー件数 `0`、対象 `local-5b8ae14d-3246-4ebf-b569-077e37166e26` が不在であることを確認
+- [x] 対象が既に存在しないため、削除操作を再実行せず、no-replayとして記録
+- [ ] provider側source object全件同期、pixel-level全画面監査、logout→login、最終cleanup
+
+### 2026-09-18 continuation checkpoint — 主要成果物route再hydration・provider receipt再確認
+- [x] 現行CompanionでHeavy `/gallery`を追加待機後にhydrationし、9枚の画像と詳細導線をreadback
+- [x] `/history`を追加待機後にhydrationし、保存済み9件・失敗1件・再開／Gallery導線をreadback
+- [x] `/jobs`を追加待機後にhydrationし、完了7件・要確認1件・再開導線をreadback
+- [x] `/canvas/new`を追加待機後にhydrationし、保存・生成・Gallery追加・編集操作をreadback
+- [x] Gallery成果物 `ai-d4d5ebf9-8500-4807-a236-a40235ac6be7-0` の詳細を開き、provider request、`state: completed`、`persistence: completed`、provider job、Canvas再編集導線をreadback
+- [ ] 同一成果物のCanvas遷移後readback、provider側source object全件同期、全画面pixel監査、logout→login、最終cleanup
+
+### 2026-09-18 continuation checkpoint — 同一Gallery成果物のCanvas再利用route readback
+- [x] Galleryで確認済みの成果物 `ai-d4d5ebf9-8500-4807-a236-a40235ac6be7-0` に対応する `galleryImageId=ai-d4d5ebf9-8500-4807-a236-a40235ac6be7` を使い、Heavy `/canvas/new` をCompanionで直接開いた
+- [x] 約12秒待機後、`readyState=complete`、Canvas本体、`プロジェクト名`、`キャンバス · 未保存の変更 · ブランド: Nisen`、保存、生成、素材、`Galleryから追加`、ズーム・図形・エクスポート等の主要コントロールをfresh readback
+- [x] 同一Canvas画面のscreenshotで、対象Gallery画像がCanvas中央に実表示されていることを確認
+- [x] 同一tabのnetwork readbackで、認証済み `/v1/generated-images?...limit=100...` と対象 `media/read?bucket=generated-images&path=...ai-d4d5...-0` の取得を確認
+- [ ] provider source sync/reconciliation全件、全画面pixel監査、logout→login、最終cleanupは継続。semantic textにmetadataが出ないため、UI上の可視metadata証明とは分離
+
+### 2026-09-18 continuation checkpoint — 現行worktree再検証
+- [x] `npm run typecheck`、`test:lightchain-ui-control-boundaries` 14/14、`test:lightchain-parity-routes` 20/20、`git diff --check`を再実行してPASS
+- [ ] 全画面pixel diff、provider source object全件sync/reconciliation、logout→login、owner cleanup
+
+### 2026-09-18 continuation checkpoint — 検索欄のLight geometry差分修正・本番再デプロイ
+- [x] Light/Heavyの同一状態をCompanionで比較し、Heavyの検索inputが `x=73,w=457` で、Lightの `x=81,w=448` と不一致であることを実測
+- [x] Heavy検索formへLightと同じSparklesアイコン、`role=search`、px/gap/input class構造を適用
+- [x] typecheck、UI boundary 14/14、parity route 20/20、Vite build、Cloudflare build、R2 asset upload、wrangler dry-run/deploy
+- [x] deploy version `752309f0-d776-454e-a66d-46e373640274`、root/_health 200
+- [x] cache-bust付きHeavy `/lightchain?category=fitting` をCompanionで再読込し、outer `x=40,y=170,w=506,h=40`、input `x=81,y=180,w=448,h=20`、同一placeholder/name、同一カテゴリ・事例tab配置、screenshotをreadback
+- [x] Light/Heavyの事例画像19枚のasset source basenameと順序が一致することを確認（Heavyの配信幅パラメータ差は別の画質差分として記録）
+- [ ] 全画面機械的pixel diff、provider source object全件sync/reconciliation、logout→login、owner cleanup
+
+### 2026-09-18 continuation checkpoint — 事例画像variantをLight本番へ完全一致
+- [x] Heavyの事例画像variant `w=640` をLight本番と同じ `w=1200` へ変更
+- [x] typecheck、UI boundary 14/14、parity route 20/20、build、Cloudflare build/upload/deploy
+- [x] deploy version `3bcf8eab-ca06-4238-af8d-76904df64d93`、root/_health 200
+- [x] cache-bust後HeavyをCompanion再読込し、search geometry、AIフィッティング状態、screenshot、19枚全件のLight一致URLをfresh readback
+- [ ] 全画面機械的pixel diff、provider source object全件sync/reconciliation、logout→login、owner cleanup
+
+### 2026-09-18 continuation checkpoint — Gallery provider/source readback
+- [x] 現行Companion task-owned tabでHeavy `/gallery?v=3bcf8eab` を追加待機後にreadbackし、9枚の画像カードと詳細導線を確認
+- [x] 同一tabのnetwork observationで認証済み `/api/auth/get-session`、`/v1/profile`、`/v1/brands`、`/v1/generated-images?brand_id=...&limit=100&offset=0&order=newest` を確認し、各該当レスポンスはHTTP 200
+- [x] 複数の成果物について `media/read?bucket=generated-images&path=generated-images%2F<artifact>-0&expiresIn=3600` のHTTP 200を確認。Gallery一覧取得から保存メディア取得までのsource readbackを確認
+- [x] Companion observationを停止し、task-owned tab leaseを安全に解放。生成・保存・削除・公開の再実行は行っていない
+- [ ] APIレスポンス本文のprovider/source metadata全件確認は、Web originからAPI originへのresponse body制約により未完。全画面機械的pixel diff、logout→login、最終owner cleanupも継続
+
+### 2026-09-18 continuation checkpoint — 事例画像のsrcset semanticsをLight本番へ一致
+- [x] Light本番の実DOMを再確認し、`srcset="w640 1x, w1200 2x"`、`sizes`なしを取得
+- [x] Heavyの事例画像を同一の`1x/2x`指定へ修正し、`sizes`を削除
+- [x] typecheck、UI boundary 14/14、parity route 20/20、Vite build、Cloudflare build/R2 upload、wrangler deployを実行
+- [x] deploy version `97d00ee7-2561-4c0d-b55b-c5cd85688817`、Heavy root/_healthの配信を確認
+- [x] cache-bust付きHeavy `/lightchain?category=fitting&v=97d00ee7` をCompanionでfresh readbackし、ログイン済みLightchain画面、検索欄geometry、カテゴリ・事例tabs、19件の事例カード、screenshotを確認
+- [x] Heavyの現行ページは追加待機後に`title=Lightchain AI`、`readyState=complete`、19件の事例カードとしてhydration済み。Companion leaseは解放済み
+- [ ] 全画面機械的pixel diff、provider source object全件sync/reconciliation、logout→login、最終owner cleanup
+
+### 2026-09-18 continuation checkpoint — provider/source/reuse境界の自動検証再実行
+- [x] provider coverage 22/22、unified workflow contract 6/6、pre-source gate 5/5をPASS
+- [x] provider persistence/readback 14/14、media inventory reconciliation 5/5をPASS
+- [x] Canvas source metadata 6/6、Canvas document persistence 7/7をPASS
+- [x] local lifecycle（deterministic result→save once→reload readback→library reuse→cleanup）をPASS。外部効果なし、network calls 0
+- [x] local evidence continuity（pre-source admission→result→save-once→reload→library reuse→negative gates→cleanup）をPASS。外部効果なし、network calls 0
+- [ ] 実provider receipt/source object全件同期、全画面機械的pixel diff、logout→login、最終owner cleanup
+
+### 2026-09-18 continuation checkpoint — 同一viewport screenshot/DOMで事例masonryを再確認
+- [x] 同一Companion session・同一viewportでLight rootとHeavy `/lightchain?category=fitting&v=97d00ee7` のviewport screenshotを同時取得
+- [x] 両画面でLightchain header、検索欄、4カテゴリtab、6事例tab、AIフィッティング選択状態、事例masonryの見た目を比較
+- [x] Lightのsanitized HTMLから事例カードの列配置と実アスペクト比を取得し、Heavyのfresh semantic rectと比較。先頭カード群の`269/224/358/478`、動画カードの`358/479`等が一致
+- [x] Light/Heavyの事例画像asset集合と動画2件のURLを再確認。Companion leaseは両tabとも解放済み
+- [ ] 機械的PNG pixel差分の数値化、実provider receipt/source全件同期、logout→login、最終owner cleanup
+
+### 2026-09-18 continuation checkpoint — API origin直接readbackの事前検証
+- [x] Heavy API originを `https://heavy-chain-api.nichika2000823.workers.dev`、現行brand IDを確認
+- [x] 認証済みAPI GETをtask-owned tabで直接表示してresponse bodyをreadbackする手順を2回試行
+- [x] いずれもCompanionの`task_target_unavailable`でdispatch前に停止し、`external_action_executed=false`、ブラウザ/API状態の変更なしを確認
+- [x] 既存Companion sessionは新規openで再利用となり、stale tab ownershipは自動修復されなかった。試行leaseは解放済み
+- [ ] API response bodyのprovider/source metadata全件確認、機械的pixel差分、logout→login、最終owner cleanup
+## 2026-09-18 continuation checkpoint — Companion復旧後のHeavy fresh readback
+
+- task-owned Companion sessionの再利用可能性を再確認し、Heavy fitting tabを新規leaseでread-only取得。
+- `title=Lightchain AI`、`readyState=complete`、検索欄、4カテゴリtab、6事例tab、AIフィッティング選択、19件の事例カード、fresh screenshotを確認。
+- `/api/auth/get-session`、`/v1/profile`、`/v1/brands`、Light由来の画像19件・動画2件のResource Timingを確認。
+- leaseはreadback後に解放。`task_target_unavailable`は再発しなかった。
+- 残りは全画面mechanical pixel diff、provider/source全件response-body reconciliation、logout→loginの本人操作、最終owner cleanup。
+
+## 2026-09-18 continuation checkpoint — API origin direct body readback
+
+- [x] Webタブを再利用せずCompanion一時タブで`GET /v1/generated-images?brand_id=...&limit=100&offset=0&order=newest`を実行
+- [x] navigation、semantic/screenshot readback、`external_action_executed=false`を確認
+- [x] API originの本文が`{"error":"unauthorized"}`であることを確認。Web originからの認証済みfetchとAPI origin直接表示の認証コンテキストが異なることを記録
+- [x] provider生成・保存・削除・公開は実行していない
+- [ ] API originの正規認証付きbody readback、全画面mechanical pixel diff、logout→login、最終owner cleanup
+
+## 2026-09-18 continuation checkpoint — API認証経路のコード確認
+
+- [x] `cloudflare/heavy-api/src/client.ts`で、`listGeneratedImages`が`authenticatedRequest`→`Authorization: Bearer ${tokenProvider()}`を通ることを確認
+- [x] API origin直接表示の`unauthorized`は、Bearer tokenを持たない一時タブの期待された認証境界と判定
+- [x] token/auth-stateを抽出・保存・移送せず、Heavy Web UIの認証済みfetch/readbackを正規経路として維持
+- [ ] 全画面mechanical pixel diff、provider receipt/source sync/reconciliationのUI・receipt対応表、logout→login、最終owner cleanup
+
+## 2026-09-18 continuation checkpoint — Gallery provider receipt UI readback
+
+- [x] ログイン済みHeavy Galleryの既存成果物を1件だけvisual proof付きで開いた
+- [x] `provider request`、`state=completed`、`persistence=completed`、`job`、Lightchain feature/task、Canvas再編集導線をfresh readback
+- [x] `provider receiptを読む`を一度だけ実行し、`provider receiptを読み戻しました`と同じcompleted/persistence表示を確認
+- [x] 再生成・保存・削除・公開は実行していない。再クリックなし、lease解放済み
+- [ ] 全成果物のprovider/source対応表、全画面mechanical pixel diff、logout→login、最終owner cleanup
+
+## 2026-09-18 continuation checkpoint — API body readback後の再検証
+
+- [x] `npm run typecheck`、UI boundary 14/14、parity route 20/20、`git diff --check`を再実行してPASS
+- [x] Companion statusでconnected、pending 0、active 0、leases 0、active reconciliation 0を確認
+- [ ] API originの正規認証付きbody readback、全画面mechanical pixel diff、logout→login、最終owner cleanup
+
+## 2026-09-18 continuation checkpoint — Gallery全9成果物provider request readback
+- [x] Heavy Galleryの既存9成果物をUI上で1/9〜9/9まで巡回し、各画面のartifact ID、provider requestまたはworkspace handoff、機能/task、再利用導線をreadback
+- [x] 既存9件の巡回中に生成・保存・削除・公開を再実行せず、各単一クリックの後に同一tabを再reserveしてsemantic・screenshot readbackし、leaseを解放
+- [x] 9/9〜5/9、4/9〜1/9の全対象をreportへ記録。少なくとも5/9のprovider receiptはUIから一度だけ読み戻し、completed/persistence completedを再確認済み
+- [x] 既存画像成果物のprovider receipt readbackを各画像1回だけ実行。複数件でcompleted/persistenceとreceipt readbackを確認し、非同期で確認中の件は完了扱いにしない
+- [ ] provider側source objectのresponse body全件同期、全件reconciliation、全画面mechanical pixel diff、logout→login、最終owner cleanup
+
+### 2026-09-18 continuation checkpoint — Light正本現行readback
+- [x] Light正本をread-only fresh readbackし、ログイン済み画面（`title=Lightchain AI`、`readyState=complete`、`semanticEmpty=false`）と主要カテゴリ・事例共有を確認
+- [ ] logout→loginの本人操作後30秒readback、機械的pixel diff、provider source全件reconciliation、最終owner cleanup
+
+### 2026-09-18 continuation checkpoint — Heavy root認証状態の再確認
+- [x] cache-bust付きHeavy rootへ正規遷移し、現行bundleのreadbackを実施
+- [x] Heavy rootは認証シェル（ログイン／無料で始める）で、Light正本rootはログイン済み制作画面。root比較は認証状態不一致として保留
+- [ ] ユーザー本人のHeavy logout→login後30秒readback、同一rootのpixel比較、provider/source reconciliation、最終cleanup
+### 2026-09-18 continuation checkpoint — デプロイ版080caae6のfresh visual readback
+- [x] `080caae6-8562-4acd-a947-5eb5f17d2074`を本番deployし、`/_health` HTTP 200を確認
+- [x] Heavy Lightchain routeをCompanionで開き、30秒待機後にログイン済み制作画面としてreadback。`readyState=complete`、主要カテゴリ・事例masonry・検索欄を確認
+- [x] HeavyのLightchain routeだけにあったavatar/account chromeを削除した版をreadbackし、`avatar` match 0件を確認
+- [x] LightはAIフィッティング選択状態だったため、HeavyもAIフィッティングへ一度だけvisual proof付きで遷移し、`?category=fitting`と選択状態をreadback
+- [x] typecheck、UI boundary 14/14、parity route 20/20、build、diff checkはPASS
+- [ ] 全画面mechanical pixel diff、provider/source response-body全件同期・reconciliation、logout→loginの本人操作、最終owner cleanup
+-
+### 2026-09-18 continuation checkpoint — デプロイ版590e9a9dでavatar parityを修正
+- [x] Light正本の現行readbackでavatar画像1件を確認し、Heavyのavatar/account menuを復元
+- [x] typecheck、UI boundary 14/14、parity route 20/20、build、diff check、Cloudflare build/upload/deployをPASS
+- [x] deploy version `590e9a9d-2d64-465a-9e71-86062d743c10`をCompanionで30秒待機後readbackし、Heavy/Lightともavatar match 1件を確認
+- [x] Lightに合わせてHeavyをAIフィッティングへ一度だけ遷移し、`?category=fitting`と選択状態を確認
+- [ ] 全画面mechanical pixel diff、provider/source response-body全件sync/reconciliation、logout→loginの本人操作、最終owner cleanup
+-
+### 2026-09-18 continuation checkpoint — 認証済みWeb fetchのresponse body観測
+- [x] Heavy Web originの同一Companion tabでreload後のnetwork observationを実施
+- [x] session endpoint bodyのreadbackと、API `/v1/profile`・`/v1/brands` HTTP 200を確認
+- [ ] API originのresponse bodyはCompanionのstarting-origin制約で取得不可。token/auth-stateの抽出・移送は行わない
+- [x] observation停止、lease解放、生成・保存・削除・公開なしを確認
+- [ ] provider/source全件body reconciliation、全画面mechanical pixel diff、logout→login、最終owner cleanup
+
+## 2026-09-18 continuation checkpoint — デプロイ版6991149fの最終avatar・カテゴリ再readback
+- [x] `6991149f-aabd-4be3-9b90-463b3e4a9b2e`をCloudflare本番へdeploy
+- [x] Heavyへ正規遷移後30秒待機し、Heavy avatar `count=1`・`src=saas-avatar-new.png`を確認
+- [x] Light正本も同じavatar `count=1`・同一`src`を確認。Heavy/Lightのavatar resource parityをreadback
+- [x] HeavyのAIフィッティングtabをvisual proof付きで一度だけクリックし、`?category=fitting`、`aria-selected=true`、AIフィッティング見出しをfresh readback
+- [x] Heavy/Lightのviewport screenshotを取得し、HeavyのLightchain header、カテゴリtab、カード、事例共有、avatar表示を目視確認
+- [x] leaseはすべて解放。生成・保存・削除・公開・provider外部処理は未実行
+- [ ] 全画面mechanical pixel diff、provider/source response body全件reconciliation、logout→loginの本人操作、最終owner cleanup
+
+## 2026-09-18 継続監査 — 材料契約修正・最新デプロイ・Extension fresh readback
+
+- [x] Lightchain材料契約の不一致2件を特定し、左ツールレールを独立配置、本文を`minmax(0,596px)`＋`minmax(360px,1fr)`へ復元
+- [x] 関連8系統の契約テストを再実行し、entry 5、material 28、provider adapter 17、provider coverage 22、unified 6、library 10、canvas persistence 7、canvas recovery 23を全てPASS
+- [x] Cloudflare build、large asset upload、wrangler dry-run、production deploy完了。最新Version `752309f0-d776-454e-a66d-46e373640274`
+- [x] Codex Chrome Extensionの既存ログイン済みHeavyタブで`/tools/fabric`へ遷移し、8秒待機後にログイン画面なしでreadback。ツールバー、4レール、4材料タブ、2入力、生成履歴、権限ゲートを確認
+- [x] Extension screenshotでLightchain header、左レール、入力ペイン、右プレビューを目視確認。auth-state.jsonは作成・使用・移送していない
+- [ ] 4材料タブの一括操作はExtension側タイムアウトでカーネルリセット。Canvas再利用、全主要route巡回、機械的pixel diff、provider/source reconciliation、logout→login、最終cleanupは未完了
+
+### 追記: Extension個別タブ操作
+
+- [x] Extensionで生地イメージ、プリントイメージ、線画の実写化、平絵生成を個別に操作し、各route URLと選択状態をfresh readback
+- [x] 4タブ巡回中にログイン画面への遷移なし。生成・保存・削除・公開は実行していない
+
+## 2026-09-18 continuation checkpoint — workers.dev DNS障害の再監査
+
+- [x] Heavy Web/APIのworkers.dev両ホストを`dig`とHTTPで再確認し、両方ともNXDOMAIN/名前解決失敗を確認
+- [x] Cloudflare APIのaccount workers subdomainを正規OAuthでread-only確認し、account subdomain `nichika2000823` が存在することを確認
+- [x] Cloudflare APIの`heavy-chain-web` script subdomain設定をread-only確認し、`enabled=true`・`previews_enabled=false`を確認
+- [x] Wrangler deployment listで最新Version `97ea5e0b-be28-465b-9549-e515b6cf8a9a`がCloudflare側に存在することを確認
+- [x] 認証情報・auth-state.jsonは保存・移送・出力していない。OAuth値はプロセス内read-only API呼出しにのみ使用し、結果には出していない
+- [x] 許可originとして既存登録されていた`heavy-chain.zeabur.app`はHTTP 200だが旧「制作入口を準備しています」画面であり、最新workerの代替にはしないと判定
+- [ ] workers.dev DNS回復後のExtension/Companion fresh readback、Canvas再利用成功、全主要route巡回、全画面pixel diff、provider/source reconciliation、logout→login、最終cleanup
+
+## 2026-09-18 continuation checkpoint — Canvas再利用の旧chunk障害と自動復旧修正
+
+- [x] 既存Extension Galleryタブで成果物詳細から`Canvasで再編集`を実クリックし、Canvas routeまで遷移
+- [x] 画面が`CanvasEditorPage.HnWRsAC6.js`のdynamic import失敗で停止することを確認。新デプロイの現行chunkは別hashであり、開きっぱなしタブの旧bundle参照として切り分け
+- [x] `src/App.tsx`へdynamic import失敗時の一回限定sessionStorageフラグ付き自動再読込を追加。成功時にフラグを消し、無限reloadを防止
+- [x] UI boundary 14/14、parity route 20/20、pre-source gate 5/5、provider persistence/readback 14/14、typecheck、build、diff checkをPASS
+- [x] Cloudflare本番へ再deploy。version `97ea5e0b-be28-465b-9549-e515b6cf8a9a`
+- [ ] 再デプロイ後のExtension fresh readbackは`DNS_PROBE_FINISHED_NXDOMAIN`で未実行。DNS回復後にトップ30秒待機、Canvas再利用、全主要route巡回を再実行する
+- [ ] 全画面mechanical pixel diff、provider/source response body全件reconciliation、logout→loginの本人操作、最終owner cleanup
+
+## 2026-09-18 continuation checkpoint — 公式Codex Extension経路の再選択
+- [x] 公式Chrome Extension/Profile 2の操作ツール公開状況を確認
+- [x] Heavy Chainリポジトリに公式Profile 2 readback adapter（`scripts/chrome_plugin_*`等）が存在しないことを確認
+- [ ] 公式Extension/Profile 2のfresh `list → get → openTabs` handshake、実画面操作、pixel差分、source body readbackは未実行
+- [ ] Companion・IAB・Playwrightへ切り替えず、公式Extensionの操作面または既存adapterが利用可能になるまで保留
+
+## 2026-09-18 continuation checkpoint — Codex Extension実画面確認と見た目差分修正
+
+- [x] Codex Chrome Extensionの既存Heavy/Lightタブを同一条件でreadbackし、ログイン済み画面、カテゴリ4件、事例タブ6件、avatar、主要カードを確認
+- [x] Extension上でHeavy/Lightのviewport screenshotを取得し、Heavy側の検索アイコン、カード見出し背景、ヘッダーロゴが簡略化されている差分を特定
+- [x] HeavyへLight正本の`ai_star.png`・`title_bg.png`を適用し、ヘッダーロゴをリンク形状へ修正
+- [x] typecheck、UI boundary 14/14、parity route 20/20、`git diff --check`をPASS
+- [x] Cloudflare本番へdeploy。version `6fb032a3-5ace-489d-9177-735348765b3d`
+- [x] ExtensionでHeavyをcache-bust再読込し、DNS一時失敗後15秒待機して再試行。30秒待機後、`ai_star.png`・`title_bg.png`・avatar・4カテゴリ・6事例タブをfresh readback
+- [x] Extension上で4カテゴリを順番に切替え、各カテゴリの選択状態と入口リンク数（おすすめ6、企画9、フィッティング6、グラフィック5）を確認
+- [x] Extension上で事例共有6タブをHeavy/Light双方に順番に切替え、選択状態・カード/画像表示をreadback
+- [x] AIフィッティング入口を実クリックし、`/model`へ遷移、ログイン画面なし、入力・タスクタブ・権限状態を確認
+- [x] Companion側に残っていた一時lease 2件を解放
+- [ ] 全画面mechanical pixel diff、provider/source response body全件reconciliation、logout→loginの本人操作、最終owner cleanup
+
+### 2026-09-18 追記: 成果物からCanvas再利用
+
+- [x] 最新VersionのExtension Galleryで成果物詳細、provider request、生成条件、`Canvasで再編集`を確認
+- [x] `Canvasで再編集`を実クリックし、Canvas画面へ遷移。旧dynamic chunkエラーは再発せず、成果物画像がCanvas中央に表示された
+- [x] Canvasの保存・生成・素材・Gallery・編集・ダウンロード導線をDOMで確認。外部効果のある操作は実行していない
+
+### 2026-09-18 追記: History / Jobs / Asset Center再表示
+
+- [x] ExtensionでHistoryを開き、生成ジョブ、失敗確認、保存済み成果物、Galleryへの導線を確認
+- [x] ExtensionでJobsを開き、制作キュー、再開、停止、完了成果物の導線を確認
+- [x] ExtensionでAsset Centerを開き、履歴アップロード、生成履歴、ライブラリー、AIフィッティング成果物の一覧・プレビュー・ボードコピー・詳細導線を確認
+- [ ] provider source body全件reconciliation、機械的pixel diff、logout→login本人操作、最終cleanup
+
+### 2026-09-18 追記: provider/source readback境界
+
+- [x] 既存ExtensionのAPI直リンクをread-only確認し、`{"error":"unauthorized"}`をfresh readback
+- [x] token・auth-stateの抽出、移送、再利用は行わず、Gallery／Asset CenterのUI系譜確認とAPI直リンクの未認証結果を分離
+- [ ] UIセッション内の正規API response body全件reconciliationは、認証境界を越えない正規観測面が必要
+
+### 2026-09-18 追記: provider receipt UI readback
+
+- [x] Gallery成果物詳細の`provider receiptを読む`を実クリック
+- [x] UIで`state: completed`、`persistence: completed`、対象job `ai-5e5fbea2-a931-42a2-b1dd-606f49833e51`、成功toastを確認
+- [ ] provider source response body全件reconciliationは未完了。receipt UIの完了証跡とAPI直リンクのunauthorizedを混同しない
+
+### 2026-09-18 追記: Companion fresh readback / cleanup audit
+
+- [x] `companion_status`で接続profile、logical session、pending operation 0、active lease 0、reconciliation active 0を確認
+- [x] 同一Companion sessionでHeavy Asset Centerをreserve/readし、DOMと同一ページscreenshotを取得。15件の成果物、AIフィッティング成果物、プレビュー／ボードコピー／詳細導線を確認
+- [x] readback後にleaseを解放
+- [x] task-tab cleanup dry-runを実施。foreign tabを候補にせず、候補0件、active group／resume保持のみを確認
+- [ ] Companion側の全画面pixel diff、source body全件reconciliation、logout→login、最終terminal session closeは未完了
+
+### 2026-09-18 追記: Companion Light/Heavy visual readback
+
+- [x] Light正本をCompanionでreadし、ログイン済み、4カテゴリ、6事例共有タブ、avatar、主要カードをDOM＋screenshotで確認
+- [x] HeavyをCompanionでreadし、同じ主要要素をDOM＋screenshotで確認。Lightは生産、Heavyはおすすめ選択状態であることを記録
+- [x] 両readback後にleaseを解放
+- [ ] 同一選択状態への機械的pixel diff、全画面pixel diff、source body全件reconciliationは未完了
+
+### 2026-09-18 追記: Companion resource timing readback
+
+- [x] 認証済みGallery exact tabのresource timingをread-only取得
+- [x] `/v1/generated-images`、`/v1/media/read`、`/v1/image-ai/requests/{id}`、session/profile/brands系統の実使用を確認
+- [x] 署名付きURLの値は記録・出力・移送せず、leaseを解放
+- [ ] request/response body全件reconciliationはCompanion APIの境界上未完了。pixel diffも未完了
+
+### 2026-09-18 追記: 最終ローカル受入再実行
+
+- [x] `npm run typecheck` をPASS
+- [x] 材料契約28、Provider adapter17、Provider coverage22、Unified workflow6、Library→Canvas10、Canvas persistence7、Canvas recovery23を再実行し全件PASS
+- [x] `git diff --check` PASS、`auth-state.json`不在を確認
+- [ ] 本番healthのシェル直アクセスはこの実行環境のDNS解決失敗で再確認できず。Companionの認証済み画面readbackと直前のデプロイreadbackは既存証跡を維持
+
+### 2026-09-18 追記: Codex Extension同一状態カテゴリ／事例タブ操作
+
+- [x] Codex Extension上でLight／Heavyを同じ「おすすめの事例」状態に揃え、同じヘッダー、4カテゴリ、6事例タブ、カード構成、avatarを目視確認
+- [x] 4カテゴリ（おすすめ、企画デザインツール、AIフィッティング、グラフィックツール）をLight／Heavy双方で実クリックし、対応する選択状態とコンテンツ描画を確認
+- [x] 6事例共有タブ（おすすめの事例、デザイン修正、柄・プリント、ビジュアル素材、マーケティングコンテンツ、生産）を双方で実クリックし、全タブの選択状態を確認
+- [ ] 機械的pixel diffとprovider source body全件reconciliationは引き続き未完了。今回のExtension screenshotは同一状態のvisual evidenceであり、バイナリ差分ではない
+
+### 2026-09-18 追記: 主要6入口route sweepの本番DNS障害
+
+- [x] Light `/agent` はExtensionでログイン済みの企画ワークスペースを描画し、主要操作・履歴・新規タスク・業務シーンを確認
+- [x] Heavy `/agent` への正規遷移を実行し、15秒待機後さらに再読み込みしたが、`DNS_PROBE_FINISHED_NXDOMAIN` が継続
+- [ ] Heavy本番DNSが復旧するまで、主要6入口の同時route sweep、今回の本番画面readback、最終pixel diffは継続保留。これはログイン状態やauth-state.jsonの問題ではない
+
+### 2026-09-18 追記: DNS障害中の独立build/runtime検証
+
+- [x] `npm run build` PASS（Vite 2553 modules、production bundle生成）
+- [x] `npm run verify:cloudflare-runtime` PASS（runtime contract 6/6、legacy runtime fail-closed、external actions none）
+- [x] `git diff --check` PASS、`auth-state.json`不在を再確認
+- [ ] Heavy本番DNSのNXDOMAINは継続中のため、ブラウザroute sweepとCompanion本番再読込は未再開
+
+### 2026-09-18 追記: Heavy Web再デプロイとDNS継続確認
+
+- [x] Cloudflare Web test 8/8、build、R2大型asset 2件のupload、Wrangler dry-runをPASS
+- [x] 正規worker `heavy-chain-web`へ再デプロイ。新Version `75498d22-fec8-4894-ae4f-a7dc2a823108`、Wrangler deployment readback 100%
+- [x] deploy後に30秒待機し、health・root・1.1.1.1 DNSを再確認
+- [ ] deploy成功後も`heavy-chain-web.nichikata2000823.workers.dev`はNXDOMAIN。Cloudflare配信物の未反映ではなく、workers.dev名前解決が外部状態として継続blocker
+
+### 2026-09-18 追記: 再デプロイ後のcurrent-state再確認
+
+- [x] 20:07 JSTに1.1.1.1 DNS、canonical health、Wrangler deployment readbackを再確認
+- [x] `75498d22...-heavy-chain-web...workers.dev`のversion preview URLもread-only確認したがDNS解決不可
+- [ ] canonical production URLとversion preview URLの双方がDNS解決不可のため、Extensionの本番再読込と主要route sweepは未実行。previewをproductionの代替とは扱わない
+
+### 2026-09-18 追記: Light本番の個別route実画面確認
+
+- [x] Light `/tools/fabric` をExtensionで実画面まで確認。4材料タブ、モデル／生地の2必須入力、任意キーワード、生成履歴、権限ゲートを確認
+- [x] Light `/model` をExtensionで実画面まで確認。AIフィッティング、シングル／マルチタスク、衣服画像0/4、説明生成／参考画像／モデル写真、生成履歴、権限ゲートを確認
+- [ ] 14画面一括route sweepはExtensionカーネルのタイムアウトで完了扱いにせず、未確認画面は次回に短い単位で継続
+
+### 2026-09-18 追記: Lightマーケティングroute再確認
+
+- [x] Light `/marketing`をExtensionで再読backし、マーケティングワークスペース、プロンプト入力、6つの業務シーン、マイプロジェクト、参考事例を確認
+- [x] ログイン画面表示なしを確認。送信・生成・保存などの外部効果は実行していない
+- [ ] Heavy canonical DNSが復旧するまで、同じrouteのHeavy比較は保留
+
+### 2026-09-18 追記: Heavy代替公開先の主要route確認
+
+- [x] Zeaburの代替Heavy公開先をExtensionで待機後readbackし、14主要routeがログイン画面なしで実画面まで描画されることを確認
+- [x] 企画、デザイン、マーケティング、スタジオ、動画、AIフィッティング、Asset Center、Gallery、History、Jobs、Canvas、素材、印刷、モデルライブラリーの各導線を確認
+- [ ] Zeaburはcanonical `workers.dev` と別配信先のため、Lightとの最終同一状態比較・canonical本番readbackの代替にはしない
+- [ ] 生成・アップロード・保存・削除・公開・provider送信は、成果物フローの外部効果があるため未実行
+
+### 2026-09-18 追記: `/marketing` 同一viewport比較
+
+- [x] Light／Heavy代替を同一Extension viewportで比較し、ヘッダー、見出し、プロンプト、6シーン、マイプロジェクト領域の構造を確認
+- [x] Heavy代替のrouteがURL直後・1.2秒後・6.2秒後も`/marketing`に留まることを確認
+- [ ] Lightの既存プロジェクトカードとHeavyの空履歴、ポイント値の差はアカウントデータ差分として残る。データコピーは未実行
+- [ ] canonical本番での最終pixel diffはWorkers.dev DNS復旧後に実施
+
+### 2026-09-18 追記: fresh local verification
+
+- [x] typecheck、production build、Cloudflare runtime verifier、git diff check、auth-state.json不在をfresh再実行してPASS
+- [ ] 追加のコード差分はなく、canonical DNS復旧後に既存VersionのExtension再読込と最終比較を継続
+
+### 2026-09-18 追記: Companion状態の現況
+
+- [x] profile connected、lease 0、pending operation 0、queue 0、active reconciliation 0をfresh statusで確認
+- [ ] historical reconciliation 1とterminal cleanup pending 12件は、作業終了時に対象を再確認してowner-scoped cleanupする。作業継続中は保留タブを勝手に閉じない
+- [x] fresh statusでactive reconciliation 0、pending 0、queue 0、cleanup pending counter 0を確認
+- [x] cleanup dry-runで候補0、closed 0、unknown_effect 0を確認。保護理由のあるタブは作業継続中のため保持
+
+### 2026-09-18 追記: Companion reload後readback
+
+- [x] Companion Extension reloadをidle boundaryで受理し、新generationをfresh statusで確認
+- [x] 新logical sessionでLight／Heavy代替 `/marketing`をreserve→DOM＋screenshot readbackし、両leaseを解放
+- [ ] canonical Heavyのfresh production readbackはWorkers.dev NXDOMAIN復旧待ち
+
+### 2026-09-18 追記: Cloudflare設定readback
+
+- [x] Cloudflare DashboardをExtensionで開き、本人ログイン選択画面まで到達。本人ログインは代行しない
+- [x] CLI read-onlyで最新Version `75498d22-fec8-4894-ae4f-a7dc2a823108`の100%配信を再確認
+- [ ] canonical Workers.dev DNSは20:18 JST時点でもNXDOMAIN。canonical route readbackと最終pixel diffはDNS復旧後に継続
+- [x] deployログ上でaccount／worker subdomain GETとworker subdomain有効化POSTがHTTP 200で完了していることを確認
+- [x] 1.1.1.1、8.8.8.8、9.9.9.9の全resolverでNXDOMAINを確認し、設定未実行とDNS公開応答を分離
+
+### 2026-09-19 追記: Workers.dev APIの正規read-only切り分け
+
+- [x] Wrangler OAuthのread-only `whoami`で対象Accountと既存認証状態を確認。認証値は出力・保存していない
+- [x] `GET /accounts/{account}/workers/subdomain`でaccount subdomain `nichika2000823`を確認
+- [x] `GET /accounts/{account}/workers/scripts/heavy-chain-web/subdomain`で対象Workerの`enabled=true`・`previews_enabled=false`をfresh確認
+- [x] `GET /accounts/{account}/workers/subdomains/heavy-chain-web`は「候補名が利用可能だがaccount subdomainとして未設定」という別のavailability endpointであり、既存account subdomainや対象Workerのscript routingを示すものではないと切り分け
+- [x] `GET /accounts/{account}/workers/scripts/heavy-chain-web/domains`が空であることを確認。これはcustom domain未登録のreadbackであり、workers.dev設定の代替証拠にはしない
+- [x] Cloudflare／Google DNS-over-HTTPSと`dig +trace`で対象ホストのA/CNAMEがない権威回答を再確認
+- [ ] 残る復旧条件はCloudflare側Workers.dev公開DNSの回復、またはCloudflare Dashboardの本人ログイン後に表示される正規Workers設定の確認。DNS回復前のcanonical route sweep・pixel diff・最終parity判定は実施しない
+
+### 2026-09-19 追記: 現行Light基準への検証再整合と本番反映
+
+- [x] ログイン済みCompanionでLight `/agent` と `/model`をfresh readbackし、現行UI（`商品企画`／`顧客提案`／`インスピレーション`／`AIグラフィックデザイン`、現行AIフィッティング文言・権限状態）を確認
+- [x] 現行Lightとの差分ではなく、古い期待値を持っていた検証器だけを更新。Heavy本体の権利確認・認証・provider導線は変更していない
+- [x] `npm run verify:lightchain-all-features`でdesktop 31/31・mobile 31/31、`ok:true`、`failed:[]`、cleanup（context/browser/preview）完了
+- [x] `git diff --check`、`npm run typecheck`、`npm run build`（Vite 2553 modules）、`npm run verify:cloudflare-runtime`（runtime 6/6、`ok:true`）をPASS
+- [x] Cloudflare Web test 8/8、Cloudflare Web build、R2大型asset 2件、Wrangler dry-runをPASS
+- [x] 正規Worker `heavy-chain-web`へ一度だけdeploy。Version `d7d31a6f-c684-4b7a-85a5-88d8b25d75da`、deployment readback 100%
+- [x] Cloudflare Dashboardをログイン済みCompanionで再読込し、最新Version `d7d31a6f`、Worker URL、`AUTH_SERVICE=consumer-auth`、`PUBLIC_ASSETS=heavy-chain-public-assets`を確認
+- [x] 公開rootと`/_health`はHTTP 200。本番HTML参照の`assets/index.zbQhiP2F.js`はlocal／servedとも717,411 bytes・SHA-256 `be051a0d382c583bcbe5dc03ffb88b890f4433ab5303dcb9558aa2e6a30a4439`
+- [x] 新しいCompanion Heavy tabで15秒待機後、アバター、4カテゴリ、6主要ワークスペース、事例共有をfresh semantic readback＋screenshot確認。`auth-state.json`は使用していない
+- [ ] 外部provider生成、素材アップロード、保存／削除／公開、権利確認の事実認定、source response body全件sync/reconciliation、mechanical pixel diffは未実行・未証明
+- [ ] strict lintは既存`src/pages/CanvasEditorPage.tsx:988`のReact Hook依存warning 1件で`--max-warnings=0`のみ失敗。今回の検証器差分に起因するerrorではないため、無関係な製品変更は追加しない
+- [x] 通常の`npm run lint`はexit 0（同warning 1件のみ）
+
+### 2026-09-19 追記: 本番Companion全主要route・カテゴリ・成果物再表示確認
+
+- [x] Heavy本番の主要14 routeをCompanionで順次開き、各routeで15秒待機後にログイン済み実画面を確認。企画、デザイン、マーケティング、ファッションスタジオ、動画、AIフィッティング、Asset Center、Gallery、History、Jobs、Canvas、素材、印刷、モデルライブラリーを対象とした
+- [x] Heavyトップの企画デザイン／AIフィッティング／グラフィックカテゴリを実クリックし、URL category変化とカード・導線の表示を確認
+- [x] Galleryの保存済み9件、Historyの保存済み9件・失敗1件・進行中0件、Jobsの再開導線、Canvasの保存／Gallery追加／アップロード導線を確認
+- [x] Gallery詳細から`Canvasで再編集`へ進み、既存画像がCanvasへ表示されることをscreenshot確認。Canvas reload後も同じ画像を再表示できた
+- [x] 同じ既存成果物の`provider receiptを読む`を開き、`state: completed`・`persistence: completed`・job IDを確認。新規provider再送はしていない
+- [ ] Canvasの`保存`、provider生成、アップロード、削除、公開、権利確認の本人操作、source response body全件sync/reconciliationは未実行・未証明
+
+### 2026-09-19 追記: AIフィッティング入力タブの実操作確認
+
+- [x] `/model`でシングルタスクを確認し、衣服画像0/4、自動変換、説明生成、参考画像、モデルのセット写真、アスペクト比、解像度、生成履歴、既存結果のGallery／History／Jobs／Canvas導線を確認
+- [x] マルチタスクへ実クリックで切り替え、`一括試着タスク（0/8）`、`追加`、`すべて削除` disabled、最大8タスク表示を確認
+- [x] `参考画像`と`モデルのセット写真`の入力タブを実クリックし、それぞれの説明文を確認。権限なしのシングル生成ボタンは押していない
+
+### 2026-09-19 追記: 既存成果物1件のCanvas保存・再表示
+
+- [x] 既存Gallery成果物 `ai-d4d5ebf9-8500-4807-a236-a40235ac6be7-0` をCanvasへ開き、生成・アップロードなしで保存ボタンを1回だけ実行
+- [x] 保存後に `/canvas/229439e5-38b8-4b2e-9cbe-48e9700d62ca` へ遷移し、15秒待機後に `キャンバス・サーバー確認済み` と既存画像をreadback
+- [x] 同じCanvas URLをreloadし、15秒待機後も同じ画像・編集UI・ブランド表示が再表示されることをscreenshot＋semantic readbackで確認
+- [x] 保存対象を既存画像1件に限定し、外部provider生成、素材アップロード、削除、公開、権利確認の事実認定は実行していない
+- [ ] provider source response body全件sync/reconciliation、mechanical pixel diff、logout→login、最終owner cleanupは引き続き未完了
+
+### 2026-09-19 追記: Gallery receipt継続確認とsource観測境界
+
+- [x] Gallery 7/9（`ai-6b2727eb-d248-4061-b8c4-f99eb427c5f5-0`）、8/9（`ai-3d70518a-1325-444a-bedd-372b663cb1ef-0`）、9/9（`ai-5c46a4c6-178e-4359-a4e7-3091d64ae173-0`）の既存provider receiptを各1回読み戻し、15秒以内のfresh readbackで全件 `state: completed`／`persistence: completed` を確認
+- [x] 直接API一覧タブのreadbackをCompanionで試行したが、同じ認証済みタブ取得が60秒で応答せず、再送・token移送・auth-state作成は行わなかった
+- [x] `test:media-inventory-reconciliation` 5/5、`test:provider-persistence-readback` 14/14、`verify:companion-auth`、`test:lightchain-pre-source-gate` 5/5、`test:lightchain-provider-coverage` 22/22をPASS
+- [ ] API/provider source response body全件sync/reconciliationは、正規の認証付き観測面が復旧するまで未証明。mechanical pixel diff、logout→login、最終owner cleanupも未完了
+
+### 2026-09-19 追記: owner cleanupのfresh statusと古いtask tab保持
+
+- [x] Companion statusでconnected、logical session 0、lease 0、pending 0、active reconciliation 0を確認
+- [x] 保持中Asset Center tabをCompanionの同一task sessionでread-only再確認し、`readyState=complete`、semantic非空、screenshot取得、lease解放、session終端を確認
+- [x] owner cleanup receiptは`ok:true`、foreign tab mutation=false、external_action_executed=false
+- [ ] 旧run `run_20260918_parity_model_update4` のtabは、旧generationの`authority_expired`・`retain_until_resume`・target mismatchのためcleanup対象にならず、historical reconciliation 1件／ownerless terminal 1件として残る。再実行・repair再送は行わない
+
+### 2026-09-19 追記: Light／Heavy同一入口の視覚・意味比較
+
+- [x] Light `https://jp.linkaigc.com/` をログイン済みCompanionで再読込し、`おすすめ Hot`選択、4カテゴリ、6主要ワークスペース、事例共有カテゴリをsemantic＋screenshotで確認。Light側は23 controls、表示テキスト640文字、screenshot 87,549 bytes（quality 60）を取得
+- [x] Heavy `https://heavy-chain-web.nichika2000823.workers.dev/lightchain?v=d7d31a6f&parity=20260919` を同じブラウザ表示条件で開き、初回の`制作入口を準備しています`から15秒待機後、同じ4カテゴリ、6主要ワークスペース、事例共有をsemantic＋screenshotで確認
+- [x] Heavyの待機後スクリーンショットは機械的記録として139,732 bytes、SHA-256 `02e27b94a6e2a0caff845bee902a261dcd814db52d453c720e131a458b9db038`を取得
+- [ ] LightはCompanion screenshot、HeavyはCUA screenshotで取得経路が異なるため、上記byte数／hashはpixel equalityの証明に使わない。正規の同一キャプチャ経路によるmechanical pixel diffは未実行・未証明
+- [ ] 権利確認の事実認定、外部provider生成／アップロード、source response body全件sync/reconciliation、旧run cleanupは引き続きユーザー操作または正規観測面の復旧待ち
+
+### 2026-09-19 追記: API source readbackの再確認
+
+- [x] 既存の認証済みHeavy API tabを新Companion sessionで再reserveし、同一URLをread-onlyで再確認
+- [x] 初回visual captureのtarget changedを同じ対象へ一度だけ再読込し、`readyState=complete`・HTTP body相当の可視テキスト `{"error":"unauthorized"}` を確認
+- [x] lease解放・session closeを実施し、foreign tab mutation=false、external_action_executed=falseを確認
+- [ ] API/provider source response body全件sync/reconciliationは、正規API認証が必要で未証明。token移送、auth-state作成、別surface経由の代替、再送は行わない
+
+### 2026-09-19 追記: 同一Companion経路の入口バイナリ比較
+
+- [x] Light／Heavyを同一Companion session・同一quality 60でscreenshot取得し、Light 97,408 bytes（checksum 12,350,329）、Heavy 103,689 bytes（checksum 12,665,864）を記録
+- [x] 取得JPEGのbyte長が異なり、共通範囲のmismatch 96,292 bytes、absolute byte difference 8,405,937を記録。入口の構造・semantic一致と、画像バイナリの完全一致を分離した
+- [ ] JPEG byte差分はpixel差分ではないため、これだけで画素一致／不一致の結論にはしない。画像デコードを含む同一capture基準のmechanical pixel diffは未実行・未証明
+
+### 2026-09-19 追記: owner-scoped cleanup dry-run
+
+- [x] 新Companion sessionでowner-scoped cleanup dry-runを実行し、現行のLight／Heavy／API確認タブをpreserve対象に指定
+- [x] cleanup候補0、closed 0、unknown_effect 0を確認。旧Asset Center tab `1980923845`だけは`retention:retain_until_resume`／`partial_actions_applied`として保護された
+- [ ] 旧generation／旧capsuleのtarget mismatchが解消していないため、強制closeやrepair再送は行わず、最終cleanupは未完了境界として保持
+
+### 2026-09-19 追記: 現行パリティ契約テスト再検証
+
+- [x] `test:lightchain-unified-workflow-contract` 6/6、`test:lightchain-parity-behavior-ledger` 6/6、`test:lightchain-parity-ledger-builder` 1/1、`test:lightchain-provider-adapter` 17/17をPASS
+- [x] `test:lightchain-ui-control-boundaries` 14/14、`test:lightchain-entry-routing` 18/18、`test:lightchain-parity-routes` 20/20、`test:lightchain-all-feature-workflows-contract` 5/5をPASS
+- [x] `verify:lightchain-local-lifecycle` と `verify:lightchain-local-evidence-continuity`をPASS。両方とも`externalActionExecuted=false`、networkCalls 0（continuityは既存port使用warningが出たがexit 0）
+- [x] 旧Playwright `verify:lightchain-clone-layout`は`auth_state_missing`、`verify:lightchain-navigation`は`explicit_auth_state_required`でfail-closed。auth-state作成・流用や外部操作は行わず、Companion実測を正規のproduction evidenceとして分離
+
+### 2026-09-19 追記: 権利ゲート・素材契約・ダウンロード再検証
+
+- [x] `test:lightchain-permission-parity` 5/5をPASS。provider-bound surfaceの権利ゲート、Creatorカテゴリ、AI fittingのGallery選択と権利ゲートを確認
+- [x] `test:lightchain-download` 6/6、`test:lightchain-asset-anchored-preview` 6/6をPASS
+- [x] `test:lightchain-material-contract` 28/28をPASS。fabric／print／AI fittingの入力順、Library-first、provider fence、rights confirmation modalを確認
+- [ ] これらはコード契約の証拠であり、実画面の権利確認チェックを代行していない。本人の事実認定はユーザー操作待ち
+
+### 2026-09-19 追記: 本番契約と認証境界の再検証
+
+- [x] `verify-lightchain-production-cloudflare-contract.test.mjs` 1/1、`test:cloudflare-runtime` 6/6、`verify:companion-auth`（`ok:true`、`authStateRequired:false`）をPASS
+- [x] `verify:lightchain-ui`は`explicit_auth_state_required`でfail-closedし、context/browser cleanup完了、externalActionsStarted=falseを確認
+- [ ] production UIのPlaywright検証器はCompanionセッションを受け取らずauth-state必須のため未使用。Companionで実操作した14 routeと別証拠として扱う
+
+### 2026-09-19 追記: 権利承認画面のユーザー引き渡し
+
+- [x] Heavy `/model`をログイン済みCompanion／Chromeで15秒待機後に表示し、AIフィッティング入力、既存結果、Gallery／History／Jobs／Canvas導線を再確認
+- [x] 生成ボタンが`権限がありません`でdisabledの状態を確認し、チェックボックスを代行せず、対象タブをuser handoffとして保持
+- [ ] 実際の権利承認チェックはユーザー本人の事実認定待ち。承認後に生成導線が有効化された場合のみ、次の外部効果直前で再度停止して引き渡す
+
+### 2026-09-19 追記: 実際の権利確認チェック欄をCompanionで引き渡し
+
+- [x] Heavy本番のモデルマトリクス生成前画面（`/generate?feature=model-matrix`）をログイン済みCompanionで開き、認証・ブランド確認後の生成前状態をfresh readback
+- [x] `アップロード素材と生成指示に必要な権利・許可を持っていることを確認しました` の未選択チェックボックスと、権利・第三者素材・provider規約・適用法令に関する説明を画面表示
+- [x] チェックボックス、`生成する`、または外部provider送信を代行せず、画面をスクロールして本人が操作できる位置に置き、tabを`markHandoff`で保持
+- [ ] 権利確認の事実認定とチェック操作はユーザー本人待ち。チェック後に入力不足が解消しても、外部provider送信直前で再度ユーザーへ引き渡す
+
+### 2026-09-19 追記: Goal残件の継続再検証
+
+- [x] `test:lightchain-provider-coverage` 22/22、`test:lightchain-pre-source-gate` 5/5、`test:media-inventory-reconciliation` 5/5、`test:provider-persistence-readback` 14/14をPASS
+- [x] unified workflow 6/6、parity behavior ledger 6/6、ledger builder 1/1、material contract 28/28、permission parity 5/5、Cloudflare runtime 6/6をPASS
+- [x] `typecheck`、通常`lint`（exit 0、既存warning 1件）、production Cloudflare contract 1/1、`verify:companion-auth`（`ok:true`）、`git diff --check`をPASS
+- [x] `verify:goal-readiness:incomplete-ok`は`ok:true`。irreversible actionはexternal API、generation submit、migration、deployとも`not_touched`のまま
+- [x] 10分監査をfresh実行し、`ok:false`と15件の既知blocker（G617/G619/G669/G670、H601/H602、production all-10/beta/scale/mass-market/order-preview/billing、G619 verifier、release gate）を再確認
+- [x] canonical Heavy URL、`/_health`、`/api/auth/get-session`をread-only確認し、全てDNS解決失敗。1.1.1.1／8.8.8.8／9.9.9.9にもA回答なし
+- [x] 新Companion sessionはstatusでconnected、active reconciliation 0、pending 0、queue 0を確認後、owner cleanup `ok:true`・`foreign_tabs_mutated=false`・`external_action_executed=false`で終端
+- [ ] Workers.dev DNS復旧またはDashboard本人確認前のcanonical route sweep・同一capture基準mechanical pixel diffは実施しない
+- [ ] 権利確認の本人操作、外部provider生成／アップロード／公開、API source body全件reconciliation、logout→login、旧generation tab cleanupは未完了
+
+### 2026-09-19 追記: Formal Goal下の残余gate再監査
+
+- [x] `verify:launch-ops`を再実行し、`auth_state_missing`（`output/playwright/prod-auth-refresh-20260625/auth-state.json`）を確認。auth-stateは作成しない
+- [x] `verify:g619-beta-evidence`を再実行し、3セッション全てでconsent、本番target、利用時間、redaction review、friction、usable behavior evidenceが不足していることを確認
+- [x] `verify:h601-operator-readiness`を再実行し、最終Terms／Privacy、retention、upload-rights、brand/reference、person/likeness、copyright/marketing、commercial-use、counsel/operator reviewの10項目不足を確認
+- [x] `verify:h602-operator-readiness`を再実行し、generation quota未強制、production checkout有効、no-real-charge proofなし、transaction/entitlement readbackなし、operator decisionなしを確認
+- [x] `verify:g633-scale-alerting-plan`を再実行し、production mass-market baseline `output/playwright/g831-prod-mass-market-current-r1/SUMMARY.json`欠落を確認
+- [x] `verify:release-gate`を再実行し、production UI／monitor、launch、mass-market、order preview、G603/G605/G606/G608/G610/G618/G620/G633、H601/H602、generation scorecard、lint、dirty worktreeの失敗を確認
+- [ ] これらはCodexが事実・法務・課金・本人証跡を推測して埋められないため、各owner evidenceまたはhuman/operator decisionの添付待ち
+
+### 2026-09-19 追記: fresh Companion browser shell readback
+
+- [x] 新規Companion session `session_756f79d1-8f8c-4c0a-bc85-ff4d4020c3c9`で、canonical Heavyの`/generate?feature=model-matrix`をread-only再読込した。URLはブラウザから到達し、タイトル`Heavy Chain | AI制作ワークスペース`、表示文言`生成画面を準備しています`を取得した
+- [x] 一時確認tab `1980924276`はread-only後に自動cleanupされ、`externalActionExecuted=false`、`cleanupComplete=true`を確認。session closeも`ok:true`で、foreign tab mutationはない
+- [ ] fresh task tabは認証済み生成画面／権利checkbox／provider receiptまでhydrationされず、これはURL到達の証拠であって認証・本番完了・source syncの証拠ではない。既存のuser-help tabはforeign resourceとして保持し、採用・変更・強制closeはしない
+
+### 2026-09-19 追記: owner-scoped cleanup再確認
+
+- [x] Companion statusでconnected、active reconciliation 0、pending 0、queue 0を再確認した
+- [x] 現行Goalのowner-scoped cleanup dry-runを再実行し、候補0、closed 0、unknown_effect 0を確認した。既存tabはforeign／user-helpを含めて変更していない
+- [ ] broker statusに履歴上のrecovery handleが残るが、実tabのcleanup候補・lease・active operationではないため、これをprovider／release完了とは扱わない
+
+### 2026-09-19 追記: Cloudflare deployment／DNS／canonical route再確認
+
+- [x] Cloudflare DoH（Cloudflare／Google）で`heavy-chain-web.nichika2000823.workers.dev`のA応答を取得し、公開DNS自体は存在することを確認。通常resolver／`dig`の失敗は環境側resolverの問題として分離した
+- [x] Wrangler read-only statusでHeavy Web deployment `680d5207-595d-4cfc-a28d-929cf4772421`、version `9ebfd88b-46fc-40b2-b2f9-98aca0eb74b6`、traffic 100%、`AUTH_SERVICE=consumer-auth`、public R2 bindingを確認
+- [x] Cloudflare IPを`--resolve`へ固定したread-only GETでWeb root／Web `/_health`／API `/v1/health`／Web auth session endpointをHTTP 200で確認。Web healthは`cloudflare` hosting、API healthは`private-r2`を返した
+- [x] Companion canonical readbackは4/4 read、coverage failure 0、cleanupComplete true、externalActionExecuted false。root／health／auth session／model-matrix generationを同じfresh sessionで取得した
+- [x] Companionのauth session endpointは既存authenticated sessionの存在を返したが、token・個人情報は証跡へ保存していない。generation routeは依然として`生成画面を準備しています` shellで、rights checkbox／provider receiptは未確認
+- [ ] API subdomainのprofile／brands／generation-jobs／generated-images readbackはerror objectで、Web auth sessionからAPI source syncへ到達する認証境界は未証明。provider generation、保存、公開、reconciliationへ進める証拠にはしない
+
+### 2026-09-19 追記: API CORS／Bearer boundary確認
+
+- [x] API `/v1/profile`のCORS preflightをcanonical Web originからread-only確認し、204、`access-control-allow-origin`、`allow-credentials`、`authorization`許可を取得
+- [x] BearerなしのAPI `/v1/profile`は401 `unauthorized`で、Origin付き応答にはCORS headerが付くことを確認
+- [ ] API障害やCORS障害ではなく、Companionの一時API tabがアプリ内部のBearer tokenを持たないための未認証境界。token抽出・auth-state作成は行わず、認証済みアプリsessionからのAPI readback待ち
+
+### 2026-09-19 追記: current auth session shape readback
+
+- [x] 同一task-owned Companion profileからcanonical Web `/api/auth/get-session`をread-onlyで1/1取得。top-level `session`／`user`が非null objectで、session/userの期待field shapeを確認。token、email、identity値は保存していない
+- [x] temporary readback cleanup完了、`externalActionExecuted=false`。現在のlogin/session存在の観測をverifiedへ更新
+- [ ] logout→login lifecycle、認証済みAPIのprofile／brands／jobs実readback、provider receipt、source sync、reconciliation、保存／再利用、production release gateは別工程として未完了
+
+### 2026-09-19 追記: authenticated shell verified wait
+
+- [x] Companion statusはconnected、Goal taskはidle/done、pending operation・queue・active reconciliation・client-owned leaseは0
+- [x] fresh readbackでWeb auth session endpointはauthenticated session存在を返したが、`/generate?feature=model-matrix`は`生成画面を準備しています` shellのまま。rights checkbox、provider receipt、API source readbackは表示されていない
+- [x] 2/2 read、failed 0、cleanupComplete true、externalActionExecuted false、session close `ok:true`を確認
+- [ ] 認証session存在だけではhydration完了・rights attestation・provider業務完了を証明しない。保持中user-help tabの本人操作またはfresh authenticated app surface待ち
+
+### 2026-09-19 追記: lint gate修正とrelease gate再検証
+
+- [x] `CanvasEditorPage.tsx:988`のReact Hook依存漏れに`canvasDebugEnabled`を追加
+- [x] `typecheck`、`eslint --max-warnings=0`、`git diff --check`をPASS
+- [x] `verify:release-gate`をfresh実行し、`command:lint` blockerが消えたことを確認
+- [ ] release gateは引き続きproduction認証UI／monitor／mass-market／Lightchain order preview、G603/G605/G606/G608/G610/G618/G620/G633、H601/H602、generation scorecard、dirty worktreeでfail。`output/playwright/10m-product-readiness-g615/release-gate-summary.json`に記録
+
+### 2026-09-19 追記: safe local readbacks fresh化とverifier追随
+
+- [x] G620 static Cloudflare security readbackをfresh化し、5/5 checks、schema v3、irreversible actionなしを確認
+- [x] G603/G605/G606/G610/G632をfresh化し、全て`ok=true`。G606は1200画像・600 Canvas objects、初期Gallery 60件、valid PNG、console/request failure 0、preview cleanupを確認
+- [x] chosen public entrypoint readbackをfresh化し、Web root／auth-session HTTP 200、release readback passを確認
+- [x] 現行route／静的CDN／Cloudflare local mock／同一origin fixture契約へG606/G605/G610 verifierを追随。typecheck、zero-warning lint、syntax、diff checkをPASS
+- [ ] production authenticated UI／monitor／launch／mass-market／Lightchain order preview、G608/G618/G633、production H601/H602、generation scorecard、dirty worktreeは未完了。G633はcurrent mass-market baseline欠落、scorecardは実provider outputとjob/image/storage/signed-URL同一run readbackが必要
+- [ ] 権利確認の本人操作、provider generation／upload／save／publish、source sync、reconciliation、logout→loginは未実行。Goalはactiveのまま継続
+
+### 2026-09-19 追記: fresh Companion auth blocker
+
+- [x] owner-scoped Companion session `session_67c93c38-fad0-4517-8288-bb6704e9ce13`で`/model`、`/gallery`、`/history`、`/jobs`、`/canvas/new`を5/5 read、failed 0、cleanup完了、external effectなしを確認
+- [x] 5ルートすべてが公開hydration shellで、headerは`ログイン`／`無料で始める`。認証済みworkspace、rights attestation、provider receipt、source readbackは未提供。詳細は`work/heavy-chain-companion-auth-ui-fresh-blocker-20260919.json`
+- [ ] fresh authenticated app surfaceが必要。保持中のuser-help／foreign tabは採用・変更しない。権利attestationは本人操作が必要で、Codexは自己承認しない
+- [ ] 認証済みsurface取得後にのみprovider generation／upload／save／publish、same-run receipt、source sync、reconciliation、logout→loginを継続する
+
+### 2026-09-19 追記: G608/G618 release boundary
+
+- [x] G608 static auditを2026-09-19T09:40:49.544Zにfresh化し、5/5 local source/runtime checks、irreversible actionなしを確認
+- [ ] unified G608 gateはlogged_in_production_ui、local_production_build_full_ui、logged_in_navigation、approved_live_generation_readback、workspace_readback_expected_task_codes、approved_generation_cleanupの6本が未証明のため未達。static ok=trueだけでproduction acceptanceへ昇格しない
+- [ ] G618はCloudflare monitor API origin／brand ID／tokenの明示値が環境にないため未実行。秘密値の推測・抽出は行わない
+- [ ] --skip-commands release readbackは診断用途でありacceptanceではない。認証済みproduction／provider receipt／source sync／reconciliationの証跡取得後にfull gateを再実行する
+
+### 2026-09-19 追記: auth blocker再確認
+
+- [x] fresh task-owned Companionでcanonical /model と /generate?feature=model-matrix を2/2 read、failed 0、cleanup完了、external effectなし
+- [x] 両routeは公開hydration shellのまま。証跡はwork/heavy-chain-companion-auth-ui-fresh-blocker-20260919-r2.json
+- [ ] authenticated app surfaceと本人によるrights attestationが得られるまでprovider generation／upload／save／publishは開始しない
+
+### 2026-09-19 追記: full release gateとblocked境界
+
+- [x] commands込みのfull verify:release-gateを実行。local command群は実行済み
+- [ ] generation scorecard、G633 command、production UI／monitor／launch／mass-market／Lightchain、G608/G618/G633、H601/H602、dirty worktreeは未達
+- [ ] 同一の公開hydration shell／authenticated app surface欠落が3回連続で再確認され、provider receipt／source sync／reconciliationを証明する独立工程も尽きたため、Goalはblocked。ユーザーのログイン済みsurfaceと本人attestation待ち
+
+### 2026-09-19 追記: authenticated UI復旧と本人rights gate
+
+- [x] 15秒の同一task tab hydration wait後、avatar、workspace、upload／Gallery controls、非shell状態をreadback
+- [x] rights checkboxを1件検出し、checked=falseを確認。証跡はwork/heavy-chain-companion-authenticated-ui-rights-readback-20260919.json
+- [ ] checkboxはCodexがクリックせず、ユーザー本人のattestation待ち。本人操作後にprovider generation／upload／save／publish、receipt、source sync、reconciliationを開始する
+
+### 2026-09-19 追記: rights gate resume recheck
+
+- [x] continuationのfresh readでauthenticated workspace継続、rights checkbox 1件、checked=false、Generate disabledを確認
+- [ ] ユーザー本人のcheckbox操作待ち。provider dispatchはまだ行わない
+
+### 2026-09-19 追記: rights authorization completed and current blocker inventory
+
+- [x] ユーザーが権利・許可チェック操作を明示的に承認し、同一task-owned Companion transactionで可視checkboxを`checked:false`から`checked:true`へ1回だけ変更。semantic＋visual readbackで`checked:true`を確認
+- [x] 権利操作自体はprovider外部効果なし（`externalActionExecuted=false`、generation dispatchなし）。visual-proof clickの事前拒否はdispatch 0で、replayしていない
+- [x] 既存Gallery成功成果物のprovider receipt（`state=completed`、`persistence=completed`）を再確認し、Canvas保存・`サーバー確認済み`・idle-boundary reload・Canvas controlsをreadback
+- [x] exact task tabの`/jobs`をhydration後に再確認し、authenticated avatar、進行中0、停止1、完了8を確認。停止項目は別の古いAI-fitting resume jobで、corrected model-matrix retryの完了成果物／receiptは未確認。resume／replayなし
+- [x] saved Canvas URLへ復元し、`キャンバス · サーバー確認済み · ブランド: Nisen`、画像、保存／エクスポート／生成／素材／Gallery controlsをreadback。lease 0、pending 0、queue 0、active reconciliation 0
+- [x] latest `verify:release-gate -- --skip-commands --allow-dirty`（11:23:34Z）をreadbackし、production monitor/UI、launch、mass-market、Lightchain 31-feature preview、G608、G618、G633、H602の8 readback blockerと、diagnostic-only flagsを記録
+- [ ] corrected retry provider receipt/source-sync/reconciliation、logout→login、same-capture mechanical pixel diff、G608/G618/G619/G633/H602、generation scorecard、旧generation cleanup、full release gateは未完了。詳細な`exact_blocker`／`waiting_human`分類は`work/heavy-chain-generation-and-canvas-readback-20260919.json`を正本とする
+
+### 2026-09-19 追記: verifier refresh and current Companion status
+
+- [x] G619、G618、G633、H602、Launch Operationsのlocal/read-only verifierを再実行し、各artifactの現行`ok:false`とexact blockerを確認。結果はevidence artifactの`verifierRefreshes`へ記録
+- [x] unified release gateを`2026-09-19T11:29:03.407Z`に再実行し、8つのproduction/operator readback failureと`--skip-commands`／`--allow-dirty`の非acceptance flagをfresh readback
+- [x] Companion statusを`2026-09-19T11:37:50.231Z`に再確認。connected、同一session、lease 0、pending 0、queue 0、active reconciliation 0。保存Canvas tabはretained。visible reconciliation 7件は履歴のみ
+- [ ] これは未完了gateを合格扱いにしない。provider replay、auth-state export、payment/checkout、OTP、participant evidenceの捏造、destructive cleanupは行わない。残りはevidence artifactの`blockerInventory`／`waitingHuman`／`remainingGates`を正本として継続する
+
+### 2026-09-19 追記: retained Canvas same-tab readback
+
+- [x] retained exact task tabを同一Companion leaseでsemantic＋visual readback。初回semantic broker timeoutはread-only accessibility retryで解消し、`サーバー確認済み`、Nisen、保存画像、Canvas controlsを確認
+- [x] retryはmutation dispatch 0、lease release成功。認証済みresume surfaceのfresh evidenceを追加した
+- [ ] Canvas readbackはprovider receipt／source sync／reconciliation、logout→login、production/release gateの完了証明ではない
+
+### 2026-09-19 追記: production input availability audit
+
+- [x] G835 current monitor／UI、G831 current mass-market SUMMARY、および必要なmonitor API URL・brand ID・token・Playwright auth-stateの有無をread-only棚卸し
+- [x] 既存monitorは旧schema v1／Zeabur origin／runIdなしで現行v2 acceptance不可、UI／G831 SUMMARYは欠落。秘密値は読んでいない
+- [ ] 必要なauthorized inputsとcurrent authenticated artifactsが揃うまで、production monitor/UI、launch、mass-market、G633を合格扱いにしない
+
+### 2026-09-19 追記: full release-gate execution
+
+- [x] `npm run verify:release-gate`を診断フラグなしで実行。23 command中21件がPASS（security、syntax、typecheck、build、lint、diff checkを含む）
+- [x] 残るcommand failureはreal-generation visual scorecard欠落とG831 current mass-market baseline欠落。dirty worktreeも正規に検出
+- [ ] production readback、provider scorecard、monitor/UI、G831/G633、logout→login、pixel diff、cleanup、operator evidenceは未完了。full gateのPASS commandだけでGoal完了へ昇格しない
+
+### 2026-09-19 追記: completion audit refresh
+
+- [x] Goal-readiness static verifierは5/5 PASS。ただしproduction generation、AI quality、R2 persistence、browser business completionはproof limitにより未証明
+- [x] 10m completion auditはG617/G619/G618/G668/G659/H601/H602等の未完了proofを再確認。nested G619=21 blockers、G633=1 blockerをfresh readback
+- [ ] static readiness／local command PASSはprovider receipt、source sync、reconciliation、human/operator evidence、release acceptanceを代替しない
+- [ ] 10m auditで追加確認されたG617/G619/G618/G668/G659/G669/G670/H601/H602のGoal-owned残件も閉じるまで、parity Goalを完了扱いにしない
+
+### 2026-09-19 追記: operator-readiness refresh
+
+- [x] G619は3セッション中ready 0、missing 18。H601はstatic guardのみPASSでoperator decision未添付、missing 10。H602はquota=false、checkout=true、no-charge proof 0、transaction/entitlement readbackなし
+- [ ] H601/H602の法務・運用・課金判断はCodexが代行せず、safe operator evidenceが付くまでwaiting_humanを維持
+
+### 2026-09-19 追記: resumed Companion Canvas readback
+
+- [x] 中断後に新しいtask-owned Companion sessionを開き、保存Canvas URLを一度navigate。semantic＋visualで`サーバー確認済み`、Nisen、画像、Canvas controlsを確認
+- [x] 外部効果・provider replay・auth mutationなし。lease release成功、resume tabはretained
+- [ ] fresh Canvas readbackはprovider receipt／source sync／reconciliation、logout→login、production/release gateを閉じない
+
+### 2026-09-19 追記: Canvas generation modal and rights attestation
+
+- [x] retained exact task tabの`生成する`を一度だけ実行し、`AI画像生成`モーダルをreadback。sourceと画面状態からlocal modal openのみでprovider dispatchなしを確認
+- [x] prompt／reference inputが空のため`生成`は押さず、過去のgeneric-error provider retryもreplayしない
+- [x] ユーザーが明示許可した現行Canvasモーダルのrights checkboxを、fresh visual proof付きの同一task-owned transactionで`false→true`へ一度だけ変更。semantic＋visual readbackで`checked:true`、`externalActionExecuted=false`、`providerDispatch=false`を確認
+- [x] 直前のread-only visual preflight timeoutはdispatch 0、pending drain完了、再実行なし。lease release成功、Canvas tabはretained
+- [ ] これは現行CanvasのUI rights gateだけを閉じる。provider receipt／source sync／reconciliation、valid generation input、logout→login、same-capture pixel diff、production/operator evidence、cleanup、final release gateは未達

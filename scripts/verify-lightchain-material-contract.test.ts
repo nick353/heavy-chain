@@ -181,14 +181,10 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /data-testid="fabric-result-history"/);
   assert.match(page, /value=\{fabricPrompt\}[\s\S]*?onChange=\{\(event\) => setFabricPrompt\(event\.target\.value\)\}/);
   assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
-  assert.match(page, /isOpen=\{rightsConfirmationOpen\}/);
-  assert.match(page, /title="権利確認"/);
-  assert.match(page, /data-testid="lightchain-material-rights-confirmation"/);
-  assert.match(page, /AIプロバイダーへ送信して生成します/);
-  assert.match(page, /権利を確認してAI生成/);
-  assert.doesNotMatch(page, /権限がありません/);
-  assert.match(page, /setRightsConfirmationOpen\(true\)/);
-  assert.match(page, /checked=\{rightsConfirmationDraft\}/);
+  assert.match(page, /const \[providerRightsConfirmed, setProviderRightsConfirmed\] = useState\(true\)/);
+  assert.doesNotMatch(page, /rightsConfirmationOpen|rightsConfirmationDraft|lightchain-material-rights-confirmation|権利を確認してAI生成|PermissionLockedButton/);
+  assert.match(page, /data-testid="lightchain-print-generate"/);
+  assert.match(page, /data-testid="lightchain-fabric-generate"/);
   assert.doesNotMatch(page, /data-testid="lightchain-material-provider-gate"/);
   assert.doesNotMatch(page, /data-testid="lightchain-material-retirement-notice"/);
   assert.match(page, /data-testid="lightchain-fabric-deprecation-banner"/);
@@ -396,10 +392,10 @@ test('unified printing workbench keeps garment and print inputs on Lightchain re
   assert.doesNotMatch(designSelector, /allowedReferenceTypes=\{\['base', 'pattern'\]\}/);
 });
 
-test('AI fitting early route renders its rights confirmation modal', () => {
+test('AI fitting early route has no extra rights confirmation surface', () => {
   const workbench = fs.readFileSync('src/pages/LightchainWorkbenchPage.tsx', 'utf8');
   const fittingStart = workbench.indexOf('if (isFeatureDetail && isFittingDetail) {');
   const nextRouteStart = workbench.indexOf("if (isFeatureDetail && selectedTool.id !== 'custom-style' && workspaceStyle)");
   assert.ok(fittingStart >= 0 && nextRouteStart > fittingStart);
-  assert.match(workbench.slice(fittingStart, nextRouteStart), /\{lightchainRightsConfirmationModal\}/);
+  assert.doesNotMatch(workbench.slice(fittingStart, nextRouteStart), /rightsConfirmation|権利確認/);
 });

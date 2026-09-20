@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy as reactLazy, Suspense, useEffect, useState, type ComponentType } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
@@ -9,6 +9,31 @@ import {
   GENERATION_LEGAL_COPY,
   UPLOAD_RIGHTS_CONFIRMATION_LABEL,
 } from './lib/legalSafetyGuard';
+
+const CHUNK_RECOVERY_SESSION_KEY = 'heavy-chain:chunk-recovery-attempted';
+
+const lazyWithChunkRecovery = (loader: () => Promise<{ default: ComponentType<any> }>) => (
+  reactLazy(async () => {
+    try {
+      const module = await loader();
+      window.sessionStorage.removeItem(CHUNK_RECOVERY_SESSION_KEY);
+      return module;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isDynamicImportFailure = /Failed to fetch dynamically imported module|Importing a module script failed|Unable to preload CSS/i.test(message);
+      const alreadyRetried = window.sessionStorage.getItem(CHUNK_RECOVERY_SESSION_KEY) === '1';
+      if (isDynamicImportFailure && !alreadyRetried) {
+        window.sessionStorage.setItem(CHUNK_RECOVERY_SESSION_KEY, '1');
+        window.location.reload();
+        await new Promise<never>(() => undefined);
+      }
+      window.sessionStorage.removeItem(CHUNK_RECOVERY_SESSION_KEY);
+      throw error;
+    }
+  })
+);
+
+const lazy = lazyWithChunkRecovery;
 
 const LandingPage = lazy(() => import('./pages/LandingPage').then((module) => ({ default: module.LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })));
@@ -22,16 +47,17 @@ const WorkflowBoardPage = lazy(() => import('./pages/WorkflowBoardPage').then((m
 const FittingPage = lazy(() => import('./pages/FittingPage').then((module) => ({ default: module.FittingPage })));
 const FashionStudioPage = lazy(() => import('./pages/FashionStudioPage').then((module) => ({ default: module.FashionStudioPage })));
 const FashionStudioDetailPage = lazy(() => import('./pages/FashionStudioDetailPage').then((module) => ({ default: module.FashionStudioDetailPage })));
-const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
 const PatternWorkspacePage = lazy(() => import('./pages/PatternWorkspacePage').then((module) => ({ default: module.PatternWorkspacePage })));
 const PatternProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PatternProjectDashboardPage })));
 const PatternDesignDetailPage = lazy(() => import('./pages/PatternDesignDetailPage').then((module) => ({ default: module.PatternDesignDetailPage })));
+const VideoProjectDashboardPage = lazy(() => import('./pages/VideoProjectDashboardPage').then((module) => ({ default: module.VideoProjectDashboardPage })));
 const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').then((module) => ({ default: module.VideoWorkstationPage })));
+const LightchainSourceNotFoundPage = lazy(() => import('./pages/LightchainSourceNotFoundPage').then((module) => ({ default: module.LightchainSourceNotFoundPage })));
 const LabPage = lazy(() => import('./pages/LabPage').then((module) => ({ default: module.LabPage })));
 const LightchainWorkbenchPage = lazy(() => import('./pages/LightchainWorkbenchPage').then((module) => ({ default: module.LightchainWorkbenchPage })));
+const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
 const HistoryPage = lazy(() => import('./pages/HistoryPage').then((module) => ({ default: module.HistoryPage })));
 const JobsPage = lazy(() => import('./pages/JobsPage').then((module) => ({ default: module.JobsPage })));
-const CreditsPage = lazy(() => import('./pages/CreditsPage').then((module) => ({ default: module.CreditsPage })));
 const GalleryPage = lazy(() => import('./pages/GalleryPage').then((module) => ({ default: module.GalleryPage })));
 const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
 const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
@@ -94,12 +120,6 @@ const loadingRouteCopy: Record<string, { eyebrow: string; title: string; descrip
     description: '服、モデル、背景、小物を組み合わせる撮影注文票を準備しています。',
     actions: ['素材を入れる', '構図を確認', 'Galleryで確認'],
   },
-  '/models': {
-    eyebrow: 'Model Library',
-    title: 'モデルライブラリを準備しています',
-    description: '顔、ポーズ、体型、年齢層などのモデル条件を準備しています。',
-    actions: ['モデル条件を選ぶ', '生成条件へ渡す', 'Canvasへ保存'],
-  },
   '/patterns': {
     eyebrow: 'Pattern Workspace',
     title: '柄・グラフィック作業台を準備しています',
@@ -107,10 +127,10 @@ const loadingRouteCopy: Record<string, { eyebrow: string; title: string; descrip
     actions: ['柄を作る', '配置を確認', '作業台へ進む'],
   },
   '/video': {
-    eyebrow: 'Video',
-    title: '動画ワークスペースを準備しています',
-    description: 'Storyboard、ショット構成、CTAを確認できる画面を準備しています。',
-    actions: ['Storyboardを作る', 'ショットを確認', 'Galleryで確認'],
+    eyebrow: '404',
+    title: 'This page could not be found.',
+    description: '',
+    actions: [],
   },
   '/lab': {
     eyebrow: 'Lab',
@@ -130,16 +150,10 @@ const loadingRouteCopy: Record<string, { eyebrow: string; title: string; descrip
     description: '過去の生成、再利用、Canvas再編集の導線を準備しています。',
     actions: ['履歴を見る', 'Galleryへ移動', 'Canvasで再編集'],
   },
-  '/credits': {
-    eyebrow: 'Credits',
-    title: '利用状況を準備しています',
-    description: '残量、利用量、次にできる作業を確認できる画面を準備しています。',
-    actions: ['利用状況を見る', '生成へ戻る', 'ジョブを見る'],
-  },
   '/brand/settings': {
     eyebrow: 'Brand',
     title: 'ブランド設定を準備しています',
-    description: '制作前の準備状態、権利確認、ブランド情報を確認できる画面を準備しています。',
+    description: '制作前の準備状態とブランド情報を確認できる画面を準備しています。',
     actions: ['準備状態を見る', '生成へ戻る', 'Galleryで確認'],
   },
 };
@@ -149,8 +163,8 @@ function getLoadingCopy(pathname: string) {
     return {
       eyebrow: 'Generate',
       title: '生成画面を準備しています',
-      description: '素材アップロード、権利確認、生成の準備をしています。',
-      actions: ['素材を入れる', '権利確認を行う', '生成する'],
+      description: '素材アップロードと生成の準備をしています。',
+      actions: ['素材を入れる', '準備状態を確認', '生成する'],
     };
   }
   if (pathname.startsWith('/lightchain')) {
@@ -169,7 +183,7 @@ function getLoadingCopy(pathname: string) {
   };
 }
 
-function WorkspaceLoadingFallback({ authRecovery = false }: { authRecovery?: boolean }) {
+function WorkspaceLoadingFallback({ authRecovery = false, showHeader = true }: { authRecovery?: boolean; showHeader?: boolean }) {
   const location = useLocation();
   const copy = getLoadingCopy(location.pathname);
   const [loadingStalled, setLoadingStalled] = useState(false);
@@ -186,19 +200,21 @@ function WorkspaceLoadingFallback({ authRecovery = false }: { authRecovery?: boo
     <div
       data-testid="workspace-loading-fallback"
       data-loading-state={authRecovery ? 'auth-recovery' : loadingStalled ? 'stalled' : 'lazy-page'}
-      className="min-h-screen bg-[#05090b] px-4 py-8 text-white dark:bg-[#05090b]"
+      className={`${showHeader ? 'min-h-screen' : 'h-full min-h-full'} bg-[#05090b] px-4 py-8 text-white dark:bg-[#05090b]`}
     >
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1800px] flex-col">
-        <header className="flex items-center justify-between border-b border-white/10 pb-5">
-          <a href="/" aria-label="Lightchain AI" className="inline-flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-white text-[11px] font-black tracking-normal text-neutral-950">◌</span>
-            LIGHTCHAIN
-          </a>
-          <div className="hidden items-center gap-2 text-sm text-neutral-300 sm:flex">
-            <span className="inline-flex items-center gap-1 rounded-full px-3 py-2"><span aria-hidden="true">◎</span>日本語</span>
-            <span className="inline-flex items-center gap-2 rounded-full px-3 py-2">ヘルプセンター</span>
-          </div>
-        </header>
+        {showHeader && (
+          <header className="flex items-center justify-between border-b border-white/10 pb-5">
+            <a href="/" aria-label="Lightchain AI" className="inline-flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-white text-[11px] font-black tracking-normal text-neutral-950">◌</span>
+              LIGHTCHAIN
+            </a>
+            <div className="hidden items-center gap-2 text-sm text-neutral-300 sm:flex">
+              <span className="inline-flex items-center gap-1 rounded-full px-3 py-2"><span aria-hidden="true">◎</span>日本語</span>
+              <span className="inline-flex items-center gap-2 rounded-full px-3 py-2">ヘルプセンター</span>
+            </div>
+          </header>
+        )}
 
         <main className="flex flex-1 items-center justify-center py-12">
           <div className="w-full max-w-xl text-center">
@@ -259,7 +275,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // 初期化が完了していない、またはローディング中の場合
   if (!isInitialized || isLoading || authRecoveryRequired) {
-    return <WorkspaceLoadingFallback authRecovery={authRecoveryRequired} />;
+    return <WorkspaceLoadingFallback authRecovery={authRecoveryRequired} showHeader={false} />;
   }
 
   // 認証されていない場合
@@ -335,7 +351,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Public Route wrapper (redirects to lightchain if already logged in)
+// Public Route wrapper (redirects to the canonical Light Chain workspace if already logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isInitialized, authRecoveryRequired, clearAuthRecoveryRequired } = useAuthStore();
 
@@ -358,7 +374,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (user) {
-    return <Navigate to="/lightchain" replace />;
+    return <Navigate to="/designProduction" replace />;
   }
 
   return <>{children}</>;
@@ -571,6 +587,19 @@ function AppRoutes() {
         }
       />
 
+      <Route
+        path="/video"
+        element={<ErrorBoundary>{lazyPage(<LightchainSourceNotFoundPage />)}</ErrorBoundary>}
+      />
+      <Route
+        path="/models"
+        element={<ErrorBoundary>{lazyPage(<LightchainSourceNotFoundPage />)}</ErrorBoundary>}
+      />
+      <Route
+        path="/credits"
+        element={<ErrorBoundary>{lazyPage(<LightchainSourceNotFoundPage />)}</ErrorBoundary>}
+      />
+
       {/* Protected routes with layout */}
       <Route element={<LazyLayout />}>
         <Route
@@ -682,20 +711,6 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/models"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <ModelLibraryPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/model-library"
           element={
             <ProtectedRoute>
@@ -738,24 +753,11 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/video"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(<VideoWorkstationPage />)}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        {/* Lightchain production exposes the video workstation under this
-            path. Keep the production entry reachable while reusing Heavy's
-            guarded storyboard workspace and persistence handoffs. */}
-        <Route
           path="/flow/GenerateShortVideo"
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<VideoWorkstationPage />)}
+                {lazyPage(<VideoProjectDashboardPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -836,16 +838,6 @@ function AppRoutes() {
                     <JobsPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/credits"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(<CreditsPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }

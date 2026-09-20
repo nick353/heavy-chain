@@ -34,3 +34,36 @@ test('video History restoration remains separate from unsupported provider admis
   assert.match(video, /restoreWorkspaceHandoffHistory\(currentBrand\?\.id, 'video-workstation'(?:,\s*user\?\.id)?\)/);
   assert.doesNotMatch(video, /setHistory\(initialHistory\)/);
 });
+
+test('History waits for auth and resolves a late brand before showing the empty state', async () => {
+  const history = await readFile(new URL('../src/pages/HistoryPage.tsx', import.meta.url), 'utf8');
+
+  assert.match(history, /isInitialized: authInitialized/);
+  assert.match(history, /isLoading: authLoading/);
+  assert.match(history, /if \(!authInitialized \|\| authLoading\)/);
+  assert.match(history, /brand = await refreshCurrentBrand\(\)/);
+  assert.match(history, /const brandId = brand\.id/);
+  assert.match(history, /data-testid="history-brand-loading"/);
+});
+
+test('Jobs waits for auth and resolves a late brand before showing the empty state', async () => {
+  const jobs = await readFile(new URL('../src/pages/JobsPage.tsx', import.meta.url), 'utf8');
+
+  assert.match(jobs, /isInitialized: authInitialized/);
+  assert.match(jobs, /isLoading: authLoading/);
+  assert.match(jobs, /if \(!authInitialized \|\| authLoading\)/);
+  assert.match(jobs, /brand = await refreshCurrentBrand\(\)/);
+  assert.match(jobs, /const brandId = brand\.id/);
+  assert.match(jobs, /data-testid="jobs-brand-loading"/);
+});
+
+test('Gallery waits for auth and resolves a late brand before showing an empty state', async () => {
+  const gallery = await readFile(new URL('../src/pages/GalleryPage.tsx', import.meta.url), 'utf8');
+
+  assert.match(gallery, /isInitialized: authInitialized/);
+  assert.match(gallery, /isLoading: authLoading/);
+  assert.match(gallery, /if \(!authInitialized \|\| authLoading\)/);
+  assert.match(gallery, /brand = await refreshCurrentBrand\(\)/);
+  assert.match(gallery, /fetchImages\(brand\)/);
+  assert.match(gallery, /brandResolutionAttempted/);
+});

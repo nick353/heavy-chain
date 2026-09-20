@@ -103,5 +103,12 @@ test('Canvas upload persists source metadata and exposes sanitized readback', as
   assert.match(page, /!source\.startsWith\('data:image\/'\)/);
   assert.match(page, /src: source,/);
   assert.match(properties, /data-testid="canvas-source-readback"/);
-  assert.match(properties, /権利・所有の証明ではありません/);
+  assert.doesNotMatch(properties, /権利・所有の証明ではありません/);
+  assert.match(page, /providerRequestId/);
+  assert.match(page, /'requestId', 'request_id'/);
+  assert.match(page, /providerJobId/);
+  assert.match(page, /generationJobId/);
+  assert.match(properties, /data-testid="canvas-source-lineage"/);
+  assert.match(properties, /Gallery image ID/);
+  assert.match(properties, /provider request/);
 });

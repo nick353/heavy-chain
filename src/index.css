@@ -388,14 +388,6 @@
   }
 }
 
-/* Lightchain design-production keeps the start cards in this stable order. */
-@media (min-width: 1024px) {
-  [data-testid="design-production-page"] > section:first-of-type > button:nth-child(2) { order: 3; }
-  [data-testid="design-production-page"] > section:first-of-type > button:nth-child(3) { order: 4; }
-  [data-testid="design-production-page"] > section:first-of-type > button:nth-child(4) { order: 5; }
-  [data-testid="design-production-page"] > section:first-of-type > button:nth-child(5) { order: 2; }
-}
-
 /* Match the Light marketing detail desktop composition: compact left rail,
    centered 768px canvas, and a fixed 420px assistant panel. */
 @media (min-width: 1280px) {

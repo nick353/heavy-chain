@@ -98,6 +98,21 @@ test('does not self-trigger likeness safety validation from provider guardrails'
   assert.deepEqual(validateLegalSafetyInput([prompt]), { blocked: false, reasons: [] });
 });
 
+test('allows a protected brand used as inspiration with generated no-logo guardrails', () => {
+  const prompt = buildLightchainProviderPrompt({
+    toolId: 'design-agent',
+    toolTitle: '企画案',
+    summary: 'LOUIS VUITTON の 2026年春夏コレクションからインスピレーションを得たメンズ企画',
+    brief: 'ショートジャケット、シャツ、ロングパンツのデザイン企画書',
+    briefOnly: true,
+  });
+  assert.deepEqual(validateLegalSafetyInput([prompt]), { blocked: false, reasons: [] });
+  assert.deepEqual(validateLegalSafetyInput(['Create the LOUIS VUITTON logo']), {
+    blocked: true,
+    reasons: ['third_party_brand_or_logo_imitation'],
+  });
+});
+
 test('inverts garment alpha into an exact transparent-edit provider mask', () => {
   const garmentRgba = new Uint8ClampedArray([
     10, 20, 30, 255,
@@ -157,23 +172,25 @@ test('builds a conservative lower-garment prior only when chromatic garment evid
   assert.equal(buildPortraitGarmentPriorAlpha({ rgba: new Uint8ClampedArray(width * height * 4), width, height }), null);
 });
 
-test('keeps the multi-image contract and provider provenance across client and edge layers', () => {
+test('keeps the multi-image contract and Cloudflare provider provenance across client and API layers', () => {
   const imageApi = readFileSync(new URL('../src/lib/imageApi.ts', import.meta.url), 'utf8');
-  const editImage = readFileSync(new URL('../supabase/functions/edit-image/index.ts', import.meta.url), 'utf8');
-  const openAiImage = readFileSync(new URL('../supabase/functions/_shared/openaiImage.ts', import.meta.url), 'utf8');
+  const cloudflareApi = readFileSync(new URL('../src/lib/cloudflareApi.ts', import.meta.url), 'utf8');
+  const cloudflareImage = readFileSync(new URL('../src/lib/cloudflareImageAI.ts', import.meta.url), 'utf8');
+  const protectedEdit = readFileSync(new URL('../src/lib/cloudflareProtectedImageEdit.ts', import.meta.url), 'utf8');
   assert.match(imageApi, /referenceImageUrls/);
   assert.match(imageApi, /imageUrls: inputImages/);
   assert.match(imageApi, /providerModel/);
   assert.match(imageApi, /inputFidelity/);
   assert.match(imageApi, /quality/);
-  assert.match(editImage, /normalizeEditImageInputs/);
-  assert.match(editImage, /images: editInputImages\.map/);
-  assert.match(editImage, /inputImageCount/);
-  assert.match(editImage, /provider: 'openai'/);
-  assert.match(editImage, /gpt-image-1/);
-  assert.match(editImage, /resolveLightchainImageEditOptions/);
-  assert.match(openAiImage, /input_fidelity/);
-  assert.match(openAiImage, /formData\.set\('quality'/);
+  assert.match(imageApi, /invokeImageAction<ImageEditResult>\('edit-image'/);
+  assert.match(cloudflareApi, /invokeProviderAction/);
+  assert.match(cloudflareApi, /\/v1\/provider-actions\//);
+  assert.match(cloudflareApi, /invokeDurableImageAction/);
+  assert.match(cloudflareImage, /prepareCloudflareImageInput/);
+  assert.match(cloudflareImage, /acknowledgeDurableImageAction/);
+  assert.match(protectedEdit, /buildProviderMaskGuide/);
+  assert.match(protectedEdit, /protected_edit_final_save_readback_mismatch/);
+  assert.doesNotMatch(`${imageApi}\n${cloudflareApi}\n${cloudflareImage}\n${protectedEdit}`, /supabase\.co|@supabase\/|\/functions\/v1\/|OPENAI_API_KEY/i);
 });
 
 test('binds the live material routes to provider generation and durable result actions', () => {
@@ -210,7 +227,7 @@ test('binds the live material routes to provider generation and durable result a
   assert.match(localArtifacts, /findWorkspaceArtifactPersisted\(artifact\.brandId, artifact\.id/);
   assert.match(localArtifacts, /localPersisted/);
   assert.match(materialPage, /editImageWithPrompt/);
-  assert.match(materialPage, /data-testid="lightchain-material-rights-confirmation"/);
+  assert.doesNotMatch(materialPage, /lightchain-material-rights-confirmation|rightsConfirmationOpen|権利を確認してAI生成/);
   assert.match(materialPage, /resultKind: 'provider'/);
   assert.match(materialPage, /saveWorkspaceArtifactPersisted/);
   assert.match(materialPage, /data-testid=\{`result-save-to-canvas-\$\{result\.id\}`\}/);
@@ -239,9 +256,8 @@ test('keeps preview fallback optional while provider generation fails closed wit
   assert.match(materialPage, /deterministicError/);
   assert.match(materialPage, /semanticError/);
   assert.match(materialPage, /maskApplied: true/);
-  assert.match(materialPage, /providerModel: 'gpt-image-1'/);
-  assert.match(materialPage, /inputFidelity: 'high'/);
-  assert.match(materialPage, /quality: 'high'/);
+  assert.match(materialPage, /providerModel: CLOUDFLARE_IMAGE_MODEL/);
+  assert.doesNotMatch(materialPage, /gpt-image-1|openaiImage|supabase\.functions/);
   assert.match(materialPage, /composeProviderProtectedResult/);
   assert.match(materialPage, /protectedRegionComposited: true/);
   assert.match(materialPage, /setFabricPreviewState\('done'\)/);

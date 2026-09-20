@@ -15,7 +15,7 @@ import {
 const fixture = Buffer.from('pinned-cloth-model-fixture');
 const fixtureSha256 = crypto.createHash('sha256').update(fixture).digest('hex');
 
-const withFixtureServer = async ({ cors = 'https://heavy-chain.zeabur.app', body = fixture, status = 200, location = null }, callback) => {
+const withFixtureServer = async ({ cors = 'https://heavy-chain-web.nichika2000823.workers.dev', body = fixture, status = 200, location = null }, callback) => {
   const server = http.createServer((request, response) => {
     response.statusCode = status;
     response.setHeader('Content-Type', 'application/octet-stream');
@@ -102,7 +102,7 @@ test('production HTTPS path binds the verified address set to the pinned request
       const response = new Response(fixture, {
         status: 200,
         headers: {
-          'Access-Control-Allow-Origin': 'https://heavy-chain.zeabur.app',
+          'Access-Control-Allow-Origin': 'https://heavy-chain-web.nichika2000823.workers.dev',
           'Content-Type': 'application/octet-stream',
           'Content-Length': String(fixture.byteLength),
         },

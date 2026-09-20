@@ -55,3 +55,11 @@ test('keeps browser format conversion on the non-pending data URL path', async (
   assert.match(implementation, /new Blob\(\[bytes\], \{ type: mimeType \}\)/);
   assert.doesNotMatch(implementation, /canvas\.toBlob/);
 });
+
+test('keeps an HTMLImageElement fallback for SVG or bitmap decode failures', () => {
+  const implementation = readFileSync(new URL('../src/lib/imageDownload.ts', import.meta.url), 'utf8');
+  assert.match(implementation, /rasterizeWithImageElement/);
+  assert.match(implementation, /new Image\(\)/);
+  assert.match(implementation, /createObjectURL\(source\)/);
+  assert.match(implementation, /Chromium may display an SVG/);
+});

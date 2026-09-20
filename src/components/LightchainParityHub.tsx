@@ -27,7 +27,7 @@ const routeIcon: Record<string, typeof Sparkles> = {
   '/marketing': PackageOpen,
   '/fitting': Shirt,
   '/lab': WandSparkles,
-  '/models': UserRound,
+  '/model-library': UserRound,
   '/studio': Images,
   '/patterns/workbench': Palette,
   '/model-base/style': CheckCircle2,
@@ -200,7 +200,7 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
 
             {compactOnMobile && (
               <Link
-                to="/lightchain"
+                to="/designProduction"
                 className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.99] md:hidden"
                 data-testid="dashboard-lightchain-all-tools-link"
               >

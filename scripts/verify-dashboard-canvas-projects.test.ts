@@ -63,7 +63,7 @@ test('Fashion Studio uses the same authenticated project-grid source and Light-c
 
   assert.match(studio, /cloudflareDataPlane\.listCanvasDocuments\(brandId\)/);
   assert.match(studio, /lg:grid-cols-7/);
-  assert.match(studio, /<Link[\s\S]*to="\/credits"[\s\S]*クレジットを確認/);
+  assert.doesNotMatch(studio, /to="\/credits"/);
   assert.match(studio, /className="w-full"/);
   assert.match(studio, /projectPageCount/);
   assert.match(studio, /buildFashionStudioProjectHref\(project\)/);

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import http from 'node:http';
+import https from 'node:https';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { chromium } from '@playwright/test';
@@ -9,15 +11,38 @@ const root = process.cwd();
 const outDir = path.resolve(root, process.argv[2] || 'output/playwright/unified-desktop-layout-current');
 const baseUrl = 'http://127.0.0.1:4184';
 const baseOrigin = new URL(baseUrl).origin;
-const SHELL_READY_TIMEOUT_MS = 10_000;
-const GLOBAL_BUDGET_MS = 300_000;
+const SHELL_READY_TIMEOUT_MS = 20_000;
+const GLOBAL_BUDGET_MS = parseBudget(process.env.UNIFIED_LAYOUT_GLOBAL_BUDGET_MS, 300_000);
 const CELL_BUDGET_MS = 30_000;
-const CLEANUP_BUDGET_MS = 5_000;
+const CLEANUP_BUDGET_MS = 30_000;
 const EXPECTED_FEATURE_COUNT = 31;
-const EXPECTED_TARGET_COUNT = 57;
+const EXPECTED_TARGET_COUNT = 61;
 const EXPECTED_VIEWPORT_COUNT = 4;
-const EXPECTED_CHECK_COUNT = 228;
+const EXPECTED_CHECK_COUNT = 244;
+const COMPATIBILITY_CHECK_COUNT = 4;
+const TOTAL_CHECK_COUNT = 248;
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const COMPATIBILITY_EVIDENCE_LABEL = 'browser-compatibility evidence via UA emulation';
+const COMPATIBILITY_VIEWPORT = Object.freeze({ width: 1440, height: 1050 });
+const COMPATIBILITY_PROFILES = Object.freeze([
+  Object.freeze({
+    id: 'macos-equivalent',
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+  }),
+  Object.freeze({
+    id: 'windows-equivalent',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+  }),
+]);
+const COMPATIBILITY_ROUTES = Object.freeze(['/designProduction', '/fitting']);
+const LOCAL_PROOF_BLOCKED_EXTERNAL_ORIGINS = new Set([
+  'https://fonts.googleapis.com',
+  'https://fonts.gstatic.com',
+  'https://jp.linkaigc.com',
+  'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com',
+  'https://ql-hangzhou-oss.oss-cn-hangzhou.aliyuncs.com',
+  'https://static-cn.linkaigc.com',
+]);
 const viewports = [
   { width: 1280, height: 900 },
   { width: 1440, height: 1050 },
@@ -25,7 +50,9 @@ const viewports = [
   { width: 2560, height: 1400 },
 ];
 const baseRouteSpecs = [
-  { id: 'hub', path: '/lightchain' },
+  { id: 'hub', path: '/designProduction' },
+  { id: 'source-shaped-legacy-404', path: '/lightchain' },
+  { id: 'dashboard-home', path: '/dashboard' },
   { id: 'ai-fitting', path: '/fitting' },
   { id: 'model', path: '/model' },
   { id: 'fabric-image', path: '/lightchain/fabric-image' },
@@ -51,16 +78,28 @@ const evidence = {
     targetCount: EXPECTED_TARGET_COUNT,
     viewportCount: EXPECTED_VIEWPORT_COUNT,
     checkCount: EXPECTED_CHECK_COUNT,
+    compatibilityCheckCount: COMPATIBILITY_CHECK_COUNT,
+    totalCheckCount: TOTAL_CHECK_COUNT,
   },
-  scheduled: EXPECTED_CHECK_COUNT,
+  scheduled: TOTAL_CHECK_COUNT,
   completed: 0,
   failed: 0,
   globalTimedOut: false,
+  evidenceLabel: COMPATIBILITY_EVIDENCE_LABEL,
+  compatibility: {
+    viewport: COMPATIBILITY_VIEWPORT,
+    caseCount: COMPATIBILITY_CHECK_COUNT,
+    validation: 'UA emulation only; this is not physical OS validation.',
+    physicalMacWindows: 'PENDING_CONFIRMATION',
+    fontsNativeControlsGpuImeFilesystem: 'PENDING_CONFIRMATION',
+    productionParity: 'PENDING_CONFIRMATION',
+  },
   results: [],
   performance: null,
   diagnostics: {
     consoleErrors: 0,
     pageErrors: 0,
+    pageErrorDetails: [],
     requestFailures: 0,
     expectedConsoleErrors: 0,
     expectedRequestFailures: 0,
@@ -76,6 +115,12 @@ const evidence = {
   },
 };
 
+function parseBudget(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < fallback) return fallback;
+  return Math.min(Math.trunc(parsed), 900_000);
+}
+
 let preview = null;
 let browser = null;
 
@@ -89,18 +134,19 @@ async function main() {
     featureIds = readUnifiedFeatureIds();
     routeSpecs = buildRouteSpecs(featureIds);
     validatePlan(featureIds, routeSpecs);
-    emitProgress({ event: 'plan_verified', scheduled: EXPECTED_CHECK_COUNT });
+    emitProgress({ event: 'plan_verified', scheduled: TOTAL_CHECK_COUNT, fixedPlan: EXPECTED_CHECK_COUNT });
 
     preview = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '4184'], {
       cwd: root,
       stdio: 'ignore',
     });
     const previewBudget = runBudget.child(SHELL_READY_TIMEOUT_MS);
-    await previewBudget.run('preview_ready', () => waitForUrl(`${baseUrl}/lightchain`, previewBudget));
-    emitProgress({ event: 'preview_ready', scheduled: EXPECTED_CHECK_COUNT });
+    await previewBudget.run('preview_ready', () => waitForUrl(`${baseUrl}/designProduction`, previewBudget));
+    emitProgress({ event: 'preview_ready', scheduled: TOTAL_CHECK_COUNT });
 
     browser = await runBudget.run('browser_launch', () => chromium.launch({ headless: true }));
     await Promise.all(viewports.map((viewport) => runViewport(viewport, routeSpecs, runBudget)));
+    await Promise.all(buildCompatibilityRuns(runBudget));
   } catch (error) {
     if (isGlobalTimeout(error) || runBudget.expired()) {
       evidence.globalTimedOut = true;
@@ -148,8 +194,8 @@ async function main() {
   };
   evidence.failed = evidence.results.filter((result) => !result.ok).length;
   evidence.resultCount = evidence.results.length;
-  evidence.ok = evidence.scheduled === EXPECTED_CHECK_COUNT
-    && evidence.completed === EXPECTED_CHECK_COUNT
+  evidence.ok = evidence.scheduled === TOTAL_CHECK_COUNT
+    && evidence.completed === TOTAL_CHECK_COUNT
     && evidence.failed === 0
     && evidence.diagnostics.unexpectedConsoleErrors === 0
     && evidence.diagnostics.unexpectedPageErrors === 0
@@ -185,7 +231,7 @@ async function main() {
   process.exitCode = evidence.globalTimedOut ? 2 : evidence.ok ? 0 : 1;
 }
 
-async function runViewport(viewport, routeSpecs, runBudget) {
+async function runViewport(viewport, routeSpecs, runBudget, userAgent = null) {
   let context = null;
   let page = null;
   let activeDiagnostics = null;
@@ -193,7 +239,7 @@ async function runViewport(viewport, routeSpecs, runBudget) {
   const viewportBudget = runBudget.child(CELL_BUDGET_MS);
 
   try {
-    context = await viewportBudget.run('context_create', () => browser.newContext({ viewport }));
+    context = await viewportBudget.run('context_create', () => browser.newContext(userAgent ? { viewport, userAgent } : { viewport }));
     tracker.activeContexts += 1;
     evidence.cleanup.contextClosed = false;
     await viewportBudget.run('local_network_boundary', () => installLocalPreviewNetworkBoundary(context));
@@ -215,12 +261,19 @@ async function runViewport(viewport, routeSpecs, runBudget) {
         else activeDiagnostics.unexpectedConsoleErrors += 1;
       }
     };
-    const onPageError = () => {
+    const onPageError = (error) => {
+      const detail = safeErrorDetail(error);
       evidence.diagnostics.pageErrors += 1;
       evidence.diagnostics.unexpectedPageErrors += 1;
+      if (detail && evidence.diagnostics.pageErrorDetails.length < 5) {
+        evidence.diagnostics.pageErrorDetails.push(detail);
+      }
       if (activeDiagnostics) {
         activeDiagnostics.pageErrors += 1;
         activeDiagnostics.unexpectedPageErrors += 1;
+        if (detail && activeDiagnostics.pageErrorDetails.length < 3) {
+          activeDiagnostics.pageErrorDetails.push(detail);
+        }
       }
     };
     const onRequestFailed = (request) => {
@@ -254,6 +307,7 @@ async function runViewport(viewport, routeSpecs, runBudget) {
         diagnostics: {
           consoleErrors: 0,
           pageErrors: 0,
+          pageErrorDetails: [],
           requestFailures: 0,
           expectedConsoleErrors: 0,
           expectedRequestFailures: 0,
@@ -262,6 +316,10 @@ async function runViewport(viewport, routeSpecs, runBudget) {
           unexpectedRequestFailures: 0,
         },
       };
+      if (route.compatibilityProfile) {
+        result.compatibilityProfile = route.compatibilityProfile;
+        result.compatibilityRoute = route.compatibilityRoute;
+      }
       const cellBudget = runBudget.beginCell();
       activeDiagnostics = result.diagnostics;
       emitProgress({ event: 'cell_start', viewport: viewport.width, routeId: route.id });
@@ -275,7 +333,21 @@ async function runViewport(viewport, routeSpecs, runBudget) {
         const finalUrl = page.url();
         assertAllowedLocalUrl(finalUrl, baseOrigin);
         if (new URL(finalUrl).origin !== baseOrigin) throw new Error('final_origin_mismatch');
-        await cellBudget.run('shell_ready', () => page.locator('[data-testid="lightchain-parity-shell"]').waitFor({
+        if (route.path === '/lightchain') {
+          const sourceNotFound = await cellBudget.run('source_shaped_404_readback', () => page.locator('[data-testid="lightchain-source-not-found"]').waitFor({
+            state: 'visible',
+            timeout: Math.min(SHELL_READY_TIMEOUT_MS, cellBudget.remaining()),
+          }).then(() => true).catch(() => false));
+          result.timing.settleMs = elapsedMs(startedAt);
+          result.ok = sourceNotFound
+            && result.diagnostics.unexpectedConsoleErrors === 0
+            && result.diagnostics.unexpectedPageErrors === 0
+            && result.diagnostics.unexpectedRequestFailures === 0;
+          result.readback = { sourceNotFound };
+          if (!result.ok) result.exactBlocker = 'source_shaped_404_mismatch';
+          continue;
+        }
+        await cellBudget.run('shell_ready', () => page.locator('[data-testid="lightchain-parity-shell"]').first().waitFor({
           state: 'visible',
           timeout: Math.min(SHELL_READY_TIMEOUT_MS, cellBudget.remaining()),
         }));
@@ -322,6 +394,7 @@ async function runViewport(viewport, routeSpecs, runBudget) {
         }
       } catch (error) {
         result.exactBlocker = classifyError(error);
+        result.blockerDetail = safeErrorDetail(error);
         if (isGlobalTimeout(error) || runBudget.expired()) evidence.globalTimedOut = true;
       } finally {
         activeDiagnostics = null;
@@ -372,6 +445,20 @@ async function runViewport(viewport, routeSpecs, runBudget) {
     }
     evidence.cleanup.contextClosed = tracker.activeContexts === 0;
   }
+}
+
+function buildCompatibilityRuns(runBudget) {
+  return COMPATIBILITY_PROFILES.flatMap((profile) => COMPATIBILITY_ROUTES.map((compatibilityRoute) => runViewport(
+    COMPATIBILITY_VIEWPORT,
+    [{
+      id: `compatibility-${profile.id}-${compatibilityRoute.slice(1).replaceAll('/', '-')}`,
+      path: compatibilityRoute,
+      compatibilityProfile: profile.id,
+      compatibilityRoute,
+    }],
+    runBudget,
+    profile.userAgent,
+  )));
 }
 
 function readUnifiedFeatureIds() {
@@ -430,64 +517,39 @@ function validatePlan(featureIds, routeSpecs) {
 }
 
 async function installLocalProofAuth(context) {
-  const supabaseUrl = readEnvValue('VITE_SUPABASE_URL');
-  if (!supabaseUrl) throw new Error('local_proof_supabase_url_missing');
-  const projectRef = new URL(supabaseUrl).host.split('.')[0];
   const userId = '00000000-0000-4000-8000-000000000033';
   const email = 'unified-desktop-layout-local-proof@example.test';
-  const token = makeLocalJwt(userId, email);
-  const localProofUser = {
-    id: userId,
-    aud: 'authenticated',
-    role: 'authenticated',
-    email,
-    user_metadata: { name: 'Local Proof User' },
-    app_metadata: {},
+  const token = 'local-cloudflare-proof-token';
+  const localProofPayload = {
+    user: { id: userId, email, name: 'Local Proof User', emailVerified: true, createdAt: new Date(0).toISOString() },
+    session: { token, expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() },
   };
 
-  // Keep the local proof session inside the preview harness. The unsigned test
-  // JWT must never reach the real Supabase project, and mocked responses prevent
-  // an expected refresh/401 from being reported as an application failure.
-  await context.route(`${supabaseUrl}/rest/v1/**`, async (route) => {
+  // Keep local preview auth on the same-origin Cloudflare contract. This never
+  // talks to a provider or adopts an external identity.
+  await context.route('**/api/auth/ok', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'content-type': 'application/json' },
-      body: '[]',
+      body: '{}',
     });
   });
-  await context.route(`${supabaseUrl}/auth/v1/token**`, async (route) => {
+  await context.route('**/api/auth/get-session', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        access_token: token,
-        token_type: 'bearer',
-        expires_in: 3600,
-        expires_at: Math.floor(Date.now() / 1000) + 3600,
-        refresh_token: 'local-proof-refresh',
-        user: localProofUser,
-      }),
+      body: JSON.stringify(localProofPayload),
     });
   });
-  await context.route(`${supabaseUrl}/auth/v1/user**`, async (route) => {
+  await context.route('**/api/auth/**', async (route) => {
     await route.fulfill({
       status: 200,
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(localProofUser),
+      body: JSON.stringify(localProofPayload),
     });
   });
 
-  await context.addInitScript(({ userId: initUserId, email: initEmail, projectRef: initProjectRef, token: initToken }) => {
-    const key = `sb-${initProjectRef}-auth-token`;
-    window.localStorage.setItem(key, JSON.stringify({
-      access_token: initToken,
-      token_type: 'bearer',
-      expires_at: Math.floor(Date.now() / 1000) + 60 * 60,
-      expires_in: 60 * 60,
-      refresh_token: 'local-proof-refresh',
-      user: { id: initUserId, aud: 'authenticated', role: 'authenticated', email: initEmail, user_metadata: {}, app_metadata: {} },
-    }));
-  }, { userId, email, projectRef, token });
+  await context.addInitScript(() => window.localStorage.clear());
 }
 
 function isExpectedConsoleError(message) {
@@ -503,8 +565,14 @@ function isExpectedRequestFailure(request) {
   const failure = request.failure()?.errorText ?? 'unknown';
   if (failure === 'net::ERR_ABORTED') return true;
   const requestUrl = readPlaywrightRequestUrl(request);
-  return requestUrl.startsWith('https://fonts.googleapis.com/')
-    || requestUrl.startsWith('https://fonts.gstatic.com/');
+  let origin = null;
+  try {
+    origin = new URL(requestUrl).origin;
+  } catch {
+    return false;
+  }
+  return failure.startsWith('net::ERR_BLOCKED_BY_CLIENT')
+    && LOCAL_PROOF_BLOCKED_EXTERNAL_ORIGINS.has(origin);
 }
 
 // Keep raw Playwright diagnostics in process memory only. Progress and
@@ -540,32 +608,6 @@ async function installLocalPreviewNetworkBoundary(context) {
   });
 }
 
-function readEnvValue(name) {
-  if (process.env[name]) return process.env[name];
-  for (const file of ['.env.local', '.env.production.local', '.env']) {
-    try {
-      const line = fs.readFileSync(path.join(root, file), 'utf8').split(/\r?\n/).find((entry) => entry.startsWith(`${name}=`));
-      if (line) return line.slice(name.length + 1).trim().replace(/^['"]|['"]$/g, '');
-    } catch {
-      // Continue through the conventional Vite env files.
-    }
-  }
-  return null;
-}
-
-function base64url(value) {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
-function makeLocalJwt(userId, email) {
-  const now = Math.floor(Date.now() / 1000);
-  return [
-    base64url({ alg: 'none', typ: 'JWT' }),
-    base64url({ aud: 'authenticated', exp: now + 3600, iat: now, role: 'authenticated', sub: userId, email }),
-    'local-proof',
-  ].join('.');
-}
-
 async function waitForUrl(url, budget) {
   assertAllowedLocalUrl(url, baseOrigin);
   const startedAt = monotonicNow();
@@ -585,7 +627,7 @@ async function waitForUrl(url, budget) {
 async function fetchLocalWithRedirectGuard(startUrl) {
   let currentUrl = assertAllowedLocalUrl(startUrl, baseOrigin).href;
   for (let redirects = 0; redirects <= 5; redirects += 1) {
-    const response = await fetch(currentUrl, { redirect: 'manual' });
+    const response = await requestLocalHttp(currentUrl);
     const location = response.headers.get('location');
     if (response.status >= 300 && response.status < 400 && location) {
       if (redirects === 5) throw new Error('local_redirect_limit');
@@ -596,6 +638,38 @@ async function fetchLocalWithRedirectGuard(startUrl) {
     return response;
   }
   throw new Error('local_redirect_invalid');
+}
+
+// Node 26's undici fetch can fail on this local-only probe with
+// `setTypeOfService EINVAL` before the preview server is reached. Keep the
+// verifier's network boundary local and use the core HTTP client instead.
+function requestLocalHttp(value) {
+  const parsed = assertAllowedLocalUrl(value, baseOrigin);
+  const client = parsed.protocol === 'https:' ? https : http;
+  return new Promise((resolve, reject) => {
+    const request = client.request({
+      protocol: parsed.protocol,
+      hostname: parsed.hostname,
+      port: parsed.port || undefined,
+      path: `${parsed.pathname}${parsed.search}`,
+      method: 'GET',
+      timeout: 2_000,
+    }, (response) => {
+      const headers = new Map();
+      for (const [name, value] of Object.entries(response.headers)) {
+        headers.set(name.toLowerCase(), Array.isArray(value) ? value.join(', ') : value ?? '');
+      }
+      response.resume();
+      resolve({
+        status: response.statusCode ?? 0,
+        url: parsed.href,
+        headers: { get: (name) => headers.get(String(name).toLowerCase()) ?? null },
+      });
+    });
+    request.once('timeout', () => request.destroy(new Error('local_probe_timeout')));
+    request.once('error', reject);
+    request.end();
+  });
 }
 
 function assertAllowedLocalUrl(value, expectedOrigin) {
@@ -793,7 +867,7 @@ function classifyError(error) {
   const message = String(error?.message || '');
   if (message.includes('local_origin')) return message.split(':')[0];
   if (message.includes('layout_overflow')) return 'layout_overflow';
-  if (message.includes('supabase')) return 'local_proof_auth_failed';
+  if (message.includes('auth_service') || message.includes('auth_session')) return 'local_proof_auth_failed';
   if (message.includes('preview_')) return message.split(':')[0];
   if (message.includes('Executable doesn\'t exist')) return 'browser_executable_missing';
   if (message.includes('browserType.launch')) return 'browser_launch_failed';

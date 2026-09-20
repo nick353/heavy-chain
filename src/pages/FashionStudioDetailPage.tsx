@@ -1,6 +1,47 @@
 import { ChevronLeft, ImageIcon, Layers, Search, Upload } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
+import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
+import { useAuthStore } from '../stores/authStore';
+
+type DetailAsset = { url: string; label: string };
+
+const extractSavedProjectDetail = (snapshot: unknown) => {
+  if (!snapshot || typeof snapshot !== 'object' || !Array.isArray((snapshot as { objects?: unknown }).objects)) {
+    return { images: [] as Array<{ source: string; label: string }>, prompt: '' };
+  }
+  const images = (snapshot as { objects: unknown[] }).objects.flatMap((item) => {
+    if (!item || typeof item !== 'object' || (item as { type?: unknown }).type !== 'image') return [];
+    const value = item as { src?: unknown; label?: unknown; metadata?: Record<string, unknown> };
+    const metadata = value.metadata ?? {};
+    const parameters = metadata.parameters && typeof metadata.parameters === 'object'
+      ? metadata.parameters as Record<string, unknown>
+      : {};
+    const source = [
+      value.src,
+      metadata.galleryImageUrl,
+      metadata.galleryStoragePath,
+      metadata.storagePath,
+      metadata.galleryImageId && `generated-images/${String(metadata.galleryImageId)}`,
+      metadata.imageId && `generated-images/${String(metadata.imageId)}`,
+      parameters.galleryStoragePath,
+      parameters.storagePath,
+      parameters.imageId && `generated-images/${String(parameters.imageId)}`,
+    ].find((candidate): candidate is string => typeof candidate === 'string' && Boolean(candidate.trim()))?.trim() ?? '';
+    return source ? [{ source, label: typeof value.label === 'string' && value.label.trim() ? value.label : '画像' }] : [];
+  });
+  const prompt = (snapshot as { objects: unknown[] }).objects.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const value = item as { metadata?: Record<string, unknown> };
+    const parameters = value.metadata?.parameters && typeof value.metadata.parameters === 'object'
+      ? value.metadata.parameters as Record<string, unknown>
+      : {};
+    return [value.metadata?.prompt, parameters.prompt].find((candidate): candidate is string => typeof candidate === 'string' && Boolean(candidate.trim())) ?? [];
+  })[0] ?? '';
+  return { images, prompt };
+};
 
 /**
  * Light Chain uses the same deep-link for a new file and an existing project,
@@ -13,7 +54,57 @@ export function FashionStudioDetailPage() {
   const [activeInput, setActiveInput] = useState<'text' | 'reference'>('text');
   const [prompt, setPrompt] = useState('メイン画像のブルーの壁紙を参考画像の平面で見せて');
   const [notice, setNotice] = useState('');
+  const [projectAssets, setProjectAssets] = useState<DetailAsset[]>([]);
   const hasProject = Boolean(searchParams.get('boardProjectCode'));
+  const projectCode = searchParams.get('boardProjectCode') ?? '';
+
+  useEffect(() => {
+    if (!hasProject || !projectCode || !cloudflareDataPlane) {
+      setProjectAssets([]);
+      return undefined;
+    }
+    let active = true;
+    const { currentBrand, user } = useAuthStore.getState();
+    const localArtifact = currentBrand?.id
+      ? listWorkspaceArtifacts(currentBrand.id, user?.id).find((artifact) => (
+        artifact.id === projectCode || artifact.canvasProjectId === projectCode
+      ))
+      : null;
+    const localPreview = localArtifact?.metadata.preview && typeof localArtifact.metadata.preview === 'object'
+      ? localArtifact.metadata.preview as Record<string, unknown>
+      : {};
+    const localSource = [localArtifact?.imageUrl, localPreview.imageUrl]
+      .find((candidate): candidate is string => typeof candidate === 'string' && Boolean(candidate.trim())) ?? '';
+    const localLabel = localArtifact?.title?.trim() || '保存済み素材';
+    const resolveSource = async (source: string): Promise<DetailAsset | null> => {
+      if (/^data:image\//i.test(source)) return { url: source, label: localLabel };
+      const resolved = await resolveGeneratedImageUrlWithStatus(source);
+      return resolved?.ok ? { url: resolved.url, label: localLabel } : null;
+    };
+    if (localSource) {
+      void resolveSource(localSource).then((asset) => {
+        if (!active || !asset) return;
+        setProjectAssets([asset]);
+        if (localArtifact?.prompt) setPrompt(localArtifact.prompt);
+      });
+    }
+    void cloudflareDataPlane.getCanvasDocument(projectCode).then(async (document) => {
+      const detail = extractSavedProjectDetail(document.snapshot);
+      const assets = await Promise.all(detail.images.slice(0, 3).map(async (image) => {
+        const resolved = /^data:image\//i.test(image.source)
+          ? { ok: true as const, url: image.source }
+          : await resolveGeneratedImageUrlWithStatus(image.source);
+        return resolved?.ok ? { url: resolved.url, label: image.label } : null;
+      }));
+      if (!active) return;
+      const remoteAssets = assets.filter((asset): asset is DetailAsset => Boolean(asset));
+      if (remoteAssets.length) setProjectAssets(remoteAssets);
+      if (detail.prompt) setPrompt(detail.prompt);
+    }).catch(() => {
+      if (active && !localSource) setProjectAssets([]);
+    });
+    return () => { active = false; };
+  }, [hasProject, projectCode]);
 
   if (hasProject) {
     return (
@@ -25,9 +116,9 @@ export function FashionStudioDetailPage() {
           <section className="mx-auto min-w-[760px] max-w-[1500px] px-[310px] pb-32 pt-8" data-testid="lightchain-fashion-studio-canvas">
             <div className="flex items-center justify-between text-xs text-neutral-400"><span>タスク <strong className="ml-2 text-neutral-200">0</strong></span><span>進行中</span></div>
             <div className="relative mt-5 min-h-[520px]">
-              <div className="absolute left-[8%] top-[14%] w-[350px] overflow-hidden rounded-xl border border-white/15 bg-[#252a2b] shadow-xl"><div className="h-[240px] bg-gradient-to-br from-sky-300 via-blue-500 to-indigo-900" /><p className="px-3 py-2 text-xs text-neutral-300">メイン画像</p></div>
-              <div className="absolute right-[8%] top-[18%] w-[370px] overflow-hidden rounded-xl border border-white/15 bg-[#252a2b] shadow-xl"><div className="h-[250px] bg-gradient-to-br from-amber-100 via-orange-300 to-rose-500" /><p className="px-3 py-2 text-xs text-neutral-300">参考画像</p></div>
-              <div className="absolute left-[39%] top-[62%] w-[370px] overflow-hidden rounded-xl border border-cyan-200/30 bg-[#252a2b] shadow-xl"><div className="h-[250px] bg-gradient-to-br from-neutral-100 via-cyan-100 to-slate-400" /><p className="px-3 py-2 text-xs text-neutral-300">生成結果</p></div>
+              <div className="absolute left-[8%] top-[14%] w-[350px] overflow-hidden rounded-xl border border-white/15 bg-[#252a2b] shadow-xl"><div className="h-[240px] bg-gradient-to-br from-sky-300 via-blue-500 to-indigo-900">{projectAssets[0] && <img data-testid="fashion-studio-saved-main-image" src={projectAssets[0].url} alt={projectAssets[0].label} className="h-full w-full object-cover" />}</div><p className="px-3 py-2 text-xs text-neutral-300">メイン画像</p></div>
+              <div className="absolute right-[8%] top-[18%] w-[370px] overflow-hidden rounded-xl border border-white/15 bg-[#252a2b] shadow-xl"><div className="h-[250px] bg-gradient-to-br from-amber-100 via-orange-300 to-rose-500">{projectAssets[1] && <img data-testid="fashion-studio-saved-reference-image" src={projectAssets[1].url} alt={projectAssets[1].label} className="h-full w-full object-cover" />}</div><p className="px-3 py-2 text-xs text-neutral-300">参考画像</p></div>
+              <div className="absolute left-[39%] top-[62%] w-[370px] overflow-hidden rounded-xl border border-cyan-200/30 bg-[#252a2b] shadow-xl"><div className="h-[250px] bg-gradient-to-br from-neutral-100 via-cyan-100 to-slate-400">{projectAssets[2] && <img data-testid="fashion-studio-saved-result-image" src={projectAssets[2].url} alt={projectAssets[2].label} className="h-full w-full object-cover" />}</div><p className="px-3 py-2 text-xs text-neutral-300">生成結果</p></div>
               <div className="pointer-events-none absolute left-[29%] top-[30%] h-px w-[38%] rotate-[18deg] bg-cyan-200/60" /><div className="pointer-events-none absolute left-[50%] top-[45%] h-px w-[20%] -rotate-[22deg] bg-cyan-200/60" />
             </div>
           </section>
@@ -35,7 +126,7 @@ export function FashionStudioDetailPage() {
             <div className="flex items-center justify-between"><div className="flex gap-1"><button type="button" onClick={() => setActiveInput('text')} className={`rounded-md px-3 py-1.5 text-xs ${activeInput === 'text' ? 'bg-cyan-300 text-neutral-950' : 'bg-white/5 text-neutral-400'}`}>テキストで生成</button><button type="button" onClick={() => setActiveInput('reference')} className={`rounded-md px-3 py-1.5 text-xs ${activeInput === 'reference' ? 'bg-cyan-300 text-neutral-950' : 'bg-white/5 text-neutral-400'}`}>参考画像</button></div><span className="text-xs text-neutral-500">画像検索</span></div>
             <div className="mt-3 grid grid-cols-2 gap-2"><div className="flex h-16 items-center justify-center rounded-lg border border-dashed border-white/15 text-xs text-neutral-500"><ImageIcon className="mr-2 h-4 w-4" />メイン画像</div><div className="flex h-16 items-center justify-center rounded-lg border border-dashed border-white/15 text-xs text-neutral-500"><Upload className="mr-2 h-4 w-4" />参考画像</div></div>
             <label className="mt-3 block text-xs font-semibold text-neutral-400" htmlFor="fashion-studio-detail-prompt">指示テキスト *</label><textarea id="fashion-studio-detail-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} className="mt-2 min-h-20 w-full resize-y rounded-lg border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-cyan-300/60" aria-label="指令を入力してください。" />
-            <div className="mt-1 flex items-center justify-between text-[11px] text-neutral-500"><span>文字数：{prompt.length}/2000</span><button type="button" onClick={() => setPrompt('')} className="rounded-md px-2 py-1 text-neutral-400 hover:bg-white/10 hover:text-white">全削除</button></div><div className="mt-2 flex gap-2"><select id="fashion-studio-generation-mode" aria-label="生成設定" className="flex-1 rounded-md border border-white/10 bg-[#15191a] px-2 py-2 text-xs text-neutral-300"><option>自動</option></select><select id="fashion-studio-generation-quality" aria-label="画像品質" className="flex-1 rounded-md border border-white/10 bg-[#15191a] px-2 py-2 text-xs text-neutral-300"><option>1K</option></select><button type="button" onClick={() => setNotice('入力内容を保持しました。外部生成は権利確認後に実行できます。')} className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950">AI生成 <span className="ml-1 text-xs">80</span></button></div>{notice && <p className="mt-2 text-xs text-cyan-200" role="status">{notice}</p>}
+            <div className="mt-1 flex items-center justify-between text-[11px] text-neutral-500"><span>文字数：{prompt.length}/2000</span><button type="button" onClick={() => setPrompt('')} className="rounded-md px-2 py-1 text-neutral-400 hover:bg-white/10 hover:text-white">全削除</button></div><div className="mt-2 flex gap-2"><select id="fashion-studio-generation-mode" aria-label="生成設定" className="flex-1 rounded-md border border-white/10 bg-[#15191a] px-2 py-2 text-xs text-neutral-300"><option>自動</option></select><select id="fashion-studio-generation-quality" aria-label="画像品質" className="flex-1 rounded-md border border-white/10 bg-[#15191a] px-2 py-2 text-xs text-neutral-300"><option>1K</option></select><button type="button" onClick={() => setNotice('入力内容を保持しました。次の生成条件を確認できます。')} className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950">AI生成 <span className="ml-1 text-xs">80</span></button></div>{notice && <p className="mt-2 text-xs text-cyan-200" role="status">{notice}</p>}
           </section>
           <div className="absolute bottom-9 left-1/2 z-20 flex -translate-x-1/2 gap-1 rounded-lg border border-white/10 bg-[#202426]/95 p-2" data-testid="lightchain-fashion-studio-canvas-toolbar"><button type="button" aria-label="選択" className="rounded px-3 py-1 text-xs text-neutral-300 hover:bg-white/10">選択</button><button type="button" aria-label="元に戻す" className="rounded px-3 py-1 text-xs text-neutral-300 hover:bg-white/10">戻す</button><button type="button" aria-label="やり直す" className="rounded px-3 py-1 text-xs text-neutral-300 hover:bg-white/10">進む</button></div>
           <div className="absolute bottom-9 right-5 z-20 flex items-center gap-2 rounded-lg border border-white/10 bg-[#202426]/95 p-2 text-xs text-neutral-300" data-testid="lightchain-fashion-studio-zoom-controls"><button type="button" aria-label="ズームアウト">−</button><span>100%</span><button type="button" aria-label="ズームイン">＋</button></div>

@@ -46,10 +46,9 @@ artifacts/
 *.mov
 *.webm
 
-# Large local AI model cache. Configure VITE_REMBG_MODEL_BASE_URL or provide
-# this directory at deploy time; do not commit ONNX/WASM model binaries.
+# Large local AI model cache. The bounded production silueta model lives in
+# public/assets; other model binaries remain ignored.
 public/models/*
-!public/models/silueta.onnx
 
 # TypeScript
 *.tsbuildinfo

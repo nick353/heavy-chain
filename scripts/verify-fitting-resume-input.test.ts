@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { readFittingDraftMaterial, readFittingResumeMaterial } from '../src/lib/fittingResume.ts';
+import {
+  readFittingDraftMaterial,
+  readFittingResumeMaterial,
+  readFittingResumeMaterialReference,
+} from '../src/lib/fittingResume.ts';
 import { getFittingMaterialIdentity } from '../src/lib/fittingMaterialIdentity.ts';
 
 const artifact = (overrides: Record<string, unknown> = {}) => ({
@@ -43,6 +47,48 @@ test('fitting resume restores same-job local high-precision material metadata', 
   assert.equal(result?.materialReference.fileName, 'garment.png');
   assert.equal(result?.materialReference.extractedImageUrl, 'blob:https://example.test/cutout');
   assert.equal(result?.materialReference.nextStepReady, true);
+});
+
+test('fitting resume restores a canonical Gallery source when the cutout was compacted', () => {
+  const result = readFittingResumeMaterial([
+    artifact({
+      metadata: {
+        materialReference: {
+          imageUrl: null,
+          sourceImageId: 'gallery-image-1',
+          sourceStoragePath: 'user-a/brand-1/gallery-image-1.png',
+          fileName: 'Gallery素材-gallery-image-1',
+          materialKind: '衣服画像',
+          extractedImageUrl: null,
+          extractedLayerReady: false,
+          nextStepReady: false,
+        },
+      },
+    }),
+  ], 'job-fit-1');
+
+  assert.equal(result?.materialReference.imageUrl, '');
+  assert.equal(result?.materialReference.sourceImageId, 'gallery-image-1');
+  assert.equal(result?.materialReference.sourceStoragePath, 'user-a/brand-1/gallery-image-1.png');
+  assert.equal(result?.materialReference.nextStepReady, false);
+});
+
+test('remote generated-image materialReferences restore the canonical Gallery source', () => {
+  const result = readFittingResumeMaterialReference({
+    hasImage: true,
+    imageUrl: null,
+    sourceImageId: 'gallery-image-remote',
+    sourceStoragePath: 'user-a/brand-1/gallery-image-remote.png',
+    fileName: 'Gallery素材-gallery-image-remote',
+    materialKind: '衣服画像',
+    extractedImageUrl: null,
+    extractedLayerReady: false,
+    nextStepReady: false,
+  });
+
+  assert.equal(result?.sourceImageId, 'gallery-image-remote');
+  assert.equal(result?.sourceStoragePath, 'user-a/brand-1/gallery-image-remote.png');
+  assert.equal(result?.imageUrl, '');
 });
 
 test('fitting resume rejects stale remote URLs, browser previews, and unrelated jobs', () => {

@@ -115,12 +115,12 @@ test('resolution exposes signing and missing-canonical-path status separately', 
   assert.match(source, /isLocalWorkspaceStoragePath\(trimmed\)/);
 });
 
-test('large Galleries sign batches concurrently and salvage valid paths after a mixed batch failure', async () => {
+test('Gallery signing uses bounded per-path Cloudflare workers with no retired batch fallback', async () => {
   const source = await read('src/lib/storage.ts');
   assert.match(source, /SIGNED_URL_BATCH_CONCURRENCY/);
-  assert.match(source, /chunks\.slice\(index, index \+ SIGNED_URL_BATCH_CONCURRENCY\)/);
-  assert.match(source, /unresolvedPaths = chunk\.filter/);
-  assert.match(source, /createSignedUrl\(path, SIGNED_URL_TTL_SECONDS\)/);
+  assert.match(source, /Math\.min\(SIGNED_URL_BATCH_CONCURRENCY, pathsToResolve\.length\)/);
+  assert.match(source, /await createSignedMediaUrl\(path\)/);
+  assert.doesNotMatch(source, /supabase\.storage|createSignedUrls/);
 });
 
 test('local workspace paths stay local while canonical remote paths are re-signed in Gallery', async () => {
@@ -131,9 +131,9 @@ test('local workspace paths stay local while canonical remote paths are re-signe
   assert.match(storage, /classifyGeneratedImageReference/);
   assert.match(storage, /clearCanonicalRemoteImageUrls/);
   assert.match(gallery, /withSignedImageUrls\(candidates\)/);
-  assert.match(gallery, /withSignedImageUrls\(localImages\)/);
+  assert.match(gallery, /resolveLocalImages\(localListImages\)/);
   assert.match(gallery, /clearCanonicalRemoteImageUrls/);
-  assert.match(gallery, /gallery_local_signed_urls_fallback_timeout/);
+  assert.match(gallery, /gallery_local_signed_urls_timeout/);
 });
 
 test('gallery selection carries storagePath into SelectedImage and print handoff import', async () => {

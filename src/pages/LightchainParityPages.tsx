@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   ArrowRight,
   BookOpen,
@@ -9,20 +10,24 @@ import {
   Grid2X2,
   Image as ImageIcon,
   Layers,
+  MoreVertical,
   Palette,
   FileText,
   Plus,
   Search,
+  Shirt,
   Sparkles,
   Trash2,
   Upload,
   WandSparkles,
 } from 'lucide-react';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
-import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
+import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { persistPrintInputState, restorePrintInputState } from '../lib/printInputPersistence';
-import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
+import { withSignedImageUrls } from '../lib/storage';
+import type { Json } from '../types/database';
 import { useAuthStore } from '../stores/authStore';
 import {
   getLightchainUnifiedFeatureWorkflowContract,
@@ -177,29 +182,6 @@ const creatorCategoryGroups: readonly CreatorCategoryGroup[] = [
 
 const creatorCategoryTabs = ['レディース', 'メンズ', '女の子', '男の子'] as const;
 
-const creatorCategoryIconUrls: Record<string, string> = {
-  ニット: 'https://static-cn.linkaigc.com/workbenches/2024-10/ecf9304d38373c510311b381e6f83f14.png',
-  ルームウェア: 'https://static-cn.linkaigc.com/workbenches/2024-10/179467f0a6d621a1e5146e05cd546b4d.png',
-  'Tシャツ': 'https://static-cn.linkaigc.com/workbenches/2024-10/014d9c8ed5b8e67a918084eca488b5a0.png',
-  パーカー: 'https://static-cn.linkaigc.com/workbenches/2024-10/a46a140a96fe20f412f58cb6ebb4357e.png',
-  シャツ: 'https://static-cn.linkaigc.com/workbenches/2024-10/c8538e358a987edb5b5c36a3a450004b.png',
-  タンクトップ: 'https://static-cn.linkaigc.com/workbenches/2024-10/0af7b907592e56a486c5d011d43ab69e.png',
-  ベスト: 'https://static-cn.linkaigc.com/workbenches/2024-10/8a1e54929d849904fa9715e37f8802a8.png',
-  スーツ: 'https://static-cn.linkaigc.com/workbenches/2024-10/006ae2e5f6c04ef7c827fa6f3add6c40.png',
-  ブルゾン: 'https://static-cn.linkaigc.com/workbenches/2024-10/2f560ff3729b6dde4e2c86e6db34dc80.png',
-  トレンチコート: 'https://static-cn.linkaigc.com/workbenches/2024-10/b5d60b777d507658bff5567f0c74f299.png',
-  オーバーコート: 'https://static-cn.linkaigc.com/workbenches/2024-10/ca3a101dd5bbb413f5b0f90983d20311.png',
-  ダウン: 'https://static-cn.linkaigc.com/workbenches/2024-10/39b9130a16a50ca0e7bc234373101139.png',
-  下着: 'https://static-cn.linkaigc.com/workbenches/2024-10/bf75c0efb8f7591e5b1dc8517011419f.png',
-  スイムウェア: 'https://static-cn.linkaigc.com/workbenches/2024-10/96dbb676c206525bc9b44b7e24aebb71.png',
-  ニットボトムス: 'https://static-cn.linkaigc.com/workbenches/2024-10/879bb772276b314fbff3ba80a772b963.png',
-  ハーフスカート: 'https://static-cn.linkaigc.com/workbenches/2024-10/06c509ae03d96d32e94caef4890b2aaf.png',
-  パンツ: 'https://static-cn.linkaigc.com/workbenches/2024-10/831f13660f35b70d9d8fe0f8f1b4dc3a.png',
-  ウールワンピース: 'https://static-cn.linkaigc.com/workbenches/2024-10/13871137b70c31a2312f8913b05db6b6.png',
-  ワンピース: 'https://static-cn.linkaigc.com/workbenches/2024-10/d4b5ba7dd4eb40dffdee170660ea6682.png',
-  つなぎ: 'https://static-cn.linkaigc.com/workbenches/2024-10/f3ef3598b08d624e4eecff4c81dd0048.png',
-};
-
 const creatorCategoryGroupsByTab: Record<(typeof creatorCategoryTabs)[number], readonly CreatorCategoryGroup[]> = {
   レディース: creatorCategoryGroups,
   女の子: creatorCategoryGroups,
@@ -238,7 +220,7 @@ function CreatorCategoryPicker({ selectedCategory, onSelect }: { selectedCategor
         {creatorCategoryTabs.map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={`relative pb-3 ${activeTab === tab ? 'font-semibold text-cyan-300 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-1 after:rounded-full after:bg-cyan-300' : ''}`} onClick={() => setActiveTab(tab)}>{tab}</button>)}
       </div>
       <div className="mt-4 flex-1 overflow-auto pr-1">
-        {visibleGroups.map((group) => <div key={group.label} className="mb-4"><button type="button" className="mb-3 flex items-center gap-1 text-xs font-semibold text-neutral-200" aria-expanded="true"><span className="text-neutral-400">▾</span>{group.label}</button><div className="grid grid-cols-4 gap-2 xl:grid-cols-8">{group.items.map((item, index) => <button key={`${group.label}-${item}-${index}`} type="button" aria-pressed={selectedCategory === `${activeTab}・${group.label}・${item}編み`} className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs transition hover:border-cyan-300/70 hover:text-white ${selectedCategory === `${activeTab}・${group.label}・${item}編み` ? 'border-cyan-300 bg-cyan-300/20 text-cyan-100' : 'border-white/10 bg-white/[0.04] text-neutral-300'}`} onClick={() => onSelect(`${activeTab}・${group.label}・${item}編み`)}><>{creatorCategoryIconUrls[item] && <img src={creatorCategoryIconUrls[item]} alt="" className="h-7 w-7 object-contain" loading="lazy" />}<span>{item}</span></></button>)}</div>{selectedCategory.startsWith(`${activeTab}・${group.label}・`) && <div className="mt-2 flex flex-wrap gap-2 rounded-lg bg-white/[0.04] p-2"><span className="rounded-full bg-cyan-300 px-3 py-1 text-[11px] font-semibold text-neutral-950">必ず選択してください</span><button type="button" className="rounded-full bg-cyan-300 px-3 py-1 text-[11px] font-semibold text-neutral-950">{selectedCategory.split('・').at(-1)}</button><button type="button" className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-neutral-300">{group.items[0]}</button></div>}</div>)}
+        {visibleGroups.map((group) => <div key={group.label} className="mb-4"><button type="button" className="mb-3 flex items-center gap-1 text-xs font-semibold text-neutral-200" aria-expanded="true"><span className="text-neutral-400">▾</span>{group.label}</button><div className="grid grid-cols-4 gap-2 xl:grid-cols-8">{group.items.map((item, index) => <button key={`${group.label}-${item}-${index}`} type="button" aria-pressed={selectedCategory === `${activeTab}・${group.label}・${item}編み`} className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs transition hover:border-cyan-300/70 hover:text-white ${selectedCategory === `${activeTab}・${group.label}・${item}編み` ? 'border-cyan-300 bg-cyan-300/20 text-cyan-100' : 'border-white/10 bg-white/[0.04] text-neutral-300'}`} onClick={() => onSelect(`${activeTab}・${group.label}・${item}編み`)}><><Shirt aria-hidden="true" className="h-7 w-7 text-cyan-200/75" /><span>{item}</span></></button>)}</div>{selectedCategory.startsWith(`${activeTab}・${group.label}・`) && <div className="mt-2 flex flex-wrap gap-2 rounded-lg bg-white/[0.04] p-2"><span className="rounded-full bg-cyan-300 px-3 py-1 text-[11px] font-semibold text-neutral-950">必ず選択してください</span><button type="button" className="rounded-full bg-cyan-300 px-3 py-1 text-[11px] font-semibold text-neutral-950">{selectedCategory.split('・').at(-1)}</button><button type="button" className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-neutral-300">{group.items[0]}</button></div>}</div>)}
         {visibleGroups.length === 0 && <p className="py-10 text-center text-sm text-neutral-500">該当するカテゴリがありません。</p>}
       </div>
     </section>
@@ -276,22 +258,21 @@ export function LightchainCreatorPage() {
 
   return (
     <ParityShell workflowFeature="design-agent" className="lightchain-creator-parity bg-[#151a1c] text-white">
-      <style>{`.lightchain-creator-parity main section > div:has(video[aria-label="インスピレーション動画"]) { width: 605px; max-width: 100%; } .lightchain-creator-parity video[aria-label="インスピレーション動画"] { width: 605px; max-width: 100%; }`}</style>
       <span className="sr-only" aria-label={`${displayName}さんのデザイン作成`} />
       <div className="mx-auto grid min-h-[calc(100vh-70px)] max-w-[1904px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)_320px]">
         <aside className="flex min-h-0 flex-col gap-4">
           <section className="rounded-xl bg-[#252a2d] p-4">
-            <div className="flex w-full items-center gap-2"><h6 className="w-full text-sm font-semibold">デザインを選択してください</h6><span className="shrink-0 rounded bg-rose-400 px-2 py-1 text-[11px] font-bold text-white">必須項目</span></div>
+            <div className="flex w-full items-center gap-2"><h6 aria-label="デザインを選択してください 必須項目" className="w-full text-sm font-semibold">デザインを選択してください</h6><span className="shrink-0 rounded bg-rose-400 px-2 py-1 text-[11px] font-bold text-white">必須項目</span></div>
             <button type="button" className="mt-4 w-full rounded-lg border border-dashed border-white/30 bg-[#171b1d] px-3 py-2 text-sm text-neutral-300" onClick={() => setCategoryPickerOpen((open) => !open)}>＋ {selectedCategory || 'カテゴリを選択してください'}</button>
             {categoryPickerOpen && <p className="mt-2 text-xs text-neutral-500">中央のカテゴリ一覧から選択してください。</p>}
             {categoryPickerOpen && <div className="fixed inset-x-[352px] bottom-4 top-[67px] z-20"><CreatorCategoryPicker selectedCategory={selectedCategory} onSelect={(category) => setSelectedCategory(category)} /></div>}
           </section>
-          <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center gap-2"><h6 className="text-sm font-semibold">画像をアップロード</h6><span className="text-xs text-neutral-400">オプション</span></div>{selectedCategory ? <><div className="mt-3 flex overflow-hidden rounded-lg border border-white/10 bg-[#171b1d] text-xs"><button type="button" className="flex-1 bg-cyan-300 px-3 py-2 font-semibold text-neutral-950">画像</button><button type="button" className="flex-1 px-3 py-2 text-neutral-300">生地画像</button></div><div className="mt-4 flex flex-1 items-center justify-center rounded-lg border border-white/10 bg-[#1b2022] text-center text-sm text-neutral-300"><button type="button" className="rounded-lg px-5 py-3" onClick={() => navigate('/asset-center')}><Upload className="mx-auto mb-2 h-6 w-6" />画像をアップロードします</button></div></> : <div className="flex flex-1 items-center justify-center"><button type="button" className="rounded-full bg-white/[0.08] px-5 py-3 text-sm text-neutral-300" onClick={() => navigate('/asset-center')}><Sparkles className="mr-2 inline h-4 w-4" />デザインを先に選択してください。</button></div>}</section>
+          <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center gap-2"><h6 aria-label="画像をアップロード オプション" className="text-sm font-semibold">画像をアップロード</h6><span className="text-xs text-neutral-400">オプション</span></div>{selectedCategory ? <><div className="mt-3 flex overflow-hidden rounded-lg border border-white/10 bg-[#171b1d] text-xs"><button type="button" className="flex-1 bg-cyan-300 px-3 py-2 font-semibold text-neutral-950">画像</button><button type="button" className="flex-1 px-3 py-2 text-neutral-300">生地画像</button></div><div className="mt-4 flex flex-1 items-center justify-center rounded-lg border border-white/10 bg-[#1b2022] text-center text-sm text-neutral-300"><button type="button" className="rounded-lg px-5 py-3" onClick={() => navigate('/asset-center')}><Upload className="mx-auto mb-2 h-6 w-6" />画像をアップロードします</button></div></> : <div className="flex flex-1 items-center justify-center"><button type="button" className="rounded-full bg-white/[0.08] px-5 py-3 text-sm text-neutral-300" onClick={() => navigate('/asset-center')}><Sparkles className="mr-2 inline h-4 w-4" />デザインを先に選択してください。</button></div>}</section>
         </aside>
 
 
-        <main className="relative min-h-0 rounded-xl bg-[#151a1c] px-2 py-4 lg:px-8"><button type="button" className="absolute right-2 top-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-200" onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button><section className="flex min-h-full flex-col items-center justify-center pt-8"><h5 className="text-xl font-semibold text-cyan-300">インスピレーション</h5><p className="mt-2 text-sm text-neutral-400">AIで素早くデザイン開発、効率向上・コスト削減</p><div className="mt-6 h-[340px] w-full max-w-[1088px] overflow-hidden rounded-lg border border-white/10 bg-[#0d1113]"><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1.mp4" className="h-full w-full object-cover" autoPlay controls playsInline aria-label="インスピレーション動画" /></div></section></main>
-        <aside className="flex min-h-0 flex-col gap-4"><section className="min-h-[264px] rounded-xl bg-[#252a2d] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><p className="mt-4 text-sm text-neutral-300">このモジュールは購入後に使用可能。</p><p className="mt-2 text-xs text-neutral-400">ご担当の営業担当者にご連絡ください</p></div></div></section><section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center justify-between gap-3"><h6 className="text-sm font-semibold">キーワードを追加</h6><span className="text-xs text-neutral-400">オプション</span></div><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="mt-4 min-h-0 flex-1 resize-y rounded-lg border border-white/10 bg-[#252a2d] p-3 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます\n\n例1：オートミール色、H型カット、チェック柄生地、通勤用ワンピース…" maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="mt-2 flex items-center justify-between text-xs text-neutral-400"><span>文字数: {keywords.length}/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div><ParityPermissionGate testId="creator-permission" marginClass="mt-4" /></section></aside>
+        <main className="relative min-h-0 rounded-xl bg-[#151a1c] px-2 py-4 lg:px-8"><button type="button" className="absolute right-2 top-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-200" onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button><section className="flex min-h-full flex-col items-center justify-center pt-8"><h5 className="text-xl font-semibold text-cyan-300">インスピレーション</h5><p className="mt-2 text-sm text-neutral-400">AIで素早くデザイン開発、効率向上・コスト削減</p><div className="mt-[1px] h-[340px] w-full max-w-[1088px] overflow-hidden rounded-lg bg-[#0d1113]"><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1.mp4" className="size-full" autoPlay controls playsInline aria-label="インスピレーション動画" /></div></section></main>
+        <aside className="flex min-h-0 flex-col gap-4"><section className="min-h-[264px] rounded-xl bg-[#252a2d] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><p className="mt-4 text-sm text-neutral-300">このモジュールは購入後に使用可能。</p><p className="mt-2 text-xs text-neutral-400">ご担当の営業担当者にご連絡ください</p></div></div></section><section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#252a2d] p-4"><div className="flex items-center justify-between gap-3"><h6 aria-label="キーワードを追加 オプション" className="text-sm font-semibold">キーワードを追加</h6><span className="text-xs text-neutral-400">オプション</span></div><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="mt-4 min-h-0 flex-1 resize-y rounded-lg border border-white/10 bg-[#252a2d] p-3 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます\n\n例1：オートミール色、H型カット、チェック柄生地、通勤用ワンピース…" maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="mt-2 flex items-center justify-between text-xs text-neutral-400"><span>文字数: {keywords.length}/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div><ParityPermissionGate testId="creator-permission" marginClass="mt-4" /></section></aside>
       </div>
 
       {historyOpen && <section className="fixed inset-x-4 bottom-4 top-[67px] z-20 overflow-auto rounded-xl border border-white/10 bg-[#252a2d] p-5 shadow-2xl" data-testid="creator-persisted-history"><h2 className="font-semibold">生成履歴</h2><PersistedHistoryPanel artifacts={historyArtifacts} emptyMessage="保存確認できたデザイン成果物はまだありません。provider生成後に保存すると、ここから再利用できます。" reuseLabel="Canvasへ再利用" onReuse={(artifact) => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)} /></section>}
@@ -460,9 +441,9 @@ export function LightchainPrintingPage() {
         .lightchain-printing-parity input[type="file"] { color: rgba(255, 255, 255, 0.7); }
       `}</style>
       <div className="relative mx-auto w-full px-4 py-4 sm:px-5 lg:px-4">
-        <aside className="absolute inset-y-0 left-0 hidden w-24 flex-col items-center gap-2 border-r border-white/10 bg-[#171b1c] px-2 py-4 lg:flex" aria-label="ツールバー">
+        <aside className="absolute left-4 top-4 hidden h-[746px] w-20 flex-col items-center gap-2 border-r border-white/10 bg-[#171b1c] px-0 py-0 lg:flex" aria-label="ツールバー">
           {[
-            ['ツールバー', Grid2X2, '/lightchain?category=recommended'],
+            ['ツールバー', Grid2X2, '/designProduction?category=recommended'],
             ['デザインツール', WandSparkles, '/tools/fabric'],
             ['フィッティングツール', Sparkles, '/model'],
             ['グラフィックデザインツール', ImageIcon, '/tools/printing'],
@@ -500,7 +481,7 @@ export function LightchainPrintingPage() {
           <section className="relative h-[746px] min-h-0 overflow-hidden rounded-2xl bg-white p-4 pt-[68px] shadow-sm">
             {printingBannerVisible && <div className="flex h-16 items-start gap-2 rounded-lg bg-amber-50 px-4 py-[15px] text-sm leading-5 text-amber-900">
               <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<Link className="ml-[15px] underline" to="/designProduction">今すぐ体験</Link></span>
-              <button type="button" aria-label="告知を閉じる" className="hidden" onClick={() => setPrintingBannerVisible(false)}>×</button>
+              <button type="button" aria-label="告知を閉じる" className="shrink-0 text-lg leading-5 text-amber-100/80 transition hover:text-white" onClick={() => setPrintingBannerVisible(false)}>×</button>
             </div>}
             <label className="mt-[18px] flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
               <input className="sr-only" type="file" accept="image/*" onChange={(event) => handleFile(event, 'base')} />
@@ -519,7 +500,7 @@ export function LightchainPrintingPage() {
           </section>
 
           <aside className="space-y-4">
-            <section className="flex min-h-[802px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#151a1c] p-5 text-center shadow-sm"><h2 className="text-xl font-bold text-white">プリントイメージ</h2><p className="mt-2 text-sm leading-[21px] text-neutral-400">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="mt-4 h-[340px] w-[605px] max-w-full rounded-lg object-cover" autoPlay controls muted playsInline aria-label="プリントイメージ動画" /></section>
+            <section className="flex h-[746px] min-h-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#151a1c] p-4 text-center shadow-sm"><div className="flex size-full flex-col items-center justify-center px-10"><h2 className="text-xl font-bold text-white">プリントイメージ</h2><p className="mt-2 text-sm leading-[21px] text-neutral-400">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p><div className="mt-4 h-[340px] w-full"><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="size-full rounded-lg object-cover" autoPlay controls muted playsInline aria-label="プリントイメージ動画" /></div></div></section>
             <section className="hidden" aria-label="詳細設定"><h2 className="font-semibold">詳細設定</h2><p>配置・マスク・複数素材を使う場合はこちら。</p><button type="button" onClick={() => navigate('/lightchain/printing-image')}>高度な印刷ワークスペース</button></section>
           </aside>
         </div>
@@ -562,20 +543,20 @@ export function LightchainVectorSpecialPage() {
       <div className="relative mx-auto min-h-[calc(100vh-70px)] max-w-[1904px] px-4 py-4 lg:pl-[112px]">
         <aside className="absolute inset-y-4 left-4 hidden w-20 flex-col items-center gap-2 rounded-xl bg-[#171b1c] px-2 py-3 lg:flex" aria-label="ツールバー">
           {[
-            ['ツールバー', 'https://jp.linkaigc.com/routeIcons/ic_工具.svg', '/lightchain?category=recommended', false],
-            ['デザインツール', 'https://jp.linkaigc.com/routeIcons/服装设计工具-未选.svg', '/tools/fabric', false],
-            ['フィッティング\nツール', 'https://jp.linkaigc.com/routeIcons/模特试衣工具-未选.svg', '/model', false],
-            ['グラフィックデザイン\nツール', 'https://jp.linkaigc.com/routeIcons/图案创作工具-选中.svg', '/tools/pattern-to-vector', true],
-            ['衣類生産\nツール', 'https://jp.linkaigc.com/routeIcons/生产工具-未选.svg', '/tools/fabric', false],
+            ['ツールバー', '/assets/lightchain-toolbar.svg', '/designProduction?category=recommended', false],
+            ['デザインツール', '/assets/lightchain-design.svg', '/tools/fabric', false],
+            ['フィッティング\nツール', '/assets/lightchain-fitting.svg', '/model', false],
+            ['グラフィックデザイン\nツール', '/assets/lightchain-graphic.svg', '/tools/pattern-to-vector', true],
+            ['衣類生産\nツール', '/assets/lightchain-production.svg', '/tools/fabric', false],
           ].map(([label, iconUrl, to, active]) => {
             return <Link key={label as string} to={to as string} aria-current={active ? 'page' : undefined} className={`flex min-h-20 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 text-center text-[10px] leading-4 transition ${active ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30' : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}><img src={iconUrl as string} alt="" className="mb-1 h-7 w-7 object-contain" /><span className="whitespace-pre-line">{label as string}</span></Link>;
           })}
         </aside>
-        <div className="grid min-h-[calc(100vh-102px)] gap-4 lg:grid-cols-[564px_minmax(0,1fr)]">
+        <div className="grid min-h-[calc(100vh-102px)] gap-4 lg:grid-cols-[596px_minmax(0,1fr)]">
           <section className="relative min-h-[746px] overflow-hidden rounded-xl bg-[#171b1c] p-4 pt-[68px] shadow-2xl shadow-black/20">
-            <nav className="absolute left-4 right-4 top-4 grid h-[36px] grid-cols-2 rounded-lg border border-white/10 bg-[#111719] p-1" role="tablist" aria-label="ベクター化モード">
-              <button type="button" role="tab" aria-selected={activeTab === '通常版'} className={`rounded-md px-2 text-sm font-medium ${activeTab === '通常版' ? 'bg-[#737d84] text-white' : 'text-white/45'}`} onClick={() => navigate('/tools/pattern-to-vector')}>パターンをベクター画像に変換（通常版）</button>
-              <button type="button" role="tab" aria-selected={activeTab === 'プロフェッショナル版'} className={`rounded-md px-2 text-sm font-medium ${activeTab === 'プロフェッショナル版' ? 'bg-[#737d84] text-white' : 'text-white/45'}`} onClick={() => navigate('/tools/vector-special')}>パターンをベクター画像に変換（プロフェッショナル版）</button>
+            <nav className="absolute left-4 right-4 top-4 grid h-[36px] grid-cols-[278px_278px] rounded-lg border border-white/10 bg-[#111719] px-[3px] py-[1.5px]" role="tablist" aria-label="ベクター化モード">
+              <button type="button" role="tab" aria-selected={activeTab === '通常版'} className={`h-[31px] overflow-hidden whitespace-nowrap rounded-md px-2 text-sm font-medium leading-5 ${activeTab === '通常版' ? 'bg-[#737d84] text-white' : 'text-white/45'}`} onClick={() => navigate('/tools/pattern-to-vector')}>パターンをベクター画像に変換（通常版）</button>
+              <button type="button" role="tab" aria-selected={activeTab === 'プロフェッショナル版'} className={`h-[31px] overflow-hidden whitespace-nowrap rounded-md px-2 text-sm font-medium leading-5 ${activeTab === 'プロフェッショナル版' ? 'bg-[#737d84] text-white' : 'text-white/45'}`} onClick={() => navigate('/tools/vector-special')}>パターンをベクター画像に変換（プロフェッショナル版）</button>
             </nav>
             <div className="flex h-16 items-start gap-2 rounded-lg bg-[#5b1f2a] px-4 py-3 text-sm leading-5 text-white">
               <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください <Link className="underline" to="/designProduction">今すぐ体験</Link></span>
@@ -588,21 +569,25 @@ export function LightchainVectorSpecialPage() {
             {isProfessionalFlow ? (
               <>
                 <div className="mt-4 flex items-center justify-between text-sm text-white/85"><span>レイヤー分け方法を選択してください（複数選択可）</span><button type="button" className="text-xs font-semibold text-white/65 underline" onClick={reset}>リセット</button></div>
-                <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="mt-3 grid grid-cols-[160px_160px] gap-4">
                   {([['stack', '積み重ね'], ['split', '分割']] as const).map(([mode, label]) => (
                     <button key={mode} type="button" aria-pressed={layerModes.includes(mode)} className={`h-[164px] rounded-xl border px-4 py-3 text-sm font-semibold ${layerModes.includes(mode) ? 'border-cyan-300 bg-cyan-300/10 text-white' : 'border-white/10 bg-[#111719] text-white/45'}`} onClick={() => toggleLayerMode(mode)}>
-                      <span className="mx-auto mb-3 block h-16 w-20 rounded-lg bg-cyan-300/15" aria-hidden="true" />{label}
+                      <span className="relative mx-auto mb-3 block h-16 w-20" aria-hidden="true">
+                        <span className={`absolute left-1/2 top-1/2 block h-8 w-12 -translate-x-1/2 -translate-y-1/2 rounded-md border border-cyan-200/30 bg-cyan-300/20 ${mode === 'stack' ? '-rotate-[18deg]' : '-rotate-[6deg]'}`} />
+                        <span className={`absolute left-1/2 top-1/2 block h-8 w-12 -translate-x-1/2 -translate-y-1/2 rounded-md border border-cyan-100/30 bg-cyan-200/15 ${mode === 'stack' ? 'rotate-[18deg]' : 'rotate-[14deg]'}`} />
+                        <span className={`absolute left-1/2 top-1/2 block h-7 w-7 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-md border border-teal-100/40 bg-teal-200/25 ${mode === 'split' ? 'scale-75' : ''}`} />
+                      </span>{label}
                     </button>
                   ))}
                 </div>
-                <div className="mt-3 flex items-center justify-end gap-4 text-xs text-white/75"><span>使用回数 {usage} / 30</span><button type="button" className="h-10 w-[288px] rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950" onClick={() => { setUsage((count) => Math.min(30, count + 1)); navigate('/tools/vector-special'); }}>AI生成 <span className="ml-1">1</span></button></div>
+                <div className="mt-4 flex flex-col items-end gap-4 text-xs text-white/75"><span>使用回数 {usage} / 30</span><button type="button" className="h-10 w-[288px] rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950" onClick={() => { setUsage((count) => Math.min(30, count + 1)); navigate('/tools/vector-special'); }}>AI生成 <span className="ml-1">1</span></button></div>
               </>
             ) : (
               <ParityPermissionGate testId="pattern-vector-permission" />
             )}
           </section>
           <section className="relative flex min-h-[746px] flex-col rounded-xl bg-[#232728] p-4">
-            <button type="button" className="absolute right-4 top-4 rounded-lg border border-white/15 bg-[#171b1c]/80 px-3 py-2 text-sm text-white/80" onClick={() => navigate('/history')}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button>
+            <button type="button" className="absolute right-4 top-4 flex h-[32px] w-[102px] items-center justify-center rounded-lg border border-white/15 bg-[#171b1c]/80 px-3 text-sm text-white/80" onClick={() => navigate('/history')}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button>
             <div className="flex flex-1 flex-col items-center justify-center text-center"><h1 className="text-xl font-bold text-white">パターンをベクター画像に変換（{activeTab}）</h1><p className="mt-2 text-sm text-neutral-400">プリントパターンをベクター画像に変換します</p></div>
           </section>
         </div>
@@ -698,6 +683,39 @@ type GalleryReferenceAsset = {
   src: string;
 };
 
+const asArtifactMetadata = (metadata: Json | null): Record<string, Json | undefined> => (
+  metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? metadata as Record<string, Json | undefined>
+    : {}
+);
+
+const generatedImageToWorkspaceArtifact = (image: ReturnType<typeof asGeneratedImageListRow>): WorkspaceArtifact => {
+  const metadata = asArtifactMetadata(image.metadata);
+  const titleCandidate = [metadata.title, metadata.projectName, metadata.name]
+    .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  return {
+    id: image.id,
+    brandId: image.brand_id,
+    featureType: image.feature_type ?? 'generate-image',
+    title: titleCandidate?.trim() ?? 'Untitled',
+    imageUrl: image.image_url ?? '',
+    prompt: image.prompt,
+    createdAt: image.created_at,
+    metadata: { ...metadata, remoteImageId: image.id, remoteStoragePath: image.storage_path },
+    sourceJobId: image.job_id ?? undefined,
+  };
+};
+
+const sortWorkspaceArtifacts = (artifacts: Iterable<WorkspaceArtifact>) => (
+  [...artifacts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+);
+
+const mergeWorkspaceArtifact = (current: WorkspaceArtifact[], next: WorkspaceArtifact) => {
+  const byId = new Map(current.map((artifact) => [artifact.id, artifact]));
+  byId.set(next.id, next);
+  return sortWorkspaceArtifacts(byId.values());
+};
+
 export function LightchainDesignProductionPage() {
   const [activeTab, setActiveTab] = useState('プロジェクトから開始');
   const [dialoguePrompt, setDialoguePrompt] = useState('');
@@ -706,6 +724,10 @@ export function LightchainDesignProductionPage() {
   const [galleryReferenceAssets, setGalleryReferenceAssets] = useState<GalleryReferenceAsset[]>([]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<[string | null, string | null]>([null, null]);
   const [persistedDesignArtifacts, setPersistedDesignArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const [projectPage, setProjectPage] = useState(1);
+  const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
+  const [pinnedProjectIds, setPinnedProjectIds] = useState<Set<string>>(new Set());
+  const [pinsHydrated, setPinsHydrated] = useState(false);
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
 
@@ -742,29 +764,132 @@ export function LightchainDesignProductionPage() {
   };
 
   useEffect(() => {
+    let cancelled = false;
     if (!currentBrand?.id) {
       setPersistedDesignArtifacts([]);
       setGalleryReferenceAssets([]);
       setSelectedAssetIds([null, null]);
+      return () => { cancelled = true; };
+    }
+    const loadArtifacts = async () => {
+      const localArtifacts = listWorkspaceArtifacts(currentBrand.id, user?.id)
+        .filter((artifact) => designHistoryFeatureTypes.has(artifact.featureType));
+      let remoteArtifacts: WorkspaceArtifact[] = [];
+      if (cloudflareDataPlane) {
+        try {
+          const remoteRows = await cloudflareDataPlane.listGeneratedImages(currentBrand.id, {
+            limit: 100,
+            offset: 0,
+            order: 'newest',
+          });
+          const listRows = remoteRows.map(asGeneratedImageListRow);
+          const signedRows = await withSignedImageUrls(listRows).catch(() => listRows);
+          remoteArtifacts = signedRows
+            .map(generatedImageToWorkspaceArtifact);
+        } catch {
+          // Local artifacts remain a safe fallback when the remote read is unavailable.
+        }
+      }
+      if (cancelled) return;
+      const byId = new Map<string, WorkspaceArtifact>();
+      [...remoteArtifacts, ...localArtifacts].forEach((artifact) => {
+        if (!byId.has(artifact.id)) byId.set(artifact.id, artifact);
+      });
+      const artifacts = sortWorkspaceArtifacts(byId.values());
+      setPersistedDesignArtifacts(artifacts);
+      const nextReferenceAssets = artifacts
+        .filter((artifact) => Boolean(artifact.imageUrl))
+        .slice(0, 12)
+        .map((artifact) => ({
+          id: artifact.id,
+          label: artifact.title,
+          src: artifact.imageUrl,
+        }));
+      setGalleryReferenceAssets(nextReferenceAssets);
+      setSelectedAssetIds([nextReferenceAssets[0]?.id ?? null, nextReferenceAssets[1]?.id ?? null]);
+      setProjectPage(1);
+    };
+    void loadArtifacts();
+    return () => { cancelled = true; };
+  }, [currentBrand?.id, user?.id]);
+
+  const projectsPerPage = 6;
+  const projectPageCount = Math.max(1, Math.ceil(persistedDesignArtifacts.length / projectsPerPage));
+  const visibleProjectArtifacts = persistedDesignArtifacts.slice(
+    (projectPage - 1) * projectsPerPage,
+    projectPage * projectsPerPage,
+  );
+
+  useEffect(() => {
+    setProjectPage((page) => Math.min(page, projectPageCount));
+  }, [projectPageCount]);
+
+  useEffect(() => {
+    const brandId = currentBrand?.id;
+    if (!brandId) {
+      setPinsHydrated(false);
+      setPinnedProjectIds(new Set());
       return;
     }
-    const artifacts = listWorkspaceArtifacts(currentBrand.id, user?.id);
-    setPersistedDesignArtifacts(
-      artifacts
-        .filter((artifact) => designHistoryFeatureTypes.has(artifact.featureType))
-        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    setPinsHydrated(false);
+    try {
+      const saved = window.localStorage.getItem(`heavy-design-production-pins:${brandId}`);
+      const parsed = saved ? JSON.parse(saved) : [];
+      setPinnedProjectIds(new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []));
+    } catch {
+      setPinnedProjectIds(new Set());
+    }
+    setPinsHydrated(true);
+  }, [currentBrand?.id]);
+
+  useEffect(() => {
+    const brandId = currentBrand?.id;
+    if (!brandId || !pinsHydrated) return;
+    window.localStorage.setItem(`heavy-design-production-pins:${brandId}`, JSON.stringify([...pinnedProjectIds]));
+  }, [currentBrand?.id, pinnedProjectIds, pinsHydrated]);
+  const saveDesignArtifactToLibrary = async (artifact: WorkspaceArtifact) => {
+    if (!currentBrand?.id) return toast.error('ブランドが選択されていないため、ライブラリーへ保存できません');
+    const result = await saveWorkspaceArtifactBestEffort({
+      ...artifact,
+      id: undefined,
+      brandId: currentBrand.id,
+      scopeId: user?.id,
+      metadata: { ...artifact.metadata, librarySource: 'design-production-card-menu', libraryGroup: 'マイライブラリー', copiedFromArtifactId: artifact.id },
+    });
+    if (!result.localPersisted) return toast.error('ライブラリー保存の確認に失敗しました');
+    setPersistedDesignArtifacts((current) => mergeWorkspaceArtifact(current, result.artifact));
+    if (result.artifact.imageUrl) {
+      setGalleryReferenceAssets((current) => [{
+        id: result.artifact.id,
+        label: result.artifact.title,
+        src: result.artifact.imageUrl,
+      }, ...current.filter((asset) => asset.id !== result.artifact.id)].slice(0, 12));
+    }
+    toast.success(result.remote ? 'アセットライブラリーに保存しました' : 'ローカルライブラリーに保存しました');
+  };
+  const deleteDesignArtifact = async (artifact: WorkspaceArtifact) => {
+    if (!currentBrand?.id || !window.confirm(`「${artifact.title}」を削除しますか？`)) return;
+    const remoteImageId = typeof artifact.metadata.remoteImageId === 'string'
+      ? artifact.metadata.remoteImageId
+      : null;
+    const isRemoteArtifact = Boolean(
+      cloudflareDataPlane && remoteImageId && !artifact.id.startsWith('local-'),
     );
-    const nextReferenceAssets = artifacts
-      .filter((artifact) => Boolean(artifact.imageUrl))
-      .slice(0, 12)
-      .map((artifact) => ({
-        id: artifact.id,
-        label: artifact.title,
-        src: artifact.imageUrl,
-      }));
-    setGalleryReferenceAssets(nextReferenceAssets);
-    setSelectedAssetIds([nextReferenceAssets[0]?.id ?? null, nextReferenceAssets[1]?.id ?? null]);
-  }, [currentBrand?.id, user?.id]);
+    if (isRemoteArtifact) {
+      try {
+        await cloudflareDataPlane!.deleteGeneratedImage(remoteImageId!);
+      } catch {
+        toast.error('削除に失敗しました');
+        return;
+      }
+    }
+    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, [artifact.id], user?.id);
+    if (!result.ok) return toast.error('成果物を削除できませんでした');
+    setPersistedDesignArtifacts((current) => current.filter((item) => item.id !== artifact.id));
+    setGalleryReferenceAssets((current) => current.filter((asset) => asset.id !== artifact.id));
+    setOpenProjectMenuId(null);
+    toast.success(isRemoteArtifact ? '画像を削除しました' : 'ローカル成果物を削除しました');
+  };
   const openProposal = () => {
     if (!canOpenProposal) return;
     const referenceLabels = resolvedSelectedAssets.map((asset) => asset.label).join('、');
@@ -782,10 +907,11 @@ export function LightchainDesignProductionPage() {
     return <LightchainDialogueParityPanel onProjectStart={() => setActiveTab('プロジェクトから開始')} />;
   }
   return (
-    <ParityShell className="bg-[#171b1c] text-white" workflowFeature="print-design-project">
-      <div data-testid="design-production-page" className="mx-auto max-w-[1157px] px-5 py-10 sm:px-8 lg:px-0"><div className="text-center"><p className="text-xs font-semibold tracking-[0.25em] text-neutral-400">LIGHTCHAIN AI / DESIGN PRODUCTION</p><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1><p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p></div>
+    <ParityShell className="relative overflow-hidden bg-[#171b1c] text-white" workflowFeature="print-design-project">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(180,224,139,0.5),rgba(112,208,239,0.42),rgba(255,255,255,0))]" />
+      <div data-testid="design-production-page" className="relative z-10 mx-auto max-w-[1157px] px-5 py-10 sm:px-8 lg:px-0"><div className="text-center"><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1><p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p></div>
         <div role="tablist" aria-label="デザイン制作の開始方法" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">{['プロジェクトから開始', '対話から開始'].map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`rounded-xl px-5 py-2.5 text-sm font-medium transition ${activeTab === tab ? 'bg-white/15 text-white shadow-sm' : 'text-neutral-400 hover:text-white'}`}>{tab}</button>)}</div>
-        {activeTab === '対話から開始' ? <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8"><div className="flex items-center gap-3"><WandSparkles className="h-5 w-5" /><h2 className="font-semibold">対話から開始</h2></div><p className="mt-3 max-w-xl text-sm leading-6 text-neutral-400">既存のGallery素材を組み合わせ、作りたい変更内容を対話で指定します。</p><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{dialogueScenes.map(([title, prompt, iconLabel]) => <button key={title} type="button" onClick={() => { setActiveScene(title); setDialoguePrompt(prompt); }} className={`rounded-2xl border bg-white/5 p-4 text-left transition hover:border-white/40 ${activeScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}><div className="flex h-20 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold text-neutral-400">{iconLabel}</div><p className="mt-3 text-sm font-semibold">{title}</p><span className="mt-2 block text-xs text-neutral-400">使ってみる</span></button>)}</div>{activeScene && <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-xs font-semibold text-neutral-400">Gallery素材を組み合わせる</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{galleryReferenceAssets.map((asset) => <button key={asset.id} type="button" onClick={() => setSelectedAssets((current) => { const next: [typeof galleryReferenceAssets[number], typeof galleryReferenceAssets[number]] = [...current]; next[activeAssetSlot] = asset; return next; })} className={`overflow-hidden rounded-xl border text-left transition ${selectedAssets[activeAssetSlot].id === asset.id ? 'border-white ring-1 ring-white' : 'border-white/10 hover:border-white/40'}`}><div className="h-24 bg-white/10"><img src={asset.src} alt={asset.label} className="h-full w-full object-cover" loading="lazy" /></div><div className="px-3 py-2 text-xs text-neutral-300">{asset.label}</div></button>)}</div><div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-400"><button type="button" onClick={() => setActiveAssetSlot(0)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 0 ? 'border-white text-white' : 'border-white/10'}`}>画像1を選択</button><button type="button" onClick={() => setActiveAssetSlot(1)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 1 ? 'border-white text-white' : 'border-white/10'}`}>画像2を選択</button></div></div>}{activeScene && <div className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 sm:grid-cols-[180px_180px_minmax(0,1fr)]"><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[0].src} alt="画像1" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像1: {selectedAssets[0].label}</p></div><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[1].src} alt="画像2" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像2: {selectedAssets[1].label}</p></div><div><textarea value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/60" aria-label="商品画像をアップロードして、デザインのリクエストを教えてください" /><div className="mt-2 text-right text-xs text-neutral-500">{dialoguePrompt.length} / 4000</div></div></div>}<div className="mt-5 max-w-2xl"><div className="flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2"><Sparkles className="h-4 w-4 text-neutral-400" /><input value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500" placeholder="作りたいデザインを入力してください" /><button type="button" className="rounded-lg bg-white px-4 py-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40" disabled={!canOpenProposal} onClick={openProposal}>提案を見る</button></div>{(!trimmedDialoguePrompt || !hasTwoReferenceAssets) && <div id="design-production-proposal-requirements" className="mt-2 space-y-1 text-xs text-neutral-400" aria-live="polite">{!trimmedDialoguePrompt && <p>依頼文を入力してください。</p>}{!hasTwoReferenceAssets && <div className="flex flex-wrap items-center gap-2"><p>{referenceRequirementMessage}</p>{galleryReferenceAssets.length === 0 && <button type="button" className="rounded-lg border border-white/20 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:border-white/50" onClick={() => navigate('/asset-center')}>ライブラリーを開く</button>}</div>}</div>}</div></section> : <><section className="mt-8 grid gap-4 grid-cols-2 lg:grid-cols-5"><button type="button" className="rounded-2xl border border-white/10 bg-white/5 p-5 text-left hover:border-white/40" onClick={() => navigate('/canvas/new')}><FileCardIcon icon={<Plus />} title="新規ファイル" description="白紙のキャンバスから始める" /></button><button type="button" className="rounded-2xl border border-white/10 bg-white/5 p-5 text-left hover:border-white/40" onClick={() => navigate('/creator')}><FileCardIcon icon={<WandSparkles />} title="インスピレーション" description="デザインプロジェクトを始める" /></button><button type="button" className="rounded-2xl border border-white/10 bg-white/5 p-5 text-left hover:border-white/40" onClick={() => navigate('/printing')}><FileCardIcon icon={<Palette />} title="ブリン卜修正" description="プリントデザインを始める" /></button><button type="button" className="rounded-2xl border border-white/10 bg-white/5 p-5 text-left hover:border-white/40" onClick={() => navigate('/tools/fabric')}><FileCardIcon icon={<Layers />} title="生地イメージ" description="生地のシミュレーションを始める" /></button><button type="button" className="rounded-2xl border border-white/10 bg-white/5 p-5 text-left hover:border-white/40" onClick={() => navigate('/agent')}><FileCardIcon icon={<FileText />} title="企画提案書" description="企画提案書を作成する" /></button></section><section className="mt-12" data-testid="design-production-persisted-projects"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2><span className="text-sm text-neutral-400">{persistedDesignArtifacts.length}件</span></div>{persistedDesignArtifacts.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-5 py-12 text-center text-sm text-neutral-400">保存確認できたデザイン成果物はまだありません。生成結果を保存すると、ここに表示されます。</div> : <div className="mt-4 grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">{persistedDesignArtifacts.slice(0, 12).map((artifact) => <button type="button" key={artifact.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}><div className="h-36 bg-white/10">{artifact.imageUrl && <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />}</div><div className="p-4"><p className="truncate font-medium">{artifact.title}</p><p className="mt-2 truncate text-xs text-neutral-400">{artifact.featureType} ・ {formatArtifactDate(artifact.createdAt)}</p></div></button>)}</div>}</section></>}
+        {activeTab === '対話から開始' ? <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8"><div className="flex items-center gap-3"><WandSparkles className="h-5 w-5" /><h2 className="font-semibold">対話から開始</h2></div><p className="mt-3 max-w-xl text-sm leading-6 text-neutral-400">既存のGallery素材を組み合わせ、作りたい変更内容を対話で指定します。</p><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{dialogueScenes.map(([title, prompt, iconLabel]) => <button key={title} type="button" onClick={() => { setActiveScene(title); setDialoguePrompt(prompt); }} className={`rounded-2xl border bg-white/5 p-4 text-left transition hover:border-white/40 ${activeScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}><div className="flex h-20 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold text-neutral-400">{iconLabel}</div><p className="mt-3 text-sm font-semibold">{title}</p><span className="mt-2 block text-xs text-neutral-400">使ってみる</span></button>)}</div>{activeScene && <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-xs font-semibold text-neutral-400">Gallery素材を組み合わせる</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{galleryReferenceAssets.map((asset) => <button key={asset.id} type="button" onClick={() => setSelectedAssets((current) => { const next: [typeof galleryReferenceAssets[number], typeof galleryReferenceAssets[number]] = [...current]; next[activeAssetSlot] = asset; return next; })} className={`overflow-hidden rounded-xl border text-left transition ${selectedAssets[activeAssetSlot].id === asset.id ? 'border-white ring-1 ring-white' : 'border-white/10 hover:border-white/40'}`}><div className="h-24 bg-white/10"><img src={asset.src} alt={asset.label} className="h-full w-full object-cover" loading="lazy" /></div><div className="px-3 py-2 text-xs text-neutral-300">{asset.label}</div></button>)}</div><div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-400"><button type="button" onClick={() => setActiveAssetSlot(0)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 0 ? 'border-white text-white' : 'border-white/10'}`}>画像1を選択</button><button type="button" onClick={() => setActiveAssetSlot(1)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 1 ? 'border-white text-white' : 'border-white/10'}`}>画像2を選択</button></div></div>}{activeScene && <div className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 sm:grid-cols-[180px_180px_minmax(0,1fr)]"><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[0].src} alt="画像1" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像1: {selectedAssets[0].label}</p></div><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[1].src} alt="画像2" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像2: {selectedAssets[1].label}</p></div><div><textarea value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/60" aria-label="商品画像をアップロードして、デザインのリクエストを教えてください" /><div className="mt-2 text-right text-xs text-neutral-500">{dialoguePrompt.length} / 4000</div></div></div>}<div className="mt-5 max-w-2xl"><div className="flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2"><Sparkles className="h-4 w-4 text-neutral-400" /><input value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500" placeholder="作りたいデザインを入力してください" /><button type="button" className="rounded-lg bg-white px-4 py-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40" disabled={!canOpenProposal} onClick={openProposal}>提案を見る</button></div>{(!trimmedDialoguePrompt || !hasTwoReferenceAssets) && <div id="design-production-proposal-requirements" className="mt-2 space-y-1 text-xs text-neutral-400" aria-live="polite">{!trimmedDialoguePrompt && <p>依頼文を入力してください。</p>}{!hasTwoReferenceAssets && <div className="flex flex-wrap items-center gap-2"><p>{referenceRequirementMessage}</p>{galleryReferenceAssets.length === 0 && <button type="button" className="rounded-lg border border-white/20 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:border-white/50" onClick={() => navigate('/asset-center')}>ライブラリーを開く</button>}</div>}</div>}</div></section> : <><p className="mt-8 text-sm font-semibold">新規ファイル</p><section className="mt-8 grid gap-4 grid-cols-2 lg:grid-cols-4" aria-label="新規ファイル"><CreationCard icon={<WandSparkles />} title="インスピレーション" actionLabel="デザインプロジェクトを新規作成" onClick={() => navigate('/creator')} /><CreationCard icon={<Palette />} title="ブリン卜修正" actionLabel="プリントプロジェクトを新規作成" onClick={() => navigate('/printing')} /><CreationCard icon={<Layers />} title="生地イメージ" actionLabel="生地プロジェクトを新規作成" onClick={() => navigate('/tools/fabric')} /><CreationCard icon={<FileText />} title="企画提案書" actionLabel="企画提案書を新規作成" onClick={() => navigate('/agent')} /></section><section className="mt-12" data-testid="design-production-persisted-projects"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2><span className="text-sm text-neutral-400">{persistedDesignArtifacts.length}件</span></div>{persistedDesignArtifacts.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-5 py-12 text-center text-sm text-neutral-400">保存確認できたデザイン成果物はまだありません。生成結果を保存すると、ここに表示されます。</div> : <><div className="mt-4 grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">{visibleProjectArtifacts.map((artifact) => <article key={artifact.id} className="relative overflow-visible rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40"><button type="button" className="block w-full overflow-hidden rounded-2xl text-left" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}><div className="h-36 bg-white/10">{artifact.imageUrl && <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />}</div><div className="p-4 pr-12"><p className="truncate font-medium">{pinnedProjectIds.has(artifact.id) ? '📌 ' : ''}{artifact.title}</p><p className="mt-2 truncate text-xs text-neutral-400">{artifact.featureType} ・ {formatArtifactDate(artifact.createdAt)}</p></div></button><div className="absolute right-2 top-2 z-20"><button type="button" aria-label={`${artifact.title}のメニュー`} aria-expanded={openProjectMenuId === artifact.id} className="rounded-lg bg-black/45 p-2 text-neutral-200 hover:bg-black/70" onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === artifact.id ? null : artifact.id); }}><MoreVertical className="h-4 w-4" /></button>{openProjectMenuId === artifact.id && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl"><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setPinnedProjectIds((current) => { const next = new Set(current); if (next.has(artifact.id)) next.delete(artifact.id); else next.add(artifact.id); return next; }); setOpenProjectMenuId(null); }}>ピン留め</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { void saveDesignArtifactToLibrary(artifact); setOpenProjectMenuId(null); }}>アセットライブラリに保存</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => deleteDesignArtifact(artifact)}>削除</button></div>}</div></article>)}</div><div className="mt-5 flex flex-wrap items-center justify-center gap-2" data-testid="design-production-pagination" aria-label="マイプロジェクトページング"><button type="button" className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage((page) => Math.max(1, page - 1))} disabled={projectPage === 1} aria-label="前のページ">前へ</button>{Array.from({ length: projectPageCount }, (_, index) => index + 1).map((page) => <button key={page} type="button" aria-current={page === projectPage ? 'page' : undefined} className={`rounded-lg border px-3 py-1.5 text-xs ${page === projectPage ? 'border-cyan-200 bg-cyan-200/10 text-white' : 'border-white/10 text-neutral-300'}`} onClick={() => setProjectPage(page)}>{page}</button>)}<button type="button" className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage((page) => Math.min(projectPageCount, page + 1))} disabled={projectPage === projectPageCount} aria-label="次のページ">次へ</button><span className="ml-2 text-xs text-neutral-500">{projectPage} / {projectPageCount}</span></div></>}</section></>}
       </div>
     </ParityShell>
   );
@@ -804,9 +930,8 @@ function LightchainDialogueParityPanel({ onProjectStart }: { onProjectStart: () 
   );
   return (
     <ParityShell className="bg-[#171b1c] text-white" workflowFeature="print-design-project">
-      <div className="mx-auto max-w-[1157px] px-5 py-10 sm:px-8 lg:px-0">
+      <div className="relative z-10 mx-auto max-w-[1157px] px-5 py-10 sm:px-8 lg:px-0">
         <div className="text-center">
-          <p className="text-xs font-semibold tracking-[0.25em] text-neutral-400">LIGHTCHAIN AI / DESIGN PRODUCTION</p>
           <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1>
           <p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p>
         </div>
@@ -852,8 +977,33 @@ function LightchainDialogueParityPanel({ onProjectStart }: { onProjectStart: () 
   );
 }
 
-function FileCardIcon({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
-  return <><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-700">{icon}</div><h2 className="mt-4 font-semibold">{title}</h2><p className="mt-2 text-sm text-neutral-500">{description}</p></>;
+function FileCardIcon({ icon, title }: { icon: ReactNode; title: string; description?: string }) {
+  return <div className="flex flex-col items-center text-center"><div className="flex h-12 w-12 items-center justify-center text-white">{icon}</div><h2 className="mt-4 text-sm font-semibold">{title}</h2></div>;
+}
+
+function CreationCard({
+  icon,
+  title,
+  actionLabel,
+  onClick,
+}: {
+  icon: ReactNode;
+  title: string;
+  actionLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-left hover:border-white/40">
+      <FileCardIcon icon={icon} title={title} />
+      <button
+        type="button"
+        className="mt-5 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-200 transition hover:border-white/35 hover:bg-white/[0.08]"
+        onClick={onClick}
+      >
+        {actionLabel}
+      </button>
+    </div>
+  );
 }
 
 const libraryGroups = ['マイライブラリー', '履歴アップロード', '生成履歴', 'ウェアデザインラボ生成結果', '2026AW', '新規格', 'ノイズバリュー用ホリゾンカラー', 'ライブラリー'] as const;

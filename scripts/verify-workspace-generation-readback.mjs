@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from 'node:fs';
+import { verifyWorkspaceEvidence } from './cloudflare-workspace-evidence.mjs';
 
 const DEFAULT_WORKSPACES = ['patterns', 'studio', 'video', 'lab', 'models', 'marketing', 'fitting'];
 const WORKFLOW_BY_WORKSPACE = {
@@ -14,6 +15,20 @@ const WORKFLOW_BY_WORKSPACE = {
 };
 
 const args = parseArgs(process.argv.slice(2));
+if (args.expectations) {
+  try {
+    if (!args.readback || process.argv.slice(2).length !== 4 || args.cleanup || args.workspaces || args.expectLightchainTaskCodes || args.expectReleaseDate || args.expectEnvironment || args.expectGitCommit) throw Error();
+    const raw = readFileSync(args.readback, 'utf8');
+    const expectedRaw = readFileSync(args.expectations, 'utf8');
+    if (containsLikelySecret(raw) || containsLikelySecret(expectedRaw)) throw Error();
+    const result = verifyWorkspaceEvidence(JSON.parse(raw), JSON.parse(expectedRaw));
+    console.log(JSON.stringify(result));
+    process.exit(result.persistedEvidenceConsistent ? 0 : 1);
+  } catch {
+    console.error('Cloudflare evidence verification failed: provide valid --readback and --expectations only; values not printed.');
+    process.exit(1);
+  }
+}
 if (!args.readback) {
   console.error('Workspace generation readback verification failed. --readback is required.');
   process.exit(1);
@@ -28,6 +43,11 @@ const expectedLightchainTaskCodes = parseList(args.expectLightchainTaskCodes, []
 const failures = [];
 const readback = readJson(args.readback);
 const cleanup = readJson(args.cleanup);
+
+if (readback?.schema === 'heavy-chain.workspace-readback.v2') {
+  console.error('Cloudflare v2 contains persisted execution records, not legacy Edge Function telemetry. This legacy closeout verifier must be migrated; v2 collectionComplete is not business completion.');
+  process.exit(1);
+}
 
 validateMetadata(args.readback, readback);
 validateMetadata(args.cleanup, cleanup);
@@ -48,6 +68,7 @@ function parseArgs(argv) {
     const arg = argv[index];
     const next = argv[index + 1];
     if (arg === '--readback' && next) parsed.readback = next;
+    if (arg === '--expectations' && next) parsed.expectations = next;
     if (arg === '--cleanup' && next) parsed.cleanup = next;
     if (arg === '--expect-release-date' && next) parsed.expectReleaseDate = next;
     if (arg === '--expect-environment' && next) parsed.expectEnvironment = next;

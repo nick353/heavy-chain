@@ -19,6 +19,20 @@ test('marketing workspace project cards are persisted and resumable', async () =
   assert.doesNotMatch(source, /Live Commerce Kit/);
 });
 
+test('marketing workspace handoff requires a succeeded job', async () => {
+  const source = await readFile(pageSourcePath, 'utf8');
+  const handoffMatch = source.match(/const canHandoff = Boolean\(([\s\S]*?)\);/);
+
+  assert.ok(handoffMatch, 'canHandoff source contract is present');
+  const handoffExpression = handoffMatch[1];
+  assert.match(handoffExpression, /currentBrand/);
+  assert.match(handoffExpression, /productImageUrl/);
+  assert.match(handoffExpression, /job\.status === 'succeeded'/);
+  assert.doesNotMatch(handoffExpression, /job\.status === '(?:running|stalled)'/);
+  assert.match(source, /完了後にキャンバスへ渡せます/);
+  assert.doesNotMatch(source, /処理中でも制作を続行できます/);
+});
+
 test('marketing-detail restores persisted project name and brief from the card route', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 

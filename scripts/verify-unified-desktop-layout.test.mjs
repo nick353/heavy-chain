@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const source = fs.readFileSync(new URL('./verify-unified-desktop-layout.mjs', import.meta.url), 'utf8');
 
-test('current catalogs resolve to the approved 31-feature, 57-target, 228-cell plan', () => {
+test('current catalogs resolve to the approved 31-feature, 61-target, 244-cell plan', () => {
   const featureSource = fs.readFileSync(new URL('../src/features/lightchain/parityContract.ts', import.meta.url), 'utf8');
   const featureBlock = featureSource.match(/GOAL_CANDIDATE_ROW_IDS\s*=\s*Object\.freeze\(\[([\s\S]+?)\]\s*as const\)/);
   assert.ok(featureBlock);
@@ -18,27 +18,57 @@ test('current catalogs resolve to the approved 31-feature, 57-target, 228-cell p
   for (const match of aliasesBlock[1].matchAll(/(?:'([^']+)'|([a-z-]+)):\s*\[([^\]]*)\]/g)) {
     aliases.set(match[1] ?? match[2], [...match[3].matchAll(/'([^']+)'/g)].map((route) => route[1]));
   }
-  const targets = new Set(['/lightchain', '/fitting', '/model', '/lightchain/fabric-image', '/lightchain/printing-image', '/gallery', '/history', '/jobs']);
+  const targets = new Set(['/designProduction', '/lightchain', '/dashboard', '/fitting', '/model', '/lightchain/fabric-image', '/lightchain/printing-image', '/gallery', '/history', '/jobs']);
   for (const featureId of featureIds) {
     targets.add(`/lightchain/${featureId}`);
     for (const alias of aliases.get(featureId) ?? []) targets.add(alias);
   }
   assert.equal(featureIds.length, 31);
   assert.equal(new Set(featureIds).size, 31);
-  assert.equal(targets.size, 57);
-  assert.equal(targets.size * 4, 228);
+  assert.equal(targets.size, 61);
+  assert.equal(targets.size * 4, 244);
 });
 
 test('unified desktop verifier keeps the approved fixed plan and budgets', () => {
   assert.match(source, /EXPECTED_FEATURE_COUNT\s*=\s*31/);
-  assert.match(source, /EXPECTED_TARGET_COUNT\s*=\s*57/);
+  assert.match(source, /EXPECTED_TARGET_COUNT\s*=\s*61/);
   assert.match(source, /EXPECTED_VIEWPORT_COUNT\s*=\s*4/);
-  assert.match(source, /EXPECTED_CHECK_COUNT\s*=\s*228/);
-  assert.match(source, /GLOBAL_BUDGET_MS\s*=\s*300_000/);
+  assert.match(source, /EXPECTED_CHECK_COUNT\s*=\s*244/);
+  assert.match(source, /COMPATIBILITY_CHECK_COUNT\s*=\s*4/);
+  assert.match(source, /TOTAL_CHECK_COUNT\s*=\s*248/);
+  assert.match(source, /GLOBAL_BUDGET_MS\s*=\s*parseBudget\(process\.env\.UNIFIED_LAYOUT_GLOBAL_BUDGET_MS,\s*300_000\)/);
   assert.match(source, /CELL_BUDGET_MS\s*=\s*30_000/);
   assert.match(source, /performance\.now\(\)/);
-  assert.match(source, /scheduled:\s*EXPECTED_CHECK_COUNT/);
-  assert.match(source, /evidence\.completed\s*===\s*EXPECTED_CHECK_COUNT/);
+  assert.match(source, /totalCheckCount:\s*TOTAL_CHECK_COUNT/);
+  assert.match(source, /scheduled:\s*TOTAL_CHECK_COUNT/);
+  assert.match(source, /evidence\.completed\s*===\s*TOTAL_CHECK_COUNT/);
+});
+
+test('verifier adds exactly four frozen UA-emulated compatibility cases', () => {
+  const profilesBlock = source.match(/const COMPATIBILITY_PROFILES\s*=\s*Object\.freeze\(\[([\s\S]+?)\]\);/);
+  assert.ok(profilesBlock);
+  assert.deepEqual(
+    [...profilesBlock[1].matchAll(/id:\s*'([^']+)'/g)].map((match) => match[1]),
+    ['macos-equivalent', 'windows-equivalent'],
+  );
+  assert.match(profilesBlock[1], /Macintosh; Intel Mac OS X/);
+  assert.match(profilesBlock[1], /Windows NT 10\.0; Win64; x64/);
+
+  const routesBlock = source.match(/const COMPATIBILITY_ROUTES\s*=\s*Object\.freeze\(\[([\s\S]+?)\]\);/);
+  assert.ok(routesBlock);
+  assert.deepEqual(
+    [...routesBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]),
+    ['/designProduction', '/fitting'],
+  );
+  assert.match(source, /COMPATIBILITY_VIEWPORT\s*=\s*Object\.freeze\(\{ width: 1440, height: 1050 \}\)/);
+  assert.match(source, /browser\.newContext\(userAgent \? \{ viewport, userAgent \} : \{ viewport \}\)/);
+  assert.doesNotMatch(source, /contextOptions/);
+  assert.match(source, /result\.compatibilityProfile\s*=\s*route\.compatibilityProfile/);
+  assert.match(source, /result\.compatibilityRoute\s*=\s*route\.compatibilityRoute/);
+  assert.match(source, /COMPATIBILITY_EVIDENCE_LABEL\s*=\s*'browser-compatibility evidence via UA emulation'/);
+  assert.match(source, /physicalMacWindows:\s*'PENDING_CONFIRMATION'/);
+  assert.match(source, /fontsNativeControlsGpuImeFilesystem:\s*'PENDING_CONFIRMATION'/);
+  assert.match(source, /productionParity:\s*'PENDING_CONFIRMATION'/);
 });
 
 test('verifier logs only bounded sanitized progress and a final summary', () => {
@@ -49,10 +79,17 @@ test('verifier logs only bounded sanitized progress and a final summary', () => 
   assert.doesNotMatch(source, /summaryPath/);
 });
 
+test('verifier keeps bounded sanitized page-error details for failed cells', () => {
+  assert.match(source, /pageErrorDetails:\s*\[\]/);
+  assert.match(source, /safeErrorDetail\(error\)/);
+  assert.match(source, /pageErrorDetails\.length\s*<\s*3/);
+  assert.match(source, /pageErrorDetails\.length\s*<\s*5/);
+});
+
 test('verifier guards local origins, final redirects, and terminal cleanup', () => {
   assert.match(source, /LOCAL_HOSTS\s*=\s*new Set\(\['localhost', '127\.0\.0\.1', '::1'\]\)/);
   assert.match(source, /assertAllowedLocalUrl\(finalUrl, baseOrigin\)/);
-  assert.match(source, /fetch\(currentUrl, \{ redirect: 'manual' \}\)/);
+  assert.match(source, /requestLocalHttp\(currentUrl\)/);
   assert.match(source, /await stopPreview\(preview, cleanupBudget\)/);
   assert.match(source, /await waitForChildExit\(child, budget, 'SIGTERM', 4_000\)/);
   assert.match(source, /cleanupLeftovers === 0/);

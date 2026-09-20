@@ -73,3 +73,63 @@ test('Gallery Canvas imports do not bypass readable blob-first image loading', a
   assert.match(canvas, /const loadViaBlob = async \(\) =>/);
   assert.match(canvas, /A successful direct cross-origin load can still taint[\s\S]*?return await loadViaBlob\(\);/);
 });
+
+test('Canvas rendering and image actions recover provider paths from generation metadata', async () => {
+  const [page, canvas] = await Promise.all([
+    readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/components/canvas/InfiniteCanvas.tsx', import.meta.url), 'utf8'),
+  ]);
+  for (const source of [page, canvas]) {
+    assert.match(source, /metadata\?\.storagePath/);
+    assert.match(source, /parameters\.storagePath/);
+    assert.match(source, /parameters\.remoteStoragePath/);
+    assert.match(source, /parameters\.sourceStoragePath/);
+    assert.match(source, /parameters\.backendStoragePath/);
+  }
+});
+
+test('Canvas persistence reconstructs a Cloudflare image path from a retained image id', async () => {
+  const persistence = await readFile(new URL('../src/lib/canvasDocumentPersistence.ts', import.meta.url), 'utf8');
+  assert.match(persistence, /metadata\?\.galleryImageId/);
+  assert.match(persistence, /metadata\?\.imageId/);
+  assert.match(persistence, /parameters\.imageId/);
+  assert.match(persistence, /`generated-images\/\$\{imageId\.trim\(\)\}`/);
+});
+
+test('Canvas save comparison treats empty relationship nulls as omitted fields', async () => {
+  const [recovery, persistence] = await Promise.all([
+    readFile(new URL('../src/lib/canvasDocumentSaveRecovery.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/canvasDocumentPersistence.ts', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(recovery, /const comparableSnapshot=\(snapshot:CanvasDocumentSnapshot\)=>/);
+  assert.match(recovery, /if\(comparable\.parentId==null\)delete comparable\.parentId/);
+  assert.match(recovery, /if\(comparable\.derivedFrom==null\)delete comparable\.derivedFrom/);
+  assert.match(recovery, /JSON\.stringify\(comparableSnapshot\(a\.snapshot\)\)===JSON\.stringify\(comparableSnapshot\(b\.snapshot\)\)/);
+  assert.match(persistence, /parentId: typeof object\.parentId === 'string' \? object\.parentId : undefined/);
+  assert.match(persistence, /derivedFrom: typeof object\.derivedFrom === 'string' \? object\.derivedFrom : undefined/);
+});
+
+test('Gallery detail hands off a remote generated image to Canvas by scoped identity', async () => {
+  const [gallery, canvas] = await Promise.all([
+    readFile(new URL('../src/pages/GalleryPage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(gallery, /Canvasで再編集/);
+  assert.match(gallery, /galleryImageId=\$\{encodeURIComponent\(selectedImage\.id\)\}/);
+  assert.match(canvas, /const galleryImageId = searchParams\.get\('galleryImageId'\)/);
+  assert.match(canvas, /listGeneratedImages\(currentBrand\.id, \{ limit: 100, order: 'newest' \}\)/);
+  assert.match(canvas, /candidate\.id === galleryImageId/);
+  assert.match(canvas, /feature: 'gallery-import'/);
+  assert.match(canvas, /galleryStoragePath: image\.storage_path/);
+});
+
+test('Gallery Canvas handoff is idempotent when the same image load resolves twice', async () => {
+  const source = await readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /const alreadyPlaced = useCanvasStore\.getState\(\)\.objects\.some/);
+  assert.match(source, /object\.metadata\?\.galleryImageId === galleryImageId/);
+  assert.match(source, /object\.metadata\?\.imageId === galleryImageId/);
+  assert.match(source, /if \(alreadyPlaced\) \{[\s\S]*importedGalleryImageRef\.current = galleryImageId;[\s\S]*return;/);
+});

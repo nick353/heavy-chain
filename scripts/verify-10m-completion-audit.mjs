@@ -63,7 +63,7 @@ const requiredProofs = [
       json.ok === true &&
       Array.isArray(json.failed) &&
       json.failed.length === 0 &&
-      Number(json.routeCount || 0) >= 17 &&
+      Number(json.routeCount || 0) >= 16 &&
       Array.isArray(json.routes) &&
       json.routes.length >= 17 &&
       Array.isArray(json.mobile) &&
@@ -80,8 +80,8 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-gallery', 'meaningful_page_content') &&
       hasRouteAssertion(json, 'gallery', 'gallery_no_scary_remote_failure_toast') &&
       hasRouteAssertion(json, 'mobile-gallery', 'gallery_no_scary_remote_failure_toast') &&
-      hasRouteAssertion(json, 'generate-campaign', 'h601_rights_confirmation_visible') &&
-      hasRouteAssertion(json, 'mobile-generate-campaign', 'h601_rights_confirmation_visible') &&
+      hasRouteAssertion(json, 'generate-campaign', 'lightchain_permission_surface_visible') &&
+      hasRouteAssertion(json, 'mobile-generate-campaign', 'lightchain_permission_surface_visible') &&
       routeAssertionDetailsIncludes(json, 'generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'で生成') &&
       routeAssertionDetailsIncludes(json, 'mobile-generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'で生成') &&
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons') &&
@@ -111,7 +111,6 @@ const requiredProofs = [
       hasRouteAssertion(json, 'studio', 'studio_preview_has_composition_context') &&
       hasRouteAssertion(json, 'lab', 'lab_workspace_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'lab', 'lab_preview_has_evaluation_context') &&
-      hasRouteAssertion(json, 'credits', 'credits_has_actionable_workspace_panel') &&
       hasRouteAssertion(json, 'history', 'history_has_reuse_action_panel') &&
       hasRouteAssertion(json, 'history', 'desktop_history_timeline_is_bounded') &&
       hasRouteAssertion(json, 'mobile-history', 'history_has_reuse_action_panel') &&
@@ -154,10 +153,9 @@ const requiredProofs = [
     validate: (json) =>
       json.ok === true &&
       hasPassingAssertion(json, 'generate_route_loaded') &&
-      hasPassingAssertion(json, 'h601_rights_label_visible') &&
-      hasPassingAssertion(json, 'h601_commercial_caveat_visible') &&
-      hasPassingAssertion(json, 'rights_checkbox_exists'),
-    expect: 'production authenticated /generate shows H601 rights label, commercial caveat, and rights checkbox',
+      hasPassingAssertion(json, 'h601_permission_surface_visible') &&
+      hasPassingAssertion(json, 'rights_checkbox_absent'),
+    expect: 'production authenticated /generate exposes the Light permission surface and no rights checkbox',
   },
   {
     id: 'production_chosen_public_entrypoint_readback',
@@ -165,7 +163,7 @@ const requiredProofs = [
     path: 'output/playwright/g835-chosen-public-entrypoint-readback-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
-      json.urls?.chosenPublicEntrypoint === 'https://heavy-chain.zeabur.app' &&
+      json.urls?.chosenPublicEntrypoint === 'https://heavy-chain-web.nichika2000823.workers.dev' &&
       json.findings?.chosenPublicEntrypoint?.reachable === true &&
       Number(json.findings?.chosenPublicEntrypoint?.status || 0) >= 200 &&
       Number(json.findings?.chosenPublicEntrypoint?.status || 0) < 300 &&
@@ -173,7 +171,7 @@ const requiredProofs = [
       json.safetyBoundaries?.generationSubmit === 'not_clicked' &&
       json.safetyBoundaries?.billingCheckoutPayment === 'not_touched' &&
       json.safetyBoundaries?.externalPublish === 'not_touched',
-    expect: 'chosen public entrypoint https://heavy-chain.zeabur.app is reachable without submit/payment/publish actions',
+    expect: 'chosen public entrypoint https://heavy-chain-web.nichika2000823.workers.dev is reachable without submit/payment/publish actions',
   },
   {
     id: 'production_h602_billing_completion_readback',

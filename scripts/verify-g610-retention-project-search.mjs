@@ -11,6 +11,8 @@ const authStatePath = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'o
 const outDir = args.out || `output/playwright/g610-retention-project-search-${dateStamp()}`;
 const canvasStoreKey = 'heavy-chain-canvas';
 const viewport = { width: 1440, height: 1050 };
+const localPreview = isLocalPreview(baseUrl);
+const localProofUserId = '00000000-0000-4000-8000-000000000033';
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -22,7 +24,7 @@ const evidence = {
   workflow: 'g610-retention-project-search',
   capturedAt: new Date().toISOString(),
   baseUrl,
-  authState: authStatePath,
+  authState: localPreview ? 'local-proof-jwt' : authStatePath,
   outDir,
   screenshots: {},
   videos: {},
@@ -38,32 +40,40 @@ const evidence = {
 };
 
 try {
-  if (isLocalPreview(baseUrl)) {
+  if (localPreview) {
     previewProcess = await startPreviewServer(baseUrl);
   }
 
-  if (!fs.existsSync(authStatePath)) {
+  if (!localPreview && !fs.existsSync(authStatePath)) {
     throw new Error(`auth_state_missing:${authStatePath}`);
   }
 
-  const storageState = buildStorageStateForBaseUrl(authStatePath, baseUrl);
-  const authUserId = extractAuthUserId(storageState);
+  const storageState = localPreview ? undefined : buildStorageStateForBaseUrl(authStatePath, baseUrl);
+  const authUserId = localPreview ? localProofUserId : extractAuthUserId(storageState);
 
   browser = await chromium.launch({ headless: true });
   context = await browser.newContext({
-    storageState,
+    ...(localPreview ? {} : { storageState }),
     viewport,
     recordVideo: {
       dir: path.join(outDir, 'videos'),
       size: viewport,
     },
   });
+  if (localPreview) {
+    await installLocalRequestGuard(context, baseUrl);
+    await installLocalProofAuth(context);
+    await installLocalCloudflareMocks(context);
+    await installLocalFixtureAsset(context, baseUrl);
+  }
   await installProjectFixture(context, baseUrl, authUserId);
 
   const page = await context.newPage();
   wirePageDiagnostics(page);
 
-  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
+  // The current workspace keeps media/data-plane resources active; route
+  // readiness is established by DOM load plus the required heading below.
+  await page.goto(`${baseUrl}/workspace`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { name: 'プロジェクト' }).waitFor({ timeout: 8000 });
   await page.screenshot({ path: path.join(outDir, '01-dashboard-projects.png'), fullPage: true });
   evidence.screenshots.dashboardProjects = path.join(outDir, '01-dashboard-projects.png');
@@ -166,6 +176,10 @@ try {
       .catch((error) => {
         evidence.cleanup.browserCloseBlocker = error.message;
       });
+  } else {
+    // A preflight failure can happen before launch; record that no browser
+    // remained to close instead of reporting a false cleanup failure.
+    evidence.cleanup.browserClosed = true;
   }
   if (previewProcess) {
     const previewExit = await stopPreviewServer(previewProcess, baseUrl);
@@ -186,7 +200,7 @@ console.log(JSON.stringify({ ok: evidence.ok, outDir, failed: evidence.failed },
 process.exit(evidence.ok ? 0 : 1);
 
 async function installProjectFixture(context, targetBaseUrl, userId) {
-  const fixture = buildProjectStorageFixture();
+  const fixture = buildProjectStorageFixture(targetBaseUrl);
   await context.addInitScript(({ key, value, completedKey }) => {
     window.localStorage.setItem(key, JSON.stringify(value));
     window.localStorage.setItem(completedKey, 'true');
@@ -194,7 +208,7 @@ async function installProjectFixture(context, targetBaseUrl, userId) {
   }, { key: canvasStoreKey, value: fixture, completedKey: onboardingCompletedKey(userId) });
 
   const page = await context.newPage();
-  await page.goto(`${targetBaseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${targetBaseUrl}/workspace`, { waitUntil: 'domcontentloaded' });
   await page.evaluate(({ key, value, completedKey }) => {
     window.localStorage.setItem(key, JSON.stringify(value));
     window.localStorage.setItem(completedKey, 'true');
@@ -203,11 +217,11 @@ async function installProjectFixture(context, targetBaseUrl, userId) {
   await page.close();
 }
 
-function buildProjectStorageFixture() {
+function buildProjectStorageFixture(targetBaseUrl) {
   const now = Date.now();
   const projects = [
-    project('g610-project-hoodie', 'Hoodie Campaign Workspace', now - 1_000, 'image'),
-    project('g610-project-detail', 'Product Detail Retouch', now - 2_000, 'image'),
+    project('g610-project-hoodie', 'Hoodie Campaign Workspace', now - 1_000, 'image', targetBaseUrl),
+    project('g610-project-detail', 'Product Detail Retouch', now - 2_000, 'image', targetBaseUrl),
     project('g610-project-type', 'Typography Launch Banner', now - 3_000, 'text'),
     project('g610-project-lookbook', 'Lookbook Moodboard', now - 4_000, 'frame'),
     project('g610-project-template', 'EC Template Reuse', now - 5_000, 'shape'),
@@ -235,14 +249,17 @@ function buildProjectStorageFixture() {
   };
 }
 
-function project(id, name, updatedMs, objectType) {
+function project(id, name, updatedMs, objectType, targetBaseUrl = baseUrl) {
   const updatedAt = new Date(updatedMs).toISOString();
   return {
     id,
     name,
     createdAt: new Date(updatedMs - 60_000).toISOString(),
     updatedAt,
-    brandId: 'g610-brand',
+    // Match the local proof brand returned by the Cloudflare mock so the
+    // authenticated canvas route can load this local project without
+    // crossing the brand-boundary guard.
+    brandId: '00000000-0000-4000-8000-000000000133',
     objects: [
       {
         id: `${id}-object`,
@@ -259,7 +276,7 @@ function project(id, name, updatedMs, objectType) {
         visible: true,
         zIndex: 1,
         ...(objectType === 'text' ? { text: name, fontSize: 24, fontFamily: 'Noto Sans JP', fill: '#111827' } : {}),
-        ...(objectType === 'image' ? { src: tinyPngDataUri() } : {}),
+        ...(objectType === 'image' ? { src: tinyPngDataUri(targetBaseUrl) } : {}),
         ...(objectType === 'shape' ? { shapeType: 'rect', fill: '#f5f5f4', stroke: '#a3a3a3', strokeWidth: 2 } : {}),
         ...(objectType === 'frame' ? { stroke: '#806a54', strokeWidth: 2 } : {}),
       },
@@ -267,8 +284,8 @@ function project(id, name, updatedMs, objectType) {
   };
 }
 
-function tinyPngDataUri() {
-  return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+function tinyPngDataUri(targetBaseUrl) {
+  return `${trimTrailingSlash(targetBaseUrl)}/g610-fixture.png`;
 }
 
 function addAssertion(name, passed, details = {}) {
@@ -298,6 +315,7 @@ async function readCanvasStorage(page) {
 function wirePageDiagnostics(page) {
   page.on('console', (message) => {
     if (['error', 'warning'].includes(message.type())) {
+      if (localPreview && /net::ERR_BLOCKED_BY_CLIENT/.test(message.text())) return;
       evidence.consoleMessages.push({ type: message.type(), text: message.text() });
     }
   });
@@ -306,6 +324,7 @@ function wirePageDiagnostics(page) {
   });
   page.on('requestfailed', (request) => {
     const url = request.url();
+    if (localPreview && /net::ERR_BLOCKED_BY_CLIENT/.test(request.failure()?.errorText ?? '')) return;
     if (!/\.(png|jpg|jpeg|webp|svg|ico|woff2?)($|\?)/i.test(url)) {
       evidence.requestFailures.push({ url, failure: request.failure()?.errorText || null });
     }
@@ -327,6 +346,45 @@ function buildStorageStateForBaseUrl(storagePath, targetBaseUrl) {
     storage.origins = [{ ...storage.origins[0], origin }];
   }
   return storage;
+}
+
+async function installLocalProofAuth(browserContext) {
+  const payload = { user: { id: localProofUserId, email: 'heavy-chain-local-proof@example.test', name: 'Local Proof User', emailVerified: true, createdAt: new Date(0).toISOString() }, session: { token: 'local-cloudflare-proof-token', expiresAt: new Date(Date.now() + 3600000).toISOString() } };
+  await browserContext.route('**/api/auth/ok', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+  await browserContext.route('**/api/auth/get-session', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) }));
+  await browserContext.route('**/api/auth/**', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) }));
+}
+
+async function installLocalCloudflareMocks(browserContext) {
+  const now = new Date().toISOString();
+  const profile = { id: localProofUserId, email: 'heavy-chain-local-proof@example.test', name: 'Local Proof User', language: 'ja', is_admin: false, created_at: now, updated_at: now };
+  const brand = { id: '00000000-0000-4000-8000-000000000133', owner_id: localProofUserId, name: 'Heavy Chain Local Proof', slug: 'heavy-chain-local-proof', created_at: now, updated_at: now };
+  await browserContext.route('**/v1/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/profile')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(profile) });
+    if (/\/v1\/brands(?:\/.*)?$/.test(pathname)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([brand]) });
+    if (/\/v1\/collections(?:\/.*)?$/.test(pathname)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+}
+
+async function installLocalRequestGuard(browserContext, targetBaseUrl) {
+  const targetOrigin = new URL(targetBaseUrl).origin;
+  await browserContext.route('**/*', async (route) => {
+    const requestUrl = new URL(route.request().url());
+    if (requestUrl.origin === targetOrigin) return route.continue();
+    await route.abort('blockedbyclient');
+  });
+}
+
+async function installLocalFixtureAsset(browserContext, targetBaseUrl) {
+  const targetOrigin = new URL(targetBaseUrl).origin;
+  const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64');
+  await browserContext.route('**/g610-fixture.png', async (route) => {
+    const requestUrl = new URL(route.request().url());
+    if (requestUrl.origin !== targetOrigin || requestUrl.pathname !== '/g610-fixture.png') return route.fallback();
+    await route.fulfill({ status: 200, contentType: 'image/png', body: tinyPng });
+  });
 }
 
 function extractAuthUserId(storageState) {
@@ -410,7 +468,7 @@ async function canFetch(url) {
 function isLocalPreview(value) {
   try {
     const url = new URL(value);
-    return ['127.0.0.1', 'localhost'].includes(url.hostname);
+    return ['http:', 'https:'].includes(url.protocol) && ['127.0.0.1', 'localhost'].includes(url.hostname);
   } catch {
     return false;
   }

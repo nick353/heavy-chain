@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Gauge, Loader2, ShieldCheck, Sparkles, BriefcaseBusiness } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Gauge, Loader2, Sparkles, BriefcaseBusiness } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { CreditSummaryPanel } from '../components/workspace';
 import { emptyWorkspaceActivity, fetchWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
@@ -47,15 +47,15 @@ export function CreditsPage() {
               今月の使用量、処理中の予約分、生成利用の状態を確認します。
             </p>
           </div>
-          <Link to="/lightchain" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
+          <Link to="/designProduction" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
             生成へ
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
         <div className="mt-6 space-y-4" data-testid="credits-workspace-panel">
-          <div className="grid gap-3 lg:grid-cols-3" data-testid="credits-next-actions">
-            <Link to="/lightchain" className="group rounded-2xl border border-neutral-200 bg-white/65 p-4 transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-900/45 dark:hover:border-primary-400/40">
+            <div className="grid gap-3 lg:grid-cols-2" data-testid="credits-next-actions">
+            <Link to="/designProduction" className="group rounded-2xl border border-neutral-200 bg-white/65 p-4 transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-900/45 dark:hover:border-primary-400/40">
               <Sparkles className="h-5 w-5 text-primary-600 dark:text-primary-300" />
               <p className="mt-3 text-sm font-semibold text-neutral-950 dark:text-white">生成を続ける</p>
               <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">残り枠を待たずに素材制作へ戻れます。</p>
@@ -65,11 +65,6 @@ export function CreditsPage() {
               <p className="mt-3 text-sm font-semibold text-neutral-950 dark:text-white">処理状況を見る</p>
               <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">予約中や失敗した生成を確認します。</p>
             </Link>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
-              <ShieldCheck className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
-              <p className="mt-3 text-sm font-semibold text-emerald-950 dark:text-emerald-100">権利確認ゲート有効</p>
-              <p className="mt-1 text-xs leading-5 text-emerald-800 dark:text-emerald-200">生成前に素材利用権と商用利用 caveat を確認します。</p>
-            </div>
           </div>
         </div>
 

@@ -2,6 +2,7 @@ import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
 
 const OUT_DIR = path.resolve(process.env.G606_OUT_DIR || 'output/playwright/10m-product-readiness-g606');
@@ -16,17 +17,118 @@ const MAX_HEAP_BYTES = Number(process.env.G606_MAX_HEAP_BYTES || 75000000);
 const BRAND_ID = 'g606-brand';
 const USER_ID = 'g606-user';
 
-const readEnvFile = async (file) => {
+const LOCAL_CLOUDFLARE_MOCK_PREFIX = '/__g606/cloudflare';
+const CLOUDFLARE_AUTH_TOKEN = 'g606-cloudflare-local-token';
+const CANVAS_PROJECT_ID = 'g606-canvas-project';
+const CANVAS_DOCUMENT_ID = '00000000-0000-4000-8000-000000000606';
+
+const CLOUDFLARE_ENDPOINT_PATTERNS = Object.freeze([
+  /^\/v1\/profile$/,
+  /^\/v1\/brands(?:\/[^/]+)?(?:\/(?:members|invitations)(?:\/[^/]+)?)?$/,
+  /^\/v1\/(?:folders|tags|style-presets)(?:\/[^/]+)?$/,
+  /^\/v1\/image-folders$/,
+  /^\/v1\/image-tags$/,
+  /^\/v1\/generated-images(?:\/[^/]+)?$/,
+  /^\/v1\/generation-jobs(?:\/[^/]+)?$/,
+  /^\/v1\/workspace-execution-steps$/,
+  /^\/v1\/image-ai\/usage$/,
+  /^\/v1\/image-ai\/requests\/[^/]+$/,
+  /^\/v1\/canvas-documents(?:\/[^/]+)?$/,
+  /^\/v1\/media\/read$/,
+  /^\/v1\/media\/[^/]+\/content$/,
+  /^\/v1\/provider-actions\/[^/]+$/,
+  /^\/v1\/workspace-artifacts$/,
+]);
+
+const isCloudflareAuthPath = (pathname) => (
+  pathname === '/api/auth/get-session' || pathname === '/api/auth/ok'
+);
+
+export const isCloudflareContractPath = (pathname) => (
+  CLOUDFLARE_ENDPOINT_PATTERNS.some((pattern) => pattern.test(pathname))
+);
+
+const isLocalCloudflareMockPath = (pathname) => {
+  if (!pathname.startsWith(`${LOCAL_CLOUDFLARE_MOCK_PREFIX}/`)) return false;
+  return isCloudflareContractPath(pathname.slice(LOCAL_CLOUDFLARE_MOCK_PREFIX.length));
+};
+
+const isLocalStaticPath = (pathname) => (
+  !pathname.startsWith('/api/')
+  && !pathname.startsWith('/v1/')
+  && pathname !== LOCAL_CLOUDFLARE_MOCK_PREFIX
+  && !pathname.startsWith(`${LOCAL_CLOUDFLARE_MOCK_PREFIX}/`)
+);
+
+const isExplicitStaticMock = (url) => (
+  (
+    url.hostname === 'fonts.googleapis.com'
+    && url.pathname === '/css2'
+  )
+  || url.hostname === 'fonts.gstatic.com'
+  || (
+    url.hostname === 'jp.linkaigc.com'
+    && url.pathname.startsWith('/routeIcons/')
+  )
+  || (
+    url.hostname === 'jp.linkaigc.com'
+    && url.pathname.startsWith('/static/')
+    && /\.(?:png|jpe?g|webp|gif|svg)$/i.test(url.pathname)
+  )
+  || (
+    url.hostname === 'ql-hangzhou-oss.oss-cn-hangzhou.aliyuncs.com'
+    && url.pathname === '/AIDesign/saas-avatar-new.png'
+  )
+  || (
+    url.hostname === 'static-cn.linkaigc.com'
+    && /^\/(?:saas|workbenches)\/.*\.(?:png|jpe?g|webp|gif|mp4|webm)$/i.test(url.pathname)
+  )
+  || (
+    url.hostname === 'lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com'
+    && /^\/light-chain-platform\/home5_0_1\/.*\.(?:png|jpe?g|webp|gif|svg)$/i.test(url.pathname)
+  )
+  || (
+    url.hostname === 'lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com'
+    && /^\/light-chain-platform\/tools\/.*\.(?:mp4|webm)$/i.test(url.pathname)
+  )
+);
+
+const isKnownCloudflareApiOrigin = (url) => (
+  url.protocol === 'https:'
+  && /^heavy-chain-api(?:\.[a-z0-9-]+)*\.workers\.dev$/i.test(url.hostname)
+);
+
+/**
+ * The G606 browser may use a compiled Cloudflare Worker origin, but every
+ * response is fulfilled by the local harness. This classifier is the single
+ * network policy used by the route guard and focused contract tests.
+ */
+export const classifyG606NetworkRequest = (requestUrl, baseUrl = BASE_URL) => {
+  let url;
+  let localOrigin;
   try {
-    const text = await import('node:fs/promises').then((fs) => fs.readFile(file, 'utf8'));
-    for (const line of text.split(/\r?\n/)) {
-      const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-      if (!match || process.env[match[1]]) continue;
-      process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
-    }
+    url = new URL(requestUrl, baseUrl);
+    localOrigin = new URL(baseUrl).origin;
   } catch {
-    // Optional local env only; do not print secrets.
+    return { allowed: false, kind: 'blocked', reason: 'invalid_url' };
   }
+  const local = url.origin === localOrigin;
+  if (local && isCloudflareAuthPath(url.pathname)) {
+    return { allowed: true, kind: 'cloudflare-auth-mock' };
+  }
+  if (local && (isLocalCloudflareMockPath(url.pathname) || isCloudflareContractPath(url.pathname))) {
+    return { allowed: true, kind: 'cloudflare-data-mock' };
+  }
+  if (local && isLocalStaticPath(url.pathname)) {
+    return { allowed: true, kind: 'local-static' };
+  }
+  if (isKnownCloudflareApiOrigin(url) && isCloudflareContractPath(url.pathname)) {
+    return { allowed: true, kind: 'cloudflare-data-mock' };
+  }
+  if (isExplicitStaticMock(url)) {
+    return { allowed: true, kind: 'explicit-static-mock' };
+  }
+  return { allowed: false, kind: 'blocked', reason: 'network_not_in_local_contract' };
 };
 
 const previewStartupError = (message, getLogs) => {
@@ -195,23 +297,7 @@ const collectBuildStats = async () => {
   };
 };
 
-const getBuiltSupabaseProjectRef = async () => {
-  const assetsDir = path.resolve('dist/assets');
-  const files = await readdir(assetsDir);
-  for (const file of files) {
-    if (!file.endsWith('.js')) continue;
-    const text = await readFile(path.join(assetsDir, file), 'utf8');
-    const match = text.match(/https:\/\/([a-z0-9]+)\.supabase\.co/i);
-    if (match) return match[1];
-  }
-  if (process.env.VITE_SUPABASE_URL) {
-    return new URL(process.env.VITE_SUPABASE_URL).host.split('.')[0];
-  }
-  return 'g606';
-};
-
-
-const makeImages = () => {
+export const makeImages = () => {
   const svg = encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">
       <rect width="240" height="240" fill="#f4f1eb"/>
@@ -243,7 +329,7 @@ const makeImages = () => {
   }));
 };
 
-const makeCanvasObjects = () => {
+export const makeCanvasObjects = () => {
   return Array.from({ length: CANVAS_OBJECT_COUNT }, (_, index) => ({
     id: `g606-object-${index}`,
     type: index % 4 === 0 ? 'text' : 'image',
@@ -270,9 +356,41 @@ const makeCanvasObjects = () => {
   }));
 };
 
-const setupMockedApp = async (page) => {
-  const projectRef = await getBuiltSupabaseProjectRef();
+export const buildCanvasInitState = (canvasObjects = makeCanvasObjects(), brandId = BRAND_ID) => {
+  const timestamp = new Date().toISOString();
+  return {
+    state: {
+      currentProjectId: CANVAS_PROJECT_ID,
+      currentProjectName: 'G606 Canvas Stress',
+      projects: [{
+        id: CANVAS_PROJECT_ID,
+        name: 'G606 Canvas Stress',
+        objects: canvasObjects,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        brandId,
+      }],
+      objects: canvasObjects,
+    },
+    version: 0,
+  };
+};
+
+export const createCloudflareContract = () => {
+  const now = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
   const images = makeImages();
+  const canvasObjects = makeCanvasObjects();
+  const user = {
+    id: USER_ID,
+    email: 'g606@example.invalid',
+    name: 'G606 User',
+    avatar_url: null,
+    language: 'ja',
+    is_admin: true,
+    created_at: now,
+    updated_at: now,
+  };
   const brand = {
     id: BRAND_ID,
     owner_id: USER_ID,
@@ -281,97 +399,243 @@ const setupMockedApp = async (page) => {
     brand_colors: null,
     tone_description: null,
     target_audience: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    role: 'owner',
+    created_at: now,
+    updated_at: now,
   };
-  const user = {
-    id: USER_ID,
-    email: 'g606@example.invalid',
-    name: 'G606 User',
-    avatar_url: null,
-    language: 'ja',
-    is_admin: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
-  await page.addInitScript(({ projectRef, user, brand, images, canvasObjects }) => {
-    const expiresAt = Math.floor(Date.now() / 1000) + 3600;
-    const accessToken = `${btoa(JSON.stringify({ alg: 'none', typ: 'JWT' })).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')}.${btoa(JSON.stringify({
-      sub: user.id,
+  const authPayload = {
+    user: {
+      id: user.id,
       email: user.email,
-      role: 'authenticated',
-      aud: 'authenticated',
-      exp: expiresAt,
-    })).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')}.`;
-    const session = {
-      access_token: accessToken,
-      refresh_token: 'g606-refresh-token',
-      expires_at: expiresAt,
-      expires_in: 3600,
-      token_type: 'bearer',
-      user: {
-        id: user.id,
-        email: user.email,
-        app_metadata: {},
-        user_metadata: { name: user.name },
-        aud: 'authenticated',
-        created_at: user.created_at,
-      },
-    };
-    window.localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify(session));
-    window.localStorage.setItem('heavy-chain-canvas', JSON.stringify({
-      state: {
-        currentProjectId: 'g606-canvas-project',
-        currentProjectName: 'G606 Canvas Stress',
-        projects: [{
-          id: 'g606-canvas-project',
-          name: 'G606 Canvas Stress',
-          objects: canvasObjects,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          brandId: brand.id,
-        }],
-        objects: canvasObjects,
-      },
-      version: 0,
-    }));
+      name: user.name,
+      emailVerified: true,
+      createdAt: user.created_at,
+    },
+    session: { token: CLOUDFLARE_AUTH_TOKEN, expiresAt },
+  };
+  const snapshot = {
+    version: 1,
+    localProjectId: CANVAS_PROJECT_ID,
+    name: 'G606 Canvas Stress',
+    objects: canvasObjects,
+    view: { zoom: 1, panX: 0, panY: 0, gridVisible: true, snapToGrid: false, gridSize: 20 },
+  };
+  const canvasDocument = {
+    id: CANVAS_DOCUMENT_ID,
+    owner_id: USER_ID,
+    brand_id: BRAND_ID,
+    title: 'G606 Canvas Stress',
+    snapshot,
+    snapshot_version: 1,
+    revision: 0,
+    created_at: now,
+    updated_at: now,
+  };
+  return {
+    authPayload,
+    user,
+    profile: user,
+    brand,
+    images,
+    canvasObjects,
+    canvasDocument,
+    canvasInitState: buildCanvasInitState(canvasObjects, brand.id),
+  };
+};
 
-    const originalFetch = window.fetch.bind(window);
-    window.fetch = async (input, init) => {
-      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
-      const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), {
-        status,
-        headers: { 'content-type': 'application/json', ...headers },
-      });
+const responseBody = (body, status = 200, contentType = 'application/json') => ({
+  status,
+  contentType,
+  body: contentType === 'application/json' ? JSON.stringify(body) : body,
+});
 
-      if (url.includes('/auth/v1/user')) {
-        return json(session.user);
-      }
-      if (url.includes('/rest/v1/users')) {
-        return json([user]);
-      }
-      if (url.includes('/rest/v1/brands')) {
-        return json([brand]);
-      }
-      if (url.includes('/rest/v1/brand_members')) {
-        if (init?.method && init.method !== 'GET' && init.method !== 'HEAD') {
-          return json({ error: 'G606 mock blocks writes' }, 405);
-        }
-        return json([]);
-      }
-      if (url.includes('/rest/v1/generated_images')) {
-        return json(images, 200, { 'content-range': `0-${images.length - 1}/${images.length}` });
-      }
-      if (url.includes('/storage/v1/object/sign/')) {
-        return json({ signedURL: images[0]?.image_url ?? '' });
-      }
-      if (init?.method && init.method !== 'GET' && init.method !== 'HEAD') {
-        return json({ error: 'G606 mock blocks writes' }, 405);
-      }
-      return originalFetch(input, init);
-    };
-  }, { projectRef, user, brand, images, canvasObjects: makeCanvasObjects() });
+const cloudflarePath = (pathname) => pathname.startsWith(`${LOCAL_CLOUDFLARE_MOCK_PREFIX}/`)
+  ? pathname.slice(LOCAL_CLOUDFLARE_MOCK_PREFIX.length)
+  : pathname;
+
+const paginateImages = (request, images) => {
+  const url = new URL(request.url());
+  let result = [...images];
+  if (url.searchParams.get('favorite') === 'true') result = result.filter((image) => image.is_favorite);
+  if (url.searchParams.get('has_job') === 'true') result = result.filter((image) => image.job_id);
+  if (url.searchParams.get('has_job') === 'false') result = result.filter((image) => !image.job_id);
+  if (url.searchParams.get('order') === 'oldest') result.reverse();
+  const offset = Math.max(0, Number.parseInt(url.searchParams.get('offset') || '0', 10) || 0);
+  const limit = Math.min(100, Math.max(0, Number.parseInt(url.searchParams.get('limit') || '50', 10) || 0));
+  return result.slice(offset, offset + limit);
+};
+
+const handleCloudflareDataMock = async (route, contract, pathname) => {
+  const request = route.request();
+  const method = request.method().toUpperCase();
+  const fulfill = (body, status = 200) => route.fulfill(responseBody(body, status));
+  if (method === 'OPTIONS') {
+    await route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' } });
+    return;
+  }
+  if (request.headers().authorization !== `Bearer ${contract.authPayload.session.token}`) {
+    await fulfill({ error: 'unauthorized' }, 401);
+    return;
+  }
+  if (!['GET', 'HEAD'].includes(method)) {
+    await fulfill({ error: 'g606_local_mock_write_blocked' }, 405);
+    return;
+  }
+  if (method === 'HEAD') {
+    await route.fulfill({ status: 200 });
+    return;
+  }
+  if (pathname === '/v1/profile') {
+    await fulfill(contract.profile);
+    return;
+  }
+  if (pathname === '/v1/brands') {
+    await fulfill([contract.brand]);
+    return;
+  }
+  if (/^\/v1\/brands\/[^/]+$/.test(pathname)) {
+    await fulfill(contract.brand);
+    return;
+  }
+  if (/^\/v1\/brands\/[^/]+\/(?:members|invitations)(?:\/[^/]+)?$/.test(pathname)) {
+    await fulfill([]);
+    return;
+  }
+  if (/^\/v1\/(?:folders|image-folders|image-tags|tags|style-presets)$/.test(pathname)
+    || /^\/v1\/(?:folders|tags|style-presets)\/[^/]+$/.test(pathname)) {
+    await fulfill([]);
+    return;
+  }
+  if (pathname === '/v1/generated-images') {
+    await fulfill(paginateImages(request, contract.images));
+    return;
+  }
+  if (/^\/v1\/generated-images\/[^/]+$/.test(pathname)) {
+    const imageId = decodeURIComponent(pathname.split('/').pop() || '');
+    await fulfill(contract.images.find((image) => image.id === imageId) || { error: 'not_found' }, contract.images.some((image) => image.id === imageId) ? 200 : 404);
+    return;
+  }
+  if (pathname === '/v1/generation-jobs' || pathname === '/v1/workspace-execution-steps') {
+    await fulfill([]);
+    return;
+  }
+  if (pathname === '/v1/image-ai/usage') {
+    await fulfill({
+      planName: 'g606-local',
+      monthlyQuota: 25,
+      remainingUnits: 25,
+      completedImages: 0,
+      runningImages: 0,
+      uncertainImages: 0,
+      attemptedImages: 0,
+      estimatedMicroUSD: 0,
+      estimatedNeurons: 0,
+      unknownEstimateCount: 0,
+      averageInferenceMs: null,
+      periodStart: new Date(0).toISOString(),
+      periodEnd: new Date(Date.now() + 86400000).toISOString(),
+      imageAIEnabled: false,
+      billing: 'estimate_not_invoice',
+      accountFreeAllocationRemaining: null,
+      accountWideBudgetGuaranteed: false,
+    });
+    return;
+  }
+  if (pathname === '/v1/canvas-documents') {
+    await fulfill([contract.canvasDocument]);
+    return;
+  }
+  if (/^\/v1\/canvas-documents\/[^/]+$/.test(pathname)) {
+    const id = decodeURIComponent(pathname.split('/').pop() || '');
+    await fulfill({ ...contract.canvasDocument, id });
+    return;
+  }
+  if (pathname === '/v1/media/read') {
+    await fulfill({ url: contract.images[0]?.image_url ?? '' });
+    return;
+  }
+  if (/^\/v1\/media\/[^/]+\/content$/.test(pathname)) {
+    const imageUrl = contract.images[0]?.image_url || '';
+    const body = imageUrl.startsWith('data:image/svg+xml,') ? decodeURIComponent(imageUrl.slice('data:image/svg+xml,'.length)) : '';
+    await route.fulfill(responseBody(body, 200, 'image/svg+xml'));
+    return;
+  }
+  if (/^\/v1\/image-ai\/requests\/[^/]+$/.test(pathname)) {
+    await fulfill({ error: 'not_found' }, 404);
+    return;
+  }
+  if (pathname === '/v1/provider-actions' || pathname.startsWith('/v1/provider-actions/')) {
+    await fulfill({ error: 'g606_local_mock_write_blocked' }, 405);
+    return;
+  }
+  if (pathname === '/v1/workspace-artifacts') {
+    await fulfill({ error: 'g606_local_mock_write_blocked' }, 405);
+    return;
+  }
+  // Keep the request policy fail-closed if the endpoint table and response
+  // table ever drift apart.
+  await route.abort('blockedbyclient');
+};
+
+const fulfillExplicitStaticMock = async (route, url) => {
+  if (url.hostname === 'fonts.googleapis.com') {
+    await route.fulfill({ status: 200, contentType: 'text/css', body: '' });
+    return;
+  }
+  if (url.hostname === 'fonts.gstatic.com') {
+    await route.fulfill({ status: 200, contentType: 'font/woff2', body: Buffer.alloc(0) });
+    return;
+  }
+  if (url.hostname === 'jp.linkaigc.com') {
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><rect width="4" height="4" fill="#62d5d2"/></svg>',
+    });
+    return;
+  }
+  if (/\.(?:png|jpe?g|webp|gif|svg)$/i.test(url.pathname)) {
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><rect width="4" height="4" fill="#62d5d2"/></svg>',
+    });
+    return;
+  }
+  await route.fulfill({ status: 200, contentType: 'video/mp4', body: Buffer.alloc(0) });
+};
+
+const installG606NetworkGuard = async (browserContext, contract) => {
+  await browserContext.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    const decision = classifyG606NetworkRequest(url.toString());
+    if (!decision.allowed) {
+      await route.abort('blockedbyclient');
+      return;
+    }
+    if (decision.kind === 'cloudflare-auth-mock') {
+      const body = url.pathname === '/api/auth/ok' ? { ok: true } : contract.authPayload;
+      await route.fulfill(responseBody(body));
+      return;
+    }
+    if (decision.kind === 'cloudflare-data-mock') {
+      await handleCloudflareDataMock(route, contract, cloudflarePath(url.pathname));
+      return;
+    }
+    if (decision.kind === 'explicit-static-mock') {
+      await fulfillExplicitStaticMock(route, url);
+      return;
+    }
+    await route.continue();
+  });
+};
+
+const setupMockedApp = async (page, browserContext) => {
+  const contract = createCloudflareContract();
+  await installG606NetworkGuard(browserContext, contract);
+  await page.addInitScript(({ canvasInitState }) => {
+    window.localStorage.setItem('heavy-chain-canvas', JSON.stringify(canvasInitState));
+  }, { canvasInitState: contract.canvasInitState });
 };
 
 const measureRoute = async (page, route, readySelector) => {
@@ -656,6 +920,26 @@ const isActionableRequestFailure = (failure) => {
   ) {
     return false;
   }
+  // The launcher intentionally lazy-loads its Heavy-owned card artwork. When
+  // the route advances immediately after its ready selector appears, cards
+  // still below the viewport can be aborted by navigation. This is not a
+  // missing asset or HTTP failure; keep other local request failures strict.
+  if (
+    failure.failure === 'net::ERR_ABORTED'
+    && failure.url.startsWith(`${BASE_URL}/assets/lightchain-cards/`)
+  ) {
+    return false;
+  }
+  // Video is explicitly outside the Heavy Chain beta scope. Lightchain's
+  // launcher may begin loading a source video before the local route moves
+  // on; navigation aborts that request and should not invalidate image-only
+  // performance measurements.
+  if (
+    failure.failure === 'net::ERR_ABORTED'
+    && /^https:\/\/lightchain-qlxy-prod\.oss-cn-hangzhou\.aliyuncs\.com\/light-chain-platform\/tools\/.*\.(?:mp4|webm)(?:\?.*)?$/i.test(failure.url)
+  ) {
+    return false;
+  }
   return true;
 };
 
@@ -723,7 +1007,6 @@ const addPerformanceIssues = ({ issues, routes, buildStats, canvasRender, canvas
 };
 
 const run = async () => {
-  await readEnvFile('.env.production.local');
   await mkdir(OUT_DIR, { recursive: true });
   for (const file of await readdir(OUT_DIR).catch(() => [])) {
     if (file.startsWith('debug-')) {
@@ -748,6 +1031,7 @@ const run = async () => {
   });
 
   let browser;
+  let context;
   let runError = null;
   let currentResult = {
     ok: false,
@@ -774,7 +1058,7 @@ const run = async () => {
     await waitForServer(BASE_URL, 20000, () => logs, () => previewExit);
     currentResult.phase = 'launching-browser';
     browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } });
+    context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } });
     const page = await context.newPage();
     page.on('console', (message) => {
       if (message.type() === 'error') {
@@ -800,11 +1084,20 @@ const run = async () => {
         statusText: response.statusText(),
       });
     });
-    await setupMockedApp(page);
+    await setupMockedApp(page, context);
 
     currentResult.phase = 'measuring-routes';
     const routes = [];
-    routes.push(await measureRoute(page, '/', 'text=Heavy Chain'));
+    // The unified Heavy workbench intentionally opens on the Lightchain parity
+    // surface. Keep the performance fixture aligned with the current product
+    // route instead of waiting for the retired Heavy Chain landing copy.
+    routes.push(await measureRoute(page, '/', '[data-testid="design-production-page"]'));
+    routes.push(await measureRoute(page, '/tools/fabric', '[data-testid="lightchain-material-workbench"]'));
+    // `/tools/printing` is the current parity page, not the fabric workbench.
+    // Wait on its active visible tab so the performance fixture follows the
+    // current route contract instead of a retired workbench test id.
+    routes.push(await measureRoute(page, '/tools/printing', '[role="tab"][aria-selected="true"]'));
+    routes.push(await measureRoute(page, '/fitting', '[data-testid="fitting-action-panel"]'));
     routes.push(await measureRoute(page, '/gallery', 'text=ギャラリー'));
     await page.waitForFunction(
       () => document.querySelectorAll('[data-g606-gallery-tile], .group.relative.aspect-square').length >= 60,
@@ -911,6 +1204,14 @@ const run = async () => {
       previewProcessCleanup: null,
     };
     if (browser) {
+      if (context) {
+        try {
+          await withTimeout(context.close(), 10000, 'browser.context.close timed out');
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          cleanupErrors.push(`browser_context_close_failed:${message}`);
+        }
+      }
       try {
         await withTimeout(browser.close(), 10000, 'browser.close timed out');
       } catch (error) {
@@ -952,7 +1253,10 @@ const run = async () => {
   }
 };
 
-run().catch(async (error) => {
+const isMainModule = process.argv[1]
+  && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) run().catch(async (error) => {
   if (error?.summaryWritten) {
     console.error(error);
     process.exit(1);

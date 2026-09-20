@@ -79,7 +79,9 @@ test('Library selected-asset detail exposes the Light production actions', () =>
   assert.match(libraryPage, />ダウンロード<\/button>/);
   assert.match(libraryPage, />削除<\/button>/);
   assert.match(libraryPage, />名前を編集<\/button>/);
-  assert.match(libraryPage, /deleteGeneratedImage\(selectedAsset\.asset\.remoteImageId\)/);
+  assert.match(libraryPage, /data-testid="library-selected-asset-id"/);
+  assert.match(libraryPage, /cardIdentity/);
+  assert.match(libraryPage, /deleteGeneratedImage\(card\.asset\.remoteImageId\)/);
   assert.match(libraryPage, /downloadValidatedImage\(imageUrl/);
 });
 

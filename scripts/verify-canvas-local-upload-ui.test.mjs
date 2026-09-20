@@ -76,11 +76,12 @@ test('empty canvas no longer exposes the explicit guide or empty properties pane
   assert.match(properties, /<h3 className="font-semibold text-neutral-800">プロパティ<\/h3>/);
 });
 
-test('rights confirmation remains available without the oversized empty-canvas card', () => {
-  assert.match(page, /UPLOAD_RIGHTS_CONFIRMATION_LABEL/);
-  assert.match(page, /className="mt-2 flex min-w-0 items-center gap-2/);
-  assert.match(page, /const \[rightsConfirmed, setRightsConfirmed\] = useState\(false\)/);
+test('canvas keeps provider safety fail-closed without rendering a Light-missing rights checkbox', () => {
+  assert.doesNotMatch(page, /UPLOAD_RIGHTS_CONFIRMATION_LABEL/);
+  assert.doesNotMatch(page, /GENERATION_LEGAL_COPY/);
+  assert.doesNotMatch(page, /type="checkbox"/);
+  assert.match(page, /const rightsConfirmed = false/);
   assert.match(page, /legalSafety: \{ rightsConfirmed \}/);
   assert.match(page, /if \(!rightsConfirmed\)/);
-  assert.match(page, /GENERATION_LEGAL_COPY/);
+  assert.match(page, /権限がありません/);
 });

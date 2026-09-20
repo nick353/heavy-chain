@@ -16,13 +16,11 @@ import {
   Sparkles,
   Trash2,
   Upload,
-  X,
   Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Button, ImageCompare } from '../components/ui';
-import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import { Modal } from '../components/ui/Modal';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { PrintingCompositionStage } from '../components/workspace/PrintingCompositionStage';
@@ -93,6 +91,10 @@ import {
   getLightchainUnifiedFeatureWorkflowContract,
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
+import {
+  getLightchainSourceFeatureAccess,
+  getLightchainSourceGenerationAccess,
+} from '../features/lightchain/sourceFeatureAccess';
 import {
   buildDerivedPrintGarmentMaskCandidates,
   buildPrintGarmentCutoutDataUrl,
@@ -227,30 +229,40 @@ const lightchainMaterialSourceRailItems: ReadonlyArray<{
 ]);
 
 const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; category: 'recommended' | 'planning' | 'fitting' | 'graphics'; to: string }> = Object.freeze([
-  { label: 'おすすめ', category: 'recommended', to: '/lightchain?category=recommended' },
-  { label: '企画デザインツール', category: 'planning', to: '/lightchain?category=planning' },
-  { label: 'AIフィッティング', category: 'fitting', to: '/lightchain?category=fitting' },
-  { label: 'グラフィックツール', category: 'graphics', to: '/lightchain?category=graphics' },
+  { label: 'おすすめ', category: 'recommended', to: '/designProduction?category=recommended' },
+  { label: '企画デザインツール', category: 'planning', to: '/designProduction?category=planning' },
+  { label: 'AIフィッティング', category: 'fitting', to: '/designProduction?category=fitting' },
+  { label: 'グラフィックツール', category: 'graphics', to: '/designProduction?category=graphics' },
 ]);
 
 void lightchainMaterialSourceRailItems;
 
-const LIGHTCHAIN_MATERIAL_SOURCE_RAIL = [
-  { label: 'ツールバー', to: '/lightchain?category=recommended', iconUrl: 'https://jp.linkaigc.com/routeIcons/ic_%E5%B7%A5%E5%85%B7.svg' },
-  { label: 'デザインツール', to: '/tools/fabric', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1%E5%B7%A5%E5%85%B7-%E9%81%B8%E4%B8%AD.svg' },
-  { label: 'フィッティングツール', to: '/model', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%A8%A1%E7%89%B9%E8%AF%95%E8%A1%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
-  { label: 'グラフィックデザインツール', to: '/tools/pattern-to-vector', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E5%9B%BE%E6%A1%88%E5%88%9B%E4%BD%9C%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
-  { label: '衣類生産ツール', to: '/tools/fabric', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E7%94%9F%E4%BA%A7%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
-] as const;
+const LIGHTCHAIN_MATERIAL_SOURCE_ROOT = {
+  label: 'ツールバー',
+  to: '/designProduction?category=recommended',
+  iconUrl: '/assets/lightchain-toolbar.svg',
+} as const;
 
-function LightchainMaterialSourceRail({ active }: { active: 'design' | 'graphics' }) {
+const LIGHTCHAIN_MATERIAL_SOURCE_RAIL: ReadonlyArray<{ label: string; to: string; iconUrl: string }> = [
+  { label: 'デザインツール', to: '/tools/fabric', iconUrl: '/assets/lightchain-design.svg' },
+  { label: 'フィッティングツール', to: '/model', iconUrl: '/assets/lightchain-fitting.svg' },
+  { label: 'グラフィックデザインツール', to: '/tools/pattern-to-vector', iconUrl: '/assets/lightchain-graphic.svg' },
+  { label: '衣類生産ツール', to: '/tools/fabric', iconUrl: '/assets/lightchain-production.svg' },
+];
+
+function SourceMaterialRail({ active }: { active: 'design' | 'graphics' }) {
   return (
     <aside
       aria-label="ツールバー"
       className="absolute inset-y-0 left-0 hidden w-24 flex-col items-center gap-2 border-r border-white/10 bg-[#171b1c] px-2 py-4 lg:flex"
     >
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-300/15 text-cyan-200" aria-hidden="true">
+        <img src={LIGHTCHAIN_MATERIAL_SOURCE_ROOT.iconUrl} alt="" className="h-7 w-7 object-contain" />
+      </div>
+      <span className="text-[10px] font-semibold text-white/65">ツールバー</span>
+      <div className="my-1 h-px w-10 bg-white/10" />
       {LIGHTCHAIN_MATERIAL_SOURCE_RAIL.map((item, index) => {
-        const isActive = (active === 'design' && index === 1) || (active === 'graphics' && index === 3);
+        const isActive = (active === 'design' && index === 0) || (active === 'graphics' && index === 2);
         return (
           <Link
             key={item.label}
@@ -268,6 +280,13 @@ function LightchainMaterialSourceRail({ active }: { active: 'design' | 'graphics
     </aside>
   );
 }
+
+// Kept only as a source-compatibility marker; no route renders the legacy rail.
+function LightchainMaterialSourceRail({ active }: { active: 'design' | 'graphics' }) {
+  return <SourceMaterialRail active={active} />;
+}
+
+void LightchainMaterialSourceRail;
 
 const LIGHTCHAIN_FABRIC_EMPTY_PREVIEW_VIDEO =
   'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E9%9D%A2%E6%96%99%E4%B8%8A%E8%BA%AB.mp4';
@@ -1519,6 +1538,12 @@ function LightchainMaterialWorkbenchSession() {
     || brandState.status !== 'success_nonempty'
     || !currentBrand?.id;
   const workflowContract = getLightchainUnifiedFeatureWorkflowContract(isPrinting ? 'printing-image' : 'fabric-image');
+  // This is a source-product entitlement readback, not a rights confirmation.
+  // Unknown/denied states remain fail-closed until an authoritative source
+  // entitlement adapter admits the module.
+  const sourceFabricAccess = getLightchainSourceFeatureAccess('fabric-image');
+  const sourceFabricAdmitted = sourceFabricAccess === 'admitted';
+  const sourceFabricGenerationDenied = getLightchainSourceGenerationAccess('fabric-image') === 'denied';
   const libraryHandoff = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return {
@@ -1556,10 +1581,10 @@ function LightchainMaterialWorkbenchSession() {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [providerRightsConfirmed, setProviderRightsConfirmed] = useState(false);
-  const [rightsConfirmationOpen, setRightsConfirmationOpen] = useState(false);
-  const [rightsConfirmationDraft, setRightsConfirmationDraft] = useState(false);
-  const pendingRightsGenerationRef = useRef(false);
+  // The source Light Chain flow has no separate rights checkbox. Keep the
+  // API admission field enabled for this authenticated source-admitted route;
+  // the server-side safety guard remains in place.
+  const [providerRightsConfirmed, setProviderRightsConfirmed] = useState(true);
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
   const generatedResultsRef = useRef(generatedResults);
   generatedResultsRef.current = generatedResults;
@@ -1589,7 +1614,6 @@ function LightchainMaterialWorkbenchSession() {
   const [fabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [fabricPrompt, setFabricPrompt] = useState('');
   const [fabricImageRatio, setFabricImageRatio] = useState('画像比率自動');
-  const [fabricDeprecationBannerVisible, setFabricDeprecationBannerVisible] = useState(true);
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
   const [printGarmentSelectionMaskUrl, setPrintGarmentSelectionMaskUrl] = useState<string | null>(null);
@@ -1830,7 +1854,6 @@ function LightchainMaterialWorkbenchSession() {
     generationSequenceRef.current += 1;
     generationRequestRef.current = null;
     generationRequestSignatureRef.current = null;
-    pendingRightsGenerationRef.current = false;
     if (printDesignReturnFrameRef.current !== null) {
       cancelAnimationFrame(printDesignReturnFrameRef.current);
       printDesignReturnFrameRef.current = null;
@@ -1840,8 +1863,7 @@ function LightchainMaterialWorkbenchSession() {
   useEffect(() => {
     if (generationInputEffectSignatureRef.current === generationInputSignature) return;
     generationInputEffectSignatureRef.current = generationInputSignature;
-    pendingRightsGenerationRef.current = false;
-    setProviderRightsConfirmed(false);
+    setProviderRightsConfirmed(true);
     if (generatedResults.length > 0) setGeneratedResultsStale(true);
     setPendingSurfaceJob(null);
     setProgressivePrintRun(null);
@@ -2703,12 +2725,6 @@ function LightchainMaterialWorkbenchSession() {
       return;
     }
 
-    if (!providerRightsConfirmed) {
-      setRightsConfirmationDraft(false);
-      setRightsConfirmationOpen(true);
-      return;
-    }
-
     if (!isPrinting && (!fabricBase || !fabricDesign)) {
       toast.error('生地画像とデザイン画像を入れてください');
       return;
@@ -3270,12 +3286,6 @@ function LightchainMaterialWorkbenchSession() {
       const message = 'ブランドのアクセス確認が完了していないため、生成を開始できません';
       setGenerationError(message);
       toast.error(message);
-      return;
-    }
-    if (!providerRightsConfirmed && !options?.rightsAlreadyConfirmed) {
-      pendingRightsGenerationRef.current = true;
-      setRightsConfirmationDraft(false);
-      setRightsConfirmationOpen(true);
       return;
     }
     const rightsConfirmedForRequest = providerRightsConfirmed || options?.rightsAlreadyConfirmed === true;
@@ -6124,9 +6134,8 @@ function LightchainMaterialWorkbenchSession() {
       {isPrinting && (
         <div
           data-testid="lightchain-print-parity-view"
-          className="relative min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6 lg:pl-28"
+          className="relative min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
         >
-          <LightchainMaterialSourceRail active="graphics" />
           <div className="mx-auto max-w-[1680px]">
             {printInputStorageError && <p role="alert" data-testid="print-input-storage-error" className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">{printInputStorageError}</p>}
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
@@ -6284,33 +6293,17 @@ function LightchainMaterialWorkbenchSession() {
                   </details>
                 )}
 
-                {!providerRightsConfirmed ? (
-                  <button
-                    type="button"
-                    data-testid="lightchain-print-generate"
-                    onClick={() => {
-                      pendingRightsGenerationRef.current = true;
-                      setRightsConfirmationDraft(false);
-                      setRightsConfirmationOpen(true);
-                    }}
-                    disabled={isGenerating}
-                    className="w-full rounded-xl bg-[#343a3d] px-4 py-3 text-sm font-semibold text-white/65 transition hover:bg-[#40484c] hover:text-white disabled:cursor-wait disabled:opacity-50"
-                  >
-                    権利を確認してAI生成
-                  </button>
-                ) : (
-                  <Button
-                    data-testid="lightchain-print-generate"
-                    onClick={() => void handleGenerate()}
-                    isLoading={isGenerating}
-                    disabled={isGenerating || !lightchainPrintReady}
-                    className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
-                    size="lg"
-                    leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
-                  >
-                    {isGenerating ? '生成中…' : 'AI生成'}
-                  </Button>
-                )}
+                <Button
+                  data-testid="lightchain-print-generate"
+                  onClick={() => void handleGenerate()}
+                  isLoading={isGenerating}
+                  disabled={isGenerating || !lightchainPrintReady}
+                  className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
+                  size="lg"
+                  leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
+                >
+                  {isGenerating ? '生成中…' : 'AI生成'}
+                </Button>
 
                 {generationError && (
                   <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/25 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-100">
@@ -6412,7 +6405,7 @@ function LightchainMaterialWorkbenchSession() {
           data-testid="lightchain-fabric-parity-view"
           className="relative h-[calc(100vh-50px)] min-h-0 overflow-hidden bg-[#0b1113] px-4 py-4 pl-28 text-white"
         >
-          <LightchainMaterialSourceRail active="design" />
+          <SourceMaterialRail active="design" />
           <div className="h-full w-full">
             <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,596px)_minmax(360px,1fr)]">
 
@@ -6435,69 +6428,79 @@ function LightchainMaterialWorkbenchSession() {
                 ))}
               </nav>
 
-              {fabricDeprecationBannerVisible && (
-                <div
-                  data-testid="lightchain-fabric-deprecation-banner"
-                  className="flex justify-between rounded-lg pl-4 pr-2 py-5 gap-2 bg-linear-to-r from-[#133936] to-[#1A4D48] mt-2 [background:var(--surface-danger)] [&>span]:text-text-primary"
-                >
-                  <span className="text-sm text-text-on-brand-white flex-1 leading-5">
-                    この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
-                    <Link to="/designProduction" className="ml-7 underline text-primary hover:opacity-80" target="_blank">
-                      今すぐ体験
-                    </Link>
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="告知を閉じる"
-                    className="hidden"
-                    onClick={() => setFabricDeprecationBannerVisible(false)}
-                  >
-                    <X className="text-tertiary-foreground text-lg" />
-                  </button>
-                </div>
-              )}
+              <div
+                data-testid="lightchain-fabric-deprecation-banner"
+                className="mt-2 flex h-16 rounded-lg bg-[#5b1f2a] px-4 py-2 text-base leading-6 text-white"
+              >
+                <span className="flex-1">
+                  この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
+                  <Link to="/designProduction" className="ml-7 underline text-primary hover:opacity-80" target="_blank">
+                    今すぐ体験
+                  </Link>
+                </span>
+              </div>
 
               <div className="flex flex-col gap-4">
 
-                <section data-testid="lightchain-fabric-design-input" className="order-1 mt-[6px] rounded-none bg-transparent p-0">
-                  <h6 className="mb-4 text-base font-semibold text-white">モデル/デザイン画像*</h6>
-                  <ImageSelector
-                    label="モデル/デザイン画像"
-                    required
-                    value={fabricDesign}
-                    galleryTitle="素材を選択"
-                    confirmGallerySelection
-                    galleryConfirmLabel="適用"
-                    selectionTestId="fabric-design-selector"
-                    onChange={setFabricDesign}
-                    allowedReferenceTypes={['base']}
-                    defaultReferenceType="base"
-                    platformAssetRole="garment"
-                    lightchainSourceAppearance
-                    sourceDropLabel="参考画像をアップロードしてください"
-                    sourceDropHint="20MB以下の画像アップロードしてください"
-                  />
-                </section>
+                {sourceFabricAdmitted ? (
+                  <>
+                    <section data-testid="lightchain-fabric-design-input" className="order-1 mt-[6px] rounded-none bg-transparent p-0">
+                      <h6 className="mb-4 text-base font-semibold text-white">モデル/デザイン画像*</h6>
+                      <ImageSelector
+                        label="モデル/デザイン画像"
+                        required
+                        value={fabricDesign}
+                        galleryTitle="素材を選択"
+                        confirmGallerySelection
+                        galleryConfirmLabel="適用"
+                        selectionTestId="fabric-design-selector"
+                        onChange={setFabricDesign}
+                        allowedReferenceTypes={['base']}
+                        defaultReferenceType="base"
+                        platformAssetRole="garment"
+                        lightchainSourceAppearance
+                        sourceDropLabel="参考画像をアップロードしてください"
+                        sourceDropHint="20MB以下の画像アップロードしてください"
+                      />
+                    </section>
 
-                <section data-testid="lightchain-fabric-input" className="order-2 rounded-none bg-transparent p-0">
-                  <h6 className="mb-1 text-base font-semibold text-white">生地画像*</h6>
-                  <ImageSelector
-                    label="生地画像"
-                    required
-                    value={fabricBase}
-                    galleryTitle="素材を選択"
-                    confirmGallerySelection
-                    galleryConfirmLabel="適用"
-                    selectionTestId="fabric-base-selector"
-                    onChange={setFabricBase}
-                    allowedReferenceTypes={['base']}
-                    defaultReferenceType="base"
-                    platformAssetRole="textile"
-                    lightchainSourceAppearance
-                    sourceDropLabel="参考画像をアップロードしてください"
-                    sourceDropHint="20MB以下の画像アップロードしてください"
-                  />
-                </section>
+                    <section data-testid="lightchain-fabric-input" className="order-2 rounded-none bg-transparent p-0">
+                      <h6 className="mb-1 text-base font-semibold text-white">生地画像*</h6>
+                      <ImageSelector
+                        label="生地画像"
+                        required
+                        value={fabricBase}
+                        galleryTitle="素材を選択"
+                        confirmGallerySelection
+                        galleryConfirmLabel="適用"
+                        selectionTestId="fabric-base-selector"
+                        onChange={setFabricBase}
+                        allowedReferenceTypes={['base']}
+                        defaultReferenceType="base"
+                        platformAssetRole="textile"
+                        lightchainSourceAppearance
+                        sourceDropLabel="参考画像をアップロードしてください"
+                        sourceDropHint="20MB以下の画像アップロードしてください"
+                      />
+                    </section>
+                  </>
+                ) : (
+                  <section
+                    data-testid="lightchain-fabric-access-denied"
+                    className="order-1 mt-[6px] rounded-none bg-transparent p-0"
+                  >
+                    <h6 className="mb-4 text-base font-semibold text-white">モデル/デザイン画像*</h6>
+                    <button
+                      type="button"
+                      disabled
+                      aria-label="権限がありません"
+                      data-testid="lightchain-fabric-permission"
+                      className="mt-1 inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      権限がありません
+                    </button>
+                  </section>
+                )}
 
                 <section className="order-3 -mt-[9px] block rounded-xl border border-white/10 bg-[#202629] p-3">
                   <h6 className="text-sm font-semibold text-white">キーワードを追加してください（任意）</h6>
@@ -6531,16 +6534,16 @@ function LightchainMaterialWorkbenchSession() {
                     className="absolute left-0 top-[23px] h-[42px] w-[202px] rounded-md border border-white/10 bg-[#111719] px-3 text-sm text-white outline-none focus:border-cyan-300/50"
                   >
                     <option>画像比率自動</option>
-                    <option>正方形 1:1</option>
-                    <option>縦長 4:5</option>
-                    <option>横長 16:9</option>
                   </select>
-                  {!providerRightsConfirmed ? (
-                    <PermissionLockedButton
-                      testId="lightchain-fabric-generate"
-                      marginClass="absolute right-0 top-[25px]"
-                      className="h-[40px] w-[288px] rounded-md px-4"
-                    />
+                  {sourceFabricGenerationDenied ? (
+                    <button
+                      type="button"
+                      aria-label="権限がありません"
+                      data-testid="lightchain-fabric-permission"
+                      className="absolute right-0 top-[25px] inline-flex h-[40px] w-[288px] items-center justify-center rounded-lg bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs transition-all hover:brightness-105"
+                    >
+                      権限がありません
+                    </button>
                   ) : (
                     <Button
                       data-testid="lightchain-fabric-generate"
@@ -6656,59 +6659,6 @@ function LightchainMaterialWorkbenchSession() {
           </div>
           </div>
       )}
-
-      <Modal
-        isOpen={rightsConfirmationOpen}
-        onClose={() => {
-          pendingRightsGenerationRef.current = false;
-          setRightsConfirmationDraft(false);
-          setRightsConfirmationOpen(false);
-        }}
-        title="権利確認"
-        size="md"
-        footer={(
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                pendingRightsGenerationRef.current = false;
-                setRightsConfirmationDraft(false);
-                setRightsConfirmationOpen(false);
-              }}
-            >
-              キャンセル
-            </Button>
-            <Button
-              onClick={() => {
-                const pending = pendingRightsGenerationRef.current;
-                pendingRightsGenerationRef.current = false;
-                setProviderRightsConfirmed(true);
-                setRightsConfirmationDraft(false);
-                setRightsConfirmationOpen(false);
-                if (pending) void handleGenerate({ rightsAlreadyConfirmed: true });
-              }}
-              disabled={!rightsConfirmationDraft}
-            >
-              確認して続ける
-            </Button>
-          </div>
-        )}
-      >
-        <div data-testid="lightchain-material-rights-confirmation" className="space-y-4">
-          <p className="text-sm leading-6 text-neutral-600 dark:text-white/70">
-            AI生成へ進む前に、アップロードした画像・生地・プリント素材を利用する権利があることを確認してください。
-          </p>
-          <label className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4 text-sm leading-6 dark:border-white/10">
-            <input
-              type="checkbox"
-              checked={rightsConfirmationDraft}
-              onChange={(event) => setRightsConfirmationDraft(event.target.checked)}
-              className="mt-1 h-4 w-4 shrink-0 accent-cyan-500"
-            />
-            <span>入力素材の利用権限を確認しました。確認後、AIプロバイダーへ送信して生成します。</span>
-          </label>
-        </div>
-      </Modal>
 
       <Modal
         isOpen={favoriteTargetResult !== null && (!favoriteTargetResult.id.startsWith('print-') || canDisplayPrintHistory)}

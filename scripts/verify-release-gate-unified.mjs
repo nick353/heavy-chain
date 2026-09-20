@@ -3,6 +3,8 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { verifyScaleOpsEvidence } from './cloudflare-scale-ops-evidence.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const capturedAt = new Date();
@@ -11,6 +13,19 @@ const allowDirty = Boolean(args.allowDirty || args['allow-dirty']);
 const skipCommands = Boolean(args.skipCommands || args['skip-commands']);
 const maxArtifactAgeHours = Number(args.maxArtifactAgeHours || args['max-artifact-age-hours'] || 48);
 const defaultCommandTimeoutMs = Number(args.commandTimeoutMs || args['command-timeout-ms'] || 10 * 60 * 1000);
+const PRODUCTION_ORIGIN = 'https://heavy-chain-web.nichika2000823.workers.dev';
+const PRODUCTION_API_ORIGIN = 'https://heavy-chain-api.nichika2000823.workers.dev';
+const CURRENT_UI_PAGE_NAMES = Object.freeze(['dashboard', 'generate', 'fitting', 'marketing', 'studio', 'models', 'patterns', 'video', 'lab', 'gallery', 'history', 'jobs', 'canvas', 'brand-settings']);
+const CURRENT_UI_VIEWPORT_NAMES = Object.freeze(['desktop', 'mobile']);
+const LIGHTCHAIN_VIDEO_ROW_IDS = new Set(['video-workstation', 'video-detail']);
+const LIGHTCHAIN_VIDEO_ROUTE_RESULT_IDS = Object.freeze([
+  'desktop-video-dashboard',
+  'desktop-video-detail',
+  'mobile-video-dashboard',
+  'mobile-video-detail',
+]);
+const currentLightchainManifest = readCurrentLightchainManifest();
+let report;
 
 const REQUIRED_G608_REQUIREMENT_IDS = [
   'logged_in_production_ui',
@@ -23,15 +38,19 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 
 const requiredReadbacks = [
   {
-    name: 'production monitor',
-    path: 'output/playwright/g835-production-monitor-current-r1/summary.json',
-    validate: (json) =>
-      json.ok === true &&
-      arrayFrom(json.blockers).length === 0 &&
-      Number(json.summary?.blockers ?? 0) === 0 &&
-      json.summary?.uiOk === true &&
-      !arrayFrom(json.warnings).some((warning) => warning?.code === 'ui_probe_skipped'),
-    expect: 'ok=true, blockers=[], summary.blockers=0, uiOk=true, and UI probe not skipped',
+    name: 'Companion authenticated production UI evidence',
+    path: 'work/heavy-chain-companion-authenticated-evidence-20260912.json',
+    validate: validateCompanionAuthenticatedEvidence,
+    expect: 'fresh Companion same-session production evidence for /model, /gallery, /history, /jobs, and /canvas/new with semantic+visual readback and no exported auth secret',
+  },
+  {
+    name: 'production monitor and UI pair',
+    pair: {
+      monitor: 'output/playwright/g835-production-monitor-current-r1/summary.json',
+      ui: 'output/playwright/g835-production-ui-current-r1/summary.json',
+    },
+    validate: validateProductionMonitorReleasePair,
+    expect: 'API-only production-monitor.v2 plus fresh authenticated production UI v2, exact origin, zero failures, cleanup, and matching nonempty runId',
   },
   {
     name: 'launch operations',
@@ -45,8 +64,8 @@ const requiredReadbacks = [
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
-      Number(json.routeCount || 0) >= 17 &&
-      arrayFrom(json.routes).length >= 17 &&
+      Number(json.routeCount || 0) >= 16 &&
+      arrayFrom(json.routes).length >= 16 &&
       arrayFrom(json.mobile).length >= 8 &&
       json.cleanup?.contextClosed === true &&
       json.cleanup?.browserClosed === true &&
@@ -57,8 +76,8 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'mobile-gallery', 'meaningful_page_content') &&
       hasRouteAssertion(json, 'gallery', 'gallery_no_scary_remote_failure_toast') &&
       hasRouteAssertion(json, 'mobile-gallery', 'gallery_no_scary_remote_failure_toast') &&
-      hasRouteAssertion(json, 'generate-campaign', 'h601_rights_confirmation_visible') &&
-      hasRouteAssertion(json, 'mobile-generate-campaign', 'h601_rights_confirmation_visible') &&
+      hasRouteAssertion(json, 'generate-campaign', 'lightchain_permission_surface_visible') &&
+      hasRouteAssertion(json, 'mobile-generate-campaign', 'lightchain_permission_surface_visible') &&
       routeAssertionDetailsIncludes(json, 'generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'で生成') &&
       routeAssertionDetailsIncludes(json, 'mobile-generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'で生成') &&
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons') &&
@@ -88,7 +107,6 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'studio', 'studio_preview_has_composition_context') &&
       hasRouteAssertion(json, 'lab', 'lab_workspace_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'lab', 'lab_preview_has_evaluation_context') &&
-      hasRouteAssertion(json, 'credits', 'credits_has_actionable_workspace_panel') &&
       hasRouteAssertion(json, 'history', 'history_has_reuse_action_panel') &&
       hasRouteAssertion(json, 'history', 'desktop_history_timeline_is_bounded') &&
       hasRouteAssertion(json, 'mobile-history', 'history_has_reuse_action_panel') &&
@@ -97,31 +115,17 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_category_cards_open_real_feature_routes') &&
       hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
-    expect: 'current production mass-market QA ok=true with 17 desktop routes, 9 mobile routes including mobile History, Gallery fallback visible without scary remote-failure toast, H601-ready generation route, Dashboard recent images without broken placeholders, Brand Settings removed readiness blocks hidden, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix context when preview is visible, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard old quick start and next action hidden by design, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, compact mobile Lightchain category entry with real feature links, bounded mobile Jobs list, mobile Canvas content fit on open, no console/page/request failures, and cleanup closed',
+    expect: 'current production mass-market QA ok=true with 16 desktop routes, 9 mobile routes including mobile History, Gallery fallback visible without scary remote-failure toast, H601-ready generation route, Dashboard recent images without broken placeholders, Brand Settings removed readiness blocks hidden, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix context when preview is visible, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard old quick start and next action hidden by design, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, compact mobile Lightchain category entry with real feature links, bounded mobile Jobs list, mobile Canvas content fit on open, no console/page/request failures, and cleanup closed',
   },
   {
     name: 'production Lightchain all-feature order previews',
-    path: 'output/playwright/g831-prod-lightchain-all-features-current-r1/SUMMARY.json',
-    validate: (json) =>
-      json.ok === true &&
-      arrayFrom(json.failed).length === 0 &&
-      Number(json.featureCount || 0) >= 33 &&
-      arrayFrom(json.featureResults).length >= 33 &&
-      arrayFrom(json.assertions).filter((assertion) =>
-        String(assertion?.id ?? '').includes('workspace_artifact_preview_is_tool_specific_order_sheet') &&
-        assertion?.ok === true
-      ).length >= 31 &&
-      json.cleanup?.contextClosed === true &&
-      json.cleanup?.browserClosed === true &&
-      json.cleanup?.previewStopped === true &&
-      arrayFrom(json.consoleMessages).length === 0 &&
-      arrayFrom(json.pageErrors).length === 0 &&
-      arrayFrom(json.requestFailures).length === 0,
-    expect: 'production Lightchain all-feature workflow ok=true with 33 features, current tool-specific order-sheet preview assertions, no console/page/request failures, and cleanup closed',
+    latestSummaryPrefix: 'g831-prod-lightchain-all-features-current-',
+    validate: (json) => validateLightchainProductionReadback(json, currentLightchainManifest),
+    expect: `current-manifest production Lightchain workflow ok=true for ${currentLightchainManifest.length} features, either as exact feature rows or 31 non-video rows plus four unique video route readbacks, with passing desktop/mobile assertions, no console/page/request failures, and cleanup closed`,
   },
   {
     name: 'G610 retention workspace search',
-    path: 'output/playwright/g830-g610-retention-current-r1/SUMMARY.json',
+    path: 'output/playwright/g610-retention-project-search-current-20260910-r3/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -134,13 +138,13 @@ const requiredReadbacks = [
   },
   {
     name: 'G603 garment Canvas',
-    path: 'output/playwright/g830-g603-garment-canvas-current-r1/SUMMARY.json',
+    path: 'output/playwright/g603-garment-layer-canvas-20260909T224537Z/SUMMARY.json',
     validate: (json) => json.ok === true && arrayFrom(json.failed).length === 0,
     expect: 'ok=true and failed=[]',
   },
   {
     name: 'G605 onboarding templates',
-    path: 'output/playwright/g830-g605-onboarding-current-r2/SUMMARY.json',
+    path: 'output/playwright/g605-onboarding-templates-20260909T225306Z/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -186,15 +190,15 @@ const requiredReadbacks = [
   },
   {
     name: 'G618 scale ops baseline',
-    path: 'output/playwright/g764-g618-scale-ops-r1/summary.json',
+    path: 'output/playwright/10m-product-readiness-g618/summary.json',
     validate: validateG618ScaleOps,
-    expect: 'ok=true, blockers=[], expected schema, commands/checks passed, imageCount>=1200, canvasObjectCount>=600, monitor/performance nested artifacts valid, and only allowed monitor warnings',
+    expect: 'ok=true, blockers=[], v2 schema, explicit monitor expectations, commands/checks passed, imageCount>=1200, canvasObjectCount>=600, nested performance and production-monitor v2 evidence valid, and no unresolved warnings',
   },
   {
     name: 'G620 security operations',
     path: 'output/playwright/g764-g620-security-ops-r1/summary.json',
     validate: validateG620SecurityOps,
-    expect: 'ok=true, current v2 static security schema, no retired-provider references, and no irreversible actions touched',
+    expect: 'ok=true, current v3 static Cloudflare security schema, no retired-provider references, all required checks passed, and no irreversible actions touched',
   },
   {
     name: 'G632 incident response drill',
@@ -229,17 +233,16 @@ const requiredReadbacks = [
     validate: (json) =>
       json.ok === true &&
       hasPassingAssertion(json, 'generate_route_loaded') &&
-      hasPassingAssertion(json, 'h601_rights_label_visible') &&
-      hasPassingAssertion(json, 'h601_commercial_caveat_visible') &&
-      hasPassingAssertion(json, 'rights_checkbox_exists'),
-    expect: 'production authenticated /generate shows H601 rights label, commercial caveat, and rights checkbox',
+      hasPassingAssertion(json, 'h601_permission_surface_visible') &&
+      hasPassingAssertion(json, 'rights_checkbox_absent'),
+    expect: 'production authenticated /generate exposes the Light permission surface and no rights checkbox',
   },
   {
     name: 'production chosen public entrypoint readback',
     path: 'output/playwright/g835-chosen-public-entrypoint-readback-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
-      json.urls?.chosenPublicEntrypoint === 'https://heavy-chain.zeabur.app' &&
+      json.urls?.chosenPublicEntrypoint === 'https://heavy-chain-web.nichika2000823.workers.dev' &&
       json.findings?.chosenPublicEntrypoint?.reachable === true &&
       Number(json.findings?.chosenPublicEntrypoint?.status || 0) >= 200 &&
       Number(json.findings?.chosenPublicEntrypoint?.status || 0) < 300 &&
@@ -247,7 +250,7 @@ const requiredReadbacks = [
       json.safetyBoundaries?.generationSubmit === 'not_clicked' &&
       json.safetyBoundaries?.billingCheckoutPayment === 'not_touched' &&
       json.safetyBoundaries?.externalPublish === 'not_touched',
-    expect: 'chosen public entrypoint https://heavy-chain.zeabur.app is reachable without submit/payment/publish actions',
+    expect: 'chosen public entrypoint https://heavy-chain-web.nichika2000823.workers.dev is reachable without submit/payment/publish actions',
   },
   {
     name: 'production H602 billing completion readback',
@@ -335,7 +338,7 @@ const commandChecks = [
   {
     name: 'node syntax: H602 billing verifier',
     command: 'node',
-    args: ['--check', 'scripts/verify-h602-billing-readiness.mjs'],
+    args: ['--check', 'scripts/verify-h602-cloudflare-billing-readiness.mjs'],
   },
   {
     name: 'security audit',
@@ -394,7 +397,8 @@ const commandChecks = [
   },
 ];
 
-const report = {
+function runReleaseGate() {
+report = {
   schema: 'heavy-chain.release-gate-unified.v1',
   capturedAt: capturedAt.toISOString(),
   mode: skipCommands
@@ -436,7 +440,7 @@ if (!allowDirty) {
 }
 
 for (const item of requiredReadbacks) {
-  report.readbacks.push(readbackCheck(item));
+    report.readbacks.push(item.pair ? readbackPairCheck(item) : readbackCheck(item));
 }
 
 if (!skipCommands) {
@@ -467,6 +471,7 @@ fs.writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
 
 console.log(JSON.stringify({ ok: report.ok, outPath, failed: report.failed }, null, 2));
 process.exit(report.ok ? 0 : 1);
+}
 
 function checkGitClean() {
   const result = spawnSync('git', ['status', '--short'], {
@@ -521,6 +526,150 @@ function readbackCheck(item) {
   }
 
   return entry;
+}
+
+function readbackPairCheck(item) {
+  const entry = { name: item.name, path: item.pair, expected: item.expect, passed: false };
+  try {
+    const artifacts = Object.fromEntries(Object.entries(item.pair).map(([key, artifactPath]) => {
+      const raw = fs.readFileSync(artifactPath, 'utf8');
+      const stat = fs.statSync(artifactPath);
+      const json = JSON.parse(raw);
+      return [key, { json, freshness: artifactFreshness(artifactPath, json, stat) }];
+    }));
+    entry.freshness = Object.fromEntries(Object.entries(artifacts).map(([key, value]) => [key, value.freshness]));
+    entry.safeSummary = Object.fromEntries(Object.entries(artifacts).map(([key, value]) => [key, summarizeJson(value.json)]));
+    entry.passed = item.validate(artifacts.monitor.json, artifacts.ui.json, { now: capturedAt, maxArtifactAgeHours }) && Object.values(artifacts).every((value) => value.freshness.passed);
+    if (!entry.passed) entry.next = 'Refresh both same-run production monitor and UI artifacts; do not reuse or synthesize either artifact.';
+  } catch (error) {
+    entry.error = error.message;
+    entry.next = `Create both ${item.pair.monitor} and ${item.pair.ui}; expected ${item.expect}.`;
+  }
+  return entry;
+}
+
+function freshTimestamp(value, options = {}) {
+  const timestamp = Date.parse(value);
+  const now = options.now instanceof Date ? options.now.getTime() : Date.now();
+  const maxAgeMs = Number(options.maxArtifactAgeHours ?? 48) * 3600000;
+  return Number.isFinite(timestamp) && timestamp <= now && now - timestamp <= maxAgeMs;
+}
+
+export function validateProductionMonitorReleasePair(monitor, ui, options = {}) {
+  const empty = value => Array.isArray(value) && value.length === 0;
+  const id = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value);
+  const nonnegative = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  const zeroCount = value => Number.isSafeInteger(value) && value === 0;
+  const usageFields = ['plannedImages', 'completedImages', 'runningImages', 'uncertainImages',
+    'attemptedImages', 'unknownEstimateCount', 'estimatedMicroUSD', 'estimatedNeurons',
+    'averageInferenceMs', 'remainingUnits', 'monthlyQuota'];
+  const coverage = monitor?.coverage;
+  const generation = monitor?.sections?.generation;
+  const usage = monitor?.sections?.usage;
+  const storage = monitor?.sections?.storage;
+  const counts = generation?.counts;
+  const thresholds = monitor?.thresholds;
+  const window = monitor?.window;
+  const countValuesValid = counts && typeof counts === 'object' && !Array.isArray(counts) &&
+    Object.entries(counts).every(([name, value]) =>
+      ['pending', 'processing', 'queued', 'running', 'completed', 'failed', 'cancelled'].includes(name) &&
+      Number.isInteger(value) && value >= 0,
+    );
+  const observedJobCount = countValuesValid ? Object.values(counts).reduce((sum, value) => sum + value, 0) : -1;
+  const monitorShapeValid =
+    monitor?.baseUrl === PRODUCTION_API_ORIGIN && monitor?.mode === 'cloudflare_authenticated_read_only' &&
+    freshTimestamp(monitor?.capturedAt, options) && id(monitor?.brandId) &&
+    Array.isArray(monitor?.blockers) && Array.isArray(monitor?.warnings) &&
+    Number.isFinite(window?.hours) && window.hours >= 1 && Number.isFinite(window?.staleMinutes) && window.staleMinutes >= 1 &&
+    Number.isFinite(thresholds?.maxFailureRate) && thresholds.maxFailureRate >= 0 && thresholds.maxFailureRate <= 1 &&
+    Number.isInteger(thresholds?.maxRows) && thresholds.maxRows >= 100 &&
+    Number.isInteger(thresholds?.sampleSize) && thresholds.sampleSize >= 1 &&
+    Number.isInteger(thresholds?.maxFailedJobs) && thresholds.maxFailedJobs >= 0 &&
+    Number.isInteger(thresholds?.maxStaleActiveJobs) && thresholds.maxStaleActiveJobs >= 0 &&
+    Number.isInteger(thresholds?.maxStorageErrors) && thresholds.maxStorageErrors >= 0 &&
+    coverage?.jobs === 'current_principal_and_brand' &&
+    coverage?.media === 'current_principal_recent_sample' &&
+    coverage?.usage === 'authorized_brand_current_month' &&
+    coverage?.ui === 'not_checked' && coverage?.cpu === 'not_measured' &&
+    coverage?.providerBilling === 'not_available' && coverage?.businessCompletion === 'not_verified' &&
+    coverage?.pagination === 'bounded_nontransactional_observation' &&
+    monitor?.sections?.api?.status === 'ok' && monitor.sections.api.media === 'private-r2' &&
+    Number.isInteger(generation?.total) && generation.total > 0 &&
+    countValuesValid && generation.total === observedJobCount &&
+    Number.isInteger(generation?.terminal) && generation.terminal >= 0 &&
+    Number.isInteger(generation?.failed) && generation.failed >= 0 &&
+    generation.terminal === (counts.completed ?? 0) + (counts.failed ?? 0) &&
+    Array.isArray(generation?.failedJobIds) && generation.failedJobIds.every(id) &&
+    Array.isArray(generation?.staleJobIds) && generation.staleJobIds.every(id) &&
+    Array.isArray(storage?.checks) && storage.checks.length > 0 &&
+    Number.isInteger(storage?.checkedImages) && storage.checkedImages === storage.checks.length &&
+    Number.isInteger(storage?.readable) && storage.readable === storage.checks.length &&
+    Number.isInteger(storage?.errors) && storage.errors === 0 && storage.checks.every(check =>
+      id(check?.imageId) && check?.ok === true && Number.isInteger(check?.bytes) && check.bytes > 0 &&
+      /^[a-f0-9]{64}$/.test(check?.sha256 || '') && check?.checksumVerified === true,
+    ) &&
+    Number.isInteger(generation?.staleActive) && generation.staleActive >= 0 &&
+    usage?.scope === 'authorized_brand_current_month' && usage.billing === 'estimate_not_invoice' &&
+    usage.imageAIEnabled === true && usageFields.every(field => nonnegative(usage[field])) &&
+    Number.isInteger(storage?.totalRecentImages) && storage.totalRecentImages >= storage.checkedImages;
+  const now = options.now instanceof Date ? options.now.getTime() : Date.now();
+  const maxAgeMs = Number(options.maxArtifactAgeHours ?? 48) * 3600000;
+  const fresh = value => freshTimestamp(value, { now: new Date(now), maxArtifactAgeHours: maxAgeMs / 3600000 });
+  const runId = monitor?.runId;
+  const auth = ui?.authEvidence;
+  const authPath = String(auth?.statePath || ui?.storageState || '');
+  const localProof = /local-proof-jwt|localhost|127\.0\.0\.1/i.test(authPath);
+  const results = arrayFrom(ui?.results);
+  return fresh(monitor?.capturedAt) && fresh(ui?.finishedAt) && monitorShapeValid &&
+    monitor?.schema === 'heavy-chain.production-monitor.v2' && monitor.ok === true &&
+    monitor.coverage?.ui === 'not_checked' && empty(monitor.blockers) &&
+    !Object.hasOwn(monitor, 'summary') && !Object.hasOwn(monitor, 'uiOk') &&
+    !arrayFrom(monitor.warnings).some((warning) => warning?.code === 'ui_probe_skipped') &&
+    id(runId) &&
+    ui?.schema === 'heavy-chain.lightchain-production-ui.v2' && ui.mode === 'production' && ui.baseUrl === PRODUCTION_ORIGIN &&
+    ui.targetOrigin?.origin === PRODUCTION_ORIGIN && ui.targetOrigin?.bound === true && ui.preflight?.ok === true &&
+    auth?.source === 'explicit_env' && auth.supplied === true && auth.statePathExists === true && !localProof &&
+    ui.storageState === auth.statePath && ui.runId === runId &&
+    Array.isArray(ui.pages) && ui.pages.length === CURRENT_UI_PAGE_NAMES.length &&
+    ui.pages.map((page) => page?.name).every((name, index) => name === CURRENT_UI_PAGE_NAMES[index]) &&
+    Array.isArray(ui.viewports) && ui.viewports.length === CURRENT_UI_VIEWPORT_NAMES.length &&
+    ui.viewports.map((viewport) => viewport?.name).every((name, index) => name === CURRENT_UI_VIEWPORT_NAMES[index]) &&
+    ui.completion?.status === 'verified_read_only' && ui.completion?.externalActionsStarted === false &&
+    ui.fatalRunnerError === null && ui.failureCount === 0 && ui.resultCount === results.length && results.length === 28 &&
+    new Set(results.map((result) => `${result?.viewport}/${result?.page}`)).size === results.length &&
+    results.every((result) => CURRENT_UI_VIEWPORT_NAMES.includes(result?.viewport) && CURRENT_UI_PAGE_NAMES.includes(result?.page)) &&
+    CURRENT_UI_VIEWPORT_NAMES.every((viewport) => CURRENT_UI_PAGE_NAMES.every((page) => results.some((result) => result.viewport === viewport && result.page === page))) &&
+    results.every((result) => result?.passed === true && result.redirectedToLogin === false &&
+      zeroCount(result.consoleErrorCount) && zeroCount(result.pageErrorCount) &&
+      zeroCount(result.requestFailureCount) &&
+      empty(result.missingText) && empty(result.legacyViolations)) &&
+    empty(ui.consoleMessages) && empty(ui.pageErrors) && empty(ui.requestFailures) &&
+    empty(ui.legacyViolations) && ui.cleanup?.contextClosed === true && ui.cleanup?.browserClosed === true;
+}
+
+export function validateCompanionAuthenticatedEvidence(evidence) {
+  const expectedOrigin = PRODUCTION_ORIGIN;
+  const expectedRoutes = ['/model', '/gallery', '/history', '/jobs', '/canvas/new'];
+  const routes = Array.isArray(evidence?.routes) ? evidence.routes : [];
+  const routeByPath = new Map(routes.map((route) => [route?.path, route]));
+  return evidence?.schema === 'heavy-chain.companion-authenticated-production-evidence.v1' &&
+    evidence?.source === 'aos_chrome_companion_profile_instance' &&
+    typeof evidence?.taskId === 'string' && evidence.taskId.length > 0 &&
+    typeof evidence?.sessionId === 'string' && evidence.sessionId.length > 0 &&
+    Number.isInteger(evidence?.tabId) && evidence.tabId > 0 &&
+    typeof evidence?.generation === 'string' && evidence.generation.length > 0 &&
+    evidence?.origin === expectedOrigin && evidence?.authSecretExported === false &&
+    routes.length === expectedRoutes.length && expectedRoutes.every((routePath) => {
+      const route = routeByPath.get(routePath);
+      return route?.readyState === 'complete' &&
+        ['avatar', 'canvas-save'].includes(route?.authMarker) &&
+        route?.semanticReadback === 'verified' &&
+        route?.visualReadback === 'verified' &&
+        Array.isArray(route?.routeMarkers) && route.routeMarkers.length > 0;
+    }) &&
+    evidence?.businessCompletion?.providerReceipt === 'unverified' &&
+    evidence?.businessCompletion?.sourceSync === 'unverified' &&
+    evidence?.businessCompletion?.reconciliation === 'unverified';
 }
 
 function resolveReadbackPath(item) {
@@ -629,21 +778,55 @@ function summarizeJson(json) {
   };
 }
 
-function validateG618ScaleOps(json) {
+export function validateG618ScaleOps(json, now = Date.now()) {
+  const checks = arrayFrom(json?.checks);
+  const commands = arrayFrom(json?.commands);
+  const thresholds = json?.thresholds || {};
+  const monitorExpectations = json?.monitorExpectations;
+  const requiredLocalChecks = [
+    'performance summary readable',
+    'production monitor summary readable',
+    'production readback window covers G618 baseline',
+    'local scale fixture size',
+    'local scale performance passed',
+    'local route SLO',
+    'gallery virtualization guard',
+    'canvas object readback',
+    'preview cleanup proof',
+  ];
+  const requiredUnverified = [
+    'production_concurrent_load',
+    'worker_cpu',
+    'provider_invoice',
+    'fleet_wide_slo',
+    'browser_business_workflow',
+  ];
   if (
-    json.schema !== 'heavy-chain.g618.scale-ops-baseline.v1' ||
+    json?.schema !== 'heavy-chain.g618.scale-ops-baseline.v2' ||
     json.ok !== true ||
     arrayFrom(json.blockers).length !== 0 ||
-    Number(json.summary?.checks || 0) !== 16 ||
-    Number(json.summary?.imageCount || 0) < 1200 ||
-    Number(json.summary?.canvasObjectCount || 0) < 600 ||
-    Number(json.thresholds?.maxFailureRate ?? -1) !== 0 ||
-    Number(json.thresholds?.productionReadbackWindowHours || 0) < 96 ||
-    Number(json.thresholds?.minStorageImages || 0) < 4 ||
+    json.businessCompletion !== 'not_verified' ||
+    !Array.isArray(json.unverified) ||
+    !requiredUnverified.every((item) => json.unverified.includes(item)) ||
+    Number(json.summary?.checks ?? -1) !== checks.length ||
+    Number(json.summary?.commands ?? -1) !== commands.length ||
+    Number(json.summary?.imageCount ?? 0) < 1200 ||
+    Number(json.summary?.canvasObjectCount ?? 0) < 600 ||
+    Number(thresholds.maxFailureRate ?? -1) !== 0 ||
+    Number(thresholds.productionReadbackWindowHours ?? 0) < 96 ||
+    Number(thresholds.minStorageImages ?? 0) < 4 ||
     json.summary?.performanceOk !== true ||
     json.summary?.monitorOk !== true ||
-    !arrayFrom(json.commands).every((command) => command?.passed === true) ||
-    !arrayFrom(json.checks).every((check) => check?.passed === true)
+    !commands.length ||
+    !commands.every((command) => command?.passed === true) ||
+    !checks.length ||
+    !checks.every((check) => check?.passed === true) ||
+    !requiredLocalChecks.every((name) => checks.some((check) => check?.name === name && check?.passed === true)) ||
+    !monitorExpectations ||
+    monitorExpectations.source !== 'explicit_cli_or_environment' ||
+    monitorExpectations.windowHours !== thresholds.productionReadbackWindowHours ||
+    monitorExpectations.maxFailureRate !== thresholds.maxFailureRate ||
+    monitorExpectations.minStorageImages !== thresholds.minStorageImages
   ) {
     return false;
   }
@@ -659,26 +842,29 @@ function validateG618ScaleOps(json) {
 
   const performancePath = json.artifacts?.performanceSummary;
   const monitorPath = json.artifacts?.productionMonitorSummary;
-  if (!performancePath || !monitorPath || !fs.existsSync(performancePath) || !fs.existsSync(monitorPath)) return false;
+  if (typeof performancePath !== 'string' || typeof monitorPath !== 'string') return false;
+  const performanceFile = path.resolve(process.cwd(), performancePath);
+  const monitorFile = path.resolve(process.cwd(), monitorPath);
+  if (!fs.existsSync(performanceFile) || !fs.existsSync(monitorFile)) return false;
 
-  const performance = JSON.parse(fs.readFileSync(performancePath, 'utf8'));
-  const monitor = JSON.parse(fs.readFileSync(monitorPath, 'utf8'));
-  const monitorWarningCodes = arrayFrom(monitor.warnings).map((warning) => warning?.code).filter(Boolean).sort();
-  const allowedMonitorWarnings = new Set([
-    'edge_function_failures_seen',
-    'usage_event_failures_seen',
-    'local_worker_inbox_stale_files',
-    'ui_probe_skipped',
-  ]);
-  const warningsAllowed = monitorWarningCodes.every((code) => allowedMonitorWarnings.has(code));
-  const edgeFailures = arrayFrom(monitor.sections?.edgeFunctions?.recentFailures);
-  const knownProbeEdgeFailures = edgeFailures.filter(isKnownG618ProbeFailure);
-  const knownProbeUsageRequestIds = new Set(knownProbeEdgeFailures.map((failure) => failure?.requestId).filter(Boolean));
-  const usageFailures = arrayFrom(monitor.sections?.usage?.recentFailures);
-  const usageFailuresAccountedFor = usageFailures.every((failure) => knownProbeUsageRequestIds.has(failure?.requestId));
-  const edgeFailuresAccountedFor =
-    Number(monitor.sections?.edgeFunctions?.failed ?? 0) === 0 ||
-    knownProbeEdgeFailures.length === Number(monitor.sections?.edgeFunctions?.failed ?? 0);
+  let performance;
+  let monitor;
+  try {
+    performance = JSON.parse(fs.readFileSync(performanceFile, 'utf8'));
+    monitor = JSON.parse(fs.readFileSync(monitorFile, 'utf8'));
+  } catch {
+    return false;
+  }
+
+  const monitorChecks = verifyScaleOpsEvidence(monitor, monitorExpectations, now);
+  if (!monitorChecks.length || !monitorChecks.every((check) => check?.passed === true)) return false;
+  if (
+    monitor.thresholds?.maxFailureRate !== monitorExpectations.maxFailureRate ||
+    monitor.thresholds?.maxFailedJobs !== 0 ||
+    monitor.thresholds?.maxStaleActiveJobs !== 0 ||
+    monitor.thresholds?.maxStorageErrors !== 0 ||
+    Number(monitor.thresholds?.sampleSize ?? 0) < monitorExpectations.minStorageImages
+  ) return false;
 
   return (
     performance.ok === true &&
@@ -692,38 +878,114 @@ function validateG618ScaleOps(json) {
     Number(performance.canvasStress?.export?.height || 0) > 8000 &&
     Number(performance.canvasStress?.export?.edgeColorSamples?.top || 0) > 20 &&
     Number(performance.canvasStress?.export?.edgeColorSamples?.bottom || 0) > 20 &&
-    performance.cleanup?.previewProcessCleanup?.groupAliveAfter === false &&
-    monitor.schema === 'heavy-chain.production-monitor.v1' &&
-    monitor.ok === true &&
-    Number(monitor.window?.hours || 0) >= 96 &&
-    arrayFrom(monitor.blockers).length === 0 &&
-    warningsAllowed &&
-    Number(monitor.sections?.generation?.failureRate ?? 0) === 0 &&
-    Number(monitor.sections?.generation?.staleActive ?? 0) === 0 &&
-    Number(monitor.sections?.storage?.checkedImages ?? 0) >= 4 &&
-    Number(monitor.sections?.storage?.signedUrlOk ?? 0) === Number(monitor.sections?.storage?.checkedImages ?? 0) &&
-    Number(monitor.sections?.storage?.errors ?? 0) === 0 &&
-    (Number(monitor.sections?.usage?.failed ?? 0) === 0 || usageFailuresAccountedFor) &&
-    Number(monitor.sections?.usage?.staleReserved ?? 0) === 0 &&
-    edgeFailuresAccountedFor &&
-    Number(monitor.sections?.edgeFunctions?.staleStarted ?? 0) === 0
+    performance.cleanup?.previewProcessCleanup?.groupAliveAfter === false
   );
 }
 
-function isKnownG618ProbeFailure(failure) {
-  const message = String(failure?.errorMessage || '');
+export function validateLightchainProductionReadback(json, manifest = currentLightchainManifest) {
+  const featureResults = arrayFrom(json?.featureResults);
+  const videoResults = arrayFrom(json?.videoResults);
+  const assertions = arrayFrom(json?.assertions);
+  const manifestIds = Array.isArray(manifest) ? manifest.map((id) => String(id)) : [];
+  const nonVideoManifestIds = manifestIds.filter((id) => !LIGHTCHAIN_VIDEO_ROW_IDS.has(id));
+  const resultIds = featureResults.map((result) => result?.id);
+  const resultIdSet = new Set(resultIds);
+  const manifestIdSet = new Set(manifestIds);
+  const nonVideoManifestIdSet = new Set(nonVideoManifestIds);
+  const exactManifestOrder = resultIds.length === manifestIds.length && resultIds.every((id, index) => id === manifestIds[index]);
+  const exactNonVideoOrder = resultIds.length === nonVideoManifestIds.length && resultIds.every((id, index) => id === nonVideoManifestIds[index]);
+  const currentFeatureAssertionsPass = manifestIds.every((id) =>
+    hasPassingAssertion(json, `${id}:shared_workflow_contract_readback`) &&
+    hasPassingAssertion(json, `${id}:route_loaded_without_login`) &&
+    hasPassingAssertion(json, `mobile_screen:${id}`)
+  );
+  const currentNonVideoFeatureAssertionsPass = nonVideoManifestIds.every((id) =>
+    hasPassingAssertion(json, `${id}:shared_workflow_contract_readback`) &&
+    hasPassingAssertion(json, `${id}:route_loaded_without_login`) &&
+    hasPassingAssertion(json, `mobile_screen:${id}`)
+  );
+  const fullManifestReadback =
+    Number(json.featureCount || 0) === manifestIds.length &&
+    featureResults.length === manifestIds.length &&
+    resultIds.every((id) => typeof id === 'string') &&
+    resultIdSet.size === resultIds.length &&
+    resultIdSet.size === manifestIdSet.size &&
+    manifestIds.every((id) => resultIdSet.has(id)) &&
+    exactManifestOrder &&
+    currentFeatureAssertionsPass;
+  const splitManifestReadback =
+    Number(json.featureCount || 0) === nonVideoManifestIds.length &&
+    featureResults.length === nonVideoManifestIds.length &&
+    resultIds.every((id) => typeof id === 'string') &&
+    resultIdSet.size === resultIds.length &&
+    resultIdSet.size === nonVideoManifestIdSet.size &&
+    nonVideoManifestIds.every((id) => resultIdSet.has(id)) &&
+    exactNonVideoOrder &&
+    currentNonVideoFeatureAssertionsPass &&
+    validateLightchainVideoRouteReadback(videoResults);
+
   return (
-    message.includes('API_KEY_INVALID') ||
-    message.includes('No active subscription for brand')
+    json?.ok === true &&
+    arrayFrom(json.failed).length === 0 &&
+    json.baseUrl === PRODUCTION_ORIGIN &&
+    typeof json.authState === 'string' &&
+    json.authState !== 'local-proof-jwt' &&
+    !json.authState.includes('127.0.0.1') &&
+    (fullManifestReadback || splitManifestReadback) &&
+    assertions.length > 0 &&
+    json.cleanup?.contextClosed === true &&
+    json.cleanup?.browserClosed === true &&
+    json.cleanup?.previewStopped === true &&
+    arrayFrom(json.consoleMessages).length === 0 &&
+    arrayFrom(json.pageErrors).length === 0 &&
+    arrayFrom(json.requestFailures).length === 0
   );
 }
 
-function validateG620SecurityOps(json) {
+function validateLightchainVideoRouteReadback(videoResults) {
+  const videoResultIds = videoResults.map((result) => result?.id);
   if (
-    json.schema !== 'heavy-chain.g620.security-operations.v2' ||
+    videoResults.length !== LIGHTCHAIN_VIDEO_ROUTE_RESULT_IDS.length ||
+    new Set(videoResultIds).size !== videoResultIds.length
+  ) return false;
+  const resultsById = new Map(videoResults.map((result) => [result?.id, result]));
+  return LIGHTCHAIN_VIDEO_ROUTE_RESULT_IDS.every((id) => {
+    const result = resultsById.get(id);
+    return (
+      result &&
+      !result.exactBlocker &&
+      arrayFrom(result.assertions).length > 0 &&
+      arrayFrom(result.assertions).every((assertion) => assertion?.ok === true) &&
+      result.observed?.visibleCheckboxCount === 0
+    );
+  });
+}
+
+const REQUIRED_G620_CHECK_IDS = [
+  'cloudflare_entrypoints_exist',
+  'legacy_runtime_markers_absent',
+  'private_media_route_present',
+  'provider_action_route_present',
+  'runtime_auth_boundary_present',
+];
+
+export function validateG620SecurityOps(json) {
+  if (
+    json.schema !== 'heavy-chain.g620.security-ops.v3' ||
     json.ok !== true ||
     arrayFrom(json.failures).length !== 0 ||
-    json.mode !== 'read-only-static-no-submit-no-payment-no-deploy'
+    json.mode !== 'read-only-static-cloudflare-no-submit-no-payment-no-deploy'
+  ) {
+    return false;
+  }
+
+  const checks = arrayFrom(json.checks);
+  const checkIds = checks.map((check) => check?.id);
+  const checkIdSet = new Set(checkIds);
+  if (
+    checkIds.some((id) => typeof id !== 'string') ||
+    checkIdSet.size !== checkIds.length ||
+    REQUIRED_G620_CHECK_IDS.some((id) => !checks.some((check) => check?.id === id && check?.passed === true))
   ) {
     return false;
   }
@@ -779,6 +1041,27 @@ function routeAssertionDetailsIncludes(json, routeKey, assertionName, expectedTe
   return JSON.stringify(assertion?.details || {}).includes(expectedText);
 }
 
+export function readCurrentLightchainManifest() {
+  const sourcePath = path.join(process.cwd(), 'src/pages/LightchainWorkbenchPage.tsx');
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const toolsBlock = source.match(/const tools: CompatTool\[\] = \[([\s\S]+?)\];\n\nconst statusLabel/)
+    ?? source.match(/const tools: CompatTool\[\] = \[([\s\S]+?)\];\n\nfor \(const \[index, tool\] of tools\.entries\(\)/);
+  if (!toolsBlock) throw new Error(`lightchain_manifest_not_found:${sourcePath}`);
+  const ids = [];
+  for (const match of toolsBlock[1].matchAll(/\{\s*id: '([^']+)'[\s\S]+?title: '([^']+)'[\s\S]+?category: '([^']+)'/g)) {
+    ids.push(match[1]);
+  }
+  const requiredVideoIds = ['video-workstation', 'video-detail'];
+  if (
+    ids.length === 0 ||
+    new Set(ids).size !== ids.length ||
+    requiredVideoIds.some((id) => !ids.includes(id))
+  ) {
+    throw new Error(`lightchain_manifest_invalid:${sourcePath}`);
+  }
+  return Object.freeze(ids);
+}
+
 function parseArgs(argv) {
   const parsed = {};
   for (let index = 0; index < argv.length; index += 1) {
@@ -798,4 +1081,8 @@ function parseArgs(argv) {
 
 function dateStamp(date) {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  runReleaseGate();
 }

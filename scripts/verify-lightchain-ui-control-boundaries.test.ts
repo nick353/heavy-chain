@@ -9,6 +9,7 @@ const layoutSourcePath = new URL('../src/components/layout/Layout.tsx', import.m
 const appSourcePath = new URL('../src/App.tsx', import.meta.url);
 const publicHeaderSourcePath = new URL('../src/components/layout/Header.tsx', import.meta.url);
 const loginSourcePath = new URL('../src/pages/LoginPage.tsx', import.meta.url);
+const parityPagesSourcePath = new URL('../src/pages/LightchainParityPages.tsx', import.meta.url);
 
 test('public and auth recovery shells use the Lightchain identity without extra Heavy chrome', async () => {
   const [app, header, login] = await Promise.all([
@@ -38,7 +39,7 @@ test('authenticated root enters the Lightchain home instead of the Heavy landing
   const source = await readFile(appSourcePath, 'utf8');
 
   assert.match(source, /path="\/"[\s\S]*?<PublicRoute>[\s\S]*?lazyPage\(<LandingPage \/>\)/);
-  assert.match(source, /if \(user\) \{[\s\S]*?return <Navigate to="\/lightchain" replace \/>/);
+  assert.match(source, /if \(user\) \{[\s\S]*?return <Navigate to="\/designProduction" replace \/>/);
 });
 
 test('Lightchain routes do not expose the Heavy global keyboard shortcut affordance', async () => {
@@ -55,14 +56,15 @@ test('Lightchain header exposes the current language and help button controls', 
   assert.match(source, /aria-label="ヘルプセンター"/);
 });
 
-test('Lightchain header uses the avatar identity instead of Heavy account chrome', async () => {
+test('Lightchain header uses the Lightchain avatar identity and account menu', async () => {
   const source = await readFile(layoutSourcePath, 'utf8');
 
   assert.match(source, /aria-label="avatar"/);
   assert.match(source, /alt="avatar"/);
-  assert.match(source, /bg-\[#62666a\]\/90/);
-  assert.match(source, /<User className="h-4 w-4" strokeWidth=\{2\.25\}/);
-  assert.doesNotMatch(source, /aria-label="アカウント"[\s\S]{0,220}isLightAccountMenuOpen/);
+  assert.match(source, /lightchainAvatarUrl/);
+  assert.match(source, /saas-avatar-new\.png/);
+  assert.match(source, /onClick=\{\(\) => void handleLightchainSignOut\(\)\}/);
+  assert.match(source, /\{!isLightchainRoute && \([\s\S]*aria-label="アカウント"/);
 });
 
 test('Lightchain routes use the current Lightchain browser title', async () => {
@@ -79,11 +81,32 @@ test('Lightchain routes use the current Lightchain browser title', async () => {
   assert.match(canvas, /document\.title = 'Lightchain AI'/);
 });
 
+test('vector-special keeps the Light geometry contract for the professional parity surface', async () => {
+  const source = await readFile(parityPagesSourcePath, 'utf8');
+  const vectorBlock = source.slice(source.indexOf('export function LightchainVectorSpecialPage()'), source.indexOf('const modelTabs ='));
+
+  assert.match(vectorBlock, /lg:grid-cols-\[596px_minmax\(0,1fr\)\]/);
+  assert.match(vectorBlock, /grid-cols-\[278px_278px\]/);
+  assert.match(vectorBlock, /px-\[3px\] py-\[1\.5px\]/);
+  assert.match(vectorBlock, /h-\[31px\].*whitespace-nowrap/s);
+  assert.match(vectorBlock, /grid-cols-\[160px_160px\] gap-4/);
+  assert.match(vectorBlock, /h-\[32px\] w-\[102px\]/);
+  assert.match(vectorBlock, /border-cyan-200\/30/);
+  assert.doesNotMatch(vectorBlock, /lg:grid-cols-\[564px_minmax\(0,1fr\)\]/);
+});
+
 test('fitting and line-to-real settings are stateful and persisted into the workbench contract', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 
   assert.match(source, /setAutoConvertGarment\(\(current\) => !current\)/);
-  assert.match(source, /aria-pressed=\{autoConvertGarment\}/);
+  assert.match(source, /const \[referenceNote, setReferenceNote\] = useState\(''\)/);
+  assert.match(source, /const \[autoConvertGarment, setAutoConvertGarment\] = useState\(false\)/);
+  assert.match(source, /setAutoConvertGarment\(false\)/);
+  assert.match(source, /role="switch"/);
+  assert.match(source, /aria-checked=\{autoConvertGarment\}/);
+  assert.doesNotMatch(source, /role="switch"[\s\S]{0,180}aria-pressed=\{autoConvertGarment\}/);
+  assert.match(source, /role="combobox"[\s\S]{0,100}aria-label=\{fittingAspectRatio\}/);
+  assert.match(source, /role="combobox"[\s\S]{0,100}aria-label=\{fittingResolution\}/);
   assert.match(source, /autoConvertGarment: isFittingDetail \? autoConvertGarment : null/);
   assert.match(source, /lineToRealImageType/);
   assert.match(source, /data-testid=\{`lightchain-line-to-real-output-type-\$\{option\}`\}/);

@@ -31,7 +31,7 @@ export const UNIFIED_WORKFLOW_LIFECYCLE = Object.freeze([
   'retry',
 ] as const);
 
-export const UNIFIED_RIGHTS_GATE = 'generation-time-confirmation' as const;
+export const UNIFIED_RIGHTS_GATE = 'source-admitted-generation' as const;
 
 export type UnifiedResultDestination = (typeof UNIFIED_RESULT_DESTINATIONS)[number];
 export type UnifiedWorkflowLifecycle = (typeof UNIFIED_WORKFLOW_LIFECYCLE)[number];

@@ -63,13 +63,13 @@ try {
 
   const page = await context.newPage();
   wirePageDiagnostics(page);
-  await page.goto(`${baseUrl}/lightchain`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/designProduction`, { waitUntil: 'networkidle' });
   await dismissBlockingOverlays(page);
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
   await screenshot(page, '01-lightchain-home');
   await verifyAllFeatureDetailRoutes(page);
   await verifyInvalidFeatureRouteRedirect(page);
-  await page.goto(`${baseUrl}/lightchain`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/designProduction`, { waitUntil: 'networkidle' });
 
   await page.goto(`${baseUrl}/lightchain/fitting-clothing-reference`, { waitUntil: 'networkidle' });
   await page.waitForURL(/\/lightchain\/fitting-clothing-reference$/, { timeout: 10_000 });
@@ -373,8 +373,8 @@ async function verifyAllFeatureDetailRoutes(page) {
 
 async function verifyInvalidFeatureRouteRedirect(page) {
   await page.goto(`${baseUrl}/lightchain/not-a-real-feature`, { waitUntil: 'networkidle' });
-  await page.waitForURL(/\/lightchain$/, { timeout: 10_000 });
-  addAssertion('invalid_feature_route_redirects_to_index', page.url().endsWith('/lightchain'), { url: page.url() });
+  await page.waitForURL(/\/designProduction$/, { timeout: 10_000 });
+  addAssertion('invalid_feature_route_redirects_to_canonical_home', page.url().endsWith('/designProduction'), { url: page.url() });
 }
 
 function readLightchainToolIds() {

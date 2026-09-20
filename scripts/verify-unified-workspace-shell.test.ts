@@ -15,7 +15,7 @@ test('first complete apparel flows use the unified workspace shell', () => {
   assert.match(app, /path="\/lightchain"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<GenerateLightchainEntry \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
   assert.match(app, /path="\/lightchain\/fabric-image"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<LightchainMaterialWorkbenchPage \/>/);
   assert.match(app, /path="\/lightchain\/printing-image"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<LightchainMaterialWorkbenchPage \/>/);
-  assert.match(app, /path="\/tools\/printing"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<LightchainMaterialWorkbenchPage \/>/);
+  assert.match(app, /path="\/tools\/printing"[\s\S]*?<LightchainPrintingPage \/>/);
   assert.match(app, /path="\/model-library\/model-custom-form"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<ModelLibraryPage \/>/);
   assert.match(app, /path="\/flow\/integration"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<FashionStudioPage \/>/);
   assert.match(app, /path="\/flow\/laboratory"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<LabPage \/>/);
@@ -47,19 +47,23 @@ test('first complete apparel flows use the unified workspace shell', () => {
   const fitting = fs.readFileSync('src/pages/FittingPage.tsx', 'utf8');
   const material = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
   const generate = fs.readFileSync('src/pages/GeneratePage.tsx', 'utf8');
+  const pattern = fs.readFileSync('src/pages/PatternWorkspacePage.tsx', 'utf8');
+  const parityPages = fs.readFileSync('src/pages/LightchainParityPages.tsx', 'utf8');
   const workbench = fs.readFileSync('src/pages/LightchainWorkbenchPage.tsx', 'utf8');
   assert.match(workbench, /data-testid="lightchain-source-toolbar"/);
-  assert.match(workbench, /ツールバー/);
-  assert.match(workbench, /デザインツール/);
-  assert.match(workbench, /フィッティングツール/);
-  assert.match(workbench, /グラフィックデザインツール/);
-  assert.match(workbench, /衣類生産ツール/);
+  assert.match(workbench, /aria-label="ツールカテゴリ"/);
+  assert.match(workbench, /label: 'おすすめ'/);
+  assert.match(workbench, /label: '企画デザインツール'/);
+  assert.match(workbench, /label: 'AIフィッティング'/);
+  assert.match(workbench, /label: 'グラフィックツール'/);
+  assert.doesNotMatch(workbench, /<LightchainMaterialSourceRail/);
   assert.match(material, /data-testid="lightchain-source-toolbar"/);
-  assert.match(material, /ツールバー/);
-  assert.match(material, /デザインツール/);
-  assert.match(material, /フィッティングツール/);
-  assert.match(material, /グラフィックデザインツール/);
-  assert.match(material, /衣類生産ツール/);
+  assert.match(material, /aria-label="ツールカテゴリ"/);
+  assert.match(material, /label: 'おすすめ'/);
+  assert.match(material, /label: '企画デザインツール'/);
+  assert.match(material, /label: 'AIフィッティング'/);
+  assert.match(material, /label: 'グラフィックツール'/);
+  assert.doesNotMatch(material, /<LightchainMaterialSourceRail/);
   const auxiliaryPages = [
     'src/pages/MarketingWorkspacePage.tsx',
     'src/pages/FashionStudioPage.tsx',
@@ -68,12 +72,32 @@ test('first complete apparel flows use the unified workspace shell', () => {
     'src/pages/LabPage.tsx',
   ].map((path) => fs.readFileSync(path, 'utf8'));
   assert.match(fitting, /data-flow-state={fittingFlowState}/);
+  assert.match(fitting, /data-lightchain-parity-shell="ai-fitting"/);
+  assert.match(fitting, /UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION/);
+  assert.match(fitting, /data-workflow-feature="ai-fitting"/);
+  assert.match(fitting, /data-workflow-result-destinations=/);
+  assert.match(fitting, /data-workflow-rights-gate=/);
   assert.match(material, /data-flow-state={materialFlowState}/);
   assert.match(generate, /useUnifiedWorkspaceFlow/);
   assert.match(generate, /deriveUnifiedWorkspaceFlowState/);
   assert.match(generate, /setFlowState\(unifiedFlowState\)/);
   assert.match(generate, /data-testid="heavy-generate-workspace"/);
+  assert.match(generate, /data-lightchain-parity-shell="generate"/);
   assert.match(generate, /data-flow-state-label=\{unifiedWorkspaceFlowLabels\[unifiedFlowState\]\}/);
+  assert.match(generate, /UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION/);
+  assert.match(generate, /feature\.route === currentPath/);
+  assert.match(generate, /data-workflow-feature=\{generateWorkflowContract\?\.rowId \?\? ''\}/);
+  assert.match(generate, /data-workflow-result-destinations=\{generateWorkflowContract\?\.resultDestinations\.join\(','\) \?\? ''\}/);
+  assert.match(generate, /data-workflow-rights-gate=\{generateWorkflowContract\?\.rightsGate \?\? ''\}/);
+  assert.match(pattern, /getLightchainUnifiedFeatureWorkflowContract/);
+  assert.match(pattern, /data-lightchain-parity-shell="pattern-workspace"/);
+  assert.match(pattern, /data-workflow-result-destinations=\{patternWorkflowContract\?\.resultDestinations\.join\(','\) \?\? ''\}/);
+  assert.match(pattern, /print-design-detail/);
+  assert.match(parityPages, /getLightchainUnifiedFeatureWorkflowContract/);
+  assert.match(parityPages, /workflowFeature="design-agent"/);
+  assert.match(parityPages, /workflowFeature="ai-fitting"/);
+  assert.match(parityPages, /workflowFeature="print-design-project"/);
+  assert.match(parityPages, /workflowFeature="wear-design-lab"/);
   assert.match(workbench, /useUnifiedWorkspaceFlow/);
   assert.match(workbench, /deriveUnifiedWorkspaceFlowState/);
   assert.match(workbench, /setFlowState\(unifiedFlowState\)/);
@@ -102,6 +126,7 @@ test('unified workspace aliases current Heavy-compatible Lightchain entry routes
     ['design-agent', '/agent'],
     ['lab', '/flow/laboratory'],
     ['print-design-project', '/editor/patternDesign'],
+    ['print-design-detail', '/patterns/workbench'],
     ['fabric-image', '/tools/fabric'],
     ['line-to-real', '/tools/line-draft-to-tile'],
     ['pattern-vector-pro', '/tools/vector-special'],
@@ -116,6 +141,20 @@ test('unified workspace aliases current Heavy-compatible Lightchain entry routes
   }
 });
 
+test('pattern workspace aliases preserve distinct project and detail feature scopes', () => {
+  assert.deepEqual(getLightchainUnifiedRouteAliases('print-design-project'), [
+    '/editor/patternDesign',
+    '/printing',
+    '/patterns',
+  ]);
+  assert.deepEqual(getLightchainUnifiedRouteAliases('print-design-detail'), ['/patterns/workbench']);
+
+  const layout = fs.readFileSync('src/components/layout/Layout.tsx', 'utf8');
+  const shell = fs.readFileSync('src/components/workspace/LightchainUnifiedWorkspaceShell.tsx', 'utf8');
+  assert.match(layout, /getLightchainUnifiedRouteAliases/);
+  assert.match(shell, /getLightchainUnifiedRouteAliases/);
+});
+
 test('every unified workspace alias is implemented by an App route inside the shared shell', () => {
   const app = fs.readFileSync('src/App.tsx', 'utf8');
   const routeBlocks = [...app.matchAll(/<Route\s+path="([^"]+)"[\s\S]*?(?=\n\s*<Route|\n\s*<\/Routes>)/g)]
@@ -124,10 +163,16 @@ test('every unified workspace alias is implemented by an App route inside the sh
     lightchainUnifiedFeatureCatalog.flatMap((feature) => getLightchainUnifiedRouteAliases(feature.id)),
   );
 
-  assert.equal(aliasPaths.size, 24);
+  // The stale plural /models alias was intentionally removed with the current
+  // Lightchain route map; keep this count tied to the live alias set.
+  assert.equal(aliasPaths.size, 26);
   for (const path of aliasPaths) {
     const matches = routeBlocks.filter((route) => route.path === path);
     assert.equal(matches.length, 1, `${path} must have exactly one App route`);
-    assert.match(matches[0].source, /LightchainUnifiedWorkspaceShell/, `${path} must use the shared workspace shell`);
+    if (path === '/tools/printing') {
+      assert.match(matches[0].source, /LightchainPrintingPage/, `${path} must use the Lightchain parity printing page`);
+    } else {
+      assert.match(matches[0].source, /LightchainUnifiedWorkspaceShell/, `${path} must use the shared workspace shell`);
+    }
   }
 });

@@ -1,520 +1,185 @@
 #!/usr/bin/env node
-
-import { createClient } from '@supabase/supabase-js';
-import { spawnSync } from 'node:child_process';
-import fs from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { createHash } from 'node:crypto';
+import { parseArgs } from 'node:util';
 
-const DEFAULT_BRAND_ID = 'e5571b0b-7af7-4265-9d47-7d90ae4767d3';
-const GENERATED_IMAGES_BUCKET = 'generated-images';
-const args = parseArgs(process.argv.slice(2));
-const initialEnvKeys = new Set(Object.keys(process.env));
-loadEnvFile('.env.production.local', initialEnvKeys);
-
-const now = new Date();
-const windowHours = numberArg(args.windowHours, 24);
-const staleMinutes = numberArg(args.staleMinutes, 20);
-const maxFailureRate = numberArg(args.maxFailureRate, 0.15);
-const maxFailedJobs = numberArg(args.maxFailedJobs, 0);
-const maxStaleActiveJobs = numberArg(args.maxStaleActiveJobs, 0);
-const maxStorageErrors = numberArg(args.maxStorageErrors, 0);
-const maxUiFailures = numberArg(args.maxUiFailures, 0);
-const brandId = args.brandId || process.env.HEAVY_CHAIN_MONITOR_BRAND_ID || DEFAULT_BRAND_ID;
-const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain.zeabur.app');
-const outDir = args.out || `output/playwright/production-monitor-${dateStamp(now)}`;
-const uiOutDir = path.join(outDir, 'ui');
-const runUi = args.ui !== false && args.skipUi !== true;
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
-const since = new Date(now.getTime() - windowHours * 60 * 60 * 1000);
-const staleBefore = new Date(now.getTime() - staleMinutes * 60 * 1000);
-
-const report = {
-  schema: 'heavy-chain.production-monitor.v1',
-  capturedAt: now.toISOString(),
-  mode: 'read-only-no-submit-no-payment-no-cleanup',
-  baseUrl,
-  brandId,
-  window: {
-    hours: windowHours,
-    since: since.toISOString(),
-    staleMinutes,
-    staleBefore: staleBefore.toISOString(),
-  },
-  thresholds: {
-    maxFailureRate,
-    maxFailedJobs,
-    maxStaleActiveJobs,
-    maxStorageErrors,
-    maxUiFailures,
-  },
-  irreversibleActions: {
-    generationSubmit: 'not_clicked',
-    purchasePaymentCheckout: 'not_touched',
-    externalPublish: 'not_touched',
-    destructiveCleanup: 'not_touched',
-  },
-  checks: [],
-  blockers: [],
-  warnings: [],
-  sections: {},
+export const validID = value => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value);
+export const safeError = error => /^(http_\d+|request_failed|response_size_limit|empty_response_body|invalid_json_response|invalid_page|invalid_row_scope|unstable_pagination|observation_row_limit|unexpected_service|invalid_usage_contract|invalid_usage_value|invalid_media_content|media_checksum_mismatch)$/.test(error?.message) ? error.message : 'read_failed';
+const finite = (value, fallback, min, max) => {
+  const n = value === undefined ? fallback : Number(value);
+  if (!Number.isFinite(n) || n < min || n > max) throw new Error('invalid_monitor_limit');
+  return n;
 };
-
-if (!supabaseUrl || !serviceRoleKey) {
-  addBlocker('supabase_service_role_env_missing', 'SUPABASE_URL/VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY/SERVICE_ROLE_KEY are required.', 'Load production Supabase env locally without printing secret values.');
-  await finish();
-}
-
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
-
-await collectGenerationHealth();
-await collectEdgeFunctionHealth();
-await collectUsageHealth();
-await collectStorageHealth();
-if (runUi) await collectUiHealth();
-else addWarning('ui_probe_skipped', 'UI probe was skipped by --skip-ui.', 'Run without --skip-ui for daily production monitoring.');
-
-await finish();
-
-async function collectGenerationHealth() {
-  const { data, error } = await supabase
-    .from('generation_jobs')
-    .select('id, status, feature_type, error_message, input_params, created_at, completed_at')
-    .eq('brand_id', brandId)
-    .gte('created_at', since.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(500);
-
-  if (error) {
-    addBlocker('generation_jobs_readback_failed', error.message, 'Fix production DB readback, then rerun npm run monitor:production.');
-    report.sections.generation = { error: error.message };
-    return;
+export function apiOrigin(value) {
+  let url; try { url = new URL(value); } catch { throw new Error('cloudflare_api_origin_required'); }
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
+    throw new Error('invalid_cloudflare_api_origin');
   }
-
-  const rows = Array.isArray(data) ? data : [];
-  const counts = countBy(rows, (row) => row.status || 'unknown');
-  const terminal = (counts.completed || 0) + (counts.failed || 0);
-  const failureRate = terminal > 0 ? (counts.failed || 0) / terminal : 0;
-  const activeRows = rows.filter((row) => ['pending', 'processing'].includes(row.status));
-  const staleActiveRows = activeRows.filter((row) => Date.parse(row.created_at || '') < staleBefore.getTime());
-  const failedRows = rows.filter((row) => row.status === 'failed');
-
-  report.sections.generation = {
-    total: rows.length,
-    counts,
-    terminal,
-    failureRate,
-    active: activeRows.length,
-    staleActive: staleActiveRows.length,
-    recentFailedJobs: failedRows.slice(0, 10).map(projectJob),
-    staleActiveJobs: staleActiveRows.slice(0, 10).map(projectJob),
-  };
-  addCheck('generation jobs readable', true, { total: rows.length, counts });
-  addThresholdCheck('generation failure rate', failureRate <= maxFailureRate, {
-    failureRate,
-    threshold: maxFailureRate,
-    terminal,
-    failed: counts.failed || 0,
-  }, 'generation_failure_rate_high', 'Investigate recent failed generation_jobs and worker logs before scaling traffic.');
-  addThresholdCheck('recent failed generation jobs', (counts.failed || 0) <= maxFailedJobs, {
-    failed: counts.failed || 0,
-    threshold: maxFailedJobs,
-    recentFailedJobs: failedRows.slice(0, 5).map(projectJob),
-  }, 'recent_generation_jobs_failed', 'Open Jobs/Admin and inspect failed job error_message before the next launch push.');
-  addThresholdCheck('stale active local worker jobs', staleActiveRows.length <= maxStaleActiveJobs, {
-    staleActive: staleActiveRows.length,
-    threshold: maxStaleActiveJobs,
-    staleActiveJobs: staleActiveRows.slice(0, 5).map(projectJob),
-  }, 'stale_generation_jobs_detected', 'Open Jobs/Admin and inspect stale generation jobs before processing more requests.');
+  return url.origin;
 }
-
-async function collectEdgeFunctionHealth() {
-  const { data, error } = await supabase
-    .from('edge_function_runs')
-    .select('id, function_name, status, request_id, duration_ms, error_message, started_at, completed_at, created_at')
-    .eq('brand_id', brandId)
-    .gte('created_at', since.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(500);
-
-  if (error) {
-    addBlocker('edge_function_runs_readback_failed', error.message, 'Fix edge_function_runs readback, then rerun npm run monitor:production.');
-    report.sections.edgeFunctions = { error: error.message };
-    return;
-  }
-  const rows = Array.isArray(data) ? data : [];
-  const counts = countBy(rows, (row) => row.status || 'unknown');
-  const failed = rows.filter((row) => row.status === 'failed');
-  const startedStale = rows.filter((row) => row.status === 'started' && Date.parse(row.started_at || row.created_at || '') < staleBefore.getTime());
-  report.sections.edgeFunctions = {
-    total: rows.length,
-    counts,
-    failed: failed.length,
-    staleStarted: startedStale.length,
-    recentFailures: failed.slice(0, 10).map(projectEdgeRun),
-  };
-  addCheck('edge function runs readable', true, { total: rows.length, counts });
-  if (failed.length > 0) addWarning('edge_function_failures_seen', `${failed.length} failed Edge Function run(s) in the window.`, 'Inspect edge_function_runs.error_message and matching request_id.');
-  if (startedStale.length > 0) addWarning('edge_function_started_stale', `${startedStale.length} Edge Function run(s) still started past stale threshold.`, 'Check Supabase logs for interrupted function execution.');
-}
-
-async function collectUsageHealth() {
-  const { data, error } = await supabase
-    .from('usage_events')
-    .select('id, function_name, status, units, request_id, reserved_at, completed_at, created_at')
-    .eq('brand_id', brandId)
-    .gte('created_at', since.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(500);
-
-  if (error) {
-    addBlocker('usage_events_readback_failed', error.message, 'Fix usage_events readback, then rerun npm run monitor:production.');
-    report.sections.usage = { error: error.message };
-    return;
-  }
-  const rows = Array.isArray(data) ? data : [];
-  const counts = countBy(rows, (row) => row.status || 'unknown');
-  const failed = rows.filter((row) => row.status === 'failed');
-  const staleReserved = rows.filter((row) => row.status === 'reserved' && Date.parse(row.reserved_at || row.created_at || '') < staleBefore.getTime());
-  report.sections.usage = {
-    total: rows.length,
-    counts,
-    failed: failed.length,
-    staleReserved: staleReserved.length,
-    recentFailures: failed.slice(0, 10).map(projectUsageEvent),
-  };
-  addCheck('usage events readable', true, { total: rows.length, counts });
-  if (failed.length > 0) addWarning('usage_event_failures_seen', `${failed.length} failed usage event(s) in the window.`, 'Inspect usage_events and matching request_id.');
-  if (staleReserved.length > 0) addWarning('usage_event_reserved_stale', `${staleReserved.length} usage reservation(s) are stale.`, 'Check matching Edge Function runs and finalize/release path.');
-}
-
-async function collectStorageHealth() {
-  const { data, error } = await supabase
-    .from('generated_images')
-    .select('id, job_id, feature_type, storage_path, created_at')
-    .eq('brand_id', brandId)
-    .gte('created_at', since.toISOString())
-    .not('storage_path', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(50);
-
-  if (error) {
-    addBlocker('generated_images_readback_failed', error.message, 'Fix generated_images readback, then rerun npm run monitor:production.');
-    report.sections.storage = { error: error.message };
-    return;
-  }
-
-  const rows = Array.isArray(data) ? data : [];
-  const signedUrlChecks = [];
-  for (const row of rows) {
-    const { signed, signedError, attempts } = await createSignedUrlWithRetry(row.storage_path, 120);
-    signedUrlChecks.push({
-      imageId: row.id,
-      jobId: row.job_id,
-      feature: row.feature_type,
-      storagePath: row.storage_path,
-      signedUrlOk: Boolean(signed?.signedUrl && !signedError),
-      error: signedError?.message || null,
-      attempts,
-    });
-  }
-  const errors = signedUrlChecks.filter((row) => !row.signedUrlOk);
-  report.sections.storage = {
-    checkedImages: rows.length,
-    signedUrlOk: signedUrlChecks.filter((row) => row.signedUrlOk).length,
-    errors: errors.length,
-    failed: errors.slice(0, 10),
-  };
-  addCheck('generated image storage readable', errors.length <= maxStorageErrors, {
-    checkedImages: rows.length,
-    errors: errors.length,
-    threshold: maxStorageErrors,
-  });
-  if (errors.length > maxStorageErrors) {
-    addBlocker('generated_image_storage_errors', `${errors.length} generated image storage object(s) failed signed-url readback.`, 'Inspect generated_images.storage_path and Storage object existence before trusting Gallery health.');
-  }
-}
-
-async function createSignedUrlWithRetry(storagePath, expiresIn) {
-  let signed = null;
-  let signedError = null;
-  const maxAttempts = 3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const { data, error } = await supabase.storage
-      .from(GENERATED_IMAGES_BUCKET)
-      .createSignedUrl(storagePath, expiresIn);
-    signed = data;
-    signedError = error;
-    if (signed?.signedUrl && !signedError) {
-      return { signed, signedError: null, attempts: attempt };
-    }
-    if (attempt < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
-    }
-  }
-  return { signed, signedError, attempts: maxAttempts };
-}
-
-async function collectUiHealth() {
-  const expectedAsset = args.expectedAsset || process.env.HEAVY_CHAIN_EXPECTED_ASSET || readCurrentBuildAsset();
-  const launchArgs = ['scripts/verify-launch-operations-readiness.mjs', '--baseUrl', baseUrl, '--out', uiOutDir];
-  if (expectedAsset) launchArgs.push('--expectedAsset', expectedAsset);
-  const result = spawnSync('node', launchArgs, {
-    encoding: 'utf8',
-    shell: false,
-    env: { ...process.env, HEAVY_CHAIN_EXPECTED_ASSET: expectedAsset || process.env.HEAVY_CHAIN_EXPECTED_ASSET || '' },
-  });
-  const summaryPath = path.join(uiOutDir, 'summary.json');
-  const summary = readJsonIfExists(summaryPath);
-  const consoleFailures = (summary?.consoleMessages || []).length + (summary?.pageErrors || []).length;
-  const networkFailures = (summary?.networkFailures || []).length;
-  const failureCount = (summary?.failed || []).length + consoleFailures + networkFailures;
-  report.sections.ui = {
-    command: `node ${launchArgs.join(' ')}`,
-    exitStatus: result.status,
-    summaryPath,
-    ok: summary?.ok === true,
-    failed: summary?.failed || [],
-    consoleMessages: summary?.consoleMessages || [],
-    pageErrors: summary?.pageErrors || [],
-    networkFailures: summary?.networkFailures || [],
-    stdout: truncate(result.stdout),
-    stderr: truncate(result.stderr),
-  };
-  addThresholdCheck('production UI launch-ops probe', failureCount <= maxUiFailures && summary?.ok === true, {
-    failureCount,
-    threshold: maxUiFailures,
-    summaryPath,
-    failed: summary?.failed || [],
-  }, 'production_ui_probe_failed', 'Open the UI proof summary, inspect screenshots/console/network failures, then rerun npm run monitor:production.');
-}
-
-async function finish() {
-  report.ok = report.blockers.length === 0;
-  report.summary = {
-    ok: report.ok,
-    blockers: report.blockers.length,
-    warnings: report.warnings.length,
-    generationFailureRate: report.sections.generation?.failureRate ?? null,
-    staleActiveJobs: report.sections.generation?.staleActive ?? null,
-    storageErrors: report.sections.storage?.errors ?? null,
-    uiOk: report.sections.ui?.ok ?? null,
-  };
-  fs.mkdirSync(outDir, { recursive: true });
-  const jsonPath = path.join(outDir, 'summary.json');
-  const markdownPath = path.join(outDir, 'SUMMARY.md');
-  fs.writeFileSync(jsonPath, `${JSON.stringify(redactObject(report), null, 2)}\n`);
-  fs.writeFileSync(markdownPath, renderMarkdown(redactObject(report), jsonPath));
-  console.log(JSON.stringify({ ok: report.ok, jsonPath, markdownPath, summary: report.summary }, null, 2));
-  process.exit(report.ok ? 0 : 1);
-}
-
-function renderMarkdown(proof, jsonPath) {
-  const lines = [
-    '# Heavy Chain Production Monitor',
-    '',
-    `Captured: ${proof.capturedAt}`,
-    `Mode: ${proof.mode}`,
-    `Window: last ${proof.window.hours}h`,
-    `JSON: ${jsonPath}`,
-    '',
-    `Status: ${proof.ok ? 'OK' : 'BLOCKED'}`,
-    '',
-    '## Summary',
-    '',
-    `- Generation failure rate: ${formatRate(proof.summary.generationFailureRate)}`,
-    `- Stale active jobs: ${proof.summary.staleActiveJobs ?? 'n/a'}`,
-    `- Storage errors: ${proof.summary.storageErrors ?? 'n/a'}`,
-    `- UI probe: ${proof.summary.uiOk === null ? 'skipped' : proof.summary.uiOk ? 'OK' : 'failed'}`,
-    `- Blockers: ${proof.blockers.length}`,
-    `- Warnings: ${proof.warnings.length}`,
-    '',
-    '## Blockers',
-    '',
-    ...(proof.blockers.length ? proof.blockers.map((item) => `- ${item.code}: ${item.message}`) : ['- none']),
-    '',
-    '## Warnings',
-    '',
-    ...(proof.warnings.length ? proof.warnings.map((item) => `- ${item.code}: ${item.message}`) : ['- none']),
-    '',
-    '## Daily Command',
-    '',
-    '```bash',
-    'npm run monitor:production',
-    '```',
-    '',
-  ];
-  return `${lines.join('\n')}\n`;
-}
-
-function addCheck(name, passed, details = {}) {
-  report.checks.push({ name, passed: Boolean(passed), details: redactObject(details) });
-}
-
-function addThresholdCheck(name, passed, details, code, nextAction) {
-  addCheck(name, passed, details);
-  if (!passed) addBlocker(code, `${name} exceeded threshold.`, nextAction);
-}
-
-function addBlocker(code, message, nextAction) {
-  report.blockers.push({ code, message, next_action: nextAction });
-}
-
-function addWarning(code, message, nextAction) {
-  report.warnings.push({ code, message, next_action: nextAction });
-}
-
-function projectJob(row) {
-  const input = asRecord(row.input_params);
-  return {
-    id: row.id,
-    status: row.status,
-    feature: row.feature_type,
-    provider: input.provider || null,
-    errorMessage: row.error_message || null,
-    createdAt: row.created_at,
-    completedAt: row.completed_at,
-  };
-}
-
-function projectEdgeRun(row) {
-  return {
-    id: row.id,
-    functionName: row.function_name,
-    status: row.status,
-    requestId: row.request_id,
-    durationMs: row.duration_ms,
-    errorMessage: row.error_message,
-    createdAt: row.created_at,
-  };
-}
-
-function projectUsageEvent(row) {
-  return {
-    id: row.id,
-    functionName: row.function_name,
-    status: row.status,
-    units: row.units,
-    requestId: row.request_id,
-    reservedAt: row.reserved_at,
-    completedAt: row.completed_at,
-    createdAt: row.created_at,
-  };
-}
-
-function countBy(rows, getKey) {
-  return rows.reduce((acc, row) => {
-    const key = getKey(row);
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-}
-
-function asRecord(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function parseArgs(argv) {
-  const parsed = {};
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    const next = argv[index + 1];
-    if (!arg.startsWith('--')) continue;
-    const key = arg.slice(2);
-    if (key === 'skip-ui') {
-      parsed.skipUi = true;
-      parsed.ui = false;
-    } else if (!next || next.startsWith('--')) {
-      parsed[key] = true;
-    } else {
-      parsed[key] = next;
-      index += 1;
-    }
-  }
-  return parsed;
-}
-
-function numberArg(value, fallback) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function loadEnvFile(filePath, initialKeys) {
-  if (!fs.existsSync(filePath)) return;
-  const content = fs.readFileSync(filePath, 'utf8');
-  for (const line of content.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(trimmed);
-    if (!match) continue;
-    const [, key, rawValue] = match;
-    if (key === 'SUPABASE_ACCESS_TOKEN') continue;
-    const value = unquote(rawValue.trim());
-    if (isPlaceholder(value)) continue;
-    if (initialKeys.has(key) && !isPlaceholder(process.env[key])) continue;
-    process.env[key] = value;
-  }
-}
-
-function unquote(value) {
-  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) return value.slice(1, -1);
-  return value;
-}
-
-function isPlaceholder(value) {
-  return !value || /\b(PROJECT_REF|YOUR_|REPLACE_ME|example\.com)\b/i.test(String(value));
-}
-
-function readJsonIfExists(filePath) {
-  if (!fs.existsSync(filePath)) return null;
+export async function boundedBytes(response, maximum) {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('empty_response_body');
+  const chunks = []; let length = 0;
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return null;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.length;
+      if (length > maximum) throw new Error('response_size_limit');
+      chunks.push(value);
+    }
+  } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+  return Buffer.concat(chunks, length);
+}
+
+/** Authenticated GETs only. Jobs/media cover this principal, usage the authorized brand.
+ * No login, token refresh, signed-URL creation, inference or repair is performed.
+ */
+export async function collectProductionHealth(options, fetchImpl = fetch) {
+  const baseUrl = apiOrigin(options.apiBaseUrl);
+  if (!validID(options.brandId)) throw new Error('cloudflare_monitor_brand_required');
+  if (typeof options.token !== 'string' || !options.token.trim() || /[\r\n]/.test(options.token)) throw new Error('cloudflare_monitor_session_required');
+  const now = options.now ?? Date.now();
+  const windowHours = finite(options.windowHours, 24, 1, 24 * 31);
+  const staleMinutes = finite(options.staleMinutes, 20, 1, 1440);
+  const maxRows = finite(options.maxRows, 5000, 100, 10000);
+  const sampleSize = finite(options.sampleSize, 20, 1, 50);
+  if (!Number.isInteger(maxRows) || maxRows % 100 || !Number.isInteger(sampleSize)) throw new Error('invalid_monitor_limit');
+  const maxFailureRate = finite(options.maxFailureRate, 0.15, 0, 1);
+  const maxFailedJobs = finite(options.maxFailedJobs, 0, 0, maxRows);
+  const maxStaleActiveJobs = finite(options.maxStaleActiveJobs, 0, 0, maxRows);
+  const maxStorageErrors = finite(options.maxStorageErrors, 0, 0, sampleSize);
+  if (![maxFailedJobs, maxStaleActiveJobs, maxStorageErrors].every(Number.isInteger)) throw new Error('invalid_monitor_limit');
+  if (options.runId !== undefined && options.runId !== null && !validID(options.runId)) throw new Error('invalid_monitor_run_id');
+  const since = now - windowHours * 3600000;
+  const report = {
+    schema: 'heavy-chain.production-monitor.v2',
+    capturedAt: new Date(now).toISOString(), baseUrl, brandId: options.brandId, runId: options.runId ?? null,
+    mode: 'cloudflare_authenticated_read_only', ok: false,
+    coverage: { jobs: 'current_principal_and_brand', media: 'current_principal_recent_sample',
+      usage: 'authorized_brand_current_month', ui: 'not_checked', cpu: 'not_measured',
+      providerBilling: 'not_available', businessCompletion: 'not_verified',
+      pagination: 'bounded_nontransactional_observation' },
+    window: { hours: windowHours, since: new Date(since).toISOString(), staleMinutes },
+    thresholds: { maxFailureRate, maxFailedJobs, maxStaleActiveJobs, maxStorageErrors, maxRows, sampleSize },
+    sections: {}, blockers: [], warnings: [],
+  };
+  const blocker = code => report.blockers.push({ code });
+  const get = async route => {
+    let response;
+    try { response = await fetchImpl(baseUrl + route, { method: 'GET', redirect: 'error', cache: 'no-store',
+      headers: { authorization: 'Bearer ' + options.token }, signal: AbortSignal.timeout(15000) }); }
+    catch { throw new Error('request_failed'); }
+    if (!response.ok) { await response.body?.cancel().catch(() => {}); throw new Error('http_' + response.status); }
+    return response;
+  };
+  const json = async route => {
+    try { return JSON.parse((await boundedBytes(await get(route), 4 * 1024 * 1024)).toString('utf8')); }
+    catch (error) {
+      if (/^(http_\d+|request_failed|response_size_limit)$/.test(error.message)) throw error;
+      throw new Error('invalid_json_response');
+    }
+  };
+  const brandQuery = 'brand_id=' + encodeURIComponent(options.brandId);
+  const rows = async resource => {
+    const collected = []; const seen = new Set();
+    for (let offset = 0; offset < maxRows; offset += 100) {
+      const page = await json('/v1/' + resource + '?' + brandQuery + '&limit=100&offset=' + offset);
+      if (!Array.isArray(page) || page.length > 100) throw new Error('invalid_page');
+      for (const row of page) {
+        if (!validID(row?.id) || row.brand_id !== options.brandId || !Number.isFinite(Date.parse(row.created_at))) throw new Error('invalid_row_scope');
+        if (seen.has(row.id)) throw new Error('unstable_pagination');
+        seen.add(row.id);
+        if (Date.parse(row.created_at) >= since) collected.push(row);
+      }
+      if (page.length < 100 || page.every(row => Date.parse(row.created_at) < since)) return collected;
+    }
+    throw new Error('observation_row_limit');
+  };
+  try {
+    const health = await json('/v1/health');
+    if (health.service !== 'heavy-api' || health.status !== 'ok' || health.media !== 'private-r2') throw new Error('unexpected_service');
+    report.sections.api = { status: 'ok', media: 'private-r2' };
+  } catch (error) { blocker('api_' + safeError(error)); }
+  try {
+    const jobs = await rows('generation-jobs');
+    const counts = Object.create(null);
+    for (const job of jobs) counts[job.status] = (counts[job.status] ?? 0) + 1;
+    const failed = counts.failed ?? 0;
+    const terminal = failed + (counts.completed ?? 0);
+    const failureRate = terminal ? failed / terminal : null;
+    const stale = jobs.filter(job => ['pending', 'processing', 'queued', 'running'].includes(job.status) && Date.parse(job.created_at) < now - staleMinutes * 60000);
+    report.sections.generation = { total: jobs.length, counts, terminal, failed, failureRate, staleActive: stale.length,
+      staleJobIds: stale.map(job => job.id), failedJobIds: jobs.filter(job => job.status === 'failed').map(job => job.id) };
+    if (!jobs.length) blocker('no_generation_evidence');
+    if (failureRate !== null && failureRate > maxFailureRate) blocker('generation_failure_rate_high');
+    if (failed > maxFailedJobs) blocker('recent_generation_jobs_failed');
+    if (stale.length > maxStaleActiveJobs) blocker('stale_generation_jobs');
+    if (jobs.some(job => !['pending', 'processing', 'queued', 'running', 'completed', 'failed', 'cancelled'].includes(job.status))) blocker('unknown_generation_state');
+  } catch (error) { blocker('generation_' + safeError(error)); }
+  try {
+    const usage = await json('/v1/image-ai/usage?' + brandQuery);
+    if (usage?.measurementScope !== 'cloudflare_image_ai_only' || usage.billing !== 'estimate_not_invoice' ||
+        !Number.isFinite(usage.remainingUnits) || !Number.isFinite(usage.monthlyQuota)) throw new Error('invalid_usage_contract');
+    const fields = ['plannedImages','completedImages','runningImages','uncertainImages','attemptedImages','unknownEstimateCount',
+      'estimatedMicroUSD','estimatedNeurons','averageInferenceMs','remainingUnits','monthlyQuota'];
+    for (const field of fields) if (usage[field] !== null && (!Number.isFinite(usage[field]) || usage[field] < 0)) throw new Error('invalid_usage_value');
+    report.sections.usage = Object.fromEntries(fields.map(field => [field, usage[field]]));
+    Object.assign(report.sections.usage, { scope: 'authorized_brand_current_month', billing: 'estimate_not_invoice',
+      periodStart: usage.periodStart, periodEnd: usage.periodEnd, imageAIEnabled: usage.imageAIEnabled === true });
+    if (usage.uncertainImages > 0) blocker('unresolved_image_ai_candidates');
+    if (usage.unknownEstimateCount > 0) report.warnings.push({ code: 'unknown_usage_estimates' });
+    if (!usage.imageAIEnabled) report.warnings.push({ code: 'image_ai_disabled' });
+  } catch (error) { blocker('usage_' + safeError(error)); }
+  try {
+    const images = await rows('generated-images');
+    const sample = images.slice(0, sampleSize); const checks = [];
+    for (const row of sample) {
+      try {
+        const response = await get('/v1/generated-images/' + encodeURIComponent(row.id) + '/content');
+        const bytes = await boundedBytes(response, 10 * 1024 * 1024);
+        if (!response.headers.get('content-type')?.startsWith('image/') || !bytes.length) throw new Error('invalid_media_content');
+        const sha256 = createHash('sha256').update(bytes).digest('hex');
+        const expected = row.metadata?.contentSha256 ?? row.metadata?.sha256;
+        const expectedSize = row.metadata?.contentBytes;
+        if (expected && expected !== sha256 || expectedSize !== undefined && expectedSize !== bytes.length) throw new Error('media_checksum_mismatch');
+        checks.push({ imageId: row.id, ok: true, bytes: bytes.length, sha256, checksumVerified: Boolean(expected) });
+      } catch (error) { checks.push({ imageId: row.id, ok: false, error: safeError(error) }); }
+    }
+    report.sections.storage = { totalRecentImages: images.length, checkedImages: checks.length,
+      readable: checks.filter(check => check.ok).length, errors: checks.filter(check => !check.ok).length, checks };
+    if (!checks.length) blocker('no_private_media_evidence');
+    if (checks.filter(check => !check.ok).length > maxStorageErrors) blocker('private_media_read_failed');
+  } catch (error) { blocker('storage_' + safeError(error)); }
+  report.ok = report.blockers.length === 0;
+  return report;
+}
+
+export async function main(argv = process.argv.slice(2), env = process.env) {
+  const { values } = parseArgs({ args: argv, strict: true, options: {
+    apiBaseUrl: { type: 'string' }, brandId: { type: 'string' }, out: { type: 'string' }, runId: { type: 'string' },
+    windowHours: { type: 'string' }, staleMinutes: { type: 'string' },
+    maxRows: { type: 'string' }, sampleSize: { type: 'string' }, maxFailureRate: { type: 'string' },
+    maxFailedJobs: { type: 'string' }, maxStaleActiveJobs: { type: 'string' }, maxStorageErrors: { type: 'string' },
+    'skip-ui': { type: 'boolean' }, help: { type: 'boolean' },
+  } });
+  if (values.help) {
+    console.log('Cloudflare read-only API monitor. Requires --apiBaseUrl https://API_ORIGIN --brandId ID and HEAVY_CHAIN_MONITOR_TOKEN (live consumer-auth session). Optional --out DIR --windowHours 24 --staleMinutes 20 --maxRows 5000 --sampleSize 20 --maxFailureRate 0.15. No UI/CPU/billing/E2E proof; no old environment files are loaded.');
+    return;
   }
+  const report = await collectProductionHealth({ ...values,
+    apiBaseUrl: values.apiBaseUrl ?? env.HEAVY_CHAIN_MONITOR_API_URL,
+    brandId: values.brandId ?? env.HEAVY_CHAIN_MONITOR_BRAND_ID, token: env.HEAVY_CHAIN_MONITOR_TOKEN,
+    runId: values.runId ?? env.HEAVY_CHAIN_MONITOR_RUN_ID });
+  const out = values.out ?? 'output/cloudflare-monitor-' + report.capturedAt.replace(/[:.]/g, '-');
+  await mkdir(out, { recursive: true });
+  await writeFile(path.join(out, 'summary.json'), JSON.stringify(report, null, 2) + '\n');
+  console.log(JSON.stringify({ ok: report.ok, summaryPath: path.join(out, 'summary.json'), blockers: report.blockers }));
+  process.exitCode = report.ok ? 0 : 1;
 }
-
-function readCurrentBuildAsset() {
-  const htmlPath = 'dist/index.html';
-  if (!fs.existsSync(htmlPath)) return '';
-  const match = fs.readFileSync(htmlPath, 'utf8').match(/assets\/index\.[^"']+\.js/);
-  return match?.[0] || '';
-}
-
-function trimTrailingSlash(value) {
-  return String(value || '').replace(/\/+$/, '');
-}
-
-function dateStamp(date = new Date()) {
-  return date.toISOString().replace(/[:.]/g, '-');
-}
-
-function truncate(value) {
-  const text = String(value || '').trim();
-  return text.length > 2000 ? `${text.slice(0, 2000)}...[truncated]` : text;
-}
-
-function formatRate(value) {
-  if (value === null || value === undefined) return 'n/a';
-  return `${(Number(value) * 100).toFixed(1)}%`;
-}
-
-function redactObject(value) {
-  if (Array.isArray(value)) return value.map(redactObject);
-  if (!value || typeof value !== 'object') {
-    if (typeof value === 'string') return redactString(value);
-    return value;
-  }
-  return Object.fromEntries(Object.entries(value).map(([key, item]) => {
-    if (/token|secret|authorization|apikey|api_key|jwt/i.test(key) || key === 'signedUrl') return [key, '[redacted]'];
-    return [key, redactObject(item)];
-  }));
-}
-
-function redactString(value) {
-  return value
-    .replace(/(apikey|token|authorization|jwt)=([^&\s]+)/gi, '$1=[redacted]')
-    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [redacted]');
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await main().catch(() => { console.error('monitor_failed: check explicit API/brand/session configuration and bounded limits; no credentials printed'); process.exitCode = 1; });
 }

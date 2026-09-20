@@ -4,23 +4,19 @@ import fs from 'node:fs';
 import {
   hasPrintDesignAssetPurpose,
   PRINT_DESIGN_ASSET_PURPOSE,
+  buildPrintDesignAssetPrompt,
+  sanitizePrintDesignAssetPurpose,
 } from '../src/features/printing/selection/printDesignAssetPurpose.ts';
 import { shouldShowPrintDesignCreationCta } from '../src/features/printing/selection/galleryPrintDesignCta.ts';
 import { getGalleryImageLabel } from '../src/features/printing/selection/galleryImageLabel.ts';
-import {
-  buildPrintDesignAssetPrompt,
-  sanitizePrintDesignAssetPurpose,
-} from '../supabase/functions/_shared/printDesignAssetPurpose.ts';
+import { isTrustedPatternsOrigin } from '../src/features/printing/selection/printDesignHandoff.ts';
+import { getLightchainProviderRoute } from '../src/features/lightchain/providerAdapter.ts';
 
 const gallerySelector = fs.readFileSync('src/components/GallerySelector.tsx', 'utf8');
 const imageSelector = fs.readFileSync('src/components/ImageSelector.tsx', 'utf8');
 const printingPage = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
-const designGacha = fs.readFileSync('supabase/functions/design-gacha/index.ts', 'utf8');
-const generateImage = fs.readFileSync('supabase/functions/generate-image/index.ts', 'utf8');
-const migration = fs.readFileSync(
-  'supabase/migrations/20260719190000_backfill_explicit_pattern_print_design_purpose.sql',
-  'utf8',
-);
+const handoff = fs.readFileSync('src/features/printing/selection/printDesignHandoff.ts', 'utf8');
+const cloudflareCore = fs.readFileSync('cloudflare/heavy-api/src/core.ts', 'utf8');
 
 test('print-design metadata parser accepts only the exact explicit purpose', () => {
   assert.equal(PRINT_DESIGN_ASSET_PURPOSE, 'print-design');
@@ -31,9 +27,9 @@ test('print-design metadata parser accepts only the exact explicit purpose', () 
   assert.equal(hasPrintDesignAssetPurpose(null), false);
 });
 
-test('Gallery applies the explicit metadata filter before its result limit', () => {
-  const filterIndex = gallerySelector.indexOf("imageQuery.contains('metadata', { assetPurpose: PRINT_DESIGN_ASSET_PURPOSE })");
-  const limitIndex = gallerySelector.indexOf('imageQuery = imageQuery.limit(20)');
+test('Cloudflare Gallery requests and reapplies the explicit metadata filter before display slicing', () => {
+  const filterIndex = gallerySelector.indexOf('assetPurpose: assetPurpose === PRINT_DESIGN_ASSET_PURPOSE ? PRINT_DESIGN_ASSET_PURPOSE : undefined');
+  const limitIndex = gallerySelector.indexOf('.slice(0, filter === \'recent\' ? 20 : 50)');
   assert.ok(filterIndex >= 0, 'print-design metadata filter must exist');
   assert.ok(limitIndex > filterIndex, 'print-design metadata filter must run before limit');
   assert.match(gallerySelector, /assetPurpose === PRINT_DESIGN_ASSET_PURPOSE/);
@@ -83,10 +79,10 @@ test('producer sanitizer tags only a validated Patterns-origin design-gacha inte
   assert.equal(sanitizePrintDesignAssetPurpose({ ...valid, workflowVersion: 'unknown' }), null);
   assert.equal(sanitizePrintDesignAssetPurpose({ ...valid, sourceResumePath: '/patterns' }), null);
   assert.equal(sanitizePrintDesignAssetPurpose({ ...valid, generationIntent: { feature: 'prompt-edit' } }), null);
-  assert.match(designGacha, /sanitizePrintDesignAssetPurpose\(requestSourceMetadata\)/);
-  assert.match(designGacha, /sanitizePrintDesignAssetPurpose\(finalSourceMetadata\)/);
-  assert.match(designGacha, /patterns: \{ label: '柄・グラフィック', resumePath: '\/patterns\/workbench'/);
-  assert.doesNotMatch(designGacha, /assetPurpose:\s*['"]print-design['"]/);
+  assert.equal(isTrustedPatternsOrigin(valid), true);
+  assert.equal(isTrustedPatternsOrigin({ ...valid, sourceWorkspace: 'studio' }), false);
+  assert.match(handoff, /sourceWorkspace === 'patterns'/);
+  assert.match(handoff, /sourceResumePath === '\/patterns\/workbench'/);
 });
 
 test('Patterns-origin print assets use an artwork-only prompt without changing product-photo generation', () => {
@@ -112,10 +108,8 @@ test('Patterns-origin print assets use an artwork-only prompt without changing p
   });
   assert.match(withReference, /Use the reference only as visual motif inspiration/);
   assert.match(withReference, /Do not preserve or reproduce any garment or product silhouette/);
-  assert.match(designGacha, /if \(finalPrintDesignPurpose\) \{/);
-  assert.match(designGacha, /else if \(isProductFixed && originalImageBase64\)/);
-  assert.match(designGacha, /else if \(!generatedImage\) \{\s*generatedImage = await generateFromText/);
-  assert.match(designGacha, /generationMode: finalPrintDesignPurpose \? 'isolated-print-design' : 'fashion-product-photo'/);
+  assert.equal(getLightchainProviderRoute('print-design-detail'), 'edit-image');
+  assert.equal(getLightchainProviderRoute('marketing-home'), 'edit-image');
 });
 
 test('Gallery labels distinguish print assets without changing other Gallery labels', () => {
@@ -125,22 +119,14 @@ test('Gallery labels distinguish print assets without changing other Gallery lab
   assert.match(gallerySelector, /isPrintDesign: assetPurpose === PRINT_DESIGN_ASSET_PURPOSE/);
 });
 
-test('the active unified generate-image producer preserves metadata and artwork-only prompt policy', () => {
-  assert.match(generateImage, /sanitizePrintDesignAssetPurpose\(sourceMetadata\)/);
-  assert.match(generateImage, /const productionPrompt = printDesignPurpose\s*\? buildPrintDesignAssetPrompt/);
-  assert.match(generateImage, /patterns: \{ label: '柄・グラフィック', resumePath: '\/patterns\/workbench'/);
-  assert.ok((generateImage.match(/\.\.\.\(printDesignPurpose \?\? \{\}\)/g) ?? []).length >= 2);
-  assert.doesNotMatch(generateImage, /assetPurpose:\s*['"]print-design['"]/);
+test('the active Cloudflare gallery contract preserves the explicit purpose boundary', () => {
+  assert.match(cloudflareCore, /asset_purpose/);
+  assert.match(cloudflareCore, /assetPurpose !== null && assetPurpose !== "print-design"/);
+  assert.match(cloudflareCore, /json_extract\(metadata, '\$\.assetPurpose'\)/);
+  assert.match(cloudflareCore, /user_id = \?/);
 });
 
-test('migration is idempotent, high-confidence, and carries an exact rollback marker', () => {
-  assert.match(migration, /WHERE feature_type = 'design-gacha'/);
-  assert.match(migration, /metadata->>'sourceWorkspace' = 'patterns'/);
-  assert.match(migration, /metadata->>'workflowVersion' = 'pattern-preview-local-v1'/);
-  assert.match(migration, /metadata->>'sourceMode' = 'local-workflow-intake'/);
-  assert.match(migration, /metadata#>>'\{generationIntent,feature\}' = 'design-gacha'/);
-  assert.match(migration, /NOT \(COALESCE\(metadata, '\{\}'::jsonb\) \? 'assetPurpose'\)/);
-  assert.match(migration, /assetPurposeBackfillMigration/);
-  assert.match(migration, /metadata - 'assetPurpose' - 'assetPurposeBackfillMigration'/);
-  assert.doesNotMatch(migration, /prompt\s+(?:LIKE|ILIKE)|ocr|pixel/i);
+test('current runtime has no package-owned legacy producer dependency', () => {
+  assert.doesNotMatch(handoff, /supabase\.functions|supabase\.co|OPENAI_API_KEY/);
+  assert.doesNotMatch(cloudflareCore, /supabase\.functions|supabase\.co|\/functions\/v1\//);
 });

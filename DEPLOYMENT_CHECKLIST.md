@@ -1,4 +1,9 @@
-# GitHub公開チェックリスト | GitHub Publishing Checklist
+# GitHub公開チェックリスト（旧構成の履歴） | GitHub Publishing Checklist (Archived)
+
+> 現行のCloudflare Web/API/Auth配置手順ではありません。現行のセットアップは
+> [SETUP.md](SETUP.md)、Web配置は[cloudflare/heavy-web/README.md](cloudflare/heavy-web/README.md)、
+> 完了判定は[STATE.md](STATE.md)と`plan.md`を参照してください。以下のSupabase/
+> Zeabur/Vercel手順は移行履歴として保持しており、実行しないでください。
 
 このチェックリストを使って、GitHubリポジトリを公開する前に確認してください。
 
@@ -165,7 +170,7 @@ vercel --prod
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - `VITE_REMBG_MODEL_BASE_URL`（任意。silueta以外のモデル配信元）
-   - `VITE_REMBG_SILUETA_MODEL_URL`（任意。未設定時は同梱の `/models/silueta.onnx`）
+   - `VITE_REMBG_SILUETA_MODEL_URL`（任意。未設定時は同梱の `/assets/silueta.onnx`）
    - `VITE_REMBG_CLOTH_SEG_MODEL_URL`（任意の手動build用override。既定のZeabur `build:deploy`はrevision固定のHugging Face URLを検証・埋め込み）
 5. Deploy
 
@@ -174,7 +179,7 @@ vercel --prod
 - [ ] デプロイURLをREADME.mdに追加
 - [ ] デプロイURLをGitHub About欄に追加
 - [ ] デプロイされたアプリをテスト
-- [ ] 公開URLの `/models/silueta.onnx` が200で取得できることを確認
+- [ ] 公開URLの `/assets/silueta.onnx` が200、`application/octet-stream`、44,173,029 bytesで取得できることを確認
 - [ ] `VITE_REMBG_SILUETA_MODEL_URL` を設定した場合は、その完全URLが200かつCORS対応であることを確認
 - [ ] ISNetを明示利用する場合のみ、`VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` がCORS対応の管理下CDNを指すことを確認
 - [ ] Zeabur build commandが`npm install && npm run build:deploy`で、固定Hugging Face URLのHEAD/CORS/size/hash検証・build・dist URL readbackを一つのcommandで行う

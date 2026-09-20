@@ -1,20 +1,34 @@
 import assert from 'node:assert/strict';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import {
   PINNED_EXTERNAL_CLOTH_MODEL_URL,
   resolveClothModelBuildUrl,
   validateClothModelBuildUrl,
 } from './rembg-cloth-model-build-contract.mjs';
 
-const runVerifier = ({ args = [], clothModelUrl } = {}) => {
+const repoRoot = process.cwd();
+const verifierScript = fileURLToPath(new URL('./verify-rembg-model-deploy-readiness.mjs', import.meta.url));
+const rembgModelUrlEnvKeys = [
+  'VITE_REMBG_MODEL_BASE_URL',
+  'VITE_REMBG_SILUETA_MODEL_URL',
+  'VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL',
+  'VITE_REMBG_CLOTH_SEG_MODEL_URL',
+];
+const checkEnvSource = readFileSync(join(repoRoot, 'scripts/check-env.mjs'), 'utf8');
+
+const runVerifier = ({ args = [], clothModelUrl, cwd = repoRoot } = {}) => {
   const env = { ...process.env };
   env.VITE_REMBG_CLOTH_SEG_MODEL_URL = clothModelUrl ?? '';
   const result = spawnSync(process.execPath, [
-    'scripts/verify-rembg-model-deploy-readiness.mjs',
+    verifierScript,
     ...args,
   ], {
-    cwd: process.cwd(),
+    cwd,
     env,
     encoding: 'utf8',
   });
@@ -23,6 +37,34 @@ const runVerifier = ({ args = [], clothModelUrl } = {}) => {
     summary: JSON.parse(result.stdout),
   };
 };
+
+const createVerifierFixture = ({ checkEnv = checkEnvSource } = {}) => {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), 'rembg-model-deploy-readiness-'));
+  const copy = (relativePath) => {
+    const destination = join(fixtureRoot, relativePath);
+    mkdirSync(dirname(destination), { recursive: true });
+    copyFileSync(join(repoRoot, relativePath), destination);
+  };
+
+  for (const relativePath of [
+    '.gitignore',
+    '.env.example',
+    '.env.production.example',
+    'README.md',
+    'DEPLOYMENT_CHECKLIST.md',
+    'src/lib/workspaceMaterialReferences.ts',
+    'src/features/printing/selection/clothModelRuntimeContract.ts',
+  ]) {
+    copy(relativePath);
+  }
+  mkdirSync(join(fixtureRoot, 'scripts'), { recursive: true });
+  writeFileSync(join(fixtureRoot, 'scripts/check-env.mjs'), checkEnv);
+  mkdirSync(join(fixtureRoot, 'public/assets'), { recursive: true });
+  writeFileSync(join(fixtureRoot, 'public/assets/silueta.onnx'), Buffer.alloc(1_000_001));
+  return fixtureRoot;
+};
+
+const removeFixture = (fixtureRoot) => rmSync(fixtureRoot, { force: true, recursive: true });
 
 test('default production readiness configures the pinned cloth model URL', () => {
   const result = runVerifier();
@@ -44,6 +86,37 @@ test('default production readiness configures the pinned cloth model URL', () =>
     result.summary.checks.find(({ name }) => name === 'runtime_cloth_model_integrity_uses_official_pinned_sha256')?.ok,
     true,
   );
+});
+
+test('readiness does not require the legacy provider config file', () => {
+  const fixtureRoot = createVerifierFixture();
+  try {
+    const result = runVerifier({ cwd: fixtureRoot });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.summary.ok, true);
+    assert.equal(result.summary.checks.some(({ name }) => name.includes('zeabur')), false);
+  } finally {
+    removeFixture(fixtureRoot);
+  }
+});
+
+test('readiness fails when any rembg model URL leaves the check-env optional contract', () => {
+  for (const key of rembgModelUrlEnvKeys) {
+    const invalidCheckEnv = checkEnvSource.replace(`  '${key}',\n`, '');
+    assert.notEqual(invalidCheckEnv, checkEnvSource, `fixture did not remove ${key}`);
+    const fixtureRoot = createVerifierFixture({ checkEnv: invalidCheckEnv });
+    try {
+      const result = runVerifier({ cwd: fixtureRoot });
+      assert.equal(result.status, 1, `${key}: ${result.stderr}`);
+      assert.equal(result.summary.ok, false);
+      assert.match(result.summary.exactBlocker, /env_check_treats_model_base_url_as_optional/);
+      if (key === 'VITE_REMBG_CLOTH_SEG_MODEL_URL') {
+        assert.match(result.summary.exactBlocker, /cloth_model_url_is_optional_in_deployment_contract/);
+      }
+    } finally {
+      removeFixture(fixtureRoot);
+    }
+  }
 });
 
 test('development keeps the unconfigured fallback while production resolves the pinned URL', () => {

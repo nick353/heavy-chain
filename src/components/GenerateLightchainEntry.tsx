@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   Search,
-  Sparkles,
   X,
 } from 'lucide-react';
 import {
@@ -65,6 +64,13 @@ const galleryCasesByTab = {
       featureId: 'marketing-workspace',
     },
     {
+      id: 'text-style-recommended',
+      title: 'ファッションスタジオ（テキスト生成）：人気モデルのスタイルDNAを維持しながら、AIが人気デザインのバリエーション展開をスピーディーに実現',
+      description: '人気デザインのトーンを保ちながら、企画のバリエーションを作ります。',
+      step: 'ファッションスタジオ → テキスト指示 → バリエーション → 保存',
+      featureId: 'fashion-studio',
+    },
+    {
       id: 'flat-fabric',
       title: 'ファッションスタジオ： 平絵＋生地',
       description: '平絵と生地を組み合わせ、質感と服の見え方を確認します。',
@@ -100,11 +106,32 @@ const galleryCasesByTab = {
       featureId: 'lineart-to-real',
     },
     {
-      id: 'pose-one-click',
-      title: '【ファッションスタジオ】— ポーズ指定ワンクリック生成：ダイナミックなビジュアルで訴求力を最大化',
-      description: '衣服とモデルを保ったままポーズを比較します。',
-      step: 'AIフィッティング → ポーズ参考 → 結果比較 → 保存',
+      id: 'video-workstation-recommended',
+      title: 'ファッションスタジオ＋動画ワークスペース：白背景の商品画像からシーン動画をワンクリック生成',
+      description: '商品画像からプロモーション動画の構成へ展開します。',
+      step: '動画ワークステーション → 商品画像 → 構成 → 書き出し',
+      featureId: 'video-workstation',
+    },
+    {
+      id: 'face-pose-recommended',
+      title: '【AIフィッティング】— アパレルデザイン画とモデルの顔・ポーズ参考画像を組み合わせ、リアルなモデル着用画像を瞬時に生成',
+      description: 'デザイン画と顔・ポーズ参考画像を組み合わせて着用イメージを作ります。',
+      step: 'AIフィッティング → 顔・ポーズ参考 → 生成 → 保存',
       featureId: 'virtual-fitting',
+    },
+    {
+      id: 'three-dimensional-display-recommended',
+      title: '【ファッションスタジオ】——靴下カテゴリー：3Dビジュアル展示',
+      description: '商品デザインの見え方を立体的に確認します。',
+      step: 'ファッションスタジオ → 撮影セット → マルチアングル → Canvas',
+      featureId: 'fashion-studio',
+    },
+    {
+      id: 'garment-design-video-recommended',
+      title: '【ファッションスタジオ】——服の着せ替えからデザイン制作までをワンストップで実現',
+      description: '衣服、モデル、背景をつないで企画から制作へ進みます。',
+      step: 'AIフィッティング → デザイン修正 → 生地／プリント → Canvas',
+      featureId: 'fashion-studio',
     },
     {
       id: 'inner-lookbook',
@@ -148,67 +175,18 @@ const galleryCasesByTab = {
       step: 'ファッションスタジオ → 撮影セット → アングル比較 → Canvas',
       featureId: 'fashion-studio',
     },
-  ],
-  edit: [
     {
-      id: 'detail-recreate',
-      title: '【ファッションスタジオ】— ディテールをワンクリックで再現',
-      description: '服のディテールを参照画像から保ち、対象箇所を調整します。',
-      step: 'ウェアデザインラボ → 対象箇所 → 候補比較 → 保存',
-      featureId: 'wear-design-lab',
-    },
-    {
-      id: 'inspiration-knit',
-      title: 'インスピレーション｜インスピレーションデザイン：クリエイティブなニットコレクション設計',
-      description: '素材やテーマから複数のデザイン案を作り、企画へつなげます。',
-      step: 'インスピレーション → テーマ → 複数案 → デザインエージェント',
-      featureId: 'inspiration-design',
-    },
-    {
-      id: 'body-proportion',
-      title: '【ファッションスタジオ】— モデルの体型・プロポーションをワンクリックで調整',
-      description: '衣服と構図を保ちながら、モデル条件の差分を比較します。',
-      step: 'モデル企画ライブラリ → 体型・サイズ → 比較 → 保存',
-      featureId: 'model-body-shape',
-    },
-    {
-      id: 'line-to-product',
-      title: '【ファッションスタジオ】— 線画から商品画像・モデル着用画像までを瞬時に生成',
-      description: '線画のsource provenanceを保ちながら、商品と着用の候補へ展開します。',
-      step: '平絵生成 → 線画の実写化 → AIフィッティング → 保存',
-      featureId: 'lineart-to-real',
+      id: 'pose-one-click',
+      title: '【ファッションスタジオ】— ポーズ指定ワンクリック生成：ダイナミックなビジュアルで訴求力を最大化',
+      description: '衣服とモデルを保ったままポーズを比較します。',
+      step: 'AIフィッティング → ポーズ参考 → 結果比較 → 保存',
+      featureId: 'virtual-fitting',
     },
   ],
-  print: [
-    {
-      id: 'print-fabric',
-      title: 'ファッションスタジオ：平絵＋生地',
-      description: '平絵と生地を組み合わせ、質感と服の見え方を確認します。',
-      step: '生地イメージ → 生地選択 → 結果比較 → Canvas',
-      featureId: 'fabric-simulation',
-    },
-    {
-      id: 'print-placement',
-      title: 'プリントイメージ：服画像へプリントを配置',
-      description: 'スポットと全体のプリント範囲を切り替え、配置結果を比較します。',
-      step: 'プリントイメージ → 範囲調整 → AI生成 → Gallery / History',
-      featureId: 'printing-image',
-    },
-    {
-      id: 'print-vector',
-      title: 'パターンをベクター化し量産用データへつなげる',
-      description: '総柄、リピート、配色の方針を保持して生産工程へ渡します。',
-      step: '柄・グラフィック → ベクター化 → repeat確認 → 保存',
-      featureId: 'pattern-vector-pro',
-    },
-    {
-      id: 'graphic-motif',
-      title: 'AIグラフィックデザイン：柄・ロゴ・モチーフを作成',
-      description: 'グラフィック案を商品、プリント、販促素材へ展開します。',
-      step: 'グラフィックツール → モチーフ → 配置 → 保存',
-      featureId: 'graphic-design',
-    },
-  ],
+  // These tabs are currently empty on the Light production session. Keep the
+  // Heavy launcher faithful to that observed state instead of inventing cards.
+  edit: [],
+  print: [],
   visual: [
     {
       id: 'flat-to-fitting',
@@ -269,36 +247,7 @@ const galleryCasesByTab = {
       featureId: 'fashion-studio',
     },
   ],
-  production: [
-    {
-      id: 'outdoor-line',
-      title: 'ファッションスタジオ：実物から線画化',
-      description: '商品画像から生産・企画用の線画とsource provenanceを作ります。',
-      step: '線画生成 → 線画確認 → ベクター化 → 保存',
-      featureId: 'lineart-to-real',
-    },
-    {
-      id: 'garment-detail',
-      title: 'ファッションスタジオ：服の着せ替えからデザイン制作まで',
-      description: '衣服、モデル、背景をつないで企画から制作へ進みます。',
-      step: 'AIフィッティング → デザイン修正 → 生地／プリント → Canvas',
-      featureId: 'virtual-fitting',
-    },
-    {
-      id: 'multiple-models',
-      title: '【ファッションスタジオ】— 複数モデルによるシーンを生成',
-      description: '同じ衣服を複数モデルとシーンで比較し、量産前の判断へつなげます。',
-      step: 'モデル企画ライブラリ → シーン → 複数案 → 保存',
-      featureId: 'fashion-studio',
-    },
-    {
-      id: 'three-dimensional-display',
-      title: '【ファッションスタジオ】— 3Dビジュアル展示',
-      description: '商品デザインの見え方を立体的に確認し、企画・確認・販促へ渡します。',
-      step: 'ファッションスタジオ → 撮影セット → マルチアングル → Canvas',
-      featureId: 'fashion-studio',
-    },
-  ],
+  production: [],
 } as const;
 
 type GalleryCase = {
@@ -309,6 +258,7 @@ type GalleryCase = {
   featureId: string;
   artifactId?: string;
   imageUrl?: string;
+  videoUrl?: string;
 };
 
 const resolveArtifactFeatureId = (artifact: WorkspaceArtifact, fallback: string) => {
@@ -329,43 +279,47 @@ const resolveArtifactFeatureId = (artifact: WorkspaceArtifact, fallback: string)
     : fallback;
 };
 
+// Kept as the shared reuse-route resolver for saved artifacts; the launcher
+// intentionally does not inject saved artifacts into the production gallery.
+void resolveArtifactFeatureId;
+
 const isBetaFeature = (feature: LightchainFeature | undefined): feature is LightchainFeature => Boolean(feature && feature.betaIncluded !== false);
 
 // The home mirrors Lightchain's complete recommended card inventory. Video remains
-// visibly discoverable here while its /video destination stays fail-closed.
+// visibly discoverable here while its canonical project dashboard stays separate
+// from the guarded detail/provider workspace.
 const isHomepageVisibleFeature = (_feature: LightchainFeature): boolean => true;
 
-/**
- * Lightchain is the visual source of truth for this launcher. These are the
- * public production card assets observed on Lightchain, kept as remote
- * references so Heavy does not invent substitute artwork or duplicate files.
- */
+/** Heavy-owned artwork for the shared Lightchain-shaped launcher chrome. */
 const launcherCategoryImages: Record<LightchainCategoryId, string> = {
-  recommended: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  planning: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/aiDesignCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  fitting: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  graphics: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GeneratePrintingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  recommended: '/assets/lightchain-cards/design-v1.png',
+  planning: '/assets/lightchain-cards/design-v1.png',
+  fitting: '/assets/lightchain-cards/fitting-v1.png',
+  graphics: '/assets/lightchain-cards/graphics-v1.png',
 };
 
 const launcherFeatureImages: Partial<Record<string, string>> = {
-  'design-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'marketing-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateMarketingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'virtual-fitting': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'wear-design-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/orientedDesignCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'model-library': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FittingModelLibraryCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'fashion-studio': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/integrationCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'design-agent': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'heavychain-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/laboratoryCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'inspiration-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/aiDesignCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'fabric-simulation': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FabricBodyCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'lineart-to-real': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/LineArtToRealCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'change-color': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/OneClickChangeColorCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'flat-vector': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/LineArtVectorConvertCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'custom-style': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/fashionModelCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'graphic-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GeneratePrintingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'pattern-vector-pro': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/SVGConvertCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'design-arrange': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/OneClickModifyPrintingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
-  'print-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FlowerShapedDesignCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'design-workspace': '/assets/lightchain-cards/design-v1.png',
+  'video-workstation': '/assets/lightchain-cards/marketing-v1.png',
+  'marketing-workspace': '/assets/lightchain-cards/marketing-v1.png',
+  'virtual-fitting': '/assets/lightchain-cards/fitting-v1.png',
+  'image-repair': '/assets/lightchain-cards/fitting-v1.png',
+  'remove-background': '/assets/lightchain-cards/fitting-v1.png',
+  'wear-design-lab': '/assets/lightchain-cards/design-v1.png',
+  'model-library': '/assets/lightchain-cards/fitting-v1.png',
+  'fashion-studio': '/assets/lightchain-cards/design-v1.png',
+  'design-agent': '/assets/lightchain-cards/marketing-v1.png',
+  'heavychain-lab': '/assets/lightchain-cards/design-v1.png',
+  'inspiration-design': '/assets/lightchain-cards/design-v1.png',
+  'fabric-simulation': '/assets/lightchain-cards/fitting-v1.png',
+  'lineart-to-real': '/assets/lightchain-cards/design-v1.png',
+  'change-color': '/assets/lightchain-cards/design-v1.png',
+  'flat-vector': '/assets/lightchain-cards/graphics-v1.png',
+  'custom-style': '/assets/lightchain-cards/design-v1.png',
+  'graphic-design': '/assets/lightchain-cards/graphics-v1.png',
+  'pattern-vector-pro': '/assets/lightchain-cards/graphics-v1.png',
+  'design-arrange': '/assets/lightchain-cards/graphics-v1.png',
+  'print-design': '/assets/lightchain-cards/graphics-v1.png',
 };
 
 const buildGalleryExampleImage = (featureId: string) => {
@@ -377,7 +331,7 @@ const buildGalleryExampleImage = (featureId: string) => {
 
 const buildLauncherFeatureImage = (feature: LightchainFeature) => (
   launcherFeatureImages[feature.id] ?? launcherCategoryImages[feature.category]
-);
+).replace('w_256', 'w_384');
 
 const findFeatureFromPrompt = (prompt: string) => {
   const normalizedPrompt = prompt.trim().toLowerCase();
@@ -414,7 +368,6 @@ interface GenerateLightchainEntryProps {
 export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLightchainEntryProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currentBrand, user } = useAuthStore();
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
   const [command, setCommand] = useState('');
   const [galleryTab, setGalleryTab] = useState<(typeof galleryTabs)[number]['id']>('recommended');
@@ -422,7 +375,9 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   const [galleryQuery, setGalleryQuery] = useState('');
   const [gallerySearchTerm, setGallerySearchTerm] = useState('');
   const [selectedCase, setSelectedCase] = useState<GalleryCase | null>(null);
-  const [galleryArtifacts, setGalleryArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const currentBrand = useAuthStore((state) => state.currentBrand);
+  const user = useAuthStore((state) => state.user);
+  const [savedArtifacts, setSavedArtifacts] = useState<WorkspaceArtifact[]>([]);
   const categoryParam = searchParams.get('category');
 
   useEffect(() => {
@@ -430,6 +385,31 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
       setActiveCategory(categoryParam as LightchainCategoryId);
     }
   }, [categoryParam]);
+
+  useEffect(() => {
+    if (!currentBrand?.id) {
+      setSavedArtifacts([]);
+      return;
+    }
+    let cancelled = false;
+    const hydrateSavedArtifacts = async () => {
+      const artifacts = listWorkspaceArtifacts(currentBrand.id, user?.id);
+      const signedReferences = artifacts.map((artifact) => ({
+        storage_path: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata) ?? artifact.imageUrl,
+        image_url: artifact.imageUrl,
+      }));
+      const signed = await withSignedImageUrls(signedReferences).catch(() => signedReferences);
+      if (cancelled) return;
+      setSavedArtifacts(artifacts.map((artifact, index) => ({
+        ...artifact,
+        imageUrl: signed[index]?.image_url?.trim() || artifact.imageUrl,
+      })));
+    };
+    void hydrateSavedArtifacts();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBrand?.id, user?.id]);
 
   const visibleFeatures = useMemo(
     () => getLightchainLauncherFeatures(activeCategory).filter(isHomepageVisibleFeature),
@@ -439,35 +419,34 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   const commandHref = buildLightchainFeatureHref(commandFeature);
   const galleryItems = useMemo<GalleryCase[]>(() => {
     const templates = galleryCasesByTab[galleryTab];
-    // Keep saved results in the category where their tool belongs. Positional
-    // injection makes unrelated local artifacts appear in every tab.
-    const persistedCandidates = galleryTab === 'recommended'
-      ? galleryArtifacts
-      : galleryArtifacts.filter((artifact) => {
-        const featureId = resolveArtifactFeatureId(artifact, '');
-        return templates.some((template) => template.featureId === featureId);
-      });
-    const persistedItems = persistedCandidates.slice(0, templates.length).flatMap((artifact, index) => {
-      const template = templates[index];
-      const imageUrl = artifact.imageUrl.trim();
-      if (!imageUrl) return [];
-      return [{
-        ...template,
-        id: `saved-${artifact.id}`,
-        artifactId: artifact.id,
-        title: artifact.title || template.title,
-        description: artifact.prompt?.trim() || template.description,
-        featureId: resolveArtifactFeatureId(artifact, template.featureId),
-        imageUrl,
-      }];
-    });
-    const exampleItems = templates.slice(persistedItems.length).map((template) => ({
+    const exampleItems = templates.map((template) => ({
       ...template,
       id: `example-${template.id}`,
       imageUrl: buildGalleryExampleImage(template.featureId),
     }));
-    return [...persistedItems, ...exampleItems];
-  }, [galleryArtifacts, galleryTab]);
+    const persistedCandidates = galleryTab === 'recommended'
+      ? savedArtifacts
+      : savedArtifacts.filter((artifact) => {
+        const featureId = resolveArtifactFeatureId(artifact, '');
+        return templates.some((template) => template.featureId === featureId);
+      });
+    const persistedItems = persistedCandidates
+      .filter((artifact) => artifact.imageUrl.trim())
+      .map((artifact) => {
+        const featureId = resolveArtifactFeatureId(artifact, templates[0]?.featureId ?? 'fashion-studio');
+        const matchingTemplate = templates.find((template) => template.featureId === featureId);
+        return {
+          id: `saved-${artifact.id}`,
+          artifactId: artifact.id,
+          title: artifact.title || matchingTemplate?.title || '保存済み成果物',
+          description: artifact.prompt?.trim() || matchingTemplate?.description || '保存済みのLightchain成果物です。',
+          step: '保存済み成果物 → 再利用',
+          featureId,
+          imageUrl: artifact.imageUrl,
+        };
+      });
+    return [...exampleItems, ...persistedItems];
+  }, [galleryTab, savedArtifacts]);
 
   const filteredGalleryItems = useMemo(() => {
     const normalizedQuery = gallerySearchTerm.trim().toLocaleLowerCase();
@@ -476,40 +455,6 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
       `${item.title} ${item.description} ${item.step}`.toLocaleLowerCase().includes(normalizedQuery)
     ));
   }, [galleryItems, gallerySearchTerm]);
-
-  useEffect(() => {
-    if (!currentBrand?.id) {
-      setGalleryArtifacts([]);
-      return;
-    }
-    let cancelled = false;
-    const localArtifacts = listWorkspaceArtifacts(currentBrand.id, user?.id)
-      .filter((artifact) => Boolean(artifact.imageUrl || getWorkspaceArtifactCanonicalStoragePath(artifact.metadata)));
-    setGalleryArtifacts(localArtifacts);
-
-    const imageReferences = localArtifacts.map((artifact) => ({
-      storage_path: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata) ?? artifact.imageUrl,
-      image_url: artifact.imageUrl,
-    }));
-    void withSignedImageUrls(imageReferences)
-      .then((signedArtifacts) => {
-        if (cancelled) return;
-        setGalleryArtifacts(localArtifacts.map((artifact, index) => {
-          const canonicalStoragePath = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
-          return {
-            ...artifact,
-            imageUrl: signedArtifacts[index]?.image_url || (canonicalStoragePath ? '' : artifact.imageUrl),
-          };
-        }));
-      })
-      .catch(() => {
-        // Local data URLs remain usable when remote signing is unavailable.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentBrand?.id, user?.id]);
 
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
     setActiveCategory(categoryId);
@@ -529,19 +474,19 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
           </div>
 
           <form
-            className="mt-4 flex h-10 max-w-[507px] items-center rounded-full border border-cyan-300/75 bg-white/[0.035] px-4 shadow-[0_0_22px_rgba(56,189,248,0.12)] focus-within:border-indigo-300"
+            role="search"
+            className="mt-4 flex h-10 w-full max-w-[506px] items-center gap-2 rounded-[24px] border border-cyan-300/75 bg-white/[0.035] px-4 shadow-[0_0_22px_rgba(56,189,248,0.12)] transition-all duration-300 focus-within:border-indigo-300"
             onSubmit={(event) => {
               event.preventDefault();
               navigate(`${commandHref}${commandHref.includes('?') ? '&' : '?'}prompt=${encodeURIComponent(command.trim())}`);
             }}
           >
-            <Sparkles className="h-4 w-4 shrink-0 text-cyan-300" />
+            <span aria-hidden="true" className="flex h-4 w-4 shrink-0 items-center justify-center text-sm text-cyan-200">✦</span>
             <input
               value={command}
               onChange={(event) => setCommand(event.target.value)}
-              className="min-w-0 flex-1 border-0 bg-transparent px-3 py-0 text-sm text-white outline-none placeholder:text-neutral-500"
+              className="min-w-0 flex-1 border-0 bg-transparent py-0 text-sm leading-5 text-white outline-none placeholder:text-neutral-500 focus-visible:ring-0"
               placeholder="指示を入力してください... 例：『モデルの着せ替え』"
-              aria-label="指示を入力してください"
             />
           </form>
 
@@ -558,7 +503,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   data-state={active ? 'active' : 'inactive'}
                   onClick={() => handleCategoryChange(category.id)}
                   style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
-                  className={`group relative flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-md border-0 px-6 py-1 text-sm leading-[21px] transition ${
+                  className={`shrink-0 rounded-md px-6 py-2 transition group relative flex h-8 items-center justify-center whitespace-nowrap border-0 text-sm leading-[21px] ${
                     active ? 'bg-[#63cbc7] font-medium text-neutral-950 shadow-[0_0_20px_rgba(99,203,199,0.18)]' : 'font-normal text-neutral-400 hover:bg-white/[0.08] hover:text-white'
                   }`}
                 >
@@ -572,6 +517,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
           <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4" data-testid="lightchain-tool-grid">
             {visibleFeatures.map((feature, index) => {
               const hiddenOnMobile = compactOnMobile && index > 5;
+              const badge = getLightchainLauncherBadge(feature);
               return (
                 <Link
                   key={feature.id}
@@ -579,15 +525,26 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   data-testid="lightchain-tool-card"
                   className={`${hiddenOnMobile ? 'hidden md:flex' : ''} relative flex w-full cursor-pointer gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#262a2b] p-3 transition hover:border-cyan-300/50 xl:gap-4 xl:p-4`}
                 >
-                  {getLightchainLauncherBadge(feature) && <span className="absolute right-0 top-0 z-10 rounded-bl-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 px-3 py-1 text-[10px] font-medium leading-3 text-white">{getLightchainLauncherBadge(feature)}</span>}
+                  {badge && <span className={`absolute right-0 top-0 z-10 rounded-bl-xl px-3 py-1 text-[10px] font-medium leading-3 text-white ${badge === 'Beta' ? 'bg-gradient-to-r from-fuchsia-500 to-rose-500' : 'bg-[#687070]'}`}>{badge}</span>}
                   <div className="relative h-[80px] w-[112px] shrink-0 overflow-hidden rounded-[5px] bg-white xl:h-[88px] xl:w-[132px]">
                     <img src={buildLauncherFeatureImage(feature)} alt="" className="h-full w-full object-cover" loading="lazy" />
                   </div>
                   <div className="flex min-h-[80px] min-w-0 flex-1 flex-col gap-1 xl:min-h-[88px]">
-                    <div className="relative flex min-h-7 items-center xl:min-h-8">
-                      <h3 className="min-w-0 truncate bg-gradient-to-r from-white to-cyan-100 bg-clip-text text-sm font-medium leading-5 text-transparent xl:text-base xl:leading-6">{getLightchainLauncherTitle(feature)}</h3>
+                    <div className="relative flex min-h-7 items-center overflow-hidden xl:min-h-8">
+                      <span aria-hidden="true" className="pointer-events-none absolute left-0 top-1/2 h-11 w-[148px] -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_left,rgba(99,203,199,0.28),transparent_70%)] opacity-80" />
+                      <h3
+                        style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
+                        className="relative z-[1] min-w-0 line-clamp-2 bg-gradient-to-r from-white to-cyan-100 bg-clip-text text-sm font-medium leading-6 text-transparent xl:text-base"
+                      >
+                        {getLightchainLauncherTitle(feature)}
+                      </h3>
                     </div>
-                    <p className="line-clamp-3 text-sm leading-4 text-neutral-300">{getLightchainLauncherDescription(feature)}</p>
+                    <p
+                      style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
+                      className="line-clamp-3 text-xs leading-4 text-neutral-300"
+                    >
+                      {getLightchainLauncherDescription(feature)}
+                    </p>
                   </div>
                 </Link>
               );
@@ -599,8 +556,8 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
       <section className="border-t border-white/10 px-5 pb-8 pt-10 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-none">
           <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">事例共有</h2>
-          <div className="mt-5 flex flex-wrap items-center gap-4">
-            <div role="tablist" aria-label="事例共有カテゴリ" className="flex w-fit gap-0 overflow-x-auto rounded-lg border border-white/10 bg-[#262a2b] p-1 text-sm text-neutral-400">
+          <div className="mt-[23px] flex flex-wrap items-center gap-4">
+            <div role="tablist" aria-label="事例共有カテゴリ" className="flex h-10 w-fit items-center justify-center gap-2 overflow-x-auto rounded-lg border border-white/10 bg-[#262a2b] p-1 text-neutral-400 xl:overflow-x-visible">
             {galleryTabs.map((tab) => (
               <button
                 key={tab.id}
@@ -608,7 +565,9 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                 role="tab"
                 aria-selected={galleryTab === tab.id}
                 onClick={() => setGalleryTab(tab.id)}
-                className={`shrink-0 rounded-md px-6 py-2 transition ${galleryTab === tab.id ? 'bg-[#63cbc7] font-medium text-neutral-950' : 'hover:bg-white/[0.06] hover:text-white'}`}
+                data-state={galleryTab === tab.id ? 'active' : 'inactive'}
+                style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
+                className={`shrink-0 rounded-md px-6 py-2 transition group relative flex h-8 items-center justify-center whitespace-nowrap rounded-lg border-0 text-sm font-normal leading-[21px] ${galleryTab === tab.id ? 'rounded-md bg-[#63cbc7] font-medium text-neutral-950 shadow-sm' : 'text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}
               >
                 {tab.label}
               </button>
@@ -652,7 +611,17 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   onClick={() => setSelectedCase(item)}
                   className="group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-xl bg-[#262a2b] text-left shadow-md transition hover:shadow-xl"
                 >
-                  <img src={item.imageUrl} alt="" loading="lazy" className="block h-auto w-full object-cover transition duration-500 group-hover:scale-[1.01]" />
+                  {item.videoUrl ? (
+                    <video src={item.videoUrl} muted loop playsInline preload="metadata" className="block h-auto w-full object-cover transition duration-500 group-hover:scale-[1.01]" />
+                  ) : (
+                    <img
+                      src={item.imageUrl}
+                      srcSet={item.imageUrl ? `${item.imageUrl.replace(/w_1200(?=,limit_1)/, 'w_640')} 1x, ${item.imageUrl} 2x` : undefined}
+                      alt=""
+                      loading="lazy"
+                      className="block h-auto w-full object-cover transition duration-500 group-hover:scale-[1.01]"
+                    />
+                  )}
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-4 pt-14 opacity-0 transition group-hover:opacity-100">
                     <p className="text-sm font-medium leading-5 text-white">{item.title}</p>
                   </div>

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, ChevronRight, Clapperboard, Film, Save, Smartphone } from 'lucide-react';
+import { Check, ChevronRight, Clapperboard, Film, Save, Smartphone, Upload } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
@@ -99,6 +99,8 @@ const initialMaterialReference: MaterialReferenceState = {
   scale: 64,
   note: '動画のどのショットに使う素材かを先に決めます。',
 };
+
+const VIDEO_GUIDE_DISMISSED_STORAGE_KEY = 'heavy-chain-video-guide-dismissed';
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -208,6 +210,13 @@ const buildVideoStoryboardPreviewSvg = ({
 export function VideoWorkstationPage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
+  const [showVideoGuide, setShowVideoGuide] = useState(() => {
+    try {
+      return window.localStorage.getItem(VIDEO_GUIDE_DISMISSED_STORAGE_KEY) !== 'true';
+    } catch {
+      return true;
+    }
+  });
   const [activeChoice, setActiveChoice] = useState(choices[0]);
   const [progress, setProgress] = useState(40);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -339,7 +348,7 @@ export function VideoWorkstationPage() {
           searchTokens: ['video-shot-plan', 'video-storyboard-local-v1', activeChoice, selectedStoryboard.id, duration],
         },
         status: 'planned',
-        resumePath: '/video',
+        resumePath: '/flow/GenerateShortVideo/detail',
         handoffKind: 'local-workflow-intake',
         primaryInput,
         nextStep,
@@ -386,6 +395,87 @@ export function VideoWorkstationPage() {
       toast.error(message);
     }
   };
+
+  const dismissVideoGuide = () => {
+    try {
+      window.localStorage.setItem(VIDEO_GUIDE_DISMISSED_STORAGE_KEY, 'true');
+    } catch {
+      // The source flow still works when local preference storage is unavailable.
+    }
+    setShowVideoGuide(false);
+  };
+
+  const handleInitialImage = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const imageUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (!imageUrl) return;
+      setMaterialReference((current) => ({
+        ...current,
+        imageUrl,
+        fileName: file.name,
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (showVideoGuide) {
+    return (
+      <div className="min-h-[calc(100vh-5rem)] bg-[#111719] px-4 py-10 text-white sm:px-8">
+        <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
+          <button
+            type="button"
+            data-testid="video-guide-show"
+            onClick={dismissVideoGuide}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-left transition hover:border-cyan-300/60 hover:bg-white/[0.08]"
+          >
+            <span className="block text-lg font-semibold">ガイドを見る</span>
+            <span className="mt-2 block text-sm text-neutral-400">ガイドを表示する</span>
+          </button>
+          <button
+            type="button"
+            data-testid="video-guide-skip"
+            onClick={dismissVideoGuide}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-left transition hover:border-cyan-300/60 hover:bg-white/[0.08]"
+          >
+            <span className="block text-lg font-semibold">ガイドを表示しない</span>
+            <span className="mt-2 block text-sm text-neutral-400">ガイド無しで開始します</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!materialReference.imageUrl) {
+    return (
+      <main className="relative dark min-h-[calc(100vh-56px)] overflow-hidden bg-[#101516] px-4 py-6 text-white">
+        <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(#4b5b5f_0.7px,transparent_0.7px)] [background-size:22px_22px]" />
+        <div className="relative z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#252b2d] text-sm text-neutral-200 shadow-xl">
+          <div className="border-b border-white/10 px-3 py-1.5 text-xs text-neutral-300">
+            <span aria-hidden="true" className="mr-2 inline-block rounded bg-cyan-500/80 px-1.5 py-1 text-[10px] leading-none">🎬</span>
+            動画ワークステーション
+          </div>
+          <div className="px-3 py-3"><span aria-hidden="true" className="mr-5 text-lg">‹</span>Untitled</div>
+        </div>
+        <label
+          data-testid="video-initial-image-dropzone"
+          className="relative z-10 mx-auto mt-8 flex min-h-[31rem] max-w-[784px] cursor-pointer flex-col items-center justify-center rounded-xl border border-white/10 bg-[#282c2d] px-6 text-center transition hover:bg-[#303638]"
+        >
+          <Upload className="h-10 w-10 text-white" />
+          <span className="mt-5 text-sm text-neutral-200">ここをクリックまたはドラッグして画像を追加</span>
+          <span className="mt-2 text-xs text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</span>
+          <input
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            className="sr-only"
+            onChange={handleInitialImage}
+          />
+        </label>
+      </main>
+    );
+  }
 
   return (
     <div className="space-y-6">

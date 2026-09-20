@@ -1,6 +1,121 @@
-# Lightchain / Heavy parity matrix — current-selector checkpoint r101 (historical overlays retained)
+# Lightchain / Heavy parity matrix — current-selector checkpoint r153 (historical overlays retained)
+
+## 0.latest video scope correction — 2026-09-20
+
+The canonical video dashboard/detail is no longer absent from the parity
+behavior accounting. The existing `31`-row non-video ledger remains unchanged
+for the common provider workflow, and the two video rows now have a dedicated
+eight-layer ledger at
+`work/lightchain-video-parity-behavior-ledger-current.json`.
+
+Local `input`, `screen`, and explicit fail-closed `error` layers are
+`verified-local`; `generation`, `result`, `save`, `reuse`, and `performance`
+remain `PENDING_CONFIRMATION` until an approved provider receipt and same-run
+Lightchain↔Heavy persistence/reconciliation evidence exists. This prevents the
+video gap from being hidden while preserving the no-unverified-provider rule.
+
+## 0.current 31-row behavior ledger r203
+
+- Machine-readable ledger: `work/lightchain-parity-behavior-ledger-current-20260821-r203.json`
+- Structural readback: `work/heavy-parity-behavior-ledger-20260821-r203.md`
+- Scope: exactly 31 non-video rows; `video-workstation` and `video-detail` are excluded.
+- Required layers for every row: `input` / `generation` / `result` / `save` / `reuse` / `error` / `performance`.
+- Status counts: `verified-production=20`, `verified-local=26`, `PENDING_CONFIRMATION=171`.
+- `verified-local` is not production parity. Pending layers remain unresolved and are not promoted by route reach, screenshots, queued jobs, or historical artifacts.
+
+## 0.current fresh source homepage baseline r153
+
+- Fresh current-selector readback under `backend=chrome_plugin`, Profile 2,
+  `signed_chrome_extension_profile2`, revision `1` completed successfully.
+- Homepage exposed the Lightchain hero, prompt search, four categories, eight
+  recommended cards (seven non-video and one excluded video), and the case-sharing
+  section. Artifact:
+  `work/lightchain-profile2-fresh-home-readback-20260821-r153.md`.
+- This replaces no historical per-category proof automatically. Category-panel
+  enumeration, card-to-route binding, and per-feature behavior remain
+  `PENDING_CONFIRMATION` until read back under the current selector.
+- Heavy production authentication remains separately blocked by
+  `heavy_target_workspace_authentication_not_ready`; no Heavy/provider status is
+  inferred from this source readback.
+
+## 0.current fresh source non-video route ledger r158
+
+- Under the same current selector revision `1` and fresh owner as r153, all 19
+  non-video candidate routes returned URL/title/DOM readback and task-owned
+  cleanup success. Four distinct targets were processed in parallel per batch.
+- Six routes retained a visible `読み込み中` marker in the bounded DOM readback;
+  these are route-reachable but final lazy-screen hydration remains
+  `PENDING_CONFIRMATION`.
+- Artifact: `work/lightchain-profile2-current-selector-route-ledger-20260821-r158.md`.
+- Provider generation, result/save/reuse/reload, cross-surface lineage, and
+  Heavy production authentication remain separate proof layers.
+
+## 0.current consolidated parity overlay r136
+
+- Fresh Lightchain source ledger: 4 categories, 26 non-video card occurrences,
+  19 distinct non-video routes, and 2 excluded video cards.
+- Heavy current catalog: 31 non-video rows, all explicitly admitted to either
+  `edit-image` or `model-matrix`; all use the shared unified workflow contract.
+- Priority production evidence is now separated from pending rows: fabric/print
+  imagery and AI fitting have r127/r128/r133 provider, persistence, destination,
+  reload, and reuse proof. The remaining 28 rows still need real provider
+  workflow evidence.
+- Heavy production UI route audit r135 read back 21/21 canonical routes plus
+  `/tools/fabric` and `/model`; this is UI/readback coverage and does not close
+  provider generation parity.
+- Local all-feature verifier r134 passed 31/31 routes and 277 assertions;
+  desktop layout passed 228/228 at 1280/1440/1920/2560px.
+- Current consolidated artifact:
+  `work/lightchain-heavy-current-parity-ledger-20260820-r136.md`。
+
+| Requirement layer | Current status | Current evidence / gap |
+|---|---|---|
+| Lightchain source inventory and video exclusion | `verified` | fresh Profile 2 card ledger |
+| Heavy 31-row catalog and common contract | `verified-local` | 31/31 provider admission and workflow contract |
+| Fabric/printing provider flow | `verified-production` | r127/r128 |
+| AI fitting provider flow | `verified-production` | r133 |
+| Remaining 28 provider workflows | `PENDING_CONFIRMATION` | no bounded all-row provider batch yet |
+| Mac/Windows current Chrome | `PENDING_CONFIRMATION` | no real cross-OS proof in this environment |
+| Internal beta acceptance | `PENDING_CONFIRMATION` | real consented user evidence missing |
 
 更新日: 2026-08-20
+
+## 0.current fresh Lightchain source inventory r307
+
+- Fresh current Profile 2 source readback completed under selector revision `4`
+  with browser `-ee94-4428-a132-99cfb9540d00`; the old revision-30 artifacts are
+  historical and were not promoted.
+- The homepage and all four tool categories were read in task-owned tabs. The
+  current visible non-video card counts are `おすすめHot=7`,
+  `企画デザインツール=9`, `AIフィッティング=5`, and
+  `グラフィックツール=5`. Video cards were separately counted and excluded.
+- The current source exposed the search input, four tool tabs, six case tabs,
+  current retirement markers, and the source labels for fabric/print, AI fitting,
+  model library, wear design, graphics, marketing, and studio workflows.
+- Artifact:
+  `work/lightchain-profile2-fresh-source-readback-20260821-r307.md`.
+
+| Requirement layer | Current status | Current evidence / gap |
+|---|---|---|
+| Current Lightchain homepage/category source inventory | `verified` | r307 fresh Profile 2 same-run readback |
+| Video exclusion from Heavy scope | `verified` | video cards separated from non-video counts |
+| Heavy route/card mapping | `verified-local` | local catalog and route tests; source reconciliation still route-local |
+| Per-feature generation/result/save/reuse parity | `PENDING_CONFIRMATION` | source inventory alone does not prove behavior layers |
+| Windows Chrome acceptance | `PENDING_CONFIRMATION` | no Windows evidence in this environment |
+
+更新日: 2026-08-21
+
+## 0.current Heavy route readback overlay r310
+
+- Fresh Profile 2 Heavy browser `-26c2-40bf-a698-2070cec6110c` read ten
+  additional non-video routes with URL/title/DOM and task-owned cleanup proof:
+  model face, body shape, clothing size, pose, background, angle, line
+  generation, pattern vector, print-design detail, and marketing detail.
+- Artifact:
+  `work/heavy-profile2-non-video-route-readback-20260821-r310.md`.
+- Route reach and visible controls are current UI evidence only. Existing
+  printing results and disabled AI-fitting controls were not promoted to new
+  provider generation/save/reuse evidence.
 
 ## 0.0 current desktop parity overlay r108
 
@@ -991,3 +1106,67 @@ Excluded rows:
 - Fresh official Profile 2 browser-client `-92f8-481c-aee9-55d6c8c3e702` under selector revision 4 passed same-run `openTabs()` and owner lineage checks.
 - The official advertisement remains `viewport` plus `pageAssets`/`cdp`; `foreground_activation` and `management` are absent. Heavy production provider generation, save, reuse, and reload remain `PENDING_CONFIRMATION`.
 - Artifact: `work/chrome-plugin-profile2-capability-readback-20260820-r57.md`.
+
+## r312 overlay — 2026-08-21 Lightchain priority source readback
+
+- Fresh current Profile 2 source readback completed for `/tools/fabric`,
+  `/tools/printing`, and `/model` with browser
+  `-0053-4f89-953b-627b3eacc622` and task tabs `1980906123`, `1980906125`,
+  and `1980906127`.
+- All three exact targets returned matching URL/title/DOM with
+  `exact_blocker=null` and `cleanup_verified=true`. Current visible source
+  controls include fabric/print inputs and placement controls, and AI-fitting
+  task/input controls. Fabric and AI-fitting also showed the current
+  `権限がありません` state.
+- Artifact:
+  `work/lightchain-priority-source-readback-20260821-r312.md`.
+
+### Proof boundary
+
+- This overlay updates current Lightchain route/UI source evidence only. It
+  does not prove generation, result quality, persistence, save/reuse,
+  Gallery/Canvas/History/Jobs reconciliation, Windows Chrome, G619, or H601.
+- Existing workflow receipts and Heavy route readbacks remain separate. No
+  provider generation, upload, save, reuse, or external effect was performed
+  in r312.
+
+## r314 ledger overlay — 2026-08-21
+
+- The machine-readable parity ledger now uses the r312 Lightchain priority
+  source readback as its current source boundary:
+  `work/lightchain-parity-behavior-ledger-current-20260821-r314.json`.
+- It retains 31 non-video rows × 7 behavior layers and `PENDING_CONFIRMATION=171`;
+  existing Heavy production artifacts are cited only for the layers they
+  explicitly document.
+
+## r315 overlay — 2026-08-21 Lightchain print-design detail
+
+- Fresh target-scoped readback of `/editor/patternDesign/detail` completed with
+  browser `-a0bb-4014-9c9c-5c5c1fe79e1e`, task tab `1980906131`, matching
+  URL/title/DOM, and `cleanup_verified=true`.
+- The current hydrated body exposed `プリントデザイン`, `Untitled`, and the
+  image-drop/upload guidance. The first-run guide control was absent and was
+  not clicked.
+- Artifact: `work/lightchain-print-design-detail-readback-20260821-r315.md`.
+
+### Proof boundary
+
+- This is route/UI source evidence only. It does not prove generation,
+  result, save, reuse, or full production parity.
+
+## r320 overlay — 2026-08-21 Lightchain/Heavy home visual comparison
+
+- Fresh same-run screenshots compared Lightchain `/` with Heavy `/lightchain`
+  under browser `-8199-4ac1-9887-b1cce690808a`.
+- Header, title, prompt, four category tabs, non-video card hierarchy, beta
+  labels, and case-sharing controls aligned. Heavy intentionally omits the
+  video card and reflows the remaining cards.
+- Artifacts:
+  `work/lightchain-heavy-home-visual-compare-20260821-r320.md`,
+  `work/lightchain-home-source-r320.png`, and
+  `work/heavy-lightchain-home-r320.png`.
+
+### Proof boundary
+
+- This is one fresh desktop entry-route visual baseline. It does not prove all
+  route/width/Windows visual parity or production behavior layers.

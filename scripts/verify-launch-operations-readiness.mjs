@@ -5,7 +5,7 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 
 const args = parseArgs(process.argv.slice(2));
-const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain.zeabur.app');
+const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain-web.nichika2000823.workers.dev');
 const authState = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || firstExistingAuthState([
   'output/playwright/g830-prod-auth-from-chrome-profile2-r1/auth-state.json',
   'output/playwright/g689-prod-temp-auth-r2/auth-state.json',
@@ -51,7 +51,6 @@ const evidence = {
 };
 const trackedHostnames = new Set([
   new URL(baseUrl).hostname,
-  'ghwjymozrwmcrpjqvbmo.supabase.co',
 ]);
 const generationButtonPattern = /生成する|企画書を保存/;
 
@@ -125,7 +124,7 @@ async function checkProductionAsset() {
   const response = await context.request.get(`${baseUrl}/`);
   const body = await response.text();
   const currentAsset = extractIndexAsset(body);
-  pushCheck('Zeabur serves expected current asset', response.ok() && Boolean(expectedAsset) && currentAsset === expectedAsset, {
+  pushCheck('Cloudflare Web serves expected current asset', response.ok() && Boolean(expectedAsset) && currentAsset === expectedAsset, {
     status: response.status(),
     expectedAsset,
     currentAsset,
@@ -165,20 +164,19 @@ async function checkGenerateForm() {
   const buttonVisible = await button.isVisible().catch(() => false);
   const rightsCheckbox = page.getByRole('checkbox').first();
   const rightsVisible = await rightsCheckbox.isVisible().catch(() => false);
-  if (rightsVisible) {
-    await rightsCheckbox.check({ timeout: 5000 }).catch(() => undefined);
-  }
   const buttonEnabled = await button.isEnabled().catch(() => false);
   const body = await page.locator('body').innerText();
+  const permissionVisible = body.includes('権限がありません');
   const screenshot = `${outDir}/generate-form-filled-no-submit.png`;
   await page.screenshot({ path: screenshot, fullPage: false });
   evidence.screenshots.generateForm = screenshot;
-  pushCheck('Generate form is editable without submitting', buttonVisible && buttonEnabled && conceptValue === prompt && rightsVisible, {
+  pushCheck('Generate form reflects source permission without submitting', buttonVisible && !buttonEnabled && conceptValue === prompt && !rightsVisible && permissionVisible, {
     url: page.url(),
     prompt,
     conceptValue,
     generationSubmit: 'not_clicked',
     rightsVisible,
+    permissionVisible,
     buttonVisible,
     buttonEnabled,
     excerpt: body.slice(0, 800),

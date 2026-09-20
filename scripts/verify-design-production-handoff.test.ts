@@ -14,7 +14,12 @@ test('design production proposal uses the canonical generation handoff', () => {
   assert.match(pageSource, /sourceWorkspace: 'design-production'/);
   assert.match(pageSource, /workflowVersion: 'design-production-brief-local-v1'/);
   assert.match(pageSource, /onClick=\{openProposal\}/);
-  assert.match(pageSource, /disabled=\{!dialoguePrompt\.trim\(\)\}/);
+  assert.match(pageSource, /const resolvedSelectedAssets = useMemo\(/);
+  assert.match(pageSource, /const canOpenProposal = Boolean\(trimmedDialoguePrompt\) && hasTwoReferenceAssets;/);
+  assert.match(pageSource, /if \(!canOpenProposal\) return;/);
+  assert.match(pageSource, /disabled=\{!canOpenProposal\}/);
+  assert.match(pageSource, /参考素材を2件選択してください/);
+  assert.match(pageSource, /ライブラリーを開く/);
 });
 
 test('design production source summaries expose the handoff brief', () => {

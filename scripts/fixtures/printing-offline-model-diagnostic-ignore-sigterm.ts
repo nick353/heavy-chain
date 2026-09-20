@@ -23,6 +23,9 @@ process.on('SIGTERM', () => {
 
 process.stdout.write(`${JSON.stringify({ type: 'fixture-ready', pid: process.pid })}\n`);
 if (process.argv.includes('--leader-exits-normally-after-ready')) {
-  setTimeout(() => process.exit(0), 300);
+  // Give the descendant a scheduling window before the leader exits. The
+  // process-group contract is exercised under the full verifier suite, where
+  // a 300ms window is not reliable on a busy host.
+  setTimeout(() => process.exit(0), 1_000);
 }
 setInterval(() => undefined, 1_000);

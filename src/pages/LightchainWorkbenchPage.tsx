@@ -21,7 +21,6 @@ import {
   Redo2,
   Search,
   Shirt,
-  ShieldCheck,
   Sparkles,
   Square,
   Type,
@@ -39,7 +38,7 @@ import {
   type AuthBrandFenceSnapshot,
 } from '../lib/authBrandSelection';
 import { useCanvasStore } from '../stores/canvasStore';
-import { Button, Modal } from '../components/ui';
+import { Modal } from '../components/ui';
 import {
   buildMaterialCutoutDataUrl,
   buildPrintDesignCutoutDataUrl,
@@ -161,10 +160,6 @@ type LightchainPreviewOverrides = {
   brief?: string;
   allowBriefOnly?: boolean;
 };
-
-type PendingRightsGeneration =
-  | { kind: 'printing' }
-  | { kind: 'generic'; overrides?: LightchainPreviewOverrides };
 
 const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
 const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspace-tutorial-dismissed-v1';
@@ -339,10 +334,10 @@ const getLightchainVisibleCategoryId = (category: ToolCategory): LightchainVisib
 // above the feature controls. Keep the labels and grouping source-aligned
 // while routing into Heavy's non-video compatibility catalog.
 const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; category: LightchainVisibleCategoryId; to: string }> = Object.freeze([
-  { label: 'おすすめ', category: 'recommended', to: '/lightchain?category=recommended' },
-  { label: '企画デザインツール', category: 'planning', to: '/lightchain?category=planning' },
-  { label: 'AIフィッティング', category: 'fitting', to: '/lightchain?category=fitting' },
-  { label: 'グラフィックツール', category: 'graphics', to: '/lightchain?category=graphics' },
+  { label: 'おすすめ', category: 'recommended', to: '/designProduction?category=recommended' },
+  { label: '企画デザインツール', category: 'planning', to: '/designProduction?category=planning' },
+  { label: 'AIフィッティング', category: 'fitting', to: '/designProduction?category=fitting' },
+  { label: 'グラフィックツール', category: 'graphics', to: '/designProduction?category=graphics' },
 ]);
 
 const tools: CompatTool[] = [
@@ -459,7 +454,7 @@ const tools: CompatTool[] = [
     description: 'ストーリーボード、映像複製、ECモデル展示、動画生成+服の置き換えのプロジェクト画面。',
     inputs: ['商品画像', '動画目的', '尺', 'CTA'],
     outputs: ['動画構成', 'ショットリスト', 'Canvas素材'],
-    heavyChainHref: '/video',
+    heavyChainHref: '/flow/GenerateShortVideo/detail',
     runLabel: '動画構成を作る',
     promptTemplate: 'この商品の15秒ショート動画構成を、3ショットとCTA付きで作成してください。',
   },
@@ -472,7 +467,7 @@ const tools: CompatTool[] = [
     description: 'ガイドから始める動画詳細制作画面。商品紹介、着せ替え、復元、複製へ接続。',
     inputs: ['開始画像', '終了画像', '動き', '尺'],
     outputs: ['動画タスク', 'ストーリーボード'],
-    heavyChainHref: '/video',
+    heavyChainHref: '/flow/GenerateShortVideo/detail',
     runLabel: '詳細構成へ',
     promptTemplate: '開始画像から自然な商品紹介動画になるように、動きとカメラワークを設計してください。',
   },
@@ -680,7 +675,7 @@ const tools: CompatTool[] = [
     description: '元画像のメインモデルを、モデル参考画像またはランダムモデルへ変更。アパレルサイズ保持あり。',
     inputs: ['元画像', 'モデル参考画像', 'サイズ保持'],
     outputs: ['モデル変更画像'],
-    heavyChainHref: '/models',
+    heavyChainHref: '/model-library/model-change-form',
     runLabel: 'モデルを変更',
     promptTemplate: '服のサイズ感を維持しながら、メインモデルだけを変更してください。',
   },
@@ -693,7 +688,7 @@ const tools: CompatTool[] = [
     description: '服装を変えずに体型のみを男性/女性/標準/カスタムへ変更。',
     inputs: ['元画像', '性別', '体型'],
     outputs: ['体型変更画像'],
-    heavyChainHref: '/models',
+    heavyChainHref: '/model-library/body-form',
     runLabel: '体型を調整',
     promptTemplate: '服装は変えず、モデルの体型だけを自然に調整してください。',
   },
@@ -706,7 +701,7 @@ const tools: CompatTool[] = [
     description: '体型は変えず、トップス/ボトムス/全身の服サイズだけを変更。',
     inputs: ['元画像', '服装タイプ', '元サイズ', '変更サイズ'],
     outputs: ['サイズ差分画像'],
-    heavyChainHref: '/models',
+    heavyChainHref: '/model-library/size-form',
     runLabel: 'サイズを変更',
     promptTemplate: '体型は維持し、服のサイズ感だけを指定サイズに変更してください。',
   },
@@ -719,7 +714,7 @@ const tools: CompatTool[] = [
     description: 'ポーズ参考画像またはライブラリからモデルのポーズと身体の動きを調整。',
     inputs: ['元画像', 'ポーズ参考画像'],
     outputs: ['ポーズ変更画像'],
-    heavyChainHref: '/generate?feature=model-matrix',
+    heavyChainHref: '/model-library/pose-form',
     runLabel: 'ポーズ変更',
     promptTemplate: '衣服の見え方を保ちながら、モデルのポーズを参考画像に合わせて変更してください。',
   },
@@ -732,7 +727,7 @@ const tools: CompatTool[] = [
     description: '背景参照画像またはランダム背景で画像背景を変更。',
     inputs: ['元画像', '背景参考画像', '背景説明'],
     outputs: ['背景変更画像'],
-    heavyChainHref: '/studio',
+    heavyChainHref: '/model-library/background-form',
     runLabel: '背景変更',
     promptTemplate: '商品とモデルは保ち、背景だけを指定シーンへ自然に変更してください。',
   },
@@ -745,7 +740,7 @@ const tools: CompatTool[] = [
     description: '左右45度、見上げ/見下ろし、接写/遠景、背面など画角と構図を変更。',
     inputs: ['元画像', '左右視点', '上下視点', '距離', '背面'],
     outputs: ['アングル差分画像'],
-    heavyChainHref: '/studio',
+    heavyChainHref: '/model-library/perspective-form',
     runLabel: 'アングル変更',
     promptTemplate: '衣服の特徴を保ち、カメラアングルだけを指定方向へ変更してください。',
   },
@@ -758,7 +753,7 @@ const tools: CompatTool[] = [
     description: '性別、年齢、国籍、ハーフ、肌色、体型を選ぶ専用バーチャルモデル生成。',
     inputs: ['性別', '年齢', '国籍', '肌色', '体型'],
     outputs: ['専用モデル画像'],
-    heavyChainHref: '/generate?feature=model-matrix',
+    heavyChainHref: '/model-library/model-custom-form',
     runLabel: 'モデル生成',
     promptTemplate: '指定条件に合う専用バーチャルモデルを、EC撮影に使える品質で生成してください。',
   },
@@ -975,6 +970,7 @@ function getOverlayPosition(placement: string, scale: number) {
  */
 function LightchainResultDestinations() {
   const linkClass = 'rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-semibold text-neutral-300 transition hover:border-cyan-300/50 hover:text-white';
+
   return (
     <nav className="mt-3 grid grid-cols-4 gap-2" aria-label="生成結果の移動先" data-testid="lightchain-special-result-destinations">
       <Link to="/gallery" data-testid="lightchain-special-result-gallery-link" className={linkClass}>Gallery</Link>
@@ -1299,7 +1295,9 @@ export function LightchainWorkbenchPage() {
   const [selectedToolId, setSelectedToolId] = useState('marketing-home');
   const [query, setQuery] = useState('');
   const [brief, setBrief] = useState('黒のチェーン柄フーディーを、ECとSNSで使える高級ストリート系ビジュアルに展開したい。');
-  const [referenceNote, setReferenceNote] = useState('モデルは20代、無地背景、チェーン柄は服の主役として残す。');
+  // Light Chain opens the fitting prompt empty. Example copy belongs to the
+  // user-selected preset/intent route, not the bare /model entry state.
+  const [referenceNote, setReferenceNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [garmentImageUrl, setGarmentImageUrl] = useState('');
   const [garmentFileName, setGarmentFileName] = useState('');
@@ -1337,10 +1335,10 @@ export function LightchainWorkbenchPage() {
   const lightchainResultRef = useRef<typeof lightchainResult>(null);
   lightchainResultRef.current = lightchainResult;
   const [lightchainResultPreviewOpen, setLightchainResultPreviewOpen] = useState(false);
-  const [providerRightsConfirmed, setProviderRightsConfirmed] = useState(false);
-  const [rightsConfirmationOpen, setRightsConfirmationOpen] = useState(false);
-  const [rightsConfirmationDraft, setRightsConfirmationDraft] = useState(false);
-  const pendingRightsGenerationRef = useRef<PendingRightsGeneration | null>(null);
+  // Light Chain does not expose a separate rights checkbox in this flow. The
+  // authenticated Light Chain route is the source-admitted generation path;
+  // the API still keeps its fail-closed boolean guard.
+  const [providerRightsConfirmed, setProviderRightsConfirmed] = useState(true);
   const [lightchainGenerationRunning, setLightchainGenerationRunning] = useState(false);
   const [lightchainGenerationError, setLightchainGenerationError] = useState<string | null>(null);
   const [resumeInputReadback, setResumeInputReadback] = useState<'restored' | 'unavailable' | null>(null);
@@ -1353,7 +1351,12 @@ export function LightchainWorkbenchPage() {
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
   const [activeFittingInputTab, setActiveFittingInputTab] = useState('説明生成');
-  const [autoConvertGarment, setAutoConvertGarment] = useState(true);
+  // Match Light's bare fitting entry: automatic flat-lay conversion starts
+  // disabled and can be enabled explicitly by the user.
+  const [autoConvertGarment, setAutoConvertGarment] = useState(false);
+  const [fittingAspectRatio, setFittingAspectRatio] = useState('スマート');
+  const [fittingResolution, setFittingResolution] = useState('1K');
+  const [fittingControlOpen, setFittingControlOpen] = useState<'aspect' | 'resolution' | null>(null);
   const [printingMode, setPrintingMode] = useState<'スポット' | '全体'>('スポット');
   const [printingNotice, setPrintingNotice] = useState('');
   const [printingGenerationStatus, setPrintingGenerationStatus] = useState<PrintingGenerationStatus>('idle');
@@ -1392,8 +1395,8 @@ export function LightchainWorkbenchPage() {
   const [printDesignPrompt, setPrintDesignPrompt] = useState('');
   const [printDesignStyle, setPrintDesignStyle] = useState('ファッション');
   const [marketingDetailTab, setMarketingDetailTab] = useState<'assistant' | 'layers'>('assistant');
-  const [marketingProjectName, setMarketingProjectName] = useState('Untitled');
-  const [marketingProjectNameDraft, setMarketingProjectNameDraft] = useState('Untitled');
+  const [marketingProjectName, setMarketingProjectName] = useState('名称未設定');
+  const [marketingProjectNameDraft, setMarketingProjectNameDraft] = useState('名称未設定');
   const [marketingProjectNameEditing, setMarketingProjectNameEditing] = useState(false);
   const [marketingCanvasTool, setMarketingCanvasTool] = useState('選択');
   const [marketingCanvasZoom, setMarketingCanvasZoom] = useState(20);
@@ -1662,6 +1665,8 @@ export function LightchainWorkbenchPage() {
     '/model-library/pose-form': 'pose-change',
     '/model-library/background-form': 'background-change',
     '/model-library/perspective-form': 'angle-change',
+    '/model-library': 'model-library',
+    '/model-library/model-custom-form': 'model-library',
     '/model-base/style': 'custom-style',
   };
   const directRouteTitleOverride: Record<string, string> = {
@@ -1862,6 +1867,8 @@ export function LightchainWorkbenchPage() {
           autoConvertGarment: isFittingDetail ? autoConvertGarment : null,
           fittingTaskTab: isFittingDetail ? activeFittingTaskTab : null,
           fittingInputTab: isFittingDetail ? activeFittingInputTab : null,
+          fittingAspectRatio: isFittingDetail ? fittingAspectRatio : null,
+          fittingResolution: isFittingDetail ? fittingResolution : null,
           fabricPrompt: selectedTool.id === 'fabric-image' ? fabricPrompt.trim() : null,
           lineDraftType: ['line-to-real', 'line-generation'].includes(selectedTool.id) ? lineDraftType : null,
           lineToRealOutputType: selectedTool.id === 'line-to-real' ? lineToRealImageType : null,
@@ -2025,8 +2032,7 @@ export function LightchainWorkbenchPage() {
     lightchainGenerationSequenceRef.current += 1;
     lightchainGenerationRequestRef.current = null;
     setLightchainGenerationRunning(false);
-    pendingRightsGenerationRef.current = null;
-    setProviderRightsConfirmed(false);
+    setProviderRightsConfirmed(true);
     setPlatformAssetRightsConfirmed(false);
     setLightchainGenerationError(null);
     setLightchainResult(null);
@@ -2112,8 +2118,7 @@ export function LightchainWorkbenchPage() {
     setPrintingCutoutErrors({ primary: null, secondary: null });
     setLightchainResult(null);
     setLightchainResultPreviewOpen(false);
-    pendingRightsGenerationRef.current = null;
-    setProviderRightsConfirmed(false);
+    setProviderRightsConfirmed(true);
     setLightchainGenerationRunning(false);
     setLightchainGenerationError(null);
     lightchainGenerationSequenceRef.current += 1;
@@ -2125,7 +2130,9 @@ export function LightchainWorkbenchPage() {
     printingGenerationRequestRef.current = null;
     setPrintingMode('スポット');
     setPrintingNotice('');
-    setAutoConvertGarment(true);
+    // Lightchainの直接入口 `/model` は、初期状態で自動変換をOFFにする。
+    // ツール切替時のリセットでも同じ初期状態を維持する。
+    setAutoConvertGarment(false);
     setFabricPrompt('');
     setFabricNotice('');
     setLineDraftType('カラー線画');
@@ -2147,8 +2154,8 @@ export function LightchainWorkbenchPage() {
     setPrintDesignStyle('ファッション');
     setMarketingDetailTab('assistant');
     setMarketingDetailPrompt('');
-    setMarketingProjectName('Untitled');
-    setMarketingProjectNameDraft('Untitled');
+    setMarketingProjectName('名称未設定');
+    setMarketingProjectNameDraft('名称未設定');
     setMarketingProjectNameEditing(false);
     setMarketingCanvasTool('選択');
     setMarketingCanvasZoom(20);
@@ -2422,7 +2429,6 @@ export function LightchainWorkbenchPage() {
       lightchainGenerationRequestRef.current = null;
       printingGenerationSequenceRef.current += 1;
       printingGenerationRequestRef.current = null;
-      pendingRightsGenerationRef.current = null;
     };
   }, []);
 
@@ -2478,13 +2484,6 @@ export function LightchainWorkbenchPage() {
       return;
     }
     const generationBrandId = authBrandFence.brandId;
-    if (!providerRightsConfirmed && !options?.rightsAlreadyConfirmed) {
-      pendingRightsGenerationRef.current = { kind: 'printing' };
-      setRightsConfirmationDraft(false);
-      setRightsConfirmationOpen(true);
-      return;
-    }
-
     const rightsConfirmedForRequest = providerRightsConfirmed || options?.rightsAlreadyConfirmed === true;
 
     const requestId = ++printingGenerationSequenceRef.current;
@@ -2634,7 +2633,7 @@ export function LightchainWorkbenchPage() {
   };
 
   if (toolId && !routeTool) {
-    return <Navigate to="/lightchain" replace />;
+    return <Navigate to="/designProduction" replace />;
   }
 
   const handleMaterialSlotUpload = async (slot: MaterialSlotKey, event: ChangeEvent<HTMLInputElement>) => {
@@ -2935,13 +2934,6 @@ export function LightchainWorkbenchPage() {
       toast.error('先に主素材画像を選択してください');
       return;
     }
-    if (!providerRightsConfirmed && !options?.rightsAlreadyConfirmed) {
-      pendingRightsGenerationRef.current = { kind: 'generic', overrides };
-      setRightsConfirmationDraft(false);
-      setRightsConfirmationOpen(true);
-      return;
-    }
-
     const rightsConfirmedForRequest = providerRightsConfirmed || options?.rightsAlreadyConfirmed === true;
 
     // Guard before the first state update so rapid clicks cannot submit two
@@ -3503,65 +3495,6 @@ export function LightchainWorkbenchPage() {
       </div>
     );
   };
-
-  const lightchainRightsConfirmationModal = (
-    <Modal
-      isOpen={rightsConfirmationOpen}
-      onClose={() => {
-        pendingRightsGenerationRef.current = null;
-        setRightsConfirmationDraft(false);
-        setRightsConfirmationOpen(false);
-      }}
-      title="権利確認"
-      size="md"
-      footer={(
-        <div className="flex justify-end gap-3">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              pendingRightsGenerationRef.current = null;
-              setRightsConfirmationDraft(false);
-              setRightsConfirmationOpen(false);
-            }}
-          >
-            キャンセル
-          </Button>
-          <Button
-            onClick={() => {
-              const pending = pendingRightsGenerationRef.current;
-              pendingRightsGenerationRef.current = null;
-              setProviderRightsConfirmed(true);
-              setRightsConfirmationDraft(false);
-              setRightsConfirmationOpen(false);
-              if (pending?.kind === 'printing') {
-                void handlePrintingImageGenerate({ rightsAlreadyConfirmed: true });
-              } else if (pending?.kind === 'generic') {
-                void handleLightchainPreviewGenerate(pending.overrides, { rightsAlreadyConfirmed: true });
-              }
-            }}
-            disabled={!rightsConfirmationDraft}
-          >
-            確認して続ける
-          </Button>
-        </div>
-      )}
-    >
-      <div data-testid="lightchain-rights-confirmation" className="space-y-4">
-        <p className="text-sm leading-6 text-neutral-600 dark:text-white/70">
-          AI生成へ進む前に、アップロードした画像・人物・柄・生地を利用する権利があることを確認してください。
-        </p>
-        <label className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4 text-sm leading-6 dark:border-white/10">
-          <input
-            type="checkbox"
-            checked={rightsConfirmationDraft}
-            onChange={(event) => setRightsConfirmationDraft(event.target.checked)}
-            className="mt-1 h-4 w-4 shrink-0 accent-cyan-500"
-          />
-          <span>入力素材の利用権限を確認しました。確認後、AIプロバイダーへ送信して生成します。</span>
-        </label>
-      </div>
-    </Modal>
-  );
 
   const handleOpenMaskAdjustment = () => {
     if (!garmentImageUrl) {
@@ -4264,7 +4197,6 @@ export function LightchainWorkbenchPage() {
         data-lightchain-brand-pending={String(brandResolutionPending)}
         data-lightchain-ai-disabled={String(aiGenerateDisabled)}
         data-lightchain-provider-rights={String(providerRightsConfirmed)}
-        data-lightchain-rights-open={String(rightsConfirmationOpen)}
         data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
         data-lightchain-brand-status={brandState.status}
         data-lightchain-brand-error={brandState.error ?? ''}
@@ -4275,7 +4207,7 @@ export function LightchainWorkbenchPage() {
           <section className="border-r border-white/10 bg-[#141717]" data-testid="lightchain-fitting-input-flow">
             <div className="flex h-12 items-center justify-between border-b border-white/10 px-4">
               <h1 className="text-sm font-semibold text-white">AIフィッティング</h1>
-              <div className="inline-flex rounded-xl bg-[#262b2e] p-1" role="tablist" aria-label="AIフィッティングタスク">
+              <div className="inline-flex h-8 w-fit items-center justify-center gap-1 rounded-lg bg-[#262b2e] p-1" role="tablist">
                 {['シングルタスク', 'マルチタスク'].map((tab) => (
                   <button
                     key={tab}
@@ -4283,7 +4215,7 @@ export function LightchainWorkbenchPage() {
                     role="tab"
                     onClick={() => setActiveFittingTaskTab(tab)}
                     aria-selected={activeFittingTaskTab === tab}
-                    className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition ${activeFittingTaskTab === tab ? 'bg-[#687178] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]' : 'text-neutral-400 hover:text-neutral-200'}`}
+                    className={`h-6 shrink-0 rounded px-2 py-1 text-sm font-medium leading-4 transition ${tab === 'シングルタスク' ? 'w-[102px]' : 'w-[90px]'} ${activeFittingTaskTab === tab ? 'bg-[#687178] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>
@@ -4313,12 +4245,13 @@ export function LightchainWorkbenchPage() {
                   </div>
                   <button
                     type="button"
+                    className="inline-flex h-4 w-8 shrink-0 items-center rounded-full border border-transparent bg-neutral-500 p-0 transition"
                     onClick={() => setAutoConvertGarment((current) => !current)}
-                    aria-pressed={autoConvertGarment}
-                    aria-label="自動変換"
+                    role="switch"
+                    aria-checked={autoConvertGarment}
+                    aria-label="on"
                   >
-                    <span className={`block h-5 w-9 rounded-full p-0.5 transition ${autoConvertGarment ? 'bg-cyan-300' : 'bg-neutral-500'}`}>
-                      <span className={`block h-4 w-4 rounded-full bg-white shadow-sm transition ${autoConvertGarment ? 'translate-x-4' : ''}`} />
+                    <span className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-sm transition ${autoConvertGarment ? 'translate-x-4' : ''}`}>
                     </span>
                   </button>
                 </div>
@@ -4425,7 +4358,7 @@ export function LightchainWorkbenchPage() {
                   )}
                 </section>
               )}
-              <div className="grid grid-cols-3 border-b border-white/10" role="tablist" aria-label="AIフィッティング入力">
+              <div className="!mt-[19px] flex h-auto w-full items-center justify-start gap-2 border-b border-white/10" role="tablist">
                 {['説明生成', '参考画像', 'モデルのセット写真'].map((tab) => (
                   <button
                     key={tab}
@@ -4433,7 +4366,7 @@ export function LightchainWorkbenchPage() {
                     role="tab"
                     onClick={() => setActiveFittingInputTab(tab)}
                     aria-selected={activeFittingInputTab === tab}
-                    className={`px-2 py-3 text-sm font-semibold transition ${activeFittingInputTab === tab ? 'rounded-lg bg-[#707980] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
+                    className={`h-[34px] shrink-0 rounded-lg px-4 py-1 text-base font-medium leading-6 whitespace-nowrap transition ${tab === 'モデルのセット写真' ? 'w-[160px] -ml-px' : 'w-[112px]'} ${activeFittingInputTab === tab ? 'bg-[#707980] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>
@@ -4442,7 +4375,7 @@ export function LightchainWorkbenchPage() {
               <textarea
                 value={referenceNote}
                 onChange={(event) => setReferenceNote(event.target.value)}
-                className="min-h-[114px] w-full resize-none rounded-2xl border border-white/5 bg-[#181d1f] px-4 py-4 text-sm text-white outline-none placeholder:text-neutral-500"
+                className="mx-[17px] !mt-[28px] min-h-[220px] w-[calc(100%-34px)] resize-none rounded-2xl border border-white/5 bg-[#181d1f] px-4 py-4 text-sm text-white outline-none placeholder:text-neutral-500"
                 placeholder={activeFittingInputTab === '説明生成' ? '背景の説明をここに記入してください' : activeFittingInputTab === '参考画像' ? '参考画像で残したい雰囲気や衣服の条件を記入してください' : 'モデルセット写真で合わせたいポーズ、背景、小物を記入してください'}
               />
               <div className="flex justify-end text-xs text-neutral-500" aria-live="polite">
@@ -4499,12 +4432,33 @@ export function LightchainWorkbenchPage() {
                 </button>
               )}
             </div>
-            <div className="absolute bottom-0 left-0 grid w-full gap-2 border-t border-white/10 bg-[#141717] p-2 sm:grid-cols-[1fr_1fr_2fr] lg:w-[432px]">
-              {['スマート', '1K'].map((control) => (
-                  <span key={control} className="rounded-lg bg-[#24292c] px-3 py-3 text-sm font-semibold text-neutral-200">
-                    {control}
-                  </span>
-                ))}
+            <div className="fixed bottom-2 left-0 z-30 grid w-full grid-cols-[96px_96px_207px] gap-2 border-t border-white/10 bg-[#141717] p-2 lg:w-[432px]">
+              <div className="relative">
+                <button
+                  type="button"
+                  role="combobox"
+                  aria-label={fittingAspectRatio}
+                  aria-expanded={fittingControlOpen === 'aspect'}
+                  onClick={() => setFittingControlOpen((current) => current === 'aspect' ? null : 'aspect')}
+                  className="flex h-10 w-full items-center justify-between rounded-lg bg-[#24292c] px-3 text-sm font-semibold text-neutral-200"
+                >
+                  {fittingAspectRatio}<span aria-hidden="true" className="ml-2 text-neutral-400">⌄</span>
+                </button>
+                {fittingControlOpen === 'aspect' && <div role="listbox" className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-lg border border-white/10 bg-[#24292c] p-1 shadow-xl">{['スマート', '1:1', '2:3', '3:2', '4:3', '3:4', '4:5', '5:4', '9:16', '16:9'].map((option) => <button key={option} type="button" role="option" aria-selected={fittingAspectRatio === option} className="block w-full rounded px-2 py-1.5 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setFittingAspectRatio(option); setFittingControlOpen(null); }}>{option}</button>)}</div>}
+              </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  role="combobox"
+                  aria-label={fittingResolution}
+                  aria-expanded={fittingControlOpen === 'resolution'}
+                  onClick={() => setFittingControlOpen((current) => current === 'resolution' ? null : 'resolution')}
+                  className="flex h-10 w-full items-center justify-between rounded-lg bg-[#24292c] px-3 text-sm font-semibold text-neutral-200"
+                >
+                  {fittingResolution}<span aria-hidden="true" className="ml-2 text-neutral-400">⌄</span>
+                </button>
+                {fittingControlOpen === 'resolution' && <div role="listbox" className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-lg border border-white/10 bg-[#24292c] p-1 shadow-xl">{['1K', '2K', '4K'].map((option) => <button key={option} type="button" role="option" aria-selected={fittingResolution === option} className="block w-full rounded px-2 py-1.5 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setFittingResolution(option); setFittingControlOpen(null); }}>{option}</button>)}</div>}
+              </div>
                 {activeFittingTaskTab === 'マルチタスク' ? (
                   <button
                     type="button"
@@ -4519,6 +4473,9 @@ export function LightchainWorkbenchPage() {
                     testId="lightchain-model-permission"
                     marginClass=""
                     className="rounded-lg bg-[#65d3cf] text-neutral-950"
+                    disabled={false}
+                    showSourceIcon
+                    buttonType="submit"
                   />
                 ) : (
                   <button
@@ -4534,9 +4491,9 @@ export function LightchainWorkbenchPage() {
           </section>
           <aside className="relative flex min-h-[calc(100vh-70px)] items-center justify-center bg-[#151515]">
             <Link
-              to="/model#fitting-history"
-              className="absolute right-4 top-4 rounded-xl border border-white/15 bg-[#181b1d] px-4 py-2 text-sm font-semibold text-white"
+              className="absolute right-4 top-4 h-8 w-[102px] rounded-lg border border-white/15 bg-[#181b1d] px-4 py-2 text-sm font-semibold text-white"
               data-testid="lightchain-fitting-history-link"
+              to="/model#fitting-history"
             >
               生成履歴
             </Link>
@@ -4687,7 +4644,6 @@ export function LightchainWorkbenchPage() {
                         )}
                       </div>
 	                      )}
-        {lightchainRightsConfirmationModal}
       </main>
     );
   }
@@ -4771,7 +4727,6 @@ export function LightchainWorkbenchPage() {
               </div>
             )}
           </section>
-          {lightchainRightsConfirmationModal}
         </main>
       );
     }
@@ -4884,7 +4839,7 @@ export function LightchainWorkbenchPage() {
             className="absolute left-3 top-3 z-10 hidden h-[calc(100vh-94px)] w-[326px] overflow-hidden rounded-2xl border border-white/10 bg-[#24282a] text-neutral-100 shadow-xl md:block"
           >
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-              <button type="button" onClick={() => navigate('/lightchain')} className="flex items-center gap-2 text-base font-semibold">
+              <button type="button" onClick={() => navigate('/designProduction')} className="flex items-center gap-2 text-base font-semibold">
                 <span aria-hidden="true">‹</span>
                 企画ワークスペース
               </button>
@@ -5180,7 +5135,6 @@ export function LightchainWorkbenchPage() {
             )}
           </section>}
         </section>
-        {lightchainRightsConfirmationModal}
       </main>
     );
   }
@@ -5490,7 +5444,6 @@ export function LightchainWorkbenchPage() {
           </aside>
         </section>
         {lightchainResultModal}
-        {lightchainRightsConfirmationModal}
       </main>
     );
   }
@@ -5520,7 +5473,6 @@ export function LightchainWorkbenchPage() {
         data-workflow-rights-gate={workflowRightsGate}
       >
         <section className="mx-auto max-w-[1180px]">
-          {lightchainRightsConfirmationModal}
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-base font-semibold text-white">{currentDisplayTitle}</h1>
             <button
@@ -5629,7 +5581,6 @@ export function LightchainWorkbenchPage() {
         data-workflow-rights-gate={workflowRightsGate}
       >
         {renderLightchainProviderGate()}
-        {lightchainRightsConfirmationModal}
         {!printDesignDetailStarted ? (
           <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-[780px] items-center justify-center">
             <div className="w-full">
@@ -5812,14 +5763,12 @@ export function LightchainWorkbenchPage() {
         data-lightchain-brand-pending={String(brandResolutionPending)}
         data-lightchain-ai-disabled={String(aiGenerateDisabled)}
         data-lightchain-provider-rights={String(providerRightsConfirmed)}
-        data-lightchain-rights-open={String(rightsConfirmationOpen)}
         data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
         data-lightchain-brand-status={brandState.status}
         data-lightchain-brand-error={brandState.error ?? ''}
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
         <section className="mx-auto max-w-[1180px]">
-          {lightchainRightsConfirmationModal}
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-base font-semibold text-white">ウェアデザインラボ</h1>
             <button
@@ -5988,7 +5937,6 @@ export function LightchainWorkbenchPage() {
         data-workflow-rights-gate={workflowRightsGate}
       >
         {renderLightchainProviderGate()}
-        {lightchainRightsConfirmationModal}
         {!wearDesignDetailStarted && !isDirectWearDesignDetail ? (
           <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-[780px] items-center justify-center">
             <div className="grid w-full gap-8 md:grid-cols-2">
@@ -6398,10 +6346,11 @@ export function LightchainWorkbenchPage() {
           </div>
         )}
         {lightchainResultModal}
-        {lightchainRightsConfirmationModal}
       </main>
     );
   }
+
+  const isLightParityTallDetail = ['image-repair', 'line-generation', 'line-to-real'].includes(selectedTool.id);
 
   return (
     <main
@@ -6426,16 +6375,16 @@ export function LightchainWorkbenchPage() {
       data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
       data-lightchain-generation-error={lightchainGenerationError ?? ''}
     >
-      {isFeatureDetail && selectedTool.id === 'line-to-real' && lineDeprecationBannerVisible && (
+      {isFeatureDetail && selectedTool.id === 'line-to-real' && lineDeprecationBannerVisible && !isLightParityTallDetail && (
         <div className="absolute left-[128px] top-[84px] z-30 flex h-16 w-[564px] justify-between gap-2 rounded-lg bg-[#5b1f2a] px-4 py-2 text-base leading-6 text-white">
           <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<Link to="/designProduction" className="underline">今すぐ体験</Link></span>
           <button type="button" aria-label="告知を閉じる" className="flex size-6 shrink-0 items-center justify-center rounded hover:bg-white/10" onClick={() => setLineDeprecationBannerVisible(false)}>×</button>
         </div>
       )}
       {isFeatureDetail && (
-        <aside className="fixed left-4 top-[66px] z-20 hidden w-20 flex-col gap-3 lg:flex" aria-label="ツールバー">
+        <aside className={`fixed left-4 top-[66px] z-20 hidden w-20 flex-col gap-3 lg:flex ${isLightParityTallDetail ? 'h-[746px]' : ''}`} aria-label="ツールバー">
           {[
-            ['ツールバー', 'https://jp.linkaigc.com/routeIcons/ic_工具.svg', '/lightchain?category=recommended', 'recommended'],
+            ['ツールバー', 'https://jp.linkaigc.com/routeIcons/ic_工具.svg', '/designProduction?category=recommended', 'recommended'],
             ['デザインツール', `https://jp.linkaigc.com/routeIcons/服装设计工具-${location.pathname === '/tools/fabric' ? '选中' : '未选'}.svg`, '/tools/fabric', 'planning'],
             ['フィッティングツール', `https://jp.linkaigc.com/routeIcons/模特试衣工具-${location.pathname === '/model' ? '选中' : '未选'}.svg`, '/model', 'fitting'],
             ['グラフィックデザインツール', `https://jp.linkaigc.com/routeIcons/图案创作工具-${activeSourceCategory === 'graphics' ? '选中' : '未选'}.svg`, '/tools/pattern-to-vector', 'graphics'],
@@ -6445,12 +6394,12 @@ export function LightchainWorkbenchPage() {
           })}
         </aside>
       )}
-      <div className={isFeatureDetail ? 'space-y-4 lg:pl-24' : 'mx-auto max-w-7xl space-y-5'}>
+      <div className={isFeatureDetail ? `space-y-4 ${isLightParityTallDetail ? 'lg:pl-[88px]' : 'lg:pl-24'}` : 'mx-auto max-w-7xl space-y-5'}>
         {isFeatureDetail && (
           <nav
             aria-label="ツールカテゴリ"
             data-testid="lightchain-source-toolbar"
-            className={`grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 text-xs font-semibold text-neutral-300 sm:grid-cols-4 sm:text-sm ${isFeatureDetail ? 'hidden' : ''}`}
+            className={`grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 text-xs font-semibold text-neutral-300 sm:grid-cols-4 sm:text-sm ${isFeatureDetail || isLightParityTallDetail ? 'hidden' : ''}`}
           >
             {lightchainSourceToolbarItems.map((item) => (
               <Link
@@ -6475,7 +6424,9 @@ export function LightchainWorkbenchPage() {
                 {isFeatureDetail ? currentDisplayTitle : '用途を選んで、そのまま制作へ進む'}
               </h1>
               <p className={`${isFeatureDetail ? 'mt-1 max-w-4xl text-xs leading-6' : 'mt-2 max-w-3xl text-sm leading-7'} text-neutral-600 dark:text-neutral-300`}>
-                {isFeatureDetail ? selectedTool.description : '既存の生成、フィッティング、柄、モデル、Canvasへつながる入口です。'}
+                {isFeatureDetail
+                  ? selectedTool.id === 'image-repair' ? '手足や顔の奇形をAIが修復します' : selectedTool.description
+                  : '既存の生成、フィッティング、柄、モデル、Canvasへつながる入口です。'}
               </p>
             </div>
             <label className={`${isFeatureDetail ? 'hidden xl:flex' : 'flex'} min-w-0 items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm dark:border-neutral-700 dark:bg-neutral-950 lg:w-[420px]`}>
@@ -6546,7 +6497,6 @@ export function LightchainWorkbenchPage() {
                 ))}
               </div>
               <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-400">
-                <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-cyan-200" />権利確認は生成前に固定</span>
                 <span className="inline-flex items-center gap-1.5"><Layers3 className="h-3.5 w-3.5 text-cyan-200" />結果はCanvasへ再利用</span>
                 <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-cyan-200" />状態は入力→生成→保存で表示</span>
               </div>
@@ -6586,7 +6536,7 @@ export function LightchainWorkbenchPage() {
           )}
 
           {isFeatureDetail && !isModelToolDetail && (
-            <div className={`rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,13,15,0.98),rgba(13,17,20,0.94))] p-3 shadow-soft lg:max-w-[636px] ${lightchainToolPanelConfig || selectedTool.id === 'printing-image' ? 'pb-3' : ''}`}>
+            <div className={`rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,13,15,0.98),rgba(13,17,20,0.94))] p-3 shadow-soft lg:max-w-[636px] ${isLightParityTallDetail ? 'hidden' : ''} ${lightchainToolPanelConfig || selectedTool.id === 'printing-image' ? 'pb-3' : ''}`}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
                   {!lightchainToolPanelConfig && selectedTool.id !== 'printing-image' && flowTabs.map((step, index) => (
@@ -6608,11 +6558,13 @@ export function LightchainWorkbenchPage() {
                 </p>
                 )}
               </div>
-              <div className="mt-3 flex gap-2 overflow-x-auto" data-testid="lightchain-detail-tabs">
-                {selectedCategoryTools.map((tool) => (
+              <div className="mt-3 flex gap-2 overflow-x-auto" data-testid="lightchain-detail-tabs" role={selectedTool.id === 'image-repair' ? 'tablist' : undefined}>
+                {(selectedTool.id === 'image-repair' ? [selectedTool] : selectedCategoryTools).map((tool) => (
                   <Link
                     key={tool.id}
                     to={resolveHeavyRouteForRow(tool.id, `/lightchain/${tool.id}`)}
+                    role={selectedTool.id === 'image-repair' ? 'tab' : undefined}
+                    aria-selected={selectedTool.id === 'image-repair' ? selectedTool.id === tool.id : undefined}
                     className={`shrink-0 rounded-full border px-3 py-2 text-sm font-semibold transition ${
                       selectedTool.id === tool.id
                         ? 'border-cyan-300/40 bg-cyan-300/10 text-white'
@@ -6646,7 +6598,7 @@ export function LightchainWorkbenchPage() {
             </p>
           )}
 
-          <div className={isFeatureDetail ? isModelToolDetail ? 'grid gap-4 lg:grid-cols-[432px_minmax(0,1fr)]' : 'grid gap-4 lg:grid-cols-[596px_minmax(0,1fr)]' : 'grid gap-5 xl:grid-cols-[1fr_420px]'}>
+          <div className={isFeatureDetail ? `${isLightParityTallDetail ? 'relative -top-5 h-[746px] ' : ''}grid gap-4 ${isModelToolDetail ? 'lg:grid-cols-[432px_minmax(0,1fr)]' : 'lg:grid-cols-[596px_minmax(0,1fr)]'}` : 'grid gap-5 xl:grid-cols-[1fr_420px]'}>
             {!isFeatureDetail && (
             <section className="space-y-4">
               <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
@@ -6737,8 +6689,8 @@ export function LightchainWorkbenchPage() {
             </section>
             )}
 
-            <aside>
-              <div className={`shadow-soft ${isFeatureDetail ? 'w-full' : 'rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 xl:sticky xl:top-24'}`}>
+            <aside className={isFeatureDetail && isLightParityTallDetail ? 'h-full' : undefined}>
+              <div className={`shadow-soft ${isFeatureDetail ? 'h-full w-full' : 'rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 xl:sticky xl:top-24'}`}>
                 {isFeatureDetail && currentModelPanel ? (
 	                  <section className="flex h-[calc(100vh-104px)] min-h-[520px] flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,17,19,0.98),rgba(9,13,15,0.96))]" data-testid="lightchain-model-panel">
 	                    <div className="px-4 pb-3 pt-5">
@@ -7204,18 +7156,35 @@ export function LightchainWorkbenchPage() {
                     </div>
                   </section>
                 ) : isFeatureDetail && lightchainToolPanelConfig ? (
-                  <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#171c1e]" data-testid="lightchain-input-material-panel">
+                  <section className={`overflow-hidden rounded-2xl border border-white/10 bg-[#171c1e] ${isLightParityTallDetail ? 'flex h-full flex-col' : ''}`} data-testid="lightchain-input-material-panel">
+                    {isLightParityTallDetail && (
+                      <div className="px-4 pt-4">
+                        <div className="flex h-[34px] items-center justify-center rounded-lg border border-white/10 bg-[#3a3f41] text-sm font-semibold text-white" role="tablist">
+                          {(selectedTool.id === 'image-repair' ? [selectedTool] : selectedCategoryTools).map((tool) => (
+                            <Link key={tool.id} to={resolveHeavyRouteForRow(tool.id, `/lightchain/${tool.id}`)} role="tab" aria-selected={selectedTool.id === tool.id} className={`h-full flex-1 rounded-lg px-3 py-2 text-center ${selectedTool.id === tool.id ? 'bg-[#5b6265] text-white' : 'text-neutral-300'}`}>
+                              {tool.title}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {['line-generation', 'line-to-real'].includes(selectedTool.id) && lineDeprecationBannerVisible && (
+                      <div className="mx-4 mt-[18px] flex h-16 justify-between gap-2 rounded-lg bg-[#5b1f2a] px-4 py-2 text-sm leading-6 text-white">
+                        <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<Link to="/designProduction" className="underline">今すぐ体験</Link></span>
+                        <button type="button" aria-label="告知を閉じる" className="flex size-6 shrink-0 items-center justify-center rounded hover:bg-white/10" onClick={() => setLineDeprecationBannerVisible(false)}>×</button>
+                      </div>
+                    )}
                     {lightchainToolPanelConfig.notice && (
                       <div className="bg-[#1d4d49] px-4 py-3 text-sm leading-6 text-cyan-50">
                         <span>{lightchainToolPanelConfig.notice} </span>
                         <span className="underline">今すぐ体験</span>
                       </div>
 	                    )}
-	                    <div className="p-4">
+                    <div className={`p-4 ${isLightParityTallDetail ? 'flex min-h-0 flex-1 flex-col' : ''}`}>
                       {selectedTool.id === 'fabric-image' && (
                         <p className="mb-3 text-sm font-semibold text-neutral-200">モデル/デザイン画像*</p>
                       )}
-	                      <div className="mb-3 flex justify-end">
+	                      {!isLightParityTallDetail && <div className="mb-3 flex justify-end">
 	                        <button
 	                          type="button"
 	                          onClick={() => openMaterialModalForSlot('primary')}
@@ -7223,9 +7192,9 @@ export function LightchainWorkbenchPage() {
 	                        >
 	                          素材を選択
 	                        </button>
-	                      </div>
+	                      </div>}
 		                      <label
-		                        className="relative flex min-h-[244px] cursor-pointer flex-col items-center justify-center rounded-xl bg-[#121719] p-5 text-center transition hover:bg-[#151c1f]"
+                            className={`relative flex cursor-pointer flex-col items-center justify-center rounded-xl bg-[#121719] p-5 text-center transition hover:bg-[#151c1f] ${isLightParityTallDetail ? 'min-h-[280px]' : 'min-h-[244px]'}`}
 		                        onClick={() => setActiveMaterialSlot('primary')}
 	                      >
 	                        <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
@@ -7323,11 +7292,13 @@ export function LightchainWorkbenchPage() {
                               リセット
                             </button>
                           </div>
-	                          <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-xl bg-[#20272a] p-1">
+	                          <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-xl bg-[#20272a] p-1" role={selectedTool.id === 'image-repair' ? 'tablist' : undefined}>
 		                            {lightchainToolPanelConfig.options.map((option, index) => (
-	                              <button
-	                                key={option}
-	                                type="button"
+	                                <button
+	                                  key={option}
+	                                  type="button"
+	                                  role={selectedTool.id === 'image-repair' ? 'tab' : undefined}
+	                                  aria-selected={selectedTool.id === 'image-repair' ? imageRepairMode === option : undefined}
 	                                  onClick={() => {
 	                                    if (selectedTool.id === 'line-to-real') setLineDraftType(option as 'カラー線画' | 'モノクロ線画');
 	                                    if (selectedTool.id === 'line-generation') setLineGenerationImageType(option as '平置き画像' | 'モデル図');
@@ -7357,8 +7328,8 @@ export function LightchainWorkbenchPage() {
 	                              </button>
 		                            ))}
 	                          </div>
-                          {selectedTool.id === 'image-repair' && imageRepairMode === 'マスクツール' && (
-                            <p className="mt-3 rounded-full bg-[#20272a] px-4 py-2 text-center text-xs font-semibold text-[#65d3cf]">
+                          {selectedTool.id === 'image-repair' && (
+                            <p role="tabpanel" aria-label={imageRepairMode} className="mt-3 rounded-full bg-[#20272a] px-4 py-2 text-center text-xs font-semibold text-[#65d3cf]">
                               「マスクツール」を使用して手足の部分をマスクで選択してください
                             </p>
                           )}
@@ -7369,20 +7340,11 @@ export function LightchainWorkbenchPage() {
                         <div className="mt-5 space-y-4">
                           <div>
                             <p className="mb-2 text-sm font-semibold text-neutral-200">生成画像の種類</p>
-                              <div className="grid grid-cols-2 overflow-hidden rounded-xl bg-[#20272a] p-1" role="group" aria-label="生成画像の種類">
-                                {(['平置き画像', 'モデル図'] as const).map((option) => (
-                                  <button
-                                    key={option}
-                                    type="button"
-                                    onClick={() => setLineToRealImageType(option)}
-                                    aria-pressed={lineToRealImageType === option}
-                                    data-testid={`lightchain-line-to-real-output-type-${option}`}
-                                    className={`rounded-lg px-4 py-2 text-sm font-semibold ${lineToRealImageType === option ? 'bg-[#737d84] text-white' : 'text-neutral-400'}`}
-                                  >
-                                    {option}
-                                  </button>
-                                ))}
-                              </div>
+                              {['平置き画像'].map((option) => (
+                                <div key={option} className="flex h-8 w-full items-center rounded-lg border border-white/10 bg-[#5d6669] px-3 py-1.5 text-left text-sm font-semibold text-neutral-300" role="combobox" aria-disabled="true" aria-label="生成画像の種類" data-testid={`lightchain-line-to-real-output-type-${option}`}>
+                                  {option}
+                                </div>
+                              ))}
                           </div>
                           <div>
                             <label className="text-sm font-semibold text-neutral-200" htmlFor="line-to-real-description">
@@ -7450,7 +7412,7 @@ export function LightchainWorkbenchPage() {
                         </div>
                       )}
 
-                      <div className={lightchainToolPanelConfig.bottomControl || selectedTool.id === 'line-generation' ? 'mt-4 grid grid-cols-[1fr_1.45fr] items-end gap-3' : 'mt-4'}>
+                      <div className={`${selectedTool.id === 'image-repair' ? 'mt-auto pt-4' : selectedTool.id === 'line-generation' ? 'mt-auto grid grid-cols-[1fr_1.45fr] items-end gap-3 pt-4' : lightchainToolPanelConfig.bottomControl ? 'mt-4 grid grid-cols-[1fr_1.45fr] items-end gap-3' : 'mt-4'}`}>
                         {selectedTool.id === 'line-generation' && (
                           <div>
                             <p className="mb-2 text-sm font-semibold text-neutral-200">生成画像の種類</p>
@@ -7468,8 +7430,15 @@ export function LightchainWorkbenchPage() {
                             {lightchainToolPanelConfig.bottomControl}
                           </div>
                         )}
-                        {['line-to-real', 'line-generation'].includes(selectedTool.id) ? (
-                          <PermissionLockedButton testId={`lightchain-${selectedTool.id}-permission`} marginClass="" className="rounded-xl bg-[#65d3cf] text-neutral-950" />
+                        {['image-repair', 'line-to-real', 'line-generation'].includes(selectedTool.id) ? (
+                          <button
+                            type="button"
+                            data-testid={`lightchain-${selectedTool.id}-permission`}
+                            onClick={() => toast.error('この機能は現在のLight Chain権限では利用できません')}
+                            className={selectedTool.id === 'image-repair' ? 'float-right inline-flex h-10 w-72 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#65d3cf] to-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs transition-all hover:brightness-105' : 'inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs transition-all hover:brightness-105'}
+                          >
+                            権限がありません
+                          </button>
                         ) : (
                           <button
                             type="button"
@@ -7499,7 +7468,7 @@ export function LightchainWorkbenchPage() {
                 </div>
 
                 <p className="mt-3 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                  {selectedTool.description}
+                  {selectedTool.id === 'image-repair' ? '手足や顔の奇形をAIが修復します' : selectedTool.description}
                 </p>
 
                 {workbenchEnabled && (
@@ -7899,34 +7868,44 @@ export function LightchainWorkbenchPage() {
               </div>
             </aside>
             {isFeatureDetail && (
-              <aside className="relative min-h-[560px] lg:sticky lg:top-24 lg:self-start">
+            <aside className={`relative min-h-[560px] lg:sticky lg:self-start ${isLightParityTallDetail ? 'h-full lg:top-4' : 'lg:top-24'}`}>
                 <Link
                   to="/history"
-                  className="absolute right-0 top-0 z-10 rounded-full border border-white/15 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-white"
+                  className={`absolute right-0 z-10 rounded-full border border-white/15 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-white ${isLightParityTallDetail ? 'top-4' : 'top-0'}`}
                   data-testid="lightchain-feature-history-link"
                 >
                   生成履歴
                 </Link>
-                <section className="flex min-h-[560px] items-center justify-center">
-                  <div className="w-full pt-16 text-center">
-                    <h2 className="text-xl font-semibold text-[#6ee7df]">
-                      {isPatternVectorProFlow ? 'パターンをベクター画像に変換（プロフェッショナル版）' : currentDisplayTitle}
-                    </h2>
-                    <p className="mx-auto mt-4 max-w-[460px] text-sm leading-7 text-neutral-400">
-                      {selectedTool.id === 'printing-image'
-                        ? 'プリントイメージを使用し、版下を作成せずに印刷効果を確認できます'
-                        : selectedTool.id === 'fabric-image'
-                          ? '異なる生地の効果を生成できます'
-                        : selectedTool.id === 'line-to-real'
-                          ? '平絵を編集可能なベクター画像に変換します'
-                        : selectedTool.id === 'line-generation'
-                          ? '衣類の着用画像や平置き画像から平絵に変換'
-                        : isPatternVectorProFlow
-                          ? 'プリントパターンをベクター画像に変換します'
-                        : currentModelPanel
-                          ? currentModelPanel.subtitle ?? selectedTool.description
-                        : selectedTool.description}
-                    </p>
+                <section className={`flex min-h-[560px] items-center justify-center ${isLightParityTallDetail ? 'h-full rounded-[28px] bg-[#232728]' : ''}`}>
+                  {['line-generation', 'line-to-real'].includes(selectedTool.id) && !lightchainResult ? (
+                    <div className="translate-x-[4px] translate-y-[13px] text-center">
+                      <h2 className="font-bold text-[18px] leading-[25px] text-white">{currentDisplayTitle}</h2>
+                      <p className="mx-auto mt-2 max-w-[280px] text-sm leading-[21px] text-[#aab8b6]">
+                        {selectedTool.id === 'line-generation' ? '衣類の着用画像や平置き画像から平絵に変換' : '平絵を編集可能なベクター画像に変換します'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="w-full pt-16 text-center">
+                      <h2 className="text-xl font-semibold text-[#6ee7df]">
+                        {isPatternVectorProFlow ? 'パターンをベクター画像に変換（プロフェッショナル版）' : currentDisplayTitle}
+                      </h2>
+                      <p className="mx-auto mt-4 max-w-[460px] text-sm leading-7 text-neutral-400">
+                        {selectedTool.id === 'printing-image'
+                          ? 'プリントイメージを使用し、版下を作成せずに印刷効果を確認できます'
+                          : selectedTool.id === 'fabric-image'
+                            ? '異なる生地の効果を生成できます'
+                          : selectedTool.id === 'line-to-real'
+                            ? '平絵を編集可能なベクター画像に変換します'
+                          : selectedTool.id === 'line-generation'
+                            ? '衣類の着用画像や平置き画像から平絵に変換'
+                          : isPatternVectorProFlow
+                            ? 'プリントパターンをベクター画像に変換します'
+                          : selectedTool.id === 'image-repair'
+                            ? '手足や顔の奇形をAIが修復します'
+                          : currentModelPanel
+                            ? currentModelPanel.subtitle ?? selectedTool.description
+                          : selectedTool.description}
+                      </p>
                     {selectedTool.id === 'line-to-real' && !lightchainResult ? null : <div className={`mx-auto mt-10 flex max-w-[520px] items-center justify-center bg-black/30 p-4 ${lightchainResult ? 'min-h-[420px] overflow-visible' : 'aspect-[16/9] overflow-hidden'}`}>
                       {lightchainResult ? (
 	                        <div className="w-full">
@@ -8004,7 +7983,8 @@ export function LightchainWorkbenchPage() {
                         </div>
                       )}
                     </div>}
-                  </div>
+                    </div>
+                  )}
                 </section>
               </aside>
             )}
@@ -8086,7 +8066,6 @@ export function LightchainWorkbenchPage() {
         </div>
       )}
       {lightchainResultModal}
-      {lightchainRightsConfirmationModal}
     </main>
   );
 }

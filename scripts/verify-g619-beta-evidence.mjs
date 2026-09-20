@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const args = parseArgs(process.argv.slice(2));
+const CANONICAL_BASE_URL = 'https://heavy-chain-web.nichika2000823.workers.dev';
 const outDir = args.out || 'output/playwright/g619-real-beta-evidence';
 const manifestPath = args.manifest || path.join(outDir, 'manifest.json');
 const summaryPath = args.summary || path.join(outDir, 'summary.json');
@@ -282,7 +283,7 @@ function validateSession(session, evidenceFiles, textBlobs) {
     h601H602DecisionStatus: session?.h601H602DecisionStatus ?? null,
     missingPhrases: requiredChecklistPhrases.filter((phrase) => !checklistText.includes(phrase)),
   });
-  addCheck(`${prefix} uses production target`, /^https:\/\/heavy-chain\.zeabur\.app(?:\/|$)/.test(String(session?.baseUrl || '')), {
+  addCheck(`${prefix} uses production target`, isCanonicalBaseUrl(session?.baseUrl), {
     baseUrl: session?.baseUrl ?? null,
   });
   addCheck(`${prefix} has useful duration`, Number(session?.durationMinutes || 0) >= 5, {
@@ -497,7 +498,7 @@ function templateManifest() {
         participantAlias: 'beta-001',
         persona: 'apparel-ec-operator',
         platform: 'desktop',
-        baseUrl: 'https://heavy-chain.zeabur.app',
+        baseUrl: CANONICAL_BASE_URL,
         durationMinutes: 0,
         consent: {
           confirmed: false,
@@ -523,6 +524,15 @@ function templateManifest() {
       },
     ],
   };
+}
+
+function isCanonicalBaseUrl(value) {
+  try {
+    const parsed = new URL(String(value));
+    return parsed.origin === CANONICAL_BASE_URL && parsed.pathname === '/' && !parsed.search && !parsed.hash;
+  } catch {
+    return false;
+  }
 }
 
 function readJson(filePath) {

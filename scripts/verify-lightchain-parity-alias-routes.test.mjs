@@ -18,8 +18,8 @@ test('exposes the observed Light Chain direct routes in Heavy App', () => {
 
 test('keeps permission and purchase boundaries visible in the parity screens', () => {
   // The internal beta is available to all employees; the legacy plan lock was
-  // intentionally removed. Generation still has rights confirmation gates in
-  // the provider-backed workbenches covered by their focused contracts.
+  // intentionally removed. The source permission surface is separate from
+  // rights-attestation UI, which Light Chain does not render.
   assert.doesNotMatch(parityPagesSource, /PermissionLockedButton/);
   assert.match(permissionComponentSource, /権限がありません/);
   assert.match(parityPagesSource, /AIフィッティングを開く/);
@@ -41,7 +41,9 @@ test('keeps the model-library alias on the shared workflow contract', () => {
   assert.match(modelLibrarySource, /data-workflow-feature="model-library"/);
   assert.match(modelLibrarySource, /data-workflow-result-destinations=\{modelLibraryWorkflowContract\?\.resultDestinations\.join\(','\) \?\? ''\}/);
   assert.match(modelLibrarySource, /data-workflow-rights-gate=\{modelLibraryWorkflowContract\?\.rightsGate \?\? ''\}/);
-  assert.match(modelLibrarySource, /data-testid="model-library-rights-gate"/);
+  assert.match(modelLibrarySource, /data-testid="model-library-permission-surface"/);
+  assert.match(modelLibrarySource, /権限がありません/);
+  assert.doesNotMatch(modelLibrarySource, /生成直前に権利確認を行います/);
   assert.match(modelLibrarySource, /getLightchainUnifiedFeatureWorkflowContract\('model-library'\)/);
   assert.match(modelLibrarySource, /buildGenerationIntentHref/);
 });
@@ -51,5 +53,5 @@ test('uses Light Chain /model as the canonical AI fitting entrypoint', () => {
   assert.ok(fittingEntries.length >= 1, 'missing AI fitting catalog entries');
   assert.ok(fittingEntries.every((href) => href.startsWith('/model')), `non-canonical AI fitting hrefs: ${fittingEntries.join(', ')}`);
   assert.match(parityPagesSource, /navigate\(`\/model\?/);
-  assert.match(workbenchSource, /to="\/model#fitting-history"/);
+  assert.match(workbenchSource, /to="\/model#fitting-history"|navigate\('\/model#fitting-history'\)/);
 });

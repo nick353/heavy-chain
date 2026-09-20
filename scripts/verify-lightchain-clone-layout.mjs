@@ -5,7 +5,7 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 
 const args = parseArgs(process.argv.slice(2));
-const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain.zeabur.app');
+const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain-web.nichika2000823.workers.dev');
 const authStatePath = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'output/playwright/prod-auth-refresh-20260625/auth-state.json';
 const outDir = args.out || `output/playwright/lightchain-clone-layout-${dateStamp()}`;
 const imagePath = args.image || process.env.HEAVY_CHAIN_QA_IMAGE || '/Users/nichikatanaka/Downloads/S__4235312(1).jpg';
@@ -27,10 +27,12 @@ const requiredRouteKeys = [
   'public-login',
   'desktop-home',
   'home-click-to-feature',
+  'desktop-video-projects',
   ...directFeatures.map((feature) => feature.key),
   'desktop-history',
   'desktop-canvas',
   'mobile-home',
+  'mobile-video-projects',
   'mobile-graphics-remove-bg',
   'mobile-history',
   'mobile-canvas',
@@ -107,12 +109,14 @@ try {
 
   evidence.routes.push(await verifyHome(context, desktopViewport, 'desktop-home'));
   evidence.routes.push(await verifyFeatureFromHome(context, desktopViewport));
+  evidence.routes.push(await verifyVideoProjects(context, desktopViewport, 'desktop-video-projects'));
   for (const spec of directFeatures) {
     evidence.routes.push(await verifyFeature(context, desktopViewport, spec));
   }
   evidence.routes.push(await verifyHistory(context, desktopViewport, 'desktop-history'));
   evidence.routes.push(await verifyCanvas(context, desktopViewport, 'desktop-canvas'));
   evidence.routes.push(await verifyHome(context, mobileViewport, 'mobile-home'));
+  evidence.routes.push(await verifyVideoProjects(context, mobileViewport, 'mobile-video-projects'));
   evidence.routes.push(await verifyFeature(context, mobileViewport, { ...directFeatures[2], key: 'mobile-graphics-remove-bg' }));
   evidence.routes.push(await verifyHistory(context, mobileViewport, 'mobile-history'));
   evidence.routes.push(await verifyCanvas(context, mobileViewport, 'mobile-canvas'));
@@ -248,6 +252,40 @@ async function verifyFeature(context, viewport, spec) {
     await fillPromptAndPlan(page, routeEvidence);
     await openOperationsDetails(page, routeEvidence);
     routeEvidence.screenshot = await screenshot(page, `${spec.key}.png`);
+  } catch (error) {
+    markException(routeEvidence, error);
+  } finally {
+    routeEvidence.video = await closePageAndGetVideo(page);
+  }
+  return routeEvidence;
+}
+
+async function verifyVideoProjects(context, viewport, key) {
+  const page = await newTrackedPage(context, key, viewport);
+  const routeEvidence = newRouteEvidence(key, '/flow/GenerateShortVideo', viewport);
+  try {
+    await gotoAndSettle(page, '/flow/GenerateShortVideo');
+    await captureBaseState(page, routeEvidence, {
+      expected: [authenticatedLightchainBrand, '動画ワークステーション', '新規ファイル', 'Untitled', '参考事例', '修正'],
+      minBodyLength: 160,
+    });
+    const dashboard = page.getByTestId('lightchain-video-project-dashboard');
+    addAssertion(routeEvidence, 'video_project_dashboard_present', await dashboard.isVisible().catch(() => false));
+    addAssertion(routeEvidence, 'video_projects_route_is_canonical', new URL(page.url()).pathname === '/flow/GenerateShortVideo', { url: page.url() });
+    const projectSection = page.getByTestId('video-recent-projects');
+    const referenceSection = page.locator('section[aria-labelledby="video-reference-heading"]');
+    const projectCount = await projectSection.getByRole('button').count().catch(() => 0);
+    const referenceCount = await referenceSection.getByRole('button').count().catch(() => 0);
+    const newFileButton = page.getByRole('button', { name: '新規ファイル', exact: true });
+    const checkboxCount = await page.locator('input[type="checkbox"]').count().catch(() => 0);
+    const editLabelCount = await page.getByTestId('video-project-edit-label').count().catch(() => 0);
+    routeEvidence.interactions.push({ type: 'video-dashboard-inventory', projectCount, referenceCount, newFileCount: await newFileButton.count(), editLabelCount, checkboxCount });
+    addAssertion(routeEvidence, 'video_recent_project_cards_match_source_count', projectCount === 6, { projectCount });
+    addAssertion(routeEvidence, 'video_reference_cards_match_source_count', referenceCount === 5, { referenceCount });
+    addAssertion(routeEvidence, 'video_new_file_action_present', await newFileButton.isVisible().catch(() => false));
+    addAssertion(routeEvidence, 'video_edit_labels_match_source_count', editLabelCount === 11, { editLabelCount });
+    addAssertion(routeEvidence, 'video_rights_checkbox_absent', checkboxCount === 0, { checkboxCount });
+    routeEvidence.screenshot = await screenshot(page, `${key}.png`);
   } catch (error) {
     markException(routeEvidence, error);
   } finally {
@@ -560,15 +598,9 @@ async function openOperationsDetails(page, routeEvidence) {
 function buildStorageStateForBaseUrl(filePath, targetBaseUrl) {
   const state = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   const targetOrigin = new URL(targetBaseUrl).origin;
-  if (/^https?:\/\/(127\.0\.0\.1|localhost)/.test(targetOrigin)) {
-    const prodOrigin = state.origins?.find((origin) => origin.origin === 'https://heavy-chain.zeabur.app') ?? state.origins?.[0];
-    if (prodOrigin?.localStorage) {
-      state.origins = [
-        ...(state.origins ?? []).filter((origin) => origin.origin !== targetOrigin),
-        { origin: targetOrigin, localStorage: prodOrigin.localStorage },
-      ];
-    }
-  }
+  const targetState = state.origins?.find((origin) => origin.origin === targetOrigin);
+  if (!targetState) throw new Error(`auth_state_target_origin_missing:${targetOrigin}`);
+  state.origins = [targetState];
   return state;
 }
 
@@ -784,7 +816,7 @@ function collectFailures(result) {
 }
 
 function isWorkspaceHref(href) {
-  return Boolean(href && /^\/(generate|lightchain|jobs|gallery|canvas|fitting|marketing|models|patterns|studio|video|lab|workflows|dashboard)(\/|\?|$)/.test(href));
+  return Boolean(href && /^\/(generate|lightchain|jobs|gallery|canvas|fitting|marketing|model-library|patterns|studio|video|flow\/GenerateShortVideo|lab|workflows|dashboard)(\/|\?|$)/.test(href));
 }
 
 function isBackgroundRemovalHref(href) {

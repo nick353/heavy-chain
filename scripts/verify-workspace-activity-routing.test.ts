@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { readOptionalWorkspaceValue } from '../src/lib/workspaceReadRecovery.ts';
-import { withSupabaseSessionRecovery } from '../src/lib/supabaseSessionRecovery.ts';
+import { withAuthSessionRecovery } from '../src/lib/authSessionRecovery.ts';
 
 const read = (path: string) => readFile(new URL(path, import.meta.url), 'utf8');
 
@@ -14,15 +14,16 @@ test('workspace activity unwraps artifact metadata for shared Jobs and History r
   assert.match(source, /buildSourceContextSummaryRows\(getWorkspaceActivityMetadata\(metadata\)\)/);
 });
 
-test('workspace activity recovers each settled Supabase read before aggregating failures', async () => {
+test('workspace activity recovers Cloudflare reads before aggregating failures', async () => {
   const source = await read('../src/lib/workspaceActivity.ts');
   const recovery = await read('../src/lib/workspaceReadRecovery.ts');
-  assert.match(source, /withSupabaseSessionRecovery\(\(\) => fetchCreditSummary\(brandId\)\)/);
-  assert.match(source, /withSupabaseSessionRecovery\(\(\) => fetchJobs\(brandId\)\)/);
-  assert.match(source, /withSupabaseSessionRecovery\(\(\) => fetchOutputs\(brandId\)\)/);
-  assert.match(source, /withSupabaseSessionRecovery\(\(\) => fetchLightchainTaskSteps\(brandId\)\)/);
+  assert.match(source, /withAuthSessionRecovery\(\(\) => fetchCreditSummary\(brandId\)\)/);
+  assert.match(source, /withAuthSessionRecovery\(\(\) => fetchJobs\(brandId\)\)/);
+  assert.match(source, /withAuthSessionRecovery\(\(\) => fetchOutputs\(brandId\)\)/);
+  assert.match(source, /withAuthSessionRecovery\(\(\) => fetchLightchainTaskSteps\(brandId, jobIds\)\)/);
+  assert.doesNotMatch(source, /from\('lightchain_task_steps'\)/);
   assert.match(source, /Promise\.allSettled\(\[[\s\S]*original 401\/expired-token signal/);
-  assert.match(recovery, /if \(isSupabaseAuthFailure\(error\)\) throw error/);
+  assert.match(recovery, /if \(isAuthFailure\(error\)\) throw error/);
 });
 
 test('optional task-step reads preserve auth failures for one coordinated refresh and retry', async () => {
@@ -30,7 +31,7 @@ test('optional task-step reads preserve auth failures for one coordinated refres
   let refreshCalls = 0;
   const logged: unknown[] = [];
 
-  const result = await withSupabaseSessionRecovery(
+  const result = await withAuthSessionRecovery(
     () => readOptionalWorkspaceValue(
       async () => {
         operationCalls += 1;
@@ -87,7 +88,14 @@ test('generic provider jobs resume through their persisted Lightchain feature id
 test('Activity timeline and Dashboard use the same canonical Gallery selection key', async () => {
   const activity = await read('../src/lib/workspaceActivity.ts');
   const dashboard = await read('../src/pages/DashboardPage.tsx');
+  const jobs = await read('../src/pages/JobsPage.tsx');
+  const queue = await read('../src/components/workspace/JobQueuePanel.tsx');
   assert.match(activity, /getGeneratedImageSelectionKey\(\{[\s\S]*storage_path: output\.storagePath/);
+  assert.match(activity, /const getOutputHref =/);
+  assert.match(activity, /outputHref: getOutputHref\(primaryOutput\)/);
+  assert.match(activity, /const firstOutputByJob = outputs\.reduce/);
+  assert.match(jobs, /job\.status === 'completed'[\s\S]*job\.outputHref/);
+  assert.match(queue, /to=\{job\.outputHref\}/);
   assert.match(dashboard, /getGeneratedImageSelectionKey\(image\)/);
   assert.match(dashboard, /encodeURIComponent\(getGeneratedImageSelectionKey\(image\)\)/);
 });
@@ -104,10 +112,26 @@ test('Heavy Chain task steps survive remote-image to local-artifact fallback', a
 test('provider artifacts reconstruct a completed Jobs entry when no generation_jobs row exists', async () => {
   const activity = await read('../src/lib/workspaceActivity.ts');
   assert.match(activity, /const buildLocalWorkspaceJobs =/);
-  assert.match(activity, /listWorkspaceArtifacts\(brandId, scopeId\)/);
+  assert.match(activity, /listWorkspaceArtifactsForActivity\(brandId, scopeId\)/);
   assert.match(activity, /artifact\.sourceJobId \?\? getMetadataString\(artifact\.metadata, 'remoteJobId'\)/);
+  assert.match(activity, /const getLocalArtifactSourceReadback =/);
+  assert.match(activity, /artifact\.featureType\.includes\('printing-image'\)/);
+  assert.match(activity, /sourceResumePath: sourceResumePath \?\? '\/lightchain\/printing-image'/);
+  assert.match(activity, /artifact\.featureType\.includes\('fabric-image'\)/);
+  assert.match(activity, /sourceResumePath: sourceResumePath \?\? '\/lightchain\/fabric-image'/);
+  assert.match(activity, /artifact\.featureType === 'model-matrix-local-preview'/);
   assert.match(activity, /const localJobs = buildLocalWorkspaceJobs\(localArtifacts, new Set\(jobs\.map\(\(job\) => job\.id\)\)\)/);
   assert.match(activity, /\[\.\.\.jobs, \.\.\.localJobs\]\.map/);
+});
+
+test('Jobs keeps proven local provider artifacts when remote activity reads fail', async () => {
+  const activity = await read('../src/lib/workspaceActivity.ts');
+  assert.match(activity, /const localArtifacts = listWorkspaceArtifactsForActivity\(brandId, scopeId\);/);
+  assert.match(activity, /const localJobs = buildLocalWorkspaceJobs\(localArtifacts, new Set\(jobs\.map\(\(job\) => job\.id\)\)\)/);
+  assert.match(activity, /const localJobsForFailureFallback = localJobs/);
+  assert.match(activity, /jobsResult\.status === 'rejected' && localJobsForFailureFallback\.length === 0/);
+  assert.match(activity, /outputsResult\.status === 'rejected' && localOutputs\.length === 0/);
+  assert.match(activity, /creditResult\.status === 'rejected'/);
 });
 
 test('Lightchain workbench accepts a resumeJob readback without a legacy source handoff', async () => {

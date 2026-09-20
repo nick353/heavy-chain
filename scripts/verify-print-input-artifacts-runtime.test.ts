@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { persistPrintInputState } from '../src/lib/printInputPersistence.ts';
+import { persistPrintInputState, restorePrintInputState, printInputScopeKey, validatePrintInputEditorState, type PrintInputEditorState } from '../src/lib/printInputPersistence.ts';
 
 type RecordValue = { key: string; blob: Blob; createdAt: string };
 
@@ -76,6 +76,7 @@ class FakeDatabase {
   }
 
   close() {}
+  records() { return [...this.stores.values()].flatMap(store => [...store.values()]); }
 }
 
 class FakeIndexedDb {
@@ -97,6 +98,7 @@ class FakeIndexedDb {
     });
     return request;
   }
+  records() { return [...this.databases.values()].flatMap(database => database.records()); }
 }
 
 class FakeFileReader {
@@ -185,4 +187,95 @@ test('print input cutouts and candidates survive a fresh module restore without 
     if (previousFileReader === undefined) delete (globalThis as { FileReader?: unknown }).FileReader;
     else (globalThis as { FileReader?: unknown }).FileReader = previousFileReader;
   }
+});
+
+const withStorage = async (run: (storage: Map<string, string>, db: FakeIndexedDb, browser: { localStorage: { getItem: (key: string) => string | null; setItem: (key: string, value: string) => void } }) => Promise<void>) => {
+  const previous = { indexedDB: globalThis.indexedDB, window: globalThis.window, FileReader: globalThis.FileReader };
+  const storage = new Map<string, string>(), db = new FakeIndexedDb();
+  const browser = { localStorage: { getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => { storage.set(key, value); } } };
+  Object.assign(globalThis, { indexedDB: db, window: browser, FileReader: FakeFileReader });
+  try { await run(storage, db, browser); }
+  finally { for (const [key, value] of Object.entries(previous)) {
+    if (value === undefined) delete (globalThis as Record<string, unknown>)[key];
+    else (globalThis as Record<string, unknown>)[key] = value;
+  } }
+};
+const scope = { origin: 'https://print-api.test', userId: 'owner' }, brandId = 'same-brand';
+const editor: PrintInputEditorState = { version: 1, coverageMode: 'spot', outputScale: 2, placementConfirmed: true, printableSurfaceEnabled: false,
+  layers: [4, 2, 0, 5, 1, 3].map((designIndex, order) => ({ designIndex, layerId: `print-design-${designIndex + 1}`,
+    transform: { x: 30 + order * 5, y: 42 + order * 3, scale: 0.45 + order / 10, rotation: order * 17 - 24, opacity: 0.5 + order / 10, flipX: order % 2 === 0, flipY: order % 3 === 0 } })) };
+const designs = Array.from({ length: 6 }, (_, index) => ({ url: `data:text/plain;base64,${Buffer.from('design-' + index).toString('base64')}`, referenceType: 'pattern' as const }));
+const processedState = { garment: { processedUrl, processedResult: cutoutResult, maskRevision: 3 },
+  designs: designs.map(() => ({ processedUrl, processedResult: cutoutResult, maskRevision: 7 })) };
+
+test('Cloudflare scoped snapshot restores all six transformed layers and never adopts brand-only or foreign data', () => withStorage(async storage => {
+  await persistPrintInputState(brandId, { url: sourceUrl, referenceType: 'base' }, [], processedState);
+  assert.deepEqual(await restorePrintInputState(brandId, { scope }), { garment: null, designs: [] });
+  await persistPrintInputState(brandId, { url: sourceUrl, referenceType: 'base' }, designs, processedState, { scope, editorState: editor });
+  const restored = await restorePrintInputState(brandId, { scope });
+  assert.deepEqual(restored.editorState, editor);
+  assert.deepEqual(restored.designs.map(design => design.url), designs.map(design => design.url));
+  assert.equal(restored.garment?.processedResult?.dataUrl, processedUrl);
+  assert(restored.designs.every(design => design.maskRevision === 7));
+  assert.deepEqual(await restorePrintInputState(brandId, { scope: { ...scope, userId: 'foreign' } }), { garment: null, designs: [] });
+  assert.deepEqual(await restorePrintInputState(brandId, { scope: { ...scope, origin: 'https://other-api.test' } }), { garment: null, designs: [] });
+  assert.deepEqual(await restorePrintInputState('foreign-brand', { scope }), { garment: null, designs: [] });
+  const raw = storage.get('heavy-chain-print-inputs:v1:' + printInputScopeKey(brandId, scope))!;
+  assert.doesNotMatch(raw, /data:|cHJvY2Vzc2Vk|c291cmNl/);
+  assert(storage.has('heavy-chain-print-inputs:v1:' + brandId), 'legacy metadata was not removed');
+}));
+
+test('failed context or localStorage commit leaves previous bytes and layout intact and removes only the uncommitted revision', () => withStorage(async (storage, db, browser) => {
+  await persistPrintInputState(brandId, { url: sourceUrl, referenceType: 'base' }, designs, processedState, { scope, editorState: editor });
+  const before = [...storage], keys = db.records().map(record => record.key).sort();
+  let assertions = 0;
+  await assert.rejects(persistPrintInputState(brandId, { url: processedUrl, referenceType: 'base' }, designs, processedState,
+    { scope, editorState: { ...editor, outputScale: 1 }, assertContext: () => { if (++assertions === 3) throw new Error('fixture_context_changed'); } }), /fixture_context_changed/);
+  assert.deepEqual([...storage], before);
+  assert.deepEqual(db.records().map(record => record.key).sort(), keys);
+  const put = browser.localStorage.setItem;
+  browser.localStorage.setItem = () => { throw new Error('fixture_storage_quota'); };
+  await assert.rejects(persistPrintInputState(brandId, null, designs, processedState, { scope, editorState: editor }), /fixture_storage_quota/);
+  browser.localStorage.setItem = put;
+  assert.deepEqual([...storage], before);
+  assert.deepEqual(db.records().map(record => record.key).sort(), keys);
+  assert.equal((await restorePrintInputState(brandId, { scope })).garment?.url, sourceUrl);
+}));
+
+test('tampered snapshot scope or foreign asset reference is rejected before any foreign bytes are restored or cleaned', () => withStorage(async (storage, db) => {
+  await persistPrintInputState(brandId, { url: sourceUrl, referenceType: 'base' }, designs, processedState, { scope, editorState: editor });
+  const key = 'heavy-chain-print-inputs:v1:' + printInputScopeKey(brandId, scope), raw = storage.get(key)!;
+  const originalKeys = db.records().map(record => record.key).sort();
+  storage.set(key, JSON.stringify({ ...JSON.parse(raw), scopeKey: 'foreign' }));
+  await assert.rejects(restorePrintInputState(brandId, { scope }), /scope_mismatch/);
+  await assert.rejects(persistPrintInputState(brandId, null, [], { designs: [] }, { scope }), /scope_mismatch/);
+  const edited = JSON.parse(raw); edited.images[0].processed.result.dataUrlAssetRef = 'local-print-input://foreign%3Agarment%3A0';
+  storage.set(key, JSON.stringify(edited));
+  await assert.rejects(restorePrintInputState(brandId, { scope }), /snapshot_invalid/);
+  assert.deepEqual(db.records().map(record => record.key).sort(), originalKeys);
+  await persistPrintInputState(brandId, null, [], { designs: [] }, { scope, replaceUnreadableSnapshot: true });
+  assert.deepEqual(await restorePrintInputState(brandId, { scope }), { garment: null, designs: [] });
+  assert.deepEqual(db.records().map(record => record.key).sort(), originalKeys, 'explicit Clear does not guess corrupt asset targets');
+}));
+
+test('manual printable and occluder planes persist as native Blob assets, not localStorage data URLs', () => withStorage(async storage => {
+  const plane = { width: 10, height: 10, format: 'png' as const, dataUrl: processedUrl, contentHash: 'sha256:plane' as const };
+  const manual = { provenance: 'manual-printable-area' as const, plane, occluder: { ...plane, dataUrl: sourceUrl },
+    identity: { version: 'garment-surface-map-v1' as const, sourceHash: 'sha256:source' as const, contentHash: 'sha256:plane' as const, manualRevision: 5, status: 'manual-ready' as const } };
+  const value = { ...editor, printableSurfaceEnabled: true, manualPrintableSurface: manual } as PrintInputEditorState;
+  await persistPrintInputState(brandId, { url: sourceUrl, referenceType: 'base' }, designs, processedState, { scope, editorState: value });
+  assert.deepEqual((await restorePrintInputState(brandId, { scope })).editorState, value);
+  assert([...storage.values()].every(raw => !raw.includes('data:')));
+}));
+
+test('layout validation rejects omissions, duplicate identities, invalid opacity and non-finite transforms', () => {
+  assert.deepEqual(validatePrintInputEditorState(editor, 6), editor);
+  assert.throws(() => validatePrintInputEditorState({ ...editor, layers: editor.layers.slice(1) }, 6), /editor_state_invalid/);
+  assert.throws(() => validatePrintInputEditorState({ ...editor, layers: [...editor.layers.slice(1), editor.layers[1]] }, 6), /editor_state_invalid/);
+  for (const transform of [{ opacity: -1 }, { x: NaN }, { scale: 0 }, { flipY: 'yes' }]) {
+    const layers = editor.layers.map((layer, index) => index === 0 ? { ...layer, transform: { ...layer.transform, ...transform } } : layer) as typeof editor.layers;
+    assert.throws(() => validatePrintInputEditorState({ ...editor, layers }, 6), /editor_state_invalid/);
+  }
+  assert.throws(() => printInputScopeKey(brandId, { ...scope, origin: 'https://user:pass@print-api.test' }), /scope_invalid/);
 });

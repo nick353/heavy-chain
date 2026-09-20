@@ -63,6 +63,7 @@ const cardTitle = (card: LibraryCard) => card.kind === 'local' ? card.artifact.t
 const cardFeatureType = (card: LibraryCard) => card.kind === 'local' ? card.artifact.featureType : card.asset.featureType;
 const cardImageUrl = (card: LibraryCard) => card.kind === 'local' ? card.artifact.imageUrl : card.asset.imageUrl;
 const cardPrompt = (card: LibraryCard) => card.kind === 'local' ? card.artifact.prompt : card.asset.prompt;
+const cardIdentity = (card: LibraryCard) => card.kind === 'local' ? card.artifact.id : card.asset.remoteImageId;
 
 const isVideoGeneratedImage = (image: GeneratedImageListRow) => (
   /video|動画/i.test(image.feature_type || '')
@@ -118,11 +119,14 @@ export function LightchainLibraryPage() {
   const [renameValue, setRenameValue] = useState('');
   const [uploading, setUploading] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [detailMode, setDetailMode] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'png' | 'jpeg' | 'avif'>('png');
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedFeatureId, setSelectedFeatureId] = useState('ai-fitting');
+  const [pendingDelete, setPendingDelete] = useState<{ card?: LibraryCard; localIds?: string[]; label: string } | null>(null);
 
   const groupsKey = currentBrand?.id ? groupStorageKey(currentBrand.id, user?.id) : null;
   const allGroups = useMemo(
@@ -403,13 +407,7 @@ export function LightchainLibraryPage() {
       .filter((card): card is Extract<LibraryCard, { kind: 'local' }> => card.kind === 'local' && selectedIds.has(getCardId(card)))
       .map((card) => card.artifact.id);
     if (localIds.length === 0) return;
-    if (!window.confirm(`${localIds.length}件の素材を削除しますか？`)) return;
-    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, localIds, user?.id);
-    if (!result.ok) return;
-    setArtifacts(listWorkspaceArtifacts(currentBrand.id, user?.id));
-    setSelectedIds(new Set());
-    setSelectMode(false);
-    setSelectedAssetId(null);
+    setPendingDelete({ localIds, label: `${localIds.length}件の素材` });
   };
 
   const handleRenameSelected = async () => {
@@ -503,13 +501,15 @@ export function LightchainLibraryPage() {
 
   const handleDeleteSelected = async () => {
     if (!selectedAsset) return;
-    if (!window.confirm(`「${cardTitle(selectedAsset)}」を削除しますか？`)) return;
+    setPendingDelete({ card: selectedAsset, label: `「${cardTitle(selectedAsset)}」` });
+  };
 
-    if (selectedAsset.kind === 'remote') {
+  const handleDeleteCard = async (card: LibraryCard) => {
+    if (card.kind === 'remote') {
       try {
         if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
-        await cloudflareDataPlane.deleteGeneratedImage(selectedAsset.asset.remoteImageId);
-        setRemoteAssets((current) => current.filter((asset) => asset.id !== selectedAsset.asset.id));
+        await cloudflareDataPlane.deleteGeneratedImage(card.asset.remoteImageId);
+        setRemoteAssets((current) => current.filter((asset) => asset.id !== card.asset.id));
         setSelectedAssetId(null);
         toast.success('画像を削除しました');
       } catch {
@@ -519,12 +519,34 @@ export function LightchainLibraryPage() {
     }
 
     if (!currentBrand?.id) return;
-    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, [selectedAsset.artifact.id], user?.id);
+    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, [card.artifact.id], user?.id);
     if (!result.ok) {
       toast.error('ローカル成果物を削除できませんでした');
       return;
     }
     setArtifacts(listWorkspaceArtifacts(currentBrand.id, user?.id));
+    setSelectedAssetId(null);
+    setDetailMode(false);
+    toast.success('ローカル成果物を削除しました');
+  };
+
+  const confirmPendingDelete = async () => {
+    if (!pendingDelete) return;
+    const request = pendingDelete;
+    setPendingDelete(null);
+    if (request.card) {
+      await handleDeleteCard(request.card);
+      return;
+    }
+    if (!currentBrand?.id || !request.localIds?.length) return;
+    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, request.localIds, user?.id);
+    if (!result.ok) {
+      toast.error('ローカル成果物を削除できませんでした');
+      return;
+    }
+    setArtifacts(listWorkspaceArtifacts(currentBrand.id, user?.id));
+    setSelectedIds(new Set());
+    setSelectMode(false);
     setSelectedAssetId(null);
     toast.success('ローカル成果物を削除しました');
   };
@@ -611,7 +633,15 @@ export function LightchainLibraryPage() {
                       ) : (
                         <button type="button" className="flex-1 rounded-lg border border-cyan-200/30 px-2 py-2 text-xs text-cyan-100 hover:bg-cyan-200/10 disabled:opacity-40" onClick={() => void handleImportRemote(card.asset)} disabled={uploading}>ボードにコピー</button>
                       )}
-                      <button type="button" aria-label="詳細" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)}><MoreVertical className="h-4 w-4" /></button>
+                      <div className="relative">
+                        <button type="button" aria-label="詳細" aria-expanded={openMenuId === getCardId(card)} className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => setOpenMenuId((current) => current === getCardId(card) ? null : getCardId(card))}><MoreVertical className="h-4 w-4" /></button>
+                        {openMenuId === getCardId(card) && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
+                          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); setSelectedAssetId(getCardId(card)); setDetailMode(true); setRenameValue(cardTitle(card)); setRenameOpen(true); }}>編集する</button>
+                          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); if (card.kind === 'remote') void handleImportRemote(card.asset); else navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(card.artifact.id)}`); }}>キャンバスをコピー</button>
+                          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); setSelectedAssetId(getCardId(card)); setDownloadFormat('png'); setDownloadOpen(true); }}>ダウンロード</button>
+                          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => { setOpenMenuId(null); setPendingDelete({ card, label: `「${cardTitle(card)}」` }); }}>削除</button>
+                        </div>}
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -634,6 +664,7 @@ export function LightchainLibraryPage() {
               </div>
               {renameOpen && <div className="mt-4 flex flex-wrap gap-2"><input value={renameValue} onChange={(event) => setRenameValue(event.target.value)} className="min-w-56 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-cyan-200/60" aria-label="素材名" /><button type="button" className="rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950 disabled:opacity-40" disabled={!renameValue.trim()} onClick={handleRenameSelected}>保存</button><button type="button" className="rounded-lg border border-white/10 px-3 py-2 text-xs text-neutral-300" onClick={() => setRenameOpen(false)}>キャンセル</button></div>}
               <p className="mt-3 text-sm text-neutral-400">{cardPrompt(selectedAsset) || '保存済み素材'}</p>
+              <p className="mt-2 break-all font-mono text-[11px] text-neutral-500" data-testid="library-selected-asset-id">ID: {cardIdentity(selectedAsset)}</p>
               {showExtendedLibraryHandoffs ? (selectedAsset.kind === 'local' ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className="rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}`)}>Canvasへ送る</button>
@@ -678,6 +709,29 @@ export function LightchainLibraryPage() {
               </div>}
             </aside>
           )}
+
+          {detailMode && selectedAsset && (
+            <section className="fixed inset-y-0 left-0 right-0 z-20 flex bg-[#222627] pt-[70px] lg:left-[312px]" aria-label="ライブラリー素材詳細">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
+                  <button type="button" className="rounded-lg px-3 py-2 text-sm text-neutral-300 hover:bg-white/10" onClick={() => { setDetailMode(false); setRenameOpen(false); }}>← 戻る</button>
+                  <div className="ml-auto flex flex-wrap gap-2">
+                    <button type="button" className={mutedButton} onClick={() => void handleCopySelected()}>コピーを作成します</button>
+                    <button type="button" className={mutedButton} onClick={handleDownloadSelected}>ダウンロード</button>
+                    <button type="button" className="rounded-xl border border-red-300/30 bg-red-300/10 px-4 py-2 text-sm text-red-200" onClick={() => void handleDeleteSelected()}>削除</button>
+                  </div>
+                </div>
+                <div className="flex min-h-0 flex-1 items-center justify-center p-8">
+                  {cardImageUrl(selectedAsset) ? <img src={cardImageUrl(selectedAsset)} alt={cardTitle(selectedAsset)} className="max-h-full max-w-full object-contain" /> : <ImageIcon className="h-16 w-16 text-cyan-100/60" />}
+                </div>
+              </div>
+              <aside className="w-full max-w-md border-l border-white/10 bg-[#262b2c] p-6">
+                <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-semibold">名前を編集</h2><button type="button" aria-label="閉じる" className="text-neutral-400 hover:text-white" onClick={() => { setDetailMode(false); setRenameOpen(false); }}><X className="h-5 w-5" /></button></div>
+                <label className="mt-6 block text-sm text-neutral-300">名前 <span className="text-red-300">*</span><input value={renameValue || cardTitle(selectedAsset)} onChange={(event) => setRenameValue(event.target.value)} className="mt-2 w-full rounded-lg border border-white/15 bg-black/20 px-3 py-3 text-sm text-white outline-none focus:border-cyan-200/60" aria-label="素材名" /></label>
+                <div className="mt-5 flex justify-end gap-2"><button type="button" className={mutedButton} onClick={() => { setDetailMode(false); setRenameOpen(false); }}>キャンセル</button><button type="button" className="rounded-xl bg-cyan-200 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={!renameValue.trim()} onClick={() => void handleRenameSelected()}>確認</button></div>
+              </aside>
+            </section>
+          )}
         </main>
       </div>
 
@@ -711,6 +765,19 @@ export function LightchainLibraryPage() {
             <div className="mt-6 flex justify-end gap-2">
               <button type="button" className={mutedButton} onClick={() => setDownloadOpen(false)}>キャンセル</button>
               <button type="button" className="rounded-xl bg-cyan-200 px-4 py-2 text-sm font-semibold text-neutral-950" onClick={() => void handleConfirmDownloadSelected()}>ダウンロードを確認</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-5" role="dialog" aria-modal="true" aria-labelledby="library-delete-title">
+          <div className={`${darkPanel} w-full max-w-md p-6`}>
+            <h2 id="library-delete-title" className="text-lg font-semibold">削除確認</h2>
+            <p className="mt-3 text-sm text-neutral-300">{pendingDelete.label}を削除しますか？</p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" className={mutedButton} onClick={() => setPendingDelete(null)}>キャンセル</button>
+              <button type="button" className="rounded-xl bg-red-300 px-4 py-2 text-sm font-semibold text-neutral-950" onClick={() => void confirmPendingDelete()}>削除</button>
             </div>
           </div>
         </div>

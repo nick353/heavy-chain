@@ -73,10 +73,11 @@ test('workspace and detail handlers preserve uploaded assets before canned previ
   assert.match(workbenchSource, /imageUrl: anchoredPreview/);
   assert.match(workbenchSource, /const handleWorkspaceStyleGenerate = async \(\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
   assert.match(workbenchSource, /const handleCustomStyleSave = async \(\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
-  assert.match(workbenchSource, /const handleWearDesignStart = async \(mode: 'guide' \| 'no-guide'\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
-  assert.match(workbenchSource, /const handlePrintDesignStart = async \(mode: 'guide' \| 'no-guide'\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
+  assert.match(workbenchSource, /const handleWearDesignStart = \(mode: 'guide' \| 'no-guide'\) => \{/);
+  assert.match(workbenchSource, /const handleWearDesignGenerate = \(\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
+  assert.match(workbenchSource, /const handlePrintDesignStart = \(mode: 'guide' \| 'no-guide'\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
   assert.match(workbenchSource, /const handleMarketingDetailGenerate = async \(\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
   assert.match(workbenchSource, /const previewMode = selectedTool\.id === 'line-generation'[\s\S]*?currentModelPanel\s*\n\s*\? 'model'/);
-  assert.match(workbenchSource, /const handlePrintDesignStart = async \(mode: 'guide' \| 'no-guide'\) =>/);
+  assert.match(workbenchSource, /const handlePrintDesignStart = \(mode: 'guide' \| 'no-guide'\) =>/);
   assert.match(workbenchSource, /const handleMarketingDetailGenerate = async \(\) =>/);
 });

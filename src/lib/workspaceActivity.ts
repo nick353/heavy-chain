@@ -244,7 +244,7 @@ const buildResumeHref = (job: GenerationJob) => {
   const metadata = getWorkspaceActivityMetadata(job.input_params);
   const generationHref = getGenerationHref(metadata);
   if (generationHref) return generationHref;
-  if (!job.feature_type) return '/lightchain';
+  if (!job.feature_type) return '/designProduction';
 
   const sourceResumePath = getMetadataString(metadata, 'sourceResumePath');
   if (sourceResumePath === '/fitting') {

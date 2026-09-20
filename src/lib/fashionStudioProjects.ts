@@ -19,8 +19,8 @@ export type FashionStudioProjectCard = FashionStudioRemoteProject & {
  * Keep this route contract independent from the Heavy Canvas handoff used by
  * a newly generated workspace.
  */
-export const buildFashionStudioProjectHref = (project: Pick<FashionStudioProjectCard, 'id'>): string =>
-  `/flow/integration/detail?boardProjectCode=${encodeURIComponent(project.id)}&boardProjectType=integrationCustom`;
+export const buildFashionStudioProjectHref = (project: Pick<FashionStudioProjectCard, 'id' | 'canvasProjectId'>): string =>
+  `/flow/integration/detail?boardProjectCode=${encodeURIComponent(project.canvasProjectId ?? project.id)}&boardProjectType=integrationCustom`;
 
 /**
  * Merge the authenticated Canvas index with the browser-local handoff index.

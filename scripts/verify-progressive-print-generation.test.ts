@@ -23,7 +23,7 @@ test('exact and fabric start together but exact becomes visible before fabric is
   const fabricStart = page.indexOf('const fabricCompositionPromise = settleComposition');
   const exactAwait = page.indexOf('const exactComposition = await exactCompositionPromise');
   const exactDecode = page.indexOf('await waitForDisplayableImage(exactComposition.imageUrl)', exactAwait);
-  const exactReady = page.indexOf("exact: { status: 'ready', result: exactResult", exactDecode);
+  const exactReady = page.indexOf("exact: { status: 'ready', result: previewExactResult", exactDecode);
   const paint = page.indexOf('await waitForCommittedPaint()', exactReady);
   const fabricAwait = page.indexOf('const fabricComposition = await fabricCompositionPromise', paint);
   assert.ok(exactStart >= 0 && fabricStart > exactStart && exactAwait > fabricStart);

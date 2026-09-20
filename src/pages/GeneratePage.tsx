@@ -62,8 +62,6 @@ import {
 import { buildProductionImagePrompt, mergeProductionNegativePrompt } from '../lib/productPromptQuality';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
-  GENERATION_LEGAL_COPY,
-  UPLOAD_RIGHTS_CONFIRMATION_LABEL,
   validateLegalSafetyInput,
 } from '../lib/legalSafetyGuard';
 import { getWorkflowMetadata, type WorkflowMetadata } from '../lib/workflowMetadata';
@@ -992,7 +990,10 @@ export function GeneratePage() {
   const [overlayStrokeWidth, setOverlayStrokeWidth] = useState(2);
   const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(getInitialGenerationModel);
   const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
-  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  // The current Light Chain source exposes permission state, not an upload
+  // rights checkbox. Keep provider admission fail-closed until a source
+  // permission readback explicitly admits this generation surface.
+  const rightsConfirmed = false;
   const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
   
   // Reference image state
@@ -1328,7 +1329,7 @@ export function GeneratePage() {
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
     setShowSuccessCard(false);
-    navigate(window.location.pathname === '/editor/changeColor' ? '/editor/changeColor' : '/lightchain', { replace: true });
+    navigate(window.location.pathname === '/editor/changeColor' ? '/editor/changeColor' : '/designProduction', { replace: true });
   };
 
   // 画像を圧縮する関数
@@ -1472,8 +1473,8 @@ export function GeneratePage() {
         return;
       }
 
-      if (!rightsConfirmed) {
-        toast.error('素材と生成指示の権利確認にチェックしてください');
+      if (!noImageGenerationMode && !rightsConfirmed) {
+        toast.error('権限がありません');
         return;
       }
 
@@ -3717,7 +3718,7 @@ export function GeneratePage() {
     if (!selectedFeature) return true;
     if (isGenerating) return true;
     if (featureConfig?.requiresImage && !referenceImage) return true;
-    if (!rightsConfirmed) return true;
+    if (!noImageGenerationMode && !rightsConfirmed) return true;
     switch (selectedFeature.id) {
       case 'design-gacha':
         return !prompt.trim() && !referenceImage;
@@ -3822,8 +3823,8 @@ export function GeneratePage() {
 
   if (!selectedFeature) {
     const nextPath = categoryParam
-      ? `/lightchain?category=${encodeURIComponent(categoryParam)}`
-      : '/lightchain';
+      ? `/designProduction?category=${encodeURIComponent(categoryParam)}`
+      : '/designProduction';
     return <Navigate to={nextPath} replace />;
   }
 
@@ -3874,7 +3875,7 @@ export function GeneratePage() {
               { title: 'ファッションスタジオ', to: '/studio', desc: 'モデル、背景、小物を組む' },
               { title: 'モデル企画ライブラリ', to: '/generate?feature=model-matrix', desc: 'モデル条件を渡す' },
               { title: '柄・グラフィック', to: '/patterns/workbench', desc: '新規や事例から開く' },
-              { title: '動画ワークステーション', to: '/video', desc: 'ショット構成を作る' },
+              { title: '動画ワークステーション', to: '/flow/GenerateShortVideo', desc: 'プロジェクトから始める' },
             ].map((item) => (
               <Link
                 key={item.to}
@@ -4046,7 +4047,7 @@ export function GeneratePage() {
             </div>
 
             <Link
-              to="/lightchain"
+              to="/designProduction"
               className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-neutral-300 transition hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -4350,24 +4351,9 @@ export function GeneratePage() {
               </details>
             )}
 
-            {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
-              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm dark:border-amber-800 dark:bg-amber-950/20">
-                <label className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={rightsConfirmed}
-                    onChange={(event) => setRightsConfirmed(event.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                  />
-                  <span>
-                    <span className="block font-semibold text-amber-900 dark:text-amber-100">
-                      {UPLOAD_RIGHTS_CONFIRMATION_LABEL}
-                    </span>
-                    <span className="mt-1 block text-xs leading-5 text-amber-800 dark:text-amber-200">
-                      {GENERATION_LEGAL_COPY}
-                    </span>
-                  </span>
-                </label>
+            {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && !rightsConfirmed && (
+              <div role="status" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100">
+                権限がありません
               </div>
             )}
 

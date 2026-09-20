@@ -52,8 +52,6 @@ import {
 } from '../lib/canvasImageEditResults';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
-  GENERATION_LEGAL_COPY,
-  UPLOAD_RIGHTS_CONFIRMATION_LABEL,
   validateLegalSafetyInput,
 } from '../lib/legalSafetyGuard';
 import { useAuthStore } from '../stores/authStore';
@@ -88,6 +86,15 @@ type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
 type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'multilingual';
 type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit' | 'inpaint' | 'partial-edit';
+
+const readStringField = (record: unknown, keys: readonly string[]): string | null => {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return null;
+  const source = record as Record<string, unknown>;
+  for (const key of keys) {
+    if (typeof source[key] === 'string' && source[key]) return source[key];
+  }
+  return null;
+};
 type CanvasTemplateMode = 'size' | 'design';
 type CanvasRenderState = { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean };
 type LocalUploadState = {
@@ -444,7 +451,9 @@ export function CanvasEditorPage() {
   const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s']);
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  // Canvas has no Light Chain rights checkbox. Provider edits remain
+  // fail-closed until a trusted source permission admission exists.
+  const rightsConfirmed = false;
   const [localUploadState, setLocalUploadState] = useState<LocalUploadState>({
     status: 'idle',
     persistenceStatus: 'unknown',
@@ -976,7 +985,7 @@ export function CanvasEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [addObject, canvasSize.height, canvasSize.width, currentBrand?.id, projectId, selectObject, sourceArtifactId, user?.id]);
+  }, [addObject, canvasDebugEnabled, canvasSize.height, canvasSize.width, currentBrand?.id, projectId, selectObject, sourceArtifactId, user?.id]);
 
   useEffect(() => {
     if (projectId !== 'new' || !galleryImageId || !currentBrand?.id || !cloudflareDataPlane) return;
@@ -997,6 +1006,21 @@ export function CanvasEditorPage() {
         if (!image) throw new Error('canvas_gallery_image_not_found');
         const source = image.storage_path || image.image_url;
         if (!source) throw new Error('canvas_gallery_image_source_missing');
+        const imageMetadata = image.metadata && typeof image.metadata === 'object' && !Array.isArray(image.metadata)
+          ? image.metadata as Record<string, unknown>
+          : {};
+        const generationParams = image.generation_params && typeof image.generation_params === 'object' && !Array.isArray(image.generation_params)
+          ? image.generation_params as Record<string, unknown>
+          : {};
+        const provider = readStringField(imageMetadata, ['provider']) ?? readStringField(generationParams, ['provider']);
+        const backendProvider = readStringField(imageMetadata, ['backendProvider', 'backend_provider']) ?? readStringField(generationParams, ['backendProvider', 'backend_provider']);
+        const providerModel = readStringField(imageMetadata, ['providerModel', 'provider_model']) ?? readStringField(generationParams, ['providerModel', 'provider_model']);
+        const providerRequestId = readStringField(imageMetadata, ['providerRequestId', 'provider_request_id', 'requestId', 'request_id']) ?? readStringField(generationParams, ['providerRequestId', 'provider_request_id', 'requestId', 'request_id']);
+        const explicitProviderJobId = readStringField(imageMetadata, ['providerJobId', 'provider_job_id']) ?? readStringField(generationParams, ['providerJobId', 'provider_job_id']);
+        // Cloudflare image-ai writes the receipt job_id into generated_images.job_id.
+        // Only use that field as providerJobId when this record already carries the
+        // canonical provider request ID; never relabel a request ID as a job ID.
+        const providerJobId = explicitProviderJobId ?? (providerRequestId && image.job_id ? image.job_id : null);
         const loaded = await loadLibraryCanvasImage(source);
         if (cancelled) return;
         assertContext();
@@ -1033,10 +1057,22 @@ export function CanvasEditorPage() {
             galleryImageId: image.id,
             galleryStoragePath: image.storage_path || undefined,
             galleryImageUrl: image.image_url || undefined,
+            provider: provider || undefined,
+            backendProvider: backendProvider || undefined,
+            providerModel: providerModel || undefined,
+            providerTaskId: providerJobId || undefined,
+            jobId: image.job_id || undefined,
+            storagePath: image.storage_path || undefined,
             parameters: {
               galleryImageId: image.id,
               sourceFeatureType: image.feature_type,
               sourceCreatedAt: image.created_at,
+              provider: provider || undefined,
+              backendProvider: backendProvider || undefined,
+              providerModel: providerModel || undefined,
+              providerRequestId: providerRequestId || undefined,
+              providerJobId: providerJobId || undefined,
+              generationJobId: image.job_id || undefined,
             },
           },
         });
@@ -2143,7 +2179,7 @@ export function CanvasEditorPage() {
       let canvasGenerationResultCount = 0;
       const safetyText = [generatePrompt, productDescription, headline, subheadline].filter(Boolean).join(' ');
       if (!rightsConfirmed) {
-        toast.error('素材と生成指示の権利確認にチェックしてください');
+        toast.error('権限がありません');
         setIsGenerating(false);
         return;
       }
@@ -2415,7 +2451,7 @@ export function CanvasEditorPage() {
       return;
     }
     if (!rightsConfirmed) {
-      toast.error('素材の利用権利を確認してください');
+      toast.error('権限がありません');
       return;
     }
     if (action === 'partial-edit' || action === 'inpaint') {
@@ -2966,7 +3002,7 @@ export function CanvasEditorPage() {
       throw new Error('ブランドを選択してから実行してください');
     }
     if (!rightsConfirmed) {
-      throw new Error('素材の利用権利を確認してください');
+      throw new Error('権限がありません');
     }
     if (validateLegalSafetyInput([payload.prompt]).blocked) {
       throw new Error(BRAND_LIKENESS_BLOCK_COPY);
@@ -3120,7 +3156,7 @@ export function CanvasEditorPage() {
       return false;
     }
     if (!rightsConfirmed) {
-      toast.error('素材の利用権利を確認してください');
+      toast.error('権限がありません');
       return false;
     }
     const sourceObject = editingObjectId
@@ -3929,19 +3965,7 @@ export function CanvasEditorPage() {
                   })}
                 </div>
                 <p className="mt-2 px-1 text-xs text-neutral-500">画像を選択すると、背景削除・色変更・派生などを直接かけられます。</p>
-                <label className="mt-2 flex min-w-0 items-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-300/[0.06] px-2.5 py-2 text-xs text-cyan-100">
-                  <input
-                    type="checkbox"
-                    checked={rightsConfirmed}
-                    onChange={(event) => setRightsConfirmed(event.target.checked)}
-                    className="h-4 w-4 shrink-0 rounded border-cyan-300 text-cyan-300 focus:ring-cyan-300"
-                    disabled={isGenerating}
-                  />
-                  <span className="min-w-0 truncate font-semibold" title={UPLOAD_RIGHTS_CONFIRMATION_LABEL}>
-                    {UPLOAD_RIGHTS_CONFIRMATION_LABEL}
-                  </span>
-                  <span className="ml-auto shrink-0 text-[10px] text-cyan-200/70">生成時にも確認</span>
-                </label>
+                {!rightsConfirmed && <p role="status" className="mt-2 rounded-lg border border-cyan-300/25 bg-cyan-300/[0.06] px-2.5 py-2 text-xs font-semibold text-cyan-100">権限がありません</p>}
               </div>
             )}
 
@@ -4158,19 +4182,7 @@ export function CanvasEditorPage() {
 
           {/* Dynamic form */}
           {renderGenerateForm()}
-          <label className="flex items-start gap-3 rounded-xl border border-cyan-300/35 bg-cyan-300/[0.08] p-3 text-xs text-cyan-100">
-            <input
-              type="checkbox"
-              checked={rightsConfirmed}
-              onChange={(event) => setRightsConfirmed(event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-cyan-300 text-cyan-300 focus:ring-cyan-300"
-              disabled={isGenerating}
-            />
-            <span>
-              <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
-              <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
-            </span>
-          </label>
+          {!rightsConfirmed && <p role="status" className="rounded-xl border border-cyan-300/35 bg-cyan-300/[0.08] p-3 text-xs font-semibold text-cyan-100">権限がありません</p>}
 
           <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button

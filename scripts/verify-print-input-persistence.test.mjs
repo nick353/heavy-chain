@@ -15,7 +15,7 @@ test('Printing inputs keep image bytes in IndexedDB and only safe metadata in lo
   assert.match(helper, /indexedDB\.open\(DB_NAME, DB_VERSION\)/);
   assert.match(helper, /await putAssets/);
   assert.match(helper, /await deleteAssets/);
-  assert.match(helper, /window\.localStorage\.setItem\(storageKey\(brandId\), JSON\.stringify\(metadata\)\)/);
+  assert.match(helper, /window\.localStorage\.setItem\(storageKey\(scopeKey\), serialized\)/);
   assert.doesNotMatch(helper, /localStorage\.setItem\([^\n]*image\.url/);
   assert.match(helper, /isLocalImageSource/);
   assert.match(helper, /readAsDataURL\(blob\)/);
@@ -23,11 +23,11 @@ test('Printing inputs keep image bytes in IndexedDB and only safe metadata in lo
 });
 
 test('Printing page hydrates inputs before saving state and releases restored object URLs', () => {
-  assert.match(page, /restorePrintInputState\(brandId\)/);
-  assert.match(page, /persistPrintInputState\(brandId, printGarment, printDesigns, processedState\)/);
+  assert.match(page, /restorePrintInputState\(brandId, \{ scope: printInputScope, assertContext: assertRestoreCurrent \}\)/);
+  assert.match(page, /persistPrintInputState\(brandId, printGarment, printDesigns, processedState,/);
   assert.match(page, /processedResult: selectedPrintGarmentMaskCandidate\?\.result/);
   assert.match(page, /processedUrl: printDesignProcessedUrls\[index\]/);
-  assert.match(page, /printInputHydratedBrandRef\.current = brandId/);
+  assert.match(page, /setPrintInputHydratedScope\(scopeKey\)/);
   assert.match(page, /releaseRestoredPrintInput/);
   assert.match(page, /printInputHydrationGenerationRef/);
 });

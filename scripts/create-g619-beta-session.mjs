@@ -7,6 +7,7 @@ import path from 'node:path';
 const args = parseArgs(process.argv.slice(2));
 const outDir = args.out || 'output/playwright/g619-real-beta-evidence';
 const manifestPath = args.manifest || path.join(outDir, 'manifest.json');
+const CANONICAL_BASE_URL = 'https://heavy-chain-web.nichika2000823.workers.dev';
 const sessionId = requiredArg('session-id');
 const participantAlias = args.alias || sessionId.replace(/^g619-/, '');
 const sessionDir = path.join(outDir, 'sessions', participantAlias);
@@ -15,7 +16,7 @@ const reviewerAlias = args.reviewerAlias || args['reviewer-alias'] || collectorA
 const platform = args.platform || 'desktop';
 const persona = args.persona || 'apparel-ec-operator';
 const durationMinutes = Number(args.durationMinutes || args['duration-minutes'] || 0);
-const baseUrl = args.baseUrl || args['base-url'] || 'https://heavy-chain.zeabur.app';
+const baseUrl = args.baseUrl || args['base-url'] || CANONICAL_BASE_URL;
 const workflows = listArg(args.workflows || 'lightchain_entry,generate_readiness');
 const friction = listArg(args.friction || '').map((note) => ({ note }));
 const noFrictionNote = args.noFrictionNote || args['no-friction-note'] || '';
@@ -47,6 +48,11 @@ const consent = {
 const redactionReview = {
   noSensitiveTextFound: booleanArg('redaction-reviewed', false),
 };
+
+if (!isCanonicalBaseUrl(baseUrl)) {
+  console.error(`invalid_g619_base_url: expected ${CANONICAL_BASE_URL} with optional trailing slash`);
+  process.exit(1);
+}
 
 fs.mkdirSync(sessionDir, { recursive: true });
 
@@ -185,6 +191,15 @@ function readManifest() {
     operatorOnlyHardStops,
     sessions: [],
   };
+}
+
+function isCanonicalBaseUrl(value) {
+  try {
+    const parsed = new URL(String(value));
+    return parsed.origin === CANONICAL_BASE_URL && parsed.pathname === '/' && !parsed.search && !parsed.hash;
+  } catch {
+    return false;
+  }
 }
 
 function artifact(type, relativePath) {

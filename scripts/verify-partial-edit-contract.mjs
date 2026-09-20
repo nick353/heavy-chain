@@ -1,20 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import process from 'node:process';
 
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
-
 const sources = {
-  modal: read('src/components/canvas/PartialEditModal.tsx'),
-  toolbar: read('src/components/canvas/FloatingToolbar.tsx'),
-  page: read('src/pages/CanvasEditorPage.tsx'),
-  api: read('src/lib/imageApi.ts'),
-  helper: read('supabase/functions/_shared/openaiImage.ts'),
-  function: read('supabase/functions/edit-image/index.ts'),
-  deploy: read('scripts/deploy-edge-functions.sh'),
+  modal: read('src/components/canvas/PartialEditModal.tsx'), toolbar: read('src/components/canvas/FloatingToolbar.tsx'),
+  page: read('src/pages/CanvasEditorPage.tsx'), api: read('src/lib/imageApi.ts'), client: read('src/lib/cloudflareApi.ts'),
+  image: read('src/lib/cloudflareImageAI.ts'), protectedEdit: read('src/lib/cloudflareProtectedImageEdit.ts'),
 };
-
+const active = Object.values(sources).join('\n');
+const retired = /(?:supabase\.co|@supabase\/|\/functions\/v1\/|supabase-edge-function|OPENAI_API_KEY)/i;
 const checks = [
   ['modal exposes blue mask canvas', /data-testid="partial-edit-mask-canvas"/.test(sources.modal)],
   ['modal renders an API mask canvas', /ref=\{apiMaskRef\}/.test(sources.modal) && /data-testid="partial-edit-api-mask-canvas"/.test(sources.modal)],
@@ -24,21 +19,21 @@ const checks = [
   ['page wires partial edit modal', /<PartialEditModal/.test(sources.page) && /handlePartialEditSubmit/.test(sources.page)],
   ['page marker counts partial edit results', /partialEditResultCount/.test(sources.page) && /heavyCanvasPartialEditState/.test(sources.page)],
   ['client sends mask payload', /maskDataUrl: options\?\.maskDataUrl/.test(sources.api)],
-  ['helper accepts remote HTTPS input', /parsedUrl\.protocol !== 'https:'/.test(sources.helper) && /responseBlob\.arrayBuffer/.test(sources.helper)],
-  ['edge rejects unsupported data URI input before reservation', /SUPPORTED_EDIT_INPUT_MIME_TYPES/.test(sources.function) && /Unsupported edit input image type/.test(sources.function) && /dataImageMatch/.test(sources.function)],
-  ['helper appends multipart mask', /formData\.append\('mask'/.test(sources.helper)],
-  ['edge function persists inpaint provenance', /feature_type: hasMask \? 'inpaint'/.test(sources.function) && /backendProvider: 'supabase-edge-function'/.test(sources.function)],
-  ['edge function returns mask result readback', /maskApplied: hasMask/.test(sources.function) && /parentObjectId: safeParentObjectId/.test(sources.function)],
-  ['partial edit requests one four-candidate backend batch when not on Lightchain material route', /const requestedCandidateCount = hasMask && !imageEditOptions\.isLightchainMaterialRoute \? 4 : 1/.test(sources.function) && /count: requestedCandidateCount/.test(sources.function) && /result\.requestedCandidateCount === 4/.test(sources.page)],
-  ['edit-image is deployable by allowlist', /  edit-image\n/.test(sources.deploy)],
+  ['client routes image edits through Cloudflare provider actions', /invokeImageAction<ImageEditResult>\('edit-image'/.test(sources.api) && /\/v1\/provider-actions\//.test(sources.client)],
+  ['protected edit builds a bounded provider guide', /buildProviderMaskGuide/.test(sources.protectedEdit) && /protectedEdit:plan/.test(sources.protectedEdit)],
+  ['protected edit persists a composite through Cloudflare workspace artifacts', /saveWorkspaceArtifact/.test(sources.protectedEdit) && /\/v1\/workspace-artifacts\//.test(sources.protectedEdit)],
+  ['protected edit verifies Cloudflare receipt identity', /backendProvider !== 'cloudflare-workers-ai'/.test(sources.protectedEdit) && /protected_edit_receipt_plan_mismatch/.test(sources.protectedEdit)],
+  ['protected edit reads private media after save', /\/v1\/media\/read\?/.test(sources.protectedEdit) && /protected_edit_final_media_readback_invalid/.test(sources.protectedEdit)],
+  ['Cloudflare input rejects unsupported direct mask fallback', /maskDataUrl \|\| body\.maskApplied/.test(sources.image) && /Cloudflare画像AIでまだ対応していません/.test(sources.image)],
+  ['active partial-edit sources have no retired provider reference', !retired.test(active)],
 ];
-
 const failed = checks.filter(([, passed]) => !passed).map(([name]) => name);
 const result = {
-  schema: 'heavy-chain.partial-edit-contract.v1',
-  status: failed.length === 0 ? 'pass' : 'fail',
-  checks: Object.fromEntries(checks.map(([name, passed]) => [name, passed])),
-  failed,
+  schema: 'heavy-chain.partial-edit-contract.v2', status: failed.length === 0 ? 'pass' : 'fail',
+  mode: 'static-cloudflare-protected-edit-no-provider-submit',
+  checks: Object.fromEntries(checks.map(([name, passed]) => [name, passed])), failed,
+  irreversibleActions: { generationSubmit: 'not_clicked', deploy: 'not_run' },
+  proofLimits: ['This gate does not prove authenticated production inference, visual quality, R2 data readback, or device/browser completion.'],
 };
 console.log(JSON.stringify(result, null, 2));
 if (failed.length) process.exitCode = 1;

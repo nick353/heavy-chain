@@ -11,7 +11,6 @@ import {
 } from '../src/lib/canvasImageEditResults.ts';
 import type { ImageEditResult } from '../src/lib/imageApi.ts';
 import type { CanvasObject } from '../src/stores/canvasStore.ts';
-import { resolveImageEditCleanupStatus } from '../supabase/functions/_shared/openaiImage.ts';
 
 const read = (path: string) => readFile(new URL(path, import.meta.url), 'utf8');
 
@@ -45,56 +44,46 @@ test('partial edit UI provides a precise reversible PNG mask', async () => {
   assert.match(source, /const completed = await onEdit\(mode,[\s\S]*if \(completed\) onClose\(\)/);
 });
 
-test('partial edit mask is sent through the client and edge function without storing raw mask data', async () => {
-  const [client, edge, openAi] = await Promise.all([
+test('partial edit mask is sent through the client and Cloudflare protected-edit path without storing raw mask data', async () => {
+  const [client, api, image, protectedEdit] = await Promise.all([
     read('../src/lib/imageApi.ts'),
-    read('../supabase/functions/edit-image/index.ts'),
-    read('../supabase/functions/_shared/openaiImage.ts'),
+    read('../src/lib/cloudflareApi.ts'),
+    read('../src/lib/cloudflareImageAI.ts'),
+    read('../src/lib/cloudflareProtectedImageEdit.ts'),
   ]);
   assert.match(client, /maskDataUrl: options\?\.maskDataUrl/);
   assert.match(client, /requiresPngNormalization\s*=\s*Boolean\(/);
   assert.match(client, /requiresPngNormalization\s*\? await imageBlobToPngDataUrl\(imageBlob\)/);
-  assert.match(edge, /mask: maskDataUrl \? \{ imageUrl: maskDataUrl \} : undefined/);
-  assert.match(edge, /Edit mask dimensions must match input image/);
-  assert.match(edge, /Edit mask must contain an alpha channel/);
-  assert.match(edge, /maskApplied: true/);
-  assert.doesNotMatch(edge, /input_params:[\s\S]{0,500}maskDataUrl[,}]/);
-  assert.match(openAi, /formData\.append\('mask', mask\.blob, 'mask\.png'\)/);
-  assert.match(openAi, /openai_image_edit_mask_not_png/);
-  assert.match(edge, /const requestedCandidateCount = hasMask && !imageEditOptions\.isLightchainMaterialRoute \? 4 : 1/);
-  assert.match(edge, /count: requestedCandidateCount/);
-  assert.match(edge, /requestedCandidateCount,/);
-  assert.match(edge, /idempotency-key/);
-  assert.match(openAi, /formData\.set\('n', String\(requestedCount\)\)/);
-  assert.equal((edge.match(/await editOpenAiImage\(/g) ?? []).length, 1);
+  assert.match(api, /action === 'edit-image' && body\.maskDataUrl/);
+  assert.match(api, /persistProtectedImageInput/);
+  assert.match(api, /finalizeProtectedCloudflareEdit/);
+  assert.match(image, /body\.maskDataUrl \|\| body\.maskApplied/);
+  assert.match(image, /image_request_id_invalid/);
+  assert.match(protectedEdit, /buildProviderMaskGuide/);
+  assert.match(protectedEdit, /maskSha256/);
+  assert.doesNotMatch(`${api}\n${image}\n${protectedEdit}`, /supabase\.co|@supabase\/|\/functions\/v1\/|OPENAI_API_KEY/i);
 });
 
-test('SVG edit references are rasterized before provider submission and unsupported MIME is fail-closed', async () => {
-  const [client, openAi] = await Promise.all([
+test('SVG edit references are rasterized before Cloudflare submission and unsupported input is fail-closed', async () => {
+  const [client, image] = await Promise.all([
     read('../src/lib/imageApi.ts'),
-    read('../supabase/functions/_shared/openaiImage.ts'),
+    read('../src/lib/cloudflareImageAI.ts'),
   ]);
   assert.match(client, /requiresPngNormalization/);
   assert.match(client, /response\.headers\.get\('content-type'\)/);
   assert.match(client, /isSvgOrXml/);
   assert.match(client, /requiresPngNormalization\s*\? await imageBlobToPngDataUrl/);
-  assert.match(openAi, /assertSupportedEditMimeType/);
-  assert.match(openAi, /openai_image_edit_input_unsupported_mime/);
-  assert.match(openAi, /\['image\/jpeg', 'image\/jpg', 'image\/png', 'image\/webp'\]/);
+  assert.match(image, /image_reference_invalid/);
+  assert.match(image, /image_reference_decode_failed/);
+  assert.match(image, /image_reference_fetch_failed/);
 });
 
-test('edit-image rejects unsupported data URI MIME before reserving usage or creating a job', async () => {
-  const edge = await read('../supabase/functions/edit-image/index.ts');
-  const validationStart = edge.indexOf('function normalizeEditImageInputs');
-  const validationEnd = edge.indexOf('\n\nfunction pngDataUrlInfo');
-  assert.ok(validationStart >= 0 && validationEnd > validationStart);
-  const validation = edge.slice(validationStart, validationEnd);
-  assert.match(validation, /SUPPORTED_EDIT_INPUT_MIME_TYPES/);
-  assert.match(validation, /dataImageMatch/);
-  assert.match(validation, /Unsupported edit input image type/);
-  assert.ok(validation.indexOf('Unsupported edit input image type') < validation.indexOf('return normalized'));
-  assert.ok(edge.indexOf('const editInputImages = normalizeEditImageInputs') < edge.indexOf('usageReservation = await reserveBrandUsage'));
-  assert.ok(edge.indexOf('const editInputImages = normalizeEditImageInputs') < edge.indexOf(".from('generation_jobs')"));
+test('Cloudflare edit rejects unsupported mask and transparent-output modes before submission', async () => {
+  const image = await read('../src/lib/cloudflareImageAI.ts');
+  assert.match(image, /if \(body\.maskDataUrl \|\| body\.maskApplied === true \|\| body\.outputBackground === 'transparent'\)/);
+  assert.match(image, /Cloudflare画像AIでまだ対応していません/);
+  assert.match(image, /const path = `\/v1\/image-ai\/requests\/\$\{id\}`/);
+  assert.match(image, /remember\(key,id\)/);
 });
 
 test('partial edit submit makes one four-candidate batch and refuses incomplete persistence', async () => {
@@ -114,11 +103,12 @@ test('partial edit submit makes one four-candidate batch and refuses incomplete 
   assert.match(handler, /placement\.placed\.length !== 4/);
   assert.match(handler, /deleteObject\(objectId\)/);
   assert.match(handler, /candidates: placement\.placed\.map\(\(\{ candidate \}\) => candidate\)/);
-  assert.match(handler, /externalInpaintRequestCount: 1/);
+  assert.match(handler, /externalInpaintRequestCount: result\.provider === 'workers_ai' \? result\.requestedCandidateCount : 1/);
+  assert.match(handler, /clientSubmissionCount:1/);
   assert.match(handler, /backendJobId: candidate\.jobId/);
   assert.match(handler, /backendImageId: candidate\.imageId/);
   assert.match(handler, /backendStoragePath: candidate\.storagePath/);
-  assert.match(handler, /partialEditAttemptRef\.current\.attempted/);
+  assert.match(handler, /partialEditAttemptRef\.current = \{ attempted: true/);
 });
 
 test('partial edit result remains a parent-linked derived canvas object', async () => {
@@ -138,7 +128,7 @@ test('partial edit result remains a parent-linked derived canvas object', async 
   assert.match(source, /candidateIndex: candidate\.candidateIndex/);
   assert.match(source, /parentObjectId: editingObjectId/);
   assert.match(source, /idempotencyKey/);
-  assert.match(source, /inpaintAttemptRef\.current\.attempted/);
+  assert.match(source, /partialEditAttemptRef\.current = \{ attempted: true/);
   assert.match(source, /await addImageToCanvas\(candidate\.imageUrl,[\s\S]*editingObjectId \?\? undefined/);
   assert.match(source, /candidates: placement\.placed\.map\(\(\{ candidate \}\) => candidate\)/);
   assert.match(source, /updateObject\(objectId,[\s\S]*batchProof/);
@@ -228,31 +218,22 @@ test('partial Canvas placement records proof for actual successes and keeps tryi
   );
 });
 
-test('provider and all-upload zero-persist failures report no cleanup when no cleanup target existed', async () => {
-  assert.equal(resolveImageEditCleanupStatus(false, []), 'none');
-  assert.equal(resolveImageEditCleanupStatus(true, []), 'completed');
-  assert.equal(resolveImageEditCleanupStatus(true, ['storage-remove-failed']), 'failed');
-  const edge = await read('../supabase/functions/edit-image/index.ts');
-  assert.match(edge, /let cleanupAttempted = false/);
-  assert.match(edge, /if \(telemetryClient && insertedImageIds\.length\) \{\s*cleanupAttempted = true/);
-  assert.match(edge, /if \(telemetryClient && uploadedStoragePaths\.length\) \{\s*cleanupAttempted = true/);
-  assert.match(edge, /cleanupStatus: resolveImageEditCleanupStatus\(cleanupAttempted, cleanupErrors\)/);
+test('Cloudflare unknown or failed candidates remain explicit and do not become cleanup success', async () => {
+  const [api, image] = await Promise.all([read('../src/lib/cloudflareApi.ts'), read('../cloudflare/heavy-api/src/image-ai.ts')]);
+  assert.match(image, /cleanupStatus: 'none'/);
+  assert.match(image, /failedCandidates/);
+  assert.match(api, /acknowledgeImageAction/);
+  assert.match(api, /readImageAIRequest/);
 });
 
-test('edit-image persists each candidate under one job and keeps first-candidate response fields', async () => {
-  const edge = await read('../supabase/functions/edit-image/index.ts');
-  assert.match(edge, /const persistedImages:/);
-  assert.match(edge, /for \(const \[fallbackIndex, candidate\] of generatedCandidates\.entries\(\)\)/);
-  assert.match(edge, /job_id: job\.id/);
-  assert.match(edge, /batchId: job\.id/);
-  assert.match(edge, /persistenceStatus === 'partial'/);
-  assert.match(edge, /edit_image_zero_persisted_candidates/);
-  assert.match(edge, /imageId: firstImage\.imageId/);
-  assert.match(edge, /storagePath: firstImage\.storagePath/);
-  assert.match(edge, /imageUrl: firstImage\.imageUrl/);
-  assert.match(edge, /\.remove\(uploadedStoragePaths\)/);
+test('Cloudflare edit persists each protected candidate with stable identity and final private readback', async () => {
+  const [api, protectedEdit] = await Promise.all([read('../src/lib/cloudflareApi.ts'), read('../src/lib/cloudflareProtectedImageEdit.ts')]);
+  assert.match(api, /finalizeProtectedCloudflareEdit/);
+  assert.match(protectedEdit, /candidateIndex !== index/);
+  assert.match(protectedEdit, /storagePath !== `generated-images\/\$\{raw\.imageId\}`/);
+  assert.match(protectedEdit, /protected_edit_final_save_readback_mismatch/);
+  assert.match(protectedEdit, /protected_edit_final_media_readback_invalid/);
 });
-
 test('canvas exposes deterministic generation provenance without counting source images as results', async () => {
   const source = await read('../src/pages/CanvasEditorPage.tsx');
   assert.match(source, /data-testid="canvas-generation-state"/);
@@ -273,7 +254,7 @@ test('canvas exposes deterministic generation provenance without counting source
         feature: 'inpaint', generation: 1, maskApplied: true,
         parameters: {
           backendJobId: 'private-job', backendImageId: 'private-image',
-          backendStoragePath: 'private/brand/path.png', backendProvider: 'openai', persistenceStatus: 'completed',
+          backendStoragePath: 'private/brand/path.png', backendProvider: 'cloudflare-workers-ai', persistenceStatus: 'completed',
         },
       } as CanvasObject['metadata'],
     }),

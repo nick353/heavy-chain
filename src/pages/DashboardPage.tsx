@@ -542,13 +542,10 @@ export function DashboardPage() {
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">失敗</p>
                     <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.failedJobs.length}</p>
                   </Link>
-                  <Link
-                    to="/credits"
-                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3"
-                  >
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-3">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">残り</p>
                     <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.creditSummary.billingTestAccountQuotaBypass ? '無制限' : workspaceActivity.creditSummary.remainingUnits?.toLocaleString() ?? '未取得'}</p>
-                  </Link>
+                  </div>
                 </div>
                 <Link
                   to="/jobs"
@@ -589,12 +586,6 @@ export function DashboardPage() {
             className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-100"
           >
             Canvas
-          </Link>
-          <Link
-            to="/credits"
-            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-100"
-          >
-            利用状況
           </Link>
         </motion.nav>
 
@@ -921,7 +912,7 @@ export function DashboardPage() {
               )}
               
               {/* Add New Button */}
-              <Link to="/lightchain" className="group aspect-square rounded-xl sm:rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-300">
+              <Link to="/designProduction" className="group aspect-square rounded-xl sm:rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-300">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
                   <IconPlus className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400 group-hover:text-primary-500" size={24} />
                 </div>
@@ -940,7 +931,7 @@ export function DashboardPage() {
                 まだ生成画像はありません。商品画像やプロンプトを入れると、ここに成果物が並びます。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/lightchain">
+                <Link to="/designProduction">
                   <Button size="lg" className="rounded-full shadow-glow hover:shadow-glow-lg" leftIcon={<IconSparkles className="w-5 h-5" size={20} />}>
                     制作入口を見る
                   </Button>

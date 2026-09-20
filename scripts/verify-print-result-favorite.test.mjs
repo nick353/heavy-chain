@@ -2,9 +2,6 @@ import assert from 'node:assert/strict';
 import test, { after } from 'node:test';
 import { createServer } from 'vite';
 
-process.env.VITE_SUPABASE_URL ||= 'http://127.0.0.1:54321';
-process.env.VITE_SUPABASE_ANON_KEY ||= 'local-test-key';
-
 class MemoryStorage {
   values = new Map();
   failWrites = false;

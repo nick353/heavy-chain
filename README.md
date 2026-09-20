@@ -1,5 +1,13 @@
 # Heavy Chain
 
+Cloudflare migration checkpoint (2026-09-08): the active Web/API/Auth path is Cloudflare
+Workers with D1, private R2, `consumer-auth`, and the `workers_ai` adapter. Local
+contracts and selected deployments are verified, but authenticated production generation,
+real email/OAuth, device acceptance, full traffic-zero proof, and old-service retirement
+remain open. Use the current [setup guide](SETUP.md), [quick start](QUICK_START.md),
+[current state](STATE.md), and [migration plan](plan.md). Older OpenAI/Supabase/Zeabur
+descriptions below are retained as historical context and are not active instructions.
+
 [![License: Private](https://img.shields.io/badge/License-Private-red.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.2-61dafb.svg)](https://reactjs.org/)
@@ -14,11 +22,11 @@
 
 ### 🎯 概要
 
-Heavy Chainは、**OpenAI画像APIを中心とするアパレル向け画像生成プラットフォーム**です。マーケティング、商品企画、EC、編集ユーティリティなど、アパレルビジネスに必要な画像生成・編集機能をワンストップで提供します。
+Heavy Chainは、**Cloudflare Workers AIを中心とするアパレル向け画像生成プラットフォーム**です。マーケティング、商品企画、EC、編集ユーティリティなど、アパレルビジネスに必要な画像生成・編集機能をワンストップで提供します。
 
 ### ✨ デモ
 
-**🔗 デモサイト**: [Coming Soon]
+**🔗 公開Web（未認証画面）**: [heavy-chain-web.nichika2000823.workers.dev](https://heavy-chain-web.nichika2000823.workers.dev)
 
 <!-- デプロイ後にURLを追加してください -->
 
@@ -40,7 +48,7 @@ Coming Soon - デモ画面を追加予定
 
 - ✅ **認証システム** - メール/Google/Apple OAuth対応
 - ✅ **ブランド管理** - 複数ブランドの一元管理
-- ✅ **AI画像生成** - Text-to-Image生成（OpenAI Images API）
+- ✅ **AI画像生成** - Cloudflare Workers AI adapter経由の生成・編集経路
 - ✅ **画像ギャラリー** - 生成画像の一覧・管理
 - ✅ **ダウンロード機能** - PNG/JPEG/WebP形式対応
 - ✅ **お気に入り機能** - 重要な画像をブックマーク
@@ -65,13 +73,14 @@ Coming Soon - デモ画面を追加予定
 - **Framer Motion** - スムーズなアニメーション
 
 #### バックエンド
-- **Supabase** - BaaS（認証・DB・ストレージ・Edge Functions）
-- **PostgreSQL** - リレーショナルデータベース
-- **Row Level Security (RLS)** - セキュアなデータアクセス制御
+- **Cloudflare Workers** - API、認証境界、業務処理
+- **Cloudflare D1** - owner/brand-scopedな業務データ
+- **Cloudflare R2** - private media（認証済みgateway経由）
+- **consumer-auth** - Heavy専用の認証Worker
 
 #### AI/機械学習
-- **OpenAI Images API** - 画像生成・編集
-- **OpenAI API** - プロンプト最適化・自然言語処理
+- **Cloudflare Workers AI** - サーバー側のprovider adapter
+- **ONNX Runtime Web** - ブラウザ内の補助的な画像処理
 
 #### キャンバス・UI
 - **Konva.js** + **react-konva** - 2Dキャンバス操作
@@ -79,7 +88,7 @@ Coming Soon - デモ画面を追加予定
 - **Yjs** - リアルタイム共同編集（CRDT）
 
 #### インフラ・その他
-- **Zeabur** - ホスティング
+- **Cloudflare Workers Static Assets** - Webホスティング
 - **Stripe** - 決済（将来実装予定）
 - **Lucide React** - アイコンセット
 
@@ -97,18 +106,18 @@ heavy-chain/
 │   ├── stores/           # Zustand状態管理
 │   ├── lib/              # ユーティリティ・API設定
 │   └── types/            # TypeScript型定義
-├── supabase/
-│   ├── functions/        # Edge Functions（12機能）
-│   │   ├── generate-image/        # 画像生成
-│   │   ├── remove-background/     # 背景削除
-│   │   ├── upscale/              # アップスケール
-│   │   ├── colorize/             # カラーバリエーション
-│   │   └── ...
-│   └── migrations/       # データベースマイグレーション
+├── cloudflare/
+│   ├── consumer-auth/    # Heavy専用認証Worker
+│   ├── heavy-api/        # D1/R2/Workers AI API
+│   └── heavy-web/        # Static Assets + auth proxy Worker
+├── supabase/             # 移行履歴・rollback検討用（現行実行経路ではない）
 └── public/               # 静的ファイル
 ```
 
-### 🚀 セットアップ
+### 🚀 旧セットアップ（履歴）
+
+> 現行の手順は [SETUP.md](SETUP.md) と [QUICK_START.md](QUICK_START.md) です。
+> 以下は移行前のSupabase/Zeabur構成を参照するために保持した履歴で、現行起動には使用しません。
 
 #### 必要環境
 
@@ -137,7 +146,7 @@ npm install
 # Supabase
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-# 任意: 既定では同一originの /models/silueta.onnx を使います
+# 任意: 既定では同一originの /assets/silueta.onnx を使います
 # VITE_REMBG_MODEL_BASE_URL=https://your-cors-enabled-model-host.example.com/models
 # VITE_REMBG_SILUETA_MODEL_URL=https://your-cors-enabled-model-host.example.com/models/silueta.onnx
 # 任意: 手動build用override。Zeaburのbuild:deployはrevision固定の外部model URLを埋め込みます
@@ -180,7 +189,7 @@ supabase functions deploy upscale
 フロントエンドのビルド時環境変数はZeabur（または利用するViteホスト）に設定：
 - `VITE_GENERATION_PROVIDER` - 通常は `openai`
 - `VITE_REMBG_MODEL_BASE_URL` - 任意のモデル配信元override。silueta以外のモデルで使います。
-- `VITE_REMBG_SILUETA_MODEL_URL` - 任意。未設定時は同梱の `/models/silueta.onnx` を同一originから読み込みます。
+- `VITE_REMBG_SILUETA_MODEL_URL` - 任意。未設定時は同梱の `/assets/silueta.onnx` を同一originから読み込みます。
 - `VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` - 任意。管理下CDNに置いたISNetモデルを明示利用する場合だけ設定します。Hugging Face直取得にはfallbackしません。
 - `VITE_REMBG_CLOTH_SEG_MODEL_URL` - 任意の外部host override。productionの通常`npm run build`とZeaburの`build:deploy`は、未設定または空ならrevision固定のHugging Face URLを埋め込みます。developmentでは未設定のまま既存のsilueta/手動マスクへ安全に戻ります。
 - `VITE_EFFICIENT_SAM_ENCODER_URL` / `VITE_EFFICIENT_SAM_DECODER_URL` - 任意の管理下CORS host override。未設定時はApache-2.0 EfficientSAM-Tiのrevision固定ONNXを使用します。
@@ -399,7 +408,11 @@ heavy-chain/
 └── public/               # Static files
 ```
 
-### 🚀 Getting Started
+### 🚀 Legacy setup (archived)
+
+> Use [SETUP.md](SETUP.md) and [QUICK_START.md](QUICK_START.md) for the current
+> Cloudflare setup. The section below is retained only as historical
+> Supabase/Zeabur context and is not an active instruction.
 
 #### Prerequisites
 

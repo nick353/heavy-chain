@@ -113,7 +113,10 @@ for (const phrase of [
 for (const file of [
   'output/playwright/10m-product-readiness-g618/summary.json',
   'output/playwright/10m-product-readiness-g620/summary.json',
-  'output/playwright/prod-post-g633-mass-market-20260701-r1/SUMMARY.json',
+  // G631 is the current production broad-UX baseline named by the plan.
+  // Keep this as a presence gate; validity still belongs to the G831/readback
+  // verifier and must not be inferred from this planning check alone.
+  'output/playwright/g831-prod-mass-market-current-r1/SUMMARY.json',
   'output/playwright/g632-incident-response-drill/summary.json',
 ]) {
   addCheck(`baseline proof exists ${file}`, fs.existsSync(file), { file });

@@ -1,131 +1,81 @@
-# Heavy Chain - セットアップガイド
+# Heavy Chain セットアップガイド（現行Cloudflare構成）
 
-## 🚀 クイックスタート
+この文書が現行のセットアップ手順です。Heavy Chainの実行時データ面は
+Cloudflare Workers、D1、private R2、`consumer-auth`、Workers AIを使用します。
+Supabase CLI、Supabase credentials、Edge Functions、旧テストデータのコピーは
+この手順では使用しません。
 
-### 1. 環境変数の設定
+## 現行の公開構成
 
-プロジェクトルートに `.env` ファイルを作成し、以下の内容を記入してください：
+- Web: `https://heavy-chain-web.nichika2000823.workers.dev`
+- API/D1/private R2: `https://heavy-chain-api.nichika2000823.workers.dev`
+- Auth: `https://consumer-auth.nichika2000823.workers.dev`
+- 画像AI adapter: Cloudflare `workers_ai`
+- ブラウザのprivate media: API経由の認証済みR2 gateway
 
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
-```
+実メール、OAuth consent、認証済みAI/R2業務、実機、全通信zero、旧サービス停止は
+別の本番受入れ条件です。healthやlocal testだけで業務完了とは扱いません。
 
-#### Supabase の設定値を取得する方法：
+## ローカル準備
 
-1. [Supabase Dashboard](https://app.supabase.com) にログイン
-2. プロジェクトを選択
-3. **Settings** → **API** に移動
-4. **Project URL** を `VITE_SUPABASE_URL` にコピー
-5. **Project API keys** の **anon public** キーを `VITE_SUPABASE_ANON_KEY` にコピー
-
-### 2. Supabase のセットアップ
-
-通常手順は migration を正本にします。Supabase CLI を使える環境では、`supabase/migrations/` の全 migration を順に適用してください。SQL Editor で手動適用する場合も、`001_initial_schema.sql` だけではなく最新 migration まで順番に実行します。
-
-最新 migration には以下が含まれます：
-- `generated-images` / `brand-assets` / `exports` の private bucket 作成
-- `storage.objects` の RLS policy
-- private schema 上の権限判定関数
-
-### 3. ストレージバケットの確認
-
-Supabase Dashboard で：
-1. **Storage** を開く
-2. 以下のバケットが作成されていることを確認：
-   - `generated-images` (private)
-   - `brand-assets` (private)
-   - `exports` (private)
-
-### 4. 依存関係のインストール
+必要環境はNode.js 18以上とnpmです。
 
 ```bash
-npm install
+cp .env.example .env
+npm ci
 ```
 
-### 5. 開発サーバーの起動
+`.env.example` に含まれるのはブラウザへ公開可能なCloudflare設定だけです。
+session token、R2 key、Worker secret、provider secretは`VITE_*`へ入れません。
+
+## ローカル検証と起動
 
 ```bash
+npm run typecheck
+npm run test:lightchain-material-contract
+npm run build
 npm run dev
 ```
 
-ブラウザで `http://localhost:5173` を開きます。
-
-## 🔧 トラブルシューティング
-
-### 画像が表示されない場合
-
-1. **ストレージバケットが作成されているか確認**
-   - Supabase Dashboard → Storage
-   - `generated-images`、`brand-assets`、`exports` が存在するか
-
-2. **private bucket になっているか確認**
-   - 各バケットをクリック
-   - "Public bucket" がオフになっているか
-
-3. **ストレージポリシーが設定されているか確認**
-   - 通常は最新 migration まで適用済みか確認
-   - 緊急再適用のみ `supabase/storage-setup.sql` を実行
-
-4. **コンソールでエラーを確認**
-   - ブラウザの開発者ツールを開く（F12）
-   - Console タブでエラーメッセージを確認
-
-### 画像パスのデバッグ
-
-コンソールに以下の情報が表示されます：
-```
-Fetched images: X images
-Sample image data: { id: "...", storage_path: "...", ... }
-Image URL generated: { path: "...", url: "..." }
-```
-
-これらの情報から：
-- `storage_path` が正しい形式か確認（例：`user-id/brand-id/job-id.png`）
-- `url` が正しいSupabaseのURLか確認
-
-### よくある問題
-
-**問題**: "Failed to load image" エラーが多数表示される
-
-**解決策**:
-1. 最新 migration が適用されているか確認
-2. 緊急時のみ `supabase/storage-setup.sql` で private bucket policy を再適用
-3. RLS（Row Level Security）が正しく設定されているか確認
-
-**問題**: データベースのテーブルが見つからない
-
-**解決策**:
-1. `supabase link --project-ref your-project-ref` を実行
-2. `supabase db push` で最新 migration まで適用
-
-## 📝 環境変数の詳細
-
-| 変数名 | 説明 | 必須 |
-|--------|------|------|
-| `VITE_SUPABASE_URL` | SupabaseプロジェクトのURL | ✅ 必須 |
-| `VITE_SUPABASE_ANON_KEY` | Supabaseの匿名キー（公開キー） | ✅ 必須 |
-
-## 🎨 画像生成機能を使用する場合
-
-画像生成機能を使用する場合は、Supabase Edge Functions に以下の環境変数を設定する必要があります：
+開発サーバーは `http://localhost:5173` で起動します。`npm run verify` は6つの
+Cloudflare公開設定を環境から要求します。未設定の場合は`env:check`で停止します。
 
 ```bash
-# OpenAI API (DALL-E用)
-OPENAI_API_KEY=your-openai-key
-
-# Google Gemini API（画像分析・生成用）
-GEMINI_API_KEY=your-gemini-key
+npm run verify
 ```
 
-Supabase Dashboard で設定：
-1. **Edge Functions** を開く
-2. **Secrets** タブ
-3. 上記の環境変数を追加
+## Cloudflare Webのビルド
 
-## 📚 その他のドキュメント
+Cloudflare Webの生成物は`cloudflare/heavy-web/.build`へ作成されます。
+既存の`dist`やユーザーデータを置き換えません。
 
-- [デプロイガイド](DEPLOYMENT_CHECKLIST.md)
-- [要件定義](HeavyChain_Requirements%20(3).md)
-- [次のステップ](NEXT_STEPS.md)
+```bash
+node --test cloudflare/heavy-web/test/web.test.mjs
+node cloudflare/heavy-web/build.mjs
+```
+
+配置・large assetのreadback・ロールバック境界は
+[Cloudflare Web README](cloudflare/heavy-web/README.md)を使用します。
+本番配置やsecret変更は、対象・version・bindingを直前に確認してから実施します。
+
+## Cloudflare Workerのローカル検証
+
+```bash
+npm --prefix cloudflare/heavy-api ci
+npm --prefix cloudflare/heavy-api test
+npm --prefix cloudflare/heavy-api run typecheck
+
+npm --prefix cloudflare/consumer-auth ci
+npm --prefix cloudflare/consumer-auth test
+npm --prefix cloudflare/consumer-auth run typecheck
+```
+
+これらはSQLite/R2/外部providerのfixtureを使うローカル契約検証です。実AI、
+実メール、実OAuth、実R2業務の証拠とは分けて扱います。
+
+## 旧資料の扱い
+
+ルートの`supabase/`、`SUPABASE_SETUP.md`、旧migration、旧Edge Function資料は
+移行履歴・比較・rollback検討用に保持しています。現行起動のために適用したり、
+旧providerへfallbackしたりしないでください。移行完了の判定と旧サービス整理は、
+[STATE.md](STATE.md)と計画書の本番証拠に従います。

@@ -2,6 +2,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
+import { verifyCloudflareReleaseReadback } from './verify-cloudflare-release-readback.mjs';
 
 const releaseBlockersPath = 'docs/release-blockers-2026-06-18.json';
 const acceptedBlockerStatuses = new Set(['resolved', 'accepted', 'waived']);
@@ -113,17 +114,6 @@ const proofTargetValid =
   [releaseDate, releaseEnvironment, currentGitCommit].every((target) => target.valid) &&
   releaseProofSurfaceCount === 1;
 
-const currentReadbackArgs = ['run', 'verify:readback', '--silent'];
-if (releaseDate.value) currentReadbackArgs.push('--', '--expect-release-date', releaseDate.value);
-if (releaseEnvironment.value) {
-  if (!currentReadbackArgs.includes('--')) currentReadbackArgs.push('--');
-  currentReadbackArgs.push('--expect-environment', releaseEnvironment.value);
-}
-if (currentGitCommit.value) {
-  if (!currentReadbackArgs.includes('--')) currentReadbackArgs.push('--');
-  currentReadbackArgs.push('--expect-git-commit', currentGitCommit.value);
-}
-
 const currentBrowserUseArgs = ['run', 'verify:browser-use', '--silent', '--', '--dir', releaseBrowserUseProofDir];
 if (releaseDate.value) currentBrowserUseArgs.push('--expect-release-date', releaseDate.value);
 if (releaseEnvironment.value) currentBrowserUseArgs.push('--expect-environment', releaseEnvironment.value);
@@ -139,8 +129,8 @@ const releaseProofCheck = releaseChromePluginEvidenceValid
       name: 'verify:chrome-plugin-proof',
       command: 'npm',
       args: currentChromePluginArgs,
-      stop: 'Chrome Pluginのfresh proofが足りないか壊れています。',
-      next: '同一Chrome PluginセッションでHistory/Gallery/Jobs/Canvas/Downloadをread-only再確認し、RELEASE_CHROME_PLUGIN_EVIDENCEにCURRENT-TURN証跡を指定してください。',
+      stop: 'Chrome Pluginのdated proof verifierは退役済みです（historical_chrome_plugin_proof_retired）。historical-onlyのためrelease proofとして受理できません。',
+      next: 'このproof branchには自動の次アクションはありません。歴史的証跡はそのまま保持してください。',
     }
   : {
       name: 'verify:browser-use',
@@ -149,6 +139,47 @@ const releaseProofCheck = releaseChromePluginEvidenceValid
       stop: 'Browser Useの画面証跡が足りないか壊れています。',
       next: 'env-injectedのview-only画面証跡を取り直し、RELEASE_BROWSER_USE_PROOF_DIRに保存先ディレクトリを指定してください。',
     };
+
+const cloudflareReleaseReadbackContractPath =
+  process.env.RELEASE_CLOUDFLARE_READBACK_CONTRACT || process.env.CLOUDFLARE_RELEASE_READBACK_CONTRACT || '';
+
+const cloudflareReleaseReadbackContractCheck = () => {
+  const missing = {
+    name: 'cloudflare_release_readback_contract_missing',
+    passed: false,
+    status: 1,
+    output: 'cloudflare_release_readback_contract_missing',
+    stop: '現行Cloudflare release readback contractがありません（cloudflare_release_readback_contract_missing）。',
+    next: '現行Cloudflare release readback contractと同一runのprovider receipt/readbackが正式に定義・検証可能になるまでreleaseを止めてください。Cloudflare runtime/H602の別チェックはこのblockerの代替ではありません。',
+  };
+
+  if (!cloudflareReleaseReadbackContractPath.trim()) return missing;
+
+  let report;
+  try {
+    report = verifyCloudflareReleaseReadback({
+      manifestPath: cloudflareReleaseReadbackContractPath,
+      root: process.cwd(),
+    });
+  } catch {
+    return missing;
+  }
+  if (report.contractValid === true) {
+    return {
+      name: 'cloudflare_release_readback_production_not_verified',
+      passed: false,
+      status: 1,
+      output: 'cloudflare_release_readback_production_not_verified',
+      stop: 'Cloudflare release readback contractはlocal-onlyで有効ですが、認証済みproduction readbackは未検証です（cloudflare_release_readback_production_not_verified）。',
+      next: '認証済みproductionのprovider receiptとreadbackに正式なschema／validatorが実装され、同一runで検証可能になるまでreleaseを止めてください。',
+    };
+  }
+
+  return {
+    ...missing,
+    output: `cloudflare_release_readback_contract_missing ${report.failures.join(' ')}`.trim(),
+  };
+};
 
 const checks = [
   {
@@ -181,26 +212,18 @@ const checks = [
     next: '`scripts/check-env.mjs` の名前を見て、値は表示せずローカル環境に読み込んでください。',
   },
   {
-    name: 'verify:readback',
-    command: 'npm',
-    args: ['run', 'verify:readback', '--silent'],
-    stop: '保存済み readback 証跡が足りないか壊れています。',
-    next: '失敗行の proof file を直すか、read-only readback 証跡を取り直してください。',
-  },
-  {
-    name: 'verify:readback:current',
-    command: 'npm',
-    args: currentReadbackArgs,
-    stop: 'readback 証跡が現在の release date / environment / git commit と一致していません。',
-    next: 'staging の read-only readback を取り直し、各 JSON に release_date / environment / git_commit / captured_at を入れてください。',
+    name: 'cloudflare_release_readback_contract_missing',
+    run: cloudflareReleaseReadbackContractCheck,
+    stop: '現行Cloudflare release readback contractがありません（cloudflare_release_readback_contract_missing）。',
+    next: '現行Cloudflare release readback contractと同一runのprovider receipt/readbackが正式に定義・検証可能になるまでreleaseを止めてください。Cloudflare runtime/H602の別チェックはこのblockerの代替ではありません。',
   },
   releaseProofCheck,
   {
-    name: 'supabase:verify:static',
+    name: 'verify:cloudflare-runtime',
     command: 'npm',
-    args: ['run', 'supabase:verify:static', '--silent'],
-    stop: 'Supabase の静的ガードが通っていません。',
-    next: '出力された migration/function の静的チェック箇所を修正してください。DB 接続は不要です。',
+    args: ['run', 'verify:cloudflare-runtime', '--silent'],
+    stop: 'Cloudflare runtime contract が通っていません。',
+    next: '現行Web/API/Auth sourceとCloudflare env contractの最初の失敗を修正してください。',
   },
   {
     name: 'security:audit',
@@ -222,13 +245,6 @@ const checks = [
     args: ['run', 'verify:generation-scorecard', '--silent'],
     stop: '生成品質 scorecard の証跡が足りないか、readback と成果物画像が対応していません。',
     next: 'primary/polish の visual-scorecard と readback-after-worker を取り直し、各画像が対応する job id の成果物であることを確認してください。',
-  },
-  {
-    name: 'smoke:edge',
-    command: 'npm',
-    args: ['run', 'smoke:edge', '--silent'],
-    stop: 'Edge Function のローカル静的 smoke が通っていません。',
-    next: '不足している quota/observability guard を指摘された function に追加してください。',
   },
   {
     name: 'typecheck',
@@ -278,6 +294,7 @@ function runCheck(check) {
     const result = check.run();
     return {
       ...check,
+      ...result,
       passed: result.passed === true,
       status: result.status ?? (result.passed ? 0 : 1),
       error: result.error,

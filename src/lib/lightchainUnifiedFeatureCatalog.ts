@@ -328,7 +328,7 @@ const routeAliases: Partial<Record<NonVideoGoalCandidateRowId, readonly string[]
   'marketing-home': ['/marketing'],
   'ai-fitting': ['/model', '/fitting'],
   'wear-design-lab': ['/flow/orientedDesign'],
-  'model-library': ['/model-library/model-custom-form', '/model-library', '/models'],
+  'model-library': ['/model-library/model-custom-form', '/model-library'],
   'fashion-studio': ['/flow/integration', '/studio'],
   'design-agent': ['/agent', '/creator'],
   lab: ['/flow/laboratory', '/lab'],

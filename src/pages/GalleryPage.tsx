@@ -854,7 +854,7 @@ export function GalleryPage() {
                 再読み込み
               </button>
               <Link
-                to="/lightchain"
+                to="/designProduction"
                 className="inline-flex rounded-lg bg-cyan-300 px-3 py-1.5 text-xs font-semibold text-neutral-950 transition hover:bg-cyan-200"
               >
                 新しく生成
@@ -1138,7 +1138,7 @@ export function GalleryPage() {
                 : '画像を生成すると、ここに表示されます'
               }
             </p>
-            <Link to="/lightchain">
+            <Link to="/designProduction">
               <Button>画像を生成する</Button>
             </Link>
           </motion.div>

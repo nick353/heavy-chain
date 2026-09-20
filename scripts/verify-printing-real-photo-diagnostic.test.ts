@@ -66,7 +66,7 @@ test('shared process failure publication keeps real-photo non-approval flags', a
       manifestPath: path.join(tempRoot, 'manifest.json'),
       manifestDigestBefore: 'a'.repeat(64),
       workerScriptPath: path.join(repositoryRoot, 'scripts/printing-real-photo-diagnostic-worker.ts'),
-      modelPath: path.join(repositoryRoot, 'public/models/silueta.onnx'),
+      modelPath: path.join(repositoryRoot, 'public/assets/silueta.onnx'),
       caseCount: 10,
       timeoutMs: 500,
       killGraceMs: 100,

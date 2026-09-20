@@ -22,7 +22,7 @@ const materialWorkbench = read('src/components/workspace/MaterialWorkbench.tsx')
 const gallery = read('src/pages/GalleryPage.tsx');
 const onboarding = read('src/components/Onboarding.tsx');
 const packageJson = read('package.json');
-const submitFeedback = read('supabase/functions/submit-feedback/index.ts');
+const cloudflareApi = read('src/lib/cloudflareApi.ts');
 
 const userFacingBundle = [
   ['DashboardPage.tsx', dashboard],
@@ -82,27 +82,26 @@ addCheck('feedback_collects_screenshot_and_comment_only', (
 addCheck('feedback_collects_screenshot_and_context', (
   packageJson.includes('"html2canvas"')
   && feedback.includes("import html2canvas from 'html2canvas'")
-  && feedback.includes("supabase.functions.invoke('submit-feedback'")
+  && feedback.includes('cloudflareDataPlane.submitFeedback')
+  && feedback.includes("request_id: crypto.randomUUID()")
   && feedback.includes('screenshot_capture_status')
   && feedback.includes('MAX_SCREENSHOT_DATA_URL_LENGTH')
   && feedback.includes('height: window.innerHeight')
   && feedback.includes('page_url: window.location.href')
   && feedback.includes('user_agent: window.navigator.userAgent')
   && feedback.includes('再撮影')
-  && submitFeedback.includes("FEEDBACK_SCREENSHOT_BUCKET = 'feedback-screenshots'")
-  && submitFeedback.includes(".from('feedback_submissions')")
-  && submitFeedback.includes('.remove([uploadedScreenshotPath])')
-  && submitFeedback.includes('MAX_SCREENSHOT_BYTES')
-  && submitFeedback.includes('MAX_REQUEST_BYTES')
-  && submitFeedback.includes('content-length')
-  && submitFeedback.includes('readJsonWithLimit')
-  && submitFeedback.includes('normalizePageUrl')
+  && cloudflareApi.includes("'/v1/feedback'")
+  && cloudflareApi.includes("'/v1/admin/feedback'")
+  && cloudflareApi.includes('`/v1/admin/feedback/${encodeURIComponent(id)}/screenshot`')
+  && cloudflareApi.includes('screenshot_capture_status')
+  && cloudflareApi.includes('request_id')
 ), {});
 
 addCheck('admin_dashboard_reviews_beta_feedback', (
   admin.includes("{ id: 'feedback', label: 'フィードバック' }")
-  && admin.includes("from('feedback_submissions')")
-  && admin.includes("from('feedback-screenshots')")
+  && admin.includes('cloudflareDataPlane.listAdminFeedback()')
+  && admin.includes('cloudflareDataPlane.updateAdminFeedback')
+  && admin.includes('cloudflareDataPlane.readFeedbackScreenshot')
   && admin.includes('getSafeFeedbackUrl')
   && admin.includes('FEEDBACK_STATUS_LABELS')
   && admin.includes('管理メモ')
@@ -118,7 +117,7 @@ addCheck('navigation_uses_material_workbench_label', (
 ), {});
 
 const summary = {
-  schema: 'heavy-chain.internal-ux-consistency.v1',
+  schema: 'heavy-chain.internal-ux-consistency.v2',
   capturedAt: new Date().toISOString(),
   checks,
   failed: checks.filter((check) => !check.ok).map((check) => check.id),

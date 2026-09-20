@@ -40,7 +40,7 @@ import {
 } from './lib/printing-real-photo-diagnostic.ts';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const modelPath = path.join(repositoryRoot, 'public/models/silueta.onnx');
+const modelPath = path.join(repositoryRoot, 'public/assets/silueta.onnx');
 const workerScriptPath = path.join(repositoryRoot, 'scripts/printing-real-photo-diagnostic-worker.ts');
 const artworkRoot = path.join(repositoryRoot, 'benchmarks/printing-approval-v1/assets');
 const artworkPath = path.join(artworkRoot, 'S1-01/artwork.png');

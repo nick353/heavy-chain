@@ -38,3 +38,9 @@ test('Workspace-to-Canvas callers surface persistence failures without navigatin
     assert.ok(source.indexOf('toast.error(message)', catchBlock) > catchBlock);
   }
 });
+
+test('Workspace handoff does not serialize ephemeral data/blob previews as remote Canvas images', async () => {
+  const source = await readFile(new URL('../src/lib/workspaceHandoff.ts', import.meta.url), 'utf8');
+  assert.match(source, /if \(!\/\^\(\?:data\|blob\):\/i\.test\(imageUrl\.trim\(\)\)\)/);
+  assert.match(source, /structured handoff note below remains the/);
+});

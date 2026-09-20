@@ -3,6 +3,8 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { apiOrigin, validID } from './monitor-production-health.mjs';
+import { verifyScaleOpsEvidence } from './cloudflare-scale-ops-evidence.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const capturedAt = new Date();
@@ -17,9 +19,23 @@ const maxReadyMs = Number(args.maxReadyMs || args['max-ready-ms'] || 5000);
 const maxFailureRate = Number(args.maxFailureRate || args['max-failure-rate'] || 0);
 const windowHours = Number(args.windowHours || args['window-hours'] || 96);
 const minStorageImages = Number(args.minStorageImages || args['min-storage-images'] || 4);
+let monitorExpected;
+try {
+  monitorExpected = { apiOrigin:apiOrigin(args.apiBaseUrl ?? process.env.HEAVY_CHAIN_MONITOR_API_URL),
+    brandId:args.brandId ?? process.env.HEAVY_CHAIN_MONITOR_BRAND_ID, windowHours, maxFailureRate, minStorageImages };
+  if (!validID(monitorExpected.brandId) || !process.env.HEAVY_CHAIN_MONITOR_TOKEN?.trim() ||
+      /[\r\n]/.test(process.env.HEAVY_CHAIN_MONITOR_TOKEN) ||
+      verifyScaleOpsEvidence(null,monitorExpected)[0]?.name === 'explicit Cloudflare monitor expectations') throw Error();
+} catch {
+  console.error('G618 requires explicit Cloudflare API origin, brand, live session and valid baseline limits; no build or browser started.');
+  process.exit(1);
+}
 
 const report = {
-  schema: 'heavy-chain.g618.scale-ops-baseline.v1',
+  schema: 'heavy-chain.g618.scale-ops-baseline.v2',
+  businessCompletion: 'not_verified',
+  unverified: ['production_concurrent_load','worker_cpu','provider_invoice','fleet_wide_slo','browser_business_workflow'],
+  monitorExpectations: { ...monitorExpected, source: 'explicit_cli_or_environment' },
   capturedAt: capturedAt.toISOString(),
   mode: 'local-scale-plus-read-only-production-ops-no-submit-no-payment-no-cleanup',
   outDir,
@@ -90,6 +106,10 @@ runStep({
     '--skip-ui',
     '--windowHours',
     String(windowHours),
+    '--apiBaseUrl', monitorExpected.apiOrigin,
+    '--brandId', monitorExpected.brandId,
+    '--maxFailureRate', String(maxFailureRate),
+    '--sampleSize', String(Math.max(20,minStorageImages)),
   ],
   required: true,
 });
@@ -109,7 +129,9 @@ addCheck('production readback window covers G618 baseline', windowHours >= 96, {
 });
 
 if (performanceSummary) {
-  const routeMaxReadyMs = Math.max(...arrayFrom(performanceSummary.routeMetrics).map((route) => Number(route.readyMs || 0)), 0);
+  const routes = arrayFrom(performanceSummary.routeMetrics);
+  const routeMaxReadyMs = routes.length && routes.every(route => Number.isFinite(route.readyMs) && route.readyMs >= 0)
+    ? Math.max(...routes.map(route => route.readyMs)) : Infinity;
   addCheck('local scale fixture size', performanceSummary.fixture?.imageCount >= imageCount && performanceSummary.fixture?.canvasObjectCount >= canvasObjectCount, {
     expectedImages: imageCount,
     actualImages: performanceSummary.fixture?.imageCount ?? null,
@@ -137,70 +159,7 @@ if (performanceSummary) {
 }
 
 if (monitorSummary) {
-  const generation = monitorSummary.sections?.generation || {};
-  const storage = monitorSummary.sections?.storage || {};
-  const usage = monitorSummary.sections?.usage || {};
-  const edgeFunctions = monitorSummary.sections?.edgeFunctions || {};
-  const allowedMonitorWarnings = new Set([
-    'edge_function_failures_seen',
-    'usage_event_failures_seen',
-    'local_worker_inbox_stale_files',
-    'ui_probe_skipped',
-  ]);
-  const monitorWarningCodes = arrayFrom(monitorSummary.warnings).map((warning) => warning?.code).filter(Boolean);
-  const edgeFailures = arrayFrom(edgeFunctions.recentFailures);
-  const usageFailures = arrayFrom(usage.recentFailures);
-  const knownProbeEdgeFailures = edgeFailures.filter(isKnownG618ProbeFailure);
-  const knownProbeUsageRequestIds = new Set(knownProbeEdgeFailures.map((failure) => failure?.requestId).filter(Boolean));
-  const usageFailuresAccountedFor = usageFailures.every((failure) => knownProbeUsageRequestIds.has(failure?.requestId));
-  addCheck('production monitor readback has zero blockers', monitorSummary.ok === true && arrayFrom(monitorSummary.blockers).length === 0, {
-    ok: monitorSummary.ok,
-    blockers: arrayFrom(monitorSummary.blockers).length,
-  });
-  addCheck('production monitor warnings are allowlisted', monitorWarningCodes.every((code) => allowedMonitorWarnings.has(code)), {
-    warnings: monitorWarningCodes,
-    allowedWarnings: Array.from(allowedMonitorWarnings),
-  });
-  addCheck('production monitor readback window matches G618 baseline', Number(monitorSummary.window?.hours ?? 0) >= 96, {
-    monitorWindowHours: monitorSummary.window?.hours ?? null,
-    minWindowHours: 96,
-  });
-  addCheck('production generation SLO', Number(generation.failureRate ?? 0) <= maxFailureRate && Number(generation.staleActive ?? 0) === 0, {
-    failureRate: generation.failureRate ?? null,
-    staleActive: generation.staleActive ?? null,
-    threshold: maxFailureRate,
-  });
-  addCheck(
-    'production storage signed URL sample readback',
-    Number(storage.checkedImages ?? 0) >= minStorageImages &&
-      Number(storage.signedUrlOk ?? 0) === Number(storage.checkedImages ?? 0) &&
-      Number(storage.errors ?? 0) === 0,
-    {
-      checkedImages: storage.checkedImages ?? null,
-      signedUrlOk: storage.signedUrlOk ?? null,
-      errors: storage.errors ?? null,
-      minStorageImages,
-    },
-  );
-  addCheck('production usage readback', (Number(usage.failed ?? 0) === 0 || usageFailuresAccountedFor) && Number(usage.staleReserved ?? 0) === 0, {
-    total: usage.total ?? null,
-    failed: usage.failed ?? null,
-    staleReserved: usage.staleReserved ?? null,
-    accountedKnownProbeFailures: usageFailuresAccountedFor ? usageFailures.length : 0,
-  });
-  addCheck('production edge function readback has no failed or stale started runs', (Number(edgeFunctions.failed ?? 0) === 0 || knownProbeEdgeFailures.length === Number(edgeFunctions.failed ?? 0)) && Number(edgeFunctions.staleStarted ?? 0) === 0, {
-    total: edgeFunctions.total ?? null,
-    failed: edgeFunctions.failed ?? null,
-    staleStarted: edgeFunctions.staleStarted ?? null,
-    knownProbeFailures: knownProbeEdgeFailures.length,
-  });
-  if (arrayFrom(monitorSummary.warnings).length > 0) {
-    report.warnings.push({
-      id: 'production_monitor_warnings_present',
-      message: 'Production monitor warnings are recorded for operator triage but are not automatically G618 blockers.',
-      warnings: arrayFrom(monitorSummary.warnings).map((warning) => warning?.code).filter(Boolean),
-    });
-  }
+  for (const check of verifyScaleOpsEvidence(monitorSummary, monitorExpected)) addCheck(check.name, check.passed);
 }
 
 for (const check of report.checks) {
@@ -294,14 +253,6 @@ function parseArgs(argv) {
 
 function arrayFrom(value) {
   return Array.isArray(value) ? value : [];
-}
-
-function isKnownG618ProbeFailure(failure) {
-  const message = String(failure?.errorMessage || '');
-  return (
-    message.includes('API_KEY_INVALID') ||
-    message.includes('No active subscription for brand')
-  );
 }
 
 function safeTail(text) {

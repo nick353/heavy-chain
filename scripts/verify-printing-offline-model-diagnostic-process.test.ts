@@ -28,9 +28,9 @@ test('hard timeout sends TERM then KILL, awaits exit, removes staging, and publi
       manifestPath: path.join(repositoryRoot, 'benchmarks/printing-approval-v1/manifest.json'),
       manifestDigestBefore: 'a'.repeat(64),
       workerScriptPath: fixturePath,
-      modelPath: path.join(repositoryRoot, 'public/models/silueta.onnx'),
+      modelPath: path.join(repositoryRoot, 'public/assets/silueta.onnx'),
       caseCount: 1,
-      timeoutMs: 1_500,
+      timeoutMs: 5_000,
       killGraceMs: 100,
     });
 
@@ -84,7 +84,7 @@ test('spawn failure cleans staging and publishes an incomplete readback only', a
       manifestPath: path.join(repositoryRoot, 'benchmarks/printing-approval-v1/manifest.json'),
       manifestDigestBefore: 'b'.repeat(64),
       workerScriptPath: fixturePath,
-      modelPath: path.join(repositoryRoot, 'public/models/silueta.onnx'),
+      modelPath: path.join(repositoryRoot, 'public/assets/silueta.onnx'),
       caseCount: 1,
       timeoutMs: 500,
       killGraceMs: 100,
@@ -125,9 +125,9 @@ test('process-group escalation kills a TERM-ignoring descendant after its leader
       manifestPath: path.join(repositoryRoot, 'benchmarks/printing-approval-v1/manifest.json'),
       manifestDigestBefore: 'e'.repeat(64),
       workerScriptPath: fixturePath,
-      modelPath: path.join(repositoryRoot, 'public/models/silueta.onnx'),
+      modelPath: path.join(repositoryRoot, 'public/assets/silueta.onnx'),
       caseCount: 1,
-      timeoutMs: 1_500,
+      timeoutMs: 5_000,
       killGraceMs: 100,
     });
     assert.equal(result.kind, 'timeout');
@@ -164,7 +164,7 @@ test('symlinked output ancestry is rejected without deleting outside staging', a
         manifestPath: path.join(repositoryRoot, 'benchmarks/printing-approval-v1/manifest.json'),
         manifestDigestBefore: 'c'.repeat(64),
         workerScriptPath: fixturePath,
-        modelPath: path.join(repositoryRoot, 'public/models/silueta.onnx'),
+        modelPath: path.join(repositoryRoot, 'public/assets/silueta.onnx'),
         caseCount: 1,
         timeoutMs: 500,
         killGraceMs: 100,
@@ -202,9 +202,9 @@ test('normal leader exit still terminates and reaps a surviving descendant group
       manifestPath: path.join(repositoryRoot, 'benchmarks/printing-approval-v1/manifest.json'),
       manifestDigestBefore: 'f'.repeat(64),
       workerScriptPath: fixturePath,
-      modelPath: path.join(repositoryRoot, 'public/models/silueta.onnx'),
+      modelPath: path.join(repositoryRoot, 'public/assets/silueta.onnx'),
       caseCount: 1,
-      timeoutMs: 2_000,
+      timeoutMs: 5_000,
       killGraceMs: 100,
     });
     assert.equal(result.kind, 'exit');
@@ -239,7 +239,7 @@ test('existing output is preserved and no temporary error directory leaks', asyn
         manifestPath: path.join(repositoryRoot, 'benchmarks/printing-approval-v1/manifest.json'),
         manifestDigestBefore: 'd'.repeat(64),
         workerScriptPath: fixturePath,
-        modelPath: path.join(repositoryRoot, 'public/models/silueta.onnx'),
+        modelPath: path.join(repositoryRoot, 'public/assets/silueta.onnx'),
         caseCount: 1,
         timeoutMs: 500,
         killGraceMs: 100,

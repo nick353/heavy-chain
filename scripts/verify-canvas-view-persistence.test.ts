@@ -13,19 +13,42 @@ test('Canvas view normalization preserves finite values and clamps zoom', () => 
 
 test('remote Canvas load and verified save readback restore the persisted view', () => {
   assert.match(page, /const restoreCanvasView = \(snapshot: unknown\)/);
-  assert.match(page, /view: restoreCanvasView\(document\.snapshot\)/);
-  assert.match(page, /view: restoreCanvasView\(readback\.snapshot\)/);
+  assert.match(page, /const restoredView=restoreCanvasView\(document\.snapshot\)/);
+  assert.match(page, /view:\s*restoredView/);
+  assert.match(page, /const restoredView=restoreCanvasView\(readback\.snapshot\)/);
+  assert.match(page, /view:\s*restoredView/);
 });
 
-test('Canvas retains the server identity before readback and exposes remote recovery', () => {
-  const writeIndex = page.indexOf('const document = remoteDocumentIdRef.current');
+test('saved Canvas dirty tracking includes persisted view changes', () => {
+  assert.match(page, /const observedCanvasContentRef = useRef\(\{objects,name:currentProjectName,zoom,panX,panY\}\)/);
+  assert.match(page, /observedCanvasContentRef\.current = \{objects,name:currentProjectName,zoom,panX,panY\}/);
+  assert.match(page, /previous\.zoom === zoom/);
+  assert.match(page, /previous\.panX === panX/);
+  assert.match(page, /previous\.panY === panY/);
+  assert.match(page, /\[canvasPersistenceStatus, currentProjectName, objects, zoom, panX, panY\]/);
+});
+
+test('Canvas retains scoped identity before recoverable save and exposes context-bound remote recovery', () => {
+  const saveIndex = page.indexOf('const handleSave = async');
+  const draftIndex = page.indexOf('const entry=retainCanvasSaveDraft(scope,documentId',saveIndex);
+  const identityIndex = page.indexOf('remoteDocumentIdRef.current=documentId',draftIndex);
+  const writeIndex = page.indexOf('document=await saveCanvasDocumentRecoverably',identityIndex);
   const retainIndex = page.indexOf('remoteDocumentIdRef.current = document.id', writeIndex);
   const verifyIndex = page.indexOf("setCanvasPersistenceStatus('verifying')", retainIndex);
-  assert.ok(writeIndex >= 0);
+  assert.ok(saveIndex >= 0);
+  assert.ok(draftIndex > saveIndex);
+  assert.ok(identityIndex > draftIndex);
+  assert.ok(writeIndex > identityIndex);
   assert.ok(retainIndex > writeIndex);
   assert.ok(verifyIndex > retainIndex);
   assert.match(page, /const handleReloadRemote = async \(\)/);
   assert.match(page, /data-testid="canvas-reload-remote"/);
-  assert.match(page, /getCanvasDocument\(documentId, brandId\)/);
+  assert.match(page, /getCanvasDocument\(documentId, brandId,\s*\{userId:user\.id,assertContext\}\)/);
   assert.match(page, /最新のCanvas状態を再読み込みしました/);
+});
+
+test('old local bookmarks resolve only the same app-user-brand save identity',()=>{
+  assert.match(page,/initialCanvasDocumentId\(scope,projectId\)\.then\(id=>\{\s*assertLocalRoute\(\)/);
+  assert.match(page,/if\(readCanvasSaveRecovery\(scope,id\)\)\{navigate\(`\/canvas\/\$\{id\}`/);
+  assert.match(page,/localProject\.brandId!==scope\.brandId/);
 });

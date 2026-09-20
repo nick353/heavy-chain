@@ -15,7 +15,7 @@ test('Gallery downloads use the shared image validation boundary', async () => {
 
 test('Gallery selection keeps a stable item id in the URL', async () => {
   const source = await readFile(new URL('../src/pages/GalleryPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /const selectImage = useCallback\(\(image: GeneratedImage \| null\)/);
+  assert.match(source, /const selectImage = useCallback\(\(image: (?:GeneratedImage|GalleryImage) \| null\)/);
   assert.match(source, /getGeneratedImageSelectionKey\(image\)/);
   assert.match(source, /: selectImage\(image\)/);
   assert.match(source, /getGeneratedImageSelectionKey\(candidate\) === imageId/);

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, ChevronRight, Images, Layers3, Save, Sparkles } from 'lucide-react';
+import { Check, ChevronRight, Images, Layers3, MoreVertical, Save, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
@@ -10,7 +10,7 @@ import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
-import { listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
+import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import {
   buildGenerationIntentHref,
   handoffWorkspaceToCanvas,
@@ -261,6 +261,9 @@ export function FashionStudioPage() {
   const [remoteProjects, setRemoteProjects] = useState<Array<{ id: string; title: string; updatedAt: string; imageUrl: string }>>([]);
   const [remoteProjectsStatus, setRemoteProjectsStatus] = useState<'idle' | 'loading' | 'success' | 'failure'>('idle');
   const [projectPage, setProjectPage] = useState(1);
+  const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
+  const [pinnedProjectIds, setPinnedProjectIds] = useState<Set<string>>(new Set());
+  const pinsHydrated = useRef(false);
   const nextHistoryId = useRef(1);
   const selectedStudioSetup = useMemo<StudioSetup>(() => ({
     model: modelOptions.find((option) => option.id === selectedModelId) ?? modelOptions[0],
@@ -284,6 +287,60 @@ export function FashionStudioPage() {
     failed: false,
     persisted: Boolean(savedArtifactId),
   });
+
+  useEffect(() => {
+    const brandId = currentBrand?.id;
+    if (!brandId) {
+      pinsHydrated.current = false;
+      setPinnedProjectIds(new Set());
+      return;
+    }
+    pinsHydrated.current = false;
+    try {
+      const saved = window.localStorage.getItem(`heavy-fashion-studio-pins:${brandId}`);
+      const parsed = saved ? JSON.parse(saved) : [];
+      setPinnedProjectIds(new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []));
+    } catch {
+      setPinnedProjectIds(new Set());
+    }
+    pinsHydrated.current = true;
+  }, [currentBrand?.id]);
+
+  useEffect(() => {
+    const brandId = currentBrand?.id;
+    if (!brandId || !pinsHydrated.current) return;
+    window.localStorage.setItem(`heavy-fashion-studio-pins:${brandId}`, JSON.stringify([...pinnedProjectIds]));
+  }, [currentBrand?.id, pinnedProjectIds]);
+  const findLocalStudioArtifact = (projectId: string) => currentBrand?.id
+    ? listWorkspaceArtifacts(currentBrand.id, user?.id).find((artifact) => artifact.id === projectId || (artifact.featureType === 'fashion-studio' && artifact.canvasProjectId === projectId))
+    : undefined;
+  const saveStudioProjectToLibrary = async (project: { id: string; title: string; updatedAt: string; imageUrl: string }) => {
+    if (!currentBrand?.id) return toast.error('ブランドが選択されていないため、ライブラリーへ保存できません');
+    const source = findLocalStudioArtifact(project.id);
+    const result = await saveWorkspaceArtifactBestEffort({
+      ...(source ?? {} as WorkspaceArtifact),
+      id: undefined,
+      brandId: currentBrand.id,
+      scopeId: user?.id,
+      featureType: source?.featureType ?? 'fashion-studio',
+      title: project.title,
+      imageUrl: source?.imageUrl || project.imageUrl,
+      prompt: source?.prompt ?? null,
+      canvasProjectId: source?.canvasProjectId ?? project.id,
+      metadata: { ...(source?.metadata ?? {}), librarySource: 'fashion-studio-card-menu', libraryGroup: 'マイライブラリー', copiedFromArtifactId: source?.id ?? project.id },
+    });
+    if (!result.localPersisted) return toast.error('ライブラリー保存の確認に失敗しました');
+    toast.success(result.remote ? 'アセットライブラリーに保存しました' : 'ローカルライブラリーに保存しました');
+  };
+  const deleteStudioProject = (project: { id: string; title: string }) => {
+    if (!currentBrand?.id || !window.confirm(`「${project.title}」を削除しますか？`)) return;
+    const source = findLocalStudioArtifact(project.id);
+    if (!source) return toast.error('このプロジェクトの正規保存データを確認できません');
+    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, [source.id], user?.id);
+    if (!result.ok) return toast.error('プロジェクトを削除できませんでした');
+    setOpenProjectMenuId(null);
+    toast.success('プロジェクトを削除しました');
+  };
 
   useEffect(() => {
     setFlowState(studioFlowState);
@@ -569,13 +626,6 @@ export function FashionStudioPage() {
         <section className="w-full">
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-base font-semibold text-white">ファッションスタジオ</h1>
-            <Link
-              to="/credits"
-              aria-label="クレジットを確認"
-              className="shrink-0 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-neutral-300 transition hover:border-cyan-300/40 hover:text-white"
-            >
-              ✦ 378911
-            </Link>
           </div>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
             <button
@@ -595,20 +645,37 @@ export function FashionStudioPage() {
               </div>
             </button>
             {visibleProjectCards.map((project) => (
-              <button
-                key={project.id}
-                type="button"
-                onClick={() => navigate(buildFashionStudioProjectHref(project))}
-                className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
-              >
-                <div className="flex h-40 items-center justify-center bg-[#171c1f]">
-                  {project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">PROJECT</span>}
+              <article key={project.id} className="relative overflow-visible rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
+                <button
+                  type="button"
+                  onClick={() => navigate(buildFashionStudioProjectHref(project))}
+                  className="block w-full overflow-hidden rounded-xl text-left"
+                >
+                  <div className="flex h-40 items-center justify-center bg-[#171c1f]">
+                    {project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">PROJECT</span>}
+                  </div>
+                  <div className="px-4 py-4 pr-12">
+                    <p className="truncate text-sm font-semibold text-neutral-200">{pinnedProjectIds.has(project.id) ? '📌 ' : ''}{project.title}</p>
+                    <p className="mt-2 text-xs text-neutral-500">{formatProjectAge(project.updatedAt)}</p>
+                  </div>
+                </button>
+                <div className="absolute right-3 top-3 z-20">
+                  <button
+                    type="button"
+                    aria-label={`${project.title}のメニュー`}
+                    aria-expanded={openProjectMenuId === project.id}
+                    className="rounded-lg bg-black/45 p-2 text-neutral-200 hover:bg-black/70"
+                    onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === project.id ? null : project.id); }}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                  {openProjectMenuId === project.id && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
+                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setPinnedProjectIds((current) => { const next = new Set(current); if (next.has(project.id)) next.delete(project.id); else next.add(project.id); return next; }); setOpenProjectMenuId(null); }}>ピン留め</button>
+                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { void saveStudioProjectToLibrary(project); setOpenProjectMenuId(null); }}>アセットライブラリに保存</button>
+                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => deleteStudioProject(project)}>削除</button>
+                  </div>}
                 </div>
-                <div className="px-4 py-4">
-                  <p className="truncate text-sm font-semibold text-neutral-200">{project.title}</p>
-                  <p className="mt-2 text-xs text-neutral-500">{formatProjectAge(project.updatedAt)}</p>
-                </div>
-              </button>
+              </article>
             ))}
           </div>
           {remoteProjectsStatus === 'loading' && <p className="mt-3 text-xs text-neutral-500">プロジェクトを読み込んでいます…</p>}

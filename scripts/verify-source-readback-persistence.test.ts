@@ -1,127 +1,95 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import test from 'node:test';
-import { buildSourceMetadata, sanitizeSourceReadback, sourceTelemetryMetadata } from '../supabase/functions/_shared/sourceReadback.ts';
+import { readFile } from 'node:fs/promises';
+import { webcrypto } from 'node:crypto';
+import {
+  buildLocalUploadSourceMetadata,
+  sanitizeCanvasSourceMetadata,
+  sourceRevisionMatches,
+} from '../src/features/canvasSourceMetadata.ts';
 
-const repoRoot = path.resolve(import.meta.dirname, '..');
-const read = (relativePath: string) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+if (!globalThis.crypto) Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 
-const validSource = {
-  sourceWorkspace: 'patterns',
-  workflowVersion: 'pattern-preview-local-v1',
-  sourceLabel: '柄・グラフィック',
-  sourceResumePath: '/patterns/workbench',
-  sourceMode: 'local-workflow-intake',
-};
-
-test('source readback sanitizer accepts only known workspace contracts', () => {
-  assert.deepEqual(sanitizeSourceReadback(validSource), validSource);
-  assert.deepEqual(sanitizeSourceReadback({ ...validSource, sourceResumePath: '/patterns' }), {
-    ...validSource,
-    sourceResumePath: '/patterns',
-  });
-  assert.equal(sanitizeSourceReadback({ ...validSource, sourceLabel: 'spoofed' }), null);
-  assert.equal(sanitizeSourceReadback({ ...validSource, workflowVersion: 'invented-v1' }), null);
-  assert.equal(sanitizeSourceReadback({ ...validSource, sourceWorkspace: 'unknown' }), null);
+const file = (bytes: Uint8Array, type = 'image/png') => ({
+  arrayBuffer: async () => bytes.slice().buffer,
+  size: bytes.byteLength,
+  type,
 });
 
-test('Lightchain marketing and fitting source contracts survive shared Edge metadata sanitization', () => {
-  const lightchainSources = [
-    {
-      sourceWorkspace: 'marketing',
-      workflowVersion: 'marketing-brief-local-v1',
-      sourceLabel: 'マーケティングワークスペース',
-      sourceResumePath: '/marketing',
-      sourceMode: 'local-workflow-intake',
+test('Canvas source readback hashes exact bytes and remains ownership-neutral', async () => {
+  const metadata = await buildLocalUploadSourceMetadata(file(new Uint8Array([1, 2, 3])), { width: 12, height: 8 });
+
+  assert.equal(metadata.sourceIdentity.kind, 'local-upload');
+  assert.match(metadata.sourceIdentity.hash, /^[0-9a-f]{64}$/);
+  assert.equal(metadata.sourceRevision.revision, `sha256:${metadata.sourceRevision.hash}`);
+  assert.equal(metadata.sourceRevision.mimeType, 'image/png');
+  assert.equal(metadata.sourceRevision.sizeBytes, 3);
+  assert.equal(metadata.sourceReadback.status, 'verified');
+  assert.equal(metadata.sourceReadback.provenance, 'unverified');
+  assert.doesNotMatch(JSON.stringify(metadata), /data:|objecturl|\/tmp\//i);
+});
+
+test('Canvas source sanitizer removes local and inline payload fields without touching safety metadata', () => {
+  const sanitized = sanitizeCanvasSourceMetadata({
+    sourceIdentity: { kind: 'local-upload', hash: 'abc' },
+    sourceReadback: {
+      url: 'data:image/png;base64,AAAA',
+      fileName: 'secret.png',
+      path: '/tmp/secret.png',
+      exif_data: { GPSLatitude: 1 },
+      ok: true,
     },
-    {
-      sourceWorkspace: 'fitting',
-      workflowVersion: 'fitting-brief-local-v1',
-      sourceLabel: 'AIフィッティング',
-      sourceResumePath: '/fitting',
-      sourceMode: 'local-workflow-intake',
-    },
-  ] as const;
+    legalSafety: { rightsConfirmed: true },
+  }) as Record<string, any>;
 
-  for (const source of lightchainSources) {
-    assert.deepEqual(sanitizeSourceReadback(source), source);
-    assert.deepEqual(buildSourceMetadata(source), source);
-  }
+  const serialized = JSON.stringify(sanitized);
+  assert.doesNotMatch(serialized, /secret\.png|\/tmp\/secret|data:image|gpslatitude/i);
+  assert.equal(sanitized.sourceIdentity.hash, 'abc');
+  assert.equal(sanitized.sourceReadback.ok, true);
+  assert.deepEqual(sanitized.legalSafety, { rightsConfirmed: true });
 });
 
-test('generation intent is persisted only when it matches the sanitized source', () => {
-  const intent = {
-    feature: 'design-gacha',
-    prompt: 'safe prompt',
-    href: '/generate?feature=design-gacha',
-    label: '柄・グラフィックで生成',
-    ...validSource,
-    aspectRatio: '1:1',
-  };
-  const result = buildSourceMetadata(validSource, intent);
-  assert.equal(result?.sourceWorkspace, 'patterns');
-  assert.deepEqual(result?.generationIntent, intent);
-  assert.deepEqual(sourceTelemetryMetadata(result), {
-    sourceWorkspace: 'patterns',
-    workflowVersion: 'pattern-preview-local-v1',
-  });
-  const mismatched = buildSourceMetadata(validSource, { ...intent, sourceWorkspace: 'studio' });
-  assert.equal(mismatched?.generationIntent, undefined);
-  assert.deepEqual(sourceTelemetryMetadata({ sourceWorkspace: 'spoofed', workflowVersion: 'unknown' }), {});
+test('Changed Canvas bytes produce a revision mismatch and size drift fails closed', async () => {
+  const first = await buildLocalUploadSourceMetadata(file(new Uint8Array([1, 2, 3])), { width: 1, height: 1 });
+  const changed = await buildLocalUploadSourceMetadata(file(new Uint8Array([1, 2, 4])), { width: 1, height: 1 });
+  assert.equal(sourceRevisionMatches(first.sourceRevision, changed.sourceRevision), false);
+  assert.equal(sourceRevisionMatches(first.sourceRevision, first.sourceRevision), true);
+  await assert.rejects(
+    buildLocalUploadSourceMetadata({
+      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+      size: 4,
+      type: 'image/png',
+    }, { width: 1, height: 1 }),
+    /canvas_source_bytes_changed/,
+  );
 });
 
-test('Canvas handoff and derived actions carry source readback into Edge Functions', () => {
-  const generatePage = read('src/pages/GeneratePage.tsx');
-  const canvasPage = read('src/pages/CanvasEditorPage.tsx');
-  assert.match(generatePage, /sourceReadback,\n\s+sourceWorkspace:/);
+test('Canvas and generation pages carry source metadata into the Cloudflare request boundary', async () => {
+  const [canvasPage, generatePage, imageAI, imageContracts] = await Promise.all([
+    readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/lib/cloudflareImageAI.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../cloudflare/heavy-api/src/image-ai-contracts.ts', import.meta.url), 'utf8'),
+  ]);
+
   assert.match(canvasPage, /const sourceReadback = image\.sourceReadback/);
-  assert.match(canvasPage, /\.\.\.\(sourceReadback \? \{ sourceReadback/);
   assert.match(canvasPage, /\.\.\.\(sourceReadback \? \{ sourceReadback \} : \{\}\)/);
-  assert.match(canvasPage, /\.\.\.\(generationIntent \? \{ generationIntent \} : \{\}\)/);
+  assert.match(generatePage, /sourceReadback,/);
+  assert.match(generatePage, /generationIntent/);
+  assert.match(imageAI, /canonicalCloudflareImageBody/);
+  assert.match(imageAI, /sourceReadback/);
+  assert.match(imageContracts, /sourceReadback/);
+  assert.match(imageContracts, /generationIntent/);
+  assert.doesNotMatch(imageAI, /supabase|\/functions\/v1/i);
+  assert.doesNotMatch(imageContracts, /supabase|\/functions\/v1/i);
 });
 
-test('all Canvas-derived generation Edge Functions persist source metadata and durable step attribution', () => {
-  const functionPaths = [
-    'edit-image',
-    'remove-background',
-    'colorize',
-    'upscale',
-    'generate-variations',
-  ];
-  for (const functionName of functionPaths) {
-    const source = read(`supabase/functions/${functionName}/index.ts`);
-    assert.match(source, /_shared\/sourceReadback\.ts/);
-    assert.match(source, /buildSourceMetadata\(sourceReadback, generationIntent\)/);
-    assert.match(source, /\.\.\.\(sourceMetadata \?\? \{\}\)/);
-    assert.match(source, /sourceMetadata[,)]/);
-  }
-});
-
-test('Lightchain generation lanes accept the marketing and fitting source contracts', () => {
-  const generateImage = read('supabase/functions/generate-image/index.ts');
-  const modelMatrix = read('supabase/functions/model-matrix/index.ts');
-  const collector = read('scripts/collect-workspace-live-readback.mjs');
-  const verifier = read('scripts/verify-workspace-generation-readback.mjs');
-
-  for (const source of ['marketing-brief-local-v1', 'fitting-brief-local-v1']) {
-    assert.match(generateImage, new RegExp(source));
-    assert.match(verifier, new RegExp(source));
-  }
-  assert.match(modelMatrix, /fitting-brief-local-v1/);
-  assert.match(collector, /'models', 'marketing', 'fitting'/);
-  for (const source of ['edit-image', 'generate-variations', 'remove-background', 'upscale', 'colorize']) {
-    assert.match(read(`supabase/functions/${source}/index.ts`), /sourceTelemetryMetadata/);
-  }
-  assert.match(generateImage, /sourceTelemetryMetadata\(sourceMetadata\)/);
-  assert.match(modelMatrix, /sourceTelemetryMetadata\(requestSourceMetadata\)/);
-  assert.match(read('supabase/functions/design-gacha/index.ts'), /sourceTelemetryMetadata/);
-});
-
-test('Fitting-to-generation handoff preserves canonical Gallery identity and re-signs it after navigation', () => {
-  const handoff = read('src/lib/workspaceHandoff.ts');
-  const fitting = read('src/pages/FittingPage.tsx');
-  const generate = read('src/pages/GeneratePage.tsx');
+test('Fitting-to-generation handoff preserves canonical Cloudflare media identity', async () => {
+  const [handoff, fitting, generate] = await Promise.all([
+    readFile(new URL('../src/lib/workspaceHandoff.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8'),
+  ]);
 
   assert.match(handoff, /sourceImageId\?: string/);
   assert.match(handoff, /sourceStoragePath\?: string/);

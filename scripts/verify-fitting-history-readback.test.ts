@@ -4,14 +4,22 @@ import test from 'node:test';
 import { compactFittingMaterialReferenceForPersistence } from '../src/lib/fittingPersistence.ts';
 import { prepareFittingDraftMaterialReferenceForPersistence } from '../src/lib/fittingPersistence.ts';
 
-test('Fitting history is rebuilt from persisted model-matrix artifacts', async () => {
+test('Fitting history is rebuilt from persisted provider and local preview artifacts', async () => {
   const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
 
   assert.match(source, /listWorkspaceGeneratedImages/);
   assert.match(source, /withSignedImageUrls/);
   assert.match(source, /buildFittingHistoryFromPersistedImages/);
-  assert.match(source, /image\.feature_type !== 'model-matrix'/);
-  assert.match(source, /metadata\.feature !== 'model-matrix'/);
+  assert.match(source, /FITTING_LOCAL_PREVIEW_FEATURE_TYPE/);
+  assert.match(source, /const isLocalPreview = image\.feature_type === FITTING_LOCAL_PREVIEW_FEATURE_TYPE/);
+  assert.match(source, /const isProviderArtifact = image\.feature_type === 'model-matrix'/);
+  assert.match(source, /generationMode: isLocalPreview \? 'preview' : 'provider'/);
+  assert.match(source, /const getPersistedFittingResultStatus = \(\s*image: GeneratedImageListRow,?\s*\)/);
+  assert.match(source, /persistenceStatus: getPersistedFittingResultStatus\(image\)/);
+  assert.match(source, /if \(\['pending', 'processing', 'not_started'\]\.includes\(explicitStatus\)\)/);
+  assert.match(source, /group\.persistenceStatus = 'failed'/);
+  assert.match(source, /group\.persistenceStatus === 'pending'/);
+  assert.match(source, /'保存中'/);
   assert.match(source, /const remoteJobId = image\.job_id \?\? getGeneratedImageMetadataString/);
   assert.match(source, /materialReference\?\.imageUrl/);
   assert.match(source, /materialReference\?\.extractedImageUrl/);
@@ -24,6 +32,19 @@ test('Fitting history is rebuilt from persisted model-matrix artifacts', async (
   assert.doesNotMatch(source, /const seedHistory: HistoryItem\[\]/);
 });
 
+test('Fitting conditions can be saved as a local preview without claiming provider generation', async () => {
+  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /const handleSaveFittingBriefPreview = \(\) =>/);
+  assert.match(source, /generationMode: 'preview'/);
+  assert.match(source, /backendProvider: FITTING_LOCAL_PREVIEW_BACKEND/);
+  assert.match(source, /featureType: FITTING_LOCAL_PREVIEW_FEATURE_TYPE/);
+  assert.match(source, /provider未実行/);
+  assert.match(source, /data-testid="fitting-save-brief-preview"/);
+  assert.match(source, /providerResultArtifact: !isLocalPreview/);
+  assert.match(source, /localPreviewArtifact: isLocalPreview/);
+});
+
 test('Fitting history hydration does not fabricate a record without persisted artifacts', async () => {
   const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
   const historyBuilder = source.slice(
@@ -34,6 +55,18 @@ test('Fitting history hydration does not fabricate a record without persisted ar
   assert.match(historyBuilder, /const groups = new Map/);
   assert.match(historyBuilder, /return Array\.from\(groups\.values\(\)\)/);
   assert.doesNotMatch(historyBuilder, /fit-1042|fit-1038/);
+  assert.match(historyBuilder, /getGeneratedImageMetadataString\(image, 'backendProvider'\) \?\? 'unknown'/);
+  assert.doesNotMatch(historyBuilder, /cloudflare-workers-ai|supabase-edge-function/);
+});
+
+test('new Cloudflare result metadata cannot default to the retired execution backend', async () => {
+  for (const page of ['FittingPage', 'LightchainWorkbenchPage', 'LightchainMaterialWorkbenchPage']) {
+    const source = await readFile(new URL(`../src/pages/${page}.tsx`, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /supabase-edge-function/);
+    assert.match(source, /backendProvider: (?:response|providerResult)\.backendProvider \?\? 'cloudflare-workers-ai'/);
+  }
+  const workbench = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(workbench, /backendProvider = modelResult\.backendProvider \?\? backendProvider/);
 });
 
 test('Canvas resume uses only persisted material-reference URLs after reload', async () => {

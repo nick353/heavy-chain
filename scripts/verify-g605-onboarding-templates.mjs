@@ -12,6 +12,7 @@ const outDir = args.out || `output/playwright/g605-onboarding-templates-${dateSt
 const canvasStoreKey = 'heavy-chain-canvas';
 const desktopViewport = { width: 1440, height: 1050 };
 const mobileViewport = { width: 390, height: 844 };
+const localPreview = isLocalPreview(baseUrl);
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -24,7 +25,7 @@ const evidence = {
   workflow: 'g605-onboarding-templates',
   capturedAt: new Date().toISOString(),
   baseUrl,
-  authState: authStatePath,
+  authState: localPreview ? 'local-proof-jwt' : authStatePath,
   outDir,
   screenshots: {},
   videos: {},
@@ -41,19 +42,18 @@ const evidence = {
 };
 
 try {
-  if (isLocalPreview(baseUrl)) {
+  if (localPreview) {
     previewProcess = await startPreviewServer(baseUrl);
   }
 
-  if (!fs.existsSync(authStatePath)) {
+  if (!localPreview && !fs.existsSync(authStatePath)) {
     throw new Error(`auth_state_missing:${authStatePath}`);
   }
 
-  const storageState = buildStorageStateForBaseUrl(authStatePath, baseUrl);
   browser = await chromium.launch({ headless: true });
 
   desktopContext = await browser.newContext({
-    storageState,
+    ...(localPreview ? {} : { storageState: buildStorageStateForBaseUrl(authStatePath, baseUrl) }),
     viewport: desktopViewport,
     acceptDownloads: true,
     recordVideo: {
@@ -61,12 +61,17 @@ try {
       size: desktopViewport,
     },
   });
+  if (localPreview) {
+    await installLocalRequestGuard(desktopContext, baseUrl);
+    await installLocalProofAuth(desktopContext);
+    await installLocalCloudflareMocks(desktopContext);
+  }
   await installFirstRunState(desktopContext);
 
   const page = await desktopContext.newPage();
   wirePageDiagnostics(page, 'desktop');
 
-  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/workspace`, { waitUntil: 'domcontentloaded' });
   await page.getByText('Heavy Chainへようこそ').waitFor({ timeout: 6000 });
   await page.screenshot({ path: path.join(outDir, '01-dashboard-first-run-onboarding.png'), fullPage: true });
   evidence.screenshots.dashboardFirstRun = path.join(outDir, '01-dashboard-first-run-onboarding.png');
@@ -101,9 +106,18 @@ try {
   const generateEntry = firstActionLinks.find((link) => (
     link.href === '/generate' && /生成|制作|新しく/.test(link.text)
   ));
-  addAssertion('dashboard_first_actions_available', Boolean(canvasEntry && generateEntry), {
+  const generationInput = page.locator('input[aria-label="制作したい内容"]');
+  const generationButton = page.getByRole('button', { name: '開始', exact: true });
+  const generationForm = await generationInput.count() === 1
+    && await generationInput.isVisible().catch(() => false)
+    && await generationInput.isEnabled().catch(() => false)
+    && await generationButton.count() === 1
+    && await generationButton.isVisible().catch(() => false)
+    && await generationButton.isEnabled().catch(() => false);
+  addAssertion('dashboard_first_actions_available', Boolean(canvasEntry && (generateEntry || generationForm)), {
     canvasEntry,
     generateEntry,
+    generationForm,
     matchingLinks: firstActionLinks.filter((link) => ['/canvas/new', '/generate'].includes(link.href)),
   });
 
@@ -114,10 +128,17 @@ try {
   evidence.screenshots.canvasEmpty = path.join(outDir, '03-canvas-empty-before-template.png');
   const emptyBody = await bodyText(page);
   fs.writeFileSync(path.join(outDir, '03-canvas-empty-body.txt'), emptyBody);
-  const templateButtonVisible = await page.locator('button[title="テンプレート"]').isVisible();
-  addAssertion('canvas_empty_state_has_template_entry', templateButtonVisible && emptyBody.includes('プロパティ'), {
+  const templateButton = page.locator('button[title="テンプレート"]');
+  const templateButtonCount = await templateButton.count();
+  const templateButtonVisible = templateButtonCount === 1 && await templateButton.isVisible();
+  const templateButtonEnabled = templateButtonVisible && await templateButton.isEnabled();
+  const expectedCanvasNewRoute = new URL(page.url()).pathname === '/canvas/new';
+  addAssertion('canvas_empty_state_has_template_entry', expectedCanvasNewRoute && templateButtonVisible && templateButtonEnabled, {
     url: page.url(),
+    expectedCanvasNewRoute,
+    templateButtonCount,
     templateButtonVisible,
+    templateButtonEnabled,
   });
 
   await page.locator('button[title="テンプレート"]').click();
@@ -165,7 +186,8 @@ try {
   const mobilePage = await desktopContext.newPage();
   await mobilePage.setViewportSize(mobileViewport);
   wirePageDiagnostics(mobilePage, 'mobile');
-  await mobilePage.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
+  await mobilePage.goto(`${baseUrl}/workspace`, { waitUntil: 'domcontentloaded' });
+  await mobilePage.getByText('Heavy Chainへようこそ').waitFor({ timeout: 6000 });
   await mobilePage.screenshot({ path: path.join(outDir, '06-mobile-first-run-onboarding.png'), fullPage: true });
   evidence.screenshots.mobileOnboarding = path.join(outDir, '06-mobile-first-run-onboarding.png');
   const mobileBody = await bodyText(mobilePage);
@@ -257,7 +279,7 @@ function buildStorageStateForBaseUrl(filePath, targetBaseUrl) {
       item.name !== 'onboarding_completed' && !item.name.startsWith('heavy_chain_onboarding_completed')
     ));
   }
-  if (/^https?:\/\/(127\.0\.0\.1|localhost)/.test(targetOrigin)) {
+  if (isLocalPreview(targetOrigin)) {
     const sourceOrigin = state.origins?.find((origin) => origin.origin === 'https://heavy-chain.zeabur.app') ?? state.origins?.[0];
     if (sourceOrigin?.localStorage) {
       state.origins = [
@@ -267,6 +289,64 @@ function buildStorageStateForBaseUrl(filePath, targetBaseUrl) {
     }
   }
   return state;
+}
+
+async function installLocalProofAuth(browserContext) {
+  const userId = '00000000-0000-4000-8000-000000000033';
+  const payload = { user: { id: userId, email: 'heavy-chain-local-proof@example.test', name: 'Local Proof User', emailVerified: true, createdAt: new Date(0).toISOString() }, session: { token: 'local-cloudflare-proof-token', expiresAt: new Date(Date.now() + 3600000).toISOString() } };
+  await browserContext.route('**/api/auth/ok', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+  await browserContext.route('**/api/auth/get-session', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) }));
+  await browserContext.route('**/api/auth/**', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) }));
+}
+
+async function installLocalCloudflareMocks(browserContext) {
+  const userId = '00000000-0000-4000-8000-000000000033';
+  const now = new Date().toISOString();
+  const profile = { id: userId, email: 'heavy-chain-local-proof@example.test', name: 'Local Proof User', language: 'ja', is_admin: false, created_at: now, updated_at: now };
+  const brand = { id: '00000000-0000-4000-8000-000000000133', owner_id: userId, name: 'Heavy Chain Local Proof', slug: 'heavy-chain-local-proof', created_at: now, updated_at: now };
+  await browserContext.route('https://heavy-chain-api.nichika2000823.workers.dev/v1/**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/profile')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(profile) });
+    if (/\/v1\/brands(?:\/.*)?$/.test(pathname)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([brand]) });
+    if (/\/v1\/collections(?:\/.*)?$/.test(pathname)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+}
+
+async function installLocalRequestGuard(browserContext, targetBaseUrl) {
+  const targetOrigin = new URL(targetBaseUrl).origin;
+  const cloudflareApiOrigin = 'https://heavy-chain-api.nichika2000823.workers.dev';
+  const userId = '00000000-0000-4000-8000-000000000033';
+  const brand = {
+    id: '00000000-0000-4000-8000-000000000133',
+    owner_id: userId,
+    name: 'Heavy Chain Local Proof',
+    slug: 'heavy-chain-local-proof',
+  };
+  await browserContext.route('**/*', async (route) => {
+    const requestUrl = new URL(route.request().url());
+    // Keep the local proof fully offline even when the production build has
+    // the Cloudflare data plane enabled. The API rows needed by onboarding
+    // are fulfilled here instead of falling through to the network.
+    if (requestUrl.origin === cloudflareApiOrigin && requestUrl.pathname.startsWith('/v1/')) {
+      if (requestUrl.pathname.endsWith('/profile')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ id: userId, email: 'heavy-chain-local-proof@example.test', name: 'Local Proof User', language: 'ja', is_admin: false }),
+        });
+      }
+      if (requestUrl.pathname === '/v1/brands' || requestUrl.pathname.endsWith('/brands')) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([brand]) });
+      }
+      if (requestUrl.pathname === '/v1/image-ai/usage') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ planName: 'local-proof', monthlyQuota: 25, remainingUnits: 25, completedImages: 0, runningImages: 0, uncertainImages: 0, attemptedImages: 0, estimatedMicroUSD: 0, estimatedNeurons: 0, unknownEstimateCount: 0, averageInferenceMs: null, imageAIEnabled: false, billing: 'estimate_not_invoice' }) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    }
+    if (requestUrl.origin === targetOrigin) return route.continue();
+    await route.abort('blockedbyclient');
+  });
 }
 
 async function startPreviewServer(targetBaseUrl) {
@@ -367,6 +447,8 @@ function wirePageDiagnostics(page, route) {
   page.on('console', (message) => {
     if (['error', 'warning'].includes(message.type())) {
       const text = message.text();
+      if (localPreview && /net::ERR_BLOCKED_BY_CLIENT/.test(text)) return;
+      if (/^Canvas render state \{/.test(text)) return;
       if (!/Download the React DevTools|favicon/.test(text)) {
         evidence.consoleMessages.push({ route, type: message.type(), text });
       }
@@ -375,7 +457,9 @@ function wirePageDiagnostics(page, route) {
   page.on('requestfailed', (request) => {
     const url = request.url();
     const failure = request.failure()?.errorText ?? null;
-    if (/\/storage\/v1\/object\/sign\//.test(url) && failure === 'net::ERR_ABORTED') return;
+    if (failure === 'net::ERR_ABORTED' && /^https:\/\/127\.0\.0\.1:4174\/v1\//.test(url)) return;
+    if (localPreview && failure === 'net::ERR_ABORTED' && /^https:\/\/heavy-chain-api\.nichika2000823\.workers\.dev\/v1\//.test(url)) return;
+    if (localPreview && /net::ERR_BLOCKED_BY_CLIENT/.test(failure ?? '')) return;
     if (!url.includes('favicon')) {
       evidence.requestFailures.push({ route, url, failure });
     }
@@ -408,7 +492,12 @@ async function withTimeout(promise, timeoutMs, message) {
 }
 
 function isLocalPreview(value) {
-  return /^https?:\/\/(127\.0\.0\.1|localhost)/.test(value);
+  try {
+    const parsed = new URL(value);
+    return ['http:', 'https:'].includes(parsed.protocol) && ['127.0.0.1', 'localhost'].includes(parsed.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function trimTrailingSlash(value) {

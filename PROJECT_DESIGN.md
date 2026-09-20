@@ -1,19 +1,19 @@
 # Heavy Chain Product Design
 
-Updated: 2026-08-19
+Updated: 2026-09-20
 
 ## Durable Desired Future State
 
-Heavy Chain should become the internal apparel team's unified production workspace: a desktop-first, cross-platform application where staff can choose any non-video Lightchain production capability from a shared library, complete the full input-to-generation workflow, inspect the result, save it, and continue working in Gallery, Canvas, History, or Jobs without losing context.
+Heavy Chain should become a faithful Heavy-side implementation of the current Light Chain production product: a desktop-first, cross-platform application where staff can enter any Light Chain capability, complete the same input-to-generation workflow, inspect the result, save it, and continue working in Gallery, Canvas, History, or Jobs without losing context.
 
-The experience should feel like the current Lightchain production product in information architecture, visual language, interaction patterns, workflow clarity, performance, and generated-output quality. Heavy Chain may retain its own product identity and implementation, but it should not make a Lightchain-experienced apparel operator relearn the work.
+The current Light Chain production site is the source of truth. Heavy Chain must match it in information architecture, visual language, layout, controls, labels, input semantics, state transitions, navigation, persistence, result handoffs, and user-visible failure/retry behavior. Heavy-specific infrastructure may differ behind the boundary, but an operator should not have to relearn the product or encounter an extra Heavy-only step.
 
 The first complete product experiences are:
 
 1. Fabric print imagery: select garment/fabric and print assets from the library, configure placement and presentation, generate a usable apparel preview, and continue to save, edit, and reuse it.
 2. AI fitting: select garment and model references from the library, configure the fitting context, generate a usable fitting image, and continue to Gallery, Canvas, History, and Jobs.
 
-After those two experiences are production-quality for internal use, the same workspace contract should cover every other current Lightchain feature except video features.
+Those two experiences remain the first acceptance anchors, but the same source-derived workspace contract must ultimately cover every current Light Chain feature, including video workspaces and their complete flows.
 
 ## Primary User and Product Promise
 
@@ -46,6 +46,8 @@ Parity is evaluated across five layers:
 4. Performance: library search, route/workspace readiness, image loading, editing interactions, and other user-visible operations compared on equivalent desktop environments.
 5. Generated-output and persistence quality: same intended input semantics, apparel fidelity, composition, usefulness, saved lineage, Gallery/Canvas continuity, and History/Jobs readback.
 
+The Heavy Light Chain clone must not introduce a visible rights-confirmation checkbox or modal when the source Light Chain flow does not contain one. Rights and provider safety remain fail-closed at the admission/API boundary; removing the extra visual step is a parity change, not permission to silently bypass an unverified or unsafe request.
+
 "Same generated result" means semantic and visual production parity: the same input intent should produce equivalent garment fidelity, print placement, model/fitting composition, and commercial usefulness. Pixel-identical output is not required unless Heavy and Light can use the same provider, model version, preprocessing, postprocessing, and deterministic seed.
 
 Lightchain logos, trademarks, and proprietary brand assets are not copied. The product should match the useful workflow and design behavior while retaining Heavy Chain's own identity.
@@ -55,7 +57,7 @@ Lightchain logos, trademarks, and proprietary brand assets are not copied. The p
 Heavy Chain should present one project workspace rather than a collection of disconnected tools.
 
 - A shared project shell keeps the active project, selected assets, generation context, and current task visible.
-- A left-side catalog/search surface exposes all supported non-video features and categories.
+- A left-side catalog/search surface exposes all supported Light Chain features and categories.
 - The central workbench hosts the selected feature without losing project context.
 - A context surface shows selected library assets, settings, rights state, generation state, result metadata, and next actions.
 - Gallery, Canvas, History, and Jobs remain addressable but behave as connected views of the same project and result lineage.
@@ -63,7 +65,7 @@ Heavy Chain should present one project workspace rather than a collection of dis
 
 ## Library-First Material System
 
-The library is the primary starting point for production work. It should support the asset types needed by the non-video feature set, including garments, models, fabrics, prints, backgrounds, poses, brand materials, references, and prior generated results where applicable.
+The library is the primary starting point for production work. It should support the asset types needed by the full Light Chain feature set, including garments, models, fabrics, prints, backgrounds, poses, brand materials, references, video inputs, and prior generated results where applicable.
 
 Every asset should have a stable identity, type, source/provenance, rights state, preview, canonical storage reference, and reuse history. All internal beta users can search, select, and use the supported library assets in every feature. Shared-library destructive or governance operations such as deleting, renaming, or changing rights metadata should remain administratively controlled unless a later policy explicitly broadens them.
 
@@ -71,7 +73,7 @@ Every asset should have a stable identity, type, source/provenance, rights state
 
 ### In scope for the internal beta
 
-- All current Lightchain production features except video features.
+- All current Light Chain production features, including video features, where the source product exposes them.
 - Complete input, processing/generation, result, save, and reuse behavior for each in-scope feature.
 - Fabric print imagery and AI fitting as the first fully integrated experiences.
 - Shared library, project context, result lineage, Gallery, Canvas, History, and Jobs integration.
@@ -81,7 +83,6 @@ Every asset should have a stable identity, type, source/provenance, rights state
 
 ### Deferred from the current product scope
 
-- Video generation and video-workstation execution. Video may be reconsidered as a separate product scope after the image-production workspace is stable.
 - Public launch, external publishing, billing, checkout, payment, and purchase flows.
 - Identity verification, OTP/CAPTCHA, security-code entry, and secret handling in the user-facing workflow.
 - Literal pixel-level cloning of Lightchain output where the provider is nondeterministic or implementation conditions differ.
@@ -120,11 +121,11 @@ The desired future state is becoming real when:
 
 ## Important Gaps and Assumptions
 
-- The exact in-scope feature count and names must be frozen from a fresh current Lightchain production readback after removing video features.
+- The exact in-scope feature count, names, routes, and source states must be frozen from a fresh current Light Chain production readback, including video features.
 - The Lightchain baseline needs stable desktop screenshots, DOM/interaction observations, performance measurements, and representative input/output examples.
 - Generated-output parity requires a written quality rubric covering apparel fidelity, print placement, model/fitting quality, composition, artifacts, and commercial usefulness.
 - The library schema, source ownership, rights metadata, and shared-library governance need confirmation before broad internal use.
-- Provider/model choices, cost controls, and environment configuration must support real non-video generation without weakening billing, secret, or rights boundaries.
+- Provider/model choices, cost controls, and environment configuration must support the full source-derived generation surface without weakening billing, secret, or rights boundaries.
 - Internal beta staffing, representative tasks, feedback capture, and acceptance sample size remain to be defined.
 
 ## Non-Goals and Safety Boundaries
@@ -136,4 +137,4 @@ The desired future state is becoming real when:
 
 ## Project Summary
 
-Heavy Chain is an internal, desktop-first apparel production workspace that aims to make the current Lightchain production experience available across every non-video capability while adding durable library, generation, result, Canvas, Gallery, History, and Jobs continuity. Fabric print imagery and AI fitting are the first complete proof experiences; the long-term product is one coherent project workspace rather than a set of disconnected feature pages.
+Heavy Chain is an internal, desktop-first apparel production workspace that aims to reproduce the current Light Chain production experience across every exposed capability while adding durable library, generation, result, Canvas, Gallery, History, and Jobs continuity. Fabric print imagery and AI fitting are the first complete proof experiences; the long-term product is one coherent project workspace rather than a set of disconnected feature pages.

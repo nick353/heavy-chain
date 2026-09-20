@@ -4,8 +4,6 @@ import { useAuthStore } from '../stores/authStore';
 import { editImageWithPrompt, generateImage } from '../lib/imageApi';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
-  GENERATION_LEGAL_COPY,
-  UPLOAD_RIGHTS_CONFIRMATION_LABEL,
   validateLegalSafetyInput,
 } from '../lib/legalSafetyGuard';
 import toast from 'react-hot-toast';
@@ -36,7 +34,7 @@ export function ChatEditor({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentImage, setCurrentImage] = useState(initialImage || selectedImageUrl);
-  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const rightsConfirmed = false;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
 
@@ -102,7 +100,7 @@ export function ChatEditor({
     try {
       let result;
       if (!rightsConfirmed) {
-        throw new Error('素材と生成指示の権利確認にチェックしてください');
+        throw new Error('権限がありません');
       }
       const legalSafetyAssessment = validateLegalSafetyInput([userInput]);
       if (legalSafetyAssessment.blocked) {
@@ -301,21 +299,7 @@ export function ChatEditor({
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-neutral-100">
-        {!currentImage && (
-          <label className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
-            <input
-              type="checkbox"
-              checked={rightsConfirmed}
-              onChange={(event) => setRightsConfirmed(event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-              disabled={isLoading}
-            />
-            <span>
-              <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
-              <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
-            </span>
-          </label>
-        )}
+        {!rightsConfirmed && <p role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs font-semibold text-amber-900">権限がありません</p>}
         <div className="flex gap-2">
           <input
             type="text"

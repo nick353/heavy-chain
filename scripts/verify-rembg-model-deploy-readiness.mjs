@@ -18,26 +18,22 @@ const viteMode = modeArgument?.slice('--mode='.length) || 'production';
 const loadedViteEnv = loadEnv(viteMode, process.cwd(), '');
 
 const read = (file) => fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
-const readJson = (file) => {
-  try {
-    return JSON.parse(read(file));
-  } catch {
-    return null;
-  }
-};
 const add = (name, ok, details = {}) => {
   checks.push({ name, ok: Boolean(ok), details });
 };
 
 const gitignore = read('.gitignore');
-const sourceModelFiles = fs.existsSync('public/models')
-  ? fs.readdirSync('public/models', { withFileTypes: true })
-      .filter((entry) => entry.isFile())
-      .map((entry) => `public/models/${entry.name}`)
-  : [];
+const sourceModelFiles = [
+  ...(fs.existsSync('public/models')
+    ? fs.readdirSync('public/models', { withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => `public/models/${entry.name}`)
+    : []),
+  ...(fs.existsSync('public/assets/silueta.onnx') ? ['public/assets/silueta.onnx'] : []),
+];
 const gitTrackedModels = (() => {
   try {
-    return execFileSync('git', ['ls-files', 'public/models'], { encoding: 'utf8' })
+    return execFileSync('git', ['ls-files', 'public/models', 'public/assets/silueta.onnx'], { encoding: 'utf8' })
       .split('\n')
       .filter(Boolean);
   } catch {
@@ -45,7 +41,7 @@ const gitTrackedModels = (() => {
     return sourceModelFiles;
   }
 })();
-const bundledModelPath = 'public/models/silueta.onnx';
+const bundledModelPath = 'public/assets/silueta.onnx';
 const bundledModelBytes = fs.existsSync(bundledModelPath) ? fs.statSync(bundledModelPath).size : 0;
 const stagedClothModelPath = 'public/models/u2net_cloth_seg.onnx';
 const distClothModelPath = 'dist/models/u2net_cloth_seg.onnx';
@@ -76,11 +72,27 @@ const source = read('src/lib/workspaceMaterialReferences.ts');
 const runtimeContract = read('src/features/printing/selection/clothModelRuntimeContract.ts');
 const envExample = read('.env.example');
 const prodEnvExample = read('.env.production.example');
-const zeabur = read('zeabur.json');
-const zeaburConfig = readJson('zeabur.json');
 const checkEnv = read('scripts/check-env.mjs');
 const readme = read('README.md');
 const checklist = read('DEPLOYMENT_CHECKLIST.md');
+const parseStringArrayDeclaration = (sourceText, declarationName) => {
+  const declaration = sourceText.match(
+    new RegExp(`const\\s+${declarationName}\\s*=\\s*\\[([\\s\\S]*?)\\];`),
+  );
+  return declaration
+    ? [...declaration[1].matchAll(/['"]([^'"]+)['"]/g)].map(([, value]) => value)
+    : null;
+};
+const checkEnvOptionalKeys = parseStringArrayDeclaration(checkEnv, 'optional');
+const rembgModelUrlEnvKeys = [
+  'VITE_REMBG_MODEL_BASE_URL',
+  'VITE_REMBG_SILUETA_MODEL_URL',
+  'VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL',
+  'VITE_REMBG_CLOTH_SEG_MODEL_URL',
+];
+const optionalRembgModelUrlEnvKeys = checkEnvOptionalKeys
+  ? rembgModelUrlEnvKeys.filter((key) => checkEnvOptionalKeys.includes(key))
+  : [];
 const configuredClothModelUrl = String(
   Object.hasOwn(process.env, 'VITE_REMBG_CLOTH_SEG_MODEL_URL')
     ? process.env.VITE_REMBG_CLOTH_SEG_MODEL_URL
@@ -121,7 +133,7 @@ add('source_supports_model_base_url_env', source.includes('VITE_REMBG_MODEL_BASE
 add('source_defaults_to_bundled_silueta_without_remote_isnet_fallback', (
   source.includes("modelName = 'silueta'")
   && (source.match(/modelName: 'silueta'/g) || []).length >= 1
-  && source.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'")
+  && source.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/assets/silueta.onnx'")
   && source.includes("VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL\n  || ''")
   && !source.includes('https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx')
 ), {
@@ -140,10 +152,6 @@ add('model_load_failure_has_quality_gated_fallback', (
 });
 add('env_examples_include_model_base_url', envExample.includes('VITE_REMBG_MODEL_BASE_URL') && prodEnvExample.includes('VITE_REMBG_MODEL_BASE_URL'), {
   files: ['.env.example', '.env.production.example'],
-});
-add('zeabur_model_base_url_is_optional', zeaburConfig?.env?.VITE_REMBG_MODEL_BASE_URL?.required === false, {
-  file: 'zeabur.json',
-  value: zeaburConfig?.env?.VITE_REMBG_MODEL_BASE_URL ?? null,
 });
 add('source_supports_explicit_cloth_model_url', (
   source.includes('VITE_REMBG_CLOTH_SEG_MODEL_URL')
@@ -171,10 +179,9 @@ add('runtime_cloth_model_integrity_uses_official_pinned_sha256', (
 add('cloth_model_url_is_optional_in_deployment_contract', (
   envExample.includes('VITE_REMBG_CLOTH_SEG_MODEL_URL')
   && prodEnvExample.includes('VITE_REMBG_CLOTH_SEG_MODEL_URL')
-  && zeaburConfig?.env?.VITE_REMBG_CLOTH_SEG_MODEL_URL?.required === false
-  && checkEnv.includes("'VITE_REMBG_CLOTH_SEG_MODEL_URL'")
+  && checkEnvOptionalKeys?.includes('VITE_REMBG_CLOTH_SEG_MODEL_URL')
 ), {
-  files: ['.env.example', '.env.production.example', 'zeabur.json', 'scripts/check-env.mjs'],
+  files: ['.env.example', '.env.production.example', 'scripts/check-env.mjs'],
 });
 add('cloth_model_deployment_is_documented', (
   readme.includes('VITE_REMBG_CLOTH_SEG_MODEL_URL')
@@ -225,14 +232,15 @@ if (verifyDist) {
   }
 }
 add('env_check_treats_model_base_url_as_optional', (
-  checkEnv.indexOf("const optional") < checkEnv.indexOf("'VITE_REMBG_MODEL_BASE_URL'")
-  && checkEnv.indexOf("const optional") < checkEnv.indexOf("'VITE_REMBG_SILUETA_MODEL_URL'")
+  rembgModelUrlEnvKeys.every((key) => optionalRembgModelUrlEnvKeys.includes(key))
 ), {
   file: 'scripts/check-env.mjs',
+  expectedOptionalKeys: rembgModelUrlEnvKeys,
+  actualOptionalKeys: optionalRembgModelUrlEnvKeys,
 });
 add('docs_name_bundled_default_and_optional_isnet_cors_requirement', (
-  readme.includes('/models/silueta.onnx')
-  && checklist.includes('/models/silueta.onnx')
+  readme.includes('/assets/silueta.onnx')
+  && checklist.includes('/assets/silueta.onnx')
   && checklist.includes('VITE_REMBG_SILUETA_MODEL_URL')
   && checklist.includes('VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL')
   && checklist.includes('CORS')

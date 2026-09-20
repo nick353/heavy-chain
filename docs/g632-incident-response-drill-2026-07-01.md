@@ -1,15 +1,22 @@
 # G632 Incident Response Drill
 
-Updated: 2026-08-18
+Updated: 2026-09-08
 
 ## Purpose
 
 This drill turns the current Heavy Chain incident-response guidance into a
-machine-checkable, non-destructive operations rehearsal. It validates the
-operator path for provider failures, job/readback stalls, storage failures,
-permission anomalies, and generation-quality regressions. It is not a
-production outage simulation, load test, billing test, purchase, checkout,
-external publishing test, or destructive cleanup.
+machine-checkable, non-destructive local rehearsal. It validates the operator
+path for Cloudflare provider-action failures, durable job/receipt readback
+stalls, private-media delivery failures, auth-boundary anomalies, and
+generation-quality regressions. It is not a production outage simulation,
+load test, billing test, purchase, checkout, external publishing test, or
+destructive cleanup.
+
+The verifier checks the current Cloudflare contract in the G620 source/schema
+and the image, monitoring, feedback/admin, and Canvas recovery runbooks. A
+passing result is local rehearsal readiness only; it is not production
+completion and does not establish live provider, browser, billing, or
+release evidence.
 
 ## Hard Stops
 
@@ -20,37 +27,45 @@ deployment, or new paid vendor setup.
 
 Allowed without extra approval:
 
-- read-only production monitor and release-gate readback
-- local source, migration, runbook, and verifier checks
+- local source, runbook, and verifier checks
 - marker-scoped local artifacts under `output/playwright/g632-incident-response-drill/`
-- screenshot/video/DOM proof from existing non-submit QA artifacts
+- read-only inspection of existing local receipts/readbacks and non-submit QA artifacts
+
+The rehearsal commands do not authorize generation, provider-action
+submission, retry, billing or payment, or deployment. They do not copy old
+data, invoke a provider, load credentials, contact a production API, or prove
+that real legacy-service communication is zero.
 
 ## Drill Matrix
 
 | Scenario ID | Detect | First action | Recovery rehearsal | Required proof | Stop condition |
 |---|---|---|---|---|---|
-| `provider-adapter-failure` | A provider adapter error, disabled provider, or failed Edge Function readback appears in the monitor/job artifact | Preserve the run marker, job id, provider error class, and current readback; do not retry automatically | Confirm the configured server-side adapter boundary and re-run only static/read-only checks; a real provider retry requires explicit approval | `npm run verify:g620-security-ops`, current monitor/readback JSON, and the incident summary | Stop when provider availability, secret presence, or retry approval is unavailable |
-| `job-readback-stall` | A `pending`/`processing` job exceeds the configured freshness window or the Jobs/History readback stalls | Preserve the job state and timestamp, then compare Jobs, History, and usage readback | Reconcile the marker-scoped job state and verify stale-job handling without submitting a new generation | Jobs/History readback, `npm run monitor:production -- --skip-ui`, and the incident summary | Do not replay a job or mark it complete without same-run readback |
-| `storage-readback-failure` | A generated image row exists but its signed URL or download readback fails | Preserve the image id and storage path metadata; do not trust the Gallery card as a completed artifact | Verify storage-path and signing contracts with static checks and a read-only database/storage readback | workspace readback JSON, storage contract checks, and the incident summary | Stop before changing buckets, policies, or deleting an artifact |
-| `rls-permission-anomaly` | A cross-workspace row, missing source attribution, or permission error appears in a readback | Isolate the affected workspace and record the exact table/operation; do not bypass RLS | Re-run static security checks and request an authorized Supabase/RLS readback; no service-role workaround | `scripts/security-audit.mjs`, `scripts/supabase-prod-verify.sh`, and the incident summary | Stop when authenticated Supabase readback or security-definer proof is unavailable |
-| `generation-quality-regression` | The quality scorecard reports `fail`/`needs-polish` or the output has a wrong garment, crop, text, or watermark artifact | Keep the prompt, feature, job/task id, image, and scorecard row; do not generate a replacement | Review the bounded feature-specific rubric and prepare a fix plan; a new generation requires explicit approval | `docs/generation-quality-rubric-2026-06-26.md`, `npm run verify:generation-scorecard`, and the incident summary | Do not claim all-feature quality completion while any required row is unresolved |
+| `provider-adapter-failure` | A Cloudflare provider-action failure, disabled action, or failed durable receipt appears in the local monitor/job artifact | Preserve the run marker, request ID, provider action, error class, and current readback; do not retry automatically | Confirm the server-side provider-action boundary and rerun only static/read-only checks; a real provider retry requires explicit approval | `npm run verify:g620-security-ops`, `cloudflare/heavy-api/IMAGE_AI.md`, current receipt/readback, and the incident summary | Stop when provider availability, current auth/role, secret boundary, or retry approval is unavailable |
+| `job-readback-stall` | A `pending`/`processing` job exceeds the configured freshness window or Jobs/History readback stalls | Preserve the request/job state and timestamp, then compare Jobs, History, and usage readback | Reconcile the exact marker-scoped request and verify stale-job handling without submitting a new generation | `cloudflare/heavy-api/MONITORING.md`, current receipt/readback JSON, and the incident summary | Do not replay a request or mark it complete without same-run durable readback |
+| `storage-readback-failure` | A private media readback failure affects an otherwise recorded image or its capability/object | Preserve the image ID, private object path, digest/size metadata, and receipt; do not trust the Gallery card as a completed artifact | Verify the private R2 path, owner-scoped access, and exact content readback with static/local checks | `cloudflare/heavy-api/MONITORING.md`, `cloudflare/heavy-api/IMAGE_AI.md`, and the incident summary | Stop before changing buckets, access policy, media capabilities, or deleting an artifact |
+| `auth-boundary-anomaly` | A cross-workspace object, owner/brand mismatch, stale role, or auth boundary anomaly appears in a readback | Isolate the affected user, brand, request, and route; preserve the exact response; do not bypass the auth boundary | Rerun static Cloudflare checks and request an authorized current-session readback; no caller-supplied role or service credential workaround | `cloudflare/heavy-api/FEEDBACK_ADMIN.md`, `cloudflare/heavy-api/CANVAS_SAVE_RECOVERY.md`, and the incident summary | Stop when the verified session, current role, or owner-scoped readback is unavailable |
+| `generation-quality-regression` | The quality scorecard reports `fail`/`needs-polish` or the output has a wrong garment, crop, text, or watermark artifact | Keep the prompt, feature, request/candidate ID, image, and scorecard row; do not submit a replacement | Review the bounded feature-specific rubric and prepare a fix plan; a new provider action requires explicit approval | `cloudflare/heavy-api/IMAGE_AI.md`, `docs/generation-quality-rubric-2026-06-26.md`, and the incident summary | Do not claim quality or production completion while any required row is unresolved |
 
 ## Rehearsal Commands
 
-Run the non-destructive drill verifier:
+Run the non-destructive local Cloudflare contract and incident-response
+verifier:
 
 ```bash
 npm run verify:g632-incident-response
 ```
 
-For a release candidate, follow with the read-only production monitor and the
-release gate. These commands do not authorize generation, retry, billing, or
-deployment.
+An explicit JSON path is supported for an isolated local summary. The command
+does not authorize generation, provider-action submission, retry, billing,
+payment, or deployment.
 
 ```bash
-npm run monitor:production -- --skip-ui
-npm run verify:release-gate -- --out output/playwright/release-gate-current/summary.json
+npm run verify:g632-incident-response -- --out /tmp/g632-cloudflare-local-20260908/summary.json
 ```
+
+For a release candidate, any monitor or release-gate readback remains a
+separate operation and must retain its own authorization and evidence. This
+drill does not run those operations.
 
 ## Acceptance
 
@@ -59,11 +74,13 @@ G632 is accepted only when the verifier confirms every scenario has:
 - a detection signal
 - a first action
 - a recovery rehearsal path
-- a required proof artifact or command
+- a required current Cloudflare proof artifact or command
 - an explicit stop condition
 - no irreversible action requirement
 
-The drill can pass while beta evidence, production source attribution,
-billing completion, provider execution, external reviewer verification, and
-the public release gate remain open. It proves response readiness, not public
-launch completion.
+The output records `productionCompletion: not_verified` and
+`zeroRealSupabaseCommunication: not_verified` explicitly. The drill can pass
+while production authentication, source attribution, billing completion,
+provider execution, external reviewer verification, image quality, and the
+public release gate remain open. It proves response readiness, not public
+launch completion or zero real legacy-service communication.

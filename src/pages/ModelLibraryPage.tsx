@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, Save, Shirt, SlidersHorizontal, Sparkles, UserRound } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -21,6 +21,7 @@ import {
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
   getLightchainUnifiedFeatureWorkflowContract,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
+import { SourceModelLibrarySurface } from '../components/lightchain/SourceModelLibrarySurface';
 
 const intents = ['EC標準', 'LOOK確認', '広告検証'] as const;
 const modelCustomizationTabs = ['顔変更', 'モデル変更', '体型', '服のサイズ', 'ポーズ', '背景', 'アングル'] as const;
@@ -222,6 +223,7 @@ const buildModelLibraryPreviewSvg = ({
 };
 
 export function ModelLibraryPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
   const { setFlowState } = useUnifiedWorkspaceFlow();
@@ -434,7 +436,7 @@ export function ModelLibraryPage() {
           searchTokens: ['model-library-workspace', usage, selectedCandidate.label],
         },
         status: 'planned',
-        resumePath: '/models',
+        resumePath: '/model-library',
         handoffKind: 'local-workflow-intake',
         primaryInput,
         nextStep,
@@ -514,6 +516,26 @@ export function ModelLibraryPage() {
       toast.error(message);
     }
   };
+
+  if (location.pathname === '/model-library' || location.pathname === '/model-library/model-custom-form') {
+    return (
+      <div
+        data-lightchain-parity-shell="model-customization"
+        data-flow-state={modelLibraryFlowState}
+        data-flow-state-label={unifiedWorkspaceFlowLabels[modelLibraryFlowState]}
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature="model-library"
+        data-workflow-input-roles={modelLibraryWorkflowContract?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={modelLibraryWorkflowContract?.resultDestinations.join(',') ?? ''}
+        data-workflow-lifecycle={modelLibraryWorkflowContract?.lifecycle.join(',') ?? ''}
+        data-workflow-source-input-mode={modelLibraryWorkflowContract?.sourceInputMode ?? ''}
+        data-workflow-retry-policy={modelLibraryWorkflowContract?.retry.retainsLastCompletedResult && modelLibraryWorkflowContract.retry.preservesInputLineage && modelLibraryWorkflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
+        data-workflow-rights-gate={modelLibraryWorkflowContract?.rightsGate ?? ''}
+      >
+        <SourceModelLibrarySurface />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -661,10 +683,11 @@ export function ModelLibraryPage() {
               Galleryで結果を見る
             </Link>
             <p
-              data-testid="model-library-rights-gate"
-              className="rounded-xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-2 text-xs leading-5 text-amber-100"
+              data-testid="model-library-permission-surface"
+              role="status"
+              className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs leading-5 text-neutral-300"
             >
-              生成直前に権利確認を行います。モデル条件の保存・Canvas引き渡しと、provider生成の承認を分けて扱います。
+              権限がありません
             </p>
           </div>
         </div>

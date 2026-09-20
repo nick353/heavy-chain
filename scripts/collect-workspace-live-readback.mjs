@@ -1,569 +1,184 @@
 #!/usr/bin/env node
-
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { createClient } from '@supabase/supabase-js';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { parseArgs } from 'node:util';
+import { createHash } from 'node:crypto';
+import { validID, apiOrigin, boundedBytes, safeError } from './monitor-production-health.mjs';
 
 const DEFAULT_WORKSPACES = ['patterns', 'studio', 'video', 'lab', 'models', 'marketing', 'fitting'];
-const GENERATED_IMAGES_BUCKET = 'generated-images';
-const PAGE_SIZE = 1000;
-const MAX_ROWS_PER_TABLE = 10000;
-const MAX_TELEMETRY_INFERENCE_DISTANCE_MS = 5 * 60 * 1000;
-
-const args = parseArgs(process.argv.slice(2));
-const now = new Date();
-const defaultOut = `output/playwright/production-workspace-generation-${dateStamp(now)}/workspace-db-readback.json`;
-const outPath = args.out ?? defaultOut;
-const workspaces = parseList(args.workspaces, DEFAULT_WORKSPACES);
-
-if (!args.since || Number.isNaN(Date.parse(args.since))) {
-  console.error('--since <iso-timestamp> is required so production readback stays bounded to the approved live run.');
-  process.exit(1);
-}
-
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !serviceRoleKey) {
-  console.error(
-    'Missing SUPABASE_URL/VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY/SERVICE_ROLE_KEY. Secret values were not printed.',
-  );
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
-
-const metadata = {
-  captured_at: now.toISOString(),
-  release_date: args.expectReleaseDate ?? null,
-  environment: args.expectEnvironment ?? null,
-  git_commit: args.expectGitCommit ?? null,
-  since: args.since ?? null,
-  workspaces,
-  collector: 'collect-workspace-live-readback',
-  collector_mode: 'read-only-select-and-createSignedUrl',
-};
-
-const jobs = await selectRows('generation_jobs', 'created_at');
-const images = await selectRows('generated_images', 'created_at');
-const usage = await selectRows('usage_events', 'created_at');
-const runs = await selectRows('edge_function_runs', 'created_at');
-const lightchainTaskStepRows = await selectRows('lightchain_task_steps', 'created_at');
-
-const filteredJobs = filterWorkspaceRows(jobs);
-const filteredImages = filterWorkspaceRows(images).filter((image) => {
-  if (!filteredJobs.length) return true;
-  if (!image.job_id) return true;
-  return filteredJobs.some((job) => job.id === image.job_id);
-});
-const sourceEvents = buildSourceEvents(filteredJobs, filteredImages);
-const requestIds = new Set([
-  ...filteredJobs.map(requestIdFor).filter(isNonEmptyString),
-  ...filteredImages.map(requestIdFor).filter(isNonEmptyString),
-]);
-const filteredRuns = filterTelemetryRows(runs, requestIds, sourceEvents);
-// The run-to-usage foreign key is stronger than source inference. A usage
-// reservation can be reused or carry less source metadata than its run, so
-// keep the linked usage event even when its request_id/source metadata does
-// not independently pass telemetry attribution.
-const linkedUsageEventIds = new Set(
-  filteredRuns.map((run) => run.usage_event_id).filter(isNonEmptyString),
-);
-const filteredUsage = usage.filter(
-  (row) => linkedUsageEventIds.has(row.id) || isTelemetryRowInScope(row, requestIds, sourceEvents),
-);
-const filteredLightchainTaskSteps = filterLightchainTaskStepRows(lightchainTaskStepRows, filteredJobs, filteredImages, requestIds);
-const storage = await collectStorageReadback(filteredImages);
-const sourceAttribution = buildSourceAttribution({
-  jobs,
-  images,
-  usage,
-  runs,
-  lightchainTaskSteps: lightchainTaskStepRows,
-  filteredJobs,
-  filteredImages,
-  filteredUsage,
-  filteredRuns,
-  filteredLightchainTaskSteps,
-});
-
-const readback = redactSecrets({
-  metadata,
-  sourceAttribution,
-  counts: {
-    jobs: filteredJobs.length,
-    images: filteredImages.length,
-    usage: filteredUsage.length,
-    runs: filteredRuns.length,
-    lightchainTaskSteps: filteredLightchainTaskSteps.length,
-    storage: storage.length,
-  },
-  jobs: filteredJobs.map(projectJob),
-  images: filteredImages.map(projectImage),
-  usage: filteredUsage.map((row) => projectUsage(row, inferTelemetrySource(row, sourceEvents))),
-  runs: filteredRuns.map((row) => projectRun(row, inferTelemetrySource(row, sourceEvents))),
-  lightchainTaskSteps: filteredLightchainTaskSteps.map(projectLightchainTaskStep),
-  storage,
-});
-
-const raw = JSON.stringify(readback, null, 2);
-if (containsLikelySecret(raw)) {
-  console.error('Collector output contained a likely secret after redaction; refusing to write.');
-  process.exit(1);
-}
-
-mkdirSync(dirname(outPath), { recursive: true });
-writeFileSync(outPath, `${raw}\n`);
-console.log(`Workspace readback written to ${outPath}. Secret values were not printed.`);
-
-function parseArgs(argv) {
-  const parsed = {};
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    const next = argv[index + 1];
-    if (arg === '--out' && next) parsed.out = next;
-    if (arg === '--since' && next) parsed.since = next;
-    if (arg === '--expect-release-date' && next) parsed.expectReleaseDate = next;
-    if (arg === '--expect-environment' && next) parsed.expectEnvironment = next;
-    if (arg === '--expect-git-commit' && next) parsed.expectGitCommit = next;
-    if (arg === '--workspaces' && next) parsed.workspaces = next;
-    if (arg.startsWith('--') && next) index += 1;
-  }
-  return parsed;
-}
-
-function parseList(value, fallback) {
-  if (!value) return fallback;
-  const values = value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-  return values.length ? values : fallback;
-}
-
-function dateStamp(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
-async function selectRows(table, orderColumn) {
-  const rows = [];
-  for (let from = 0; from < MAX_ROWS_PER_TABLE; from += PAGE_SIZE) {
-    const to = from + PAGE_SIZE - 1;
-    const { data, error } = await supabase
-      .from(table)
-      .select('*')
-      .gte(orderColumn, args.since)
-      .order(orderColumn, { ascending: false })
-      .range(from, to);
-    if (error) {
-      console.error(`${table}: select failed: ${error.message}`);
-      process.exit(1);
-    }
-    const page = Array.isArray(data) ? data : [];
-    rows.push(...page);
-    if (page.length < PAGE_SIZE) break;
-  }
-
-  if (rows.length >= MAX_ROWS_PER_TABLE) {
-    console.error(`${table}: readback exceeded ${MAX_ROWS_PER_TABLE} rows; narrow --since and rerun.`);
-    process.exit(1);
-  }
-
-  return rows;
-}
-
-function filterWorkspaceRows(rows) {
-  return rows.filter((row) => {
-    const source = sourceInfo(row);
-    return source.sourceWorkspace && workspaces.includes(source.sourceWorkspace);
-  });
-}
-
-function filterTelemetryRows(rows, requestIds, events) {
-  return rows.filter((row) => isTelemetryRowInScope(row, requestIds, events));
-}
-
-function isTelemetryRowInScope(row, requestIds, events) {
-  const source = sourceInfo(row);
-  if (source.sourceWorkspace && workspaces.includes(source.sourceWorkspace)) return true;
-  if (isNonEmptyString(row.request_id) && requestIds.has(row.request_id)) return true;
-  return Boolean(inferTelemetrySource(row, events).sourceWorkspace);
-}
-
-function filterLightchainTaskStepRows(rows, jobRows, imageRows, requestIds) {
-  const jobIds = new Set(jobRows.map((row) => row.id).filter(isNonEmptyString));
-  const imageIds = new Set(imageRows.map((row) => row.id).filter(isNonEmptyString));
-  return rows.filter((row) => {
-    const source = sourceInfo(row);
-    if (source.sourceWorkspace && workspaces.includes(source.sourceWorkspace)) return true;
-    if (row.job_id && jobIds.has(row.job_id)) return true;
-    if (row.image_id && imageIds.has(row.image_id)) return true;
-    if (isNonEmptyString(row.request_id) && requestIds.has(row.request_id)) return true;
-    return false;
-  });
-}
-
-function buildSourceAttribution({
-  jobs,
-  images,
-  usage,
-  runs,
-  lightchainTaskSteps,
-  filteredJobs,
-  filteredImages,
-  filteredUsage,
-  filteredRuns,
-  filteredLightchainTaskSteps,
-}) {
-  const tables = [
-    ['jobs', jobs, filteredJobs],
-    ['images', images, filteredImages],
-    ['usage', usage, filteredUsage],
-    ['runs', runs, filteredRuns],
-    ['lightchainTaskSteps', lightchainTaskSteps, filteredLightchainTaskSteps],
-  ];
-  const rawRows = {};
-  const rawRowsWithSourceReadback = {};
-  const filteredRows = {};
-  const filteredRowsWithSourceReadback = {};
-
-  for (const [name, rows, filteredRowsForTable] of tables) {
-    rawRows[name] = rows.length;
-    rawRowsWithSourceReadback[name] = rows.filter(hasSourceReadback).length;
-    filteredRows[name] = filteredRowsForTable.length;
-    filteredRowsWithSourceReadback[name] = filteredRowsForTable.filter(hasSourceReadback).length;
-  }
-
-  return {
-    sourceContract: 'sourceWorkspace+workflowVersion',
-    rawRows,
-    rawRowsWithSourceReadback,
-    filteredRows,
-    filteredRowsWithSourceReadback,
-  };
-}
-
-function hasSourceReadback(row) {
-  const source = sourceInfo(row);
-  return Boolean(source.sourceWorkspace && source.workflowVersion);
-}
-
-function buildSourceEvents(jobRows, imageRows) {
-  const events = [];
-  for (const row of [...jobRows, ...imageRows]) {
-    const source = sourceInfo(row);
-    const at = Date.parse(row.created_at ?? row.completed_at ?? '');
-    if (!source.sourceWorkspace || !source.workflowVersion || Number.isNaN(at)) continue;
-    events.push({
-      sourceWorkspace: source.sourceWorkspace,
-      workflowVersion: source.workflowVersion,
-      brand_id: row.brand_id ?? null,
-      user_id: row.user_id ?? null,
-      request_id: requestIdFor(row),
-      at,
-    });
-  }
-  return events;
-}
-
-function inferTelemetrySource(row, events) {
-  const direct = sourceInfo(row);
-  if (direct.sourceWorkspace && direct.workflowVersion) return direct;
-  if (isNonEmptyString(row.request_id)) {
-    const requestMatch = events.find((event) => event.request_id === row.request_id);
-    if (requestMatch) {
-      return {
-        sourceWorkspace: requestMatch.sourceWorkspace,
-        workflowVersion: requestMatch.workflowVersion,
-      };
-    }
-  }
-
-  const rowAt = Date.parse(row.started_at ?? row.completed_at ?? row.created_at ?? '');
-  if (Number.isNaN(rowAt)) return {};
-  const functionName = row.function_name;
-  const candidates = events
-    .filter((event) => {
-      if (row.brand_id && event.brand_id && row.brand_id !== event.brand_id) return false;
-      if (row.user_id && event.user_id && row.user_id !== event.user_id) return false;
-      if (functionName === 'design-gacha') return event.sourceWorkspace === 'patterns';
-      if (functionName === 'generate-image') return ['studio', 'video', 'lab', 'models', 'marketing', 'fitting'].includes(event.sourceWorkspace);
-      if (functionName === 'model-matrix') return ['studio', 'models', 'fitting'].includes(event.sourceWorkspace);
-      return ['patterns', 'studio', 'video', 'lab', 'models', 'marketing', 'fitting'].includes(event.sourceWorkspace);
-    })
-    .map((event) => ({ ...event, distance: Math.abs(rowAt - event.at) }))
-    .sort((a, b) => a.distance - b.distance);
-
-  const match = candidates[0];
-  if (!match || match.distance > MAX_TELEMETRY_INFERENCE_DISTANCE_MS) return {};
-  return {
-    sourceWorkspace: match.sourceWorkspace,
-    workflowVersion: match.workflowVersion,
-  };
-}
-
-async function collectStorageReadback(images) {
-  const paths = [...new Set(images.map((image) => image.storage_path).filter(isNonEmptyString))];
-  const rows = [];
-
-  for (const storagePath of paths) {
-    const { data, error } = await supabase.storage.from(GENERATED_IMAGES_BUCKET).createSignedUrl(storagePath, 60);
-    const image = images.find((row) => row.storage_path === storagePath);
-    const source = sourceInfo(image ?? {});
-    const lightchainCompat = lightchainInfo(image ?? {}, 'completed');
-    rows.push({
-      storage_path: storagePath,
-      bucket: GENERATED_IMAGES_BUCKET,
-      image_id: image?.id ?? null,
-      job_id: image?.job_id ?? null,
-      sourceWorkspace: source.sourceWorkspace ?? null,
-      workflowVersion: source.workflowVersion ?? null,
-      lightchainCompat,
-      signedUrlOk: Boolean(data?.signedUrl && !error),
-      signedUrlExpiresIn: 60,
-      signedUrlError: error?.message ?? null,
-    });
-  }
-
-  return rows;
-}
-
-function projectJob(row) {
-  const source = sourceInfo(row);
-  const lightchainCompat = lightchainInfo(row, stepStatusForRowStatus(row.status));
-  return {
-    id: row.id,
-    brand_id: row.brand_id,
-    user_id: row.user_id,
-    feature_type: row.feature_type,
-    status: row.status,
-    error_message: row.error_message ?? null,
-    created_at: row.created_at ?? null,
-    completed_at: row.completed_at ?? null,
-    sourceWorkspace: source.sourceWorkspace ?? null,
-    workflowVersion: source.workflowVersion ?? null,
-    lightchainCompat,
-    request_id: requestIdFor(row),
-    input_params: row.input_params ?? {},
-  };
-}
-
-function projectImage(row) {
-  const source = sourceInfo(row);
-  const lightchainCompat = lightchainInfo(row, 'completed');
-  return {
-    id: row.id,
-    job_id: row.job_id ?? null,
-    brand_id: row.brand_id,
-    user_id: row.user_id,
-    storage_path: row.storage_path,
-    image_url: isNonEmptyString(row.image_url) ? '[present-redacted]' : null,
-    feature_type: row.feature_type ?? null,
-    model_used: row.model_used ?? null,
-    created_at: row.created_at ?? null,
-    sourceWorkspace: source.sourceWorkspace ?? null,
-    workflowVersion: source.workflowVersion ?? null,
-    lightchainCompat,
-    request_id: requestIdFor(row),
-    generation_params: row.generation_params ?? {},
-    metadata: row.metadata ?? {},
-  };
-}
-
-function projectUsage(row, sourceOverride = null) {
-  const source = sourceOverride ?? sourceInfo(row);
-  return {
-    id: row.id,
-    brand_id: row.brand_id,
-    user_id: row.user_id,
-    function_name: row.function_name,
-    units: row.units,
-    status: row.status,
-    request_id: row.request_id ?? null,
-    created_at: row.created_at ?? null,
-    completed_at: row.completed_at ?? null,
-    sourceWorkspace: source.sourceWorkspace ?? null,
-    workflowVersion: source.workflowVersion ?? null,
-    metadata: row.metadata ?? {},
-  };
-}
-
-function projectRun(row, sourceOverride = null) {
-  const source = sourceOverride ?? sourceInfo(row);
-  return {
-    id: row.id,
-    usage_event_id: row.usage_event_id ?? null,
-    brand_id: row.brand_id ?? null,
-    user_id: row.user_id ?? null,
-    function_name: row.function_name,
-    status: row.status,
-    request_id: row.request_id ?? null,
-    duration_ms: row.duration_ms ?? null,
-    error_message: row.error_message ?? null,
-    started_at: row.started_at ?? null,
-    completed_at: row.completed_at ?? null,
-    created_at: row.created_at ?? null,
-    sourceWorkspace: source.sourceWorkspace ?? null,
-    workflowVersion: source.workflowVersion ?? null,
-    metadata: row.metadata ?? {},
-  };
-}
-
-function projectLightchainTaskStep(row) {
-  const source = sourceInfo(row);
-  return {
-    id: row.id,
-    job_id: row.job_id ?? null,
-    image_id: row.image_id ?? null,
-    brand_id: row.brand_id ?? null,
-    user_id: row.user_id ?? null,
-    lightchain_feature_id: row.lightchain_feature_id ?? null,
-    lightchain_feature_title: row.lightchain_feature_title ?? null,
-    task_code: row.task_code ?? null,
-    step_index: row.step_index ?? null,
-    status: row.status ?? null,
-    sourceWorkspace: source.sourceWorkspace ?? null,
-    workflowVersion: source.workflowVersion ?? null,
-    request_id: row.request_id ?? null,
-    artifact_uri: row.artifact_uri ?? null,
-    error_message: row.error_message ?? null,
-    created_at: row.created_at ?? null,
-    completed_at: row.completed_at ?? null,
-    metadata: row.metadata ?? {},
-  };
-}
-
+const stepStates = new Set(['queued','processing','completed','failed','unknown','not_started']);
+const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+const text = value => typeof value === 'string' && value.length <= 256 && !/https?:|Bearer\s|[\r\n]/i.test(value) ? value : null;
 function sourceInfo(row) {
-  const candidates = [
-    row.sourceReadback,
-    row.generationIntent,
-    row.input_params,
-    row.input_params?.sourceReadback,
-    row.input_params?.generationIntent,
-    row.input_params?.generationIntent?.sourceReadback,
-    row.metadata,
-    row.metadata?.sourceReadback,
-    row.metadata?.generationIntent,
-    row.metadata?.generationIntent?.sourceReadback,
-    row.generation_params,
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const sourceWorkspace = readString(candidate, 'sourceWorkspace') ?? readString(candidate, 'source_workspace');
-    const workflowVersion = readString(candidate, 'workflowVersion') ?? readString(candidate, 'workflow_version');
-    if (sourceWorkspace || workflowVersion) return { sourceWorkspace, workflowVersion };
+  const p = record(row.input_params), m = record(row.metadata), g = record(row.generation_params);
+  const candidates = [p, p.metadata, p.sourceReadback, p.generationIntent, p.generationIntent?.sourceReadback,
+    m, m.sourceReadback, m.generationIntent, m.generationIntent?.sourceReadback, g];
+  for (const value of candidates) {
+    const v = record(value);
+    if (text(v.sourceWorkspace ?? v.source_workspace) || text(v.workflowVersion ?? v.workflow_version)) return {
+      sourceWorkspace: text(v.sourceWorkspace ?? v.source_workspace), workflowVersion: text(v.workflowVersion ?? v.workflow_version),
+      basis: 'declared_metadata_not_execution',
+    };
   }
-  return {};
+  return { sourceWorkspace: null, workflowVersion: null, basis: 'not_recorded' };
 }
 
-function lightchainInfo(row, fallbackStepStatus = 'completed') {
-  const candidates = [
-    row.lightchainCompat,
-    row.input_params?.lightchainCompat,
-    row.input_params?.generationIntent?.lightchainCompat,
-    row.metadata?.lightchainCompat,
-    row.metadata?.generationIntent?.lightchainCompat,
-    row.generation_params?.lightchainCompat,
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const lightchainFeatureId = readString(candidate, 'lightchainFeatureId');
-    const lightchainFeatureTitle = readString(candidate, 'lightchainFeatureTitle');
-    const rawTaskCodes = candidate.lightchainTaskCodes;
-    const lightchainTaskCodes = Array.isArray(rawTaskCodes)
-      ? rawTaskCodes.filter((item) => isNonEmptyString(item))
-      : [];
-    if (lightchainFeatureId && lightchainFeatureTitle && lightchainTaskCodes.length) {
-      const rawSteps = candidate.lightchainTaskSteps;
-      const persistedSteps = Array.isArray(rawSteps)
-        ? rawSteps
-          .filter((step) => step && typeof step === 'object' && !Array.isArray(step))
-          .map((step) => ({
-            taskCode: readString(step, 'taskCode'),
-            status: readString(step, 'status'),
-          }))
-          .filter((step) => step.taskCode && step.status)
-        : [];
-      const lightchainTaskSteps = persistedSteps.length
-        ? persistedSteps
-        : lightchainTaskCodes.map((taskCode) => ({
-          taskCode,
-          status: fallbackStepStatus,
-        }));
-      return {
-        lightchainFeatureId,
-        lightchainFeatureTitle,
-        lightchainTaskCodes,
-        lightchainTaskSteps,
-      };
+/** Collect only named jobs, their own final images and persisted execution rows.
+ * No fuzzy timestamp attribution or synthetic completed task codes.
+ */
+export async function collectWorkspaceReadback(options, fetchImpl = fetch) {
+  const origin = apiOrigin(options.apiBaseUrl);
+  if (!validID(options.brandId) || !Array.isArray(options.jobIds) || !options.jobIds.length ||
+      options.jobIds.length > 100 || options.jobIds.some(id => !validID(id)) || new Set(options.jobIds).size !== options.jobIds.length) throw new Error('explicit_brand_and_job_ids_required');
+  const since = Date.parse(options.since);
+  const now = options.now ?? Date.now();
+  if (!Number.isFinite(since) || since > now) throw new Error('valid_since_required');
+  if (typeof options.token !== 'string' || !options.token.trim() || /[\r\n]/.test(options.token)) throw new Error('live_session_required');
+  const report = { schema: 'heavy-chain.workspace-readback.v2', capturedAt: new Date(now).toISOString(),
+    collectionComplete: false, businessCompletion: 'not_verified',
+    scope: { apiOrigin: origin, brandId: options.brandId, requestedJobIds: options.jobIds, since: new Date(since).toISOString(),
+      principal: 'current_consumer_auth_session', observation: 'nontransactional_read_only' },
+    jobs: [], images: [], executionSteps: [], canonicalFinalLinks: [], storage: [], blockers: [],
+    unsupportedEvidence: ['legacy_edge_function_runs','legacy_usage_events','provider_invoice','browser_workflow','cleanup_receipt'],
+  };
+  const get = async route => {
+    let response;
+    try { response = await fetchImpl(origin + route, { method:'GET', redirect:'error', cache:'no-store',
+      headers:{ authorization:'Bearer ' + options.token }, signal:AbortSignal.timeout(15000) }); }
+    catch { throw new Error('request_failed'); }
+    if (!response.ok) { await response.body?.cancel().catch(() => {}); throw new Error('http_' + response.status); }
+    return response;
+  };
+  const json = async route => {
+    const bytes = await boundedBytes(await get(route), 4 * 1024 * 1024);
+    try { return JSON.parse(bytes.toString('utf8')); } catch { throw new Error('invalid_json_response'); }
+  };
+  const fail = (code, jobId = null) => report.blockers.push({ code, jobId });
+  const imagesSeen = new Set();
+  const jobRows = new Map();
+  const addJob = row => {
+    if (jobRows.has(row.id)) return;
+    jobRows.set(row.id, row);
+    report.jobs.push({ id:row.id, brand_id:row.brand_id, user_id:row.user_id, status:text(row.status), feature_type:text(row.feature_type),
+      created_at:row.created_at, completed_at:row.completed_at ?? null, source:sourceInfo(row) });
+  };
+  const collectImage = async image => {
+    if (report.images.some(item => item.id === image.id)) return;
+    const jobId = image.job_id;
+    report.images.push({ id:image.id, job_id:jobId, brand_id:image.brand_id, user_id:image.user_id,
+      feature_type:text(image.feature_type), created_at:image.created_at, source:sourceInfo(image) });
+    try {
+      const response = await get('/v1/generated-images/' + encodeURIComponent(image.id) + '/content');
+      const bytes = await boundedBytes(response, 10 * 1024 * 1024);
+      if (!bytes.length || !response.headers.get('content-type')?.startsWith('image/')) throw new Error('invalid_media_content');
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      const m = record(image.metadata), expected = m.contentSha256 ?? m.sha256;
+      if (expected && expected !== sha256 || m.contentBytes != null && m.contentBytes !== bytes.length) throw new Error('media_checksum_mismatch');
+      report.storage.push({ imageId:image.id, jobId, readable:true, bytes:bytes.length, sha256, checksumVerified:Boolean(expected) });
+    } catch (error) { report.storage.push({ imageId:image.id, jobId, readable:false, error:safeError(error) }); fail('private_media_read_failed', jobId); }
+  };
+  let principalId = null;
+  for (const jobId of options.jobIds) {
+    try {
+      const row = await json('/v1/generation-jobs/' + encodeURIComponent(jobId));
+      if (row.id !== jobId || row.brand_id !== options.brandId || !validID(row.user_id) || !Number.isFinite(Date.parse(row.created_at)) || Date.parse(row.created_at) < since) throw new Error('invalid_row_scope');
+      if (principalId && principalId !== row.user_id) throw new Error('invalid_row_scope');
+      principalId = row.user_id;
+      addJob(row);
+      const jobImages = []; let finished = false;
+      for (let offset = 0; offset < 10000; offset += 100) {
+        const query = new URLSearchParams({ brand_id:options.brandId, job_id:jobId, limit:'100', offset:String(offset) });
+        const page = await json('/v1/generated-images?' + query);
+        if (!Array.isArray(page) || page.length > 100) throw new Error('invalid_page');
+        for (const image of page) {
+          if (!validID(image.id) || image.job_id !== jobId || image.brand_id !== options.brandId || image.user_id !== row.user_id ||
+              !Number.isFinite(Date.parse(image.created_at)) || Date.parse(image.created_at) < since) throw new Error('invalid_row_scope');
+          if (imagesSeen.has(image.id)) throw new Error('unstable_pagination');
+          imagesSeen.add(image.id); jobImages.push(image);
+        }
+        if (page.length < 100) { finished = true; break; }
+      }
+      if (!finished) throw new Error('observation_row_limit');
+      for (const image of jobImages) {
+        await collectImage(image);
+      }
+    } catch (error) { fail('job_' + safeError(error), jobId); }
+  }
+  try {
+    const query = new URLSearchParams({ brand_id:options.brandId });
+    options.jobIds.forEach(id => query.append('job_id', id));
+    const steps = await json('/v1/workspace-execution-steps?' + query);
+    if (!Array.isArray(steps)) throw new Error('invalid_page');
+    const seen = new Set();
+    for (const step of steps) {
+      if (typeof step.id !== 'string' || step.id.length > 256 || !options.jobIds.includes(step.job_id) ||
+          step.image_id !== null && !validID(step.image_id) || step.basis !== 'cloudflare_execution_ledger' ||
+          !stepStates.has(step.status) || !Number.isSafeInteger(step.step_index) || step.step_index < 0 || !text(step.task_code)) throw new Error('invalid_row_scope');
+      const key = step.job_id + ':' + step.id;
+      if (seen.has(key)) throw new Error('unstable_pagination');
+      seen.add(key);
+      report.executionSteps.push({ id:step.id, job_id:step.job_id, image_id:step.image_id,
+        task_code:step.task_code, step_index:step.step_index, status:step.status, basis:step.basis });
     }
-  }
-  return null;
-}
-
-function stepStatusForRowStatus(status) {
-  if (status === 'pending') return 'queued';
-  if (status === 'processing') return 'processing';
-  if (status === 'failed') return 'retryable';
-  return 'completed';
-}
-
-function readString(value, key) {
-  const item = value?.[key];
-  return typeof item === 'string' && item.trim() ? item.trim() : null;
-}
-
-function requestIdFor(row) {
-  return (
-    readString(row, 'request_id') ||
-    readString(row, 'requestId') ||
-    readString(row.input_params, 'requestId') ||
-    readString(row.input_params, 'request_id') ||
-    readString(row.metadata, 'requestId') ||
-    readString(row.metadata, 'request_id') ||
-    null
-  );
-}
-
-function isNonEmptyString(value) {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-function redactSecrets(value) {
-  if (Array.isArray(value)) return value.map(redactSecrets);
-  if (!value || typeof value !== 'object') {
-    if (typeof value === 'string' && containsLikelySecret(value)) return '[redacted]';
-    return value;
-  }
-
-  const next = {};
-  for (const [key, item] of Object.entries(value)) {
-    if (/secret|service_role|token|api[_-]?key|authorization/i.test(key) || /^signed_?url$/i.test(key)) {
-      next[key] = '[redacted]';
-    } else {
-      next[key] = redactSecrets(item);
+    // Only the API's final-save phase can discover another job. Declared IDs
+    // in input metadata never trigger a lookup, nor do intermediate images.
+    for (const step of report.executionSteps) {
+      if (step.step_index % 3 !== 2 || step.status !== 'completed' || !step.image_id || !jobRows.has(step.job_id)) continue;
+      try {
+        const identity = /^([^:]+):(\d+):2$/.exec(step.id);
+        if (!identity || !validID(identity[1]) || Number(identity[2]) * 3 + 2 !== step.step_index) throw new Error('invalid_row_scope');
+        const image = await json('/v1/generated-images/' + encodeURIComponent(step.image_id));
+        if (image.id !== step.image_id || image.job_id !== image.id || image.brand_id !== options.brandId || image.user_id !== principalId ||
+            image.storage_path !== 'generated-images/' + image.id || !Number.isFinite(Date.parse(image.created_at)) || Date.parse(image.created_at) < since ||
+            image.metadata?.artifactRole === 'provider-intermediate') throw new Error('invalid_row_scope');
+        const final = jobRows.get(image.job_id) ?? await json('/v1/generation-jobs/' + encodeURIComponent(image.job_id));
+        const params = record(final.input_params), ai = record(params.imageAI);
+        const sourceJobId = params.sourceJobId;
+        if (final.id !== image.job_id || final.brand_id !== options.brandId || final.user_id !== principalId || final.status !== 'completed' ||
+            !Number.isFinite(Date.parse(final.created_at)) || Date.parse(final.created_at) < since ||
+            !validID(sourceJobId) || (step.job_id !== final.id && sourceJobId !== step.job_id) ||
+            ai.requestId !== identity[1] || ai.candidateIndex !== Number(identity[2]) ||
+            !/^[a-f0-9]{64}$/.test(params.checksum) || !Number.isSafeInteger(params.contentBytes) || params.contentBytes <= 0) throw new Error('invalid_row_scope');
+        addJob(final);
+        await collectImage(image);
+        const content = report.storage.find(item => item.imageId === image.id);
+        if (!content?.readable || content.sha256 !== params.checksum || content.bytes !== params.contentBytes) throw new Error('media_checksum_mismatch');
+        content.checksumVerified = true;
+        if (!report.canonicalFinalLinks.some(link => link.sourceJobId === sourceJobId && link.imageId === image.id)) {
+          report.canonicalFinalLinks.push({ sourceJobId, finalJobId:final.id, imageId:image.id, executionStepId:step.id, basis:step.basis });
+        }
+      } catch (error) { fail('final_link_' + safeError(error), step.job_id); }
     }
+    for (const jobId of options.jobIds) if (!report.executionSteps.some(step => step.job_id === jobId)) fail('execution_records_not_available', jobId);
+  } catch (error) { fail('execution_' + safeError(error)); }
+  for (const jobId of options.jobIds) {
+    if (!report.images.some(image => image.job_id === jobId) && !report.canonicalFinalLinks.some(link => link.sourceJobId === jobId)) fail('no_final_image_for_requested_job', jobId);
   }
-  return next;
+  report.collectionComplete = report.blockers.length === 0;
+  if (JSON.stringify(report).includes(options.token)) throw new Error('sensitive_output_refused');
+  return report;
 }
 
-function containsLikelySecret(raw) {
-  const patterns = [
-    /eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/,
-    /(^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}/,
-    /service_role[_-]?[A-Za-z0-9_-]{20,}/i,
-    /AIza[0-9A-Za-z_-]{20,}/,
-    /sb_secret_[A-Za-z0-9_-]{20,}/i,
-  ];
-  return patterns.some((pattern) => pattern.test(raw));
+export async function main(argv = process.argv.slice(2), env = process.env) {
+  const { values } = parseArgs({ args:argv, strict:true, options:{
+    apiBaseUrl:{type:'string'}, brandId:{type:'string'}, jobIds:{type:'string'}, since:{type:'string'},
+    out:{type:'string'}, help:{type:'boolean'},
+  } });
+  if (values.help) {
+    console.log('Read-only Cloudflare job/image/execution collector. Requires --apiBaseUrl HTTPS_ORIGIN --brandId ID --jobIds ID,ID --since ISO and HEAVY_CHAIN_MONITOR_TOKEN. Optional --out FILE. Source workspace metadata (' + DEFAULT_WORKSPACES.join(',') + ') is declared input, not execution proof. No login, replay, inference, repair or old DB access.');
+    return;
+  }
+  const report = await collectWorkspaceReadback({ ...values,
+    apiBaseUrl:values.apiBaseUrl ?? env.HEAVY_CHAIN_MONITOR_API_URL,
+    brandId:values.brandId ?? env.HEAVY_CHAIN_MONITOR_BRAND_ID,
+    jobIds:values.jobIds?.split(',').map(s => s.trim()), token:env.HEAVY_CHAIN_MONITOR_TOKEN });
+  const out = values.out ?? 'output/cloudflare-workspace-' + report.capturedAt.replace(/[:.]/g, '-') + '/workspace-readback.json';
+  await mkdir(path.dirname(out), { recursive:true });
+  await writeFile(out, JSON.stringify(report, null, 2) + '\n');
+  console.log(JSON.stringify({ collectionComplete:report.collectionComplete, out, blockers:report.blockers }));
+  process.exitCode = report.collectionComplete ? 0 : 1;
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await main().catch(() => { console.error('collector_failed: explicit API/brand/job IDs/since/live session required; credentials not printed'); process.exitCode = 1; });
 }

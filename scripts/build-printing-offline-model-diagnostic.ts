@@ -35,7 +35,7 @@ import {
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = path.join(repositoryRoot, 'benchmarks/printing-approval-v1/manifest.json');
-const modelPath = path.join(repositoryRoot, 'public/models/silueta.onnx');
+const modelPath = path.join(repositoryRoot, 'public/assets/silueta.onnx');
 const workerScriptPath = path.join(repositoryRoot, 'scripts/printing-offline-model-diagnostic-worker.ts');
 const SESSION_TIMEOUT_MS = 20 * 60 * 1_000;
 const CASE_TIMEOUT_MS = 60_000;

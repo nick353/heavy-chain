@@ -1,5 +1,44 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-20
+
+Version `bea34181-9d09-4876-9444-17358cacf0ba` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. This release aligns the current
+Light Chain video dashboard: `動画ワークステーション`, source snapshot
+assets, six recent cards, five reference cards, and visible `修正` labels. The
+clone remains free of rights-confirmation checkboxes, modals, and badges.
+Cloudflare web tests passed 8/8, build and dry-run passed, and the authenticated
+production readback after the preparation shell detached confirmed the source
+shape. The first Worker-only deploy left stale static assets; the final deploy
+used explicit `--assets cloudflare/heavy-web/.build/site --old-asset-ttl 0` and
+uploaded the changed bundle. Evidence:
+`../../work/heavy-chain-production-video-dashboard-readback-20260920-r8.md`.
+
+### Previous Web release
+
+Version `2718be53-bf12-41f7-857b-77cbd0c98fd5` was deployed at 100% with the
+current Light-aligned model customization surface at `/model-library` and
+`/model-library/model-custom-form`. The source-shaped model rail, condition
+panel, centered empty state, history link, and disabled `権限がありません`
+control are read back after a real 30-second authenticated wait. No rights
+checkbox/modal/badge was added. Local all-feature verification passed `31/31`
+desktop and mobile; focused parity tests passed `33/33`. No provider, upload,
+save, billing, publish, credential, or secret effect occurred. Evidence:
+`../../work/heavy-chain-production-model-library-readback-20260920.md`.
+
+### Previous video-detail release
+
+Version `58425e2a-b2d4-4446-9c6e-3a3cab0d66e1` is deployed at 100% from the
+current Heavy parity build. The release aligns the initial
+`/flow/GenerateShortVideo/detail` flow with Light: guide choices first, then the
+`動画ワークステーション` / `Untitled` image dropzone after local guide
+dismissal. It also retains the Light-compatible `権限がありません`
+fail-closed permission surface with no rights checkbox. Build, R2 asset upload,
+dry-run, and deployment completed. After a real 30-second authenticated Chrome
+readback, the Heavy video detail surface matched the source controls. No
+provider, upload, save, billing, publish, credential, or other external effect
+occurred. Evidence: `../../work/heavy-chain-production-video-detail-readback-20260920.md`.
+
 ## Web release 2026-09-08 — provider canonicalization
 
 Version `5f41051e-ac7a-477a-87b2-0eaf9dd7d691` is deployed at 100% with the

@@ -137,7 +137,7 @@ test('keeps the two explicit custom-model entries source-free without weakening 
   assert.match(workbench, /if \(effectiveProviderRoute === 'model-matrix'\)/);
 });
 
-test('exposes generation-time rights confirmation without a persistent Lightchain gate', () => {
+test('matches the Light Chain direct-generation path without a rights checkbox', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const branches = [
     ['AI fitting', 'if (isFeatureDetail && isFittingDetail)', 'if (isFeatureDetail && selectedTool.id !== \'custom-style\' && workspaceStyle)'],
@@ -157,21 +157,15 @@ test('exposes generation-time rights confirmation without a persistent Lightchai
     assert.match(branch, /renderLightchainProviderGate\(\)/, `${label} must expose the rights gate`);
   }
 
-  assert.match(
-    workbench,
-    /const specialProviderGenerationLocked = !lightchainProviderSupported[\s\S]*brandResolutionPending[\s\S]*lightchainGenerationRunning[\s\S]*workspaceStyle\?\.kind === 'agent' && !providerRightsConfirmed/,
-    'special provider generation must remain locked while the brand resolution state is pending',
-  );
+  assert.match(workbench, /const specialProviderGenerationLocked = !lightchainProviderSupported[\s\S]*brandResolutionPending[\s\S]*lightchainGenerationRunning/);
   assert.match(workbench, /data-testid="lightchain-special-provider-gate"/);
-  assert.match(workbench, /const lightchainRightsConfirmationModal =/);
-  assert.match(workbench, /isOpen=\{rightsConfirmationOpen\}/);
-  assert.match(workbench, /setRightsConfirmationOpen\(true\)/);
-  assert.match(workbench, /data-testid="lightchain-rights-confirmation"/);
+  assert.match(workbench, /const \[providerRightsConfirmed, setProviderRightsConfirmed\] = useState\(true\)/);
+  assert.doesNotMatch(workbench, /lightchainRightsConfirmationModal|rightsConfirmationOpen|rightsConfirmationDraft|data-testid="lightchain-rights-confirmation"/);
   assert.doesNotMatch(workbench, /data-testid="lightchain-provider-gate"/);
   assert.match(workbench, /data-testid="lightchain-generation-error"/);
 });
 
-test('keeps the marketing detail provider flow able to render its rights confirmation modal', () => {
+test('keeps the marketing detail provider flow on the direct Light Chain path', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const startIndex = workbench.indexOf("if (selectedTool.id === 'marketing-detail')");
   const endIndex = workbench.indexOf("if (selectedTool.id === 'print-design-project')", startIndex + 1);
@@ -179,19 +173,14 @@ test('keeps the marketing detail provider flow able to render its rights confirm
   const branch = workbench.slice(startIndex, endIndex);
   assert.match(branch, /renderLightchainProviderGate\(\)/);
   assert.match(branch, /\{lightchainResultModal\}/);
-  assert.match(branch, /\{lightchainRightsConfirmationModal\}/);
+  assert.doesNotMatch(branch, /rightsConfirmation|権利確認/);
 });
 
-test('continues the generation that opened rights confirmation after the user confirms', () => {
+test('uses the source-admitted route instead of a pending rights confirmation', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(workbench, /type PendingRightsGeneration =/);
-  assert.match(workbench, /const pendingRightsGenerationRef = useRef<PendingRightsGeneration \| null>\(null\)/);
-  assert.match(workbench, /pendingRightsGenerationRef\.current = \{ kind: 'printing' \}/);
-  assert.match(workbench, /pendingRightsGenerationRef\.current = \{ kind: 'generic', overrides \}/);
-  assert.match(workbench, /const pending = pendingRightsGenerationRef\.current/);
-  assert.match(workbench, /handlePrintingImageGenerate\(\{ rightsAlreadyConfirmed: true \}\)/);
-  assert.match(workbench, /handleLightchainPreviewGenerate\(pending\.overrides, \{ rightsAlreadyConfirmed: true \}\)/);
-  assert.match(workbench, /pendingRightsGenerationRef\.current = null;[\s\S]*setProviderRightsConfirmed\(true\)/);
+  assert.match(workbench, /authenticated Light Chain route is the source-admitted generation path/);
+  assert.doesNotMatch(workbench, /PendingRightsGeneration|pendingRightsGenerationRef|rightsConfirmationOpen|rightsConfirmationDraft/);
+  assert.match(workbench, /const rightsConfirmedForRequest = providerRightsConfirmed \|\| options\?\.rightsAlreadyConfirmed === true/);
 });
 
 test('passes the rights confirmation override into every provider route without stale React state', () => {
@@ -205,19 +194,17 @@ test('passes the rights confirmation override into every provider route without 
   assert.doesNotMatch(workbench, /rightsConfirmed: providerRightsConfirmed/);
 });
 
-test('continues the dedicated material generation after rights confirmation', () => {
+test('keeps dedicated material generation direct like Light Chain', () => {
   const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(material, /const pendingRightsGenerationRef = useRef\(false\)/);
-  assert.match(material, /pendingRightsGenerationRef\.current = true/);
-  assert.match(material, /const pending = pendingRightsGenerationRef\.current/);
-  assert.match(material, /handleGenerate\(\{ rightsAlreadyConfirmed: true \}\)/);
+  assert.match(material, /const \[providerRightsConfirmed, setProviderRightsConfirmed\] = useState\(true\)/);
+  assert.doesNotMatch(material, /pendingRightsGenerationRef|rightsConfirmationOpen|rightsConfirmationDraft|PermissionLockedButton|権利を確認してAI生成/);
   assert.match(material, /const rightsConfirmedForRequest = providerRightsConfirmed \|\| options\?\.rightsAlreadyConfirmed === true/);
   assert.equal(
     (material.match(/rightsConfirmed: rightsConfirmedForRequest/g) ?? []).length,
     2,
     'printing and fabric provider routes must use the request-local confirmation value',
   );
-  assert.match(material, /pendingRightsGenerationRef\.current = false;[\s\S]*setProviderRightsConfirmed\(true\)/);
+  assert.match(material, /setProviderRightsConfirmed\(true\)/);
 });
 
 test('keeps non-model catalog prompts feature-specific instead of using the generic fallback', () => {
