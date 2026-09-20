@@ -24,6 +24,14 @@ local build exactly. Provider generation/save/reuse, billing, credential/token,
 and strict release-gate evidence remain separate lanes; no auth token or
 secret was extracted or added.
 
+The post-deployment strict release-gate recheck at commit `31bd428` remains
+fail-closed with the same ten blockers: production monitor/UI pair, launch
+operations, current mass-market QA, production Lightchain all-feature order
+previews, G608 security audit, G618 scale baseline, G633 scale/alerting plan,
+production H602 billing completion readback, generation scorecard, and the
+dependent G633 command. These require fresh operator/provider/billing evidence
+and were not replaced with local or UI-only proof.
+
 # Light source readback corrected fitting-tab verifier and full 31-feature gate — 2026-09-21 r89
 
 Fresh authenticated AOS Chrome Companion readback of deployed Heavy `/model`
