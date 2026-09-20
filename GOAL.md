@@ -6725,3 +6725,32 @@ the fresh evidence with `authSecretExported=false`, no retained/unknown-effect
 tabs, and terminal cleanup complete. A bounded network-observer sample on
 `/designProduction` saw 72 responses with zero non-2xx responses; this is
 explicitly marked as a sample and does not prove provider/business completion.
+
+# Goal progress — 2026-09-21 r99
+
+After commit `fae9c5c` was pushed to `origin/main`, the clean full release
+gate was rerun. The current Companion mass-market readback passed, as did
+the contract tests (13/13), typecheck, build, lint, security audit, G610,
+G603, G605, G606, G620, G632, G633, and H601. The dirty-tree blocker is
+closed.
+
+The remaining release-gate failures are exactly:
+
+- production monitor and UI pair: the required same-run Cloudflare API
+  monitor plus authenticated UI v2 artifacts are absent;
+- launch operations: the current required launch-ops artifact is absent;
+- production Lightchain all-feature order previews: the current production
+  order-preview artifact is absent;
+- G608 security audit: the static Cloudflare audit is present, but the
+  required approved live-generation evidence IDs are not present;
+- G618 scale ops baseline: the existing baseline is older than 48 hours and
+  refreshing it requires the explicit live monitor session;
+- production H602 billing completion: transaction/entitlement and verified
+  no-real-charge proof, plus the operator release decision, remain absent;
+- generation scorecard: the real-generation visual scorecard artifact is
+  absent.
+
+No token export, generation submit, payment/checkout, purchase, publish,
+deployment, or destructive cleanup was performed. The release gate therefore
+remains correctly fail-closed; these are external/provider/operator evidence
+blockers, not unresolved current-Lightchain route QA failures.
