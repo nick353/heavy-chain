@@ -113,6 +113,8 @@ type MaskCandidate = 'トップス' | '無地部分' | '柄' | '手動範囲';
 type WorkbenchStep = 'asset' | 'mask' | 'extracted' | 'next';
 type MaterialTab = 'upload-history' | 'generation-history' | 'my-library' | 'team-library' | 'platform-assets';
 type MaterialSlotKey = 'primary' | 'secondary';
+type FittingReferenceSlotKey = 'model' | 'pose' | 'background';
+type FittingModelCategory = 'all' | 'men' | 'women' | 'children';
 type MaterialSlotFile = {
   name: string;
   kind: string;
@@ -167,6 +169,76 @@ const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
 const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspace-tutorial-dismissed-v1';
 const LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL = 'https://static-jp.linkaigc.com/saas/2026-08/7c9021b93516cd2edfe4e2f7059bf20f.jpeg';
 const LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL = 'https://jp.linkaigc.com/static/default.png';
+const FITTING_REFERENCE_SLOT_CONFIG: Array<{
+  key: FittingReferenceSlotKey;
+  label: string;
+  required: boolean;
+  demoImageUrl: string;
+  trackTarget: string;
+}> = [
+  {
+    key: 'model',
+    label: 'モデル画像',
+    required: true,
+    demoImageUrl: 'https://jp.linkaigc.com/static/upload-example-model-new.png',
+    trackTarget: 'ModelVirtualFittingModel',
+  },
+  {
+    key: 'pose',
+    label: 'ポーズ',
+    required: false,
+    demoImageUrl: 'https://jp.linkaigc.com/static/upload-example-pose-new.png',
+    trackTarget: 'ModelVirtualFittingPosture',
+  },
+  {
+    key: 'background',
+    label: '背景',
+    required: false,
+    demoImageUrl: 'https://jp.linkaigc.com/static/model-new-bg.png',
+    trackTarget: 'ModelVirtualFittingBackground',
+  },
+];
+const FITTING_MODEL_SETS: Array<{
+  id: string;
+  category: Exclude<FittingModelCategory, 'all'>;
+  images: string[];
+}> = [
+  {
+    id: 'group-26',
+    category: 'men',
+    images: [1, 1.1, 1.2, 1.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Male/${suffix}.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
+  },
+  {
+    id: 'group-27',
+    category: 'men',
+    images: [2, 2.1, 2.2, 2.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Male/${suffix}.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
+  },
+  {
+    id: 'group-28',
+    category: 'men',
+    images: [3, 3.1, 3.2, 3.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Male/${suffix}.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
+  },
+  {
+    id: 'group-1',
+    category: 'women',
+    images: [1, 1.1, 1.2, 1.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Missy/${suffix}.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
+  },
+  {
+    id: 'group-2',
+    category: 'women',
+    images: [2, 2.1, 2.2, 2.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Missy/${suffix}.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
+  },
+  {
+    id: 'group-44',
+    category: 'children',
+    images: ['Child_1', 'Child_1.1', 'Child_1.2', 'Child_1.3'].map((name) => `https://static-cn.linkaigc.com/saas/4_8_reference/Child/${name}.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
+  },
+  {
+    id: 'group-45',
+    category: 'children',
+    images: ['Child_2', 'Child_2.1', 'Child_2.2', 'Child_2.3'].map((name) => `https://static-cn.linkaigc.com/saas/4_8_reference/Child/${name}.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
+  },
+];
 const FITTING_PROMPT_TEMPLATES = [
   {
     title: 'EC商品写真',
@@ -1376,6 +1448,15 @@ export function LightchainWorkbenchPage() {
   const [fittingReferenceImageModalOpen, setFittingReferenceImageModalOpen] = useState(false);
   const [fittingReferenceImageUrl, setFittingReferenceImageUrl] = useState<string | null>(null);
   const [fittingReferenceImageName, setFittingReferenceImageName] = useState('');
+  const [fittingReferenceSlots, setFittingReferenceSlots] = useState<Record<FittingReferenceSlotKey, MaterialSlotFile | null>>({
+    model: null,
+    pose: null,
+    background: null,
+  });
+  const [fittingReferenceLibrarySlot, setFittingReferenceLibrarySlot] = useState<FittingReferenceSlotKey | null>(null);
+  const [fittingModelCategory, setFittingModelCategory] = useState<FittingModelCategory>('all');
+  const [selectedFittingModelSetId, setSelectedFittingModelSetId] = useState<string | null>(null);
+  const [fittingModelHintDismissed, setFittingModelHintDismissed] = useState(false);
   const [fittingPromptTemplateModalOpen, setFittingPromptTemplateModalOpen] = useState(false);
   // Match Light's bare fitting entry: automatic flat-lay conversion starts
   // disabled and can be enabled explicitly by the user.
@@ -1692,6 +1773,36 @@ export function LightchainWorkbenchPage() {
             </button>
           ))}
         </div>
+      </div>
+    </Modal>
+  );
+
+  const fittingReferenceLibraryModal = (
+    <Modal
+      isOpen={fittingReferenceLibrarySlot !== null}
+      onClose={() => setFittingReferenceLibrarySlot(null)}
+      title="参考画像ライブラリ"
+      size="xl"
+    >
+      <div className="grid max-h-[68vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-4" data-testid="lightchain-fitting-reference-library-modal">
+        {FITTING_MODEL_SETS.flatMap((modelSet) => modelSet.images.map((imageUrl, imageIndex) => ({
+          imageUrl,
+          name: `${modelSet.id}-${imageIndex + 1}`,
+        }))).map((item) => (
+          <button
+            key={item.name}
+            type="button"
+            data-track-id="library-use"
+            data-track-url={item.imageUrl}
+            onClick={() => {
+              if (fittingReferenceLibrarySlot) handleSelectFittingReferenceLibraryImage(fittingReferenceLibrarySlot, item.imageUrl, item.name);
+            }}
+            className="group relative flex min-h-48 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-[#181d1f] p-2 transition hover:border-cyan-300/70"
+          >
+            <img src={item.imageUrl} alt={item.name} loading="lazy" className="h-48 w-full object-contain" />
+            <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-lg bg-cyan-300 px-4 py-2 text-xs font-semibold text-neutral-950 opacity-0 transition group-hover:opacity-100">使用</span>
+          </button>
+        ))}
       </div>
     </Modal>
   );
@@ -2212,6 +2323,56 @@ export function LightchainWorkbenchPage() {
     setFittingReferenceImageName(file.name);
   }
 
+  function handleFittingReferenceSlotUpload(slot: FittingReferenceSlotKey, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('jpg/png/webp画像を選択してください');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('画像は20MB以下で選択してください');
+      return;
+    }
+    const imageUrl = URL.createObjectURL(file);
+    setFittingReferenceSlots((current) => {
+      const previous = current[slot]?.imageUrl;
+      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
+      return {
+        ...current,
+        [slot]: {
+          name: file.name,
+          kind: slot,
+          imageUrl,
+          persistenceStatus: 'session-only',
+        },
+      };
+    });
+  }
+
+  function handleSelectFittingReferenceLibraryImage(slot: FittingReferenceSlotKey, imageUrl: string, name: string) {
+    setFittingReferenceSlots((current) => {
+      const previous = current[slot]?.imageUrl;
+      if (previous?.startsWith('blob:')) URL.revokeObjectURL(previous);
+      return {
+        ...current,
+        [slot]: {
+          name,
+          kind: slot,
+          imageUrl,
+          persistenceStatus: 'unknown',
+        },
+      };
+    });
+    setFittingReferenceLibrarySlot(null);
+  }
+
+  const fittingModelSets = useMemo(
+    () => FITTING_MODEL_SETS.filter((modelSet) => fittingModelCategory === 'all' || modelSet.category === fittingModelCategory),
+    [fittingModelCategory],
+  );
+
   function handleSelectFittingPromptTemplate(prompt: string) {
     setReferenceNote(prompt);
     setFittingPromptTemplateModalOpen(false);
@@ -2232,6 +2393,11 @@ export function LightchainWorkbenchPage() {
     setActiveCategory(selectedTool.category);
     setActiveMaterialSlot('primary');
     setMaterialSlotFiles({ primary: null, secondary: null });
+    setFittingReferenceSlots({ model: null, pose: null, background: null });
+    setFittingReferenceLibrarySlot(null);
+    setFittingModelCategory('all');
+    setSelectedFittingModelSetId(null);
+    setFittingModelHintDismissed(false);
     printingCutoutRequestRef.current.primary += 1;
     printingCutoutRequestRef.current.secondary += 1;
     setPrintingCutoutStatus({ primary: 'idle', secondary: 'idle' });
@@ -4498,57 +4664,168 @@ export function LightchainWorkbenchPage() {
                   </button>
                 ))}
               </div>
-              <div className="mx-[17px] !mt-[28px] flex min-h-[220px] w-[calc(100%-34px)] flex-col rounded-2xl border border-white/5 bg-[#181d1f] px-4 pt-4 pb-2 focus-within:border-cyan-300/60">
-                <textarea
-                  value={referenceNote}
-                  onChange={(event) => setReferenceNote(event.target.value)}
-                  className="min-h-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm text-white outline-none placeholder:text-neutral-500"
-                  placeholder={activeFittingInputTab === '説明生成' ? '背景の説明をここに記入してください' : activeFittingInputTab === '参考画像' ? '参考画像で残したい雰囲気や衣服の条件を記入してください' : 'モデルセット写真で合わせたいポーズ、背景、小物を記入してください'}
-                />
-                <div className="mt-2 flex items-center justify-end gap-1 text-xs text-neutral-500" aria-live="polite" data-testid="lightchain-fitting-prompt-actions">
-                  <button
-                    type="button"
-                    disabled
-                    title="説明を拡大"
-                    aria-label="説明を拡大"
-                    className="flex size-8 items-center justify-center rounded-lg text-neutral-500 opacity-50"
-                  >
-                    <Pencil className="size-5" />
-                  </button>
-                  <button
-                    type="button"
-                    data-track-id="desc:reference-image"
-                    title="参照画像から逆算"
-                    aria-label="参照画像から逆算"
-                    onClick={() => setFittingReferenceImageModalOpen(true)}
-                    className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <ImagePlus className="size-5" />
-                  </button>
-                  <button
-                    type="button"
-                    data-track-id="desc:open_templates"
-                    title="プロンプトテンプレート"
-                    aria-label="プロンプトテンプレート"
-                    onClick={() => setFittingPromptTemplateModalOpen(true)}
-                    className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <Type className="size-5" />
-                  </button>
-                  <button
-                    type="button"
-                    data-track-id="desc:clear"
-                    title="説明をクリア"
-                    aria-label="説明をクリア"
-                    disabled={!referenceNote}
-                    onClick={() => setReferenceNote('')}
-                    className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
-                  >
-                    <Trash2 className="size-5" />
-                  </button>
-                  <span className="ml-1">{referenceNote.length}/2000</span>
+              {activeFittingInputTab === '説明生成' && (
+                <div className="mx-[17px] !mt-[28px] flex min-h-[220px] w-[calc(100%-34px)] flex-col rounded-2xl border border-white/5 bg-[#181d1f] px-4 pt-4 pb-2 focus-within:border-cyan-300/60">
+                  <textarea
+                    value={referenceNote}
+                    onChange={(event) => setReferenceNote(event.target.value)}
+                    className="min-h-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm text-white outline-none placeholder:text-neutral-500"
+                    placeholder="背景の説明をここに記入してください"
+                  />
+                  <div className="mt-2 flex items-center justify-end gap-1 text-xs text-neutral-500" aria-live="polite" data-testid="lightchain-fitting-prompt-actions">
+                    <button
+                      type="button"
+                      disabled
+                      title="説明を拡大"
+                      aria-label="説明を拡大"
+                      className="flex size-8 items-center justify-center rounded-lg text-neutral-500 opacity-50"
+                    >
+                      <Pencil className="size-5" />
+                    </button>
+                    <button
+                      type="button"
+                      data-track-id="desc:reference-image"
+                      title="参照画像から逆算"
+                      aria-label="参照画像から逆算"
+                      onClick={() => setFittingReferenceImageModalOpen(true)}
+                      className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <ImagePlus className="size-5" />
+                    </button>
+                    <button
+                      type="button"
+                      data-track-id="desc:open_templates"
+                      title="プロンプトテンプレート"
+                      aria-label="プロンプトテンプレート"
+                      onClick={() => setFittingPromptTemplateModalOpen(true)}
+                      className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <Type className="size-5" />
+                    </button>
+                    <button
+                      type="button"
+                      data-track-id="desc:clear"
+                      title="説明をクリア"
+                      aria-label="説明をクリア"
+                      disabled={!referenceNote}
+                      onClick={() => setReferenceNote('')}
+                      className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                    >
+                      <Trash2 className="size-5" />
+                    </button>
+                    <span className="ml-1">{referenceNote.length}/2000</span>
+                  </div>
                 </div>
-              </div>
+              )}
+              {activeFittingInputTab === '参考画像' && (
+                <div className="mx-[17px] !mt-[28px] grid gap-5" data-testid="lightchain-fitting-reference-input">
+                  {FITTING_REFERENCE_SLOT_CONFIG.map((slot) => {
+                    const selectedFile = fittingReferenceSlots[slot.key];
+                    return (
+                      <section key={slot.key} className="grid gap-2" data-testid={`lightchain-fitting-reference-slot-${slot.key}`}>
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-100">
+                          <span>{slot.label}</span>
+                          {slot.required && <span className="rounded border border-white/10 bg-cyan-500 px-2 py-0.5 text-[11px] font-semibold text-neutral-950">必須項目</span>}
+                        </div>
+                        <div className="flex min-h-[150px] gap-2 rounded-2xl border border-white/5 bg-[#181d1f] p-3">
+                          <label className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-[#20272a] px-3 text-center transition hover:border-cyan-300/70">
+                            <input
+                              type="file"
+                              accept=".png,.jpg,.jpeg,.avif,.webp"
+                              className="hidden"
+                              onChange={(event) => handleFittingReferenceSlotUpload(slot.key, event)}
+                            />
+                            {selectedFile ? (
+                              <img src={selectedFile.imageUrl} alt={`${slot.label}選択済み`} className="max-h-28 rounded-lg object-contain" />
+                            ) : (
+                              <>
+                                <Upload className="size-5 text-neutral-300" />
+                                <span className="mt-2 text-sm font-semibold text-neutral-100">アップロード</span>
+                              </>
+                            )}
+                          </label>
+                          <div className="flex w-[112px] shrink-0 flex-col items-center justify-center gap-2 text-center text-xs text-neutral-500">
+                            <span>または</span>
+                            <button
+                              type="button"
+                              data-track-id="open-reference-library"
+                              data-track-target={slot.trackTarget}
+                              onClick={() => setFittingReferenceLibrarySlot(slot.key)}
+                              className="text-sm font-semibold text-cyan-200 underline underline-offset-2 transition hover:text-cyan-100"
+                            >
+                              参考画像ライブラリ
+                            </button>
+                            <span className="text-[11px] text-neutral-500">選択</span>
+                          </div>
+                          <div className="flex w-[96px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#20272a]">
+                            <img src={selectedFile?.imageUrl ?? slot.demoImageUrl} alt="demo" className="size-full max-h-[128px] object-cover" />
+                          </div>
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              )}
+              {activeFittingInputTab === 'モデルのセット写真' && (
+                <div className="mx-[17px] !mt-[28px] grid gap-4" data-testid="lightchain-fitting-model-set-input">
+                  <div className="flex items-center gap-2 overflow-x-auto border-b border-white/10 pb-2">
+                    {([
+                      ['all', 'すべて表示'],
+                      ['men', 'メンズ'],
+                      ['women', 'レディース'],
+                      ['children', 'キッズ'],
+                    ] as const).map(([category, label]) => (
+                      <button
+                        key={category}
+                        type="button"
+                        data-track-id="category"
+                        data-track-category-value={category}
+                        onClick={() => setFittingModelCategory(category)}
+                        className={`flex h-7 shrink-0 flex-col items-center justify-between px-2 text-sm transition ${fittingModelCategory === category ? 'text-white' : 'text-neutral-400 hover:text-white'}`}
+                      >
+                        <span>{label}</span>
+                        <span className={`h-1 w-4 rounded-sm ${fittingModelCategory === category ? 'bg-cyan-300' : 'bg-transparent'}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid gap-2" data-testid="lightchain-fitting-model-set-grid">
+                    {fittingModelSets.map((modelSet) => {
+                      const selected = selectedFittingModelSetId === modelSet.id;
+                      return (
+                        <button
+                          key={modelSet.id}
+                          type="button"
+                          data-track-id="model-set"
+                          data-track-model-set-id={modelSet.id}
+                          aria-pressed={selected}
+                          onClick={() => setSelectedFittingModelSetId(modelSet.id)}
+                          className={`grid grid-cols-4 gap-0.5 rounded-lg border-2 p-2 text-left transition hover:opacity-90 ${selected ? 'border-cyan-300' : 'border-transparent'}`}
+                        >
+                          {modelSet.images.map((imageUrl, imageIndex) => (
+                            <span key={imageUrl} className="min-w-0 overflow-hidden rounded bg-[#20272a]">
+                              <img src={imageUrl} alt={`Model group-${modelSet.id.replace('group-', '')}-${imageIndex + 1}`} loading="lazy" className="h-40 w-full object-contain" />
+                            </span>
+                          ))}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-[#181d1f] p-4 text-center">
+                    <p className="text-sm leading-6 text-neutral-300">お気に入りのモデルが見つかりませんか？モデル企画ライブラリを使って、あなた専用のモデルをカスタマイズできます！</p>
+                    <Link to="/model-library/model-custom-form" className="mt-3 inline-flex text-sm font-semibold text-cyan-200 underline underline-offset-2 hover:text-cyan-100">今すぐカスタマイズ</Link>
+                  </div>
+                  {!fittingModelHintDismissed && (
+                    <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-4" data-testid="lightchain-fitting-model-hint">
+                      <p className="text-xs font-semibold text-cyan-200">ヒント</p>
+                      <p className="mt-2 text-sm leading-6 text-neutral-200">お好みのモデルが見つかりませんでしたか？今すぐあなただけのモデルをカスタマイズしましょう！</p>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <button type="button" onClick={() => setFittingModelHintDismissed(true)} className="text-xs text-neutral-400 underline underline-offset-2 hover:text-white">今後表示しない</button>
+                        <Link to="/model-library/model-custom-form" className="text-xs font-semibold text-cyan-200 underline underline-offset-2 hover:text-cyan-100">カスタマイズを選ぶ</Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {garmentImageUrl && (
                 <details
                   className="rounded-xl border border-white/10 bg-[#181d1f] p-3"
@@ -4837,6 +5114,7 @@ export function LightchainWorkbenchPage() {
 	                      )}
         {fittingReferenceImageModal}
         {fittingPromptTemplateModal}
+        {fittingReferenceLibraryModal}
       </main>
     );
   }

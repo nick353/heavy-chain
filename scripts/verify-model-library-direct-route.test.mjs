@@ -50,6 +50,14 @@ test('new fitting entrypoints use canonical /model while retaining the legacy re
   assert.match(workbench, /title="プロンプトテンプレート"/);
   assert.match(workbench, /data-testid="lightchain-fitting-reference-image-modal"/);
   assert.match(workbench, /data-testid="lightchain-fitting-prompt-template-modal"/);
+  assert.match(workbench, /data-testid="lightchain-fitting-reference-input"/);
+  assert.match(workbench, /data-testid={`lightchain-fitting-reference-slot-\$\{slot\.key\}`}/);
+  assert.match(workbench, /data-testid="lightchain-fitting-model-set-input"/);
+  assert.match(workbench, /data-testid="lightchain-fitting-model-set-grid"/);
+  assert.match(workbench, /data-track-category-value={category}/);
+  assert.match(workbench, /data-track-id="model-set"/);
+  assert.match(workbench, /今すぐカスタマイズ/);
+  assert.match(workbench, /data-testid="lightchain-fitting-reference-library-modal"/);
   assert.match(workbench, /data-testid="lightchain-fitting-batch-permission"/);
   assert.match(workbench, /alt="タスクなし"/);
   assert.match(workbench, /LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL/);
