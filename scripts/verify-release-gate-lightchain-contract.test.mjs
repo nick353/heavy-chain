@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validateCompanionAuthenticatedEvidence,
+  validateCompanionProductionRouteMatrix,
   validateLightchainProductionReadback,
+  readCurrentLightchainManifest,
 } from './verify-release-gate-unified.mjs';
 
 const productionOrigin = 'https://heavy-chain-web.nichika2000823.workers.dev';
@@ -171,4 +173,60 @@ test('does not promote Companion UI evidence to provider completion', () => {
     },
   });
   assert.equal(validateCompanionAuthenticatedEvidence(promoted), false);
+});
+
+function companionRouteMatrixFixture(overrides = {}) {
+  const ids = [...readCurrentLightchainManifest(), 'launcher'];
+  const routes = ids.map((id) => ({
+    id,
+    title: id,
+    path: `/${id}`,
+    url: `${productionOrigin}/${id}`,
+    titleReadback: 'Lightchain AI',
+    readyState: 'complete',
+    loaded: true,
+    semanticReadback: 'verified',
+    visualReadback: 'verified',
+    textSha256: 'a'.repeat(64),
+    markers: 'Lightchain route',
+    capturedAt: new Date().toISOString(),
+  }));
+  return {
+    schema: 'heavy-chain.companion-production-route-matrix.v1',
+    source: 'aos_chrome_companion_profile_instance',
+    taskId: 'task_123',
+    sessionId: 'session_123',
+    generation: 'generation_123',
+    origin: productionOrigin,
+    authSecretExported: false,
+    routeCount: ids.length,
+    loadedCount: ids.length,
+    failed: [],
+    routes,
+    businessCompletion: {
+      providerReceipt: 'unverified',
+      sourceSync: 'unverified',
+      reconciliation: 'unverified',
+    },
+    cleanup: { sessionClosed: true, leasesReleased: 'per-route' },
+    ...overrides,
+  };
+}
+
+test('accepts the complete Companion production route matrix', () => {
+  assert.equal(validateCompanionProductionRouteMatrix(companionRouteMatrixFixture()), true);
+});
+
+test('rejects incomplete or promoted Companion route matrices', () => {
+  const incomplete = companionRouteMatrixFixture({ loadedCount: 32 });
+  assert.equal(validateCompanionProductionRouteMatrix(incomplete), false);
+
+  const promoted = companionRouteMatrixFixture({
+    businessCompletion: {
+      providerReceipt: 'verified',
+      sourceSync: 'verified',
+      reconciliation: 'verified',
+    },
+  });
+  assert.equal(validateCompanionProductionRouteMatrix(promoted), false);
 });

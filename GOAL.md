@@ -6677,3 +6677,19 @@ receipt, generation/save/reuse source sync, reconciliation, billing, and
 production monitor completion remain unverified. Companion cleanup completed:
 the task session closed, the task tab closed, leases were released, foreign
 tabs were untouched, and external_action_executed=false.
+
+# Goal progress — 2026-09-21 r96
+
+The fresh 34-route Companion matrix is now consumed by the strict release-gate
+code as `Companion production route matrix`. Its validator requires the
+current 33-item Lightchain manifest plus the launcher, exact production origin
+binding, complete semantic and visual readback, stabilized routes, no visible
+Light-missing rights-confirmation UI, closed Companion cleanup, and explicitly
+unverified provider/source/reconciliation completion. It cannot be promoted to
+provider completion. The release-gate contract suite passes 11/11.
+
+The gate still fails closed on the independent production monitor/UI,
+launch-operations, mass-market, production feature-workflow, G608, G618,
+G633, and H602 readbacks; the command-skipped run also correctly remains
+non-release-accepting. No auth token or provider receipt was created or
+substituted.

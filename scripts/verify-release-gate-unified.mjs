@@ -44,6 +44,12 @@ const requiredReadbacks = [
     expect: 'fresh Companion same-session production evidence for /model, /gallery, /history, /jobs, and /canvas/new with semantic+visual readback and no exported auth secret',
   },
   {
+    name: 'Companion production route matrix',
+    path: 'work/heavy-chain-companion-production-route-matrix-20260921.json',
+    validate: validateCompanionProductionRouteMatrix,
+    expect: 'fresh Companion semantic+visual readback for every current Lightchain feature route, both video routes, and the launcher, with no exported auth secret and business completion left unverified',
+  },
+  {
     name: 'production monitor and UI pair',
     pair: {
       monitor: 'output/playwright/g835-production-monitor-current-r1/summary.json',
@@ -670,6 +676,38 @@ export function validateCompanionAuthenticatedEvidence(evidence) {
     evidence?.businessCompletion?.providerReceipt === 'unverified' &&
     evidence?.businessCompletion?.sourceSync === 'unverified' &&
     evidence?.businessCompletion?.reconciliation === 'unverified';
+}
+
+export function validateCompanionProductionRouteMatrix(evidence) {
+  const expectedIds = new Set([...currentLightchainManifest, 'launcher']);
+  const routes = arrayFrom(evidence?.routes);
+  const routeIds = routes.map((route) => route?.id);
+  const routeIdentityValid = routes.every((route) => {
+    if (typeof route?.path !== 'string' || !route.path.startsWith('/')) return false;
+    let parsed;
+    try { parsed = new URL(route.url); } catch { return false; }
+    return parsed.origin === PRODUCTION_ORIGIN && `${parsed.pathname}${parsed.search}` === route.path;
+  });
+  return evidence?.schema === 'heavy-chain.companion-production-route-matrix.v1' &&
+    evidence?.source === 'aos_chrome_companion_profile_instance' &&
+    typeof evidence?.taskId === 'string' && evidence.taskId.length > 0 &&
+    typeof evidence?.sessionId === 'string' && evidence.sessionId.length > 0 &&
+    typeof evidence?.generation === 'string' && evidence.generation.length > 0 &&
+    evidence?.origin === PRODUCTION_ORIGIN && evidence?.authSecretExported === false &&
+    evidence?.routeCount === expectedIds.size && evidence?.loadedCount === expectedIds.size &&
+    routes.length === expectedIds.size && arrayFrom(evidence?.failed).length === 0 &&
+    new Set(routeIds).size === routeIds.length && routeIds.every((id) => expectedIds.has(id)) && routeIdentityValid &&
+    routes.every((route) =>
+      route?.loaded === true && route?.readyState === 'complete' &&
+      route?.semanticReadback === 'verified' && route?.visualReadback === 'verified' &&
+      route?.titleReadback === 'Lightchain AI' && typeof route?.markers === 'string' && route.markers.length > 0 &&
+      freshTimestamp(route?.capturedAt) &&
+      !/権利確認|権利を確認しました|rights.?confirmation|rights.?checkbox/i.test(route?.markers || ''),
+    ) &&
+    evidence?.businessCompletion?.providerReceipt === 'unverified' &&
+    evidence?.businessCompletion?.sourceSync === 'unverified' &&
+    evidence?.businessCompletion?.reconciliation === 'unverified' &&
+    evidence?.cleanup?.sessionClosed === true && evidence?.cleanup?.leasesReleased === 'per-route';
 }
 
 function resolveReadbackPath(item) {
