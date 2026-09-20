@@ -1,3 +1,13 @@
+# Release-gate recheck after fitting parity deployment — 2026-09-21 r87
+
+Fresh `npm run verify:release-gate --silent` remains fail-closed with the same
+ten explicit failures: production monitor/UI pair, launch operations, current
+mass-market QA, production Lightchain all-feature order previews, G608, G618,
+G633, production H602 billing completion, generation scorecard, and the
+dependent G633 command. No failure was hidden, downgraded, or replaced with
+local/UI evidence. Worktree and `origin/main` are clean and equal at
+`e85078c`.
+
 # Light reference/model-set input parity and final Companion production readback — 2026-09-21 r86
 
 Fresh authenticated Companion readback compared Light `/model` and the
