@@ -7108,3 +7108,17 @@ all-feature order previews, G618 scale baseline, production H602 completion,
 and the generation scorecard. No new code-side failure appeared after the
 web release; these remain missing external/operator evidence rather than a
 route or build regression.
+
+# Goal progress — 2026-09-21 r108
+
+The official source bundle also exposes `/editor/changeColor/detail`, while
+Heavy previously had only `/editor/changeColor`. Heavy now routes both the
+source and detail paths through the color-change surface, and the GeneratePage
+route feature remains `colorize` for either path. The focused route suites
+passed 26/26 and 24/24, with typecheck and lint passing.
+
+The change was deployed as web version
+`817850ef-8b37-482b-9e59-0a1b4466f17d`. Fresh public readback returned Web
+`/_health` HTTP 200 and `/lightchain` HTTP 200; the served main and feature
+bundles contain the new detail route and colorize feature. The same six
+external release-gate blockers remain and are unchanged.

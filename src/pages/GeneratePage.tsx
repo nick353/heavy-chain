@@ -672,7 +672,7 @@ const getInitialFeatureFromLocation = () => {
   // Lightchain's direct color-change route is an actual feature entry point,
   // not a launcher. Keep the route stable while hydrating the same colorize
   // workflow that is used by the shared generation surface.
-  const routeFeature = window.location.pathname === '/editor/changeColor' ? 'colorize' : null;
+  const routeFeature = window.location.pathname.startsWith('/editor/changeColor') ? 'colorize' : null;
   const featureParam = workflow?.primaryFeature ?? params.get('feature') ?? routeFeature;
   return featureParam ? findFeatureFromQuery(featureParam) ?? null : null;
 };
@@ -1334,7 +1334,7 @@ export function GeneratePage() {
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
     setShowSuccessCard(false);
-    navigate(window.location.pathname === '/editor/changeColor' ? '/editor/changeColor' : '/designProduction', { replace: true });
+    navigate(window.location.pathname.startsWith('/editor/changeColor') ? '/editor/changeColor' : '/designProduction', { replace: true });
   };
 
   // 画像を圧縮する関数

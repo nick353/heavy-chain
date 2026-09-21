@@ -1107,6 +1107,20 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/editor/changeColor/detail"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <GeneratePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/model-library/model-custom-form"
           element={
             <ProtectedRoute>

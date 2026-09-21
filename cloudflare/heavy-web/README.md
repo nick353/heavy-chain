@@ -1,5 +1,17 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r53
+
+Version `817850ef-8b37-482b-9e59-0a1b4466f17d` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. This release adds the official
+Lightchain `/editor/changeColor/detail` route and keeps it on the existing
+color-change surface. Route parity tests passed 26/26 and entry-routing tests
+passed 24/24; typecheck, lint, Cloudflare build, R2 asset preparation, and
+Wrangler dry-run also passed. Fresh public readback returned Web `/_health`
+HTTP 200 and `/lightchain` HTTP 200, and the served main/feature bundles
+contained `editor/changeColor/detail` and the `colorize` route feature. No
+provider, payment, publish, or private-media completion is claimed.
+
 ## Latest Web release — 2026-09-21 r52
 
 Version `77edd2cb-8464-4127-83af-dcf8008f0b20` is deployed at 100% to
