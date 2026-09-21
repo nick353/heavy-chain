@@ -129,8 +129,15 @@ export function verifyH602CloudflareBillingReadiness(options = {}) {
     ['image_ai:no_account_wide_budget_claim', 'accountWideBudgetGuaranteed: false'],
     ['image_ai:request_receipt_route', 'url.pathname.match'],
     ['image_ai:usage_readback_route', "'/v1/image-ai/usage'"],
-    ['image_ai:workers_ai_provider_identity', "provider: 'workers_ai'"],
+    ['image_ai:provider_identity', "type ProviderKind = 'workers_ai' | 'openai'"],
   ]) check(label, hasText(imageAI, needle));
+  check(
+    'image_ai:configured_provider_is_allowlisted',
+    ['workers_ai', 'openai'].includes(vars.AI_IMAGE_PROVIDER) &&
+      hasText(imageAI, 'const configuredProvider') &&
+      hasText(imageAI, 'provider === OPENAI_IMAGE_PROVIDER'),
+    { configuredProvider: vars.AI_IMAGE_PROVIDER ?? null },
+  );
 
   const imageContracts = sources.get('cloudflare/heavy-api/src/image-ai-contracts.ts') ?? '';
   for (const [label, needle] of [
@@ -201,7 +208,7 @@ export function verifyH602CloudflareBillingReadiness(options = {}) {
     failures,
     scope: {
       reads: H602_CLOUDFLARE_CONTRACT_PATHS,
-      provider: 'cloudflare_workers_ai',
+      provider: vars.AI_IMAGE_PROVIDER === 'openai' ? 'cloudflare_openai_images_api' : 'cloudflare_workers_ai',
       quota: 'bounded_worker_and_brand_admission',
       receipts: 'd1_request_and_candidate_readback',
       notPerformed: ['provider call', 'billing or checkout operation', 'deployment', 'external write'],

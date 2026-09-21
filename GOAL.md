@@ -12,6 +12,11 @@ must pass with zero blockers, while the older six-requirement artifact remains
 accepted for backward compatibility. This does not promote static checks to
 production generation, billing, or provider completion.
 
+The H602 local Cloudflare contract now validates the configured provider as an
+allowlisted `openai` or `workers_ai` path and reports the actual configured
+provider in its scope. The current local contract passes; its production proof
+and billing completion fields remain explicitly unverified.
+
 Fresh authenticated Companion observation of the actual Light source
 `https://jp.linkaigc.com/marketing` was used as the visual authority. Heavy's
 `/marketing` now opens a source-shaped marketing landing page instead of the
