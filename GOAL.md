@@ -8546,3 +8546,18 @@ settleして再比較した。`/` は4カテゴリ、6 launcher card、6事例�
 sessionとtask-owned tabs 2件はcleanup済み。残りはr177のproduction monitor/UI、launch operations、
 33-feature production preview、G618、H602、real-generation scorecard、authenticated provider/save/readback/
 reconciliationであり、Goalは`in_progress`を維持する。
+
+# Goal progress — 2026-09-22 r179
+
+本家トップ右上のアカウント位置を30秒settle後に1回だけ確認し、同じタブを
+再読込した。URLは`/`のままで、アカウントメニューやGallery内部導線は表示されず、
+Companion durable statusも`completed / known_effect / dispatch_count=0 /
+reconciliation_required=false`だった。タブ・lease・sessionはcleanup済みで、外部効果はない。
+
+Heavy本番も同じCompanion profileで`/`、`/designProduction`、`/gallery`を読み返したが、
+いずれも認証・ブランド設定待ちの準備シェルで停止した。したがって現在のプロファイルには
+Heavy本番のサイト認証がなく、authenticated provider receipt、source sync、reconciliation、
+save/reuse/reload、production visual proofはまだ作れない。直URL `/gallery`を削除して404に
+合わせる変更や、cookie/storage移送、権利迂回、provider・保存・課金・公開操作は行わない。
+詳細は`work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。
+Goalは`in_progress`を維持する。
