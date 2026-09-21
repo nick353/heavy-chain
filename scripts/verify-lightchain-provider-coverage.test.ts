@@ -277,8 +277,9 @@ test('keeps direct provider promotion behind durable result and Canvas lineage g
   assert.match(fitting, /data-testid="fitting-result-jobs-link"/);
   assert.match(fitting, /data-testid="fitting-result-save-to-canvas"/);
   assert.match(fitting, /Canvasへ再利用/);
-  assert.match(workbench, /to="\/model#fitting-history"/);
   assert.match(workbench, /data-testid="lightchain-fitting-history-link"/);
+  assert.match(workbench, /data-testid="lightchain-fitting-history-panel"/);
+  assert.match(workbench, /setFittingHistoryOpen/);
   assert.match(workbench, /to="\/history"/);
   assert.match(workbench, /data-testid="lightchain-feature-history-link"/);
   for (const marker of [

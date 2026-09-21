@@ -1446,6 +1446,7 @@ export function LightchainWorkbenchPage() {
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
+  const [fittingHistoryOpen, setFittingHistoryOpen] = useState(false);
   const [activeFittingInputTab, setActiveFittingInputTab] = useState('説明生成');
   const [fittingReferenceImageModalOpen, setFittingReferenceImageModalOpen] = useState(false);
   const [fittingReferenceImageUrl, setFittingReferenceImageUrl] = useState<string | null>(null);
@@ -1924,6 +1925,12 @@ export function LightchainWorkbenchPage() {
     'fitting-clothing-reference',
     'fitting-background-reference',
   ].includes(selectedTool.id);
+  const fittingHistoryItems = useMemo(
+    () => materialTabItems['generation-history'].filter((item) => (
+      /model-matrix|ai-fitting|fitting/i.test(`${item.kind} ${item.title}`)
+    )),
+    [materialTabItems],
+  );
   const fittingGarmentCount = materialSlotFiles.primary ? 1 : 0;
   const currentModelPanel = selectedTool.id === 'model-library'
     ? modelPanelConfig['model-custom']
@@ -4501,7 +4508,7 @@ export function LightchainWorkbenchPage() {
                     key={tab}
                     type="button"
                     role="tab"
-                    onClick={() => setActiveFittingTaskTab(tab)}
+                    onClick={() => { setActiveFittingTaskTab(tab); setFittingHistoryOpen(false); }}
                     aria-selected={activeFittingTaskTab === tab}
                     className={`h-6 shrink-0 rounded px-2 py-1 text-sm font-medium leading-4 transition ${tab === 'シングルタスク' ? 'w-[102px]' : 'w-[90px]'} ${activeFittingTaskTab === tab ? 'bg-[#687178] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
                   >
@@ -4930,14 +4937,66 @@ export function LightchainWorkbenchPage() {
             </div>
           </section>
           <aside className="relative flex min-h-[calc(100vh-70px)] items-center justify-center bg-[#151515]">
-            <Link
+            <button
+              type="button"
               className="absolute right-4 top-4 h-8 w-[102px] rounded-lg border border-white/15 bg-[#181b1d] px-4 py-2 text-sm font-semibold text-white"
               data-testid="lightchain-fitting-history-link"
-              to="/model#fitting-history"
+              aria-expanded={fittingHistoryOpen}
+              onClick={() => setFittingHistoryOpen((open) => !open)}
             >
               生成履歴
-            </Link>
-            {activeFittingTaskTab === 'マルチタスク' ? (
+            </button>
+            {fittingHistoryOpen ? (
+              <section className="absolute inset-0 flex flex-col text-left" data-testid="lightchain-fitting-history-panel">
+                <div className="flex items-center gap-3 border-b border-white/10 px-4 py-4">
+                  <div className="flex flex-1 items-center gap-2">
+                    <h2 className="text-lg font-semibold text-white">生成履歴</h2>
+                    <span aria-hidden="true" className="text-sm text-neutral-400">ⓘ</span>
+                    <button
+                      type="button"
+                      disabled={fittingHistoryItems.length === 0}
+                      className="rounded-lg px-2 py-1 text-xs font-semibold text-neutral-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:text-neutral-600"
+                    >
+                      全削除
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="閉じる"
+                    onClick={() => setFittingHistoryOpen(false)}
+                    className="rounded-lg px-2 py-1 text-xl leading-none text-neutral-400 hover:text-white"
+                  >
+                    ›|
+                  </button>
+                </div>
+                {fittingHistoryItems.length > 0 ? (
+                  <div className="grid flex-1 content-start gap-3 overflow-y-auto p-4 sm:grid-cols-2">
+                    {fittingHistoryItems.map((item) => (
+                      <article key={item.id} className="overflow-hidden rounded-xl border border-white/10 bg-[#1a1f22]">
+                        <img src={item.imageUrl} alt="" className="aspect-[4/5] w-full object-cover" loading="lazy" />
+                        <div className="p-3">
+                          <p className="truncate text-sm font-semibold text-white">{item.title}</p>
+                          <p className="mt-1 text-xs text-neutral-500">{item.note}</p>
+                          <button
+                            type="button"
+                            onClick={() => handleUseMaterialAsset(item)}
+                            className="mt-3 rounded-lg bg-[#65d3cf] px-3 py-2 text-xs font-semibold text-neutral-950"
+                          >
+                            再利用
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+                    <img src={LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL} alt="" className="size-32 object-contain" loading="lazy" />
+                    <p className="text-sm text-neutral-300">生成記録はありません</p>
+                    <p className="text-xs text-neutral-500">生成記録の保存期間は14日間。期限を過ぎると自動的に削除されます</p>
+                  </div>
+                )}
+              </section>
+            ) : activeFittingTaskTab === 'マルチタスク' ? (
               <section className="absolute inset-0 flex flex-col text-left" data-testid="lightchain-fitting-batch-panel">
                 <div className="flex items-center gap-3 border-b border-white/10 px-4 py-4">
                   <div className="flex flex-1 items-center gap-3">

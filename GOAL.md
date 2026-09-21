@@ -1,3 +1,30 @@
+# Light Chain source parity and fitting-history panel parity — 2026-09-21 r118
+
+The official authenticated Lightchain AI-fitting page was re-read after the
+requested 30-second wait. Its `生成履歴` control stays inside the same
+workbench and switches the right pane to a history view; it does not navigate
+to a global `/history` route. The empty state says `生成記録はありません`
+and shows the 14-day retention copy. The official `/gallery`, `/history`,
+`/jobs`, and `/canvas` paths themselves return 404, so Heavy's global
+Gallery/History/Jobs/Canvas routes are treated as Heavy-owned continuation
+surfaces rather than source URL claims.
+
+Heavy's `/model` implementation previously rendered `生成履歴` as a link to
+`/model#fitting-history`, which was a visible flow mismatch. It now renders a
+source-shaped button that opens an in-place right-pane history panel, keeps the
+source empty state for no fitting records, and lists only fitting-compatible
+saved results when available. The change keeps the existing provider permission
+gate and does not submit generation. Provider-contract tests (22/22), route
+tests (28/28), typecheck, lint, build, R2 asset preparation, Wrangler dry-run,
+and deployment passed. The production version is
+`c4f3f8fe-a3fb-49d9-91b6-67807f5991dc`.
+
+The full Goal remains open for authenticated provider execution/rendering,
+same-fixture visual/interaction diff across every source route, durable
+generated-artifact reconciliation, video provider admission, and the six
+external release-gate evidence items. No permission gate, payment, publish,
+secret export, or destructive cleanup was performed.
+
 # Light Chain source parity and production Canvas persistence readback — 2026-09-21 r117
 
 The production API configuration was read without exposing secret values: the

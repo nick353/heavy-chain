@@ -1,5 +1,22 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r61
+
+Version `c4f3f8fe-a3fb-49d9-91b6-67807f5991dc` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. The official authenticated
+Lightchain `/model` flow keeps `生成履歴` in the same workbench and opens it
+as a right-pane view; Heavy now matches that interaction with a button and an
+in-place history panel instead of navigating to `/model#fitting-history`.
+The panel preserves the source empty-state copy and 14-day retention text,
+while fitting-compatible saved results remain reusable when present.
+
+The official source `/gallery`, `/history`, `/jobs`, and `/canvas` paths were
+also checked and return 404; Heavy's global routes remain explicit
+Heavy-owned continuation surfaces, not claims that those source URLs exist.
+Provider-contract tests passed 22/22, route tests 28/28, and typecheck, lint,
+build, R2 asset preparation, Wrangler dry-run, and deployment passed. No
+provider submit or permission-gate bypass was performed.
+
 ## Latest production readback — 2026-09-21 r60
 
 Production API configuration was checked without exposing secret values. The
