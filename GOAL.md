@@ -7041,3 +7041,20 @@ completion.
 No source change, deployment, token export, generation submit, payment,
 purchase, publish, or destructive cleanup was performed in this audit. The
 production/operator evidence blockers from r102 remain unchanged.
+
+# Goal progress — 2026-09-21 r104
+
+The supplied official source `https://jp.linkaigc.com/` was re-read through a
+task-owned Companion URL read. It returned the title `Lightchain AI` and a
+same-transaction screenshot, but the unauthenticated page exposed no semantic
+body text. The read completed with cleanup and no external action, so it is
+valid source identity evidence but not enough to invent additional UI or
+workflow assertions.
+
+The production `heavy-chain-api` secret inventory was checked by name only:
+`OPENAI_API_KEY` and `MEDIA_READ_SECRET` are present; no
+`HEAVY_CHAIN_MONITOR_TOKEN` is configured. The local environment likewise has
+only `OPENAI_API_KEY` among the relevant provider/monitor variables. Therefore
+the remaining real-generation, scale-monitor, and production readback gates
+cannot be honestly executed from this task without an authenticated user
+session and the separately scoped monitor credential/brand identity.
