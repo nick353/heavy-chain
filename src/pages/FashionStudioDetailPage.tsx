@@ -204,7 +204,7 @@ export function FashionStudioDetailPage() {
         </section>
 
         <div className="fashion-studio-source-points" aria-label="ポイント"><Sparkles className="h-4 w-4" />375731</div>
-        <div className="fashion-studio-source-image-search" aria-label="画像検索"><Search className="h-4 w-4" />画像検索<span className="ml-auto">☷　⇧⌄</span></div>
+        <div className="fashion-studio-source-image-search" aria-label="画像検索"><Search className="h-4 w-4" />画像検索<span className="ml-auto">☷<span className="inline-block w-4" aria-hidden="true" />⇧⌄</span></div>
       </main>
     );
   }
