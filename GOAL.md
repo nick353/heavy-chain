@@ -8517,3 +8517,18 @@ No provider generation, payment, publish, deployment, or destructive action
 was performed. The Goal remains active pending authenticated production
 receipts, monitor/operator evidence, billing completion, and the real
 scorecard.
+# Light Chain canonical root live readback — 2026-09-22 r177
+
+ユーザーが指定した唯一の正本 `https://jp.linkaigc.com/` を同じChrome環境でfresh readbackし、
+Heavy本番 `https://heavy-chain-web.nichika2000823.workers.dev/` の `/` と照合した。本家は
+30秒settle後に、header、4カテゴリ、recommended 6カード、事例共有6タブ、recommended 20件の
+タイトル、権利確認checkbox 0件を確認した。Heavyも同じ表示構造・文言・件数・権利UI不在で、
+スクリーンショット上のLightchain-shaped shellは一致した。事例画像はlive dataとして変動し得るため、
+同一fixtureのpixel equalityは未完了のまま保持する。
+
+同じChromeタブでHeavy `/designProduction` を直接読むと、Heavy側の明示的な認証状態がなく、
+`ワークスペースを準備しています` とログイン/無料で始めるfail-closed shellに停止した。認証cookie/
+storage stateの抽出・移送、rights bypass、provider生成、保存、課金は行っていない。詳細証跡は
+`work/heavy-chain-lightchain-canonical-root-readback-20260922.md`。残りはr176の本番monitor/UI、
+launch operations、all-feature preview、G618、H602、generation scorecard、およびauthenticated
+同一fixture/provider/save-readback/reconciliationであり、Goalは`in_progress`を維持する。
