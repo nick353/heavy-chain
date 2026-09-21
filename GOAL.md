@@ -1,3 +1,25 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r121
+
+After the source-permission change, a fresh isolated local all-feature run
+completed successfully. It covered all 31 non-video features on desktop and
+mobile, both canonical video routes on desktop and mobile, and the four
+source-contract routes (`/designProduction`, `/creator`, `/tools/fabric`,
+`/model`). The artifact reports `ok:true`, failed `0`, console/page/request
+failures `0`, and browser/context/preview cleanup complete:
+`output/playwright/lightchain-all-feature-workflows-20260921T072859Z-kTODFc/SUMMARY.json`.
+
+This proves current local route, lifecycle-contract, permission-surface, and
+fail-closed video coverage. It does not promote local screenshots to source
+pixel equality: the current authenticated Lightchain screenshot baseline is
+still unavailable, and provider generation/result/save/reuse/reconciliation
+remain unverified.
+
+A fresh task-owned Companion read of the official `/` and `/model` URLs at
+`2026-09-21T07:34:18Z` and `07:34:19Z` returned title `Lightchain AI` but
+empty semantic text for both pages; both temporary tabs cleaned up with
+`externalActionExecuted:false`. This confirms the current auth/source boundary
+without treating an empty shell as authenticated UI evidence.
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r120
 
 The official public source at `https://jp.linkaigc.com/` was rechecked. Its

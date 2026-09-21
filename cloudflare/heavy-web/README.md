@@ -1,5 +1,18 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest local parity evidence — 2026-09-21 r63
+
+The fresh isolated all-feature runner passed with 31/31 non-video features on
+desktop and mobile, both canonical video dashboard/detail routes on desktop
+and mobile, and source-contract parity for `/designProduction`, `/creator`,
+`/tools/fabric`, and `/model`. It reported failed `0`, console/page/request
+failures `0`, and complete browser/context/preview cleanup. Evidence:
+`output/playwright/lightchain-all-feature-workflows-20260921T072859Z-kTODFc/SUMMARY.json`.
+
+This is local contract evidence only. The current authenticated Lightchain
+pixel baseline and real provider receipt/save/reuse/reconciliation remain
+required before production parity can be claimed.
+
 ## Latest Web release — 2026-09-21 r62
 
 Version `1432521e-a0d6-4b8a-b539-b9f9a1bcbead` is deployed at 100% to
