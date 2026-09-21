@@ -89,26 +89,26 @@ export function PatternProjectDashboardPage() {
   const references = ['花型工艺呈现', 'レトロなイラスト', 'プランナーコミック', '夏のフルーツポスター'];
 
   return (
-    <main className="dark min-h-screen bg-[#101010] px-4 py-5 text-white sm:px-6" data-testid="lightchain-pattern-overview">
-      <section className="w-full">
-        <h1 className="text-base font-semibold">デザインアレンジ</h1>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
-          <button type="button" onClick={() => navigate('/editor/pattern/detail?boardProjectCode=&boardProjectType=')} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60" data-testid="lightchain-pattern-new-file">
-            <div className="flex h-40 items-center justify-center bg-[radial-gradient(circle_at_28%_24%,#e7ffe8,#5d646b_52%,#181f22)]"><span className="relative text-xs font-bold">PROJECT<span className="absolute -bottom-2 -right-8 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-200 text-xl text-neutral-700">+</span></span></div>
-            <div className="px-4 py-4"><p className="text-sm font-semibold text-neutral-200">新規ファイル</p></div>
+    <main className="dark pattern-project-dashboard-parity min-h-screen bg-[#171b1c] text-white" data-testid="lightchain-pattern-overview">
+      <section className="pattern-project-dashboard-content">
+        <h1 className="pattern-project-dashboard-title">デザインアレンジ</h1>
+        <div className="pattern-project-dashboard-grid">
+          <button type="button" onClick={() => navigate('/editor/pattern/detail?boardProjectCode=&boardProjectType=')} className="pattern-project-dashboard-card pattern-project-dashboard-new-card" data-testid="lightchain-pattern-new-file">
+            <div className="pattern-project-dashboard-media pattern-project-dashboard-new-media"><span className="relative text-xs font-bold">PROJECT<span className="absolute -bottom-2 -right-8 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-200 text-xl text-neutral-700">+</span></span></div>
+            <div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">新規ファイル</p></div>
           </button>
           {visibleProjects.map((project) => (
-            <button key={project.id} type="button" data-testid={`lightchain-pattern-project-${project.id}`} onClick={() => navigate(`/editor/pattern/detail?boardProjectCode=${encodeURIComponent(project.id)}&boardProjectType=custom`)} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
-              <div className="flex h-40 items-center justify-center bg-[#171c1f]">{project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">PROJECT</span>}</div>
-              <div className="px-4 py-4"><p className="truncate text-sm font-semibold text-neutral-200">{project.title}</p><p className="mt-2 text-xs text-neutral-500">{formatProjectAge(project.updatedAt)} 修正</p></div>
+            <button key={project.id} type="button" data-testid={`lightchain-pattern-project-${project.id}`} onClick={() => navigate(`/editor/pattern/detail?boardProjectCode=${encodeURIComponent(project.id)}&boardProjectType=custom`)} className="pattern-project-dashboard-card pattern-project-dashboard-project-card">
+              <div className="pattern-project-dashboard-media">{project.imageUrl ? <img src={project.imageUrl} alt="" /> : <span className="text-xs text-neutral-500">PROJECT</span>}</div>
+              <div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{project.title}</p><p className="pattern-project-dashboard-date">{formatProjectAge(project.updatedAt)} 修正</p></div>
             </button>
           ))}
         </div>
         {status === 'loading' && <p className="mt-3 text-xs text-neutral-500">プロジェクトを読み込んでいます…</p>}
         {status === 'failure' && <p className="mt-3 text-xs text-neutral-500">既存プロジェクトを読み込めませんでした。</p>}
         {pageCount > 1 && <nav className="mt-4 flex items-center justify-center gap-2 text-xs text-neutral-400" aria-label="プロジェクトページ"><button type="button" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">前のページ</button><span>{page}</span><button type="button" disabled={page === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">次のページ</button></nav>}
-        <h2 className="mt-7 text-base font-semibold">参考事例</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{references.map((title) => <button key={title} type="button" onClick={() => navigate('/patterns/workbench')} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"><div className="h-40 bg-[linear-gradient(135deg,#dbeafe,#f8fafc_52%,#65d3cf_53%)]" /><div className="px-4 py-4"><p className="line-clamp-2 text-sm font-semibold text-neutral-200">{title}</p><p className="mt-2 text-xs text-neutral-500">参考事例</p></div></button>)}</div>
+        <h2 className="pattern-project-dashboard-section-title">参考事例</h2>
+        <div className="pattern-project-dashboard-reference-grid">{references.map((title) => <button key={title} type="button" onClick={() => navigate('/patterns/workbench')} className="pattern-project-dashboard-card pattern-project-dashboard-reference-card"><div className="pattern-project-dashboard-media"><span className="pattern-project-dashboard-reference-art" aria-hidden="true" /></div><div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{title}</p><p className="pattern-project-dashboard-date">参考事例</p></div></button>)}</div>
       </section>
     </main>
   );

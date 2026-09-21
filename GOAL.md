@@ -8121,6 +8121,28 @@ route/detail/state parity work, authenticated provider receipts, durable
 persistence/readback/reconciliation, video-quality evidence, billing/operator proof, and
 strict release-gate artifacts.
 
+# Goal progress — 2026-09-22 r166
+
+The `/editor/pattern` design-arrange board was moved onto the same canonical
+Light project-board geometry already freshly confirmed for Wear Design Lab,
+Fashion Studio, Video, and Laboratory: 16px content inset, 220x240 project
+cards, 167px media, 73px metadata footer, 16px gaps, and source-shaped
+reference cards. Existing project loading, detail-route handoff, pagination,
+and reference navigation remain intact. The route contains no rights checkbox,
+rights modal, or rights explanation badge.
+
+Added a focused pattern-board acceptance assertion. The focused parity/provider
+suite now passes 54/54, Cloudflare static-reference tests pass 3/3, typecheck,
+and diff checks pass. Worker version `78c44e0e-3055-4030-9f30-f4b6f7659c2d`
+is deployed. Fresh public readback returned HTTP 200 for `/_health` and the
+SPA entrypoints; the served `PatternProjectDashboardPage` bundle contains the
+new source-board class markers. Companion visual readback remains pending
+because the Chrome debugger is currently unattached. No provider generation,
+file upload, payment, publish, migration, or destructive cleanup was
+performed. The Goal remains active for the remaining route/state parity,
+authenticated provider receipts, durable persistence/readback/reconciliation,
+business/legal decisions, and strict release-gate artifacts.
+
 # Goal progress — 2026-09-22 r164
 
 The authenticated canonical existing video project at

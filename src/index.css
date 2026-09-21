@@ -77,6 +77,29 @@
 .oriented-design-content > section:last-child { margin-top: 24px; }
 .oriented-design-reference-grid .oriented-design-project-media { height: 240px; }
 
+/* The canonical pattern-arrange board uses the same Light project-board
+   geometry as the other source workspaces: 16px content inset, 220x240
+   cards, 167px media, and a 73px metadata footer. */
+.pattern-project-dashboard-parity { font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
+.pattern-project-dashboard-content { padding: 16px 20px 16px 16px; }
+.pattern-project-dashboard-title, .pattern-project-dashboard-section-title { height: 18px; margin: 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 18px; }
+.pattern-project-dashboard-grid, .pattern-project-dashboard-reference-grid { display: flex; width: 100%; flex-wrap: wrap; gap: 16px; }
+.pattern-project-dashboard-grid { margin-top: 18px; }
+.pattern-project-dashboard-reference-grid { margin-top: 16px; }
+.pattern-project-dashboard-section-title { margin-top: 24px; }
+.pattern-project-dashboard-card { position: relative; width: 220px; height: 240px; flex: 0 0 220px; overflow: hidden; border: 0; border-radius: 16px; color: #fff; text-align: left; transition: box-shadow .15s ease; }
+.pattern-project-dashboard-card:hover { box-shadow: 0 0 0 1px rgba(103, 232, 249, .6); }
+.pattern-project-dashboard-new-card, .pattern-project-dashboard-reference-card { background: #262a2b; }
+.pattern-project-dashboard-project-card { background: #3c4143; }
+.pattern-project-dashboard-media { display: flex; height: 167px; align-items: flex-start; justify-content: center; overflow: hidden; background: #3c4143; }
+.pattern-project-dashboard-new-media { align-items: center; background: radial-gradient(circle at 28% 24%, #e7ffe8, #5d646b 52%, #181f22); }
+.pattern-project-dashboard-media img { width: 100%; height: 100%; object-fit: cover; }
+.pattern-project-dashboard-meta { height: 73px; padding: 12px; background: #262a2b; color: #abb8b6; font-size: 14px; line-height: 21px; }
+.pattern-project-dashboard-name { min-width: 80px; height: 30px; overflow: hidden; padding: 1px 4px; color: #abb8b6; font-size: 16px; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; }
+.pattern-project-dashboard-date { padding: 1px 4px; color: #abb8b6; font-size: 14px; line-height: 21px; }
+.pattern-project-dashboard-reference-art { display: block; width: 100%; height: 100%; background: linear-gradient(135deg, #dbeafe, #f8fafc 52%, #65d3cf 53%); }
+.pattern-project-dashboard-reference-card .pattern-project-dashboard-media { height: 167px; }
+
 /* The Fashion Studio list uses the same canonical project-board geometry. */
 .fashion-studio-overview-parity { background: #171b1c !important; padding: 16px 20px 16px 16px !important; font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
 .fashion-studio-overview-parity > section > div:first-child h1 { height: 18px; margin: 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 18px; }

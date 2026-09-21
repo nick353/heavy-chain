@@ -9,6 +9,7 @@ const fashionStudio = await readFile(new URL('../src/pages/FashionStudioPage.tsx
 const videoDashboard = await readFile(new URL('../src/pages/VideoProjectDashboardPage.tsx', import.meta.url), 'utf8');
 const labPage = await readFile(new URL('../src/pages/LabPage.tsx', import.meta.url), 'utf8');
 const labDetailPage = await readFile(new URL('../src/pages/LightchainLabDetailPage.tsx', import.meta.url), 'utf8');
+const patternBoardPage = await readFile(new URL('../src/pages/PatternProjectDashboardPage.tsx', import.meta.url), 'utf8');
 
 test('canonical Wear Design Lab board and detail route stay source-shaped', () => {
   assert.match(appSource, /path="\/flow\/orientedDesign"[\s\S]*?<LightchainOrientedDesignPage \/>/);
@@ -71,6 +72,14 @@ test('canonical Lightchain Lab detail keeps the source empty-canvas geometry', (
   assert.match(labDetailPage, /w-\[min\(781\.59px,calc\(100vw-40px\)\)\]/);
   assert.match(labDetailPage, /LIGHTCHAIN_LAB_PROJECT_ICON/);
   assert.doesNotMatch(labDetailPage, /type="checkbox"/);
+});
+
+test('canonical pattern-arrange board keeps the shared Light project-board geometry', () => {
+  assert.match(patternBoardPage, /pattern-project-dashboard-parity/);
+  assert.match(patternBoardPage, /pattern-project-dashboard-grid/);
+  assert.match(patternBoardPage, /editor\/pattern\/detail\?boardProjectCode=&boardProjectType=/);
+  assert.match(patternBoardPage, /参考事例/);
+  assert.doesNotMatch(patternBoardPage, /権利確認|権利を確認してAI生成|type="checkbox"/);
 });
 
 console.log('Lightchain source board parity tests: 3/3 passed');
