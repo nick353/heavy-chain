@@ -1,3 +1,31 @@
+# Light Chain source parity and production Canvas persistence readback — 2026-09-21 r117
+
+The production API configuration was read without exposing secret values: the
+production Worker declares the OpenAI image provider and the secret names
+`OPENAI_API_KEY` and `MEDIA_READ_SECRET`. The official authenticated Lightchain
+AI-fitting route and Heavy's corresponding route were each left open for the
+requested 30-second wait. Both showed the same `権限がありません` action and
+neither showed a rights-confirmation checkbox or modal; no permission gate was
+bypassed and no provider request was submitted.
+
+Heavy's already-rendered AI-fitting result was then followed through the
+existing save action into Canvas. The handoff opened `/canvas/39jk88mahdf`;
+explicit Canvas save created `/canvas/e9e40703-ddfe-4385-b1b3-9408e020bf78`
+and changed from `保存中` to `サーバー確認済み`. Reloading that exact URL
+returned the same image layer and settled again at `サーバー確認済み` after
+the server readback. This proves one durable Canvas save/reload path for an
+existing fixture, not provider generation or complete artifact reconciliation.
+
+The same authenticated session also read back Gallery, History, and Jobs.
+Gallery rendered 15 account images; History rendered its timeline and showed
+`保存済み 0件`; Jobs rendered the production queue and showed `0`. Therefore
+route continuity is live, but the saved Canvas document is not yet proven to
+appear as one reconciled artifact in Gallery/History/Jobs. The full Goal
+remains open for provider execution/rendering, Gallery/History/Jobs artifact
+continuity, same-fixture interaction/visual diff, and the six external release
+gate evidence items. No payment, publish, secret export, or destructive
+cleanup was performed.
+
 # Light Chain source parity and live OpenAI readback — 2026-09-21 r116
 
 The official authenticated source root at `https://jp.linkaigc.com/` and the

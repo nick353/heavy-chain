@@ -1,5 +1,24 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest production readback — 2026-09-21 r60
+
+Production API configuration was checked without exposing secret values. The
+image provider is configured as OpenAI and the production secret names include
+`OPENAI_API_KEY` and `MEDIA_READ_SECRET`. The official Lightchain AI-fitting
+route and Heavy's route were each waited for 30 seconds; both showed the same
+`権限がありません` action and no Light-absent rights checkbox or modal. No
+permission gate was bypassed and no provider request was submitted.
+
+An existing Heavy AI-fitting result was followed through the source-shaped
+save flow into Canvas. Canvas save changed to `サーバー確認済み`, and the
+exact persisted Canvas URL was reloaded until the same image layer returned
+with `サーバー確認済み` again. Gallery, History, and Jobs were then read
+back in the same session: Gallery showed 15 account images, History showed
+`保存済み 0件`, and Jobs showed queue `0`. This proves the Canvas
+save/reload path and route continuity, but not provider generation or
+cross-surface artifact reconciliation. The remaining Goal and six external
+release-gate evidence items stay open.
+
 ## Latest Web release — 2026-09-21 r59
 
 Version `88055441-c1a5-4c06-9673-be9644eb23c3` is deployed at 100% to
