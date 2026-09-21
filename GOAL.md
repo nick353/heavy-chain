@@ -8582,6 +8582,18 @@ visual scorecard、およびrelease gateの厳格な再通過である。provide
 `work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。Goalは
 `in_progress`を維持する。
 
+# Goal progress — 2026-09-22 r184
+
+新規task-owned Companion sessionでmobile viewport証跡を再試行したが、Extensionが
+error pageを返し、最初のnavigation dispatch前に停止した。`mutationDispatchAttempted=false`
+および`external_action_executed=false`を確認し、tab/sessionはowner cleanup済み。
+同じ不確実操作は再送していない。mobile release evidenceは未完了として保持する。
+
+public-entrypoint修正後の残り6件は、monitor/UI pair、launch operations、all-feature
+order-preview artifact、G618、H602 billing completion、real-generation visual
+scorecardで変わらない。provider生成、upload、保存、課金、公開、権利迂回は未実行。
+Goalは`in_progress`を維持する。
+
 # Goal progress — 2026-09-22 r182
 
 33/33の本番route readback後に統合release gateを再実行した。ローカルの
