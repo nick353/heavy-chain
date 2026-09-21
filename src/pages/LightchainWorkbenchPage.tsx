@@ -5446,7 +5446,7 @@ export function LightchainWorkbenchPage() {
 
     return (
       <main
-        className={`${workspaceStyle.kind === 'agent' ? 'dark flex h-full min-h-full bg-[#171b1c]' : 'dark min-h-[calc(100vh-70px)] bg-[#101313]'} text-white`}
+        className={`${workspaceStyle.kind === 'agent' ? 'dark flex h-[calc(100vh-50px)] min-h-full bg-[#171b1c]' : 'dark min-h-[calc(100vh-70px)] bg-[#101313]'} text-white`}
         data-testid={`lightchain-workspace-${workspaceStyle.kind}`}
         data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
         data-workflow-feature={selectedTool.id}
