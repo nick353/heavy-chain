@@ -124,6 +124,16 @@ test('keeps the Light print-design project cards on the canonical detail route',
   assert.doesNotMatch(project, /type=["']checkbox["']|権利を確認してAI生成/);
 });
 
+test('returns the Light marketing detail surface to the canonical marketing entry', async () => {
+  const page = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  const detailStart = page.indexOf("if (selectedTool.id === 'marketing-detail')");
+  const detailEnd = page.indexOf("if (selectedTool.id === 'print-design-project')", detailStart);
+  assert.ok(detailStart >= 0 && detailEnd > detailStart, 'marketing detail surface is required');
+  const detail = page.slice(detailStart, detailEnd);
+  assert.match(detail, /navigate\('\/marketing'\)/);
+  assert.doesNotMatch(detail, /\/lightchain\/marketing-home/);
+});
+
 test('keeps the video project dashboard and detail route aligned with Lightchain', async () => {
   const app = await readFile(appPath, 'utf8');
   const catalog = await readFile(catalogPath, 'utf8');

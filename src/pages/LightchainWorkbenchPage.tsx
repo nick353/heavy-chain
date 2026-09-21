@@ -5847,7 +5847,7 @@ export function LightchainWorkbenchPage() {
           <aside className="self-start mt-4 h-[84px] overflow-hidden rounded-xl border border-white/10 bg-[#151a1d] p-2 shadow-xl">
             <button
               type="button"
-              onClick={() => navigate('/lightchain/marketing-home')}
+              onClick={() => navigate('/marketing')}
               data-testid="lightchain-marketing-workspace-home"
               className="flex h-5 w-full items-center gap-1 text-left text-sm font-semibold text-neutral-300 transition hover:text-white"
             >
@@ -5857,7 +5857,7 @@ export function LightchainWorkbenchPage() {
             <div className="mt-[17px] flex h-[29px] items-center gap-2">
               <button
                 type="button"
-                onClick={() => navigate('/lightchain/marketing-home')}
+                onClick={() => navigate('/marketing')}
                 data-testid="lightchain-marketing-back"
                 className="flex h-[29px] w-[29px] items-center justify-center rounded-lg border-0 bg-transparent p-0 text-neutral-300 transition hover:bg-white/5 hover:text-white"
                 aria-label="戻る"
