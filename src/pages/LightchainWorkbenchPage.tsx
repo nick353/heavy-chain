@@ -1,5 +1,6 @@
 import { type ChangeEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import {
   ArrowRight,
   Bot,
@@ -1769,7 +1770,7 @@ export function LightchainWorkbenchPage() {
     toast.success('プロジェクトを作成しました');
   };
 
-  const agentProjectCreateModal = agentProjectCreateOpen ? (
+  const agentProjectCreateModal = agentProjectCreateOpen && typeof document !== 'undefined' ? createPortal((
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
       role="presentation"
@@ -1818,7 +1819,7 @@ export function LightchainWorkbenchPage() {
         </div>
       </div>
     </div>
-  ) : null;
+  ), document.body) : null;
 
   const fittingReferenceImageModal = (
     <Modal
