@@ -242,6 +242,28 @@ pixel equality: the current authenticated Lightchain screenshot baseline is
 still unavailable, and provider generation/result/save/reuse/reconciliation
 remain unverified.
 
+# Goal progress — 2026-09-21 r112
+
+The identified unauthenticated entry difference was fixed in `3021a23`:
+when the auth adapter explicitly enters recovery with no user, Heavy now
+preserves the current pathname, query, and hash in `/login?redirect=...`,
+matching the official Lightchain protected-route contract. Normal session
+hydration still keeps its loading state and an already admitted user is not
+redirected.
+
+The fix passed the focused auth tests 2/2, route parity 29/29, Lightchain UI
+boundaries 15/15, typecheck, and lint. The Cloudflare Web Worker build passed
+8/8, the asset manifest/R2 upload and Wrangler dry-run succeeded, and the
+public Worker was deployed at 100% as version
+`ab23d34b-485a-43e1-a8b4-60b9ed4c2980`. Fresh public checks returned HTTP 200
+for `/_health`, `/model`, `/lightchain`, and `/login`; the Worker reports
+`hosting: cloudflare` and serves the new bundle. Companion post-deploy
+readback completed with zero external actions and clean task-owned cleanup.
+
+Provider generation, authenticated source visual matrix, production receipt /
+source sync / durable readback, billing/operator proof, and the six strict
+release-gate artifacts remain unverified. Goal remains active.
+
 A fresh task-owned Companion read of the official `/` and `/model` URLs at
 `2026-09-21T07:34:18Z` and `07:34:19Z` returned title `Lightchain AI` but
 empty semantic text for both pages; both temporary tabs cleaned up with
