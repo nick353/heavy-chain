@@ -1,3 +1,16 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r133
+
+同一Chrome状態で本家 `https://jp.linkaigc.com/model` と本番Heavy `/model` を30秒settle後に
+fresh AX/visual readbackした。両方でAIフィッティング、シングル/マルチタスク、衣服画像0/4、
+自動変換switch、説明生成/参考画像/モデルのセット写真、2000文字入力、スマート/1K、
+`権限がありません`、`生成履歴`、visible checkbox 0件を確認した。Heavyの既存生成結果と履歴3件、
+本家の履歴0件はユーザーデータ状態の差であり、データ削除や非表示によって本家へ偽装しない。
+Heavyの既存結果にはGallery/History/Jobs/Canvasの導線と保存・ダウンロードが表示される。
+
+このreadbackは認証済みsemantic/interaction parityを前進させたが、同一fixtureのpixel equality、
+provider receipt、再生成、durable save/readback/reuse/reconciliation、動画provider、strict
+release gateは未完了。Goalは`in_progress`を維持する。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r132
 
 本家 `https://jp.linkaigc.com/` のトップをfresh DOM/AX readbackし、4カテゴリのカード順・
