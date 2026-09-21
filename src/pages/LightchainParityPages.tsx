@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import {
   Archive,
   ArrowRight,
+  ChevronLeft,
   ChevronRight,
   Clock3,
   FolderOpen,
@@ -1440,5 +1441,44 @@ export function LightchainOrientedDesignPage() {
         </section>
       </div>
     </ParityShell>
+  );
+}
+
+export function LightchainOrientedDesignDetailPage() {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImageUrl(URL.createObjectURL(file));
+  };
+
+  return (
+    <main className="dark min-h-[calc(100vh-50px)] overflow-hidden bg-[#181a1d] text-white" data-testid="oriented-design-detail" data-lightchain-parity-shell="oriented-design-detail">
+      <div className="pointer-events-none absolute inset-0 opacity-70" style={{ backgroundImage: 'radial-gradient(#464b50 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+      <aside className="absolute left-4 top-[74px] z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#202426] shadow-xl">
+        <div className="flex h-10 items-center gap-2 border-b border-white/10 px-2 text-sm text-neutral-400">
+          <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="PROJECT" className="h-6 w-6 rounded-md object-cover" />
+          <span>ウェアデザインラボ</span>
+        </div>
+        <button type="button" onClick={() => navigate('/flow/orientedDesign')} className="flex h-11 w-full items-center gap-3 px-3 text-left text-sm text-neutral-400 transition hover:bg-white/5 hover:text-white">
+          <ChevronLeft className="h-5 w-5" />
+          <span>Untitled</span>
+        </button>
+      </aside>
+      <label className="absolute left-1/2 top-[190.93px] flex h-[496.14px] w-[min(781.59px,calc(100vw-40px))] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-xl bg-[#25292b] text-center transition hover:bg-[#2a2e30]" data-testid="oriented-design-detail-upload">
+        {imageUrl ? (
+          <img src={imageUrl} alt="アップロードしたデザイン素材" className="h-full w-full rounded-xl object-contain" />
+        ) : (
+          <>
+            <Upload className="h-8 w-8 text-white" />
+            <p className="relative top-[8px] mt-5 text-sm leading-[21px] text-neutral-300">ここをクリックまたはドラッグして画像を追加</p>
+            <p className="relative top-[8px] mt-1 text-xs leading-[17.14px] text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</p>
+          </>
+        )}
+        <input className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" onChange={handleFileChange} />
+      </label>
+    </main>
   );
 }

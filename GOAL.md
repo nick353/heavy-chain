@@ -8026,6 +8026,26 @@ was performed. The Goal remains active for the remaining canonical route/detail/
 work, authenticated provider receipts, durable persistence/readback/reconciliation,
 video-quality evidence, billing/operator proof, and strict release-gate artifacts.
 
+# Goal progress — 2026-09-21 r157
+
+The canonical `/flow/orientedDesign/detail` new-file state was read from the source:
+the Lightchain header is followed by a dotted dark canvas, a `ウェアデザインラボ /
+Untitled` project rail at `x=16/y=74`, and a centered `781.59x496.14` upload panel at
+`y=190.93` with the exact Japanese image-upload copy. Heavy now has a dedicated
+`LightchainOrientedDesignDetailPage` for this route instead of the Heavy-only generic
+workbench. It keeps local file selection/preview and returns to the source-shaped lab list.
+
+The new detail implementation passed typecheck and diff checks and was deployed in Worker
+version `2f58dd0a-e986-48da-a2d4-758ad0bfef72`; the full build and static-reference
+validation completed successfully. A fresh Heavy browser readback reached the canonical
+auth boundary and redirected to `/login`, so this detail slice still needs one authenticated
+visual/interaction readback when the Heavy session is available. No credentials were
+entered, and no provider generation, file upload, payment, publish, migration, or
+destructive cleanup was performed. The Goal remains active for the remaining canonical
+route/detail/state parity work, authenticated provider receipts, durable
+persistence/readback/reconciliation, video-quality evidence, billing/operator proof, and
+strict release-gate artifacts.
+
 # Goal progress — 2026-09-21 r155
 
 The canonical Asset Center route `https://jp.linkaigc.com/asset-center` was
