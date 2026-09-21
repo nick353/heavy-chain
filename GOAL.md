@@ -7822,3 +7822,24 @@ with typecheck and diff checks green. Goal remains active: same-fixture
 pixel/interaction equality, authenticated provider receipt, durable
 persistence/readback/reconciliation, video-provider completion, billing and
 operator proof, and the six strict external release-gate artifacts remain.
+
+# Goal progress — 2026-09-21 r144
+
+A follow-up same-profile readback kept the source and Heavy tabs side by side
+for more than 30 seconds. Heavy remained authenticated and continued to show
+the persisted fitting result card. The source `/model` page remained at its
+guest/permission-denied surface and did not expose the avatar control even
+after the wait. This makes the current source authentication state
+unconfirmable from this Companion profile; it is not evidence that Heavy
+should remove its avatar or user result data. The shared fitting controls and
+the absence of any rights checkbox/modal/badge still match.
+
+The failed initial source wait was read-only (`mutationDispatchAttempted=false`,
+`external_action_executed=false`, `known_no_effect`), and the successful
+retry used only body visibility plus semantic/visual readback. Final
+Companion cleanup closed task-owned tabs `1980926547` and `1980926548`,
+released the remaining lease, and confirmed `foreign_tabs_mutated=false` and
+`external_action_executed=false`. Goal remains active pending a genuinely
+authenticated source session, same-state visual/interaction diff, and the
+provider/persistence/reconciliation and strict release-gate evidence listed
+above.
