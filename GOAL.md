@@ -7911,3 +7911,35 @@ Goal remains active; these missing production artifacts, a genuinely
 authenticated canonical source session, provider receipt plus durable
 save/readback/reconciliation, and billing/operator proof cannot be replaced
 by local tests or fabricated evidence.
+
+# Goal progress — 2026-09-21 r149
+
+The canonical source for the parity work is now confirmed as the authenticated
+Light Chain site at `https://jp.linkaigc.com/`, with `/model` as the reference
+workbench. A fresh same-session comparison after waiting for the authenticated
+page to settle found that Heavy alone promoted an unrelated persisted result
+card on the initial `/model` view, while Light Chain opened with the empty
+input state. The fix is now deployed in the Heavy web Worker: the canonical
+`/model` route no longer silently restores an unrelated saved result, while
+explicit `resumeJob` and history flows remain available.
+
+The deployed UI slice also aligns the observed Light Chain fitting controls:
+the three fitting tabs, selected tab accent/border, prompt textarea geometry
+and typography, reference/template toolbar controls, counter, and disabled
+clear control. Fresh readback confirmed no Heavy-only result card on initial
+`/model`; the measured tab and textarea geometry matches the source, and the
+remaining toolbar button positions differ only by one pixel from browser
+rounding. No Light-absent rights checkbox, rights modal, or rights badge was
+added. The latest successful web deployment is version
+`f55c61cc-046c-4693-9c27-ebf89558ed9e`.
+
+Commits `70be2af` and `d76845e` contain the implementation and targeted
+regression coverage. Targeted restore tests passed 2/2, Lightchain UI control
+boundaries passed 15/15, typecheck, lint, build, and diff checks passed, and
+the local lifecycle/evidence continuity checks passed with
+`externalActionExecuted=false` and zero network calls. This closes the
+initial `/model` empty-state parity slice only; the full Goal remains open for
+all other routes and states, real provider generation receipts, durable
+save/readback/reconciliation, video quality evidence, billing/operator proof,
+and the strict release-gate artifacts. No provider generation, payment,
+publish, migration, or destructive cleanup was performed in this slice.
