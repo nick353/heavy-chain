@@ -77,15 +77,13 @@ test('Lightchain header uses the source logo asset instead of a Heavy icon subst
   assert.doesNotMatch(launcher, /<Link2/);
 });
 
-test('Lightchain header uses the Lightchain avatar identity and account menu', async () => {
+test('Lightchain parity routes do not add a Heavy-only avatar or account menu', async () => {
   const source = await readFile(layoutSourcePath, 'utf8');
 
-  assert.match(source, /aria-label="avatar"/);
-  assert.match(source, /alt="avatar"/);
-  assert.match(source, /lightchainAvatarUrl/);
-  assert.match(source, /saas-avatar-new\.png/);
-  assert.match(source, /onClick=\{\(\) => void handleLightchainSignOut\(\)\}/);
   assert.match(source, /\{!isLightchainRoute && \([\s\S]*aria-label="アカウント"/);
+  assert.doesNotMatch(source, /aria-label="avatar"/);
+  assert.doesNotMatch(source, /lightchainAvatarUrl/);
+  assert.doesNotMatch(source, /isLightAccountMenuOpen|handleLightchainSignOut|saas-avatar-new\.png/);
 });
 
 test('Lightchain routes use the current Lightchain browser title', async () => {

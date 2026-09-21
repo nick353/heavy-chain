@@ -4897,7 +4897,7 @@ export function LightchainWorkbenchPage() {
                   onClick={() => setFittingControlOpen((current) => current === 'aspect' ? null : 'aspect')}
                   className="flex h-10 w-full items-center justify-between rounded-lg bg-[#24292c] px-3 text-sm font-semibold text-neutral-200"
                 >
-                  {fittingAspectRatio}<span aria-hidden="true" className="ml-2 text-neutral-400">⌄</span>
+                  {fittingAspectRatio}
                 </button>
                 {fittingControlOpen === 'aspect' && <div role="listbox" className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-lg border border-white/10 bg-[#24292c] p-1 shadow-xl">{['スマート', '1:1', '2:3', '3:2', '4:3', '3:4', '4:5', '5:4', '9:16', '16:9'].map((option) => <button key={option} type="button" role="option" aria-selected={fittingAspectRatio === option} className="block w-full rounded px-2 py-1.5 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setFittingAspectRatio(option); setFittingControlOpen(null); }}>{option}</button>)}</div>}
               </div>
@@ -4910,7 +4910,7 @@ export function LightchainWorkbenchPage() {
                   onClick={() => setFittingControlOpen((current) => current === 'resolution' ? null : 'resolution')}
                   className="flex h-10 w-full items-center justify-between rounded-lg bg-[#24292c] px-3 text-sm font-semibold text-neutral-200"
                 >
-                  {fittingResolution}<span aria-hidden="true" className="ml-2 text-neutral-400">⌄</span>
+                  {fittingResolution}
                 </button>
                 {fittingControlOpen === 'resolution' && <div role="listbox" className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-lg border border-white/10 bg-[#24292c] p-1 shadow-xl">{['1K', '2K', '4K'].map((option) => <button key={option} type="button" role="option" aria-selected={fittingResolution === option} className="block w-full rounded px-2 py-1.5 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setFittingResolution(option); setFittingControlOpen(null); }}>{option}</button>)}</div>}
               </div>
