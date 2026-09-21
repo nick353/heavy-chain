@@ -7888,3 +7888,26 @@ all passing. It explicitly records `externalApiCall=not_touched`,
 The audit also states its proof limit: it cannot establish authenticated
 production generation, AI quality, R2 persistence, or browser business
 completion. Goal remains active with those proof boundaries intact.
+
+# Goal progress — 2026-09-21 r148
+
+The strict unified release gate was run locally with
+`node scripts/verify-release-gate-unified.mjs` and failed closed because
+required current evidence is absent, not because a new code regression was
+observed. The failed checks are: the production monitor/UI pair, launch
+operations, the current production Lightchain all-feature order previews,
+G610 retention workspace search, G603 garment Canvas, G605 onboarding
+templates, G606 performance scale, G618 scale-operations baseline, G620
+security operations, H602 billing completion readback, and the generation
+scorecard. The scorecard specifically lacks
+`output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`.
+
+The gate evidence was written to `/tmp/heavy-chain-release-gate-20260921.json`.
+Its irreversible-action ledger remained safe: generation submit was
+`not_clicked`, payment checkout and external publish were `not_touched`,
+destructive cleanup was `not_touched`, and deploy was `not_run`. No provider
+request, charge, publish, deployment, or destructive action was performed.
+Goal remains active; these missing production artifacts, a genuinely
+authenticated canonical source session, provider receipt plus durable
+save/readback/reconciliation, and billing/operator proof cannot be replaced
+by local tests or fabricated evidence.
