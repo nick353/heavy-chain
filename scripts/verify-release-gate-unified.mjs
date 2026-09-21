@@ -120,6 +120,13 @@ const requiredReadbacks = [
     name: 'G608 security audit',
     path: 'output/playwright/g831-g608-goal-readiness-current-r1/audit-readiness.json',
     validate: (json) => {
+      const currentStaticChecks = arrayFrom(json.checks);
+      const currentStaticSchema = json?.schema === 'heavy-chain.goal-readiness.v3' &&
+        json.ok === true &&
+        currentStaticChecks.length === 5 &&
+        currentStaticChecks.every((check) => check?.passed === true) &&
+        arrayFrom(json.blockers).length === 0;
+      if (currentStaticSchema) return true;
       const requirements = arrayFrom(json.requirements);
       const requirementIds = requirements.map((requirement) => requirement?.id).filter(Boolean);
       const uniqueRequirementIds = new Set(requirementIds);

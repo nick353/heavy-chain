@@ -6,6 +6,12 @@ the retired-runtime scan still rejects Supabase and arbitrary provider-proxy
 references. G614, security audit, and diff checks pass without any provider
 submission or deployment.
 
+The release gate's G608 adapter was also aligned with the current
+`goal-readiness.v3` static artifact: all five current Cloudflare runtime checks
+must pass with zero blockers, while the older six-requirement artifact remains
+accepted for backward compatibility. This does not promote static checks to
+production generation, billing, or provider completion.
+
 Fresh authenticated Companion observation of the actual Light source
 `https://jp.linkaigc.com/marketing` was used as the visual authority. Heavy's
 `/marketing` now opens a source-shaped marketing landing page instead of the
