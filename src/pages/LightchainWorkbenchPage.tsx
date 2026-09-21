@@ -2674,7 +2674,12 @@ export function LightchainWorkbenchPage() {
   }, [currentBrand?.id, searchParams, user?.id]);
 
   useEffect(() => {
-    if (!currentBrand?.id || !user?.id || searchParams.get('resumeJob') || lightchainResultRef.current) return;
+    // The canonical Light Chain workbench opens in its empty input state even
+    // when the account owns historical results. Results are restored through
+    // the explicit resume/history flows above; silently promoting the latest
+    // artifact here changes the initial /model surface and makes a fresh
+    // source/Heavy comparison depend on unrelated persisted data.
+    if (!currentBrand?.id || !user?.id || searchParams.get('resumeJob') || lightchainResultRef.current || isModelRoute) return;
     const artifact = findLatestPersistedLightchainResult(workspaceArtifacts, selectedTool.id);
     if (!artifact) return;
 
@@ -2717,7 +2722,7 @@ export function LightchainWorkbenchPage() {
     return () => {
       cancelled = true;
     };
-  }, [currentBrand?.id, searchParams, selectedTool.id, user?.id, workspaceArtifacts]);
+  }, [currentBrand?.id, isModelRoute, searchParams, selectedTool.id, user?.id, workspaceArtifacts]);
 
   useEffect(() => {
     return () => {
@@ -4671,7 +4676,7 @@ export function LightchainWorkbenchPage() {
                     role="tab"
                     onClick={() => setActiveFittingInputTab(tab)}
                     aria-selected={activeFittingInputTab === tab}
-                    className={`h-[34px] shrink-0 rounded-lg px-4 py-1 text-base font-medium leading-6 whitespace-nowrap transition ${tab === 'モデルのセット写真' ? 'w-[160px] -ml-px' : 'w-[112px]'} ${activeFittingInputTab === tab ? 'bg-[#707980] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
+                    className={`h-[34px] shrink-0 rounded-lg border border-transparent px-4 py-1 text-base font-medium leading-6 whitespace-nowrap transition ${tab === 'モデルのセット写真' ? 'w-[160px] -ml-px' : 'w-[112px]'} ${activeFittingInputTab === tab ? 'border-[#0bc1b8] bg-white/15 text-white shadow-sm' : 'text-[#aab8b6] hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>
@@ -4685,48 +4690,32 @@ export function LightchainWorkbenchPage() {
                     className="min-h-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm text-white outline-none placeholder:text-neutral-500"
                     placeholder="背景の説明をここに記入してください"
                   />
-                  <div className="mt-2 flex items-center justify-end gap-1 text-xs text-neutral-500" aria-live="polite" data-testid="lightchain-fitting-prompt-actions">
-                    <button
-                      type="button"
-                      disabled
-                      title="説明を拡大"
-                      aria-label="説明を拡大"
-                      className="flex size-8 items-center justify-center rounded-lg text-neutral-500 opacity-50"
-                    >
-                      <Pencil className="size-5" />
-                    </button>
-                    <button
-                      type="button"
-                      data-track-id="desc:reference-image"
-                      title="参照画像から逆算"
-                      aria-label="参照画像から逆算"
-                      onClick={() => setFittingReferenceImageModalOpen(true)}
-                      className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <ImagePlus className="size-5" />
-                    </button>
-                    <button
-                      type="button"
-                      data-track-id="desc:open_templates"
-                      title="プロンプトテンプレート"
-                      aria-label="プロンプトテンプレート"
-                      onClick={() => setFittingPromptTemplateModalOpen(true)}
-                      className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <Type className="size-5" />
-                    </button>
+                  <div className="mt-2 flex items-center justify-end gap-2 text-xs text-neutral-500" aria-live="polite" data-testid="lightchain-fitting-prompt-actions">
+                    <div className="flex items-center gap-1">
+                      <div data-track-id="desc:expand" className="relative flex size-8 items-center justify-center rounded-lg text-neutral-500 opacity-50" aria-disabled="true">
+                        <Pencil className="size-5" />
+                      </div>
+                      <div data-track-id="desc:reference-image" className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white">
+                        <button type="button" onClick={() => setFittingReferenceImageModalOpen(true)} className="flex size-5 items-center justify-center" data-testid="lightchain-fitting-reference-image-action">
+                          <ImagePlus className="size-5" />
+                        </button>
+                      </div>
+                      <div data-track-id="desc:open_templates" className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white">
+                        <button type="button" onClick={() => setFittingPromptTemplateModalOpen(true)} className="flex size-5 items-center justify-center" data-testid="lightchain-fitting-prompt-template-action">
+                          <Type className="size-5" />
+                        </button>
+                      </div>
+                    </div>
+                    <span className="ml-1">{referenceNote.length} / 2000</span>
                     <button
                       type="button"
                       data-track-id="desc:clear"
-                      title="説明をクリア"
-                      aria-label="説明をクリア"
                       disabled={!referenceNote}
                       onClick={() => setReferenceNote('')}
                       className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
                     >
                       <Trash2 className="size-5" />
                     </button>
-                    <span className="ml-1">{referenceNote.length}/2000</span>
                   </div>
                 </div>
               )}

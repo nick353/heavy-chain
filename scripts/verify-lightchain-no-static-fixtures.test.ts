@@ -38,6 +38,13 @@ test('Lightchain workbench restores only persisted results for the current tool'
   assert.match(source, /withSignedImageUrls\(\[\{/);
   assert.match(source, /lightchainResultRef\.current/);
   assert.match(source, /setResumeInputReadback\('restored'\)/);
+  assert.match(source, /searchParams\.get\('resumeJob'\) \|\| lightchainResultRef\.current \|\| isModelRoute/);
+});
+
+test('canonical /model opens without silently promoting an unrelated saved result', () => {
+  assert.match(source, /canonical Light Chain workbench opens in its empty input state/);
+  assert.match(source, /explicit resume\/history flows above/);
+  assert.match(source, /if \(!currentBrand\?\.id \|\| !user\?\.id .* \|\| isModelRoute\) return;/s);
 });
 
 test('Lightchain parity entrypoints do not inject fixed external or sample library assets', () => {
