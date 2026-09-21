@@ -1,5 +1,20 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r59
+
+Version `88055441-c1a5-4c06-9673-be9644eb23c3` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. This release aligns the public
+Lightchain root with the official source header and launcher: the shared
+124x24 SVG header logo, the 318x48 launcher wordmark, and the 48px source
+top padding. The Light-only rights checkbox and modal remain absent.
+
+The source and Heavy roots were each read back after a 30-second wait in the
+same authenticated Chrome profile. Heavy returned the source title, header
+controls, launcher search, category tabs, and feature cards; typecheck, lint,
+production build, R2 asset preparation, and deployment passed. This is root
+visual-contract evidence only; provider execution, durable save/reuse,
+reconciliation, billing, publish, and private-media completion remain open.
+
 ## Latest Web release — 2026-09-21 r58
 
 Version `3515ec9d-4042-4469-a95f-c257f15fcb0a` is deployed at 100% to

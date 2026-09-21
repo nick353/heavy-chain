@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Chrome, Eye, Globe2, HelpCircle, LockKeyhole, Mail } from 'lucide-react';
 import { Button } from '../components/ui';
+import { LightchainLogo } from '../components/LightchainLogo';
 import { useAuthStore } from '../stores/authStore';
 import { getAuthErrorMessage } from '../lib/authErrorMessage';
 import { probeAuthService } from '../lib/auth';
@@ -109,9 +110,8 @@ export function LoginPage() {
     <main className="min-h-screen px-4 py-8 text-white">
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1500px] flex-col">
         <header className="flex items-center justify-between border-b border-white/10 pb-5">
-          <Link to="/" aria-label="Lightchain AI" className="inline-flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-white text-[11px] font-black tracking-normal text-neutral-950">◌</span>
-            LIGHTCHAIN
+          <Link to="/" aria-label="Lightchain AI" className="inline-flex items-center text-white">
+            <LightchainLogo />
           </Link>
           <div className="flex items-center gap-1 text-sm text-neutral-300 sm:gap-2">
             <button type="button" aria-label="日本語" className="hidden items-center gap-1 rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-white sm:inline-flex">

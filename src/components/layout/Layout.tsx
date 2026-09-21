@@ -12,7 +12,10 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
+import { LightchainLogo } from '../LightchainLogo';
 import { ChevronDown, Globe2, HelpCircle, History, User, UserCircle } from 'lucide-react';
+
+// Source logo provenance: src="/assets/lightchain-logo.svg". The inline component avoids a remote asset dependency.
 
 export function Layout() {
   const { user, profile, signOut } = useAuthStore();
@@ -116,11 +119,8 @@ export function Layout() {
             <div className={`mx-auto flex items-center justify-between gap-4 lightchain-route-header-inner ${isLightchainRoute ? 'h-[49px] max-w-none px-6' : 'h-[70px] max-w-[1800px] px-4 sm:px-6 lg:px-8'}`}>
               <div className={`flex items-center ${isLightchainRoute ? 'gap-4' : 'gap-7'}`}>
                 {isLightchainRoute ? (
-                  <Link to="/" aria-label="Lightchain AI" className="flex h-6 shrink-0 items-center gap-2 text-[12px] font-semibold tracking-[0.16em] text-white">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-white text-neutral-950">
-                      <img src="/assets/lightchain-logo.svg" alt="" className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    LIGHTCHAIN
+                  <Link to="/" aria-label="Lightchain AI" className="flex h-6 shrink-0 items-center text-white">
+                    <LightchainLogo />
                   </Link>
                 ) : (
                   <Link to="/dashboard" className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">

@@ -1,3 +1,29 @@
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r116
+
+The official authenticated source root at `https://jp.linkaigc.com/` and the
+Heavy root were both re-read in Chrome after the requested 30-second wait.
+Heavy now uses the source-shaped 124x24 SVG header logo and the source-shaped
+318x48 launcher wordmark at the same x/y positions; the launcher top padding
+is 48px, matching the source. The header and launcher remain free of the
+Light-absent rights-confirmation checkbox/modal.
+
+The production Web Worker version is
+`88055441-c1a5-4c06-9673-be9644eb23c3`. Typecheck, lint, production build,
+R2 asset upload, and deployment passed. The post-deploy authenticated readback
+returned `Lightchain AI`, the source header controls, the launcher search,
+category tabs, and the source feature cards after the 30-second wait. This
+release verifies the root/header visual contract; it does not claim provider
+generation, durable save/reuse, billing, publish, or private-media completion.
+
+The full Light-to-Heavy goal remains open. The remaining product work is
+provider execution/rendering, durable save/reuse/readback and reconciliation,
+same-fixture full interaction diff coverage, Gallery/Canvas/History/Jobs
+continuity, and the six external/operator release-gate blockers: authenticated
+production monitor/UI evidence, launch operations, production all-feature order
+previews, a fresh G618 scale baseline, production H602 billing completion, and
+the real-generation visual scorecard. No provider submit, payment, publish,
+secret export, or destructive cleanup was performed.
+
 # Light Chain source parity and live OpenAI readback — 2026-09-21 r115
 
 The official authenticated source detail at

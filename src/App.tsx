@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LightchainLogo } from './components/LightchainLogo';
 import { LightchainUnifiedWorkspaceShell } from './components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
@@ -207,9 +208,8 @@ function WorkspaceLoadingFallback({ authRecovery = false, showHeader = true }: {
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1800px] flex-col">
         {showHeader && (
           <header className="flex items-center justify-between border-b border-white/10 pb-5">
-            <a href="/" aria-label="Lightchain AI" className="inline-flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-white text-[11px] font-black tracking-normal text-neutral-950">◌</span>
-              LIGHTCHAIN
+            <a href="/" aria-label="Lightchain AI" className="inline-flex items-center text-white">
+              <LightchainLogo />
             </a>
             <div className="hidden items-center gap-2 text-sm text-neutral-300 sm:flex">
               <span className="inline-flex items-center gap-1 rounded-full px-3 py-2"><span aria-hidden="true">◎</span>日本語</span>
