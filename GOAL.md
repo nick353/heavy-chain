@@ -7642,15 +7642,16 @@ readback exposed the Lightchain header avatar, help control, fitting tabs,
 `権限がありません`, and no rights checkbox/modal/badge. Heavy's final
 readback matched the fixed source geometry for the header (`ヘルプセンター`
 at x=1671, avatar at x=1848), the fitting switch (y=135), the prompt input
-(x=33, y=466, h=214 versus source h=213), Smart/1K controls, permission
+(x=33, y=466, h=213, matching source h=213), Smart/1K controls, permission
 surface, and `生成履歴`. Existing Heavy result data and its Gallery/History/
 Jobs/Canvas links were retained rather than deleted or hidden.
 
-The final code is recorded at `3dd3b84` (avatar/account parity restoration in
-`8934dda`, fitting panel height in `7efbb5c`, and final switch geometry in
-`3dd3b84`). The Cloudflare-only build passed the Heavy Web Worker tests 8/8,
+The final code is recorded at `dfce66c` (avatar/account parity restoration in
+`8934dda`, fitting panel height in `7efbb5c`, final switch geometry in
+`3dd3b84`, and the final one-pixel prompt adjustment in `dfce66c`). The
+Cloudflare-only build passed the Heavy Web Worker tests 8/8,
 production build, R2 hash-checked asset upload, Wrangler dry-run, and was
-deployed at 100% as version `0d6ef13a-7924-4953-a5cd-ed63d9a20056`.
+deployed at 100% as version `6ee7fc20-4cc8-45fe-a8da-4d4ac6e87ece`.
 Public `/_health`, `/lightchain`, and `/model` returned HTTP 200. Local UI
 boundaries passed 15/15, route parity passed 29/29, and typecheck passed.
 
