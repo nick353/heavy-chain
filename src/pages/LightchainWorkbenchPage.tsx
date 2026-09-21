@@ -4678,7 +4678,7 @@ export function LightchainWorkbenchPage() {
                 ))}
               </div>
               {activeFittingInputTab === '説明生成' && (
-                <div className="mx-0 !mt-3 flex min-h-[280px] w-full flex-col rounded-2xl border border-white/5 bg-[#181d1f] px-4 pt-4 pb-2 focus-within:border-cyan-300/60">
+                <div className="mx-0 !mt-3 flex min-h-[279px] w-full flex-col rounded-2xl border border-white/5 bg-[#181d1f] px-4 pt-4 pb-2 focus-within:border-cyan-300/60">
                   <textarea
                     value={referenceNote}
                     onChange={(event) => setReferenceNote(event.target.value)}
