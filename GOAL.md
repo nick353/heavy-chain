@@ -8503,3 +8503,17 @@ Targeted ESLint and `git diff --check` pass. These local proofs do not replace
 authenticated production provider receipts, durable R2 readback,
 reconciliation, billing/operator proof, or the real generation scorecard; the
 Goal remains active.
+
+# Goal progress — 2026-09-22 r177
+
+The full integrated release gate was rerun after committing the verifier
+refresh (`ca53e62`). G610, G603, G605, G606, and G620 all pass with fresh
+readback selection. The remaining exact failures are production monitor/UI
+pair, launch operations, current 33-feature production previews, stale G618
+live-monitor evidence, production H602 billing completion, and the missing
+real-generation visual scorecard at
+`output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`.
+No provider generation, payment, publish, deployment, or destructive action
+was performed. The Goal remains active pending authenticated production
+receipts, monitor/operator evidence, billing completion, and the real
+scorecard.
