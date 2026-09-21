@@ -8163,6 +8163,21 @@ readback, the remaining route/state parity work, provider receipts,
 persistence/readback/reconciliation, business/legal decisions, and release-gate
 artifacts.
 
+# Goal progress — 2026-09-22 r168
+
+The marketing detail back/home actions were also using the internal
+`/lightchain/marketing-home` alias. They now return to the canonical Light
+entry `/marketing`; the routing test covers both absence of the stale alias and
+presence of the canonical route.
+
+The entry-routing suite passes 28/28, typecheck and diff checks pass. Worker
+version `1472c91b-03e1-45e4-b121-b3dd0b1b707e` is deployed. Public readback
+returned HTTP 200 for `/_health`, HTTP 307 for `/marketing`,
+`/marketing/detail`, and `/editor/patternDesign`, and the served bundle has
+zero stale marketing/print internal-path references. The Goal remains active;
+no provider generation, upload, payment, publish, migration, or destructive
+cleanup was performed.
+
 # Goal progress — 2026-09-22 r164
 
 The authenticated canonical existing video project at
