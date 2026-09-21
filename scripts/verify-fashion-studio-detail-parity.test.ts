@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../src/pages/FashionStudioDetailPage.tsx', import.meta.url), 'utf8');
 const overviewSource = readFileSync(new URL('../src/pages/FashionStudioPage.tsx', import.meta.url), 'utf8');
+const styleSource = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
 
 test('fashion studio saved-project detail keeps the Light canvas shell landmarks', () => {
   for (const marker of [
@@ -14,11 +15,11 @@ test('fashion studio saved-project detail keeps the Light canvas shell landmarks
         'data-testid="lightchain-fashion-studio-zoom-controls"',
         'cloudflareDataPlane.getCanvasDocument',
         'resolveGeneratedImageUrlWithStatus',
-        'data-testid="fashion-studio-saved-main-image"',
-        'data-testid="fashion-studio-saved-reference-image"',
-        'data-testid="fashion-studio-saved-result-image"',
-        'radial-gradient',
+        'testId="fashion-studio-saved-main-image"',
+        'testId="fashion-studio-saved-reference-image"',
+        'testId="fashion-studio-saved-result-image"',
   ]) assert.ok(source.includes(marker), `missing parity marker: ${marker}`);
+  assert.match(styleSource, /\.fashion-studio-source-dots[\s\S]*radial-gradient/);
 });
 
 test('AI generation remains an explicit safe boundary in the detail shell', () => {

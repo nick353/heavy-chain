@@ -1,4 +1,20 @@
-import { ChevronLeft, ImageIcon, Layers, Search, Upload } from 'lucide-react';
+import {
+  ArrowUpRight,
+  BookOpen,
+  ChevronLeft,
+  Hand,
+  ImageIcon,
+  ImagePlus,
+  Layers,
+  MousePointer2,
+  Redo2,
+  Search,
+  Sparkles,
+  Undo2,
+  Upload,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
@@ -7,6 +23,34 @@ import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 
 type DetailAsset = { url: string; label: string };
+
+const LIGHTCHAIN_FASHION_REFERENCE_ASSETS = {
+  main: 'https://static-jp.linkaigc.com/saas/2026-09/83d167ee1d010835bb7e999124b6549b.webp',
+  reference: 'https://static-jp.linkaigc.com/saas/2026-09/e89aa47fb8ca7afdcfde6f0bc848ec9c.webp',
+  result: 'https://static-jp.linkaigc.com/saas/2026-09/a07017977ab692da3bb02259525e3d21.webp',
+  projectIcon: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/%E4%B8%87%E8%83%BD%E7%A9%BF%E6%90%AD%E8%9E%8D%E5%90%88icon.png?x-oss-process=image/resize,m_lfit,w_48,limit_1/format,webp',
+} as const;
+
+function FashionStudioImageNode({
+  src,
+  alt,
+  className,
+  testId,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  testId: string;
+}) {
+  return (
+    <figure className={`fashion-studio-source-image-node ${className}`} data-testid={testId}>
+      <img src={src} alt={alt} loading="eager" className="h-full w-full object-cover" />
+      <button type="button" className="fashion-studio-source-expand" aria-label={`${alt}を拡大`}>
+        <ArrowUpRight className="h-5 w-5" />
+      </button>
+    </figure>
+  );
+}
 
 const extractSavedProjectDetail = (snapshot: unknown) => {
   if (!snapshot || typeof snapshot !== 'object' || !Array.isArray((snapshot as { objects?: unknown }).objects)) {
@@ -51,7 +95,6 @@ const extractSavedProjectDetail = (snapshot: unknown) => {
  */
 export function FashionStudioDetailPage() {
   const [searchParams] = useSearchParams();
-  const [activeInput, setActiveInput] = useState<'text' | 'reference'>('text');
   const [prompt, setPrompt] = useState('メイン画像のブルーの壁紙を参考画像の平面で見せて');
   const [notice, setNotice] = useState('');
   const [projectAssets, setProjectAssets] = useState<DetailAsset[]>([]);
@@ -107,30 +150,61 @@ export function FashionStudioDetailPage() {
   }, [hasProject, projectCode]);
 
   if (hasProject) {
+    const mainImage = projectAssets[0]?.url ?? LIGHTCHAIN_FASHION_REFERENCE_ASSETS.main;
+    const referenceImage = projectAssets[1]?.url ?? LIGHTCHAIN_FASHION_REFERENCE_ASSETS.reference;
+    const resultImage = projectAssets[2]?.url ?? LIGHTCHAIN_FASHION_REFERENCE_ASSETS.result;
+
     return (
-      <main className="dark relative min-h-[calc(100vh-50px)] overflow-hidden bg-[#181a1d] text-white" data-testid="lightchain-fashion-studio-project-detail" data-lightchain-parity-shell="fashion-studio-project-detail">
-        <div className="pointer-events-none absolute inset-0 opacity-70" style={{ backgroundImage: 'radial-gradient(#464b50 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
-        <div className="relative z-10 min-h-[calc(100vh-50px)] overflow-auto">
-          <aside className="absolute left-4 top-6 z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#202426]/95 shadow-xl"><div className="flex h-10 items-center gap-2 border-b border-white/10 px-2 text-sm text-neutral-400"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#52c9c3] text-[11px] font-bold text-neutral-950">✦</span><span>ファッションスタジオ</span></div><div className="flex h-11 items-center gap-3 px-3 text-sm text-neutral-300"><Link to="/flow/integration" aria-label="ファッションスタジオへ戻る" className="text-neutral-400 hover:text-white"><ChevronLeft className="h-5 w-5" /></Link><span>Untitled</span><span className="ml-auto text-xs text-neutral-500">30%</span></div></aside>
-          <aside className="absolute left-4 top-[360px] z-10 flex flex-col gap-2 rounded-xl border border-white/10 bg-[#202426]/95 p-2 shadow-xl" aria-label="プロジェクトツール">{[Layers, ImageIcon, Search, Upload].map((Icon, index) => <button key={index} type="button" aria-label={`ツール${index + 1}`} className="flex h-9 w-9 items-center justify-center rounded-md text-neutral-400 hover:bg-white/10 hover:text-white"><Icon className="h-4 w-4" /></button>)}</aside>
-          <section className="mx-auto min-w-[760px] max-w-[1500px] px-[310px] pb-32 pt-8" data-testid="lightchain-fashion-studio-canvas">
-            <div className="flex items-center justify-between text-xs text-neutral-400"><span>タスク <strong className="ml-2 text-neutral-200">0</strong></span><span>進行中</span></div>
-            <div className="relative mt-5 min-h-[520px]">
-              <div className="absolute left-[8%] top-[14%] w-[350px] overflow-hidden rounded-xl border border-white/15 bg-[#252a2b] shadow-xl"><div className="h-[240px] bg-gradient-to-br from-sky-300 via-blue-500 to-indigo-900">{projectAssets[0] && <img data-testid="fashion-studio-saved-main-image" src={projectAssets[0].url} alt={projectAssets[0].label} className="h-full w-full object-cover" />}</div><p className="px-3 py-2 text-xs text-neutral-300">メイン画像</p></div>
-              <div className="absolute right-[8%] top-[18%] w-[370px] overflow-hidden rounded-xl border border-white/15 bg-[#252a2b] shadow-xl"><div className="h-[250px] bg-gradient-to-br from-amber-100 via-orange-300 to-rose-500">{projectAssets[1] && <img data-testid="fashion-studio-saved-reference-image" src={projectAssets[1].url} alt={projectAssets[1].label} className="h-full w-full object-cover" />}</div><p className="px-3 py-2 text-xs text-neutral-300">参考画像</p></div>
-              <div className="absolute left-[39%] top-[62%] w-[370px] overflow-hidden rounded-xl border border-cyan-200/30 bg-[#252a2b] shadow-xl"><div className="h-[250px] bg-gradient-to-br from-neutral-100 via-cyan-100 to-slate-400">{projectAssets[2] && <img data-testid="fashion-studio-saved-result-image" src={projectAssets[2].url} alt={projectAssets[2].label} className="h-full w-full object-cover" />}</div><p className="px-3 py-2 text-xs text-neutral-300">生成結果</p></div>
-              <div className="pointer-events-none absolute left-[29%] top-[30%] h-px w-[38%] rotate-[18deg] bg-cyan-200/60" /><div className="pointer-events-none absolute left-[50%] top-[45%] h-px w-[20%] -rotate-[22deg] bg-cyan-200/60" />
+      <main className="fashion-studio-project-detail-parity dark relative min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white" data-testid="lightchain-fashion-studio-project-detail" data-lightchain-parity-shell="fashion-studio-project-detail">
+        <div className="fashion-studio-source-dots pointer-events-none absolute inset-0" />
+        <aside className="fashion-studio-source-project-rail absolute left-4 top-6 z-30 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#262a2b] shadow-xl">
+          <div className="flex h-10 items-center gap-1.5 border-b border-white/10 px-2 text-sm text-neutral-400"><img src={LIGHTCHAIN_FASHION_REFERENCE_ASSETS.projectIcon} alt="" className="size-5 object-contain" /><span>ファッションスタジオ</span></div>
+          <div className="flex h-11 items-center gap-3 px-3 text-sm text-neutral-300"><Link to="/flow/integration" aria-label="ファッションスタジオへ戻る" className="text-neutral-400 hover:text-white"><ChevronLeft className="h-5 w-5" /></Link><span>Untitled</span></div>
+        </aside>
+
+        <aside className="fashion-studio-source-asset-trigger absolute left-4 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2 overflow-hidden rounded-xl border border-white/10 bg-[#262a2b] p-1 shadow-xl" aria-label="アセット">
+          <button type="button" aria-label="アセット" className="flex size-12 cursor-pointer items-center justify-center rounded-lg bg-[#353a3b] text-neutral-200 hover:bg-white/10"><Layers className="h-5 w-5" /></button>
+        </aside>
+
+        <section className="absolute inset-0 z-10" data-testid="lightchain-fashion-studio-canvas" aria-label="Fashion Studio Canvas">
+          <svg className="fashion-studio-source-edges pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1904 771" preserveAspectRatio="none" aria-hidden="true">
+            <defs><marker id="fashion-studio-arrow" markerWidth="12" markerHeight="12" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#5e6263" strokeWidth="1.5" /></marker></defs>
+            <path d="M430 515 C520 500 545 390 577 340" fill="none" stroke="#5e6263" strokeWidth="1.75" markerEnd="url(#fashion-studio-arrow)" />
+            <path d="M930 340 C1000 320 1050 280 1122 285" fill="none" stroke="#5e6263" strokeWidth="1.75" markerEnd="url(#fashion-studio-arrow)" />
+            <path d="M430 520 C690 520 850 560 1072 635" fill="none" stroke="#5e6263" strokeWidth="1.75" markerEnd="url(#fashion-studio-arrow)" />
+          </svg>
+          <FashionStudioImageNode src={mainImage} alt="メイン画像" testId="fashion-studio-saved-main-image" className="fashion-studio-source-main-node" />
+          <FashionStudioImageNode src={referenceImage} alt="参考画像" testId="fashion-studio-saved-reference-image" className="fashion-studio-source-reference-node" />
+          <FashionStudioImageNode src={resultImage} alt="生成結果" testId="fashion-studio-saved-result-image" className="fashion-studio-source-result-node" />
+
+          <div className="fashion-studio-source-task" aria-label="タスク"><span><span className="mr-2">▣</span>タスク</span><span>0 <span className="mx-1">進行中</span>⌃</span></div>
+          <div className="fashion-studio-source-canvas-toolbar" data-testid="lightchain-fashion-studio-canvas-toolbar">
+            <button type="button" aria-label="選択" className="is-active"><MousePointer2 className="h-4 w-4" /></button><button type="button" aria-label="移動"><Hand className="h-4 w-4" /></button><button type="button" aria-label="画像を追加"><ImagePlus className="h-4 w-4" /></button><button type="button" aria-label="元に戻す"><Undo2 className="h-4 w-4" /></button><button type="button" aria-label="やり直す"><Redo2 className="h-4 w-4" /></button>
+          </div>
+          <div className="fashion-studio-source-zoom-controls" data-testid="lightchain-fashion-studio-zoom-controls"><button type="button" aria-label="ズームアウト"><ZoomOut className="h-4 w-4" /></button><span>30%</span><button type="button" aria-label="ズームイン"><ZoomIn className="h-4 w-4" /></button></div>
+          <button type="button" className="fashion-studio-source-handbook" aria-label="操作ガイド"><BookOpen className="h-5 w-5" /></button>
+          <button type="button" className="fashion-studio-source-panel-toggle" aria-label="パネルを開く"><Layers className="h-5 w-5" /></button>
+        </section>
+
+        <section className="fashion-studio-source-generation-panel" data-testid="lightchain-fashion-studio-generation-panel">
+          <div className="fashion-studio-source-generation-inner">
+            <div className="flex items-center justify-between"><div className="text-[30px] text-neutral-400">テキストで生成</div><div className="flex items-center gap-3 text-[30px] text-neutral-300"><ImageIcon className="h-8 w-8" />画像検索</div></div>
+            <div className="flex items-center rounded-[32px] bg-gradient-to-r from-[#00a1ff66] to-[#c861ff66] px-5 py-2.5 text-[30px] text-white"><Sparkles className="mr-2.5 h-[30px] w-[30px]" />指令と参考画像を使ってワンクリック生成</div>
+            <div className="flex items-center justify-between rounded-[32px] border border-white/10 bg-[#353a3b] p-5 text-[30px]"><div className="flex items-center gap-5"><img src={mainImage} alt="メイン画像" className="size-[100px] rounded-[20px] object-contain" /><span>メイン画像</span></div><button type="button" aria-label="メイン画像を差し替え"><ImagePlus className="h-8 w-8" /></button></div>
+            <div className="text-[30px] text-neutral-400">参考画像</div>
+            <div className="flex items-center gap-5"><img src={referenceImage} alt="参考画像" className="size-[140px] rounded-[20px] object-contain" /><button type="button" aria-label="参考画像を追加" className="flex size-[100px] items-center justify-center rounded-[20px] border border-white/10 bg-[#353a3b]"><ImagePlus className="h-8 w-8" /></button></div>
+            <div className="flex flex-col gap-5">
+              <label className="flex items-center text-[30px] text-neutral-400" htmlFor="fashion-studio-detail-prompt">指示テキスト *</label>
+              <div className="flex h-[420px] flex-col justify-between gap-5 rounded-[32px] border border-white/15 bg-[#353a3b] p-5"><textarea id="fashion-studio-detail-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={2000} className="h-full resize-none border-none bg-transparent p-0 text-[30px] leading-6 text-white outline-none" aria-label="指令を入力してください。" /><div className="flex items-center justify-between"><div className="flex gap-2 text-[30px] text-neutral-300"><button type="button" aria-label="プロンプト補助"><Sparkles className="h-5 w-5" /></button><button type="button" aria-label="入力画像"><ImageIcon className="h-5 w-5" /></button></div><span className="text-[30px] text-neutral-400">文字数：{prompt.length}/2000</span><button type="button" onClick={() => setPrompt('')} className="rounded-xl bg-[#505c5e] px-5 py-2 text-[30px] text-white">全削除</button></div></div>
             </div>
-          </section>
-          <section className="absolute bottom-[75px] left-5 z-20 w-[min(390px,calc(100vw-40px))] rounded-xl border border-white/10 bg-[#202426]/95 p-3 shadow-2xl lg:left-[222px]" data-testid="lightchain-fashion-studio-generation-panel">
-            <div className="flex items-center justify-between"><div className="flex gap-1"><button type="button" onClick={() => setActiveInput('text')} className={`rounded-md px-3 py-1.5 text-xs ${activeInput === 'text' ? 'bg-cyan-300 text-neutral-950' : 'bg-white/5 text-neutral-400'}`}>テキストで生成</button><button type="button" onClick={() => setActiveInput('reference')} className={`rounded-md px-3 py-1.5 text-xs ${activeInput === 'reference' ? 'bg-cyan-300 text-neutral-950' : 'bg-white/5 text-neutral-400'}`}>参考画像</button></div><span className="text-xs text-neutral-500">画像検索</span></div>
-            <div className="mt-3 grid grid-cols-2 gap-2"><div className="flex h-16 items-center justify-center rounded-lg border border-dashed border-white/15 text-xs text-neutral-500"><ImageIcon className="mr-2 h-4 w-4" />メイン画像</div><div className="flex h-16 items-center justify-center rounded-lg border border-dashed border-white/15 text-xs text-neutral-500"><Upload className="mr-2 h-4 w-4" />参考画像</div></div>
-            <label className="mt-3 block text-xs font-semibold text-neutral-400" htmlFor="fashion-studio-detail-prompt">指示テキスト *</label><textarea id="fashion-studio-detail-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} className="mt-2 min-h-20 w-full resize-y rounded-lg border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-cyan-300/60" aria-label="指令を入力してください。" />
-            <div className="mt-1 flex items-center justify-between text-[11px] text-neutral-500"><span>文字数：{prompt.length}/2000</span><button type="button" onClick={() => setPrompt('')} className="rounded-md px-2 py-1 text-neutral-400 hover:bg-white/10 hover:text-white">全削除</button></div><div className="mt-2 flex gap-2"><select id="fashion-studio-generation-mode" aria-label="生成設定" className="flex-1 rounded-md border border-white/10 bg-[#15191a] px-2 py-2 text-xs text-neutral-300"><option>自動</option></select><select id="fashion-studio-generation-quality" aria-label="画像品質" className="flex-1 rounded-md border border-white/10 bg-[#15191a] px-2 py-2 text-xs text-neutral-300"><option>1K</option></select><button type="button" onClick={() => setNotice('入力内容を保持しました。次の生成条件を確認できます。')} className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950">AI生成 <span className="ml-1 text-xs">80</span></button></div>{notice && <p className="mt-2 text-xs text-cyan-200" role="status">{notice}</p>}
-          </section>
-          <div className="absolute bottom-9 left-1/2 z-20 flex -translate-x-1/2 gap-1 rounded-lg border border-white/10 bg-[#202426]/95 p-2" data-testid="lightchain-fashion-studio-canvas-toolbar"><button type="button" aria-label="選択" className="rounded px-3 py-1 text-xs text-neutral-300 hover:bg-white/10">選択</button><button type="button" aria-label="元に戻す" className="rounded px-3 py-1 text-xs text-neutral-300 hover:bg-white/10">戻す</button><button type="button" aria-label="やり直す" className="rounded px-3 py-1 text-xs text-neutral-300 hover:bg-white/10">進む</button></div>
-          <div className="absolute bottom-9 right-5 z-20 flex items-center gap-2 rounded-lg border border-white/10 bg-[#202426]/95 p-2 text-xs text-neutral-300" data-testid="lightchain-fashion-studio-zoom-controls"><button type="button" aria-label="ズームアウト">−</button><span>100%</span><button type="button" aria-label="ズームイン">＋</button></div>
-        </div>
+            <div className="flex gap-2"><select id="fashion-studio-generation-mode" aria-label="生成設定" className="h-20 flex-1 rounded-2xl border border-white/10 bg-[#353a3b] px-10 py-5 text-[30px] text-neutral-300"><option>自動</option></select><select id="fashion-studio-generation-quality" aria-label="画像品質" className="h-20 flex-1 rounded-2xl border border-white/10 bg-[#353a3b] px-10 py-5 text-[30px] text-neutral-300"><option>1K</option></select></div>
+            <button type="button" onClick={() => setNotice('入力内容を保持しました。次の生成条件を確認できます。')} className="h-20 w-full rounded-3xl bg-[#0bc1b8] text-[30px] font-medium text-[#111817]">AI生成 <span className="ml-1 text-[22px]">80</span></button>
+            {notice && <p className="text-[24px] text-cyan-200" role="status">{notice}</p>}
+          </div>
+        </section>
+
+        <div className="fashion-studio-source-points" aria-label="ポイント"><Sparkles className="h-4 w-4" />375731</div>
+        <div className="fashion-studio-source-image-search" aria-label="画像検索"><Search className="h-4 w-4" />画像検索<span className="ml-auto">☷　⇧⌄</span></div>
       </main>
     );
   }

@@ -475,6 +475,267 @@
   white-space: normal;
 }
 
+/* Fashion Studio existing-project parity. The canonical canvas uses a 30%
+   React Flow viewport, so the generation node is intentionally rendered from
+   the same large source coordinate space and scaled into the lower-left rail. */
+.fashion-studio-project-detail-parity {
+  isolation: isolate;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.fashion-studio-source-dots {
+  z-index: 0;
+  background-color: #171b1c;
+  background-image: radial-gradient(#464b50 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.fashion-studio-source-project-rail {
+  height: 83px;
+  border-color: #3d4346;
+}
+
+.fashion-studio-source-asset-trigger {
+  border-color: #3d4346;
+}
+
+.fashion-studio-source-edges {
+  z-index: 1;
+}
+
+.fashion-studio-source-image-node {
+  z-index: 2;
+  position: absolute;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #3d4346;
+  border-radius: 12px;
+  background: #262a2b;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
+}
+
+.fashion-studio-source-main-node {
+  top: 190.86px;
+  left: 30.29%;
+  width: 351.06px;
+  height: 300px;
+}
+
+.fashion-studio-source-reference-node {
+  top: 134.36px;
+  left: 58.93%;
+  width: 372.41px;
+  height: 300px;
+}
+
+.fashion-studio-source-result-node {
+  top: 557.16px;
+  left: 56.31%;
+  width: 372.41px;
+  height: 300px;
+}
+
+.fashion-studio-source-expand {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: rgb(0 0 0 / 12%);
+  color: #fff;
+}
+
+.fashion-studio-source-expand:hover {
+  background: rgb(0 0 0 / 34%);
+}
+
+.fashion-studio-source-generation-panel {
+  position: absolute;
+  z-index: 25;
+  top: 379.36px;
+  left: 11.67vw;
+  width: 210px;
+  height: 459px;
+  overflow: hidden;
+  border: 1px solid #3d4346;
+  border-radius: 12px;
+  background: #262a2b;
+  color: #e3e8e8;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 40%);
+}
+
+.fashion-studio-source-generation-inner {
+  box-sizing: border-box;
+  display: flex;
+  width: 700px;
+  min-height: 1530px;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+  transform: scale(0.3);
+  transform-origin: top left;
+}
+
+.fashion-studio-source-generation-inner button,
+.fashion-studio-source-generation-inner select,
+.fashion-studio-source-generation-inner textarea {
+  font-family: inherit;
+}
+
+.fashion-studio-source-task,
+.fashion-studio-source-canvas-toolbar,
+.fashion-studio-source-zoom-controls,
+.fashion-studio-source-handbook,
+.fashion-studio-source-panel-toggle,
+.fashion-studio-source-points,
+.fashion-studio-source-image-search {
+  position: absolute;
+  z-index: 30;
+  border: 1px solid #3d4346;
+  background: #262a2b;
+  color: #e3e8e8;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
+}
+
+.fashion-studio-source-task {
+  bottom: 39px;
+  left: 16px;
+  display: flex;
+  width: 276px;
+  height: 47px;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.fashion-studio-source-canvas-toolbar {
+  bottom: 39px;
+  left: 50%;
+  display: flex;
+  height: 56px;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 12px;
+  transform: translateX(-50%);
+}
+
+.fashion-studio-source-canvas-toolbar button {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #fff;
+}
+
+.fashion-studio-source-canvas-toolbar button:hover,
+.fashion-studio-source-canvas-toolbar button.is-active {
+  background: rgb(255 255 255 / 15%);
+}
+
+.fashion-studio-source-zoom-controls {
+  right: 16px;
+  bottom: 39px;
+  display: flex;
+  width: 154px;
+  height: 40px;
+  align-items: center;
+  justify-content: space-around;
+  border-radius: 20px;
+  font-size: 13px;
+}
+
+.fashion-studio-source-zoom-controls button,
+.fashion-studio-source-handbook,
+.fashion-studio-source-panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e3e8e8;
+}
+
+.fashion-studio-source-zoom-controls button {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.fashion-studio-source-zoom-controls button:hover,
+.fashion-studio-source-handbook:hover,
+.fashion-studio-source-panel-toggle:hover {
+  background: #353a3b;
+}
+
+.fashion-studio-source-handbook,
+.fashion-studio-source-panel-toggle {
+  bottom: 39px;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+}
+
+.fashion-studio-source-handbook {
+  right: 120px;
+}
+
+.fashion-studio-source-panel-toggle {
+  right: 72px;
+}
+
+.fashion-studio-source-points {
+  top: 23px;
+  right: 335px;
+  display: flex;
+  height: 38px;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.fashion-studio-source-image-search {
+  top: 23px;
+  right: 16px;
+  display: flex;
+  width: 312px;
+  height: 48px;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border-radius: 12px;
+  color: #e3e8e8;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .fashion-studio-source-main-node {
+    left: 32%;
+  }
+
+  .fashion-studio-source-reference-node,
+  .fashion-studio-source-result-node {
+    left: 58%;
+  }
+
+  .fashion-studio-source-points,
+  .fashion-studio-source-image-search {
+    display: none;
+  }
+}
+
 /* Touch action improvements for mobile */
 @media (hover: none) and (pointer: coarse) {
   .glass-card:hover {

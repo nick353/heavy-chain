@@ -8039,6 +8039,31 @@ remains active for the remaining source routes and states, provider receipts,
 durable persistence/readback/reconciliation, video-quality evidence,
 billing/operator proof, and strict release-gate artifacts.
 
+# Goal progress — 2026-09-22 r162
+
+The authenticated canonical Fashion Studio existing-project state was freshly
+read at `/flow/integration/detail?boardProjectCode=2099697581958967298&boardProjectType=integrationCustom`.
+Heavy's detail view now follows the same dotted canvas and React Flow-style
+composition: the project rail is `x=16/y=74/w=264/h=83`, the generation node
+is `x=222.20/y=429.36/w=210/h=459` at the source's 30% zoom, and the three
+image nodes read back at `351.05x300`, `372.41x300`, and `372.41x300` with
+source-matching positions `x=576.72/y=240.86`, `x=1122.02/y=184.36`, and
+`x=1072.14/y=607.16`. The canonical public fixture images and project icon
+were used only as deterministic visual fallbacks; persisted Heavy assets still
+override them when readback succeeds.
+
+The live Heavy readback after a 30-second settle contains the source-shaped
+canvas, image-search header, points indicator, task bar, zoom/toolbar controls,
+prompt input, 1K/automatic selectors, and `AI生成 80` boundary. Browser logs
+were empty and the route has zero checkbox inputs. Worker version
+`be0085cf-3f30-42b5-b115-1bc6d0ae3ab9` is live after a successful build,
+static-reference test (3/3), dry-run, and deploy. Focused parity tests passed
+6/6 and typecheck/diff checks passed. No provider generation, file upload,
+payment, publish, migration, or destructive cleanup was performed. The Goal
+remains active for all other canonical route/state parity layers, authenticated
+provider receipts, durable persistence/readback/reconciliation, video-quality
+evidence, business/legal decisions, and strict release-gate artifacts.
+
 # Goal progress — 2026-09-21 r161
 
 During the acceptance review, the Fashion Studio parity CSS was tightened so
