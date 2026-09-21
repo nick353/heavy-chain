@@ -1,4 +1,36 @@
-# Light Chain source parity and live OpenAI readback — 2026-09-21 r113
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r114
+
+The official authenticated source page at
+`https://jp.linkaigc.com/marketing` was read back directly after the requested
+30-second wait in the same Chrome profile and compared with Heavy at the same
+viewport. Heavy's marketing home now matches the source card geometry and
+surface: the source upload placeholder, dark tutorial bubble, six scene
+recommendations, fixed 220px project cards, source empty-state artwork, and
+the top-right remaining-credit badge. The project surface now reads remote
+generated-image rows with signed URLs, merges local fallback artifacts, and
+exposes source-shaped per-card menus for pin, library-save, and delete. The
+Light-only rights checkbox/modal is still absent.
+
+The latest production Web Worker version is
+`1404b2d9-3ee2-4f42-abcf-5e2aa20b3933`. The focused marketing contract passed
+1/1, the Lightchain route suite passed 28/28, typecheck, diff check, build,
+R2 asset upload, and Wrangler dry-run passed. Fresh public readback returned
+HTTP 200 for `/_health`, `/lightchain`, and `/marketing`; the served parity
+chunk contains the 220px cards, official source artwork references, credit
+badge, project menus, and no `権利確認` marker. A fresh authenticated Chrome
+readback showed the aligned six-card row, source-shaped prompt/tutorial,
+account-backed credit value, empty-state image, and menu interaction with the
+three expected actions. The displayed projects and credit number remain
+account data and therefore are not expected to equal the current source
+account's fixtures.
+
+This closes the current marketing-home parity slice, but not the full
+Light-to-Heavy goal. The same six external/operator release-gate blockers
+remain: authenticated production monitor/UI evidence, launch operations,
+production all-feature order previews, a fresh G618 scale baseline,
+production H602 billing completion, and the real-generation visual scorecard.
+No provider submit, payment, publish, secret export, or destructive cleanup
+was performed.
 
 The official authenticated source page at
 `https://jp.linkaigc.com/designProduction` was read back directly after the

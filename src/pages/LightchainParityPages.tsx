@@ -758,17 +758,91 @@ export function LightchainMarketingHomePage() {
   const [prompt, setPrompt] = useState('');
   const [projects, setProjects] = useState<WorkspaceArtifact[]>([]);
   const [tutorialVisible, setTutorialVisible] = useState(false);
+  const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
+  const [pinnedProjectIds, setPinnedProjectIds] = useState<Set<string>>(new Set());
+  const [pinsHydrated, setPinsHydrated] = useState(false);
+  const [remainingUnits, setRemainingUnits] = useState<number | null>(null);
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    setProjects(currentBrand?.id ? listWorkspaceArtifacts(currentBrand.id, user?.id).slice(0, 12) : []);
     try {
       setTutorialVisible(window.localStorage.getItem(MARKETING_TUTORIAL_STORAGE_KEY) !== '1');
     } catch {
       setTutorialVisible(true);
     }
+    let cancelled = false;
+    if (!currentBrand?.id) {
+      setProjects([]);
+      return () => { cancelled = true; };
+    }
+    const loadProjects = async () => {
+      const localProjects = listWorkspaceArtifacts(currentBrand.id, user?.id);
+      let remoteProjects: WorkspaceArtifact[] = [];
+      if (cloudflareDataPlane) {
+        try {
+          const remoteRows = await cloudflareDataPlane.listGeneratedImages(currentBrand.id, {
+            limit: 100,
+            offset: 0,
+            order: 'newest',
+          });
+          const listRows = remoteRows.map(asGeneratedImageListRow);
+          const signedRows = await withSignedImageUrls(listRows).catch(() => listRows);
+          remoteProjects = signedRows.map(generatedImageToWorkspaceArtifact);
+        } catch {
+          // Local artifacts remain a safe fallback when remote readback is unavailable.
+        }
+      }
+      if (cancelled) return;
+      const byId = new Map<string, WorkspaceArtifact>();
+      [...remoteProjects, ...localProjects].forEach((project) => {
+        if (!byId.has(project.id)) byId.set(project.id, project);
+      });
+      setProjects(sortWorkspaceArtifacts(byId.values()).slice(0, 12));
+    };
+    void loadProjects();
+    return () => { cancelled = true; };
   }, [currentBrand?.id, user?.id]);
+
+  useEffect(() => {
+    const brandId = currentBrand?.id;
+    if (!brandId) {
+      setPinsHydrated(false);
+      setPinnedProjectIds(new Set());
+      return;
+    }
+    setPinsHydrated(false);
+    try {
+      const saved = window.localStorage.getItem(`heavy-marketing-pins:${brandId}`);
+      const parsed = saved ? JSON.parse(saved) : [];
+      setPinnedProjectIds(new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []));
+    } catch {
+      setPinnedProjectIds(new Set());
+    }
+    setPinsHydrated(true);
+  }, [currentBrand?.id]);
+
+  useEffect(() => {
+    const brandId = currentBrand?.id;
+    if (!brandId || !pinsHydrated) return;
+    window.localStorage.setItem(`heavy-marketing-pins:${brandId}`, JSON.stringify([...pinnedProjectIds]));
+  }, [currentBrand?.id, pinnedProjectIds, pinsHydrated]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const brandId = currentBrand?.id;
+    if (!brandId || !cloudflareDataPlane) {
+      setRemainingUnits(null);
+      return () => { cancelled = true; };
+    }
+    void cloudflareDataPlane.getImageUsage(brandId).then((summary) => {
+      if (cancelled) return;
+      setRemainingUnits(Number.isSafeInteger(summary.remainingUnits) && summary.remainingUnits >= 0 ? summary.remainingUnits : null);
+    }).catch(() => {
+      if (!cancelled) setRemainingUnits(null);
+    });
+    return () => { cancelled = true; };
+  }, [currentBrand?.id]);
 
   const generationHref = (nextPrompt: string) => buildGenerationIntentHref({
     feature: 'campaign-image',
@@ -789,17 +863,50 @@ export function LightchainMarketingHomePage() {
     }
   };
 
+  const saveMarketingArtifactToLibrary = async (artifact: WorkspaceArtifact) => {
+    if (!currentBrand?.id) return toast.error('ブランドが選択されていないため、ライブラリーへ保存できません');
+    const result = await saveWorkspaceArtifactBestEffort({
+      ...artifact,
+      id: undefined,
+      brandId: currentBrand.id,
+      scopeId: user?.id,
+      metadata: { ...artifact.metadata, librarySource: 'marketing-project-card-menu', libraryGroup: 'マイライブラリー', copiedFromArtifactId: artifact.id },
+    });
+    if (!result.localPersisted) return toast.error('ライブラリー保存の確認に失敗しました');
+    setProjects((current) => mergeWorkspaceArtifact(current, result.artifact).slice(0, 12));
+    toast.success(result.remote ? 'アセットライブラリーに保存しました' : 'ローカルライブラリーに保存しました');
+  };
+
+  const deleteMarketingArtifact = async (artifact: WorkspaceArtifact) => {
+    if (!currentBrand?.id || !window.confirm(`「${artifact.title}」を削除しますか？`)) return;
+    const remoteImageId = typeof artifact.metadata.remoteImageId === 'string' ? artifact.metadata.remoteImageId : null;
+    if (cloudflareDataPlane && remoteImageId && !artifact.id.startsWith('local-')) {
+      try {
+        await cloudflareDataPlane.deleteGeneratedImage(remoteImageId);
+      } catch {
+        toast.error('削除に失敗しました');
+        return;
+      }
+    }
+    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, [artifact.id], user?.id);
+    if (!result.ok) return toast.error('成果物を削除できませんでした');
+    setProjects((current) => current.filter((project) => project.id !== artifact.id));
+    setOpenProjectMenuId(null);
+    toast.success('プロジェクトを削除しました');
+  };
+
   return (
     <ParityShell className="relative overflow-hidden bg-[#171b1c] text-white" workflowFeature="marketing-home">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(56,189,148,0.42),rgba(59,130,246,0.38),rgba(30,41,59,0.1))]" />
+      {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</div>}
       <main data-testid="lightchain-marketing-home" className="relative z-10 mx-auto max-w-[1365px] px-5 pb-10 pt-16 sm:px-8 lg:px-0">
         <section className="text-center">
           <h1 className="text-4xl font-semibold tracking-[-0.04em]">マーケティングワークスペースへようこそ</h1>
           <p className="mt-3 text-sm text-neutral-400">今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！</p>
           <div className="relative mx-auto mt-8 max-w-[980px] rounded-2xl border border-[#0bcabc] bg-[#1a1f22] p-2 shadow-[0_0_28px_rgba(101,211,207,0.14)]">
-            <div className="grid min-h-[206px] grid-cols-[96px_minmax(0,1fr)] items-center gap-4 rounded-2xl bg-[#1d2326] px-4 py-3 text-left">
-              <button type="button" aria-label="参考画像を追加" onClick={() => navigate('/marketing/detail')} className="flex h-24 w-20 rotate-[-8deg] items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#243039,#101719)] text-neutral-300 transition hover:text-white">
-                <ImageIcon className="h-6 w-6" />
+            <div className="grid min-h-[206px] grid-cols-[96px_minmax(0,1fr)] items-start gap-4 rounded-2xl bg-[#1d2326] px-4 py-3 text-left">
+              <button type="button" aria-label="参考画像を追加" onClick={() => navigate('/marketing/detail')} className="mt-2 flex h-24 w-20 rotate-[-8deg] items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#243039,#101719)] text-neutral-300 transition hover:text-white">
+                <img src="https://jp.linkaigc.com/marketing/upload-placeholder.png" alt="" className="h-full w-full object-cover" />
               </button>
               <textarea
                 value={prompt}
@@ -815,11 +922,11 @@ export function LightchainMarketingHomePage() {
               <button type="button" aria-label="送信" disabled={!prompt.trim()} onClick={() => navigate(generationHref(prompt.trim()))} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#65d3cf] disabled:cursor-not-allowed disabled:opacity-40"><ArrowRight className="h-5 w-5 -rotate-45" /></button>
             </div>
             {tutorialVisible && (
-              <div className="absolute left-1/2 top-1/2 z-20 flex w-[min(660px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-full border border-[#65d3cf]/50 bg-[#91f0df] px-4 py-2 text-left text-xs font-semibold text-neutral-950 shadow-xl" data-testid="lightchain-marketing-tutorial">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-white ring-4 ring-[#65d3cf]/50" />
+              <div className="absolute left-1/2 top-1/2 z-20 flex w-[min(660px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-full border border-[#65d3cf]/50 bg-[#202829]/95 px-4 py-2 text-left text-xs font-semibold text-neutral-200 shadow-xl" data-testid="lightchain-marketing-tutorial">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#65d3cf] ring-4 ring-[#65d3cf]/30" />
                 <span className="min-w-0 flex-1">ここで参考画像のアップロードや、アイデア（プロンプト）の入力ができます。 1 / 4</span>
-                <button type="button" onClick={dismissTutorial} className="shrink-0 underline">Next</button>
-                <button type="button" aria-label="スキップ" onClick={dismissTutorial} className="shrink-0 text-lg leading-none">×</button>
+                <button type="button" onClick={dismissTutorial} className="shrink-0 text-[#65d3cf] underline">Next</button>
+                <button type="button" aria-label="スキップ" onClick={dismissTutorial} className="shrink-0 text-lg leading-none text-[#65d3cf]">×</button>
               </div>
             )}
           </div>
@@ -837,18 +944,23 @@ export function LightchainMarketingHomePage() {
           </div>
         </section>
 
-        <section className="mt-12" data-testid="lightchain-marketing-projects">
-          <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2><span className="text-sm text-neutral-400">{projects.length}件</span></div>
-          <div className="mt-4 grid gap-2 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-            <button type="button" onClick={() => navigate('/marketing/detail')} className="overflow-hidden rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-left transition hover:border-cyan-200/60">
-              <div className="flex h-36 items-center justify-center bg-[radial-gradient(circle_at_50%_45%,rgba(101,211,207,0.24),transparent_34%),#20272a] text-3xl text-neutral-400">＋</div>
-              <div className="p-4"><p className="font-medium">新規ファイル</p><p className="mt-2 text-xs text-neutral-500">マーケティングプロジェクトを作成</p></div>
+        <section className="mt-9" data-testid="lightchain-marketing-projects">
+          <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2></div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={() => navigate('/marketing/detail')} className="group relative h-60 w-[220px] overflow-hidden rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-left transition hover:border-cyan-200/60">
+              <div className="flex h-full flex-col items-center justify-center rounded-xl bg-[#20272a] text-neutral-200 transition-colors group-hover:bg-[#252d30]">
+                <div className="relative h-20 w-20"><img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="" className="h-full w-full object-contain" /><span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-neutral-900"><Plus className="h-4 w-4" /></span></div>
+                <p className="mt-3 font-medium">新規ファイル</p>
+              </div>
             </button>
             {projects.map((project) => (
-              <button key={project.id} type="button" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(project.id)}`)} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left transition hover:border-white/40">
-                <div className="h-36 bg-[#20272a]">{project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <div className="flex h-full items-center justify-center text-2xl text-neutral-600">✦</div>}</div>
-                <div className="p-4"><p className="truncate font-medium">{project.title}</p><p className="mt-2 truncate text-xs text-neutral-500">{formatArtifactDate(project.createdAt)}</p></div>
-              </button>
+              <article key={project.id} className="group relative h-60 w-[220px] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left transition hover:border-white/40">
+                <button type="button" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(project.id)}`)} className="absolute inset-0 flex h-full w-full flex-col text-left">
+                  <div className="flex flex-1 items-center justify-center bg-[#20272a]">{project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="" className="h-12 w-12 object-contain" loading="lazy" />}</div>
+                  <div className="shrink-0 px-3 py-3"><p className="truncate font-medium">{pinnedProjectIds.has(project.id) ? '📌 ' : ''}{project.title}</p><p className="mt-2 truncate text-xs text-neutral-500">{formatArtifactDate(project.createdAt)}</p></div>
+                </button>
+                <div className="absolute right-2 top-2 z-20"><button type="button" aria-label={`${project.title}のメニュー`} aria-expanded={openProjectMenuId === project.id} className="rounded-lg bg-black/45 p-2 text-neutral-200 opacity-0 transition group-hover:opacity-100 hover:bg-black/70 focus:opacity-100" onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === project.id ? null : project.id); }}><MoreVertical className="h-4 w-4" /></button>{openProjectMenuId === project.id && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl"><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setPinnedProjectIds((current) => { const next = new Set(current); if (next.has(project.id)) next.delete(project.id); else next.add(project.id); return next; }); setOpenProjectMenuId(null); }}>ピン留め</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { void saveMarketingArtifactToLibrary(project); setOpenProjectMenuId(null); }}>アセットライブラリに保存</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => void deleteMarketingArtifact(project)}>削除</button></div>}</div>
+              </article>
             ))}
           </div>
           {projects.length === 0 && <p className="mt-4 text-sm text-neutral-500">保存済みのプロジェクトはここに表示されます。</p>}
@@ -856,7 +968,7 @@ export function LightchainMarketingHomePage() {
 
         <section className="mt-12" data-testid="lightchain-marketing-reference-cases">
           <h2 className="text-lg font-semibold">参考事例</h2>
-          <div className="mt-4 flex min-h-24 items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-neutral-500">データなし</div>
+          <div className="mt-4 flex min-h-24 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-neutral-500"><img src="https://jp.linkaigc.com/static/searchEmpty.png" alt="search empty" className="h-12 w-12 object-contain opacity-70" /><span className="mt-2">データなし</span></div>
         </section>
       </main>
     </ParityShell>

@@ -1,6 +1,28 @@
 # Heavy Chain Cloudflare web hosting
 
-## Latest Web release — 2026-09-21 r56
+## Latest Web release — 2026-09-21 r57
+
+Version `1404b2d9-3ee2-4f42-abcf-5e2aa20b3933` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. This release aligns the
+authenticated `/marketing` home with the current official Lightchain source:
+the source upload placeholder and dark tutorial, six scene recommendations,
+fixed 220px project cards, source empty-state artwork, and the top-right
+remaining-credit badge. Project cards read remote generated-image rows with
+signed URLs, keep a local fallback, and expose pin/library-save/delete menus.
+The Light-only rights checkbox and modal remain absent.
+
+The marketing parity contract passed 1/1 and the Lightchain route suite passed
+28/28; typecheck, diff check, Cloudflare build, R2 asset preparation, and
+Wrangler dry-run passed. Fresh public readback returned HTTP 200 for
+`/_health`, `/lightchain`, and `/marketing`; the served parity chunk contains
+the source artwork references, 220px cards, credit badge, project menus, and
+no `権利確認` marker. A fresh authenticated Chrome readback waited 30 seconds,
+showed the aligned project row and prompt surface, and opened/closed one
+project menu with the expected three actions. Account-specific project images
+and credit values are not treated as static source fixtures. No provider,
+payment, publish, or private-media completion is claimed.
+
+## Prior Web release — 2026-09-21 r56
 
 Version `9399b16b-51dd-487f-b9ce-b454d8013bd3` is deployed at 100% to
 `heavy-chain-web.nichika2000823.workers.dev`. This release aligns the
