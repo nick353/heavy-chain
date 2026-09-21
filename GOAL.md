@@ -1,3 +1,12 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r125
+
+The M04 model-planning route gap is now closed in the parity catalog. The
+canonical `/model-library/model-custom-form` entry, launcher mapping, fitting
+handoff, and stale `/models` rejection pass the dedicated route test plus the
+full entry-routing suite. M04 is marked `done`; M01/M05/M10/M13 remain open
+because their provider, persistence, or interaction evidence is broader than
+route correctness.
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r124
 
 The public source-route audit was extended from primary paths to the complete
