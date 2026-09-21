@@ -14,6 +14,13 @@ test('video dashboard keeps Light source image crop semantics', () => {
   }
 });
 
+test('video dashboard keeps the Light empty-project card contrast', () => {
+  assert.match(
+    pageSource,
+    /project\.imageUrl \? 'bg-\[#25292c\] items-start' : 'bg-\[#383d3e\] items-center'/u,
+  );
+});
+
 test('video dashboard retains the source fixture URLs and no visible rights checkbox', () => {
   for (const marker of [
     '548083b211dccf02c2b0335279d15216',

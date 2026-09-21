@@ -63,7 +63,7 @@ export function VideoProjectDashboardPage() {
                 onClick={() => openDetail(project)}
                 className="group flex h-[240px] w-full flex-col overflow-hidden rounded-2xl bg-[#25292c] text-left transition hover:bg-[#2d3235] lg:w-[220px]"
               >
-                <div className={`flex h-[170px] shrink-0 justify-center overflow-hidden bg-[#25292c] ${project.imageUrl ? 'items-start' : 'items-center'}`}>
+                <div className={`flex h-[170px] shrink-0 justify-center overflow-hidden ${project.imageUrl ? 'bg-[#25292c] items-start' : 'bg-[#383d3e] items-center'}`}>
                   {project.imageUrl ? (
                     <img src={project.imageUrl} alt="coverImg" className="object-cover" loading="eager" />
                   ) : (

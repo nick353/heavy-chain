@@ -1,4 +1,20 @@
-# Light Chain source parity and live OpenAI readback — 2026-09-21 r108
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r109
+
+The official Light source URL supplied for this pass is
+`https://jp.linkaigc.com/`. The saved source dashboard screenshot and Heavy's
+same-viewport screenshot showed one deterministic visual mismatch in the video
+project list: the empty `3ヶ月前` project card used the dark image-panel fill
+in Heavy instead of Light's lighter gray panel. Heavy now uses the Light
+contrast only for that empty card; image-backed cards remain unchanged. The
+focused source-asset test is 4/4, typecheck and lint pass, and the Web Worker
+was deployed as version `75ea2bcc-d483-4bdf-b724-27145ca6be68`.
+
+Fresh post-deploy Companion readback waited 3 seconds on the task-owned Heavy
+video dashboard and verified the exact 11-project text inventory, canonical
+Light-shaped route, screenshot, and zero external/browser mutation. The source
+URLs still returned an empty DOM in the current Companion temporary tabs, so
+no new source semantic acceptance or pixel-diff claim was fabricated. Session
+cleanup completed with no foreign-tab mutation.
 
 Fresh Companion production readback on 2026-09-21 used a task-owned session
 without exporting auth state. Ten source/Heavy URLs were read and cleaned up;
