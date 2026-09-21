@@ -1,5 +1,24 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r64
+
+Version `8eded371-db03-408a-889c-01417b2d950c` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. Fresh public readback returned
+HTTP 200 for `/_health`, `/lightchain`, and `/model`; the health payload reports
+`service=heavy-chain-web`, `hosting=cloudflare`, and `authProvider=cloudflare`.
+
+The release path passed web tests 11/11, production build, R2 asset upload,
+Wrangler dry-run, and deployment. The isolated local full verifier also passed
+31/31 non-video features on desktop/mobile, the canonical video and source
+routes, 404/redirect coverage, 404 interaction assertions, and cleanup with
+zero console/page/request failures. Production UI/navigation verifiers were
+then invoked and correctly stopped before navigation at
+`explicit_auth_state_required`; no credential or auth state was exported or
+used, and no provider generation or other external action was started.
+
+This is a public deployment and local-contract readback, not authenticated
+Lightchain pixel equality or provider/save/reuse/reconciliation evidence.
+
 ## Latest local parity evidence — 2026-09-21 r63
 
 The fresh isolated all-feature runner passed with 31/31 non-video features on

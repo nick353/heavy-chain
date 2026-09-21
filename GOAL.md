@@ -1,3 +1,35 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r131
+
+最新HEADをCloudflareの現行deploy経路で本番反映した。Version
+`8eded371-db03-408a-889c-01417b2d950c`を100% deployし、`/_health`、`/lightchain`、
+`/model`のfresh public readbackがHTTP 200、health payloadが
+`service=heavy-chain-web` / `hosting=cloudflare` / `authProvider=cloudflare`であることを確認。
+web test 11/11、production build、R2 asset upload、Wrangler dry-run、deployも通過した。
+
+同じHEADのisolated local full verifierは31/31 non-video機能をdesktop/mobileで完走し、
+canonical video 4 route readback、source 4 route readback、404/redirect、interaction/assertion
+合計404件、console/page/request failure 0、browser/context/preview cleanup完了を再確認した。
+本番UI/navigation verifierも実行したが、明示的な認証状態がないため
+`explicit_auth_state_required`でnavigation前にfail-closedとなった。認証情報やstorage stateは
+取得・使用せず、provider生成・保存・課金・公開などの外部効果は開始していない。
+
+残りは、認証済み本家とHeavyの同一fixtureによるpixel/interaction比較、認証済みprovider receipt、
+durable save/readback/reuse/reconciliation、動画provider、cleanup/release gateである。Goalは
+`in_progress`を維持する。
+
+# Light Chain source parity and release-gate readback — 2026-09-21 r130
+
+現行HEADに対してisolated local full verifierを再実行し、31/31 non-video機能をdesktop/mobile
+で完走、canonical video 4 route readback、source 4 route readback、404/redirect、
+interaction/assertion合計404件を通過した。`SUMMARY.json` は
+`output/playwright/lightchain-all-feature-workflows-20260921T082944Z-3ormTA/SUMMARY.json`。
+`ok:true`、failed 0、console 0、pageErrors 0、requestFailures 0、browser/context/
+preview cleanup完了。これは現行Heavyのroute/interaction/local lifecycle証跡であり、
+Light本家のauthenticated pixel equality、provider receipt、durable save/readback/
+reconciliation、動画provider実行の証明には昇格させない。
+
+本番反映は最新HEADのdeploy経路を確認してから進める。Goalは `in_progress` を維持する。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r129
 
 本家 `https://jp.linkaigc.com/model` をChromeで再読し、ログイン済みの本家画面に
