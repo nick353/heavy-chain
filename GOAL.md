@@ -1,3 +1,19 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r126
+
+M10/M13のローカル契約を前進させた。色変更は公式`/editor/changeColor`の
+`colorize`入口、必須対象画像、provider action、結果materialize、保存/readback、
+履歴昇格の経路を専用テストで固定した。Canvas対話編集は、送信前に「編集対象」と
+「操作」を表示するコンテキストバーを追加し、既存の部分編集マスク、4候補、親子
+リンク、保存/readback契約と結合して検証した。Lightchainホームには表示を変えない
+semantic h1を追加し、機械的見出しパリティも修正した。
+
+検証はfocused parity/partial-edit suite 38/38、typecheck、build、対象Playwright
+desktop/mobile（`/lightchain` と `/canvas/new`、console/page errorなし）を通過。
+全31機能ランナーは短縮のため3機能目の途中でSIGINTし、cleanup完了を確認したため、
+今回の変更について全31機能完走とは扱わない。provider送信、本番生成、deployは未実行。
+M04はroute parityとしてdone、M01/M05/M10/M13は認証済み本番provider・保存・品質証跡が
+未取得のためGoal全体ではin_progressを維持する。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r125
 
 The M04 model-planning route gap is now closed in the parity catalog. The
@@ -4574,16 +4590,16 @@ Heavy Chain を Lightchain の上位互換として違和感なく使える状�
 | M01 AIフィッティング | virtual shooting assistant | garment image + product description path exists, but the entry is heavier than Light | simplify the Heavy entry while keeping practical pre-generation prep | P0 | removes core onboarding ambiguity and keeps the first generation path moving | GeneratePage / MaterialWorkbench / `/fitting` | direct checks keep garment image / product description on a clear ready, generating, success, failure, retry path; browser QA is still auth-gated | in_progress |
 | M02 グラフィックツール | same-name graphics tool catalog | Heavy workbench wording is broader than the Light feature catalog split | clarify the save flow and keep catalog vs workbench intent obvious | P1 | useful parity, but not required for first generation | GeneratePage / parity catalog | feature entry text makes the save flow and catalog split obvious without hiding advanced actions | queued |
 | M03 ファッションスタジオ | same-name studio entry | Heavy still starts from model, pose, background, and props all at once | make the staged/default path lighter without losing the studio workflow | P1 | helpful parity, but not required for first generation | GeneratePage / `/studio` | initial studio copy and controls read as staged instead of all-at-once | queued |
-| M04 モデル企画ライブラリ | same-name model planning library | Heavy equivalent lives under `/generate?feature=model-matrix` and the route naming is still indirect | make routing and naming direct | P0 | core generation continuity depends on a direct route into model planning | GeneratePage / parity catalog | the model planning entry resolves directly to the intended generate route and direct checks keep the naming understandable; browser QA is still auth-gated | in_progress |
+| M04 モデル企画ライブラリ | same-name model planning library | Heavy equivalent lives under `/generate?feature=model-matrix` and the route naming is still indirect | make routing and naming direct | P0 | core generation continuity depends on a direct route into model planning | GeneratePage / parity catalog | canonical `/model-library/model-custom-form`, launcher mapping, fitting handoff, stale `/models` rejection, and entry-routing readback | done |
 | M05 動画ワークステーション | same-name video workstation | Heavy storyboard and generation conditions are mixed into a heavier entry | simplify the entry while keeping storyboard conditions visible | P1 | useful parity, but not required for first generation | GeneratePage / `/video` | video entry shows storyboard conditions without forcing extra steps first | queued |
 | M06 ウェアデザインラボ | same-name wear design lab | Heavy Chain Lab copy still reads like a separate experiment space | align naming and meaning without losing the experimental nature | P1 | helps comprehension, but does not block first generation | GeneratePage / `/lab` | lab copy explains the experimental nature and the Heavy name without extra decoding | queued |
 | M07 デザインエージェント | same-name design agent | Heavy AI fashion series generation still reads more like a generic workflow | clarify comparison and series purpose | P1 | useful parity, but not required for first generation | GeneratePage / design exploration workflow | series/comparison intent is explicit before any generation starts | queued |
 | M08 生地プリント試着シミュレーション | simulation-first fabric print try-on | Heavy starts from a print design / pattern graphics workbench | align onboarding so the simulation goal is understandable immediately | P1 | helps the feature explain itself, but not required for first generation | GeneratePage / `/patterns/workbench` | the first screen makes the simulation goal clear before the workbench details | queued |
 | M09 線画から実写 | equivalent line-art to real conversion | Heavy already has explicit source context, but the guidance can still be simpler | simplify the source guidance while keeping provenance | P1 | useful parity, but not required for first generation | GeneratePage / source-readback generation | source context is understandable without extra route jargon | queued |
-| M10 色変更 | equivalent color change flow | Heavy tracks generated conditions and history, which can make the first change feel heavier than needed | simplify interaction while retaining traceability | P0 | keeps generation continuity visible and prevents state ambiguity | GeneratePage / colorize flow | color-change entry shows a direct action plus durable history/readback; browser QA is still auth-gated | in_progress |
+| M10 色変更 | equivalent color change flow | Heavy tracks generated conditions and history, which can make the first change feel heavier than needed | simplify interaction while retaining traceability | P0 | keeps generation continuity visible and prevents state ambiguity | GeneratePage / colorize flow | `verify-lightchain-color-edit-contract.test.mjs` covers direct route, required source, colorize action, materialized result, save/readback, and history; authenticated provider QA remains open | in_progress |
 | M11 平絵/パターンのベクター化 | vectorize | Heavy adds embroidery and print submission context on top of vectorization | simplify the core path while retaining production details | P1 | production detail is valuable, but not required for first generation | GeneratePage / `/patterns/workbench` | vectorize path is obvious before the production-specific extras appear | queued |
 | M12 カスタムスタイル | equivalent custom style entry | Heavy brand settings already exist, but the connection is not always obvious | make the brand connection understandable immediately | P1 | useful parity, but not required for first generation | GeneratePage / `/brand/settings` | brand settings explain how style settings flow into generation | queued |
-| M13 部分修正・対話編集 | design arrangement and partial correction | Heavy Canvas/chat editing exists, but the edit target and action stay implicit | make the edit target and action concrete before editing begins | P0 | prevents invalid or duplicate edits and protects generation continuity | GeneratePage / Canvas chat edit | the edit flow states the target and action before any edit is submitted; browser QA is still auth-gated | in_progress |
+| M13 部分修正・対話編集 | design arrangement and partial correction | Heavy Canvas/chat editing exists, but the edit target and action stay implicit | make the edit target and action concrete before editing begins | P0 | prevents invalid or duplicate edits and protects generation continuity | GeneratePage / Canvas chat edit | Chat context bar states target/action; partial-edit contract covers mask, single submit, four candidates, parent link, persistence/readback; authenticated provider QA remains open | in_progress |
 
 ## P0 Cross-cutting Goals
 

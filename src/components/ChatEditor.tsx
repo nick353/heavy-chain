@@ -188,6 +188,17 @@ export function ChatEditor({
   return (
     <div className="flex flex-col h-full">
       {/* Current image indicator */}
+      <div
+        data-testid="chat-edit-context"
+        className="flex items-center justify-between gap-3 border-b border-neutral-100 bg-white px-4 py-2 text-xs text-neutral-500"
+      >
+        <span>
+          編集対象: <strong className="font-semibold text-neutral-700">{currentImage ? '選択中の画像' : '新しい画像'}</strong>
+        </span>
+        <span>
+          操作: <strong className="font-semibold text-neutral-700">{currentImage ? '画像を編集' : '画像を生成'}</strong>
+        </span>
+      </div>
       {currentImage && (
         <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
           <div className="flex items-center gap-3">

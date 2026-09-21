@@ -495,6 +495,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_6%,rgba(24,78,83,0.12),transparent_40%)]" />
         <div className="relative mx-auto max-w-none">
           <div className="flex h-14 items-end gap-4">
+            <h1 className="sr-only">LIGHTCHAIN AI</h1>
             <svg aria-label="Lightchain AI" role="img" viewBox="0 0 318 35" fill="none" className="h-12 w-[318px] shrink-0 text-white">
               <path d={LIGHTCHAIN_WORDMARK_PATH} fill="currentColor" />
             </svg>
