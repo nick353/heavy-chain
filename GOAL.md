@@ -8371,3 +8371,26 @@ cleanup was performed. The Goal remains active for video existing-project
 states, all other canonical route/state parity layers, provider receipts,
 durable persistence/readback/reconciliation, business/legal decisions, and the
 strict release-gate artifacts.
+
+# Goal progress — 2026-09-22 r169
+
+The canonical Light Chain homepage at `https://jp.linkaigc.com/` was freshly
+compared with Heavy using the authenticated Chrome session and the required
+settle/readback flow. Heavy's launcher now uses the canonical Light artwork for
+the visible planning, fitting, and graphics cards, including the previously
+incorrect image-repair card. The final public readback on the latest Worker
+confirmed the source image sequence and category state for planning, fitting,
+and graphics, with matching Japanese labels/routes and no Heavy-only rights
+checkbox or rights badge.
+
+The homepage case-sharing section spacing was aligned to the canonical vertical
+offset and its Heavy-only divider was removed. Static launcher assertions pass
+20/20. The rights/source suite passes 8/8, common workflow contracts 6/6,
+provider coverage 22/22, and canonical route integrity 31/31; typecheck and
+diff checks pass. The final deployed Worker version is
+`ccd023d9-bf6c-43a1-a099-bc8cb7bbac63` after the final image correction;
+asset upload and Wrangler dry-run both passed before deployment. No provider
+generation, user file upload, payment, publish, migration, or destructive
+cleanup was performed. The Goal remains active for the remaining canonical
+route/state parity, authenticated provider receipts, durable persistence and
+reconciliation, business/legal decisions, and strict release-gate artifacts.
