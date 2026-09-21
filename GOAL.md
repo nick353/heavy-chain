@@ -70,6 +70,14 @@ dropzone, while the existing-project readback confirmed both source image URLs,
 the reference controls, and the disabled provider action. Focused routing,
 video dashboard, provider-boundary, and typecheck tests passed.
 
+The lint-only cleanup and source-image acceptance test were committed as
+`ebf2280` and deployed as the final Web Worker version
+`f8a187b8-8c74-44d3-9246-665b411e8755`. A fresh final-tab readback after a
+30-second wait confirmed both canonical states again: the new-project
+dropzone at the empty `boardProjectCode` route and the existing-project
+editor with the Light image pair, reference settings, and disabled provider
+action. No Light-missing rights checkbox/modal/badge appeared.
+
 # OpenAI provider boundary and provenance implemented locally — 2026-09-21 r104 (historical)
 
 The active Heavy Cloudflare API now has a server-only OpenAI Images adapter for
