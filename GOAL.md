@@ -1,4 +1,4 @@
-# Light Chain source parity and live OpenAI readback — 2026-09-21 r106
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r107
 
 Fresh authenticated Companion observation of the actual Light source
 `https://jp.linkaigc.com/marketing` was used as the visual authority. Heavy's
@@ -36,6 +36,23 @@ every other route/state (especially video post-upload/render states), finish
 actual video-provider admission, complete same-fixture visual/interaction
 diff coverage, and rerun the strict release gate. The release gate is still
 not green.
+
+Fresh authenticated Companion observation of the actual Light video source
+`https://jp.linkaigc.com/flow/GenerateShortVideo` and an existing project detail
+fixed the dashboard, new-project dropzone, post-upload canvas, source-shaped
+tool dock, task dock, reference-video upload card, reference radios, video
+settings, remaining-credit badge, and disabled provider action as the current
+video UI contract. Heavy now uses the project query to enter the same
+post-upload editor state, keeps `project=new` on the source-shaped dropzone,
+and omits the Light-missing rights checkbox/modal/badge. The Web Worker was
+rebuilt and deployed as version
+`63eab21c-66de-42db-90ef-0cf22f4457b2`; after the deployment, a live AX
+readback confirmed the expected video controls and two image layers. Focused
+video provider-boundary, video behavior-ledger, and typecheck tests passed.
+
+This closes the observed video shell/editor parity slice, but actual video
+provider/render completion, same-fixture visual/interaction diff coverage,
+durable video save/reuse readback, and the strict release gate remain open.
 
 # OpenAI provider boundary and provenance implemented locally — 2026-09-21 r104 (historical)
 

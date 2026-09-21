@@ -226,7 +226,12 @@ export function VideoWorkstationPage() {
   const [shotPlan, setShotPlan] = useState(storyboardCandidates[0].shotOrder);
   const [subtitleCta, setSubtitleCta] = useState(storyboardCandidates[0].cta);
   const [materials, setMaterials] = useState(storyboardCandidates[0].materials);
-  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
+  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(() => {
+    const project = new URLSearchParams(window.location.search).get('project');
+    return project && project !== 'new'
+      ? { ...initialMaterialReference, imageUrl: '/assets/lightchain-cards/design-v1.png', fileName: project }
+      : initialMaterialReference;
+  });
   const nextHistoryId = useRef(1);
   const selectedStoryboard = storyboardCandidates.find((candidate) => candidate.id === selectedStoryboardId) ?? storyboardCandidates[0];
   const shotSteps = shotPlan
@@ -476,6 +481,14 @@ export function VideoWorkstationPage() {
       </main>
     );
   }
+
+  return (
+    <VideoSourceEditorParity
+      imageUrl={materialReference.imageUrl}
+      onImageChange={handleInitialImage}
+      onBack={() => setMaterialReference(initialMaterialReference)}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -802,5 +815,133 @@ export function VideoWorkstationPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function VideoSourceEditorParity({
+  imageUrl,
+  onImageChange,
+  onBack,
+}: {
+  imageUrl: string;
+  onImageChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onBack: () => void;
+}) {
+  const [activeTool, setActiveTool] = useState('参考画像モード');
+  const [garmentReference, setGarmentReference] = useState('main');
+  const [modelReference, setModelReference] = useState('main');
+  const [referenceVideoName, setReferenceVideoName] = useState('');
+  const [videoSettings, setVideoSettings] = useState('5s ｜ 720p ｜ Auto');
+
+  return (
+    <main
+      className="dark relative min-h-[calc(100vh-56px)] overflow-hidden bg-[#101516] text-white"
+      data-testid="video-source-editor-parity"
+    >
+      <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(#4b5b5f_0.7px,transparent_0.7px)] [background-size:22px_22px]" />
+      <div className="relative z-10 min-h-[calc(100vh-56px)] px-4 py-5">
+        <div className="absolute left-4 top-5 z-20 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#252b2d] text-sm text-neutral-200 shadow-xl">
+          <div className="border-b border-white/10 px-3 py-2 text-xs text-neutral-300">
+            <span aria-hidden="true" className="mr-2 inline-block rounded bg-cyan-500/80 px-1.5 py-1 text-[10px] leading-none">🎬</span>
+            動画ワークステーション
+          </div>
+          <button type="button" onClick={onBack} className="w-full px-3 py-4 text-left hover:bg-white/5">
+            <span aria-hidden="true" className="mr-5 text-lg">‹</span>
+            Untitled
+          </button>
+        </div>
+
+        <div className="ml-[280px] flex max-w-[590px] items-center gap-1 rounded-xl border border-white/10 bg-[#252b2d] px-2 py-2 text-xs text-neutral-200 shadow-xl">
+          {['アセット', 'クリッピング', '動画生成', 'スタイルテンプレート', '参考画像モード'].map((tool) => (
+            <button
+              key={tool}
+              type="button"
+              onClick={() => setActiveTool(tool)}
+              className={activeTool === tool ? 'whitespace-nowrap rounded-lg bg-white/15 px-2 py-2 text-[11px] text-white' : 'whitespace-nowrap rounded-lg px-2 py-2 text-[11px] text-neutral-300 hover:bg-white/10'}
+            >
+              {tool}
+            </button>
+          ))}
+          <label htmlFor="video-main-image-upload" aria-label="画像を追加" className="cursor-pointer rounded-lg px-2 py-2 text-lg text-neutral-300 hover:bg-white/10">⊞</label>
+          <input id="video-main-image-upload" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="sr-only" onChange={onImageChange} />
+          <button type="button" aria-label="フォルダーを開く" className="rounded-lg px-2 py-2 text-lg text-neutral-300 hover:bg-white/10">⌁</button>
+          <button type="button" aria-label="ダウンロード" className="rounded-lg px-2 py-2 text-lg text-neutral-300 hover:bg-white/10">⇩</button>
+          <button type="button" aria-label="実行" className="rounded-lg px-2 py-2 text-lg text-neutral-300 hover:bg-white/10">▷</button>
+        </div>
+
+        <div className="absolute right-4 top-5 rounded-xl border border-white/10 bg-[#252b2d] px-4 py-3 text-xs text-neutral-300 shadow-xl">
+          ✨ 残り生成回数 <span className="ml-2 font-semibold text-white">9</span>
+        </div>
+
+        <div className="relative mt-3 min-h-[660px] rounded-2xl">
+          <div className="absolute left-[18%] top-0 h-[520px] w-[300px] overflow-hidden rounded-xl border border-white/10 bg-[#22282a] opacity-90 shadow-2xl">
+            <img src="/assets/lightchain-cards/design-v1.png" alt="imgResult" className="h-full w-full object-cover" />
+          </div>
+          <div className="absolute left-[18%] top-0 z-10 h-[304px] w-[378px] overflow-hidden rounded-xl border-2 border-cyan-300/80 bg-[#202627] shadow-2xl">
+            <img src={imageUrl} alt="imgResult" className="h-full w-full object-cover" />
+            <span className="absolute right-3 top-3 rounded bg-black/35 px-2 py-1 text-sm text-white">↗</span>
+          </div>
+
+          <aside className="absolute left-[40%] top-14 z-20 w-[210px] rounded-xl border border-white/10 bg-[#252b2d] p-3 text-xs text-neutral-300 shadow-2xl">
+            <p className="text-[11px] text-neutral-400">参考画像モード</p>
+            <p className="mt-2 rounded-lg bg-gradient-to-r from-cyan-500/80 to-fuchsia-500/70 px-2 py-2 text-[11px] font-semibold text-white">
+              ✨ 参考動画をアップロードしてワンクリックで再現
+            </p>
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-white/10 p-2">
+              <img src={imageUrl} alt="" className="h-7 w-7 rounded object-cover" />
+              <span>メイン画像</span>
+            </div>
+            <p className="mt-3 text-[11px] text-neutral-400">参照動画<span className="text-cyan-300">*</span></p>
+            <label htmlFor="video-reference-upload" className="mt-1 flex min-h-[108px] cursor-pointer flex-col items-center justify-center rounded-lg bg-white/[0.06] px-2 text-center hover:bg-white/10">
+              <span className="text-xl">♧</span>
+              <span className="mt-2 text-[11px]">動画をアップロード</span>
+              <span className="mt-1 text-[9px] text-neutral-500">MP4/MOV対応、2〜15秒、200MB以内</span>
+              {referenceVideoName && <span className="mt-1 max-w-full truncate text-[9px] text-cyan-200">{referenceVideoName}</span>}
+            </label>
+            <input
+              id="video-reference-upload"
+              type="file"
+              accept=".mp4,.mov,video/mp4,video/quicktime"
+              className="sr-only"
+              onChange={(event) => setReferenceVideoName(event.target.files?.[0]?.name ?? '')}
+            />
+            <p className="mt-3 text-[11px] text-neutral-400">参考画像設定</p>
+            <fieldset className="mt-1 rounded-lg bg-white/[0.04] p-2">
+              <legend className="text-[10px] text-neutral-400">商品画像参考</legend>
+              <label className="mr-3 inline-flex items-center gap-1.5"><input type="radio" name="garment-reference" checked={garmentReference === 'main'} onChange={() => setGarmentReference('main')} />メイン画像</label>
+              <label className="inline-flex items-center gap-1.5"><input type="radio" name="garment-reference" checked={garmentReference === 'video'} onChange={() => setGarmentReference('video')} />動画</label>
+            </fieldset>
+            <fieldset className="mt-2 rounded-lg bg-white/[0.04] p-2">
+              <legend className="text-[10px] text-neutral-400">モデル参考</legend>
+              <label className="mr-2 inline-flex items-center gap-1.5"><input type="radio" name="model-reference" checked={modelReference === 'main'} onChange={() => setModelReference('main')} />メイン画像</label>
+              <label className="mr-2 inline-flex items-center gap-1.5"><input type="radio" name="model-reference" checked={modelReference === 'video'} onChange={() => setModelReference('video')} />動画</label>
+              <label className="inline-flex items-center gap-1.5"><input type="radio" name="model-reference" checked={modelReference === 'none'} onChange={() => setModelReference('none')} />なし</label>
+            </fieldset>
+            <p className="mt-3 text-[11px] text-neutral-400">動画設定</p>
+            <select value={videoSettings} onChange={(event) => setVideoSettings(event.target.value)} className="mt-1 w-full appearance-none rounded-lg bg-white/[0.05] px-2 py-2 text-[10px] text-neutral-200 outline-none">
+              <option>5s ｜ 720p ｜ Auto</option>
+              <option>10s ｜ 720p ｜ Auto</option>
+              <option>15s ｜ 1080p ｜ Auto</option>
+            </select>
+            <button type="button" disabled className="mt-3 w-full rounded-lg bg-cyan-300/85 px-2 py-2 text-[11px] font-semibold text-neutral-950 disabled:cursor-not-allowed">
+              権限がありません 6
+            </button>
+          </aside>
+        </div>
+
+        <button type="button" aria-label="レイヤーツール" className="absolute bottom-20 left-4 rounded-xl border border-white/10 bg-[#252b2d] p-4 text-xl text-neutral-200 shadow-xl">♧</button>
+        <div className="absolute bottom-5 left-4 rounded-xl border border-white/10 bg-[#252b2d] px-4 py-3 text-xs text-neutral-300 shadow-xl">
+          ▣ タスク <span className="ml-20">0 進行中⌃</span>
+        </div>
+        <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-1 rounded-xl border border-white/10 bg-[#252b2d] p-2 text-lg text-neutral-300 shadow-xl">
+          <button type="button" aria-label="選択" className="rounded-lg bg-white/10 px-3 py-2">▷</button>
+          <button type="button" aria-label="移動" className="rounded-lg px-3 py-2 hover:bg-white/10">✋</button>
+          <button type="button" aria-label="画像を追加" className="rounded-lg px-3 py-2 hover:bg-white/10">▧</button>
+          <button type="button" aria-label="元に戻す" className="rounded-lg px-3 py-2 hover:bg-white/10">↶</button>
+          <button type="button" aria-label="やり直す" className="rounded-lg px-3 py-2 hover:bg-white/10">↷</button>
+        </div>
+        <div className="absolute bottom-5 right-4 rounded-xl border border-white/10 bg-[#252b2d] px-4 py-3 text-xs text-neutral-300 shadow-xl">⌕　30%　⌄　⌕</div>
+      </div>
+    </main>
   );
 }
