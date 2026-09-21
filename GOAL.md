@@ -8121,6 +8121,31 @@ route/detail/state parity work, authenticated provider receipts, durable
 persistence/readback/reconciliation, video-quality evidence, billing/operator proof, and
 strict release-gate artifacts.
 
+# Goal progress — 2026-09-22 r164
+
+The authenticated canonical existing video project at
+`https://jp.linkaigc.com/flow/GenerateShortVideo/detail?boardProjectCode=2022207466173444098&boardProjectType=GenerateShortVideoCustom`
+was freshly compared with Heavy. Heavy now uses the same 40% React Flow
+composition: the central video node reads `x=747.56/y=75.66/w=404.8/h=553.33`,
+the visible `動画の修正` node reads `x=363.54/y=257.08/w=280/h=656.27`, and
+the surrounding partial nodes use the source positions. The source and Heavy
+both read the `動画ワークステーション` rail at `x=16/y=74/w=264`, the task
+bar, 40% zoom controls, graph edges, points indicator, and source-style edit
+controls. Heavy has no rights checkbox and keeps the unavailable video
+provider action fail-closed as a disabled `AI生成 600` control.
+
+Worker version `dc3d2d8b-3b06-4895-ab8c-0acc5010c119` is live after a
+successful build, static-reference validation, and deploy. A cache-separated
+live readback after the required 30-second settle confirmed the above
+coordinates, zero checkbox inputs, disabled provider action, and empty browser
+logs; the canonical source readback confirmed the same result/edit node
+geometry and 40% zoom. Focused parity tests passed 33/33, typecheck and diff
+checks passed. No provider generation, file upload, payment, publish,
+migration, or destructive cleanup was performed. The Goal remains active for
+the other canonical route/state parity layers, authenticated provider
+receipts, durable persistence/readback/reconciliation, business/legal
+decisions, and strict release-gate artifacts.
+
 # Goal progress — 2026-09-21 r158
 
 The canonical `https://jp.linkaigc.com/flow/integration` readback showed that

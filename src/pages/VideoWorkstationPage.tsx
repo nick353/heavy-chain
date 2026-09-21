@@ -1,7 +1,27 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, ChevronRight, Clapperboard, Film, Save, Smartphone, Upload } from 'lucide-react';
+import {
+  ArrowUpRight,
+  BookOpen,
+  Check,
+  ChevronRight,
+  Clapperboard,
+  Film,
+  Hand,
+  ImageIcon,
+  ImagePlus,
+  Layers,
+  MousePointer2,
+  Redo2,
+  Save,
+  Smartphone,
+  Sparkles,
+  Undo2,
+  Upload,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
@@ -104,6 +124,8 @@ const VIDEO_GUIDE_DISMISSED_STORAGE_KEY = 'heavy-chain-video-guide-dismissed';
 const LIGHTCHAIN_VIDEO_MAIN_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/c914c5010e17ca8f3bdbdb93ae2088fc.jpeg?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
 const LIGHTCHAIN_VIDEO_REFERENCE_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/73e4af273bd3f306c8ed549efd3a7cb5.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
 const LIGHTCHAIN_VIDEO_PROJECT_ICON = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/%E8%A7%86%E9%A2%91%E5%B7%A5%E4%BD%9C%E5%8F%B0icon.png?x-oss-process=image/resize,m_lfit,w_48,limit_1/format,webp';
+const LIGHTCHAIN_VIDEO_SOURCE_RESULT = 'https://static-jp.linkaigc.com/saas/2026-02/c44b4aecfba3ddee5a37d94925b4f40d.mp4?x-oss-process=video/snapshot,t_1000,m_fast,ar_auto';
+const LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-02/dbe43f25eadaf147c9ffefc1d609c4eb.webp';
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -825,6 +847,84 @@ export function VideoWorkstationPage() {
 }
 
 function VideoSourceEditorParity({
+  imageUrl,
+  secondaryImageUrl,
+  onImageChange,
+  onBack,
+}: {
+  imageUrl: string;
+  secondaryImageUrl?: string;
+  onImageChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onBack: () => void;
+}) {
+  const [editPrompt, setEditPrompt] = useState('男性は歩かずそのままの位置で男女が目を見つめあい１回うなずく。そして正面を向いて笑顔で３秒微笑む');
+  const [referenceName, setReferenceName] = useState('');
+  const [duration, setDuration] = useState('5秒');
+  const [resolution, setResolution] = useState('720P');
+  const displayVideo = imageUrl && imageUrl !== LIGHTCHAIN_VIDEO_MAIN_IMAGE ? imageUrl : LIGHTCHAIN_VIDEO_SOURCE_RESULT;
+  const displayReference = secondaryImageUrl || LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE;
+
+  return (
+    <main className="dark video-source-existing-page relative min-h-[calc(100vh-56px)] overflow-hidden bg-[#171b1c] text-white" data-testid="video-source-editor-parity">
+      <div className="video-source-existing-dots pointer-events-none absolute inset-0" />
+      <div className="video-source-existing-canvas absolute inset-0">
+        <svg className="video-source-existing-edges pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          <path d="M644 352 C700 352 705 300 748 300" />
+          <path d="M643 565 C700 565 705 444 748 444" />
+          <path d="M1150 310 C1085 310 1060 280 1030 280" />
+        </svg>
+
+        <div className="video-source-existing-node video-source-existing-upper-node"><img src={LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE} alt="imgResult" /></div>
+        <div className="video-source-existing-node video-source-existing-right-node"><img src={LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE} alt="imgResult" /></div>
+        <div className="video-source-existing-node video-source-existing-left-node"><img src={LIGHTCHAIN_VIDEO_SOURCE_RESULT} alt="videoResult" /></div>
+        <div className="video-source-existing-node video-source-existing-main-node">
+          <img src={displayVideo} alt="videoResult" />
+          <button type="button" aria-label="動画を開く" className="video-source-existing-expand"><ArrowUpRight size={16} /></button>
+          <div className="video-source-existing-video-controls" aria-hidden="true"><span>▶</span><span>00:00 / 00:05</span></div>
+        </div>
+
+        <aside className="video-source-existing-edit-panel" aria-label="動画の修正">
+          <div className="video-source-existing-edit-inner">
+            <div className="video-source-existing-edit-heading">
+              <div><p className="text-[16px] font-semibold text-white">動画の修正</p><p className="mt-1 text-[11px] text-[#a8b0b1]">AI動画のブラッシュアップで、動画のスタイル変更が簡単に実現できます</p></div>
+              <button type="button" aria-label="閉じる" className="text-[#9da6a7]">×</button>
+            </div>
+            <div className="video-source-existing-tip"><Sparkles size={14} /> 参考動画をアップロードすると、動きとスタイルを再現できます</div>
+            <div className="video-source-existing-preview-row"><img src={displayVideo} alt="動画の修正プレビュー" /><div><p className="text-[12px] text-white">Untitled</p><p className="mt-1 text-[10px] text-[#9da6a7]">動画を修正</p></div></div>
+            <div className="video-source-existing-duration-row"><span>動画の長さ</span><span>{duration} · 00:00–00:05</span></div>
+            <label className="video-source-existing-label" htmlFor="video-reference-upload">参考画像</label>
+            <label htmlFor="video-reference-upload" className="video-source-existing-reference-upload"><img src={displayReference} alt="参考画像" /><span>{referenceName || '画像を追加'}</span><ImagePlus size={15} /></label>
+            <input id="video-reference-upload" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,image/jpeg,image/png,image/webp,video/mp4,video/quicktime" className="sr-only" onChange={(event) => setReferenceName(event.target.files?.[0]?.name ?? '')} />
+            <div className="video-source-existing-label-row"><label className="video-source-existing-label" htmlFor="video-edit-prompt">修正指示</label><span>{editPrompt.length}/1000</span></div>
+            <textarea id="video-edit-prompt" value={editPrompt} onChange={(event) => setEditPrompt(event.target.value)} maxLength={1000} className="video-source-existing-prompt" />
+            <div className="video-source-existing-select-row">
+              <label>動画の長さ<select value={duration} onChange={(event) => setDuration(event.target.value)}><option>5秒</option><option>10秒</option><option>15秒</option></select></label>
+              <label>解像度<select value={resolution} onChange={(event) => setResolution(event.target.value)}><option>720P</option><option>1080P</option></select></label>
+            </div>
+            <button type="button" disabled data-testid="video-generation-blocked" aria-disabled="true" title="video_provider_not_admitted: 動画providerの利用可能状態が未確認です" data-lightchain-provider-route="unsupported" className="video-source-existing-generate">AI生成 <span>600</span></button>
+          </div>
+        </aside>
+
+        <aside className="video-source-existing-project-rail absolute left-4 top-6 z-30 w-[264px] overflow-hidden rounded-xl border bg-[#252b2d] text-sm text-neutral-200 shadow-xl">
+          <div className="flex h-[35px] items-center border-b border-white/10 px-3 text-xs text-neutral-300"><img src={LIGHTCHAIN_VIDEO_PROJECT_ICON} alt="" className="mr-2 size-5 rounded" />動画ワークステーション</div>
+          <button type="button" onClick={onBack} className="flex h-[48px] w-full items-center px-3 text-left hover:bg-white/5"><span aria-hidden="true" className="mr-5 text-lg">‹</span>Untitled</button>
+        </aside>
+
+        <label htmlFor="video-main-image-upload" aria-label="アセット" title="アセット" className="video-source-existing-asset-trigger absolute left-4 top-[356px] z-30 flex size-12 cursor-pointer items-center justify-center rounded-lg border bg-[#252b2d] text-neutral-200 hover:bg-[#30383a]"><Layers size={19} /></label>
+        <input id="video-main-image-upload" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="sr-only" onChange={onImageChange} />
+        <div className="video-source-existing-points"><Sparkles size={14} /> 残り生成回数 <strong>9</strong></div>
+        <div className="video-source-existing-task"><span><Layers size={14} /> タスク</span><span>0&nbsp;&nbsp;進行中⌃</span></div>
+        <div className="video-source-existing-canvas-toolbar" role="toolbar" aria-label="キャンバスツール">
+          <button type="button" aria-label="選択" className="is-active"><MousePointer2 size={17} /></button><button type="button" aria-label="移動"><Hand size={17} /></button><button type="button" aria-label="画像を追加"><ImagePlus size={17} /></button><button type="button" aria-label="元に戻す"><Undo2 size={17} /></button><button type="button" aria-label="やり直す"><Redo2 size={17} /></button>
+        </div>
+        <div className="video-source-existing-zoom-controls"><button type="button" aria-label="縮小"><ZoomOut size={15} /></button><span>40%</span><button type="button" aria-label="拡大"><ZoomIn size={15} /></button></div>
+        <button type="button" aria-label="ハンドブック" className="video-source-existing-handbook"><BookOpen size={17} /></button><button type="button" aria-label="パネル" className="video-source-existing-panel-toggle"><ImageIcon size={17} /></button>
+      </div>
+    </main>
+  );
+}
+
+export function VideoSourceEditorParityLegacy({
   imageUrl,
   secondaryImageUrl,
   onImageChange,

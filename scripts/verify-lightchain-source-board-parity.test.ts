@@ -35,8 +35,20 @@ test('video project board keeps canonical card geometry and fail-closed provider
   assert.match(videoDetail, /video-source-empty-upload/);
   assert.match(videoDetail, /w-\[781\.59px\]/);
   assert.match(parityCss, /\.video-source-empty-upload[\s\S]*781\.59px/);
+  for (const marker of [
+    'video-source-existing-main-node',
+    'video-source-existing-edit-panel',
+    'video-source-existing-zoom-controls',
+    'LIGHTCHAIN_VIDEO_SOURCE_RESULT',
+    'AI生成 <span>600</span>',
+  ]) {
+    assert.ok(videoDetail.includes(marker), `missing existing video detail parity marker: ${marker}`);
+  }
+  assert.match(parityCss, /\.video-source-existing-main-node[\s\S]*404\.8px[\s\S]*553\.33px/);
+  assert.match(parityCss, /\.video-source-existing-edit-panel[\s\S]*280px[\s\S]*656\.27px/);
   assert.match(videoDetail, /video_provider_not_admitted/);
   assert.doesNotMatch(videoDetail, /権利確認後/);
+  assert.doesNotMatch(videoDetail, /権利確認[\s\S]*type="checkbox"/);
 });
 
 console.log('Lightchain source board parity tests: 3/3 passed');
