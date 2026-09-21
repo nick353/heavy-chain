@@ -268,6 +268,7 @@ function LazyLayout() {
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isInitialized, authRecoveryRequired, clearAuthRecoveryRequired } = useAuthStore();
+  const location = useLocation();
 
   useEffect(() => {
     if (user && authRecoveryRequired) {
@@ -275,8 +276,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     }
   }, [authRecoveryRequired, clearAuthRecoveryRequired, user]);
 
+  // The canonical Lightchain server sends an unauthenticated protected route
+  // to login while preserving the original path. Keep the loading state for
+  // normal session hydration, but converge to that same redirect once the
+  // auth adapter has explicitly reported recovery is required.
+  if (authRecoveryRequired && !user) {
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(returnTo)}`} replace />;
+  }
+
   // 初期化が完了していない、またはローディング中の場合
-  if (!isInitialized || isLoading || authRecoveryRequired) {
+  if (!isInitialized || isLoading) {
     return <WorkspaceLoadingFallback authRecovery={authRecoveryRequired} showHeader={false} />;
   }
 
