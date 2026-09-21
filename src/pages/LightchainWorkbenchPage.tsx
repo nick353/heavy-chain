@@ -5462,14 +5462,28 @@ export function LightchainWorkbenchPage() {
     };
     const visibleAgentQuickStartExamples = agentQuickStartExamplesByTab[currentWorkspaceTab]
       ?? agentQuickStartExamplesByTab['商品企画'];
-    const agentReferenceCases: Record<string, { title: string; prompt: string }> = {
+    const agentHeroImageByTab: Record<string, string> = {
+      商品企画: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-product-planning.png',
+      顧客提案: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-client-proposal-dark.png',
+      インスピレーション: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-fashion-design.png',
+      AIグラフィックデザイン: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-pattern-design.png',
+    };
+    const agentHeroFallbackByTab: Record<string, string> = {
+      商品企画: '/assets/lightchain-cards/design-v1.png',
+      顧客提案: '/assets/lightchain-cards/design-v1.png',
+      インスピレーション: '/assets/lightchain-cards/design-v1.png',
+      AIグラフィックデザイン: '/assets/lightchain-cards/graphics-v1.png',
+    };
+    const agentReferenceCases: Record<string, { title: string; prompt: string; image: string }> = {
       インスピレーション: {
         title: 'クリエイティブ企画20260210181',
         prompt: 'フレンチレトロをテーマに、夏のレディースウェアをデザインしてください。',
+        image: 'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-02/fa8afe9ba7ffd1c8343a082bcf287e55.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
       },
       AIグラフィックデザイン: {
         title: 'クリエイティブ企画20260210176',
         prompt: '熱帯植物と飛ぶ鳥をモチーフに、レトロな幾何学テイストのリピートプリントをデザインしてください。',
+        image: 'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-02/283c652275fd550a2aaf3c1769e59348.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
       },
     };
     const agentReferenceCase = agentReferenceCases[currentWorkspaceTab] ?? null;
@@ -5591,14 +5605,12 @@ export function LightchainWorkbenchPage() {
                 )}
                 <div className="archive-header-motion pointer-events-none absolute right-0 bottom-0 z-[2] block h-[172px] w-[240px] overflow-visible">
                   <img
-                    src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-product-planning.png"
+                    src={agentHeroImageByTab[currentWorkspaceTab] ?? agentHeroImageByTab['商品企画']}
                     alt=""
                     aria-hidden="true"
                     onError={(event) => {
                       event.currentTarget.onerror = null;
-                      event.currentTarget.src = currentWorkspaceTab === 'AIグラフィックデザイン'
-                        ? '/assets/lightchain-cards/graphics-v1.png'
-                        : '/assets/lightchain-cards/design-v1.png';
+                      event.currentTarget.src = agentHeroFallbackByTab[currentWorkspaceTab] ?? agentHeroFallbackByTab['商品企画'];
                     }}
                     className="absolute inset-0 z-[2] block h-full w-full object-cover"
                   />
@@ -5653,24 +5665,33 @@ export function LightchainWorkbenchPage() {
             )}
 
             {workspaceStyle.kind === 'agent' && agentReferenceCase && (
-              <section className="mt-0 w-[720px] flex-none pb-6 max-[1120px]:w-[min(720px,calc(100%-32px))]" data-testid="lightchain-agent-reference-cases" aria-label="参考事例">
-                <h2 className="flex items-center gap-2 px-2 text-sm font-semibold text-white"><ImageIcon className="h-4 w-4 text-[#aab8b6]" />参考事例</h2>
-                <button
-                  type="button"
-                  aria-label={`読み取り専用ケースを見る：${agentReferenceCase.title}`}
-                  onClick={() => setWorkspaceText(agentReferenceCase.prompt)}
-                  className="mt-3 flex w-full max-w-[240px] flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] text-left transition hover:border-white/30"
-                >
-                  <div className="h-28 bg-white/10">
+              <section className="order-4 mx-auto w-[720px] flex-none pb-6 max-[1120px]:w-[min(720px,calc(100%-32px))]" data-testid="lightchain-agent-reference-cases" aria-label="参考事例">
+                <header className="flex h-[52px] items-center justify-center px-2 py-4">
+                  <h2 className="flex min-w-0 flex-auto items-center gap-1 text-base font-medium leading-5 text-[#aab8b6]"><ImageIcon className="h-4 w-4 text-[#aab8b6]" />参考事例</h2>
+                </header>
+                <div className="relative h-[120px] w-full overflow-hidden rounded-xl">
+                  <button
+                    type="button"
+                    aria-label={`読み取り専用ケースを見る：${agentReferenceCase.title}`}
+                    onClick={() => setWorkspaceText(agentReferenceCase.prompt)}
+                    className="group relative h-[120px] w-60 flex-none overflow-hidden rounded-xl bg-white/[0.04] p-0 text-left transition"
+                  >
                     <img
-                      src={currentWorkspaceTab === 'AIグラフィックデザイン' ? '/assets/lightchain-cards/graphics-v1.png' : '/assets/lightchain-cards/design-v1.png'}
+                      src={agentReferenceCase.image}
                       alt=""
-                      className="h-full w-full object-cover"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = currentWorkspaceTab === 'AIグラフィックデザイン'
+                          ? '/assets/lightchain-cards/graphics-v1.png'
+                          : '/assets/lightchain-cards/design-v1.png';
+                      }}
+                      className="absolute inset-0 h-full w-full object-cover"
                     />
-                  </div>
-                  <span className="px-3 py-2 text-xs text-neutral-300">{agentReferenceCase.title}</span>
-                  <span className="px-3 pb-3 text-[11px] text-neutral-500">読み取り専用ケースを見る</span>
-                </button>
+                    <span className="absolute inset-x-0 bottom-0 flex min-h-16 items-end bg-[linear-gradient(to_bottom,transparent,rgb(0_0_0/72%))] px-3 pt-6 pb-3 text-sm font-medium leading-5 text-white">
+                      {agentReferenceCase.title}
+                    </span>
+                  </button>
+                </div>
               </section>
             )}
 
