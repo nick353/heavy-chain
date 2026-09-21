@@ -65,6 +65,7 @@ const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages')
 const LightchainPrintingPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainPrintingPage })));
 const LightchainVectorSpecialPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainVectorSpecialPage })));
 const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
+const LightchainMarketingHomePage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainMarketingHomePage })));
 const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainLibraryPage').then((module) => ({ default: module.LightchainLibraryPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
@@ -672,7 +673,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
+                    <LightchainMarketingHomePage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

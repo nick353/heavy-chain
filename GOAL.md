@@ -1,4 +1,30 @@
-# OpenAI provider boundary and provenance implemented locally — 2026-09-21 r104
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r105
+
+Fresh authenticated Companion observation of the actual Light source
+`https://jp.linkaigc.com/marketing` was used as the visual authority. Heavy's
+`/marketing` now opens a source-shaped marketing landing page instead of the
+Heavy-only generic workbench/loading surface: gradient header band, prompt
+input, 0/4000 counter, reference-image tile, rounded submit control, six
+recommended scenes, six-column project gallery, new-file card, and reference
+case empty state. The Light-only rights checkbox/modal/badge is not rendered.
+
+The Web Worker was deployed as version
+`d4d0ed79-e463-4f70-8468-44d22c9d1f67` and the API remains deployed with the
+server-only OpenAI provider and secret boundary. From the authenticated
+marketing route, one intentional generation completed without replay:
+`campaign-image` returned a saved result, Gallery readback showed the provider
+request and Canvas link, History showed the same completed prompt and private
+save receipt, and Jobs showed `キャンペーン画像 / 完了 / 1 outputs`.
+The generated image identity was `ai-f381c4d5-5c0d-4b3c-8b7b-294c10f83f79-0`.
+
+This closes the active provider credential blocker for the tested image path,
+but not the full Light-to-Heavy goal. Remaining work is to source-observe and
+match every other route/state (especially designProduction project cards and
+video post-upload/render states), finish actual video-provider admission,
+complete same-fixture visual/interaction diff coverage, and rerun the strict
+release gate. The release gate is still not green.
+
+# OpenAI provider boundary and provenance implemented locally — 2026-09-21 r104 (historical)
 
 The active Heavy Cloudflare API now has a server-only OpenAI Images adapter for
 generation, reference edits, and model-matrix fitting. The default production

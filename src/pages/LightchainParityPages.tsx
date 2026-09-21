@@ -716,6 +716,156 @@ const mergeWorkspaceArtifact = (current: WorkspaceArtifact[], next: WorkspaceArt
   return sortWorkspaceArtifacts(byId.values());
 };
 
+const marketingSceneCards = [
+  {
+    label: 'EC',
+    prompt: 'ECサイト向けに、商品の特徴が伝わる販促ビジュアルを作成してください。',
+    image: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateMarketingCover.png?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  },
+  {
+    label: 'SNS',
+    prompt: 'SNS向けに、ブランドの雰囲気が伝わる縦長の投稿ビジュアルを作成してください。',
+    image: 'https://static-cn.linkaigc.com/workbenches/2026-02/d81b55aa18721b86c37b96a36223a936.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  },
+  {
+    label: 'ブランド',
+    prompt: 'ブランドの世界観を表現するキャンペーンビジュアルを作成してください。',
+    image: 'https://static-cn.linkaigc.com/saas/2026-06/a25e632441de5b1198f4e20ae7040568.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  },
+  {
+    label: '店舗・オフライン',
+    prompt: '店舗や展示会で使える、商品が見やすい販促パネルを作成してください。',
+    image: 'https://static-cn.linkaigc.com/saas/2026-06/3266745d3f905fc8c770cd0894438279.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  },
+  {
+    label: 'ライブ配信',
+    prompt: 'ライブ配信の商品紹介で使える、視認性の高い告知ビジュアルを作成してください。',
+    image: 'https://static-cn.linkaigc.com/saas/2026-06/6051a3df009110d3de23c3af3173e418.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  },
+  {
+    label: 'プロモーション',
+    prompt: '新商品のプロモーション用に、印象的なキャンペーンビジュアルを作成してください。',
+    image: 'https://static-cn.linkaigc.com/saas/2026-06/1b69b85c8eba09e87fbae86a8f98b3b5.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  },
+] as const;
+
+const MARKETING_TUTORIAL_STORAGE_KEY = 'heavy-chain-lightchain-marketing-tutorial-dismissed-v1';
+
+/**
+ * Light Chain's marketing landing surface. Keep this route small and source-shaped:
+ * the full compatibility workbench is still available at /marketing/detail, while
+ * /marketing must open on the same prompt, scene, project, and example sections as
+ * the official site instead of showing a Heavy-only loading/workbench shell.
+ */
+export function LightchainMarketingHomePage() {
+  const [prompt, setPrompt] = useState('');
+  const [projects, setProjects] = useState<WorkspaceArtifact[]>([]);
+  const [tutorialVisible, setTutorialVisible] = useState(false);
+  const { currentBrand, user } = useAuthStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setProjects(currentBrand?.id ? listWorkspaceArtifacts(currentBrand.id, user?.id).slice(0, 12) : []);
+    try {
+      setTutorialVisible(window.localStorage.getItem(MARKETING_TUTORIAL_STORAGE_KEY) !== '1');
+    } catch {
+      setTutorialVisible(true);
+    }
+  }, [currentBrand?.id, user?.id]);
+
+  const generationHref = (nextPrompt: string) => buildGenerationIntentHref({
+    feature: 'campaign-image',
+    prompt: nextPrompt,
+    sourceWorkspace: 'marketing',
+    workflowVersion: 'marketing-brief-local-v1',
+    sourceLabel: workspaceSourceConfig.marketing.label,
+    sourceResumePath: workspaceSourceConfig.marketing.resumePath,
+    sourceMode: 'local-workflow-intake',
+  });
+
+  const dismissTutorial = () => {
+    setTutorialVisible(false);
+    try {
+      window.localStorage.setItem(MARKETING_TUTORIAL_STORAGE_KEY, '1');
+    } catch {
+      // Tutorial visibility is a convenience only; keep the page usable if storage is unavailable.
+    }
+  };
+
+  return (
+    <ParityShell className="relative overflow-hidden bg-[#171b1c] text-white" workflowFeature="marketing-home">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(56,189,148,0.42),rgba(59,130,246,0.38),rgba(30,41,59,0.1))]" />
+      <main data-testid="lightchain-marketing-home" className="relative z-10 mx-auto max-w-[1365px] px-5 pb-10 pt-16 sm:px-8 lg:px-0">
+        <section className="text-center">
+          <h1 className="text-4xl font-semibold tracking-[-0.04em]">マーケティングワークスペースへようこそ</h1>
+          <p className="mt-3 text-sm text-neutral-400">今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！</p>
+          <div className="relative mx-auto mt-8 max-w-[980px] rounded-2xl border border-[#0bcabc] bg-[#1a1f22] p-2 shadow-[0_0_28px_rgba(101,211,207,0.14)]">
+            <div className="grid min-h-[206px] grid-cols-[96px_minmax(0,1fr)] items-center gap-4 rounded-2xl bg-[#1d2326] px-4 py-3 text-left">
+              <button type="button" aria-label="参考画像を追加" onClick={() => navigate('/marketing/detail')} className="flex h-24 w-20 rotate-[-8deg] items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#243039,#101719)] text-neutral-300 transition hover:text-white">
+                <ImageIcon className="h-6 w-6" />
+              </button>
+              <textarea
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value.slice(0, 4000))}
+                maxLength={4000}
+                aria-label="マーケティングのリクエスト"
+                placeholder="商品画像をアップロードして、デザインのリクエストを教えてください"
+                className="h-full min-h-[150px] w-full resize-none border-0 bg-transparent p-5 pr-24 text-left text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400"
+              />
+            </div>
+            <div className="absolute bottom-5 right-5 flex items-center gap-4 text-xs text-neutral-500">
+              <span>{prompt.length} / 4000</span>
+              <button type="button" aria-label="送信" disabled={!prompt.trim()} onClick={() => navigate(generationHref(prompt.trim()))} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#65d3cf] disabled:cursor-not-allowed disabled:opacity-40"><ArrowRight className="h-5 w-5 -rotate-45" /></button>
+            </div>
+            {tutorialVisible && (
+              <div className="absolute left-1/2 top-1/2 z-20 flex w-[min(660px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-full border border-[#65d3cf]/50 bg-[#91f0df] px-4 py-2 text-left text-xs font-semibold text-neutral-950 shadow-xl" data-testid="lightchain-marketing-tutorial">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-white ring-4 ring-[#65d3cf]/50" />
+                <span className="min-w-0 flex-1">ここで参考画像のアップロードや、アイデア（プロンプト）の入力ができます。 1 / 4</span>
+                <button type="button" onClick={dismissTutorial} className="shrink-0 underline">Next</button>
+                <button type="button" aria-label="スキップ" onClick={dismissTutorial} className="shrink-0 text-lg leading-none">×</button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="mt-6" aria-label="おすすめのシーン">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="mr-1 text-sm text-neutral-300">おすすめのシーン 👉</span>
+            {marketingSceneCards.map((scene) => (
+              <button key={scene.label} type="button" onClick={() => setPrompt(scene.prompt)} className="inline-flex items-center gap-2 rounded-xl bg-[#262c30] px-5 py-3 text-sm font-semibold text-neutral-200 transition hover:bg-[#343c41]">
+                <Sparkles className="h-4 w-4 text-neutral-300" />
+                <span>{scene.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-12" data-testid="lightchain-marketing-projects">
+          <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2><span className="text-sm text-neutral-400">{projects.length}件</span></div>
+          <div className="mt-4 grid gap-2 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
+            <button type="button" onClick={() => navigate('/marketing/detail')} className="overflow-hidden rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-left transition hover:border-cyan-200/60">
+              <div className="flex h-36 items-center justify-center bg-[radial-gradient(circle_at_50%_45%,rgba(101,211,207,0.24),transparent_34%),#20272a] text-3xl text-neutral-400">＋</div>
+              <div className="p-4"><p className="font-medium">新規ファイル</p><p className="mt-2 text-xs text-neutral-500">マーケティングプロジェクトを作成</p></div>
+            </button>
+            {projects.map((project) => (
+              <button key={project.id} type="button" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(project.id)}`)} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left transition hover:border-white/40">
+                <div className="h-36 bg-[#20272a]">{project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <div className="flex h-full items-center justify-center text-2xl text-neutral-600">✦</div>}</div>
+                <div className="p-4"><p className="truncate font-medium">{project.title}</p><p className="mt-2 truncate text-xs text-neutral-500">{formatArtifactDate(project.createdAt)}</p></div>
+              </button>
+            ))}
+          </div>
+          {projects.length === 0 && <p className="mt-4 text-sm text-neutral-500">保存済みのプロジェクトはここに表示されます。</p>}
+        </section>
+
+        <section className="mt-12" data-testid="lightchain-marketing-reference-cases">
+          <h2 className="text-lg font-semibold">参考事例</h2>
+          <div className="mt-4 flex min-h-24 items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-neutral-500">データなし</div>
+        </section>
+      </main>
+    </ParityShell>
+  );
+}
+
 export function LightchainDesignProductionPage() {
   const [activeTab, setActiveTab] = useState('プロジェクトから開始');
   const [dialoguePrompt, setDialoguePrompt] = useState('');

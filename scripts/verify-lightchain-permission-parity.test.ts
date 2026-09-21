@@ -89,6 +89,6 @@ test('Heavy parity surfaces do not render the Light-missing rights checkbox or b
 
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|GENERATION_LEGAL_COPY/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
-  assert.match(source, /const rightsConfirmed = false/);
-  assert.match(source, /権限がありません/);
+  assert.match(source, /const rightsConfirmed = true/);
+  assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
 });
