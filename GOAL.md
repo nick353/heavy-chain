@@ -8039,6 +8039,19 @@ remains active for the remaining source routes and states, provider receipts,
 durable persistence/readback/reconciliation, video-quality evidence,
 billing/operator proof, and strict release-gate artifacts.
 
+# Goal progress — 2026-09-21 r161
+
+During the acceptance review, the Fashion Studio parity CSS was tightened so
+the project card itself remains `overflow-visible`; only its inner media/button
+clips content. This preserves the canonical card geometry without hiding the
+existing Lightchain project menu and its pin/save/delete actions.
+
+The focused parity/detail tests (6/6), typecheck, diff checks, full build and
+static-reference validation passed. The corrected build is deployed as Worker
+version `9dedd0a4-9b30-4461-8ab0-b9d6013df527`. The Goal remains active for
+authenticated visual readback and all remaining route/state, provider,
+persistence/reconciliation, video-quality, business, and release-gate work.
+
 # Goal progress — 2026-09-21 r156
 
 The canonical `/flow/orientedDesign` route at `https://jp.linkaigc.com/flow/orientedDesign`
