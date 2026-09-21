@@ -194,7 +194,9 @@ test('Agent new-file opens the Lightchain project creation flow', async () => {
 
   assert.match(source, /const \[agentProjectCreateOpen, setAgentProjectCreateOpen\] = useState\(false\)/);
   assert.match(source, /onClick=\{openAgentProjectCreate\}/);
+  assert.match(source, /onPointerDown=\{openAgentProjectCreate\}/);
   assert.match(source, /aria-label="新規ファイル" aria-haspopup="dialog"/);
+  assert.match(source, /aria-expanded=\{agentProjectCreateOpen\}/);
   assert.match(source, /title="プロジェクトを作成"/);
   assert.match(source, /プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください/);
   assert.match(source, /placeholder="プロジェクト名です"/);

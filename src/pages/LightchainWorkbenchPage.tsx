@@ -5627,7 +5627,7 @@ export function LightchainWorkbenchPage() {
               <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="mt-3 flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
                 <button type="button" aria-label="最近" className="flex items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
-                <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" onClick={openAgentProjectCreate} className="rounded-md p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
+                <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" aria-expanded={agentProjectCreateOpen} onPointerDown={openAgentProjectCreate} onClick={openAgentProjectCreate} className="rounded-md p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
               </div>
               <div className="mt-4 space-y-0">
                 {agentCreatedProjects.map((title) => (
