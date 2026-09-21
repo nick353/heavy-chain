@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Film,
   FolderOpen,
+  FolderPlus,
   Grid2X2,
   Hand,
   Layers3,
@@ -18,6 +19,8 @@ import {
   Maximize2,
   MessageSquareText,
   MousePointer2,
+  PanelLeft,
+  PanelLeftClose,
   Palette,
   Pencil,
   Redo2,
@@ -5530,13 +5533,15 @@ export function LightchainWorkbenchPage() {
           >
             <div className="absolute inset-3 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#262a2b] p-4 text-neutral-100 shadow-xl">
               <div className="flex h-8 w-full items-center justify-between gap-2">
-                <button type="button" aria-label="ホームに戻る" onClick={() => navigate('/designProduction')} className="flex min-w-0 items-center gap-2 text-base font-medium text-neutral-200">
-                  <span aria-hidden="true">‹</span>
+                <div className="flex min-w-0 items-center gap-2 text-base font-medium text-neutral-200">
+                  <button type="button" aria-label="ホームに戻る" onClick={() => navigate('/designProduction')} className="shrink-0">
+                    <span aria-hidden="true">‹</span>
+                  </button>
                   <span className="truncate">インサイト意思決定ワークベンチ</span>
-                </button>
+                </div>
                 <div className="flex items-center gap-2">
                   <button type="button" aria-label="検索" className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
-                  <button type="button" aria-label="サイドバーを閉じる" onClick={() => setAgentSidebarOpen(false)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><LayoutGrid className="h-4 w-4" /></button>
+                  <button type="button" aria-label="サイドバーを閉じる" onClick={() => setAgentSidebarOpen(false)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><PanelLeftClose className="h-4 w-4" /></button>
                 </div>
               </div>
               <nav aria-label="ワークベンチ入口" className="mt-4 grid gap-2">
@@ -5553,7 +5558,7 @@ export function LightchainWorkbenchPage() {
               <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="mt-3 flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
                 <button type="button" aria-label="最近" className="flex items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
-                <button type="button" aria-label="新規ファイル" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="rounded-md p-1 hover:bg-white/10">＋</button>
+                <button type="button" aria-label="新規ファイル" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="rounded-md p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
               </div>
               <div className="mt-4 space-y-0">
                 {agentRecentTasks.map(([title, kind, date]) => (
@@ -5572,7 +5577,7 @@ export function LightchainWorkbenchPage() {
             aria-label="企画ワークスペースサイドバー"
             className="relative z-20 flex h-full w-[64px] shrink-0 flex-col items-center gap-3 overflow-hidden border-r border-white/10 bg-[#262a2b] py-3 text-neutral-100"
           >
-            <button type="button" aria-label="サイドバーを開く" onClick={() => setAgentSidebarOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><LayoutGrid className="h-4 w-4" /></button>
+            <button type="button" aria-label="サイドバーを開く" onClick={() => setAgentSidebarOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><PanelLeft className="h-4 w-4" /></button>
             <button type="button" aria-label="新規タスク" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><MessageSquareText className="h-4 w-4" /></button>
             <button type="button" aria-label="業務プリファレンスプロファイル" onClick={() => setWorkspaceTutorialDismissed(false)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><ClipboardList className="h-4 w-4" /></button>
             <button type="button" aria-label="最近" onClick={() => setAgentSidebarOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>

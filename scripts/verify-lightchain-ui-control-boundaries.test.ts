@@ -178,6 +178,10 @@ test('Agent parity starts with the expanded project sidebar and exposes Lightcha
   const source = await readFile(workbenchSourcePath, 'utf8');
 
   assert.match(source, /const \[agentSidebarOpen, setAgentSidebarOpen\] = useState\(true\)/);
+  assert.match(source, /aria-label="ホームに戻る"/);
+  assert.match(source, /<span className="truncate">インサイト意思決定ワークベンチ<\/span>/);
+  assert.match(source, /<PanelLeftClose className="h-4 w-4" \/>/);
+  assert.match(source, /<FolderPlus className="h-4 w-4" \/>/);
   assert.match(source, /aria-label="添付を追加"/);
   assert.match(source, /data-testid=\{workspaceStyle\.kind === 'agent' \? 'lightchain-agent-quick-start' : undefined\}/);
   assert.match(source, /aria-label="アップロードするファイルを選択"/);
