@@ -1,5 +1,22 @@
 # Light Chain source parity and live OpenAI readback — 2026-09-21 r108
 
+Fresh Companion production readback on 2026-09-21 used a task-owned session
+without exporting auth state. Ten source/Heavy URLs were read and cleaned up;
+the Heavy existing-video detail route, after a bounded 3-second wait, rendered
+the expected Light-shaped editor with the observed image pair, reference
+settings, remaining-credit badge, disabled permission action, and no rights
+checkbox/modal. The same direct Light detail URL returned a blank DOM in this
+session, so it is retained as an observation limitation rather than being
+counted as a new source-parity acceptance. Session cleanup completed with no
+foreign-tab mutation.
+
+The full strict release gate was rerun at `2026-09-21T03:55:32Z` on the clean
+current commit. G608, G614, H602 local contract, typecheck, lint, and security
+checks now pass. The only remaining gate failures are the missing authenticated
+production monitor/UI pair, launch-operations artifact, production all-feature
+artifact, fresh G618 live baseline, production H602 billing readback, and the
+real-generation visual scorecard artifact.
+
 The G614 operations-docs gate was corrected so the active server-only
 OpenAI credential alias is not misclassified as a retired provider reference;
 the retired-runtime scan still rejects Supabase and arbitrary provider-proxy
