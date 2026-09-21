@@ -1,3 +1,21 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r123
+
+Fresh release-gate readback completed at `2026-09-21T07:42:04Z` in
+`output/playwright/10m-product-readiness-g615/release-gate-summary.json`.
+Static syntax checks, security audit, incident response, scale-alerting, and
+the current public-entry/right-surface readbacks passed. The gate still fails
+closed on six concrete items: missing current production monitor/UI pair,
+missing launch-ops artifact, missing production all-feature order-preview
+artifact, stale/missing-failing G618 baseline, unresolved H602 billing
+completion, and missing generation-scorecard artifact. The verifier performed
+no generation submit, payment, publish, destructive cleanup, or deploy.
+
+The fresh Companion auth recheck in this turn also read official `/` and
+`/model` with title `Lightchain AI` but empty semantic text; both temporary
+tabs were cleaned with `externalActionExecuted:false`. This preserves the
+authenticated-source boundary as unverified and does not promote route
+reachability to visual/provider completion.
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r122
 
 The canonical reference is now explicitly fixed to `https://jp.linkaigc.com/`.
