@@ -1,4 +1,34 @@
-# Light Chain source parity and live OpenAI readback — 2026-09-21 r112
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r113
+
+The official authenticated source page at
+`https://jp.linkaigc.com/designProduction` was read back directly after the
+requested 30-second wait and compared with Heavy at the same viewport. The
+current source contract is five creation cards in one row: a plain dashed
+`新規ファイル` card followed by `インスピレーション`, `プリント修正`,
+`生地イメージ`, and `企画提案書`; the four actionable cards expose only
+their source-style creation action, and the page has no rights-confirmation
+checkbox or modal.
+
+Heavy now matches that structure and visual spacing: the source T-shirt icon,
+five-column 8px-gap row, dashed first card, source vertical rhythm, and a
+live remaining-credit badge backed by the Heavy usage endpoint. The latest
+production version is `9399b16b-51dd-487f-b9ce-b454d8013bd3`. Focused route
+tests passed 28/28, the design-production contract passed 2/2, typecheck,
+lint, build, R2 asset preparation, and Wrangler dry-run passed. Fresh public
+readback returned HTTP 200 for `/_health`, `/lightchain`, and
+`/designProduction`; the served parity chunk contains the five-card layout,
+dashed card, credit badge, and no `権利確認` marker. A fresh authenticated
+Chrome readback waited 30 seconds and showed the aligned card row and source
+shapes. Credit numbers remain account data, so the official account's current
+displayed value and Heavy's value are not expected to be identical fixtures.
+
+The same six external/operator release-gate blockers remain: authenticated
+production monitor/UI evidence, launch operations, production all-feature
+order previews, a fresh G618 scale baseline, production H602 billing
+completion, and the real-generation visual scorecard. No provider submit,
+payment, publish, secret export, or destructive cleanup was performed.
+
+## Prior release — 2026-09-21 r112
 
 The official authenticated source page at
 `https://jp.linkaigc.com/flow/laboratory/detail` was read back directly after

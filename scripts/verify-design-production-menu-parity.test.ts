@@ -26,5 +26,11 @@ test('design production creation cards match the current Light source contract',
   assert.match(source, /title="ブリン卜修正" actionLabel="プリントプロジェクトを新規作成"/);
   assert.match(source, /title="生地イメージ" actionLabel="生地プロジェクトを新規作成"/);
   assert.match(source, /title="企画提案書" actionLabel="企画提案書を新規作成"/);
+  assert.match(source, /grid-cols-2 lg:grid-cols-5" aria-label="新規ファイル"/);
+  assert.match(source, /className="mt-6 grid gap-2 grid-cols-2 lg:grid-cols-5"/);
+  assert.match(source, /border-dashed border-white\/10 bg-white\/5 p-5 text-center/);
+  assert.match(source, /aria-label="残りクレジット"/);
+  assert.match(source, /<Plus className="h-8 w-8 text-white" \/>[\s\S]*新規ファイル/);
+  assert.match(source, /aria-label=\{actionLabel\}/);
   assert.doesNotMatch(source, /onClick=\{\(\) => navigate\('\/canvas\/new'\)\}.*title="新規ファイル"/s);
 });

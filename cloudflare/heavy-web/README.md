@@ -1,6 +1,26 @@
 # Heavy Chain Cloudflare web hosting
 
-## Latest Web release — 2026-09-21 r55
+## Latest Web release — 2026-09-21 r56
+
+Version `9399b16b-51dd-487f-b9ce-b454d8013bd3` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. This release aligns the
+authenticated `/designProduction` surface with the current official Lightchain
+source: five creation cards, the plain dashed `新規ファイル` card, the source
+T-shirt icon, source spacing, single source-style action buttons, and a live
+remaining-credit badge from the Heavy usage endpoint. The source and Heavy
+pages were each read back after a 30-second wait in the same Chrome viewport;
+the Heavy row matched the source layout and there is no rights-confirmation
+checkbox or modal.
+
+Focused route tests passed 28/28 and the design-production contract passed
+2/2; typecheck, lint, build, R2 asset preparation, and Wrangler dry-run passed.
+Fresh public readback returned HTTP 200 for `/_health`, `/lightchain`, and
+`/designProduction`; the served parity chunk contains the five-card layout,
+dashed first card, credit badge, and no `権利確認` marker. The live credit
+number is account-specific and is not treated as a static source fixture. No
+provider, payment, publish, or private-media completion is claimed.
+
+## Prior Web release — 2026-09-21 r55
 
 Version `091ac99e-2dcc-4dc1-acaf-2095297b14e8` is deployed at 100% to
 `heavy-chain-web.nichika2000823.workers.dev`. This release adds the official
