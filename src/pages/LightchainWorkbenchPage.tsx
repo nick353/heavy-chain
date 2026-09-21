@@ -169,7 +169,7 @@ type LightchainPreviewOverrides = {
 const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
 const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspace-tutorial-dismissed-v1';
 const LIGHTCHAIN_GENERATION_PROVIDER = import.meta.env.VITE_GENERATION_PROVIDER === 'openai' ? 'openai' : 'workers_ai';
-const LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL = 'https://static-jp.linkaigc.com/saas/2026-08/7c9021b93516cd2edfe4e2f7059bf20f.jpeg';
+const LIGHTCHAIN_FITTING_EXAMPLE_VIDEO_URL = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/persistence/font-end/model-custom-demo.mp4';
 const LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL = 'https://jp.linkaigc.com/static/default.png';
 const FITTING_REFERENCE_SLOT_CONFIG: Array<{
   key: FittingReferenceSlotKey;
@@ -4489,7 +4489,8 @@ export function LightchainWorkbenchPage() {
   if (isFeatureDetail && isFittingDetail) {
     return (
       <main
-        className="dark min-h-[calc(100vh-70px)] bg-[#121414] text-white"
+        className="dark min-h-[calc(100vh-50px)] bg-[#121414] text-white"
+        style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
         data-flow-state={unifiedFlowState}
         data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
         data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
@@ -4511,11 +4512,11 @@ export function LightchainWorkbenchPage() {
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
         {renderLightchainProviderGate()}
-        <div className="relative grid min-h-[calc(100vh-70px)] lg:grid-cols-[432px_minmax(0,1fr)]">
+        <div className="relative grid min-h-[calc(100vh-50px)] lg:grid-cols-[432px_minmax(0,1fr)]">
           <section className="border-r border-white/10 bg-[#141717]" data-testid="lightchain-fitting-input-flow">
             <div className="flex h-12 items-center justify-between border-b border-white/10 px-4">
-              <h1 className="text-sm font-semibold text-white">AIフィッティング</h1>
-              <div className="inline-flex h-8 w-fit items-center justify-center gap-1 rounded-lg bg-[#262b2e] p-1" role="tablist">
+              <p className="text-[14px] font-semibold leading-6 text-white">AIフィッティング</p>
+              <div className="inline-flex h-8 w-[204px] items-center justify-center rounded-lg bg-[#262a2b] p-1" role="tablist">
                 {['シングルタスク', 'マルチタスク'].map((tab) => (
                   <button
                     key={tab}
@@ -4523,7 +4524,8 @@ export function LightchainWorkbenchPage() {
                     role="tab"
                     onClick={() => { setActiveFittingTaskTab(tab); setFittingHistoryOpen(false); }}
                     aria-selected={activeFittingTaskTab === tab}
-                    className={`h-6 shrink-0 rounded px-2 py-1 text-sm font-medium leading-4 transition ${tab === 'シングルタスク' ? 'w-[102px]' : 'w-[90px]'} ${activeFittingTaskTab === tab ? 'bg-[#687178] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
+                    style={activeFittingTaskTab === tab ? { borderColor: 'rgb(11, 193, 184)' } : undefined}
+                    className={`h-6 shrink-0 flex-none rounded-lg border border-transparent px-2 py-1 text-xs font-medium leading-4 transition ${tab === 'シングルタスク' ? 'w-[102px]' : 'ml-1 w-[90px]'} ${activeFittingTaskTab === tab ? 'bg-white/15 text-white shadow-sm' : 'text-[#aab8b6] hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>
@@ -4535,13 +4537,13 @@ export function LightchainWorkbenchPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p
-                      className="text-base font-semibold text-white"
+                      className="mt-2 text-[14px] font-bold leading-4 text-[#e3e8e8]"
                       data-testid="lightchain-fitting-garment-count"
                       data-count={`${fittingGarmentCount}/4`}
                     >
                       衣服の画像 ({fittingGarmentCount}/4)
                     </p>
-                    <p className="mt-2 text-sm text-neutral-400">自動でアパレル平置き画像に変換</p>
+                    <p className="mt-1 mb-1 text-[14px] leading-6 text-[#aab8b6]">自動でアパレル平置き画像に変換</p>
                     {materialSlotFiles.primary?.name && (
                       <p
                         className="mt-1 truncate text-xs text-neutral-500"
@@ -4553,7 +4555,7 @@ export function LightchainWorkbenchPage() {
                   </div>
                   <button
                     type="button"
-                    className="inline-flex h-4 w-8 shrink-0 translate-y-[11px] items-center rounded-full border border-transparent bg-neutral-500 p-0 transition"
+                    className="inline-flex h-4 w-8 shrink-0 translate-y-[9px] items-center rounded-full border border-transparent bg-[#434a4c] p-0 transition"
                     onClick={() => setAutoConvertGarment((current) => !current)}
                     role="switch"
                     aria-checked={autoConvertGarment}
@@ -4563,32 +4565,37 @@ export function LightchainWorkbenchPage() {
                     </span>
                   </button>
                 </div>
-                <label className="grid h-[200px] shrink-0 cursor-pointer grid-cols-[1fr_140px] overflow-hidden rounded-2xl border border-white/5 bg-[#202527] p-2 transition hover:border-cyan-300/40">
+                <label className="flex h-[200px] shrink-0 cursor-pointer gap-2 overflow-hidden rounded-2xl border border-dashed border-white/10 bg-[#262a2b] transition hover:border-cyan-300/40">
                   <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
-                  <div className="flex flex-col items-center justify-center px-5 text-center">
-                    <ImagePlus className="h-6 w-6 text-neutral-300" />
-                    <p className="mt-5 text-base font-semibold leading-7 text-neutral-100">
-                      複数のコーディネートのアップロードに対応
-                    </p>
-                    <p className="mt-2 text-xs leading-5 text-neutral-400">
-                      ここをクリック/ドラッグしてアイテムを追加します。
-                    </p>
-                    <span className="mt-3 rounded-full bg-cyan-400 px-3 py-1 text-xs font-bold text-neutral-950">必須項目</span>
-                  </div>
-                  <div className="flex items-center justify-center rounded-xl bg-white p-2">
-                    {garmentImageUrl ? (
-                      <img src={garmentImageUrl} alt="衣服画像" className="max-h-40 rounded-lg object-contain" />
-                    ) : (
-                      <div className="relative flex h-full min-h-40 w-full items-end justify-center overflow-hidden rounded-lg bg-[linear-gradient(180deg,#f5f0e8,#ffffff)] p-2 text-xs font-semibold text-neutral-500">
-                        <img
-                          src={LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL}
-                          alt="例"
-                          className="absolute inset-0 h-full w-full object-cover"
-                          loading="eager"
-                        />
-                        <span className="relative rounded-full bg-white/90 px-2 py-0.5 text-neutral-700">例</span>
+                  <div className="flex flex-1 gap-2 size-full p-2 group">
+                    <div className="relative flex flex-1 size-full flex-col max-w-65 min-w-0">
+                      <div className="flex size-full shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border-none bg-transparent p-4 text-center text-[#aab8b6] transition hover:border-cyan-300/40">
+                        <ImagePlus className="h-6 w-6 text-neutral-300" />
+                        <p className="mt-2 w-full break-words text-center text-[14px] leading-[21px] text-[#e3e8e8]">
+                          複数のコーディネートのアップロードに対応
+                        </p>
+                        <p className="mt-1 break-words text-center text-xs leading-[17.1429px] text-[#aab8b6]">
+                          ここをクリック/ドラッグしてアイテムを追加します。
+                        </p>
+                        <span className="mt-2 flex w-fit items-center justify-center rounded-lg border border-white/10 bg-[#0bc1b8] px-2 py-0.5 text-xs font-medium leading-[17.1429px] text-[#111817]">必須項目</span>
                       </div>
-                    )}
+                    </div>
+                    <div className="h-full w-px bg-white/10" aria-hidden="true" />
+                    <div className="relative aspect-[96/128] h-full shrink-0 overflow-hidden rounded-lg">
+                      {garmentImageUrl ? (
+                        <img src={garmentImageUrl} alt="衣服画像" className="size-full object-cover" />
+                      ) : (
+                        <video
+                          src={LIGHTCHAIN_FITTING_EXAMPLE_VIDEO_URL}
+                          className="size-full object-cover transition-opacity duration-300 group-hover:hidden"
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          aria-label="例"
+                        />
+                      )}
+                    </div>
                   </div>
                 </label>
                 {garmentImageUrl && (
@@ -4668,7 +4675,7 @@ export function LightchainWorkbenchPage() {
                   )}
                 </section>
               )}
-              <div className="!mt-[37px] flex h-[34px] w-full items-center justify-start gap-2 border-b border-white/10" role="tablist">
+              <div className="!mt-[33px] flex h-[34px] w-full items-center justify-start gap-2" role="tablist">
                 {['説明生成', '参考画像', 'モデルのセット写真'].map((tab) => (
                   <button
                     key={tab}
@@ -4677,7 +4684,7 @@ export function LightchainWorkbenchPage() {
                     onClick={() => setActiveFittingInputTab(tab)}
                     aria-selected={activeFittingInputTab === tab}
                     style={activeFittingInputTab === tab ? { borderColor: 'rgb(11, 193, 184)' } : undefined}
-                    className={`h-[34px] shrink-0 rounded-lg border border-transparent px-4 py-1 text-base font-medium leading-6 whitespace-nowrap transition ${tab === 'モデルのセット写真' ? 'w-[160px] -ml-px' : 'w-[112px]'} ${activeFittingInputTab === tab ? 'border-[#0bc1b8] bg-white/15 text-white shadow-sm' : 'text-[#aab8b6] hover:text-neutral-200'}`}
+                    className={`h-[34px] flex-1 shrink-0 rounded-lg border border-transparent px-4 py-1 text-[14px] font-medium leading-6 whitespace-nowrap transition ${activeFittingInputTab === tab ? 'border-[#0bc1b8] bg-white/15 text-white shadow-sm' : 'text-[#aab8b6] hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>
@@ -4934,7 +4941,7 @@ export function LightchainWorkbenchPage() {
                 )}
             </div>
           </section>
-          <aside className="relative flex min-h-[calc(100vh-70px)] items-center justify-center bg-[#151515]">
+          <aside className="relative flex min-h-0 items-center justify-center bg-[#151515] p-4">
             <button
               type="button"
               className="absolute right-4 top-4 h-8 w-[102px] rounded-lg border border-white/15 bg-[#181b1d] px-4 py-2 text-sm font-semibold text-white"
@@ -5043,9 +5050,9 @@ export function LightchainWorkbenchPage() {
                   </button>
                 </div>
               </section>
-            ) : <div className="text-center">
-              <h2 className="text-xl font-semibold text-[#6ee7df]">AIフィッティング</h2>
-              <p className="mt-3 text-sm text-neutral-400">AIでモデル着用イメージを素早く実現</p>
+            ) : <div className="flex size-full flex-col items-center justify-center px-10 text-center">
+              <h5 className="font-[AlimamaFangYuanTiVF] text-[18px] font-bold leading-[25.2px] text-[#0bc1b8]">AIフィッティング</h5>
+              <p className="mt-2 text-sm leading-[21px] text-[#aab8b6]">AIでモデル着用イメージを素早く実現</p>
               {lightchainResult ? (
                 <div className="mx-auto mt-8 max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#1a1f22] text-left shadow-2xl">
                   {renderLightchainResultPreviewImage('h-56 w-full object-cover', '生成結果プレビュー')}

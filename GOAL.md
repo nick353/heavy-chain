@@ -7943,3 +7943,36 @@ all other routes and states, real provider generation receipts, durable
 save/readback/reconciliation, video quality evidence, billing/operator proof,
 and the strict release-gate artifacts. No provider generation, payment,
 publish, migration, or destructive cleanup was performed in this slice.
+
+# Goal progress — 2026-09-21 r150
+
+Using the authenticated canonical source at `https://jp.linkaigc.com/model`,
+the initial Light Chain workbench was re-measured and Heavy was brought to the
+same `/model` empty state. The final source-versus-Heavy readback after a
+30-second authentication settle confirmed matching coordinates and styles for
+the header title, task tabs, garment count/helper text, disabled auto-convert
+switch, 399x200 dashed upload surface, upload copy and required badge, the
+three fitting tabs, prompt textarea, and right-side empty-state copy. The
+source example video URL is now used by the Heavy empty upload fixture. Heavy
+has zero result cards and zero checkbox inputs in this state, so no
+Light-absent rights checkbox/modal/badge was introduced.
+
+The final deployed Web Worker version is
+`4c2c6988-e058-4c17-b2c0-63810bec61e6`. Fresh readback measured, among other
+points, fitting tabs at x=16/135.5/255 and y=403 with source-equivalent
+34px geometry, the prompt textarea at x=33 y=466 w=365 h=213, the upload panel
+at x=16 y=170 w=399 h=200, and the source example video at x=269.5 y=179
+w=136.5 h=182. The only observed non-visual DOM difference is that Heavy's
+count/helper elements are narrower text nodes rather than the source's full
+row-width wrappers; their rendered text, typography, color, and placement
+match exactly.
+
+Targeted UI boundaries passed 15/15; typecheck, lint, build, diff check, and
+Cloudflare dry-run passed. The local lifecycle/evidence checks remain
+`externalActionExecuted=false` with zero network calls. This closes the
+authenticated `/model` initial-state parity slice. The overall Goal remains
+open for every other source route/state and for real provider generation
+receipts, durable save/readback/reconciliation, video quality evidence,
+billing/operator proof, and the missing strict release-gate artifacts. No
+provider generation, payment, publish, migration, or destructive cleanup was
+performed.
