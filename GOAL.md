@@ -8627,6 +8627,15 @@ production monitor/UI pair、launch operations、production all-feature order pr
 G618、H602 billing、real-generation visual scorecardの6件である。provider生成、upload、
 保存、課金、公開、権利迂回は実行していない。Goalは `in_progress` を維持する。
 
+# Goal progress — 2026-09-22 r186
+
+コミット後の統合release gateをfreshに再実行した。`capturedAt=2026-09-21T18:55:45.456Z`
+で `ok=false`、残りは production monitor/UI pair、launch operations、production
+Lightchain all-feature order previews、G618 scale ops baseline、H602 billing completion
+readback、generation scorecard の6件。ローカル実装由来の新規失敗はなく、作業ツリーは
+clean。外部認証・monitor token・provider生成・課金/operator証跡が必要な項目を合成して
+閉じていない。Goalは `in_progress` を維持する。
+
 # Goal progress — 2026-09-22 r184
 
 新規task-owned Companion sessionでmobile viewport証跡を再試行したが、Extensionが
