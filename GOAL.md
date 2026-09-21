@@ -7403,6 +7403,23 @@ remains active for the remaining source route/state sweep, authenticated
 visual/interaction proof, provider receipts, durable persistence/readback/
 reconciliation, video-quality evidence, billing/operator proof, and strict
 release-gate artifacts.
+
+# Goal progress — 2026-09-21 r160
+
+Re-ran the focused parity and provider-boundary acceptance set: Fashion Studio
+detail, Lightchain source board parity, video parity ledger, unified workspace
+shell, provider persistence/readback, and provider coverage passed 51/51.
+These tests confirm the implementation contracts and fail-closed behavior, but
+they do not substitute for live provider receipts.
+
+The current shell environment check is an authoritative blocker for the
+production execution layer: `npm run env:check` reports 0/6 required runtime
+keys present (`VITE_CLOUDFLARE_API_BASE_URL`, `VITE_CLOUDFLARE_API_ENABLED`,
+`VITE_MEDIA_PROVIDER_ORDER`, `VITE_MEDIA_GATEWAY_URL`,
+`VITE_GENERATION_PROVIDER`, `PUBLIC_URL`). No secret was printed or inferred.
+The Goal remains active; UI parity work continues independently while
+provider generation, durable save/readback/reconciliation, and release-gate
+evidence remain unclaimed until an authenticated production path exists.
 # Canonical fitting flow alignment and authenticated production readback — 2026-09-21 r84
 
 The new Light-shaped fitting entrypoints now use the canonical `/model` route:
