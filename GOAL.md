@@ -8562,6 +8562,21 @@ save/reuse/reload、production visual proofはまだ作れない。直URL `/gall
 詳細は`work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。
 Goalは`in_progress`を維持する。
 
+# Goal progress — 2026-09-22 r185
+
+ユーザー指定の本家URL `https://jp.linkaigc.com/` を正本として再確認し、実際の
+正規ワークスペース `https://jp.linkaigc.com/designProduction` とHeavy本番の同一
+`/designProduction`を30秒settle後に視覚・semantic readbackした。両方ともLightchain
+の暗色launcher shell、header、welcome、開始方法tabs、4つの新規プロジェクトカード、
+マイプロジェクトを表示し、権利確認checkboxは0件だった。Heavyのクレジット、最近の
+プロジェクト画像・件数・ラベルはアカウント/runtimeデータの差であり、shellの差分と
+混同しないよう記録した。provider生成、upload、保存、課金、公開、権利迂回は未実行。
+
+残り6件（production monitor/UI pair、launch operations、all-feature order-preview、
+G618、H602 billing、real-generation visual scorecard）は変わらず、Goalは
+`in_progress`を維持する。詳細は
+`work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。
+
 # Goal progress — 2026-09-22 r180
 
 前回r179のHeavy認証判定は、認証/bootstrapが収束する前の準備シェルを読んだ
