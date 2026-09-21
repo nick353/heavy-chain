@@ -1476,6 +1476,7 @@ export function LightchainWorkbenchPage() {
   const [agentProjectCreateOpen, setAgentProjectCreateOpen] = useState(false);
   const [agentProjectName, setAgentProjectName] = useState('');
   const [agentCreatedProjects, setAgentCreatedProjects] = useState<string[]>([]);
+  const [agentQuickStartOpen, setAgentQuickStartOpen] = useState(true);
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
@@ -5712,25 +5713,25 @@ export function LightchainWorkbenchPage() {
                   <span className="truncate">インサイト意思決定ワークベンチ</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button type="button" aria-label="検索" className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
-                  <button type="button" aria-label="サイドバーを閉じる" onClick={() => setAgentSidebarOpen(false)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><PanelLeftClose className="h-4 w-4" /></button>
+                  <button type="button" aria-label="検索" className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
+                  <button type="button" aria-label="サイドバーを閉じる" onClick={() => setAgentSidebarOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><PanelLeftClose className="h-4 w-4" /></button>
                 </div>
               </div>
-              <nav aria-label="ワークベンチ入口" className="mt-4 grid gap-2">
-              <button type="button" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base font-medium leading-6 text-neutral-300 hover:bg-white/10">
+              <nav aria-label="ワークベンチ入口" className="mt-5 grid gap-2">
+              <button type="button" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
                 <MessageSquareText className="h-4 w-4" />
                 新規タスク
               </button>
-              <button type="button" onClick={() => setWorkspaceTutorialDismissed(false)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base font-medium leading-6 text-neutral-300 hover:bg-white/10">
+              <button type="button" onClick={() => setWorkspaceTutorialDismissed(false)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
                 <ClipboardList className="h-4 w-4" />
                 業務プリファレンスプロファイル
               </button>
               </nav>
               <div className="mt-2 h-px w-full bg-white/10" />
               <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="mt-3 flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
-                <button type="button" aria-label="最近" className="flex items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
-                <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" aria-expanded={agentProjectCreateOpen} onPointerDown={openAgentProjectCreate} onClick={openAgentProjectCreate} className="rounded-md p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
+              <div className="mt-[11px] flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
+                <button type="button" aria-label="最近" className="flex h-6 items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
+                <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" aria-expanded={agentProjectCreateOpen} onPointerDown={openAgentProjectCreate} onClick={openAgentProjectCreate} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
               </div>
               <div className="mt-4 space-y-0">
                 {agentCreatedProjects.map((title) => (
@@ -5767,7 +5768,7 @@ export function LightchainWorkbenchPage() {
               ✦ 33607
             </div>
           )}
-          <div className={`${workspaceStyle.kind === 'agent' ? 'workspace-shell mx-auto flex min-h-full w-[720px] flex-col items-center justify-start pt-14 max-[1120px]:w-[min(720px,calc(100%-32px))] max-[760px]:pt-8' : `relative mx-auto ${workspaceStyle.kind === 'marketing' ? 'max-w-[980px]' : 'max-w-[720px]'} text-center`}`}>
+          <div className={`${workspaceStyle.kind === 'agent' ? 'workspace-shell mx-auto flex min-h-full w-[720px] flex-col items-center justify-start pt-[68px] max-[1120px]:w-[min(720px,calc(100%-32px))] max-[760px]:pt-8' : `relative mx-auto ${workspaceStyle.kind === 'marketing' ? 'max-w-[980px]' : 'max-w-[720px]'} text-center`}`}>
             {workspaceStyle.kind === 'agent' ? (
               <section className="workspace-header relative z-[1] flex min-h-[172px] w-[720px] flex-none flex-col items-start gap-4 px-2 py-6 max-[1120px]:w-[min(720px,calc(100%-32px))] max-[760px]:h-auto max-[760px]:min-h-[144px]">
                 <div className="workspace-copy relative z-[3] w-[472px] px-2 max-[900px]:w-full max-[900px]:pr-0">
@@ -5833,11 +5834,11 @@ export function LightchainWorkbenchPage() {
 
             {workspaceStyle.kind === 'agent' ? (
               <section className="quick-start order-3 mt-0 w-[720px] flex-none overflow-hidden py-6 max-[1120px]:w-[min(720px,calc(100%-32px))]" data-testid={workspaceStyle.kind === 'agent' ? 'lightchain-agent-quick-start' : undefined}>
-                <button type="button" className="flex h-14 w-full items-center justify-between gap-2 bg-transparent px-2 py-4 text-white" onClick={() => setWorkspaceTutorialDismissed((dismissed) => !dismissed)}>
+                <button type="button" aria-label="クイックスタート 迷ったら、こちらのテンプレートをお試しください" aria-expanded={agentQuickStartOpen} className="flex h-14 w-full items-center justify-between gap-2 bg-transparent px-2 py-4 text-white" onClick={() => setAgentQuickStartOpen((open) => !open)}>
                   <span className="flex items-center gap-1 text-xs font-medium leading-5 text-[#aab8b6]"><span aria-hidden="true">♧</span><strong className="text-sm font-bold text-white">クイックスタート</strong></span>
                   <span className="flex items-center gap-1 text-sm text-[#7b8a88]">迷ったら、こちらのテンプレートをお試しください <span aria-hidden="true">⌄</span></span>
                 </button>
-                <div className="grid h-[88px] grid-cols-3 gap-2 overflow-hidden max-[760px]:grid-cols-1">
+                {agentQuickStartOpen && <div className="grid h-[88px] grid-cols-3 gap-2 overflow-hidden max-[760px]:grid-cols-1">
                   {visibleAgentQuickStartExamples.map((example) => {
                     const [kind, ...rest] = example.split('｜');
                     return (
@@ -5846,7 +5847,7 @@ export function LightchainWorkbenchPage() {
                       </button>
                     );
                   })}
-                </div>
+                </div>}
               </section>
             ) : visibleExamples && (
               <div className="mt-7 text-left">
@@ -5909,7 +5910,7 @@ export function LightchainWorkbenchPage() {
                       className="absolute left-0 top-4 z-10 rounded-md bg-[#244440] px-2 py-1 text-sm font-semibold text-[#7ee1d4]"
                       onClick={() => setWorkspaceText('')}
                     >
-                      {currentWorkspaceTab}⌄
+                      {currentWorkspaceTab === '商品企画' ? '新商品企画' : currentWorkspaceTab}⌄
                     </button>
                   )}
                 <textarea
@@ -5957,7 +5958,7 @@ export function LightchainWorkbenchPage() {
                 <button
                   type="button"
                   onClick={handleWorkspaceStyleGenerate}
-                  disabled={specialProviderGenerationLocked}
+                  disabled={specialProviderGenerationLocked || (workspaceStyle.kind === 'agent' && !workspaceText.trim())}
                   data-testid="lightchain-workspace-generate"
                   className={`${workspaceStyle.kind === 'agent' ? 'absolute right-3 bottom-3 top-auto flex h-10 w-10' : 'relative flex h-11 w-11'} items-center justify-center rounded-full bg-[#0d6261] text-[rgba(0,0,0,0.5)] transition hover:bg-[#65d3cf] hover:text-neutral-950`}
                   aria-label={workspaceStyle.kind === 'agent' ? '送信' : 'AI生成'}
@@ -5967,10 +5968,10 @@ export function LightchainWorkbenchPage() {
               </div>
               {workspaceStyle.kind === 'agent' && (
                 <div className="flex h-12 w-full flex-none items-start gap-2 px-3 py-2">
-                  <button type="button" className="flex h-8 w-[240px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => setWorkspaceTutorialDismissed(false)}>
+                  <button type="button" aria-label="業務プリファレンスプロファイル" className="flex h-8 w-[240px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => setWorkspaceTutorialDismissed(false)}>
                     <ClipboardList className="h-4 w-4" /> 業務プリファレンスプロファイル <span aria-hidden="true">›</span>
                   </button>
-                  <button type="button" className="flex h-8 w-[172px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => navigate('/designProduction')}>
+                  <button type="button" aria-label="プロジェクトを選択" className="flex h-8 w-[172px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => navigate('/designProduction')}>
                     <FolderOpen className="h-4 w-4" /> プロジェクトを選択 <span aria-hidden="true">›</span>
                   </button>
                 </div>
