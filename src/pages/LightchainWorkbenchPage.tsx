@@ -5717,7 +5717,7 @@ export function LightchainWorkbenchPage() {
                   <button type="button" aria-label="サイドバーを閉じる" onClick={() => setAgentSidebarOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><PanelLeftClose className="h-4 w-4" /></button>
                 </div>
               </div>
-              <nav aria-label="ワークベンチ入口" className="mt-5 grid gap-2">
+              <nav aria-label="ワークベンチ入口" className="mt-4 grid gap-2">
               <button type="button" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
                 <MessageSquareText className="h-4 w-4" />
                 新規タスク
@@ -5729,7 +5729,7 @@ export function LightchainWorkbenchPage() {
               </nav>
               <div className="mt-2 h-px w-full bg-white/10" />
               <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="mt-[11px] flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
+              <div className="mt-[17px] flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
                 <button type="button" aria-label="最近" className="flex h-6 items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
                 <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" aria-expanded={agentProjectCreateOpen} onPointerDown={openAgentProjectCreate} onClick={openAgentProjectCreate} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
               </div>
@@ -5906,11 +5906,11 @@ export function LightchainWorkbenchPage() {
                   {workspaceStyle.kind === 'agent' && (
                     <button
                       type="button"
-                      aria-label={currentWorkspaceTab}
-                      className="absolute left-0 top-4 z-10 rounded-md bg-[#244440] px-2 py-1 text-sm font-semibold text-[#7ee1d4]"
+                      aria-expanded={false}
+                      className="absolute left-1 top-1 z-10 flex h-6 w-max items-center gap-0.5 rounded-md bg-[#244440] pr-1 pl-2 text-base font-normal leading-5 text-[#7ee1d4]"
                       onClick={() => setWorkspaceText('')}
                     >
-                      {currentWorkspaceTab === '商品企画' ? '新商品企画' : currentWorkspaceTab}⌄
+                      {currentWorkspaceTab === '商品企画' ? '新商品企画' : currentWorkspaceTab} <span aria-hidden="true">⌄</span>
                     </button>
                   )}
                 <textarea
@@ -5922,9 +5922,10 @@ export function LightchainWorkbenchPage() {
                         setWorkspaceTextDrafts((drafts) => ({ ...drafts, [currentWorkspaceTab]: nextValue }));
                       }
                     }}
-                    placeholder={currentWorkspaceCopy.prompt}
+                    aria-label={workspaceStyle.kind === 'agent' ? '調査したい市場、カテゴリ、スタイル方向を入力してください…' : undefined}
+                    placeholder={workspaceStyle.kind === 'agent' ? '' : currentWorkspaceCopy.prompt}
                     maxLength={4000}
-                    className={`${workspaceStyle.kind === 'agent' ? 'h-14 min-h-14 pl-[108px] pt-1' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400`}
+                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 pl-1 text-base font-normal leading-6 text-[#e8eeed] [text-indent:90px]' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
                   />
                 </div>
                 {workspaceStyle.kind === 'agent' && (
