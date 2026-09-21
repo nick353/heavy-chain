@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import path from 'node:path';
+
+const outIndex = process.argv.indexOf('--out');
+const outPath = outIndex >= 0 ? process.argv[outIndex + 1] : null;
 
 const sourceRoots = ['src', 'cloudflare/heavy-api/src', 'cloudflare/heavy-web/src'];
 const required = [
@@ -47,5 +51,10 @@ const report = {
   ok: checks.every(([, passed]) => passed),
   proofLimits: ['This gate does not prove production traffic-zero, provider quality, or authenticated browser completion.'],
 };
-console.log(JSON.stringify(report, null, 2));
+const serialized = `${JSON.stringify(report, null, 2)}\n`;
+if (outPath) {
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, serialized);
+}
+console.log(serialized);
 process.exit(report.ok ? 0 : 1);
