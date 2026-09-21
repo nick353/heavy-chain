@@ -4,6 +4,20 @@
 .lightchain-creator-parity main > section > h5 { font-family: AlimamaFangYuanTiVF, sans-serif; font-size: 18px; font-weight: 700; line-height: 25.2px; }
 .lightchain-creator-parity main > section > p { width: 328px; line-height: 21px; text-align: center; }
 .lightchain-creator-parity main > section > div { margin-top: 16px; }
+.design-production-parity [data-testid="design-production-page"] { position: relative; left: -2px; font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
+.design-production-parity [data-testid="design-production-page"] > .text-center { transform: translateY(4px); }
+.design-production-parity [data-testid="design-production-page"] > [role="tablist"] > button { padding-left: 24px; padding-right: 24px; font-size: 18px; line-height: 24px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] { margin-top: 40px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:first-child { height: 32px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:first-child > h2 { font-weight: 500; line-height: 28px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) { display: flex; flex-wrap: wrap; column-gap: 8px; row-gap: 16px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) > article { flex: 0 0 220px; width: 220px; height: 240px; overflow: hidden; border: 0; border-radius: 16px; background: #262a2b; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) > article > button > div:first-child { height: 167px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) > article > button > div:last-child { height: 73px; padding: 12px; font-size: 12px; line-height: 17.1429px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) > article > button > div:last-child > p:first-child { font-size: 14px; line-height: 21px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) > article > button > div:last-child > p:last-child { font-size: 12px; line-height: 17.1429px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) > article > div { top: 8px; right: 8px; }
+.design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) > article > div > button { width: 32px; height: 32px; padding: 0; }
 
 @tailwind base;
 @tailwind components;

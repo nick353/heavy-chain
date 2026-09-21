@@ -1186,7 +1186,7 @@ export function LightchainDesignProductionPage() {
     return <LightchainDialogueParityPanel onProjectStart={() => setActiveTab('プロジェクトから開始')} />;
   }
   return (
-    <ParityShell className="relative overflow-hidden bg-[#171b1c] text-white" workflowFeature="print-design-project">
+    <ParityShell className="design-production-parity relative overflow-hidden bg-[#171b1c] text-white" workflowFeature="print-design-project">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(180,224,139,0.5),rgba(112,208,239,0.42),rgba(255,255,255,0))]" />
       {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</div>}
       <div data-testid="design-production-page" className="relative z-10 mx-auto max-w-[1157px] px-5 py-7 sm:px-8 lg:px-0"><div className="text-center"><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1><p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p></div>
