@@ -8581,3 +8581,22 @@ visual scorecard、およびrelease gateの厳格な再通過である。provide
 課金、公開、権利迂回は実行していない。詳細は
 `work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。Goalは
 `in_progress`を維持する。
+
+# Goal progress — 2026-09-22 r181
+
+認証済みHeavy本番で、`GOAL_CANDIDATE_ROW_IDS`の33行を正規routeへ対応付け、
+全33/33を同一Companion sessionでsemantic+visual readbackした。マーケティング、
+AIフィッティング、ウェアデザイン、動画、モデル個別7面、グラフィック、ラボ、
+ファッションスタジオ、カスタムスタイルまで全てsettled表示に到達し、権利確認
+checkboxは全routeで0件だった。`model-library`と`model-custom`は同じ正規の
+`/model-library/model-custom-form`を共有するrowとして確認した。task-owned tabは
+cleanup receiptで閉じ、`external_action_executed=false`を確認した。
+
+本番の全feature route readbackは完了したが、Goal完了ではない。残りは本家とHeavyの
+同一fixture pixel/interaction diff、各featureの入力→生成→進行/失敗/再試行→保存/再利用
+のprovider実行receipt、R2/source sync/readback/reconciliation、business cleanup、
+production monitor/UI・launch/operator証跡、G618、H602 billing、real-generation
+visual scorecard、およびrelease gateの厳格な再通過である。生成、upload、保存、課金、
+公開、権利迂回は実行していない。詳細は
+`work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。Goalは
+`in_progress`を維持する。
