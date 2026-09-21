@@ -1,3 +1,15 @@
+# Light Chain authenticated-source settle readback — 2026-09-21 r137
+
+正本 `https://jp.linkaigc.com/model` のログイン状態をCompanionのtask-owned sessionで
+再確認した。ブラウザ側の1回の待機上限に合わせて10秒待機を2回実行したが、3回目の
+待機前にsigned authorityが期限切れとなり、最後のsemantic readbackは未実行で終了した。
+browser mutation、外部action、ログイン操作は0件。残った同一タブはtask terminal cleanupで
+閉じ、lease releaseとforeign tab非変更を確認した。これは未認証の証明でも認証済みの証明でも
+なく、authenticated source/Heavyのpixel・provider・save/readbackを完了扱いにはしない。
+
+残りのrelease blockerはr134記載の6件から変化なし。auth/provider/billing/operator actionを
+迂回せず、Goalは`in_progress`を維持する。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r134
 
 clean checkoutでstrict release gateを再実行した。実装側のsyntax、security audit、typecheck、
