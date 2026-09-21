@@ -8561,3 +8561,23 @@ save/reuse/reload、production visual proofはまだ作れない。直URL `/gall
 合わせる変更や、cookie/storage移送、権利迂回、provider・保存・課金・公開操作は行わない。
 詳細は`work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。
 Goalは`in_progress`を維持する。
+
+# Goal progress — 2026-09-22 r180
+
+前回r179のHeavy認証判定は、認証/bootstrapが収束する前の準備シェルを読んだ
+暫定判定だったため訂正した。30秒settle後に同一Companionタブを読み返すと、Heavy
+本番は認証済みのLightchain-shaped launcherまで収束した。さらに同一タブで
+`/`、`/designProduction`、`/model`、動画一覧・詳細、`/gallery`（15枚）、
+`/history`、`/jobs`、`/canvas/new`をsemantic+visual readbackし、全て権利確認
+checkbox 0件だった。`/model`とCanvasに表示された`権限がありません`は製品の
+権限状態であり、権利確認checkboxではないため迂回していない。Historyは準備中
+シェルを先に拾ったため、正確な`生成履歴`見出しまで待って再確認した。
+
+これにより本番認証済みUIの主要連携面は前進したが、Goal完了ではない。残りは
+同一fixtureでの本家とのpixel/interaction diff、31/33全featureの本番readback、
+provider実生成receipt、保存/R2 readback、source sync・reconciliation・cleanup、
+production monitor/UI・launch/operator証跡、G618、H602 billing、real-generation
+visual scorecard、およびrelease gateの厳格な再通過である。provider、upload、保存、
+課金、公開、権利迂回は実行していない。詳細は
+`work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。Goalは
+`in_progress`を維持する。
