@@ -6,6 +6,48 @@ const appSourcePath = new URL('../src/App.tsx', import.meta.url);
 const routeMappingPath = new URL('../src/features/lightchain/heavyRouteMapping.ts', import.meta.url);
 const workbenchSourcePath = new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url);
 
+// Snapshot of the routes emitted by the official public Lightchain app chunk
+// observed at https://jp.linkaigc.com/ on 2026-09-21. This is intentionally
+// kept separate from the Heavy catalog so source-route coverage cannot pass
+// by only enumerating Heavy-owned feature ids.
+const OFFICIAL_LIGHTCHAIN_SOURCE_ROUTE_SNAPSHOT = Object.freeze([
+  '/',
+  '/creator',
+  '/tools/fabric',
+  '/tools/line',
+  '/tools/line-draft-to-tile',
+  '/agent',
+  '/model-base/style',
+  '/tools/printing',
+  '/tools/svg-convert',
+  '/printing',
+  '/editor/pattern',
+  '/tools/pattern-to-vector',
+  '/tools/vector-special',
+  '/model',
+  '/model/clothing',
+  '/model/model-reference',
+  '/model/pose-reference',
+  '/model/background-reference',
+  '/tools/reactor',
+  '/flow/orientedDesign',
+  '/flow/integration',
+  '/flow/laboratory',
+  '/editor/patternDesign',
+  '/editor/changeColor',
+  '/model-library/model-custom-form',
+  '/model-library/head-form',
+  '/model-library/model-change-form',
+  '/model-library/body-form',
+  '/model-library/size-form',
+  '/model-library/pose-form',
+  '/model-library/background-form',
+  '/model-library/perspective-form',
+  '/flow/GenerateShortVideo',
+  '/marketing',
+  '/designProduction',
+]);
+
 function parseRoutePaths(source) {
   return [...source.matchAll(/path="([^"]+)"/gu)].map((match) => match[1]);
 }
@@ -68,5 +110,15 @@ test('every Light source row uses a current Heavy route or its explicit pending 
     const pathname = route.split('?')[0];
     return !appRoutes.some((pattern) => routeMatches(pattern, pathname));
   });
+  assert.deepEqual(missing, []);
+});
+
+test('covers every route in the current official Lightchain source snapshot', async () => {
+  const appSource = await readFile(appSourcePath, 'utf8');
+  const appRoutes = parseRoutePaths(appSource);
+  assert.equal(new Set(OFFICIAL_LIGHTCHAIN_SOURCE_ROUTE_SNAPSHOT).size, 35);
+  const missing = OFFICIAL_LIGHTCHAIN_SOURCE_ROUTE_SNAPSHOT.filter(
+    (pathname) => !appRoutes.some((pattern) => routeMatches(pattern, pathname)),
+  );
   assert.deepEqual(missing, []);
 });

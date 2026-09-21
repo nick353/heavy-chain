@@ -1,6 +1,6 @@
-# Lightchain → Heavy Chain current parity matrix r68
+# Lightchain → Heavy Chain current parity matrix r69
 
-Updated: 2026-08-20
+Updated: 2026-09-21
 
 ## Current source boundary
 
@@ -9,13 +9,59 @@ This matrix separates current-selector route evidence from the older card-ledger
 | Evidence layer | Current evidence | Verdict |
 | --- | --- | --- |
 | Lightchain category/card enumeration | Fresh card ledger from 2026-08-19, selector revision 30, 26 non-video primary cards, 19 distinct routes | Historical reference; do not use as current-selector proof |
-| Lightchain route readback | Fresh current-selector revision 4 route ledger, 19/19 non-video routes with URL/title/body/visible-marker readback | Confirmed read-only route baseline |
+| Lightchain public source route manifest | Official public app chunk `28i12-k8opw4o.js`, 174,552 bytes, 35 route paths observed 2026-09-21 | Confirmed source snapshot; authenticated UI and provider behavior remain separate |
+| Lightchain route readback | Fresh current-selector revision 4 route ledger, 19/19 non-video routes with URL/title/body/visible-marker readback | Confirmed read-only route baseline; historical selector scope |
 | Heavy local inventory | 31 video-excluded unified feature entries; video entries remain excluded | Confirmed local inventory |
-| Heavy local workflows | r66 verifier: 31 features, 277 assertions, no console/page/request failures | Confirmed local contract only |
+| Heavy local workflows | Fresh 2026-09-21 artifact: 31 non-video features, 4 video dashboard/detail checks, 4 source-contract routes; 0 console/page/request failures | Confirmed local contract only |
+| Heavy source-route coverage | App route parser covers 35/35 official source paths, including `/model/:modelMode` and `/model-library/:modelTool` dynamic children | Confirmed static route coverage; not visual or authenticated behavior proof |
 | Priority local contracts | r67 focused suites: 43/43 | Confirmed local contract only |
 | Heavy production priority UI | r62 printing and r63 fabric/model target-scoped readback | Confirmed read-only UI/input markers |
 | Provider output/persistence | No current same-run production provider result → save → reuse → reload proof | PENDING_CONFIRMATION |
 | Mac/Windows real Chrome acceptance | No paired current-machine acceptance artifact | PENDING_CONFIRMATION |
+
+## Current official public source route snapshot
+
+The canonical source reference for this revision is [https://jp.linkaigc.com/](https://jp.linkaigc.com/). The route list below was extracted from the public app chunk `/_next/static/chunks/28i12-k8opw4o.js` on 2026-09-21. It is a source-code route snapshot, not a claim that the protected workbench was authenticated or that provider calls succeeded.
+
+| # | Official source path | Heavy App coverage |
+|---:|---|---|
+| 1 | `/` | exact |
+| 2 | `/creator` | exact |
+| 3 | `/tools/fabric` | exact |
+| 4 | `/tools/line` | exact |
+| 5 | `/tools/line-draft-to-tile` | exact |
+| 6 | `/agent` | exact |
+| 7 | `/model-base/style` | exact |
+| 8 | `/tools/printing` | exact |
+| 9 | `/tools/svg-convert` | exact |
+| 10 | `/printing` | exact |
+| 11 | `/editor/pattern` | exact |
+| 12 | `/tools/pattern-to-vector` | exact |
+| 13 | `/tools/vector-special` | exact |
+| 14 | `/model` | exact |
+| 15 | `/model/clothing` | `/model/:modelMode` |
+| 16 | `/model/model-reference` | `/model/:modelMode` |
+| 17 | `/model/pose-reference` | `/model/:modelMode` |
+| 18 | `/model/background-reference` | `/model/:modelMode` |
+| 19 | `/tools/reactor` | exact |
+| 20 | `/flow/orientedDesign` | exact |
+| 21 | `/flow/integration` | exact |
+| 22 | `/flow/laboratory` | exact |
+| 23 | `/editor/patternDesign` | exact |
+| 24 | `/editor/changeColor` | exact |
+| 25 | `/model-library/model-custom-form` | exact |
+| 26 | `/model-library/head-form` | `/model-library/:modelTool` |
+| 27 | `/model-library/model-change-form` | `/model-library/:modelTool` |
+| 28 | `/model-library/body-form` | `/model-library/:modelTool` |
+| 29 | `/model-library/size-form` | `/model-library/:modelTool` |
+| 30 | `/model-library/pose-form` | `/model-library/:modelTool` |
+| 31 | `/model-library/background-form` | `/model-library/:modelTool` |
+| 32 | `/model-library/perspective-form` | `/model-library/:modelTool` |
+| 33 | `/flow/GenerateShortVideo` | exact |
+| 34 | `/marketing` | exact |
+| 35 | `/designProduction` | exact |
+
+The source chunk also exposed `/model` as the base route plus the four dynamic model children above; the snapshot has 35 paths when the base route is counted once. The static acceptance test is `test:lightchain-parity-routes`, and it asserts 35 unique source paths with zero uncovered paths. This only closes route coverage; visual diff, authenticated workbench behavior, provider result, persistence, and cross-device acceptance remain separate gates.
 
 ## Current Lightchain primary route baseline
 

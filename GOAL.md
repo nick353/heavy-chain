@@ -1,3 +1,20 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r122
+
+The canonical reference is now explicitly fixed to `https://jp.linkaigc.com/`.
+The official public app chunk `/_next/static/chunks/28i12-k8opw4o.js` was
+re-read on 2026-09-21 (`174,552` bytes), and its 35 primary source paths,
+including `/` and the dynamic model/model-library children, were added to the
+current parity matrix. Heavy's App router covers 35/35; the combined route
+acceptance suite passes 29/29. This is static source-route coverage only and
+does not claim authenticated UI or provider parity.
+
+The updated matrix is `work/lightchain-parity-matrix-current-20260820-r68.md`.
+The new route snapshot is enforced by
+`test:lightchain-parity-routes`, while the fresh all-feature artifact below
+continues to prove the local desktop/mobile workflows. The Goal remains open
+for authenticated visual/interaction diff, permitted provider receipts,
+persistence/reconciliation, and external release gates.
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r121
 
 After the source-permission change, a fresh isolated local all-feature run
