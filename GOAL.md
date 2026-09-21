@@ -1,3 +1,20 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r134
+
+clean checkoutでstrict release gateを再実行した。実装側のsyntax、security audit、typecheck、
+build、lint、diff check、G608、G620、G632、G633、Companion authenticated production evidence、
+mass-market QAは通過。最新artifactは
+`output/playwright/10m-product-readiness-g615/release-gate-summary.json`で、残りは次の6件のみ。
+
+- production monitor/UI pair: `g835-production-ui-current-r1/summary.json`が欠落（API monitorと同一runIdのauthenticated UI v2が必要）
+- launch operations: `g830-launch-ops-production-current-r2/summary.json`が欠落
+- production Lightchain all-feature order previews: current 33-feature production summaryが欠落
+- G618: scale ops baselineが48時間超でfreshness失敗
+- production H602 billing completion: quota enforcement=false、checkout=true、verified no-real-charge proof=0、transaction/entitlement readback=false、operator decision未確認、live constraint readback未実施
+- generation scorecard: `output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`が欠落
+
+これらは認証済みmonitor/API、運用operator判断、課金/Apple sandboxの本人操作、実provider生成の
+正規証跡が必要で、存在しないartifactを作らずfail-closedにした。Goalは`in_progress`を維持する。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r133
 
 同一Chrome状態で本家 `https://jp.linkaigc.com/model` と本番Heavy `/model` を30秒settle後に
