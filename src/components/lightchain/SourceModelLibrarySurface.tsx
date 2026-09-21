@@ -59,7 +59,7 @@ function SourceModelCombobox({ field, label, value, open, onToggle, onChange }: 
         aria-expanded={open}
         aria-controls={optionsId}
         onClick={onToggle}
-        className="flex h-[34px] w-full items-center justify-between rounded-lg border border-white/10 bg-[#282c2d] px-3 text-left text-sm font-semibold text-neutral-200 outline-none transition hover:bg-[#303637]"
+        className="flex h-8 w-[280px] shrink-0 items-center justify-between rounded-lg border border-white/10 bg-[#262a2b] px-3 py-2 text-left text-sm font-normal leading-[21px] text-neutral-200 outline-none transition hover:bg-[#303637]"
       >
         <span>{value}</span>
         <ChevronDown className="h-4 w-4 text-neutral-400" aria-hidden="true" />
@@ -69,7 +69,7 @@ function SourceModelCombobox({ field, label, value, open, onToggle, onChange }: 
           id={optionsId}
           role="listbox"
           aria-label={label}
-          className="absolute left-0 right-0 top-[38px] z-20 max-h-52 overflow-y-auto rounded-lg border border-white/10 bg-[#282c2d] p-1 shadow-xl"
+          className="absolute left-0 right-0 top-9 z-20 max-h-52 overflow-y-auto rounded-lg border border-white/10 bg-[#262a2b] p-1 shadow-xl"
         >
           {sourceModelFieldOptions[field].map((option) => (
             <div
@@ -109,6 +109,7 @@ export function SourceModelLibrarySurface() {
   return (
     <div
       className="flex h-[calc(100vh-50px)] min-h-[640px] w-full overflow-hidden bg-[#171b1c] text-white"
+      style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
       data-testid="lightchain-source-model-surface"
       data-lightchain-source-surface="model-customization"
     >
@@ -123,14 +124,14 @@ export function SourceModelLibrarySurface() {
               key={label}
               to={href}
               aria-current={index === 0 ? 'page' : undefined}
-              className={`flex h-[76px] flex-col items-center justify-center gap-1 rounded-lg border px-1 text-center text-[11px] leading-4 transition ${
+              className={`flex flex-col items-center justify-center gap-y-1 rounded-lg border px-1 py-2 text-center text-[12px] font-normal leading-[17.1429px] transition ${
                 index === 0
                   ? 'border-[#65d3cf] bg-[#273233] text-[#65d3cf]'
                   : 'border-transparent text-neutral-300 hover:border-white/15 hover:bg-white/[0.04] hover:text-white'
               }`}
             >
               <Icon className="h-6 w-6" strokeWidth={1.7} aria-hidden="true" />
-              <span>{label}</span>
+              <span className={index === 0 ? 'w-[61px]' : ''}>{label}</span>
             </Link>
           ))}
         </div>
@@ -141,16 +142,16 @@ export function SourceModelLibrarySurface() {
         className="relative flex w-[432px] shrink-0 flex-col border-r border-white/10 bg-[#171b1c]"
       >
         <div className="flex-1 overflow-y-auto px-4 pb-5 pt-4">
-          <h1 className="text-base font-semibold text-white">モデルカスタマイズ</h1>
+          <h1 className="text-base font-medium leading-6 text-white">モデルカスタマイズ</h1>
 
-          <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-xl border border-white/10 bg-[#282c2d] p-1">
+          <div className="mt-4 grid grid-cols-2 gap-1 overflow-hidden rounded-xl border border-white/10 bg-[#262a2b] p-1">
             {(['ラベル', 'カスタム'] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  activeTab === tab ? 'border border-[#65d3cf] bg-[#282c2d] text-white' : 'border border-transparent text-neutral-300 hover:bg-white/[0.06]'
+                className={`rounded-lg px-4 py-1 text-sm font-normal leading-[21px] transition ${
+                  activeTab === tab ? 'border border-[#65d3cf] bg-white/[0.15] text-white' : 'border border-transparent text-neutral-300 hover:bg-white/[0.06]'
                 }`}
               >
                 {tab}
@@ -159,25 +160,30 @@ export function SourceModelLibrarySurface() {
           </div>
 
           <div className="mt-4 space-y-4">
-            <div id="gender" className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-x-4">
-              <span className="text-sm font-semibold text-neutral-200">性別</span>
-              <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-white/10 bg-[#202526] p-1" data-testid="lightchain-source-model-gender">
+            <label id="gender" className="flex items-center justify-between">
+              <span className="text-sm font-medium leading-5 text-[#e3e8e8]">性別</span>
+              <div className="relative flex w-[280px] shrink-0 gap-1 rounded-lg border border-white/10 p-1 leading-4" data-testid="lightchain-source-model-gender">
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute bottom-1 top-1 rounded bg-[#0bc1b8]"
+                  style={{ width: 133, left: 5 }}
+                />
                 {(['男性', '女性'] as const).map((option) => (
-                  <span
+                  <div
                     key={option}
                     onClick={() => setGender(option)}
                     role="presentation"
-                    className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${gender === option ? 'bg-[#65d3cf] text-[#102021]' : 'text-neutral-300 hover:bg-white/[0.06]'}`}
+                    className={`relative z-10 flex h-6 flex-1 items-center justify-center rounded px-2 py-1 text-[12px] leading-[17.1429px] transition ${gender === option ? 'bg-[#0bc1b8] text-[#102021]' : 'text-neutral-300 hover:bg-white/[0.06]'}`}
                   >
                     {option}
-                  </span>
+                  </div>
                 ))}
               </div>
-            </div>
+            </label>
 
             {(['age', 'nationality'] as SourceModelField[]).map((field) => (
-              <div key={field} id={field} className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-x-4">
-                <span className="text-sm font-semibold text-neutral-200">{sourceModelFieldLabels[field]}</span>
+              <label key={field} id={field} className="flex items-center justify-between">
+                <span className="text-sm font-medium leading-5 text-[#e3e8e8]">{sourceModelFieldLabels[field]}</span>
                 <SourceModelCombobox
                   field={field}
                   label={sourceModelFieldLabels[field]}
@@ -189,26 +195,26 @@ export function SourceModelLibrarySurface() {
                     setOpenField(null);
                   }}
                 />
-              </div>
+              </label>
             ))}
 
-            <div id="mixed" className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-x-4">
-              <span className="text-sm font-semibold text-neutral-200">ハーフ</span>
+            <label id="mixed" className="flex h-10 items-center justify-between">
+              <span className="text-sm font-medium leading-5 text-[#e3e8e8]">ハーフ</span>
               <button
                 type="button"
                 role="switch"
                 aria-checked={half}
                 aria-label="ハーフ"
                 onClick={() => setHalf((current) => !current)}
-                className={`flex h-5 w-8 items-center rounded-full p-0.5 transition ${half ? 'bg-[#65d3cf]' : 'bg-[#3b4245]'}`}
+                className={`flex h-4 w-8 items-center rounded-full p-0.5 transition ${half ? 'bg-[#65d3cf]' : 'bg-[#434a4c]'}`}
               >
                 <span className={`h-4 w-4 rounded-full bg-white transition ${half ? 'translate-x-3' : ''}`} />
               </button>
-            </div>
+            </label>
 
             {(['skinColor', 'bodyType'] as SourceModelField[]).map((field) => (
-              <div key={field} id={field === 'skinColor' ? 'skin-color' : 'body-type'} className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-x-4">
-                <span className="text-sm font-semibold text-neutral-200">{sourceModelFieldLabels[field]}</span>
+              <label key={field} id={field === 'skinColor' ? 'skin-color' : 'body-type'} className="flex items-center justify-between">
+                <span className="text-sm font-medium leading-5 text-[#e3e8e8]">{sourceModelFieldLabels[field]}</span>
                 <SourceModelCombobox
                   field={field}
                   label={sourceModelFieldLabels[field]}
@@ -220,18 +226,18 @@ export function SourceModelLibrarySurface() {
                     setOpenField(null);
                   }}
                 />
-              </div>
+              </label>
             ))}
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-white/10 bg-[#171b1c] p-4">
+        <div className="shrink-0 border-t border-white/10 bg-[#171b1c] px-2 py-4">
           <SourcePermissionLockedButton
             testId="lightchain-model-permission"
             marginClass=""
             disabled={false}
             showSourceIcon
-            className="!h-10 !rounded-lg !bg-[#65d3cf] !text-[#102021] !opacity-100"
+            className="!h-10 !rounded-lg !bg-[#65d3cf] !text-[12px] !leading-[17.1429px] !text-[#111817] !opacity-100"
           />
         </div>
       </aside>
@@ -241,16 +247,14 @@ export function SourceModelLibrarySurface() {
           type="button"
           data-testid="lightchain-source-model-history"
           onClick={() => navigate('/history')}
-          className="absolute right-8 top-4 inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-white/25 hover:bg-white/[0.04]"
+          className="absolute right-4 top-4 z-10 inline-flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] px-3 py-2 text-[12px] font-medium leading-[17.1429px] text-white transition hover:border-white/25 hover:bg-white/[0.04]"
         >
-          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          <RefreshCw className="h-5 w-5" aria-hidden="true" />
           生成履歴
         </button>
-        <div className="flex h-full items-center justify-center px-8 text-center">
-          <div>
-            <h2 className="text-xl font-semibold text-white">モデルカスタマイズ</h2>
-            <p className="mt-2 text-sm text-neutral-400">ワンクリックで専用のバーチャルモデルイメージを生成</p>
-          </div>
+        <div className="flex h-full flex-col items-center justify-center px-10 text-center">
+          <h2 className="font-[AlimamaFangYuanTiVF] text-lg font-bold leading-[25.2px] text-white">モデルカスタマイズ</h2>
+          <p className="mt-2 text-sm leading-[21px] text-[#aab8b6]">ワンクリックで専用のバーチャルモデルイメージを生成</p>
         </div>
       </main>
     </div>

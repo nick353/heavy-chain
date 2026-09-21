@@ -1160,7 +1160,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
+                    <ModelLibraryPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

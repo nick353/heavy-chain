@@ -170,6 +170,7 @@ const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
 const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspace-tutorial-dismissed-v1';
 const LIGHTCHAIN_GENERATION_PROVIDER = import.meta.env.VITE_GENERATION_PROVIDER === 'openai' ? 'openai' : 'workers_ai';
 const LIGHTCHAIN_FITTING_EXAMPLE_VIDEO_URL = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/persistence/font-end/model-custom-demo.mp4';
+const LIGHTCHAIN_FITTING_RECENT_UPLOAD_URL = 'https://static-jp.linkaigc.com/saas/2026-08/7c9021b93516cd2edfe4e2f7059bf20f.jpeg';
 const LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL = 'https://jp.linkaigc.com/static/default.png';
 const FITTING_REFERENCE_SLOT_CONFIG: Array<{
   key: FittingReferenceSlotKey;
@@ -2336,6 +2337,16 @@ export function LightchainWorkbenchPage() {
       resetWorkbenchMaskState();
     }
     return true;
+  };
+
+  const handleUseFittingRecentUpload = () => {
+    void applyMaterialToSlot('primary', {
+      name: 'recent-upload.jpeg',
+      kind: garmentCategory,
+      imageUrl: LIGHTCHAIN_FITTING_RECENT_UPLOAD_URL,
+      sourceImageId: null,
+      sourceStoragePath: null,
+    });
   };
 
   const openMaterialModalForSlot = (slot: MaterialSlotKey) => {
@@ -4593,9 +4604,9 @@ export function LightchainWorkbenchPage() {
                     </span>
                   </button>
                 </div>
-                <label className="flex h-[200px] shrink-0 cursor-pointer gap-2 overflow-hidden rounded-2xl border border-dashed border-white/10 bg-[#262a2b] transition hover:border-cyan-300/40">
-                  <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
-                  <div className="flex flex-1 gap-2 size-full p-2 group">
+                <div className="flex h-[200px] shrink-0 gap-2 overflow-hidden rounded-2xl border border-dashed border-white/10 bg-[#262a2b] transition hover:border-cyan-300/40">
+                  <label className="flex flex-1 cursor-pointer gap-2 p-2 group">
+                    <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
                     <div className="relative flex flex-1 size-full flex-col max-w-65 min-w-0">
                       <div className="flex size-full shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border-none bg-transparent p-4 text-center text-[#aab8b6] transition hover:border-cyan-300/40">
                         <ImagePlus className="h-6 w-6 text-neutral-300" />
@@ -4608,11 +4619,19 @@ export function LightchainWorkbenchPage() {
                         <span className="mt-2 flex w-fit items-center justify-center rounded-lg border border-white/10 bg-[#0bc1b8] px-2 py-0.5 text-xs font-medium leading-[17.1429px] text-[#111817]">必須項目</span>
                       </div>
                     </div>
-                    <div className="h-full w-px bg-white/10" aria-hidden="true" />
-                    <div className="relative aspect-[96/128] h-full shrink-0 overflow-hidden rounded-lg">
-                      {garmentImageUrl ? (
-                        <img src={garmentImageUrl} alt="衣服画像" className="size-full object-cover" />
-                      ) : (
+                  </label>
+                  <div className="h-full w-px bg-white/10" aria-hidden="true" />
+                  <div
+                    className="group relative aspect-[96/128] h-full shrink-0 cursor-pointer overflow-hidden rounded-lg"
+                    data-testid="lightchain-fitting-example-card"
+                    onClick={() => {
+                      if (!garmentImageUrl) handleUseFittingRecentUpload();
+                    }}
+                  >
+                    {garmentImageUrl ? (
+                      <img src={garmentImageUrl} alt="衣服画像" className="size-full object-cover" />
+                    ) : (
+                      <>
                         <video
                           src={LIGHTCHAIN_FITTING_EXAMPLE_VIDEO_URL}
                           className="size-full object-cover transition-opacity duration-300 group-hover:hidden"
@@ -4621,11 +4640,33 @@ export function LightchainWorkbenchPage() {
                           muted
                           playsInline
                           aria-label="例"
+                          style={{ pointerEvents: 'none', appearance: 'none' }}
                         />
-                      )}
-                    </div>
+                        <img
+                          alt="recent upload"
+                          loading="lazy"
+                          width={96}
+                          height={128}
+                          src={LIGHTCHAIN_FITTING_RECENT_UPLOAD_URL}
+                          className="absolute inset-0 size-full object-cover transition-opacity duration-300 hidden group-hover:block"
+                        />
+                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded border border-white/10 bg-black/40 px-1 py-0.5 backdrop-blur transition-all duration-300 group-hover:bg-[#0bc1b8]">
+                          <button
+                            type="button"
+                            className="hidden whitespace-nowrap text-sm font-medium leading-4 text-[#111817] group-hover:block hover:opacity-80"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleUseFittingRecentUpload();
+                            }}
+                          >
+                            再び使います
+                          </button>
+                          <p className="whitespace-nowrap text-sm font-medium leading-4 text-white group-hover:hidden">例</p>
+                        </div>
+                      </>
+                    )}
                   </div>
-                </label>
+                </div>
                 {garmentImageUrl && (
                   <button
                     type="button"

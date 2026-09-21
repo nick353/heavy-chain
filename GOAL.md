@@ -8002,6 +8002,31 @@ remains active for the remaining source routes and states, provider receipts,
 durable persistence/readback/reconciliation, video-quality evidence,
 billing/operator proof, and strict release-gate artifacts.
 
+# Goal progress — 2026-09-21 r153
+
+The canonical source `https://jp.linkaigc.com/` was used for fresh visual and
+DOM readback of the model-library surfaces. Heavy's `/model-library/model-custom-form`
+now matches the source geometry for the left rail, model controls, gender selector,
+comboboxes, half switch, permission button, history button, and centered empty state;
+the live readback includes zero checkbox inputs, preserving the source UI's absence
+of a rights checkbox.
+
+The remaining model-library route family was moved away from the Heavy-only generic
+workspace. `/model-library/head-form` and the sibling model-tool routes now use a
+source-shaped tool surface with two 399x160 upload cards, the canonical demo video
+and reference image, source-like bottom smart/quality controls, source centered copy,
+and route-specific labels. Fresh live readback on the deployed face route measured
+cards at y=106 and y=331, the centered subtitle at x=1068/y=441.6, and the source
+rail heights 80.28px/63.14px.
+
+The latest successful Worker deployment is version
+`d14fead4-5ef4-4df9-b0fa-5c19b7b2e561`. Lightchain UI boundaries passed 15/15;
+typecheck, lint, build, and diff checks passed. No provider generation, user file
+upload, payment, publish, migration, or destructive cleanup was performed. The Goal
+remains active for the other canonical route/state parity work, authenticated
+provider receipts, durable persistence/readback/reconciliation, video-quality
+evidence, billing/operator proof, and strict release-gate artifacts.
+
 # Goal progress — 2026-09-21 r152
 
 The canonical model-set state at `https://jp.linkaigc.com/model` was read back

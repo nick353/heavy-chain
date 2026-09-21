@@ -22,6 +22,7 @@ import {
   getLightchainUnifiedFeatureWorkflowContract,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
 import { SourceModelLibrarySurface } from '../components/lightchain/SourceModelLibrarySurface';
+import { SourceModelToolSurface } from '../components/lightchain/SourceModelToolSurface';
 
 const intents = ['EC標準', 'LOOK確認', '広告検証'] as const;
 const modelCustomizationTabs = ['顔変更', 'モデル変更', '体型', '服のサイズ', 'ポーズ', '背景', 'アングル'] as const;
@@ -535,6 +536,10 @@ export function ModelLibraryPage() {
         <SourceModelLibrarySurface />
       </div>
     );
+  }
+
+  if (location.pathname.startsWith('/model-library/')) {
+    return <SourceModelToolSurface />;
   }
 
   return (
