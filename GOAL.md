@@ -8146,6 +8146,29 @@ the other canonical route/state parity layers, authenticated provider
 receipts, durable persistence/readback/reconciliation, business/legal
 decisions, and strict release-gate artifacts.
 
+# Goal progress — 2026-09-22 r165
+
+The authenticated canonical `/flow/laboratory` board was freshly compared
+with Heavy. Heavy now has the source-shaped `Lightchain Lab` board: the title
+reads `x=16/y=66/w=1872/h=18`, the new-file and reference cards both read
+`x=16/y=102|400/w=220/h=240`, the reference media is `220x168`, and the
+reference heading reads `x=16/y=366`. The new-file card hands off to
+`/flow/laboratory/detail`, the observed reference fixture is used, and the
+board has zero checkbox inputs. The detail route was also aligned to the
+source's empty canvas with the canonical Lab icon and upload panel
+`x=561.21/y=187.43/w=781.59/h=496.13`.
+
+Worker version `ff356f5b-d3aa-4c49-917a-21eec7da7995` is live after build,
+static-reference validation, and deploy. The last successful cache-separated
+browser readback after the required 30-second settle confirmed the board
+coordinates, empty logs, and zero checkboxes; the prior detail readback
+confirmed the upload coordinates and empty logs. A final readback after the
+small source-rail height correction could not attach because the Chrome
+Companion debugger became unavailable; no external action or auth state was
+changed. The Goal remains active for the other canonical route/state parity
+layers, authenticated provider receipts, durable persistence/readback/
+reconciliation, business/legal decisions, and strict release-gate artifacts.
+
 # Goal progress — 2026-09-21 r158
 
 The canonical `https://jp.linkaigc.com/flow/integration` readback showed that

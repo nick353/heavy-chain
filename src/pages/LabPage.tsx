@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { BarChart3, Check, ChevronRight, FlaskConical, Images, Layers3, Lightbulb, Save, Sparkles, Target } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -110,11 +110,34 @@ const initialMaterialReference: MaterialReferenceState = {
   note: '比較したい素材や生成候補を置いて、採用判断の対象を明確にします。',
 };
 
+const LIGHTCHAIN_LAB_REFERENCE_IMAGE = 'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/ce57f13946995e1512e61ac50228a3ac.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
+
 const labReadinessItems = [
   { label: '仮説', detail: '何を比較するかを先に決める' },
   { label: '評価', detail: 'scoreと評価軸で採用判断を残す' },
   { label: '出力', detail: '生成、Canvas、Galleryへ同じ条件で渡す' },
 ];
+
+function LightchainLabBoardParity() {
+  return (
+    <main className="lightchain-lab-source-board" data-testid="lightchain-lab-source-board">
+      <h6 className="lightchain-lab-source-title">Lightchain Lab</h6>
+      <section className="lightchain-lab-source-new-section" aria-label="新規ファイル">
+        <Link to="/flow/laboratory/detail" className="lightchain-lab-source-new-card" data-testid="lightchain-lab-new-card" data-track-id="laboratory:project-card">
+          <span className="lightchain-lab-source-project-mark" aria-hidden="true"><span>PROJECT</span><b>＋</b></span>
+          <span>新規ファイル</span>
+        </Link>
+      </section>
+      <h6 className="lightchain-lab-source-reference-title">参考事例</h6>
+      <section className="lightchain-lab-source-reference-grid" aria-label="参考事例">
+        <Link to="/flow/laboratory/detail?boardProjectCode=light-lab-reference" className="lightchain-lab-source-reference-card" data-testid="lightchain-lab-reference-card" data-track-id="laboratory:project-card">
+          <div className="lightchain-lab-source-reference-media"><img src={LIGHTCHAIN_LAB_REFERENCE_IMAGE} alt="coverImg" /></div>
+          <div className="lightchain-lab-source-reference-meta"><div>物マーケティング画像への変換</div><p>8ヶ月前 修正</p></div>
+        </Link>
+      </section>
+    </main>
+  );
+}
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -199,6 +222,7 @@ const buildLabExperimentPreviewSvg = ({
 };
 
 export function LabPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
   const { setFlowState } = useUnifiedWorkspaceFlow();
@@ -433,6 +457,10 @@ export function LabPage() {
       toast.error(message);
     }
   };
+
+  if (location.pathname === '/flow/laboratory') {
+    return <LightchainLabBoardParity />;
+  }
 
   return (
     <div

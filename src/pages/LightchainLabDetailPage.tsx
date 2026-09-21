@@ -2,6 +2,8 @@ import { useState, type ChangeEvent } from 'react';
 import { ChevronLeft, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const LIGHTCHAIN_LAB_PROJECT_ICON = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/laboratory-icon.png?x-oss-process=image/resize,m_lfit,w_48,limit_1/format,webp';
+
 /**
  * Light Chain's laboratory detail route is intentionally a minimal empty
  * canvas. Keep it separate from the richer local LabPage so the canonical
@@ -26,22 +28,21 @@ export function LightchainLabDetailPage() {
         className="pointer-events-none absolute inset-0 opacity-70"
         style={{ backgroundImage: 'radial-gradient(#464b50 1px, transparent 1px)', backgroundSize: '18px 18px' }}
       />
-      <aside className="absolute left-4 top-[74px] z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#202426] shadow-xl">
-        <div className="flex h-10 items-center gap-2 border-b border-white/10 px-2 text-sm text-neutral-400">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-400 via-indigo-500 to-cyan-300 text-[11px] font-bold text-neutral-950">✦</span>
-          <span>Lightchain Lab</span>
-        </div>
+      <aside className="absolute left-4 top-6 z-10 flex h-[84px] w-[264px] flex-col gap-y-2 overflow-hidden rounded-xl border border-white/10 bg-[#202426] p-2 text-neutral-200 shadow-xl">
+        <div className="text-sm text-neutral-400"><img src={LIGHTCHAIN_LAB_PROJECT_ICON} alt="" className="mr-1 inline-block size-5 rounded object-contain" />Lightchain Lab</div>
+        <div className="h-px w-full bg-white/10" />
         <Link
           to="/flow/laboratory"
           aria-label="Lightchain Labへ戻る"
-          className="flex h-11 items-center gap-3 px-3 text-sm text-neutral-400 transition hover:bg-white/5 hover:text-white"
+          className="flex w-fit items-center gap-2 text-base text-neutral-400 transition hover:text-white"
         >
           <ChevronLeft className="h-5 w-5" />
-          <span>Untitled</span>
+          <div className="h-full w-px bg-transparent" />
+          <span className="rounded-sm px-1 py-1">Untitled</span>
         </Link>
       </aside>
       <label
-        className="absolute left-1/2 top-[190.93px] flex h-[496.14px] w-[min(781.59px,calc(100vw-40px))] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-xl bg-[#25292b] text-center transition hover:bg-[#2a2e30]"
+        className="absolute left-1/2 top-[187.43px] flex h-[496.14px] w-[min(781.59px,calc(100vw-40px))] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-xl bg-[#25292b] text-center transition hover:bg-[#2a2e30]"
         data-testid="lightchain-lab-detail-upload"
       >
         {imageUrl ? (

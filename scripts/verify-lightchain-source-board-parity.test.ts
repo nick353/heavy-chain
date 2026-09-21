@@ -7,6 +7,8 @@ const parityPages = await readFile(new URL('../src/pages/LightchainParityPages.t
 const parityCss = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
 const fashionStudio = await readFile(new URL('../src/pages/FashionStudioPage.tsx', import.meta.url), 'utf8');
 const videoDashboard = await readFile(new URL('../src/pages/VideoProjectDashboardPage.tsx', import.meta.url), 'utf8');
+const labPage = await readFile(new URL('../src/pages/LabPage.tsx', import.meta.url), 'utf8');
+const labDetailPage = await readFile(new URL('../src/pages/LightchainLabDetailPage.tsx', import.meta.url), 'utf8');
 
 test('canonical Wear Design Lab board and detail route stay source-shaped', () => {
   assert.match(appSource, /path="\/flow\/orientedDesign"[\s\S]*?<LightchainOrientedDesignPage \/>/);
@@ -49,6 +51,26 @@ test('video project board keeps canonical card geometry and fail-closed provider
   assert.match(videoDetail, /video_provider_not_admitted/);
   assert.doesNotMatch(videoDetail, /権利確認後/);
   assert.doesNotMatch(videoDetail, /権利確認[\s\S]*type="checkbox"/);
+});
+
+test('canonical Lightchain Lab board keeps the source project cards and detail handoff', () => {
+  assert.match(appSource, /path="\/flow\/laboratory"[\s\S]*?<LabPage \/>/);
+  assert.match(labPage, /lightchain-lab-source-board/);
+  assert.match(labPage, /to="\/flow\/laboratory\/detail"/);
+  assert.match(labPage, /data-track-id="laboratory:project-card"/);
+  assert.match(labPage, /LIGHTCHAIN_LAB_REFERENCE_IMAGE/);
+  assert.doesNotMatch(labPage, /type="checkbox"/);
+  assert.match(parityCss, /\.lightchain-lab-source-new-card[\s\S]*220px[\s\S]*240px/);
+  assert.match(parityCss, /\.lightchain-lab-source-reference-media[\s\S]*168px/);
+});
+
+test('canonical Lightchain Lab detail keeps the source empty-canvas geometry', () => {
+  assert.match(appSource, /path="\/flow\/laboratory\/detail"[\s\S]*?<LightchainLabDetailPage \/>/);
+  assert.match(labDetailPage, /top-\[187\.43px\]/);
+  assert.match(labDetailPage, /h-\[496\.14px\]/);
+  assert.match(labDetailPage, /w-\[min\(781\.59px,calc\(100vw-40px\)\)\]/);
+  assert.match(labDetailPage, /LIGHTCHAIN_LAB_PROJECT_ICON/);
+  assert.doesNotMatch(labDetailPage, /type="checkbox"/);
 });
 
 console.log('Lightchain source board parity tests: 3/3 passed');

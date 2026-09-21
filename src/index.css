@@ -736,6 +736,184 @@
   }
 }
 
+/* Lightchain Lab overview board. The canonical route is a compact 220x240
+   project grid, separate from the richer Heavy lab workspace at /lab. */
+.lightchain-lab-source-board {
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+  background: #171b1c;
+  color: #fff;
+  font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+}
+
+.lightchain-lab-source-title,
+.lightchain-lab-source-reference-title {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.lightchain-lab-source-title {
+  height: 18px;
+  margin: 0;
+}
+
+.lightchain-lab-source-new-section {
+  display: flex;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.lightchain-lab-source-new-card,
+.lightchain-lab-source-reference-card {
+  display: block;
+  width: 220px;
+  height: 240px;
+  overflow: hidden;
+  border-radius: 16px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.lightchain-lab-source-new-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #262a2b;
+  color: #abb8b6;
+}
+
+.lightchain-lab-source-new-card:hover {
+  background: #2c3132;
+}
+
+.lightchain-lab-source-project-mark {
+  position: relative;
+  display: flex;
+  width: 68px;
+  height: 68px;
+  align-items: flex-end;
+  justify-content: center;
+  box-sizing: border-box;
+  padding-bottom: 17px;
+  border-radius: 17px 17px 25px 18px;
+  background: linear-gradient(140deg, #8caaa4 0%, #597b78 36%, #a96998 72%, #dbccdc 100%);
+  box-shadow: 0 8px 16px rgb(0 0 0 / 20%);
+  color: #f0f5ee;
+}
+
+.lightchain-lab-source-project-mark::before {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  width: 39px;
+  height: 30px;
+  border-radius: 9px 18px 7px 14px;
+  background: linear-gradient(155deg, #d9d4a4, #6f878b 55%, #a989b9);
+  content: "";
+  opacity: .9;
+}
+
+.lightchain-lab-source-project-mark span {
+  position: relative;
+  z-index: 1;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.lightchain-lab-source-project-mark b {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f1f2ed;
+  color: #656d6e;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.lightchain-lab-source-new-card > span:last-child {
+  font-size: 16px;
+  line-height: 21px;
+}
+
+.lightchain-lab-source-reference-title {
+  height: 18px;
+  margin: 24px 0 0;
+}
+
+.lightchain-lab-source-reference-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.lightchain-lab-source-reference-card {
+  position: relative;
+  background: #3c4143;
+}
+
+.lightchain-lab-source-reference-card:hover {
+  filter: brightness(1.08);
+}
+
+.lightchain-lab-source-reference-media {
+  display: flex;
+  height: 168px;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  background: #3c4143;
+}
+
+.lightchain-lab-source-reference-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: initial;
+}
+
+.lightchain-lab-source-reference-meta {
+  height: 72px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  background: #262a2b;
+  color: #abb8b6;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.lightchain-lab-source-reference-meta > div {
+  width: 196px;
+  height: 30px;
+  padding: 1px 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.lightchain-lab-source-reference-meta p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 21px;
+}
+
 /* Video new-file state follows the same source upload canvas as the canonical
    route; only the feature title/icon differs from Fashion Studio. */
 .video-source-empty-page {
