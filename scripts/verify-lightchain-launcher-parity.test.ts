@@ -152,6 +152,36 @@ test('launcher mirrors the observed Lightchain home card routes by category', ()
   });
 });
 
+test('launcher uses the canonical Lightchain artwork for planning cards', () => {
+  const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
+  for (const asset of [
+    'aiDesignCover.png',
+    'orientedDesignCover.png',
+    'FabricBodyCover.png',
+    'LineArtToRealCover.png',
+    'OneClickChangeColorCover.png',
+    'LineArtVectorConvertCover.png',
+    'fashionModelCover.png',
+  ]) {
+    assert.match(source, new RegExp(`home5_0_1/${asset}`));
+  }
+});
+
+test('launcher uses the canonical Lightchain artwork for fitting and graphics cards', () => {
+  const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
+  for (const asset of [
+    'FittingModelLibraryCover.png',
+    'laboratoryCover.png',
+    'FixDeformitiesCover.png',
+    'GeneratePrintingCover.png',
+    'SVGConvertCover.png',
+    'OneClickModifyPrintingCover.png',
+    'FlowerShapedDesignCover.png',
+  ]) {
+    assert.match(source, new RegExp(`home5_0_1/${asset}`));
+  }
+});
+
 test('homepage case tabs use the current Lightchain labels', () => {
   const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
   assert.match(source, /\{ id: 'production', label: '生産' \}/);
