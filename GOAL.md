@@ -8586,6 +8586,21 @@ scorecardの6件、ならびに全featureの同一fixture pixel/interaction diff
 readback/reconciliation、動画providerの実行証跡である。provider生成、upload、保存、課金、公開、
 権利迂回は実行していない。
 
+# Goal progress — 2026-09-22 r188
+
+Agentの本家寄せを受入テストへ昇格した。`verify-lightchain-all-feature-workflows.mjs` は、
+Agentの4タブについて、本番モードでは本家ヒーロー画像URLと480x344の自然寸法、対応する参考事例画像、
+可視checkbox 0件を検証する。ローカル隔離previewでは外部OSS画像をfallbackへ置換するため、画像URLの
+実体検証を`deferred_local_remote_asset_network`として明示的に分離し、成功を偽装しない。
+
+再実行結果は `ok=true`、31/31 feature、416 assertions、Agent 27 assertions、video 4 route、source
+4 route、console/page/request failure 0、browser/context/preview cleanup完了。typecheck、node syntax、
+diff checkも通過した。変更は `44fac66 test: verify Agent source visual contract`。
+
+統合release gateのfresh実行は前回同様6件失敗で、production monitor/UI pair、launch operations、
+production all-feature order previews、G618、H602 billing、generation scorecardに限定される。
+Goalは`in_progress`を維持し、外部証跡の合成・認証迂回・provider生成・課金は行っていない。
+
 # Goal progress — 2026-09-22 r185
 
 ユーザー指定の本家URL `https://jp.linkaigc.com/` を正本として再確認し、実際の
