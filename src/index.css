@@ -52,6 +52,31 @@
   .asset-center-parity .asset-center-card-type { height: 16px; font-size: 10px; line-height: 16px; }
 }
 
+/* Match the canonical Wear Design Lab project board. */
+.oriented-design-parity { background: #171b1c !important; font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
+.oriented-design-content { padding: 16px 20px 16px 16px; }
+.oriented-design-title { height: 18px; margin: 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 18px; }
+.oriented-design-card-grid, .oriented-design-reference-grid { display: flex; width: 100%; flex-wrap: wrap; gap: 16px; }
+.oriented-design-card-grid { margin-top: 18px; }
+.oriented-design-reference-grid { margin-top: 16px; }
+.oriented-design-reference-grid + * { margin-top: 0; }
+.oriented-design-new-card, .oriented-design-project-card { position: relative; width: 220px; height: 240px; flex: 0 0 220px; overflow: hidden; border: 0; border-radius: 16px; color: #fff; text-align: left; }
+.oriented-design-new-card { background: #262a2b; }
+.oriented-design-new-card-inner { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; color: #abb8b6; font-size: 14px; line-height: 21px; }
+.oriented-design-project-mark { position: relative; width: 64px; height: 64px; margin-bottom: 12px; }
+.oriented-design-project-mark img { width: 64px; height: 64px; object-fit: contain; }
+.oriented-design-project-card { background: #3c4143; }
+.oriented-design-project-media { display: flex; height: 167px; align-items: flex-start; justify-content: center; overflow: hidden; background: #3c4143; }
+.oriented-design-project-media img { width: 100%; height: auto; object-fit: initial; }
+.oriented-design-project-meta { position: absolute; right: 0; bottom: 0; left: 0; height: 73px; padding: 12px; background: #262a2b; color: #abb8b6; font-size: 14px; line-height: 21px; }
+.oriented-design-project-name { min-width: 80px; height: 30px; overflow: hidden; padding: 1px 4px; color: #abb8b6; font-size: 16px; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; }
+.oriented-design-project-date { padding: 1px 4px; color: #abb8b6; font-size: 14px; line-height: 21px; }
+.oriented-design-project-menu { position: absolute; top: 8px; right: 8px; display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 999px; color: #fff; opacity: 0; transition: opacity .15s ease; }
+.oriented-design-project-card:hover .oriented-design-project-menu { opacity: 1; }
+.oriented-design-section-title { height: 18px; margin: 24px 0 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 18px; }
+.oriented-design-content > section:last-child { margin-top: 24px; }
+.oriented-design-reference-grid .oriented-design-project-media { height: 240px; }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

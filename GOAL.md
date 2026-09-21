@@ -8002,6 +8002,30 @@ remains active for the remaining source routes and states, provider receipts,
 durable persistence/readback/reconciliation, video-quality evidence,
 billing/operator proof, and strict release-gate artifacts.
 
+# Goal progress — 2026-09-21 r156
+
+The canonical `/flow/orientedDesign` route at `https://jp.linkaigc.com/flow/orientedDesign`
+was compared against Heavy and moved to a source-shaped Wear Design Lab surface. Heavy now
+matches the source's 16px/20px content inset, 220x240 project cards, 7-column first and
+second rows, 16px gaps, project metadata footer, and reference-case section. The route has
+zero checkbox inputs and keeps the project/detail navigation and project-menu boundaries.
+
+Fresh live readback after the final deployment showed the Heavy title at `x=16/y=66`, the
+project grid at `x=16/y=102` with `h=496`, the first project card at `x=252/y=102` with
+`220x240`, and the reference grid at `x=16/y=656`. The source and Heavy screenshots show
+matching card order, spacing, dark background, image proportions, and footer treatment.
+The only known visual difference is the new-file card icon asset; the source uses a private
+rainbow project mark while Heavy uses the existing public project-default icon.
+
+The final Worker deployment is version `fd581272-1ec4-46c6-b01d-8c78f4cfcc7e`. Typecheck,
+Lightchain UI boundary tests (15/15), and `git diff --check` passed. A repeated local Vite
+build remained running without output and was stopped after the already-successful deploy
+build; this is recorded as a tooling verification issue, not as a runtime deployment error.
+No provider generation, file upload, payment, publish, migration, or destructive cleanup
+was performed. The Goal remains active for the remaining canonical route/detail/state parity
+work, authenticated provider receipts, durable persistence/readback/reconciliation,
+video-quality evidence, billing/operator proof, and strict release-gate artifacts.
+
 # Goal progress — 2026-09-21 r155
 
 The canonical Asset Center route `https://jp.linkaigc.com/asset-center` was

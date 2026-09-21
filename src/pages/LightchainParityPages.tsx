@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from '
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
+  Archive,
   ArrowRight,
-  BookOpen,
   ChevronRight,
   Clock3,
   FolderOpen,
@@ -1367,51 +1367,76 @@ export function LightchainAssetCenterPage() {
   return <ParityShell><div className="mx-auto flex max-w-[1480px] gap-6 px-5 py-8 sm:px-8 lg:px-10"><aside className={`${darkPanel} hidden w-64 shrink-0 p-3 lg:block`}><div className="px-3 py-3 text-xs font-semibold tracking-[0.2em] text-neutral-400">LIBRARY</div>{libraryGroups.map((group) => <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAsset(null); }} className={`flex w-full items-center rounded-xl px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}><FolderOpen className="mr-2 h-4 w-4" />{group}</button>)}</aside><main className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / LIBRARY</p><h1 className="mt-3 text-3xl font-semibold">{activeGroup}</h1><p className="mt-2 text-sm text-neutral-500">生成済みの成果物は、次のCanvas作業へ同じ系譜で引き継げます。</p></div><div className="flex gap-2"><button type="button" className={`${mutedButton} opacity-60`} disabled title="素材の登録は各ワークベンチから行います"><Upload className="mr-2 inline h-4 w-4" />アップロード</button><button type="button" className={`${mutedButton} opacity-60`} disabled title="グループ管理はβ版で準備中"><Plus className="mr-2 inline h-4 w-4" />新規グループ作成</button></div></div><div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4"><div className="flex gap-2"><button type="button" className={`rounded-lg px-3 py-2 text-sm ${filter === '画像／動画' ? 'bg-white text-neutral-950' : 'text-neutral-400'}`} onClick={() => setFilter('画像／動画')}>画像／動画</button><button type="button" className={`rounded-lg px-3 py-2 text-sm ${filter === 'お気に入り' ? 'bg-white text-neutral-950' : 'text-neutral-400'}`} onClick={() => setFilter('お気に入り')}>お気に入り</button></div><label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-400"><Search className="h-4 w-4" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="w-40 bg-transparent outline-none" placeholder="検索" aria-label="ライブラリー検索" /></label></div><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><span className="text-sm text-neutral-400">選択済み ： {selectedIds.size} / {assets.length}</span>{selectMode ? <div className="flex flex-wrap gap-2"><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={handleBulkCopy}>キャンバスをコピー</button><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={() => void handleBulkDownload()}>ダウンロード</button><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={handleBulkDelete}><Trash2 className="mr-2 inline h-4 w-4" />削除</button><button type="button" className={mutedButton} onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}>一括操作を閉じる</button></div> : <button type="button" className={mutedButton} onClick={() => setSelectMode(true)}>一括操作</button>}</div>{selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(assets.filter((asset) => asset.persisted).map((asset) => asset.id)))}>全選択</button>}{assets.length === 0 ? <div className="mt-10 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center"><Grid2X2 className="h-8 w-8 text-neutral-600" /><h2 className="mt-4 font-semibold">まだ素材がありません</h2><p className="mt-2 text-sm text-neutral-500">このグループに保存された生成結果はありません。</p></div> : <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{assets.map((asset) => <article key={asset.id} className={`overflow-hidden rounded-2xl border bg-[#151a1c] ${selectedAsset?.id === asset.id ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>{selectMode && <button type="button" className="w-full border-b border-white/10 px-3 py-2 text-left text-xs text-neutral-300 disabled:opacity-40" disabled={!asset.persisted} onClick={() => toggleSelectedAsset(asset.id)} aria-pressed={selectedIds.has(asset.id)}>{selectedIds.has(asset.id) ? "✓ 選択中" : "選択"}</button>}<button type="button" className="flex h-44 w-full items-center justify-center bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.22),transparent_24%),linear-gradient(135deg,#263438,#111719)]" onClick={() => asset.persisted && setSelectedAsset(persistedArtifacts.find((candidate) => candidate.id === asset.id) ?? null)} aria-label={`${asset.title}を選択`}>{asset.imageUrl ? <img src={asset.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}</button><div className="p-4"><p className="truncate text-sm font-medium">{asset.title}</p><p className="mt-1 truncate text-xs text-neutral-500">{asset.featureType}</p><div className="mt-3 flex gap-2"><button type="button" className="flex-1 rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-400 hover:text-white disabled:opacity-40" disabled={!asset.persisted} onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(asset.id)}`)}>ボードにコピー</button><button type="button" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-400 hover:text-white disabled:opacity-40" disabled={!asset.persisted} onClick={() => setSelectedAsset(persistedArtifacts.find((candidate) => candidate.id === asset.id) ?? null)}>詳細</button></div></div></article>)}</div>}{selectedAsset && <aside className="mt-6 rounded-2xl border border-cyan-200/20 bg-cyan-200/[0.05] p-5" aria-live="polite"><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.2em] text-cyan-200">SELECTED ASSET</p><h2 className="mt-2 font-semibold">{selectedAsset.title}</h2></div><button type="button" className="text-sm text-neutral-400 hover:text-white" onClick={() => setSelectedAsset(null)}>閉じる</button></div><p className="mt-3 text-sm text-neutral-400">{selectedAsset.prompt || '保存済み成果物'}</p><button type="button" className="mt-4 rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(selectedAsset.id)}`)}>Canvasへ送る</button></aside>}</main></div></ParityShell>;
 }
 
+const orientedDesignProjectImages = [
+  null,
+  'https://static-jp.linkaigc.com/saas/2026-03/19509c24192de2a2412746e144948051.jpg?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
+  'https://static-jp.linkaigc.com/cutout/2026/08/07/1786111982399-56819482-c9b2-4f9f.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
+  null,
+  'https://static-jp.linkaigc.com/saas/2026-08/eb450cb0c32120c34ea2d6bfbea2e2e2.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
+  'https://static-jp.linkaigc.com/saas/2026-07/67656e58adbc399c1b34140aa15f10bc.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
+  'https://static-jp.linkaigc.com/saas/2026-03/e061b3a2928e55dd4ea659bf9ca0b71c.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
+  null,
+  null,
+  'https://static-jp.linkaigc.com/saas/2025-11/d7f1c73a093d95c637d06c393831f2d5.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
+  null,
+  null,
+  null,
+] as const;
+
+const orientedDesignProjectDates = [
+  '1ヶ月前 修正', '1ヶ月前 修正', '1ヶ月前 修正', '1ヶ月前 修正',
+  '2ヶ月前 修正', '2ヶ月前 修正', '6ヶ月前 修正', '8ヶ月前 修正',
+  '8ヶ月前 修正', '10ヶ月前 修正', '10ヶ月前 修正', '1年前 修正', '1年前 修正',
+] as const;
+
+const orientedDesignReferenceImages = [
+  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/6a1d37284e65c215fe6fcd1994972a78.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/7a1e111e3f302abe404e6c0b347563ca.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+] as const;
+
 export function LightchainOrientedDesignPage() {
-  const { currentBrand, user } = useAuthStore();
-  const [historyArtifacts, setHistoryArtifacts] = useState<WorkspaceArtifact[]>([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!currentBrand?.id) {
-      setHistoryArtifacts([]);
-      return;
-    }
-    setHistoryArtifacts(
-      listWorkspaceArtifacts(currentBrand.id, user?.id)
-        .filter((artifact) => designHistoryFeatureTypes.has(artifact.featureType))
-        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
-    );
-  }, [currentBrand?.id, user?.id]);
-
   return (
-    <ParityShell workflowFeature="wear-design-lab">
-      <div className="mx-auto max-w-[1380px] px-5 py-8 sm:px-8 lg:px-10">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / LAB</p>
-            <h1 className="mt-3 text-3xl font-semibold">ウェアデザインラボ</h1>
-            <p className="mt-2 text-sm text-neutral-400">参考素材を組み合わせ、デザイン候補を比較する作業台です。</p>
+    <ParityShell workflowFeature="wear-design-lab" className="oriented-design-parity">
+      <div className="oriented-design-content">
+        <h6 className="oriented-design-title">ウェアデザインラボ</h6>
+        <section aria-labelledby="oriented-design-new-files">
+          <h6 id="oriented-design-new-files" className="sr-only">新規ファイル</h6>
+          <div className="oriented-design-card-grid">
+            <button type="button" className="oriented-design-new-card" onClick={() => navigate('/flow/orientedDesign/detail')}>
+              <div className="oriented-design-new-card-inner">
+                <div className="oriented-design-project-mark"><img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="PROJECT" /></div>
+                <span>新規ファイル</span>
+              </div>
+            </button>
+            {orientedDesignProjectImages.map((image, index) => (
+              <button key={`${orientedDesignProjectDates[index]}-${index}`} type="button" className="oriented-design-project-card" onClick={() => navigate(`/flow/orientedDesign/detail?project=${index + 1}`)}>
+                <div className="oriented-design-project-media">
+                  {image ? <img src={image} alt="coverImg" loading="lazy" /> : <Archive className="h-8 w-8 text-white" />}
+                </div>
+                <div className="oriented-design-project-meta">
+                  <div className="oriented-design-project-name">Untitled</div>
+                  <div className="oriented-design-project-date">{orientedDesignProjectDates[index]}</div>
+                </div>
+                <span className="oriented-design-project-menu" aria-label="プロジェクトメニュー"><MoreVertical className="h-4 w-4" /></span>
+              </button>
+            ))}
           </div>
-          <Link to="/designProduction" className={mutedButton}>デザインワークスペースへ</Link>
-        </div>
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          {['新しいデザインを作成', '既存プロジェクトを続ける', '参考画像を整理する'].map((title, index) => (
-            <Link key={title} to={index === 1 ? '/designProduction' : index === 2 ? '/asset-center' : '/creator'} className={`${darkPanel} group p-5 transition hover:-translate-y-0.5 hover:border-cyan-200/50`}>
-              <div className="flex h-28 items-center justify-center rounded-xl bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.24),transparent_25%),linear-gradient(135deg,#263438,#111719)]"><WandSparkles className="h-9 w-9 text-cyan-100" /></div>
-              <h2 className="mt-4 font-semibold">{title}<ArrowRight className="float-right h-4 w-4 text-neutral-500 transition group-hover:translate-x-1" /></h2>
-              <p className="mt-2 text-sm text-neutral-500">作業の状態と次のアクションを確認できます。</p>
-            </Link>
-          ))}
-        </div>
-        <section className={`${darkPanel} mt-6 p-5`} data-testid="oriented-design-persisted-history">
-          <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-cyan-200" /><h2 className="font-semibold">タスク履歴</h2></div>
-          <PersistedHistoryPanel
-            artifacts={historyArtifacts}
-            emptyMessage="保存確認できたデザインタスクはまだありません。生成結果を保存すると、ここからCanvasへ再利用できます。"
-            reuseLabel="Canvasへ再利用"
-            onReuse={(artifact) => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}
-          />
+        </section>
+        <section aria-labelledby="oriented-design-reference-cases">
+          <h6 id="oriented-design-reference-cases" className="oriented-design-section-title">参考事例</h6>
+          <div className="oriented-design-reference-grid">
+            {orientedDesignReferenceImages.map((image, index) => (
+              <button key={image} type="button" className="oriented-design-project-card" onClick={() => navigate(`/flow/orientedDesign/detail?reference=${index + 1}`)}>
+                <div className="oriented-design-project-media"><img src={image} alt="coverImg" loading="lazy" /></div>
+                <div className="oriented-design-project-meta">
+                  <div className="oriented-design-project-name">{index === 0 ? 'デザイン要素融合' : 'ディテール変更'}</div>
+                  <div className="oriented-design-project-date">8ヶ月前 修正</div>
+                </div>
+              </button>
+            ))}
+          </div>
         </section>
       </div>
     </ParityShell>
