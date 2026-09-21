@@ -723,9 +723,9 @@ async function verifyVisibleTabInteractions(page, tool, result) {
     ],
     'design-agent': [
       { tab: '商品企画', expected: '商品企画', promptValue: '', helper: '', example: 'ZIMMERMANN', placeholder: '調査したい市場、カテゴリ、スタイル方向を入力してください…' },
-      { tab: '顧客提案', expected: '顧客提案', promptValue: '顧客要望', helper: '', example: '顧客向けに、ブランドの強みと商品企画の提案書を作成する。', placeholder: '顧客要望を入力するか、brief、メール、議事録をアップロードしてください…' },
-      { tab: 'インスピレーション', expected: 'インスピレーション', promptValue: 'デザインしたい服のスタイル', helper: '', example: 'メタリック素材', placeholder: 'デザインしたい服のスタイルを入力するか、参考画像をアップロードしてください…' },
-      { tab: 'AIグラフィックデザイン', expected: 'AIグラフィックデザイン', promptValue: '生成したい柄のスタイル', helper: '', example: 'チェーンモチーフ', placeholder: '生成したい柄のスタイル、要素、使用シーンを入力してください…' },
+      { tab: '顧客提案', expected: '顧客提案', promptValue: '顧客要望', helper: '', example: '手の届くラグジュアリー', placeholder: '顧客要望を入力するか、brief、メール、議事録をアップロードしてください…' },
+      { tab: 'インスピレーション', expected: 'インスピレーション', promptValue: 'デザインしたい服のスタイル', helper: '', example: 'フレンチレトロ', placeholder: 'デザインしたい服のスタイルを入力するか、参考画像をアップロードしてください…' },
+      { tab: 'AIグラフィックデザイン', expected: 'AIグラフィックデザイン', promptValue: '生成したい柄のスタイル', helper: '', example: '熱帯植物と飛ぶ鳥', placeholder: '生成したい柄のスタイル、要素、使用シーンを入力してください…' },
     ],
   }[tool.id] ?? [];
 

@@ -8606,6 +8606,27 @@ visual scorecard、およびrelease gateの厳格な再通過である。provide
 `work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。Goalは
 `in_progress`を維持する。
 
+# Goal progress — 2026-09-22 r185
+
+本家 `https://jp.linkaigc.com/agent` の実画面を再観測し、HeavyのAgentワークスペースを
+本家に合わせて更新した。カテゴリタブごとに本家と同じ入力プレースホルダー、クイック
+スタート例、見出し選択状態を表示し、インスピレーション/AIグラフィックデザインの
+参考事例カードとAIグラフィック用のバッジも追加した。外部画像が失敗した場合もHeavyの
+ローカル画像へフォールバックし、権利確認checkboxは追加していない。
+
+変更は `src/pages/LightchainWorkbenchPage.tsx` と
+`scripts/verify-lightchain-all-feature-workflows.mjs`。fresh local workflowは
+`ok=true`、31/31 feature、desktop/mobile、video 4 route、source 4 route、404 assertions、
+console/page/request failure 0、browser/context/preview cleanup完了。typecheck、parity
+contract 9/9、permission parity 8/8、route parity 31/31、video ledger 4/4、workflow
+contract 5/5も通過した。最新証跡は
+`output/playwright/lightchain-all-feature-workflows-20260921T184914Z-gIQ6Xi/SUMMARY.json`。
+
+本番release gateは、外部の新しい証跡が未提供のため未完了のまま維持する。残りは
+production monitor/UI pair、launch operations、production all-feature order previews、
+G618、H602 billing、real-generation visual scorecardの6件である。provider生成、upload、
+保存、課金、公開、権利迂回は実行していない。Goalは `in_progress` を維持する。
+
 # Goal progress — 2026-09-22 r184
 
 新規task-owned Companion sessionでmobile viewport証跡を再試行したが、Extensionが

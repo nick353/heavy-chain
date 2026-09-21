@@ -5438,11 +5438,41 @@ export function LightchainWorkbenchPage() {
       ['Okinawa風 2026年 デザイン企画', 'テーマ企画', '26-01-19'],
       ['Okinawa Ryukyu風 2026年 {{type}}デザイン企画', 'テーマ企画', '26-01-19'],
     ] as const;
-    const agentQuickStartExamples = [
+    const agentQuickStartExamplesByTab: Record<string, readonly string[]> = {
+      商品企画: [
       '新商品企画｜北米市場向けに、2027年春のレディースウェアの商品企画を作成してください。ターゲットは、都市部で働く28〜40歳の女性です。対象アイテムは、ジャンプスーツ、ワンピース、長袖トップス。シンプルできちんと感がありながら、リラックスして着られる通勤スタイルを目指します。現地の気候、ファッショントレンド、着用シーン、販売ポテンシャルを踏まえ、テーマ、カラーパレット、推奨素材、主要なデザイン要素、主力アイテム、シリーズ全体のコーディネートを提案してください。',
       '新商品企画｜欧州市場向けに、2027年初夏のリゾートレディースウェアの商品企画を作成してください。海辺への旅行、街歩き、リゾートでのディナーなどのシーンを想定します。対象アイテムは、キャミソールワンピース、ゆったりとしたシャツ、スカート、薄手の羽織り。ターゲットは、品質とデザイン性を重視する25〜38歳の女性です。市場・トレンド動向、シリーズテーマ、カラーとプリントの方向性、素材、シルエットや構造、重点アイテムを提案してください',
       '新商品企画｜日本市場向けに、2027年秋の都市型ライトアウトドア・レディースウェアの商品企画を作成してください。ターゲットは、通勤にも週末のお出かけにも使える服を求める22〜35歳の女性です。防風アウター、ニットトップス、機能性パンツ、重ね着できるベストを展開し、軽量性、防護性、収納性、日常の服との合わせやすさを重視します。消費者動向、商品ポジショニング、テーマコンセプト、配色、機能素材、デザインディテール、アイテム構成、想定販売価格帯を提案してください。',
-    ] as const;
+      ],
+      顧客提案: [
+        '顧客提案｜都市部に住む28〜40歳の女性をターゲットに、手の届くラグジュアリーを提案するクライアントへ、2027年春夏レディースコレクションの提案書を作成してください。クライアントは、通勤での実用性、女性らしさ、会食やイベントなどの社交シーンで映えるデザインを求めています。重点アイテムは、スーツ、シャツ、ワンピース、スカートです。ブランドの位置づけ、市場機会、シリーズテーマ、カラー・素材、核となるデザイン要素、商品構成、重点アイテム、販売上の訴求ポイントを整理し、クライアントとの商談に使える内容にまとめてください。',
+        '顧客提案｜北米向けの越境ECを主力とするレディースアパレルのクライアントへ、2026年秋冬の商品提案を作成してください。ターゲットは20〜35歳の女性です。クライアントは、購入につながりやすい商品、幅広い体型に対応するサイズ展開、商品画像や動画での見映え、コスト管理を重視しています。対象アイテムは、ショート丈ジャケット、ニット、長袖Tシャツ、カジュアルパンツ、ニットワンピースです。競合・トレンド分析、有望な商品領域、シリーズの方向性、アイテム別の構成比率、ヒット候補商品、配色、素材、想定販売価格帯、販促上の訴求ポイントを提案してください。',
+        '顧客提案｜大人の女性を主な顧客とするレディースブランドに向けて、2027年春の商品提案を作成してください。従来はクラシックな通勤スタイルを中心としており、既存顧客を維持しながら、新たに23〜30歳の女性を取り込むことを目指しています。ブランドを進化させるための明確な方針を示し、スタイルの方向性、若年層に響くデザイン要素、カラー・柄、重点アイテム、代表的なコーディネート、SNSでの訴求ポイント、既存商品と新商品のつなぎ方を提案してください。',
+      ],
+      インスピレーション: [
+        'インスピレーション｜フレンチレトロをテーマに、夏のレディースウェアをデザインしてください。パフスリーブのトップスとハイウエストスカートを組み合わせ、ギャザーやタックなどのひだを生かしたディテールと、柔らかなパステルカラーを取り入れてください。',
+        'インスピレーション｜近未来的で機能性のある冬のレディースウェアをデザインしてください。ダウンベストと裾を絞ったパンツを組み合わせ、取り外し可能なパーツや構造を取り入れてください。カラーはシルバーグレー系を基調とします。',
+        'インスピレーション｜ロマンティックなカントリースタイルをテーマに、春のレディースウェアをデザインしてください。スクエアネックのブラウスとティアードロングスカートを組み合わせ、刺繍のディテールと、花をイメージした彩度を抑えた配色を取り入れてください。',
+      ],
+      AIグラフィックデザイン: [
+        'AIグラフィックデザイン｜熱帯植物と飛ぶ鳥をモチーフに、レトロな幾何学テイストのリピートプリントを複数案デザインしてください。高彩度のコントラスト配色を用い、上下左右につなげて使える柄にしてください。',
+        'AIグラフィックデザイン｜惑星と宇宙船をモチーフに、幻想的な手描き風の配置プリントを複数案デザインしてください。ブルーからパープルへのグラデーションを用い、衣服の特定の位置に配置して使うことを想定してください。',
+        'AIグラフィックデザイン｜柑橘類とチェッカーボード柄をモチーフに、モダンでフラットなイラスト表現の総柄プリントを複数案デザインしてください。明るくコントラストの効いた配色を取り入れてください。',
+      ],
+    };
+    const visibleAgentQuickStartExamples = agentQuickStartExamplesByTab[currentWorkspaceTab]
+      ?? agentQuickStartExamplesByTab['商品企画'];
+    const agentReferenceCases: Record<string, { title: string; prompt: string }> = {
+      インスピレーション: {
+        title: 'クリエイティブ企画20260210181',
+        prompt: 'フレンチレトロをテーマに、夏のレディースウェアをデザインしてください。',
+      },
+      AIグラフィックデザイン: {
+        title: 'クリエイティブ企画20260210176',
+        prompt: '熱帯植物と飛ぶ鳥をモチーフに、レトロな幾何学テイストのリピートプリントをデザインしてください。',
+      },
+    };
+    const agentReferenceCase = agentReferenceCases[currentWorkspaceTab] ?? null;
 
     return (
       <main
@@ -5564,10 +5594,16 @@ export function LightchainWorkbenchPage() {
                     src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-product-planning.png"
                     alt=""
                     aria-hidden="true"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = currentWorkspaceTab === 'AIグラフィックデザイン'
+                        ? '/assets/lightchain-cards/graphics-v1.png'
+                        : '/assets/lightchain-cards/design-v1.png';
+                    }}
                     className="absolute inset-0 z-[2] block h-full w-full object-cover"
                   />
-                  <span className="absolute right-[-8px] top-[18px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">精度の高い商品選定</span>
-                  <span className="absolute left-[-6px] bottom-[24px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">市場インサイト</span>
+                  <span className="absolute right-[-8px] top-[18px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">{currentWorkspaceTab === 'AIグラフィックデザイン' ? '視覚的な訴求力' : '精度の高い商品選定'}</span>
+                  <span className="absolute left-[-6px] bottom-[24px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">{currentWorkspaceTab === 'AIグラフィックデザイン' ? 'オリジナル図案' : '市場インサイト'}</span>
                 </div>
               </section>
             ) : (
@@ -5595,7 +5631,7 @@ export function LightchainWorkbenchPage() {
                   <span className="flex items-center gap-1 text-sm text-[#7b8a88]">迷ったら、こちらのテンプレートをお試しください <span aria-hidden="true">⌄</span></span>
                 </button>
                 <div className="grid h-[88px] grid-cols-3 gap-2 overflow-hidden max-[760px]:grid-cols-1">
-                  {agentQuickStartExamples.map((example) => {
+                  {visibleAgentQuickStartExamples.map((example) => {
                     const [kind, ...rest] = example.split('｜');
                     return (
                       <button key={example} type="button" onClick={() => setWorkspaceText(example)} className="flex min-h-[88px] min-w-0 flex-col items-start justify-center overflow-hidden rounded-xl bg-white/[0.05] px-4 py-3 text-left text-xs leading-5 text-[#aab8b6] transition hover:bg-white/10">
@@ -5616,6 +5652,28 @@ export function LightchainWorkbenchPage() {
               </div>
             )}
 
+            {workspaceStyle.kind === 'agent' && agentReferenceCase && (
+              <section className="mt-0 w-[720px] flex-none pb-6 max-[1120px]:w-[min(720px,calc(100%-32px))]" data-testid="lightchain-agent-reference-cases" aria-label="参考事例">
+                <h2 className="flex items-center gap-2 px-2 text-sm font-semibold text-white"><ImageIcon className="h-4 w-4 text-[#aab8b6]" />参考事例</h2>
+                <button
+                  type="button"
+                  aria-label={`読み取り専用ケースを見る：${agentReferenceCase.title}`}
+                  onClick={() => setWorkspaceText(agentReferenceCase.prompt)}
+                  className="mt-3 flex w-full max-w-[240px] flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] text-left transition hover:border-white/30"
+                >
+                  <div className="h-28 bg-white/10">
+                    <img
+                      src={currentWorkspaceTab === 'AIグラフィックデザイン' ? '/assets/lightchain-cards/graphics-v1.png' : '/assets/lightchain-cards/design-v1.png'}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <span className="px-3 py-2 text-xs text-neutral-300">{agentReferenceCase.title}</span>
+                  <span className="px-3 pb-3 text-[11px] text-neutral-500">読み取り専用ケースを見る</span>
+                </button>
+              </section>
+            )}
+
             <div className={`${workspaceStyle.kind === 'marketing' ? 'mt-6 min-h-[232px] border-[#0bcabc]' : workspaceStyle.kind === 'agent' ? 'order-2 relative z-[8] mt-0 flex min-h-[208px] w-[720px] max-h-[328px] flex-none flex-col overflow-visible rounded-[24px] border-0 bg-[#353a3b] p-0 shadow-none' : 'mt-4 min-h-[160px] border-cyan-300/80'} ${workspaceStyle.kind === 'agent' ? '' : 'rounded-2xl border bg-[#1a1f22]/95 p-3 shadow-[0_0_28px_rgba(101,211,207,0.18)]'}`}>
               <div className={`${workspaceStyle.kind === 'marketing' ? 'grid min-h-[206px] grid-cols-[120px_1fr_52px]' : workspaceStyle.kind === 'agent' ? 'relative flex min-h-[162px] flex-none flex-col items-stretch overflow-visible rounded-[24px] border border-white/10 bg-[#262a2b] px-3 pt-3 pb-[52px]' : 'grid min-h-[136px] grid-cols-[1fr_52px]'} ${workspaceStyle.kind === 'agent' ? '' : 'items-center gap-4 rounded-2xl bg-[#1d2326] px-4'} text-left`}>
                 {workspaceStyle.kind === 'marketing' && (
@@ -5631,11 +5689,11 @@ export function LightchainWorkbenchPage() {
                   {workspaceStyle.kind === 'agent' && (
                     <button
                       type="button"
-                      aria-label="新商品企画"
+                      aria-label={currentWorkspaceTab}
                       className="absolute left-0 top-4 z-10 rounded-md bg-[#244440] px-2 py-1 text-sm font-semibold text-[#7ee1d4]"
                       onClick={() => setWorkspaceText('')}
                     >
-                      新商品企画⌄
+                      {currentWorkspaceTab}⌄
                     </button>
                   )}
                 <textarea
