@@ -8153,6 +8153,10 @@ and use `boardProjectType=custom`.
 
 The focused entry-routing, source-board, and unified-shell checks pass 38/38;
 typecheck and diff checks pass. No rights checkbox or rights-only UI was added.
+Worker version `54317cfe-dada-43a9-9d03-ed4f1bfd0d65` is deployed. Public
+readback returned HTTP 200 for `/_health`, HTTP 307 for the protected canonical
+routes, one canonical detail-route reference in the served bundle, and zero
+references to the stale internal path.
 Provider generation, upload, payment, publish, migration, and destructive
 cleanup were not performed. The Goal remains active for authenticated visual
 readback, the remaining route/state parity work, provider receipts,
