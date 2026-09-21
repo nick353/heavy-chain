@@ -68,6 +68,36 @@ test('unknown models never read R2 and app routes use the SPA binding', async ()
   assert.equal(await (await web.fetch(request('/login'), env)).text(), 'SPA');
   assert.equal(calls.length, 0);
 });
+
+test('protected SPA routes match the source login redirect when the browser has no session', async () => {
+  const { env } = fixture();
+  env.AUTH_SERVICE = { async fetch() { return new Response('null', { status: 200 }); } };
+  const response = await web.fetch(request('/model?mode=single'), env);
+  assert.equal(response.status, 307);
+  assert.equal(response.headers.get('location'), 'https://heavy.example/login?redirect=%2Fmodel%3Fmode%3Dsingle');
+});
+
+test('protected SPA routes are served after a valid browser session readback', async () => {
+  const { env } = fixture();
+  env.AUTH_SERVICE = { async fetch(authRequest) {
+    assert.equal(authRequest.url, 'https://heavy.example/api/auth/get-session');
+    assert.equal(authRequest.headers.get('cookie'), 'consumer-auth.session=valid');
+    return Response.json({
+      user: { emailVerified: true },
+      session: { token: 'opaque', expiresAt: new Date(Date.now() + 60_000).toISOString() },
+    });
+  } };
+  const response = await web.fetch(request('/model', { headers: { cookie: 'consumer-auth.session=valid' } }), env);
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), 'SPA');
+});
+
+test('login and reset-password remain public auth entry routes', async () => {
+  const { env } = fixture();
+  assert.equal(await (await web.fetch(request('/login'), env)).text(), 'SPA');
+  assert.equal(await (await web.fetch(request('/reset-password?token=fixture'), env)).text(), 'SPA');
+});
+
 test('no writes, missing and inconsistent assets fail closed', async () => {
   const { env, calls } = fixture();
   assert.equal((await web.fetch(request(undefined, { method: 'PUT', body: 'x' }), env)).status, 405);

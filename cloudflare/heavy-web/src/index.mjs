@@ -9,6 +9,55 @@ export function parseRange(value, size) {
   return { offset: start, length: end - start + 1 };
 }
 
+const PUBLIC_BROWSER_PATHS = new Set(['/login', '/login-m', '/auth/callback', '/reset-password']);
+
+function isHtmlNavigationPath(path) {
+  // Static assets and API routes have their own authorization/asset boundary.
+  // Only the SPA document fallback is subject to the source's auth redirect.
+  return !path.startsWith('/assets/') && !path.startsWith('/api/') && !path.includes('.');
+}
+
+function sourceLoginRedirect(request) {
+  const requestUrl = new URL(request.url);
+  const loginUrl = new URL('/login', request.url);
+  // The source preserves a trailing `?` even when the original route has no
+  // query string. Hash fragments never reach a Worker and therefore cannot be
+  // preserved at this boundary.
+  const returnTo = `${requestUrl.pathname}${requestUrl.search || '?'}`;
+  loginUrl.searchParams.set('redirect', returnTo);
+  return Response.redirect(loginUrl.toString(), 307);
+}
+
+function hasValidAuthPayload(payload) {
+  if (!payload || typeof payload !== 'object') return false;
+  const user = payload.user;
+  const session = payload.session;
+  if (!user || typeof user !== 'object' || user.emailVerified !== true) return false;
+  if (!session || typeof session !== 'object' || typeof session.token !== 'string') return false;
+  const expiresAt = Date.parse(session.expiresAt);
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+}
+
+async function hasAuthenticatedBrowserSession(request, env) {
+  if (!env.AUTH_SERVICE) return false;
+  const headers = new Headers();
+  const cookie = request.headers.get('cookie');
+  if (cookie) headers.set('cookie', cookie);
+  const origin = request.headers.get('origin');
+  if (origin) headers.set('origin', origin);
+  try {
+    const sessionRequest = new Request(new URL('/api/auth/get-session', request.url), {
+      method: 'GET',
+      headers,
+    });
+    const response = await env.AUTH_SERVICE.fetch(sessionRequest);
+    if (!response.ok) return false;
+    return hasValidAuthPayload(await response.json());
+  } catch {
+    return false;
+  }
+}
+
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
@@ -46,6 +95,10 @@ export default {
     const asset = Object.hasOwn(manifest, path) ? manifest[path] : null;
     if (!asset) {
       if (path.startsWith('/assets/') && /\.(onnx|wasm)$/.test(path)) return new Response('Not found', { status: 404 });
+      if (isHtmlNavigationPath(path) && !PUBLIC_BROWSER_PATHS.has(path)) {
+        const authenticated = await hasAuthenticatedBrowserSession(request, env);
+        if (!authenticated) return sourceLoginRedirect(request);
+      }
       return serveHtml();
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {

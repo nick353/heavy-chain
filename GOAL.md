@@ -1,3 +1,20 @@
+# Light Chain unauthenticated route parity — 2026-09-21 r139
+
+本家の公開HTTPを再確認し、未認証の `/`、`/model`、`/terms`、`/signup`、`/forgot-password`、
+`/reset-password` は `307 /login?redirect=...`、`/login` と `/login-m` は `200` であることを
+固定した。Heavyは未認証でもSPAを返して認証状態確認シェルに留まっていたため、Cloudflare Web
+Workerにread-onlyの`consumer-auth /api/auth/get-session`判定を追加し、未認証HTML routeを
+本家と同じlogin redirectへ収束させた。valid session payload時だけSPAを返し、auth unavailable/
+invalid/expiredはfail-closed。cookie/tokenをログへ出さず、provider/生成/課金操作は行っていない。
+
+検証はCloudflare Web test 11/11、root typecheck、build、R2 asset upload、Wrangler dry-runを
+通過。本番Version `726d1fed-5066-4e86-91c0-54867cca80e7`を100% deployし、Heavy `/model` と
+`/terms` の `307` location、`/login` の `200`、`/_health` の `hosting=cloudflare`、
+`/api/auth/get-session` の未認証`null`をfresh readbackした。認証済みUI/provider receipt、
+durable save/readback/reuse/reconciliation、billing、strict release gateの6 blockerは未完了。
+
+Goalは`in_progress`。
+
 # Light Chain vs Heavy immediate production readback — 2026-09-21 r138
 
 task-owned Companion `read_urls`で本家 `/model` とCloudflare Heavy `/model`を同時取得した。
