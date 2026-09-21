@@ -615,7 +615,7 @@ export function FashionStudioPage() {
 
     return (
       <main
-        className="dark min-h-screen bg-[#101010] px-4 py-5 text-white sm:px-6"
+        className="fashion-studio-overview-parity dark min-h-screen bg-[#101010] px-4 py-5 text-white sm:px-6"
         data-testid="lightchain-fashion-studio-overview"
         data-lightchain-parity-shell="fashion-studio-overview"
         data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}

@@ -8046,6 +8046,28 @@ route/detail/state parity work, authenticated provider receipts, durable
 persistence/readback/reconciliation, video-quality evidence, billing/operator proof, and
 strict release-gate artifacts.
 
+# Goal progress — 2026-09-21 r158
+
+The canonical `https://jp.linkaigc.com/flow/integration` readback showed that
+Fashion Studio uses the same board pattern as the Wear Design Lab: a title at
+the 16px content inset, 220x240 project cards in a 7-column flex grid, 16px
+gaps, source-style metadata footers, pagination, and reference cases. Heavy's
+existing Fashion Studio page kept its local/remote project loading, pin/save/
+delete menus, pagination, and detail handoff, but its overview cards were only
+160px high and used a different shell. The overview now has a scoped canonical
+board layout and source dark colors without removing those operations.
+
+Typecheck, Lightchain UI boundary tests (15/15), and diff checks passed. The
+build/static-reference validation completed and the change was deployed in
+Worker version `37c820f1-9590-415b-b202-1600825e301c`. The source video route
+was temporarily blank in the current source session, so no video visual claim
+was promoted from that observation. No provider generation, file upload,
+payment, publish, migration, or destructive cleanup was performed. The Goal
+remains active for authenticated visual readback, the remaining route/state
+parity, provider receipts, durable persistence/readback/reconciliation,
+video-quality evidence, billing/operator proof, and strict release-gate
+artifacts.
+
 # Goal progress — 2026-09-21 r155
 
 The canonical Asset Center route `https://jp.linkaigc.com/asset-center` was
