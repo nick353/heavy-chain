@@ -8532,3 +8532,17 @@ storage stateの抽出・移送、rights bypass、provider生成、保存、課�
 `work/heavy-chain-lightchain-canonical-root-readback-20260922.md`。残りはr176の本番monitor/UI、
 launch operations、all-feature preview、G618、H602、generation scorecard、およびauthenticated
 同一fixture/provider/save-readback/reconciliationであり、Goalは`in_progress`を維持する。
+
+# Goal progress — 2026-09-22 r178
+
+ユーザー指定の正本 `https://jp.linkaigc.com/` とHeavy本番を、同じCompanionセッションで各ルート30秒
+settleして再比較した。`/` は4カテゴリ、6 launcher card、6事例共有tab、権利確認checkbox 0件が一致し、
+`/model` はAIフィッティングの主要入力・タブ・`権限がありません`・生成履歴が一致した。動画ルート
+`/flow/GenerateShortVideo` も最近の6プロジェクトと参考事例5件の文言・件数・レイアウトが一致した。
+
+一方、本家の直URL `/gallery` は30秒後も404で、Heavyの同URLは11枚の画像を表示するGalleryだった。
+本家の正規導線が未特定のため、HeavyのGalleryを削除して見かけ上404にする変更は行わず、直URL parityの
+未解決差分として記録した。全readbackはsemantic+visualで、生成・保存・課金・外部送信は未実行。Companion
+sessionとtask-owned tabs 2件はcleanup済み。残りはr177のproduction monitor/UI、launch operations、
+33-feature production preview、G618、H602、real-generation scorecard、authenticated provider/save/readback/
+reconciliationであり、Goalは`in_progress`を維持する。
