@@ -31,6 +31,18 @@ Light Chainにない権利確認checkbox/modal/badgeは引き続き追加され�
 reuse/reconciliation、同一fixtureのauthenticated pixel equality、動画provider実行、strict
 release gateの6 blockerを完了扱いにはしない。Goalは`in_progress`を維持する。
 
+# Cloudflare readiness re-audit — 2026-09-21 r136
+
+現行HEADで `npm run verify:goal-readiness:incomplete-ok --silent` を再実行した。
+Cloudflare runtime contract、legacy Supabase runtime removal、Cloudflare auth/media adapters、
+Cloudflare AI adapter、active gateのlegacy edge entrypoint除去の5/5が通過し、artifactは
+`output/playwright/goal-readiness.v3.json` に出力された。
+
+同artifact自身が明記する通り、これはauthenticated production generation、AI quality、R2
+persistence、browser business completion、production deploymentの証明ではない。外部API、
+generation submit、migration、deployはこのreadiness runでは実行していない。前項r134の6つの
+strict release-gate blockerは変更されず、Goalは`in_progress`を維持する。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r133
 
 同一Chrome状態で本家 `https://jp.linkaigc.com/model` と本番Heavy `/model` を30秒settle後に
