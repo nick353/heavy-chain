@@ -1769,50 +1769,56 @@ export function LightchainWorkbenchPage() {
     toast.success('プロジェクトを作成しました');
   };
 
-  const agentProjectCreateModal = (
-    <Modal
-      isOpen={agentProjectCreateOpen}
-      onClose={closeAgentProjectCreate}
-      title="プロジェクトを作成"
-      size="sm"
+  const agentProjectCreateModal = agentProjectCreateOpen ? (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) closeAgentProjectCreate();
+      }}
     >
-      <div className="space-y-4" data-testid="lightchain-agent-project-create-modal">
-        <p className="text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-          プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください
-        </p>
-        <div className="space-y-2">
-          <input
-            type="text"
-            value={agentProjectName}
-            onChange={(event) => setAgentProjectName(event.target.value.slice(0, 40))}
-            placeholder="プロジェクト名です"
-            aria-label="プロジェクト名です"
-            maxLength={40}
-            autoFocus
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-primary-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-neutral-500"
-          />
-          <div className="text-right text-xs text-neutral-400 dark:text-neutral-500">{agentProjectName.length} / 40</div>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lightchain-agent-project-create-title"
+        className="w-full max-w-[480px] rounded-2xl border border-white/10 bg-[#2c3133] text-white shadow-2xl"
+        data-testid="lightchain-agent-project-create-modal"
+      >
+        <div className="flex items-start justify-between gap-4 px-6 pb-3 pt-6">
+          <div>
+            <h2 id="lightchain-agent-project-create-title" className="text-xl font-semibold leading-7">プロジェクトを作成</h2>
+            <p className="mt-1 text-sm leading-5 text-neutral-300">
+              プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください
+            </p>
+          </div>
+          <button type="button" onClick={closeAgentProjectCreate} aria-label="閉じる" className="rounded-md p-1 text-2xl leading-none text-neutral-300 hover:bg-white/10">×</button>
+        </div>
+        <div className="px-6 py-3">
+          <div className="flex items-center gap-2 rounded-lg border border-cyan-300/70 bg-[#252a2c] px-3 py-2.5 focus-within:ring-1 focus-within:ring-cyan-300">
+            <input
+              type="text"
+              value={agentProjectName}
+              onChange={(event) => setAgentProjectName(event.target.value.slice(0, 40))}
+              placeholder="プロジェクト名です"
+              aria-label="プロジェクト名です"
+              maxLength={40}
+              autoFocus
+              className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-neutral-400"
+            />
+            <span className="shrink-0 text-xs text-neutral-300">{agentProjectName.length} / 40</span>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 px-6 pb-6 pt-3">
+          <button type="button" onClick={closeAgentProjectCreate} className="rounded-lg bg-[#687174] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#788285]">
+            キャンセル
+          </button>
+          <button type="button" onClick={handleAgentProjectCreate} disabled={!agentProjectName.trim()} className="rounded-lg bg-[#687174] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#788285] disabled:cursor-not-allowed disabled:opacity-40">
+            作成
+          </button>
         </div>
       </div>
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={closeAgentProjectCreate}
-          className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/10"
-        >
-          キャンセル
-        </button>
-        <button
-          type="button"
-          onClick={handleAgentProjectCreate}
-          disabled={!agentProjectName.trim()}
-          className="rounded-lg bg-primary-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          作成
-        </button>
-      </div>
-    </Modal>
-  );
+    </div>
+  ) : null;
 
   const fittingReferenceImageModal = (
     <Modal
