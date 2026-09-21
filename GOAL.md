@@ -1,4 +1,4 @@
-# Light Chain source parity and live OpenAI readback — 2026-09-21 r105
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r106
 
 Fresh authenticated Companion observation of the actual Light source
 `https://jp.linkaigc.com/marketing` was used as the visual authority. Heavy's
@@ -18,11 +18,24 @@ save receipt, and Jobs showed `キャンペーン画像 / 完了 / 1 outputs`.
 The generated image identity was `ai-f381c4d5-5c0d-4b3c-8b7b-294c10f83f79-0`.
 
 This closes the active provider credential blocker for the tested image path,
-but not the full Light-to-Heavy goal. Remaining work is to source-observe and
-match every other route/state (especially designProduction project cards and
-video post-upload/render states), finish actual video-provider admission,
-complete same-fixture visual/interaction diff coverage, and rerun the strict
-release gate. The release gate is still not green.
+but not the full Light-to-Heavy goal.
+
+Fresh authenticated readback of the actual Light source
+`https://jp.linkaigc.com/designProduction` then matched Heavy's
+`/designProduction`: same heading/subtitle, two start tabs, four new-file
+cards, five-column project grid, no Heavy-only rights UI, no detailed-workbench
+count badge, and relative `X日前 修正` project dates. Heavy Web was rebuilt
+and deployed as version
+`1e44cdbe-ab0f-4d78-af6e-484997739bed`; after a 30-second wait the live AX
+tree confirmed the same structure and the saved generated projects remained
+available.
+
+This closes the observed marketing and design workspace parity slices, but not
+the full Light-to-Heavy goal. Remaining work is to source-observe and match
+every other route/state (especially video post-upload/render states), finish
+actual video-provider admission, complete same-fixture visual/interaction
+diff coverage, and rerun the strict release gate. The release gate is still
+not green.
 
 # OpenAI provider boundary and provenance implemented locally — 2026-09-21 r104 (historical)
 
