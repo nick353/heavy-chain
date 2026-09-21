@@ -1,3 +1,15 @@
+# Light Chain vs Heavy immediate production readback — 2026-09-21 r138
+
+task-owned Companion `read_urls`で本家 `/model` とCloudflare Heavy `/model`を同時取得した。
+本家はAIフィッティング画面のスクリーンショットを取得できた（semantic textは空で、canvas/
+AX readbackは未取得）。HeavyはHTTP/ページ取得自体は成功したが、semantic textが
+`ワークスペースを準備しています / 認証状態とブランド設定を確認しています`のままで、
+authenticated workspaceへの遷移は確認できなかった。Heavy側の追加settleはread-only timeout
+で実行前停止し、mutation/external actionは0件。同一sessionのタブはterminal cleanup済み。
+
+したがって、認証済み本家/Heavyの同一fixture pixel・interaction equality、provider receipt、
+save/readback/reuse/reconciliationは未完了。r134の6 blockerは変わらず、Goalは`in_progress`。
+
 # Light Chain authenticated-source settle readback — 2026-09-21 r137
 
 正本 `https://jp.linkaigc.com/model` のログイン状態をCompanionのtask-owned sessionで
