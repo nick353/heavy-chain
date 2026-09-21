@@ -48,6 +48,18 @@ const OFFICIAL_LIGHTCHAIN_SOURCE_ROUTE_SNAPSHOT = Object.freeze([
   '/designProduction',
 ]);
 
+const OFFICIAL_LIGHTCHAIN_SOURCE_DETAIL_ROUTE_SNAPSHOT = Object.freeze([
+  '/editor/pattern/detail',
+  '/flow/orientedDesign/detail',
+  '/flow/integration/detail',
+  '/flow/laboratory/detail',
+  '/editor/patternDesign/detail',
+  '/editor/changeColor/detail',
+  '/flow/GenerateShortVideo/detail',
+  '/marketing/detail',
+  '/designProduction/detail',
+]);
+
 function parseRoutePaths(source) {
   return [...source.matchAll(/path="([^"]+)"/gu)].map((match) => match[1]);
 }
@@ -113,11 +125,17 @@ test('every Light source row uses a current Heavy route or its explicit pending 
   assert.deepEqual(missing, []);
 });
 
-test('covers every route in the current official Lightchain source snapshot', async () => {
+test('covers every primary and detail route in the current official Lightchain source snapshot', async () => {
   const appSource = await readFile(appSourcePath, 'utf8');
   const appRoutes = parseRoutePaths(appSource);
+  const officialRoutes = [
+    ...OFFICIAL_LIGHTCHAIN_SOURCE_ROUTE_SNAPSHOT,
+    ...OFFICIAL_LIGHTCHAIN_SOURCE_DETAIL_ROUTE_SNAPSHOT,
+  ];
   assert.equal(new Set(OFFICIAL_LIGHTCHAIN_SOURCE_ROUTE_SNAPSHOT).size, 35);
-  const missing = OFFICIAL_LIGHTCHAIN_SOURCE_ROUTE_SNAPSHOT.filter(
+  assert.equal(new Set(OFFICIAL_LIGHTCHAIN_SOURCE_DETAIL_ROUTE_SNAPSHOT).size, 9);
+  assert.equal(new Set(officialRoutes).size, 44);
+  const missing = officialRoutes.filter(
     (pathname) => !appRoutes.some((pattern) => routeMatches(pattern, pathname)),
   );
   assert.deepEqual(missing, []);

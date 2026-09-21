@@ -1,3 +1,12 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r124
+
+The public source-route audit was extended from primary paths to the complete
+route metadata in the same official chunk. It contains 35 primary paths plus
+9 `detailsPath` transitions (44 total), and Heavy's App router now passes
+44/44 coverage through `test:lightchain-parity-routes`. This closes a real
+navigation-scope gap in the parity evidence; it remains static route proof,
+not authenticated visual/provider/persistence proof.
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r123
 
 Fresh release-gate readback completed at `2026-09-21T07:42:04Z` in
@@ -20,11 +29,12 @@ reachability to visual/provider completion.
 
 The canonical reference is now explicitly fixed to `https://jp.linkaigc.com/`.
 The official public app chunk `/_next/static/chunks/28i12-k8opw4o.js` was
-re-read on 2026-09-21 (`174,552` bytes), and its 35 primary source paths,
-including `/` and the dynamic model/model-library children, were added to the
-current parity matrix. Heavy's App router covers 35/35; the combined route
-acceptance suite passes 29/29. This is static source-route coverage only and
-does not claim authenticated UI or provider parity.
+re-read on 2026-09-21 (`174,552` bytes), and its 35 primary plus 9 detail
+source paths, including `/` and the dynamic model/model-library children, were
+added to the current parity matrix. Heavy's App router covers 44/44; the
+combined route acceptance suite now includes this complete route metadata.
+This is static source-route coverage only and does not claim authenticated UI
+or provider parity.
 
 The updated matrix is `work/lightchain-parity-matrix-current-20260820-r68.md`.
 The new route snapshot is enforced by

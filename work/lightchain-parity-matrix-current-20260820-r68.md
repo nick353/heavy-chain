@@ -9,11 +9,11 @@ This matrix separates current-selector route evidence from the older card-ledger
 | Evidence layer | Current evidence | Verdict |
 | --- | --- | --- |
 | Lightchain category/card enumeration | Fresh card ledger from 2026-08-19, selector revision 30, 26 non-video primary cards, 19 distinct routes | Historical reference; do not use as current-selector proof |
-| Lightchain public source route manifest | Official public app chunk `28i12-k8opw4o.js`, 174,552 bytes, 35 route paths observed 2026-09-21 | Confirmed source snapshot; authenticated UI and provider behavior remain separate |
+| Lightchain public source route manifest | Official public app chunk `28i12-k8opw4o.js`, 174,552 bytes, 35 primary + 9 `detailsPath` route paths (44 total) observed 2026-09-21 | Confirmed source snapshot; authenticated UI and provider behavior remain separate |
 | Lightchain route readback | Fresh current-selector revision 4 route ledger, 19/19 non-video routes with URL/title/body/visible-marker readback | Confirmed read-only route baseline; historical selector scope |
 | Heavy local inventory | 31 video-excluded unified feature entries; video entries remain excluded | Confirmed local inventory |
 | Heavy local workflows | Fresh 2026-09-21 artifact: 31 non-video features, 4 video dashboard/detail checks, 4 source-contract routes; 0 console/page/request failures | Confirmed local contract only |
-| Heavy source-route coverage | App route parser covers 35/35 official source paths, including `/model/:modelMode` and `/model-library/:modelTool` dynamic children | Confirmed static route coverage; not visual or authenticated behavior proof |
+| Heavy source-route coverage | App route parser covers 44/44 official source paths, including `/model/:modelMode` and `/model-library/:modelTool` dynamic children | Confirmed static route coverage; not visual or authenticated behavior proof |
 | Priority local contracts | r67 focused suites: 43/43 | Confirmed local contract only |
 | Heavy production priority UI | r62 printing and r63 fabric/model target-scoped readback | Confirmed read-only UI/input markers |
 | Provider output/persistence | No current same-run production provider result → save → reuse → reload proof | PENDING_CONFIRMATION |
@@ -61,7 +61,25 @@ The canonical source reference for this revision is [https://jp.linkaigc.com/](h
 | 34 | `/marketing` | exact |
 | 35 | `/designProduction` | exact |
 
-The source chunk also exposed `/model` as the base route plus the four dynamic model children above; the snapshot has 35 paths when the base route is counted once. The static acceptance test is `test:lightchain-parity-routes`, and it asserts 35 unique source paths with zero uncovered paths. This only closes route coverage; visual diff, authenticated workbench behavior, provider result, persistence, and cross-device acceptance remain separate gates.
+The source chunk also exposed `/model` as the base route plus the four dynamic model children above; the primary snapshot has 35 paths when the base route is counted once. The static acceptance test is `test:lightchain-parity-routes`, and it asserts 44 unique source paths (35 primary + 9 detail) with zero uncovered paths. This only closes route coverage; visual diff, authenticated workbench behavior, provider result, persistence, and cross-device acceptance remain separate gates.
+
+### Official source detail paths
+
+The same chunk defines these nine detail transitions in addition to the 35 primary paths. They are included in the same static acceptance test.
+
+| # | Official detail path | Heavy App coverage |
+|---:|---|---|
+| 1 | `/editor/pattern/detail` | exact |
+| 2 | `/flow/orientedDesign/detail` | exact |
+| 3 | `/flow/integration/detail` | exact |
+| 4 | `/flow/laboratory/detail` | exact |
+| 5 | `/editor/patternDesign/detail` | exact |
+| 6 | `/editor/changeColor/detail` | exact |
+| 7 | `/flow/GenerateShortVideo/detail` | exact |
+| 8 | `/marketing/detail` | exact |
+| 9 | `/designProduction/detail` | exact |
+
+The resulting source route coverage is 44/44 (35 primary + 9 detail). It still does not prove authenticated controls, provider completion, persistence, or pixel equality.
 
 ## Current Lightchain primary route baseline
 
