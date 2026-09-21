@@ -15,6 +15,7 @@
     "build:lightchain-parity-behavior-ledger": "node --experimental-strip-types scripts/build-lightchain-parity-behavior-ledger.ts",
     "test:lightchain-parity-behavior-ledger": "node --experimental-strip-types --test scripts/verify-lightchain-parity-behavior-ledger.test.ts",
     "test:lightchain-parity-contract": "node --experimental-strip-types --test scripts/verify-lightchain-parity-contract.test.ts",
+    "test:lightchain-production-visual-fixture": "node --test scripts/verify-lightchain-production-visual-fixture.test.mjs",
     "test:lightchain-video-parity-behavior-ledger": "node --experimental-strip-types --test scripts/verify-lightchain-video-parity-behavior-ledger.test.ts",
     "test:lightchain-parity-ledger-builder": "node --experimental-strip-types --test scripts/verify-lightchain-parity-ledger-builder.test.ts",
     "test:video-provider-boundary": "node --experimental-strip-types --test scripts/verify-video-provider-boundary.test.ts",
