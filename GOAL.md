@@ -8394,3 +8394,24 @@ generation, user file upload, payment, publish, migration, or destructive
 cleanup was performed. The Goal remains active for the remaining canonical
 route/state parity, authenticated provider receipts, durable persistence and
 reconciliation, business/legal decisions, and strict release-gate artifacts.
+# Goal progress — 2026-09-22 r170
+
+The user-provided canonical source `https://jp.linkaigc.com/` was read directly
+through a fresh Companion source tab after a 30-second settle, then compared
+with Heavy's authenticated homepage and five core workspaces. The homepage
+readback matches on the Light Chain category tabs, search placeholder, six
+launcher labels/order, case-sharing tabs, search control, heading geometry, and
+canonical artwork after image hydration. Both source and Heavy report zero
+visible `input[type="checkbox"]` elements. Heavy's authenticated-only avatar
+and persisted case data are expected state differences, not source UI drift.
+
+Fresh Heavy semantic plus visual readback completed for `/model`, `/gallery`,
+`/history`, `/jobs`, and `/canvas/new`. These screens reached their settled
+authenticated UI after the requested wait, and their visible flows include the
+source-aligned fitting controls, Gallery filters/cards, History resume/failure/
+saved actions, Jobs queue summary, and Canvas toolbar/save/actions. Each route
+reported zero visible rights checkboxes. Navigation dispatches were individually
+verified with known effects and no provider action was triggered. The Goal
+remains active for the remaining feature-state parity, authenticated provider
+receipts, durable persistence/readback/reconciliation, business/legal decisions,
+video-quality evidence, and strict release-gate artifacts.
