@@ -7122,3 +7122,16 @@ The change was deployed as web version
 `/_health` HTTP 200 and `/lightchain` HTTP 200; the served main and feature
 bundles contain the new detail route and colorize feature. The same six
 external release-gate blockers remain and are unchanged.
+
+# Goal progress — 2026-09-21 r109
+
+The official source also exposes `/login-m`; Heavy previously only exposed
+`/login`. Heavy now maps `/login-m` to the shared authentication surface and
+classifies it as public in the shared layout. Route parity passed 27/27 and
+entry-routing passed 25/25, with typecheck and lint passing.
+
+The change was deployed as web version
+`45464b67-f097-4c1d-bdcb-5a28a0c979ff`. Fresh public readback returned Web
+`/_health` HTTP 200 and `/lightchain` HTTP 200; the served main/Layout bundles
+contain `login-m` and the color-change detail route. The external/operator
+release-gate blockers remain unchanged.

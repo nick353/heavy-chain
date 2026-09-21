@@ -1,5 +1,17 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r54
+
+Version `45464b67-f097-4c1d-bdcb-5a28a0c979ff` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. This release adds the official
+Lightchain `/login-m` route to the shared authentication surface and keeps the
+public layout classification aligned with it. Route parity tests passed 27/27
+and entry-routing tests passed 25/25; typecheck, lint, Cloudflare build, R2
+asset preparation, and Wrangler dry-run passed. Fresh public readback returned
+Web `/_health` HTTP 200 and `/lightchain` HTTP 200, and the served main/Layout
+bundles contained `login-m` plus the color-change detail route. No credential,
+provider, payment, publish, or private-media completion is claimed.
+
 ## Latest Web release — 2026-09-21 r53
 
 Version `817850ef-8b37-482b-9e59-0a1b4466f17d` is deployed at 100% to

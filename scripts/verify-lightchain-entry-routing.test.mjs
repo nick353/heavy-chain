@@ -61,6 +61,11 @@ test('keeps the official color-change detail route on the color-change surface',
   assert.match(generate, /window\.location\.pathname\.startsWith\('\/editor\/changeColor'\)/);
 });
 
+test('keeps the official mobile login route on the shared authentication surface', async () => {
+  const source = await readFile(appPath, 'utf8');
+  assert.match(source, /path="\/login-m"[\s\S]*?<LoginPage \/>/);
+});
+
 test('maps vector-special to the Light legacy parity surface', async () => {
   const app = await readFile(appPath, 'utf8');
   const routeStart = app.indexOf('path="/tools/vector-special"');

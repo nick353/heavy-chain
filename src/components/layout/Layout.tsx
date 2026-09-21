@@ -28,7 +28,7 @@ export function Layout() {
   
   // Determine if we should show sidebar (only for authenticated users on dashboard pages)
   // Exclude public pages and auth pages
-  const isPublicPage = ['/login', '/signup', '/forgot-password', '/'].includes(location.pathname);
+  const isPublicPage = ['/login', '/login-m', '/signup', '/forgot-password', '/'].includes(location.pathname);
   const showSidebar = user && !isPublicPage;
   const lightchainParityAliases = lightchainUnifiedFeatureCatalog
     .flatMap((feature) => [feature.route, ...getLightchainUnifiedRouteAliases(feature.id)])

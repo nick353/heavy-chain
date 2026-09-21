@@ -466,6 +466,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/login-m"
+        element={
+          <PublicRoute>
+            {lazyPage(<LoginPage />)}
+          </PublicRoute>
+        }
+      />
+      <Route
         path="/signup"
         element={
           <PublicRoute>
