@@ -1,5 +1,20 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-22 r66
+
+Version `9dcbd73e-c0e5-49a3-addd-ab40d3e0a190` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. The Agent workbench now uses the
+current Light Chain hero imagery for all four business tabs and matches the
+source reference-case rail layout and imagery. The Light-only rights checkbox
+remains absent.
+
+The fresh local all-feature verifier passed 31/31 features, desktop/mobile,
+video/source routes, 404 assertions, zero console/page/request failures, and
+cleanup. Production build, R2 upload, Wrangler dry-run, deployment, and
+authenticated Companion readback passed. Full provider/save/reuse/
+reconciliation and strict production release-gate evidence remain separate
+gates.
+
 ## Latest Web release — 2026-09-21 r65
 
 Version `cb5553df-ca3a-4f3b-892d-a14668bb3905` is deployed at 100% to

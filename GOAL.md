@@ -8562,6 +8562,29 @@ save/reuse/reload、production visual proofはまだ作れない。直URL `/gall
 詳細は`work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。
 Goalは`in_progress`を維持する。
 
+# Goal progress — 2026-09-22 r187
+
+本家 `https://jp.linkaigc.com/agent` の現行表示を再観測し、HeavyのAgent画面を追加で本家寄せした。
+業務シーン4タブのヒーロー画像を本家と同じ画像URLへ対応付け、インスピレーション/AIグラフィック
+デザインの参考事例を本家の画像・オーバーレイ・配置へ合わせ、入力→クイックスタート→参考事例の
+順序と寸法を統一した。Light Chainにない権利確認checkboxはHeavyで0件のまま維持した。
+
+`npm run verify:lightchain-all-features -- --mode=local` は `ok=true`、31/31 feature、404 assertions、
+video 4 route、source 4 route、console/page/request failure 0、cleanup完了。typecheck、UI control
+boundaries 15/15、permission parity 8/8、diff checkも通過した。Cloudflare build、R2 asset upload、
+Wrangler dry-run、production deployを通過し、version `9dcbd73e-c0e5-49a3-addd-ab40d3e0a190` を100%反映した。
+
+認証済みCompanionで本家/Heavyを同じAIグラフィックデザインタブで実測し、ヒーロー画像URL・自然寸法
+480x344、参考事例レール `720x196`、カード `240x120`、selected tab、Heavy checkbox 0件を確認した。
+Heavyの4タブ全てで対応する本家画像URLと警告/エラー0件も確認した。今回の変更は
+`3e02c38 fix: match Agent source imagery and case rail`。
+
+Goalは`in_progress`のまま。残りはproduction monitor/UI pair、launch operations、production
+all-feature order previews、G618、H602 billing completion readback、real-generation visual
+scorecardの6件、ならびに全featureの同一fixture pixel/interaction diff、provider生成・保存・再利用・
+readback/reconciliation、動画providerの実行証跡である。provider生成、upload、保存、課金、公開、
+権利迂回は実行していない。
+
 # Goal progress — 2026-09-22 r185
 
 ユーザー指定の本家URL `https://jp.linkaigc.com/` を正本として再確認し、実際の
