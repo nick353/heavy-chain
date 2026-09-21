@@ -7794,3 +7794,31 @@ authenticated source session was not available for a full fresh visual
 matrix, and provider receipt, source synchronization, durable production
 readback, billing/operator proof, and the six strict release-gate artifacts
 remain unverified.
+
+# Goal progress — 2026-09-21 r143
+
+The canonical source `https://jp.linkaigc.com/` and the authenticated Heavy
+deployment were read back again in one task-owned Companion session on the
+same `/model` route after both pages settled. The common Light Chain surface
+matches: AIフィッティング title, single/multi-task tabs, garment upload and
+auto-convert switch, 説明生成/参考画像/モデルのセット写真 tabs, 0/2000
+prompt counter, Smart/1K controls, `権限がありません`, and `生成履歴`.
+Neither surface rendered a rights checkbox, rights modal, or explanatory
+rights badge, so no Light-absent rights UI was added.
+
+Heavy alone displayed a previously persisted result preview and its
+Gallery/History/Jobs/Canvas destinations. Source inspection shows that the
+Heavy `/model` workbench restores the latest user-scoped persisted artifact
+into its active result state; this is therefore recorded as a persisted-state
+difference until the same empty-state fixture is used for mechanical visual
+comparison, not as permission to delete or hide user data. The readback did
+not submit a provider request, save a new result, charge, or publish anything.
+
+The task-owned session released both leases and closed tabs `1980926539` and
+`1980926540`; cleanup completed with `external_action_executed=false`.
+The parity contract is now exposed as `npm run test:lightchain-parity-contract`
+and passes 9/9; the combined parity contract/runtime/ledger checks pass 30/30,
+with typecheck and diff checks green. Goal remains active: same-fixture
+pixel/interaction equality, authenticated provider receipt, durable
+persistence/readback/reconciliation, video-provider completion, billing and
+operator proof, and the six strict external release-gate artifacts remain.
