@@ -258,7 +258,7 @@ export function LightchainCreatorPage() {
       <span className="sr-only" aria-label={`${displayName}さんのデザイン作成`} />
       <div
         className="mx-auto grid min-h-[calc(100vh-50px)] max-w-[1904px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)_320px]"
-        style={{ fontFamily: '-apple-system, system-ui, "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
+        style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
       >
         <aside className="flex min-h-0 flex-col gap-4">
           <section className="h-[104px] shrink-0 rounded-xl bg-[#262a2b] p-4">
