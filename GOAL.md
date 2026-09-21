@@ -1,3 +1,23 @@
+# OpenAI API availability recheck — 2026-09-21 r103
+
+The requested current OpenAI generation probe was attempted once with the
+existing local `OPENAI_API_KEY` environment value, without printing or storing
+the secret. The request reached `https://api.openai.com/v1/images/generations`
+but returned HTTP `401` with `invalid_api_key`; no image was created and no
+Heavy Chain record, storage object, payment, publish, or deployment effect
+occurred. Evidence is
+`output/playwright/openai-current-direct-probe/summary.json`.
+
+The legacy Supabase project still reports the secret names
+`OPENAI_API_KEY` and `OPENAI_IMAGE_API_KEY`, but their values are not
+recoverable through the secret-name readback. The active Heavy Chain runtime
+is the Cloudflare Workers AI adapter and does not consume those legacy
+Supabase secrets. Therefore this probe does not accept OpenAI availability,
+G617 generation, or production completion. The exact remaining provider
+blocker is a valid OpenAI credential bound to the active generation path (or
+an authenticated server path that can be read back); the invalid local key was
+not replayed.
+
 # Canonical Light launcher root parity correction — 2026-09-21 r90
 
 Fresh authenticated Chrome Companion readback of the actual Light source
