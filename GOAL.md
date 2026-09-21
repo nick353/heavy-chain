@@ -7632,3 +7632,31 @@ The change was deployed as web version
 `/_health` HTTP 200 and `/lightchain` HTTP 200; the served main/Layout bundles
 contain `login-m` and the color-change detail route. The external/operator
 release-gate blockers remain unchanged.
+
+# Goal progress — 2026-09-21 r110
+
+The canonical source `https://jp.linkaigc.com/` and Heavy production
+`https://heavy-chain-web.nichika2000823.workers.dev` were freshly read in a
+task-owned Companion session on the same `/model` surface. The source settled
+readback exposed the Lightchain header avatar, help control, fitting tabs,
+`権限がありません`, and no rights checkbox/modal/badge. Heavy's final
+readback matched the fixed source geometry for the header (`ヘルプセンター`
+at x=1671, avatar at x=1848), the fitting switch (y=135), the prompt input
+(x=33, y=466, h=214 versus source h=213), Smart/1K controls, permission
+surface, and `生成履歴`. Existing Heavy result data and its Gallery/History/
+Jobs/Canvas links were retained rather than deleted or hidden.
+
+The final code is recorded at `3dd3b84` (avatar/account parity restoration in
+`8934dda`, fitting panel height in `7efbb5c`, and final switch geometry in
+`3dd3b84`). The Cloudflare-only build passed the Heavy Web Worker tests 8/8,
+production build, R2 hash-checked asset upload, Wrangler dry-run, and was
+deployed at 100% as version `0d6ef13a-7924-4953-a5cd-ed63d9a20056`.
+Public `/_health`, `/lightchain`, and `/model` returned HTTP 200. Local UI
+boundaries passed 15/15, route parity passed 29/29, and typecheck passed.
+
+The Companion session completed with all task-owned leases released, nine
+task-owned tabs closed, no retained or unknown-effect tabs, and
+`external_action_executed=false`. This proves the current `/model` source/UI
+parity slice and deployment, not provider generation, durable persistence,
+source synchronization, billing, or the six outstanding strict release-gate
+items. Goal remains active.
