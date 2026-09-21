@@ -8468,3 +8468,14 @@ readback, or business completion. The integrated gate's remaining failures are
 therefore not a general API outage: they are missing authenticated production
 evidence and the real visual scorecard. The Goal remains active and the
 fail-closed provider boundary is unchanged.
+# Goal progress — 2026-09-22 r175
+
+Added an explicit `--out` path to the read-only G620 security-operations
+verifier and regenerated its current artifact from the repository state. The
+artifact is fresh, schema `heavy-chain.g620.security-ops.v3`, `ok=true`, with
+all five checks passed and no irreversible actions touched. The release-gate
+readback now accepts G620; the remaining failures are production monitor/UI,
+launch operations, current all-feature previews, stale local/scale evidence,
+H602 production proof, and the intentionally skipped-command marker in the
+readback-only diagnostic run. No provider, payment, deploy, or publish action
+was performed.
