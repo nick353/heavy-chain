@@ -9,7 +9,7 @@
 .design-production-parity [data-testid="design-production-page"] > .text-center > h1 { font-weight: 700; letter-spacing: normal; }
 .design-production-parity [data-testid="design-production-page"] > .text-center > p { font-size: 18px; line-height: 24px; }
 .design-production-parity [data-testid="design-production-page"] > [role="tablist"] { margin-top: 28px; }
-.design-production-parity [data-testid="design-production-page"] > [role="tablist"] > button { padding: 4px 24px; font-size: 16px; line-height: 24.8889px; }
+.design-production-parity [data-testid="design-production-page"] > [role="tablist"] > button { width: auto; min-height: 40px; height: 40px; padding: 4px 25px; font-size: 16px; line-height: 24.8889px; }
 .design-production-parity [data-testid="design-production-persisted-projects"] { margin-top: 40px; }
 .design-production-parity [data-testid="design-production-persisted-projects"] > div:first-child { height: 32px; }
 .design-production-parity [data-testid="design-production-persisted-projects"] > div:first-child > h2 { font-weight: 500; line-height: 28px; }
