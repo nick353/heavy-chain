@@ -54,6 +54,7 @@ import {
   type GenerationIntent,
 } from '../lib/workspaceHandoff';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
+import { deriveGenerationFlowStage, getGenerationPrimaryActionLabel } from '../lib/generationFlow';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   getLightchainUnifiedFeatureWorkflowContract,
@@ -3744,15 +3745,12 @@ export function GeneratePage() {
         return false;
     }
   })();
-  const generationFlowStage = isGenerating
-    ? 'generating'
-    : generationError
-      ? 'failed'
-      : generatedImages.length > 0 || Boolean(optimizedPromptResult)
-        ? 'complete'
-        : isGenerateDisabled
-          ? 'blocked'
-          : 'ready';
+  const generationFlowStage = deriveGenerationFlowStage({
+    isGenerating,
+    hasError: Boolean(generationError),
+    hasResult: generatedImages.length > 0 || Boolean(optimizedPromptResult),
+    isDisabled: isGenerateDisabled,
+  });
   const generationFlowCopy = {
     ready: {
       label: '準備完了',
@@ -3787,13 +3785,11 @@ export function GeneratePage() {
     setFlowState(unifiedFlowState);
   }, [setFlowState, unifiedFlowState]);
 
-  const primaryActionLabel = isGenerating
-    ? '生成中...'
-    : generationFlowStage === 'failed'
-      ? '再試行'
-      : selectedFeature?.id === 'optimize-prompt'
-        ? '最適化'
-        : noImageGenerationMode ? '企画書を保存' : '生成する';
+  const primaryActionLabel = getGenerationPrimaryActionLabel({
+    stage: generationFlowStage,
+    isPromptOptimization: selectedFeature?.id === 'optimize-prompt',
+    noImageGenerationMode,
+  });
 
   const handleGenerateMaterialChange = (nextState: MaterialReferenceState) => {
     setMaterialReference(nextState);

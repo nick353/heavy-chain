@@ -1,3 +1,21 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r128
+
+M01/P0-02の生成ライフサイクル判定を`src/lib/generationFlow.ts`へ分離し、
+`ready / blocked / generating / complete / failed`の優先順位と、失敗時の
+`再試行`ラベルを純粋関数テストで固定した。GeneratePageの見た目・権利UI・provider
+送信経路は変えていない。
+
+検証はライフサイクル2/2、provider persistence/readback 14/14、workspace activity
+13/13、Canvas persistence 7/7、permission parity 8/8、unified workflow 6/6、
+typecheck、production build、diff checkを通過。Browser pluginが利用可能でないため
+Playwright fallbackで`/generate?feature=campaign-image`をdesktop 1440x1050とmobile
+390x844でレンダーし、初期入力待ち、生成ボタンdisabled、詳細操作クリック、checkbox 0件、
+console/page error 0件、スクリーンショットを確認した。
+
+Heavy本番`/model`は30秒待機後も認証待ちシェルのままで、本番provider receipt・保存readback・
+Gallery/Canvas/History/Jobs reconciliation・同一fixture visual diffは未取得。Goalは
+in_progressのまま。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r127
 
 本家の正本URL `https://jp.linkaigc.com/` をChromeで再確認し、動画の現行入口を
