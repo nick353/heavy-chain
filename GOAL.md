@@ -7976,3 +7976,28 @@ receipts, durable save/readback/reconciliation, video quality evidence,
 billing/operator proof, and the missing strict release-gate artifacts. No
 provider generation, payment, publish, migration, or destructive cleanup was
 performed.
+
+# Goal progress — 2026-09-21 r151
+
+The authenticated canonical source reference state `/model` → `参考画像` was
+measured against Heavy after a 30-second post-deploy settle. The three cards
+now use the source geometry and composition: each outer card is x=16, w=399,
+h=160 at y=449/625/801; the upload content width is 225.5px; the source
+link rows, labels, required badge, divider, demo image rectangles
+(x=299.5, w=106.5, h=142), and `例` overlay all read back at the same
+coordinates, typography, colors, and rendered wrapping. The initial fitting
+surface backgrounds and bottom controls fixed in this slice remain source
+aligned as well.
+
+This slice also removed the Heavy-only dark panel layers from the fitting
+route and changed the bottom bar from fixed positioning to the source's
+in-flow 431x73px bar. The permission button now reads back as the source
+`rgb(11, 193, 184)`, 12px/17.1429px, full-opacity control. Deployment version
+`73bac764-62c4-498c-87f3-c357df6c9655` is live at the Heavy Worker.
+
+Lightchain UI boundaries remain 15/15; the final class-only change passed
+typecheck, build, and diff checks. No provider generation, file upload,
+payment, publish, migration, or destructive cleanup was performed. The Goal
+remains active for the remaining source routes and states, provider receipts,
+durable persistence/readback/reconciliation, video-quality evidence,
+billing/operator proof, and strict release-gate artifacts.

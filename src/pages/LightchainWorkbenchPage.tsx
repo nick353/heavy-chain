@@ -4489,7 +4489,7 @@ export function LightchainWorkbenchPage() {
   if (isFeatureDetail && isFittingDetail) {
     return (
       <main
-        className="dark min-h-[calc(100vh-50px)] bg-[#121414] text-white"
+        className="dark min-h-[calc(100vh-50px)] bg-[#171b1c] text-white"
         style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
         data-flow-state={unifiedFlowState}
         data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
@@ -4513,7 +4513,7 @@ export function LightchainWorkbenchPage() {
       >
         {renderLightchainProviderGate()}
         <div className="relative grid min-h-[calc(100vh-50px)] lg:grid-cols-[432px_minmax(0,1fr)]">
-          <section className="border-r border-white/10 bg-[#141717]" data-testid="lightchain-fitting-input-flow">
+          <section className="flex min-h-0 flex-col border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
             <div className="flex h-12 items-center justify-between border-b border-white/10 px-4">
               <p className="text-[14px] font-semibold leading-6 text-white">AIフィッティング</p>
               <div className="inline-flex h-8 w-[204px] items-center justify-center rounded-lg bg-[#262a2b] p-1" role="tablist">
@@ -4532,7 +4532,7 @@ export function LightchainWorkbenchPage() {
                 ))}
               </div>
             </div>
-            <div className="flex flex-1 flex-col overflow-hidden px-4 py-2">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-2">
               <div className="flex flex-col gap-2 shrink-0">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -4732,43 +4732,52 @@ export function LightchainWorkbenchPage() {
                   {FITTING_REFERENCE_SLOT_CONFIG.map((slot) => {
                     const selectedFile = fittingReferenceSlots[slot.key];
                     return (
-                      <section key={slot.key} className="flex h-40 min-h-0 gap-2 rounded-2xl border border-dashed border-white/15 bg-[#181d1f] p-2" data-testid={`lightchain-fitting-reference-slot-${slot.key}`}>
-                          <label className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center px-3 text-center transition hover:text-cyan-100">
-                            <input
-                              type="file"
-                              accept=".png,.jpg,.jpeg,.avif,.webp"
-                              className="hidden"
-                              onChange={(event) => handleFittingReferenceSlotUpload(slot.key, event)}
-                            />
-                            {selectedFile ? (
-                              <img src={selectedFile.imageUrl} alt={`${slot.label}選択済み`} className="max-h-28 rounded-lg object-contain" />
-                            ) : (
-                              <>
-                                <span className="text-sm font-semibold text-neutral-100">{slot.label}</span>
-                                <Upload className="size-5 text-neutral-300" />
-                                <span className="mt-2 text-sm font-semibold text-neutral-100">アップロード</span>
-                                {slot.required && <span className="mt-2 rounded border border-white/10 bg-cyan-500 px-2 py-0.5 text-[11px] font-semibold text-neutral-950">必須項目</span>}
-                              </>
-                            )}
-                          </label>
-                          <div className="flex w-[112px] shrink-0 flex-col items-center justify-center gap-2 text-center text-xs text-neutral-500">
-                            <span>または</span>
-                            <button
-                              type="button"
-                              data-track-id="open-reference-library"
-                              data-track-target={slot.trackTarget}
-                              onClick={() => setFittingReferenceLibrarySlot(slot.key)}
-                              className="h-[17px] min-h-0 w-[108px] px-0 py-0 text-sm font-semibold leading-[17px] text-cyan-200 underline underline-offset-2 transition hover:text-cyan-100"
-                              style={{ height: 17, minHeight: 17, lineHeight: '17px', padding: 0 }}
-                            >
-                              参考画像ライブラリ
-                            </button>
-                            <span className="text-[11px] text-neutral-500">選択</span>
+                      <div key={slot.key} className="relative flex h-40 shrink-0 flex-col gap-2 rounded-2xl border border-dashed border-white/10 bg-[#262a2b] p-2" data-testid={`lightchain-fitting-reference-slot-${slot.key}`}>
+                        <div className="flex size-full flex-1 gap-2">
+                          <div className="relative flex size-full flex-1 flex-col">
+                            <label className="relative flex size-full shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-none bg-transparent p-4 text-center text-[#aab8b6] transition hover:bg-white/[0.02]">
+                              <input
+                                type="file"
+                                accept=".png,.jpg,.jpeg,.avif,.webp"
+                                className="hidden"
+                                onChange={(event) => handleFittingReferenceSlotUpload(slot.key, event)}
+                              />
+                              {selectedFile ? (
+                                <img src={selectedFile.imageUrl} alt={`${slot.label}選択済み`} className="max-h-28 rounded-lg object-contain" />
+                              ) : (
+                                <>
+                                  <ImagePlus className="h-6 w-6 text-[#e3e8e8]" />
+                                  <div className="mt-2 w-full break-words text-center text-[14px] leading-[21px] text-[#e3e8e8]">{slot.label}</div>
+                                  <div className="mt-1 break-words text-center text-xs leading-[17.1429px] text-[#aab8b6]">
+                                    <div className="flex items-center justify-center gap-1 flex-wrap">
+                                      <span className="text-[#0bc1b8] underline">アップロード</span>
+                                      <span>または</span>
+                                      <button
+                                        type="button"
+                                        data-track-id="open-reference-library"
+                                        data-track-target={slot.trackTarget}
+                                        onClick={(event) => { event.preventDefault(); setFittingReferenceLibrarySlot(slot.key); }}
+                                        className="text-[#0bc1b8] underline transition hover:text-cyan-100"
+                                      >
+                                        参考画像ライブラリ
+                                      </button>
+                                      <span>選択</span>
+                                    </div>
+                                  </div>
+                                  {slot.required && <p className="mt-2 flex w-fit items-center justify-center rounded border border-white/10 bg-[#0bc1b8] px-2 py-0.5 text-xs font-medium leading-[17.1429px] text-[#111817]">必須項目</p>}
+                                </>
+                              )}
+                            </label>
                           </div>
-                          <div className="aspect-[96/128] h-full w-[106px] shrink-0 overflow-hidden rounded-xl bg-[#20272a]">
-                            <img src={selectedFile?.imageUrl ?? slot.demoImageUrl} alt="demo" className="size-full max-h-[128px] object-cover" />
+                          <div className="h-full w-px bg-white/10" aria-hidden="true" />
+                          <div className="relative aspect-[96/128] h-full shrink-0 overflow-hidden rounded-lg">
+                            <img src={selectedFile?.imageUrl ?? slot.demoImageUrl} alt="demo" className="size-full object-cover" />
+                            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded border border-white/10 bg-[#262a2b]/80 px-1 py-0.5 leading-4 backdrop-blur transition-all duration-300">
+                              <span className="whitespace-nowrap text-sm text-white">例</span>
+                            </div>
                           </div>
-                      </section>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -4884,8 +4893,8 @@ export function LightchainWorkbenchPage() {
                 </button>
               )}
             </div>
-            <div className="fixed bottom-2 left-0 z-30 grid w-full grid-cols-[96px_96px_207px] gap-2 border-t border-white/10 bg-[#141717] p-2 lg:w-[432px]">
-              <div className="relative">
+            <div className="flex shrink-0 items-end gap-2 border-t border-white/10 px-2 py-4">
+              <div className="relative h-10 w-24 shrink-0">
                 <button
                   type="button"
                   role="combobox"
@@ -4898,7 +4907,7 @@ export function LightchainWorkbenchPage() {
                 </button>
                 {fittingControlOpen === 'aspect' && <div role="listbox" className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-lg border border-white/10 bg-[#24292c] p-1 shadow-xl">{['スマート', '1:1', '2:3', '3:2', '4:3', '3:4', '4:5', '5:4', '9:16', '16:9'].map((option) => <button key={option} type="button" role="option" aria-selected={fittingAspectRatio === option} className="block w-full rounded px-2 py-1.5 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setFittingAspectRatio(option); setFittingControlOpen(null); }}>{option}</button>)}</div>}
               </div>
-              <div className="relative">
+              <div className="relative h-10 w-24 shrink-0">
                 <button
                   type="button"
                   role="combobox"
@@ -4924,7 +4933,7 @@ export function LightchainWorkbenchPage() {
                   <PermissionLockedButton
                     testId="lightchain-model-permission"
                     marginClass=""
-                    className="rounded-lg bg-[#65d3cf] text-neutral-950"
+                    className="!rounded-lg !bg-[#0bc1b8] !text-xs !font-medium !leading-[17.1429px] !text-[#111817] !opacity-100"
                     disabled={false}
                     showSourceIcon
                     buttonType="submit"
@@ -4941,7 +4950,7 @@ export function LightchainWorkbenchPage() {
                 )}
             </div>
           </section>
-          <aside className="relative flex min-h-0 items-center justify-center bg-[#151515] p-4">
+          <aside className="relative flex min-h-0 items-center justify-center bg-transparent p-4">
             <button
               type="button"
               className="absolute right-4 top-4 h-8 w-[102px] rounded-lg border border-white/15 bg-[#181b1d] px-4 py-2 text-sm font-semibold text-white"
