@@ -1,3 +1,18 @@
+# Light Chain model input/provider boundary readback — 2026-09-21 r141
+
+Heavy本番 `/model` の同一task-owned tabで、hidden file inputが1件に解決されることをpreflightし、
+非機密fixture `dist/assets/lightchain-cards/fitting-v1.png`を一度だけuploadした。site confirmation
+で `fitting-v1.png`、`衣服の画像 (1/4)`、画像previewをsemantic・visual readbackした。
+
+しかし本家の現行source contractは `model-matrix` generation access=`denied` で、Heavyも同じ
+`権限がありません` locked buttonを表示している。upload後もその状態を確認し、provider submit、
+rights bypass、生成、保存、課金は実行しなかった。upload tabはtask terminal cleanupで閉じ、
+`external_action_executed=false`を確認した。これは入力UIとfail-closed provider境界の証跡であり、
+provider receipt/品質scorecardの代替にはしない。
+
+Goalは`in_progress`。r134のstrict blockerと、認証済みsource/Heavy同一fixture pixel equality、
+durable provider readback/reconciliationは未完了。
+
 # Light Chain / Heavy authenticated UI settle readback — 2026-09-21 r140
 
 Cloudflare auth-route deploy後、同一task-owned Companion sessionでHeavy `/model`を8秒settleし、
