@@ -7383,6 +7383,26 @@ The Goal remains active. Protected provider receipt/source sync/save/reuse/
 reconciliation, scorecard, operations/billing, and strict release acceptance
 still require the real consumer-auth Secret and the remaining fresh production
 artifacts.
+
+# Goal progress — 2026-09-21 r159
+
+Added `scripts/verify-lightchain-source-board-parity.test.ts` as a focused
+acceptance contract for the freshly observed source boards. It checks the Wear
+Design Lab list/detail route mapping and upload contract, the Fashion Studio
+board geometry while preserving pin/save/delete/pagination/reference actions,
+and the video project board's 220x240 / 7-column geometry plus fail-closed
+provider detail boundary. The new suite passes 3/3, with typecheck and diff
+checks also passing.
+
+This is acceptance protection, not proof of full production parity: the
+current source session returned blank canvases for the video and Lightchain Lab
+routes, and Heavy's protected feature routes still require an authenticated
+session for fresh visual readback. No provider generation, file upload,
+payment, publish, migration, or destructive cleanup was performed. The Goal
+remains active for the remaining source route/state sweep, authenticated
+visual/interaction proof, provider receipts, durable persistence/readback/
+reconciliation, video-quality evidence, billing/operator proof, and strict
+release-gate artifacts.
 # Canonical fitting flow alignment and authenticated production readback — 2026-09-21 r84
 
 The new Light-shaped fitting entrypoints now use the canonical `/model` route:
