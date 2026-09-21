@@ -8415,3 +8415,17 @@ verified with known effects and no provider action was triggered. The Goal
 remains active for the remaining feature-state parity, authenticated provider
 receipts, durable persistence/readback/reconciliation, business/legal decisions,
 video-quality evidence, and strict release-gate artifacts.
+# Goal progress — 2026-09-22 r171
+
+The canonical video workspace was freshly compared on both origins:
+`/flow/GenerateShortVideo` and `/flow/GenerateShortVideo/detail`. Source and
+Heavy now show the same video-workstation heading, new-file card, existing
+project cards, reference-example cards, dotted detail canvas, `Untitled`
+breadcrumb, centered image drop zone, accepted formats (`jpg`, `jpeg`, `png`,
+`webp`), and 20M limit. Detail screenshots matched at the same 1904x821
+viewport; both source and Heavy reported zero visible rights checkboxes. The
+comparison used known-effect navigation and visual/semantic readback only;
+no file upload, video generation, save, payment, publish, or provider action
+was performed. The Goal remains active for existing-project states, provider
+receipts, durable persistence/readback/reconciliation, business/legal
+decisions, and strict release-gate artifacts.
