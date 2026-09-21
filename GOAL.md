@@ -8596,6 +8596,19 @@ release artifactは未完了のまま保持する。公開HTTP readbackは未認
 確認しただけで、認証tokenの抽出・入力はしていない。provider生成、upload、保存、
 課金、公開、権利迂回も未実行。Goalは`in_progress`を維持する。
 
+# Goal progress — 2026-09-22 r183
+
+public-entrypoint verifierが未認証時の正規同一origin `/login?redirect=...`
+への307を誤って失敗扱いしていたため、fail-closed redirectを到達証跡として
+認めるよう修正した。認証迂回はなく、HTTP readbackは`ok=true`、307、auth-session
+200、submit/payment/publish未実行で通過した。release gateの残りは6件に減った。
+
+変更は`verify-cloudflare-public-entrypoint-readback.mjs`と
+`verify-release-gate-unified.mjs`のみで、契約テスト20件、public readback、syntax、
+diff checkを通過した。残りはmonitor/UI pair、launch operations、all-feature
+order-preview artifact、G618、H602 billing completion、real-generation visual
+scorecardである。Goalは`in_progress`を維持する。
+
 # Goal progress — 2026-09-22 r181
 
 認証済みHeavy本番で、`GOAL_CANDIDATE_ROW_IDS`の33行を正規routeへ対応付け、

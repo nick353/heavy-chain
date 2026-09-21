@@ -200,16 +200,19 @@ const requiredReadbacks = [
   {
     name: 'production chosen public entrypoint readback',
     path: 'output/playwright/g835-chosen-public-entrypoint-readback-r1/summary.json',
-    validate: (json) =>
-      json.ok === true &&
-      json.urls?.chosenPublicEntrypoint === 'https://heavy-chain-web.nichika2000823.workers.dev' &&
-      json.findings?.chosenPublicEntrypoint?.reachable === true &&
-      Number(json.findings?.chosenPublicEntrypoint?.status || 0) >= 200 &&
-      Number(json.findings?.chosenPublicEntrypoint?.status || 0) < 300 &&
-      json.findings?.chosenPublicEntrypoint?.hasHeavyChainShell === true &&
-      json.safetyBoundaries?.generationSubmit === 'not_clicked' &&
-      json.safetyBoundaries?.billingCheckoutPayment === 'not_touched' &&
-      json.safetyBoundaries?.externalPublish === 'not_touched',
+    validate: (json) => {
+      const entrypoint = json.findings?.chosenPublicEntrypoint;
+      const status = Number(entrypoint?.status || 0);
+      const publicShell = status >= 200 && status < 300 && entrypoint?.hasHeavyChainShell === true;
+      const protectedRedirect = status >= 300 && status < 400 && entrypoint?.protectedRedirect === true;
+      return json.ok === true &&
+        json.urls?.chosenPublicEntrypoint === 'https://heavy-chain-web.nichika2000823.workers.dev' &&
+        entrypoint?.reachable === true &&
+        (publicShell || protectedRedirect) &&
+        json.safetyBoundaries?.generationSubmit === 'not_clicked' &&
+        json.safetyBoundaries?.billingCheckoutPayment === 'not_touched' &&
+        json.safetyBoundaries?.externalPublish === 'not_touched';
+    },
     expect: 'chosen public entrypoint https://heavy-chain-web.nichika2000823.workers.dev is reachable without submit/payment/publish actions',
   },
   {

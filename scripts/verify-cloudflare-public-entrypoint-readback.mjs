@@ -21,19 +21,35 @@ async function read(url) {
   };
 }
 
+function isSameOriginLoginRedirect(value) {
+  if (typeof value !== 'string' || !value) return false;
+  try {
+    const redirect = new URL(value);
+    return redirect.origin === publicOrigin
+      && redirect.pathname === '/login'
+      && redirect.searchParams.has('redirect');
+  } catch {
+    return false;
+  }
+}
+
 const root = await read(`${publicOrigin}/`);
 const authSession = await read(`${publicOrigin}/api/auth/get-session`);
+const publicShell = root.status >= 200 && root.status < 300 && root.hasHeavyChainShell;
+const protectedRedirect = root.status >= 300 && root.status < 400 && isSameOriginLoginRedirect(root.redirect);
 const report = {
   schema: 'heavy-chain.chosen-public-entrypoint-readback.v2',
   capturedAt,
   mode: 'read-only-http-shell-and-auth-boundary',
-  ok: root.status >= 200 && root.status < 300 && root.hasHeavyChainShell && authSession.status >= 200 && authSession.status < 300,
+  ok: (publicShell || protectedRedirect) && authSession.status >= 200 && authSession.status < 300,
   urls: { chosenPublicEntrypoint: publicOrigin },
   findings: {
     chosenPublicEntrypoint: {
-      reachable: root.status >= 200 && root.status < 300,
+      reachable: publicShell || protectedRedirect,
       status: root.status,
       hasHeavyChainShell: root.hasHeavyChainShell,
+      publicShell,
+      protectedRedirect,
       contentType: root.contentType,
       bodyLength: root.bodyLength,
       redirect: root.redirect,
@@ -54,7 +70,7 @@ const report = {
     deployment: 'not_run',
   },
   externalEffect: 'read-only public HTTP readback; no provider, generation, upload, save, auth, billing, payment, or publish action',
-  proofLimit: 'This proves public HTTP reachability and the unauthenticated boundary only; it is not authenticated production UI or provider completion proof.',
+  proofLimit: 'This proves public HTTP reachability plus either the public shell or the same-origin fail-closed auth redirect, and the unauthenticated boundary; it is not authenticated production UI or provider completion proof.',
 };
 
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
