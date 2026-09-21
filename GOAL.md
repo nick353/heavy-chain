@@ -7860,3 +7860,20 @@ mutation was performed. Goal remains active pending a real authenticated
 source tab, same-state capture pair, provider receipt and durable
 save/readback/reconciliation, video-provider evidence, and the strict release
 gate artifacts.
+
+# Goal progress — 2026-09-21 r146
+
+The post-change local acceptance sweep is green: visual fixture comparator
+4/4, parity contract 9/9, provider coverage 22/22, unified workflow 6/6,
+video behavior ledger 4/4, provider persistence/readback 14/14, Generate
+readback 4/4, Canvas generation/readback 10/10, workspace handoff 3/3,
+route parity 29/29, Lightchain UI boundaries 15/15, permission parity 8/8,
+typecheck, and diff checks. This verifies the current code-side contracts
+remain coherent after exposing the visual comparator command.
+
+The sweep is still local/static evidence. It does not promote the historical
+video artifact, create a provider receipt, prove a durable production
+save/readback/reconciliation, or close billing/operator/strict release gates.
+The canonical source authentication tab is still absent from the current
+Chrome profile, so authenticated source capture and same-state visual diff
+remain the next external-state-dependent step.
