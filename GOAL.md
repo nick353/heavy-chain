@@ -13,6 +13,13 @@ no foreign-tab mutation. The current Companion surface still showed the
 auth/brand readiness screen after the bounded readback; no login state was
 assumed or fabricated.
 
+After this deploy, the strict release gate was rerun at
+`2026-09-21T04:19:05Z`. It remains blocked by the same six evidence gates:
+the authenticated production monitor/UI pair, launch-operations artifact,
+production all-feature workflow artifact, fresh G618 scale baseline,
+production H602 billing completion readback, and the real-generation visual
+scorecard. No missing artifact was synthesized.
+
 The official Light source URL supplied for this pass is
 `https://jp.linkaigc.com/`. The saved source dashboard screenshot and Heavy's
 same-viewport screenshot showed one deterministic visual mismatch in the video
