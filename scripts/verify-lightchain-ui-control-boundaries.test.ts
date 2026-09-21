@@ -189,6 +189,21 @@ test('Agent parity starts with the expanded project sidebar and exposes Lightcha
   assert.match(source, /aria-label=\{workspaceStyle\.kind === 'agent' \? '送信' : 'AI生成'\}/);
 });
 
+test('Agent new-file opens the Lightchain project creation flow', async () => {
+  const source = await readFile(workbenchSourcePath, 'utf8');
+
+  assert.match(source, /const \[agentProjectCreateOpen, setAgentProjectCreateOpen\] = useState\(false\)/);
+  assert.match(source, /onClick=\{openAgentProjectCreate\}/);
+  assert.match(source, /title="プロジェクトを作成"/);
+  assert.match(source, /プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください/);
+  assert.match(source, /placeholder="プロジェクト名です"/);
+  assert.match(source, /\{agentProjectName\.length\} \/ 40/);
+  assert.match(source, /disabled=\{!agentProjectName\.trim\(\)\}/);
+  assert.match(source, /キャンセル/);
+  assert.match(source, />\s*作成\s*</);
+  assert.match(source, /data-testid="lightchain-agent-project-create-modal"/);
+});
+
 test('Agent category copy matches the Lightchain production controls', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 

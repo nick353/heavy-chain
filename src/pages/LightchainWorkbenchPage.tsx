@@ -1473,6 +1473,9 @@ export function LightchainWorkbenchPage() {
   // Keep Heavy on the same initial state; users can still collapse it with the
   // same control without changing the underlying task input flow.
   const [agentSidebarOpen, setAgentSidebarOpen] = useState(true);
+  const [agentProjectCreateOpen, setAgentProjectCreateOpen] = useState(false);
+  const [agentProjectName, setAgentProjectName] = useState('');
+  const [agentCreatedProjects, setAgentCreatedProjects] = useState<string[]>([]);
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
@@ -1744,6 +1747,72 @@ export function LightchainWorkbenchPage() {
       )}
     </Modal>
   ) : null;
+
+  const openAgentProjectCreate = () => {
+    setAgentProjectName('');
+    setAgentProjectCreateOpen(true);
+  };
+
+  const closeAgentProjectCreate = () => {
+    setAgentProjectCreateOpen(false);
+    setAgentProjectName('');
+  };
+
+  const handleAgentProjectCreate = () => {
+    const name = agentProjectName.trim().slice(0, 40);
+    if (!name) return;
+
+    setAgentCreatedProjects((current) => [name, ...current.filter((projectName) => projectName !== name)]);
+    setWorkspaceText('');
+    setLightchainResult(null);
+    closeAgentProjectCreate();
+    toast.success('プロジェクトを作成しました');
+  };
+
+  const agentProjectCreateModal = (
+    <Modal
+      isOpen={agentProjectCreateOpen}
+      onClose={closeAgentProjectCreate}
+      title="プロジェクトを作成"
+      size="sm"
+    >
+      <div className="space-y-4" data-testid="lightchain-agent-project-create-modal">
+        <p className="text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+          プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください
+        </p>
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={agentProjectName}
+            onChange={(event) => setAgentProjectName(event.target.value.slice(0, 40))}
+            placeholder="プロジェクト名です"
+            aria-label="プロジェクト名です"
+            maxLength={40}
+            autoFocus
+            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-primary-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-neutral-500"
+          />
+          <div className="text-right text-xs text-neutral-400 dark:text-neutral-500">{agentProjectName.length} / 40</div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={closeAgentProjectCreate}
+          className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-white/10"
+        >
+          キャンセル
+        </button>
+        <button
+          type="button"
+          onClick={handleAgentProjectCreate}
+          disabled={!agentProjectName.trim()}
+          className="rounded-lg bg-primary-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          作成
+        </button>
+      </div>
+    </Modal>
+  );
 
   const fittingReferenceImageModal = (
     <Modal
@@ -5558,9 +5627,14 @@ export function LightchainWorkbenchPage() {
               <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="mt-3 flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
                 <button type="button" aria-label="最近" className="flex items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
-                <button type="button" aria-label="新規ファイル" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="rounded-md p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
+                <button type="button" aria-label="新規ファイル" onClick={openAgentProjectCreate} className="rounded-md p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
               </div>
               <div className="mt-4 space-y-0">
+                {agentCreatedProjects.map((title) => (
+                  <button key={`created-${title}`} type="button" onClick={() => setWorkspaceText(title)} className="flex min-h-[58px] w-full items-start gap-2 py-2 pl-7 pr-0 text-left text-base font-normal leading-5 text-neutral-300 hover:bg-white/10">
+                    <span className="min-w-0 flex-1 truncate">{title}<span className="mt-1 block text-xs leading-4 text-neutral-500"><span className="mr-1 inline-block rounded border border-white/10 px-1 text-[10px] leading-4">プロジェクト</span>たった今</span></span>
+                  </button>
+                ))}
                 {agentRecentTasks.map(([title, kind, date]) => (
                   <button key={`${title}-${date}`} type="button" onClick={() => setWorkspaceText(title)} className="flex min-h-[58px] w-full items-start gap-2 py-2 pl-7 pr-0 text-left text-base font-normal leading-5 text-neutral-300 hover:bg-white/10">
                     <span className="min-w-0 flex-1 truncate">{title}<span className="mt-1 block text-xs leading-4 text-neutral-500"><span className="mr-1 inline-block rounded border border-white/10 px-1 text-[10px] leading-4">{kind}</span>{date}</span></span>
@@ -6199,6 +6273,7 @@ export function LightchainWorkbenchPage() {
           </aside>
         </section>
         {lightchainResultModal}
+        {agentProjectCreateModal}
       </main>
     );
   }
