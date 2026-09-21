@@ -8002,6 +8002,31 @@ remains active for the remaining source routes and states, provider receipts,
 durable persistence/readback/reconciliation, video-quality evidence,
 billing/operator proof, and strict release-gate artifacts.
 
+# Goal progress — 2026-09-21 r154
+
+The canonical Creator surface at `https://jp.linkaigc.com/creator` was compared
+against Heavy after both authenticated pages settled for the required wait.
+Heavy now matches the source's Creator geometry: the 104px/619px left panels,
+264px/459px right panels, 328px centered description, 18px Alimama heading,
+340px inspiration video at x=408/y=300.6, 286px keyword input at x=1585/y=395,
+and 40px permission button at y=749. The canonical full keyword placeholder is
+present, and the Creator route contains zero checkbox inputs.
+
+The source font fallback and Alimama font were added, the Creator background
+colors, semantics, input frame, disabled permission styling, and responsive
+vertical sizing were aligned, and the result was deployed to Worker version
+`3047ceba-d37f-40e3-9a71-1636d2df1624` after the final copy-width adjustment.
+Fresh live readback after the deployment measured the Heavy heading at
+`x=871.27/y=230.40`, paragraph at `x=788/y=263.60`, video at
+`x=408/y=300.60`, and the exact source input/button coordinates. Typecheck,
+Lightchain UI boundaries 15/15, and diff checks passed; lint had also passed on
+the preceding Creator geometry revision. Browser error and warning logs were
+empty. No provider generation, file upload, payment, publish, migration, or
+destructive cleanup was performed. The Goal remains active for the other
+canonical route/state parity work, authenticated provider receipts, durable
+persistence/readback/reconciliation, video-quality evidence, billing/operator
+proof, and strict release-gate artifacts.
+
 # Goal progress — 2026-09-21 r153
 
 The canonical source `https://jp.linkaigc.com/` was used for fresh visual and
