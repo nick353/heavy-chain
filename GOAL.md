@@ -1,3 +1,20 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r129
+
+本家 `https://jp.linkaigc.com/model` をChromeで再読し、ログイン済みの本家画面に
+`AIフィッティング`、`シングルタスク / マルチタスク`、衣服画像入力、説明生成・参考画像・
+モデルのセット写真、比率・解像度、`権限がありません`、`生成履歴`があることを確認した。
+Heavyの同一 `/model` 実装にはこれらの同一主要コントロールと、Light Chainにない権利確認
+checkbox/modal/badgeが無いことをソース契約・ローカル実装で確認した。
+
+追加の静的受入は UI control 15/15、provider coverage 22/22、unified workflow 6/6、
+permission parity 8/8、route 29/29、material 28/28、all-feature contract 5/5、
+video boundary 1/1、generation lifecycle 2/2、release-gate contract 13/13 を通過。
+ただしローカルChromeの `/model` は未認証のためログイン待ちシェルになり、本家と同じ
+ログイン済み状態でのHeavyのpixel/interaction比較は未取得。認証済みprovider receipt、
+durable save/readback/reconciliation、動画provider、deploy/release gateも未完了のまま。
+
+Goalは `in_progress` を維持する。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r128
 
 M01/P0-02の生成ライフサイクル判定を`src/lib/generationFlow.ts`へ分離し、
