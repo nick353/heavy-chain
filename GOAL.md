@@ -8577,6 +8577,15 @@ G618、H602 billing、real-generation visual scorecard）は変わらず、Goal�
 `in_progress`を維持する。詳細は
 `work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。
 
+# Goal progress — 2026-09-22 r186
+
+本家URLの再確認後、外部副作用なしの検証を並列実行した。Lightchain parity contract
+9/9、permission parity 8/8、route parity 31/31、all-feature verifier contract 5/5、
+video parity ledger 4/4、typecheckを通過した。Heavy-onlyの権利確認checkbox/badgeを
+追加しない契約も通過している。production monitor/UI、launch operations、all-feature
+order-preview、G618、H602、real-generation scorecardの6件は、認証・monitor・provider・
+operator証跡が必要なため未完了のまま保持する。Goalは`in_progress`を維持する。
+
 # Goal progress — 2026-09-22 r180
 
 前回r179のHeavy認証判定は、認証/bootstrapが収束する前の準備シェルを読んだ
