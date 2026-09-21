@@ -86,6 +86,7 @@ import {
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
   getLightchainUnifiedFeatureWorkflowContract,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
+import { getLightchainSourceGenerationAccess } from '../features/lightchain/sourceFeatureAccess';
 import {
   buildLightchainParityInputRoles,
   buildLightchainParityRuntime,
@@ -1431,10 +1432,6 @@ export function LightchainWorkbenchPage() {
   const lightchainResultRef = useRef<typeof lightchainResult>(null);
   lightchainResultRef.current = lightchainResult;
   const [lightchainResultPreviewOpen, setLightchainResultPreviewOpen] = useState(false);
-  // Light Chain does not expose a separate rights checkbox in this flow. The
-  // authenticated Light Chain route is the source-admitted generation path;
-  // the API still keeps its fail-closed boolean guard.
-  const [providerRightsConfirmed, setProviderRightsConfirmed] = useState(true);
   const [lightchainGenerationRunning, setLightchainGenerationRunning] = useState(false);
   const [lightchainGenerationError, setLightchainGenerationError] = useState<string | null>(null);
   const [resumeInputReadback, setResumeInputReadback] = useState<'restored' | 'unavailable' | null>(null);
@@ -1743,7 +1740,7 @@ export function LightchainWorkbenchPage() {
         </label>
         <button
           type="button"
-          disabled={!fittingReferenceImageUrl || !providerRightsConfirmed}
+          disabled={!fittingReferenceImageUrl || getLightchainSourceGenerationAccess('model-matrix') !== 'permitted'}
           className="w-full rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500 dark:disabled:bg-white/10 dark:disabled:text-neutral-500"
         >
           画像から単語への変換
@@ -1908,6 +1905,12 @@ export function LightchainWorkbenchPage() {
   const workflowRightsGate = selectedFeatureWorkflow?.rightsGate ?? '';
   const lightchainProviderRoute = selectedFeatureWorkflow?.providerRoute ?? 'unsupported';
   const lightchainProviderSupported = selectedFeatureWorkflow !== null;
+  const sourceModelGenerationDenied = lightchainProviderRoute === 'model-matrix'
+    && getLightchainSourceGenerationAccess('model-matrix') !== 'permitted';
+  // Light Chain does not expose a separate rights checkbox. The request-local
+  // flag is derived from the source entitlement; denied/unknown states remain
+  // fail-closed without adding a Heavy-only UI surface.
+  const providerRightsConfirmed = !sourceModelGenerationDenied;
   const activeSourceCategory = getLightchainVisibleCategoryId(selectedTool.category);
   const isPrintingImageGenerationRunning = printingGenerationStatus === 'pending' || printingGenerationStatus === 'processing';
   const isPrintingImageGenerationLocked = isPrintingImageGenerationRunning || printingGenerationRequestRef.current !== null;
@@ -2132,7 +2135,7 @@ export function LightchainWorkbenchPage() {
   // present; this is not an entitlement assertion or rights confirmation.
   const showModelPermissionGate = isModelRoute
     && selectedTool.id === 'ai-fitting'
-    && !garmentImageUrl;
+    && (!garmentImageUrl || sourceModelGenerationDenied);
   const lightchainToolPanelConfig = useMemo(() => {
     const base = {
       notice: null as string | null,
@@ -2243,7 +2246,6 @@ export function LightchainWorkbenchPage() {
     lightchainGenerationSequenceRef.current += 1;
     lightchainGenerationRequestRef.current = null;
     setLightchainGenerationRunning(false);
-    setProviderRightsConfirmed(true);
     setPlatformAssetRightsConfirmed(false);
     setLightchainGenerationError(null);
     setLightchainResult(null);
@@ -2413,7 +2415,6 @@ export function LightchainWorkbenchPage() {
     setPrintingCutoutErrors({ primary: null, secondary: null });
     setLightchainResult(null);
     setLightchainResultPreviewOpen(false);
-    setProviderRightsConfirmed(true);
     setLightchainGenerationRunning(false);
     setLightchainGenerationError(null);
     lightchainGenerationSequenceRef.current += 1;
@@ -3101,6 +3102,12 @@ export function LightchainWorkbenchPage() {
     overrides?: LightchainPreviewOverrides,
     options?: { rightsAlreadyConfirmed?: boolean },
   ) => {
+    if (sourceModelGenerationDenied) {
+      const message = '権限がありません';
+      setLightchainGenerationError(message);
+      toast.error(message);
+      return;
+    }
     const providerSourceImageUrl = materialSlotFiles.primary?.imageUrl || garmentImageUrl || undefined;
     const explicitBriefOnlyModel = lightchainProviderRoute === 'model-matrix'
       && currentModelPanel?.variant === 'custom'
@@ -3714,6 +3721,7 @@ export function LightchainWorkbenchPage() {
   const specialProviderGenerationLocked = !lightchainProviderSupported
     || brandResolutionPending
     || lightchainGenerationRunning
+    || sourceModelGenerationDenied
     || (workspaceStyle?.kind === 'agent' && !providerRightsConfirmed);
   const handleBrandRefresh = async () => {
     if (brandRefreshRunning) return;

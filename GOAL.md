@@ -1,3 +1,27 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r120
+
+The official public source at `https://jp.linkaigc.com/` was rechecked. Its
+current unauthenticated root redirects to `/login?redirect=/?`; the
+task-owned Companion tab therefore did not expose the protected workbench.
+Heavy's source-access readback was used only for the already observed
+permission state: model-matrix and fabric generation are denied, while
+printing generation remains unknown. Heavy now derives its API admission flag
+from that source state: denied/unknown routes stop before provider submission,
+and no Light-absent rights checkbox, modal, or badge is rendered.
+
+The change passed typecheck, lint, provider coverage 22/22, permission parity
+8/8, material contract 28/28, fitting lifecycle 10/10, route coverage 28/28,
+and the production Vite build. It was deployed as Web version
+`1432521e-a0d6-4b8a-b539-b9f9a1bcbead`; fresh public readback returned Web
+`/_health` HTTP 200, `/lightchain` HTTP 200, and the served Workbench/material
+bundles contained the fail-closed permission surface.
+
+The Goal remains open: authenticated source-vs-Heavy full visual/interaction
+diff, permitted provider generation receipts and durable readback, video
+provider/render/save/reuse evidence, and the six external/operator release
+gates are still missing. No provider submit, payment, publish, secret export,
+or destructive cleanup was performed.
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r119
 
 The latest static/provider checks remain green: OpenAI provider readiness 7/7,

@@ -1543,7 +1543,10 @@ function LightchainMaterialWorkbenchSession() {
   // entitlement adapter admits the module.
   const sourceFabricAccess = getLightchainSourceFeatureAccess('fabric-image');
   const sourceFabricAdmitted = sourceFabricAccess === 'admitted';
-  const sourceFabricGenerationDenied = getLightchainSourceGenerationAccess('fabric-image') === 'denied';
+  const sourceGenerationAccess = getLightchainSourceGenerationAccess(isPrinting ? 'printing-image' : 'fabric-image');
+  const sourceFabricGenerationDenied = getLightchainSourceGenerationAccess('fabric-image') !== 'permitted';
+  const sourcePrintingGenerationDenied = getLightchainSourceGenerationAccess('printing-image') !== 'permitted';
+  const sourceGenerationDenied = sourceGenerationAccess !== 'permitted';
   const libraryHandoff = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return {
@@ -1581,10 +1584,9 @@ function LightchainMaterialWorkbenchSession() {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  // The source Light Chain flow has no separate rights checkbox. Keep the
-  // API admission field enabled for this authenticated source-admitted route;
-  // the server-side safety guard remains in place.
-  const [providerRightsConfirmed, setProviderRightsConfirmed] = useState(true);
+  // Light Chain has no separate rights checkbox. Keep the API admission field
+  // derived from source entitlement and fail closed for denied/unknown states.
+  const providerRightsConfirmed = !sourceGenerationDenied;
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
   const generatedResultsRef = useRef(generatedResults);
   generatedResultsRef.current = generatedResults;
@@ -1863,7 +1865,6 @@ function LightchainMaterialWorkbenchSession() {
   useEffect(() => {
     if (generationInputEffectSignatureRef.current === generationInputSignature) return;
     generationInputEffectSignatureRef.current = generationInputSignature;
-    setProviderRightsConfirmed(true);
     if (generatedResults.length > 0) setGeneratedResultsStale(true);
     setPendingSurfaceJob(null);
     setProgressivePrintRun(null);
@@ -3258,6 +3259,12 @@ function LightchainMaterialWorkbenchSession() {
   void handleLegacyPreviewGenerate;
 
   const handleGenerate = async (options?: { rightsAlreadyConfirmed?: boolean }) => {
+    if (sourceGenerationDenied) {
+      const message = '権限がありません';
+      setGenerationError(message);
+      toast.error(message);
+      return;
+    }
     if (!cloudflareDataPlane) {
       const message = 'Cloudflare画像AIが未設定のため生成できません';
       setGenerationError(message);
@@ -6297,12 +6304,12 @@ function LightchainMaterialWorkbenchSession() {
                   data-testid="lightchain-print-generate"
                   onClick={() => void handleGenerate()}
                   isLoading={isGenerating}
-                  disabled={isGenerating || !lightchainPrintReady}
+                  disabled={sourcePrintingGenerationDenied || isGenerating || !lightchainPrintReady}
                   className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
                   size="lg"
                   leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
                 >
-                  {isGenerating ? '生成中…' : 'AI生成'}
+                  {sourcePrintingGenerationDenied ? '権限がありません' : isGenerating ? '生成中…' : 'AI生成'}
                 </Button>
 
                 {generationError && (

@@ -1,5 +1,23 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r62
+
+Version `1432521e-a0d6-4b8a-b539-b9f9a1bcbead` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. The Lightchain parity workbench
+now derives its provider admission flag from the observed source entitlement:
+model-matrix and fabric generation remain denied, and the unobserved printing
+generation route is fail-closed. This keeps the Light source's
+`権限がありません` surface without adding a Heavy-only rights checkbox,
+modal, or badge.
+
+Typecheck, lint, provider coverage 22/22, permission parity 8/8, material
+contract 28/28, fitting lifecycle 10/10, route coverage 28/28, production
+build, asset upload, Wrangler dry-run, deployment, and fresh public readback
+passed. Public `/_health` returned HTTP 200 and `/lightchain` returned HTTP
+200. The official protected source was not authenticated in the task-owned
+tab, so this release does not claim provider generation or private artifact
+reconciliation.
+
 ## Latest Web release — 2026-09-21 r61
 
 Version `c4f3f8fe-a3fb-49d9-91b6-67807f5991dc` is deployed at 100% to

@@ -174,7 +174,8 @@ test('keeps the generation-time rights gate request-local and fail-closed', () =
     workbenchSource,
     /const rightsConfirmedForRequest = providerRightsConfirmed \|\| options\?\.rightsAlreadyConfirmed === true;/,
   );
-  assert.match(workbenchSource, /const \[providerRightsConfirmed, setProviderRightsConfirmed\] = useState\(true\)/);
+  assert.match(workbenchSource, /const providerRightsConfirmed = !sourceModelGenerationDenied/);
+  assert.match(workbenchSource, /const sourceModelGenerationDenied = lightchainProviderRoute === 'model-matrix'/);
   assert.doesNotMatch(workbenchSource, /rightsConfirmationOpen|pendingRightsGenerationRef|権利を確認してAI生成/);
 });
 
