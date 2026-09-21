@@ -1,5 +1,11 @@
 # Light Chain source parity and live OpenAI readback — 2026-09-21 r108
 
+The G614 operations-docs gate was corrected so the active server-only
+OpenAI credential alias is not misclassified as a retired provider reference;
+the retired-runtime scan still rejects Supabase and arbitrary provider-proxy
+references. G614, security audit, and diff checks pass without any provider
+submission or deployment.
+
 Fresh authenticated Companion observation of the actual Light source
 `https://jp.linkaigc.com/marketing` was used as the visual authority. Heavy's
 `/marketing` now opens a source-shaped marketing landing page instead of the

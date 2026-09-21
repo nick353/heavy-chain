@@ -21,7 +21,10 @@ const activeRuntimeFiles = [
   'src/lib/cloudflareProtectedImageEdit.ts', 'cloudflare/heavy-api/src/image-ai.ts',
   'cloudflare/heavy-api/src/image-ai-contracts.ts',
 ];
-const retiredRuntimePattern = /(?:supabase\.co|@supabase\/|\/rest\/v1\/|\/auth\/v1\/|\/functions\/v1\/|SUPABASE_(?:URL|ANON_KEY)|OPENAI_API_KEY)/i;
+// OPENAI_API_KEY is a supported server-only credential alias for the active
+// OpenAI Images adapter. It is not a retired provider reference; browser
+// paths are covered separately by the client-boundary tests.
+const retiredRuntimePattern = /(?:supabase\.co|@supabase\/|\/rest\/v1\/|\/auth\/v1\/|\/functions\/v1\/|SUPABASE_(?:URL|ANON_KEY)|AI_PROVIDER_URL)/i;
 
 for (const file of requiredDocs) addCheck(`current Cloudflare operations document exists: ${file}`, fs.existsSync(file), { file });
 const imageAiText = readText('cloudflare/heavy-api/IMAGE_AI.md');
