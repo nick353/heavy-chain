@@ -136,9 +136,10 @@ test('keeps the video project dashboard and detail route aligned with Lightchain
   assert.match(detail, /ここをクリックまたはドラッグして画像を追加/);
   assert.match(detail, /最大20M/);
   assert.match(detail, /w-\[264px\]/);
-  assert.match(detail, /max-w-\[784px\]/);
-  assert.match(detail, /radial-gradient\(#4b5b5f_0\.7px,transparent_0\.7px\)/);
-  assert.match(detail, /aria-hidden=\"true\" className=\"mr-2 inline-block rounded bg-cyan-500\/80/);
+  assert.match(detail, /video-source-empty-upload/);
+  assert.match(detail, /w-\[781\.59px\]/);
+  assert.match(detail, /LIGHTCHAIN_VIDEO_PROJECT_ICON/);
+  assert.match(detail, /video-source-empty-dots/);
   assert.doesNotMatch(detail, /border-dashed border-cyan-300\/70/);
   assert.match(detail, /video_provider_not_admitted/);
 });

@@ -32,6 +32,9 @@ test('video project board keeps canonical card geometry and fail-closed provider
   assert.match(videoDashboard, /h-\[240px\]/);
   assert.match(videoDashboard, /lg:grid-cols-\[repeat\(7,220px\)\]/);
   const videoDetail = await readFile(new URL('../src/pages/VideoWorkstationPage.tsx', import.meta.url), 'utf8');
+  assert.match(videoDetail, /video-source-empty-upload/);
+  assert.match(videoDetail, /w-\[781\.59px\]/);
+  assert.match(parityCss, /\.video-source-empty-upload[\s\S]*781\.59px/);
   assert.match(videoDetail, /video_provider_not_admitted/);
   assert.doesNotMatch(videoDetail, /権利確認後/);
 });

@@ -103,6 +103,7 @@ const initialMaterialReference: MaterialReferenceState = {
 const VIDEO_GUIDE_DISMISSED_STORAGE_KEY = 'heavy-chain-video-guide-dismissed';
 const LIGHTCHAIN_VIDEO_MAIN_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/c914c5010e17ca8f3bdbdb93ae2088fc.jpeg?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
 const LIGHTCHAIN_VIDEO_REFERENCE_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/73e4af273bd3f306c8ed549efd3a7cb5.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
+const LIGHTCHAIN_VIDEO_PROJECT_ICON = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/%E8%A7%86%E9%A2%91%E5%B7%A5%E4%BD%9C%E5%8F%B0icon.png?x-oss-process=image/resize,m_lfit,w_48,limit_1/format,webp';
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -461,18 +462,16 @@ export function VideoWorkstationPage() {
 
   if (!materialReference.imageUrl) {
     return (
-      <main className="relative dark min-h-[calc(100vh-56px)] overflow-hidden bg-[#101516] px-4 py-6 text-white">
-        <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(#4b5b5f_0.7px,transparent_0.7px)] [background-size:22px_22px]" />
-        <div className="relative z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#252b2d] text-sm text-neutral-200 shadow-xl">
-          <div className="border-b border-white/10 px-3 py-1.5 text-xs text-neutral-300">
-            <span aria-hidden="true" className="mr-2 inline-block rounded bg-cyan-500/80 px-1.5 py-1 text-[10px] leading-none">🎬</span>
-            動画ワークステーション
-          </div>
-          <div className="px-3 py-3"><span aria-hidden="true" className="mr-5 text-lg">‹</span>Untitled</div>
+      <main className="video-source-empty-page relative dark min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white">
+        <div className="video-source-empty-dots pointer-events-none absolute inset-0" />
+        <div className="video-source-empty-project-rail absolute left-4 top-6 z-10 flex w-[264px] flex-col gap-2 rounded-xl border border-white/10 bg-[#262a2b] p-2 text-neutral-200 shadow-xl">
+          <div className="flex h-5 items-center text-sm text-neutral-400"><img src={LIGHTCHAIN_VIDEO_PROJECT_ICON} alt="" className="mr-1 size-5 object-contain" />動画ワークステーション</div>
+          <div className="h-px w-full bg-white/10" />
+          <Link to="/flow/GenerateShortVideo" aria-label="動画ワークステーションへ戻る" className="flex w-fit items-center gap-2 text-base text-neutral-400 hover:text-white"><ChevronRight className="h-5 w-5 rotate-180" />Untitled</Link>
         </div>
         <label
           data-testid="video-initial-image-dropzone"
-          className="relative z-10 mx-auto mt-8 flex min-h-[31rem] max-w-[784px] cursor-pointer flex-col items-center justify-center rounded-xl border border-white/10 bg-[#282c2d] px-6 text-center transition hover:bg-[#303638]"
+          className="video-source-empty-upload absolute left-1/2 top-[137.43px] z-10 flex h-[496.14px] w-[781.59px] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/15 bg-[#262a2b] px-6 text-center transition hover:border-cyan-300/60"
         >
           <Upload className="h-10 w-10 text-white" />
           <span className="mt-5 text-sm text-neutral-200">ここをクリックまたはドラッグして画像を追加</span>

@@ -736,6 +736,35 @@
   }
 }
 
+/* Video new-file state follows the same source upload canvas as the canonical
+   route; only the feature title/icon differs from Fashion Studio. */
+.video-source-empty-page {
+  isolation: isolate;
+}
+
+.video-source-empty-dots {
+  z-index: 0;
+  background-color: #171b1c;
+  background-image: radial-gradient(#464b50 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.video-source-empty-project-rail {
+  height: 84px;
+  border-color: #3d4346;
+}
+
+.video-source-empty-upload {
+  border-color: #3d4346;
+  color: #e3e8e8;
+}
+
+@media (max-width: 900px) {
+  .video-source-empty-upload {
+    width: min(781.59px, calc(100vw - 32px));
+  }
+}
+
 /* Touch action improvements for mobile */
 @media (hover: none) and (pointer: coarse) {
   .glass-card:hover {

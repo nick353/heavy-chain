@@ -8246,3 +8246,23 @@ payment, publish, migration, or destructive cleanup was performed. The Goal
 remains active for other source routes/states, authenticated provider receipts,
 durable persistence/readback/reconciliation, video-quality evidence,
 billing/operator proof, and strict release-gate artifacts.
+
+# Goal progress — 2026-09-22 r163
+
+The authenticated canonical video new-file detail state at
+`https://jp.linkaigc.com/flow/GenerateShortVideo/detail` was compared with
+Heavy after the required 30-second settle. Heavy now uses the source's video
+workstation icon and rail structure, dotted canvas, dashed upload surface, and
+exact upload geometry: source and Heavy both read `x=561.21/y=187.43`,
+`781.59x496.14` at a 1904x821 viewport. The source and Heavy screenshots show
+the same empty upload composition, Japanese copy, and no rights checkbox.
+
+Worker version `3df86fed-c0a5-4aa4-81b7-6b4b78fee66d` is live after build and
+deploy. A cache-separated live readback confirmed the new bundle, zero browser
+errors/warnings, zero checkbox inputs, and the source coordinates. The focused
+video/source routing tests passed 33/33 and typecheck/diff checks passed. No
+provider generation, file upload, payment, publish, migration, or destructive
+cleanup was performed. The Goal remains active for video existing-project
+states, all other canonical route/state parity layers, provider receipts,
+durable persistence/readback/reconciliation, business/legal decisions, and the
+strict release-gate artifacts.
