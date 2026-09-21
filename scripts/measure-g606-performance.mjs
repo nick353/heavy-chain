@@ -91,6 +91,10 @@ const isExplicitStaticMock = (url) => (
     url.hostname === 'lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com'
     && /^\/light-chain-platform\/tools\/.*\.(?:mp4|webm)$/i.test(url.pathname)
   )
+  || (
+    url.hostname === 'lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com'
+    && /^\/(?:persistence\/font-end|light-chain-platform\/common)\/.*\.(?:mp4|webm|woff2?|ttf|otf)$/i.test(url.pathname)
+  )
 );
 
 const isKnownCloudflareApiOrigin = (url) => (
@@ -602,7 +606,10 @@ const fulfillExplicitStaticMock = async (route, url) => {
     });
     return;
   }
-  await route.fulfill({ status: 200, contentType: 'video/mp4', body: Buffer.alloc(0) });
+  const contentType = /\.(?:woff2?|ttf|otf)$/i.test(url.pathname)
+    ? 'font/woff'
+    : 'video/mp4';
+  await route.fulfill({ status: 200, contentType, body: Buffer.alloc(0) });
 };
 
 const installG606NetworkGuard = async (browserContext, contract) => {
@@ -1091,13 +1098,13 @@ const run = async () => {
     // The unified Heavy workbench intentionally opens on the Lightchain parity
     // surface. Keep the performance fixture aligned with the current product
     // route instead of waiting for the retired Heavy Chain landing copy.
-    routes.push(await measureRoute(page, '/', '[data-testid="design-production-page"]'));
+    routes.push(await measureRoute(page, '/', '[data-testid="lightchain-tool-grid"]'));
     routes.push(await measureRoute(page, '/tools/fabric', '[data-testid="lightchain-material-workbench"]'));
     // `/tools/printing` is the current parity page, not the fabric workbench.
     // Wait on its active visible tab so the performance fixture follows the
     // current route contract instead of a retired workbench test id.
     routes.push(await measureRoute(page, '/tools/printing', '[role="tab"][aria-selected="true"]'));
-    routes.push(await measureRoute(page, '/model', '[data-testid="fitting-action-panel"]'));
+    routes.push(await measureRoute(page, '/model', '[data-testid="lightchain-fitting-input-flow"]'));
     routes.push(await measureRoute(page, '/gallery', 'text=ギャラリー'));
     await page.waitForFunction(
       () => document.querySelectorAll('[data-g606-gallery-tile], .group.relative.aspect-square').length >= 60,

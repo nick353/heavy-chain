@@ -91,13 +91,13 @@ const requiredReadbacks = [
   },
   {
     name: 'G603 garment Canvas',
-    path: 'output/playwright/g603-garment-layer-canvas-20260909T224537Z/SUMMARY.json',
+    latestSummaryPrefix: 'g603-garment-layer-canvas-20260922-',
     validate: (json) => json.ok === true && arrayFrom(json.failed).length === 0,
     expect: 'ok=true and failed=[]',
   },
   {
     name: 'G605 onboarding templates',
-    path: 'output/playwright/g605-onboarding-templates-20260909T225306Z/SUMMARY.json',
+    latestSummaryPrefix: 'g605-onboarding-templates-20260922-',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -107,7 +107,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G606 performance scale',
-    path: 'output/playwright/g830-g606-performance-current-r1/summary.json',
+    latestSummaryPrefix: 'g830-g606-performance-current-',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.issues).length === 0 &&
@@ -747,8 +747,9 @@ function resolveReadbackPath(item) {
   for (const summaryPath of fs
     .readdirSync(baseDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name.startsWith(item.latestSummaryPrefix))
-    .map((entry) => path.join(baseDir, entry.name, 'SUMMARY.json'))
-    .filter((summaryPath) => fs.existsSync(summaryPath))) {
+    .flatMap((entry) => ['SUMMARY.json', 'summary.json']
+      .map((fileName) => path.join(baseDir, entry.name, fileName))
+      .filter((summaryPath) => fs.existsSync(summaryPath)))) {
     try {
       const json = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
       const timestamp =

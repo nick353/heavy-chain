@@ -8479,3 +8479,27 @@ launch operations, current all-feature previews, stale local/scale evidence,
 H602 production proof, and the intentionally skipped-command marker in the
 readback-only diagnostic run. No provider, payment, deploy, or publish action
 was performed.
+
+# Goal progress — 2026-09-22 r176
+
+Refreshed the remaining local infrastructure proofs against the current
+Lightchain-aligned routes. G610 retention/project search passed with
+`output/playwright/g610-retention-project-search-current-20260910-r3`;
+G603 garment upload -> manual mask -> layer placement -> Canvas persistence
+passed with `output/playwright/g603-garment-layer-canvas-20260922-r1/SUMMARY.json`;
+and G605 onboarding/templates passed with
+`output/playwright/g605-onboarding-templates-20260922-r1/SUMMARY.json`.
+
+G606 was repaired and rerun locally. Its verifier now waits on the current
+top-level `lightchain-tool-grid` and `/model` `lightchain-fitting-input-flow`
+markers instead of retired selectors, and mocks the canonical source's static
+demo video/font assets without external network access. The fresh result
+`output/playwright/g830-g606-performance-current-20260922-r6/summary.json` is
+`ok=true`: all five routes stayed below the 5s readiness threshold, Gallery
+rendered 60 initial tiles from a 500-image fixture, Canvas rendered 180
+objects with nonblank/color pixels, and export produced a valid 3348x9948 PNG;
+console, page-error, response-error, and request-failure lists are empty.
+Targeted ESLint and `git diff --check` pass. These local proofs do not replace
+authenticated production provider receipts, durable R2 readback,
+reconciliation, billing/operator proof, or the real generation scorecard; the
+Goal remains active.
