@@ -1,5 +1,24 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r58
+
+Version `3515ec9d-4042-4469-a95f-c257f15fcb0a` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. This release aligns the
+authenticated `/flow/GenerateShortVideo/detail` editor with the official
+Lightchain source: source-sized image layers and rounded corners, the compact
+reference panel, the asset button and icon, and the exact bottom-toolbar
+geometry. It keeps the source labels, reference controls, disabled
+`権限がありません 6` action, and no Light-absent rights checkbox or modal.
+
+The source and Heavy detail pages were each read back after a 30-second wait
+in the same authenticated Chrome profile. The final Heavy geometry matched
+the source at the measured positions; typecheck, lint, diff check, build, R2
+asset preparation, Wrangler dry-run, and the video provider boundary test
+passed. The source project identifier and Heavy fixture identifier differ by
+account, so this release claims UI contract parity, not fixture identity. No
+provider generation, render, save, payment, publish, or private-media
+completion is claimed.
+
 ## Latest Web release — 2026-09-21 r57
 
 Version `64bdc7a3-9f6d-4320-b34f-8133ebf617f5` is deployed at 100% to

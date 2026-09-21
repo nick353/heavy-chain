@@ -836,7 +836,6 @@ function VideoSourceEditorParity({
   onImageChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onBack: () => void;
 }) {
-  const [activeTool, setActiveTool] = useState('参考画像モード');
   const [garmentReference, setGarmentReference] = useState('main');
   const [modelReference, setModelReference] = useState('main');
   const [referenceVideoName, setReferenceVideoName] = useState('');
@@ -860,40 +859,22 @@ function VideoSourceEditorParity({
           </button>
         </div>
 
-        <div className="ml-[280px] flex max-w-[590px] items-center gap-1 rounded-xl border border-white/10 bg-[#252b2d] px-2 py-2 text-xs text-neutral-200 shadow-xl">
-          {['アセット', 'クリッピング', '動画生成', 'スタイルテンプレート', '参考画像モード'].map((tool) => (
-            <button
-              key={tool}
-              type="button"
-              onClick={() => setActiveTool(tool)}
-              className={activeTool === tool ? 'whitespace-nowrap rounded-lg bg-white/15 px-2 py-2 text-[11px] text-white' : 'whitespace-nowrap rounded-lg px-2 py-2 text-[11px] text-neutral-300 hover:bg-white/10'}
-            >
-              {tool}
-            </button>
-          ))}
-          <label htmlFor="video-main-image-upload" aria-label="画像を追加" className="cursor-pointer rounded-lg px-2 py-2 text-lg text-neutral-300 hover:bg-white/10">⊞</label>
-          <input id="video-main-image-upload" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="sr-only" onChange={onImageChange} />
-          <button type="button" aria-label="フォルダーを開く" className="rounded-lg px-2 py-2 text-lg text-neutral-300 hover:bg-white/10">⌁</button>
-          <button type="button" aria-label="ダウンロード" className="rounded-lg px-2 py-2 text-lg text-neutral-300 hover:bg-white/10">⇩</button>
-          <button type="button" aria-label="実行" className="rounded-lg px-2 py-2 text-lg text-neutral-300 hover:bg-white/10">▷</button>
-        </div>
-
         <div className="absolute right-4 top-5 rounded-xl border border-white/10 bg-[#252b2d] px-4 py-3 text-xs text-neutral-300 shadow-xl">
           ✨ 残り生成回数 <span className="ml-2 font-semibold text-white">9</span>
         </div>
 
-        <div className="relative mt-3 min-h-[660px] rounded-2xl">
+        <div className="relative mt-[80px] min-h-[660px] rounded-2xl">
           {secondaryImageUrl && (
-            <div className="absolute left-[18%] top-0 h-[520px] w-[300px] overflow-hidden rounded-xl border border-white/10 bg-[#22282a] opacity-90 shadow-2xl">
+            <div className="absolute left-[29.7%] top-[239px] h-[375px] w-[300px] overflow-hidden rounded-[40px] bg-[#22282a] shadow-2xl">
               <img src={secondaryImageUrl} alt="imgResult" className="h-full w-full object-cover" />
             </div>
           )}
-          <div className="absolute left-[18%] top-0 z-10 h-[304px] w-[378px] overflow-hidden rounded-xl border-2 border-cyan-300/80 bg-[#202627] shadow-2xl">
+          <div className="absolute left-[18.4%] top-0 z-10 h-[300px] w-[375px] overflow-hidden rounded-[40px] bg-[#202627] shadow-2xl">
             <img src={imageUrl} alt="imgResult" className="h-full w-full object-cover" />
             <span className="absolute right-3 top-3 rounded bg-black/35 px-2 py-1 text-sm text-white">↗</span>
           </div>
 
-          <aside className="absolute left-[40%] top-14 z-20 w-[210px] rounded-xl border border-white/10 bg-[#252b2d] p-3 text-xs text-neutral-300 shadow-2xl">
+          <aside className="absolute left-[40.15%] top-[52px] z-20 w-[210px] origin-top scale-y-[0.87] rounded-[40px] border border-white/10 bg-[#252b2d] p-3 text-xs text-neutral-300 shadow-2xl">
             <p className="text-[11px] text-neutral-400">参考画像モード</p>
             <p className="mt-2 rounded-lg bg-gradient-to-r from-cyan-500/80 to-fuchsia-500/70 px-2 py-2 text-[11px] font-semibold text-white">
               ✨ 参考動画をアップロードしてワンクリックで再現
@@ -940,16 +921,21 @@ function VideoSourceEditorParity({
           </aside>
         </div>
 
-        <button type="button" aria-label="レイヤーツール" className="absolute bottom-20 left-4 rounded-xl border border-white/10 bg-[#252b2d] p-4 text-xl text-neutral-200 shadow-xl">♧</button>
+        <label htmlFor="video-main-image-upload" aria-label="アセット" title="アセット" className="absolute left-[21px] top-[361.5px] z-20 flex size-12 cursor-pointer items-center justify-center rounded-lg bg-[#252b2d] text-neutral-200 hover:bg-[#30383a]">
+          <svg aria-hidden="true" className="size-5" viewBox="0 0 20 20" fill="none">
+            <path d="M12.5289 1.08738C12.9681 0.648381 13.6641 0.621208 14.1353 1.00535L14.2271 1.08738L18.7583 5.61863C19.2267 6.08702 19.2263 6.84721 18.7583 7.31589L16.3228 9.75046L18.1988 11.6255C19.0186 12.4455 19.0175 13.7751 18.1978 14.5952L15.0865 17.7075C14.2664 18.5276 12.9359 18.5276 12.1158 17.7075L10.2408 15.8325L8.08257 17.9917L7.98393 18.0815C7.74135 18.2754 7.43025 18.3687 7.11772 18.3384L2.98784 17.936L2.88139 17.9214C2.39651 17.8301 2.01543 17.4483 1.92436 16.9634L1.91069 16.8579L1.50737 12.728C1.4771 12.4156 1.57138 12.1053 1.76518 11.8628L1.85405 11.7632L4.01225 9.60398L2.07475 7.66648C1.25497 6.84635 1.25476 5.51577 2.07475 4.69578L5.18706 1.58445C6.00718 0.764651 7.33776 0.764449 8.15776 1.58445L10.0943 3.52097L12.5289 1.08738ZM11.5142 14.5591L13.3892 16.4341C13.5064 16.5512 13.6959 16.5512 13.813 16.4341L16.9253 13.3227C17.0422 13.2056 17.0423 13.015 16.9253 12.8979L15.0503 11.0229L11.5142 14.5591ZM3.32768 12.8354L3.65385 16.1919L7.0103 16.518L13.2925 10.2368L9.60893 6.5532L3.32768 12.8354ZM10.8824 5.27976L14.566 8.96335L17.0611 6.46726L13.3785 2.78464L10.8824 5.27976ZM6.88432 2.85691C6.76714 2.74084 6.57657 2.74084 6.45952 2.85789L3.34819 5.96921C3.23114 6.08626 3.23136 6.27586 3.34819 6.39304L5.28569 8.33054L8.82182 4.79441L6.88432 2.85691Z" fill="currentColor" />
+          </svg>
+        </label>
+        <input id="video-main-image-upload" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="sr-only" onChange={onImageChange} />
         <div className="absolute bottom-5 left-4 rounded-xl border border-white/10 bg-[#252b2d] px-4 py-3 text-xs text-neutral-300 shadow-xl">
           ▣ タスク <span className="ml-20">0 進行中⌃</span>
         </div>
-        <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-1 rounded-xl border border-white/10 bg-[#252b2d] p-2 text-lg text-neutral-300 shadow-xl">
-          <button type="button" aria-label="選択" className="rounded-lg bg-white/10 px-3 py-2">▷</button>
-          <button type="button" aria-label="移動" className="rounded-lg px-3 py-2 hover:bg-white/10">✋</button>
-          <button type="button" aria-label="画像を追加" className="rounded-lg px-3 py-2 hover:bg-white/10">▧</button>
-          <button type="button" aria-label="元に戻す" className="rounded-lg px-3 py-2 hover:bg-white/10">↶</button>
-          <button type="button" aria-label="やり直す" className="rounded-lg px-3 py-2 hover:bg-white/10">↷</button>
+        <div className="absolute bottom-[49px] left-1/2 flex -translate-x-1/2 gap-1 rounded-xl border border-white/10 bg-[#252b2d] p-2 text-2xl text-neutral-300 shadow-xl">
+          <button type="button" aria-label="選択" className="size-9 rounded-lg bg-white/10 p-2 text-sm">▷</button>
+          <button type="button" aria-label="移動" className="size-9 rounded-lg p-2 text-sm hover:bg-white/10">✋</button>
+          <button type="button" aria-label="画像を追加" className="size-9 rounded-lg p-2 text-sm hover:bg-white/10">▧</button>
+          <button type="button" aria-label="元に戻す" className="size-9 rounded-lg p-2 text-sm hover:bg-white/10">↶</button>
+          <button type="button" aria-label="やり直す" className="size-9 rounded-lg p-2 text-sm hover:bg-white/10">↷</button>
         </div>
         <div className="absolute bottom-5 right-4 rounded-xl border border-white/10 bg-[#252b2d] px-4 py-3 text-xs text-neutral-300 shadow-xl">⌕ 30% ⌄ ⌕</div>
       </div>

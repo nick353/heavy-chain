@@ -1,3 +1,35 @@
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r115
+
+The official authenticated source detail at
+`https://jp.linkaigc.com/flow/GenerateShortVideo/detail?boardProjectCode=2061700413541396482&boardProjectType=GenerateShortVideoCustom`
+was read back in Chrome after the requested 30-second wait and compared with
+Heavy's corresponding existing-project detail route. Heavy now matches the
+source editor geometry and visible state: the 375x300 main image, 300x375
+reference layer, 210x485 reference panel, 48px asset button at the source
+position, source-sized rounded corners, and the 214x54 bottom toolbar at the
+source position. The source-shaped asset icon, source labels, radio groups,
+video selector, disabled `権限がありません 6` action, credit badge, and task
+panel are present; no Light-absent rights checkbox or rights modal was added.
+
+The final production Web Worker version is
+`3515ec9d-4042-4469-a95f-c257f15fcb0a`. The build, R2 asset upload, Wrangler
+dry-run, typecheck, lint, diff check, and video provider boundary test passed
+(1/1). Final authenticated Heavy readback waited 30 seconds and returned the
+canonical detail route, expected accessibility labels, matching geometry, and
+a screenshot. The source uses a numeric account project code while Heavy uses
+the existing `untitled-3m` fixture route; this pass verifies the source UI
+contract, not cross-account fixture identity.
+
+This closes the current video-editor visual parity slice, but not the full
+Light-to-Heavy goal. Video provider execution/rendering, durable save/reuse
+readback, same-fixture full interaction diff coverage, Gallery/Canvas/History/
+Jobs continuity, and the six external/operator release-gate blockers remain
+open: authenticated production monitor/UI evidence, launch operations,
+production all-feature order previews, a fresh G618 scale baseline,
+production H602 billing completion, and the real-generation visual scorecard.
+No provider submit, payment, publish, secret export, or destructive cleanup
+was performed.
+
 # Light Chain source parity and live OpenAI readback — 2026-09-21 r114
 
 The official authenticated source page at
