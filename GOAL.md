@@ -7877,3 +7877,14 @@ save/readback/reconciliation, or close billing/operator/strict release gates.
 The canonical source authentication tab is still absent from the current
 Chrome profile, so authenticated source capture and same-state visual diff
 remain the next external-state-dependent step.
+
+# Goal progress — 2026-09-21 r147
+
+The current `npm run verify:goal-readiness:incomplete-ok` audit captured at
+`2026-09-21T10:36:00.545Z` reports the Cloudflare runtime, auth/media
+adapters, AI adapter, and removal of the legacy Supabase runtime entrypoint
+all passing. It explicitly records `externalApiCall=not_touched`,
+`generationSubmit=not_clicked`, `migrationApply=not_run`, and `deploy=not_run`.
+The audit also states its proof limit: it cannot establish authenticated
+production generation, AI quality, R2 persistence, or browser business
+completion. Goal remains active with those proof boundaries intact.
