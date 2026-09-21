@@ -57,11 +57,11 @@ test('Creator mirrors the Lightchain full and compact category sets', async () =
   assert.ok(source.includes("{ label: 'ワンピース/セットアップ', items: ['つなぎ'] }"));
 });
 
-test('Wear Design Lab resumes through current persisted projects instead of a seeded project id', async () => {
+test('Wear Design Lab mirrors the current project cards without a seeded project id', async () => {
   const source = await readFile(parityPagesSourcePath, 'utf8');
 
-  assert.match(source, /既存プロジェクトを続ける/);
-  assert.match(source, /index === 1 \? '\/designProduction'/);
+  assert.match(source, /orientedDesignProjectImages/);
+  assert.match(source, /`\/flow\/orientedDesign\/detail\?project=\$\{index \+ 1\}`/);
   assert.doesNotMatch(source, /boardProjectCode=2088009465900642306/);
 });
 

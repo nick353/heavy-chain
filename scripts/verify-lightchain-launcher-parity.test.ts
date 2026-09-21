@@ -180,6 +180,7 @@ test('launcher uses the canonical Lightchain artwork for fitting and graphics ca
   ]) {
     assert.match(source, new RegExp(`home5_0_1/${asset}`));
   }
+  assert.match(source, /'remove-background': 'https:\/\/lightchain-qlxy-prod\.oss-cn-hangzhou\.aliyuncs\.com\/light-chain-platform\/home5_0_1\/FixDeformitiesCover\.png/);
 });
 
 test('homepage case tabs use the current Lightchain labels', () => {
