@@ -8458,3 +8458,13 @@ missing current all-feature production previews, stale G610/G603/G605/G606/G620
 and G618 artifacts, incomplete H602 production proof, and the missing real
 generation visual scorecard. No new provider request, payment, publish,
 deployment, or destructive operation was performed.
+# Goal progress — 2026-09-22 r174
+
+The live Heavy API health endpoint was read directly and returned HTTP 200 with
+`{"status":"ok","service":"heavy-api","media":"private-r2"}`. This
+confirms the deployed API/private-media surface is reachable, but intentionally
+does not promote provider generation, user-scoped receipt, R2 object
+readback, or business completion. The integrated gate's remaining failures are
+therefore not a general API outage: they are missing authenticated production
+evidence and the real visual scorecard. The Goal remains active and the
+fail-closed provider boundary is unchanged.
