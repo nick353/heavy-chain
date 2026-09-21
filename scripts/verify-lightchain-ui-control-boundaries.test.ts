@@ -195,6 +195,16 @@ test('Agent category copy matches the Lightchain production controls', async () 
   assert.match(source, /AIグラフィックデザイン:\s*\{\s*helper: ''/s);
 });
 
+test('Agent recent-task rail keeps the current Lightchain source inventory', async () => {
+  const source = await readFile(workbenchSourcePath, 'utf8');
+  const block = source.match(/const agentRecentTasks = \[([\s\S]+?)\n\s{4}\] as const;/)?.[1] ?? '';
+  const rows = block.match(/^\s+\['[^']+', '[^']+', '[^']+'\],?$/gm) ?? [];
+
+  assert.equal(rows.length, 25);
+  assert.match(block, /\['クリエイティブ企画2025120313', 'テーマ企画', '25-12-03'\]/);
+  assert.match(block, /\['ZIMMERMANN風 2026年 Womenデザイン企画', 'テーマ企画', '25-10-08'\]/);
+});
+
 test('parity runtime captures feature-specific settings in the comparison key', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 
