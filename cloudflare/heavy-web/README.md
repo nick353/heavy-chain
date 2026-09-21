@@ -1,5 +1,18 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r55
+
+Version `091ac99e-2dcc-4dc1-acaf-2095297b14e8` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. This release adds the official
+Lightchain `/flow/laboratory/detail` route with the source empty-canvas state:
+`Lightchain Lab`, `Untitled`, the dotted workspace background, and the
+20MB image dropzone. Route parity passed 28/28 and entry-routing passed 26/26;
+typecheck, lint, build, R2 asset preparation, and Wrangler dry-run passed.
+Fresh public readback returned Web `/_health` HTTP 200,
+`/lightchain` HTTP 200, and `/flow/laboratory/detail` HTTP 200; the served
+detail chunk contains the source copy and no rights checkbox. No provider,
+payment, publish, or private-media completion is claimed.
+
 ## Latest Web release — 2026-09-21 r54
 
 Version `45464b67-f097-4c1d-bdcb-5a28a0c979ff` is deployed at 100% to

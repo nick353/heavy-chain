@@ -54,6 +54,7 @@ const VideoProjectDashboardPage = lazy(() => import('./pages/VideoProjectDashboa
 const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').then((module) => ({ default: module.VideoWorkstationPage })));
 const LightchainSourceNotFoundPage = lazy(() => import('./pages/LightchainSourceNotFoundPage').then((module) => ({ default: module.LightchainSourceNotFoundPage })));
 const LabPage = lazy(() => import('./pages/LabPage').then((module) => ({ default: module.LabPage })));
+const LightchainLabDetailPage = lazy(() => import('./pages/LightchainLabDetailPage').then((module) => ({ default: module.LightchainLabDetailPage })));
 const LightchainWorkbenchPage = lazy(() => import('./pages/LightchainWorkbenchPage').then((module) => ({ default: module.LightchainWorkbenchPage })));
 const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
 const HistoryPage = lazy(() => import('./pages/HistoryPage').then((module) => ({ default: module.HistoryPage })));
@@ -1208,6 +1209,16 @@ function AppRoutes() {
                     <LabPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/flow/laboratory/detail"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<LightchainLabDetailPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }

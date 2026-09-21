@@ -66,6 +66,20 @@ test('keeps the official mobile login route on the shared authentication surface
   assert.match(source, /path="\/login-m"[\s\S]*?<LoginPage \/>/);
 });
 
+test('keeps the official Lightchain Lab detail route on the source empty-canvas surface', async () => {
+  const [app, page] = await Promise.all([
+    readFile(appPath, 'utf8'),
+    readFile(new URL('../src/pages/LightchainLabDetailPage.tsx', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /path="\/flow\/laboratory\/detail"[\s\S]*?<LightchainLabDetailPage \/>/);
+  assert.match(page, /Lightchain Lab/);
+  assert.match(page, /Untitled/);
+  assert.match(page, /ここをクリックまたはドラッグして画像を追加/);
+  assert.match(page, /最大20M/);
+  assert.match(page, /radial-gradient\(#464b50 1px, transparent 1px\)/);
+  assert.doesNotMatch(page, /type="checkbox"|権利確認|権利を確認してAI生成/);
+});
+
 test('maps vector-special to the Light legacy parity surface', async () => {
   const app = await readFile(appPath, 'utf8');
   const routeStart = app.indexOf('path="/tools/vector-special"');

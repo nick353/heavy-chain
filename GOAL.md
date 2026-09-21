@@ -1,4 +1,28 @@
-# Light Chain source parity and live OpenAI readback — 2026-09-21 r111
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r112
+
+The official authenticated source page at
+`https://jp.linkaigc.com/flow/laboratory/detail` was read back directly after
+the requested 30-second wait. Its first state is a minimal empty canvas:
+`Lightchain Lab`, `Untitled`, a dotted dark workspace, and the centered
+`ここをクリックまたはドラッグして画像を追加` dropzone with the 20MB image
+limit. Heavy now has the dedicated `/flow/laboratory/detail` route and keeps
+the existing richer `/flow/laboratory` experiment page separate from this
+source deep-link. The new surface has no Lightchain-absent rights checkbox or
+rights modal, and its local image selection remains local-only until a
+verified provider path exists.
+
+The focused route suite passed 28/28, entry-routing passed 26/26, typecheck
+and lint passed, the production build passed, Cloudflare asset preparation and
+Wrangler dry-run passed, and the Web Worker was deployed as version
+`091ac99e-2dcc-4dc1-acaf-2095297b14e8`. Fresh public readback returned HTTP
+200 for `/_health`, `/lightchain`, and `/flow/laboratory/detail`; the served
+detail chunk contains the source labels and no rights checkbox.
+
+The same six external/operator release-gate blockers remain: authenticated
+production monitor/UI evidence, launch operations, production all-feature
+order previews, a fresh G618 scale baseline, production H602 billing
+completion, and the real-generation visual scorecard. No provider submit,
+payment, publish, secret export, or destructive cleanup was performed.
 
 The official source bundle for `https://jp.linkaigc.com/` resolves the
 Lightchain header mark to `/logo.svg`, not the generic link icon previously
