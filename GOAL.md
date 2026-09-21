@@ -1,4 +1,17 @@
-# Light Chain source parity and live OpenAI readback — 2026-09-21 r109
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r110
+
+The official source bundle for `https://jp.linkaigc.com/` resolves the
+Lightchain header mark to `/logo.svg`, not the generic link icon previously
+used by Heavy. Heavy now serves the source-shaped mark from
+`/assets/lightchain-logo.svg` in both Light-compatible header variants. The
+focused Lightchain UI boundary suite is 15/15, the video dashboard suite is
+4/4, typecheck/lint/diff checks pass, and the Web Worker was redeployed as
+version `09b9fe1f-325a-4ee2-b1eb-6746daf6c3c0`. A fresh post-deploy
+Companion readback found the exact logo image at 20x20 on the canonical video
+route, captured a screenshot, reported `known_no_effect`, and cleaned up with
+no foreign-tab mutation. The current Companion surface still showed the
+auth/brand readiness screen after the bounded readback; no login state was
+assumed or fabricated.
 
 The official Light source URL supplied for this pass is
 `https://jp.linkaigc.com/`. The saved source dashboard screenshot and Heavy's

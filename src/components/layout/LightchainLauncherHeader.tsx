@@ -1,4 +1,4 @@
-import { ChevronDown, Globe2, HelpCircle, Link2 } from 'lucide-react';
+import { ChevronDown, Globe2, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const LIGHTCHAIN_AVATAR_URL = 'https://ql-hangzhou-oss.oss-cn-hangzhou.aliyuncs.com/AIDesign/saas-avatar-new.png?x-oss-process=image/resize,m_lfit,w_64,limit_1/format,webp';
@@ -11,7 +11,7 @@ export function LightchainLauncherHeader() {
         <div className="flex items-center gap-5">
           <Link to="/" aria-label="Lightchain AI" className="flex items-center gap-2 text-[12px] font-semibold tracking-[0.2em] text-white">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-neutral-950">
-              <Link2 className="h-4 w-4" strokeWidth={2.5} />
+              <img src="/assets/lightchain-logo.svg" alt="" className="h-5 w-5" />
             </span>
             LIGHTCHAIN
           </Link>

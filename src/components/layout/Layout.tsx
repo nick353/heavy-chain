@@ -12,7 +12,7 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
-import { ChevronDown, Globe2, HelpCircle, History, Link2, User, UserCircle } from 'lucide-react';
+import { ChevronDown, Globe2, HelpCircle, History, User, UserCircle } from 'lucide-react';
 
 export function Layout() {
   const { user, profile, signOut } = useAuthStore();
@@ -118,7 +118,7 @@ export function Layout() {
                 {isLightchainRoute ? (
                   <Link to="/" aria-label="Lightchain AI" className="flex h-6 shrink-0 items-center gap-2 text-[12px] font-semibold tracking-[0.16em] text-white">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-white text-neutral-950">
-                      <Link2 className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
+                      <img src="/assets/lightchain-logo.svg" alt="" className="h-5 w-5" aria-hidden="true" />
                     </span>
                     LIGHTCHAIN
                   </Link>

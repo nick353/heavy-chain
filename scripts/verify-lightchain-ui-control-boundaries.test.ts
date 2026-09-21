@@ -11,6 +11,7 @@ const publicHeaderSourcePath = new URL('../src/components/layout/Header.tsx', im
 const landingSourcePath = new URL('../src/pages/LandingPage.tsx', import.meta.url);
 const loginSourcePath = new URL('../src/pages/LoginPage.tsx', import.meta.url);
 const parityPagesSourcePath = new URL('../src/pages/LightchainParityPages.tsx', import.meta.url);
+const lightchainLogoAssetPath = new URL('../public/assets/lightchain-logo.svg', import.meta.url);
 
 test('public and auth recovery shells use the Lightchain identity without extra Heavy chrome', async () => {
   const [app, header, login] = await Promise.all([
@@ -60,6 +61,20 @@ test('Lightchain header exposes the current language and help button controls', 
   assert.match(source, /<Globe2 className="h-4 w-4" \/>/);
   assert.match(source, /aria-label="日本語"/);
   assert.match(source, /aria-label="ヘルプセンター"/);
+});
+
+test('Lightchain header uses the source logo asset instead of a Heavy icon substitute', async () => {
+  const [layout, launcher, logo] = await Promise.all([
+    readFile(layoutSourcePath, 'utf8'),
+    readFile(new URL('../src/components/layout/LightchainLauncherHeader.tsx', import.meta.url), 'utf8'),
+    readFile(lightchainLogoAssetPath, 'utf8'),
+  ]);
+
+  assert.match(layout, /src="\/assets\/lightchain-logo\.svg"/);
+  assert.match(launcher, /src="\/assets\/lightchain-logo\.svg"/);
+  assert.match(logo, /#20D0C4/);
+  assert.doesNotMatch(layout, /<Link2/);
+  assert.doesNotMatch(launcher, /<Link2/);
 });
 
 test('Lightchain header uses the Lightchain avatar identity and account menu', async () => {
