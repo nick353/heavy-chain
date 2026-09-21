@@ -1,4 +1,4 @@
-# Light Chain source parity and live OpenAI readback — 2026-09-21 r110
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r111
 
 The official source bundle for `https://jp.linkaigc.com/` resolves the
 Lightchain header mark to `/logo.svg`, not the generic link icon previously
@@ -19,6 +19,15 @@ the authenticated production monitor/UI pair, launch-operations artifact,
 production all-feature workflow artifact, fresh G618 scale baseline,
 production H602 billing completion readback, and the real-generation visual
 scorecard. No missing artifact was synthesized.
+
+The unauthenticated local all-feature acceptance workflow also completed at
+`2026-09-21T04:25:12Z`: all 31 non-video features, two desktop video routes,
+two mobile video routes, and four source-route parity checks passed with
+`failed=[]`; the video dashboard observed 6 recent projects, 5 reference
+projects, 11 source-matching edit labels, and zero visible checkboxes. Browser
+context and preview cleanup both completed. This is local route/interaction
+evidence only; it does not promote video provider execution or production
+authentication/billing evidence.
 
 The official Light source URL supplied for this pass is
 `https://jp.linkaigc.com/`. The saved source dashboard screenshot and Heavy's
