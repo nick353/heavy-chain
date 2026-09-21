@@ -7058,3 +7058,18 @@ only `OPENAI_API_KEY` among the relevant provider/monitor variables. Therefore
 the remaining real-generation, scale-monitor, and production readback gates
 cannot be honestly executed from this task without an authenticated user
 session and the separately scoped monitor credential/brand identity.
+
+# Goal progress — 2026-09-21 r105
+
+A fresh unified release-gate run completed at `2026-09-21T04:34:35.732Z`.
+All current local/static and previously captured Companion evidence remained
+valid, while the same six external/operator items remained failed:
+production monitor/UI pair, launch operations, production all-feature order
+previews, G618 scale baseline, production H602 completion, and the real-
+generation visual scorecard.
+
+The official root response also confirms the current source boundary: the
+server-rendered route resolves to the Lightchain login page with redirect
+`/?`, so unauthenticated HTML cannot prove the protected workspace UI. No
+production submit, payment, publish, deploy, or destructive cleanup was
+performed; the release gate remains fail-closed.
