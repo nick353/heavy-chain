@@ -8447,3 +8447,14 @@ explicit proof limits remain: no authenticated production provider request,
 durable R2 readback, business completion, or release approval was claimed.
 The Goal remains active for those external receipts/reconciliation and the
 remaining fresh release-gate artifacts.
+# Goal progress — 2026-09-22 r173
+
+The integrated release gate was rerun after the Fashion Studio lint fix with a
+180-second per-command ceiling. Typecheck, build, full ESLint, security,
+operations, incident-response, scale-alerting, legal-safety, billing-contract,
+and all local static checks passed. The gate now fails only on the known
+external/readback set: missing production monitor/UI and launch-ops artifacts,
+missing current all-feature production previews, stale G610/G603/G605/G606/G620
+and G618 artifacts, incomplete H602 production proof, and the missing real
+generation visual scorecard. No new provider request, payment, publish,
+deployment, or destructive operation was performed.
