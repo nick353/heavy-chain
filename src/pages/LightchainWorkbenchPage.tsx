@@ -5447,6 +5447,7 @@ export function LightchainWorkbenchPage() {
     return (
       <main
         className={`${workspaceStyle.kind === 'agent' ? 'dark flex h-[calc(100vh-50px)] min-h-full bg-[#171b1c]' : 'dark min-h-[calc(100vh-70px)] bg-[#101313]'} text-white`}
+        style={workspaceStyle.kind === 'agent' ? { fontFamily: '-apple-system, system-ui, "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' } : undefined}
         data-testid={`lightchain-workspace-${workspaceStyle.kind}`}
         data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
         data-workflow-feature={selectedTool.id}
@@ -5482,11 +5483,11 @@ export function LightchainWorkbenchPage() {
                 </div>
               </div>
               <nav aria-label="ワークベンチ入口" className="mt-4 grid gap-2">
-              <button type="button" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
+              <button type="button" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base font-medium leading-6 text-neutral-300 hover:bg-white/10">
                 <MessageSquareText className="h-4 w-4" />
                 新規タスク
               </button>
-              <button type="button" onClick={() => setWorkspaceTutorialDismissed(false)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
+              <button type="button" onClick={() => setWorkspaceTutorialDismissed(false)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base font-medium leading-6 text-neutral-300 hover:bg-white/10">
                 <ClipboardList className="h-4 w-4" />
                 業務プリファレンスプロファイル
               </button>
@@ -5499,7 +5500,7 @@ export function LightchainWorkbenchPage() {
               </div>
               <div className="mt-4 space-y-0">
                 {agentRecentTasks.map(([title, kind, date]) => (
-                  <button key={`${title}-${date}`} type="button" onClick={() => setWorkspaceText(title)} className="flex min-h-[58px] w-full items-start gap-2 py-2 text-left text-base font-normal leading-5 text-neutral-300 hover:bg-white/10">
+                  <button key={`${title}-${date}`} type="button" onClick={() => setWorkspaceText(title)} className="flex min-h-[58px] w-full items-start gap-2 py-2 pl-7 pr-0 text-left text-base font-normal leading-5 text-neutral-300 hover:bg-white/10">
                     <span className="min-w-0 flex-1 truncate">{title}<span className="mt-1 block text-xs leading-4 text-neutral-500"><span className="mr-1 inline-block rounded border border-white/10 px-1 text-[10px] leading-4">{kind}</span>{date}</span></span>
                   </button>
                 ))}
@@ -5616,7 +5617,7 @@ export function LightchainWorkbenchPage() {
             )}
 
             <div className={`${workspaceStyle.kind === 'marketing' ? 'mt-6 min-h-[232px] border-[#0bcabc]' : workspaceStyle.kind === 'agent' ? 'order-2 relative z-[8] mt-0 flex min-h-[208px] w-[720px] max-h-[328px] flex-none flex-col overflow-visible rounded-[24px] border-0 bg-[#353a3b] p-0 shadow-none' : 'mt-4 min-h-[160px] border-cyan-300/80'} ${workspaceStyle.kind === 'agent' ? '' : 'rounded-2xl border bg-[#1a1f22]/95 p-3 shadow-[0_0_28px_rgba(101,211,207,0.18)]'}`}>
-              <div className={`${workspaceStyle.kind === 'marketing' ? 'grid min-h-[206px] grid-cols-[120px_1fr_52px]' : workspaceStyle.kind === 'agent' ? 'relative flex min-h-[162px] flex-none flex-col overflow-visible rounded-[24px] border border-white/10 bg-[#262a2b] px-3 pt-3 pb-[52px]' : 'grid min-h-[136px] grid-cols-[1fr_52px]'} items-center gap-4 ${workspaceStyle.kind === 'agent' ? '' : 'rounded-2xl bg-[#1d2326] px-4'} text-left`}>
+              <div className={`${workspaceStyle.kind === 'marketing' ? 'grid min-h-[206px] grid-cols-[120px_1fr_52px]' : workspaceStyle.kind === 'agent' ? 'relative flex min-h-[162px] flex-none flex-col items-stretch overflow-visible rounded-[24px] border border-white/10 bg-[#262a2b] px-3 pt-3 pb-[52px]' : 'grid min-h-[136px] grid-cols-[1fr_52px]'} ${workspaceStyle.kind === 'agent' ? '' : 'items-center gap-4 rounded-2xl bg-[#1d2326] px-4'} text-left`}>
                 {workspaceStyle.kind === 'marketing' && (
                   <button
                     type="button"
@@ -5626,7 +5627,7 @@ export function LightchainWorkbenchPage() {
                     <ImagePlus className="h-6 w-6" />
                   </button>
                 )}
-                <div className={`${workspaceStyle.kind === 'agent' ? 'relative h-24 min-h-24 flex-1' : 'relative h-full min-h-[112px]'}`}>
+                <div className={`${workspaceStyle.kind === 'agent' ? 'relative h-24 min-h-24 w-full flex-1' : 'relative h-full min-h-[112px]'}`}>
                   {workspaceStyle.kind === 'agent' && (
                     <button
                       type="button"
@@ -5648,7 +5649,7 @@ export function LightchainWorkbenchPage() {
                     }}
                     placeholder={currentWorkspaceCopy.prompt}
                     maxLength={4000}
-                    className={`${workspaceStyle.kind === 'agent' ? 'h-14 min-h-14 pt-2' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400`}
+                    className={`${workspaceStyle.kind === 'agent' ? 'h-14 min-h-14 pl-[108px] pt-1' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400`}
                   />
                 </div>
                 {workspaceStyle.kind === 'agent' && (
@@ -5660,7 +5661,7 @@ export function LightchainWorkbenchPage() {
                       aria-label="添付を追加"
                       className="absolute bottom-3 left-0 rounded-md px-2 py-1 text-xs font-semibold text-neutral-300 transition hover:bg-white/10"
                     >
-                      添付を追加
+                      <span className="sr-only">添付を追加</span><span aria-hidden="true" className="text-2xl font-normal leading-6">＋</span>
                     </label>
                     <input
                       id="lightchain-agent-attachment-file"
