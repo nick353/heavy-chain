@@ -15,6 +15,22 @@ mass-market QAは通過。最新artifactは
 これらは認証済みmonitor/API、運用operator判断、課金/Apple sandboxの本人操作、実provider生成の
 正規証跡が必要で、存在しないartifactを作らずfail-closedにした。Goalは`in_progress`を維持する。
 
+# Light Chain canonical URL and local parity contract audit — 2026-09-21 r135
+
+本家の唯一の正本を `https://jp.linkaigc.com/` として再確認した。公開HTTP readbackは
+`200` だが未認証時は `/login?redirect=/?` へ遷移するため、ログイン済みUIの証跡とは分離した。
+ブラウザ接続が `Debugger unattached` になったため、認証Cookieを抽出・移送せず、既取得の
+本家ルート/UI readbackと現行ソースを正本にしてローカル契約を再検証した。
+
+現行HEADのローカル受入は、route 29/29、permission parity 8/8、provider coverage 22/22、
+material contract 28/28、unified workflow 6/6、UI control boundary 15/15、video provider
+boundary 1/1、generation lifecycle 2/2、all-feature verifier contract 5/5 が全て通過した。
+Light Chainにない権利確認checkbox/modal/badgeは引き続き追加されていない。
+
+これはコード側の静的・契約境界が通過した証拠であり、本番のprovider receipt、durable save/readback/
+reuse/reconciliation、同一fixtureのauthenticated pixel equality、動画provider実行、strict
+release gateの6 blockerを完了扱いにはしない。Goalは`in_progress`を維持する。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r133
 
 同一Chrome状態で本家 `https://jp.linkaigc.com/model` と本番Heavy `/model` を30秒settle後に
