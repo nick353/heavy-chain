@@ -12,7 +12,9 @@ The legacy Supabase project still reports the secret names
 `OPENAI_API_KEY` and `OPENAI_IMAGE_API_KEY`, but their values are not
 recoverable through the secret-name readback. The active Heavy Chain runtime
 is the Cloudflare Workers AI adapter and does not consume those legacy
-Supabase secrets. Therefore this probe does not accept OpenAI availability,
+Supabase secrets; a fresh Cloudflare production secret-name readback contains
+only `MEDIA_READ_SECRET`, with no OpenAI key or model binding. Therefore this
+probe does not accept OpenAI availability,
 G617 generation, or production completion. The exact remaining provider
 blocker is a valid OpenAI credential bound to the active generation path (or
 an authenticated server path that can be read back); the invalid local key was
