@@ -22,6 +22,36 @@
 .design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) > article > div { top: 8px; right: 8px; }
 .design-production-parity [data-testid="design-production-persisted-projects"] > div:nth-child(2) > article > div > button { width: 32px; height: 32px; padding: 0; }
 
+/* Match the canonical Lightchain library surface: fixed rail, two compact
+   header rows, six-column asset grid, and hover-only card actions. */
+.asset-center-parity { font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
+@media (min-width: 1024px) {
+  .asset-center-parity .asset-center-sidebar { padding: 16px; }
+  .asset-center-parity .asset-center-sidebar-header { height: 44px; padding: 0; }
+  .asset-center-parity .asset-center-sidebar-header > button { width: 32px; height: 32px; padding: 6px; }
+  .asset-center-parity .asset-center-library-root { height: 24px; margin-top: 20px; }
+  .asset-center-parity .asset-center-library-root > button:first-child { height: 24px; }
+  .asset-center-parity .asset-center-library-root > button:last-child { width: 32px; height: 32px; padding: 6px; }
+  .asset-center-parity .asset-center-library-groups { margin-top: 33px; display: flex; flex-direction: column; gap: 16px; }
+  .asset-center-parity .asset-center-library-group { height: 32px; padding: 0 10px; border-radius: 8px; font-size: 16px; line-height: 24px; }
+  .asset-center-parity .asset-center-library-group.bg-white { background: #4b5152; color: #fff; }
+  .asset-center-parity .asset-center-main { padding: 0; }
+  .asset-center-parity .asset-center-breadcrumb { height: 40px; margin: 0; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .asset-center-parity .asset-center-toolbar { height: 57px; margin: 0; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.1); background: #222627; justify-content: flex-start; }
+  .asset-center-parity .asset-center-selection-count { display: none; }
+  .asset-center-parity .asset-center-bulk-button { display: inline-flex; height: 32px; width: 104px; align-items: center; justify-content: center; border-radius: 8px; background: #626b6f; color: #fff; font-size: 12px; font-weight: 500; line-height: 17.1429px; }
+  .asset-center-parity .asset-center-grid { margin-top: 0; width: 100%; padding: 16px 20px 16px 16px; align-content: start; }
+  .asset-center-parity .asset-center-card { display: flex; flex-direction: column; height: 367.25px; gap: 8px; padding-bottom: 16px; border-color: rgba(255,255,255,.1); border-radius: 8px; }
+  .asset-center-parity .asset-center-card-media { position: relative; height: 317.25px; flex: none; }
+  .asset-center-parity .asset-center-card-actions { top: 1px; left: 1px; width: calc(100% - 2px); height: 317.25px; padding: 0; gap: 16px; background: rgba(9, 13, 14, .56); }
+  .asset-center-parity .asset-center-card:hover .asset-center-card-actions { opacity: 1; }
+  .asset-center-parity .asset-center-card-action { display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; color: #fff; background: rgba(31,38,39,.78); }
+  .asset-center-parity .asset-center-card-action:hover { background: rgba(255,255,255,.14); }
+  .asset-center-parity .asset-center-card-footer { height: 24px; padding: 0 8px; }
+  .asset-center-parity .asset-center-card-footer > p { font-size: 14px; font-weight: 500; line-height: 24px; }
+  .asset-center-parity .asset-center-card-type { height: 16px; font-size: 10px; line-height: 16px; }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ChevronRight, Download, FolderOpen, Grid2X2, Image as ImageIcon, MoreVertical, Plus, Trash2, Upload, X } from 'lucide-react';
+import { ChevronRight, Copy, Download, Eye, FolderOpen, Grid2X2, Image as ImageIcon, MoreVertical, Plus, Trash2, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -60,7 +60,6 @@ type LibraryFeatureDestination =
   | { kind: 'feature'; featureId: string };
 
 const cardTitle = (card: LibraryCard) => card.kind === 'local' ? card.artifact.title : card.asset.title;
-const cardFeatureType = (card: LibraryCard) => card.kind === 'local' ? card.artifact.featureType : card.asset.featureType;
 const cardImageUrl = (card: LibraryCard) => card.kind === 'local' ? card.artifact.imageUrl : card.asset.imageUrl;
 const cardPrompt = (card: LibraryCard) => card.kind === 'local' ? card.artifact.prompt : card.asset.prompt;
 const cardIdentity = (card: LibraryCard) => card.kind === 'local' ? card.artifact.id : card.asset.remoteImageId;
@@ -552,26 +551,32 @@ export function LightchainLibraryPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-70px)] bg-[#222627] text-white">
+    <div className="asset-center-parity min-h-[calc(100vh-70px)] bg-[#222627] text-white">
       <div className="flex min-h-[calc(100vh-70px)] w-full gap-0">
-        <aside className="hidden w-[312px] shrink-0 border-r border-white/10 bg-[#262b2c] p-4 lg:block">
-          <div className="flex items-center justify-between px-0 py-2 text-lg font-semibold text-neutral-100">
+        <aside className="asset-center-sidebar hidden w-[312px] shrink-0 border-r border-white/10 bg-[#262b2c] p-4 lg:block">
+          <div className="asset-center-sidebar-header flex items-center justify-between px-0 py-2 text-lg font-semibold text-neutral-100">
             <span>ライブラリー</span>
-            <div className="flex items-center gap-1">
-              <button type="button" aria-label="ライブラリーを検索" className="rounded-full p-2 text-neutral-200 hover:bg-white/10">⌕</button>
-              <button type="button" aria-label="アップロード" className="rounded-full p-2 text-neutral-200 hover:bg-white/10" onClick={() => uploadInputRef.current?.click()} disabled={uploading}><Upload className="h-4 w-4" /></button>
-              <button type="button" aria-label="新規グループ作成" className="rounded-full p-2 text-neutral-200 hover:bg-white/10" onClick={() => setNewGroupOpen(true)}><Plus className="h-4 w-4" /></button>
-            </div>
+            <button type="button" aria-label="ライブラリーを検索" className="rounded-full p-2 text-neutral-200 hover:bg-white/10">⌕</button>
           </div>
-          {allGroups.map((group) => (
-            <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`flex w-full items-center rounded-lg px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'}`}>
+          <div className="asset-center-library-root flex items-center justify-between">
+            <button type="button" className="flex items-center gap-1 text-sm text-neutral-100" onClick={() => { setActiveGroup('マイライブラリー'); setSelectedAssetId(null); setSelectedIds(new Set()); }}>
+              <FolderOpen className="h-5 w-5 rounded-full bg-emerald-400 p-1 text-emerald-950" />
+              <span>マイライブラリー</span>
+              <ChevronRight className="h-3.5 w-3.5 rotate-90 text-neutral-400" />
+            </button>
+            <button type="button" aria-label="アップロード" className="rounded-full p-2 text-neutral-200 hover:bg-white/10" onClick={() => uploadInputRef.current?.click()} disabled={uploading}><Plus className="h-4 w-4" /></button>
+          </div>
+          <div className="asset-center-library-groups">
+          {allGroups.slice(1).map((group) => (
+            <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`asset-center-library-group flex w-full items-center rounded-lg px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'}`}>
               <FolderOpen className="mr-2 h-4 w-4" />{group}
             </button>
           ))}
+          </div>
         </aside>
 
-        <main className="relative min-w-0 flex-1 px-4 py-4 sm:px-4">
-          <nav aria-label="パンくずナビゲーション" className="mb-5 flex items-center gap-2 text-xs text-neutral-500">
+        <main className="asset-center-main relative min-w-0 flex-1 px-4 py-4 sm:px-4">
+          <nav aria-label="パンくずナビゲーション" className="asset-center-breadcrumb mb-5 flex items-center gap-2 text-xs text-neutral-500">
             <span>マイライブラリー</span>
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             <span className="text-neutral-300">{activeGroup}</span>
@@ -593,8 +598,8 @@ export function LightchainLibraryPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <span className="text-sm text-neutral-400">選択済み ： {selectedIds.size} / {visibleArtifacts.length}</span>
+          <div className="asset-center-toolbar flex flex-wrap items-center justify-between gap-3">
+            <span className="asset-center-selection-count text-sm text-neutral-400">選択済み ： {selectedIds.size} / {visibleArtifacts.length}</span>
             {selectMode ? (
               <div className="flex flex-wrap gap-2">
                 <button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0 || uploading} onClick={() => void handleBulkCopy()}>キャンバスをコピー</button>
@@ -602,8 +607,8 @@ export function LightchainLibraryPage() {
                 <button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={!visibleArtifacts.some((card) => card.kind === 'local' && selectedIds.has(getCardId(card)))} onClick={handleBulkDelete}><Trash2 className="mr-2 inline h-4 w-4" />削除</button>
                 <button type="button" className={mutedButton} onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}>一括操作を閉じる</button>
               </div>
-            ) : (
-              <button type="button" className={mutedButton} onClick={() => setSelectMode(true)}>一括操作</button>
+          ) : (
+              <button type="button" className="asset-center-bulk-button" onClick={() => setSelectMode(true)}>一括操作</button>
             )}
           </div>
           {selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(visibleArtifacts.map(getCardId)))}>全選択</button>}
@@ -616,33 +621,33 @@ export function LightchainLibraryPage() {
               <button type="button" className="mt-4 rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => uploadInputRef.current?.click()}>最初の素材を追加</button>
             </div>
           ) : (
-            <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
+            <div className="asset-center-grid mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
               {visibleArtifacts.map((card) => (
-                <article key={card.kind === 'local' ? card.artifact.id : card.asset.id} className={`overflow-hidden rounded-lg border bg-[#151a1c] ${selectedAssetId === (card.kind === 'local' ? card.artifact.id : card.asset.id) || selectedIds.has(getCardId(card)) ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>
+                <article key={card.kind === 'local' ? card.artifact.id : card.asset.id} className={`asset-center-card group relative overflow-hidden rounded-lg border bg-[#151a1c] ${selectedAssetId === (card.kind === 'local' ? card.artifact.id : card.asset.id) || selectedIds.has(getCardId(card)) ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>
                   {selectMode && <button type="button" className="w-full border-b border-white/10 px-3 py-2 text-left text-xs text-neutral-300" onClick={() => toggleSelected(getCardId(card))} aria-pressed={selectedIds.has(getCardId(card))}>{selectedIds.has(getCardId(card)) ? '✓ 選択中' : '選択'}</button>}
-                  <button type="button" className="flex h-80 w-full items-center justify-center bg-[linear-gradient(45deg,#1d2324_25%,transparent_25%,transparent_75%,#1d2324_75%),linear-gradient(45deg,#1d2324_25%,transparent_25%,transparent_75%,#1d2324_75%)] bg-[length:16px_16px] bg-[position:0_0,8px_8px]" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)} aria-label={`${cardTitle(card)}を選択`}>
+                  <button type="button" className="asset-center-card-media flex w-full items-center justify-center bg-[linear-gradient(45deg,#1d2324_25%,transparent_25%,transparent_75%,#1d2324_75%),linear-gradient(45deg,#1d2324_25%,transparent_25%,transparent_75%,#1d2324_75%)] bg-[length:16px_16px] bg-[position:0_0,8px_8px]" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)} aria-label={`${cardTitle(card)}を選択`}>
                     {cardImageUrl(card) ? <img src={cardImageUrl(card)} alt="" className="h-full w-full object-contain" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}
                   </button>
-                  <div className="p-2.5">
-                    <p className="truncate text-sm font-medium">{cardTitle(card)}</p>
-                    <p className="mt-1 truncate text-xs text-neutral-500">{cardFeatureType(card)}</p>
-                    <div className="mt-3 flex gap-2">
-                      <button type="button" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)}>プレビュー</button>
-                      {card.kind === 'local' ? (
-                        <button type="button" className="flex-1 rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(card.artifact.id)}`)}>ボードにコピー</button>
-                      ) : (
-                        <button type="button" className="flex-1 rounded-lg border border-cyan-200/30 px-2 py-2 text-xs text-cyan-100 hover:bg-cyan-200/10 disabled:opacity-40" onClick={() => void handleImportRemote(card.asset)} disabled={uploading}>ボードにコピー</button>
-                      )}
-                      <div className="relative">
-                        <button type="button" aria-label="詳細" aria-expanded={openMenuId === getCardId(card)} className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => setOpenMenuId((current) => current === getCardId(card) ? null : getCardId(card))}><MoreVertical className="h-4 w-4" /></button>
-                        {openMenuId === getCardId(card) && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
+                  <div className="asset-center-card-actions absolute left-0 top-0 z-10 flex w-full items-center justify-center gap-4 p-2 opacity-0 transition-opacity">
+                    <button type="button" aria-label="プレビュー" className="asset-center-card-action" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)}><Eye className="h-4 w-4" /></button>
+                    {card.kind === 'local' ? (
+                      <button type="button" aria-label="ボードにコピー" className="asset-center-card-action" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(card.artifact.id)}`)}><Copy className="h-4 w-4" /></button>
+                    ) : (
+                      <button type="button" aria-label="ボードにコピー" className="asset-center-card-action" onClick={() => void handleImportRemote(card.asset)} disabled={uploading}><Copy className="h-4 w-4" /></button>
+                    )}
+                    <div className="relative">
+                      <button type="button" aria-label="詳細" aria-expanded={openMenuId === getCardId(card)} className="asset-center-card-action asset-center-card-menu" onClick={() => setOpenMenuId((current) => current === getCardId(card) ? null : getCardId(card))}><MoreVertical className="h-4 w-4" /></button>
+                      {openMenuId === getCardId(card) && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); setSelectedAssetId(getCardId(card)); setDetailMode(true); setRenameValue(cardTitle(card)); setRenameOpen(true); }}>編集する</button>
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); if (card.kind === 'remote') void handleImportRemote(card.asset); else navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(card.artifact.id)}`); }}>キャンバスをコピー</button>
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); setSelectedAssetId(getCardId(card)); setDownloadFormat('png'); setDownloadOpen(true); }}>ダウンロード</button>
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => { setOpenMenuId(null); setPendingDelete({ card, label: `「${cardTitle(card)}」` }); }}>削除</button>
                         </div>}
-                      </div>
                     </div>
+                  </div>
+                  <div className="asset-center-card-footer flex items-center justify-between gap-2 px-2">
+                    <p className="truncate text-sm font-medium">{cardTitle(card)}</p>
+                    <span className="asset-center-card-type shrink-0 rounded-sm bg-white/[0.06] px-1 text-[10px] leading-4 text-neutral-400">画像／動画</span>
                   </div>
                 </article>
               ))}

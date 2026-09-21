@@ -8002,6 +8002,29 @@ remains active for the remaining source routes and states, provider receipts,
 durable persistence/readback/reconciliation, video-quality evidence,
 billing/operator proof, and strict release-gate artifacts.
 
+# Goal progress — 2026-09-21 r155
+
+The canonical Asset Center route `https://jp.linkaigc.com/asset-center` was
+freshly compared against Heavy after both authenticated pages settled. Heavy's
+desktop surface now follows the source geometry: the 312px library rail, the
+40px breadcrumb row, the 57px bulk-action row, the source six-column grid, and
+the 252.664px × 367.25px asset cards with 317.25px media and 24px metadata
+footer. The source-style hover-only preview/copy/menu actions are present, the
+source sidebar group spacing and active state are aligned, and the normal
+surface has no rights checkbox or checkbox input.
+
+The deployed Worker version is `24bd470c-e6ad-4e9e-9154-1a8120760698`.
+Fresh live readback after the deployment measured the card at `x=328/y=163`,
+media at `x=329/y=164`, footer at `y=489.25`, and the source card height and
+width exactly. The bulk-action flow was opened and closed successfully; the
+final page was restored to its initial state with 20 cards, zero checkbox
+inputs, and empty browser logs. Typecheck, build, and diff checks passed. No
+provider generation, file upload, payment, publish, migration, or destructive
+cleanup was performed. The Goal remains active for the other canonical
+route/state parity work, authenticated provider receipts, durable
+persistence/readback/reconciliation, video-quality evidence, billing/operator
+proof, and strict release-gate artifacts.
+
 # Goal progress — 2026-09-21 r154
 
 The canonical Creator surface at `https://jp.linkaigc.com/creator` was compared
