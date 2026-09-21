@@ -7073,3 +7073,28 @@ server-rendered route resolves to the Lightchain login page with redirect
 `/?`, so unauthenticated HTML cannot prove the protected workspace UI. No
 production submit, payment, publish, deploy, or destructive cleanup was
 performed; the release gate remains fail-closed.
+
+# Goal progress — 2026-09-21 r106
+
+The official source bundle for `https://jp.linkaigc.com/` was compared with the
+current Heavy catalog. The official source exposes the video workstation as an
+AI-fitting launcher entry and includes the task family
+`GenerateShortVideoV2`, `StoryboardVideoV2`, `CustomizedStoryboardVideo`,
+`ReplicationVideo`, `StoryboardImage`, and `EditingVideo`. Heavy now shows that
+video workstation in the Lightchain launcher and the compatibility workbench;
+the separate video-detail row remains on its dedicated route. No
+Lightchain-only rights checkbox was added.
+
+The change passed the focused parity suites (route integrity 25, unified
+workflow 6, launcher/lifecycle 26), video provider-boundary tests (17),
+typecheck, lint, root production build, Cloudflare Web Worker tests 8/8,
+Cloudflare build, and Wrangler dry-run. It was deployed as web version
+`77edd2cb-8464-4127-83af-dcf8008f0b20`. Fresh public readback returned Web
+`/_health` HTTP 200, `/lightchain` HTTP 200, and the served catalog/workbench
+bundles contained the expected video identifiers.
+
+The remaining Goal blockers are unchanged: authenticated production UI/order
+preview evidence, same-run production monitor and launch-ops evidence, fresh
+G618 scale baseline, production H602 billing/operator evidence, and the real
+generation visual scorecard. The provider remains fail-closed because the
+required production receipt/readback and monitor credential are not present.

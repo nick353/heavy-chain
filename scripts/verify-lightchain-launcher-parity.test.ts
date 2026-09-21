@@ -21,7 +21,7 @@ test('launcher mirrors the current Lightchain card counts by category', () => {
   });
 });
 
-test('launcher preserves shared cards and exposes deferred video at its guarded route', () => {
+test('launcher preserves shared cards and exposes the official video workstation', () => {
   const allFeatures = lightchainCategories.flatMap((category) => getLightchainLauncherFeatures(category.id));
   const recommended = getLightchainLauncherFeatures('recommended');
   assert.equal(allFeatures.some((feature) => /動画|video/i.test(`${feature.title} ${feature.route}`)), true);
@@ -34,7 +34,7 @@ test('launcher preserves shared cards and exposes deferred video at its guarded 
     'virtual-fitting',
   ]);
   assert.equal(recommended[4]?.route, '/flow/GenerateShortVideo');
-  assert.equal(recommended[4]?.betaIncluded, false);
+  assert.notEqual(recommended[4]?.betaIncluded, false);
   assert.equal(recommended.some((feature) => feature.id === 'design-workspace'), true);
   assert.equal(getLightchainLauncherFeatures('planning').some((feature) => feature.id === 'design-workspace'), true);
   assert.equal(getLightchainLauncherFeatures('graphics').some((feature) => feature.id === 'design-workspace'), true);
@@ -128,10 +128,9 @@ test('homepage uses the current Lightchain workspace heading', () => {
   assert.doesNotMatch(source, /<h1[^>]*>アパレル特化のAIデザインワークスペース<\/h1>/);
 });
 
-test('non-video workbench homepage copy does not expose the excluded video scope', () => {
+test('workbench homepage copy includes the official video scope', () => {
   const source = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /既存の生成、フィッティング、柄、モデル、Canvasへつながる入口です/);
-  assert.doesNotMatch(source, /既存の生成、フィッティング、柄、モデル、動画、Canvasへつながる入口です/);
+  assert.match(source, /既存の生成、フィッティング、柄、モデル、動画、Canvasへつながる入口です/);
 });
 
 test('homepage does not expose a Heavy-only tool count beside the Lightchain category heading', () => {
@@ -141,7 +140,7 @@ test('homepage does not expose a Heavy-only tool count beside the Lightchain cat
 
 test('homepage keeps the complete Lightchain baseline cards visible alongside saved artifacts', () => {
   const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
-  assert.match(source, /const exampleItems = templates\.map\(\(template\) =>/);
+  assert.match(source, /const exampleItems = templates\.map\(\(template, index\) =>/);
   assert.match(source, /buildGalleryExampleImage\(template\.featureId\)/);
   assert.match(source, /return \[\.\.\.exampleItems, \.\.\.persistedItems\]/);
 });

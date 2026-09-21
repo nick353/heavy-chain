@@ -99,15 +99,14 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
   {
     id: 'video-workstation',
     title: '動画ワークステーション',
-    lightchainName: 'StoryboardImage / StoryboardVideo / GenerateShortVideo',
-    description: '動画構成を storyboard にまとめます。',
+    lightchainName: 'GenerateShortVideoV2 / StoryboardVideoV2 / CustomizedStoryboardVideo / ReplicationVideo / StoryboardImage / EditingVideo',
+    description: '各種マーケティング動画を素早く生成し、服装展示、販促、着せ替え、実写動態へつなげます。',
     route: '/flow/GenerateShortVideo',
     category: 'recommended',
     status: 'local-proof',
     capability: '尺、比率、ショット構成、CTA、保存',
     evidence: 'video-storyboard-local-v1',
     tags: ['動画', 'Storyboard', 'CTA'],
-    betaIncluded: false,
   },
   {
     id: 'model-library',

@@ -285,9 +285,9 @@ void resolveArtifactFeatureId;
 
 const isBetaFeature = (feature: LightchainFeature | undefined): feature is LightchainFeature => Boolean(feature && feature.betaIncluded !== false);
 
-// The home mirrors Lightchain's complete recommended card inventory. Video remains
-// visibly discoverable here while its canonical project dashboard stays separate
-// from the guarded detail/provider workspace.
+// The home mirrors Lightchain's complete recommended card inventory. Video is
+// visibly discoverable here while provider execution remains fail-closed until
+// the canonical production receipt/readback is available.
 const isHomepageVisibleFeature = (_feature: LightchainFeature): boolean => true;
 
 /** Heavy-owned artwork for the shared Lightchain-shaped launcher chrome. */

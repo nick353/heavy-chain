@@ -204,7 +204,7 @@ test('excludes video rows from the unified catalog and provider contract', () =>
   assert.equal(LIGHTCHAIN_UNIFIED_FEATURE_WORKFLOW_CONTRACT['video-workstation' as never], undefined);
   assert.equal(getLightchainProviderRoute('video-workstation'), 'unsupported');
   assert.equal(getLightchainProviderRoute('video-detail'), 'unsupported');
-  assert.match(workbenchSource, /const visibleTools = tools\.filter\(\(tool\) => !tool\.id\.startsWith\('video-'\)\);/);
+  assert.match(workbenchSource, /const visibleTools = tools\.filter\(\(tool\) => tool\.id !== 'video-detail'\);/);
 });
 
 test('keeps the current ledger at 31 records, 31 non-video rows, eight layers, and zero verified production', async () => {

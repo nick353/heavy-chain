@@ -1,5 +1,22 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r52
+
+Version `77edd2cb-8464-4127-83af-dcf8008f0b20` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. This release aligns the
+Lightchain launcher/workbench video entry with the current official source:
+the video workstation is visible in the launcher and the catalog records the
+official task family `GenerateShortVideoV2`, `StoryboardVideoV2`,
+`CustomizedStoryboardVideo`, `ReplicationVideo`, `StoryboardImage`, and
+`EditingVideo`. The deeper video detail/provider path remains fail-closed until
+an authenticated production provider receipt and readback exist; no video
+generation request was submitted. Web Worker tests passed 8/8, the Cloudflare
+build and Wrangler dry-run passed, and fresh public readback returned Web
+`/_health` HTTP 200 and `/lightchain` HTTP 200. The served catalog and
+workbench bundles contain the expected video identifiers. No authenticated UI
+readback, provider generation, payment, publish, or private-media completion is
+claimed by this release.
+
 ## Latest Companion route readback — 2026-09-20 r51
 
 Fresh task-owned Companion read-only coverage reached 10/10 Cloudflare Web

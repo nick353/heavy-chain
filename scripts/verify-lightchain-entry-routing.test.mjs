@@ -268,15 +268,13 @@ test('does not expose the compact hub count as the detailed workbench count', as
   assert.doesNotMatch(source, /\{lightchainFeatureCatalog\.length\}機能をすべて見る/);
 });
 
-test('excludes deferred video features from the non-video launcher', async () => {
+test('keeps the official video workstation in the launcher while retaining generic beta filtering', async () => {
   const hub = await readFile(new URL('../src/components/LightchainParityHub.tsx', import.meta.url), 'utf8');
   const entry = await readFile(entryPath, 'utf8');
   const navigation = await readFile(new URL('../src/components/layout/navigation.ts', import.meta.url), 'utf8');
-  const launcherSource = entry.slice(0, entry.indexOf('const galleryTabs'));
   assert.match(hub, /feature\.betaIncluded !== false/);
   assert.doesNotMatch(hub, /動画まで/);
-  assert.doesNotMatch(launcherSource, /video-promotion/);
-  assert.doesNotMatch(launcherSource, /featureId: 'video-workstation'/);
+  assert.match(entry, /featureId: 'video-workstation'/);
   assert.doesNotMatch(navigation, /path: '\/video'/);
 });
 

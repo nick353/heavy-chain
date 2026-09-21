@@ -106,13 +106,14 @@ test('makes the Workbench consume the shared contract instead of a route fallbac
   assert.doesNotMatch(workbench, /const lightchainProviderRoute = getLightchainProviderRoute\(selectedTool\.id\)/);
 });
 
-test('keeps video definitions out of the visible unified beta workbench', () => {
+test('shows the official video workstation while keeping its detail row on the dedicated route', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
 
   assert.match(
     workbench,
-    /const visibleTools = tools\.filter\(\(tool\) => !tool\.id\.startsWith\('video-'\)\);/,
+    /const visibleTools = tools\.filter\(\(tool\) => tool\.id !== 'video-detail'\);/,
   );
+  assert.match(workbench, /id: 'video-workstation'/);
   assert.match(workbench, /const selectedTool = routeTool \?\? visibleTools\.find/);
   assert.match(workbench, /visibleTools\.filter\(\(tool\) => tool\.category/);
   assert.match(workbench, /\{filteredTools\.map\(\(tool, index\) =>/);

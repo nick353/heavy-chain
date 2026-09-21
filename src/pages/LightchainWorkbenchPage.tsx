@@ -874,9 +874,10 @@ for (const [index, tool] of tools.entries()) {
   };
 }
 
-// Keep legacy video definitions available to the provider-boundary tests, but
-// never expose them through the Lightchain non-video beta workbench.
-const visibleTools = tools.filter((tool) => !tool.id.startsWith('video-'));
+// The official Lightchain launcher exposes the video workstation alongside
+// the other entry points. Keep the deeper video detail row on its dedicated
+// route while leaving its unverified provider execution fail-closed.
+const visibleTools = tools.filter((tool) => tool.id !== 'video-detail');
 const visibleCategories = categories;
 const totalToolCount = visibleTools.length;
 
@@ -6891,7 +6892,7 @@ export function LightchainWorkbenchPage() {
               <p className={`${isFeatureDetail ? 'mt-1 max-w-4xl text-xs leading-6' : 'mt-2 max-w-3xl text-sm leading-7'} text-neutral-600 dark:text-neutral-300`}>
                 {isFeatureDetail
                   ? selectedTool.id === 'image-repair' ? '手足や顔の奇形をAIが修復します' : selectedTool.description
-                  : '既存の生成、フィッティング、柄、モデル、Canvasへつながる入口です。'}
+                  : '既存の生成、フィッティング、柄、モデル、動画、Canvasへつながる入口です。'}
               </p>
             </div>
             <label className={`${isFeatureDetail ? 'hidden xl:flex' : 'flex'} min-w-0 items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm dark:border-neutral-700 dark:bg-neutral-950 lg:w-[420px]`}>
