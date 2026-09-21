@@ -2,11 +2,11 @@
 
 ## Latest Web release — 2026-09-21 r57
 
-Version `1404b2d9-3ee2-4f42-abcf-5e2aa20b3933` is deployed at 100% to
+Version `64bdc7a3-9f6d-4320-b34f-8133ebf617f5` is deployed at 100% to
 `heavy-chain-web.nichika2000823.workers.dev`. This release aligns the
 authenticated `/marketing` home with the current official Lightchain source:
 the source upload placeholder and dark tutorial, six scene recommendations,
-fixed 220px project cards, source empty-state artwork, and the top-right
+fixed 220px project cards, source-shaped PROJECT new-file artwork, source empty-state artwork, and the top-right
 remaining-credit badge. Project cards read remote generated-image rows with
 signed URLs, keep a local fallback, and expose pin/library-save/delete menus.
 The Light-only rights checkbox and modal remain absent.

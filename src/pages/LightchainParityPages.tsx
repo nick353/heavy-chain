@@ -949,7 +949,7 @@ export function LightchainMarketingHomePage() {
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={() => navigate('/marketing/detail')} className="group relative h-60 w-[220px] overflow-hidden rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-left transition hover:border-cyan-200/60">
               <div className="flex h-full flex-col items-center justify-center rounded-xl bg-[#20272a] text-neutral-200 transition-colors group-hover:bg-[#252d30]">
-                <div className="relative h-20 w-20"><img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="" className="h-full w-full object-contain" /><span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-neutral-900"><Plus className="h-4 w-4" /></span></div>
+                <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#6fd7cf_0%,#3d6475_42%,#9964ac_100%)] shadow-[inset_8px_8px_18px_rgba(255,255,255,0.28),inset_-10px_-10px_20px_rgba(20,25,35,0.3)]"><div className="absolute inset-3 flex items-center justify-center rounded-lg border border-white/20 bg-black/10 text-[8px] font-bold tracking-[0.12em] text-white/90 shadow-inner">PROJECT</div><span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-neutral-900 shadow-md"><Plus className="h-4 w-4" /></span></div>
                 <p className="mt-3 font-medium">新規ファイル</p>
               </div>
             </button>

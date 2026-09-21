@@ -5,14 +5,15 @@ The official authenticated source page at
 30-second wait in the same Chrome profile and compared with Heavy at the same
 viewport. Heavy's marketing home now matches the source card geometry and
 surface: the source upload placeholder, dark tutorial bubble, six scene
-recommendations, fixed 220px project cards, source empty-state artwork, and
+recommendations, fixed 220px project cards, source-shaped PROJECT new-file
+artwork, source empty-state artwork, and
 the top-right remaining-credit badge. The project surface now reads remote
 generated-image rows with signed URLs, merges local fallback artifacts, and
 exposes source-shaped per-card menus for pin, library-save, and delete. The
 Light-only rights checkbox/modal is still absent.
 
 The latest production Web Worker version is
-`1404b2d9-3ee2-4f42-abcf-5e2aa20b3933`. The focused marketing contract passed
+`64bdc7a3-9f6d-4320-b34f-8133ebf617f5`. The focused marketing contract passed
 1/1, the Lightchain route suite passed 28/28, typecheck, diff check, build,
 R2 asset upload, and Wrangler dry-run passed. Fresh public readback returned
 HTTP 200 for `/_health`, `/lightchain`, and `/marketing`; the served parity

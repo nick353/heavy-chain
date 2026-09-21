@@ -9,6 +9,7 @@ test('marketing home keeps the source-shaped prompt and project surface', () => 
   assert.match(source, /aria-label="残りクレジット"/);
   assert.match(source, /marketing\/upload-placeholder\.png/);
   assert.match(source, /static\/project_default_cover\.png/);
+  assert.match(source, />PROJECT<\/div>/);
   assert.match(source, /static\/searchEmpty\.png/);
   assert.match(source, /items-start gap-4/);
   assert.match(source, /bg-\[#202829\]\/95/);
