@@ -8,6 +8,7 @@ import {
   Clock3,
   ClipboardList,
   Film,
+  FolderOpen,
   Grid2X2,
   Hand,
   Layers3,
@@ -5423,10 +5424,29 @@ export function LightchainWorkbenchPage() {
       '右側の矢印で生成を開始できます。',
       '生成後は履歴から保存・ダウンロードできます。',
     ];
+    const agentRecentTasks = [
+      ['クリエイティブ企画2026080825', 'テーマ企画', '26-08-08'],
+      ['ZIMMERMANN風 2026年 Womenデザイン企画', 'テーマ企画', '26-07-29'],
+      ['クリエイティブ企画2026071123', 'AIグラフィックデザイン', '26-07-11'],
+      ['クリエイティブ企画2026042922', 'AIグラフィックデザイン', '26-04-29'],
+      ['Kariyushi風 2026年 デザイン企画', 'テーマ企画', '26-01-20'],
+      ['Kariyushi Wear風 2026年 {{type}}デザイン企画', 'テーマ企画', '26-01-20'],
+      ['Tropical Wear風 2026年 {{type}}デザイン企画', 'テーマ企画', '26-01-20'],
+      ['Kariyushi Wear風 2026年 デザイン企画', 'テーマ企画', '26-01-19'],
+      ['Kariyushi風 2026年 {{type}}デザイン企画', 'テーマ企画', '26-01-19'],
+      ['Kariyushi Wear風 2026年 デザイン企画', 'テーマ企画', '26-01-19'],
+      ['Okinawa風 2026年 デザイン企画', 'テーマ企画', '26-01-19'],
+      ['Okinawa Ryukyu風 2026年 {{type}}デザイン企画', 'テーマ企画', '26-01-19'],
+    ] as const;
+    const agentQuickStartExamples = [
+      '新商品企画｜北米市場向けに、2027年春のレディースウェアの商品企画を作成してください。ターゲットは、都市部で働く28〜40歳の女性です。対象アイテムは、ジャンプスーツ、ワンピース、長袖トップス。シンプルできちんと感がありながら、リラックスして着られる通勤スタイルを目指します。現地の気候、ファッショントレンド、着用シーン、販売ポテンシャルを踏まえ、テーマ、カラーパレット、推奨素材、主要なデザイン要素、主力アイテム、シリーズ全体のコーディネートを提案してください。',
+      '新商品企画｜欧州市場向けに、2027年初夏のリゾートレディースウェアの商品企画を作成してください。海辺への旅行、街歩き、リゾートでのディナーなどのシーンを想定します。対象アイテムは、キャミソールワンピース、ゆったりとしたシャツ、スカート、薄手の羽織り。ターゲットは、品質とデザイン性を重視する25〜38歳の女性です。市場・トレンド動向、シリーズテーマ、カラーとプリントの方向性、素材、シルエットや構造、重点アイテムを提案してください',
+      '新商品企画｜日本市場向けに、2027年秋の都市型ライトアウトドア・レディースウェアの商品企画を作成してください。ターゲットは、通勤にも週末のお出かけにも使える服を求める22〜35歳の女性です。防風アウター、ニットトップス、機能性パンツ、重ね着できるベストを展開し、軽量性、防護性、収納性、日常の服との合わせやすさを重視します。消費者動向、商品ポジショニング、テーマコンセプト、配色、機能素材、デザインディテール、アイテム構成、想定販売価格帯を提案してください。',
+    ] as const;
 
     return (
       <main
-        className="dark min-h-[calc(100vh-70px)] bg-[#101313] text-white"
+        className={`${workspaceStyle.kind === 'agent' ? 'dark flex h-full min-h-full bg-[#171b1c]' : 'dark min-h-[calc(100vh-70px)] bg-[#101313]'} text-white`}
         data-testid={`lightchain-workspace-${workspaceStyle.kind}`}
         data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
         data-workflow-feature={selectedTool.id}
@@ -5447,50 +5467,52 @@ export function LightchainWorkbenchPage() {
       >
         {workspaceStyle.kind === 'agent' && agentSidebarOpen && (
           <aside
-            aria-label="企画ワークスペースサイドバー"
-            className="absolute left-3 top-3 z-10 hidden h-[calc(100vh-94px)] w-[326px] overflow-hidden rounded-2xl border border-white/10 bg-[#24282a] text-neutral-100 shadow-xl md:block"
+            aria-label="ワークベンチ入口"
+            className="relative z-20 hidden h-full w-[352px] shrink-0 p-3 md:block"
           >
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-              <button type="button" onClick={() => navigate('/designProduction')} className="flex items-center gap-2 text-base font-semibold">
-                <span aria-hidden="true">‹</span>
-                企画ワークスペース
-              </button>
-              <div className="flex items-center gap-2">
-                <button type="button" aria-label="検索" className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
-                <button type="button" aria-label="サイドバーを閉じる" onClick={() => setAgentSidebarOpen(false)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><LayoutGrid className="h-4 w-4" /></button>
+            <div className="absolute inset-3 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#262a2b] p-4 text-neutral-100 shadow-xl">
+              <div className="flex h-8 w-full items-center justify-between gap-2">
+                <button type="button" aria-label="ホームに戻る" onClick={() => navigate('/designProduction')} className="flex min-w-0 items-center gap-2 text-base font-medium text-neutral-200">
+                  <span aria-hidden="true">‹</span>
+                  <span className="truncate">インサイト意思決定ワークベンチ</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <button type="button" aria-label="検索" className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
+                  <button type="button" aria-label="サイドバーを閉じる" onClick={() => setAgentSidebarOpen(false)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><LayoutGrid className="h-4 w-4" /></button>
+                </div>
               </div>
-            </div>
-            <div className="space-y-2 px-4 py-3">
-              <button type="button" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-white/10">
+              <nav aria-label="ワークベンチ入口" className="mt-4 grid gap-2">
+              <button type="button" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
                 <MessageSquareText className="h-4 w-4" />
                 新規タスク
               </button>
-              <button type="button" onClick={() => setWorkspaceTutorialDismissed(false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-white/10">
+              <button type="button" onClick={() => setWorkspaceTutorialDismissed(false)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
                 <ClipboardList className="h-4 w-4" />
                 業務プリファレンスプロファイル
               </button>
-            </div>
-            <div className="border-t border-white/10 px-4 py-3">
-              <div className="mb-2 flex items-center justify-between text-xs font-semibold text-neutral-400">
-                <span>最近</span>
+              </nav>
+              <div className="mt-2 h-px w-full bg-white/10" />
+              <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="mt-3 flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
+                <button type="button" aria-label="最近" className="flex items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
                 <button type="button" aria-label="新規ファイル" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="rounded-md p-1 hover:bg-white/10">＋</button>
               </div>
-              <div className="space-y-1">
-                {['クリエイティブ企画2026080825', 'ZIMMERMANN風 2026年 Womenデザイン企画', 'クリエイティブ企画2026071123', 'クリエイティブ企画2026042922'].map((title) => (
-                  <button key={title} type="button" onClick={() => setWorkspaceText(title)} className="w-full rounded-lg px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10">
-                    <span className="block truncate">{title}</span>
-                    <span className="mt-1 block text-[10px] text-neutral-500">テーマ企画</span>
+              <div className="mt-4 space-y-0">
+                {agentRecentTasks.map(([title, kind, date]) => (
+                  <button key={`${title}-${date}`} type="button" onClick={() => setWorkspaceText(title)} className="flex min-h-[58px] w-full items-start gap-2 py-2 text-left text-base font-normal leading-5 text-neutral-300 hover:bg-white/10">
+                    <span className="min-w-0 flex-1 truncate">{title}<span className="mt-1 block text-xs leading-4 text-neutral-500"><span className="mr-1 inline-block rounded border border-white/10 px-1 text-[10px] leading-4">{kind}</span>{date}</span></span>
                   </button>
                 ))}
               </div>
+              </div>
+              <button type="button" className="-mx-4 -mb-4 flex h-[52px] w-[calc(100%+32px)] flex-none items-center gap-2 border-t border-white/10 bg-transparent px-6 text-sm leading-5 text-neutral-300">残りクレジット <span aria-hidden="true">✦</span> 375731</button>
             </div>
-            <div className="absolute inset-x-0 bottom-0 border-t border-white/10 px-4 py-4 text-xs text-neutral-300">残りクレジット <span aria-hidden="true">✦</span> 378911</div>
           </aside>
         )}
         {workspaceStyle.kind === 'agent' && !agentSidebarOpen && (
           <aside
             aria-label="企画ワークスペースサイドバー"
-            className="absolute left-3 top-3 z-10 flex h-[calc(100vh-94px)] w-12 flex-col items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#24282a] py-3 text-neutral-100 shadow-xl"
+            className="relative z-20 flex h-full w-[64px] shrink-0 flex-col items-center gap-3 overflow-hidden border-r border-white/10 bg-[#262a2b] py-3 text-neutral-100"
           >
             <button type="button" aria-label="サイドバーを開く" onClick={() => setAgentSidebarOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><LayoutGrid className="h-4 w-4" /></button>
             <button type="button" aria-label="新規タスク" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><MessageSquareText className="h-4 w-4" /></button>
@@ -5498,90 +5520,103 @@ export function LightchainWorkbenchPage() {
             <button type="button" aria-label="最近" onClick={() => setAgentSidebarOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
           </aside>
         )}
-        <section className={`relative min-h-[calc(100vh-70px)] overflow-hidden px-4 sm:px-8 ${workspaceStyle.kind === 'agent' ? 'pt-[116px] pb-14' : 'py-14'}`}>
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_52%_20%,rgba(101,211,207,0.22),transparent_38%),linear-gradient(90deg,rgba(15,23,42,0.15),rgba(34,197,94,0.1),rgba(59,130,246,0.12))]" />
+        <section className={`${workspaceStyle.kind === 'agent' ? 'relative h-full min-w-0 flex-1 overflow-auto bg-[#171b1c] px-0' : 'relative min-h-[calc(100vh-70px)] overflow-hidden px-4 py-14 sm:px-8'}`}>
+          {workspaceStyle.kind !== 'agent' && <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_52%_20%,rgba(101,211,207,0.22),transparent_38%),linear-gradient(90deg,rgba(15,23,42,0.15),rgba(34,197,94,0.1),rgba(59,130,246,0.12))]" />}
           {workspaceStyle.kind === 'marketing' && (
             <div className="absolute right-4 top-4 rounded-lg border border-white/10 bg-[#1b2125] px-4 py-3 text-sm font-semibold text-neutral-200">
               ✦ 33607
             </div>
           )}
-          {workspaceStyle.kind === 'agent' && (
-            <Link
-              to="/lightchain"
-              data-testid="lightchain-design-agent-menu"
-              className="absolute left-5 top-5 flex h-11 w-11 items-center justify-center rounded-lg border border-white/15 bg-[#171c1f] text-neutral-200"
-              aria-label="メニュー"
-            >
-              <ClipboardList className="h-5 w-5" />
-            </Link>
-          )}
-          <div className={`relative mx-auto ${workspaceStyle.kind === 'marketing' ? 'max-w-[980px]' : 'max-w-[720px]'} ${workspaceStyle.kind === 'agent' ? 'text-left' : 'text-center'}`}>
-            {workspaceStyle.kind === 'agent' && (
-              <img
-                src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-product-planning.png"
-                alt=""
-                aria-hidden="true"
-                className="pointer-events-none absolute right-[-36px] top-[-4px] h-[172px] w-[240px] object-contain"
-              />
+          <div className={`${workspaceStyle.kind === 'agent' ? 'workspace-shell mx-auto flex min-h-full w-[720px] flex-col items-center justify-start pt-14 max-[1120px]:w-[min(720px,calc(100%-32px))] max-[760px]:pt-8' : `relative mx-auto ${workspaceStyle.kind === 'marketing' ? 'max-w-[980px]' : 'max-w-[720px]'} text-center`}`}>
+            {workspaceStyle.kind === 'agent' ? (
+              <section className="workspace-header relative z-[1] flex min-h-[172px] w-[720px] flex-none flex-col items-start gap-4 px-2 py-6 max-[1120px]:w-[min(720px,calc(100%-32px))] max-[760px]:h-auto max-[760px]:min-h-[144px]">
+                <div className="workspace-copy relative z-[3] w-[472px] px-2 max-[900px]:w-full max-[900px]:pr-0">
+                  <h1 className="m-0 w-[456px] text-[32px] font-bold leading-10 tracking-normal text-white max-[760px]:w-full max-[760px]:text-[28px] max-[760px]:leading-9">
+                    {workspaceStyle.title}
+                  </h1>
+                  <p className="mt-2 mb-0 w-[456px] text-sm font-normal leading-5 text-[#aab8b6] max-[760px]:w-full">{workspaceStyle.subtitle}</p>
+                </div>
+                {renderLightchainProviderGate()}
+                {workspaceStyle.tabs && (
+                  <div className="mode-tabs relative z-[5] inline-flex h-10 w-max items-center gap-1 rounded-xl border border-white/10 bg-[#171b1c] p-1" role="tablist" aria-label="業務シーン">
+                    {workspaceTabs.map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        role="tab"
+                        aria-selected={currentWorkspaceTab === tab}
+                        onClick={() => {
+                          setWorkspaceTextDrafts((drafts) => ({ ...drafts, [currentWorkspaceTab]: workspaceText }));
+                          setActiveWorkspaceTab(tab);
+                          const nextCopy = workspaceTabCopy[tab];
+                          setWorkspaceText(workspaceTextDrafts[tab] ?? nextCopy?.prompt ?? '');
+                        }}
+                        className={`relative z-[1] flex h-8 flex-none items-center justify-center rounded-lg px-4 py-1 text-xs font-medium leading-4 whitespace-nowrap transition-colors ${currentWorkspaceTab === tab ? 'text-[#20d0c4]' : 'text-[#aab8b6] hover:text-white'}`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="archive-header-motion pointer-events-none absolute right-0 bottom-0 z-[2] block h-[172px] w-[240px] overflow-visible">
+                  <img
+                    src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-product-planning.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 z-[2] block h-full w-full object-cover"
+                  />
+                  <span className="absolute right-[-8px] top-[18px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">精度の高い商品選定</span>
+                  <span className="absolute left-[-6px] bottom-[24px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">市場インサイト</span>
+                </div>
+              </section>
+            ) : (
+              <>
+                <div>
+                  <h1 className={`${workspaceStyle.kind === 'marketing' ? 'text-3xl sm:text-4xl' : 'text-3xl'} font-semibold tracking-tight text-white`}>{workspaceStyle.title}</h1>
+                  <p className="mt-4 text-sm text-neutral-400">{workspaceStyle.subtitle}</p>
+                </div>
+                {renderLightchainProviderGate()}
+                {workspaceStyle.tabs && (
+                  <div className="mx-auto mt-6 inline-flex rounded-xl border border-white/10 bg-[#1a1f22] p-1" role="tablist" aria-label="業務シーン">
+                    {workspaceTabs.map((tab) => (
+                      <button key={tab} type="button" role="tab" aria-selected={currentWorkspaceTab === tab} onClick={() => { setWorkspaceTextDrafts((drafts) => ({ ...drafts, [currentWorkspaceTab]: workspaceText })); setActiveWorkspaceTab(tab); const nextCopy = workspaceTabCopy[tab]; setWorkspaceText(workspaceTextDrafts[tab] ?? nextCopy?.prompt ?? ''); }} className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${tab === 'インスピレーション' ? 'w-[140px]' : tab === 'AIグラフィックデザイン' ? 'w-[176px]' : 'w-20'} ${currentWorkspaceTab === tab ? 'bg-[#3b4247] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}>{tab}</button>
+                    ))}
+                  </div>
+                )}
+                {workspaceTabs.length > 0 && currentWorkspaceCopy.helper && <p className="mx-auto mt-3 max-w-[560px] text-xs leading-5 text-[#65d3cf]" data-testid="lightchain-workspace-tab-state">{currentWorkspaceCopy.helper}</p>}
+              </>
             )}
-            <div className={workspaceStyle.kind === 'agent' ? 'ml-[52px] w-[456px]' : undefined}>
-              <h1 className={`${workspaceStyle.kind === 'marketing' ? 'text-3xl sm:text-4xl' : workspaceStyle.kind === 'agent' ? 'w-[456px] text-[32px] leading-10' : 'text-3xl'} font-semibold tracking-tight text-white`}>
-                {workspaceStyle.title}
-              </h1>
-              <p className={`${workspaceStyle.kind === 'agent' ? 'mt-2 leading-5' : 'mt-4'} text-sm text-neutral-400`}>{workspaceStyle.subtitle}</p>
-            </div>
-            {renderLightchainProviderGate()}
 
-            {workspaceStyle.tabs && (
-              <div className={`${workspaceStyle.kind === 'agent' ? 'ml-[44px] mt-4 h-10' : 'mx-auto mt-6'} inline-flex rounded-xl border border-white/10 bg-[#1a1f22] p-1`} role="tablist" aria-label="業務シーン">
-                {workspaceTabs.map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    role="tab"
-                    aria-selected={currentWorkspaceTab === tab}
-                    onClick={() => {
-                      setWorkspaceTextDrafts((drafts) => ({ ...drafts, [currentWorkspaceTab]: workspaceText }));
-                      setActiveWorkspaceTab(tab);
-                      const nextCopy = workspaceTabCopy[tab];
-                      setWorkspaceText(workspaceTextDrafts[tab] ?? nextCopy?.prompt ?? '');
-                    }}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${tab === 'インスピレーション' ? 'w-[140px]' : tab === 'AIグラフィックデザイン' ? 'w-[176px]' : 'w-20'} ${currentWorkspaceTab === tab ? 'bg-[#3b4247] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            )}
-            {workspaceTabs.length > 0 && currentWorkspaceCopy.helper && (
-              <p className="mx-auto mt-3 max-w-[560px] text-xs leading-5 text-[#65d3cf]" data-testid="lightchain-workspace-tab-state">
-                {currentWorkspaceCopy.helper}
-              </p>
-            )}
-
-            {visibleExamples && (
-              <div
-                className={`mt-7 text-left ${workspaceStyle.kind === 'agent' ? 'ml-[36px] w-[720px]' : ''}`}
-                data-testid={workspaceStyle.kind === 'agent' ? 'lightchain-agent-quick-start' : undefined}
-              >
+            {workspaceStyle.kind === 'agent' ? (
+              <section className="quick-start order-3 mt-0 w-[720px] flex-none overflow-hidden py-6 max-[1120px]:w-[min(720px,calc(100%-32px))]" data-testid={workspaceStyle.kind === 'agent' ? 'lightchain-agent-quick-start' : undefined}>
+                <button type="button" className="flex h-14 w-full items-center justify-between gap-2 bg-transparent px-2 py-4 text-white" onClick={() => setWorkspaceTutorialDismissed((dismissed) => !dismissed)}>
+                  <span className="flex items-center gap-1 text-xs font-medium leading-5 text-[#aab8b6]"><span aria-hidden="true">♧</span><strong className="text-sm font-bold text-white">クイックスタート</strong></span>
+                  <span className="flex items-center gap-1 text-sm text-[#7b8a88]">迷ったら、こちらのテンプレートをお試しください <span aria-hidden="true">⌄</span></span>
+                </button>
+                <div className="grid h-[88px] grid-cols-3 gap-2 overflow-hidden max-[760px]:grid-cols-1">
+                  {agentQuickStartExamples.map((example) => {
+                    const [kind, ...rest] = example.split('｜');
+                    return (
+                      <button key={example} type="button" onClick={() => setWorkspaceText(example)} className="flex min-h-[88px] min-w-0 flex-col items-start justify-center overflow-hidden rounded-xl bg-white/[0.05] px-4 py-3 text-left text-xs leading-5 text-[#aab8b6] transition hover:bg-white/10">
+                        <span className="line-clamp-3 w-full overflow-hidden text-ellipsis"><strong className="font-bold text-white">{kind}</strong><span aria-hidden="true">｜</span>{rest.join('｜')}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : visibleExamples && (
+              <div className="mt-7 text-left">
                 <p className="text-sm text-neutral-300">こちらをお試しください</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {visibleExamples.map((example) => (
-                    <button
-                      key={example}
-                      type="button"
-                      onClick={() => setWorkspaceText(example)}
-                      className="rounded-lg bg-[#1b2125] px-4 py-3 text-left text-sm leading-6 text-neutral-300 transition hover:bg-[#232b30]"
-                    >
-                      {example}
-                    </button>
+                    <button key={example} type="button" onClick={() => setWorkspaceText(example)} className="rounded-lg bg-[#1b2125] px-4 py-3 text-left text-sm leading-6 text-neutral-300 transition hover:bg-[#232b30]">{example}</button>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className={`${workspaceStyle.kind === 'marketing' ? 'mt-6 min-h-[232px] border-[#0bcabc]' : workspaceStyle.kind === 'agent' ? 'mt-6 min-h-[160px] border-cyan-300/80' : 'mt-4 min-h-[160px] border-cyan-300/80'} ${workspaceStyle.kind === 'agent' ? 'ml-[36px] w-[720px]' : ''} rounded-2xl border bg-[#1a1f22]/95 p-3 shadow-[0_0_28px_rgba(101,211,207,0.18)]`}>
-              <div className={`${workspaceStyle.kind === 'marketing' ? 'grid min-h-[206px] grid-cols-[120px_1fr_52px]' : workspaceStyle.kind === 'agent' ? 'relative grid min-h-[136px] grid-cols-1' : 'grid min-h-[136px] grid-cols-[1fr_52px]'} items-center gap-4 rounded-2xl bg-[#1d2326] ${workspaceStyle.kind === 'agent' ? 'px-0' : 'px-4'} text-left`}>
+            <div className={`${workspaceStyle.kind === 'marketing' ? 'mt-6 min-h-[232px] border-[#0bcabc]' : workspaceStyle.kind === 'agent' ? 'order-2 relative z-[8] mt-0 flex min-h-[208px] w-[720px] max-h-[328px] flex-none flex-col overflow-visible rounded-[24px] border-0 bg-[#353a3b] p-0 shadow-none' : 'mt-4 min-h-[160px] border-cyan-300/80'} ${workspaceStyle.kind === 'agent' ? '' : 'rounded-2xl border bg-[#1a1f22]/95 p-3 shadow-[0_0_28px_rgba(101,211,207,0.18)]'}`}>
+              <div className={`${workspaceStyle.kind === 'marketing' ? 'grid min-h-[206px] grid-cols-[120px_1fr_52px]' : workspaceStyle.kind === 'agent' ? 'relative flex min-h-[162px] flex-none flex-col overflow-visible rounded-[24px] border border-white/10 bg-[#262a2b] px-3 pt-3 pb-[52px]' : 'grid min-h-[136px] grid-cols-[1fr_52px]'} items-center gap-4 ${workspaceStyle.kind === 'agent' ? '' : 'rounded-2xl bg-[#1d2326] px-4'} text-left`}>
                 {workspaceStyle.kind === 'marketing' && (
                   <button
                     type="button"
@@ -5591,7 +5626,7 @@ export function LightchainWorkbenchPage() {
                     <ImagePlus className="h-6 w-6" />
                   </button>
                 )}
-                <div className="relative h-full min-h-[112px]">
+                <div className={`${workspaceStyle.kind === 'agent' ? 'relative h-24 min-h-24 flex-1' : 'relative h-full min-h-[112px]'}`}>
                   {workspaceStyle.kind === 'agent' && (
                     <button
                       type="button"
@@ -5623,7 +5658,7 @@ export function LightchainWorkbenchPage() {
                       role="button"
                       tabIndex={0}
                       aria-label="添付を追加"
-                      className="absolute bottom-3 left-3 rounded-md px-2 py-1 text-xs font-semibold text-neutral-300 transition hover:bg-white/10"
+                      className="absolute bottom-3 left-0 rounded-md px-2 py-1 text-xs font-semibold text-neutral-300 transition hover:bg-white/10"
                     >
                       添付を追加
                     </label>
@@ -5649,12 +5684,22 @@ export function LightchainWorkbenchPage() {
                   onClick={handleWorkspaceStyleGenerate}
                   disabled={specialProviderGenerationLocked}
                   data-testid="lightchain-workspace-generate"
-                  className={`${workspaceStyle.kind === 'agent' ? 'absolute right-3 top-1/2 -translate-y-1/2' : 'relative'} flex h-11 w-11 items-center justify-center rounded-full bg-[#253034] text-[#65d3cf] transition hover:bg-[#65d3cf] hover:text-neutral-950`}
+                  className={`${workspaceStyle.kind === 'agent' ? 'absolute right-3 bottom-3 top-auto flex h-10 w-10' : 'relative flex h-11 w-11'} items-center justify-center rounded-full bg-[#0d6261] text-[rgba(0,0,0,0.5)] transition hover:bg-[#65d3cf] hover:text-neutral-950`}
                   aria-label={workspaceStyle.kind === 'agent' ? '送信' : 'AI生成'}
                 >
                   <ArrowRight className="h-5 w-5 -rotate-45" />
                 </button>
               </div>
+              {workspaceStyle.kind === 'agent' && (
+                <div className="flex h-12 w-full flex-none items-start gap-2 px-3 py-2">
+                  <button type="button" className="flex h-8 w-[240px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => setWorkspaceTutorialDismissed(false)}>
+                    <ClipboardList className="h-4 w-4" /> 業務プリファレンスプロファイル <span aria-hidden="true">›</span>
+                  </button>
+                  <button type="button" className="flex h-8 w-[172px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => navigate('/designProduction')}>
+                    <FolderOpen className="h-4 w-4" /> プロジェクトを選択 <span aria-hidden="true">›</span>
+                  </button>
+                </div>
+              )}
               {workspaceStyle.kind === 'marketing' && !workspaceTutorialDismissed && (
                 <div className="absolute left-1/2 mt-[-150px] hidden -translate-x-1/2 items-center gap-3 rounded-full bg-[#91f0df] px-4 py-2 text-xs font-semibold text-neutral-950 shadow-xl lg:flex" data-testid="lightchain-workspace-tutorial">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-white ring-4 ring-[#65d3cf]/50" />
