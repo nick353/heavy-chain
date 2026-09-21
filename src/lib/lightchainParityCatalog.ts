@@ -481,7 +481,7 @@ const lightchainLauncherFeatureIdsByCategory: Record<LightchainCategoryId, reado
 };
 
 const lightchainLauncherTitleOverrides: Record<string, string> = {
-  'design-agent': '企画ワークスペース',
+  'design-agent': 'インサイト意思決定ワークベンチ',
   'inspiration-design': 'インスピレーション',
   'heavychain-lab': 'Lightchain Lab',
   'pattern-vector-pro': 'パターンをベクター画像に変換（プロフェッショナル版）',

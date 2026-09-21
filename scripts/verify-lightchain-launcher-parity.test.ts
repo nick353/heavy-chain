@@ -70,7 +70,7 @@ test('launcher preserves the current Lightchain card order and display names', (
 
   assert.deepEqual(titlesByCategory, {
     recommended: [
-      '企画ワークスペース',
+      'インサイト意思決定ワークベンチ',
       'デザインワークスペース',
       'マーケティングワークスペース',
       'ファッションスタジオ',
@@ -81,7 +81,7 @@ test('launcher preserves the current Lightchain card order and display names', (
       'デザインワークスペース',
       'インスピレーション',
       'ウェアデザインラボ',
-      '企画ワークスペース',
+      'インサイト意思決定ワークベンチ',
       '生地プリントの試着シミュレーション',
       '線画から実写へ変換',
       '色変更',
@@ -102,6 +102,52 @@ test('launcher preserves the current Lightchain card order and display names', (
       'パターンをベクター画像に変換（プロフェッショナル版）',
       'デザインアレンジ',
       'プリントデザイン',
+    ],
+  });
+});
+
+test('launcher mirrors the observed Lightchain home card routes by category', () => {
+  const routesByCategory = Object.fromEntries(
+    lightchainCategories.map((category) => [
+      category.id,
+      getLightchainLauncherFeatures(category.id).map((feature) => feature.route),
+    ]),
+  );
+
+  assert.deepEqual(routesByCategory, {
+    recommended: [
+      '/agent',
+      '/designProduction',
+      '/marketing',
+      '/flow/integration',
+      '/flow/GenerateShortVideo',
+      '/model',
+    ],
+    planning: [
+      '/designProduction',
+      '/creator',
+      '/flow/orientedDesign',
+      '/agent',
+      '/tools/fabric',
+      '/tools/line-draft-to-tile',
+      '/editor/changeColor',
+      '/tools/svg-convert',
+      '/model-base/style',
+    ],
+    fitting: [
+      '/model',
+      '/model-library/model-custom-form',
+      '/flow/integration',
+      '/flow/GenerateShortVideo',
+      '/flow/laboratory',
+      '/tools/reactor',
+    ],
+    graphics: [
+      '/designProduction',
+      '/printing',
+      '/tools/vector-special',
+      '/editor/pattern',
+      '/editor/patternDesign',
     ],
   });
 });
