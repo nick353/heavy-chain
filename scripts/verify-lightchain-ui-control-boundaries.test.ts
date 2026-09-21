@@ -128,6 +128,7 @@ test('fitting and line-to-real settings are stateful and persisted into the work
   assert.doesNotMatch(source, /role="switch"[\s\S]{0,180}aria-pressed=\{autoConvertGarment\}/);
   assert.match(source, /role="combobox"[\s\S]{0,100}aria-label=\{fittingAspectRatio\}/);
   assert.match(source, /role="combobox"[\s\S]{0,100}aria-label=\{fittingResolution\}/);
+  assert.match(source, /mx-0 !mt-3 flex min-h-\[280px\] w-full flex-col/);
   assert.match(source, /autoConvertGarment: isFittingDetail \? autoConvertGarment : null/);
   assert.match(source, /lineToRealImageType/);
   assert.match(source, /data-testid=\{`lightchain-line-to-real-output-type-\$\{option\}`\}/);
