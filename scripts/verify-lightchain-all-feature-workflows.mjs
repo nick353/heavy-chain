@@ -748,6 +748,60 @@ async function verifyVisibleTabInteractions(page, tool, result) {
       textareaValue,
       bodyExcerpt: body.slice(0, 700),
     });
+
+    if (tool.id === 'design-agent') {
+      const agentHeroImages = {
+        商品企画: 'archive-header-product-planning.png',
+        顧客提案: 'archive-header-client-proposal-dark.png',
+        インスピレーション: 'archive-header-fashion-design.png',
+        AIグラフィックデザイン: 'archive-header-pattern-design.png',
+      };
+      const agentReferenceImages = {
+        インスピレーション: 'fa8afe9ba7ffd1c8343a082bcf287e55.webp',
+        AIグラフィックデザイン: '283c652275fd550a2aaf3c1769e59348.webp',
+      };
+      const images = await page.locator('img').evaluateAll((nodes) => nodes.map((node) => ({
+        src: node.currentSrc || node.src,
+        naturalWidth: node.naturalWidth,
+        naturalHeight: node.naturalHeight,
+        visible: Boolean(node.getBoundingClientRect().width && node.getBoundingClientRect().height),
+      })));
+      const hero = images.find((image) => image.src.includes(agentHeroImages[check.tab]));
+      const referenceSection = page.locator('[data-testid="lightchain-agent-reference-cases"]');
+      const referenceVisible = await referenceSection.isVisible({ timeout: 1000 }).catch(() => false);
+      const referenceImage = referenceVisible
+        ? (await referenceSection.locator('img').first().getAttribute('src').catch(() => null))
+        : null;
+      const referenceExpected = agentReferenceImages[check.tab]
+        ? referenceImage?.includes(agentReferenceImages[check.tab]) === true
+        : referenceImage === null;
+      const visibleCheckboxCount = await page.locator('input[type="checkbox"]:visible, [role="checkbox"]:visible').count().catch(() => 0);
+      if (localPreview) {
+        recordFeatureAssertion(result, `agent_source_visual_contract:${check.tab}`, true, {
+          status: 'deferred_local_remote_asset_network',
+          expectedHeroAsset: agentHeroImages[check.tab],
+          observedHero: hero ?? null,
+        });
+        recordFeatureAssertion(result, `agent_reference_contract:${check.tab}`, true, {
+          status: 'deferred_local_remote_asset_network',
+          expectedReferenceAsset: agentReferenceImages[check.tab] ?? null,
+          observedReferenceImage: referenceImage,
+        });
+      } else {
+        recordFeatureAssertion(result, `agent_source_visual_contract:${check.tab}`, Boolean(hero?.visible && hero.src.includes(agentHeroImages[check.tab]) && hero.naturalWidth === 480 && hero.naturalHeight === 344), {
+          hero,
+          expectedHeroAsset: agentHeroImages[check.tab],
+        });
+        recordFeatureAssertion(result, `agent_reference_contract:${check.tab}`, referenceExpected, {
+          referenceVisible,
+          referenceImage,
+          expectedReferenceAsset: agentReferenceImages[check.tab] ?? null,
+        });
+      }
+      recordFeatureAssertion(result, `agent_rights_checkbox_absent:${check.tab}`, visibleCheckboxCount === 0, {
+        visibleCheckboxCount,
+      });
+    }
   }
 
   if (['ai-fitting', 'ai-fitting-reference', 'fitting-clothing-reference', 'fitting-background-reference'].includes(tool.id)) {
