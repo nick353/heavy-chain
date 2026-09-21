@@ -8573,6 +8573,7 @@ Goalは`in_progress`を維持する。
 video 4 route、source 4 route、console/page/request failure 0、cleanup完了。typecheck、UI control
 boundaries 15/15、permission parity 8/8、diff checkも通過した。Cloudflare build、R2 asset upload、
 Wrangler dry-run、production deployを通過し、version `9dcbd73e-c0e5-49a3-addd-ab40d3e0a190` を100%反映した。
+全機能summaryは `output/playwright/lightchain-all-feature-workflows-20260921T191333Z-7rL757/SUMMARY.json`。
 
 認証済みCompanionで本家/Heavyを同じAIグラフィックデザインタブで実測し、ヒーロー画像URL・自然寸法
 480x344、参考事例レール `720x196`、カード `240x120`、selected tab、Heavy checkbox 0件を確認した。
