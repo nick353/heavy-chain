@@ -1751,6 +1751,102 @@ export function LightchainWorkbenchPage() {
   const openAgentProjectCreate = () => {
     setAgentProjectName('');
     setAgentProjectCreateOpen(true);
+
+    if (typeof document === 'undefined') return;
+    const existingModal = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="lightchain-agent-project-create-modal"]'))
+      .find((element) => element.getAttribute('aria-hidden') !== 'true' && !element.classList.contains('hidden'));
+    if (existingModal) {
+      existingModal.querySelector<HTMLInputElement>('input')?.focus();
+      return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4';
+    overlay.setAttribute('role', 'presentation');
+    overlay.setAttribute('data-testid', 'lightchain-agent-project-create-modal');
+
+    const dialog = document.createElement('div');
+    dialog.className = 'w-full max-w-[480px] rounded-2xl border border-white/10 bg-[#2c3133] text-white shadow-2xl';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-labelledby', 'lightchain-agent-project-create-title');
+
+    const header = document.createElement('div');
+    header.className = 'flex items-start justify-between gap-4 px-6 pb-3 pt-6';
+    const headingGroup = document.createElement('div');
+    const heading = document.createElement('h2');
+    heading.id = 'lightchain-agent-project-create-title';
+    heading.className = 'text-xl font-semibold leading-7';
+    heading.textContent = 'プロジェクトを作成';
+    const helper = document.createElement('p');
+    helper.className = 'mt-1 text-sm leading-5 text-neutral-300';
+    helper.textContent = 'プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください';
+    headingGroup.append(heading, helper);
+
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'rounded-md p-1 text-2xl leading-none text-neutral-300 hover:bg-white/10';
+    closeButton.setAttribute('aria-label', '閉じる');
+    closeButton.textContent = '×';
+    header.append(headingGroup, closeButton);
+
+    const field = document.createElement('div');
+    field.className = 'px-6 py-3';
+    const fieldBox = document.createElement('div');
+    fieldBox.className = 'flex items-center gap-2 rounded-lg border border-cyan-300/70 bg-[#252a2c] px-3 py-2.5';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'プロジェクト名です';
+    input.setAttribute('aria-label', 'プロジェクト名です');
+    input.maxLength = 40;
+    input.className = 'min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-neutral-400';
+    const counter = document.createElement('span');
+    counter.className = 'shrink-0 text-xs text-neutral-300';
+    counter.textContent = '0 / 40';
+    fieldBox.append(input, counter);
+    field.append(fieldBox);
+
+    const footer = document.createElement('div');
+    footer.className = 'flex justify-end gap-2 px-6 pb-6 pt-3';
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.className = 'rounded-lg bg-[#687174] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#788285]';
+    cancelButton.textContent = 'キャンセル';
+    const createButton = document.createElement('button');
+    createButton.type = 'button';
+    createButton.className = 'rounded-lg bg-[#687174] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#788285] disabled:cursor-not-allowed disabled:opacity-40';
+    createButton.textContent = '作成';
+    createButton.disabled = true;
+    footer.append(cancelButton, createButton);
+    dialog.append(header, field, footer);
+    overlay.append(dialog);
+
+    const closeImperativeModal = () => {
+      overlay.remove();
+      closeAgentProjectCreate();
+    };
+    const syncInput = () => {
+      input.value = input.value.slice(0, 40);
+      counter.textContent = `${input.value.length} / 40`;
+      createButton.disabled = !input.value.trim();
+    };
+    input.addEventListener('input', syncInput);
+    closeButton.addEventListener('click', closeImperativeModal);
+    cancelButton.addEventListener('click', closeImperativeModal);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) closeImperativeModal();
+    });
+    createButton.addEventListener('click', () => {
+      const name = input.value.trim().slice(0, 40);
+      if (!name) return;
+      setAgentCreatedProjects((current) => [name, ...current.filter((projectName) => projectName !== name)]);
+      setWorkspaceText('');
+      setLightchainResult(null);
+      closeImperativeModal();
+      toast.success('プロジェクトを作成しました');
+    });
+    document.body.append(overlay);
+    input.focus();
   };
 
   const closeAgentProjectCreate = () => {
