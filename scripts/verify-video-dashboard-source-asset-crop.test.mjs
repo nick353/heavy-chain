@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const pageSource = await readFile(new URL('../src/pages/VideoProjectDashboardPage.tsx', import.meta.url), 'utf8');
+const detailSource = await readFile(new URL('../src/pages/VideoWorkstationPage.tsx', import.meta.url), 'utf8');
 
 test('video dashboard keeps Light source image crop semantics', () => {
   const imageTags = [...pageSource.matchAll(/<img\s+src=\{project\.imageUrl\}[^>]+>/gu)].map((match) => match[0]);
@@ -26,4 +27,12 @@ test('video dashboard retains the source fixture URLs and no visible rights chec
     '6dbc3e2e853d0fb7da9b24a0c0627a1c',
   ]) assert.match(pageSource, new RegExp(marker, 'u'));
   assert.doesNotMatch(pageSource, /権利確認|権利を確認|rights-checkbox|rights-attestation/iu);
+});
+
+test('video detail keeps the Light existing-project route and source image pair', () => {
+  assert.match(pageSource, /boardProjectCode=&boardProjectType=/u);
+  assert.match(pageSource, /boardProjectType=GenerateShortVideoCustom/u);
+  assert.match(detailSource, /c914c5010e17ca8f3bdbdb93ae2088fc/u);
+  assert.match(detailSource, /73e4af273bd3f306c8ed549efd3a7cb5/u);
+  assert.doesNotMatch(detailSource, /design-v1\.png/u);
 });

@@ -210,7 +210,7 @@ try {
   reportProgress('desktop_phase_complete', { verifiedFeatureCount: toolsToVerify.length });
 
   evidence.videoResults.push(await verifyVideoSurface(context, desktopViewport, '/flow/GenerateShortVideo', 'desktop-video-dashboard'));
-  evidence.videoResults.push(await verifyVideoSurface(context, desktopViewport, '/flow/GenerateShortVideo/detail?project=new', 'desktop-video-detail'));
+  evidence.videoResults.push(await verifyVideoSurface(context, desktopViewport, '/flow/GenerateShortVideo/detail?boardProjectCode=&boardProjectType=', 'desktop-video-detail'));
   reportProgress('desktop_video_phase_complete', { verifiedRouteCount: evidence.videoResults.length });
 
   await verifySourceRouteParity(context, desktopViewport);
@@ -267,7 +267,7 @@ try {
     }
 
     evidence.videoResults.push(await verifyVideoSurface(context, mobileViewport, '/flow/GenerateShortVideo', 'mobile-video-dashboard'));
-    evidence.videoResults.push(await verifyVideoSurface(context, mobileViewport, '/flow/GenerateShortVideo/detail?project=new', 'mobile-video-detail'));
+    evidence.videoResults.push(await verifyVideoSurface(context, mobileViewport, '/flow/GenerateShortVideo/detail?boardProjectCode=&boardProjectType=', 'mobile-video-detail'));
     reportProgress('mobile_video_phase_complete', { verifiedRouteCount: evidence.videoResults.length });
 
     const invalidPage = await context.newPage();

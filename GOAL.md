@@ -1,4 +1,4 @@
-# Light Chain source parity and live OpenAI readback — 2026-09-21 r107
+# Light Chain source parity and live OpenAI readback — 2026-09-21 r108
 
 Fresh authenticated Companion observation of the actual Light source
 `https://jp.linkaigc.com/marketing` was used as the visual authority. Heavy's
@@ -53,6 +53,22 @@ video provider-boundary, video behavior-ledger, and typecheck tests passed.
 This closes the observed video shell/editor parity slice, but actual video
 provider/render completion, same-fixture visual/interaction diff coverage,
 durable video save/reuse readback, and the strict release gate remain open.
+
+The route contract was then corrected from Heavy's legacy `project=` query to
+the exact Light form: new projects use
+`/flow/GenerateShortVideo/detail?boardProjectCode=&boardProjectType=`, and
+existing projects use
+`/flow/GenerateShortVideo/detail?boardProjectCode=<id>&boardProjectType=GenerateShortVideoCustom`.
+The local route verifiers and retry fallback now assert that contract. A fresh
+source DOM readback also captured the current existing-project main image and
+reference garment image; Heavy now seeds those same Light assets for the
+existing-project editor state. The route correction was deployed as version
+`6218ac68-d42a-4b48-9dac-68d3c95284d3`; the image correction was then deployed
+as `06dc6630-e894-4bb1-9d13-8837de2f6c9a`. A fresh tab after the final
+deployment and a 30-second auth wait confirmed the canonical new-project
+dropzone, while the existing-project readback confirmed both source image URLs,
+the reference controls, and the disabled provider action. Focused routing,
+video dashboard, provider-boundary, and typecheck tests passed.
 
 # OpenAI provider boundary and provenance implemented locally — 2026-09-21 r104 (historical)
 

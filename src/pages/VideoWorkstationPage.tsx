@@ -101,6 +101,8 @@ const initialMaterialReference: MaterialReferenceState = {
 };
 
 const VIDEO_GUIDE_DISMISSED_STORAGE_KEY = 'heavy-chain-video-guide-dismissed';
+const LIGHTCHAIN_VIDEO_MAIN_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/c914c5010e17ca8f3bdbdb93ae2088fc.jpeg?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
+const LIGHTCHAIN_VIDEO_REFERENCE_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/73e4af273bd3f306c8ed549efd3a7cb5.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -210,6 +212,10 @@ const buildVideoStoryboardPreviewSvg = ({
 export function VideoWorkstationPage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
+  const routeParams = new URLSearchParams(window.location.search);
+  const boardProjectCode = routeParams.get('boardProjectCode');
+  const legacyProjectCode = routeParams.get('project');
+  const hasExistingVideoProject = Boolean(boardProjectCode || (legacyProjectCode && legacyProjectCode !== 'new'));
   const [showVideoGuide, setShowVideoGuide] = useState(() => {
     try {
       return window.localStorage.getItem(VIDEO_GUIDE_DISMISSED_STORAGE_KEY) !== 'true';
@@ -227,9 +233,9 @@ export function VideoWorkstationPage() {
   const [subtitleCta, setSubtitleCta] = useState(storyboardCandidates[0].cta);
   const [materials, setMaterials] = useState(storyboardCandidates[0].materials);
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(() => {
-    const project = new URLSearchParams(window.location.search).get('project');
+    const project = boardProjectCode || legacyProjectCode;
     return project && project !== 'new'
-      ? { ...initialMaterialReference, imageUrl: '/assets/lightchain-cards/design-v1.png', fileName: project }
+      ? { ...initialMaterialReference, imageUrl: LIGHTCHAIN_VIDEO_MAIN_IMAGE, fileName: project }
       : initialMaterialReference;
   });
   const nextHistoryId = useRef(1);
@@ -485,8 +491,9 @@ export function VideoWorkstationPage() {
   return (
     <VideoSourceEditorParity
       imageUrl={materialReference.imageUrl}
+      secondaryImageUrl={hasExistingVideoProject ? LIGHTCHAIN_VIDEO_REFERENCE_IMAGE : undefined}
       onImageChange={handleInitialImage}
-      onBack={() => setMaterialReference(initialMaterialReference)}
+      onBack={() => navigate('/flow/GenerateShortVideo')}
     />
   );
 
@@ -820,10 +827,12 @@ export function VideoWorkstationPage() {
 
 function VideoSourceEditorParity({
   imageUrl,
+  secondaryImageUrl,
   onImageChange,
   onBack,
 }: {
   imageUrl: string;
+  secondaryImageUrl?: string;
   onImageChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onBack: () => void;
 }) {
@@ -874,9 +883,11 @@ function VideoSourceEditorParity({
         </div>
 
         <div className="relative mt-3 min-h-[660px] rounded-2xl">
-          <div className="absolute left-[18%] top-0 h-[520px] w-[300px] overflow-hidden rounded-xl border border-white/10 bg-[#22282a] opacity-90 shadow-2xl">
-            <img src="/assets/lightchain-cards/design-v1.png" alt="imgResult" className="h-full w-full object-cover" />
-          </div>
+          {secondaryImageUrl && (
+            <div className="absolute left-[18%] top-0 h-[520px] w-[300px] overflow-hidden rounded-xl border border-white/10 bg-[#22282a] opacity-90 shadow-2xl">
+              <img src={secondaryImageUrl} alt="imgResult" className="h-full w-full object-cover" />
+            </div>
+          )}
           <div className="absolute left-[18%] top-0 z-10 h-[304px] w-[378px] overflow-hidden rounded-xl border-2 border-cyan-300/80 bg-[#202627] shadow-2xl">
             <img src={imageUrl} alt="imgResult" className="h-full w-full object-cover" />
             <span className="absolute right-3 top-3 rounded bg-black/35 px-2 py-1 text-sm text-white">↗</span>
@@ -940,7 +951,7 @@ function VideoSourceEditorParity({
           <button type="button" aria-label="元に戻す" className="rounded-lg px-3 py-2 hover:bg-white/10">↶</button>
           <button type="button" aria-label="やり直す" className="rounded-lg px-3 py-2 hover:bg-white/10">↷</button>
         </div>
-        <div className="absolute bottom-5 right-4 rounded-xl border border-white/10 bg-[#252b2d] px-4 py-3 text-xs text-neutral-300 shadow-xl">⌕　30%　⌄　⌕</div>
+        <div className="absolute bottom-5 right-4 rounded-xl border border-white/10 bg-[#252b2d] px-4 py-3 text-xs text-neutral-300 shadow-xl">⌕ 30% ⌄ ⌕</div>
       </div>
     </main>
   );

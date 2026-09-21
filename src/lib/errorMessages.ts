@@ -123,7 +123,7 @@ const FAILURE_RECOVERY_GUIDANCE: Record<FailureRecoveryKind, FailureRecoveryGuid
     userMessage: '動画providerが未admittedのため、動画生成はfail-closedです。provider toolsと同一runのreadbackが確認できるまで再試行しません。',
     nextAction: '動画providerの接続状態と利用可能性を確認してから再開',
     retryLabel: 'admission確認後に再開',
-    retryHrefFallback: '/flow/GenerateShortVideo/detail',
+    retryHrefFallback: '/flow/GenerateShortVideo/detail?boardProjectCode=&boardProjectType=',
   },
   'worker-wait': {
     kind: 'worker-wait',

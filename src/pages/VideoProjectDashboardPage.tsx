@@ -31,7 +31,7 @@ export function VideoProjectDashboardPage() {
   const navigate = useNavigate();
 
   const openDetail = (project: VideoProject) => {
-    navigate(`/flow/GenerateShortVideo/detail?project=${encodeURIComponent(project.id)}`);
+    navigate(`/flow/GenerateShortVideo/detail?boardProjectCode=${encodeURIComponent(project.id)}&boardProjectType=GenerateShortVideoCustom`);
   };
 
   return (
@@ -47,7 +47,7 @@ export function VideoProjectDashboardPage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-[repeat(7,220px)]">
             <button
               type="button"
-              onClick={() => navigate('/flow/GenerateShortVideo/detail?project=new')}
+              onClick={() => navigate('/flow/GenerateShortVideo/detail?boardProjectCode=&boardProjectType=')}
               aria-label="新規ファイル"
               className="group flex h-[240px] w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-[#25292c] text-left transition hover:bg-[#2d3235] lg:w-[220px]"
             >
