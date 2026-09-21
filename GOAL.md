@@ -8001,3 +8001,34 @@ payment, publish, migration, or destructive cleanup was performed. The Goal
 remains active for the remaining source routes and states, provider receipts,
 durable persistence/readback/reconciliation, video-quality evidence,
 billing/operator proof, and strict release-gate artifacts.
+
+# Goal progress — 2026-09-21 r152
+
+The canonical model-set state at `https://jp.linkaigc.com/model` was read back
+after the authenticated source page settled. Heavy now contains the complete
+source catalog in the observed order: 77 model groups and 308 images, covering
+the 18 male groups, 25 first women groups, 21 later women groups, and 13 child
+groups. The source image URLs, format exceptions, and the special renamed
+variants were carried over from the canonical DOM data rather than guessed.
+
+The model-set panel was restructured to the source's fixed-height workbench
+flow: category tabs remain above a borderless scroll area, the scroll area
+hides its scrollbar, rows use the source 4-up image geometry, and the library
+copy remains below the catalog. Responsive `srcSet`/`sizes` selection was added
+so Heavy uses the same fitting thumbnail density as the source. The latest
+successful Worker deployment is version
+`138060a4-aea5-4280-9322-0d2fd0879ac1`; live HTML serves the new
+`index.CplGaFDZ.js` bundle and the deployed component contains the model-set
+`srcSet`, `sizes`, and scrollbar behavior.
+
+The build now uses Vite `--emptyOutDir` to avoid stale asset retention, and
+static reference validation passed with no unresolved or invalid references.
+Lightchain UI boundaries passed 15/15; typecheck, lint, and `git diff --check`
+also passed. Browser semantic reattachment was unavailable because the
+Companion debugger reported `Debugger unattached`, so the final live evidence
+for this slice is the source readback already captured plus HTTP/bundle/static
+validation, not a new browser screenshot. No provider generation, file upload,
+payment, publish, migration, or destructive cleanup was performed. The Goal
+remains active for other source routes/states, authenticated provider receipts,
+durable persistence/readback/reconciliation, video-quality evidence,
+billing/operator proof, and strict release-gate artifacts.

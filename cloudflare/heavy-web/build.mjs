@@ -150,7 +150,7 @@ export async function build() {
   };
   const site = path.join(here, '.build/site');
   run(path.join(root, 'node_modules/.bin/tsc'), ['-b'], env);
-  run(path.join(root, 'node_modules/.bin/vite'), ['build', '--outDir', site], env);
+  run(path.join(root, 'node_modules/.bin/vite'), ['build', '--emptyOutDir', '--outDir', site], env);
   const staticValidation = await validateStaticReferences(site);
   if (!staticValidation.ok) {
     throw new Error(`Static asset validation failed: ${JSON.stringify(staticValidation, null, 2)}`);

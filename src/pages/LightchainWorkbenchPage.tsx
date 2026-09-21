@@ -200,46 +200,74 @@ const FITTING_REFERENCE_SLOT_CONFIG: Array<{
     trackTarget: 'ModelVirtualFittingBackground',
   },
 ];
+const buildFittingImageUrls = (baseUrl: string, names: string[], extension: string, width = 3840) => (
+  names.map((name) => `${baseUrl}/${name}.${extension}?x-oss-process=image/resize,m_lfit,w_${width},limit_1/format,webp`)
+);
+const FITTING_IMAGE_WIDTHS = [32, 48, 64, 96, 128, 256, 384, 640, 750, 828, 1080, 1200, 1920, 2048, 3840] as const;
+const fittingImageSrcSet = (imageUrl: string) => FITTING_IMAGE_WIDTHS
+  .map((width) => `${imageUrl.replace(/w_\d+/, `w_${width}`)} ${width}w`)
+  .join(', ');
+const fittingVariantNames = (name: string) => [name, `${name}.1`, `${name}.2`, `${name}.3`];
 const FITTING_MODEL_SETS: Array<{
   id: string;
   category: Exclude<FittingModelCategory, 'all'>;
   images: string[];
 }> = [
-  {
-    id: 'group-26',
-    category: 'men',
-    images: [1, 1.1, 1.2, 1.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Male/${suffix}.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
-  },
-  {
-    id: 'group-27',
-    category: 'men',
-    images: [2, 2.1, 2.2, 2.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Male/${suffix}.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
-  },
-  {
-    id: 'group-28',
-    category: 'men',
-    images: [3, 3.1, 3.2, 3.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Male/${suffix}.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
-  },
-  {
-    id: 'group-1',
-    category: 'women',
-    images: [1, 1.1, 1.2, 1.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Missy/${suffix}.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
-  },
-  {
-    id: 'group-2',
-    category: 'women',
-    images: [2, 2.1, 2.2, 2.3].map((suffix) => `https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Missy/${suffix}.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
-  },
-  {
-    id: 'group-44',
-    category: 'children',
-    images: ['Child_1', 'Child_1.1', 'Child_1.2', 'Child_1.3'].map((name) => `https://static-cn.linkaigc.com/saas/4_8_reference/Child/${name}.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
-  },
-  {
-    id: 'group-45',
-    category: 'children',
-    images: ['Child_2', 'Child_2.1', 'Child_2.2', 'Child_2.3'].map((name) => `https://static-cn.linkaigc.com/saas/4_8_reference/Child/${name}.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp`),
-  },
+  ...Array.from({ length: 18 }, (_, index) => {
+    const modelNumber = index + 1;
+    const extension = modelNumber <= 2 ? 'png' : 'webp';
+    return {
+      id: `group-${modelNumber + 25}`,
+      category: 'men' as const,
+      images: buildFittingImageUrls(
+        'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Male',
+        fittingVariantNames(String(modelNumber)),
+        extension,
+      ),
+    };
+  }),
+  ...Array.from({ length: 25 }, (_, index) => {
+    const modelNumber = index + 1;
+    return {
+      id: `group-${modelNumber}`,
+      category: 'women' as const,
+      images: buildFittingImageUrls(
+        'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Missy',
+        fittingVariantNames(String(modelNumber)),
+        modelNumber <= 2 ? 'png' : 'webp',
+      ),
+    };
+  }),
+  ...Array.from({ length: 21 }, (_, index) => {
+    const modelNumber = index + 26;
+    const names = modelNumber === 45
+      ? ['Missy_45.1', 'Missy_45.2-1', 'Missy_45.2-2', 'Missy_45.3']
+      : fittingVariantNames(`Missy_${modelNumber}`);
+    return {
+      id: `group-${modelNumber + 31}`,
+      category: 'women' as const,
+      images: buildFittingImageUrls(
+        'https://static-cn.linkaigc.com/saas/4_8_reference/Missy',
+        names,
+        'webp',
+      ),
+    };
+  }),
+  ...Array.from({ length: 13 }, (_, index) => {
+    const modelNumber = index + 1;
+    const names = modelNumber === 8
+      ? ['Child_8', 'Child_8.1', 'Child_8.2', 'Child_8.4-20251229-142358']
+      : fittingVariantNames(`Child_${modelNumber}`);
+    return {
+      id: `group-${modelNumber + 43}`,
+      category: 'children' as const,
+      images: buildFittingImageUrls(
+        'https://static-cn.linkaigc.com/saas/4_8_reference/Child',
+        names,
+        'webp',
+      ),
+    };
+  }),
 ];
 const FITTING_PROMPT_TEMPLATES = [
   {
@@ -4489,7 +4517,7 @@ export function LightchainWorkbenchPage() {
   if (isFeatureDetail && isFittingDetail) {
     return (
       <main
-        className="dark min-h-[calc(100vh-50px)] bg-[#171b1c] text-white"
+        className="dark h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white"
         style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
         data-flow-state={unifiedFlowState}
         data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
@@ -4512,8 +4540,8 @@ export function LightchainWorkbenchPage() {
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
         {renderLightchainProviderGate()}
-        <div className="relative grid min-h-[calc(100vh-50px)] lg:grid-cols-[432px_minmax(0,1fr)]">
-          <section className="flex min-h-0 flex-col border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
+        <div className="relative grid h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden lg:grid-cols-[432px_minmax(0,1fr)]">
+          <section className="flex h-full min-h-0 flex-col overflow-hidden border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
             <div className="flex h-12 items-center justify-between border-b border-white/10 px-4">
               <p className="text-[14px] font-semibold leading-6 text-white">AIフィッティング</p>
               <div className="inline-flex h-8 w-[204px] items-center justify-center rounded-lg bg-[#262a2b] p-1" role="tablist">
@@ -4783,8 +4811,8 @@ export function LightchainWorkbenchPage() {
                 </div>
               )}
               {activeFittingInputTab === 'モデルのセット写真' && (
-                <div className="mx-0 !mt-2 grid gap-4 overflow-y-auto py-1" data-testid="lightchain-fitting-model-set-input">
-                  <div className="flex items-center gap-2 overflow-x-auto border-b border-white/10 pb-2">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="lightchain-fitting-model-set-input">
+                  <div className="relative mt-3 mb-2 flex shrink-0 items-center gap-2 py-0">
                     {([
                       ['all', 'すべて表示'],
                       ['men', 'メンズ'],
@@ -4797,49 +4825,53 @@ export function LightchainWorkbenchPage() {
                         data-track-id="category"
                         data-track-category-value={category}
                         onClick={() => setFittingModelCategory(category)}
-                        className={`flex h-7 shrink-0 flex-col items-center justify-between px-2 text-sm transition ${fittingModelCategory === category ? 'text-white' : 'text-neutral-400 hover:text-white'}`}
+                        className="flex h-6 shrink-0 cursor-pointer flex-col items-center justify-between px-2"
                       >
-                        <span>{label}</span>
-                        <span className={`h-1 w-4 rounded-sm ${fittingModelCategory === category ? 'bg-cyan-300' : 'bg-transparent'}`} />
+                        <span className={`text-sm leading-4 transition-colors ${fittingModelCategory === category ? 'text-white' : 'text-[#aab8b6] hover:text-white'}`}>{label}</span>
+                        <span className={`h-1 w-4 rounded-sm ${fittingModelCategory === category ? 'bg-[#0bc1b8]' : 'bg-transparent'}`} />
                       </button>
                     ))}
                   </div>
-                  <div className="grid gap-2" data-testid="lightchain-fitting-model-set-grid">
-                    {fittingModelSets.map((modelSet) => {
-                      const selected = selectedFittingModelSetId === modelSet.id;
-                      return (
-                        <button
-                          key={modelSet.id}
-                          type="button"
-                          data-track-id="model-set"
-                          data-track-model-set-id={modelSet.id}
-                          aria-pressed={selected}
-                          onClick={() => setSelectedFittingModelSetId(modelSet.id)}
-                          className={`grid grid-cols-4 gap-0.5 rounded-lg border-2 p-2 text-left transition hover:opacity-90 ${selected ? 'border-cyan-300' : 'border-transparent'}`}
-                        >
-                          {modelSet.images.map((imageUrl, imageIndex) => (
-                            <span key={imageUrl} className="min-w-0 overflow-hidden rounded bg-[#20272a]">
-                              <img src={imageUrl} alt={`Model group-${modelSet.id.replace('group-', '')}-${imageIndex + 1}`} loading="lazy" className="h-40 w-full object-contain" />
-                            </span>
-                          ))}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="rounded-xl border border-white/10 bg-[#181d1f] p-4 text-center">
-                    <p className="text-sm leading-6 text-neutral-300">お気に入りのモデルが見つかりませんか？モデル企画ライブラリを使って、あなた専用のモデルをカスタマイズできます！</p>
-                    <Link to="/model-library/model-custom-form" className="mt-3 inline-flex text-sm font-semibold text-cyan-200 underline underline-offset-2 hover:text-cyan-100">今すぐカスタマイズ</Link>
-                  </div>
-                  {!fittingModelHintDismissed && (
-                    <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-4" data-testid="lightchain-fitting-model-hint">
-                      <p className="text-xs font-semibold text-cyan-200">ヒント</p>
-                      <p className="mt-2 text-sm leading-6 text-neutral-200">お好みのモデルが見つかりませんでしたか？今すぐあなただけのモデルをカスタマイズしましょう！</p>
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <button type="button" onClick={() => setFittingModelHintDismissed(true)} className="text-xs text-neutral-400 underline underline-offset-2 hover:text-white">今後表示しない</button>
-                        <Link to="/model-library/model-custom-form" className="text-xs font-semibold text-cyan-200 underline underline-offset-2 hover:text-cyan-100">カスタマイズを選ぶ</Link>
-                      </div>
+                  <div className="scrollbar-hide flex-1 min-h-0 overflow-y-auto py-2" data-testid="lightchain-fitting-model-set-grid">
+                    <div className="flex flex-col gap-0.5">
+                      {fittingModelSets.map((modelSet) => {
+                        const selected = selectedFittingModelSetId === modelSet.id;
+                        return (
+                          <button
+                            key={modelSet.id}
+                            type="button"
+                            data-track-id="model-set"
+                            data-track-model-set-id={modelSet.id}
+                            aria-pressed={selected}
+                            onClick={() => setSelectedFittingModelSetId(modelSet.id)}
+                            className={`flex w-full shrink-0 cursor-pointer gap-0.5 rounded-lg border-2 border-transparent p-2 text-left transition hover:opacity-90 ${selected ? 'border-cyan-300' : ''}`}
+                          >
+                            <div className="flex min-w-0 flex-1 gap-0.5">
+                              {modelSet.images.map((imageUrl, imageIndex) => (
+                                <span key={imageUrl} className="flex-1 min-w-0 overflow-hidden rounded bg-black/20">
+                                  <img src={imageUrl} srcSet={fittingImageSrcSet(imageUrl)} sizes="90px" alt={`Model group-${modelSet.id.replace('group-', '')}-${imageIndex + 1}`} loading="lazy" width="90" height="160" className="inline-block h-full w-full object-contain" />
+                                </span>
+                              ))}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
+                    <div className="rounded-xl border border-white/10 bg-[#181d1f] p-4 text-center">
+                      <p className="text-sm leading-6 text-neutral-300">お気に入りのモデルが見つかりませんか？モデル企画ライブラリを使って、あなた専用のモデルをカスタマイズできます！</p>
+                      <Link to="/model-library/model-custom-form" className="mt-3 inline-flex text-sm font-semibold text-cyan-200 underline underline-offset-2 hover:text-cyan-100">今すぐカスタマイズ</Link>
+                    </div>
+                    {!fittingModelHintDismissed && (
+                      <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-4" data-testid="lightchain-fitting-model-hint">
+                        <p className="text-xs font-semibold text-cyan-200">ヒント</p>
+                        <p className="mt-2 text-sm leading-6 text-neutral-200">お好みのモデルが見つかりませんでしたか？今すぐあなただけのモデルをカスタマイズしましょう！</p>
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <button type="button" onClick={() => setFittingModelHintDismissed(true)} className="text-xs text-neutral-400 underline underline-offset-2 hover:text-white">今後表示しない</button>
+                          <Link to="/model-library/model-custom-form" className="text-xs font-semibold text-cyan-200 underline underline-offset-2 hover:text-cyan-100">カスタマイズを選ぶ</Link>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {garmentImageUrl && (
