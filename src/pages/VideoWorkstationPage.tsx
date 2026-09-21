@@ -915,7 +915,15 @@ function VideoSourceEditorParity({
               <option>10s ｜ 720p ｜ Auto</option>
               <option>15s ｜ 1080p ｜ Auto</option>
             </select>
-            <button type="button" disabled className="mt-3 w-full rounded-lg bg-cyan-300/85 px-2 py-2 text-[11px] font-semibold text-neutral-950 disabled:cursor-not-allowed">
+            <button
+              type="button"
+              disabled
+              data-testid="video-generation-blocked"
+              aria-disabled="true"
+              title="video_provider_not_admitted: 動画providerの利用可能状態が未確認です"
+              data-lightchain-provider-route="unsupported"
+              className="mt-3 w-full rounded-lg bg-cyan-300/85 px-2 py-2 text-[11px] font-semibold text-neutral-950 disabled:cursor-not-allowed"
+            >
               権限がありません 6
             </button>
           </aside>

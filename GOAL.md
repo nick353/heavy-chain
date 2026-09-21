@@ -1,3 +1,20 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r127
+
+本家の正本URL `https://jp.linkaigc.com/` をChromeで再確認し、動画の現行入口を
+`/flow/GenerateShortVideo`、詳細を
+`/flow/GenerateShortVideo/detail?boardProjectCode=&boardProjectType=` と確定した。
+Heavyの一覧・新規ファイル・参考事例・詳細ドロップゾーンは同じ文言と導線である。
+詳細の実到達コンポーネントにも `video-generation-blocked`、
+`data-lightchain-provider-route="unsupported"`、動画provider未admittedのtitleを追加し、
+旧到達不能ワークスペースの契約だけに依存せず、provider未確認時のfail-closed境界を
+固定した。表示文言/レイアウトは変えず、Light Chainにないcheckboxは追加していない。
+
+`test:video-provider-boundary`、typecheck、`git diff --check` は通過。本家のprovider
+admissionは未確認のため、動画生成・保存・再利用・本番deployは実行していない。
+M05は入口/詳細のローカル境界を前進させたが、認証済みprovider receipt、durable
+save/readback/reconciliation、同一fixtureのvisual diffが未取得のためGoal全体は
+in_progressのまま。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r126
 
 M10/M13のローカル契約を前進させた。色変更は公式`/editor/changeColor`の
