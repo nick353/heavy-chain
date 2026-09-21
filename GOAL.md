@@ -1,3 +1,19 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r132
+
+本家 `https://jp.linkaigc.com/` のトップをfresh DOM/AX readbackし、4カテゴリのカード順・
+表示名・正規routeを確認した。現行Heavyだけが `企画ワークスペース` と表示していたカードを、
+本家と同じ `インサイト意思決定ワークベンチ` に修正し、全カテゴリrouteを固定する回帰テストを
+追加した。focused launcher 17/17、typecheck、diff-checkを通過。
+
+同じ変更を最新HEADでCloudflareへ再deployし、Version
+`cb5553df-ca3a-4f3b-892d-a14668bb3905`を100%配信中。production build、R2 upload、Wrangler
+dry-run、deployを通過し、`/_health`、`/lightchain`、`/model`のfresh public readbackは全て
+HTTP 200。isolated full verifierも31/31 non-video、desktop/mobile、canonical video/source
+route、console/page/request failure 0、cleanup完了を再確認した。
+
+本家の認証済みpixel/interaction equality、provider receipt、durable save/readback/reuse/
+reconciliation、動画provider、strict release gateは未完了。Goalは`in_progress`を維持する。
+
 # Light Chain source parity and release-gate readback — 2026-09-21 r131
 
 最新HEADをCloudflareの現行deploy経路で本番反映した。Version

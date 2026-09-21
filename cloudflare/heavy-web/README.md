@@ -1,5 +1,21 @@
 # Heavy Chain Cloudflare web hosting
 
+## Latest Web release — 2026-09-21 r65
+
+Version `cb5553df-ca3a-4f3b-892d-a14668bb3905` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. The Lightchain homepage launcher
+now matches the freshly observed source card title `インサイト意思決定ワークベンチ`
+and the source route order for all four categories; the Light-only rights
+checkbox/modal/badge remains absent.
+
+The change passed the focused launcher suite 17/17, typecheck, diff-check, and
+the isolated full verifier (31/31 non-video features on desktop/mobile,
+canonical video/source routes, zero console/page/request failures, cleanup
+complete). Production build, R2 upload, Wrangler dry-run, and deployment
+passed. Fresh public readback returned HTTP 200 for `/_health`, `/lightchain`,
+and `/model`. Authenticated visual equality and provider/persistence receipts
+remain separate gates.
+
 ## Latest Web release — 2026-09-21 r64
 
 Version `8eded371-db03-408a-889c-01417b2d950c` is deployed at 100% to
