@@ -1,3 +1,19 @@
+# Light Chain / Heavy authenticated UI settle readback — 2026-09-21 r140
+
+Cloudflare auth-route deploy後、同一task-owned Companion sessionでHeavy `/model`を8秒settleし、
+semantic・visual readbackが`verified`になった。AIフィッティング、シングル/マルチタスク、
+衣服画像0/4、自動変換switch、説明生成/参考画像/モデルのセット写真、2000文字カウンタ、
+スマート/1K、`権限がありません`、`生成履歴`、生成結果の保存/ダウンロード、Gallery/History/
+Jobs/Canvas導線を確認した。生成submit、provider action、保存mutation、課金は0件。
+
+同じsessionで本家 `/model`もreadしたが、今回のsemantic結果はbody内のNext bootstrap scriptで、
+本家のauthenticated controlsを同一runで証明するには不足。visualも実質blankだったため、既取得の
+本家UI証跡と分離し、pixel/interaction equalityは未完了とした。Heavyのreadback sessionは
+terminal cleanupで閉じ、external actionは0件。
+
+provider receipt、durable save/readback/reuse/reconciliation、動画provider、billing、strict release
+gateの6 blockerは未完了。Goalは`in_progress`。
+
 # Light Chain unauthenticated route parity — 2026-09-21 r139
 
 本家の公開HTTPを再確認し、未認証の `/`、`/model`、`/terms`、`/signup`、`/forgot-password`、
