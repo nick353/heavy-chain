@@ -1,3 +1,19 @@
+# Light Chain / Heavy authenticated video workspace readback — 2026-09-21 r142
+
+認証済みHeavy本番の動画ワークスペースをtask-owned Companionで読み取り、loading shellが消えるまで
+待機してsemantic・visual readbackした。`/flow/GenerateShortVideo` は「動画ワークステーション」、
+「新規ファイル」、既存プロジェクトカード、参考事例カードを表示し、detail routeは「🎬動画ワーク
+ステーション」、`Untitled`、画像のクリック/ドラッグ追加、jpg/jpeg/png/webp、最大20Mのfile inputを
+表示した。動画list/detailとも認証済み画面へのsettleを確認した。
+
+これはUI route/input boundaryのreadbackであり、画像upload、動画provider生成、保存、課金、外部actionは
+実行していない。session closeのowner cleanupは`closed=[1980926537]`、lease release確認済み、
+`external_action_executed=false`。Companion statusもlogical session 0、lease 0、queue 0、active
+reconciliation 0でidleを確認した。
+
+Goalは`in_progress`。r134のstrict blocker 6件、source/Heavyの同一fixture pixel equality、provider
+receipt、durable save/readback/reuse/reconciliation、動画providerは未完了。
+
 # Light Chain model input/provider boundary readback — 2026-09-21 r141
 
 Heavy本番 `/model` の同一task-owned tabで、hidden file inputが1件に解決されることをpreflightし、
