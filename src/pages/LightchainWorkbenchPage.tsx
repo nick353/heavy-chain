@@ -1,6 +1,5 @@
 import { type ChangeEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import {
   ArrowRight,
   Bot,
@@ -1770,16 +1769,17 @@ export function LightchainWorkbenchPage() {
     toast.success('プロジェクトを作成しました');
   };
 
-  const agentProjectCreateModal = agentProjectCreateOpen && typeof document !== 'undefined' ? createPortal((
+  const agentProjectCreateModal = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
-      role="presentation"
+      className={agentProjectCreateOpen ? 'fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4' : 'hidden'}
+      aria-hidden={!agentProjectCreateOpen}
+      role={agentProjectCreateOpen ? 'presentation' : undefined}
       onClick={(event) => {
         if (event.target === event.currentTarget) closeAgentProjectCreate();
       }}
     >
       <div
-        role="dialog"
+        role={agentProjectCreateOpen ? 'dialog' : undefined}
         aria-modal="true"
         aria-labelledby="lightchain-agent-project-create-title"
         className="w-full max-w-[480px] rounded-2xl border border-white/10 bg-[#2c3133] text-white shadow-2xl"
@@ -1819,7 +1819,7 @@ export function LightchainWorkbenchPage() {
         </div>
       </div>
     </div>
-  ), document.body) : null;
+  );
 
   const fittingReferenceImageModal = (
     <Modal
