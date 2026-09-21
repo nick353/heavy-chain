@@ -4527,7 +4527,7 @@ export function LightchainWorkbenchPage() {
             </div>
             <div className="flex flex-1 flex-col overflow-hidden px-4 py-2">
               <div className="flex flex-col gap-2 shrink-0">
-                <div className="flex items-end justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                   <div>
                     <p
                       className="text-base font-semibold text-white"
@@ -4548,7 +4548,7 @@ export function LightchainWorkbenchPage() {
                   </div>
                   <button
                     type="button"
-                    className="inline-flex h-4 w-8 shrink-0 items-center rounded-full border border-transparent bg-neutral-500 p-0 transition"
+                    className="inline-flex h-4 w-8 shrink-0 translate-y-[11px] items-center rounded-full border border-transparent bg-neutral-500 p-0 transition"
                     onClick={() => setAutoConvertGarment((current) => !current)}
                     role="switch"
                     aria-checked={autoConvertGarment}
