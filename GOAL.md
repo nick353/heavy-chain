@@ -8582,6 +8582,20 @@ visual scorecard、およびrelease gateの厳格な再通過である。provide
 `work/heavy-chain-lightchain-account-and-auth-readback-20260922.md`。Goalは
 `in_progress`を維持する。
 
+# Goal progress — 2026-09-22 r182
+
+33/33の本番route readback後に統合release gateを再実行した。ローカルの
+typecheck/build/lint、security、G603/G605/G606/G620/G632/G633、Goal readinessは
+通過した。gateの残りは、production monitor/UI pair、launch operations、
+production all-feature order previews artifact、stale G618、48時間超過のchosen
+public-entrypoint、H602 billing completion、real-generation visual scorecardの7件。
+
+Companionの認証済み同一タブをmobile viewportへ切り替える追加試行は、対象tabの
+再解決がdispatch前に失敗したため実行せず、session/tabはcleanupした。よってmobile
+release artifactは未完了のまま保持する。公開HTTP readbackは未認証境界の307/200を
+確認しただけで、認証tokenの抽出・入力はしていない。provider生成、upload、保存、
+課金、公開、権利迂回も未実行。Goalは`in_progress`を維持する。
+
 # Goal progress — 2026-09-22 r181
 
 認証済みHeavy本番で、`GOAL_CANDIDATE_ROW_IDS`の33行を正規routeへ対応付け、
