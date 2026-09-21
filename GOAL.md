@@ -1,3 +1,26 @@
+# Light Chain source parity and release-gate readback — 2026-09-21 r119
+
+The latest static/provider checks remain green: OpenAI provider readiness 7/7,
+provider persistence/readback 14/14, workspace Activity routing 13/13, Canvas
+document persistence 7/7, Canvas save recovery 23/23, fitting-history/provider
+coverage 22/22, and route coverage 28/28. The production Web deployment from
+r118 is live at version `c4f3f8fe-a3fb-49d9-91b6-67807f5991dc`.
+
+The unified release gate still fails closed on six external/operator items:
+production monitor/UI pair, launch operations, production all-feature order
+previews, a fresh G618 scale baseline, production H602 billing completion, and
+the explicit `commands_skipped_not_release_acceptance` blocker. The current
+readback identifies the actionable limits without inventing evidence:
+launch-ops lacks the required authenticated state artifact; G618 has no
+explicit Cloudflare API origin, brand, live session, or valid baseline limits;
+H602 still lacks quota enforcement, checkout decision, verified no-charge
+proof, transaction/entitlement readback, operator release decision, and live
+constraint readback. No payment, Apple login, OTP, quota mutation, publish,
+secret export, or provider submit was performed.
+
+The full Goal remains open until those external receipts and same-fixture
+provider/browser evidence exist.
+
 # Light Chain source parity and fitting-history panel parity — 2026-09-21 r118
 
 The official authenticated Lightchain AI-fitting page was re-read after the
