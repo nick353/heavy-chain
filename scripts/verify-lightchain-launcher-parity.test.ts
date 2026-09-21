@@ -167,6 +167,12 @@ test('homepage case tabs keep the widened Lightchain-aligned desktop spacing', (
   );
 });
 
+test('homepage case-sharing starts at the canonical vertical offset without a Heavy-only divider', () => {
+  const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
+  assert.match(source, /<section className="border-t-0 px-5 pb-8 pt-\[58px\] sm:px-8 lg:px-10">/);
+  assert.doesNotMatch(source, /<section className="border-t border-white\/10 px-5 pb-8 pt-10/);
+});
+
 test('homepage uses the current Lightchain workspace heading', () => {
   const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
   assert.match(source, /<h1[^>]*>LIGHTCHAIN AI<\/h1>/);

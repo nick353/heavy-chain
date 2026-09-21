@@ -582,7 +582,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
         </div>
       </section>
 
-      <section className="border-t border-white/10 px-5 pb-8 pt-10 sm:px-8 lg:px-10">
+      <section className="border-t-0 px-5 pb-8 pt-[58px] sm:px-8 lg:px-10">
         <div className="mx-auto max-w-none">
           <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">事例共有</h2>
           <div className="mt-[23px] flex flex-wrap items-center gap-4">
