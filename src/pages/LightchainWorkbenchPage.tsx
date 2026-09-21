@@ -6179,7 +6179,11 @@ export function LightchainWorkbenchPage() {
               <button
                 key={`${card.title}-${index}`}
                 type="button"
-                onClick={() => navigate('/lightchain/print-design-detail')}
+                onClick={() => navigate(
+                  card.isNew
+                    ? '/editor/patternDesign/detail'
+                    : `/editor/patternDesign/detail?boardProjectCode=${encodeURIComponent(card.id)}&boardProjectType=custom`,
+                )}
                 className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
               >
                 <div className="relative flex h-40 items-center justify-center bg-[#171c1f]">
@@ -6210,7 +6214,7 @@ export function LightchainWorkbenchPage() {
           <h2 className="mt-6 text-base font-semibold text-white">参考事例</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
             {exampleCards.map((card) => (
-              <button key={card.title} type="button" onClick={() => navigate('/lightchain/print-design-detail')} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
+              <button key={card.title} type="button" onClick={() => navigate('/editor/patternDesign/detail')} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
                 <div className={`h-40 ${card.tone}`} />
                 <div className="px-4 py-4">
                   <p className="text-sm font-semibold text-neutral-200">{card.title}</p>

@@ -111,6 +111,19 @@ test('maps the Light design-arrange entry to a project dashboard before editing'
   assert.match(page, /boardProjectType=custom/);
 });
 
+test('keeps the Light print-design project cards on the canonical detail route', async () => {
+  const page = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  const projectStart = page.indexOf("if (selectedTool.id === 'print-design-project')");
+  const projectEnd = page.indexOf("if (selectedTool.id === 'print-design-detail')", projectStart);
+  assert.ok(projectStart >= 0 && projectEnd > projectStart, 'print-design project surface is required');
+  const project = page.slice(projectStart, projectEnd);
+  assert.match(project, /card\.isNew\s*\?\s*'\/editor\/patternDesign\/detail'/);
+  assert.match(project, /\/editor\/patternDesign\/detail\?boardProjectCode=\$\{encodeURIComponent\(card\.id\)\}&boardProjectType=custom/);
+  assert.match(project, /onClick=\{\(\) => navigate\('\/editor\/patternDesign\/detail'\)\}/);
+  assert.doesNotMatch(project, /\/lightchain\/print-design-detail/);
+  assert.doesNotMatch(project, /type=["']checkbox["']|権利を確認してAI生成/);
+});
+
 test('keeps the video project dashboard and detail route aligned with Lightchain', async () => {
   const app = await readFile(appPath, 'utf8');
   const catalog = await readFile(catalogPath, 'utf8');

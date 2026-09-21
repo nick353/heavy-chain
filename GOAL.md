@@ -8143,6 +8143,22 @@ performed. The Goal remains active for the remaining route/state parity,
 authenticated provider receipts, durable persistence/readback/reconciliation,
 business/legal decisions, and strict release-gate artifacts.
 
+# Goal progress — 2026-09-22 r167
+
+The `/editor/patternDesign` project and reference cards had been navigating to
+the non-canonical `/lightchain/print-design-detail` path. Heavy now follows the
+Light route contract: new files and reference examples open
+`/editor/patternDesign/detail`, while saved projects preserve their artifact ID
+and use `boardProjectType=custom`.
+
+The focused entry-routing, source-board, and unified-shell checks pass 38/38;
+typecheck and diff checks pass. No rights checkbox or rights-only UI was added.
+Provider generation, upload, payment, publish, migration, and destructive
+cleanup were not performed. The Goal remains active for authenticated visual
+readback, the remaining route/state parity work, provider receipts,
+persistence/readback/reconciliation, business/legal decisions, and release-gate
+artifacts.
+
 # Goal progress — 2026-09-22 r164
 
 The authenticated canonical existing video project at
