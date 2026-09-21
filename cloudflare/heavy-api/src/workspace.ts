@@ -206,13 +206,16 @@ export async function saveWorkspaceArtifact(request: Request, env: Env): Promise
     if (!dimensions || dimensions.contentType !== 'image/png' || dimensions.width !== ai.plan.sourceWidth || dimensions.height !== ai.plan.sourceHeight ||
         input.sourceJobId !== ai.row.job_id || featureType !== ai.input.featureType) return fail('workspace_ai_final_contract_mismatch',409);
   }
+  const protectedProvider = ai?.input?.provider === 'openai' ? 'openai' : 'workers_ai';
+  const protectedBackendProvider = typeof ai?.input?.backendProvider === 'string' ? ai.input.backendProvider :
+    protectedProvider === 'openai' ? 'openai-images-api' : 'cloudflare-workers-ai';
   const params: Params = {
     title, prompt, metadata, canvasProjectId: input.canvasProjectId ?? null,
     sourceJobId: input.sourceJobId ?? null, contentType: image.contentType, checksum,
     ...(ai ? { imageAI:{ requestId:ai.requestId,candidateIndex:ai.candidateIndex },contentBytes:image.bytes.length,
       parentImageId:ai.row.image_id,generation:ai.input.generation,modelUsed:ai.row.model,
       metadata:{ ...(metadata as Record<string,unknown>),protectedEdit:ai.plan,artifactRole:'protected-edit-final',
-        protectedRegionComposited:true,maskApplied:true,provider:'workers_ai',backendProvider:'cloudflare-workers-ai',providerModel:ai.row.model,
+        protectedRegionComposited:true,maskApplied:true,provider:protectedProvider,backendProvider:protectedBackendProvider,providerModel:ai.row.model,
         providerRequestId:ai.requestId,providerJobId:ai.row.job_id,providerImageId:ai.row.image_id,
         providerStoragePath:`generated-images/${ai.row.image_id}`,batchId:ai.row.job_id,candidateIndex:ai.candidateIndex } } : {}),
   } as Params;

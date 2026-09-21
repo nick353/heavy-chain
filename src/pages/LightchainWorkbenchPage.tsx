@@ -167,6 +167,7 @@ type LightchainPreviewOverrides = {
 
 const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
 const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspace-tutorial-dismissed-v1';
+const LIGHTCHAIN_GENERATION_PROVIDER = import.meta.env.VITE_GENERATION_PROVIDER === 'openai' ? 'openai' : 'workers_ai';
 const LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL = 'https://static-jp.linkaigc.com/saas/2026-08/7c9021b93516cd2edfe4e2f7059bf20f.jpeg';
 const LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL = 'https://jp.linkaigc.com/static/default.png';
 const FITTING_REFERENCE_SLOT_CONFIG: Array<{
@@ -3323,7 +3324,7 @@ export function LightchainWorkbenchPage() {
       } else {
         assertCurrentAuthBrandFence(authBrandFence, 'generate_image_before_provider');
         const generatedResult = await generateImage(providerPrompt, generationBrandId, {
-          generationProvider: 'workers_ai',
+          generationProvider: LIGHTCHAIN_GENERATION_PROVIDER,
           featureType: `lightchain-${selectedTool.id}`,
           lightchainCompat,
           materialReferences,

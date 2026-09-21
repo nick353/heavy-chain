@@ -3,6 +3,7 @@ import { principal } from './domain.ts';
 import { requireBrandRole, handleMediaReadGateway } from './core.ts';
 import { IMAGE_MODEL, IMAGE_ACTIONS, ImageInputError, boundedImageJSON, canonical, decodeImage, imageEstimate,
   isRecord, modelMultipart, parseImageInput, sha256, type ImageAction, type ImageInput, type Json } from './image-ai-contracts.ts';
+import { OPENAI_IMAGE_BACKEND, OPENAI_IMAGE_PROVIDER, openAIExpectedDimensions, resolveOpenAIModel, runOpenAIImage } from './openai-image.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_MODEL_TIMEOUT_MS = 45_000;
@@ -29,7 +30,33 @@ const limit = (value: string | undefined, fallback: number, max: number) => {
 };
 const limits = (env: Env) => ({ monthly: limit(env.AI_MONTHLY_IMAGE_UNITS, 25, 10000), accountMonthly: limit(env.AI_ACCOUNT_MONTHLY_IMAGE_UNITS ?? env.AI_MONTHLY_IMAGE_UNITS, 25, 10000), daily: limit(env.AI_DAILY_IMAGE_UNITS, 100, 10000),
   dailyNeuronCenti: limit(env.AI_DAILY_ESTIMATED_NEURONS, 5000, 1000000) * 100, concurrent: 2 });
-const enabled = (env: Env, action: string) => env.AI_IMAGE_ENABLED === 'true' && !!env.AI &&
+type ProviderKind = 'workers_ai' | 'openai';
+type ProviderConfig = { provider: ProviderKind; backendProvider: string; model: string };
+
+const configuredProvider = (env: Env): ProviderKind => env.AI_IMAGE_PROVIDER?.trim() === OPENAI_IMAGE_PROVIDER ? 'openai' : 'workers_ai';
+const providerConfig = (env: Env, action: ImageAction, body: Json): ProviderConfig => {
+  const provider = configuredProvider(env);
+  const effectiveAction: ImageAction = action === 'generate-image' && Array.isArray(body.imageUrls) && body.imageUrls.length
+    ? 'edit-image' : action;
+  const requested = typeof body.generationProvider === 'string' ? body.generationProvider.trim() : '';
+  if (requested && requested !== provider) throw new ImageInputError('image_provider_not_enabled', 422);
+  if (provider === OPENAI_IMAGE_PROVIDER) {
+    try {
+      return { provider, backendProvider: OPENAI_IMAGE_BACKEND,
+        model: resolveOpenAIModel(env, effectiveAction, body.generationModel ?? body.providerModel) };
+    } catch (error) {
+      if (error instanceof Error && error.message === 'openai_image_model_not_supported') {
+        throw new ImageInputError('image_model_not_supported', 422);
+      }
+      throw error;
+    }
+  }
+  const requestedModel = body.generationModel ?? body.providerModel;
+  if (requestedModel && requestedModel !== IMAGE_MODEL) throw new ImageInputError('image_model_not_supported', 422);
+  return { provider, backendProvider: 'cloudflare-workers-ai', model: IMAGE_MODEL };
+};
+const enabled = (env: Env, action: string, provider: ProviderKind) => env.AI_IMAGE_ENABLED === 'true' &&
+  (provider === 'openai' ? true : !!env.AI) &&
   (env.AI_IMAGE_ALLOWED_ACTIONS ?? '').split(',').map(v => v.trim()).includes(action);
 
 async function canContinue(request: Request, env: Env, row: Row): Promise<Response | null> {
@@ -47,10 +74,13 @@ async function commitStoredCandidate(env: Env, row: Row, output: Output): Promis
       object.customMetadata?.requestId !== row.request_id || object.customMetadata?.imageId !== output.image_id) return false;
   const input = JSON.parse(row.input_metadata) as Json;
   const descriptor = JSON.parse(output.descriptor) as Json;
-  const metadata = JSON.stringify({ ...(input.metadata as Json), ...descriptor, provider: 'workers_ai',
+  const provider = input.provider === 'openai' ? 'openai' : 'workers_ai';
+  const backendProvider = typeof input.backendProvider === 'string' ? input.backendProvider :
+    provider === 'openai' ? OPENAI_IMAGE_BACKEND : 'cloudflare-workers-ai';
+  const metadata = JSON.stringify({ ...(input.metadata as Json), ...descriptor, provider,
     ...(isRecord((input.metadata as Json).protectedEdit) ? { artifactRole:'provider-intermediate',requiresProtectedComposite:true } : {}),
     feature: input.featureType, source: row.action, bodyTypes: [descriptor.bodyType].filter(Boolean), ageGroups: [descriptor.ageGroup].filter(Boolean),
-    backendProvider: 'cloudflare-workers-ai', providerModel: row.model, requestId: row.request_id,
+    backendProvider, providerModel: row.model, requestId: row.request_id,
     storageProvider: 'cloudflare_r2', sha256: output.sha256, contentBytes: output.content_bytes,
     inputImageCount: input.inputImageCount, referenceDimensions: input.referenceDimensions,
     sourceMetadataVersion: 1, persistenceStatus: 'completed' });
@@ -109,6 +139,10 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
   const editor = row.state === 'completed' ? owner : await requireBrandRole(request,env,row.brand_id,'editor');
   if (!(editor instanceof Response) && editor === row.user_id) row = await reconcile(env,row);
   const current = await outputs(env,row.request_id); const completed: Json[] = [];
+  const input = JSON.parse(row.input_metadata) as Json;
+  const provider = input.provider === 'openai' ? 'openai' : 'workers_ai';
+  const backendProvider = typeof input.backendProvider === 'string' ? input.backendProvider :
+    provider === 'openai' ? OPENAI_IMAGE_BACKEND : 'cloudflare-workers-ai';
   for (const output of current.filter(o => o.state === 'completed')) {
     const path = `generated-images/${output.image_id}`;
     const object = await env.PRIVATE_MEDIA.head(path);
@@ -120,9 +154,11 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
     const signed = await handleMediaReadGateway(new Request(url,{ headers: request.headers }),env);
     if (!signed?.ok) return signed ?? fail('image_readback_unavailable',503);
     const media = await signed.json() as { url: string };
+    const descriptor = JSON.parse(output.descriptor) as Json;
+    const providerTaskId = isRecord(descriptor) && typeof descriptor.providerTaskId === 'string' ? descriptor.providerTaskId : null;
     completed.push({ ...JSON.parse(output.descriptor), id: output.image_id, imageId: output.image_id, jobId: row.job_id,
-      imageUrl: media.url, storagePath: path, persistenceStatus: 'completed', provider: 'workers_ai', modelUsed: row.model,
-      providerModel: row.model, providerTaskId: null, candidateIndex: output.candidate_index,
+      imageUrl: media.url, storagePath: path, persistenceStatus: 'completed', provider, modelUsed: row.model,
+      providerModel: row.model, providerTaskId, candidateIndex: output.candidate_index,
       seed: output.seed, width: output.width, height: output.height });
   }
   // Do not disclose a late result after logout / membership revocation.
@@ -131,11 +167,10 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
   if (finalOwner !== row.user_id) return fail('image_request_not_found',404);
   const success = row.state === 'completed' && completed.length === row.candidate_count;
   const known = current.filter(o => o.estimated_micro_usd !== null);
-  const input = JSON.parse(row.input_metadata) as Json;
   const payload: Json = { success, requestId: row.request_id, jobId: row.job_id, state: row.state,
     createdAt:row.created_at,featureType:input.featureType,metadata:input.metadata,
     protectedEdit:(input.metadata as Json).protectedEdit,requiresProtectedComposite:isRecord((input.metadata as Json).protectedEdit),
-    status: row.state, provider: 'workers_ai', backendProvider: 'cloudflare-workers-ai', providerModel: row.model,
+    status: row.state, provider, backendProvider, providerModel: row.model,
     persistenceStatus: success ? 'completed' : completed.length ? 'partial' : row.state === 'running' ? 'processing' : 'failed',
     requestedCandidateCount: row.candidate_count, persistedCandidateCount: completed.length, cleanupStatus: 'none',
     inputImageCount: (JSON.parse(row.input_metadata) as Json).inputImageCount,
@@ -153,9 +188,11 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
   return reply(payload);
 }
 
-async function runModel(env: Env, input: ImageInput, index: number): Promise<unknown> {
+async function runModel(env: Env, action: ImageAction, input: ImageInput, index: number, provider: ProviderConfig): Promise<unknown> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const inference = env.AI!.run(IMAGE_MODEL,{ multipart: modelMultipart(input,input.candidates[index]) });
+  const inference = provider.provider === 'openai'
+    ? runOpenAIImage(env, action, input, index)
+    : env.AI!.run(IMAGE_MODEL,{ multipart: modelMultipart(input,input.candidates[index]) });
   // A timeout is UNKNOWN, never a safe retry. Workers AI binding has no abort
   // or provider job lookup in this contract. Losing the observer is not cancel.
   try { return await Promise.race([inference,new Promise((_,reject) => { timer = setTimeout(() => reject(new Error('image_outcome_unknown')),modelTimeoutMs(env)); })]); }
@@ -167,7 +204,8 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
   let row: Row | null = null;
   try {
     const user = await principal(request,env); if (user instanceof Response) return user;
-    const raw = await boundedImageJSON(request); const input = parseImageInput(action as ImageAction,raw);
+    const raw = await boundedImageJSON(request); const typedAction = action as ImageAction;
+    const input = parseImageInput(typedAction,raw); const provider = providerConfig(env,typedAction,raw);
     const owner = await requireBrandRole(request,env,input.brandId,'editor'); if (owner instanceof Response) return owner;
     if (owner !== user) return fail('unauthorized',401);
     const id = request.headers.get('idempotency-key')?.toLowerCase(); if (!id || !UUID.test(id)) return fail('image_request_id_required',400);
@@ -175,7 +213,10 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
     row = await read(env,id);
     if (row) return row.user_id === user && row.brand_id === input.brandId && row.fingerprint === fingerprint
       ? receipt(request,env,row) : fail('image_request_conflict',409);
-    if (!enabled(env,action)) return fail('image_ai_not_enabled',503);
+    if (!enabled(env,action,provider.provider)) return fail('image_ai_not_enabled',503);
+    if (provider.provider === 'openai' && !env.OPENAI_IMAGE_API_KEY?.trim() && !env.OPENAI_API_KEY?.trim()) {
+      return fail('openai_image_api_key_missing',503);
+    }
     if (!env.MEDIA_READ_SECRET || env.MEDIA_READ_SECRET.length < 32) return fail('media_read_gateway_unavailable',503);
     if (input.parentImageId && !await env.DB.prepare('SELECT id FROM generated_images WHERE id=? AND user_id=? AND brand_id=?')
       .bind(input.parentImageId,user,input.brandId).first()) return fail('parent_image_not_found',404);
@@ -186,7 +227,7 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
       if (await env.DB.prepare('SELECT id FROM generated_images WHERE id=?').bind(`${jobId}-${index}`).first() ||
           await env.PRIVATE_MEDIA.head(`generated-images/${jobId}-${index}`)) return fail('image_request_conflict',409);
     }
-    const metadata = JSON.stringify({ prompt: input.prompt, featureType: input.featureType, width: input.width, height: input.height,
+    const metadata = JSON.stringify({ provider: provider.provider, backendProvider: provider.backendProvider, prompt: input.prompt, featureType: input.featureType, width: input.width, height: input.height,
       metadata: input.metadata, parentImageId: input.parentImageId, generation: input.generation, inputImageCount: input.references.length,
       referenceDimensions: input.references.map(r => ({ width: r.width,height: r.height })) });
     const admission = env.DB.prepare(`INSERT OR IGNORE INTO heavy_ai_requests
@@ -197,7 +238,7 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
       AND COALESCE((SELECT admitted_centi_neurons FROM heavy_ai_daily WHERE utc_day=?),0)+? <= ?
       AND (SELECT COUNT(*) FROM heavy_ai_requests WHERE state='running' AND created_at>?) < ?
       AND NOT EXISTS(SELECT 1 FROM heavy_ai_requests WHERE user_id=? AND state='running' AND created_at>?)`)
-      .bind(id,user,input.brandId,action,fingerprint,executionId,IMAGE_MODEL,jobId,metadata,count,count,reservedNeuronCenti,utcMonth,utcDay,now,now,
+      .bind(id,user,input.brandId,action,fingerprint,executionId,provider.model,jobId,metadata,count,count,reservedNeuronCenti,utcMonth,utcDay,now,now,
         utcMonth,count,quota.accountMonthly,utcDay,count,quota.daily,utcDay,reservedNeuronCenti,quota.dailyNeuronCenti,
         new Date(Date.now()-STALE_MS).toISOString(),quota.concurrent,user,new Date(Date.now()-STALE_MS).toISOString());
     let admissionError = false;
@@ -223,7 +264,7 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
         .bind(new Date().toISOString(),id,index).run();
       if (changed.meta.changes !== 1) break;
       const started = Date.now(); let output: unknown;
-      try { output = await runModel(env,input,index); }
+      try { output = await runModel(env,typedAction,input,index,provider); }
       catch {
         await env.DB.prepare("UPDATE heavy_ai_candidates SET state='unknown',error_code='image_outcome_unknown',latency_ms=? WHERE request_id=? AND candidate_index=? AND state='running'")
           .bind(Date.now()-started,id,index).run();
@@ -234,18 +275,23 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
       try {
         if (!isRecord(output) || typeof output.image !== 'string') throw new Error('invalid');
         image = decodeImage(output.image,false);
-        if (image.width !== input.width || image.height !== input.height) throw new Error('dimensions');
+        const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height) : [input.width,input.height];
+        if (image.width !== expected[0] || image.height !== expected[1]) throw new Error('dimensions');
       } catch {
         await env.DB.prepare("UPDATE heavy_ai_candidates SET state='failed',error_code='image_provider_invalid_output',latency_ms=? WHERE request_id=? AND candidate_index=?")
           .bind(latency,id,index).run();
         break;
       }
       const estimate = imageEstimate(input); const checksum = await sha256(image.bytes); const imageId = `${jobId}-${index}`;
+      const providerTaskId = isRecord(output) && typeof output.providerTaskId === 'string' ? output.providerTaskId : null;
+      const descriptor = isRecord(input.candidates[index].descriptor)
+        ? { ...input.candidates[index].descriptor, ...(providerTaskId ? { providerTaskId } : {}) }
+        : input.candidates[index].descriptor;
       // Record immutable output identity BEFORE writing R2, so a lost R2 or D1
       // response can finish this save without paying for another inference.
       await env.DB.prepare(`UPDATE heavy_ai_candidates SET state='storing',content_type=?,content_bytes=?,sha256=?,width=?,height=?,
-        estimated_micro_usd=?,estimated_neurons=?,latency_ms=? WHERE request_id=? AND candidate_index=? AND state='running'`)
-        .bind(image.contentType,image.bytes.length,checksum,image.width,image.height,estimate.microUSD,estimate.neurons,latency,id,index).run();
+        estimated_micro_usd=?,estimated_neurons=?,latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'`)
+        .bind(image.contentType,image.bytes.length,checksum,image.width,image.height,estimate.microUSD,estimate.neurons,latency,JSON.stringify(descriptor),id,index).run();
       const access = await canContinue(request,env,row); if (access) { await reconcile(env,row,true); return access; }
       try {
         await env.PRIVATE_MEDIA.put(`generated-images/${imageId}`,image.bytes,{ onlyIf: { etagDoesNotMatch: '*' }, httpMetadata: { contentType: image.contentType },
@@ -266,6 +312,8 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
 
 export async function imageUsage(env: Env, brandId: string): Promise<Json> {
   const now = new Date(); const month = now.toISOString().slice(0,7); const quota = limits(env);
+  const provider = configuredProvider(env);
+  const imageModel = provider === 'openai' ? resolveOpenAIModel(env,'generate-image') : IMAGE_MODEL;
   const used = await env.DB.prepare(`SELECT COALESCE(SUM(r.quota_units),0) AS allocated FROM heavy_ai_requests r WHERE brand_id=? AND utc_month=?`)
     .bind(brandId,month).first<{ allocated: number }>();
   const sums = await env.DB.prepare(`SELECT COUNT(*) AS plannedImages,
@@ -284,7 +332,8 @@ export async function imageUsage(env: Env, brandId: string): Promise<Json> {
     monthlyQuota: quota.monthly, remainingUnits: Math.max(0,quota.monthly-(used?.allocated ?? 0)), accountMonthlyQuota: quota.accountMonthly,
     accountRemainingUnits: Math.max(0,quota.accountMonthly-(accountUsed?.allocated ?? 0)), planName: '内部Free枠',
     billing: 'estimate_not_invoice', providerBilling: null, accountFreeAllocationRemaining: null,
-    measurementScope: 'cloudflare_image_ai_only', imageModel: IMAGE_MODEL, imageAIEnabled: env.AI_IMAGE_ENABLED === 'true',
+    measurementScope: 'cloudflare_image_ai_only', provider, backendProvider: provider === 'openai' ? OPENAI_IMAGE_BACKEND : 'cloudflare-workers-ai', imageModel,
+    imageAIEnabled: env.AI_IMAGE_ENABLED === 'true',
     dailyWorkerAdmissionLimit: quota.daily, dailyWorkerEstimatedNeuronLimit: quota.dailyNeuronCenti / 100, accountWideBudgetGuaranteed: false };
 }
 

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test test/index.test.ts test/domain.test.ts test/core.test.ts test/client.test.ts test/migration.test.ts test/auth.test.ts test/workspace.test.ts test/identity.test.ts test/feedback-admin.test.ts test/image-ai.test.ts test/durable-job-claim.test.ts test/canvas.test.ts test/gallery.test.ts",
+    "test": "node --experimental-strip-types --test test/index.test.ts test/domain.test.ts test/core.test.ts test/client.test.ts test/migration.test.ts test/auth.test.ts test/workspace.test.ts test/identity.test.ts test/feedback-admin.test.ts test/image-ai.test.ts test/openai-image.test.ts test/durable-job-claim.test.ts test/canvas.test.ts test/gallery.test.ts",
     "dry-run": "wrangler deploy --dry-run --config wrangler.example.jsonc --outdir .wrangler/dry-run",
     "test:feedback-runtime": "node --experimental-strip-types --test test/feedback-admin.runtime.ts",
     "test:image-runtime": "node --experimental-strip-types --test test/image-ai.runtime.ts"

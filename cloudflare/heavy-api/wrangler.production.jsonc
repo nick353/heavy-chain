@@ -23,6 +23,7 @@
   "vars": {
     "AUTH_ISSUER": "https://consumer-auth.nichika2000823.workers.dev",
     "FRONTEND_ORIGINS": "https://heavy-chain-web.nichika2000823.workers.dev,https://heavy-chain.zeabur.app",
+    "AI_IMAGE_PROVIDER": "workers_ai",
     "AI_IMAGE_ENABLED": "true",
     "AI_IMAGE_ALLOWED_ACTIONS": "generate-image,edit-image,model-matrix",
     "AI_IMAGE_TIMEOUT_MS": "90000",

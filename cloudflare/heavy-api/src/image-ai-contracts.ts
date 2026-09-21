@@ -2,6 +2,7 @@ export const IMAGE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b';
 import { PROTECTED_IMAGE_EDIT_MODE } from '../../../src/lib/protectedImageEditContract.ts';
 export const IMAGE_ACTIONS = new Set(['generate-image', 'edit-image', 'model-matrix']);
 export type ImageAction = 'generate-image' | 'edit-image' | 'model-matrix';
+const OPENAI_IMAGE_MODELS = new Set(['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini', 'chatgpt-image-latest']);
 export type Json = Record<string, unknown>;
 export type Raster = { bytes: Uint8Array; contentType: string; width: number; height: number };
 export type Candidate = { prompt: string; descriptor: Json; seed: number };
@@ -124,8 +125,14 @@ export function parseImageInput(action: ImageAction, body: Json): ImageInput {
   catch { throw new ImageInputError('legal_safety_prompt_blocked',403); }
   if (body.maskDataUrl || body.maskApplied === true || body.outputBackground === 'transparent') throw new ImageInputError('image_mask_or_transparency_not_supported', 422);
   // A caller asking for a different provider/model must not be silently routed.
-  for (const value of [body.generationModel, body.providerModel]) if (value && value !== IMAGE_MODEL) throw new ImageInputError('image_model_not_supported', 422);
-  if (body.generationProvider && body.generationProvider !== 'workers_ai') throw new ImageInputError('image_provider_not_supported', 422);
+  for (const value of [body.generationModel, body.providerModel]) {
+    if (value && value !== IMAGE_MODEL && !(typeof value === 'string' && OPENAI_IMAGE_MODELS.has(value))) {
+      throw new ImageInputError('image_model_not_supported', 422);
+    }
+  }
+  if (body.generationProvider && !['workers_ai', 'openai'].includes(String(body.generationProvider))) {
+    throw new ImageInputError('image_provider_not_supported', 422);
+  }
   const prompt = requiredText(action === 'model-matrix'
     ? (typeof body.productDescription === 'string' && body.productDescription.trim() ? body.productDescription
       : body.imageUrl ? 'Use the provided garment reference without inventing or replacing its design.' : body.productDescription)

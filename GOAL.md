@@ -1,3 +1,31 @@
+# OpenAI provider boundary and provenance implemented locally — 2026-09-21 r104
+
+The active Heavy Cloudflare API now has a server-only OpenAI Images adapter for
+generation, reference edits, and model-matrix fitting. The default production
+provider remains Workers AI; `AI_IMAGE_PROVIDER=openai` is an explicit opt-in,
+browser requests must match that server configuration, and missing keys or
+unsupported models fail before durable admission. OpenAI credentials never
+enter the browser bundle or request metadata. Provider/model/backend and the
+provider `x-request-id` are retained through the candidate, private R2/Gallery
+metadata, receipt, History/Jobs path, and protected workspace-save metadata.
+
+Evidence: Cloudflare API `npm test` passes 102/102, including authenticated
+admission, R2 persistence, receipt, Gallery provenance, edit multipart
+references, and server-only credential assertions. API typecheck passes;
+Cloudflare runtime contract passes 6/6; synthetic workerd/Auth/D1/private-R2
+image runtime passes 1/1; root typecheck, lint, and production Web build pass.
+These are local/synthetic fixtures and do not claim a live OpenAI generation.
+
+Remaining exact boundary: the current local OpenAI key returns HTTP 401
+`invalid_api_key`, and the active Cloudflare production secret readback still
+contains only `MEDIA_READ_SECRET`. A valid key must be bound to the active
+Cloudflare Worker, then the intentional provider/model environment settings
+must be deployed and read back. Only after that can one authenticated marker
+generation per action, private R2/Gallery/History/Jobs/Canvas save and reuse
+readback, cleanup, visual scorecard, and the strict Light-to-Heavy release gate
+be accepted. No invalid key was replayed and no production provider switch or
+deployment was performed in this slice.
+
 # OpenAI API availability recheck — 2026-09-21 r103
 
 The requested current OpenAI generation probe was attempted once with the

@@ -22,6 +22,7 @@
   "vars": {
     "AUTH_ISSUER": "https://consumer-auth.example.workers.dev",
     "FRONTEND_ORIGINS": "https://replace-with-frontend.example",
+    "AI_IMAGE_PROVIDER": "workers_ai",
     "AI_IMAGE_ENABLED": "false",
     "AI_IMAGE_ALLOWED_ACTIONS": "generate-image,edit-image,model-matrix",
     "AI_IMAGE_TIMEOUT_MS": "45000",

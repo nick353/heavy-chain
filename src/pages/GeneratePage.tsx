@@ -615,17 +615,20 @@ const isPrintEligibleDesignGachaResult = (image: GeneratedResult) => (
 );
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
-const generationProvider = 'workers_ai';
-const hostedImageGenerationMode = generationProvider === 'workers_ai';
+const generationProvider = import.meta.env.VITE_GENERATION_PROVIDER === 'openai' ? 'openai' as const : 'workers_ai' as const;
+const hostedImageGenerationMode = generationProvider === 'workers_ai' || generationProvider === 'openai';
 const noImageGenerationMode = false;
 
-const generationModelOptions = [{
+const generationModelOptions = generationProvider === 'openai' ? [{
+  id: import.meta.env.VITE_DEFAULT_GENERATION_MODEL || 'gpt-image-1-mini', provider: 'openai' as const,
+  label: 'OpenAI候補', title: 'OpenAI画像モデル', cost: '実行後に利用量表示（請求額ではありません）', description: 'サーバー側キー・画像API',
+}] as const : [{
   id: CLOUDFLARE_IMAGE_MODEL, provider: 'workers_ai' as const, label: 'Cloudflare候補', title: 'FLUX.2 Klein 4B',
   cost: '実行後に利用量表示（請求額ではありません）', description: '品質検証中・参照512px',
 }] as const;
 
 const getInitialGenerationModel = () => {
-  return CLOUDFLARE_IMAGE_MODEL;
+  return generationModelOptions[0].id;
 };
 
 const debugLog = (message: string, details?: Record<string, unknown>) => {
@@ -4277,7 +4280,7 @@ export function GeneratePage() {
             )}
 
             {renderFeatureForm()}
-            {cloudflareDataPlane && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">{CLOUDFLARE_IMAGE_NOTICE}</p>}
+            {cloudflareDataPlane && generationProvider === 'workers_ai' && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">{CLOUDFLARE_IMAGE_NOTICE}</p>}
 
             {!isGenerating && !generationError && (
               <div className={`mt-5 rounded-2xl border p-4 shadow-soft ${

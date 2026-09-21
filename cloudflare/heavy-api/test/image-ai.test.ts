@@ -164,6 +164,30 @@ test('real SQLite/R2 contract: generation result, quota, private content, Galler
   assert.equal(usage.providerBilling,null); assert.equal(usage.accountFreeAllocationRemaining,null);
 });
 
+test('OpenAI provider uses the same authenticated admission, R2 persistence, receipt and Gallery provenance',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_MODEL='gpt-image-1-mini';
+  const providerImage=pngFixture(1024,1024,[40,120,80]);
+  const originalFetch=globalThis.fetch;
+  let providerURL='';
+  globalThis.fetch=async(input: RequestInfo|URL, init?: RequestInit) => {
+    providerURL=String(input);
+    assert.equal(init?.headers && new Headers(init.headers).get('authorization'),'Bearer server-only-test-key');
+    return Response.json({data:[{b64_json:Buffer.from(providerImage).toString('base64'),mime_type:'image/png'}]}, {headers:{'x-request-id':'req-openai-runtime-fixture'}});
+  };
+  try {
+    const id=crypto.randomUUID();
+    const result=await json(await s.call(url+'generate-image','alice',{...s.input(),generationProvider:'openai',generationModel:'gpt-image-1-mini'},id));
+    assert.equal(result.success,true); assert.equal(result.provider,'openai'); assert.equal(result.backendProvider,'openai-images-api');
+    assert.equal(result.providerModel,'gpt-image-1-mini'); assert.equal(result.images[0].providerTaskId,'req-openai-runtime-fixture');
+    assert.equal(providerURL,'https://api.openai.com/v1/images/generations');
+    assert.equal(s.calls.length,0); assert.equal(s.bucket.puts,1);
+    const stored=JSON.parse(s.db.sql.prepare('SELECT metadata FROM generated_images').get()!.metadata as string);
+    assert.equal(stored.provider,'openai'); assert.equal(stored.backendProvider,'openai-images-api'); assert.equal(stored.providerTaskId,'req-openai-runtime-fixture');
+    assert.equal((await json(await s.call('/v1/generated-images?brand_id=brand')))[0].metadata.provider,'openai');
+  } finally { globalThis.fetch=originalFetch; }
+});
+
 test('image editing passes each ordered reference as binary multipart, preserves lineage and never exposes URLs/secrets',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close()); const first=pngFixture(128,64); const second=pngFixture(64,128,[180,30,20]);
   const references=[first,second].map(bytes=>'data:image/png;base64,'+Buffer.from(bytes).toString('base64'));
