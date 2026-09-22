@@ -1,3 +1,22 @@
+# Light Chain Agent project dialog exact parity — 2026-09-22 r146
+
+本家 `https://jp.linkaigc.com/agent` とHeavy本番
+`https://heavy-chain-web.nichika2000823.workers.dev/agent` を同じログイン済みCompanion profileの
+fresh task-owned tabsで実測した。本家の「新規ファイル」から開くプロジェクト作成モーダルを、Heavyの
+imperative runtimeでも確実に開くようにし、モーダル本体を `x=480,y=201,w=480,h=246`、入力欄を
+`x=505,y=318,w=430,h=40`、キャンセルを `x=733,y=382,w=118,h=40`、作成を
+`x=859,y=382,w=76,h=40`へ一致させた。placeholder、40文字カウンタ、disabled状態、visual click後の
+semantic+visual readbackも本家と一致した。Light Chainにない権利確認checkbox/modal/badgeは追加していない。
+
+変更は `7de85f3` と `746eedd`。typecheck、UI boundary 17/17、eslint、diff check、Cloudflare
+build、Wrangler dry-run、web test 11/11を通過し、Cloudflare Version
+`fbaace69-096c-44b5-8c40-c43a8b1172e6`を100% deployした。health、未認証 `/agent` の307 login
+redirect、Companionの本家/Heavy visual click・geometry readback、task terminal cleanup（閉じた
+Heavy tab、unknown effect 0）を確認した。provider生成、保存mutation、readback/reuse、課金、外部送信は0件。
+
+Goalは `in_progress`。残りは全routeの同一fixture pixel/interaction equality、authenticated provider
+receipt、durable save/readback/reuse/reconciliation、video provider completion、strict release gate。
+
 # Light Chain Agent selector-flow parity — 2026-09-22 r145
 
 正本 `https://jp.linkaigc.com/agent` の実画面を同一Companion profileで観測し、HeavyのAgent
