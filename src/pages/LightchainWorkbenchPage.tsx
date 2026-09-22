@@ -1778,7 +1778,7 @@ export function LightchainWorkbenchPage() {
     dialog.setAttribute('aria-labelledby', 'lightchain-agent-project-create-title');
 
     const header = document.createElement('div');
-    header.className = 'flex items-start justify-between gap-4';
+    header.className = '-mb-1 flex items-start justify-between gap-4';
     const headingGroup = document.createElement('div');
     headingGroup.className = 'min-w-0';
     const heading = document.createElement('h2');
@@ -1888,7 +1888,7 @@ export function LightchainWorkbenchPage() {
         className="box-border flex h-[246px] w-[min(480px,calc(100vw-48px))] flex-col gap-6 rounded-2xl border border-white/10 bg-[#2c3133] p-6 text-white shadow-2xl"
         data-testid="lightchain-agent-project-create-modal"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="-mb-1 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h2 id="lightchain-agent-project-create-title" className="text-xl font-semibold leading-7">プロジェクトを作成</h2>
             <p className="mt-1 text-sm leading-5 text-neutral-300">
