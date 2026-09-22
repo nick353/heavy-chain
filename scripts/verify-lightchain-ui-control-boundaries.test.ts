@@ -194,6 +194,7 @@ test('Agent new-file opens the Lightchain project creation flow', async () => {
 
   assert.match(source, /const \[agentProjectCreateOpen, setAgentProjectCreateOpen\] = useState\(false\)/);
   assert.match(source, /onClick=\{openAgentProjectCreate\}/);
+  assert.match(source, /onMouseDown=\{openAgentProjectCreate\}/);
   assert.match(source, /onPointerDown=\{openAgentProjectCreate\}/);
   assert.match(source, /aria-label="新規ファイル" aria-haspopup="dialog"/);
   assert.doesNotMatch(source, /aria-label="新規ファイル"[^>]*aria-expanded/);
