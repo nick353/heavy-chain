@@ -5921,14 +5921,14 @@ export function LightchainWorkbenchPage() {
                         {agentTaskTypeLabel} <ChevronDown aria-hidden="true" className="h-3 w-3" />
                       </button>
                       {agentTaskTypeOpen && (
-                        <div role="listbox" aria-label="業務シーン" className="absolute left-[10px] top-[-73px] z-30 w-[86px] rounded-lg border border-white/10 bg-[#303536] p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                        <div role="listbox" aria-label="商品企画タイプを選択" className="absolute left-[7px] top-[-90px] z-30 flex w-[96px] flex-col gap-1 rounded-xl border border-white/10 bg-[#303536] p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
                           {(['商品企画', 'テーマ企画'] as const).map((taskType) => (
                             <button
                               key={taskType}
                               type="button"
                               role="option"
                               aria-selected={agentTaskType === taskType}
-                              className="flex h-8 w-full items-center rounded-lg px-2 text-left text-base font-normal leading-5 text-[#dfe8e6] hover:bg-white/10"
+                              className="flex h-8 w-full flex-none items-center rounded-lg px-2 py-0 text-left text-base font-normal leading-5 text-[#dfe8e6] hover:bg-white/10"
                               onClick={() => {
                                 setAgentTaskType(taskType);
                                 setAgentTaskTypeOpen(false);
