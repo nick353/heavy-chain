@@ -1,3 +1,20 @@
+# Light Chain Agent selector-flow parity — 2026-09-22 r145
+
+正本 `https://jp.linkaigc.com/agent` の実画面を同一Companion profileで観測し、HeavyのAgent
+初期状態と業務シーンselectorの状態遷移を更新した。`新商品企画`／`テーマ企画`の選択、
+`aria-expanded`/`aria-selected`、テーマ企画時のcontenteditable入力欄とplaceholder、draft復元を
+実装した。権利確認checkbox/modal/badgeは追加していない。selector展開メニューは本家の実測
+listbox 96x78、選択肢86x32、4px間隔、X=551/Y=233に合わせた。
+
+検証はtypecheck、Lightchain UI boundary 17/17、eslint、build、Cloudflare web test 11/11、
+`/_health`、未認証`/agent`の`307 /login?redirect=...`、本番Version
+`67d4d45e-d7ca-47fd-a95d-6342ecf25270`、Companionのfresh semantic/visual readbackとowner cleanupを
+通過した。Heavyの最終readbackでもselector初期状態24x100と展開listbox 96x78/X=551/Y=233を確認した。
+操作はUI比較のみで、provider生成、保存mutation、課金、外部送信は0件。
+
+Goalは`in_progress`。r134のstrict blocker 6件、全画面のauthenticated同一fixture pixel equality、
+provider receipt、durable save/readback/reuse/reconciliation、video provider completionは未完了。
+
 # Light Chain Agent initial-state parity — 2026-09-22 r143
 
 正本 `https://jp.linkaigc.com/agent` とHeavy本番
