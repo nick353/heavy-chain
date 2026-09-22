@@ -1772,7 +1772,7 @@ export function LightchainWorkbenchPage() {
     overlay.setAttribute('data-testid', 'lightchain-agent-project-create-modal');
 
     const dialog = document.createElement('div');
-    dialog.className = 'flex w-[min(480px,calc(100vw-48px))] flex-col gap-6 rounded-2xl border border-white/10 bg-[#2c3133] p-6 text-white shadow-2xl';
+    dialog.className = 'box-border flex h-[246px] w-[min(480px,calc(100vw-48px))] flex-col gap-6 rounded-2xl border border-white/10 bg-[#2c3133] p-6 text-white shadow-2xl';
     dialog.setAttribute('role', 'dialog');
     dialog.setAttribute('aria-modal', 'true');
     dialog.setAttribute('aria-labelledby', 'lightchain-agent-project-create-title');
@@ -1794,7 +1794,10 @@ export function LightchainWorkbenchPage() {
     closeButton.type = 'button';
     closeButton.className = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-neutral-300 hover:bg-white/10';
     closeButton.setAttribute('aria-label', '閉じる');
-    closeButton.textContent = '×';
+    const closeIcon = document.createElement('span');
+    closeIcon.className = 'text-[28px] font-light leading-none';
+    closeIcon.textContent = '×';
+    closeButton.append(closeIcon);
     header.append(headingGroup, closeButton);
 
     const field = document.createElement('div');
@@ -1814,11 +1817,11 @@ export function LightchainWorkbenchPage() {
     footer.className = 'flex justify-end gap-2';
     const cancelButton = document.createElement('button');
     cancelButton.type = 'button';
-    cancelButton.className = 'h-10 min-w-[76px] rounded-lg bg-[#687174] px-6 text-base font-medium text-white shadow-xs transition hover:bg-[#788285]';
+    cancelButton.className = 'h-10 w-[118px] rounded-lg bg-[#687174] px-0 text-base font-medium text-white shadow-xs transition hover:bg-[#788285]';
     cancelButton.textContent = 'キャンセル';
     const createButton = document.createElement('button');
     createButton.type = 'button';
-    createButton.className = 'h-10 min-w-[76px] rounded-lg bg-cyan-300 px-6 text-base font-medium text-neutral-950 shadow-xs transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-[#687174] disabled:text-neutral-400';
+    createButton.className = 'h-10 w-[76px] rounded-lg bg-cyan-300 px-0 text-base font-medium text-neutral-950 shadow-xs transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-[#687174] disabled:text-neutral-400';
     createButton.textContent = '作成';
     createButton.disabled = true;
     footer.append(cancelButton, createButton);
@@ -1882,7 +1885,7 @@ export function LightchainWorkbenchPage() {
         role={agentProjectCreateOpen ? 'dialog' : undefined}
         aria-modal="true"
         aria-labelledby="lightchain-agent-project-create-title"
-        className="flex w-[min(480px,calc(100vw-48px))] flex-col gap-6 rounded-2xl border border-white/10 bg-[#2c3133] p-6 text-white shadow-2xl"
+        className="box-border flex h-[246px] w-[min(480px,calc(100vw-48px))] flex-col gap-6 rounded-2xl border border-white/10 bg-[#2c3133] p-6 text-white shadow-2xl"
         data-testid="lightchain-agent-project-create-modal"
       >
         <div className="flex items-start justify-between gap-4">
@@ -1910,10 +1913,10 @@ export function LightchainWorkbenchPage() {
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-base text-neutral-400">{agentProjectName.length} / 40</span>
         </div>
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={closeAgentProjectCreate} className="h-10 min-w-[76px] rounded-lg bg-[#687174] px-6 text-base font-medium text-white shadow-xs transition hover:bg-[#788285]">
+          <button type="button" onClick={closeAgentProjectCreate} className="h-10 w-[118px] rounded-lg bg-[#687174] px-0 text-base font-medium text-white shadow-xs transition hover:bg-[#788285]">
             キャンセル
           </button>
-          <button type="button" onClick={handleAgentProjectCreate} disabled={!agentProjectName.trim()} className="h-10 min-w-[76px] rounded-lg bg-cyan-300 px-6 text-base font-medium text-neutral-950 shadow-xs transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-[#687174] disabled:text-neutral-400">
+          <button type="button" onClick={handleAgentProjectCreate} disabled={!agentProjectName.trim()} className="h-10 w-[76px] rounded-lg bg-cyan-300 px-0 text-base font-medium text-neutral-950 shadow-xs transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-[#687174] disabled:text-neutral-400">
             作成
           </button>
         </div>
