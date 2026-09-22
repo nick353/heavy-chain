@@ -1478,6 +1478,9 @@ export function LightchainWorkbenchPage() {
   const [agentProjectName, setAgentProjectName] = useState('');
   const [agentCreatedProjects, setAgentCreatedProjects] = useState<string[]>([]);
   const [agentQuickStartOpen, setAgentQuickStartOpen] = useState(true);
+  const [agentTaskType, setAgentTaskType] = useState<'商品企画' | 'テーマ企画'>('商品企画');
+  const [agentTaskTypeOpen, setAgentTaskTypeOpen] = useState(false);
+  const [agentTaskTypeDrafts, setAgentTaskTypeDrafts] = useState<Record<string, string>>({});
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
@@ -5594,6 +5597,9 @@ export function LightchainWorkbenchPage() {
       historyLabel: workspaceStyle.kind === 'marketing' ? 'マイプロジェクト' : '履歴',
       examples: workspaceStyle.examples,
     };
+    const agentThemePrompt = workspaceStyle.kind === 'agent' && agentTaskType === 'テーマ企画';
+    const agentTaskTypeLabel = agentTaskType === '商品企画' ? '新商品企画' : 'テーマ企画';
+    const agentTaskTypePlaceholder = 'テーマ企画のテーマ、目標、納品要件を入力してください…';
     const visibleExamples = currentWorkspaceCopy.examples ?? workspaceStyle.examples;
     const workspaceTutorialSteps = [
       'ここで参考画像のアップロードや、アイデア（プロンプト）の入力ができます。',
@@ -5905,22 +5911,66 @@ export function LightchainWorkbenchPage() {
                 )}
                 <div className={`${workspaceStyle.kind === 'agent' ? 'relative h-24 min-h-24 w-full flex-1' : 'relative h-full min-h-[112px]'}`}>
                   {workspaceStyle.kind === 'agent' && (
-                    <button
-                      type="button"
-                      aria-expanded={false}
-                      className="absolute left-1 top-1 z-10 flex h-6 w-[100px] items-center gap-0.5 rounded-md bg-[#244440] pr-1 pl-2 text-base font-normal leading-5 text-[#7ee1d4]"
-                      onClick={() => setWorkspaceText('')}
-                    >
-                      {currentWorkspaceTab === '商品企画' ? '新商品企画' : currentWorkspaceTab} <ChevronDown aria-hidden="true" className="h-3 w-3" />
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        aria-expanded={agentTaskTypeOpen}
+                        className="absolute left-1 top-1 z-20 flex h-6 w-[100px] items-center gap-0.5 rounded-md bg-[#244440] pr-1 pl-2 text-base font-normal leading-5 text-[#7ee1d4]"
+                        onClick={() => setAgentTaskTypeOpen((open) => !open)}
+                      >
+                        {agentTaskTypeLabel} <ChevronDown aria-hidden="true" className="h-3 w-3" />
+                      </button>
+                      {agentTaskTypeOpen && (
+                        <div role="listbox" aria-label="業務シーン" className="absolute left-[10px] top-[-73px] z-30 w-[86px] rounded-lg border border-white/10 bg-[#303536] p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                          {(['商品企画', 'テーマ企画'] as const).map((taskType) => (
+                            <button
+                              key={taskType}
+                              type="button"
+                              role="option"
+                              aria-selected={agentTaskType === taskType}
+                              className="flex h-8 w-full items-center rounded-lg px-2 text-left text-base font-normal leading-5 text-[#dfe8e6] hover:bg-white/10"
+                              onClick={() => {
+                                setAgentTaskType(taskType);
+                                setAgentTaskTypeOpen(false);
+                                setWorkspaceText(agentTaskTypeDrafts[taskType] ?? '');
+                              }}
+                            >
+                              {taskType === '商品企画' ? '新商品企画' : taskType}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
-                <textarea
-                  value={workspaceText}
+                {agentThemePrompt ? (
+                  <div className="relative h-[88px] min-h-[88px] w-full">
+                    <div
+                      role="textbox"
+                      contentEditable
+                      suppressContentEditableWarning
+                      aria-label={agentTaskTypePlaceholder}
+                      onInput={(event) => {
+                        const nextValue = event.currentTarget.textContent ?? '';
+                        setWorkspaceText(nextValue);
+                        setAgentTaskTypeDrafts((drafts) => ({ ...drafts, [agentTaskType]: nextValue }));
+                      }}
+                      className="relative z-[2] h-full w-full overflow-visible whitespace-pre-wrap break-words p-1 text-base font-normal leading-6 text-[#e8eeed] outline-none"
+                    >
+                      {workspaceText}
+                    </div>
+                    {!workspaceText && <span aria-hidden="true" className="pointer-events-none absolute left-[94px] top-1 z-[1] text-[#8f9b99]">{agentTaskTypePlaceholder}</span>}
+                  </div>
+                ) : (
+                  <textarea
+                    value={workspaceText}
                     onChange={(event) => {
                       const nextValue = event.target.value;
                       setWorkspaceText(nextValue);
                       if (currentWorkspaceTab) {
                         setWorkspaceTextDrafts((drafts) => ({ ...drafts, [currentWorkspaceTab]: nextValue }));
+                      }
+                      if (workspaceStyle.kind === 'agent') {
+                        setAgentTaskTypeDrafts((drafts) => ({ ...drafts, [agentTaskType]: nextValue }));
                       }
                     }}
                     aria-label={workspaceStyle.kind === 'agent' ? '調査したい市場、カテゴリ、スタイル方向を入力してください…' : undefined}
@@ -5928,6 +5978,7 @@ export function LightchainWorkbenchPage() {
                     maxLength={4000}
                     className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 pl-1 text-base font-normal leading-6 text-[#e8eeed] [text-indent:90px]' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
                   />
+                )}
                 </div>
                 {workspaceStyle.kind === 'agent' && (
                   <>
