@@ -2,6 +2,7 @@ import { type ChangeEvent, type MouseEvent, useEffect, useMemo, useRef, useState
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
+  ChevronDown,
   Bot,
   Boxes,
   CheckCircle2,
@@ -5729,8 +5730,8 @@ export function LightchainWorkbenchPage() {
               </nav>
               <div className="mt-2 h-px w-full bg-white/10" />
               <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="mt-[17px] flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
-                <button type="button" aria-label="最近" className="flex h-6 items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
+              <div className="mt-[16.65625px] flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
+                <button type="button" aria-label="最近" className="flex h-6 w-12 items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
                 <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" aria-expanded={agentProjectCreateOpen} onPointerDown={openAgentProjectCreate} onClick={openAgentProjectCreate} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
               </div>
               <div className="mt-4 space-y-0">
@@ -5834,7 +5835,7 @@ export function LightchainWorkbenchPage() {
 
             {workspaceStyle.kind === 'agent' ? (
               <section className="quick-start order-3 mt-0 w-[720px] flex-none overflow-hidden py-6 max-[1120px]:w-[min(720px,calc(100%-32px))]" data-testid={workspaceStyle.kind === 'agent' ? 'lightchain-agent-quick-start' : undefined}>
-                <button type="button" aria-label="クイックスタート 迷ったら、こちらのテンプレートをお試しください" aria-expanded={agentQuickStartOpen} className="flex h-14 w-full items-center justify-between gap-2 bg-transparent px-2 py-4 text-white" onClick={() => setAgentQuickStartOpen((open) => !open)}>
+                <button type="button" aria-expanded={agentQuickStartOpen} className="flex h-14 w-full items-center justify-between gap-2 bg-transparent px-2 py-4 text-white" onClick={() => setAgentQuickStartOpen((open) => !open)}>
                   <span className="flex items-center gap-1 text-xs font-medium leading-5 text-[#aab8b6]"><span aria-hidden="true">♧</span><strong className="text-sm font-bold text-white">クイックスタート</strong></span>
                   <span className="flex items-center gap-1 text-sm text-[#7b8a88]">迷ったら、こちらのテンプレートをお試しください <span aria-hidden="true">⌄</span></span>
                 </button>
@@ -5907,10 +5908,10 @@ export function LightchainWorkbenchPage() {
                     <button
                       type="button"
                       aria-expanded={false}
-                      className="absolute left-1 top-1 z-10 flex h-6 w-max items-center gap-0.5 rounded-md bg-[#244440] pr-1 pl-2 text-base font-normal leading-5 text-[#7ee1d4]"
+                      className="absolute left-1 top-1 z-10 flex h-6 w-[100px] items-center gap-0.5 rounded-md bg-[#244440] pr-1 pl-2 text-base font-normal leading-5 text-[#7ee1d4]"
                       onClick={() => setWorkspaceText('')}
                     >
-                      {currentWorkspaceTab === '商品企画' ? '新商品企画' : currentWorkspaceTab} <span aria-hidden="true">⌄</span>
+                      {currentWorkspaceTab === '商品企画' ? '新商品企画' : currentWorkspaceTab} <ChevronDown aria-hidden="true" className="h-3 w-3" />
                     </button>
                   )}
                 <textarea
