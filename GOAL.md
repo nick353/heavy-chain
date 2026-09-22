@@ -1,3 +1,20 @@
+# Light Chain Agent initial-state parity — 2026-09-22 r143
+
+正本 `https://jp.linkaigc.com/agent` とHeavy本番
+`https://heavy-chain-web.nichika2000823.workers.dev/agent` を、同じCompanion profileの
+task-owned tabsで同時にsettle/readbackした。Agentの初期状態について、見出し、Quick Startの
+expanded状態とアクセシブル名、`新商品企画` selectorの名称・24x100 geometry、空入力時の送信
+disabled、入力欄のaria-label/placeholder、サイドバーの新規タスク/最近/新規ファイルを確認した。
+HeavyはSourceと同じ高さ・寸法・状態になり、Quick Startの文字記号も本家同様にアイコン要素へ
+置換した。Heavy本番Version `cf9ac418-101b-4107-a8e9-2be41190df98` を100% deployし、
+`/_health`、未認証`/agent`のlogin redirect、Companionのsemantic+visual readback、tab cleanup
+をfresh確認した。Light Chainに存在しない権利確認checkbox/modal/badgeは追加していない。
+
+これはAgent初期UIのreadbackであり、provider生成、実データ保存・再利用・readback/reconciliation、
+video provider、課金、外部actionは実行していない。Goalは `in_progress`。r134のstrict blocker 6件、
+同一fixture全画面のauthenticated pixel equality、provider receipt、durable persistence、動画
+provider completionは未完了。
+
 # Light Chain / Heavy authenticated video workspace readback — 2026-09-21 r142
 
 認証済みHeavy本番の動画ワークスペースをtask-owned Companionで読み取り、loading shellが消えるまで
