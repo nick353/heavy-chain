@@ -10,6 +10,7 @@ export function parseRange(value, size) {
 }
 
 const PUBLIC_BROWSER_PATHS = new Set(['/login', '/login-m', '/auth/callback', '/reset-password']);
+const SOURCE_LIGHTCHAIN_FONT_URL = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/common/AlimamaFangYuanTiVF-Thin.woff';
 
 function isHtmlNavigationPath(path) {
   // Static assets and API routes have their own authorization/asset boundary.
@@ -71,6 +72,23 @@ export default {
     if (path === '/_health') {
       return Response.json({ service: 'heavy-chain-web', hosting: 'cloudflare', authProvider: env.AUTH_SERVICE ? 'cloudflare' : 'unavailable' },
         { headers: { 'cache-control': 'no-store' } });
+    }
+    if (path === '/assets/AlimamaFangYuanTiVF-Thin.woff') {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
+      }
+      try {
+        const response = await fetch(SOURCE_LIGHTCHAIN_FONT_URL, { method: request.method });
+        if (!response.ok) return new Response('Font unavailable', { status: 502, headers: { 'cache-control': 'no-store' } });
+        const headers = new Headers(response.headers);
+        headers.set('content-type', 'font/woff');
+        headers.set('cache-control', 'public, max-age=31536000, immutable');
+        headers.set('access-control-allow-origin', '*');
+        headers.set('x-content-type-options', 'nosniff');
+        return new Response(request.method === 'HEAD' ? null : response.body, { status: 200, headers });
+      } catch {
+        return new Response('Font unavailable', { status: 502, headers: { 'cache-control': 'no-store' } });
+      }
     }
     const serveHtml = async () => {
       const response = await env.ASSETS.fetch(request);

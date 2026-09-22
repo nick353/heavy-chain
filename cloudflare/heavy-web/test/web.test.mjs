@@ -69,6 +69,25 @@ test('unknown models never read R2 and app routes use the SPA binding', async ()
   assert.equal(calls.length, 0);
 });
 
+test('Lightchain display font is served through the same-origin web boundary', async () => {
+  const { env } = fixture();
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    assert.equal(input, 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/common/AlimamaFangYuanTiVF-Thin.woff');
+    assert.equal(init.method, 'GET');
+    return new Response('font-bytes', { headers: { 'content-type': 'application/octet-stream' } });
+  };
+  try {
+    const response = await web.fetch(request('/assets/AlimamaFangYuanTiVF-Thin.woff'), env);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'font/woff');
+    assert.equal(response.headers.get('access-control-allow-origin'), '*');
+    assert.equal(await response.text(), 'font-bytes');
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test('protected SPA routes match the source login redirect when the browser has no session', async () => {
   const { env } = fixture();
   env.AUTH_SERVICE = { async fetch() { return new Response('null', { status: 200 }); } };

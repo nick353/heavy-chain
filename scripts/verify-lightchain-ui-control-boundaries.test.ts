@@ -128,7 +128,14 @@ test('fitting and line-to-real settings are stateful and persisted into the work
   assert.doesNotMatch(source, /role="switch"[\s\S]{0,180}aria-pressed=\{autoConvertGarment\}/);
   assert.match(source, /role="combobox"[\s\S]{0,100}aria-label=\{fittingAspectRatio\}/);
   assert.match(source, /role="combobox"[\s\S]{0,100}aria-label=\{fittingResolution\}/);
-  assert.match(source, /mx-0 !mt-3 flex min-h-\[279px\] w-full flex-col/);
+  assert.match(source, /relative mx-0 flex min-h-0 flex-1 flex-col overflow-hidden/);
+  assert.match(source, /className="flex min-h-0 flex-1 flex-col px-0 py-3"/);
+  assert.match(source, /className="relative flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl/);
+  assert.match(source, /className="relative flex min-h-0 flex-1 px-4 pt-4 pb-0"/);
+  assert.match(source, /className="h-full min-h-0 flex-1 resize-none/);
+  assert.match(source, /style=\{\{ minHeight: '120px' \}\}/);
+  assert.match(source, /className="z-2 flex w-full shrink-0 items-center justify-end gap-2 p-2"/);
+  assert.match(source, /className="h-4 w-px shrink-0 bg-white\/10"/);
   assert.match(source, /autoConvertGarment: isFittingDetail \? autoConvertGarment : null/);
   assert.match(source, /lineToRealImageType/);
   assert.match(source, /data-testid=\{`lightchain-line-to-real-output-type-\$\{option\}`\}/);

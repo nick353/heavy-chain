@@ -4943,39 +4943,45 @@ export function LightchainWorkbenchPage() {
                 ))}
               </div>
               {activeFittingInputTab === '説明生成' && (
-                <div className="mx-0 !mt-3 flex min-h-[279px] w-full flex-col rounded-2xl border border-white/10 bg-[#262a2b] px-4 pt-4 pb-2 focus-within:border-cyan-300/60">
-                  <textarea
-                    value={referenceNote}
-                    onChange={(event) => setReferenceNote(event.target.value)}
-                    className="min-h-0 flex-1 resize-none border-0 bg-transparent p-0 text-[14px] leading-6 text-[#aab8b6] outline-none placeholder:text-neutral-500"
-                    placeholder="背景の説明をここに記入してください"
-                  />
-                  <div className="mt-2 flex items-center justify-end gap-2 text-xs text-neutral-500" aria-live="polite" data-testid="lightchain-fitting-prompt-actions">
-                    <div className="flex items-center gap-2 translate-x-3">
-                      <div data-track-id="desc:expand" className="relative flex size-8 items-center justify-center rounded-lg text-neutral-500 opacity-50" aria-disabled="true">
-                        <Pencil className="size-5" />
+  <div className="relative mx-0 flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <div className="flex min-h-0 flex-1 flex-col px-0 py-3">
+                    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-white/10 bg-[#262a2b] focus-within:border-cyan-300/60">
+                      <div className="relative flex min-h-0 flex-1 px-4 pt-4 pb-0">
+                        <textarea
+                          value={referenceNote}
+                          onChange={(event) => setReferenceNote(event.target.value)}
+                          className="h-full min-h-0 flex-1 resize-none border-0 bg-transparent p-0 text-[14px] leading-6 text-[#aab8b6] outline-none placeholder:text-neutral-500"
+                          style={{ minHeight: '120px' }}
+                          placeholder="背景の説明をここに記入してください"
+                        />
                       </div>
-                      <div data-track-id="desc:reference-image" className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white">
-                        <button type="button" onClick={() => setFittingReferenceImageModalOpen(true)} className="flex size-5 items-center justify-center" data-testid="lightchain-fitting-reference-image-action">
-                          <ImagePlus className="size-5" />
-                        </button>
-                      </div>
-                      <div data-track-id="desc:open_templates" className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white">
-                        <button type="button" onClick={() => setFittingPromptTemplateModalOpen(true)} className="flex size-5 items-center justify-center" data-testid="lightchain-fitting-prompt-template-action">
-                          <Type className="size-5" />
+                      <div className="z-2 flex w-full shrink-0 items-center justify-end gap-2 p-2" aria-live="polite" data-testid="lightchain-fitting-prompt-actions">
+                        <div data-track-id="desc:expand" className="relative flex size-8 items-center justify-center rounded-lg text-neutral-500 opacity-50" aria-disabled="true">
+                          <Pencil className="size-5" />
+                        </div>
+                        <div data-track-id="desc:reference-image" className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white">
+                          <button type="button" onClick={() => setFittingReferenceImageModalOpen(true)} className="flex size-5 items-center justify-center" data-testid="lightchain-fitting-reference-image-action">
+                            <ImagePlus className="size-5" />
+                          </button>
+                        </div>
+                        <div data-track-id="desc:open_templates" className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white">
+                          <button type="button" onClick={() => setFittingPromptTemplateModalOpen(true)} className="flex size-5 items-center justify-center" data-testid="lightchain-fitting-prompt-template-action">
+                            <Type className="size-5" />
+                          </button>
+                        </div>
+                        <div className="h-4 w-px shrink-0 bg-white/10" aria-hidden="true" />
+                        <span className="text-[14px] leading-6 text-[#aab8b6]">{referenceNote.length}/2000</span>
+                        <button
+                          type="button"
+                          data-track-id="desc:clear"
+                          disabled={!referenceNote}
+                          onClick={() => setReferenceNote('')}
+                          className="flex size-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                        >
+                          <Trash2 className="size-5" />
                         </button>
                       </div>
                     </div>
-                    <span className="ml-3 translate-x-2 text-[14px] leading-6 text-[#aab8b6]">{referenceNote.length}/2000</span>
-                    <button
-                      type="button"
-                      data-track-id="desc:clear"
-                      disabled={!referenceNote}
-                      onClick={() => setReferenceNote('')}
-                      className="flex size-8 translate-x-2 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
-                    >
-                      <Trash2 className="size-5" />
-                    </button>
                   </div>
                 </div>
               )}

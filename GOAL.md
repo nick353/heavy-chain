@@ -1,3 +1,24 @@
+# Light Chain model input geometry and font parity — 2026-09-22 r147
+
+本家 `https://jp.linkaigc.com/model` は他ユーザー利用中だったため、既取得済みの本家
+DOM計測値を正本として、Heavy本番 `https://heavy-chain-web.nichika2000823.workers.dev/model`
+だけを修正・再検証した。本家の同一648px viewport計測値である外側コンテナ
+`x=16,y=437,w=399,h=130`、入力カード `x=16,y=449,w=399,h=106`、textarea
+`x=33,y=466,w=359,h=120`、アクション `y=520`、下段controls `y=592`へHeavyを一致させた。
+原因だったHeavy固有の外側`!mt-3`を除去し、本家と同じflex階層・カード内48px footerへ修正した。
+
+さらにHeavyだけで発生していた本家フォントのCORSエラーを、同一オリジンのWorker font boundary
+`/assets/AlimamaFangYuanTiVF-Thin.woff`へプロキシして解消した。本番Version
+`20684480-d9cf-494a-af53-4543cb4616a5`を100% deployし、Health 200、font endpoint 200、
+`font/woff`/cache/CORS headers、Companion visual+semantic readback、console error 0件、
+rights checkbox 0件を確認した。provider生成、保存mutation、readback/reuse、課金、外部送信は0件。
+
+ローカル検証はtypecheck、Lightchain UI boundary 17/17、web test 12/12、ESLint、diff check、
+Cloudflare build、R2 upload、Wrangler dry-runを通過した。Companion sessionはHeavy tabのreadback後に
+close/cleanupする。Goalは`in_progress`。残りは本家が空いた時のfresh source再照合、全route同一fixture
+pixel/interaction equality、authenticated provider receipt、durable save/readback/reuse/reconciliation、
+video provider completion、strict release gate。Light Chainにない権利確認checkbox/modal/badgeは追加していない。
+
 # Light Chain Agent project dialog exact parity — 2026-09-22 r146
 
 本家 `https://jp.linkaigc.com/agent` とHeavy本番
