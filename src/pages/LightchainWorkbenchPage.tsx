@@ -35,6 +35,7 @@ import {
   UserRound,
   WandSparkles,
   Upload,
+  X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
@@ -1756,102 +1757,6 @@ export function LightchainWorkbenchPage() {
   const openAgentProjectCreate = () => {
     setAgentProjectName('');
     setAgentProjectCreateOpen(true);
-
-    if (typeof document === 'undefined') return;
-    const existingModal = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="lightchain-agent-project-create-modal"]'))
-      .find((element) => element.getAttribute('aria-hidden') !== 'true' && !element.classList.contains('hidden'));
-    if (existingModal) {
-      existingModal.querySelector<HTMLInputElement>('input')?.focus();
-      return;
-    }
-
-    const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4';
-    overlay.setAttribute('role', 'presentation');
-    overlay.setAttribute('data-testid', 'lightchain-agent-project-create-modal');
-
-    const dialog = document.createElement('div');
-    dialog.className = 'w-full max-w-[480px] rounded-2xl border border-white/10 bg-[#2c3133] text-white shadow-2xl';
-    dialog.setAttribute('role', 'dialog');
-    dialog.setAttribute('aria-modal', 'true');
-    dialog.setAttribute('aria-labelledby', 'lightchain-agent-project-create-title');
-
-    const header = document.createElement('div');
-    header.className = 'flex items-start justify-between gap-4 px-6 pb-3 pt-6';
-    const headingGroup = document.createElement('div');
-    const heading = document.createElement('h2');
-    heading.id = 'lightchain-agent-project-create-title';
-    heading.className = 'text-xl font-semibold leading-7';
-    heading.textContent = 'プロジェクトを作成';
-    const helper = document.createElement('p');
-    helper.className = 'mt-1 text-sm leading-5 text-neutral-300';
-    helper.textContent = 'プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください';
-    headingGroup.append(heading, helper);
-
-    const closeButton = document.createElement('button');
-    closeButton.type = 'button';
-    closeButton.className = 'rounded-md p-1 text-2xl leading-none text-neutral-300 hover:bg-white/10';
-    closeButton.setAttribute('aria-label', '閉じる');
-    closeButton.textContent = '×';
-    header.append(headingGroup, closeButton);
-
-    const field = document.createElement('div');
-    field.className = 'px-6 py-3';
-    const fieldBox = document.createElement('div');
-    fieldBox.className = 'flex items-center gap-2 rounded-lg border border-cyan-300/70 bg-[#252a2c] px-3 py-2.5';
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'プロジェクト名です';
-    input.setAttribute('aria-label', 'プロジェクト名です');
-    input.maxLength = 40;
-    input.className = 'min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-neutral-400';
-    const counter = document.createElement('span');
-    counter.className = 'shrink-0 text-xs text-neutral-300';
-    counter.textContent = '0 / 40';
-    fieldBox.append(input, counter);
-    field.append(fieldBox);
-
-    const footer = document.createElement('div');
-    footer.className = 'flex justify-end gap-2 px-6 pb-6 pt-3';
-    const cancelButton = document.createElement('button');
-    cancelButton.type = 'button';
-    cancelButton.className = 'rounded-lg bg-[#687174] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#788285]';
-    cancelButton.textContent = 'キャンセル';
-    const createButton = document.createElement('button');
-    createButton.type = 'button';
-    createButton.className = 'rounded-lg bg-[#687174] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#788285] disabled:cursor-not-allowed disabled:opacity-40';
-    createButton.textContent = '作成';
-    createButton.disabled = true;
-    footer.append(cancelButton, createButton);
-    dialog.append(header, field, footer);
-    overlay.append(dialog);
-
-    const closeImperativeModal = () => {
-      overlay.remove();
-      closeAgentProjectCreate();
-    };
-    const syncInput = () => {
-      input.value = input.value.slice(0, 40);
-      counter.textContent = `${input.value.length} / 40`;
-      createButton.disabled = !input.value.trim();
-    };
-    input.addEventListener('input', syncInput);
-    closeButton.addEventListener('click', closeImperativeModal);
-    cancelButton.addEventListener('click', closeImperativeModal);
-    overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) closeImperativeModal();
-    });
-    createButton.addEventListener('click', () => {
-      const name = input.value.trim().slice(0, 40);
-      if (!name) return;
-      setAgentCreatedProjects((current) => [name, ...current.filter((projectName) => projectName !== name)]);
-      setWorkspaceText('');
-      setLightchainResult(null);
-      closeImperativeModal();
-      toast.success('プロジェクトを作成しました');
-    });
-    document.body.append(overlay);
-    input.focus();
   };
 
   const closeAgentProjectCreate = () => {
@@ -1883,38 +1788,38 @@ export function LightchainWorkbenchPage() {
         role={agentProjectCreateOpen ? 'dialog' : undefined}
         aria-modal="true"
         aria-labelledby="lightchain-agent-project-create-title"
-        className="w-full max-w-[480px] rounded-2xl border border-white/10 bg-[#2c3133] text-white shadow-2xl"
+        className="flex w-[min(480px,calc(100vw-48px))] flex-col gap-6 rounded-2xl border border-white/10 bg-[#2c3133] p-6 text-white shadow-2xl"
         data-testid="lightchain-agent-project-create-modal"
       >
-        <div className="flex items-start justify-between gap-4 px-6 pb-3 pt-6">
-          <div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
             <h2 id="lightchain-agent-project-create-title" className="text-xl font-semibold leading-7">プロジェクトを作成</h2>
             <p className="mt-1 text-sm leading-5 text-neutral-300">
               プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください
             </p>
           </div>
-          <button type="button" onClick={closeAgentProjectCreate} aria-label="閉じる" className="rounded-md p-1 text-2xl leading-none text-neutral-300 hover:bg-white/10">×</button>
+          <button type="button" onClick={closeAgentProjectCreate} aria-label="閉じる" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-neutral-300 hover:bg-white/10">
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
         </div>
-        <div className="px-6 py-3">
-          <div className="flex items-center gap-2 rounded-lg border border-cyan-300/70 bg-[#252a2c] px-3 py-2.5 focus-within:ring-1 focus-within:ring-cyan-300">
-            <input
-              type="text"
-              value={agentProjectName}
-              onChange={(event) => setAgentProjectName(event.target.value.slice(0, 40))}
-              placeholder="プロジェクト名です"
-              aria-label="プロジェクト名です"
-              maxLength={40}
-              autoFocus
-              className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-neutral-400"
-            />
-            <span className="shrink-0 text-xs text-neutral-300">{agentProjectName.length} / 40</span>
-          </div>
+        <div className="relative">
+          <input
+            type="text"
+            value={agentProjectName}
+            onChange={(event) => setAgentProjectName(event.target.value.slice(0, 40))}
+            placeholder="プロジェクト名を入力"
+            aria-label="プロジェクト名です"
+            maxLength={40}
+            autoFocus
+            className="h-10 w-full rounded-lg border border-cyan-200/40 bg-[#252a2c] py-0 pl-3 pr-16 text-base font-normal leading-5 text-white outline-none placeholder:text-neutral-400 focus:border-cyan-300 focus:shadow-[0_0_0_2px_rgba(32,208,196,0.24)] focus-visible:outline-none"
+          />
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-base text-neutral-400">{agentProjectName.length} / 40</span>
         </div>
-        <div className="flex justify-end gap-2 px-6 pb-6 pt-3">
-          <button type="button" onClick={closeAgentProjectCreate} className="rounded-lg bg-[#687174] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#788285]">
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={closeAgentProjectCreate} className="h-10 min-w-[76px] rounded-lg bg-[#687174] px-6 text-base font-medium text-white shadow-xs transition hover:bg-[#788285]">
             キャンセル
           </button>
-          <button type="button" onClick={handleAgentProjectCreate} disabled={!agentProjectName.trim()} className="rounded-lg bg-[#687174] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#788285] disabled:cursor-not-allowed disabled:opacity-40">
+          <button type="button" onClick={handleAgentProjectCreate} disabled={!agentProjectName.trim()} className="h-10 min-w-[76px] rounded-lg bg-cyan-300 px-6 text-base font-medium text-neutral-950 shadow-xs transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-[#687174] disabled:text-neutral-400">
             作成
           </button>
         </div>
@@ -5738,7 +5643,7 @@ export function LightchainWorkbenchPage() {
               <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="mt-[16.65625px] flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
                 <button type="button" aria-label="最近" className="flex h-6 w-12 items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
-                <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" aria-expanded={agentProjectCreateOpen} onPointerDown={openAgentProjectCreate} onClick={openAgentProjectCreate} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
+                <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" onClick={openAgentProjectCreate} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
               </div>
               <div className="mt-4 space-y-0">
                 {agentCreatedProjects.map((title) => (

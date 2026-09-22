@@ -194,12 +194,12 @@ test('Agent new-file opens the Lightchain project creation flow', async () => {
 
   assert.match(source, /const \[agentProjectCreateOpen, setAgentProjectCreateOpen\] = useState\(false\)/);
   assert.match(source, /onClick=\{openAgentProjectCreate\}/);
-  assert.match(source, /onPointerDown=\{openAgentProjectCreate\}/);
   assert.match(source, /aria-label="新規ファイル" aria-haspopup="dialog"/);
-  assert.match(source, /aria-expanded=\{agentProjectCreateOpen\}/);
+  assert.doesNotMatch(source, /aria-label="新規ファイル"[^>]*aria-expanded/);
   assert.match(source, /id="lightchain-agent-project-create-title"[^>]*>プロジェクトを作成</);
   assert.match(source, /プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください/);
-  assert.match(source, /placeholder="プロジェクト名です"/);
+  assert.match(source, /placeholder="プロジェクト名を入力"/);
+  assert.match(source, /aria-label="プロジェクト名です"/);
   assert.match(source, /\{agentProjectName\.length\} \/ 40/);
   assert.match(source, /disabled=\{!agentProjectName\.trim\(\)\}/);
   assert.match(source, /role="dialog"/);
