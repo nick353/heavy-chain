@@ -10437,3 +10437,15 @@ clean worktreeで`npm run verify:release-gate`をfresh実行した。dirty block
 `readback:production H602 billing completion readback`、`command:generation scorecard`の4件。
 summaryは`output/playwright/10m-product-readiness-g615/release-gate-summary.json`で、generation/purchase/
 publish/destructive cleanup/deployは実行していない。Goalはactive。
+
+# Goal progress — 2026-09-26 r356
+
+H601/H602 operator boundaryをfresh再確認し、H601最終判断10項目未添付、H602のquota=false・checkout=true・
+no-real-charge proof 0・transaction/entitlement readbackなしを再現した。環境変数
+`LIGHTCHAIN_UI_AUTH_STATE`、`HEAVY_CHAIN_MONITOR_API_URL`、`HEAVY_CHAIN_MONITOR_BRAND_ID`、
+`HEAVY_CHAIN_MONITOR_TOKEN`はいずれも未設定。証跡は
+`work/heavy-chain-operator-readiness-fresh-20260926-r7.md`。
+
+一方、H601 legal-safety static `ok=true`、H602 Cloudflare contract `ok=true`（releaseApproval=false、
+production proof not_verified）、G620 security ops `ok=true`、H602 contract tests 2/2を確認した。production設定、
+Apple/checkout、provider、監視token、secretは変更していない。Goalはactive。
