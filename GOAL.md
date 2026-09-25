@@ -10459,3 +10459,10 @@ staleな旧pair-diffを根拠にせず、Companionのtask-owned sessionで本家
 確認できなかった。初回Heavy navのexact-tab継続は`task_target_unavailable`でdispatch前に停止し、再送せず、別の
 task-owned tabでreadbackした。Companion session closeは成功し、task-owned tabs 2件、lease 2件をcleanup、foreign
 mutation/unknown effect/external actionは0。provider生成・保存・課金・公開・secret操作はしていない。Goalはactive。
+
+# Goal progress — 2026-09-26 r358
+
+docs-only parity evidence commit `f959797`後に`npm run verify:release-gate --silent`を再実行。worktree dirty blockerはなく、
+fresh summary `output/playwright/10m-product-readiness-g615/release-gate-summary.json`（capturedAt=`2026-09-25T19:39:32.881Z`）
+で残りは前回と同じ4件のみ: production monitor/UI pair、G618 scale ops baseline、production H602 billing completion
+readback、generation scorecard。generation/purchase/publish/destructive cleanup/deployはすべて未実行。Goalはactive。

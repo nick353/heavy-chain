@@ -21892,3 +21892,10 @@ Companion fresh paired readbackで本家Light Chain/Heavy本番の`/flow/oriente
 avatarと相対月数は認証/data時点の差として記録。exact-tab継続の1回のblockedはdispatch前で再送せず、別task-owned
 tabで検証。session close/cleanup完了、foreign mutation false、unknown effect 0、external action false。provider生成・
 remote save/reuse/reload/reconciliation・monitor・billing・publish・secret操作は未実行。Goal active。
+
+# Heavy Chain current state — 2026-09-26 r190
+
+`f959797`後のclean release gateをfresh実行。結果`ok:false`だがdirty blockerはなく、失敗は production monitor/UI pair、
+G618、H602 billing completion readback、generation scorecard の4件で変化なし。不可逆境界は generation submit、payment、
+publish、destructive cleanup、deploy すべて未実行。strict gateは本番monitor/UI認証証跡、Cloudflare ops token+96h readback、
+billing production readback、実provider生成+画像品質scorecardが揃うまで通さない。
