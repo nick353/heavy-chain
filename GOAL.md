@@ -10429,3 +10429,11 @@ assertion 444、console/page/request failure 0、cleanup complete、`ok:true / f
 これはsource/UI parityとlocal regressionの完了であり、source account identity、provider実生成receipt、remote durable
 save/reuse/reload/reconciliation、production monitor/UI、G618、H602 billing、real-generation scorecard、公開・課金・
 権利審査の完了を意味しない。Goalはactiveのまま継続する。
+
+# Goal progress — 2026-09-26 r355
+
+clean worktreeで`npm run verify:release-gate`をfresh実行した。dirty blockerはなく、残りは
+`readback:production monitor and UI pair`、`readback:G618 scale ops baseline`、
+`readback:production H602 billing completion readback`、`command:generation scorecard`の4件。
+summaryは`output/playwright/10m-product-readiness-g615/release-gate-summary.json`で、generation/purchase/
+publish/destructive cleanup/deployは実行していない。Goalはactive。

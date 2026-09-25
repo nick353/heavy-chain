@@ -21870,3 +21870,9 @@ workflow（31/31 desktop・31/31 mobile、video 4、source 7、assertion 444、f
 Source account identity、provider実生成、remote durable save/reuse/reload/reconciliation、monitor/ops、H602 billing、
 real-generation scorecard、課金・公開・rights operator evidence、strict release gateは未達。source captureはUI parity
 判断にのみ使用し、認証情報・秘密情報・外部効果は扱っていない。Goal active。
+
+# Heavy Chain current state — 2026-09-26 r187
+
+clean worktreeでrelease gateを再実行し、dirty blockerなしを確認。fresh summaryの残りはproduction monitor/UI pair、
+G618 scale ops、production H602 billing completion readback、generation scorecardの4件。外部監視サービス追加、
+provider生成、課金、公開、破壊的cleanup、deployは実行していない。Goal active。
