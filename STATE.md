@@ -42,6 +42,14 @@ worktreeをclean化。typecheck、diff check PASS。strict gateをdirty許可な
 dirty blockerは消え、production monitor/UI、G618、production H602、real-generation scorecard
 artifact不足の4件だけが残る。commitは未pushで、外部公開・deploy・provider実行はしていない。
 
+## Fresh operator-readiness boundary audit — 2026-09-26 r6
+
+H601/H602 operator verifierをfresh実行。H601はstatic guardのみPASSで、法務文言・retention・upload
+rights・brand/reference・likeness・copyright/marketing・commercial-use・counsel review・safe JSON
+decisionが未添付。H602はquota enforcement=false、production checkout=true、no-real-charge proof 0、
+transaction/entitlement readbackなし、operator decisionなし、live constraints未確認。決済・Apple ID・
+秘密・identity・公開は未実行で、これらをcompletionへ昇格していない。
+
 ## Remote workspace save fail-closed across Light Chain clone library paths — 2026-09-26
 
 Cloudflare data planeが設定済みなのにremote receipt/readbackが無い場合、Fashion Studio、Library、Design/Marketing、Video project libraryの保存・再利用導線をlocal-only成功に進めないよう統一。既存Video Workstationと同じく、同一保存依頼の照合を促して停止する。回帰テスト16/16、typecheck、diff check PASS。Cloudflare Web version `259347df-68ae-46e3-a730-833a91b03966`へdeployし、health正常、匿名session `null`、配信chunkのfail-closed markerをreadback。実provider生成receipt、実remote business save/reuse/reload/reconciliation、full visual/interaction parity、monitor/UI、billing、strict releaseは未完了。

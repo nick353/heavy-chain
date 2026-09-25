@@ -49,6 +49,15 @@ diff checkはPASS。`--allow-dirty`なしのstrict gateを再実行し、dirty b
 残る未達は production monitor/UI pair、G618 scale-ops baseline、production H602 billing
 completion、generation scorecard artifact不足の4系統。Goalはactive。
 
+## Fresh operator-readiness boundary audit — 2026-09-26 r6
+
+H601/H602 operator readinessを再実行。H601 static guardはPASSだが、final Terms/Privacy locator、
+retention/deletion/export、upload-rights、brand/reference、person/likeness、copyright/marketing、
+commercial-use、counsel/operator review、safe-key operator JSONの10項目が未添付。H602 static
+contractはPASSだが、production quota enforcement、checkout disabled、redacted no-real-charge proof、
+transaction/entitlement readback、operator final decision、live constraint readback、production
+checkout-disabled readbackが未達。Codexは法務確定、Apple/決済、identity、秘密入力を実行しない。
+
 ## Remote save boundary expansion — 2026-09-26
 
 Light Chain cloneのLibrary/Fashion Studio/Design/Marketing/Video project保存導線で、Cloudflare remote receiptが欠けた場合にlocal-only成功を表示・遷移しないfail-closed境界を追加。関連回帰テスト16/16、typecheck、diff check、Cloudflare Web version `259347df-68ae-46e3-a730-833a91b03966`のhealth/session/chunk readbackを確認。Goalは継続中。残りは実provider生成receipt、remote durable save/reuse/reload/reconciliationの本番証跡、全route visual/interaction parity、monitor/UI、billing、scorecard、strict clean release。
