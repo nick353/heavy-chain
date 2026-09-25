@@ -21884,3 +21884,11 @@ policy/counsel evidenceが未添付。H602はquota enforcement=false、productio
 transaction/entitlement readback=false、operator decisionなし。`work/heavy-chain-operator-readiness-fresh-20260926-r7.md`
 に記録した。H601 legal-safety、H602 local Cloudflare contract（releaseApproval=false）、G620 security ops、H602
 contract tests 2/2はpass。秘密情報、billing設定、provider、deploy、publishは扱っていない。Goal active。
+
+# Heavy Chain current state — 2026-09-26 r189
+
+Companion fresh paired readbackで本家Light Chain/Heavy本番の`/flow/orientedDesign`をhydration後に比較。主要な
+カード・履歴・参考事例・操作コントロールは両方に存在し、現時点で追加の安全なlocal parity修正はなし。Heavyの
+avatarと相対月数は認証/data時点の差として記録。exact-tab継続の1回のblockedはdispatch前で再送せず、別task-owned
+tabで検証。session close/cleanup完了、foreign mutation false、unknown effect 0、external action false。provider生成・
+remote save/reuse/reload/reconciliation・monitor・billing・publish・secret操作は未実行。Goal active。

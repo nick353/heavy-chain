@@ -10449,3 +10449,13 @@ no-real-charge proof 0・transaction/entitlement readbackなしを再現した�
 一方、H601 legal-safety static `ok=true`、H602 Cloudflare contract `ok=true`（releaseApproval=false、
 production proof not_verified）、G620 security ops `ok=true`、H602 contract tests 2/2を確認した。production設定、
 Apple/checkout、provider、監視token、secretは変更していない。Goalはactive。
+
+# Goal progress — 2026-09-26 r357
+
+staleな旧pair-diffを根拠にせず、Companionのtask-owned sessionで本家Light ChainとHeavy本番の
+`/flow/orientedDesign`をhydration待機後にfresh semantic+visual readbackした。本家は`新規ファイル`、保存済み
+履歴、参考事例を表示し、Heavyも同じ主要テキスト・カード密度・操作コントロールを表示した。Heavyはavatar表示と
+履歴の相対月数が本家と異なるが、これは認証・データ時点差であり、現時点で安全に適用できる新しいparity修正は
+確認できなかった。初回Heavy navのexact-tab継続は`task_target_unavailable`でdispatch前に停止し、再送せず、別の
+task-owned tabでreadbackした。Companion session closeは成功し、task-owned tabs 2件、lease 2件をcleanup、foreign
+mutation/unknown effect/external actionは0。provider生成・保存・課金・公開・secret操作はしていない。Goalはactive。
