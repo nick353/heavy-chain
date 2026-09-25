@@ -22,6 +22,8 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   authRecoveryRequired: boolean;
+  /** True when the auth probe failed transiently; never treated as logout. */
+  authServiceUnavailable: boolean;
   
   // Actions
   initialize: () => Promise<void>;
@@ -51,15 +53,26 @@ export const fetchAccessibleBrandsForCurrentUser = async (userId: string): Promi
 
 const isRecoverableNetworkError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error || '');
-  return /Failed to fetch|NetworkError|Load failed|ERR_ABORTED/i.test(message);
+  return /Failed to fetch|NetworkError|Load failed|ERR_ABORTED|AbortError/i.test(message);
 };
 
-// Keep the store timeout longer than the browser auth adapter's 10s request
-// timeout so service errors are returned and handled instead of being masked
-// by an earlier unauthenticated fallback.
-const AUTH_SESSION_TIMEOUT_MS = 12_000;
-const AUTH_OPERATION_TIMEOUT_MS = 12_000;
-const AUTH_PROFILE_TIMEOUT_MS = 10_000;
+const isAuthServiceUnavailable = (error: unknown) => {
+  const candidate = error as { status?: unknown; code?: unknown } | null;
+  const status = typeof candidate?.status === 'number' ? candidate.status : null;
+  const code = typeof candidate?.code === 'string' ? candidate.code : '';
+  const message = error instanceof Error ? error.message : String(error || '');
+  return isRecoverableNetworkError(error)
+    || (status !== null && status >= 500)
+    || /auth_unavailable|auth_session_timeout|timed?\s*out|service\s+unavailable/i.test(`${code} ${message}`);
+};
+
+// Keep route hydration aligned with the browser auth adapter.  A valid cookie
+// can survive a direct route load while the profile/brand read is still
+// settling; a shorter timeout made that valid session appear unauthenticated.
+const AUTH_SESSION_TIMEOUT_MS = 32_000;
+const AUTH_OPERATION_TIMEOUT_MS = 32_000;
+const AUTH_PROFILE_TIMEOUT_MS = 32_000;
+const AUTH_EMPTY_SESSION_RETRY_DELAY_MS = 250;
 let authStateListenerRegistered = false;
 // getSession() emits SIGNED_IN from the browser adapter. initialize() admits
 // that same session explicitly, so suppress the notification in this narrow
@@ -161,21 +174,20 @@ export const useAuthStore = create<AuthState>((set, get) => {
   isLoading: true,
   isInitialized: false,
   authRecoveryRequired: false,
+  authServiceUnavailable: false,
 
   initialize: async () => {
     const initializeToken = ++activeInitializeToken;
     let admissionSequence = 0;
-    let latestAdmission: Promise<void> = Promise.resolve();
 
     const invalidateAdmission = () => {
       admissionSequence += 1;
-      latestAdmission = Promise.resolve();
     };
 
     const admitUser = (user: User) => {
       const sequence = ++admissionSequence;
       const admissionGeneration = clearBrandAuthority(user.id);
-      set({ user, profile: null, authRecoveryRequired: false });
+      set({ user, profile: null, authRecoveryRequired: false, authServiceUnavailable: false });
       const admission = new Promise<void>((resolve) => {
         setTimeout(async () => {
           try {
@@ -188,7 +200,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
               resolve();
               return;
             }
-            set({ user, profile: profile || null, authRecoveryRequired: false });
+            set({ user, profile: profile || null, authRecoveryRequired: false, authServiceUnavailable: false });
             await refreshBrandAuthority(user.id);
           } catch (error) {
             logAuthError('Error refreshing authenticated user data:', error);
@@ -213,7 +225,6 @@ export const useAuthStore = create<AuthState>((set, get) => {
           }
         }, 0);
       });
-      latestAdmission = admission;
       return admission;
     };
 
@@ -222,47 +233,75 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     try {
       authInitializationInFlight = true;
-      set({ isLoading: true, authRecoveryRequired: false });
+      set({ isLoading: true, authRecoveryRequired: false, authServiceUnavailable: false });
       if (!authStateListenerRegistered) {
         authStateListenerRegistered = true;
         auth.onAuthStateChange((event, session) => {
           if (session?.user && ['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
             if (authInitializationInFlight && event === 'SIGNED_IN') return;
+            // A same-token revalidation is deliberately silent. The browser
+            // adapter only emits TOKEN_REFRESHED when the opaque session token
+            // actually rotates, but keep this guard here as a second fence so
+            // a cache-expiry read can never clear a confirmed brand while a
+            // long-running generation or route transition is in flight.
+            if (event === 'TOKEN_REFRESHED' && get().user?.id === session.user.id) return;
             void activeAdmitUser?.(session.user);
           } else if (event === 'SIGNED_OUT') {
             activeInvalidateAdmission?.();
             clearBrandAuthority(null);
-            set({ user: null, profile: null, authRecoveryRequired: false });
+            set({ user: null, profile: null, authRecoveryRequired: false, authServiceUnavailable: false });
           }
         });
       }
 
-      const { data: { session }, error } = await withAuthTimeout(
+      let { data: { session }, error } = await withAuthTimeout(
         auth.getSession(),
         AUTH_SESSION_TIMEOUT_MS,
         'auth_session_timeout',
       );
       if (error) throw error;
+      // A just-issued HttpOnly cookie can arrive one event loop tick after a
+      // direct route navigation (especially through the Zeabur auth proxy).
+      // Re-read the same cookie once before treating the browser as anonymous.
+      // This keeps the Lightchain shell continuous without persisting a token
+      // or weakening the definitive anonymous boundary.
+      if (!session) {
+        await new Promise((resolve) => setTimeout(resolve, AUTH_EMPTY_SESSION_RETRY_DELAY_MS));
+        const retry = await withAuthTimeout(
+          auth.refreshSession(),
+          AUTH_SESSION_TIMEOUT_MS,
+          'auth_session_retry_timeout',
+        );
+        if (retry.error) throw retry.error;
+        session = retry.data.session;
+      }
       if (session?.user) {
-        const initialAdmission = admitUser(session.user);
-        let observedAdmission = initialAdmission;
-        await observedAdmission;
-        while (latestAdmission !== observedAdmission) {
-          observedAdmission = latestAdmission;
-          await observedAdmission;
+        // A valid browser session is enough to unlock the protected shell.
+        // Profile and brand hydration continues under the same user/brand
+        // fence, but must not make every direct route wait for a potentially
+        // slow API read before the user can move between Lightchain screens.
+        void admitUser(session.user);
+        if (initializeToken === activeInitializeToken) {
+          set({ isLoading: false, isInitialized: true, authRecoveryRequired: false, authServiceUnavailable: false });
         }
       } else {
         invalidateAdmission();
         clearBrandAuthority(null);
-        set({ user: null, profile: null, authRecoveryRequired: false });
+        set({ user: null, profile: null, authRecoveryRequired: false, authServiceUnavailable: false });
       }
     } catch (error) {
       logAuthError('Failed to initialize auth:', error);
+      const serviceUnavailable = isAuthServiceUnavailable(error);
       set((state) => ({
         currentBrand: null,
         accessibleBrands: [],
         brandState: beginAuthBrandSelection(state.brandState, state.user?.id ?? null),
-        authRecoveryRequired: !state.user,
+        // A transient 5xx/transport failure must not redirect a user to the
+        // login page.  Keep the route mounted and let the retry boundary
+        // recover the same host-only cookie.  Only a definitive anonymous
+        // result converges to login.
+        authRecoveryRequired: !state.user && !serviceUnavailable,
+        authServiceUnavailable: serviceUnavailable,
       }));
     } finally {
       authInitializationInFlight = false;
@@ -297,6 +336,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         accessibleBrands: [],
         brandState: beginAuthBrandSelection(get().brandState, data.session.user.id),
         authRecoveryRequired: false,
+        authServiceUnavailable: false,
       });
       return data.session.user;
     } finally {
@@ -371,6 +411,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       accessibleBrands: [],
       brandState,
       authRecoveryRequired: false,
+      authServiceUnavailable: false,
       isLoading: false,
       isInitialized: true,
     });
@@ -389,7 +430,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         'auth_sign_out_timeout',
       );
       if (error) throw error;
-      set({ user: null, profile: null, authRecoveryRequired: false });
+      set({ user: null, profile: null, authRecoveryRequired: false, authServiceUnavailable: false });
     } finally {
       set({ isLoading: false });
     }

@@ -66,6 +66,7 @@ import {
   validateLegalSafetyInput,
 } from '../lib/legalSafetyGuard';
 import { getWorkflowMetadata, type WorkflowMetadata } from '../lib/workflowMetadata';
+import { getLightchainSourceGenerationAccessForWorkflow } from '../features/lightchain/sourceFeatureAccess';
 import {
   buildLightchainFeatureHref,
   getLightchainFeature,
@@ -994,12 +995,6 @@ export function GeneratePage() {
   const [overlayStrokeWidth, setOverlayStrokeWidth] = useState(2);
   const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(getInitialGenerationModel);
   const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
-  // Light Chain does not expose an upload-rights checkbox in this surface.
-  // The user explicitly authorized the requested generation in this task, so
-  // carry that authorization in the server safety field without rendering an
-  // extra Heavy-only control. The API still validates this field and applies
-  // its prompt safety guard before any provider call.
-  const rightsConfirmed = true;
   const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
   
   // Reference image state
@@ -1048,6 +1043,10 @@ export function GeneratePage() {
   const featureParam = searchParams.get('feature');
   const locationFeature = featureParam ? findFeatureFromQuery(featureParam) : null;
   const selectedFeature = locationFeature ?? (featureParam ? null : selectedFeatureState);
+  // Only source-observed generation permission may admit a provider request.
+  // Unknown workflows stay fail-closed without adding a Heavy-only checkbox.
+  const sourceGenerationAccess = getLightchainSourceGenerationAccessForWorkflow(selectedFeature?.id ?? '');
+  const rightsConfirmed = sourceGenerationAccess === 'permitted';
   const currentPath = typeof window === 'undefined' ? '' : window.location.pathname;
   const [variationStrength, setVariationStrength] = useState(50);
   

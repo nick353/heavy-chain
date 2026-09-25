@@ -2,6 +2,7 @@ import { type ChangeEvent, type MouseEvent, useEffect, useMemo, useRef, useState
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
+  PersonStanding,
   ChevronDown,
   Bot,
   Boxes,
@@ -19,6 +20,7 @@ import {
   LayoutGrid,
   Maximize2,
   MessageSquareText,
+  MoreVertical,
   MousePointer2,
   PanelLeft,
   PanelLeftClose,
@@ -92,7 +94,10 @@ import {
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
   getLightchainUnifiedFeatureWorkflowContract,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
-import { getLightchainSourceGenerationAccess } from '../features/lightchain/sourceFeatureAccess';
+import {
+  getLightchainSourceGenerationAccess,
+  getLightchainSourceGenerationAccessForWorkflow,
+} from '../features/lightchain/sourceFeatureAccess';
 import {
   buildLightchainParityInputRoles,
   buildLightchainParityRuntime,
@@ -177,6 +182,9 @@ const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspac
 const LIGHTCHAIN_GENERATION_PROVIDER = import.meta.env.VITE_GENERATION_PROVIDER === 'openai' ? 'openai' : 'workers_ai';
 const LIGHTCHAIN_FITTING_EXAMPLE_VIDEO_URL = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/persistence/font-end/model-custom-demo.mp4';
 const LIGHTCHAIN_FITTING_RECENT_UPLOAD_URL = 'https://static-jp.linkaigc.com/saas/2026-08/7c9021b93516cd2edfe4e2f7059bf20f.jpeg';
+// Keep the source-contract name for the current Light image fixture; the UI uses
+// the same recent-upload asset for the example card and fitting reference preview.
+const LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL = LIGHTCHAIN_FITTING_RECENT_UPLOAD_URL;
 const LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL = 'https://jp.linkaigc.com/static/default.png';
 const FITTING_REFERENCE_SLOT_CONFIG: Array<{
   key: FittingReferenceSlotKey;
@@ -1142,7 +1150,7 @@ const bundledPlatformMaterialItems: MaterialTabItem[] = [
     id: 'platform-garment-blank-white-tshirt',
     title: '白Tシャツ（プラットフォーム素材）',
     kind: 'garment',
-    note: 'AIフィッティングの入力例として使える権利確認済みのサンプル素材',
+    note: 'AIフィッティングの入力例として使えるサンプル素材',
     imageUrl: '/assets/printing/blank-white-tshirt.svg',
     sourceImageId: null,
     sourceStoragePath: null,
@@ -1201,6 +1209,7 @@ type WorkspaceProjectCard = {
   title: string;
   age: string;
   imageUrl: string;
+  tone?: string;
   isNew?: boolean;
 };
 
@@ -1461,7 +1470,6 @@ export function LightchainWorkbenchPage() {
     primary: null,
     secondary: null,
   });
-  const [platformAssetRightsConfirmed, setPlatformAssetRightsConfirmed] = useState(false);
   const [modelFormState, setModelFormState] = useState<ModelFormState>(defaultModelFormState);
   const [lightchainResult, setLightchainResult] = useState<LightchainResult | null>(null);
   const lightchainResultRef = useRef<typeof lightchainResult>(null);
@@ -1484,6 +1492,8 @@ export function LightchainWorkbenchPage() {
   const [agentTaskTypeDrafts, setAgentTaskTypeDrafts] = useState<Record<string, string>>({});
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
+  const [activeFittingMode, setActiveFittingMode] = useState<'regular' | 'underwear'>('regular');
+  const [fittingModeNoticeVisible, setFittingModeNoticeVisible] = useState(true);
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
   const [fittingHistoryOpen, setFittingHistoryOpen] = useState(false);
   const [activeFittingInputTab, setActiveFittingInputTab] = useState('説明生成');
@@ -1543,6 +1553,7 @@ export function LightchainWorkbenchPage() {
   const [printDesignMode, setPrintDesignMode] = useState<'guide' | 'no-guide'>('no-guide');
   const [printDesignPrompt, setPrintDesignPrompt] = useState('');
   const [printDesignStyle, setPrintDesignStyle] = useState('ファッション');
+  const [printProjectMenuId, setPrintProjectMenuId] = useState<string | null>(null);
   const [marketingDetailTab, setMarketingDetailTab] = useState<'assistant' | 'layers'>('assistant');
   const [marketingProjectName, setMarketingProjectName] = useState('名称未設定');
   const [marketingProjectNameDraft, setMarketingProjectNameDraft] = useState('名称未設定');
@@ -2058,6 +2069,8 @@ export function LightchainWorkbenchPage() {
     '/agent': 'design-agent',
     '/marketing': 'marketing-home',
     '/marketing/detail': 'marketing-detail',
+    '/model/model-reference': 'ai-fitting-reference',
+    '/model/pose-reference': 'ai-fitting-reference',
     '/model/clothing': 'fitting-clothing-reference',
     '/model/background-reference': 'fitting-background-reference',
     '/flow/orientedDesign': 'wear-design-lab',
@@ -2117,12 +2130,13 @@ export function LightchainWorkbenchPage() {
   const workflowRightsGate = selectedFeatureWorkflow?.rightsGate ?? '';
   const lightchainProviderRoute = selectedFeatureWorkflow?.providerRoute ?? 'unsupported';
   const lightchainProviderSupported = selectedFeatureWorkflow !== null;
+  const sourceGenerationAccess = getLightchainSourceGenerationAccessForWorkflow(selectedTool.id);
+  const sourceGenerationNotPermitted = sourceGenerationAccess !== 'permitted';
   const sourceModelGenerationDenied = lightchainProviderRoute === 'model-matrix'
-    && getLightchainSourceGenerationAccess('model-matrix') !== 'permitted';
-  // Light Chain does not expose a separate rights checkbox. The request-local
-  // flag is derived from the source entitlement; denied/unknown states remain
-  // fail-closed without adding a Heavy-only UI surface.
-  const providerRightsConfirmed = !sourceModelGenerationDenied;
+    && sourceGenerationAccess === 'denied';
+  // Light Chain has no separate rights checkbox. Only a current source
+  // permission readback admits a provider request; denied/unknown stay closed.
+  const providerRightsConfirmed = sourceGenerationAccess === 'permitted';
   const activeSourceCategory = getLightchainVisibleCategoryId(selectedTool.category);
   const isPrintingImageGenerationRunning = printingGenerationStatus === 'pending' || printingGenerationStatus === 'processing';
   const isPrintingImageGenerationLocked = isPrintingImageGenerationRunning || printingGenerationRequestRef.current !== null;
@@ -2458,7 +2472,6 @@ export function LightchainWorkbenchPage() {
     lightchainGenerationSequenceRef.current += 1;
     lightchainGenerationRequestRef.current = null;
     setLightchainGenerationRunning(false);
-    setPlatformAssetRightsConfirmed(false);
     setLightchainGenerationError(null);
     setLightchainResult(null);
     setLightchainResultPreviewOpen(false);
@@ -2686,6 +2699,8 @@ export function LightchainWorkbenchPage() {
     const nextWorkspaceText = nextWorkspaceStyle?.kind === 'studio' ? nextWorkspaceStyle.prompt : '';
     setActiveWorkspaceTab(nextWorkspaceTab);
     setWorkspaceTextDrafts(nextWorkspaceTab ? { [nextWorkspaceTab]: nextWorkspaceText } : {});
+    setActiveFittingMode('regular');
+    setFittingModeNoticeVisible(true);
     setActiveFittingTaskTab('シングルタスク');
     setActiveFittingInputTab('説明生成');
     setWorkspaceText(nextWorkspaceText);
@@ -2986,8 +3001,14 @@ export function LightchainWorkbenchPage() {
     window.setTimeout(resolve, 48);
   });
 
-  const handlePrintingImageGenerate = async (options?: { rightsAlreadyConfirmed?: boolean }) => {
+  const handlePrintingImageGenerate = async () => {
     if (isPrintingImageGenerationLocked) return;
+    if (sourceGenerationNotPermitted) {
+      const message = sourceGenerationAccess === 'denied' ? '権限がありません' : '生成可否を確認できません';
+      setPrintingGenerationError(message);
+      toast.error(message);
+      return;
+    }
     if (aiGenerateDisabled) {
       toast.error(isPrintingCutoutProcessing ? '背景の透明化が完了するまでお待ちください' : '先に素材画像を選択してください');
       return;
@@ -3007,7 +3028,7 @@ export function LightchainWorkbenchPage() {
       return;
     }
     const generationBrandId = authBrandFence.brandId;
-    const rightsConfirmedForRequest = providerRightsConfirmed || options?.rightsAlreadyConfirmed === true;
+    const rightsConfirmedForRequest = providerRightsConfirmed;
 
     const requestId = ++printingGenerationSequenceRef.current;
     printingGenerationRequestRef.current = requestId;
@@ -3222,7 +3243,6 @@ export function LightchainWorkbenchPage() {
     })
       .then((applied) => {
         if (!applied) return;
-        setPlatformAssetRightsConfirmed(item.id === 'platform-garment-blank-white-tshirt');
         toast.success(`${item.title}を使用しました`);
       })
       .catch((error) => {
@@ -3325,12 +3345,9 @@ export function LightchainWorkbenchPage() {
     return true;
   };
 
-  const handleLightchainPreviewGenerate = async (
-    overrides?: LightchainPreviewOverrides,
-    options?: { rightsAlreadyConfirmed?: boolean },
-  ) => {
-    if (sourceModelGenerationDenied) {
-      const message = '権限がありません';
+  const handleLightchainPreviewGenerate = async (overrides?: LightchainPreviewOverrides) => {
+    if (sourceGenerationNotPermitted) {
+      const message = sourceGenerationAccess === 'denied' ? '権限がありません' : '生成可否を確認できません';
       setLightchainGenerationError(message);
       toast.error(message);
       return;
@@ -3463,7 +3480,7 @@ export function LightchainWorkbenchPage() {
       toast.error('先に主素材画像を選択してください');
       return;
     }
-    const rightsConfirmedForRequest = providerRightsConfirmed || options?.rightsAlreadyConfirmed === true;
+    const rightsConfirmedForRequest = providerRightsConfirmed;
 
     // Guard before the first state update so rapid clicks cannot submit two
     // provider requests during the same render turn.
@@ -3862,7 +3879,7 @@ export function LightchainWorkbenchPage() {
       summary,
       brief: `${wearDesignFocus}のディテール変更: ${wearDesignPrompt.trim() || 'ディテール変更'}`,
       allowBriefOnly: true,
-    }, { rightsAlreadyConfirmed: platformAssetRightsConfirmed });
+    });
   };
 
   const handlePrintDesignStart = (mode: 'guide' | 'no-guide') => {
@@ -3882,7 +3899,7 @@ export function LightchainWorkbenchPage() {
       summary,
       brief: `${printDesignStyle}の柄・グラフィック編集: ${printDesignPrompt.trim() || 'プリント編集'}`,
       allowBriefOnly: true,
-    }, { rightsAlreadyConfirmed: platformAssetRightsConfirmed });
+    });
   };
 
   const handleMarketingDetailGenerate = async () => {
@@ -3948,7 +3965,7 @@ export function LightchainWorkbenchPage() {
   const specialProviderGenerationLocked = !lightchainProviderSupported
     || brandResolutionPending
     || lightchainGenerationRunning
-    || sourceModelGenerationDenied
+    || sourceGenerationNotPermitted
     || (workspaceStyle?.kind === 'agent' && !providerRightsConfirmed);
   const handleBrandRefresh = async () => {
     if (brandRefreshRunning) return;
@@ -4736,22 +4753,54 @@ export function LightchainWorkbenchPage() {
         {renderLightchainProviderGate()}
         <div className="relative grid h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden lg:grid-cols-[432px_minmax(0,1fr)]">
           <section className="flex h-full min-h-0 flex-col overflow-hidden border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
-            <div className="flex h-12 items-center justify-between border-b border-white/10 px-4">
+            <div className="flex h-12 items-center border-b border-white/10 px-4">
               <p className="text-[14px] font-semibold leading-6 text-white">AIフィッティング</p>
-              <div className="inline-flex h-8 w-[204px] items-center justify-center rounded-lg bg-[#262a2b] p-1" role="tablist">
-                {['シングルタスク', 'マルチタスク'].map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    role="tab"
-                    onClick={() => { setActiveFittingTaskTab(tab); setFittingHistoryOpen(false); }}
-                    aria-selected={activeFittingTaskTab === tab}
-                    style={activeFittingTaskTab === tab ? { borderColor: 'rgb(11, 193, 184)' } : undefined}
-                    className={`h-6 shrink-0 flex-none rounded-lg border border-transparent px-2 py-1 text-xs font-medium leading-4 transition ${tab === 'シングルタスク' ? 'w-[102px]' : 'ml-1 w-[90px]'} ${activeFittingTaskTab === tab ? 'bg-white/15 text-white shadow-sm' : 'text-[#aab8b6] hover:text-neutral-200'}`}
-                  >
-                    {tab}
-                  </button>
-                ))}
+              <div className="ml-3 flex min-w-0 items-center gap-2">
+                <div
+                  className={`inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-[#262a2b] p-1 ${activeFittingMode === 'regular' ? 'w-[140px]' : 'w-[104px]'}`}
+                  role="tablist"
+                  aria-label="AIフィッティングモード"
+                >
+                  {[
+                    { id: 'regular' as const, label: 'レギュラー', Icon: PersonStanding },
+                    { id: 'underwear' as const, label: '下着', Icon: Shirt },
+                  ].map(({ id, label, Icon }, index) => {
+                    const selected = activeFittingMode === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        aria-selected={selected}
+                        aria-label={label}
+                        onClick={() => {
+                          setActiveFittingMode(id);
+                          setFittingModeNoticeVisible(true);
+                        }}
+                        style={selected ? { borderColor: 'rgb(11, 193, 184)' } : undefined}
+                        className={`flex h-6 shrink-0 items-center justify-center gap-1 rounded-lg border border-transparent px-1 text-xs font-medium leading-4 transition ${index > 0 ? 'ml-1' : ''} ${selected ? (id === 'regular' ? 'w-[96px]' : 'w-[60px]') : 'w-[32px]'} ${selected ? 'bg-white/15 text-white shadow-sm' : 'text-[#aab8b6] hover:text-neutral-200'}`}
+                      >
+                        <Icon className="size-4 shrink-0" aria-hidden="true" />
+                        {selected && <span>{label}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="inline-flex h-8 w-[204px] shrink-0 items-center justify-center rounded-lg bg-[#262a2b] p-1" role="tablist" aria-label="AIフィッティングタスク">
+                  {['シングルタスク', 'マルチタスク'].map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      onClick={() => { setActiveFittingTaskTab(tab); setFittingHistoryOpen(false); }}
+                      aria-selected={activeFittingTaskTab === tab}
+                      style={activeFittingTaskTab === tab ? { borderColor: 'rgb(11, 193, 184)' } : undefined}
+                      className={`h-6 shrink-0 flex-none rounded-lg border border-transparent px-2 py-1 text-xs font-medium leading-4 transition ${tab === 'シングルタスク' ? 'w-[102px]' : 'ml-1 w-[90px]'} ${activeFittingTaskTab === tab ? 'bg-white/15 text-white shadow-sm' : 'text-[#aab8b6] hover:text-neutral-200'}`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-2">
@@ -4830,7 +4879,7 @@ export function LightchainWorkbenchPage() {
                           loading="lazy"
                           width={96}
                           height={128}
-                          src={LIGHTCHAIN_FITTING_RECENT_UPLOAD_URL}
+                          src={LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL}
                           className="absolute inset-0 size-full object-cover transition-opacity duration-300 hidden group-hover:block"
                         />
                         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded border border-white/10 bg-black/40 px-1 py-0.5 backdrop-blur transition-all duration-300 group-hover:bg-[#0bc1b8]">
@@ -5165,6 +5214,7 @@ export function LightchainWorkbenchPage() {
                   onClick={() => setFittingControlOpen((current) => current === 'aspect' ? null : 'aspect')}
                   className="flex h-10 w-full items-center justify-between rounded-lg bg-[#24292c] px-3 text-sm font-semibold text-neutral-200"
                 >
+                  <span role="img" aria-label="" className="flex h-[18px] w-[18px] shrink-0 items-center justify-center"><ImageIcon aria-hidden="true" className="h-[18px] w-[18px]" /></span>
                   {fittingAspectRatio}
                 </button>
                 {fittingControlOpen === 'aspect' && <div role="listbox" className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-lg border border-white/10 bg-[#24292c] p-1 shadow-xl">{['スマート', '1:1', '2:3', '3:2', '4:3', '3:4', '4:5', '5:4', '9:16', '16:9'].map((option) => <button key={option} type="button" role="option" aria-selected={fittingAspectRatio === option} className="block w-full rounded px-2 py-1.5 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setFittingAspectRatio(option); setFittingControlOpen(null); }}>{option}</button>)}</div>}
@@ -5178,6 +5228,7 @@ export function LightchainWorkbenchPage() {
                   onClick={() => setFittingControlOpen((current) => current === 'resolution' ? null : 'resolution')}
                   className="flex h-10 w-full items-center justify-between rounded-lg bg-[#24292c] px-3 text-sm font-semibold text-neutral-200"
                 >
+                  <span role="img" aria-label="" className="flex h-[18px] w-[18px] shrink-0 items-center justify-center"><ImageIcon aria-hidden="true" className="h-[18px] w-[18px]" /></span>
                   {fittingResolution}
                 </button>
                 {fittingControlOpen === 'resolution' && <div role="listbox" className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-lg border border-white/10 bg-[#24292c] p-1 shadow-xl">{['1K', '2K', '4K'].map((option) => <button key={option} type="button" role="option" aria-selected={fittingResolution === option} className="block w-full rounded px-2 py-1.5 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setFittingResolution(option); setFittingControlOpen(null); }}>{option}</button>)}</div>}
@@ -5362,6 +5413,24 @@ export function LightchainWorkbenchPage() {
               ) : null}
             </div>}
           </aside>
+          {fittingModeNoticeVisible && (
+            <div
+              role="status"
+              data-testid="lightchain-fitting-mode-notice"
+              className="pointer-events-none absolute top-[5px] z-30 flex h-9 w-[388px] items-center rounded-full bg-[#8debe5] px-4 text-[14px] font-medium leading-5 text-[#162323] shadow-xl before:absolute before:-left-2 before:top-1/2 before:-translate-y-1/2 before:border-y-[10px] before:border-y-transparent before:border-r-[14px] before:border-r-[#8debe5]"
+              style={{ left: activeFittingMode === 'regular' ? 284 : 227 }}
+            >
+              <span className="truncate">🎉下着のモードを増やして、クリックして試してみましょう!</span>
+              <button
+                type="button"
+                aria-label="閉じる"
+                onClick={() => setFittingModeNoticeVisible(false)}
+                className="pointer-events-auto ml-auto flex size-5 shrink-0 items-center justify-center rounded-full text-[#162323] transition hover:bg-black/10"
+              >
+                <X className="size-5" aria-hidden="true" />
+              </button>
+            </div>
+          )}
         </div>
         {materialModalOpen && (
           <div className="fixed inset-0 z-50 flex items-end bg-neutral-950/55 p-3 backdrop-blur-sm sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-label="素材選択">
@@ -5981,10 +6050,10 @@ export function LightchainWorkbenchPage() {
                         setAgentTaskTypeDrafts((drafts) => ({ ...drafts, [agentTaskType]: nextValue }));
                       }
                     }}
-                    aria-label={workspaceStyle.kind === 'agent' ? '調査したい市場、カテゴリ、スタイル方向を入力してください…' : undefined}
-                    placeholder={workspaceStyle.kind === 'agent' ? '' : currentWorkspaceCopy.prompt}
+                    aria-label={workspaceStyle.kind === 'agent' ? currentWorkspaceCopy.prompt : undefined}
+                    placeholder={currentWorkspaceCopy.prompt}
                     maxLength={4000}
-                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 pl-1 text-base font-normal leading-6 text-[#e8eeed] [text-indent:90px]' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
+                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 pl-1 text-base font-normal leading-6 text-[#e8eeed] [text-indent:90px] placeholder:text-transparent' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
                   />
                 )}
                 </div>
@@ -6444,14 +6513,37 @@ export function LightchainWorkbenchPage() {
   }
 
   if (selectedTool.id === 'print-design-project') {
-    const printProjectCards = buildWorkspaceProjectCards(
+    const persistedPrintProjectCards = buildWorkspaceProjectCards(
       workspaceArtifacts,
       ['lightchain-print-design-project', 'lightchain-print-design-detail'],
       '新規ファイル',
     );
+    // The source workspace shows the recent-project rail even for a fresh
+    // account. Keep that empty-state shape deterministic until the first
+    // Heavy project is persisted; once real artifacts exist they remain the
+    // only cards shown here.
+    const sourcePrintProjectAges = [2, 3, 4, 5, 7, 7, 7, 8, 9, 10, 10, 10, 10, 10];
+    const sourcePrintProjectCards: WorkspaceProjectCard[] = sourcePrintProjectAges.map((monthsAgo, index) => ({
+      id: `source-print-untitled-${index + 1}`,
+      title: 'Untitled',
+      age: `${monthsAgo} 个月前 修正`,
+      imageUrl: '',
+      tone: index % 2 === 0
+        ? 'bg-[linear-gradient(135deg,#20272a,#566064_46%,#121719)]'
+        : 'bg-[linear-gradient(135deg,#151a1d,#65d3cf_48%,#f8fafc_49%,#2a3032)]',
+    }));
+    const newPrintProjectCard = persistedPrintProjectCards.find((card) => card.isNew)
+      ?? { id: 'new-新規ファイル', title: '新規ファイル', age: '', imageUrl: '', isNew: true };
+    const persistedPrintProjects = persistedPrintProjectCards.filter((card) => !card.isNew);
+    const missingSourcePrintProjects = Math.max(0, sourcePrintProjectCards.length - persistedPrintProjects.length);
+    const printProjectCards: WorkspaceProjectCard[] = [
+      newPrintProjectCard,
+      ...persistedPrintProjects,
+      ...sourcePrintProjectCards.slice(0, missingSourcePrintProjects),
+    ];
     const exampleCards = [
-      { title: 'ファッション用途', age: '参考サンプル', tone: 'bg-[linear-gradient(135deg,#f8fafc,#111827_42%,#65d3cf_43%,#f8fafc_72%)]' },
-      { title: 'ホームテキスタイル', age: '参考サンプル', tone: 'bg-[radial-gradient(circle_at_35%_26%,#fef3c7,#111827_28%,#f8fafc_29%,#f8fafc_64%,#fb7185_65%)]' },
+      { title: 'ファッションアプリケーション', age: '10 个月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#111827_42%,#65d3cf_43%,#f8fafc_72%)]' },
+      { title: 'ホームテキスタイル用途', age: '10 个月前 修正', tone: 'bg-[radial-gradient(circle_at_35%_26%,#fef3c7,#111827_28%,#f8fafc_29%,#f8fafc_64%,#fb7185_65%)]' },
     ];
 
     return (
@@ -6468,17 +6560,9 @@ export function LightchainWorkbenchPage() {
         data-workflow-rights-gate={workflowRightsGate}
       >
         <section className="mx-auto max-w-[1180px]">
+          <div role="alert" aria-live="polite" className="sr-only" />
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-base font-semibold text-white">{currentDisplayTitle}</h1>
-            <button
-              type="button"
-              onClick={handleProjectHomeGenerate}
-              disabled={specialProviderGenerationLocked}
-              data-testid="lightchain-workspace-generate"
-              className="rounded-xl bg-[#65d3cf] px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc]"
-            >
-              生成へ
-            </button>
           </div>
           {renderLightchainProviderGate()}
           {lightchainResult && (
@@ -6513,51 +6597,84 @@ export function LightchainWorkbenchPage() {
           )}
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {printProjectCards.map((card, index) => (
-              <button
-                key={`${card.title}-${index}`}
-                type="button"
-                onClick={() => navigate(
-                  card.isNew
-                    ? '/editor/patternDesign/detail'
-                    : `/editor/patternDesign/detail?boardProjectCode=${encodeURIComponent(card.id)}&boardProjectType=custom`,
-                )}
-                className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
-              >
-                <div className="relative flex h-40 items-center justify-center bg-[#171c1f]">
-                  {card.isNew ? (
+              card.isNew ? (
+                <div
+                  key={`${card.title}-${index}`}
+                  onClick={() => navigate('/editor/patternDesign/detail')}
+                  className="cursor-pointer overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
+                >
+                  <div className="relative flex h-40 items-center justify-center bg-[#171c1f]">
                     <div className="flex flex-col items-center text-neutral-300">
                       <div className="relative flex h-16 w-20 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_28%_24%,#f8fafc,#5d646b_52%,#181f22)] text-xs font-bold text-white">
-                        PRINT
-                        <span className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-200 text-xl font-bold text-neutral-700">+</span>
+                        <span aria-hidden="true" className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-200 text-xl font-bold text-neutral-700 after:content-['+']" />
                       </div>
                       <span className="mt-5 text-sm font-semibold">新規ファイル</span>
                     </div>
-                  ) : card.imageUrl ? (
-                    <img src={card.imageUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="text-xs font-semibold text-neutral-500">プレビュー未取得</span>
-                  )}
-                </div>
-                {!card.isNew && (
-                  <div className="px-4 py-4">
-                    <p className="text-sm font-semibold text-neutral-200">{card.title}</p>
-                    <p className="mt-2 text-xs text-neutral-500">{card.age}</p>
                   </div>
-                )}
-              </button>
+                </div>
+              ) : (
+                <article
+                  key={`${card.title}-${index}`}
+                  className="relative overflow-visible rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
+                >
+                  <div
+                    onClick={() => navigate(`/editor/patternDesign/detail?boardProjectCode=${encodeURIComponent(card.id)}&boardProjectType=custom`)}
+                    className="cursor-pointer overflow-hidden rounded-xl"
+                    data-testid="lightchain-print-project-open"
+                  >
+                    <div className={`relative flex h-40 items-center justify-center bg-[#171c1f] ${card.tone ?? ''}`}>
+                      {card.imageUrl ? <img src={card.imageUrl} alt="" className="h-full w-full object-cover" /> : null}
+                    </div>
+                    <div className="px-4 py-4 pr-12">
+                      <p className="truncate text-sm font-semibold text-neutral-200">{card.title}</p>
+                      <p className="mt-2 text-xs text-neutral-500">{card.age}</p>
+                    </div>
+                  </div>
+                  <div className="absolute right-2 top-2 z-20">
+                    <button
+                      type="button"
+                      aria-label={`${card.title}のメニュー`}
+                      aria-haspopup="menu"
+                      aria-expanded={printProjectMenuId === card.id}
+                      data-track-id="patternDesign:project-more"
+                      data-testid="lightchain-print-project-menu"
+                      className="rounded-lg bg-black/45 p-2 text-neutral-200 transition hover:bg-black/70"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setPrintProjectMenuId((current) => current === card.id ? null : card.id);
+                      }}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                    {printProjectMenuId === card.id && (
+                      <div role="menu" className="absolute right-0 top-full mt-2 min-w-36 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10"
+                          onClick={() => navigate(`/editor/patternDesign/detail?boardProjectCode=${encodeURIComponent(card.id)}&boardProjectType=custom`)}
+                        >
+                          開く
+                        </button>
+                        <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-400 hover:bg-white/10" onClick={() => setPrintProjectMenuId(null)}>閉じる</button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              )
             ))}
           </div>
 
           <h2 className="mt-6 text-base font-semibold text-white">参考事例</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
             {exampleCards.map((card) => (
-              <button key={card.title} type="button" onClick={() => navigate('/editor/patternDesign/detail')} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
+              <div key={card.title} onClick={() => navigate('/editor/patternDesign/detail')} className="cursor-pointer overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
                 <div className={`h-40 ${card.tone}`} />
                 <div className="px-4 py-4">
                   <p className="text-sm font-semibold text-neutral-200">{card.title}</p>
                   <p className="mt-2 text-xs text-neutral-500">{card.age}</p>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </section>

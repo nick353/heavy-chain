@@ -60,13 +60,13 @@ const requiredReadbacks = [
   },
   {
     name: 'launch operations',
-    path: 'output/playwright/g830-launch-ops-production-current-r2/summary.json',
-    validate: (json) => json.ok === true && arrayFrom(json.failed).length === 0,
-    expect: 'ok=true and failed=[]',
+    latestSummaryPrefix: 'g830-launch-ops-production-current-',
+    validate: validateCompanionLaunchOperations,
+    expect: 'fresh current Lightchain Companion launch readback with one authenticated session, desktop/mobile route evidence, no login redirect, no rights checkbox, no external submit, and cleanup',
   },
   {
     name: 'production mass-market QA current',
-    path: 'work/heavy-chain-companion-mass-market-qa-20260921.json',
+    path: 'work/heavy-chain-companion-mass-market-qa-20260925-r1.json',
     validate: validateCompanionMassMarketQa,
     expect: 'fresh Companion readback of the current Lightchain launcher, protected generation permission surfaces, history/jobs/gallery/canvas/brand routes, desktop/mobile semantic+visual evidence, no exported auth secret, no console/page/request failures, and terminal cleanup',
   },
@@ -78,7 +78,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G610 retention workspace search',
-    path: 'output/playwright/g610-retention-project-search-current-20260910-r3/SUMMARY.json',
+    latestSummaryPrefix: 'g610-retention-project-search-current-',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -708,6 +708,71 @@ export function validateCompanionMassMarketQa(evidence) {
     evidence?.companionCleanup?.ok === true &&
     arrayFrom(evidence?.companionCleanup?.retained).length === 0 &&
     arrayFrom(evidence?.companionCleanup?.unknown_effect).length === 0;
+}
+
+export function validateCompanionLaunchOperations(evidence) {
+  const desktop = arrayFrom(evidence?.routes);
+  const mobile = arrayFrom(evidence?.mobile);
+  const expectedDesktop = new Set(['dashboard', 'generate-campaign', 'gallery', 'canvas', 'contact']);
+  const expectedMobile = new Set(['mobile-dashboard', 'mobile-generate-campaign', 'mobile-gallery', 'mobile-canvas']);
+  const allRoutes = [...desktop, ...mobile];
+  const routeIdentityValid = allRoutes.length === 9 && allRoutes.every((route) => {
+    if (typeof route?.path !== 'string' || typeof route?.url !== 'string') return false;
+    try {
+      const parsed = new URL(route.url);
+      return parsed.origin === PRODUCTION_ORIGIN && `${parsed.pathname}${parsed.search}` === route.path;
+    } catch {
+      return false;
+    }
+  });
+  const routeReadbacksValid = allRoutes.every((route) =>
+    route?.readyState === 'complete' &&
+    route?.expectedTextPresent === true &&
+    route?.loginRedirected === false &&
+    route?.visibleCheckboxCount === 0 &&
+    route?.semanticReadback === 'verified' &&
+    route?.visualReadback === 'verified' &&
+    Number(route?.bodyLength || 0) > 0 &&
+    arrayFrom(route?.assertions).some((assertion) => assertion?.name === 'route_readback_without_login_or_rights_checkbox' && assertion?.passed === true),
+  );
+  return (
+    evidence?.schema === 'heavy-chain.companion-launch-operations.v1' &&
+    evidence?.workflow === 'current-lightchain-launch-operations-readback' &&
+    evidence?.source === 'aos_chrome_companion_profile_instance' &&
+    evidence?.mode === 'production' &&
+    evidence?.origin === PRODUCTION_ORIGIN &&
+    typeof evidence?.taskId === 'string' && evidence.taskId.length > 0 &&
+    typeof evidence?.sessionId === 'string' && evidence.sessionId.length > 0 &&
+    typeof evidence?.generation === 'string' && evidence.generation.length > 0 &&
+    evidence?.authSecretExported === false &&
+    typeof evidence?.authState === 'string' && evidence.authState === 'same_authenticated_companion_session_across_routes' &&
+    desktop.length === expectedDesktop.size &&
+    mobile.length === expectedMobile.size &&
+    new Set(desktop.map((route) => route?.key)).size === desktop.length &&
+    new Set(mobile.map((route) => route?.key)).size === mobile.length &&
+    desktop.every((route) => route?.viewport === 'desktop' && expectedDesktop.has(route?.key)) &&
+    mobile.every((route) => route?.viewport === 'mobile' && expectedMobile.has(route?.key)) &&
+    routeIdentityValid &&
+    routeReadbacksValid &&
+    arrayFrom(evidence?.failed).length === 0 &&
+    arrayFrom(evidence?.consoleMessages).length === 0 &&
+    arrayFrom(evidence?.pageErrors).length === 0 &&
+    arrayFrom(evidence?.requestFailures).length === 0 &&
+    evidence?.irreversibleActions?.generationSubmit === 'not_clicked' &&
+    evidence?.irreversibleActions?.purchasePaymentCheckout === 'not_touched' &&
+    evidence?.irreversibleActions?.externalPublish === 'not_touched' &&
+    evidence?.businessCompletion?.providerReceipt === 'unverified' &&
+    evidence?.businessCompletion?.sourceSync === 'unverified' &&
+    evidence?.businessCompletion?.reconciliation === 'unverified' &&
+    evidence?.cleanup?.sessionClosed === true &&
+    evidence?.cleanup?.logicalSessionCountAfterClose === 0 &&
+    evidence?.cleanup?.exactTabLeaseCountAfterClose === 0 &&
+    evidence?.cleanup?.activeTaskTabCountAfterClose === 0 &&
+    evidence?.cleanup?.terminalCleanupPendingTaskTabCountAfterClose === 0 &&
+    evidence?.cleanup?.viewportRestored === true &&
+    evidence?.cleanup?.foreignTabsMutated === false &&
+    evidence?.cleanup?.unknownEffect === false
+  );
 }
 
 export function validateCompanionProductionRouteMatrix(evidence) {

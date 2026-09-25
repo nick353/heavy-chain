@@ -1,6 +1,7 @@
 import { ChevronDown, Globe2, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { LightchainLogo } from '../LightchainLogo';
+import { useAuthStore } from '../../stores/authStore';
 
 const LIGHTCHAIN_AVATAR_URL = 'https://ql-hangzhou-oss.oss-cn-hangzhou.aliyuncs.com/AIDesign/saas-avatar-new.png?x-oss-process=image/resize,m_lfit,w_64,limit_1/format,webp';
 
@@ -8,6 +9,8 @@ const LIGHTCHAIN_AVATAR_URL = 'https://ql-hangzhou-oss.oss-cn-hangzhou.aliyuncs.
 
 /** The public launcher header observed on the current Lightchain home. */
 export function LightchainLauncherHeader() {
+  const user = useAuthStore((state) => state.user);
+
   return (
     <header className="flex h-[50px] w-full items-center justify-between gap-4 border-b border-white/10 bg-[#05090b]/90 px-6 backdrop-blur-xl">
       <div className="flex items-center gap-5">
@@ -26,9 +29,11 @@ export function LightchainLauncherHeader() {
           <HelpCircle className="h-3.5 w-3.5" />
           ヘルプセンター
         </button>
-        <button type="button" aria-label="avatar" className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 transition hover:bg-white/15">
-          <img src={LIGHTCHAIN_AVATAR_URL} alt="avatar" className="h-full w-full object-cover" />
-        </button>
+        {user ? (
+          <button type="button" aria-label="avatar" className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 transition hover:bg-white/15">
+            <img src={LIGHTCHAIN_AVATAR_URL} alt="avatar" className="h-full w-full object-cover" />
+          </button>
+        ) : null}
       </div>
     </header>
   );

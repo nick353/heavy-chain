@@ -159,8 +159,10 @@ test('matches the Light Chain direct-generation path without a rights checkbox',
 
   assert.match(workbench, /const specialProviderGenerationLocked = !lightchainProviderSupported[\s\S]*brandResolutionPending[\s\S]*lightchainGenerationRunning/);
   assert.match(workbench, /data-testid="lightchain-special-provider-gate"/);
-  assert.match(workbench, /const sourceModelGenerationDenied = lightchainProviderRoute === 'model-matrix'/);
-  assert.match(workbench, /const providerRightsConfirmed = !sourceModelGenerationDenied/);
+  assert.match(workbench, /const sourceGenerationAccess = getLightchainSourceGenerationAccessForWorkflow\(selectedTool\.id\)/);
+  assert.match(workbench, /const sourceGenerationNotPermitted = sourceGenerationAccess !== 'permitted'/);
+  assert.match(workbench, /const providerRightsConfirmed = sourceGenerationAccess === 'permitted'/);
+  assert.match(workbench, /if \(sourceGenerationNotPermitted\)[\s\S]*?return;/);
   assert.doesNotMatch(workbench, /lightchainRightsConfirmationModal|rightsConfirmationOpen|rightsConfirmationDraft|data-testid="lightchain-rights-confirmation"/);
   assert.doesNotMatch(workbench, /data-testid="lightchain-provider-gate"/);
   assert.match(workbench, /data-testid="lightchain-generation-error"/);
@@ -177,23 +179,24 @@ test('keeps the marketing detail provider flow on the direct Light Chain path', 
   assert.doesNotMatch(branch, /rightsConfirmation|権利確認/);
 });
 
-test('uses the source-admitted route instead of a pending rights confirmation', () => {
+test('uses only explicitly source-admitted workflows instead of a UI rights confirmation', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(workbench, /Light Chain does not expose a separate rights checkbox/);
-  assert.match(workbench, /getLightchainSourceGenerationAccess\('model-matrix'\)/);
+  assert.match(workbench, /Light Chain has no separate rights checkbox/);
+  assert.match(workbench, /getLightchainSourceGenerationAccessForWorkflow\(selectedTool\.id\)/);
   assert.doesNotMatch(workbench, /PendingRightsGeneration|pendingRightsGenerationRef|rightsConfirmationOpen|rightsConfirmationDraft/);
-  assert.match(workbench, /const rightsConfirmedForRequest = providerRightsConfirmed \|\| options\?\.rightsAlreadyConfirmed === true/);
+  assert.match(workbench, /const rightsConfirmedForRequest = providerRightsConfirmed/);
+  assert.doesNotMatch(workbench, /rightsAlreadyConfirmed/);
 });
 
-test('passes the rights confirmation override into every provider route without stale React state', () => {
+test('passes only source-admitted request-local rights into every provider route', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(workbench, /const rightsConfirmedForRequest = providerRightsConfirmed \|\| options\?\.rightsAlreadyConfirmed === true/);
+  assert.match(workbench, /const rightsConfirmedForRequest = providerRightsConfirmed/);
   assert.equal(
     (workbench.match(/rightsConfirmed: rightsConfirmedForRequest/g) ?? []).length,
     4,
-    'printing plus model-matrix, edit-image, and generate-image routes must use the request-local confirmation value',
+    'printing plus model-matrix, edit-image, and generate-image routes must use the source-admitted request-local value',
   );
-  assert.doesNotMatch(workbench, /rightsConfirmed: providerRightsConfirmed/);
+  assert.doesNotMatch(workbench, /rightsAlreadyConfirmed/);
 });
 
 test('keeps dedicated material generation direct like Light Chain', () => {
@@ -201,13 +204,15 @@ test('keeps dedicated material generation direct like Light Chain', () => {
   assert.match(material, /const providerRightsConfirmed = !sourceGenerationDenied/);
   assert.match(material, /const sourcePrintingGenerationDenied = getLightchainSourceGenerationAccess\('printing-image'\) !== 'permitted'/);
   assert.doesNotMatch(material, /pendingRightsGenerationRef|rightsConfirmationOpen|rightsConfirmationDraft|PermissionLockedButton|権利を確認してAI生成/);
-  assert.match(material, /const rightsConfirmedForRequest = providerRightsConfirmed \|\| options\?\.rightsAlreadyConfirmed === true/);
+  assert.match(material, /const rightsConfirmedForRequest = providerRightsConfirmed/);
+  assert.doesNotMatch(material, /rightsAlreadyConfirmed/);
   assert.equal(
     (material.match(/rightsConfirmed: rightsConfirmedForRequest/g) ?? []).length,
     2,
     'printing and fabric provider routes must use the request-local confirmation value',
   );
   assert.match(material, /if \(sourceGenerationDenied\)/);
+  assert.match(material, /legalSafety: \{ rightsConfirmed: !isLocalMaterialPreview && providerRightsConfirmed \}/);
 });
 
 test('keeps non-model catalog prompts feature-specific instead of using the generic fallback', () => {

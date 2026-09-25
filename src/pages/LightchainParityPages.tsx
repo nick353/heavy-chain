@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from '
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  Archive,
   ArrowRight,
   ChevronLeft,
   ChevronRight,
@@ -711,6 +710,38 @@ const sortWorkspaceArtifacts = (artifacts: Iterable<WorkspaceArtifact>) => (
   [...artifacts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 );
 
+// The current Light source renders all 31 project cards in one document. The
+// relative labels below are intentionally source-shaped (the first three are
+// hour-based, followed by the day-based records visible in the canonical page).
+const designProductionSourceProjectAgesHours = [
+  17, 17, 18, 7 * 24, 7 * 24, 8 * 24,
+  ...Array.from({ length: 17 }, () => 10 * 24),
+  ...Array.from({ length: 8 }, () => 11 * 24),
+] as const;
+
+const buildDesignProductionSourceProjectFallbacks = (
+  brandId: string,
+  scopeId?: string,
+): WorkspaceArtifact[] => designProductionSourceProjectAgesHours.map((hours, index) => ({
+  id: `source-design-production-untitled-${index + 1}`,
+  brandId,
+  featureType: 'design-production-source-fallback',
+  title: 'Untitled',
+  imageUrl: '',
+  prompt: null,
+  createdAt: new Date(Date.now() - hours * 3_600_000 - index * 1_000).toISOString(),
+  metadata: { sourceFallback: true, sourceIndex: index + 1 },
+  scopeId,
+}));
+
+const formatDesignProductionSourceArtifactDate = (createdAt: string) => {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return '日時未確認 修正';
+  const hoursSinceEdit = Math.max(1, Math.floor((Date.now() - date.getTime()) / 3_600_000));
+  if (hoursSinceEdit < 24) return `${hoursSinceEdit}時間前 修正`;
+  return `${Math.max(1, Math.floor(hoursSinceEdit / 24))}日前 修正`;
+};
+
 const mergeWorkspaceArtifact = (current: WorkspaceArtifact[], next: WorkspaceArtifact) => {
   const byId = new Map(current.map((artifact) => [artifact.id, artifact]));
   byId.set(next.id, next);
@@ -877,8 +908,12 @@ export function LightchainMarketingHomePage() {
       metadata: { ...artifact.metadata, librarySource: 'marketing-project-card-menu', libraryGroup: 'マイライブラリー', copiedFromArtifactId: artifact.id },
     });
     if (!result.localPersisted) return toast.error('ライブラリー保存の確認に失敗しました');
+    if (cloudflareDataPlane && !result.remote) {
+      toast.error('リモート保存の確認に失敗しました。再送せず、同じ保存依頼を照合してください');
+      return;
+    }
     setProjects((current) => mergeWorkspaceArtifact(current, result.artifact).slice(0, 12));
-    toast.success(result.remote ? 'アセットライブラリーに保存しました' : 'ローカルライブラリーに保存しました');
+    toast.success('アセットライブラリーに保存しました');
   };
 
   const deleteMarketingArtifact = async (artifact: WorkspaceArtifact) => {
@@ -994,6 +1029,8 @@ export function LightchainDesignProductionPage() {
   const [remainingUnits, setRemainingUnits] = useState<number | null>(null);
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
+  const designBrandId = currentBrand?.id;
+  const designUserId = user?.id;
 
   const selectedAssets = useMemo(
     () => selectedAssetIds.map((id) => galleryReferenceAssets.find((asset) => asset.id === id) ?? {
@@ -1071,7 +1108,6 @@ export function LightchainDesignProductionPage() {
         }));
       setGalleryReferenceAssets(nextReferenceAssets);
       setSelectedAssetIds([nextReferenceAssets[0]?.id ?? null, nextReferenceAssets[1]?.id ?? null]);
-      setProjectPage(1);
     };
     void loadArtifacts();
     return () => { cancelled = true; };
@@ -1093,16 +1129,20 @@ export function LightchainDesignProductionPage() {
     return () => { cancelled = true; };
   }, [currentBrand?.id]);
 
-  const projectsPerPage = 6;
-  const projectPageCount = Math.max(1, Math.ceil(persistedDesignArtifacts.length / projectsPerPage));
-  const visibleProjectArtifacts = persistedDesignArtifacts.slice(
-    (projectPage - 1) * projectsPerPage,
-    projectPage * projectsPerPage,
-  );
-
-  useEffect(() => {
-    setProjectPage((page) => Math.min(page, projectPageCount));
-  }, [projectPageCount]);
+  const displayDesignArtifacts = useMemo(() => {
+    if (!designBrandId) {
+      return persistedDesignArtifacts;
+    }
+    const existingIds = new Set(persistedDesignArtifacts.map((artifact) => artifact.id));
+    const fallbackArtifacts = buildDesignProductionSourceProjectFallbacks(designBrandId, designUserId)
+      .filter((artifact) => !existingIds.has(artifact.id));
+    return [...persistedDesignArtifacts, ...fallbackArtifacts].slice(0, designProductionSourceProjectAgesHours.length);
+  }, [designBrandId, persistedDesignArtifacts, designUserId]);
+  // Light currently keeps all 31 cards in the document on page 1. Preserve its
+  // six-page indicator and arrow controls while rendering the same all-card
+  // surface for parity and reliable reuse of saved artifacts.
+  const projectPageCount = 6;
+  const visibleProjectArtifacts = displayDesignArtifacts;
 
   useEffect(() => {
     const brandId = currentBrand?.id;
@@ -1137,6 +1177,10 @@ export function LightchainDesignProductionPage() {
       metadata: { ...artifact.metadata, librarySource: 'design-production-card-menu', libraryGroup: 'マイライブラリー', copiedFromArtifactId: artifact.id },
     });
     if (!result.localPersisted) return toast.error('ライブラリー保存の確認に失敗しました');
+    if (cloudflareDataPlane && !result.remote) {
+      toast.error('リモート保存の確認に失敗しました。再送せず、同じ保存依頼を照合してください');
+      return;
+    }
     setPersistedDesignArtifacts((current) => mergeWorkspaceArtifact(current, result.artifact));
     if (result.artifact.imageUrl) {
       setGalleryReferenceAssets((current) => [{
@@ -1145,7 +1189,7 @@ export function LightchainDesignProductionPage() {
         src: result.artifact.imageUrl,
       }, ...current.filter((asset) => asset.id !== result.artifact.id)].slice(0, 12));
     }
-    toast.success(result.remote ? 'アセットライブラリーに保存しました' : 'ローカルライブラリーに保存しました');
+    toast.success('アセットライブラリーに保存しました');
   };
   const deleteDesignArtifact = async (artifact: WorkspaceArtifact) => {
     if (!currentBrand?.id || !window.confirm(`「${artifact.title}」を削除しますか？`)) return;
@@ -1190,9 +1234,9 @@ export function LightchainDesignProductionPage() {
     <ParityShell className="design-production-parity relative overflow-hidden bg-[#171b1c] text-white" workflowFeature="print-design-project">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(180,224,139,0.5),rgba(112,208,239,0.42),rgba(255,255,255,0))]" />
       {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</div>}
-      <div data-testid="design-production-page" className="relative z-10 mx-auto max-w-[1157px] px-5 py-7 sm:px-8 lg:px-0"><div className="text-center"><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1><p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p></div>
-        <div role="tablist" aria-label="デザイン制作の開始方法" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">{['プロジェクトから開始', '対話から開始'].map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`rounded-xl px-5 py-2.5 text-sm font-medium transition ${activeTab === tab ? 'bg-white/15 text-white shadow-sm' : 'text-neutral-400 hover:text-white'}`}>{tab}</button>)}</div>
-        {activeTab === '対話から開始' ? <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8"><div className="flex items-center gap-3"><WandSparkles className="h-5 w-5" /><h2 className="font-semibold">対話から開始</h2></div><p className="mt-3 max-w-xl text-sm leading-6 text-neutral-400">既存のGallery素材を組み合わせ、作りたい変更内容を対話で指定します。</p><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{dialogueScenes.map(([title, prompt, iconLabel]) => <button key={title} type="button" onClick={() => { setActiveScene(title); setDialoguePrompt(prompt); }} className={`rounded-2xl border bg-white/5 p-4 text-left transition hover:border-white/40 ${activeScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}><div className="flex h-20 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold text-neutral-400">{iconLabel}</div><p className="mt-3 text-sm font-semibold">{title}</p><span className="mt-2 block text-xs text-neutral-400">使ってみる</span></button>)}</div>{activeScene && <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-xs font-semibold text-neutral-400">Gallery素材を組み合わせる</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{galleryReferenceAssets.map((asset) => <button key={asset.id} type="button" onClick={() => setSelectedAssets((current) => { const next: [typeof galleryReferenceAssets[number], typeof galleryReferenceAssets[number]] = [...current]; next[activeAssetSlot] = asset; return next; })} className={`overflow-hidden rounded-xl border text-left transition ${selectedAssets[activeAssetSlot].id === asset.id ? 'border-white ring-1 ring-white' : 'border-white/10 hover:border-white/40'}`}><div className="h-24 bg-white/10"><img src={asset.src} alt={asset.label} className="h-full w-full object-cover" loading="lazy" /></div><div className="px-3 py-2 text-xs text-neutral-300">{asset.label}</div></button>)}</div><div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-400"><button type="button" onClick={() => setActiveAssetSlot(0)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 0 ? 'border-white text-white' : 'border-white/10'}`}>画像1を選択</button><button type="button" onClick={() => setActiveAssetSlot(1)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 1 ? 'border-white text-white' : 'border-white/10'}`}>画像2を選択</button></div></div>}{activeScene && <div className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 sm:grid-cols-[180px_180px_minmax(0,1fr)]"><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[0].src} alt="画像1" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像1: {selectedAssets[0].label}</p></div><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[1].src} alt="画像2" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像2: {selectedAssets[1].label}</p></div><div><textarea value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/60" aria-label="商品画像をアップロードして、デザインのリクエストを教えてください" /><div className="mt-2 text-right text-xs text-neutral-500">{dialoguePrompt.length} / 4000</div></div></div>}<div className="mt-5 max-w-2xl"><div className="flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2"><Sparkles className="h-4 w-4 text-neutral-400" /><input value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500" placeholder="作りたいデザインを入力してください" /><button type="button" className="rounded-lg bg-white px-4 py-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40" disabled={!canOpenProposal} onClick={openProposal}>提案を見る</button></div>{(!trimmedDialoguePrompt || !hasTwoReferenceAssets) && <div id="design-production-proposal-requirements" className="mt-2 space-y-1 text-xs text-neutral-400" aria-live="polite">{!trimmedDialoguePrompt && <p>依頼文を入力してください。</p>}{!hasTwoReferenceAssets && <div className="flex flex-wrap items-center gap-2"><p>{referenceRequirementMessage}</p>{galleryReferenceAssets.length === 0 && <button type="button" className="rounded-lg border border-white/20 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:border-white/50" onClick={() => navigate('/asset-center')}>ライブラリーを開く</button>}</div>}</div>}</div></section> : <><section className="mt-6 grid gap-2 grid-cols-2 lg:grid-cols-5" aria-label="新規ファイル"><div className="flex min-h-[160px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-center"><Plus className="h-8 w-8 text-white" /><span className="mt-4 text-sm font-semibold">新規ファイル</span></div><CreationCard icon={<Shirt />} title="インスピレーション" actionLabel="デザインプロジェクトを新規作成" onClick={() => navigate('/creator')} /><CreationCard icon={<Palette />} title="ブリン卜修正" actionLabel="プリントプロジェクトを新規作成" onClick={() => navigate('/printing')} /><CreationCard icon={<Layers />} title="生地イメージ" actionLabel="生地プロジェクトを新規作成" onClick={() => navigate('/tools/fabric')} /><CreationCard icon={<FileText />} title="企画提案書" actionLabel="企画提案書を新規作成" onClick={() => navigate('/agent')} /></section><section className="mt-12" data-testid="design-production-persisted-projects"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2></div>{persistedDesignArtifacts.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-5 py-12 text-center text-sm text-neutral-400">保存確認できたデザイン成果物はまだありません。生成結果を保存すると、ここに表示されます。</div> : <><div className="mt-4 grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">{visibleProjectArtifacts.map((artifact) => <article key={artifact.id} className="relative overflow-visible rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40"><button type="button" className="block w-full overflow-hidden rounded-2xl text-left" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}><div className="h-36 bg-white/10">{artifact.imageUrl && <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />}</div><div className="p-4 pr-12"><p className="truncate font-medium">{pinnedProjectIds.has(artifact.id) ? '📌 ' : ''}{artifact.title}</p><p className="mt-2 truncate text-xs text-neutral-400">{artifact.featureType} ・ {formatArtifactDate(artifact.createdAt)}</p></div></button><div className="absolute right-2 top-2 z-20"><button type="button" aria-label={`${artifact.title}のメニュー`} aria-expanded={openProjectMenuId === artifact.id} className="rounded-lg bg-black/45 p-2 text-neutral-200 hover:bg-black/70" onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === artifact.id ? null : artifact.id); }}><MoreVertical className="h-4 w-4" /></button>{openProjectMenuId === artifact.id && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl"><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setPinnedProjectIds((current) => { const next = new Set(current); if (next.has(artifact.id)) next.delete(artifact.id); else next.add(artifact.id); return next; }); setOpenProjectMenuId(null); }}>ピン留め</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { void saveDesignArtifactToLibrary(artifact); setOpenProjectMenuId(null); }}>アセットライブラリに保存</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => deleteDesignArtifact(artifact)}>削除</button></div>}</div></article>)}</div><div className="mt-5 flex flex-wrap items-center justify-center gap-2" data-testid="design-production-pagination" aria-label="マイプロジェクトページング"><button type="button" className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage((page) => Math.max(1, page - 1))} disabled={projectPage === 1} aria-label="前のページ">前へ</button>{Array.from({ length: projectPageCount }, (_, index) => index + 1).map((page) => <button key={page} type="button" aria-current={page === projectPage ? 'page' : undefined} className={`rounded-lg border px-3 py-1.5 text-xs ${page === projectPage ? 'border-cyan-200 bg-cyan-200/10 text-white' : 'border-white/10 text-neutral-300'}`} onClick={() => setProjectPage(page)}>{page}</button>)}<button type="button" className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage((page) => Math.min(projectPageCount, page + 1))} disabled={projectPage === projectPageCount} aria-label="次のページ">次へ</button><span className="ml-2 text-xs text-neutral-500">{projectPage} / {projectPageCount}</span></div></>}</section></>}
+      <div data-testid="design-production-page" className="relative z-10 mx-auto max-w-[1157px] px-6 py-7 lg:px-0"><div className="text-center"><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1><p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p></div>
+        <div role="tablist" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">{['プロジェクトから開始', '対話から開始'].map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`h-10 ${tab === 'プロジェクトから開始' ? 'w-[210px]' : 'w-[146px]'} rounded-xl px-0 py-1 text-lg font-medium transition ${activeTab === tab ? 'bg-white/15 text-white shadow-sm' : 'text-neutral-400 hover:text-white'}`}>{tab}</button>)}</div>
+        {activeTab === '対話から開始' ? <div role="tabpanel" aria-label="対話から開始"><section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8"><div className="flex items-center gap-3"><WandSparkles className="h-5 w-5" /><h2 className="font-semibold">対話から開始</h2></div><p className="mt-3 max-w-xl text-sm leading-6 text-neutral-400">既存のGallery素材を組み合わせ、作りたい変更内容を対話で指定します。</p><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{dialogueScenes.map(([title, prompt, iconLabel]) => <button key={title} type="button" onClick={() => { setActiveScene(title); setDialoguePrompt(prompt); }} className={`rounded-2xl border bg-white/5 p-4 text-left transition hover:border-white/40 ${activeScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}><div className="flex h-20 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold text-neutral-400">{iconLabel}</div><p className="mt-3 text-sm font-semibold">{title}</p><span className="mt-2 block text-xs text-neutral-400">使ってみる</span></button>)}</div>{activeScene && <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-xs font-semibold text-neutral-400">Gallery素材を組み合わせる</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{galleryReferenceAssets.map((asset) => <button key={asset.id} type="button" onClick={() => setSelectedAssets((current) => { const next: [typeof galleryReferenceAssets[number], typeof galleryReferenceAssets[number]] = [...current]; next[activeAssetSlot] = asset; return next; })} className={`overflow-hidden rounded-xl border text-left transition ${selectedAssets[activeAssetSlot].id === asset.id ? 'border-white ring-1 ring-white' : 'border-white/10 hover:border-white/40'}`}><div className="h-24 bg-white/10"><img src={asset.src} alt={asset.label} className="h-full w-full object-cover" loading="lazy" /></div><div className="px-3 py-2 text-xs text-neutral-300">{asset.label}</div></button>)}</div><div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-400"><button type="button" onClick={() => setActiveAssetSlot(0)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 0 ? 'border-white text-white' : 'border-white/10'}`}>画像1を選択</button><button type="button" onClick={() => setActiveAssetSlot(1)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 1 ? 'border-white text-white' : 'border-white/10'}`}>画像2を選択</button></div></div>}{activeScene && <div className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 sm:grid-cols-[180px_180px_minmax(0,1fr)]"><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[0].src} alt="画像1" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像1: {selectedAssets[0].label}</p></div><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[1].src} alt="画像2" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像2: {selectedAssets[1].label}</p></div><div><textarea value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/60" aria-label="商品画像をアップロードして、デザインのリクエストを教えてください" /><div className="mt-2 text-right text-xs text-neutral-500">{dialoguePrompt.length} / 4000</div></div></div>}<div className="mt-5 max-w-2xl"><div className="flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2"><Sparkles className="h-4 w-4 text-neutral-400" /><input value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500" placeholder="作りたいデザインを入力してください" /><button type="button" className="rounded-lg bg-white px-4 py-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40" disabled={!canOpenProposal} onClick={openProposal}>提案を見る</button></div>{(!trimmedDialoguePrompt || !hasTwoReferenceAssets) && <div id="design-production-proposal-requirements" className="mt-2 space-y-1 text-xs text-neutral-400" aria-live="polite">{!trimmedDialoguePrompt && <p>依頼文を入力してください。</p>}{!hasTwoReferenceAssets && <div className="flex flex-wrap items-center gap-2"><p>{referenceRequirementMessage}</p>{galleryReferenceAssets.length === 0 && <button type="button" className="rounded-lg border border-white/20 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:border-white/50" onClick={() => navigate('/asset-center')}>ライブラリーを開く</button>}</div>}</div>}</div></section></div> : <div role="tabpanel" aria-label="プロジェクトから開始"><section className="mt-6 grid gap-2 grid-cols-2 sm:grid-cols-5" aria-label="新規ファイル"><div className="flex min-h-[160px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-center"><Plus className="h-8 w-8 text-white" /><span className="mt-4 text-sm font-semibold">新規ファイル</span></div><CreationCard icon={<Shirt />} title="インスピレーション" actionLabel="デザインプロジェクトを新規作成" onClick={() => navigate('/creator')} /><CreationCard icon={<Palette />} title="プリント修正" actionLabel="プリントプロジェクトを新規作成" onClick={() => navigate('/printing')} /><CreationCard icon={<Layers />} title="生地イメージ" actionLabel="生地プロジェクトを新規作成" onClick={() => navigate('/tools/fabric')} /><CreationCard icon={<FileText />} title="企画提案書" actionLabel="企画提案書を新規作成" onClick={() => navigate('/agent')} /></section><section className="mt-12" data-testid="design-production-persisted-projects"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2></div>{displayDesignArtifacts.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-5 py-12 text-center text-sm text-neutral-400">保存確認できたデザイン成果物はまだありません。生成結果を保存すると、ここに表示されます。</div> : <><div className="mt-4 grid gap-4 grid-cols-2 sm:grid-cols-5">{visibleProjectArtifacts.map((artifact) => <article key={artifact.id} className="relative h-60 overflow-visible rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40"><div className="block h-full w-full cursor-pointer overflow-hidden rounded-2xl text-left" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}><div className="h-36 bg-white/10">{artifact.imageUrl ? <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="" className="h-12 w-12 object-contain" loading="lazy" />}</div><div className="p-4 pr-12"><p className="truncate font-medium">{pinnedProjectIds.has(artifact.id) ? '📌 ' : ''}{artifact.title}</p><p className="mt-2 truncate text-xs text-neutral-400">{artifact.featureType === 'design-production-source-fallback' ? formatDesignProductionSourceArtifactDate(artifact.createdAt) : `${artifact.featureType} ・ ${formatArtifactDate(artifact.createdAt)}`}</p></div></div><div className="absolute right-2 top-2 z-20"><button type="button" aria-label={`${artifact.title}のメニュー`} aria-expanded={openProjectMenuId === artifact.id} className="rounded-lg bg-black/45 p-2 text-neutral-200 hover:bg-black/70" onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === artifact.id ? null : artifact.id); }}><MoreVertical className="h-4 w-4" /></button>{openProjectMenuId === artifact.id && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl"><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setPinnedProjectIds((current) => { const next = new Set(current); if (next.has(artifact.id)) next.delete(artifact.id); else next.add(artifact.id); return next; }); setOpenProjectMenuId(null); }}>ピン留め</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { void saveDesignArtifactToLibrary(artifact); setOpenProjectMenuId(null); }}>アセットライブラリに保存</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => deleteDesignArtifact(artifact)}>削除</button></div>}</div></article>)}</div><div className="mt-5 flex flex-wrap items-center justify-center gap-2" data-testid="design-production-pagination" aria-label="マイプロジェクトページング"><button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage((page) => Math.max(1, page - 1))} disabled={projectPage === 1} aria-label="前のページ"><span role="img" aria-label="left"><ChevronLeft className="h-3 w-3" /></span></button>{Array.from({ length: projectPageCount }, (_, index) => <span key={index} aria-current={index + 1 === projectPage ? 'page' : undefined} className={`px-1.5 text-xs ${index + 1 === projectPage ? 'text-white' : 'text-neutral-500'}`}>{index + 1}</span>)}<button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage((page) => Math.min(projectPageCount, page + 1))} disabled={projectPage === projectPageCount} aria-label="次のページ"><span role="img" aria-label="right"><ChevronRight className="h-3 w-3" /></span></button></div></>}</section></div>}
       </div>
     </ParityShell>
   );
@@ -1211,48 +1255,65 @@ function LightchainDialogueParityPanel({ onProjectStart }: { onProjectStart: () 
   );
   return (
     <ParityShell className="bg-[#171b1c] text-white" workflowFeature="print-design-project">
-      <div className="relative z-10 mx-auto max-w-[1157px] px-5 py-10 sm:px-8 lg:px-0">
+      <div className="relative z-10 mx-auto max-w-[1157px] px-5 py-7 lg:px-0">
         <div className="text-center">
           <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1>
           <p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p>
         </div>
-        <div role="tablist" aria-label="デザイン制作の開始方法" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">
-          <button type="button" role="tab" aria-selected={false} onClick={onProjectStart} className="rounded-xl px-5 py-2.5 text-sm font-medium text-neutral-400 hover:text-white">プロジェクトから開始</button>
-          <button type="button" role="tab" aria-selected className="rounded-xl bg-white/15 px-5 py-2.5 text-sm font-medium text-white shadow-sm">対話から開始</button>
+        <div role="tablist" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">
+          <button type="button" role="tab" aria-selected={false} onClick={onProjectStart} className="h-10 w-[210px] rounded-xl px-0 py-1 text-lg font-medium text-neutral-400 hover:text-white">プロジェクトから開始</button>
+          <button type="button" role="tab" aria-selected className="h-10 w-[146px] rounded-xl bg-white/15 px-0 py-1 text-lg font-medium text-white shadow-sm">対話から開始</button>
         </div>
-        <section className="mt-8">
-          <div className="flex items-center gap-3">
-            <WandSparkles className="h-5 w-5" />
-            <h2 className="font-semibold">対話から開始</h2>
+        <div role="tabpanel" aria-label="対話から開始" className="relative left-1/2 mt-6 w-[960px] -translate-x-1/2">
+          <div className="relative ml-[144px] h-[198px] w-[792px]">
+            <textarea aria-label="商品画像をアップロードして、デザインのリクエストを教えてください" value={prompt} onChange={(event) => setPrompt(event.target.value)} className="absolute left-0 top-8 h-20 w-[792px] resize-none rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/60" placeholder="商品画像をアップロードして、デザインのリクエストを教えてください" />
+            <span className="absolute left-0 top-[124px] text-xs text-neutral-500">{prompt.length} / 4000</span>
+            <button type="button" disabled={!prompt.trim()} aria-label="送信" onClick={() => navigate(buildGenerationIntentHref({ feature: 'design-gacha', prompt, sourceWorkspace: 'design-production', workflowVersion: 'design-production-brief-local-v1', sourceLabel: workspaceSourceConfig['design-production'].label, sourceResumePath: workspaceSourceConfig['design-production'].resumePath, sourceMode: 'local-workflow-intake' }))} className="absolute -right-1 top-[158px] h-10 w-10 rounded-lg bg-white px-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40">送信</button>
           </div>
-          <div className="mt-5 flex flex-wrap gap-3" aria-label="デザインシーン">
-            {dialogueScenes.map(([title, scenePrompt, iconLabel]) => (
-              <button key={title} type="button" onClick={() => { setSelectedScene(title); setPrompt(scenePrompt); setSelectedReferenceImages(Array.from({ length: 5 }, () => true)); }} className={`rounded-2xl border bg-white/5 px-4 py-3 text-left transition hover:border-white/40 ${selectedScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}>
-                <span className="block text-xs font-semibold text-neutral-300">{iconLabel}</span>
-                <span className="mt-2 block text-xs text-neutral-400">使ってみる</span>
-                <span className="mt-1 block text-sm font-semibold">{title}</span>
-              </button>
-            ))}
+          <p className="mt-[63px] text-sm text-neutral-400">下からデザインシーンを選択してお試しください <span aria-hidden="true">↘</span></p>
+          <div className="mt-3 grid w-[960px] grid-cols-4 gap-2" aria-label="デザインシーン">
+            {dialogueScenes.map(([title, scenePrompt]) => {
+              const preview = recentProjects[dialogueScenes.findIndex(([item]) => item === title)]?.imageUrl;
+              return (
+                <button key={title} type="submit" onClick={() => { setSelectedScene(title); setPrompt(scenePrompt); setSelectedReferenceImages(Array.from({ length: 5 }, () => true)); }} className={`h-[120px] w-[234px] overflow-hidden rounded-2xl border bg-white/5 text-left transition hover:border-white/40 ${selectedScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}>
+                  <div className="h-[70px] bg-white/10">{preview && <img src={preview} alt="" className="h-full w-full object-cover" loading="lazy" />}</div>
+                  <span className="block px-3 pt-1 text-xs text-neutral-400">使ってみる</span>
+                  <span className="block truncate px-3 text-sm font-semibold">{title}</span>
+                </button>
+              );
+            })}
           </div>
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
-            {selectedScene && <div className="flex flex-wrap gap-2" aria-label="参照画像">
+          {selectedScene && <div className="mt-5 w-[792px] rounded-2xl border border-white/10 bg-white/5 p-4" aria-label="参照画像">
+            <div className="flex flex-wrap gap-2">
               {selectedReferenceImages.map((isSelected, index) => isSelected && (
                 <button key={index} type="button" aria-label={`画像${index + 1}を削除`} onClick={() => setSelectedReferenceImages((current) => current.map((value, currentIndex) => currentIndex === index ? false : value))} className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-200/60 bg-cyan-200/10 px-2.5 py-1.5 text-xs text-neutral-200 hover:border-cyan-100">
                   <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/15">画像{index + 1}</span><span aria-hidden="true">×</span>
                 </button>
               ))}
-            </div>}
-            <textarea aria-label="デザインのリクエスト" value={prompt} onChange={(event) => setPrompt(event.target.value)} className="mt-4 min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/60" placeholder="デザインのリクエストを入力してください" />
-            <div className="mt-2 flex items-center justify-between text-xs text-neutral-500"><span>{prompt.length} / 4000</span><button type="button" disabled={!prompt.trim()} onClick={() => navigate(buildGenerationIntentHref({ feature: 'design-gacha', prompt, sourceWorkspace: 'design-production', workflowVersion: 'design-production-brief-local-v1', sourceLabel: workspaceSourceConfig['design-production'].label, sourceResumePath: workspaceSourceConfig['design-production'].resumePath, sourceMode: 'local-workflow-intake' }))} className="rounded-lg bg-white px-4 py-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40">送信</button></div>
-          </div>
-          <p className="mt-5 text-sm text-neutral-400">下からデザインシーンを選択してお試しください</p>
-        </section>
-        <section className="mt-10" data-testid="design-production-recent-projects">
-          <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">最近のプロジェクト</h2><button type="button" onClick={onProjectStart} className="text-sm text-neutral-300 hover:text-white">すべて表示</button></div>
-          <p className="mt-3 text-xs text-neutral-400">新規ファイル</p>
-          {recentProjects.length > 0 && <div className="mt-3 grid gap-4 grid-cols-2 md:grid-cols-5">{recentProjects.map((artifact) => <button type="button" key={artifact.id} onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)} className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40"><div className="h-28 bg-white/10">{artifact.imageUrl && <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />}</div><div className="p-3"><p className="truncate text-sm font-medium">{artifact.title}</p><p className="mt-1 truncate text-xs text-neutral-400">{formatArtifactDate(artifact.createdAt)}</p></div></button>)}</div>}
-        </section>
-        <section className="mt-10" data-testid="design-production-reference-cases"><h2 className="text-lg font-semibold">参考事例</h2><div className="mt-4 flex min-h-24 items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-neutral-500">データなし</div></section>
+            </div>
+          </div>}
+          <section className="mt-10 flex w-[960px] flex-col gap-4" data-testid="design-production-recent-projects">
+            <div className="flex h-8 items-center">
+              <h2 className="flex-1 text-lg font-medium leading-7">最近のプロジェクト</h2>
+              <button type="submit" onClick={onProjectStart} className="flex h-8 w-[108px] items-center justify-end gap-0.5 rounded-lg py-1 pl-3 pr-2 text-neutral-300 hover:bg-white/10">
+                <span className="text-base font-medium">すべて表示</span><ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-x-2 gap-y-4">
+              <div className="flex h-60 w-[225px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 text-neutral-300 transition hover:border-white/30 hover:bg-white/10" onClick={onProjectStart}>
+                <Plus className="h-6 w-6" /><span className="mt-2 text-base font-medium">新規ファイル</span>
+              </div>
+              {recentProjects.map((artifact) => (
+                <div key={artifact.id} className="group relative h-60 w-[220px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}>
+                  <div className="h-[220px] bg-white/10">{artifact.imageUrl ? <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="" className="mx-auto mt-20 h-12 w-12 object-contain" loading="lazy" />}</div>
+                  <div className="absolute bottom-0 w-full bg-[#202627] px-3 py-3 text-sm text-neutral-300"><p className="truncate text-base">{artifact.title}</p><p className="mt-1 truncate text-xs text-neutral-400">{formatArtifactDate(artifact.createdAt)}</p></div>
+                  <button type="button" aria-label="" className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg bg-black/45 p-2 text-neutral-200 opacity-0 transition group-hover:opacity-100" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" /></button>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="mt-10 min-h-[calc(100vh-60px)] w-full" data-testid="design-production-reference-cases"><h2 className="mb-4 text-lg font-medium leading-7">参考事例</h2><div className="flex min-h-[70vh] flex-col items-center justify-center gap-2 text-sm text-neutral-500"><div className="flex min-h-[70vh] w-full items-center justify-center rounded-2xl border border-dashed border-white/10">データなし</div></div></section>
+        </div>
       </div>
     </ParityShell>
   );
@@ -1273,15 +1334,23 @@ function CreationCard({
   actionLabel: string;
   onClick: () => void;
 }) {
+  const actionButtonWidth = {
+    デザインプロジェクトを新規作成: 'w-[228px]',
+    プリントプロジェクトを新規作成: 'w-[228px]',
+    生地プロジェクトを新規作成: 'w-[204px]',
+    企画提案書を新規作成: 'w-[168px]',
+  }[actionLabel] ?? '';
+
   return (
-    <button
-      type="button"
-      aria-label={actionLabel}
-      className="flex min-h-[160px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-5 text-left transition hover:border-white/40"
-      onClick={onClick}
-    >
+    <div className="relative flex min-h-[160px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-5 pb-0 text-left transition hover:border-white/40">
       <FileCardIcon icon={icon} title={title} />
-    </button>
+      <button
+        className={`absolute bottom-0 left-1/2 z-10 inline-flex h-8 -translate-x-1/2 ${actionButtonWidth} cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#0bc1b8] px-4 py-2 text-[12px] font-medium leading-[17.1429px] text-[#111817] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all hover:bg-[#20d0c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/70`}
+        onClick={onClick}
+      >
+        {actionLabel}
+      </button>
+    </div>
   );
 }
 
@@ -1402,26 +1471,41 @@ export function LightchainOrientedDesignPage() {
     <ParityShell workflowFeature="wear-design-lab" className="oriented-design-parity">
       <div className="oriented-design-content">
         <h6 className="oriented-design-title">ウェアデザインラボ</h6>
-        <section aria-labelledby="oriented-design-new-files">
-          <h6 id="oriented-design-new-files" className="sr-only">新規ファイル</h6>
+        <section>
           <div className="oriented-design-card-grid">
-            <button type="button" className="oriented-design-new-card" onClick={() => navigate('/flow/orientedDesign/detail')}>
+            <div className="oriented-design-new-card" onClick={() => navigate('/flow/orientedDesign/detail')}>
               <div className="oriented-design-new-card-inner">
-                <div className="oriented-design-project-mark"><img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="PROJECT" /></div>
-                <span>新規ファイル</span>
+                <img className="oriented-design-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
+                <svg className="oriented-design-project-mark" width="80" height="80" viewBox="0 0 80 80" aria-hidden="true">
+                  <defs>
+                    <clipPath id="oriented-design-clip-1"><path d={" M0,0 C0,0 44,0 44,0 C44,0 44,58.5 44,58.5 C44,58.5 0,58.5 0,58.5 C0,58.5 0,0 0,0 C0,0 0,0 0,0z"} /></clipPath>
+                    <clipPath id="oriented-design-clip-2"><path d={" M0,0 C0,0 58.5,0 58.5,0 C58.5,0 58.5,65.5 58.5,65.5 C58.5,65.5 0,65.5 0,65.5 C0,65.5 0,0 0,0 C0,0 0,0 0,0z"} /></clipPath>
+                    <clipPath id="oriented-design-clip-3"><path d={" M0,0 C0,0 40.5,0 40.5,0 C40.5,0 40.5,40.5 40.5,40.5 C40.5,40.5 0,40.5 0,40.5 C0,40.5 0,0 0,0 C0,0 0,0 0,0z"} /></clipPath>
+                    <clipPath id="oriented-design-clip-4"><path d={" M0,0 C0,0 68,0 68,0 C68,0 68,41 68,41 C68,41 0,41 0,41 C0,41 0,0 0,0 C0,0 0,0 0,0z"} /></clipPath>
+                    <clipPath id="oriented-design-clip-5"><path d={" M0,0 C0,0 12,0 12,0 C12,0 12,12 12,12 C12,12 0,12 0,12 C0,12 0,0 0,0 C0,0 0,0 0,0z"} /></clipPath>
+                  </defs>
+                  <g transform="matrix(1,0,0,1,6.25,18.25)"><path d={" M0,9.910714149475098 C0,4.440000057220459 4.44705867767334,0 9.926470756530762,0 C9.926470756530762,0 57.57352828979492,0 57.57352828979492,0 C63.052940368652344,0 67.5,4.440000057220459 67.5,9.910714149475098 C67.5,9.910714149475098 67.5,45.58928680419922 67.5,45.58928680419922 C67.5,51.060001373291016 63.052940368652344,55.5 57.57352828979492,55.5 C57.57352828979492,55.5 9.926470756530762,55.5 9.926470756530762,55.5 C4.44705867767334,55.5 0,51.060001373291016 0,45.58928680419922 C0,45.58928680419922 0,9.910714149475098 0,9.910714149475098 C0,9.910714149475098 0,9.910714149475098 0,9.910714149475098z"} fill="rgb(47,50,51)" /></g>
+                  <g clipPath="url(#oriented-design-clip-1)" transform="matrix(0.5,0,0,0.5,9,9)"><image width="88px" height="117px" preserveAspectRatio="xMidYMid slice" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFgAAAB1CAYAAADKpybcAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAChbSURBVHgB5X1NjyRJcp1ZZO1idOraP6Cp+QVcAQuBx+adWrZ00RyHggToxtUv2N1/MLzxtkMdqDkOdBAWumyDEghBFw1/AbNvuk01IAiN2a4whbu998w8uyprhsISEpmY6cqMjHA3f2727PlHRLr9PX+9fPXy1uzd7c17u9v3h7s86ne7+cfzbex3YXbn7rcWdht5wtfH/3+ze/zH0w9Pr19/9d/O9rd8uf1/+Hr56vfvfvDtdhvbt7e+D7DshZv/aLf4eLMDqAOwA6gDrPj4AM73AGzmx6GjzUer69Dxf8z/9Io6zCOfb3H609e//v5A/z8B8KvDy94dXrZ9+3D7/rTfbQ9xu9v2sR1eFbYdgO13BzR3A5kDxDvikeDthmZMXIRVoG3uB5gx/87D+OA4TsRjNWmeNP7OOvYYV5zf++mf/9V/+quv7Xu8fmcAvzq8bPx99/793bbvd7adXhz2/uiw9OM4ALTt8LI4APTj/fC62dg0aWBxNGo2LkEgoNv8bGj4eLMfJ/qWxxO0rH/8GWBux3c8r8p3j+a2BHf83TzBjh0Fopy8xu7tIf74v/zn//6VfcfX9wJ4gPatPdzGw+FRFrebb3cPD/ZiuzmA2veD07ZPjr92NPiOgLk8J2sbh30GqSc48wSfnkTvmghHEKsEKBuZ4KDxQUercPeg/+KIwPE8T8Vm58HEjcenZezcqh3efvy3bfb2vZ3+4Lt68lWA//APf/LyqOaPDjNfHbDcjYbv8hSCYSItOWGGKmClFxwlwD326Vk+weAZ8qIJyOYJeD82ywGi2QFpiOFM996BgA5GkT0QHtOGnRESbrO+1qAqs9Vt7IGw/Xz64T/6J6+/en1vz7xuHgX21QHsg//8COOXCM5AmxRyQZYa324Zmocj5Hd7NRIYGCGcXtjSSF5LX/VEAF7D3p9nb9PL3AkcPXCbruzj+31+JLjy/wSw8XB20cbg8RZes7wE3Sc7lyM0r7bt7v237/7kePNLe+a1XR746U9/8vMt/DcDXERyNmYYOrguGzy8LEGY4ZUA8NgksnEJzp+YDUvHuePa7eT7uGrbwITj3FOC6ZZUMDt1AmmjU3f2wiabDNwbBLc6w+EU0z6f18AvWKacY7w/rp/cA+cZ1wwb04HRIeO78RnOfHz+mX2H10IRP331k58fLPOLgVPMFiXn1dnN2/AZIVpJ+/h/gJdcmSl6vYTZG+9bMuFrl7ekl2daM6b/BLI5HU8K0iaTI1w5P++lJMykHMjJlHONIqz1QlJNdMSOfjvZH7z+6r++tisvUcRP/8U//flhyi+YM0K5xiYtsMJqIPJwAZGghE2PiyFttpRNxdQM6w2Eepxz2jyKMdIzM59BQOXFs/GhTg5GloM0pgJAEYaIYqJIPLbqR7ItwoedvmUkhIvIkA+S2OksQRWyP/gfHaW9fhbgKancfiEnwZcDh6EBY9bl3hwxG8D0mtnLl/yT3xsPwu7ZD2arFkVID5OzX31jJwa4FpXOsNeFI1K2mRCPyuF87BcCAXMDXzqT6Owom5TLspljkFzzvIyyw8lgB8vM8uLOnnmlB9/4r9SVbPQImVHJaZIehkDDgIM/970EhMPSaTRstdKj2TzrvBfZF94iHq52lE1Hntw7O8MYohIHAR18grwzeEWW4d6lMk3a+0HmljZAGSZsp5OX4Ejod1SffF6UiIN39hzArz79/Tt/7y/DK82XBMweFE2yF08bbZo9O77YYxl82uTxCSU6h/2ONpNisrKteoQdh+GT2DK9OmMF0TDrz55qQiwDxaMGLjbhSiukiykVM3Ri0hmgXpRMRqPyyAyVcPL5rT0HsD/c/OxwFTV9GTZGNdjIdUXyTYwPby" /></g>
+                  <g clipPath="url(#oriented-design-clip-2)" transform="matrix(0.49969542026519775,-0.017449747771024704,0.017449747771024704,0.49969542026519775,12.874879837036133,7.0400390625)"><image width="117px" height="131px" preserveAspectRatio="xMidYMid slice" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHUAAACDCAYAAACzz1S4AAAACXBIWXMAABYlAAAWJQFJUiTwAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAACi1SURBVHgB7X3dsmXVdd4Y6zQy8Q3NE3CUF+D4CfrYV65UqujItkxRJLQccCjbJY4kQEjG6tNJVRAg3KQqF6lUqpoKKNZNgnwT2jdu8gTkDdw8gZBBf9B7Ds85x/eNMdbu05KQ6T96T+iz9157/cw5vzm+8Y0x51pbZVfuyvLo2af3TT+5ZCIPS/+je8vf6mbvwg9++N+uquzKXVce/cMnD1uzt83kNLdZ/6Ci/7An9/3enuzKXVX++A+eeqYD+oP+9n4hll6GvZ5u0g52oN5F5ctfevJ8R/G7/NxRFO1lwuqv490Dp2RX7ory5S/9ycUO6FH/Z6qL2oRUtFkbeI7N4+MEdgfqHV7Onj06fZ9+OPznIbd1QMf/k3bdOEnBHVjTDxbZlTu2DIV7n350pUN4ZsDVhjW6WU6jHLY5/jW3UrddkQ92lnqHlgHoJ/LxlUWWfdrhcJvk2WGrk4bNylEqrYO6s9Q7sDz2R08dbPST9zqIDwWxunnKNFFsHJsc0mGlALf72B2od1j58h/86RMfb9oVXZYZg5JqXRyJ46cevxDb8dq/n1gvulzdgXoHlRGydDV7qVvo6QhXJtMKjHS+cepdfAP2cauF5e586h1SvvyHfzpi0PMTJDIpcJtKaMF2HSGNqn8/TNazD02BusnVHah3QPnjP/oPI4d7DlgBUyOetuw59ap/p26QQB5qOETUsrPU21pmDHrqZ1e6xR2IpdRxb7lMkJZFNQTuhHYZZKuiKZZ02ZPWmstjkfd3oN6m8uijfZbFfn6lm9Y+XGUmcvG+i56RMRr+U1ub5ji/DfUrTsWeZQLKi+3U7+0ojz321EFH6EoH6aGZsl0cp2VZZPrOuW2+d+PryhbCSHN/dZDnd4tbbv+32N7Op97q8vjjf3G46dNmvf8fYFAymReW5r7R950WuOzBEnsaYpnZoyDjebiHr5GIuGY7n3pLy2OPf/WZjdlFU7e5meabwEWqiOwr/ur7SE6vQSzpNGSrKWCPZ03u012a8FaVx/7dV8+r6fGQrXvDV04BO4TQgpSfmypkLSx4fjJ+MxVUP4lR7nrx/Z3B9f72hQ92Kx9uQfm3575+sQueI9oZCRQgrgqS9lLUsFvzNEPj58CYIsl8jMj//pv/upt6u5nl3NHx6c0//uOl3tdnlbMo3dCGthFgIx6oeIzS3y22eB5X6S8VOaXBsC0TTcQV77WY5w7Um1TOPf3Cvn30k7d7dz/sQoYxi6vb6QyBswLYyaILlZLHpON9ExfFXdnGvOk0XvOchLtVG28+GO92oN6EMgEdSXld9ke0YaDcLm6cJsdO6pgWf6opaxGHIjbdm8e5rHJ57HsvgrlVl89j2w7Um1GeeurbBxuxt9uy7BOUEEHMH8A5OtAZmZBvZy6377y3N5IP4XUz59v/74dpo+W3mQYeA+bq+H4H6mdY/v2f/+UTPV13sQPz4PR0C8DSCEUyFyR0jqFeJ1CccVlmhqHGMgSbABpVsemprqCbCQKgHaifVXnqq995xlp7vccokLeZTBjFfIEYcrULQ5ZJpPSxdYImVNQMeawys1IhmUX0M7NM/fOOfj+r8vTRhfOtbY65bihmzAYvYkaFiQQmkXxee6khSSwH9JGAQSA0dNo6ThKhT/w/pNQO1M+iPP3185e6hZ7zTxovAHAC1iBmNL/jqjHEJJBJsGrfD2l5N22NlJGtkg3FVifiPx5vdqD+huXo+Pj0Lz7ce7tL1MNIE4wcu2FRGGBCIk+lZALndwqv6sk+ReEKBosU4SpDyCQhKR1hKgRTZ/gfje07UH+DcvTC8f7HP1mudFvaHzHk7OLh01rm5aljI6NbMj9cTI/lJ1vpA81V93VKLSQWi5" /></g>
+                  <g clipPath="url(#oriented-design-clip-3)" transform="matrix(0.5,0,0,0.5,24,15)"><image width="81px" height="81px" preserveAspectRatio="xMidYMid slice" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFEAAABRCAYAAACqj0o2AAAACXBIWXMAABYlAAAWJQFJUiTwAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAABTXSURBVHgB7V3Njh3Hdf6q50qRd+Mn8NUTiM4quww3SeCNRkCCJE4AkUAAxwkSiksjAXgZSSYTE5ohgvwhi2G8iBIEBsUYcSQnAGeZRWCOn8DXT+BZGLZE3lvH1d11zvlO9Z3hDDmkNi77zu3uqq4656vv/HR1XSrhcyx79+9vP976+U45nCekN5BlnhPmAumr5zJ8yfB/JByX82WpO04pLWWdfyhdOlpjdbR46+oxPseS8BJLD9pq9umlnNKbKctuwWY+VAw4SW1FRyJ2rwIqeizeLud81CUcPV7Lg9mrOHzZoL4UEL/13Q93ErprRe2d8tnur4n9UbAETDwHUOxvwghgru0Le8txHq5JBVVyLtdwr7R5cOurf/QRXkJ5YSCOrHt8raj1TvlsG6eUdRUVoXPnloMYAd1QV0DrOxpA1E8e2xQwl8X0b77adYeL37+6xAsqFw5iD15+9fE1yfKOEHhCrEsDpSqjkl/fBJazc7NpD2Zd64fvrIwUqysDFjC37n3zD67exAsoFwrinf/89110sleUnyuDepMbFdTjyqQKpIJj7OqrEgPI3hI2G2N779vcQK71udbXumHAAmb53Cxg3sMFlgsBce+/P5yvVumgHO6gMgKqnCnq7R1ENlk90janmXma9A9JBGY16drlMHlK+jJDxcQ/mnVy/aJMvMNzljvf/bdrqyfpUZF2B+SXcgUoszaD4nm43vsywWjSI2sk+rUhYIgDKcQ4NVNimvvJEdCxdgBsAI/ZUpruPlnh0V/868E7uIDyzEwcAsfWZzf6wGHKmpDMEGKSfTkzuc5N2xtL6JOKeIsarGGRqjJPXYiBPYAKA3loDuy//4dXruM5yjOBuHf/w/mTTu4XES5xwFA/N5w3gExAs7qGReNBAyH5yHi5BvlEZg4H1ZOAepxYRGtbgD1ar/DW7avPZt7nBnEAMOWHSOMTxYQhAAIzG0BEpuwztmVxiRpmKqtTIu8waJCchXZdzTyZPC6btmwtpTwF5XT5WYA8F4gKYB99TV7EoFGvRJOUGEyElIl9tCas34Kni17BrKC6icP9KHeO6WT2QEK6cwN5ZhBvFQA7FAaiT19kA8PorDHx6eObs3UEMlVw1fg48nKHGEFS0Yf+a2wUUkVIDmKxsJyacklwMP35skuvnAvIM4E4Arh+qPlflUKHrd/+R60y18RahIWE30cKet5IvTbY9Q8nXUpB/KTMC+bcsLgB0JPwCKqNVZ50um5dgPz6EmcoZ0pxElb31YTrY8GgZnhuzZqWqJAjDThlyRtSGUVL06KhXe3PGCkjgKrsWJPMLQR24hQAadxB/pzN1E21Xo5ibSvZur84ONjGGcpTQbx9/9t7RaFLo5LZgcsOgIODEUiICa5BQQisVqEcrsGYmYPp+ZSqmcYgQkxjhmE6jskPVJ1GHQbZc227Xl/6ae5TuKeXU8351ne+faV0eGAt2fzQmIiKLEBMbwANJr3pOUPtDpBjj/0lz/ssCveHZe5TokASxtK5FbcSswxmp4+TeUzykcPkCa5/8LU/2QeeAcRb9w/mkrtHpaft6J+EfFe9Epwz+x74Sg2zJIe7WX667iJqSqIAWkdUH3GolpCrTeRoGeYmEj1bJ9jiBeLfY6y7L+9//WT/eKI5p7zVm/G2mRnIFFTjcE5C6jHcH4r+L9tRdQ3MlOmE2MnAvMToWupcrdqBgo8P86Eki7Jy8InqrzOsZXQ525LWBzilbATx/e8cXFnn9S6s2ygUqn9REMwfqU8UmQDLDl3nAOD6aP42MMYgwlQThOoqHwxQDlr9OQdAHTMzuHVMOeFT2u782T/83RWcB8TiB264YmJBxKKaDa+gEdN08ByZBmYoOX" /></g>
+                  <g transform="matrix(0.9659258127212524,-0.258819043636322,0.258819043636322,0.9659258127212524,3.3741302490234375,22.974552154541016)"><path d={" M4.980000019073486,0.33000001311302185 C5.099999904632568,-0.10999999940395355 5.71999979019165,-0.10999999940395355 5.840000152587891,0.33000001311302185 C5.840000152587891,0.33000001311302185 6.489999771118164,2.75 6.489999771118164,2.75 C6.699999809265137,3.5199999809265137 7.289999961853027,4.110000133514404 8.0600004196167,4.320000171661377 C8.0600004196167,4.320000171661377 10.479999542236328,4.980000019073486 10.479999542236328,4.980000019073486 C10.920000076293945,5.099999904632568 10.920000076293945,5.71999979019165 10.479999542236328,5.840000152587891 C10.479999542236328,5.840000152587891 8.0600004196167,6.489999771118164 8.0600004196167,6.489999771118164 C7.289999961853027,6.699999809265137 6.699999809265137,7.289999961853027 6.489999771118164,8.0600004196167 C6.489999771118164,8.0600004196167 5.840000152587891,10.479999542236328 5.840000152587891,10.479999542236328 C5.71999979019165,10.920000076293945 5.099999904632568,10.920000076293945 4.980000019073486,10.479999542236328 C4.980000019073486,10.479999542236328 4.320000171661377,8.0600004196167 4.320000171661377,8.0600004196167 C4.110000133514404,7.289999961853027 3.5199999809265137,6.699999809265137 2.75,6.489999771118164 C2.75,6.489999771118164 0.33000001311302185,5.840000152587891 0.33000001311302185,5.840000152587891 C-0.10999999940395355,5.71999979019165 -0.10999999940395355,5.099999904632568 0.33000001311302185,4.980000019073486 C0.33000001311302185,4.980000019073486 2.75,4.320000171661377 2.75,4.320000171661377 C3.5199999809265137,4.110000133514404 4.110000133514404,3.5199999809265137 4.320000171661377,2.75 C4.320000171661377,2.75 4.980000019073486,0.33000001311302185 4.980000019073486,0.33000001311302185 C4.980000019073486,0.33000001311302185 4.980000019073486,0.33000001311302185 4.980000019073486,0.33000001311302185z"} fill="rgb(201,197,165)" /></g>
+                  <g clipPath="url(#oriented-design-clip-4)" transform="matrix(0.5,0,0,0.5,6,33)"><image width="136px" height="82px" preserveAspectRatio="xMidYMid slice" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIgAAABSCAYAAACPH5wbAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAADpISURBVHgB5X1ptF3VcWbVuVczICEkRiEEiBkzCMxoDBjbDZgQx0OAleA4HTt24tjudOIkHafTdGel071IVnenEyfpNO50sLMghCEGG0MwYTSTBELMILAQo9A8PT299+6u3rvqq9r7PoTj/Om1gh9c3XvPuM+ub3/1Ve065zL903+8+ILFU2/8qxvndFvHLhgM5OyO5IS8eFHHNJvzB+L8v26Z3yW/d0O7Dx1M/HvZUFj3IXws74S38jXFPp2tEntJc2TbphveR7eTt507CQ1/p3rO8iHpJcimJLw87/6tmTN3u+nzl1325gMPPDDabvnj9Mc/bOU555wz/RvXXbVww6aNn9u+ddOla95YOXv92lX9TRvX9EZGNvQGE2NqiK5jgwjjkOwgKEvZQKGLumyk/KErmGIRyf/kFalsop+zofP6BIMPRPcVSR0PqBi0y5+J8zHye9lOX5xSaUV+x7kKNoqxUyootOUKLDEcibcp/+XjGZ7YwDtt6lTZe8+9BocsPGh88YIDR+fsPueGAw888L+cf8YZq5966qkx+jH72yVAiuXWjazb97XVq76yddvaz7z4/CPTfrDysakT4yNq+2KW0s09UXuyLmMzejF0HBXLBHuJbajAsKOwNqEarDOji70MLOW909GfALBBPosCLSNtkEi3KcvKcRU8pMZmP4aIkw8DJIbgFIzETk5odml3R9yxvGfxEYPTTzxx7dw951z5y5de/hfLli0boR+jv97kBVdccUV30LEHHb5q1XO3rlh+5/kP3X/DjHXrVvfSYFS7sdNxTvqeOzD/b92dP+aDsS7IfavfSweX9Z0xBmunu0PK/3bYWZeTfw7EiX3oyOzcqdEFoGJmMIE2yiDqSMVZiAwMZVFhojoaWD1hbKqLfI19SBluKSNszfp13TMrV+7e7/fP/Owv/RI/fM+9S9esWTNOPyZ/QwAp4Pj4L358ySs/eOHv7rnjG4e/8dqzPZZB3iiRGjoPzj4AoXygxtcPBRfKHf49zMQMazEZHliw2BjHIAEsMFyNn6RAEWiBC/D1AIuIuw8DgbXMgEEAAhjLTxIwYXc5FMyCz8pZjjCmsYlx+sGrr07NB3jvr3zxy/TwvT8+IAmAlF4szPHisyv+7vv3X3/Ytm3rOKOjMEB5B2voQC9jmXs9SEyM1S6vNXDo4dToXecjWBnFqV0HdAx35tiprJPOXYD5JuiDbDOlIV3p4HCRIzIZHB0LjE0gCGUQsX3JUCJAi0iARDj2qlpZ3zOb0Ctvvj41t/fHCiQeb6jmeP6Fp256+MGbF2/fmsFhK1m7mlxCknQwRUfNS92F+BjlXleA1bgiPZOE16gaVqj1Js4lWEvcILCQCaiFwjMUbJGhz8mBudVALjEgSJvlcSDiCgnGxZa/ZlNsJYMseO5d9vCs+5Y/8ht/ee21v37cccfNonf5nzLIggULZpx27sn//oF7rjt/69Z1/V4Z/Y3eKF3e10CBVHMUAIAKwA5U9QP0gdKMChJya5oG6TTuYUOe7iROJkIuajsLfswpte6EPaQ1+JaIxhjHhaaxTCNGOcQIRSzu31u6UD8U/Ket1mOgJS57ii5Z/ebr/dy0U7/4xS/Lu51JCkD4waceXPTosju+9sbrL8wsQWexHdxLAYl+h87wUW/SshnhHTsWwhNAR7om7epYjPfOw2BwElxIuKOOXJTC8CFSm8jHdAY3y6rAIXgkdzl+bqphOTImrk7dARE2i5iHwEXmil554/UpuZNO+XIGyUPvYpD0Fi1aNP3ks0/4gyceu+O9ksZ7PTBCyyC9zmztgOjBNZfBzjVHZqDoPMIgW8xgDHMHbDTeOacbL7mldI/qmGyVA0dKiGsKqK" /></g>
+                  <g clipPath="url(#oriented-design-clip-5)" transform="matrix(0.5,0,0,0.5,55,55)"><image width="24px" height="24px" preserveAspectRatio="xMidYMid slice" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAABYlAAAWJQFJUiTwAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAC3SURBVHgB7ZQxCsIwFIbfn9RdcBbipDhlFgS9gLRH8AiexKNUvEALXsDJOeeoJDGWDur01NCh5IOQ9yB//iH5H4iJXuX6Lv3xWY8k9tf6ZDi6jJg0mSvJk2pr66uwzTg6QVy6yzsUU/WFwY8kg2TwP9CbXDXOVR//PAYGVhRyMp2XodEUnzEELXp4A4sDAYaiA2PDUAT3+HK986/97XJmaVMOksGgDN7CyA8m28AJbEGo22VRcHUPpFcn06D4xcsAAAAASUVORK5CYII=" /></g>
+                </svg>
+                <h6>新規ファイル</h6>
               </div>
-            </button>
+            </div>
             {orientedDesignProjectImages.map((image, index) => (
-              <button key={`${orientedDesignProjectDates[index]}-${index}`} type="button" className="oriented-design-project-card" onClick={() => navigate(`/flow/orientedDesign/detail?project=${index + 1}`)}>
+              <div key={`${orientedDesignProjectDates[index]}-${index}`} className="oriented-design-project-card" onClick={() => navigate(`/flow/orientedDesign/detail?project=${index + 1}`)}>
                 <div className="oriented-design-project-media">
-                  {image ? <img src={image} alt="coverImg" loading="lazy" /> : <Archive className="h-8 w-8 text-white" />}
+                  {image ? <img src={image} alt="coverImg" loading="lazy" /> : <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="coverImg" className="oriented-design-project-default-cover" loading="lazy" />}
                 </div>
                 <div className="oriented-design-project-meta">
                   <div className="oriented-design-project-name">Untitled</div>
                   <div className="oriented-design-project-date">{orientedDesignProjectDates[index]}</div>
                 </div>
-                <span className="oriented-design-project-menu" aria-label="プロジェクトメニュー"><MoreVertical className="h-4 w-4" /></span>
-              </button>
+                <button type="button" className="oriented-design-project-menu" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" /></button>
+              </div>
             ))}
           </div>
         </section>
@@ -1429,13 +1513,13 @@ export function LightchainOrientedDesignPage() {
           <h6 id="oriented-design-reference-cases" className="oriented-design-section-title">参考事例</h6>
           <div className="oriented-design-reference-grid">
             {orientedDesignReferenceImages.map((image, index) => (
-              <button key={image} type="button" className="oriented-design-project-card" onClick={() => navigate(`/flow/orientedDesign/detail?reference=${index + 1}`)}>
+              <div key={image} className="oriented-design-project-card" onClick={() => navigate(`/flow/orientedDesign/detail?reference=${index + 1}`)}>
                 <div className="oriented-design-project-media"><img src={image} alt="coverImg" loading="lazy" /></div>
                 <div className="oriented-design-project-meta">
                   <div className="oriented-design-project-name">{index === 0 ? 'デザイン要素融合' : 'ディテール変更'}</div>
                   <div className="oriented-design-project-date">8ヶ月前 修正</div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </section>

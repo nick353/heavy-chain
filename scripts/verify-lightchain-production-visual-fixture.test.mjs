@@ -5,10 +5,13 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { deflateSync } from 'node:zlib';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import { comparePngFiles } from './verify-lightchain-production-visual-fixture.mjs';
 
 const SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+const visualFixtureCli = fileURLToPath(new URL('verify-lightchain-production-visual-fixture.mjs', import.meta.url));
+const scriptsDirectory = fileURLToPath(new URL('.', import.meta.url));
 
 function crc32(buffer) {
   let crc = 0xffffffff;
@@ -48,8 +51,8 @@ async function fixtureDirectory() {
 
 function runCli(args) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ['./verify-lightchain-production-visual-fixture.mjs', ...args], {
-      cwd: new URL('.', import.meta.url),
+    const child = spawn(process.execPath, [visualFixtureCli, ...args], {
+      cwd: scriptsDirectory,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stderr = '';

@@ -1447,10 +1447,12 @@ async function listCanvasDocuments(request: Request, env: CoreEnv, url: URL): Pr
   if (!validID(brandID)) return errorResponse("invalid_brand_id", 400);
   const access = await requireBrandRole(request, env, brandID, "viewer");
   if (access instanceof Response) return access;
+  const page = pagination(url);
+  if (page instanceof Response) return page;
   const result = await env.DB.prepare(
     `SELECT id, owner_id, brand_id, title, snapshot, snapshot_version, revision, created_at, updated_at
      FROM canvas_documents WHERE brand_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
-  ).bind(brandID, 100, 0).all<CanvasDocumentRow>();
+  ).bind(brandID, page.limit, page.offset).all<CanvasDocumentRow>();
   return jsonResponse((result.results ?? []).map(canvasPayload));
 }
 

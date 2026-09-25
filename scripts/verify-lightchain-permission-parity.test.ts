@@ -26,6 +26,7 @@ test('Lightchain parity does not add a Heavy-only rights checkbox', async () => 
   assert.match(source, /testId="creator-permission"/);
   assert.match(source, /providerRightsConfirmed/);
   assert.match(source, /data-testid="lightchain-fabric-design-input"/);
+  assert.doesNotMatch(source, /権利確認済みのサンプル素材/);
   assert.doesNotMatch(source, /lightchain-material-rights-confirmation|lightchain-rights-confirmation|権利を確認してAI生成/);
   assert.doesNotMatch(modelLibrary, /生成直前に権利確認を行います/);
   assert.match(modelLibrary, /data-testid="model-library-permission-surface"/);
@@ -89,6 +90,10 @@ test('Heavy parity surfaces do not render the Light-missing rights checkbox or b
 
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|GENERATION_LEGAL_COPY/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
-  assert.match(source, /const rightsConfirmed = true/);
+  const generate = sources[0];
+  assert.match(generate, /getLightchainSourceGenerationAccessForWorkflow\(selectedFeature\?\.id \?\? ''\)/);
+  assert.match(generate, /const rightsConfirmed = sourceGenerationAccess === 'permitted'/);
+  assert.doesNotMatch(generate, /const rightsConfirmed = true/);
+  assert.doesNotMatch(generate, /sourceModelGenerationDenied/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
 });

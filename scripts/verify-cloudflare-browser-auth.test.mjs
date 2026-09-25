@@ -96,6 +96,27 @@ test('recovery credentials are POST bodies, and recovery clears the cached sessi
   assert.equal((await s.auth.getSession()).data.session, null);
 });
 
+test('email OTP recovery uses purpose-specific POST bodies and clears the cached session', async t => {
+  const s = fixture(); t.after(() => s.auth.dispose());
+  const events = [];
+  s.auth.onAuthStateChange(event => events.push(event));
+  await s.auth.signInWithPassword({ email: user.email, password: 'long-test-password' });
+
+  assert.deepEqual(await s.auth.requestPasswordResetOtp(user.email), { error: null });
+  assert.deepEqual(s.calls.at(-1), {
+    path: '/api/auth/email-otp/request-password-reset',
+    body: { email: user.email },
+  });
+
+  assert.deepEqual(await s.auth.completePasswordResetWithOtp(user.email, '123456', 'new-long-password'), { error: null });
+  assert.deepEqual(s.calls.at(-1), {
+    path: '/api/auth/email-otp/reset-password',
+    body: { email: user.email, otp: '123456', password: 'new-long-password' },
+  });
+  assert.equal((await s.auth.getSession()).data.session, null);
+  assert.ok(events.includes('SIGNED_OUT'));
+});
+
 test('a session read started during logout cannot resurrect the revoked session', async t => {
   const s = fixture(); let resolveLogout; let resolveSession; let intercept = false;
   const auth = createCloudflareBrowserAuth((url, init) => {

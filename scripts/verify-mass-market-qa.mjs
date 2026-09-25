@@ -1231,7 +1231,7 @@ function collectFailures(result) {
 }
 
 function isLoginBody(body) {
-  return /アカウントにログインしてください|Googleでログイン|メールアドレス\nパスワード/.test(body);
+  return /アカウントIDを下に入力してログインをお願いします|アカウントにログインしてください|Googleでログイン|メールアドレス\nパスワード/.test(body);
 }
 
 function hasFrameworkOverlay(body) {

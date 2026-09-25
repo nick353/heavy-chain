@@ -17,7 +17,7 @@ import {
   restoreWorkspaceHandoffHistory,
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
-import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { cloudflareDataPlane, type CloudflareCanvasDocument } from '../lib/cloudflareApi';
 import { buildFashionStudioProjectHref, mergeFashionStudioProjectCards } from '../lib/fashionStudioProjects';
 import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
@@ -260,6 +260,7 @@ export function FashionStudioPage() {
   const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
   const [remoteProjects, setRemoteProjects] = useState<Array<{ id: string; title: string; updatedAt: string; imageUrl: string }>>([]);
   const [remoteProjectsStatus, setRemoteProjectsStatus] = useState<'idle' | 'loading' | 'success' | 'failure'>('idle');
+  const [remainingUnits, setRemainingUnits] = useState<number | null>(null);
   const [projectPage, setProjectPage] = useState(1);
   const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
   const [pinnedProjectIds, setPinnedProjectIds] = useState<Set<string>>(new Set());
@@ -330,7 +331,11 @@ export function FashionStudioPage() {
       metadata: { ...(source?.metadata ?? {}), librarySource: 'fashion-studio-card-menu', libraryGroup: 'マイライブラリー', copiedFromArtifactId: source?.id ?? project.id },
     });
     if (!result.localPersisted) return toast.error('ライブラリー保存の確認に失敗しました');
-    toast.success(result.remote ? 'アセットライブラリーに保存しました' : 'ローカルライブラリーに保存しました');
+    if (cloudflareDataPlane && !result.remote) {
+      toast.error('リモート保存の確認に失敗しました。再送せず、同じ保存依頼を照合してください');
+      return;
+    }
+    toast.success('アセットライブラリーに保存しました');
   };
   const deleteStudioProject = (project: { id: string; title: string }) => {
     if (!currentBrand?.id || !window.confirm(`「${project.title}」を削除しますか？`)) return;
@@ -362,12 +367,26 @@ export function FashionStudioPage() {
       setRemoteProjectsStatus('idle');
       return () => { active = false; };
     }
+    const dataPlane = cloudflareDataPlane;
 
     setRemoteProjectsStatus('loading');
-    void cloudflareDataPlane.listCanvasDocuments(brandId)
+    const loadCanvasDocuments = async () => {
+      const documents: CloudflareCanvasDocument[] = [];
+      const pageSize = 100;
+      const maxDocuments = 1000;
+      const firstPage = await dataPlane.listCanvasDocuments(brandId);
+      documents.push(...firstPage);
+      for (let offset = pageSize; firstPage.length === pageSize && offset < maxDocuments; offset += pageSize) {
+        const page = await dataPlane.listCanvasDocumentsPage(brandId, pageSize, offset);
+        documents.push(...page);
+        if (page.length < pageSize) break;
+      }
+      return documents;
+    };
+    void loadCanvasDocuments()
       .then(async (documents) => {
         if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
-        const projectCards = await Promise.all(documents.slice(0, 40).map(async (document) => {
+        const projectCards = await Promise.all(documents.map(async (document) => {
           const source = extractCanvasPreviewSource(document.snapshot);
           const resolved = source ? await resolveGeneratedImageUrlWithStatus(source) : null;
           return {
@@ -387,6 +406,28 @@ export function FashionStudioPage() {
         setRemoteProjectsStatus('failure');
       });
 
+    return () => { active = false; };
+  }, [currentBrand?.id]);
+
+  // The source Fashion Studio board keeps the live credit badge in the board
+  // chrome. Read the same usage endpoint as the other Lightchain boards and
+  // fail closed when the usage readback is unavailable; the board remains
+  // usable without inventing a quota value.
+  useEffect(() => {
+    let active = true;
+    const brandId = currentBrand?.id;
+    if (!brandId || !cloudflareDataPlane) {
+      setRemainingUnits(null);
+      return () => { active = false; };
+    }
+    void cloudflareDataPlane.getImageUsage(brandId)
+      .then((summary) => {
+        if (!active) return;
+        setRemainingUnits(Number.isSafeInteger(summary.remainingUnits) && summary.remainingUnits >= 0 ? summary.remainingUnits : null);
+      })
+      .catch(() => {
+        if (active) setRemainingUnits(null);
+      });
     return () => { active = false; };
   }, [currentBrand?.id]);
 
@@ -592,7 +633,6 @@ export function FashionStudioPage() {
     const projectArtifacts = currentBrand?.id
       ? listWorkspaceArtifacts(currentBrand.id, user?.id)
         .filter((artifact) => artifact.featureType === 'fashion-studio')
-        .slice(0, 40)
       : [];
     const localProjectCards = projectArtifacts.map((artifact) => ({
       id: artifact.id,
@@ -615,7 +655,7 @@ export function FashionStudioPage() {
 
     return (
       <main
-        className="fashion-studio-overview-parity dark min-h-screen bg-[#101010] px-4 py-5 text-white sm:px-6"
+        className="fashion-studio-overview-parity relative dark min-h-screen bg-[#101010] px-4 py-5 text-white sm:px-6"
         data-testid="lightchain-fashion-studio-overview"
         data-lightchain-parity-shell="fashion-studio-overview"
         data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
@@ -623,42 +663,46 @@ export function FashionStudioPage() {
         data-workflow-input-roles={fashionStudioWorkflowContract?.inputRoles.join(',') ?? ''}
         data-workflow-result-destinations={fashionStudioWorkflowContract?.resultDestinations.join(',') ?? ''}
       >
+        {remainingUnits !== null && (
+          <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white">
+            <Sparkles className="h-3.5 w-3.5" />
+            {remainingUnits.toLocaleString()}
+          </div>
+        )}
         <section className="w-full">
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-base font-semibold text-white">ファッションスタジオ</h1>
           </div>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
-            <button
-              type="button"
+            <div
               onClick={() => navigate('/flow/integration/detail?boardProjectCode=&boardProjectType=')}
               data-testid="lightchain-fashion-studio-new-file"
-              className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
+              className="group relative h-60 w-55 cursor-pointer overflow-hidden rounded-2xl bg-[#171c1f] text-left text-white transition hover:ring-1 hover:ring-cyan-300/60"
             >
               <div className="flex h-40 items-center justify-center bg-[radial-gradient(circle_at_28%_24%,#e7ffe8,#5d646b_52%,#181f22)]">
-                <div className="relative flex h-16 w-20 items-center justify-center text-xs font-bold text-white">
-                  PROJECT
-                  <span className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-200 text-xl font-bold text-neutral-700">+</span>
+                <img className="lightchain-fashion-studio-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
+              </div>
+              <div className="absolute bottom-0 w-full bg-[#262a2b] px-3 py-3 text-sm text-neutral-300 group-hover:bg-[#303536]">
+                <div className="rounded-sm cursor-pointer hover:bg-white/10">
+                  <p className="h-7.5 min-w-20 max-w-full overflow-hidden text-ellipsis whitespace-nowrap p-1 text-base font-semibold text-neutral-200">新規ファイル</p>
                 </div>
               </div>
-              <div className="px-4 py-4">
-                <p className="text-sm font-semibold text-neutral-200">新規ファイル</p>
-              </div>
-            </button>
+            </div>
             {visibleProjectCards.map((project) => (
-              <article key={project.id} className="relative overflow-visible rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
-                <button
-                  type="button"
-                  onClick={() => navigate(buildFashionStudioProjectHref(project))}
-                  className="block w-full overflow-hidden rounded-xl text-left"
-                >
-                  <div className="flex h-40 items-center justify-center bg-[#171c1f]">
-                    {project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">PROJECT</span>}
+              <div
+                key={project.id}
+                onClick={() => navigate(buildFashionStudioProjectHref(project))}
+                className={`group relative h-60 w-55 cursor-pointer ${openProjectMenuId === project.id ? 'overflow-visible' : 'overflow-hidden'} rounded-2xl bg-[#171c1f] text-left text-white transition hover:ring-1 hover:ring-cyan-300/60`}
+              >
+                <div className="flex h-40 items-center justify-center overflow-hidden rounded-t-2xl bg-[#171c1f]">
+                  {project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">PROJECT</span>}
+                </div>
+                <div className="absolute bottom-0 w-full rounded-b-2xl bg-[#262a2b] px-3 py-3 text-sm text-neutral-300 group-hover:bg-[#303536]">
+                  <div className="rounded-sm cursor-pointer hover:bg-white/10">
+                    <p className="h-7.5 min-w-20 max-w-full overflow-hidden text-ellipsis whitespace-nowrap p-1 text-base font-semibold text-neutral-200">{pinnedProjectIds.has(project.id) ? '📌 ' : ''}{project.title}</p>
+                    <p className="mt-1 px-1 text-xs text-neutral-500">{formatProjectAge(project.updatedAt)}</p>
                   </div>
-                  <div className="px-4 py-4 pr-12">
-                    <p className="truncate text-sm font-semibold text-neutral-200">{pinnedProjectIds.has(project.id) ? '📌 ' : ''}{project.title}</p>
-                    <p className="mt-2 text-xs text-neutral-500">{formatProjectAge(project.updatedAt)}</p>
-                  </div>
-                </button>
+                </div>
                 <div className="absolute right-3 top-3 z-20">
                   <button
                     type="button"
@@ -675,7 +719,7 @@ export function FashionStudioPage() {
                     <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => deleteStudioProject(project)}>削除</button>
                   </div>}
                 </div>
-              </article>
+              </div>
             ))}
           </div>
           {remoteProjectsStatus === 'loading' && <p className="mt-3 text-xs text-neutral-500">プロジェクトを読み込んでいます…</p>}

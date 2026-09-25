@@ -485,17 +485,20 @@ async function verifyVideoSurface(browserContext, viewport, route, key) {
       const dashboard = page.getByTestId('lightchain-video-project-dashboard');
       const projectSection = page.getByTestId('video-recent-projects');
       const referenceSection = page.locator('section[aria-labelledby="video-reference-heading"]');
-      const projectCount = await projectSection.getByRole('button').count().catch(() => 0);
-      const referenceCount = await referenceSection.getByRole('button').count().catch(() => 0);
+      const projectCount = await projectSection.getByTestId('video-project-open').count().catch(() => 0);
+      const referenceCount = await referenceSection.getByTestId('video-project-open').count().catch(() => 0);
+      const projectMenuCount = await projectSection.locator('button[data-track-id="GenerateShortVideo:project-more"]').count().catch(() => 0);
       const editLabelCount = await page.getByTestId('video-project-edit-label').count().catch(() => 0);
       result.observed.projectCount = projectCount;
       result.observed.referenceCount = referenceCount;
+      result.observed.projectMenuCount = projectMenuCount;
       result.observed.editLabelCount = editLabelCount;
       check('dashboard_present', await dashboard.isVisible().catch(() => false));
       check('dashboard_markers_visible', ['動画ワークステーション', '新規ファイル', 'Untitled', '参考事例', '修正'].every((marker) => body.includes(marker)), { bodyExcerpt: body.slice(0, 1000) });
       check('dashboard_recent_project_count', projectCount === 6, { projectCount });
       check('dashboard_reference_count', referenceCount === 5, { referenceCount });
-      check('dashboard_new_file_action_present', await page.getByRole('button', { name: '新規ファイル', exact: true }).isVisible().catch(() => false));
+      check('dashboard_recent_project_menu_count_matches_source', projectMenuCount === 6, { projectMenuCount });
+      check('dashboard_new_file_action_present', await page.getByText('新規ファイル', { exact: true }).first().isVisible().catch(() => false));
       check('dashboard_edit_labels_match_source_count', editLabelCount === 11, { editLabelCount });
     }
     const checkboxCount = await page.locator('input[type="checkbox"]:visible, [role="checkbox"]:visible').count().catch(() => 0);
@@ -536,6 +539,24 @@ async function verifySourceRouteParity(browserContext, viewport) {
       route: '/model',
       source: sourceReadback.routes['/model'],
       verify: verifyModelSourceSurface,
+    },
+    {
+      key: 'board',
+      route: '/board',
+      source: sourceReadback.routes['/board'],
+      verify: verifyBoardSourceSurface,
+    },
+    {
+      key: 'board-edit',
+      route: '/board/edit',
+      source: sourceReadback.routes['/board/edit'],
+      verify: verifyBoardEditSourceSurface,
+    },
+    {
+      key: 'asset-center',
+      route: '/asset-center',
+      source: sourceReadback.routes['/asset-center'],
+      verify: verifyAssetCenterSourceSurface,
     },
   ];
 
@@ -658,6 +679,96 @@ async function verifyModelSourceSurface(page, result) {
   // Record the difference without deleting/hiding a user's persisted result.
   result.observed.sourceResultCards = expected.resultCards;
   result.observed.resultCardState = resultCards === expected.resultCards ? 'same' : 'user-scoped-difference';
+}
+
+async function verifyBoardSourceSurface(page, result) {
+  const expected = sourceReadback.routes['/board'].source;
+  const body = await bodyText(page);
+  const creation = page.getByTestId('lightchain-board-create');
+  const documentCards = page.getByTestId('lightchain-board-document-card');
+  const cardCount = await documentCards.count().catch(() => 0);
+  const checkboxCount = await visibleCheckboxCount(page);
+  result.observed.documentCardCount = cardCount;
+  result.observed.visibleCheckboxCount = checkboxCount;
+  sourceParityAssertion(result, 'source_board_heading_match', body.includes(expected.heading), { expected: expected.heading });
+  sourceParityAssertion(result, 'source_board_creation_card_match', body.includes(expected.creationTitle) && body.includes(expected.creationDescription) && await creation.isVisible().catch(() => false), {
+    expected: [expected.creationTitle, expected.creationDescription],
+  });
+  sourceParityAssertion(result, 'source_board_documents_heading_match', body.includes(expected.documentsHeading), { expected: expected.documentsHeading });
+  // Document contents are user-scoped. Require the source-shaped collection to
+  // be present, while recording the count for reconciliation instead of
+  // treating the source account's exact card count as a clone invariant.
+  sourceParityAssertion(result, 'source_board_document_collection_present', cardCount > 0, {
+    expectedSourceCardCount: expected.visibleDocumentCards,
+    observedCardCount: cardCount,
+    state: cardCount === expected.visibleDocumentCards ? 'same' : 'user-scoped-difference',
+  });
+  sourceParityAssertion(result, 'source_board_has_no_checkbox', checkboxCount === expected.checkboxCount, { expected: expected.checkboxCount, checkboxCount });
+}
+
+async function verifyBoardEditSourceSurface(page, result) {
+  const expected = sourceReadback.routes['/board/edit'].source;
+  const body = await bodyText(page);
+  const titleInput = page.getByRole('textbox', { name: expected.titleInputLabel });
+  const toolbarLabels = await Promise.all(expected.toolbarLabels.map(async (label) => [
+    label,
+    await page.getByRole('button', { name: exactText(label) }).count(),
+  ]));
+  const actionCounts = await Promise.all(expected.actions.map(async (label) => [
+    label,
+    await page.getByRole('button', { name: exactText(label) }).count(),
+  ]));
+  const checkboxCount = await visibleCheckboxCount(page);
+  result.observed.titleInputVisible = await titleInput.isVisible().catch(() => false);
+  result.observed.titleValue = await titleInput.inputValue().catch(() => null);
+  result.observed.toolbarCounts = Object.fromEntries(toolbarLabels);
+  result.observed.actionCounts = Object.fromEntries(actionCounts);
+  result.observed.visibleCheckboxCount = checkboxCount;
+  sourceParityAssertion(result, 'source_board_edit_title_input_match', result.observed.titleInputVisible && result.observed.titleValue === expected.defaultTitle, {
+    expected: { label: expected.titleInputLabel, value: expected.defaultTitle },
+    observed: { visible: result.observed.titleInputVisible, value: result.observed.titleValue },
+  });
+  sourceParityAssertion(result, 'source_board_edit_saved_state_match', body.includes(expected.savedLabel), { expected: expected.savedLabel });
+  sourceParityAssertion(result, 'source_board_edit_toolbar_match', toolbarLabels.every(([, count]) => count === 1), { expected: expected.toolbarLabels, observed: result.observed.toolbarCounts });
+  sourceParityAssertion(result, 'source_board_edit_actions_match', actionCounts.every(([, count]) => count === 1), { expected: expected.actions, observed: result.observed.actionCounts });
+  sourceParityAssertion(result, 'source_board_edit_zoom_match', body.includes(expected.zoomLabel), { expected: expected.zoomLabel });
+  sourceParityAssertion(result, 'source_board_edit_has_no_checkbox', checkboxCount === expected.checkboxCount, { expected: expected.checkboxCount, checkboxCount });
+}
+
+async function verifyAssetCenterSourceSurface(page, result) {
+  const expected = sourceReadback.routes['/asset-center'].source;
+  const body = await bodyText(page);
+  const groupMatches = expected.groups.filter((group) => body.includes(group));
+  const filterCounts = Object.fromEntries(await Promise.all(expected.filters.map(async (label) => [
+    label,
+    await page.getByRole('button', { name: exactText(label) }).count(),
+  ])));
+  const bulkActionCount = await page.getByRole('button', { name: exactText(expected.bulkAction) }).count().catch(() => 0);
+  const searchButton = page.getByRole('button', { name: expected.searchButtonLabel }).first();
+  const searchButtonCount = await page.getByRole('button', { name: expected.searchButtonLabel }).count().catch(() => 0);
+  let searchCount = await page.getByRole('textbox', { name: expected.searchLabel }).count().catch(() => 0);
+  if (searchCount === 0 && searchButtonCount === 1) {
+    await searchButton.click();
+    searchCount = await page.getByRole('textbox', { name: expected.searchLabel }).count().catch(() => 0);
+  }
+  const checkboxCount = await visibleCheckboxCount(page);
+  result.observed.groupMatches = groupMatches;
+  result.observed.filterCounts = filterCounts;
+  result.observed.bulkActionCount = bulkActionCount;
+  result.observed.searchButtonCount = searchButtonCount;
+  result.observed.searchCount = searchCount;
+  result.observed.visibleCheckboxCount = checkboxCount;
+  sourceParityAssertion(result, 'source_asset_center_groups_match', groupMatches.length === expected.groups.length, {
+    expected: expected.groups,
+    observed: groupMatches,
+  });
+  sourceParityAssertion(result, 'source_asset_center_filters_match', Object.values(filterCounts).every((count) => count === 1), {
+    expected: expected.filters,
+    observed: filterCounts,
+  });
+  sourceParityAssertion(result, 'source_asset_center_bulk_action_present', bulkActionCount === 1, { expected: expected.bulkAction, bulkActionCount });
+  sourceParityAssertion(result, 'source_asset_center_search_present', searchCount === 1, { expected: expected.searchLabel, searchButtonLabel: expected.searchButtonLabel, searchButtonCount, searchCount });
+  sourceParityAssertion(result, 'source_asset_center_has_no_checkbox', checkboxCount === expected.checkboxCount, { expected: expected.checkboxCount, checkboxCount });
 }
 
 async function visibleCheckboxCount(page) {
@@ -805,6 +916,22 @@ async function verifyVisibleTabInteractions(page, tool, result) {
   }
 
   if (['ai-fitting', 'ai-fitting-reference', 'fitting-clothing-reference', 'fitting-background-reference'].includes(tool.id)) {
+    const fittingModeChecks = [
+      { label: 'レギュラー', expectedNotice: true },
+      { label: '下着', expectedNotice: true },
+    ];
+    for (const check of fittingModeChecks) {
+      const modeButton = page.getByRole('tab', { name: exactText(check.label) }).first();
+      await modeButton.click();
+      await page.waitForTimeout(100);
+      const selected = await modeButton.getAttribute('aria-selected').catch(() => null);
+      const noticeVisible = await page.locator('[data-testid="lightchain-fitting-mode-notice"]').isVisible().catch(() => false);
+      recordFeatureAssertion(result, `fitting_mode_tab_updates_state:${check.label}`, selected === 'true' && (!check.expectedNotice || noticeVisible), {
+        selected,
+        noticeVisible,
+      });
+    }
+
     const fittingChecks = [
       {
         tab: 'マルチタスク',

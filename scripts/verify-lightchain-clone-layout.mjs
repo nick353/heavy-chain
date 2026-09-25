@@ -274,15 +274,15 @@ async function verifyVideoProjects(context, viewport, key) {
     addAssertion(routeEvidence, 'video_projects_route_is_canonical', new URL(page.url()).pathname === '/flow/GenerateShortVideo', { url: page.url() });
     const projectSection = page.getByTestId('video-recent-projects');
     const referenceSection = page.locator('section[aria-labelledby="video-reference-heading"]');
-    const projectCount = await projectSection.getByRole('button').count().catch(() => 0);
-    const referenceCount = await referenceSection.getByRole('button').count().catch(() => 0);
-    const newFileButton = page.getByRole('button', { name: '新規ファイル', exact: true });
+    const projectCount = await projectSection.getByTestId('video-project-open').count().catch(() => 0);
+    const referenceCount = await referenceSection.getByTestId('video-project-open').count().catch(() => 0);
+    const newFileCard = page.getByText('新規ファイル', { exact: true }).first();
     const checkboxCount = await page.locator('input[type="checkbox"]').count().catch(() => 0);
     const editLabelCount = await page.getByTestId('video-project-edit-label').count().catch(() => 0);
-    routeEvidence.interactions.push({ type: 'video-dashboard-inventory', projectCount, referenceCount, newFileCount: await newFileButton.count(), editLabelCount, checkboxCount });
+    routeEvidence.interactions.push({ type: 'video-dashboard-inventory', projectCount, referenceCount, newFileCount: await newFileCard.count(), editLabelCount, checkboxCount });
     addAssertion(routeEvidence, 'video_recent_project_cards_match_source_count', projectCount === 6, { projectCount });
     addAssertion(routeEvidence, 'video_reference_cards_match_source_count', referenceCount === 5, { referenceCount });
-    addAssertion(routeEvidence, 'video_new_file_action_present', await newFileButton.isVisible().catch(() => false));
+    addAssertion(routeEvidence, 'video_new_file_action_present', await newFileCard.isVisible().catch(() => false));
     addAssertion(routeEvidence, 'video_edit_labels_match_source_count', editLabelCount === 11, { editLabelCount });
     addAssertion(routeEvidence, 'video_rights_checkbox_absent', checkboxCount === 0, { checkboxCount });
     routeEvidence.screenshot = await screenshot(page, `${key}.png`);
@@ -834,7 +834,7 @@ function isImageVariationsHref(href) {
 }
 
 function isLoginBody(body) {
-  return /アカウントにログインしてください|Googleでログイン|メールアドレス\nパスワード/.test(body);
+  return /アカウントIDを下に入力してログインをお願いします|アカウントにログインしてください|Googleでログイン|メールアドレス\nパスワード/.test(body);
 }
 
 function hasFrameworkOverlay(body) {

@@ -6,10 +6,11 @@ const appSourcePath = new URL('../src/App.tsx', import.meta.url);
 const routeMappingPath = new URL('../src/features/lightchain/heavyRouteMapping.ts', import.meta.url);
 const workbenchSourcePath = new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url);
 
-// Snapshot of the routes emitted by the official public Lightchain app chunk
-// observed at https://jp.linkaigc.com/ on 2026-09-21. This is intentionally
-// kept separate from the Heavy catalog so source-route coverage cannot pass
-// by only enumerating Heavy-owned feature ids.
+// Historical full source-route snapshot from the public app chunk observed at
+// https://jp.linkaigc.com/ on 2026-09-21. That exact chunk returned 404 on
+// 2026-09-23; the known paths are retained as compatibility coverage, not as a
+// current complete route inventory. Fresh anonymous login-bundle references
+// are tracked separately below.
 const OFFICIAL_LIGHTCHAIN_SOURCE_ROUTE_SNAPSHOT = Object.freeze([
   '/',
   '/creator',
@@ -58,6 +59,55 @@ const OFFICIAL_LIGHTCHAIN_SOURCE_DETAIL_ROUTE_SNAPSHOT = Object.freeze([
   '/flow/GenerateShortVideo/detail',
   '/marketing/detail',
   '/designProduction/detail',
+]);
+
+// Route-shaped UI references extracted from all 35 public script chunks loaded
+// by the fresh unauthenticated Lightchain login page on 2026-09-23. This is a
+// partial public reference set: protected route state and lazy authenticated
+// bundles are not observable from the login page.
+const CURRENT_PUBLIC_LOGIN_BUNDLE_ROUTE_REFERENCES = Object.freeze([
+  '/agent',
+  '/creator',
+  '/designProduction',
+  '/designProduction/detail',
+  '/editor/changeColor',
+  '/editor/changeColor/detail',
+  '/editor/pattern',
+  '/editor/pattern/detail',
+  '/editor/patternDesign',
+  '/editor/patternDesign/detail',
+  '/flow/GenerateShortVideo',
+  '/flow/GenerateShortVideo/detail',
+  '/flow/integration',
+  '/flow/integration/detail',
+  '/flow/laboratory',
+  '/flow/laboratory/detail',
+  '/flow/orientedDesign',
+  '/flow/orientedDesign/detail',
+  '/forget-password',
+  '/login',
+  '/login-m',
+  '/marketing',
+  '/marketing/detail',
+  '/model',
+  '/model-base/style',
+  '/model-library/background-form',
+  '/model-library/body-form',
+  '/model-library/head-form',
+  '/model-library/model-change-form',
+  '/model-library/model-custom-form',
+  '/model-library/perspective-form',
+  '/model-library/pose-form',
+  '/model-library/size-form',
+  '/printing',
+  '/tools/fabric',
+  '/tools/line',
+  '/tools/line-draft-to-tile',
+  '/tools/pattern-to-vector',
+  '/tools/printing',
+  '/tools/reactor',
+  '/tools/svg-convert',
+  '/tools/vector-special',
 ]);
 
 function parseRoutePaths(source) {
@@ -125,7 +175,7 @@ test('every Light source row uses a current Heavy route or its explicit pending 
   assert.deepEqual(missing, []);
 });
 
-test('covers every primary and detail route in the current official Lightchain source snapshot', async () => {
+test('keeps every previously observed primary and detail source route addressable in Heavy', async () => {
   const appSource = await readFile(appSourcePath, 'utf8');
   const appRoutes = parseRoutePaths(appSource);
   const officialRoutes = [
@@ -136,6 +186,22 @@ test('covers every primary and detail route in the current official Lightchain s
   assert.equal(new Set(OFFICIAL_LIGHTCHAIN_SOURCE_DETAIL_ROUTE_SNAPSHOT).size, 9);
   assert.equal(new Set(officialRoutes).size, 44);
   const missing = officialRoutes.filter(
+    (pathname) => !appRoutes.some((pattern) => routeMatches(pattern, pathname)),
+  );
+  assert.deepEqual(missing, []);
+});
+
+test('covers the fresh public Lightchain login-bundle route references', async () => {
+  const appSource = await readFile(appSourcePath, 'utf8');
+  const appRoutes = parseRoutePaths(appSource);
+  const knownHistoricalPaths = [
+    ...OFFICIAL_LIGHTCHAIN_SOURCE_ROUTE_SNAPSHOT,
+    ...OFFICIAL_LIGHTCHAIN_SOURCE_DETAIL_ROUTE_SNAPSHOT,
+  ];
+  assert.equal(new Set([...knownHistoricalPaths, ...CURRENT_PUBLIC_LOGIN_BUNDLE_ROUTE_REFERENCES]).size, 47);
+  assert.equal(CURRENT_PUBLIC_LOGIN_BUNDLE_ROUTE_REFERENCES.length, 42);
+  assert.equal(new Set(CURRENT_PUBLIC_LOGIN_BUNDLE_ROUTE_REFERENCES).size, 42);
+  const missing = CURRENT_PUBLIC_LOGIN_BUNDLE_ROUTE_REFERENCES.filter(
     (pathname) => !appRoutes.some((pattern) => routeMatches(pattern, pathname)),
   );
   assert.deepEqual(missing, []);

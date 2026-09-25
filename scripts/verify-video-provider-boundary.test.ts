@@ -12,7 +12,8 @@ test('Video Workstation fails closed instead of routing into image generation', 
   assert.match(reachableDetailSource, /data-testid="video-source-editor-parity"/);
   assert.match(reachableDetailSource, /data-testid="video-generation-blocked"/);
   assert.match(reachableDetailSource, /data-lightchain-provider-route="unsupported"/);
-  assert.match(reachableDetailSource, /disabled[\s\S]*?権限がありません 6/);
+  assert.match(reachableDetailSource, /disabled[\s\S]*?AI生成/);
+  assert.doesNotMatch(reachableDetailSource, /権限がありません/);
   assert.doesNotMatch(source, /buildGenerationIntentHref/);
   assert.doesNotMatch(source, /feature:\s*'campaign-image'/);
   assert.doesNotMatch(source, /generationIntent:\s*\{/);

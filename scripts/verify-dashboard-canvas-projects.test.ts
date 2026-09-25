@@ -61,7 +61,7 @@ test('Dashboard uses the authenticated list and exposes a failure retry', () => 
 test('Fashion Studio uses the same authenticated project-grid source and Light-compatible detail route', () => {
   const studio = readFileSync(new URL('../src/pages/FashionStudioPage.tsx', import.meta.url), 'utf8');
 
-  assert.match(studio, /cloudflareDataPlane\.listCanvasDocuments\(brandId\)/);
+  assert.match(studio, /listCanvasDocuments\(brandId\)/);
   assert.match(studio, /lg:grid-cols-7/);
   assert.doesNotMatch(studio, /to="\/credits"/);
   assert.match(studio, /className="w-full"/);

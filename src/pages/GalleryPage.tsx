@@ -1364,9 +1364,10 @@ export function GalleryPage() {
                       <Link
                         to={selectedGenerationIntent.href}
                         className="flex w-full items-center gap-3 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition-all hover:bg-cyan-200"
+                        data-testid={selectedImage.feature_type === 'video-workstation' ? 'gallery-video-reuse' : undefined}
                       >
                         <Sparkles className="w-4 h-4" />
-                        この内容で生成
+                        {selectedImage.feature_type === 'video-workstation' ? '動画を再利用' : 'この内容で生成'}
                       </Link>
                     )}
                     {!isLocalWorkspaceImage(selectedImage) && (

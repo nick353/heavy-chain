@@ -119,21 +119,24 @@ const labReadinessItems = [
 ];
 
 function LightchainLabBoardParity() {
+  const navigate = useNavigate();
   return (
     <main className="lightchain-lab-source-board" data-testid="lightchain-lab-source-board">
+      <div role="alert" aria-live="polite" className="sr-only" />
       <h6 className="lightchain-lab-source-title">Lightchain Lab</h6>
       <section className="lightchain-lab-source-new-section" aria-label="新規ファイル">
-        <Link to="/flow/laboratory/detail" className="lightchain-lab-source-new-card" data-testid="lightchain-lab-new-card" data-track-id="laboratory:project-card">
-          <span className="lightchain-lab-source-project-mark" aria-hidden="true"><span>PROJECT</span><b>＋</b></span>
+        <div onClick={() => navigate('/flow/laboratory/detail')} className="lightchain-lab-source-new-card cursor-pointer" data-testid="lightchain-lab-new-card" data-track-id="laboratory:project-card">
+          <img className="lightchain-lab-source-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
+          <span className="lightchain-lab-source-project-mark" aria-hidden="true"><b className="after:content-['＋']" /></span>
           <span>新規ファイル</span>
-        </Link>
+        </div>
       </section>
       <h6 className="lightchain-lab-source-reference-title">参考事例</h6>
       <section className="lightchain-lab-source-reference-grid" aria-label="参考事例">
-        <Link to="/flow/laboratory/detail?boardProjectCode=light-lab-reference" className="lightchain-lab-source-reference-card" data-testid="lightchain-lab-reference-card" data-track-id="laboratory:project-card">
+        <div onClick={() => navigate('/flow/laboratory/detail?boardProjectCode=light-lab-reference')} className="lightchain-lab-source-reference-card cursor-pointer" data-testid="lightchain-lab-reference-card" data-track-id="laboratory:project-card">
           <div className="lightchain-lab-source-reference-media"><img src={LIGHTCHAIN_LAB_REFERENCE_IMAGE} alt="coverImg" /></div>
           <div className="lightchain-lab-source-reference-meta"><div>物マーケティング画像への変換</div><p>8ヶ月前 修正</p></div>
-        </Link>
+        </div>
       </section>
     </main>
   );

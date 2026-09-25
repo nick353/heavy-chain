@@ -165,9 +165,17 @@ test('every unified workspace alias is implemented by an App route inside the sh
 
   // The stale plural /models alias was intentionally removed with the current
   // Lightchain route map; keep this count tied to the live alias set.
-  assert.equal(aliasPaths.size, 26);
+  assert.equal(aliasPaths.size, 40);
   for (const path of aliasPaths) {
-    const matches = routeBlocks.filter((route) => route.path === path);
+    const routePath = path.split('?')[0];
+    const exactMatches = routeBlocks.filter((route) => route.path === routePath);
+    const matches = exactMatches.length > 0 ? exactMatches : routeBlocks.filter((route) => {
+      if (route.path === routePath) return true;
+      const routeParts = route.path.split('/');
+      const aliasParts = routePath.split('/');
+      return routeParts.length === aliasParts.length
+        && routeParts.every((part, index) => part.startsWith(':') || part === aliasParts[index]);
+    });
     assert.equal(matches.length, 1, `${path} must have exactly one App route`);
     if (path === '/tools/printing') {
       assert.match(matches[0].source, /LightchainPrintingPage/, `${path} must use the Lightchain parity printing page`);

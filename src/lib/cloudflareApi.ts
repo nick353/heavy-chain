@@ -1,7 +1,7 @@
 import type { Brand, CanvasDocument, Folder, GeneratedImage, Json, User } from '../types/database';
 import type { GeneratedImageListRow } from './generatedImageQuery';
 import type { WorkspaceExecutionStep } from './workspaceExecution';
-import { auth } from './auth';
+import { auth, refreshAuthSession } from './auth';
 import { CLOUDFLARE_IMAGE_ACTIONS, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
 import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
 import { persistProtectedImageInput,listProtectedImageInputs,loadProtectedImageInput,deleteProtectedImageInput } from './cloudflareImageInputCache';
@@ -127,6 +127,68 @@ type CloudflareMediaAllocation = {
   declaredSizeBytes: number;
 };
 
+type WorkspaceArtifactRemote = {
+  jobId: string;
+  imageId: string;
+  storagePath: string;
+};
+
+type WorkspaceArtifactRemoteResponse = {
+  success: boolean;
+  remote: WorkspaceArtifactRemote;
+  metadata?: Record<string, unknown>;
+};
+
+type CheckedCloudflareRequest = (path: string, init?: RequestInit) => Promise<unknown>;
+
+const WORKSPACE_REQUEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const WORKSPACE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+const WORKSPACE_STORAGE_PATH = /^generated-images\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  !!value && typeof value === 'object' && !Array.isArray(value)
+);
+
+/**
+ * Validate a workspace response before allowing it to satisfy a save.
+ *
+ * A readback is keyed by the exact request ID and authenticated on the server,
+ * but the response still needs an identity check at this boundary. Otherwise a
+ * malformed or misrouted response could be treated as proof for a different
+ * artifact and a caller could retry an already committed write.
+ */
+const asWorkspaceArtifactRemoteResponse = (
+  value: unknown,
+  requestId: string,
+  expectedSourceStoragePath?: string | null,
+): WorkspaceArtifactRemoteResponse => {
+  if (!isRecord(value) || value.success !== true || !isRecord(value.remote)) {
+    throw new Error('cloudflare_workspace_save_readback_invalid');
+  }
+  const { jobId, imageId, storagePath } = value.remote;
+  if (typeof jobId !== 'string' || !WORKSPACE_ID.test(jobId) ||
+      typeof imageId !== 'string' || !WORKSPACE_ID.test(imageId) ||
+      typeof storagePath !== 'string' || !WORKSPACE_STORAGE_PATH.test(storagePath)) {
+    throw new Error('cloudflare_workspace_save_readback_identity_invalid');
+  }
+  if (expectedSourceStoragePath !== undefined && expectedSourceStoragePath !== null) {
+    if (storagePath !== expectedSourceStoragePath) throw new Error('cloudflare_workspace_save_readback_source_mismatch');
+  } else {
+    const expectedId = `wa-${requestId.toLowerCase()}`;
+    if (jobId !== expectedId || imageId !== expectedId || storagePath !== `generated-images/${expectedId}`) {
+      throw new Error('cloudflare_workspace_save_readback_request_mismatch');
+    }
+  }
+  if (value.metadata !== undefined && !isRecord(value.metadata)) {
+    throw new Error('cloudflare_workspace_save_readback_metadata_invalid');
+  }
+  return {
+    success: true,
+    remote: { jobId, imageId, storagePath },
+    ...(value.metadata === undefined ? {} : { metadata: value.metadata }),
+  };
+};
+
 const MEDIA_OBJECT_PATH = /^media\/v1\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** Convert the full Worker result to the list shape shared by Gallery/Dashboard. */
@@ -163,11 +225,19 @@ try {
 }
 
 const getBearerToken = async (): Promise<string> => {
-  const { data, error } = await auth.getSession();
-  if (error) throw error;
-  const token = data.session?.access_token;
-  if (!token) throw new Error('cloudflare_session_missing');
-  return token;
+  const read = await auth.getSession();
+  if (read.error) throw read.error;
+  const token = read.data.session?.access_token;
+  if (token) return token;
+
+  // A protected page may already be admitted from the host-only cookie while
+  // this request observes an empty/expired in-memory auth cache. Refresh that
+  // same browser session once before failing closed; never turn a transient
+  // read gap into a per-screen login prompt or invent a new credential flow.
+  const recovered = await refreshAuthSession();
+  const recoveredToken = recovered?.access_token;
+  if (recoveredToken) return recoveredToken;
+  throw new Error('cloudflare_session_missing');
 };
 
 const asUser = (profile: CloudflareProfile): User => ({
@@ -578,7 +648,7 @@ class CloudflareDataPlaneClient {
     sourceJobId?: string | null;
     sourceStoragePath: string | null;
     imageAI?: { requestId: string; candidateIndex: number };
-  },checkedRequest?: (path: string,init?: RequestInit)=>Promise<unknown>): Promise<{ success: boolean; remote: { jobId: string; imageId: string; storagePath: string }; metadata?: Record<string,unknown> }> {
+  },checkedRequest?: CheckedCloudflareRequest): Promise<WorkspaceArtifactRemoteResponse> {
     let imageUrl = input.imageUrl;
     if (!input.sourceStoragePath && imageUrl.startsWith('blob:')) {
       // Browser-owned blobs must be materialized here; a Worker must never try
@@ -595,10 +665,35 @@ class CloudflareDataPlaneClient {
       });
     }
     const send = checkedRequest ?? this.request.bind(this);
-    return await send('/v1/workspace-artifacts', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...input, imageUrl }), signal: AbortSignal.timeout(8000),
-    }) as { success: boolean; remote: { jobId: string; imageId: string; storagePath: string }; metadata?: Record<string,unknown> };
+    if (!WORKSPACE_REQUEST_ID.test(input.requestId)) throw new Error('cloudflare_workspace_request_id_invalid');
+    try {
+      const result = await send('/v1/workspace-artifacts', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...input, imageUrl }), signal: AbortSignal.timeout(8000),
+      });
+      return asWorkspaceArtifactRemoteResponse(result, input.requestId, input.sourceStoragePath);
+    } catch (error) {
+      // The POST may have committed before its response was lost. Reconcile the
+      // exact request ID before surfacing the error; never invent a new ID or
+      // silently retry a write whose effect is unknown. A 404/pending/mismatch
+      // readback keeps the original POST error so the caller can retain its
+      // local record and resume explicitly with the same identity.
+      try {
+        return await this.readWorkspaceArtifact(input.requestId, checkedRequest, input.sourceStoragePath);
+      } catch {
+        throw error;
+      }
+    }
+  }
+
+  /** Read the exact workspace save receipt used to reconcile an uncertain POST. */
+  async readWorkspaceArtifact(requestId: string, checkedRequest?: CheckedCloudflareRequest, expectedSourceStoragePath?: string | null): Promise<WorkspaceArtifactRemoteResponse> {
+    if (!WORKSPACE_REQUEST_ID.test(requestId)) throw new Error('cloudflare_workspace_request_id_invalid');
+    const read = checkedRequest ?? this.request.bind(this);
+    const result = await read(`/v1/workspace-artifacts/${encodeURIComponent(requestId)}`, {
+      method: 'GET', signal: AbortSignal.timeout(8000),
+    });
+    return asWorkspaceArtifactRemoteResponse(result, requestId, expectedSourceStoragePath);
   }
 
   async listGenerationJobs(brandId: string, options: { limit?: number; offset?: number } = {}): Promise<CloudflareGenerationJob[]> {
@@ -709,6 +804,11 @@ class CloudflareDataPlaneClient {
 
   async listCanvasDocuments(brandId: string): Promise<CloudflareCanvasDocument[]> {
     return this.request<CloudflareCanvasDocument[]>(`/v1/canvas-documents?brand_id=${encodeURIComponent(brandId)}`);
+  }
+
+  async listCanvasDocumentsPage(brandId: string, limit = 100, offset = 0): Promise<CloudflareCanvasDocument[]> {
+    const params = new URLSearchParams({ brand_id: brandId, limit: String(limit), offset: String(offset) });
+    return this.request<CloudflareCanvasDocument[]>(`/v1/canvas-documents?${params.toString()}`);
   }
 
   async createCanvasDocument(input: { id?:string;brand_id: string; title: string; snapshot: unknown },context?:{userId:string;assertContext:()=>void}): Promise<CloudflareCanvasDocument> {

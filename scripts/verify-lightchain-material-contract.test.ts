@@ -219,7 +219,7 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /const imageLoadCache = new Map<string, Promise<HTMLImageElement>>\(\)/);
   assert.ok(page.includes("img.crossOrigin = 'anonymous'"));
   assert.ok(page.includes("https?:"));
-  assert.match(page, /const handleGenerate = async \(options\?: \{ rightsAlreadyConfirmed\?: boolean \}\) => \{/);
+  assert.match(page, /const handleGenerate = async \(\) => \{/);
   assert.match(page, /const providerResult = await withTimeout\(/);
   assert.match(page, /lightchainFeatureId: 'fabric-image'/);
   assert.match(page, /maskApplied: true/);

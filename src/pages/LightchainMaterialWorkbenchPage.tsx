@@ -3258,7 +3258,7 @@ function LightchainMaterialWorkbenchSession() {
 
   void handleLegacyPreviewGenerate;
 
-  const handleGenerate = async (options?: { rightsAlreadyConfirmed?: boolean }) => {
+  const handleGenerate = async () => {
     if (sourceGenerationDenied) {
       const message = '権限がありません';
       setGenerationError(message);
@@ -3295,7 +3295,7 @@ function LightchainMaterialWorkbenchSession() {
       toast.error(message);
       return;
     }
-    const rightsConfirmedForRequest = providerRightsConfirmed || options?.rightsAlreadyConfirmed === true;
+    const rightsConfirmedForRequest = providerRightsConfirmed;
     if (!isPrinting && (!fabricBase || !fabricDesign)) {
       toast.error('生地画像とデザイン画像を入れてください');
       return;
@@ -4941,7 +4941,7 @@ function LightchainMaterialWorkbenchSession() {
         parameters: isLocalMaterialPreview
           ? { sourceLocalPreviewArtifactId: result.artifactId ?? null }
           : { sourceProviderResultArtifactId: result.artifactId ?? null },
-        legalSafety: { rightsConfirmed: true },
+        legalSafety: { rightsConfirmed: !isLocalMaterialPreview && providerRightsConfirmed },
         timestamp: new Date().toISOString(),
         ...(localSourceMetadata ? {
           sourceIdentity: localSourceMetadata.sourceIdentity,

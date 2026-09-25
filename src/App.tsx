@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LightchainLogo } from './components/LightchainLogo';
+import { resolveAuthReturnPath } from './lib/authRedirect';
 import { LightchainUnifiedWorkspaceShell } from './components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
@@ -69,6 +70,8 @@ const LightchainVectorSpecialPage = lazy(() => import('./pages/LightchainParityP
 const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
 const LightchainMarketingHomePage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainMarketingHomePage })));
 const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainLibraryPage').then((module) => ({ default: module.LightchainLibraryPage })));
+const LightchainBoardPage = lazy(() => import('./pages/LightchainBoardPage').then((module) => ({ default: module.LightchainBoardPage })));
+const LightchainBoardEditPage = lazy(() => import('./pages/LightchainBoardPage').then((module) => ({ default: module.LightchainBoardEditPage })));
 const LightchainOrientedDesignPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignPage })));
 const LightchainOrientedDesignDetailPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignDetailPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
@@ -86,7 +89,16 @@ const queryClient = new QueryClient({
   },
 });
 
-const WORKSPACE_LOADING_STALL_TIMEOUT_MS = 10_000;
+// A valid Heavy/Lightchain session is held in a host-only cookie.  Keep the
+// shell in its hydration state long enough for the same session to be read and
+// for the profile/brand fence to settle before suggesting that the user log in
+// again.  The previous 10s window made a slow-but-valid session look logged
+// out on every direct route load.
+const WORKSPACE_LOADING_STALL_TIMEOUT_MS = 30_000;
+// Retry a transient auth failure against the existing host-only cookie. This
+// keeps the source-like workspace continuous without prompting for credentials
+// again, while the delay avoids a request storm during an outage.
+const AUTH_SERVICE_RETRY_DELAY_MS = 1_500;
 
 const loadingRouteCopy: Record<string, { eyebrow: string; title: string; description: string; actions: string[] }> = {
   '/dashboard': {
@@ -106,6 +118,18 @@ const loadingRouteCopy: Record<string, { eyebrow: string; title: string; descrip
     title: 'ギャラリーを準備しています',
     description: '保存済み画像、Canvas再編集、お気に入りを確認できるようにしています。',
     actions: ['成果物を確認', 'Canvasへ追加', '新しく生成'],
+  },
+  '/board': {
+    eyebrow: 'Design Documents',
+    title: 'デザインドキュメントを準備しています',
+    description: 'デザイン提案、マップ、保存済みドキュメントを確認できるようにしています。',
+    actions: ['ドキュメントを確認', '新しく作成', 'ライブラリーを開く'],
+  },
+  '/board/edit': {
+    eyebrow: 'Design Board',
+    title: 'デザインボードを準備しています',
+    description: '素材や提案を配置して、デザインドキュメントを保存できるようにしています。',
+    actions: ['素材を配置', 'ズームを調整', '保存する'],
   },
   '/marketing': {
     eyebrow: 'Marketing',
@@ -188,23 +212,31 @@ function getLoadingCopy(pathname: string) {
   };
 }
 
-function WorkspaceLoadingFallback({ authRecovery = false, showHeader = true }: { authRecovery?: boolean; showHeader?: boolean }) {
+function WorkspaceLoadingFallback({
+  authRecovery = false,
+  authServiceUnavailable = false,
+  showHeader = true,
+}: {
+  authRecovery?: boolean;
+  authServiceUnavailable?: boolean;
+  showHeader?: boolean;
+}) {
   const location = useLocation();
   const copy = getLoadingCopy(location.pathname);
   const [loadingStalled, setLoadingStalled] = useState(false);
 
   useEffect(() => {
-    if (authRecovery) return undefined;
+    if (authRecovery || authServiceUnavailable) return undefined;
     const timeoutId = window.setTimeout(() => setLoadingStalled(true), WORKSPACE_LOADING_STALL_TIMEOUT_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [authRecovery]);
+  }, [authRecovery, authServiceUnavailable]);
 
-  const showRecoveryActions = authRecovery || loadingStalled;
+  const showRecoveryActions = authRecovery || authServiceUnavailable || loadingStalled;
 
   return (
     <div
       data-testid="workspace-loading-fallback"
-      data-loading-state={authRecovery ? 'auth-recovery' : loadingStalled ? 'stalled' : 'lazy-page'}
+      data-loading-state={authRecovery ? 'auth-recovery' : authServiceUnavailable ? 'auth-service-unavailable' : loadingStalled ? 'stalled' : 'lazy-page'}
       className={`${showHeader ? 'min-h-screen' : 'h-full min-h-full'} bg-[#05090b] px-4 py-8 text-white dark:bg-[#05090b]`}
     >
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1800px] flex-col">
@@ -224,19 +256,40 @@ function WorkspaceLoadingFallback({ authRecovery = false, showHeader = true }: {
           <div className="w-full max-w-xl text-center">
             <div className="mb-5 flex items-center justify-center gap-3">
             <div className="spinner" />
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">{authRecovery ? 'LIGHTCHAIN AI' : copy.eyebrow}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">{authRecovery || authServiceUnavailable ? 'LIGHTCHAIN AI' : copy.eyebrow}</p>
             </div>
             <h1 className="text-2xl font-display font-semibold text-white sm:text-3xl">
-              {authRecovery ? 'ログイン状態を確認しています' : copy.title}
+              {authRecovery
+                ? 'ログイン状態を確認しています'
+                : authServiceUnavailable
+                  ? '認証サービスに再接続しています'
+                  : copy.title}
             </h1>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-neutral-400">
-              {authRecovery ? 'ログイン後にLightchainの制作ワークスペースへ進めます。' : copy.description}
+              {authRecovery
+                ? 'ログイン後にLightchainの制作ワークスペースへ進めます。'
+                : authServiceUnavailable
+                  ? 'ログイン状態は保持したまま、認証サービスの応答を待っています。再ログインは不要です。'
+                  : loadingStalled
+                    ? 'ログイン状態を維持したまま、制作ワークスペースをもう一度確認しています。'
+                    : copy.description}
             </p>
             {showRecoveryActions ? (
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <a href="/login" className="inline-flex rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200">
-                  ログイン
-                </a>
+                {authRecovery ? (
+                  <a href="/login" className="inline-flex rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200">
+                    ログイン
+                  </a>
+                ) : null}
+                {authServiceUnavailable ? (
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="inline-flex rounded-full border border-cyan-200/40 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-100/70 hover:bg-cyan-100/10"
+                  >
+                    再接続
+                  </button>
+                ) : null}
                 {loadingStalled ? (
                   <button
                     type="button"
@@ -269,8 +322,9 @@ function LazyLayout() {
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, isInitialized, authRecoveryRequired, clearAuthRecoveryRequired } = useAuthStore();
+  const { user, isLoading, isInitialized, authRecoveryRequired, authServiceUnavailable, clearAuthRecoveryRequired } = useAuthStore();
   const location = useLocation();
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   useEffect(() => {
     if (user && authRecoveryRequired) {
@@ -283,8 +337,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // normal session hydration, but converge to that same redirect once the
   // auth adapter has explicitly reported recovery is required.
   if (authRecoveryRequired && !user) {
-    const returnTo = `${location.pathname}${location.search}${location.hash}`;
     return <Navigate to={`/login?redirect=${encodeURIComponent(returnTo)}`} replace />;
+  }
+
+  // A failed auth probe is not proof that the cookie-backed session is gone.
+  // Keep the current route mounted and retry the same session instead of
+  // sending the user through login on every screen.
+  if (authServiceUnavailable && !user) {
+    return <WorkspaceLoadingFallback authServiceUnavailable showHeader={false} />;
   }
 
   // 初期化が完了していない、またはローディング中の場合
@@ -294,14 +354,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // 認証されていない場合
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(returnTo)}`} replace />;
   }
 
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, isLoading, isInitialized, authRecoveryRequired, clearAuthRecoveryRequired } = useAuthStore();
+  const { user, profile, isLoading, isInitialized, authRecoveryRequired, authServiceUnavailable, clearAuthRecoveryRequired } = useAuthStore();
   const [profileWaitExpired, setProfileWaitExpired] = useState(false);
 
   useEffect(() => {
@@ -323,6 +383,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
     return () => window.clearTimeout(timeoutId);
   }, [authRecoveryRequired, isInitialized, isLoading, profile, user]);
+
+  if (authServiceUnavailable && !user) {
+    return <WorkspaceLoadingFallback authServiceUnavailable />;
+  }
 
   if (!isInitialized || isLoading || authRecoveryRequired || (user && profile === null && !profileWaitExpired)) {
     return (
@@ -367,7 +431,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 // Public Route wrapper (redirects to the canonical Light Chain workspace if already logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, isInitialized, authRecoveryRequired, clearAuthRecoveryRequired } = useAuthStore();
+  const { user, isLoading, isInitialized, authRecoveryRequired, authServiceUnavailable, clearAuthRecoveryRequired } = useAuthStore();
+  const location = useLocation();
 
   useEffect(() => {
     if (user && authRecoveryRequired) {
@@ -376,19 +441,22 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }, [authRecoveryRequired, clearAuthRecoveryRequired, user]);
 
   // 初期化が完了していない、またはローディング中の場合
-  if (!isInitialized || (isLoading && !authRecoveryRequired)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
-        <div className="text-center">
-          <div className="spinner mb-4" />
-          <p className="text-neutral-500 dark:text-neutral-400">読み込み中...</p>
-        </div>
-      </div>
-    );
+  // Keep public auth screens behind the same session-hydration boundary as
+  // protected routes.  A slow but valid host-only cookie must never degrade
+  // into a credential form merely because a local timer expired; the loading
+  // fallback provides a reload action after 30s without asking for login.
+  if (!isInitialized || isLoading) {
+    return <WorkspaceLoadingFallback authRecovery={authRecoveryRequired} authServiceUnavailable={authServiceUnavailable} />;
+  }
+
+  // A transient auth failure is not proof that the cookie-backed session is
+  // gone. Wait for the silent retry rather than showing the credential form.
+  if (authServiceUnavailable && !user) {
+    return <WorkspaceLoadingFallback authServiceUnavailable />;
   }
 
   if (user) {
-    return <Navigate to="/designProduction" replace />;
+    return <Navigate to={resolveAuthReturnPath(location.search, window.location.origin)} replace />;
   }
 
   return <>{children}</>;
@@ -438,7 +506,7 @@ function StaticInfoPage({
 }
 
 function AppRoutes() {
-  const { initialize, isInitialized } = useAuthStore();
+  const { initialize, isInitialized, authServiceUnavailable } = useAuthStore();
 
   useEffect(() => {
     let mounted = true;
@@ -461,6 +529,14 @@ function AppRoutes() {
       mounted = false;
     };
   }, [initialize, isInitialized]);
+
+  useEffect(() => {
+    if (!authServiceUnavailable) return undefined;
+    const retryId = window.setTimeout(() => {
+      void initialize();
+    }, AUTH_SERVICE_RETRY_DELAY_MS);
+    return () => window.clearTimeout(retryId);
+  }, [authServiceUnavailable, initialize]);
 
   return (
     <Routes>
@@ -491,6 +567,14 @@ function AppRoutes() {
         element={
           <PublicRoute>
             {lazyPage(<SignupPage />)}
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/forget-password"
+        element={
+          <PublicRoute>
+            {lazyPage(<ForgotPasswordPage />)}
           </PublicRoute>
         }
       />
@@ -1285,6 +1369,34 @@ function AppRoutes() {
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
                     <LightchainAssetCenterPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/board/edit"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainBoardEditPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/board"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainBoardPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

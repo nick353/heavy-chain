@@ -38,8 +38,10 @@ const evidence = {
   video: null,
   download: null,
   consoleMessages: [],
+  environmentWarnings: [],
   pageErrors: [],
   requestFailures: [],
+  apiReadbacks: [],
   assertions: [],
   cleanup: {
     contextClosed: false,
@@ -75,6 +77,12 @@ try {
 
   const page = await context.newPage();
   wirePageDiagnostics(page, 'g603');
+  page.on('response', (response) => {
+    const url = new URL(response.url());
+    if (url.pathname === '/api/auth/get-session' || /\/v1\/(?:profile|brands)\/?$/.test(url.pathname)) {
+      evidence.apiReadbacks.push({ pathname: url.pathname, status: response.status() });
+    }
+  });
 
   await page.goto(`${baseUrl}/lightchain/fitting-clothing-reference`, { waitUntil: 'networkidle' });
   await dismissBlockingOverlays(page);
@@ -107,6 +115,13 @@ try {
   evidence.screenshots.configured = path.join(outDir, '02-garment-workbench-configured.png');
 
   const canvasSaveButton = page.locator('[data-testid="lightchain-fitting-canvas-save"]');
+  const brandStatus = await page.locator('[data-lightchain-brand-status]').first()
+    .getAttribute('data-lightchain-brand-status').catch(() => null);
+  evidence.brandGateReadback = {
+    status: brandStatus,
+    unavailableMessageVisible: await page.getByText('ブランド情報を確認できません。ブランド設定を確認してから、もう一度お試しください。').count() > 0,
+    apiReadbacks: [...evidence.apiReadbacks],
+  };
   const canvasSaveCount = await canvasSaveButton.count();
   const canvasSaveVisible = canvasSaveCount === 1 && await canvasSaveButton.isVisible();
   const canvasSaveEnabled = canvasSaveVisible && await canvasSaveButton.isEnabled();
@@ -462,6 +477,15 @@ function wirePageDiagnostics(page, route) {
     if (['error', 'warning'].includes(message.type())) {
       const text = message.text();
       if (localPreview && /net::ERR_BLOCKED_BY_CLIENT/.test(text)) return;
+      if (localPreview && isKnownLocalFontProxyWarning(text)) {
+        evidence.environmentWarnings.push({
+          route,
+          type: message.type(),
+          text,
+          reason: 'The Vite preview does not include the Cloudflare Worker font proxy; production font parity is verified separately.',
+        });
+        return;
+      }
       if (/Remote workspace artifact save failed; falling back to localStorage/.test(text)) return;
       if (/^Canvas render state \{/.test(text)) return;
       if (!/Download the React DevTools|favicon/.test(text)) {
@@ -476,6 +500,11 @@ function wirePageDiagnostics(page, route) {
       evidence.requestFailures.push({ route, url, failure: request.failure()?.errorText ?? null });
     }
   });
+}
+
+function isKnownLocalFontProxyWarning(text) {
+  return /Failed to decode downloaded font: http:\/\/127\.0\.0\.1:\d+\/assets\/AlimamaFangYuanTiVF-Thin\.woff$/.test(text)
+    || text === 'OTS parsing error: invalid sfntVersion: 1008821359';
 }
 
 async function bodyText(page) {

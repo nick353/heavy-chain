@@ -6,6 +6,7 @@ import {
 import { useCanvasStore } from '../stores/canvasStore';
 import type { Json } from '../types/database';
 import type { MaterialReferenceMetadata } from './workspaceMaterialReferences';
+import { matchesVideoProjectArtifact } from './videoWorkspacePersistence.ts';
 
 export type WorkspaceHandoffFeatureType =
   | 'fashion-studio'
@@ -152,9 +153,16 @@ export const restoreWorkspaceHandoffHistory = (
   brandId: string | null | undefined,
   featureType: WorkspaceHandoffFeatureType,
   scopeId?: string,
+  projectCode?: string,
+  draftArtifactId?: string,
 ): WorkspaceHandoffHistoryItem[] => {
   if (!brandId) return [];
-  const artifact = listWorkspaceArtifacts(brandId, scopeId).find((candidate) => candidate.featureType === featureType);
+  const artifact = listWorkspaceArtifacts(brandId, scopeId).find((candidate) => (
+    candidate.featureType === featureType
+      && (featureType !== 'video-workstation'
+        || !projectCode
+        || matchesVideoProjectArtifact(candidate, projectCode, draftArtifactId))
+  ));
   const history = artifact?.metadata.history;
   if (!artifact || !Array.isArray(history)) return [];
   return history

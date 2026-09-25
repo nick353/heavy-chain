@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validateCompanionAuthenticatedEvidence,
+  validateCompanionLaunchOperations,
   validateCompanionMassMarketQa,
   validateCompanionProductionRouteMatrix,
   validateLightchainProductionReadback,
@@ -323,4 +324,86 @@ test('rejects incomplete or promoted Companion route matrices', () => {
     },
   });
   assert.equal(validateCompanionProductionRouteMatrix(promoted), false);
+});
+
+function launchOperationsFixture(overrides = {}) {
+  const desktop = [
+    ['dashboard', '/dashboard', 'LIGHTCHAIN AI'],
+    ['generate-campaign', '/generate?feature=campaign-image', '生成する'],
+    ['gallery', '/gallery', 'ギャラリー'],
+    ['canvas', '/canvas/new', 'キャンバス'],
+    ['contact', '/contact', 'お問い合わせ'],
+  ].map(([key, path, expectedText]) => ({
+    key,
+    viewport: 'desktop',
+    path,
+    url: `${productionOrigin}${path}`,
+    readyState: 'complete',
+    bodyLength: 100,
+    expectedText,
+    expectedTextPresent: true,
+    loginRedirected: false,
+    visibleCheckboxCount: 0,
+    semanticReadback: 'verified',
+    visualReadback: 'verified',
+    assertions: [{ name: 'route_readback_without_login_or_rights_checkbox', passed: true }],
+  }));
+  const mobile = desktop.filter((route) => route.key !== 'contact').map((route) => ({
+    ...route,
+    key: `mobile-${route.key}`,
+    viewport: 'mobile',
+  }));
+  return {
+    schema: 'heavy-chain.companion-launch-operations.v1',
+    workflow: 'current-lightchain-launch-operations-readback',
+    source: 'aos_chrome_companion_profile_instance',
+    mode: 'production',
+    origin: productionOrigin,
+    taskId: 'task_123',
+    sessionId: 'session_123',
+    generation: 'generation_123',
+    authState: 'same_authenticated_companion_session_across_routes',
+    authSecretExported: false,
+    irreversibleActions: {
+      generationSubmit: 'not_clicked',
+      purchasePaymentCheckout: 'not_touched',
+      externalPublish: 'not_touched',
+    },
+    routes: desktop,
+    mobile,
+    failed: [],
+    consoleMessages: [],
+    pageErrors: [],
+    requestFailures: [],
+    businessCompletion: {
+      providerReceipt: 'unverified',
+      sourceSync: 'unverified',
+      reconciliation: 'unverified',
+    },
+    cleanup: {
+      sessionClosed: true,
+      logicalSessionCountAfterClose: 0,
+      exactTabLeaseCountAfterClose: 0,
+      activeTaskTabCountAfterClose: 0,
+      terminalCleanupPendingTaskTabCountAfterClose: 0,
+      viewportRestored: true,
+      foreignTabsMutated: false,
+      unknownEffect: false,
+    },
+    ...overrides,
+  };
+}
+
+test('accepts current Companion launch operations readback', () => {
+  assert.equal(validateCompanionLaunchOperations(launchOperationsFixture()), true);
+});
+
+test('rejects launch readback with a login redirect or visible checkbox', () => {
+  const loginRedirect = launchOperationsFixture();
+  loginRedirect.routes[0].loginRedirected = true;
+  assert.equal(validateCompanionLaunchOperations(loginRedirect), false);
+
+  const visibleCheckbox = launchOperationsFixture();
+  visibleCheckbox.mobile[0].visibleCheckboxCount = 1;
+  assert.equal(validateCompanionLaunchOperations(visibleCheckbox), false);
 });

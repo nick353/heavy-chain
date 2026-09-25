@@ -111,9 +111,29 @@ test('protected SPA routes are served after a valid browser session readback', a
   assert.equal(await response.text(), 'SPA');
 });
 
-test('login and reset-password remain public auth entry routes', async () => {
+test('protected SPA routes stay on the current path when the auth service is temporarily unavailable', async () => {
+  const { env } = fixture();
+  env.AUTH_SERVICE = { async fetch() { return new Response('{"error":"auth_unavailable"}', { status: 503 }); } };
+  const response = await web.fetch(request('/model?mode=single'), env);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('location'), null);
+  assert.equal(await response.text(), 'SPA');
+});
+
+test('protected SPA routes stay available when the auth service transport fails', async () => {
+  const { env } = fixture();
+  env.AUTH_SERVICE = { async fetch() { throw new Error('temporary transport failure'); } };
+  const response = await web.fetch(request('/model?mode=single'), env);
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), 'SPA');
+});
+
+test('login, Lightchain forgot-password, legacy forgot-password, and reset-password remain public auth routes', async () => {
   const { env } = fixture();
   assert.equal(await (await web.fetch(request('/login'), env)).text(), 'SPA');
+  assert.equal(await (await web.fetch(request('/login-m'), env)).text(), 'SPA');
+  assert.equal(await (await web.fetch(request('/forget-password'), env)).text(), 'SPA');
+  assert.equal(await (await web.fetch(request('/forgot-password'), env)).text(), 'SPA');
   assert.equal(await (await web.fetch(request('/reset-password?token=fixture'), env)).text(), 'SPA');
 });
 

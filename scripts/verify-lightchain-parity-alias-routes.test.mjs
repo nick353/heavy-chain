@@ -53,5 +53,7 @@ test('uses Light Chain /model as the canonical AI fitting entrypoint', () => {
   assert.ok(fittingEntries.length >= 1, 'missing AI fitting catalog entries');
   assert.ok(fittingEntries.every((href) => href.startsWith('/model')), `non-canonical AI fitting hrefs: ${fittingEntries.join(', ')}`);
   assert.match(parityPagesSource, /navigate\(`\/model\?/);
-  assert.match(workbenchSource, /to="\/model#fitting-history"|navigate\('\/model#fitting-history'\)/);
+  assert.match(workbenchSource, /selectedToolActionHref = isFittingDetail \? '\/model#fitting-material-workbench'/);
+  assert.match(workbenchSource, /'\/model\/model-reference': 'ai-fitting-reference'/);
+  assert.match(workbenchSource, /'\/model\/pose-reference': 'ai-fitting-reference'/);
 });

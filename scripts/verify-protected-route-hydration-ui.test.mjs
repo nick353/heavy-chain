@@ -7,7 +7,7 @@ const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'ut
 test('ProtectedRoute preserves the source login redirect after explicit auth recovery', () => {
   assert.match(
     appSource,
-    /if \(authRecoveryRequired && !user\) \{[\s\S]*?const returnTo = `\$\{location\.pathname\}\$\{location\.search\}\$\{location\.hash\}`;[\s\S]*?Navigate to=\{`\/login\?redirect=\$\{encodeURIComponent\(returnTo\)\}`\}/,
+    /const returnTo = `\$\{location\.pathname\}\$\{location\.search\}\$\{location\.hash\}`;[\s\S]*?if \(authRecoveryRequired && !user\) \{[\s\S]*?Navigate to=\{`\/login\?redirect=\$\{encodeURIComponent\(returnTo\)\}`\}/,
   );
   assert.doesNotMatch(
     appSource,

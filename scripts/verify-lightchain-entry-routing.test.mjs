@@ -10,6 +10,27 @@ const landingPath = new URL('../src/pages/LandingPage.tsx', import.meta.url);
 const parityPagesPath = new URL('../src/pages/LightchainParityPages.tsx', import.meta.url);
 const modelLibraryPagePath = new URL('../src/pages/ModelLibraryPage.tsx', import.meta.url);
 const appPath = new URL('../src/App.tsx', import.meta.url);
+const loginPagePath = new URL('../src/pages/LoginPage.tsx', import.meta.url);
+const resetPasswordPagePath = new URL('../src/pages/ResetPasswordPage.tsx', import.meta.url);
+const layoutPath = new URL('../src/components/layout/Layout.tsx', import.meta.url);
+
+test('uses Lightchain forgot-password URL while retaining Heavy legacy route compatibility', async () => {
+  const [app, login, resetPassword, layout] = await Promise.all([
+    readFile(appPath, 'utf8'),
+    readFile(loginPagePath, 'utf8'),
+    readFile(resetPasswordPagePath, 'utf8'),
+    readFile(layoutPath, 'utf8'),
+  ]);
+  for (const route of ['/forget-password', '/forgot-password']) {
+    const escaped = route.replaceAll('/', '\\/');
+    assert.match(app, new RegExp(`path="${escaped}"[\\s\\S]*?<ForgotPasswordPage \\/>`), `missing shared password-reset route: ${route}`);
+  }
+  assert.match(login, /<Link to="\/forget-password"/);
+  assert.match(resetPassword, /<Link to="\/forget-password"/);
+  assert.doesNotMatch(resetPassword, /<Link to="\/forgot-password"/);
+  assert.match(layout, /const isPublicPage = \[[^\]]*'\/forget-password'/);
+  assert.match(layout, /const isPublicPage = \[[^\]]*'\/forgot-password'/);
+});
 
 test('routes both workbench recommendation tabs to the valid launcher category', async () => {
   const sources = await Promise.all([
@@ -117,7 +138,7 @@ test('keeps the Light print-design project cards on the canonical detail route',
   const projectEnd = page.indexOf("if (selectedTool.id === 'print-design-detail')", projectStart);
   assert.ok(projectStart >= 0 && projectEnd > projectStart, 'print-design project surface is required');
   const project = page.slice(projectStart, projectEnd);
-  assert.match(project, /card\.isNew\s*\?\s*'\/editor\/patternDesign\/detail'/);
+  assert.match(project, /onClick=\{\(\) => navigate\('\/editor\/patternDesign\/detail'\)\}/);
   assert.match(project, /\/editor\/patternDesign\/detail\?boardProjectCode=\$\{encodeURIComponent\(card\.id\)\}&boardProjectType=custom/);
   assert.match(project, /onClick=\{\(\) => navigate\('\/editor\/patternDesign\/detail'\)\}/);
   assert.doesNotMatch(project, /\/lightchain\/print-design-detail/);
@@ -160,8 +181,12 @@ test('keeps the video project dashboard and detail route aligned with Lightchain
   assert.match(detail, /最大20M/);
   assert.match(detail, /w-\[264px\]/);
   assert.match(detail, /video-source-empty-upload/);
-  assert.match(detail, /w-\[781\.59px\]/);
-  assert.match(detail, /LIGHTCHAIN_VIDEO_PROJECT_ICON/);
+  // Current Light source readback uses a centered 768px empty upload canvas;
+  // 781.59px was the superseded pre-video-workspace measurement.
+  assert.match(detail, /w-\[768px\]/);
+  // The current Light detail rail has no remote project icon; Heavy must not
+  // reintroduce the former Heavy-only asset in this source-shaped surface.
+  assert.doesNotMatch(detail, /LIGHTCHAIN_VIDEO_PROJECT_ICON/);
   assert.match(detail, /video-source-empty-dots/);
   assert.doesNotMatch(detail, /border-dashed border-cyan-300\/70/);
   assert.match(detail, /video_provider_not_admitted/);
@@ -175,7 +200,27 @@ test('exposes the Lightchain launcher at the canonical /lightchain route', async
   const route = app.slice(routeStart, routeEnd);
   assert.match(route, /<LightchainUnifiedWorkspaceShell>[\s\S]*?<GenerateLightchainEntry \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
   assert.doesNotMatch(route, /LightchainSourceNotFoundPage/);
-  assert.match(await readFile(new URL('../src/pages/LoginPage.tsx', import.meta.url), 'utf8'), /navigate\('\/designProduction'/);
+  assert.match(
+    await readFile(new URL('../src/pages/LoginPage.tsx', import.meta.url), 'utf8'),
+    /navigate\(resolveAuthReturnPath\(location\.search, window\.location\.origin\)/,
+  );
+});
+
+test('maps the Light design-document menu to the canonical board routes', async () => {
+  const [app, layout, board] = await Promise.all([
+    readFile(appPath, 'utf8'),
+    readFile(new URL('../src/components/layout/Layout.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/LightchainBoardPage.tsx', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /path="\/board\/edit"[\s\S]*?<LightchainBoardEditPage \/>/);
+  assert.match(app, /path="\/board"[\s\S]*?<LightchainBoardPage \/>/);
+  assert.match(layout, /<Link to="\/board"[^>]*>デザインドキュメント<\/Link>/);
+  assert.match(board, /data-testid="lightchain-board-page"/);
+  assert.match(board, /data-testid="lightchain-board-edit-page"/);
+  assert.match(board, /LIGHTCHAIN_BOARD_STORAGE_KEY/);
+  assert.match(board, /fillSourceBoardDocuments/);
+  assert.match(board, /2025\.8\.21 18:00/);
+  assert.doesNotMatch(board, /type="checkbox"|権利確認/);
 });
 
 test('keeps model customization on the Light source surface without a Heavy-only rights checkbox', async () => {

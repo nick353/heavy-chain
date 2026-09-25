@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useReducer, useRef, useState, type ChangeEvent } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowUpRight,
@@ -29,7 +29,20 @@ import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
-import { handoffWorkspaceToCanvas, restoreWorkspaceHandoffHistory } from '../lib/workspaceHandoff';
+import {
+  handoffWorkspaceToCanvas,
+  restoreWorkspaceHandoffHistory,
+  type GenerationIntent,
+} from '../lib/workspaceHandoff';
+import {
+  listWorkspaceArtifacts,
+  saveWorkspaceArtifactBestEffort,
+  type WorkspaceArtifact,
+  type WorkspaceArtifactInput,
+  type WorkspaceArtifactPersistenceResult,
+} from '../lib/localWorkspaceArtifacts';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { matchesVideoProjectArtifact, shouldHydrateVideoSourceImage } from '../lib/videoWorkspacePersistence';
 
 const choices = ['構成', '編集', '書き出し'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
@@ -50,6 +63,17 @@ type VideoStoryboardCandidate = {
 type HistoryItem = {
   id: string;
   label: string;
+};
+
+type VideoSourceEditorValues = {
+  editPrompt: string;
+  duration: string;
+  resolution: string;
+};
+
+type VideoSourceEditorPersistedState = VideoSourceEditorValues & {
+  referenceName: string;
+  referencePreview: string;
 };
 
 const storyboardCandidates: VideoStoryboardCandidate[] = [
@@ -121,11 +145,82 @@ const initialMaterialReference: MaterialReferenceState = {
 };
 
 const VIDEO_GUIDE_DISMISSED_STORAGE_KEY = 'heavy-chain-video-guide-dismissed';
+const VIDEO_SOURCE_EDITOR_VERSION = 'video-source-editor-parity-v1';
+const VIDEO_PERSISTED_DATA_URL_LIMIT = 1_500_000;
 const LIGHTCHAIN_VIDEO_MAIN_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/c914c5010e17ca8f3bdbdb93ae2088fc.jpeg?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
 const LIGHTCHAIN_VIDEO_REFERENCE_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/73e4af273bd3f306c8ed549efd3a7cb5.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
-const LIGHTCHAIN_VIDEO_PROJECT_ICON = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/%E8%A7%86%E9%A2%91%E5%B7%A5%E4%BD%9C%E5%8F%B0icon.png?x-oss-process=image/resize,m_lfit,w_48,limit_1/format,webp';
 const LIGHTCHAIN_VIDEO_SOURCE_RESULT = 'https://static-jp.linkaigc.com/saas/2026-02/c44b4aecfba3ddee5a37d94925b4f40d.mp4?x-oss-process=video/snapshot,t_1000,m_fast,ar_auto';
 const LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-02/dbe43f25eadaf147c9ffefc1d609c4eb.webp';
+
+function LightchainVideoImage({
+  src,
+  alt,
+  className,
+  fallbackLabel = '画像を読み込めません',
+  testId,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  fallbackLabel?: string;
+  testId?: string;
+}) {
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  useEffect(() => {
+    setLoadFailed(false);
+  }, [src]);
+
+  if (loadFailed || !src.trim()) {
+    return (
+      <div
+        className={`${className ?? ''} flex items-center justify-center gap-1 bg-[#2b3234] px-2 text-[10px] text-neutral-400`}
+        role="img"
+        aria-label={alt || fallbackLabel}
+        data-testid={testId}
+      >
+        <ImageIcon aria-hidden="true" className="size-4 shrink-0 opacity-75" />
+        <span className="truncate">{fallbackLabel}</span>
+      </div>
+    );
+  }
+
+  return <img src={src} alt={alt} className={className} data-testid={testId} onError={() => setLoadFailed(true)} />;
+}
+
+const readVideoMetadataString = (artifact: WorkspaceArtifact | null | undefined, key: string) => {
+  const value = artifact?.metadata[key];
+  return typeof value === 'string' ? value : '';
+};
+
+const readVideoEditorState = (artifact: WorkspaceArtifact | null | undefined): VideoSourceEditorPersistedState | undefined => {
+  if (!artifact) return undefined;
+  const duration = readVideoMetadataString(artifact, 'videoDuration');
+  const resolution = readVideoMetadataString(artifact, 'videoResolution');
+  return {
+    editPrompt: readVideoMetadataString(artifact, 'videoEditPrompt') || INITIAL_VIDEO_EDIT_PROMPT,
+    duration: duration === '5秒' || duration === '10秒' || duration === '15秒' ? duration : '5秒',
+    resolution: resolution === '720P' || resolution === '1080P' ? resolution : '720P',
+    referenceName: readVideoMetadataString(artifact, 'videoReferenceName'),
+    referencePreview: readVideoMetadataString(artifact, 'videoReferencePreview'),
+  };
+};
+
+const buildVideoEditorHref = (projectCode: string) => (
+  `/flow/GenerateShortVideo/detail?boardProjectCode=${encodeURIComponent(projectCode)}&boardProjectType=GenerateShortVideoCustom`
+);
+
+const buildVideoEditorGenerationIntent = (projectCode: string, prompt: string): GenerationIntent => ({
+  feature: 'video-workstation',
+  prompt,
+  href: buildVideoEditorHref(projectCode),
+  label: '動画を再利用',
+  sourceWorkspace: 'video',
+  workflowVersion: 'video-storyboard-local-v1',
+  sourceLabel: 'Video Workstation',
+  sourceResumePath: '/flow/GenerateShortVideo/detail',
+  sourceMode: 'local-workflow-intake',
+});
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -234,11 +329,32 @@ const buildVideoStoryboardPreviewSvg = ({
 
 export function VideoWorkstationPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, currentBrand } = useAuthStore();
-  const routeParams = new URLSearchParams(window.location.search);
+  const routeParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const boardProjectCode = routeParams.get('boardProjectCode');
   const legacyProjectCode = routeParams.get('project');
   const hasExistingVideoProject = Boolean(boardProjectCode || (legacyProjectCode && legacyProjectCode !== 'new'));
+  const [newVideoDraftId] = useState(() => {
+    try {
+      return `local-video-draft-${crypto.randomUUID()}`;
+    } catch {
+      return `local-video-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+  });
+  const videoProjectCode = boardProjectCode?.trim()
+    || (legacyProjectCode && legacyProjectCode !== 'new' ? legacyProjectCode : '')
+    || newVideoDraftId;
+  const [videoDraftArtifactId, setVideoDraftArtifactId] = useState<string | undefined>();
+  const persistedVideoDraft = useMemo(() => {
+    if (!currentBrand?.id) return null;
+    const artifacts = listWorkspaceArtifacts(currentBrand.id, user?.id);
+    return artifacts.find((artifact) => matchesVideoProjectArtifact(artifact, videoProjectCode, videoDraftArtifactId)) ?? null;
+  }, [currentBrand?.id, user?.id, videoDraftArtifactId, videoProjectCode]);
+  const persistedVideoEditorState = useMemo(
+    () => readVideoEditorState(persistedVideoDraft),
+    [persistedVideoDraft],
+  );
   const [showVideoGuide, setShowVideoGuide] = useState(() => {
     try {
       return window.localStorage.getItem(VIDEO_GUIDE_DISMISSED_STORAGE_KEY) !== 'true';
@@ -261,6 +377,7 @@ export function VideoWorkstationPage() {
       ? { ...initialMaterialReference, imageUrl: LIGHTCHAIN_VIDEO_MAIN_IMAGE, fileName: project }
       : initialMaterialReference;
   });
+  const previousVideoProjectCode = useRef(videoProjectCode);
   const nextHistoryId = useRef(1);
   const selectedStoryboard = storyboardCandidates.find((candidate) => candidate.id === selectedStoryboardId) ?? storyboardCandidates[0];
   const shotSteps = shotPlan
@@ -280,9 +397,49 @@ export function VideoWorkstationPage() {
   const nextStep = `${shotPlan}をvideo-shot-planとして保存し、動画providerの利用可能確認後にレンダーへ進める`;
   const videoProviderBlocker = 'video_provider_not_admitted: 動画providerの利用可能状態が未確認です';
 
+  // React Router can update only the query string when a saved project is
+  // opened from the dashboard.  Keep route-owned state fenced to that
+  // project so a previous project's source image, progress, or storyboard
+  // cannot bleed into the next detail view before its artifact is hydrated.
   useEffect(() => {
-    setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'video-workstation', user?.id));
-  }, [currentBrand?.id, user?.id]);
+    if (previousVideoProjectCode.current === videoProjectCode) return;
+    previousVideoProjectCode.current = videoProjectCode;
+    setVideoDraftArtifactId(undefined);
+    setActiveChoice(choices[0]);
+    setProgress(40);
+    setHistory([]);
+    nextHistoryId.current = 1;
+    setSelectedStoryboardId(storyboardCandidates[0].id);
+    setDuration(storyboardCandidates[0].duration);
+    setAspectRatio(storyboardCandidates[0].aspectRatio);
+    setShotPlan(storyboardCandidates[0].shotOrder);
+    setSubtitleCta(storyboardCandidates[0].cta);
+    setMaterials(storyboardCandidates[0].materials);
+    const project = boardProjectCode || legacyProjectCode;
+    setMaterialReference(project && project !== 'new'
+      ? { ...initialMaterialReference, imageUrl: LIGHTCHAIN_VIDEO_MAIN_IMAGE, fileName: project }
+      : initialMaterialReference);
+  }, [boardProjectCode, legacyProjectCode, videoProjectCode]);
+
+  useEffect(() => {
+    setHistory(restoreWorkspaceHandoffHistory(
+      currentBrand?.id,
+      'video-workstation',
+      user?.id,
+      videoProjectCode,
+      videoDraftArtifactId,
+    ));
+  }, [currentBrand?.id, user?.id, videoDraftArtifactId, videoProjectCode]);
+
+  useEffect(() => {
+    const savedSourceImage = readVideoMetadataString(persistedVideoDraft, 'videoSourceImageUrl');
+    if (!shouldHydrateVideoSourceImage(materialReference.imageUrl, savedSourceImage, LIGHTCHAIN_VIDEO_MAIN_IMAGE)) return;
+    setMaterialReference((current) => ({
+      ...current,
+      imageUrl: savedSourceImage,
+      fileName: readVideoMetadataString(persistedVideoDraft, 'videoSourceFileName') || current.fileName,
+    }));
+  }, [materialReference.imageUrl, persistedVideoDraft]);
 
   const recordProgress = (choice: string) => {
     const historyItem = {
@@ -430,6 +587,194 @@ export function VideoWorkstationPage() {
     }
   };
 
+  const buildVideoEditorArtifactInput = (values: VideoSourceEditorPersistedState): WorkspaceArtifactInput | null => {
+    if (!currentBrand?.id) return null;
+    const generationIntent = buildVideoEditorGenerationIntent(videoProjectCode, values.editPrompt);
+    const persistedReferencePreview = values.referencePreview.startsWith('data:')
+      && values.referencePreview.length <= VIDEO_PERSISTED_DATA_URL_LIMIT
+      ? values.referencePreview
+      : '';
+    const persistedSourceImage = materialReference.imageUrl.startsWith('data:')
+      && materialReference.imageUrl.length > VIDEO_PERSISTED_DATA_URL_LIMIT
+      ? ''
+      : materialReference.imageUrl;
+    const artifactId = videoDraftArtifactId
+      ?? persistedVideoDraft?.id
+      ?? (!hasExistingVideoProject ? newVideoDraftId : undefined);
+    return {
+      id: artifactId,
+      brandId: currentBrand.id,
+      scopeId: user?.id,
+      featureType: 'video-workstation',
+      title: 'Untitled',
+      imageUrl: previewImageUrl,
+      prompt: values.editPrompt,
+      metadata: {
+        ...(persistedVideoDraft?.metadata ?? {}),
+        feature: 'video-workstation',
+        videoProjectCode,
+        videoSourceEditorVersion: VIDEO_SOURCE_EDITOR_VERSION,
+        videoEditPrompt: values.editPrompt,
+        videoDuration: values.duration,
+        videoResolution: values.resolution,
+        videoReferenceName: values.referenceName,
+        videoReferencePreview: persistedReferencePreview,
+        videoReferencePreviewTruncated: Boolean(values.referencePreview && !persistedReferencePreview),
+        videoSourceImageUrl: persistedSourceImage,
+        videoSourceFileName: materialReference.fileName,
+        sourceWorkspace: 'video',
+        sourceLabel: 'Video Workstation',
+        sourceResumePath: '/flow/GenerateShortVideo/detail',
+        sourceMode: 'local-workflow-intake',
+        workflowVersion: 'video-storyboard-local-v1',
+        resumePath: '/flow/GenerateShortVideo/detail',
+        providerRoute: 'unsupported',
+        providerBlocker: videoProviderBlocker,
+        generationIntent,
+        searchTokens: ['video-workstation', 'video-source-editor-parity', videoProjectCode, values.duration, values.resolution],
+      },
+    };
+  };
+
+  /**
+   * Save the source-editor draft through the same durable Cloudflare boundary
+   * used by provider results. Local storage remains the offline fallback, but
+   * an enabled Cloudflare data plane never reports success without its
+   * request-id/readback receipt.
+   */
+  const persistVideoEditorBestEffort = async (
+    values: VideoSourceEditorPersistedState,
+  ): Promise<WorkspaceArtifactPersistenceResult> => {
+    const input = buildVideoEditorArtifactInput(values);
+    if (!input) return { ok: false, error: new Error('video_workspace_brand_not_ready') };
+    const result = await saveWorkspaceArtifactBestEffort(input);
+    if (!result.localPersisted) {
+      return {
+        ok: false,
+        error: result.localError instanceof Error
+          ? result.localError
+          : new Error('video_workspace_local_persistence_unverified'),
+      };
+    }
+    if (cloudflareDataPlane && !result.remote) {
+      const remoteReason = result.remoteError instanceof Error ? result.remoteError.message : 'remote_receipt_missing';
+      return { ok: false, error: new Error(`video_workspace_remote_persistence_unverified:${remoteReason}`) };
+    }
+    setVideoDraftArtifactId(result.artifact.id);
+    return { ok: true, artifact: result.artifact };
+  };
+
+  const handoffVideoEditorToCanvas = async (values: VideoSourceEditorPersistedState) => {
+    if (!currentBrand) {
+      toast.error('ブランドを読み込んでからもう一度試してください');
+      return;
+    }
+
+    const persisted = await persistVideoEditorBestEffort(values);
+    if (!persisted.ok) {
+      toast.error('動画編集内容の保存確認に失敗しました');
+      return;
+    }
+
+    const selectedVideoStoryboardMetadata = {
+      id: selectedStoryboard.id,
+      label: selectedStoryboard.label,
+      shotOrder: shotPlan,
+      motion: selectedStoryboard.motion,
+      framing: selectedStoryboard.framing,
+      cta: subtitleCta,
+      materials,
+      format: aspectRatio,
+      duration: values.duration,
+      resolution: values.resolution,
+      editPrompt: values.editPrompt,
+      motionSignature: selectedStoryboard.motionSignature,
+      framingSignature: selectedStoryboard.framingSignature,
+      workflowMode: selectedStoryboard.workflowMode,
+    };
+    const generationIntent = buildVideoEditorGenerationIntent(videoProjectCode, values.editPrompt);
+    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+    const primaryInput = `${values.duration} / ${values.resolution} / ${values.editPrompt}`;
+    const nextStep = `${videoProjectCode}を動画ワークステーションで再利用し、動画providerの利用可能確認後にレンダーへ進める`;
+
+    try {
+      const { projectId } = handoffWorkspaceToCanvas({
+        brandId: currentBrand.id,
+        scopeId: user?.id,
+        featureType: 'video-workstation',
+        projectName: `Video Workstation: ${videoProjectCode}`,
+        title: `Video Workstation: ${videoProjectCode}`,
+        prompt: values.editPrompt,
+        imageUrl: previewImageUrl,
+        summary: `動画修正 ${values.duration} / ${values.resolution}`,
+        note: values.referenceName ? `参考画像: ${values.referenceName}` : '参考画像なし',
+        activeChoice: '編集',
+        progress: Math.max(progress, 68),
+        history: [`動画編集内容を保存: ${values.duration} / ${values.resolution}`],
+        workflow: {
+          workflowVersion: 'video-storyboard-local-v1',
+          inputs: {
+            videoProjectCode,
+            editPrompt: values.editPrompt,
+            duration: values.duration,
+            resolution: values.resolution,
+            referenceName: values.referenceName,
+            selectedVideoStoryboard: selectedVideoStoryboardMetadata,
+            materialReference: materialReferenceMetadata,
+          },
+          plan: {
+            videoEditor: 'video-source-editor-parity',
+            selectedVideoStoryboard: selectedVideoStoryboardMetadata,
+            materialReference: materialReferenceMetadata,
+            preview: {
+              previewKind: 'deterministic-svg',
+              marker: 'video-source-editor-parity',
+              imageUrl: previewImageUrl,
+            },
+            nextStep,
+            searchTokens: ['video-source-editor-parity', videoProjectCode, values.duration, values.resolution],
+          },
+          status: 'planned',
+          resumePath: '/flow/GenerateShortVideo/detail',
+          handoffKind: 'local-workflow-intake',
+          primaryInput,
+          nextStep,
+          providerRoute: 'unsupported',
+          providerBlocker: videoProviderBlocker,
+          generationIntent,
+        },
+        previewMetadata: {
+          previewKind: 'deterministic-svg',
+          marker: 'video-source-editor-parity',
+          imageUrl: previewImageUrl,
+          videoProjectCode,
+          videoEditor: {
+            editPrompt: values.editPrompt,
+            duration: values.duration,
+            resolution: values.resolution,
+            referenceName: values.referenceName,
+          },
+          generationIntent,
+        },
+        selectedVideoStoryboard: selectedVideoStoryboardMetadata,
+        materialReferences: [materialReferenceMetadata],
+        metadata: {
+          workspace: 'video',
+          providerRoute: 'unsupported',
+          providerBlocker: videoProviderBlocker,
+          videoDraftArtifactId: persisted.artifact.id,
+          generationIntent,
+          searchTokens: ['video-source-editor-parity', 'video-workstation', videoProjectCode],
+        },
+      });
+      toast.success('動画編集内容を保存し、Canvasへ渡しました');
+      navigate(`/canvas/${projectId}`);
+    } catch (error) {
+      console.error('Failed to persist Video Source Editor handoff:', error);
+      toast.error(error instanceof Error ? error.message : 'Canvas保存に失敗しました');
+    }
+  };
+
   const dismissVideoGuide = () => {
     try {
       window.localStorage.setItem(VIDEO_GUIDE_DISMISSED_STORAGE_KEY, 'true');
@@ -487,13 +832,13 @@ export function VideoWorkstationPage() {
       <main className="video-source-empty-page relative dark min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white">
         <div className="video-source-empty-dots pointer-events-none absolute inset-0" />
         <div className="video-source-empty-project-rail absolute left-4 top-6 z-10 flex w-[264px] flex-col gap-2 rounded-xl border border-white/10 bg-[#262a2b] p-2 text-neutral-200 shadow-xl">
-          <div className="flex h-5 items-center text-sm text-neutral-400"><img src={LIGHTCHAIN_VIDEO_PROJECT_ICON} alt="" className="mr-1 size-5 object-contain" />動画ワークステーション</div>
+          <div className="flex h-5 items-center text-sm text-neutral-400">動画ワークステーション</div>
           <div className="h-px w-full bg-white/10" />
           <Link to="/flow/GenerateShortVideo" aria-label="動画ワークステーションへ戻る" className="flex w-fit items-center gap-2 text-base text-neutral-400 hover:text-white"><ChevronRight className="h-5 w-5 rotate-180" />Untitled</Link>
         </div>
         <label
           data-testid="video-initial-image-dropzone"
-          className="video-source-empty-upload absolute left-1/2 top-[137.43px] z-10 flex h-[496.14px] w-[781.59px] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/15 bg-[#262a2b] px-6 text-center transition hover:border-cyan-300/60"
+          className="video-source-empty-upload absolute left-1/2 top-1/2 z-10 flex h-[534.28px] w-[768px] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/15 bg-[#262a2b] px-6 text-center transition hover:border-cyan-300/60"
         >
           <Upload className="h-10 w-10 text-white" />
           <span className="mt-5 text-sm text-neutral-200">ここをクリックまたはドラッグして画像を追加</span>
@@ -511,10 +856,14 @@ export function VideoWorkstationPage() {
 
   return (
     <VideoSourceEditorParity
+      key={`${videoDraftArtifactId ?? persistedVideoDraft?.id ?? videoProjectCode}:${persistedVideoDraft?.createdAt ?? 'new'}`}
       imageUrl={materialReference.imageUrl}
       secondaryImageUrl={hasExistingVideoProject ? LIGHTCHAIN_VIDEO_REFERENCE_IMAGE : undefined}
       onImageChange={handleInitialImage}
       onBack={() => navigate('/flow/GenerateShortVideo')}
+      initialValues={persistedVideoEditorState}
+      onPersist={persistVideoEditorBestEffort}
+      onHandoffToCanvas={handoffVideoEditorToCanvas}
     />
   );
 
@@ -745,10 +1094,10 @@ export function VideoWorkstationPage() {
             <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedStoryboard.label} / {selectedStoryboard.motionSignature}</p>
           </div>
           <div className="mt-4 grid gap-4 xl:grid-cols-[420px_1fr]">
-            <img
+            <LightchainVideoImage
               src={previewImageUrl}
               alt="Video storyboard preview"
-              data-testid="video-storyboard-preview-image"
+              testId="video-storyboard-preview-image"
               className="aspect-[3/2] w-full rounded-2xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
             />
             <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
@@ -846,23 +1195,139 @@ export function VideoWorkstationPage() {
   );
 }
 
+type VideoSourceEditorHistory = {
+  past: VideoSourceEditorValues[];
+  present: VideoSourceEditorValues;
+  future: VideoSourceEditorValues[];
+};
+
+type VideoSourceEditorAction =
+  | { type: 'patch'; patch: Partial<VideoSourceEditorValues> }
+  | { type: 'undo' }
+  | { type: 'redo' };
+
+const INITIAL_VIDEO_EDIT_PROMPT = '男性は歩かずそのままの位置で男女が目を見つめあい１回うなずく。そして正面を向いて笑顔で３秒微笑む';
+const INITIAL_VIDEO_SOURCE_EDITOR_VALUES: VideoSourceEditorValues = {
+  editPrompt: INITIAL_VIDEO_EDIT_PROMPT,
+  duration: '5秒',
+  resolution: '720P',
+};
+
+function videoSourceEditorReducer(
+  state: VideoSourceEditorHistory,
+  action: VideoSourceEditorAction,
+): VideoSourceEditorHistory {
+  if (action.type === 'patch') {
+    const present = { ...state.present, ...action.patch };
+    if (
+      present.editPrompt === state.present.editPrompt
+      && present.duration === state.present.duration
+      && present.resolution === state.present.resolution
+    ) {
+      return state;
+    }
+    return {
+      past: [...state.past, state.present].slice(-20),
+      present,
+      future: [],
+    };
+  }
+
+  if (action.type === 'undo' && state.past.length > 0) {
+    const previous = state.past[state.past.length - 1];
+    return {
+      past: state.past.slice(0, -1),
+      present: previous,
+      future: [state.present, ...state.future].slice(0, 20),
+    };
+  }
+
+  if (action.type === 'redo' && state.future.length > 0) {
+    const next = state.future[0];
+    return {
+      past: [...state.past, state.present].slice(-20),
+      present: next,
+      future: state.future.slice(1),
+    };
+  }
+
+  return state;
+}
+
 function VideoSourceEditorParity({
   imageUrl,
   secondaryImageUrl,
   onImageChange,
   onBack,
+  initialValues,
+  onPersist,
+  onHandoffToCanvas,
 }: {
   imageUrl: string;
   secondaryImageUrl?: string;
   onImageChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onBack: () => void;
+  initialValues?: VideoSourceEditorPersistedState;
+  onPersist?: (values: VideoSourceEditorPersistedState) => WorkspaceArtifactPersistenceResult | Promise<WorkspaceArtifactPersistenceResult>;
+  onHandoffToCanvas?: (values: VideoSourceEditorPersistedState) => void | Promise<void>;
 }) {
-  const [editPrompt, setEditPrompt] = useState('男性は歩かずそのままの位置で男女が目を見つめあい１回うなずく。そして正面を向いて笑顔で３秒微笑む');
-  const [referenceName, setReferenceName] = useState('');
-  const [duration, setDuration] = useState('5秒');
-  const [resolution, setResolution] = useState('720P');
+  const [editorHistory, dispatchEditor] = useReducer(videoSourceEditorReducer, {
+    past: [],
+    present: initialValues ?? INITIAL_VIDEO_SOURCE_EDITOR_VALUES,
+    future: [],
+  });
+  const [referenceName, setReferenceName] = useState(initialValues?.referenceName ?? '');
+  const [referencePreview, setReferencePreview] = useState(initialValues?.referencePreview ?? '');
+  const [activeTool, setActiveTool] = useState<'select' | 'pan'>('select');
+  const [zoom, setZoom] = useState(40);
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [isHandbookOpen, setIsHandbookOpen] = useState(false);
+  const [isVideoExpanded, setIsVideoExpanded] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const mainImageInputRef = useRef<HTMLInputElement>(null);
+  const referenceInputRef = useRef<HTMLInputElement>(null);
+  const { editPrompt, duration, resolution } = editorHistory.present;
   const displayVideo = imageUrl && imageUrl !== LIGHTCHAIN_VIDEO_MAIN_IMAGE ? imageUrl : LIGHTCHAIN_VIDEO_SOURCE_RESULT;
-  const displayReference = secondaryImageUrl || LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE;
+  const displayReference = referencePreview || secondaryImageUrl || LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE;
+  const durationLabel = duration === '15秒' ? '00:15' : duration === '10秒' ? '00:10' : '00:05';
+  const currentValues: VideoSourceEditorPersistedState = {
+    editPrompt,
+    duration,
+    resolution,
+    referenceName,
+    referencePreview,
+  };
+
+  const handleReferenceChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setReferenceName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const preview = typeof reader.result === 'string' ? reader.result : '';
+      if (preview) setReferencePreview(preview);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const changeZoom = (direction: 'in' | 'out') => {
+    setZoom((current) => Math.min(100, Math.max(20, current + (direction === 'in' ? 10 : -10))));
+  };
+
+  const handleSave = async () => {
+    if (!onPersist || isSaving) return;
+    setIsSaving(true);
+    try {
+      const result = await onPersist(currentValues);
+      if (!result.ok) {
+        toast.error('動画編集内容の保存確認に失敗しました');
+        return;
+      }
+      toast.success('動画編集内容を保存しました');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <main className="dark video-source-existing-page relative min-h-[calc(100vh-56px)] overflow-hidden bg-[#171b1c] text-white" data-testid="video-source-editor-parity">
@@ -874,52 +1339,65 @@ function VideoSourceEditorParity({
           <path d="M1150 310 C1085 310 1060 280 1030 280" />
         </svg>
 
-        <div className="video-source-existing-node video-source-existing-upper-node"><img src={LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE} alt="imgResult" /></div>
-        <div className="video-source-existing-node video-source-existing-right-node"><img src={LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE} alt="imgResult" /></div>
-        <div className="video-source-existing-node video-source-existing-left-node"><img src={LIGHTCHAIN_VIDEO_SOURCE_RESULT} alt="videoResult" /></div>
-        <div className="video-source-existing-node video-source-existing-main-node">
-          <img src={displayVideo} alt="videoResult" />
-          <button type="button" aria-label="動画を開く" className="video-source-existing-expand"><ArrowUpRight size={16} /></button>
-          <div className="video-source-existing-video-controls" aria-hidden="true"><span>▶</span><span>00:00 / 00:05</span></div>
+        <div className="video-source-existing-node video-source-existing-upper-node"><LightchainVideoImage src={LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE} alt="imgResult" fallbackLabel="参照素材" /></div>
+        <div className="video-source-existing-node video-source-existing-right-node"><LightchainVideoImage src={LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE} alt="imgResult" fallbackLabel="参照素材" /></div>
+        <div className="video-source-existing-node video-source-existing-left-node"><LightchainVideoImage src={LIGHTCHAIN_VIDEO_SOURCE_RESULT} alt="videoResult" fallbackLabel="動画素材" /></div>
+        <div className="video-source-existing-node video-source-existing-main-node" style={{ transform: `scale(${zoom / 40})`, transformOrigin: 'top center' }}>
+          <LightchainVideoImage src={displayVideo} alt="videoResult" fallbackLabel="動画プレビュー" />
+          <button type="button" aria-label="動画を開く" className="video-source-existing-expand" onClick={() => setIsVideoExpanded(true)}><ArrowUpRight size={16} /></button>
+          <div className="video-source-existing-video-controls" aria-hidden="true"><span>▶</span><span>00:00 / {durationLabel}</span></div>
         </div>
 
-        <aside className="video-source-existing-edit-panel" aria-label="動画の修正">
+        {isPanelOpen && <aside className="video-source-existing-edit-panel" aria-label="動画の修正">
           <div className="video-source-existing-edit-inner">
             <div className="video-source-existing-edit-heading">
               <div><p className="text-[16px] font-semibold text-white">動画の修正</p><p className="mt-1 text-[11px] text-[#a8b0b1]">AI動画のブラッシュアップで、動画のスタイル変更が簡単に実現できます</p></div>
-              <button type="button" aria-label="閉じる" className="text-[#9da6a7]">×</button>
+              <button type="button" aria-label="閉じる" className="text-[#9da6a7]" onClick={() => setIsPanelOpen(false)}>×</button>
             </div>
             <div className="video-source-existing-tip"><Sparkles size={14} /> 参考動画をアップロードすると、動きとスタイルを再現できます</div>
-            <div className="video-source-existing-preview-row"><img src={displayVideo} alt="動画の修正プレビュー" /><div><p className="text-[12px] text-white">Untitled</p><p className="mt-1 text-[10px] text-[#9da6a7]">動画を修正</p></div></div>
-            <div className="video-source-existing-duration-row"><span>動画の長さ</span><span>{duration} · 00:00–00:05</span></div>
+            <div className="video-source-existing-preview-row"><LightchainVideoImage src={displayVideo} alt="動画の修正プレビュー" fallbackLabel="動画プレビュー" /><div><p className="text-[12px] text-white">Untitled</p><p className="mt-1 text-[10px] text-[#9da6a7]">動画を修正</p></div></div>
+            <div className="video-source-existing-duration-row"><span>動画の長さ</span><span>{duration} · 00:00–{durationLabel}</span></div>
             <label className="video-source-existing-label" htmlFor="video-reference-upload">参考画像</label>
-            <label htmlFor="video-reference-upload" className="video-source-existing-reference-upload"><img src={displayReference} alt="参考画像" /><span>{referenceName || '画像を追加'}</span><ImagePlus size={15} /></label>
-            <input id="video-reference-upload" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,image/jpeg,image/png,image/webp,video/mp4,video/quicktime" className="sr-only" onChange={(event) => setReferenceName(event.target.files?.[0]?.name ?? '')} />
+            <label htmlFor="video-reference-upload" className="video-source-existing-reference-upload"><LightchainVideoImage src={displayReference} alt="参考画像" fallbackLabel="参考画像" /><span>{referenceName || '画像を追加'}</span><ImagePlus size={15} /></label>
+            <input ref={referenceInputRef} id="video-reference-upload" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,image/jpeg,image/png,image/webp,video/mp4,video/quicktime" className="sr-only" onChange={handleReferenceChange} />
             <div className="video-source-existing-label-row"><label className="video-source-existing-label" htmlFor="video-edit-prompt">修正指示</label><span>{editPrompt.length}/1000</span></div>
-            <textarea id="video-edit-prompt" value={editPrompt} onChange={(event) => setEditPrompt(event.target.value)} maxLength={1000} className="video-source-existing-prompt" />
+            <textarea id="video-edit-prompt" value={editPrompt} onChange={(event) => dispatchEditor({ type: 'patch', patch: { editPrompt: event.target.value } })} maxLength={1000} className="video-source-existing-prompt" />
             <div className="video-source-existing-select-row">
-              <label>動画の長さ<select value={duration} onChange={(event) => setDuration(event.target.value)}><option>5秒</option><option>10秒</option><option>15秒</option></select></label>
-              <label>解像度<select value={resolution} onChange={(event) => setResolution(event.target.value)}><option>720P</option><option>1080P</option></select></label>
+              <label>動画の長さ<select value={duration} onChange={(event) => dispatchEditor({ type: 'patch', patch: { duration: event.target.value } })}><option>5秒</option><option>10秒</option><option>15秒</option></select></label>
+              <label>解像度<select value={resolution} onChange={(event) => dispatchEditor({ type: 'patch', patch: { resolution: event.target.value } })}><option>720P</option><option>1080P</option></select></label>
             </div>
             <button type="button" disabled data-testid="video-generation-blocked" aria-disabled="true" title="video_provider_not_admitted: 動画providerの利用可能状態が未確認です" data-lightchain-provider-route="unsupported" className="video-source-existing-generate">AI生成 <span>600</span></button>
+            {(onPersist || onHandoffToCanvas) && <div className="video-source-existing-actions" aria-label="動画編集の保存操作">
+              {onPersist && <button type="button" data-testid="video-draft-save" disabled={isSaving} onClick={() => void handleSave()}>保存</button>}
+              {onHandoffToCanvas && <button type="button" data-testid="video-canvas-handoff" disabled={isSaving} onClick={() => void onHandoffToCanvas(currentValues)}>Canvasへ</button>}
+            </div>}
           </div>
-        </aside>
+        </aside>}
 
         <aside className="video-source-existing-project-rail absolute left-4 top-6 z-30 w-[264px] overflow-hidden rounded-xl border bg-[#252b2d] text-sm text-neutral-200 shadow-xl">
-          <div className="flex h-[35px] items-center border-b border-white/10 px-3 text-xs text-neutral-300"><img src={LIGHTCHAIN_VIDEO_PROJECT_ICON} alt="" className="mr-2 size-5 rounded" />動画ワークステーション</div>
+          <div className="flex h-[35px] items-center border-b border-white/10 px-3 text-xs text-neutral-300">動画ワークステーション</div>
           <button type="button" onClick={onBack} className="flex h-[48px] w-full items-center px-3 text-left hover:bg-white/5"><span aria-hidden="true" className="mr-5 text-lg">‹</span>Untitled</button>
         </aside>
 
         <label htmlFor="video-main-image-upload" aria-label="アセット" title="アセット" className="video-source-existing-asset-trigger absolute left-4 top-[356px] z-30 flex size-12 cursor-pointer items-center justify-center rounded-lg border bg-[#252b2d] text-neutral-200 hover:bg-[#30383a]"><Layers size={19} /></label>
-        <input id="video-main-image-upload" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="sr-only" onChange={onImageChange} />
+        <input ref={mainImageInputRef} id="video-main-image-upload" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="sr-only" onChange={onImageChange} />
         <div className="video-source-existing-points"><Sparkles size={14} /> 残り生成回数 <strong>9</strong></div>
         <div className="video-source-existing-task"><span><Layers size={14} /> タスク</span><span>0&nbsp;&nbsp;進行中⌃</span></div>
         <div className="video-source-existing-canvas-toolbar" role="toolbar" aria-label="キャンバスツール">
-          <button type="button" aria-label="選択" className="is-active"><MousePointer2 size={17} /></button><button type="button" aria-label="移動"><Hand size={17} /></button><button type="button" aria-label="画像を追加"><ImagePlus size={17} /></button><button type="button" aria-label="元に戻す"><Undo2 size={17} /></button><button type="button" aria-label="やり直す"><Redo2 size={17} /></button>
+          <button type="button" aria-label="選択" aria-pressed={activeTool === 'select'} className={activeTool === 'select' ? 'is-active' : ''} onClick={() => setActiveTool('select')}><MousePointer2 size={17} /></button><button type="button" aria-label="移動" aria-pressed={activeTool === 'pan'} className={activeTool === 'pan' ? 'is-active' : ''} onClick={() => setActiveTool('pan')}><Hand size={17} /></button><button type="button" aria-label="画像を追加" onClick={() => mainImageInputRef.current?.click()}><ImagePlus size={17} /></button><button type="button" aria-label="元に戻す" onClick={() => dispatchEditor({ type: 'undo' })}><Undo2 size={17} /></button><button type="button" aria-label="やり直す" onClick={() => dispatchEditor({ type: 'redo' })}><Redo2 size={17} /></button>
         </div>
-        <div className="video-source-existing-zoom-controls"><button type="button" aria-label="縮小"><ZoomOut size={15} /></button><span>40%</span><button type="button" aria-label="拡大"><ZoomIn size={15} /></button></div>
-        <button type="button" aria-label="ハンドブック" className="video-source-existing-handbook"><BookOpen size={17} /></button><button type="button" aria-label="パネル" className="video-source-existing-panel-toggle"><ImageIcon size={17} /></button>
+        <div className="video-source-existing-zoom-controls"><button type="button" aria-label="縮小" onClick={() => changeZoom('out')}><ZoomOut size={15} /></button><span>{zoom}%</span><button type="button" aria-label="拡大" onClick={() => changeZoom('in')}><ZoomIn size={15} /></button></div>
+        <button type="button" aria-label="ハンドブック" className="video-source-existing-handbook" onClick={() => setIsHandbookOpen((open) => !open)}><BookOpen size={17} /></button><button type="button" aria-label="パネル" className="video-source-existing-panel-toggle" onClick={() => setIsPanelOpen(true)}><ImageIcon size={17} /></button>
+        {isHandbookOpen && <div className="video-source-existing-handbook-popover" role="dialog" aria-label="ハンドブック">
+          <div className="flex items-center justify-between gap-4"><strong>動画ワークステーション</strong><button type="button" aria-label="ハンドブックを閉じる" onClick={() => setIsHandbookOpen(false)}>×</button></div>
+          <p className="mt-2">画像を追加し、修正指示と動画設定を確認してから生成へ進みます。</p>
+        </div>}
       </div>
+      {isVideoExpanded && <div className="video-source-existing-lightbox" role="dialog" aria-label="動画プレビュー">
+        <button type="button" aria-label="動画プレビューを閉じる" className="video-source-existing-lightbox-close" onClick={() => setIsVideoExpanded(false)}>×</button>
+        <LightchainVideoImage src={displayVideo} alt="動画プレビュー" fallbackLabel="動画プレビュー" />
+        <p>{duration} · {resolution}</p>
+      </div>}
     </main>
   );
 }
@@ -965,11 +1443,11 @@ export function VideoSourceEditorParityLegacy({
         <div className="relative mt-[80px] min-h-[660px] rounded-2xl">
           {secondaryImageUrl && (
             <div className="absolute left-[29.7%] top-[239px] h-[375px] w-[300px] overflow-hidden rounded-[40px] bg-[#22282a] shadow-2xl">
-              <img src={secondaryImageUrl} alt="imgResult" className="h-full w-full object-cover" />
+              <LightchainVideoImage src={secondaryImageUrl} alt="imgResult" className="h-full w-full object-cover" fallbackLabel="参照素材" />
             </div>
           )}
           <div className="absolute left-[18.4%] top-0 z-10 h-[300px] w-[375px] overflow-hidden rounded-[40px] bg-[#202627] shadow-2xl">
-            <img src={imageUrl} alt="imgResult" className="h-full w-full object-cover" />
+            <LightchainVideoImage src={imageUrl} alt="imgResult" className="h-full w-full object-cover" fallbackLabel="メイン画像" />
             <span className="absolute right-3 top-3 rounded bg-black/35 px-2 py-1 text-sm text-white">↗</span>
           </div>
 
@@ -979,7 +1457,7 @@ export function VideoSourceEditorParityLegacy({
               ✨ 参考動画をアップロードしてワンクリックで再現
             </p>
             <div className="mt-2 flex items-center gap-2 rounded-lg bg-white/10 p-2">
-              <img src={imageUrl} alt="" className="h-7 w-7 rounded object-cover" />
+              <LightchainVideoImage src={imageUrl} alt="メイン画像" className="h-7 w-7 rounded object-cover" fallbackLabel="素材" />
               <span>メイン画像</span>
             </div>
             <p className="mt-3 text-[11px] text-neutral-400">参照動画<span className="text-cyan-300">*</span></p>
@@ -1023,7 +1501,7 @@ export function VideoSourceEditorParityLegacy({
               data-lightchain-provider-route="unsupported"
               className="mt-3 w-full rounded-lg bg-cyan-300/85 px-2 py-2 text-[11px] font-semibold text-neutral-950 disabled:cursor-not-allowed"
             >
-              権限がありません 6
+              AI生成 <span>600</span>
             </button>
           </aside>
         </div>

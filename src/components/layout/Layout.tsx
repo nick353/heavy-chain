@@ -18,7 +18,7 @@ import { ChevronDown, Globe2, HelpCircle, History, User, UserCircle } from 'luci
 // Source logo provenance: src="/assets/lightchain-logo.svg". The inline component avoids a remote asset dependency.
 
 export function Layout() {
-  const { user, profile, signOut } = useAuthStore();
+  const { user, profile, signOut, isLoading, isInitialized, authRecoveryRequired, authServiceUnavailable } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
@@ -31,8 +31,15 @@ export function Layout() {
   
   // Determine if we should show sidebar (only for authenticated users on dashboard pages)
   // Exclude public pages and auth pages
-  const isPublicPage = ['/login', '/login-m', '/signup', '/forgot-password', '/'].includes(location.pathname);
-  const showSidebar = user && !isPublicPage;
+  const isPublicPage = ['/login', '/login-m', '/signup', '/forget-password', '/forgot-password', '/'].includes(location.pathname);
+  const showSidebar = Boolean(user && !isPublicPage);
+  // Protected routes must not flash the public login CTA while a valid
+  // host-only session is being hydrated. The canonical Lightchain workspace
+  // keeps the authenticated shell continuous; the route guard owns the
+  // eventual redirect only after auth has conclusively resolved.
+  const hidePendingProtectedChrome = Boolean(
+    !user && !isPublicPage && (!isInitialized || isLoading || authRecoveryRequired || authServiceUnavailable),
+  );
   const lightchainParityAliases = lightchainUnifiedFeatureCatalog
     .flatMap((feature) => [feature.route, ...getLightchainUnifiedRouteAliases(feature.id)])
     .filter((route) => route !== '/brand/settings')
@@ -58,6 +65,7 @@ export function Layout() {
     '/editor/patternDesign',
     '/model-base/style',
     '/designProduction',
+    '/board',
     '/flow/integration',
     '/flow/laboratory',
     '/flow/orientedDesign',
@@ -74,6 +82,8 @@ export function Layout() {
     || lightchainParityAliases.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
     || lightchainDirectRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
     || lightchainWorkspaceRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
+  const isVideoWorkstationRoute = location.pathname === '/flow/GenerateShortVideo'
+    || location.pathname.startsWith('/flow/GenerateShortVideo/');
   const isLightchainPrintRoute = location.pathname === '/lightchain/printing-image';
 
   const handleLightchainSignOut = async () => {
@@ -208,7 +218,7 @@ export function Layout() {
                           ) : (
                             <>
                               <button type="button" onClick={() => setIsLightAccountDetailOpen(true)} className="block w-full px-4 py-3 text-left transition hover:bg-neutral-100">マイアカウント</button>
-                              <Link to="/designProduction" className="block px-4 py-3 transition hover:bg-neutral-100">デザインドキュメント</Link>
+                              <Link to="/board" className="block px-4 py-3 transition hover:bg-neutral-100">デザインドキュメント</Link>
                               <Link to="/asset-center" className="block px-4 py-3 transition hover:bg-neutral-100">ライブラリー</Link>
                               <Link to="/brand/settings" className="block px-4 py-3 transition hover:bg-neutral-100">チーム管理</Link>
                               <div className="my-1 border-t border-neutral-200" />
@@ -243,21 +253,33 @@ export function Layout() {
           </header>
 
           <main id="main-content" className={`${isLightchainPrintRoute ? 'min-h-[calc(100vh-48px)] bg-[#070b0d]' : isLightchainRoute ? 'min-h-0 flex-1 overflow-y-auto scrollbar-hide bg-[#171b1c]' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className={isLightchainRoute ? 'w-full' : 'mx-auto w-full max-w-[1800px]'}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            {isVideoWorkstationRoute || isLightchainRoute ? (
+              // The Light Chain shell does not fade route content in. Keeping
+              // the source-shaped routes in a direct wrapper also prevents a
+              // hidden-tab capture/restore from leaving the page at the
+              // motion component's initial opacity of 0.
+              <div className="w-full"><Outlet /></div>
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className={isLightchainRoute ? 'w-full' : 'mx-auto w-full max-w-[1800px]'}
+                >
+                  <Outlet />
+                </motion.div>
+              </AnimatePresence>
+            )}
           </main>
           {!isLightchainRoute && <FeedbackButton />}
         </div>
+      ) : hidePendingProtectedChrome ? (
+        <main id="main-content" className="min-h-screen bg-[#05090b]" tabIndex={-1}>
+          <Outlet />
+        </main>
       ) : (
         <>
           <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'glass-nav py-2' : 'bg-transparent py-4'}`}>

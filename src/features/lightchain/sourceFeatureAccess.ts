@@ -11,6 +11,13 @@ export type LightchainSourceFeatureId = 'fabric-image' | 'printing-image' | 'mod
 export type LightchainSourceFeatureAccess = 'admitted' | 'denied' | 'unknown';
 export type LightchainSourceGenerationAccess = 'permitted' | 'denied' | 'unknown';
 
+const SOURCE_FEATURE_BY_WORKFLOW_ID: Readonly<Record<string, LightchainSourceFeatureId>> = Object.freeze({
+  'model-matrix': 'model-matrix',
+  'ai-fitting': 'model-matrix',
+  'fabric-image': 'fabric-image',
+  'printing-image': 'printing-image',
+});
+
 const OBSERVED_SOURCE_FEATURE_ACCESS: Readonly<Partial<Record<LightchainSourceFeatureId, LightchainSourceFeatureAccess>>> = Object.freeze({
   // Fresh source readback r4 on 2026-09-20: /tools/fabric exposed both
   // upload inputs and the separate 「権限がありません」 generation gate.
@@ -37,4 +44,11 @@ export function getLightchainSourceGenerationAccess(
   featureId: LightchainSourceFeatureId,
 ): LightchainSourceGenerationAccess {
   return OBSERVED_SOURCE_GENERATION_ACCESS[featureId] ?? 'unknown';
+}
+
+export function getLightchainSourceGenerationAccessForWorkflow(
+  workflowId: string,
+): LightchainSourceGenerationAccess {
+  const sourceFeatureId = SOURCE_FEATURE_BY_WORKFLOW_ID[workflowId];
+  return sourceFeatureId ? getLightchainSourceGenerationAccess(sourceFeatureId) : 'unknown';
 }

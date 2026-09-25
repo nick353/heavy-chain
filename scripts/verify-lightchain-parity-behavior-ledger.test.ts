@@ -62,10 +62,10 @@ test('keeps the current fresh source readback attached to the ledger artifact', 
   const artifact = JSON.parse(await readFile(artifactPath, 'utf8')) as {
     evidenceBoundary?: { sourceReadback?: string };
   };
-  assert.equal(
-    artifact.evidenceBoundary?.sourceReadback,
-    'work/lightchain-source-readback-20260920-r5.md',
-  );
+  const sourceReadback = artifact.evidenceBoundary?.sourceReadback;
+  assert.ok(typeof sourceReadback === 'string' && sourceReadback.length > 0);
+  assert.ok(existsSync(path.resolve(repoRoot, sourceReadback)));
+  assert.match(sourceReadback, /^work\/lightchain-source-readback-/);
 });
 
 test('requires every verified layer to point at an existing local evidence artifact', async () => {

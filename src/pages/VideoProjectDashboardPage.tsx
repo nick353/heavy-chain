@@ -1,12 +1,22 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { MoreVertical } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore';
+import {
+  deleteWorkspaceArtifactsPersisted,
+  listWorkspaceArtifacts,
+  saveWorkspaceArtifactBestEffort,
+} from '../lib/localWorkspaceArtifacts';
+import {
+  buildRecentVideoDashboardProjects,
+  buildSavedVideoDashboardProjects,
+  type VideoDashboardProject,
+} from '../lib/videoDashboardProjects';
+import { getVideoProjectCodeFromArtifact } from '../lib/videoWorkspacePersistence';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 
-type VideoProject = {
-  id: string;
-  title: string;
-  age: string;
-  imageUrl?: string;
-  reference?: boolean;
-};
+type VideoProject = VideoDashboardProject;
 
 const LIGHTCHAIN_VIDEO_SNAPSHOT_ORIGIN = 'https://static-jp.linkaigc.com/saas';
 const LIGHTCHAIN_TEST_VIDEO_SNAPSHOT_ORIGIN = 'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas';
@@ -29,9 +39,98 @@ const projects: VideoProject[] = [
 
 export function VideoProjectDashboardPage() {
   const navigate = useNavigate();
+  const { user, currentBrand } = useAuthStore();
+  const brandId = currentBrand?.id ?? '';
+  const userId = user?.id;
+  const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
+  const [pinnedProjectIds, setPinnedProjectIds] = useState<Set<string>>(new Set());
+  const [pinsHydrated, setPinsHydrated] = useState(false);
+  const recentProjects = buildRecentVideoDashboardProjects(
+    brandId ? buildSavedVideoDashboardProjects(listWorkspaceArtifacts(brandId, userId)) : [],
+    projects.filter((project) => !project.reference),
+  );
 
   const openDetail = (project: VideoProject) => {
     navigate(`/flow/GenerateShortVideo/detail?boardProjectCode=${encodeURIComponent(project.id)}&boardProjectType=GenerateShortVideoCustom`);
+  };
+
+  useEffect(() => {
+    if (!brandId) {
+      setPinsHydrated(false);
+      setPinnedProjectIds(new Set());
+      return;
+    }
+    setPinsHydrated(false);
+    try {
+      const stored = window.localStorage.getItem(`heavy-video-project-pins:${brandId}`);
+      const parsed = stored ? JSON.parse(stored) : [];
+      setPinnedProjectIds(new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []));
+    } catch {
+      setPinnedProjectIds(new Set());
+    }
+    setPinsHydrated(true);
+  }, [brandId]);
+
+  useEffect(() => {
+    if (!brandId || !pinsHydrated) return;
+    try {
+      window.localStorage.setItem(`heavy-video-project-pins:${brandId}`, JSON.stringify([...pinnedProjectIds]));
+    } catch {
+      // Pinning is a convenience; keep the dashboard usable when storage is unavailable.
+    }
+  }, [brandId, pinnedProjectIds, pinsHydrated]);
+
+  const findLocalArtifact = (projectId: string) => {
+    if (!brandId) return undefined;
+    return listWorkspaceArtifacts(brandId, userId).find((artifact) => (
+      artifact.id === projectId || getVideoProjectCodeFromArtifact(artifact) === projectId
+    ));
+  };
+
+  const saveProjectToLibrary = async (project: VideoProject) => {
+    const source = findLocalArtifact(project.id);
+    if (!source || !brandId) {
+      toast.error('この参考プロジェクトの正規保存データを確認できません');
+      return;
+    }
+    const result = await saveWorkspaceArtifactBestEffort({
+      ...source,
+      id: undefined,
+      brandId,
+      scopeId: userId,
+      metadata: {
+        ...source.metadata,
+        librarySource: 'video-project-card-menu',
+        libraryGroup: 'マイライブラリー',
+        copiedFromArtifactId: source.id,
+      },
+    });
+    if (!result.localPersisted) {
+      toast.error('ライブラリー保存の確認に失敗しました');
+      return;
+    }
+    if (cloudflareDataPlane && !result.remote) {
+      toast.error('リモート保存の確認に失敗しました。再送せず、同じ保存依頼を照合してください');
+      return;
+    }
+    setOpenProjectMenuId(null);
+    toast.success('アセットライブラリーに保存しました');
+  };
+
+  const deleteProject = (project: VideoProject) => {
+    if (!brandId || !window.confirm(`「${project.title}」を削除しますか？`)) return;
+    const source = findLocalArtifact(project.id);
+    if (!source) {
+      toast.error('このプロジェクトの正規保存データを確認できません');
+      return;
+    }
+    const result = deleteWorkspaceArtifactsPersisted(brandId, [source.id], userId);
+    if (!result.ok) {
+      toast.error('プロジェクトを削除できませんでした');
+      return;
+    }
+    setOpenProjectMenuId(null);
+    toast.success('プロジェクトを削除しました');
   };
 
   return (
@@ -44,39 +143,84 @@ export function VideoProjectDashboardPage() {
         <h1 className="text-base font-semibold leading-6">動画ワークステーション</h1>
 
         <section className="mt-4" aria-label="マイプロジェクト">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-[repeat(7,220px)]">
-            <button
-              type="button"
+          <div className="flex flex-wrap gap-x-4 gap-y-4">
+            <div
+              data-testid="video-project-new"
               onClick={() => navigate('/flow/GenerateShortVideo/detail?boardProjectCode=&boardProjectType=')}
-              aria-label="新規ファイル"
-              className="group flex h-[240px] w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-[#25292c] text-left transition hover:bg-[#2d3235] lg:w-[220px]"
+              className="group relative h-60 w-[220px] cursor-pointer overflow-hidden rounded-2xl bg-[#25292c] text-white transition hover:bg-[#2d3235]"
             >
-              <img src={PROJECT_NEW_FILE_ICON} alt="project" className="size-20 object-contain" />
-              <span className="mt-5 text-sm font-medium text-neutral-200">新規ファイル</span>
-            </button>
+              <div className="flex h-full flex-col items-center justify-center">
+                <img src={PROJECT_NEW_FILE_ICON} alt="project" className="size-20 object-contain" />
+                <span className="mt-5 text-sm font-medium text-neutral-200">新規ファイル</span>
+              </div>
+            </div>
 
             <div data-testid="video-recent-projects" className="contents">
-              {projects.filter((project) => !project.reference).map((project) => (
-              <button
-                key={project.id}
-                type="button"
-                onClick={() => openDetail(project)}
-                className="group flex h-[240px] w-full flex-col overflow-hidden rounded-2xl bg-[#25292c] text-left transition hover:bg-[#2d3235] lg:w-[220px]"
-              >
-                <div className={`flex h-[170px] shrink-0 justify-center overflow-hidden ${project.imageUrl ? 'bg-[#25292c] items-start' : 'bg-[#383d3e] items-center'}`}>
-                  {project.imageUrl ? (
-                    <img src={project.imageUrl} alt="coverImg" className="object-cover" loading="eager" />
-                  ) : (
-                    <img src={PROJECT_DEFAULT_COVER} alt="coverImg" className="size-12 object-contain" />
-                  )}
-                </div>
-                <div className="flex min-h-0 flex-1 items-start justify-between gap-2 px-3 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-neutral-200">{project.title}</p>
-                    <p className="mt-1 truncate text-xs text-neutral-400">{project.age} <span data-testid="video-project-edit-label">修正</span></p>
+              {recentProjects.map((project) => (
+                <div
+                  key={project.id}
+                  data-testid="video-project-open"
+                  onClick={() => openDetail(project)}
+                  className="group relative h-60 w-[220px] cursor-pointer overflow-hidden rounded-2xl bg-[#25292c] text-white transition hover:bg-[#2d3235]"
+                >
+                  <div className="absolute inset-0 flex flex-col">
+                    <div className={`flex flex-1 items-center justify-center overflow-hidden ${project.imageUrl ? 'bg-[#25292c]' : 'bg-[#383d3e]'}`}>
+                      {project.imageUrl ? (
+                        <img src={project.imageUrl} alt="coverImg" className="h-full w-full object-cover" loading="eager" />
+                      ) : (
+                        <img src={PROJECT_DEFAULT_COVER} alt="coverImg" className="size-12 object-contain" />
+                      )}
+                    </div>
+                    <div className="w-full bg-[#25292c] px-3 py-3 text-sm text-neutral-400">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-neutral-200">{pinnedProjectIds.has(project.id) ? '📌 ' : ''}{project.title}</p>
+                        <p className="mt-1 truncate text-xs text-neutral-400">{project.age} <span data-testid="video-project-edit-label">修正</span></p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute right-2 top-2 z-20">
+                    <button
+                      type="button"
+                      data-track-id="GenerateShortVideo:project-more"
+                      aria-label={`${project.title}のメニュー`}
+                      aria-haspopup="menu"
+                      aria-expanded={openProjectMenuId === project.id}
+                      className="rounded-lg bg-black/50 p-2 text-neutral-200 opacity-0 transition group-hover:opacity-100 focus:opacity-100 hover:bg-black/70"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setOpenProjectMenuId((current) => current === project.id ? null : project.id);
+                      }}
+                    >
+                      <MoreVertical className="size-4" aria-hidden="true" />
+                    </button>
+                    {openProjectMenuId === project.id && (
+                      <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10"
+                          onClick={() => {
+                            setPinnedProjectIds((current) => {
+                              const next = new Set(current);
+                              if (next.has(project.id)) next.delete(project.id);
+                              else next.add(project.id);
+                              return next;
+                            });
+                            setOpenProjectMenuId(null);
+                          }}
+                        >
+                          ピン留め
+                        </button>
+                        <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => void saveProjectToLibrary(project)}>
+                          アセットライブラリに保存
+                        </button>
+                        <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => deleteProject(project)}>
+                          削除
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </button>
               ))}
             </div>
           </div>
@@ -84,24 +228,26 @@ export function VideoProjectDashboardPage() {
 
         <section className="mt-5" aria-labelledby="video-reference-heading">
           <h2 id="video-reference-heading" className="text-base font-semibold leading-6">参考事例</h2>
-          <div className="mt-[14px] grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-[repeat(5,220px)]">
+          <div className="mt-[14px] flex flex-wrap gap-x-4 gap-y-4">
             {projects.filter((project) => project.reference).map((project) => (
-              <button
+              <div
                 key={project.id}
-                type="button"
+                data-testid="video-project-open"
                 onClick={() => openDetail(project)}
-                className="group flex h-[240px] w-full flex-col overflow-hidden rounded-2xl bg-[#25292c] text-left transition hover:bg-[#2d3235] lg:w-[220px]"
+                className="group relative h-60 w-[220px] cursor-pointer overflow-hidden rounded-2xl bg-[#25292c] text-white transition hover:bg-[#2d3235]"
               >
-                <div className="h-[168px] shrink-0 overflow-hidden bg-[#25292c]">
-                  {project.imageUrl && <img src={project.imageUrl} alt="coverImg" className="object-cover" loading="eager" />}
-                </div>
-                <div className="flex min-h-0 flex-1 items-start justify-between gap-2 px-3 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-neutral-200">{project.title}</p>
-                    <p className="mt-1 truncate text-xs text-neutral-400">{project.age} <span data-testid="video-project-edit-label">修正</span></p>
+                <div className="absolute inset-0 flex flex-col">
+                  <div className="flex flex-1 items-center justify-center overflow-hidden bg-[#25292c]">
+                    {project.imageUrl && <img src={project.imageUrl} alt="coverImg" className="h-full w-full object-cover" loading="eager" />}
+                  </div>
+                  <div className="w-full bg-[#25292c] px-3 py-3 text-sm text-neutral-400">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-neutral-200">{project.title}</p>
+                      <p className="mt-1 truncate text-xs text-neutral-400">{project.age} <span data-testid="video-project-edit-label">修正</span></p>
+                    </div>
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </section>

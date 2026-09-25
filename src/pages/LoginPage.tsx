@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Chrome, Eye, Globe2, HelpCircle, LockKeyhole, Mail } from 'lucide-react';
-import { Button } from '../components/ui';
-import { LightchainLogo } from '../components/LightchainLogo';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Eye } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { getAuthErrorMessage } from '../lib/authErrorMessage';
 import { probeAuthService } from '../lib/auth';
+import { resolveAuthReturnPath } from '../lib/authRedirect';
 import toast from 'react-hot-toast';
 
 export function LoginPage() {
+  const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut, signInWithEmail, signInWithGoogle, signInWithApple, isLoading } = useAuthStore();
-  const [email, setEmail] = useState('');
+  const { user, signInWithEmail, isLoading } = useAuthStore();
+  const [accountId, setAccountId] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ accountId?: string; password?: string }>({});
   const [authError, setAuthError] = useState<string | null>(null);
   const [authServiceWarning, setAuthServiceWarning] = useState<string | null>(null);
   const [authServiceChecking, setAuthServiceChecking] = useState(false);
@@ -51,9 +51,8 @@ export function LoginPage() {
   }, [checkAuthService, user]);
 
   const validate = () => {
-    const nextErrors: { email?: string; password?: string } = {};
-    if (!email) nextErrors.email = 'メールアドレスを入力してください';
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) nextErrors.email = '有効なメールアドレスを入力してください';
+    const nextErrors: { accountId?: string; password?: string } = {};
+    if (!accountId.trim()) nextErrors.accountId = 'アカウントIDを入力してください';
     if (!password) nextErrors.password = 'パスワードを入力してください';
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -64,9 +63,9 @@ export function LoginPage() {
     if (!validate()) return;
     setAuthError(null);
     try {
-      await signInWithEmail(email, password);
+      await signInWithEmail(accountId.trim(), password);
       toast.success('ログインしました');
-      navigate('/designProduction', { replace: true });
+      navigate(resolveAuthReturnPath(location.search, window.location.origin), { replace: true });
     } catch (error: any) {
       const message = getAuthErrorMessage(error, 'ログインに失敗しました');
       setAuthError(message);
@@ -74,90 +73,32 @@ export function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setAuthError(null);
-    try {
-      await signInWithGoogle();
-    } catch (error: any) {
-      const message = getAuthErrorMessage(error, 'Googleログインに失敗しました');
-      setAuthError(message);
-      toast.error(message);
-    }
-  };
-
-  const handleAppleLogin = async () => {
-    setAuthError(null);
-    try {
-      await signInWithApple();
-    } catch (error: any) {
-      const message = getAuthErrorMessage(error, 'Appleログインに失敗しました');
-      setAuthError(message);
-      toast.error(message);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast.success('ログアウトしました');
-      navigate('/login', { replace: true });
-    } catch (error: any) {
-      toast.error(error.message || 'ログアウトに失敗しました');
-    }
-  };
-
   return (
-    <main className="min-h-screen px-4 py-8 text-white">
-      <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1500px] flex-col">
-        <header className="flex items-center justify-between border-b border-white/10 pb-5">
-          <Link to="/" aria-label="Lightchain AI" className="inline-flex items-center text-white">
-            <LightchainLogo />
-          </Link>
-          <div className="flex items-center gap-1 text-sm text-neutral-300 sm:gap-2">
-            <button type="button" aria-label="日本語" className="hidden items-center gap-1 rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-white sm:inline-flex">
-              <Globe2 className="h-4 w-4" />
-              日本語
-            </button>
-            <button type="button" aria-label="ヘルプセンター" className="hidden items-center gap-2 rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-white sm:inline-flex">
-              <HelpCircle className="h-4 w-4" />
-              ヘルプセンター
-            </button>
-          </div>
-        </header>
+    <main className="relative min-h-screen overflow-hidden bg-[#070b12] text-white">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_72%_at_0%_4%,rgba(0,172,174,0.35),transparent_72%),radial-gradient(50%_48%_at_2%_100%,rgba(29,61,201,0.38),transparent_72%),radial-gradient(42%_52%_at_100%_100%,rgba(23,48,151,0.42),transparent_75%)]" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.11] [background-image:radial-gradient(rgba(137,184,214,0.55)_0.7px,transparent_0.7px)] [background-size:8px_8px]" />
+      <div className="relative mx-auto grid min-h-screen w-full max-w-[1200px] items-center gap-8 px-6 py-10 lg:ml-auto lg:mr-6 lg:w-[calc(100%-3rem)] lg:grid-cols-[minmax(0,1fr)_416px] lg:px-0">
+        <section className="relative z-10 hidden max-w-[720px] lg:block" aria-labelledby="lightchain-login-hero-title">
+          <p className="mb-5 text-[clamp(2.5rem,4vw,4rem)] font-semibold leading-none tracking-[0.015em]">HELLO</p>
+          <h1 id="lightchain-login-hero-title" className="text-[clamp(1.9rem,2.35vw,2.5rem)] font-medium leading-tight tracking-[-0.02em]">
+            アパレル生成AIシステムLightchain <span className="text-[#19c8be]">AI</span>
+          </h1>
+          <p className="mt-7 max-w-[690px] text-base leading-7 text-white/75">
+            Light chainは、アパレル業界におけるさまざまな業務で活用できるAI技術を提供しており、企画から販売までの主要プロセスを幅広くサポートします。
+          </p>
+        </section>
 
-        {user && (
-          <div className="mt-5 flex items-center justify-between gap-3 rounded-[24px] border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm text-cyan-50 backdrop-blur-xl">
-            <div className="min-w-0">
-              <p className="font-semibold">現在ログイン中です</p>
-              <p className="truncate text-cyan-100/80">{user.email}</p>
+        <section className="relative z-10 mx-auto w-full max-w-[416px] rounded-[22px] border border-white/[0.06] bg-[#20252a]/95 px-6 pt-[87px] pb-[57px] shadow-[0_24px_72px_rgba(0,0,0,0.24)] lg:mx-0 lg:justify-self-end sm:px-8 lg:px-0" aria-labelledby="lightchain-login-title">
+          <div className="w-full lg:ml-16 lg:w-[352px] lg:translate-x-[3px]">
+          <div className="mb-6">
+            <div className="mb-3 flex items-center gap-2.5" aria-label="Lightchain">
+              <img src="/assets/lightchain-logo.svg" alt="" className="h-5 w-5" />
+              <span className="text-xs font-semibold tracking-[0.22em] text-white/85">LIGHTchain</span>
             </div>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={isLoading}
-              className="shrink-0 rounded-full border border-cyan-200/30 px-4 py-2 font-semibold text-cyan-50 transition hover:bg-cyan-200/10 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              ログアウト
-            </button>
-          </div>
-        )}
-
-        <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_560px]">
-          <div className="hidden lg:block">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">LIGHTCHAIN AI</p>
-            <h1 className="mt-5 max-w-3xl text-6xl font-semibold leading-none tracking-normal">
-              アパレル制作を、もっと軽く。
+            <h1 id="lightchain-login-title" className="text-[13px] font-normal leading-6 text-white/80">
+              アカウントIDを下に入力してログインをお願いします。
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-400">
-              生地、プリント、フィッティング、グラフィック制作をひとつのワークスペースで進めます。
-            </p>
           </div>
-
-          <div className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(8,12,13,0.96),rgba(11,15,18,0.92))] p-7 shadow-[0_28px_90px_rgba(0,0,0,0.5)] sm:p-10">
-            <div className="mb-8">
-              <p className="text-sm font-semibold tracking-[0.26em] text-cyan-300">LIGHTCHAIN AI / LOGIN</p>
-              <h2 className="mt-6 text-2xl font-semibold">ログイン</h2>
-            </div>
 
             {authError && (
               <div role="alert" className="mb-6 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm leading-6 text-amber-100">
@@ -182,79 +123,51 @@ export function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-7">
               <label className="block">
-                <span className="sr-only">メールアドレス</span>
-                <span className="flex min-h-[58px] items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.04] px-4 ring-1 ring-transparent focus-within:border-cyan-300/70 focus-within:bg-cyan-300/[0.06]">
-                  <Mail className="h-5 w-5 text-neutral-500" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="アカウントを入力"
-                    autoComplete="email"
-                    disabled={isLoading}
-                    className="min-w-0 flex-1 border-0 bg-transparent text-white outline-none placeholder:text-neutral-500"
-                  />
-                </span>
-                {errors.email && <span className="mt-2 block text-sm text-red-300">{errors.email}</span>}
+                <span className="sr-only">アカウントID</span>
+                <input
+                  type="text"
+                  value={accountId}
+                  onChange={(event) => setAccountId(event.target.value)}
+                  placeholder="アカウントを入力"
+                  autoComplete="username"
+                  aria-label="アカウントを入力"
+                  disabled={isLoading}
+                  className="h-12 w-full rounded-[8px] border border-white/10 bg-[#252a2f] px-6 text-sm text-white outline-none placeholder:text-white/40 focus:border-cyan-300/60"
+                />
+                {errors.accountId && <span className="mt-2 block text-sm text-red-300">{errors.accountId}</span>}
               </label>
 
               <label className="block">
                 <span className="sr-only">パスワード</span>
-                <span className="flex min-h-[58px] items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.04] px-4 ring-1 ring-transparent focus-within:border-cyan-300/70 focus-within:bg-cyan-300/[0.06]">
-                  <LockKeyhole className="h-5 w-5 text-neutral-500" />
+                <span className="relative block h-12">
                   <input
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="パスワードを入力する"
                     autoComplete="current-password"
+                    aria-label="パスワードを入力する"
                     disabled={isLoading}
-                    className="min-w-0 flex-1 border-0 bg-transparent text-white outline-none placeholder:text-neutral-500"
+                    className="h-full w-full rounded-[8px] border border-white/10 bg-[#252a2f] px-6 text-sm text-white outline-none placeholder:text-white/40 focus:border-cyan-300/60"
                   />
-                  <Eye className="h-5 w-5 text-neutral-500" />
+                  <Eye aria-hidden="true" className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
                 </span>
                 {errors.password && <span className="mt-2 block text-sm text-red-300">{errors.password}</span>}
               </label>
 
-              <div className="flex justify-end">
-                <Link to="/forgot-password" className="text-sm font-semibold text-cyan-300 transition hover:text-cyan-200">
-                  パスワードを忘れましたか?
-                </Link>
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-end">
+                  <Link to="/forget-password" className="text-sm font-semibold leading-[26px] text-cyan-300 transition hover:text-cyan-200">
+                    パスワードを忘れましたか?
+                  </Link>
+                </div>
+                <button type="submit" disabled={isLoading} className="h-12 w-full rounded-lg bg-[#12c5bc] text-base font-semibold text-[#071114] transition-colors hover:bg-[#24d1c8] disabled:cursor-not-allowed disabled:opacity-60">
+                  ログイン
+                </button>
               </div>
-
-              <Button type="submit" isLoading={isLoading} disabled={isLoading} size="lg" className="min-h-[58px] w-full rounded-2xl bg-gradient-to-r from-cyan-300 via-sky-300 to-indigo-300 text-base font-semibold text-neutral-950 hover:opacity-95">
-                ログイン
-              </Button>
             </form>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-                className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-white"
-              >
-                <Chrome className="h-4 w-4" />
-                Google
-              </button>
-              <button
-                type="button"
-                onClick={handleAppleLogin}
-                disabled={isLoading}
-                className="min-h-[48px] rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-white"
-              >
-                Apple
-              </button>
-            </div>
-
-            <p className="mt-7 text-center text-sm text-neutral-400">
-              アカウントをお持ちでない場合は{' '}
-              <Link to="/signup" className="font-semibold text-cyan-300 hover:text-cyan-200">
-                新規登録
-              </Link>
-            </p>
           </div>
         </section>
       </div>

@@ -9,7 +9,14 @@ export function parseRange(value, size) {
   return { offset: start, length: end - start + 1 };
 }
 
-const PUBLIC_BROWSER_PATHS = new Set(['/login', '/login-m', '/auth/callback', '/reset-password']);
+const PUBLIC_BROWSER_PATHS = new Set([
+  '/login',
+  '/login-m',
+  '/forget-password',
+  '/forgot-password',
+  '/auth/callback',
+  '/reset-password',
+]);
 const SOURCE_LIGHTCHAIN_FONT_URL = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/common/AlimamaFangYuanTiVF-Thin.woff';
 
 function isHtmlNavigationPath(path) {
@@ -39,8 +46,16 @@ function hasValidAuthPayload(payload) {
   return Number.isFinite(expiresAt) && expiresAt > Date.now();
 }
 
-async function hasAuthenticatedBrowserSession(request, env) {
-  if (!env.AUTH_SERVICE) return false;
+/**
+ * Keep an unavailable auth service distinct from an anonymous browser.
+ *
+ * A transient auth Worker/network failure must not turn a valid host-only
+ * cookie into a login redirect on every direct route navigation.  The SPA
+ * still fails closed (it has no admitted user while the probe is unavailable),
+ * but it can render its retry/loading boundary and preserve the current path.
+ */
+async function getBrowserSessionState(request, env) {
+  if (!env.AUTH_SERVICE) return 'unavailable';
   const headers = new Headers();
   const cookie = request.headers.get('cookie');
   if (cookie) headers.set('cookie', cookie);
@@ -52,10 +67,10 @@ async function hasAuthenticatedBrowserSession(request, env) {
       headers,
     });
     const response = await env.AUTH_SERVICE.fetch(sessionRequest);
-    if (!response.ok) return false;
-    return hasValidAuthPayload(await response.json());
+    if (!response.ok) return response.status >= 500 ? 'unavailable' : 'anonymous';
+    return hasValidAuthPayload(await response.json()) ? 'authenticated' : 'anonymous';
   } catch {
-    return false;
+    return 'unavailable';
   }
 }
 
@@ -114,8 +129,8 @@ export default {
     if (!asset) {
       if (path.startsWith('/assets/') && /\.(onnx|wasm)$/.test(path)) return new Response('Not found', { status: 404 });
       if (isHtmlNavigationPath(path) && !PUBLIC_BROWSER_PATHS.has(path)) {
-        const authenticated = await hasAuthenticatedBrowserSession(request, env);
-        if (!authenticated) return sourceLoginRedirect(request);
+        const sessionState = await getBrowserSessionState(request, env);
+        if (sessionState === 'anonymous') return sourceLoginRedirect(request);
       }
       return serveHtml();
     }

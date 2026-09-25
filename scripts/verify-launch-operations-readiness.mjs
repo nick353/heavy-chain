@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
+import { validateCompanionLaunchOperations } from './verify-release-gate-unified.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain-web.nichika2000823.workers.dev');
@@ -12,6 +13,8 @@ const authState = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || firstE
   'output/playwright/prod-auth-refresh-20260625/auth-state.json',
 ]);
 const outDir = args.out || `output/playwright/launch-operations-readiness-${dateStamp()}`;
+const companionReadback = args.companionReadback || process.env.HEAVY_CHAIN_COMPANION_LAUNCH_READBACK ||
+  'output/playwright/g830-launch-ops-production-current-r3/summary.json';
 const expectedAsset = args.expectedAsset
   || process.env.HEAVY_CHAIN_EXPECTED_ASSET
   || readCurrentBuildAsset()
@@ -55,6 +58,19 @@ const trackedHostnames = new Set([
 const generationButtonPattern = /生成する|企画書を保存/;
 
 fs.mkdirSync(outDir, { recursive: true });
+
+if (fs.existsSync(companionReadback)) {
+  const companion = readCompanionLaunchReadback(companionReadback);
+  evidence.mode = 'companion_readback_validation';
+  evidence.sourceReadback = companionReadback;
+  pushCheck('Current Lightchain Companion launch readback is fresh and complete', companion.valid, companion.details);
+  evidence.ok = evidence.checks.every((check) => check.passed);
+  evidence.failed = evidence.checks.filter((check) => !check.passed).map((check) => check.name);
+  const summaryPath = path.join(outDir, 'summary.json');
+  fs.writeFileSync(summaryPath, `${JSON.stringify(evidence, null, 2)}\n`);
+  console.log(JSON.stringify({ ok: evidence.ok, summaryPath, failed: evidence.failed }, null, 2));
+  process.exit(evidence.ok ? 0 : 1);
+}
 
 if (!fs.existsSync(authState)) {
   failEarly(`auth_state_missing: ${authState}`);
@@ -500,6 +516,41 @@ function failEarly(exactBlocker) {
   fs.writeFileSync(summaryPath, `${JSON.stringify(evidence, null, 2)}\n`);
   console.error(JSON.stringify({ ok: false, summaryPath, exactBlocker }, null, 2));
   process.exit(1);
+}
+
+function readCompanionLaunchReadback(filePath) {
+  try {
+    const json = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const capturedAt = Date.parse(json?.capturedAt);
+    const ageMs = Date.now() - capturedAt;
+    const fresh = Number.isFinite(capturedAt) && ageMs >= 0 && ageMs <= 48 * 60 * 60 * 1000;
+    return {
+      valid: fresh && validateCompanionLaunchOperations(json),
+      details: {
+        path: filePath,
+        schema: json?.schema,
+        capturedAt: json?.capturedAt,
+        fresh,
+        ageHours: Number.isFinite(ageMs) ? Math.round((ageMs / 3600000) * 100) / 100 : null,
+        source: json?.source,
+        origin: json?.origin,
+        desktopRouteCount: Array.isArray(json?.routes) ? json.routes.length : 0,
+        mobileRouteCount: Array.isArray(json?.mobile) ? json.mobile.length : 0,
+        authSecretExported: json?.authSecretExported,
+        generationSubmit: json?.irreversibleActions?.generationSubmit,
+        visibleCheckboxCounts: [...(json?.routes || []), ...(json?.mobile || [])].map((route) => ({
+          key: route?.key,
+          count: route?.visibleCheckboxCount,
+        })),
+        cleanup: json?.cleanup,
+      },
+    };
+  } catch (error) {
+    return {
+      valid: false,
+      details: { path: filePath, error: error.message },
+    };
+  }
 }
 
 function isLoginBody(body) {

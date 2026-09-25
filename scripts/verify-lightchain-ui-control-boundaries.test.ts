@@ -8,8 +8,10 @@ const canvasSourcePath = new URL('../src/pages/CanvasEditorPage.tsx', import.met
 const layoutSourcePath = new URL('../src/components/layout/Layout.tsx', import.meta.url);
 const appSourcePath = new URL('../src/App.tsx', import.meta.url);
 const publicHeaderSourcePath = new URL('../src/components/layout/Header.tsx', import.meta.url);
+const launcherHeaderSourcePath = new URL('../src/components/layout/LightchainLauncherHeader.tsx', import.meta.url);
 const landingSourcePath = new URL('../src/pages/LandingPage.tsx', import.meta.url);
 const loginSourcePath = new URL('../src/pages/LoginPage.tsx', import.meta.url);
+const forgotPasswordSourcePath = new URL('../src/pages/ForgotPasswordPage.tsx', import.meta.url);
 const parityPagesSourcePath = new URL('../src/pages/LightchainParityPages.tsx', import.meta.url);
 const lightchainLogoAssetPath = new URL('../public/assets/lightchain-logo.svg', import.meta.url);
 
@@ -31,10 +33,47 @@ test('public and auth recovery shells use the Lightchain identity without extra 
   assert.match(fallback, /ログイン状態を確認しています/);
   assert.doesNotMatch(fallback, /ログイン画面へ|読み込み後にこの導線|grid gap-3 sm:grid-cols-3/);
 
-  assert.match(login, /LIGHTCHAIN AI \/ LOGIN/);
+  assert.match(login, /<p className="mb-5[^>]*>HELLO<\/p>/);
+  assert.match(login, /アパレル生成AIシステムLightchain/);
+  assert.match(login, /Light chainは、アパレル業界におけるさまざまな業務で活用できるAI技術/);
+  assert.match(login, /アカウントIDを下に入力してログインをお願いします。/);
   assert.match(login, /placeholder="アカウントを入力"/);
   assert.match(login, /placeholder="パスワードを入力する"/);
+  assert.doesNotMatch(login, /handleGoogleLogin|handleAppleLogin|>Google<|>Apple<|\/signup|LIGHTCHAIN AI \/ LOGIN/);
   assert.doesNotMatch(login, /HEAVY CHAIN|Heavy Chain/);
+});
+
+test('anonymous login controls preserve the observed Lightchain input geometry without a rights checkbox', async () => {
+  const login = await readFile(loginSourcePath, 'utf8');
+
+  // Fresh Companion readback measured the Lightchain desktop fields at 352x48
+  // with 76px top-to-top spacing, and its submit control at 352x48. The source
+  // input radius/padding are 8px/24px; keep these values explicit in Heavy.
+  assert.match(login, /<form onSubmit=\{handleSubmit\} className="flex flex-col gap-7">/);
+  assert.match(login, /w-full lg:ml-16 lg:w-\[352px\] lg:translate-x-\[3px\]/);
+  assert.match(login, /className="h-12 w-full rounded-\[8px\][^"]*px-6 text-sm/);
+  assert.match(login, /className="h-full w-full rounded-\[8px\][^"]*px-6 text-sm/);
+  assert.match(login, /<button type="submit"[^>]*className="h-12 w-full rounded-lg/);
+  assert.doesNotMatch(login, /type="checkbox"|権利確認|rights.?checkbox/iu);
+});
+
+test('password recovery follows the Lightchain account, code and confirmation flow without rights controls', async () => {
+  const forgot = await readFile(forgotPasswordSourcePath, 'utf8');
+
+  assert.match(forgot, /パスワードのリセット/);
+  assert.match(forgot, /アカウント<span/);
+  assert.match(forgot, /認証コード取得/);
+  assert.match(forgot, /inputMode="numeric"/);
+  assert.match(forgot, /name="newPassword"/);
+  assert.match(forgot, /name="passwordConfirmation"/);
+  assert.match(forgot, /auth\.requestPasswordResetOtp\(email\)/);
+  assert.match(forgot, /auth\.completePasswordResetWithOtp\(email, verificationCode, password\)/);
+  assert.match(forgot, /MIN_PASSWORD_LENGTH = 6/);
+  assert.match(forgot, /MAX_PASSWORD_LENGTH = 20/);
+  assert.match(forgot, /6〜20文字で入力してください/);
+  assert.doesNotMatch(forgot, /12〜20文字|最低12文字/);
+  assert.doesNotMatch(forgot, /resetPasswordForEmail|リセットリンクを送信/);
+  assert.doesNotMatch(forgot, /type="checkbox"|権利確認|rights.?checkbox/iu);
 });
 
 test('the root keeps the Lightchain launcher URL for authenticated users', async () => {
@@ -49,10 +88,27 @@ test('the root keeps the Lightchain launcher URL for authenticated users', async
   assert.match(landing, /document\.title = 'Lightchain AI'/);
 });
 
+test('the launcher only renders the account avatar after session admission', async () => {
+  const source = await readFile(launcherHeaderSourcePath, 'utf8');
+
+  assert.match(source, /useAuthStore/);
+  assert.match(source, /const user = useAuthStore\(\(state\) => state\.user\)/);
+  assert.match(source, /\{user \? \(/);
+  assert.match(source, /aria-label="avatar"/);
+});
+
 test('Lightchain routes do not expose the Heavy global keyboard shortcut affordance', async () => {
   const source = await readFile(layoutSourcePath, 'utf8');
 
   assert.match(source, /showSidebar && !isLightchainRoute && <KeyboardShortcuts shortcuts=\{defaultShortcuts\} \/>/);
+});
+
+test('Lightchain route content renders directly without a hidden-tab fade-in gap', async () => {
+  const source = await readFile(layoutSourcePath, 'utf8');
+
+  assert.match(source, /\{isVideoWorkstationRoute \|\| isLightchainRoute \? \(/);
+  assert.match(source, /The Light Chain shell does not fade route content in/);
+  assert.match(source, /initial=\{\{ opacity: 0 \}\}/);
 });
 
 test('Lightchain header exposes the current language and help button controls', async () => {

@@ -1,4 +1,155 @@
+# Latest Web release — 2026-09-26 r92
+
+## Video detail empty-upload source pair — 2026-09-26
+
+同一Companion profileで本家とCloudflare Heavyの`/flow/GenerateShortVideo/detail`を各30秒待機後にreadback。両方が`Lightchain AI`、ready complete、同一の動画ワークステーション空アップロード文言、login marker 0、rights marker 0を返した。Heavyは認証avatar 1のみ追加で表示。証拠は`../../work/lightchain-heavy-video-detail-empty-state-readback-20260926-r1.json`。これはroute stateの直接比較であり、provider generation receipt、実remote save/reuse/reload/reconciliation、full pixel/interaction parity、billing/publish、monitor/UI、G618、H602、scorecard、strict releaseは未完了。
+
+## Video Workstation durable save boundary — 2026-09-26
+
+Cloudflare Worker `heavy-chain-web` version `bf8d83c0-6670-4c74-b37e-46269d35a1f6` now routes Video Workstation Save and Canvas handoff persistence through the durable workspace save contract. When the remote data plane is configured, a missing remote receipt/readback is an explicit failure (`video_workspace_remote_persistence_unverified`); local-only success is not reported. Save/Canvas controls are disabled while the same request is in flight. Typecheck, lint, Vite build, Cloudflare build, R2 upload, Wrangler dry-run/deploy, and focused persistence suites passed. `/_health` returned HTTP 200, and the deployed lazy chunk contains the fail-closed marker. Companion readback after a 30-second settle on `/flow/GenerateShortVideo` showed the video workstation, persisted task cards, avatar `1`, and zero login/password/rights markers. Evidence: `../../work/heavy-chain-video-durable-save-postdeploy-readback-20260926-r1.json`. This proves the deployed persistence boundary and authenticated route rendering only; provider generation receipt, actual remote business save/reuse/reload/reconciliation, full parity, billing/publish, monitor/UI, G618, H602, scorecard, and strict release remain open.
+
+## In-workspace auth-cache recovery after one-login deployment — 2026-09-26
+
+Cloudflare Worker `heavy-chain-web` version `7b5c6422-1493-408a-9d32-683fa2631034` now performs one bounded same-host auth-session refresh for an empty in-workspace cache before failing closed; Dashboard no longer emits a per-action login prompt from that transient state. Web tests `14/14`, Vite/Cloudflare build, R2 asset upload, Wrangler dry-run, and deploy passed; `/_health` returned HTTP 200 with `hosting=cloudflare` and `authProvider=cloudflare`. After a requested 30-second wait, the same Companion profile/task-owned Heavy `/designProduction` tab read back `Lightchain AI`, ready complete, visible, avatar `1`, controls `48`, and login/password/rights markers `0`. Evidence: `../../work/heavy-chain-auth-cache-recovery-postdeploy-readback-20260926-r1.json`. This release proves bounded one-login continuity and in-workspace auth-cache recovery only; provider generation, durable persistence/reuse/reload/reconciliation, full parity, billing/publish, monitor/UI, G618, H602, scorecard, and strict release gates remain open.
+
+## Persistent login continuity after the requested 30-second wait — 2026-09-26
+
+Cloudflare Worker `heavy-chain-web` version `6503cda5-24ee-4b55-962e-009c00adb665` was verified in the same Companion profile and task-owned tab. After a 30-second wait on `/designProduction`, the authenticated workspace remained visible with `Lightchain AI`, `readyState=complete`, avatar `1`, and zero login/password/rights markers. The same tab then navigated directly to `/board` and `/gallery` without re-authentication; Board showed six visible card columns, and Gallery settled to `ギャラリー 13枚の画像` with visible cards and no active motion opacity. Evidence: `../../work/heavy-chain-auth-continuity-postdeploy-readback-20260926-r1.json`. Auth admission `8/8`, bootstrap hydration `7/7`, session recovery `3/3`, hydration readback `4/4`, and lint passed. Source tab `1980930659` was preserved and the owned Heavy tab was closed during cleanup. The Gallery wait's final action was not dispatched after Companion authority expiry and was not replayed. This is session continuity evidence only; provider generation, durable persistence/reuse/reload/reconciliation, full pixel/interaction parity, billing, publish, monitor/UI, G618, H602, scorecard, and strict clean release remain open.
+
+## Board six-column source parity and no-fade post-deploy readback — 2026-09-26
+
+Cloudflare Worker `heavy-chain-web` version `6503cda5-24ee-4b55-962e-009c00adb665` now serves the source-shaped `/board` six-column compact document rail. The Light-route shell renders route content directly instead of using the source-absent initial opacity fade; this prevents a hidden-tab resume from leaving the body visually transparent while controls remain in the DOM. Same Companion profile/task-owned tab was navigated after deploy, held for 30 seconds, and read back with `Lightchain AI`, `readyState=complete`, 6 card columns, 24px ellipsis menu controls, avatar 1, login/rights markers 0, and a visible screenshot body. Evidence: `../../work/lightchain-board-postdeploy-visual-readback-20260926-r1.json`. Health HTTP 200; UI boundary 21/21, Board parity 8/8, typecheck, Vite/Cloudflare build, R2 asset upload, Wrangler dry-run, and Web tests 14/14 pass. Owned tabs were closed and the lease released; prior retained tab `1980930659` was not touched. Provider generation, durable persistence/reuse/reload/reconciliation, billing, publish, monitor/UI, G618, H602, scorecard, and strict clean release remain open.
+
+Requested 30-second auth-continuity readback completed on the same Companion profile and Heavy task-owned tab. After navigating `/board` to `/flow/GenerateShortVideo`, waiting 30 seconds, and reading the same tab again, both routes remained `Lightchain AI`/`readyState=complete` with the authenticated avatar, zero login/password/rights markers, and no `/login` redirect. Evidence: `../../work/lightchain-heavy-auth-persistence-current-20250925-r1.json`. Auth admission 8/8, bootstrap hydration 7/7, hydration readback 4/4, typecheck, and diff-check passed. This is browser session persistence evidence only; provider generation, durable save/reuse/reload/reconciliation, billing, publish, monitor/UI, G618, H602, scorecard, and strict clean release remain open.
+
+The paired `/board` observation intentionally preserves an account-state/DOM difference: source had 17 controls with no avatar, while authenticated Heavy had 42 controls including avatar and card/menu buttons. The difference remains visible to parity comparison.
+
+The route comparator now reads the recorded `heavyReadback`/`heavyCapture` aliases used by video-detail evidence. The current canonical seven-route semantic run is `work/lightchain-heavy-route-readback-current-20250925-r4.json` (`equal=0`, `different=2`, `pending_confirmation=5`, `errors=0`); this is comparison coverage only and does not claim provider or release completion. A same-logical-session 30-second source/Heavy video-dashboard readback is additionally recorded at `work/lightchain-heavy-video-route-current-20250925-r3.json`; it confirms matching title/ready/control topology and no login/rights UI, while preserving Heavy's three task-local video cards as a data-state difference. The source-board/video geometry contract is also green at `7/7` using the measured `h-60`/`flex flex-wrap` shape.
+
+Auth continuity contract recheck after the requested 30-second wait: local session admission `8/8`, bootstrap hydration `7/7`, hydration readback `4/4`, and route comparator `6/6` passed. The production evidence remains the same source/Heavy same-tab readback in `../../work/heavy-chain-auth-continuity-postdeploy-readback-20250925-r1.json`; no provider, billing, publish, secret, or external action was executed. Full parity and the five strict release blockers remain open.
+
+認証済みの同一Companion tabでCloudflare本番`/designProduction`を30秒待機後に確認し、そのまま`/gallery`へ遷移してさらに30秒待機。両routeとも`Lightchain AI`、通常のワークスペース本文、login marker 0、rights marker 0を維持し、画面遷移中の再ログインを再現しなかった。Evidence `../../work/heavy-chain-auth-continuity-postdeploy-readback-20250925-r1.json`。Heavy tabはtask-owned cleanupで閉鎖済み。provider生成、durable save/reuse/reload/reconciliation、PNG/interaction full parity、monitor/UI、G618、H602、real-generation scorecard、strict releaseは未完了。
+
+`design-production-page`の外側paddingをLight Chain実測に合わせて`px-6`へ更新し、Cloudflare Worker version `885879af-d3d5-4337-93d1-4339d7bf2915`へ反映。Web tests 14/14、Cloudflare build、R2 asset upload、Wrangler dry-run、deployをPASS。`/_health`はHTTP 200（`hosting=cloudflare`、`authProvider=cloudflare`）。同一Companion profileでCloudflare `/designProduction`を30秒settle後にfresh readbackし、title=`Lightchain AI`、ready complete、control 48、avatar 1、login marker 0、rights checkbox 0、tabpanel `x=22,width=665`、CTA `y=399`・`228/228/204/168×32`を確認。証跡`../../work/heavy-chain-cloudflare-design-production-postdeploy-readback-20250925-r1.json`。cleanupはowned tab close、lease release、unknown effect/foreign mutation/external action 0。provider生成、durable save/reuse/reload/reconciliation、native PNG pixel、monitor/UI、G618、H602、real-generation scorecard、strict releaseは未完了。
+
+認証hydration修正をCloudflare Webへ反映。公開画面が遅いhost-only Cookie/session読取りを資格情報フォームへ収束させず、同じセッションのhydration境界で待機する。旧`authWaitExpired`/`PUBLIC_AUTH_STALL_TIMEOUT_MS`は配信bundleに存在せず、再接続時もログイン状態を保持する。本番Workers version `0b8b8af8-c804-420e-99c0-37785b4e17ed`（100%）で`/_health` HTTP 200。
+
+同一Companion task-owned session/tabを使い、Cloudflare `/designProduction` と `/gallery`をそれぞれ30秒待機後にsemantic＋visual readback。両routeとも`Lightchain AI`、readyState=`complete`、login marker/form 0、rights marker 0、avatar 1。session close、task tab close、lease release、foreign mutation、unknown effectは完了/0。証跡`../../work/heavy-chain-auth-hydration-cloudflare-deploy-readback-20250925-r1.json`。Zeaburの同一認証修正deployment `6ab6516f10778e353136ad64`もRUNNING/health 200を確認済み。provider実生成、upload、save/readback/reconciliation、payment、publish、secret投入は未実行。full pixel/interaction parityとstrict release-gate 5 blockerは継続。
+
+# Latest Web release — 2026-09-25 r79
+
+Fresh release gate（`2026-09-25T07:21:53.645Z`）は`ok:false`で、production monitor/UI、G618、H602 billing、generation scorecard、dirty releaseの5 blockerが継続。
+証跡の正本ファイルは`../../work/heavy-chain-fashion-studio-card-auth-continuity-deploy-readback-20260925-r1.json`。
+
+Fashion Studio `/flow/integration` の保存カードを本家実測へ再同期。閉じたカードは`overflow-hidden`、メニュー表示時だけ`overflow-visible`、新規カードも本家と同じ`div`/`group relative h-60 w-55 cursor-pointer overflow-hidden rounded-2xl`。Cloudflare version `e9ac1051-5923-445a-9922-dddbbb71e92d`、Zeabur deployment `6ab61e9de92e928954ad08c8`（docker/RUNNING、`/_health` 200）へ反映。30秒settle後の両環境でcard 30件、220×240、article 0、nested project button 0、login/rights 0、avatar 1、credit badge 1をsemantic＋visual readback。detail routeは遷移後30秒＋reload後30秒も`Lightchain AI`、avatar 1、login 0、rights 0、upload dropzone visible。local parity 6/6、typecheck/lint/build pass。証跡`../../work/heavy-chain-fashion-studio-card-auth-continuity-deploy-readback-20250925-r1.json`。provider生成、upload、save/readback/reconciliation、payment、publish、secret投入は未実行。full pixel/interaction parityとstrict release-gate 5 blockerは継続。
+
+# Latest Web release — 2026-09-25 r78
+
+Fashion Studio `/flow/integration` のカードDOMを本家形状へ揃え、保存カードの`article`＋内側`button`をクリック可能な`div`へ変更。新規カードも`group relative h-60 w-55 cursor-pointer overflow-hidden rounded-2xl`へ統一。Cloudflare Web version `d43cd3d6-ab2a-4eb5-821b-120931c0c416`、Zeabur deployment `6ab61a4a10778e353136a911`（docker/RUNNING、health 200）へ反映し、両環境を30秒settle後にsemantic/visual readback。saved card 30件、nested project button 0、article 0、login/rights marker 0、credit badge 1。detail routeも両環境で30秒待機しavatar 1、login 0、rights 0、upload dropzone visibleを確認。証跡`../../work/heavy-chain-fashion-studio-card-auth-continuity-deploy-readback-20250925-r1.json`。provider生成、upload、save、payment、publish、secret投入は未実行。full pixel/interaction parity、provider persistence/reconciliation、strict release-gate evidence remain open.
+
+# Latest Web release — 2026-09-25 r77
+
+現行作業ツリーの動画詳細geometry修正をZeabur `heavy-chain`へ再deploy。deployment `6ab615385d7569a2d1c7201b`はRUNNING、finishedAt `2026-09-25T06:37:57.570Z`、health HTTP 200。配信asset `index.Vt01RFr4.js`/`index.BK1YKy2d.css`に`h-[534.28px]`、`w-[768px]`、`top-1/2`、`-translate-y-1/2`、mobile width 768pxを確認。30秒settle後のZeabur動画詳細readbackはtitle=`Lightchain AI`、ready、avatar 1、login marker 0、rights marker 0、responsive upload rect `x=16,y=76.86328125,width=677,height=534.2734375`。証跡`../../work/heavy-chain-source-heavy-video-detail-zeabur-deploy-readback-20260925-r2.json`。Cloudflare version `24d4fc8a-087c-4c16-8311-3bf29b6b7080`もhealth 200。provider生成、upload、save、payment、publish、secret投入は未実行。full pixel/interaction parity、provider persistence/reconciliation、strict release-gate evidence remain open.
+
+# Latest Web release — 2026-09-25 r76
+
+Video Workstation detailの空アップロード領域をLight Chain本家の実測geometryへ合わせた。sourceのwide viewportは`x=328,y=76.859375,width=768,height=534.28125`、Heavyは`top-1/2`/`-translate-y-1/2`と`h-[534.28px] w-[768px] max-w-[calc(100vw-32px)]`を採用し、responsive viewportのreadbackは`x=16,y=77.86328125,width=677,height=534.2734375`。Cloudflare Web version `24d4fc8a-087c-4c16-8311-3bf29b6b7080`、health HTTP 200。動画関連combined suite 19/19、typecheck、lint、Cloudflare build、R2 upload、Wrangler dry-run pass。Zeabur deployment `6ab6104fe92e928954ad05cb`はBUILDING継続で、旧health 200のためZeabur完了は未主張。証跡`../../work/heavy-chain-source-heavy-video-detail-geometry-deploy-readback-20260925-r1.json`。provider生成、upload、save、payment、publish、secret投入は未実行。full pixel/interaction parity、provider persistence/reconciliation、strict release-gate evidence remain open.
+
+# Latest Web release — 2026-09-25 r75
+
+Video Workstation detail rails were aligned to the Light Chain source: the Heavy-only remote video project icon was removed from both the empty upload rail and the populated editor rail. The source and Heavy detail route were read back after a 30-second settle in one Companion profile; both showed the same `動画ワークステーション` text rail, upload empty state, `Lightchain AI` title, and no rights UI. Focused video suite 33/33, typecheck, lint, production/Cloudflare build, asset upload, and Wrangler dry-run passed. Cloudflare version `d0ede199-e4ba-4061-973b-84e7fe0fcdc5` is deployed and was freshly reloaded/read back. Zeabur deployment `6ab6104fe92e928954ad05cb` was still `BUILDING` at capture; its prior health endpoint returned HTTP 200, so Zeabur release completion is not claimed. Evidence: `../../work/heavy-chain-source-heavy-video-detail-parity-deploy-readback-20260925-r1.json`. Provider generation, upload, save, payment, publish, and secret insertion were not performed; full pixel/interaction parity and strict release-gate evidence remain open.
+
+## Latest Web release — 2026-09-25 r74
+
+Fashion Studio overviewへ認証済みusage由来の`残りクレジット`バッジを追加し、本家/Heavyを同一Companion profileで30秒待機後にpaired visual/semantic readback。source credit `375311`、Heavy credit `15`（アカウントデータ差）だが、同位置のsource-shaped badgeを確認。Heavyはtitle=`Lightchain AI`、ready、login marker 0、rights marker 0。本家/Heavyのsource/Heavyタブはclose済み。Focused suite 56/56、Web tests 14/14、typecheck、lint、production/Cloudflare build、Wrangler dry-runがpass。Cloudflare version `8f95225d-5545-4a70-9cb4-7ce6dbdca89c`、Zeabur deployment `6ab60a61e92e928954ad04a4`（Docker/RUNNING、`/_health` 200）。証跡は`../../work/heavy-chain-source-heavy-integration-credit-badge-deploy-readback-20260925-r1.json`。provider生成、upload、save、payment、publish、secret投入は未実行。full pixel/interaction parity、production monitor/UI、G618、H602 billing、real scorecard、strict clean releaseは未完了。
+
+## Latest Web release — 2026-09-25 r73
+
+認証サービス停止時のprotected chromeでも公開ヘッダーを描画しないよう、Layoutの保護条件へ`authServiceUnavailable`を追加した。auth admission 7/7、typecheck、lint、production buildがpass。Cloudflare Web version `7b80ad54-cdf1-47e5-8b98-cdf22cc438e9`をdeployし、health HTTP 200、匿名protected routeの307、fresh assetの再接続境界を確認。Zeabur同一ソースのdeployment `6ab6058ee92e928954ad03a5`も`docker`/`RUNNING`、`/_health` HTTP 200、配信Layout chunkに保護条件を確認。provider生成、upload、save、payment、publishは未実行。
+
+## Latest Web release — 2026-09-25 r72
+
+auth serviceの一時的な5xx/transport failureをanonymous扱いせず、protected routeを現在位置のままSPAへ渡して再接続UIを表示するtri-state境界を追加した。valid sessionのshell admissionと匿名時の307 login redirectは維持し、Light Chainにない権利確認UIは追加していない。
+
+Web tests 14/14、production/Cloudflare build、R2 upload、Wrangler dry-runがpass。Cloudflare Web version `369375fc-3d45-425a-8d19-10b2d8949eaf`を`heavy-chain-web.nichika2000823.workers.dev`へdeployし、health HTTP 200と配信JSの`authServiceUnavailable`/`認証サービスに再接続しています`を確認した。Zeabur同一ソースのdeployment `6ab601be5d7569a2d1c71ee9`も`docker`/`RUNNING`、`https://heavy-chain.zeabur.app/_health` HTTP 200。provider生成、upload、save、payment、publishは未実行。詳細は`../../work/heavy-chain-auth-service-transient-route-boundary-deploy-20260925-r1.json`。
+
+## Latest Web release — 2026-09-25 r71
+
+認証の毎画面ログイン収束を修正した。valid sessionのreadback直後にprotected shellを開き、
+profile/brand hydrationは非同期継続する。認証猶予とrequest timeoutは30秒で、通常の遅延では
+ログインリンクへ収束しない。Consumer Authのsession Cookieには`Path=/`を明示した。
+
+Cloudflare Web version `e0fa3ad8-83a8-463b-9ca4-b76acd47b4c9`、Consumer Auth version
+`e8b72a35-0e02-4787-a8be-d4019cb1c831`をdeploy。Web/Auth healthはHTTP 200、未認証の
+`/asset-center`はloginへ307 redirect。認証focused 26/26、Consumer Auth 15/15、Web 12/12、
+typecheck、lint、build、R2 upload、Wrangler dry-runがpass。
+
+公式Companionの同一task-owned tabで`/asset-center`を待機後にreadbackし、`マイライブラリー`、
+8 library groups、`画像／動画`、`お気に入り`、`一括操作`、実データカードを確認した。tab/lease/
+session cleanupは成功し、foreign変更・retained・unknown effectは0件。provider生成、upload、
+save、payment、publishは未実行。詳細は
+`../../work/heavy-chain-auth-persistence-deploy-readback-20260925-r1.md`。
+
+Zeaburの同一ソースdeployはdeployment `6ab5552ee92e928954ace661`（`docker` / `RUNNING`）で反映し、
+`https://heavy-chain.zeabur.app/_health` はHTTP 200。Cloudflareでは同じCompanion session・同じtabで
+`/asset-center`、`/gallery`、`/history`を連続readbackし、ログインへ戻らず本体を表示した。
+
 # Heavy Chain Cloudflare web hosting
+
+## Latest Web release — 2026-09-25 r70
+
+The canonical `/asset-center` source contract now covers the eight library groups,
+`画像／動画`, `お気に入り`, `一括操作`, and the expandable `ライブラリー検索`
+control. The isolated full verifier passed 31/31 desktop and mobile features,
+video 4 routes, source 7 routes, failed 0, and complete cleanup.
+
+Cloudflare Web tests 12/12, production build, R2 upload, Wrangler dry-run, and
+deployment passed. Version `ace0a71c-cc6a-4b48-87f6-80afedb7be29` is deployed at
+100% to `heavy-chain-web.nichika2000823.workers.dev`. Fresh public `/_health`
+returned HTTP 200; unauthenticated `/asset-center` and `/board` returned the
+expected login redirect. A fresh authenticated Chrome tab waited 30 seconds and
+read back the production `/asset-center` visually and semantically, including the
+library groups, filters, bulk action, search expansion, cards, and zero rights
+checkboxes. No provider generation, upload, save, payment, or publish was done.
+
+## Latest Web release — 2026-09-25 r69
+
+The source-readback acceptance ledger now covers the canonical `/board` list and
+`/board/edit` editor in addition to the four existing Lightchain source routes.
+The isolated full verifier passed 31/31 desktop and mobile features, video 4
+routes, source 6 routes, failed 0, and complete cleanup. This is local semantic
+source-contract evidence; it does not replace the pending authenticated
+Cloudflare Board readback.
+
+## Latest Web release — 2026-09-25 r68
+
+Version `828826d5-f196-4b90-b31b-ad525cd94476` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. The Lightchain account-menu
+design-document route now points to the canonical `/board` list and
+`/board/edit` editor. The Board list, title, zoom, local save/reopen flow, and
+source-shaped header are deployed without adding the Light-only rights
+checkbox/modal/badge.
+
+Cloudflare Web tests 12/12, production build, R2 upload, Wrangler dry-run, and
+deployment passed. The final fresh browser tab reached the protected login
+boundary; authenticated Cloudflare Board readback still requires the user's
+session to be re-established in that tab. No provider generation, payment, or
+publish was performed.
+
+## Latest Web release — 2026-09-24 r67
+
+Version `41a90fb9-2daa-4935-b80b-1eb1974ff0a2` is deployed at 100% to
+`heavy-chain-web.nichika2000823.workers.dev`. The video source editor now has
+local save, Canvas handoff, Gallery reuse, and reload persistence for the
+source-shaped video flow. Production readback confirmed the save/reuse path in
+one authenticated Heavy Companion tab. Video generation remains fail-closed
+until the video provider is admitted; the Light-only rights checkbox remains
+absent.
+
+Web tests 12/12, production build, R2 asset upload, Wrangler dry-run, public
+health/protected-route readback, and the Companion save/reuse readback passed.
+This release still does not claim Light-source paired visual equality or a
+provider receipt/remote video output.
 
 ## Latest Web release — 2026-09-22 r66
 

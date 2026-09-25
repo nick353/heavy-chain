@@ -63,6 +63,9 @@ const cardTitle = (card: LibraryCard) => card.kind === 'local' ? card.artifact.t
 const cardImageUrl = (card: LibraryCard) => card.kind === 'local' ? card.artifact.imageUrl : card.asset.imageUrl;
 const cardPrompt = (card: LibraryCard) => card.kind === 'local' ? card.artifact.prompt : card.asset.prompt;
 const cardIdentity = (card: LibraryCard) => card.kind === 'local' ? card.artifact.id : card.asset.remoteImageId;
+const cardIsFavorite = (card: LibraryCard) => card.kind === 'local'
+  ? card.artifact.metadata.favorite === true || card.artifact.metadata.isFavorite === true
+  : card.asset.isFavorite;
 
 const isVideoGeneratedImage = (image: GeneratedImageListRow) => (
   /video|動画/i.test(image.feature_type || '')
@@ -125,6 +128,9 @@ export function LightchainLibraryPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedFeatureId, setSelectedFeatureId] = useState('ai-fitting');
+  const [assetFilter, setAssetFilter] = useState<'all' | 'favorite'>('all');
+  const [librarySearchOpen, setLibrarySearchOpen] = useState(false);
+  const [librarySearch, setLibrarySearch] = useState('');
   const [pendingDelete, setPendingDelete] = useState<{ card?: LibraryCard; localIds?: string[]; label: string } | null>(null);
 
   const groupsKey = currentBrand?.id ? groupStorageKey(currentBrand.id, user?.id) : null;
@@ -247,7 +253,14 @@ export function LightchainLibraryPage() {
   // surface until Light exposes the same contract.
   const showExtendedLibraryHandoffs = false;
 
-  const visibleArtifacts = libraryCards;
+  const visibleArtifacts = useMemo(() => {
+    const normalizedSearch = librarySearch.trim().toLowerCase();
+    return libraryCards.filter((card) => {
+      const matchesFavorite = assetFilter === 'all' || cardIsFavorite(card);
+      const matchesSearch = !normalizedSearch || `${cardTitle(card)} ${cardPrompt(card) || ''}`.toLowerCase().includes(normalizedSearch);
+      return matchesFavorite && matchesSearch;
+    });
+  }, [assetFilter, libraryCards, librarySearch]);
 
   const handleImportRemote = async (
     asset: RemoteLibraryAsset,
@@ -276,10 +289,14 @@ export function LightchainLibraryPage() {
         toast.error('生成結果のライブラリー登録確認に失敗しました');
         return;
       }
+      if (cloudflareDataPlane && !result.remote) {
+        toast.error('リモート保存の確認に失敗しました。再送せず、同じ保存依頼を照合してください');
+        return;
+      }
       setArtifacts((current) => [result.artifact, ...current.filter((artifact) => artifact.id !== result.artifact.id)]);
       setActiveGroup('生成履歴');
       setSelectedAssetId(result.artifact.id);
-      toast.success(result.remote ? '生成結果をライブラリーに登録しました' : '生成結果をローカルライブラリーに登録しました');
+      toast.success('生成結果をライブラリーに登録しました');
       if (destination !== 'none') {
         const destinationPath = typeof destination === 'object'
           ? (() => {
@@ -350,10 +367,14 @@ export function LightchainLibraryPage() {
         toast.error('素材の保存確認に失敗しました');
         return;
       }
+      if (cloudflareDataPlane && !result.remote) {
+        toast.error('リモート保存の確認に失敗しました。再送せず、同じ保存依頼を照合してください');
+        return;
+      }
       setArtifacts((current) => [result.artifact, ...current.filter((artifact) => artifact.id !== result.artifact.id)]);
       setActiveGroup(customGroups.includes(activeGroup) ? activeGroup : 'マイライブラリー');
       setSelectedAssetId(result.artifact.id);
-      toast.success(result.remote ? '素材をライブラリーに保存しました' : '素材をローカルライブラリーに保存しました');
+      toast.success('素材をライブラリーに保存しました');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '素材のアップロードに失敗しました');
     } finally {
@@ -556,7 +577,7 @@ export function LightchainLibraryPage() {
         <aside className="asset-center-sidebar hidden w-[312px] shrink-0 border-r border-white/10 bg-[#262b2c] p-4 lg:block">
           <div className="asset-center-sidebar-header flex items-center justify-between px-0 py-2 text-lg font-semibold text-neutral-100">
             <span>ライブラリー</span>
-            <button type="button" aria-label="ライブラリーを検索" className="rounded-full p-2 text-neutral-200 hover:bg-white/10">⌕</button>
+            <button type="button" aria-label="ライブラリーを検索" aria-expanded={librarySearchOpen} className="rounded-full p-2 text-neutral-200 hover:bg-white/10" onClick={() => setLibrarySearchOpen((current) => !current)}>⌕</button>
           </div>
           <div className="asset-center-library-root flex items-center justify-between">
             <button type="button" className="flex items-center gap-1 text-sm text-neutral-100" onClick={() => { setActiveGroup('マイライブラリー'); setSelectedAssetId(null); setSelectedIds(new Set()); }}>
@@ -599,6 +620,14 @@ export function LightchainLibraryPage() {
           </div>
 
           <div className="asset-center-toolbar flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className={`rounded-lg px-3 py-2 text-sm ${assetFilter === 'all' ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:text-white'}`} aria-pressed={assetFilter === 'all'} onClick={() => setAssetFilter('all')}>画像／動画</button>
+              <button type="button" className={`rounded-lg px-3 py-2 text-sm ${assetFilter === 'favorite' ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:text-white'}`} aria-pressed={assetFilter === 'favorite'} onClick={() => setAssetFilter('favorite')}>お気に入り</button>
+              {librarySearchOpen && <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-400">
+                <span className="sr-only">ライブラリー検索</span>
+                <input value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} className="w-44 bg-transparent text-white outline-none placeholder:text-neutral-500" placeholder="ライブラリー検索" aria-label="ライブラリー検索" />
+              </label>}
+            </div>
             <span className="asset-center-selection-count text-sm text-neutral-400">選択済み ： {selectedIds.size} / {visibleArtifacts.length}</span>
             {selectMode ? (
               <div className="flex flex-wrap gap-2">
