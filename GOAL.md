@@ -41,6 +41,14 @@ generation scorecard（`hc-10m-real-generation-qa-20260626/visual-scorecard.json
 およびdirty worktree受入。syntax、security、G614/G632/G633/H601/H602 static、typecheck、
 build、lint、diff checkはPASS。`--allow-dirty`は診断にのみ使用し、release合格とは扱っていない。
 
+## Dirty worktree checkpoint and clean-gate audit — 2026-09-26 r5
+
+99件のtracked/untracked Heavy Chain変更を削除せず、ローカルbranch
+`heavy-chain/checkpoint-20260926`のcommit `478128b`へ保全した。作業ツリーはclean、typecheckと
+diff checkはPASS。`--allow-dirty`なしのstrict gateを再実行し、dirty blockerは解消した。
+残る未達は production monitor/UI pair、G618 scale-ops baseline、production H602 billing
+completion、generation scorecard artifact不足の4系統。Goalはactive。
+
 ## Remote save boundary expansion — 2026-09-26
 
 Light Chain cloneのLibrary/Fashion Studio/Design/Marketing/Video project保存導線で、Cloudflare remote receiptが欠けた場合にlocal-only成功を表示・遷移しないfail-closed境界を追加。関連回帰テスト16/16、typecheck、diff check、Cloudflare Web version `259347df-68ae-46e3-a730-833a91b03966`のhealth/session/chunk readbackを確認。Goalは継続中。残りは実provider生成receipt、remote durable save/reuse/reload/reconciliationの本番証跡、全route visual/interaction parity、monitor/UI、billing、scorecard、strict clean release。

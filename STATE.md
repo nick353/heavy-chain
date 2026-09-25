@@ -35,6 +35,13 @@ fresh gateは`ok=false`。production monitor/UI、G618、production H602、real-
 scorecard artifact不足、dirty worktree受入が残る。ローカルsyntax/security/typecheck/build/lint/
 diff checkはPASS。`--allow-dirty`による診断結果をstrict release証跡へ昇格していない。
 
+## Dirty worktree checkpoint and clean-gate audit — 2026-09-26 r5
+
+99件のHeavy Chain変更をbranch `heavy-chain/checkpoint-20260926` / commit `478128b`へparkし、
+worktreeをclean化。typecheck、diff check PASS。strict gateをdirty許可なしで実行した結果、
+dirty blockerは消え、production monitor/UI、G618、production H602、real-generation scorecard
+artifact不足の4件だけが残る。commitは未pushで、外部公開・deploy・provider実行はしていない。
+
 ## Remote workspace save fail-closed across Light Chain clone library paths — 2026-09-26
 
 Cloudflare data planeが設定済みなのにremote receipt/readbackが無い場合、Fashion Studio、Library、Design/Marketing、Video project libraryの保存・再利用導線をlocal-only成功に進めないよう統一。既存Video Workstationと同じく、同一保存依頼の照合を促して停止する。回帰テスト16/16、typecheck、diff check PASS。Cloudflare Web version `259347df-68ae-46e3-a730-833a91b03966`へdeployし、health正常、匿名session `null`、配信chunkのfail-closed markerをreadback。実provider生成receipt、実remote business save/reuse/reload/reconciliation、full visual/interaction parity、monitor/UI、billing、strict releaseは未完了。
