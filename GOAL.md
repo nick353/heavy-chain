@@ -10409,3 +10409,23 @@ pixel equality、provider receipt、durable persistence/reconciliation、monitor
 この差分を現行コードで修正。`src/pages/LightchainParityPages.tsx`の新規ファイル／保存プロジェクトgridを`grid-cols-2 sm:grid-cols-5`へ変更し、作成action buttonを本家と同じ`type="submit"`へ変更。対応テストの期待値も更新。targeted parity 2/2、typecheck、ESLint、production build、`git diff --check`、隔離local all-feature workflow（31 desktop、31 mobile、desktop video 2、mobile video 4、source route 7、failed 0、cleanup complete）がPASS。これはlocal修正の証拠であり、まだ本番deploy/readback・pixel diff・provider生成/save/reuse/reconciliationの証明ではない。
 
 残りのrelease blocker（production monitor/UI pair、G618、H602 billing、real-generation scorecard、strict clean release）とfull source/Heavy pixel/interaction parity、provider実生成→保存/readback/reconciliationは継続。
+
+# Goal progress — 2026-09-26 r354
+
+Companionのtask-owned sessionでLight Chainのhydrated `/designProduction`を再取得した。
+`wait_for`で`デザインワークスペースへようこそ`の表示を確認してから同一tabをsemantic+visual
+readbackし、sourceの作成カードが`インスピレーション`、`ブリン卜修正`、`生地イメージ`、
+`企画提案書`であることを確定した。証跡は
+`work/heavy-chain-source-readback-fresh-20260926-r3.md`。初回の即時body queryはhydration前の
+semanticsだったため証拠に採用せず、待機後readbackを正本にした。session closeは成功し、tab close、lease
+release、foreign mutation false、unknown effect 0、external action falseを確認した。
+
+Heavyの`src/pages/LightchainParityPages.tsx`の作成カードをsourceの`ブリン卜修正`へ合わせ、対話面・保存済み
+project・pin/library/delete・paginationを保持して復元した。design-production parity/handoff/alias/all-feature
+contract 14/14、typecheck、local all-feature verifierをfresh実行し、31/31 desktop、31/31 mobile、video 4、source 7、
+assertion 444、console/page/request failure 0、cleanup complete、`ok:true / failed:[]`を確認した。証跡は
+`output/playwright/lightchain-all-feature-workflows-20260925T192638Z-xGlLlk/SUMMARY.json`。
+
+これはsource/UI parityとlocal regressionの完了であり、source account identity、provider実生成receipt、remote durable
+save/reuse/reload/reconciliation、production monitor/UI、G618、H602 billing、real-generation scorecard、公開・課金・
+権利審査の完了を意味しない。Goalはactiveのまま継続する。

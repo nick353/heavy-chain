@@ -21857,3 +21857,16 @@ lease 0、foreign mutation false、external action false、unknown effect 0。Go
 本家/Heavy `/designProduction`の同一Companion paired readbackで、認証継続（30秒settle、login/auth callback 0、rights checkbox 0）を再確認。sourceは5列・4作成action同一y座標・`submit`、Heavyは2列・action 3行・`button`というvisual/semantic差分を確定した。Heavyは追加30秒で準備shellからsource-shaped画面へsettleし、再ログインや外部操作は0。証跡`work/heavy-chain-source-heavy-design-production-card-grid-readback-20250925-r1.json`。
 
 ローカル修正として`LightchainParityPages.tsx`の作成／保存カードgridを`grid-cols-2 sm:grid-cols-5`へ、作成actionを`type="submit"`へ更新。design-production parity 2/2、typecheck、lint、build、git diff check、隔離all-feature workflow（31/31 desktop、31/31 mobile、video 2+4、source route 7、failed 0、cleanup complete）をfresh PASS。未deployのためproduction readbackは未完了。provider生成/save/reuse/reload/reconciliation、production monitor/UI、G618、H602、scorecard、strict clean releaseは未完了。Goal active。
+
+# Heavy Chain current state — 2026-09-26 r186
+
+Light Chainのhydrated `/designProduction` source readbackを`wait_for`後にsemantic+visualで取得し、作成カードの
+実表記が`ブリン卜修正`であることを確認した。Heavyの作成カードを同じ表記へ変更し、対話面と保存済みprojectの
+操作面を復元。targeted parity/handoff/alias/contract 14/14、typecheck、`git diff --check`、fresh local all-feature
+workflow（31/31 desktop・31/31 mobile、video 4、source 7、assertion 444、failure 0、cleanup complete）をpass。
+証跡は`work/heavy-chain-source-readback-fresh-20260926-r3.md`と
+`output/playwright/lightchain-all-feature-workflows-20260925T192638Z-xGlLlk/SUMMARY.json`。
+
+Source account identity、provider実生成、remote durable save/reuse/reload/reconciliation、monitor/ops、H602 billing、
+real-generation scorecard、課金・公開・rights operator evidence、strict release gateは未達。source captureはUI parity
+判断にのみ使用し、認証情報・秘密情報・外部効果は扱っていない。Goal active。
