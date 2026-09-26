@@ -38,6 +38,10 @@ const CLOUDFLARE_ENDPOINT_PATTERNS = Object.freeze([
   /^\/v1\/media\/[^/]+\/content$/,
   /^\/v1\/provider-actions\/[^/]+$/,
   /^\/v1\/workspace-artifacts$/,
+  // Heavy requestless entitlement status is a read-only preflight surface.
+  // The local stress harness must mock it instead of blocking the browser
+  // request and turning a fail-closed UI check into a network-error failure.
+  /^\/v1\/heavy\/entitlement$/,
 ]);
 
 const isCloudflareAuthPath = (pathname) => (
@@ -491,6 +495,25 @@ const handleCloudflareDataMock = async (route, contract, pathname) => {
   }
   if (pathname === '/v1/profile') {
     await fulfill(contract.profile);
+    return;
+  }
+  if (pathname === '/v1/heavy/entitlement') {
+    // The stress fixture only probes the requestless status surface. Keep it
+    // explicitly fail-closed; this must never authorize provider work.
+    await fulfill({
+      allowed: false,
+      reason: 'heavy_entitlement_disabled',
+      termsVersion: null,
+      termsDocumentVersion: null,
+      termsDocumentDigest: null,
+      rightsVersion: null,
+      rightsDocumentVersion: null,
+      rightsDocumentDigest: null,
+      termsAcceptanceId: null,
+      rightsAttestationId: null,
+      requestBinding: null,
+      requestScopedAttestationRequired: true,
+    });
     return;
   }
   if (pathname === '/v1/brands') {

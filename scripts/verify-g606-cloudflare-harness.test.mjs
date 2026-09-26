@@ -59,6 +59,7 @@ test('G606 network policy allows localhost and explicit mocks, and blocks unknow
     `${baseUrl}/__g606/cloudflare/v1/profile`,
     `${baseUrl}/v1/generated-images?brand_id=g606-brand&limit=100`,
     'https://heavy-chain-api.nichika2000823.workers.dev/v1/brands',
+    'https://heavy-chain-api.nichika2000823.workers.dev/v1/heavy/entitlement?brand_id=g606-brand&action=generate-image',
     'https://fonts.googleapis.com/css2?family=Inter',
   ];
   for (const url of allowed) {
