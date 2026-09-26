@@ -21910,6 +21910,6 @@ unknown effect 0、foreign mutation false）。
 fresh verification結果: H601 static guard、H602 local billing contract、G620、G632、G633、typecheck/build/lint/diff-checkはpass。
 H601 operator final decision/evidence 10項目、H602 quota enforcement、checkout disabled、machine no-charge proof、
 transaction/entitlement readbackは未達。`LIGHTCHAIN_UI_AUTH_STATE`、`HEAVY_CHAIN_MONITOR_API_URL`、
-`HEAVY_CHAIN_MONITOR_BRAND_ID`、`HEAVY_CHAIN_MONITOR_TOKEN`は未設定。release gate capturedAt=`2026-09-26T01:57:48.550Z`の失敗は
+`HEAVY_CHAIN_MONITOR_BRAND_ID`、`HEAVY_CHAIN_MONITOR_TOKEN`は未設定。clean HEADでの最終release gate capturedAt=`2026-09-26T02:02:47.619Z`の失敗は
 production monitor/UI pair（UI summary missing）、G618 baseline（2026-09-01でstale、tokenなし）、H602 production completion、
 generation scorecard（実scorecard missing）の4件。production generation/payment/publish/deploy/destructive cleanupは未実行。
