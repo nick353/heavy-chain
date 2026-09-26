@@ -330,6 +330,10 @@ export function getErrorMessage(error: any): string {
 
   // Try to get message from error object
   if (error?.message) {
+    // Heavy entitlement failures are request-scoped admission diagnostics. Keep
+    // the exact server reason visible so a blocked generation can be repaired
+    // without treating a generic 409 as a provider failure or retrying blindly.
+    if (/^cloudflare_api_\d+_heavy_/.test(error.message)) return error.message;
     // Map known error messages
     const mappedMessage = getMappedKnownMessage(error.message);
     if (mappedMessage) {

@@ -612,7 +612,14 @@ class CloudflareDataPlaneClient {
     if (CLOUDFLARE_IMAGE_ACTIONS.has(action)) {
       const {userId,assertCurrent,call} = await this.captureRequestContext(options.assertContext);
       const protectedEdit = action === 'edit-image' && body.maskDataUrl ? await prepareProtectedCloudflareEdit(body) : null;
-      const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(protectedEdit?.body ?? body, options.heavyPreparation) : (protectedEdit?.body ?? body);
+      // Heavy preflight, attestation, and provider admission each normalize
+      // the input independently. Pin one candidate seed before the first
+      // normalization so a missing caller seed cannot produce three different
+      // server digests for one explicit request.
+      const heavyInput = options.heavyConsent && (protectedEdit?.body ?? body).seed === undefined
+        ? { ...(protectedEdit?.body ?? body), seed: crypto.getRandomValues(new Uint32Array(1))[0] % 2147483647 }
+        : (protectedEdit?.body ?? body);
+      const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(heavyInput, options.heavyPreparation) : heavyInput;
       const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody)); await assertCurrent();
       const requestId = options.idempotencyKey ?? crypto.randomUUID();
       let heavyPreparation = options.heavyPreparation;
