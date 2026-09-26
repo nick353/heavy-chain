@@ -10466,3 +10466,24 @@ docs-only parity evidence commit `f959797`後に`npm run verify:release-gate --s
 fresh summary `output/playwright/10m-product-readiness-g615/release-gate-summary.json`（capturedAt=`2026-09-25T19:39:32.881Z`）
 で残りは前回と同じ4件のみ: production monitor/UI pair、G618 scale ops baseline、production H602 billing completion
 readback、generation scorecard。generation/purchase/publish/destructive cleanup/deployはすべて未実行。Goalはactive。
+
+# Goal progress — 2026-09-26 r359
+
+Companionのtask-owned sessionでHeavy本番の生成導線を読み取り専用確認。`/generate`への初回queryはhydration shellのため
+採用せず、待機後の同一tab readbackは`/designProduction`へ遷移し、`デザインワークスペースへようこそ`、4つの作成action、
+保存済みproject、quota表示を確認した。生成submit、upload、provider呼出し、保存、課金、公開は行っていない。waitの
+`page_wait_timeout`はdispatch前で、effect unknownではなくmutation未試行のlocal UI待機失敗。session closeは成功し、tab close、
+lease release、foreign mutation false、unknown effect 0、external action falseを確認。
+
+同時刻にH601/H602 operator-readiness、H602 production completion readback、G618、release gateを再実行した。H601は
+static guardのみpassで最終operator/counsel evidence 10項目が未添付、H602はquota=false、production checkout=true、
+verified no-real-charge proof 0、transaction/entitlement readbackなし。環境変数`LIGHTCHAIN_UI_AUTH_STATE`、
+`HEAVY_CHAIN_MONITOR_API_URL`、`HEAVY_CHAIN_MONITOR_BRAND_ID`、`HEAVY_CHAIN_MONITOR_TOKEN`は未設定。release gateは
+`readback:production monitor and UI pair`（UI artifact missing）、`readback:G618 scale ops baseline`（2026-09-01の587h stale）、
+`readback:production H602 billing completion readback`、`command:generation scorecard`（実画像scorecard missing）の4件で
+fail。H601 legal-safety、H602 local billing contract、G620、G632、G633、typecheck/build/lint/diff-checkはpass。
+
+現時点で安全に自動完了できる変更は尽きた。次の再開条件は、(1) operator/counselが安全なH601/H602 decisionを添付、
+(2) ownerが有効なCloudflare monitor origin/brand/tokenをtask scopeへ供給し96h readbackを取得、(3) authorized providerの
+実生成receipt・Storage/readback・画像scorecardを取得、(4)同じrunIdのproduction monitor/UI pairを作成、である。Goalは
+activeのまま保持し、未証明項目を完了扱いにしない。

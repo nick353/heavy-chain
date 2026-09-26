@@ -21899,3 +21899,17 @@ remote save/reuse/reload/reconciliation・monitor・billing・publish・secret�
 G618、H602 billing completion readback、generation scorecard の4件で変化なし。不可逆境界は generation submit、payment、
 publish、destructive cleanup、deploy すべて未実行。strict gateは本番monitor/UI認証証跡、Cloudflare ops token+96h readback、
 billing production readback、実provider生成+画像品質scorecardが揃うまで通さない。
+
+# Heavy Chain current state — 2026-09-26 r191
+
+Heavy本番生成導線のCompanion readbackをfresh取得。`/generate`のhydration shell後に同一tabを読み返すと`/designProduction`の
+hydrated workspaceへ遷移し、4つの作成action、保存済みproject、15 quotaを確認。生成・upload・provider・save・billing・publishは
+未実行。wait timeoutはmutation dispatch前で再送不要。session/tab/lease cleanupは完全成功（closed 1、released 1、retained 0、
+unknown effect 0、foreign mutation false）。
+
+fresh verification結果: H601 static guard、H602 local billing contract、G620、G632、G633、typecheck/build/lint/diff-checkはpass。
+H601 operator final decision/evidence 10項目、H602 quota enforcement、checkout disabled、machine no-charge proof、
+transaction/entitlement readbackは未達。`LIGHTCHAIN_UI_AUTH_STATE`、`HEAVY_CHAIN_MONITOR_API_URL`、
+`HEAVY_CHAIN_MONITOR_BRAND_ID`、`HEAVY_CHAIN_MONITOR_TOKEN`は未設定。release gate capturedAt=`2026-09-26T01:57:48.550Z`の失敗は
+production monitor/UI pair（UI summary missing）、G618 baseline（2026-09-01でstale、tokenなし）、H602 production completion、
+generation scorecard（実scorecard missing）の4件。production generation/payment/publish/deploy/destructive cleanupは未実行。
