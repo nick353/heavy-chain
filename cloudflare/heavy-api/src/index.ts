@@ -444,7 +444,12 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   if (request.method === "OPTIONS") return corsPreflight(request, env);
   const respond = (response: Response): Response => withCors(request, env, response);
   if (request.method === "GET" && url.pathname === "/v1/health") {
-    return respond(jsonResponse({ status: "ok", service: "heavy-api", media: "private-r2" }));
+    return respond(jsonResponse({
+      status: "ok",
+      service: "heavy-api",
+      media: "private-r2",
+      heavyEntitlementEnabled: env.HEAVY_IMAGE_ENTITLEMENT_ENABLED?.trim() === "true",
+    }));
   }
   const feedbackAdminResponse = await handleFeedbackAdminRequest(request, env);
   if (feedbackAdminResponse) return respond(feedbackAdminResponse);
