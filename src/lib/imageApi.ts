@@ -1,4 +1,4 @@
-import { cloudflareDataPlane } from './cloudflareApi';
+import { cloudflareDataPlane, type HeavyGenerationConsent } from './cloudflareApi';
 import type { Json } from '../types/database';
 import type { HeavyGenerationPreflight } from './heavyGenerationPreflight';
 export { assertCompletedImageEditResult, assertCompletedModelMatrixResult } from './providerResultReadback';
@@ -147,7 +147,7 @@ export interface SharedImagePayload {
 async function invokeImageAction<T>(
   action: string,
   body: Record<string, unknown>,
-  options: { idempotencyKey?: string; assertContext?: ()=>void; heavyPreparation?: HeavyGenerationPreflight } = {},
+  options: { idempotencyKey?: string; assertContext?: ()=>void; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent } = {},
 ): Promise<T> {
   if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
   return cloudflareDataPlane.invokeProviderAction<T>(action, body, options);
@@ -283,6 +283,7 @@ export async function generateImage(
     compositionPreview?: unknown;
     rightsConfirmed?: boolean;
     heavyPreparation?: HeavyGenerationPreflight;
+    heavyConsent?: HeavyGenerationConsent;
   }
 ): Promise<ImageEditResult> {
   try {
@@ -295,6 +296,7 @@ export async function generateImage(
       },
     }, {
       heavyPreparation: options?.heavyPreparation,
+      heavyConsent: options?.heavyConsent,
     });
     return {
       ...result,

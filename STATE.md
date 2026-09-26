@@ -22057,3 +22057,15 @@ explicit-true-only flag、empty-policy fail-closed、normalized generation input
 strict gate r6 fullではH602 local command blockerが消え、残りはproduction monitor/UI pair、mass-market QA、Lightchain
 all-feature previews、G618、H601、H602 production completion、real-generation scorecard。H602 production proof、実provider
 receipt、R2/video/billing/publish、secret投入は未実行。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r372
+
+Heavyの不足していた認証導線を、owner/product承認の範囲で実装した。運用条件とリクエスト単位の権利表明を文書化し、設定へ
+version・document version・digestを登録。Generate UIは全文表示、terms同意、権利表明を持ち、同意時だけ同一入力のprepare→acceptance→
+attestation→provider actionを実行する。サーバーのshort-lived preparation、normalized input digest、brand/user/action/request binding、
+private persistenceは既存のfail-closed境界を維持する。Light Chain側の`権限がありません`とsource permissionは変更していない。
+
+production flagはfalseのまま、acceptance/attestationのproduction D1直投入はしていない。Heavy API 112/112、Web 14/14、preflight 2/2、
+Light parity/provider 34/34、typecheck、build、lint、diff-checkがpass。実provider receipt、R2 save/reuse/reload/reconciliation、
+video、monitor/UI、G618、H601/H602 production、scorecard、billing、publishは未達。次の境界はflag falseのAPI/Web deployとfresh readback、
+その後の認証済み同意による1回限りの実生成・same-run証跡である。Goal active。

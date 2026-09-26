@@ -112,9 +112,11 @@ const MAX_MODEL_MATRIX_PATTERNS = 3;
 
 const heavyEntitlementMessage = (reason: string | null, loading = false): string => {
   if (loading || reason === 'heavy_entitlement_read_pending') return 'Heavy利用条件を確認しています…';
-  if (reason === 'heavy_generation_disabled') return 'Heavy生成機能は未実装です';
+  if (reason === 'heavy_generation_disabled') return 'Heavy生成は本番設定の有効化待ちです';
+  if (reason && /terms_acceptance_required|terms_required/i.test(reason)) return 'Heavy利用条件を確認して同意してください';
+  if (reason && /rights_attestation|request_binding|input_digest/i.test(reason)) return 'この生成リクエストの権利表明を確認してください';
   if (reason && /(terms|rights|attestation|binding)/i.test(reason)) {
-    return 'Heavy側の規約同意・権利表明が必要です';
+    return 'Heavy側の利用条件と権利表明を確認してください';
   }
   return 'Heavy利用条件を確認できません';
 };
@@ -652,11 +654,11 @@ const debugLog = (message: string, details?: Record<string, unknown>) => {
 
 async function invokeProviderAction(
   action: string,
-  options: { body: Record<string, unknown> },
+  options: { body: Record<string, unknown>; heavyConsent?: { termsAccepted: boolean; rightsAttested: boolean } },
 ): Promise<{ data: any; error: any }> {
   try {
     if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
-    return { data: await cloudflareDataPlane.invokeProviderAction(action, options.body), error: null };
+    return { data: await cloudflareDataPlane.invokeProviderAction(action, options.body, { heavyConsent: options.heavyConsent }), error: null };
   } catch (error) {
     return { data: null, error };
   }
@@ -1004,6 +1006,8 @@ export function GeneratePage() {
   const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(getInitialGenerationModel);
   const [heavyEntitlement, setHeavyEntitlement] = useState<CloudflareHeavyEntitlement | null>(null);
   const [heavyEntitlementLoading, setHeavyEntitlementLoading] = useState(false);
+  const [heavyTermsAccepted, setHeavyTermsAccepted] = useState(false);
+  const [heavyRightsAttested, setHeavyRightsAttested] = useState(false);
   const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
   const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
   
@@ -1060,8 +1064,14 @@ export function GeneratePage() {
   // response is only a closed UI preflight; the Heavy handler remains the
   // authority for the request-scoped attestation.
   const heavyEntitlementAction = selectedFeature?.id === 'model-matrix' ? 'model-matrix' : 'generate-image';
-  const heavyEntitlementReady = noImageGenerationMode
-    || (heavyEntitlement?.allowed === true && heavyEntitlement.requestScopedAttestationRequired === false);
+  const heavyPolicyConfigured = Boolean(
+    heavyEntitlement?.termsVersion && heavyEntitlement.termsDocumentVersion && heavyEntitlement.termsDocumentDigest &&
+    heavyEntitlement.rightsVersion && heavyEntitlement.rightsDocumentVersion && heavyEntitlement.rightsDocumentDigest &&
+    heavyEntitlement.reason !== 'heavy_generation_disabled',
+  );
+  const heavyEntitlementReady = noImageGenerationMode || (
+    heavyPolicyConfigured && heavyTermsAccepted && heavyRightsAttested
+  );
   // This is only the shared request's caller declaration; the Heavy handler
   // revalidates the current request-scoped entitlement before side effects.
   const providerRightsConfirmed = heavyEntitlementReady;
@@ -1075,17 +1085,25 @@ export function GeneratePage() {
     if (noImageGenerationMode || !brandId || !selectedFeatureId) {
       setHeavyEntitlement(null);
       setHeavyEntitlementLoading(false);
+      setHeavyTermsAccepted(false);
+      setHeavyRightsAttested(false);
       return () => { cancelled = true; };
     }
     if (!cloudflareDataPlane) {
       setHeavyEntitlement(null);
       setHeavyEntitlementLoading(false);
+      setHeavyTermsAccepted(false);
+      setHeavyRightsAttested(false);
       return () => { cancelled = true; };
     }
     setHeavyEntitlementLoading(true);
-    void cloudflareDataPlane.getHeavyEntitlement(brandId, heavyEntitlementAction)
+      void cloudflareDataPlane.getHeavyEntitlement(brandId, heavyEntitlementAction)
       .then((status) => {
-        if (!cancelled) setHeavyEntitlement(status);
+        if (!cancelled) {
+          setHeavyEntitlement(status);
+          setHeavyTermsAccepted(Boolean(status.termsAcceptanceId));
+          setHeavyRightsAttested(false);
+        }
       })
       .catch(() => {
         // A missing/unreadable server entitlement is closed; it is not a
@@ -1100,6 +1118,10 @@ export function GeneratePage() {
           requestBinding: null,
           requestScopedAttestationRequired: true,
         });
+        if (!cancelled) {
+          setHeavyTermsAccepted(false);
+          setHeavyRightsAttested(false);
+        }
       })
       .finally(() => {
         if (!cancelled) setHeavyEntitlementLoading(false);
@@ -1520,6 +1542,11 @@ export function GeneratePage() {
         return;
       }
 
+      const heavyConsent = noImageGenerationMode ? undefined : {
+        termsAccepted: heavyTermsAccepted,
+        rightsAttested: heavyRightsAttested,
+      };
+
       if (overlayEnabled && !overlayText.trim()) {
         toast.error('画像内テキストを入力してください');
         return;
@@ -1813,6 +1840,7 @@ export function GeneratePage() {
               rightsConfirmed: providerRightsConfirmed,
               ...buildRemoteGenerationContext(planningFeature, generationPrompt, selectedRatio),
               ...generateMaterialMetadata,
+              heavyConsent,
             });
             if (!result.success) {
               throw new Error(result.error || 'image_generation_failed');
@@ -1959,7 +1987,8 @@ export function GeneratePage() {
               imageUrl: processedImageUrl, 
               newBackground: bgPrompt,
               backgroundReferenceImage: backgroundReferenceImage?.url,
-            }
+            },
+            heavyConsent,
           }));
           if (data?.resultUrl) {
             replaceGeneratedImages([{
@@ -1981,7 +2010,8 @@ export function GeneratePage() {
               pattern: selectedPattern,
               patternReferenceImage: patternReferenceImage?.url,
               count: generateCount,
-            }
+            },
+            heavyConsent,
           }));
           if (data?.variations) {
             replaceGeneratedImages(data.variations.map((v: any) => ({
@@ -2002,7 +2032,8 @@ export function GeneratePage() {
               scale: upscaleScale,
               denoiseLevel,
               sharpness,
-            }
+            },
+            heavyConsent,
           }));
           if (data?.resultUrl) {
             replaceGeneratedImages([{
@@ -2024,7 +2055,8 @@ export function GeneratePage() {
               strength: variationStrength / 100,
               prompt: prompt || undefined,
               featureType: 'variations',
-            }
+            },
+            heavyConsent,
           }));
           if (data?.variations) {
             replaceGeneratedImages(data.variations.map((v: any, i: number) => ({
@@ -2051,7 +2083,8 @@ export function GeneratePage() {
               scenes: selectedScenes.map(s => sceneOptions.find(sc => sc.id === s)?.prompt),
               count: selectedScenes.length,
               featureType: 'scene-coordinate',
-            }
+            },
+            heavyConsent,
           }));
           if (data?.variations) {
             replaceGeneratedImages(data.variations.map((v: any, i: number) => ({
@@ -2085,7 +2118,8 @@ export function GeneratePage() {
               randomizedElements,
               sourceReadback: sourceReadback ?? undefined,
               patternContext: patternContext ?? undefined,
-            }
+            },
+            heavyConsent,
           }));
           if (data?.variations) {
             const materializedDesignGachaResults = await Promise.all(
@@ -2137,7 +2171,8 @@ export function GeneratePage() {
             );
             
             const invokePromise = invokeProviderAction('product-shots', {
-              body: requestBody
+              body: requestBody,
+              heavyConsent,
             });
             
             const result = await Promise.race([invokePromise, timeoutPromise]) as any;
@@ -2195,7 +2230,8 @@ export function GeneratePage() {
               hairStyle,
               sourceReadback: sourceReadback ?? undefined,
               modelCandidateLabel: modelCandidateLabel || undefined,
-            }
+            },
+            heavyConsent,
           }));
           if (data?.matrix) {
             const topLevelSemanticVerification =
@@ -2230,7 +2266,8 @@ export function GeneratePage() {
               subheadline,
               languages: selectedLanguages,
               aspectRatio: selectedRatio
-            }
+            },
+            heavyConsent,
           }));
           if (data?.banners) {
             replaceGeneratedImages(data.banners.map((b: any) => ({
@@ -2310,7 +2347,8 @@ export function GeneratePage() {
                 brandColor: campaignBrandColor,
                 textPosition: campaignTextPosition,
               },
-            }
+            },
+            heavyConsent,
           }));
           if (data?.images) {
             prependGeneratedImages(data.images.map((image: any) => ({
@@ -2354,7 +2392,8 @@ export function GeneratePage() {
               legalSafety: {
                 rightsConfirmed: providerRightsConfirmed,
               },
-            }
+            },
+            heavyConsent,
           }));
           if (data?.images) {
             prependGeneratedImages(data.images.map((image: any) => ({
@@ -4416,6 +4455,40 @@ export function GeneratePage() {
                 className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100"
               >
                 <p>{heavyEntitlementDisplayMessage}</p>
+                {heavyPolicyConfigured && (
+                  <div className="mt-3 grid gap-2 text-xs font-normal leading-5">
+                    <details className="rounded-xl border border-amber-300/70 bg-white/70 p-3 dark:border-amber-700/70 dark:bg-neutral-950/40" data-testid="heavy-terms-copy">
+                      <summary className="cursor-pointer font-semibold">Heavy利用条件の全文（terms v1 / rights v1）</summary>
+                      <div className="mt-2 space-y-2">
+                        <p>Heavy Chainの画像生成は、設定済みのCloudflare Workers AIとHeavy Chain内部の利用枠を使います。購入・決済・サブスクリプション・公開投稿は行いません。</p>
+                        <p>このリクエストのプロンプトと、アップロードまたは参照する各入力素材を利用する権限があることを確認してください。必要な許諾なく第三者のロゴ、保護されたブランド識別子、人物の肖像、他者の特徴的な作品を入力しないでください。</p>
+                        <p>生成結果は、ダウンロード、共有、公開、商用利用の前に利用者自身が確認してください。Heavy Chainは法的な権利判断を行いません。</p>
+                        <p>この文面は運用上のプロダクト通知であり、法的な許可や法律相談の代わりではありません。文面または権利表明ポリシーが変わると、再同意が必要になります。</p>
+                        <p className="font-mono text-[11px]">リクエストごとの権利表明: この生成リクエストのプロンプトと各入力素材を利用する権限があり、他者・他組織の権利を故意に侵害しないことを確認します。表明はアカウント、ブランド、操作、リクエストID、正規化入力ダイジェストに紐づけて保存されます。</p>
+                      </div>
+                    </details>
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={heavyTermsAccepted}
+                        onChange={(event) => setHeavyTermsAccepted(event.target.checked)}
+                        className="mt-1"
+                        data-testid="heavy-terms-acceptance"
+                      />
+                      <span>Heavy利用条件（運用上のterms v1）を読み、同意します。</span>
+                    </label>
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={heavyRightsAttested}
+                        onChange={(event) => setHeavyRightsAttested(event.target.checked)}
+                        className="mt-1"
+                        data-testid="heavy-rights-attestation"
+                      />
+                      <span>このリクエストのプロンプト・参照素材を利用する権利を確認し、生成ごとの権利表明を行います。</span>
+                    </label>
+                  </div>
+                )}
               </div>
             )}
 

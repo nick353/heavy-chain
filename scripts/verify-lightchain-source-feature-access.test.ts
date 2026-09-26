@@ -38,15 +38,19 @@ test('all 31 non-video catalog rows remain non-admitted until source permission 
   }
 });
 
-test('Heavy model-matrix generation uses the server entitlement without a UI rights checkbox', async () => {
+test('Heavy model-matrix generation uses explicit Heavy consent without Light source permission', async () => {
   assert.equal(getLightchainSourceGenerationAccess('model-matrix'), 'denied');
   const source = await readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(source, /const heavyPolicyConfigured = Boolean\(/);
+  assert.match(source, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?heavyPolicyConfigured && heavyTermsAccepted && heavyRightsAttested/);
   assert.match(source, /const providerRightsConfirmed = heavyEntitlementReady/);
   assert.match(source, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
+  assert.match(source, /data-testid="heavy-terms-acceptance"/);
+  assert.match(source, /data-testid="heavy-rights-attestation"/);
+  assert.match(source, /const heavyConsent = noImageGenerationMode \? undefined/);
   assert.doesNotMatch(source, /isLightchainGenerationSurface|sourceGenerationAccess|getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(source, /const rightsConfirmed = true/);
-  assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|type="checkbox"/);
+  assert.doesNotMatch(source, /権限がありません/);
 });
 
 test('unified-workbench workflows use Heavy entitlement rather than Light source generation access', async () => {

@@ -10650,3 +10650,20 @@ strict gate `heavy-release-gate-current-20260927-r6-full`で`command:H602 billin
 production monitor/UI pair、production mass-market QA、production Lightchain all-feature previews、G618、H601、H602、
 real-generation scorecardであり、いずれも認証済みfresh readbackまたはoperator/provider証跡が必要。H602 production
 proof、実provider/R2/video/billing/publish、秘密情報投入は行っていない。Goalはactive。
+
+# Goal progress — 2026-09-27 r372
+
+ユーザーの明示したHeavy側の認証不足解消方針を、法的許諾の推測やD1の先行投入に拡張せず、プロダクトオーナー承認として記録した。
+`cloudflare/heavy-api/HEAVY_TERMS_V1.md`、`HEAVY_RIGHTS_ATTESTATION_V1.md`、`docs/heavy-owner-approval-20260927.md`を追加し、
+terms/rightsのversion・document version・SHA-256 digestをAPI設定へ登録した。productionの
+`HEAVY_IMAGE_ENTITLEMENT_ENABLED`は引き続きfalseで、acceptance/attestationのproduction D1行は0件のまま。
+
+Heavy Generate UIは、設定済みポリシーをfresh readbackした後に利用条件全文を表示し、terms同意とリクエスト単位の権利表明を明示的に受け、
+同一の正規化入力に対するprepare→acceptance→attestation→provider actionへつなぐfail-closed導線を実装した。Light Chainの
+`src/features/lightchain/sourceFeatureAccess.ts`、Model Libraryの`権限がありません`、Light固有の権限面は変更していない。
+
+検証はHeavy API 112/112、Web 14/14、Heavy preflight 2/2、Light parity/provider suites 34/34、typecheck、production build、lint、
+`git diff --check`をPASS。実際のproduction generation、D1 acceptance/attestation、provider receipt、R2保存・再利用・reload・reconciliation、
+flag有効化、課金・公開はまだ実行していない。次はこの差分をcommitしてflag falseのままAPI/Webへdeployし、fresh UI/API readback後、
+認証済み同意を1回だけ使った実provider生成とsame-run receipt/D1/R2 readbackを行う。失敗またはunknown effectなら同じrequestを照合し、再送せずflagをfalseへ戻す。
+Goalはactive。

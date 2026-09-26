@@ -79,7 +79,7 @@ test('AI fitting exposes Gallery selection and the source permission surface bef
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|type="checkbox"/);
 });
 
-test('Heavy parity surfaces do not render the Light-missing rights checkbox or badge', async () => {
+test('Heavy parity surfaces keep Heavy consent separate from the Light-missing rights badge', async () => {
   const sources = await Promise.all([
     readFile(generateSourcePath, 'utf8'),
     readFile(canvasSourcePath, 'utf8'),
@@ -92,9 +92,13 @@ test('Heavy parity surfaces do not render the Light-missing rights checkbox or b
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|GENERATION_LEGAL_COPY/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
   const generate = sources[0];
-  assert.match(generate, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(generate, /const heavyPolicyConfigured = Boolean\(/);
+  assert.match(generate, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?heavyPolicyConfigured && heavyTermsAccepted && heavyRightsAttested/);
   assert.match(generate, /const providerRightsConfirmed = heavyEntitlementReady/);
   assert.match(generate, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
+  assert.match(generate, /data-testid="heavy-terms-acceptance"/);
+  assert.match(generate, /data-testid="heavy-rights-attestation"/);
+  assert.doesNotMatch(generate, /権限がありません/);
   assert.doesNotMatch(generate, /isLightchainGenerationSurface|sourceGenerationAccess|getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(generate, /const rightsConfirmed = true/);
   assert.doesNotMatch(generate, /sourceModelGenerationDenied/);

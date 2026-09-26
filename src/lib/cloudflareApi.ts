@@ -57,6 +57,11 @@ export type CloudflareHeavyAttestationReceipt = {
   requestScopedAttestationRequired: false;
 };
 
+export type HeavyGenerationConsent = {
+  termsAccepted: boolean;
+  rightsAttested: boolean;
+};
+
 export interface CloudflareAdminStats {
   totalUsers: number; activeUsers: number; totalImages: number;
   totalCost: number | null; totalUsageUnits: number | null; edgeRunCount: number | null; averageDurationMs: number | null;
@@ -602,16 +607,47 @@ class CloudflareDataPlaneClient {
       return {userId:session.user.id,assertCurrent,call};
   }
 
-  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void; heavyPreparation?: HeavyGenerationPreflight } = {}): Promise<T> {
+  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent } = {}): Promise<T> {
     options.assertContext?.();
     if (CLOUDFLARE_IMAGE_ACTIONS.has(action)) {
       const {userId,assertCurrent,call} = await this.captureRequestContext(options.assertContext);
       const protectedEdit = action === 'edit-image' && body.maskDataUrl ? await prepareProtectedCloudflareEdit(body) : null;
       const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(protectedEdit?.body ?? body, options.heavyPreparation) : (protectedEdit?.body ?? body);
       const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody)); await assertCurrent();
-      const scope = {origin:this.origin,userId,brandId:String(prepared.brandId ?? prepared.brand_id)};
-      const snapshot = protectedEdit ? {...protectedEdit,body:prepared} : null;
-      return invokeDurableImageAction<T>({ origin: this.origin,userId,action,body: prepared,...options,assertCurrent,call,
+      const requestId = options.idempotencyKey ?? crypto.randomUUID();
+      let heavyPreparation = options.heavyPreparation;
+      if (options.heavyConsent) {
+        heavyPreparation = heavyPreparation ?? await this.prepareHeavyGeneration({
+          brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId, input: prepared,
+        });
+        if (options.heavyConsent.termsAccepted !== true || options.heavyConsent.rightsAttested !== true) {
+          throw new Error('heavy_explicit_consent_required');
+        }
+        const status = await this.getHeavyEntitlement(String(prepared.brandId ?? prepared.brand_id), action).catch(() => null);
+        if (!status?.termsAcceptanceId) {
+          if (!heavyPreparation.termsDocumentVersion || !heavyPreparation.termsDocumentDigest) throw new Error('heavy_terms_document_unavailable');
+          await this.recordHeavyTermsAcceptance({
+            brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId, preflight: heavyPreparation,
+            termsAccepted: true, documentVersion: heavyPreparation.termsDocumentVersion,
+            documentDigest: heavyPreparation.termsDocumentDigest, source: 'heavy-ui-v1',
+          });
+        }
+        if (!heavyPreparation.termsDocumentVersion || !heavyPreparation.termsDocumentDigest ||
+            !heavyPreparation.rightsVersion || !heavyPreparation.rightsDocumentVersion || !heavyPreparation.rightsDocumentDigest) {
+          throw new Error('heavy_entitlement_policy_unavailable');
+        }
+        await this.recordHeavyRequestAttestation({
+          brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId, preflight: heavyPreparation,
+          providerInput: prepared, termsAccepted: true, rightsAttested: true,
+          termsDocumentVersion: heavyPreparation.termsDocumentVersion, termsDocumentDigest: heavyPreparation.termsDocumentDigest,
+          rightsVersion: heavyPreparation.rightsVersion, rightsDocumentVersion: heavyPreparation.rightsDocumentVersion,
+          rightsDocumentDigest: heavyPreparation.rightsDocumentDigest,
+        });
+      }
+      const finalBody = heavyPreparation ? attachHeavyGenerationPreflight(prepared, heavyPreparation) : prepared;
+      const scope = {origin:this.origin,userId,brandId:String(finalBody.brandId ?? finalBody.brand_id)};
+      const snapshot = protectedEdit ? {...protectedEdit,body:finalBody} : null;
+      return invokeDurableImageAction<T>({ origin: this.origin,userId,action,body: finalBody,idempotencyKey:requestId,assertCurrent,call,
         retainUntilAcknowledged:!!protectedEdit,
         beforeSubmit:snapshot ? (id,key)=>persistProtectedImageInput(scope,snapshot,id,key) : undefined,
         onTerminal:snapshot ? (id,key)=>deleteProtectedImageInput(scope,id,key) : undefined,
