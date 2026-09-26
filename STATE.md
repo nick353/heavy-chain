@@ -21913,3 +21913,12 @@ transaction/entitlement readbackは未達。`LIGHTCHAIN_UI_AUTH_STATE`、`HEAVY_
 `HEAVY_CHAIN_MONITOR_BRAND_ID`、`HEAVY_CHAIN_MONITOR_TOKEN`は未設定。clean HEADでの最終release gate capturedAt=`2026-09-26T02:02:47.619Z`の失敗は
 production monitor/UI pair（UI summary missing）、G618 baseline（2026-09-01でstale、tokenなし）、H602 production completion、
 generation scorecard（実scorecard missing）の4件。production generation/payment/publish/deploy/destructive cleanupは未実行。
+
+# Heavy Chain current state — 2026-09-26 r192
+
+`npm run verify:openai-provider --silent`（実体はCloudflare generation readiness）をfresh実行し、7/7 checks、`ok:true`、
+`externalApiCall=not_touched`、`generationSubmit=not_clicked`、`deploy=not_run`を確認。provider adapter、durable
+persistence/readback、video boundary/contract、generation lifecycleの決定的テストは37/37 pass。これは静的・契約証拠であり、
+production provider execution、R2 readback、画像品質、billing completionの証明ではない。Heavyの正規providerはCloudflare
+provider-actionであり、環境のOpenAI keyを直接使う別経路は採用していない。実provider receipt、monitor/UI pair、G618の
+token付き96h readback、H602 operator/billing evidence、実画像scorecardは未達。Goal active。

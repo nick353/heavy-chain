@@ -10487,3 +10487,16 @@ fail。H601 legal-safety、H602 local billing contract、G620、G632、G633、ty
 (2) ownerが有効なCloudflare monitor origin/brand/tokenをtask scopeへ供給し96h readbackを取得、(3) authorized providerの
 実生成receipt・Storage/readback・画像scorecardを取得、(4)同じrunIdのproduction monitor/UI pairを作成、である。Goalは
 activeのまま保持し、未証明項目を完了扱いにしない。
+
+# Goal progress — 2026-09-26 r360
+
+現行Cloudflare provider-action経路の静的readinessをfresh実行し、7/7 checksがpassした。証跡は
+`output/playwright/cloudflare-generation-readiness/summary.json`（capturedAt=`2026-09-26T02:05:20.352Z`）。これは
+provider action transport、durable receipt/ack、private media persistence、legacy marker除去の証明であり、実provider
+submit・認証済みproduction generation・AI品質・R2 readbackの証明ではない。環境に`OPENAI_API_KEY`名は存在するが、Heavyの
+正規production経路はCloudflareであり、直接OpenAIへ送る処理は行っていない。
+
+provider adapter、provider persistence/readback、video provider boundary/contract、generation lifecycleの決定的テストを
+同一runでfresh実行し、37/37 pass。videoはsource・credential・same-run readbackが揃うまでfail-closed、provider成果物は
+durable persistenceが完了するまでGallery/Canvasへ昇格しないことを再確認した。Goalの残りは実provider receipt、monitor/UI
+pair、G618 token付き96h readback、H602 operator/billing証跡、実画像scorecardのままである。
