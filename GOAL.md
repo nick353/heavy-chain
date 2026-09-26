@@ -10595,3 +10595,20 @@ Heavy API deploy後のproduction D1 migration readbackで、`0012`〜`0014`が�
 `heavy-chain-production-db`へ3本をremote applyした。各migrationはsuccess、再読込は`No migrations to apply!`。
 `/v1/health`はHTTP 200を維持し、未認証prepareはHTTP 401で、flag false・provider未実行のfail-closed境界を確認した。
 証跡`work/heavy-chain-entitlement-postdeploy-readback-20260927-r1.md`へ追記済み。Goalはactive。
+# Goal progress — 2026-09-27 r368
+
+全34件の現行Lightchain feature route（launcherを含む）を、同一の認証済みCompanion task-owned sessionで
+順にnavigationし、各routeをsemantic+visual readbackした。route matrixは
+`work/heavy-chain-companion-production-route-matrix-20260921.json`へ反映し、sessionId
+`session_1c1a65f0-1917-416c-aef1-e4839fdc8c32`、capturedAt=`2026-09-26T22:33:20.813Z`、loadedCount=34、
+failed=[]、authSecretExported=false、businessCompletionはproviderReceipt/sourceSync/reconciliationともunverifiedである。
+全routeのmarkersに旧Light由来の`権限がありません`はない。Companion sessionはtask-owned tab 1件をcloseし、
+lease release 1、retained/unknown 0、foreign mutation falseで終了した。コミットは`f183ad3`。
+
+strict release gate（`heavy-release-gate-current-20260927-r1`）はroute matrixとdirty worktreeの失敗を解消したが、
+残りはproduction monitor/UI pair、launch operations、production mass-market QA、production Lightchain all-feature
+order previews、G603、G606、G618、H601、H602、generation scorecard、H602 billing readinessである。
+G605/G610のlocal fresh checksはpass。G606は1200 images/600 Canvas objectsのfixture自体はpassだが、
+gate required `renderedTilesInitial >= 60`を満たさない。G603はgarment/mask assertions後の
+`canvas_save_button_not_ready`とroute exceptionでfail。実provider・R2・video・billing・publishは未実行。
+Goalはactive。

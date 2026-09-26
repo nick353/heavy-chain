@@ -22007,3 +22007,17 @@ unknown-effect tabs and no external action. Evidence: `work/heavy-chain-entitlem
 This closes only the current UI/API/authenticated-surface freshness check. Heavy approved terms/rights documents and digests,
 explicit acceptance/attestation, real provider receipt, private-R2 save/reuse/reload/reconciliation, video provider,
 monitor/UI and G618, H601/H602, and the real-generation scorecard remain open. Goal active.
+# Heavy Chain current state — 2026-09-27 r368
+
+現行Lightchain manifestの33 feature routeとlauncherの計34 routeを、同一Companion sessionで認証済み
+semantic+visual readbackした。route matrixはcapturedAt `2026-09-26T22:33:20.813Z`、loadedCount=34、
+failed=[]、legacy permission marker 0、authSecretExported=false、business completion
+(provider receipt/source sync/reconciliation) unverified。Companion cleanupはsession closed、closed tab 1、
+leases released 1、retained/unknown 0、foreign mutation false。証跡更新コミットは`f183ad3`。
+
+strict release gate `heavy-release-gate-current-20260927-r1` は、route matrix・dirty worktreeを通過した。
+残る失敗は production monitor/UI pair、launch operations、production mass-market QA、production all-feature previews、
+G603、G606、G618、H601、H602、real-generation scorecard、H602 billing readiness。G605/G610 local checksはpass。
+G606の1200/600 fixtureはpassだがrenderedTilesInitialがgate閾値未達、G603は`canvas_save_button_not_ready`。
+Heavyの承認済みterms/rights文書・digest・explicit acceptance/attestation、real provider receipt、
+private R2 save/reuse/reload/reconciliation、video provider、billing/publishは未達。Goal active。
