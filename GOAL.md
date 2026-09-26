@@ -10500,3 +10500,20 @@ provider adapter、provider persistence/readback、video provider boundary/contr
 同一runでfresh実行し、37/37 pass。videoはsource・credential・same-run readbackが揃うまでfail-closed、provider成果物は
 durable persistenceが完了するまでGallery/Canvasへ昇格しないことを再確認した。Goalの残りは実provider receipt、monitor/UI
 pair、G618 token付き96h readback、H602 operator/billing証跡、実画像scorecardのままである。
+
+# Goal progress — 2026-09-26 r361
+
+ユーザーの明示的な生成許可を受け、Heavy本番の正規Companion task-owned sessionで、`/generate?feature=campaign-image`
+へ同一tab navigation後にsemantic+visual readbackを取得した。画面は`Lightchain AI`、`キャンペーン画像`、生成モデル
+`Cloudflare FLUX.2 Klein 4B`、生成数`1枚`を表示したが、`権限がありません`とdisabledの`生成する`を表示した。
+これは入力だけの問題ではなく、現行`src/features/lightchain/sourceFeatureAccess.ts`がcampaign-imageのsource
+generation accessを`unknown`としており、`GeneratePage`の`rightsConfirmed === permitted` fail-closed gateが
+provider requestを止めているためである。UIにrights checkbox/toggleはなく、権利判定の迂回や`rightsConfirmed=true`の
+強制は行わなかった。
+
+このturnでは、Cloudflare provider submit、OpenAI直接呼出し、upload、保存、課金、公開を0件に保持した。Companionの
+navigation transactionは`known_effect`/visual verified・external action false、終端cleanupはtask-owned tab 1件close、
+lease release confirmed、retained/unknown 0、foreign mutation falseで完了した。静的readiness 7/7と決定的provider/
+persistence/video/lifecycle 37/37は有効なままだが、実provider receipt・R2 readback・画像scorecardは新たに得られていない。
+ユーザーの「今後は生成前に聞かない」許可は保持する一方、source側の明示`permitted` readbackまたは正規のoperator判断なしに
+権利ゲートを変更しない。Goalはactive。

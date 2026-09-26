@@ -21922,3 +21922,17 @@ persistence/readback、video boundary/contract、generation lifecycleの決定�
 production provider execution、R2 readback、画像品質、billing completionの証明ではない。Heavyの正規providerはCloudflare
 provider-actionであり、環境のOpenAI keyを直接使う別経路は採用していない。実provider receipt、monitor/UI pair、G618の
 token付き96h readback、H602 operator/billing evidence、実画像scorecardは未達。Goal active。
+
+# Heavy Chain current state — 2026-09-26 r193
+
+ユーザーの明示的な生成許可を受け、正規Companion task-owned sessionでHeavy本番の
+`/generate?feature=campaign-image`を開き、同一tabのsemantic+visual readbackを取得した。`Cloudflare FLUX.2 Klein 4B`と
+`生成数 1枚`は表示されたが、`権限がありません`およびdisabledの`生成する`が表示された。現行実装では
+`campaign-image`のsource generation accessが`unknown`で、`rightsConfirmed`は`permitted`のときだけtrueになるため、
+provider requestはfail-closedで送れない。rights checkbox/toggleは表示されず、権限迂回・直接OpenAI・外部provider submitは
+行っていない。
+
+Companion navigationはbrowser readback verified、external action false。終端cleanupはowned tab 1件close、lease release
+confirmed、retained/unknown 0、foreign mutation false。実provider receipt、remote durable save/reuse/reload/reconciliation、
+画像scorecard、billing、monitor/UI、G618は未達のまま。ユーザーの今後の生成許可は保持するが、正規のsource `permitted`
+readbackまたはoperator判断が得られるまで権利ゲートは変更しない。Goal active。
