@@ -181,8 +181,9 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /data-testid="fabric-result-history"/);
   assert.match(page, /value=\{fabricPrompt\}[\s\S]*?onChange=\{\(event\) => setFabricPrompt\(event\.target\.value\)\}/);
   assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
-  assert.match(page, /const providerRightsConfirmed = !sourceGenerationDenied/);
-  assert.match(page, /const sourceGenerationDenied = sourceGenerationAccess !== 'permitted'/);
+  assert.match(page, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.match(page, /const heavyEntitlementReady = heavyEntitlement\?\.allowed === true[\s\S]*?requestScopedAttestationRequired === false/);
+  assert.doesNotMatch(page, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(page, /rightsConfirmationOpen|rightsConfirmationDraft|lightchain-material-rights-confirmation|権利を確認してAI生成|PermissionLockedButton/);
   assert.match(page, /data-testid="lightchain-print-generate"/);
   assert.match(page, /data-testid="lightchain-fabric-generate"/);

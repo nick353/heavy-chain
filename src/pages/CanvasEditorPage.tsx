@@ -35,7 +35,7 @@ import { GallerySelector } from '../components/GallerySelector';
 import { TemplateSelector, type DesignTemplate, type SizeTemplate } from '../components/TemplateSelector';
 import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
-import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { cloudflareDataPlane, type CloudflareHeavyEntitlement } from '../lib/cloudflareApi';
 import { resolveGeneratedImageUrl, resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { getWorkspaceArtifactCanonicalStoragePath, listWorkspaceArtifacts, listWorkspaceArtifactsForActivity } from '../lib/localWorkspaceArtifacts';
 import { downloadValidatedImage } from '../lib/imageDownload';
@@ -124,6 +124,15 @@ async function invokeProviderAction(
 }
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 const MAX_MODEL_MATRIX_PATTERNS = 3;
+
+const heavyEntitlementMessage = (reason: string | null, loading = false): string => {
+  if (loading || reason === 'heavy_entitlement_read_pending') return 'Heavy利用条件を確認しています…';
+  if (reason === 'heavy_generation_disabled') return 'Heavy生成機能は未実装です';
+  if (reason && /(terms|rights|attestation|binding)/i.test(reason)) {
+    return 'Heavy側の規約同意・権利表明が必要です';
+  }
+  return 'Heavy利用条件を確認できません';
+};
 const DerivationTree = lazy(() =>
   import('../components/canvas/DerivationTree').then((module) => ({ default: module.DerivationTree }))
 );
@@ -451,9 +460,52 @@ export function CanvasEditorPage() {
   const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s']);
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [isGenerating, setIsGenerating] = useState(false);
-  // Canvas has no Light Chain rights checkbox. Provider edits remain
-  // fail-closed until a trusted source permission admission exists.
-  const rightsConfirmed = false;
+  const [heavyEntitlement, setHeavyEntitlement] = useState<CloudflareHeavyEntitlement | null>(null);
+  const [heavyEntitlementLoading, setHeavyEntitlementLoading] = useState(false);
+  const heavyGenerationReady = heavyEntitlement?.allowed === true
+    && heavyEntitlement.requestScopedAttestationRequired === false;
+  const heavyEntitlementReason = heavyEntitlement?.reason
+    ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
+  const heavyEntitlementDisplayMessage = heavyEntitlementMessage(heavyEntitlementReason, heavyEntitlementLoading);
+  // The shared image request still carries this caller declaration; Heavy
+  // revalidates the current request-scoped entitlement on the server.
+  const rightsConfirmed = heavyGenerationReady;
+
+  useEffect(() => {
+    let cancelled = false;
+    const brandId = currentBrand?.id;
+    if (!brandId) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    if (!cloudflareDataPlane) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    setHeavyEntitlementLoading(true);
+    void cloudflareDataPlane.getHeavyEntitlement(brandId, 'generate-image')
+      .then((status) => {
+        if (!cancelled) setHeavyEntitlement(status);
+      })
+      .catch(() => {
+        if (!cancelled) setHeavyEntitlement({
+          allowed: false,
+          reason: 'heavy_entitlement_unavailable',
+          termsVersion: null,
+          rightsVersion: null,
+          termsAcceptanceId: null,
+          rightsAttestationId: null,
+          requestBinding: null,
+          requestScopedAttestationRequired: true,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setHeavyEntitlementLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [currentBrand?.id]);
   const [localUploadState, setLocalUploadState] = useState<LocalUploadState>({
     status: 'idle',
     persistenceStatus: 'unknown',
@@ -2179,7 +2231,7 @@ export function CanvasEditorPage() {
       let canvasGenerationResultCount = 0;
       const safetyText = [generatePrompt, productDescription, headline, subheadline].filter(Boolean).join(' ');
       if (!rightsConfirmed) {
-        toast.error('権限がありません');
+        toast.error(heavyEntitlementDisplayMessage);
         setIsGenerating(false);
         return;
       }
@@ -2451,7 +2503,7 @@ export function CanvasEditorPage() {
       return;
     }
     if (!rightsConfirmed) {
-      toast.error('権限がありません');
+      toast.error(heavyEntitlementDisplayMessage);
       return;
     }
     if (action === 'partial-edit' || action === 'inpaint') {
@@ -3002,7 +3054,7 @@ export function CanvasEditorPage() {
       throw new Error('ブランドを選択してから実行してください');
     }
     if (!rightsConfirmed) {
-      throw new Error('権限がありません');
+      throw new Error(heavyEntitlementDisplayMessage);
     }
     if (validateLegalSafetyInput([payload.prompt]).blocked) {
       throw new Error(BRAND_LIKENESS_BLOCK_COPY);
@@ -3156,7 +3208,7 @@ export function CanvasEditorPage() {
       return false;
     }
     if (!rightsConfirmed) {
-      toast.error('権限がありません');
+      toast.error(heavyEntitlementDisplayMessage);
       return false;
     }
     const sourceObject = editingObjectId
@@ -3965,7 +4017,7 @@ export function CanvasEditorPage() {
                   })}
                 </div>
                 <p className="mt-2 px-1 text-xs text-neutral-500">画像を選択すると、背景削除・色変更・派生などを直接かけられます。</p>
-                {!rightsConfirmed && <p role="status" className="mt-2 rounded-lg border border-cyan-300/25 bg-cyan-300/[0.06] px-2.5 py-2 text-xs font-semibold text-cyan-100">権限がありません</p>}
+                {!rightsConfirmed && <p role="status" className="mt-2 rounded-lg border border-cyan-300/25 bg-cyan-300/[0.06] px-2.5 py-2 text-xs font-semibold text-cyan-100">{heavyEntitlementDisplayMessage}</p>}
               </div>
             )}
 
@@ -4103,6 +4155,14 @@ export function CanvasEditorPage() {
                   {sidePanel === 'chat' && (
                     <ChatEditor
                       selectedImageUrl={selectedObject?.type === 'image' ? (selectedObject as any).src : undefined}
+                      heavyReadiness={{
+                        ready: heavyGenerationReady,
+                        reason: heavyEntitlementDisplayMessage,
+                        // The parent status read is requestless. Until a
+                        // request-scoped attestation supplies the exact
+                        // prompt/image key, ChatEditor must remain fail-closed.
+                        inputKey: null,
+                      }}
                       onEditResult={handleChatEditResult}
                     />
                   )}
@@ -4182,7 +4242,7 @@ export function CanvasEditorPage() {
 
           {/* Dynamic form */}
           {renderGenerateForm()}
-          {!rightsConfirmed && <p role="status" className="rounded-xl border border-cyan-300/35 bg-cyan-300/[0.08] p-3 text-xs font-semibold text-cyan-100">権限がありません</p>}
+          {!rightsConfirmed && <p role="status" className="rounded-xl border border-cyan-300/35 bg-cyan-300/[0.08] p-3 text-xs font-semibold text-cyan-100">{heavyEntitlementDisplayMessage}</p>}
 
           <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button

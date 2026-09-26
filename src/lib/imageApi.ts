@@ -1,5 +1,6 @@
 import { cloudflareDataPlane } from './cloudflareApi';
 import type { Json } from '../types/database';
+import type { HeavyGenerationPreflight } from './heavyGenerationPreflight';
 export { assertCompletedImageEditResult, assertCompletedModelMatrixResult } from './providerResultReadback';
 
 export interface TextOverlayPayload {
@@ -146,7 +147,7 @@ export interface SharedImagePayload {
 async function invokeImageAction<T>(
   action: string,
   body: Record<string, unknown>,
-  options: { idempotencyKey?: string; assertContext?: ()=>void } = {},
+  options: { idempotencyKey?: string; assertContext?: ()=>void; heavyPreparation?: HeavyGenerationPreflight } = {},
 ): Promise<T> {
   if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
   return cloudflareDataPlane.invokeProviderAction<T>(action, body, options);
@@ -281,6 +282,7 @@ export async function generateImage(
     maskPlan?: unknown;
     compositionPreview?: unknown;
     rightsConfirmed?: boolean;
+    heavyPreparation?: HeavyGenerationPreflight;
   }
 ): Promise<ImageEditResult> {
   try {
@@ -291,6 +293,8 @@ export async function generateImage(
       legalSafety: {
         rightsConfirmed: options?.rightsConfirmed === true,
       },
+    }, {
+      heavyPreparation: options?.heavyPreparation,
     });
     return {
       ...result,
@@ -401,6 +405,7 @@ export async function editImageWithPrompt(
     layerPlan?: unknown;
     maskPlan?: unknown;
     compositionPreview?: unknown;
+    heavyPreparation?: HeavyGenerationPreflight;
   },
 ): Promise<ImageEditResult> {
   try {
@@ -455,6 +460,7 @@ export async function editImageWithPrompt(
     }, {
       idempotencyKey: options?.idempotencyKey,
       assertContext: options?.assertContext,
+      heavyPreparation: options?.heavyPreparation,
     });
     options?.assertContext?.();
     return {

@@ -94,6 +94,76 @@ export function canonical(value: unknown): string {
   return JSON.stringify(value);
 }
 
+export type AuthorizedSourceAsset = {
+  id: string;
+  revision: number | string;
+  contentDigest: string;
+};
+
+export type NormalizedImageProvider = {
+  provider: string;
+  backendProvider: string;
+  model: string;
+};
+
+/**
+ * Build the server-owned identity of what the provider will consume. Caller
+ * URLs, legal checkbox noise and object-key order are excluded; generated
+ * prompts, settings, workflow metadata, authorized source identities and the
+ * exact decoded reference bytes are retained.
+ */
+export async function normalizedImageRequestDigest(
+  action: ImageAction,
+  body: Json,
+  input: ImageInput,
+  provider: NormalizedImageProvider,
+  authorizedSourceAssets: AuthorizedSourceAsset[],
+): Promise<{ digest: string; normalized: Json }> {
+  const references = await Promise.all(input.references.map(async (reference, index) => ({
+    index,
+    contentType: reference.contentType,
+    width: reference.width,
+    height: reference.height,
+    contentDigest: await sha256(reference.bytes),
+  })));
+  const normalizedSourceAssets = [...authorizedSourceAssets]
+    .sort((left, right) => canonical(left).localeCompare(canonical(right)));
+  const normalized: Json = {
+    schema: 'heavy-image-input.v2',
+    action,
+    provider,
+    prompts: input.candidates.map(candidate => ({
+      prompt: candidate.prompt,
+      descriptor: candidate.descriptor,
+      seed: candidate.seed,
+    })),
+    settings: {
+      width: input.width,
+      height: input.height,
+      parentImageId: input.parentImageId,
+      generation: input.generation,
+      candidateCount: input.candidates.length,
+    },
+    workflow: {
+      featureType: input.featureType,
+      metadata: input.metadata,
+      workflow: compact(body.workflow ?? null),
+      workflowVersion: body.workflowVersion ?? null,
+      sourceReadback: compact(body.sourceReadback ?? null),
+      generationIntent: compact(body.generationIntent ?? null),
+    },
+    authorizedSourceAssets: normalizedSourceAssets,
+    references,
+    // Keep these as first-class binding inputs as well as retaining the
+    // per-reference/per-source records above.  The entitlement attestation
+    // must cover the exact bytes that the provider receives and every
+    // server-resolved source revision, not only a caller request id.
+    contentDigests: references.map(reference => reference.contentDigest),
+    sourceContentDigests: normalizedSourceAssets.map(asset => asset.contentDigest),
+  };
+  return { digest: await sha256(canonical(normalized)), normalized };
+}
+
 function compact(value: unknown, depth = 0): unknown {
   if (depth > 10) throw new ImageInputError('image_metadata_too_deep');
   if (typeof value === 'string') {
@@ -120,6 +190,9 @@ function choices(value: unknown, allowed: Record<string, unknown>, fallback: str
 export function parseImageInput(action: ImageAction, body: Json): ImageInput {
   const brandId = body.brandId ?? body.brand_id;
   if (typeof brandId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(brandId)) throw new ImageInputError('invalid_brand_id');
+  // This field is caller intent only. The Heavy Worker resolves the
+  // request-scoped acceptance/attestation separately before quota, R2, or
+  // provider work; a true browser value is never authority by itself.
   if (!isRecord(body.legalSafety) || body.legalSafety.rightsConfirmed !== true) throw new ImageInputError('rights_confirmation_required', 403);
   try { requireLegalSafetyApproval(body.legalSafety,[body.prompt,body.productDescription,body.negativePrompt,body.textOverlay,body.generationIntent]); }
   catch { throw new ImageInputError('legal_safety_prompt_blocked',403); }

@@ -5,6 +5,7 @@ import { auth, refreshAuthSession } from './auth';
 import { CLOUDFLARE_IMAGE_ACTIONS, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
 import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
 import { persistProtectedImageInput,listProtectedImageInputs,loadProtectedImageInput,deleteProtectedImageInput } from './cloudflareImageInputCache';
+import { attachHeavyGenerationPreflight, validateHeavyGenerationPreflight, type HeavyGenerationInput, type HeavyGenerationPreflight } from './heavyGenerationPreflight';
 
 export interface CloudflareImageUsage {
   planName: string; monthlyQuota: number; remainingUnits: number;
@@ -13,6 +14,48 @@ export interface CloudflareImageUsage {
   averageInferenceMs: number | null; periodStart: string; periodEnd: string; imageAIEnabled: boolean;
   billing: 'estimate_not_invoice'; accountFreeAllocationRemaining: null; accountWideBudgetGuaranteed: false;
 }
+
+/** Read-only Heavy server entitlement status. A status read never authorizes a request by itself. */
+export interface CloudflareHeavyEntitlement {
+  allowed: boolean;
+  reason: string | null;
+  termsVersion: string | null;
+  termsDocumentVersion?: string | null;
+  termsDocumentDigest?: string | null;
+  rightsVersion: string | null;
+  rightsDocumentVersion?: string | null;
+  rightsDocumentDigest?: string | null;
+  termsAcceptanceId: string | null;
+  rightsAttestationId: string | null;
+  requestBinding: string | null;
+  requestScopedAttestationRequired: boolean;
+}
+
+export type CloudflareHeavyGenerationPreparation = HeavyGenerationPreflight;
+
+export type CloudflareHeavyAcceptanceReceipt = {
+  success: true;
+  acceptanceId: string;
+  acceptedAt: string;
+  termsVersion: string | null;
+  documentVersion: string | null;
+  documentDigest: string | null;
+};
+
+export type CloudflareHeavyAttestationReceipt = {
+  success: true;
+  requestId: string;
+  inputDigest: string;
+  termsAcceptanceId: string;
+  rightsAttestationId: string | null;
+  termsVersion: string | null;
+  documentVersion: string | null;
+  documentDigest: string | null;
+  rightsVersion: string | null;
+  rightsDocumentVersion: string | null;
+  rightsDocumentDigest: string | null;
+  requestScopedAttestationRequired: false;
+};
 
 export interface CloudflareAdminStats {
   totalUsers: number; activeUsers: number; totalImages: number;
@@ -559,12 +602,13 @@ class CloudflareDataPlaneClient {
       return {userId:session.user.id,assertCurrent,call};
   }
 
-  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void } = {}): Promise<T> {
+  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void; heavyPreparation?: HeavyGenerationPreflight } = {}): Promise<T> {
     options.assertContext?.();
     if (CLOUDFLARE_IMAGE_ACTIONS.has(action)) {
       const {userId,assertCurrent,call} = await this.captureRequestContext(options.assertContext);
       const protectedEdit = action === 'edit-image' && body.maskDataUrl ? await prepareProtectedCloudflareEdit(body) : null;
-      const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,protectedEdit?.body ?? body)); await assertCurrent();
+      const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(protectedEdit?.body ?? body, options.heavyPreparation) : (protectedEdit?.body ?? body);
+      const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody)); await assertCurrent();
       const scope = {origin:this.origin,userId,brandId:String(prepared.brandId ?? prepared.brand_id)};
       const snapshot = protectedEdit ? {...protectedEdit,body:prepared} : null;
       return invokeDurableImageAction<T>({ origin: this.origin,userId,action,body: prepared,...options,assertCurrent,call,
@@ -576,9 +620,10 @@ class CloudflareDataPlaneClient {
     }
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
+    const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(body, options.heavyPreparation) : body;
     return this.request<T>(`/v1/provider-actions/${encodeURIComponent(action)}`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify(proofBody),
       headers,
     });
   }
@@ -609,6 +654,91 @@ class CloudflareDataPlaneClient {
 
   async getImageUsage(brandId: string): Promise<CloudflareImageUsage> {
     return this.request(`/v1/image-ai/usage?brand_id=${encodeURIComponent(brandId)}`);
+  }
+
+  async getHeavyEntitlement(brandId: string, action = 'generate-image'): Promise<CloudflareHeavyEntitlement> {
+    return this.request(`/v1/heavy/entitlement?brand_id=${encodeURIComponent(brandId)}&action=${encodeURIComponent(action)}`);
+  }
+
+  /** Prepare one exact Heavy input; this does not accept terms or attest rights. */
+  async prepareHeavyGeneration(input: {
+    brandId: string;
+    action: string;
+    requestId: string;
+    input: HeavyGenerationInput;
+  }): Promise<CloudflareHeavyGenerationPreparation> {
+    const response = await this.request<CloudflareHeavyGenerationPreparation & { success: true }>('/v1/heavy/entitlement/prepare', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Idempotency-Key': input.requestId },
+      body: JSON.stringify({ brandId: input.brandId, action: input.action, requestId: input.requestId, input: input.input }),
+    });
+    return validateHeavyGenerationPreflight(response);
+  }
+
+  /** Record explicit Heavy terms acceptance; this never auto-checks the box. */
+  async recordHeavyTermsAcceptance(input: {
+    brandId: string;
+    action: string;
+    requestId: string;
+    preflight: HeavyGenerationPreflight;
+    termsAccepted: boolean;
+    documentVersion: string;
+    documentDigest: string;
+    source?: string;
+  }): Promise<CloudflareHeavyAcceptanceReceipt> {
+    const proof = validateHeavyGenerationPreflight(input.preflight);
+    return this.request<CloudflareHeavyAcceptanceReceipt>('/v1/heavy/entitlement/acceptance', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Idempotency-Key': input.requestId },
+      body: JSON.stringify({
+        brandId: input.brandId,
+        action: input.action,
+        requestId: input.requestId,
+        preparationId: proof.preparationId,
+        inputDigest: proof.inputDigest,
+        termsAccepted: input.termsAccepted,
+        documentVersion: input.documentVersion,
+        documentDigest: input.documentDigest,
+        source: input.source,
+      }),
+    });
+  }
+
+  /** Record explicit, request-scoped rights attestation without inferring consent. */
+  async recordHeavyRequestAttestation(input: {
+    brandId: string;
+    action: string;
+    requestId: string;
+    preflight: HeavyGenerationPreflight;
+    providerInput: HeavyGenerationInput;
+    termsAccepted: boolean;
+    rightsAttested: boolean;
+    termsDocumentVersion: string;
+    termsDocumentDigest: string;
+    rightsVersion: string;
+    rightsDocumentVersion: string;
+    rightsDocumentDigest: string;
+  }): Promise<CloudflareHeavyAttestationReceipt> {
+    const proof = validateHeavyGenerationPreflight(input.preflight);
+    return this.request<CloudflareHeavyAttestationReceipt>('/v1/heavy/entitlement/attestation', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Idempotency-Key': input.requestId },
+      body: JSON.stringify({
+        brandId: input.brandId,
+        action: input.action,
+        requestId: input.requestId,
+        preparationId: proof.preparationId,
+        inputDigest: proof.inputDigest,
+        termsAccepted: input.termsAccepted,
+        rightsAttested: input.rightsAttested,
+        termsDocumentVersion: input.termsDocumentVersion,
+        termsDocumentDigest: input.termsDocumentDigest,
+        rightsVersion: input.rightsVersion,
+        rightsDocumentVersion: input.rightsDocumentVersion,
+        rightsDocumentDigest: input.rightsDocumentDigest,
+        input: input.providerInput,
+      }),
+    });
   }
 
   async listWorkspaceExecutionSteps(brandId: string, jobIds: string[]): Promise<WorkspaceExecutionStep[]> {

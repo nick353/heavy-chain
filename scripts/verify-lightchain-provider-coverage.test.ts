@@ -137,7 +137,7 @@ test('keeps the two explicit custom-model entries source-free without weakening 
   assert.match(workbench, /if \(effectiveProviderRoute === 'model-matrix'\)/);
 });
 
-test('matches the Light Chain direct-generation path without a rights checkbox', () => {
+test('routes Heavy generation through the server entitlement gate without a UI rights checkbox', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const branches = [
     ['AI fitting', 'if (isFeatureDetail && isFittingDetail)', 'if (isFeatureDetail && selectedTool.id !== \'custom-style\' && workspaceStyle)'],
@@ -159,10 +159,11 @@ test('matches the Light Chain direct-generation path without a rights checkbox',
 
   assert.match(workbench, /const specialProviderGenerationLocked = !lightchainProviderSupported[\s\S]*brandResolutionPending[\s\S]*lightchainGenerationRunning/);
   assert.match(workbench, /data-testid="lightchain-special-provider-gate"/);
-  assert.match(workbench, /const sourceGenerationAccess = getLightchainSourceGenerationAccessForWorkflow\(selectedTool\.id\)/);
-  assert.match(workbench, /const sourceGenerationNotPermitted = sourceGenerationAccess !== 'permitted'/);
-  assert.match(workbench, /const providerRightsConfirmed = sourceGenerationAccess === 'permitted'/);
-  assert.match(workbench, /if \(sourceGenerationNotPermitted\)[\s\S]*?return;/);
+  assert.match(workbench, /const heavyEntitlementAction = lightchainProviderSupported/);
+  assert.match(workbench, /const heavyEntitlementReady = heavyEntitlementAction !== null/);
+  assert.match(workbench, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.match(workbench, /if \(!heavyEntitlementReady\)[\s\S]*?return;/);
+  assert.doesNotMatch(workbench, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(workbench, /lightchainRightsConfirmationModal|rightsConfirmationOpen|rightsConfirmationDraft|data-testid="lightchain-rights-confirmation"/);
   assert.doesNotMatch(workbench, /data-testid="lightchain-provider-gate"/);
   assert.match(workbench, /data-testid="lightchain-generation-error"/);
@@ -179,10 +180,11 @@ test('keeps the marketing detail provider flow on the direct Light Chain path', 
   assert.doesNotMatch(branch, /rightsConfirmation|権利確認/);
 });
 
-test('uses only explicitly source-admitted workflows instead of a UI rights confirmation', () => {
+test('uses the Heavy server entitlement instead of a UI rights confirmation', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(workbench, /Light Chain has no separate rights checkbox/);
-  assert.match(workbench, /getLightchainSourceGenerationAccessForWorkflow\(selectedTool\.id\)/);
+  assert.match(workbench, /Heavy status is requestless and therefore only a closed UI preflight/);
+  assert.match(workbench, /requestScopedAttestationRequired === false/);
+  assert.doesNotMatch(workbench, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(workbench, /PendingRightsGeneration|pendingRightsGenerationRef|rightsConfirmationOpen|rightsConfirmationDraft/);
   assert.match(workbench, /const rightsConfirmedForRequest = providerRightsConfirmed/);
   assert.doesNotMatch(workbench, /rightsAlreadyConfirmed/);
@@ -199,10 +201,11 @@ test('passes only source-admitted request-local rights into every provider route
   assert.doesNotMatch(workbench, /rightsAlreadyConfirmed/);
 });
 
-test('keeps dedicated material generation direct like Light Chain', () => {
+test('keeps dedicated material generation behind the Heavy entitlement gate', () => {
   const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(material, /const providerRightsConfirmed = !sourceGenerationDenied/);
-  assert.match(material, /const sourcePrintingGenerationDenied = getLightchainSourceGenerationAccess\('printing-image'\) !== 'permitted'/);
+  assert.match(material, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.match(material, /const heavyEntitlementReady = heavyEntitlement\?\.allowed === true/);
+  assert.doesNotMatch(material, /getLightchainSourceGenerationAccess\(/);
   assert.doesNotMatch(material, /pendingRightsGenerationRef|rightsConfirmationOpen|rightsConfirmationDraft|PermissionLockedButton|権利を確認してAI生成/);
   assert.match(material, /const rightsConfirmedForRequest = providerRightsConfirmed/);
   assert.doesNotMatch(material, /rightsAlreadyConfirmed/);
@@ -211,7 +214,7 @@ test('keeps dedicated material generation direct like Light Chain', () => {
     2,
     'printing and fabric provider routes must use the request-local confirmation value',
   );
-  assert.match(material, /if \(sourceGenerationDenied\)/);
+  assert.match(material, /if \(!heavyEntitlementReady\)/);
   assert.match(material, /legalSafety: \{ rightsConfirmed: !isLocalMaterialPreview && providerRightsConfirmed \}/);
 });
 

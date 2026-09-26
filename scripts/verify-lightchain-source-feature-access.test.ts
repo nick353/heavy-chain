@@ -38,21 +38,22 @@ test('all 31 non-video catalog rows remain non-admitted until source permission 
   }
 });
 
-test('observed model-matrix denial remains enforced without a UI rights checkbox', async () => {
+test('Heavy model-matrix generation uses the server entitlement without a UI rights checkbox', async () => {
   assert.equal(getLightchainSourceGenerationAccess('model-matrix'), 'denied');
   const source = await readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /getLightchainSourceGenerationAccessForWorkflow\(selectedFeature\?\.id \?\? ''\)/);
-  assert.match(source, /const rightsConfirmed = sourceGenerationAccess === 'permitted'/);
-  assert.match(source, /if \(!noImageGenerationMode && !rightsConfirmed\)/);
+  assert.match(source, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(source, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.match(source, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
+  assert.doesNotMatch(source, /isLightchainGenerationSurface|sourceGenerationAccess|getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(source, /const rightsConfirmed = true/);
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|type="checkbox"/);
 });
 
-test('unobserved unified-workbench workflows cannot start provider requests', async () => {
+test('unified-workbench workflows use Heavy entitlement rather than Light source generation access', async () => {
   const source = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /getLightchainSourceGenerationAccessForWorkflow\(selectedTool\.id\)/);
-  assert.match(source, /const sourceGenerationNotPermitted = sourceGenerationAccess !== 'permitted'/);
-  assert.match(source, /const providerRightsConfirmed = sourceGenerationAccess === 'permitted'/);
-  assert.match(source, /if \(sourceGenerationNotPermitted\)[\s\S]*?return;/);
+  assert.match(source, /const heavyEntitlementReady = heavyEntitlementAction !== null[\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(source, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.match(source, /if \(!heavyEntitlementReady\)[\s\S]*?return;/);
+  assert.doesNotMatch(source, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(source, /rightsAlreadyConfirmed|platformAssetRightsConfirmed/);
 });

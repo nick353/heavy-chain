@@ -93,7 +93,6 @@ import {
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
 import {
   getLightchainSourceFeatureAccess,
-  getLightchainSourceGenerationAccess,
 } from '../features/lightchain/sourceFeatureAccess';
 import {
   buildDerivedPrintGarmentMaskCandidates,
@@ -190,7 +189,7 @@ import {
   composeProviderProtectedResult,
 } from '../features/lightchain/providerMask';
 import { assertCompletedImageEditResult, editImageWithPrompt } from '../lib/imageApi';
-import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { cloudflareDataPlane, type CloudflareHeavyEntitlement } from '../lib/cloudflareApi';
 import { CLOUDFLARE_IMAGE_MODEL } from '../lib/cloudflareImageAI';
 import { CLOUDFLARE_PROTECTED_EDIT_NOTICE } from '../lib/cloudflareProtectedImageEdit';
 import { CLOUDFLARE_PRINT_INPUT_NOTICE, printProviderPrompt, renderPrintProviderInput } from '../lib/printProviderInput';
@@ -199,6 +198,15 @@ import type { GeneratedImage, Json } from '../types/database';
 
 type WorkbenchMode = 'fabric' | 'printing';
 type PrintCoverageMode = 'spot' | 'full';
+
+const heavyEntitlementMessage = (reason: string | null, loading = false): string => {
+  if (loading || reason === 'heavy_entitlement_read_pending') return 'Heavy利用条件を確認しています…';
+  if (reason === 'heavy_generation_disabled') return 'Heavy生成機能は未実装です';
+  if (reason && /(terms|rights|attestation|binding)/i.test(reason)) {
+    return 'Heavy側の規約同意・権利表明が必要です';
+  }
+  return 'Heavy利用条件を確認できません';
+};
 
 const lightchainMaterialSourceRailItems: ReadonlyArray<{
   label: string;
@@ -1543,10 +1551,50 @@ function LightchainMaterialWorkbenchSession() {
   // entitlement adapter admits the module.
   const sourceFabricAccess = getLightchainSourceFeatureAccess('fabric-image');
   const sourceFabricAdmitted = sourceFabricAccess === 'admitted';
-  const sourceGenerationAccess = getLightchainSourceGenerationAccess(isPrinting ? 'printing-image' : 'fabric-image');
-  const sourceFabricGenerationDenied = getLightchainSourceGenerationAccess('fabric-image') !== 'permitted';
-  const sourcePrintingGenerationDenied = getLightchainSourceGenerationAccess('printing-image') !== 'permitted';
-  const sourceGenerationDenied = sourceGenerationAccess !== 'permitted';
+  const [heavyEntitlement, setHeavyEntitlement] = useState<CloudflareHeavyEntitlement | null>(null);
+  const [heavyEntitlementLoading, setHeavyEntitlementLoading] = useState(false);
+  const heavyEntitlementReady = heavyEntitlement?.allowed === true
+    && heavyEntitlement.requestScopedAttestationRequired === false;
+  const heavyEntitlementReason = heavyEntitlement?.reason
+    ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
+  const heavyEntitlementDisplayMessage = heavyEntitlementMessage(heavyEntitlementReason, heavyEntitlementLoading);
+
+  useEffect(() => {
+    let cancelled = false;
+    const brandId = currentBrand?.id;
+    if (!brandId) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    if (!cloudflareDataPlane) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    setHeavyEntitlementLoading(true);
+    void cloudflareDataPlane.getHeavyEntitlement(brandId, 'edit-image')
+      .then((status) => {
+        if (!cancelled) setHeavyEntitlement(status);
+      })
+      .catch(() => {
+        if (!cancelled) setHeavyEntitlement({
+          allowed: false,
+          reason: 'heavy_entitlement_unavailable',
+          termsVersion: null,
+          rightsVersion: null,
+          termsAcceptanceId: null,
+          rightsAttestationId: null,
+          requestBinding: null,
+          requestScopedAttestationRequired: true,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setHeavyEntitlementLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [currentBrand?.id]);
+
   const libraryHandoff = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return {
@@ -1584,9 +1632,9 @@ function LightchainMaterialWorkbenchSession() {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  // Light Chain has no separate rights checkbox. Keep the API admission field
-  // derived from source entitlement and fail closed for denied/unknown states.
-  const providerRightsConfirmed = !sourceGenerationDenied;
+  // This is only the shared request's caller declaration. Heavy revalidates
+  // the current request-scoped entitlement before any provider side effect.
+  const providerRightsConfirmed = heavyEntitlementReady;
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
   const generatedResultsRef = useRef(generatedResults);
   generatedResultsRef.current = generatedResults;
@@ -3259,8 +3307,8 @@ function LightchainMaterialWorkbenchSession() {
   void handleLegacyPreviewGenerate;
 
   const handleGenerate = async () => {
-    if (sourceGenerationDenied) {
-      const message = '権限がありません';
+    if (!heavyEntitlementReady) {
+      const message = heavyEntitlementDisplayMessage;
       setGenerationError(message);
       toast.error(message);
       return;
@@ -5089,7 +5137,7 @@ function LightchainMaterialWorkbenchSession() {
     inputReady: isPrinting
       ? printingReadinessCompleteCount === printingReadinessSteps.length
       : Boolean(fabricDesign && fabricBase),
-    rightsReady: Boolean(providerRightsConfirmed),
+    rightsReady: heavyEntitlementReady,
     generating: isGenerating,
     completed: generatedResults.length > 0,
     failed: Boolean(generationError),
@@ -5679,6 +5727,12 @@ function LightchainMaterialWorkbenchSession() {
           >
             {isGenerating ? '生成中...' : 'AI生成して結果を出す'}
           </Button>
+
+          {!heavyEntitlementReady && (
+            <p role="status" data-testid="heavy-entitlement-gate" className="rounded-xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-2 text-xs font-semibold text-amber-100">
+              {heavyEntitlementDisplayMessage}
+            </p>
+          )}
 
           {generationError && (
             <p className="rounded-xl border border-rose-300/20 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-200">
@@ -6304,12 +6358,12 @@ function LightchainMaterialWorkbenchSession() {
                   data-testid="lightchain-print-generate"
                   onClick={() => void handleGenerate()}
                   isLoading={isGenerating}
-                  disabled={sourcePrintingGenerationDenied || isGenerating || !lightchainPrintReady}
+                  disabled={!heavyEntitlementReady || isGenerating || !lightchainPrintReady}
                   className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
                   size="lg"
                   leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
                 >
-                  {sourcePrintingGenerationDenied ? '権限がありません' : isGenerating ? '生成中…' : 'AI生成'}
+                  {!heavyEntitlementReady ? heavyEntitlementDisplayMessage : isGenerating ? '生成中…' : 'AI生成'}
                 </Button>
 
                 {generationError && (
@@ -6500,11 +6554,11 @@ function LightchainMaterialWorkbenchSession() {
                     <button
                       type="button"
                       disabled
-                      aria-label="権限がありません"
+                      aria-label="素材入力を利用できません"
                       data-testid="lightchain-fabric-permission"
                       className="mt-1 inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                      権限がありません
+                      素材入力を利用できません
                     </button>
                   </section>
                 )}
@@ -6542,14 +6596,14 @@ function LightchainMaterialWorkbenchSession() {
                   >
                     <option>画像比率自動</option>
                   </select>
-                  {sourceFabricGenerationDenied ? (
+                  {!heavyEntitlementReady ? (
                     <button
                       type="button"
-                      aria-label="権限がありません"
+                      aria-label={heavyEntitlementDisplayMessage}
                       data-testid="lightchain-fabric-permission"
                       className="absolute right-0 top-[25px] inline-flex h-[40px] w-[288px] items-center justify-center rounded-lg bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs transition-all hover:brightness-105"
                     >
-                      権限がありません
+                      {heavyEntitlementDisplayMessage}
                     </button>
                   ) : (
                     <Button

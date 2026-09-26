@@ -24,7 +24,6 @@ import {
   BRAND_LIKENESS_BLOCK_COPY,
   validateLegalSafetyInput,
 } from '../lib/legalSafetyGuard';
-import { getLightchainSourceGenerationAccess } from '../features/lightchain/sourceFeatureAccess';
 import {
   deleteWorkspaceArtifactsPersisted,
   getWorkspaceArtifactCanonicalStoragePath,
@@ -46,7 +45,7 @@ import {
   prepareFittingDraftMaterialReferenceForPersistence,
 } from '../lib/fittingPersistence';
 import { resolveGeneratedImageUrl, withSignedImageUrls } from '../lib/storage';
-import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
+import { asGeneratedImageListRow, cloudflareDataPlane, type CloudflareHeavyEntitlement } from '../lib/cloudflareApi';
 import { CLOUDFLARE_IMAGE_NOTICE } from '../lib/cloudflareImageAI';
 import { mergeGeneratedImagesByCanonicalIdentity } from '../lib/generatedImageIdentity';
 import {
@@ -490,6 +489,15 @@ const isLocalCanvasMaskEngine = (maskEngine?: string | null) => (
 
 const MAX_MODEL_MATRIX_PATTERNS = 3;
 
+const heavyEntitlementMessage = (reason: string | null, loading = false): string => {
+  if (loading || reason === 'heavy_entitlement_read_pending') return 'Heavy利用条件を確認しています…';
+  if (reason === 'heavy_generation_disabled') return 'Heavy生成機能は未実装です';
+  if (reason && /(terms|rights|attestation|binding)/i.test(reason)) {
+    return 'Heavy側の規約同意・権利表明が必要です';
+  }
+  return 'Heavy利用条件を確認できません';
+};
+
 const buildGenerationBlockers = ({
   currentBrandLoaded,
   rightsConfirmed,
@@ -525,7 +533,7 @@ const buildGenerationBlockers = ({
   ) {
     blockers.push('高精度AI切り抜き');
   }
-  if (!rightsConfirmed) blockers.push('権限がありません');
+  if (!rightsConfirmed) blockers.push('Heavy利用条件');
   if (!productDescription.trim()) blockers.push('生成brief');
   if (!selectedBodyTypesCount) blockers.push('体型');
   if (!selectedAgeGroupsCount) blockers.push('年代');
@@ -639,16 +647,55 @@ export function FittingPage() {
   const fittingDraftRestoredRef = useRef(false);
   const fittingDraftPersistenceErrorRef = useRef(false);
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
-  // Light Chain's current /model readback exposes the input surface but denies
-  // generation permission without rendering an upload-rights checkbox. Keep
-  // the API safety field fail-closed until a fresh source permission readback
-  // admits this feature.
-  const rightsConfirmed = getLightchainSourceGenerationAccess('model-matrix') === 'permitted';
+  const [heavyEntitlement, setHeavyEntitlement] = useState<CloudflareHeavyEntitlement | null>(null);
+  const [heavyEntitlementLoading, setHeavyEntitlementLoading] = useState(false);
   const [showGallerySelector, setShowGallerySelector] = useState(false);
   const [showModelGallerySelector, setShowModelGallerySelector] = useState(false);
   const resumeJob = searchParams.get('resumeJob');
   const libraryArtifactId = searchParams.get('libraryArtifactId');
   const heavyFallbackSource = searchParams.get('source') === 'lightchain-model-heavy-fallback';
+  const heavyGenerationReady = heavyEntitlement?.allowed === true
+    && heavyEntitlement.requestScopedAttestationRequired === false;
+  const heavyEntitlementReason = heavyEntitlement?.reason
+    ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
+  const heavyEntitlementDisplayMessage = heavyEntitlementMessage(heavyEntitlementReason, heavyEntitlementLoading);
+
+  useEffect(() => {
+    let cancelled = false;
+    const brandId = currentBrand?.id;
+    if (!brandId) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    if (!cloudflareDataPlane) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    setHeavyEntitlementLoading(true);
+    void cloudflareDataPlane.getHeavyEntitlement(brandId, 'model-matrix')
+      .then((status) => {
+        if (!cancelled) setHeavyEntitlement(status);
+      })
+      .catch(() => {
+        if (!cancelled) setHeavyEntitlement({
+          allowed: false,
+          reason: 'heavy_entitlement_unavailable',
+          termsVersion: null,
+          rightsVersion: null,
+          termsAcceptanceId: null,
+          rightsAttestationId: null,
+          requestBinding: null,
+          requestScopedAttestationRequired: true,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setHeavyEntitlementLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [currentBrand?.id]);
+
   const garmentImageUrl = materialReference.imageUrl || undefined;
   const extractedGarmentImageUrl = materialReference.extractedImageUrl || undefined;
   const garmentFileName = materialReference.fileName;
@@ -656,7 +703,7 @@ export function FittingPage() {
   const patternCount = selectedBodyTypes.length * selectedAgeGroups.length;
   const fittingFlowState = deriveUnifiedWorkspaceFlowState({
     inputReady: Boolean(garmentImageUrl),
-    rightsReady: Boolean(rightsConfirmed),
+    rightsReady: heavyGenerationReady,
     generating: isGenerating,
     completed: resultMatrix.length > 0,
     failed: Boolean(errorMessage),
@@ -1047,7 +1094,7 @@ export function FittingPage() {
   const canGenerate = useMemo(() => {
     return Boolean(
       currentBrand
-      && rightsConfirmed
+      && heavyGenerationReady
       && !isGenerating
       && garmentImageUrl
 	      && extractedGarmentImageUrl
@@ -1068,14 +1115,17 @@ export function FittingPage() {
 	    materialReference.maskEngine,
 	    materialReference.nextStepReady,
     productDescription,
-    rightsConfirmed,
+    heavyGenerationReady,
     selectedAgeGroups.length,
     selectedBodyTypes.length,
     patternCount,
   ]);
+  // The local brief preview is a persistence-only path. Its helper intentionally
+  // excludes provider-only entitlement gates; actual Heavy generation below
+  // remains guarded by heavyGenerationReady.
   const fittingPreviewBlockers = useMemo(() => buildFittingPreviewBlockers({
     currentBrandLoaded: Boolean(currentBrand),
-    rightsConfirmed,
+    rightsConfirmed: true,
     isGenerating,
     garmentImageUrl,
     productDescription,
@@ -1088,7 +1138,6 @@ export function FittingPage() {
     isGenerating,
     patternCount,
     productDescription,
-    rightsConfirmed,
     selectedAgeGroups.length,
     selectedBodyTypes.length,
   ]);
@@ -1103,7 +1152,7 @@ export function FittingPage() {
   const genderLabel = genderOptions.find((option) => option.id === gender)?.label ?? '女性';
   const generationBlockers = useMemo(() => buildGenerationBlockers({
     currentBrandLoaded: Boolean(currentBrand),
-    rightsConfirmed,
+    rightsConfirmed: heavyGenerationReady,
     isGenerating,
     garmentImageUrl,
     extractedGarmentImageUrl,
@@ -1119,7 +1168,7 @@ export function FittingPage() {
     isGenerating,
     materialReference,
     productDescription,
-    rightsConfirmed,
+    heavyGenerationReady,
     selectedAgeGroups.length,
     selectedBodyTypes.length,
     patternCount,
@@ -1162,8 +1211,8 @@ export function FittingPage() {
       setErrorMessage('保存先ブランドを取得できませんでした。ブランド設定を確認してください。');
       return;
     }
-    if (!rightsConfirmed) {
-      setErrorMessage('権限がありません。');
+    if (!heavyGenerationReady) {
+      setErrorMessage(heavyEntitlementDisplayMessage);
       return;
     }
 
@@ -1371,9 +1420,9 @@ export function FittingPage() {
     setIsGenerating(true);
     setErrorMessage('');
 
-    if (!rightsConfirmed) {
+    if (!heavyGenerationReady) {
       setIsGenerating(false);
-      setErrorMessage('権限がありません。');
+      setErrorMessage(heavyEntitlementDisplayMessage);
       return;
     }
     const legalSafetyAssessment = validateLegalSafetyInput([
@@ -1433,7 +1482,7 @@ export function FittingPage() {
         maskPlan: request.maskPlan,
         compositionPreview: providerCompositionPreview,
         sourceReadback: request.sourceReadback,
-        rightsConfirmed,
+        rightsConfirmed: heavyGenerationReady,
       });
     } catch (error) {
       setIsGenerating(false);
@@ -1882,8 +1931,8 @@ export function FittingPage() {
                 },
                 {
                   label: '条件',
-                  detail: rightsConfirmed ? '商品説明と生成条件が完了' : '商品説明と生成条件を確認',
-                  ready: Boolean(productDescription.trim()) && rightsConfirmed,
+                  detail: heavyGenerationReady ? '商品説明と生成条件が完了' : heavyEntitlementDisplayMessage,
+                  ready: Boolean(productDescription.trim()) && heavyGenerationReady,
                 },
                 {
                   label: '生成・結果確認',
@@ -2239,12 +2288,12 @@ export function FittingPage() {
                       </button>
                     ))}
                   </div>
-                  {!rightsConfirmed && (
+                  {!heavyGenerationReady && (
                     <div
                       role="status"
                       className="flex max-w-xl items-center rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100"
                     >
-                      権限がありません
+                      {heavyEntitlementDisplayMessage}
                     </div>
                   )}
                   <button

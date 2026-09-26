@@ -692,7 +692,7 @@ export function ModelLibraryPage() {
               role="status"
               className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs leading-5 text-neutral-300"
             >
-              権限がありません
+              Heavy利用条件を確認できません
             </p>
           </div>
         </div>

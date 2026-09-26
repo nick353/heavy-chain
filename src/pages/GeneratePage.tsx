@@ -27,7 +27,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { cloudflareDataPlane, type CloudflareHeavyEntitlement } from '../lib/cloudflareApi';
 import { Button, Textarea, Input } from '../components/ui';
 import { FEATURES, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
@@ -66,7 +66,6 @@ import {
   validateLegalSafetyInput,
 } from '../lib/legalSafetyGuard';
 import { getWorkflowMetadata, type WorkflowMetadata } from '../lib/workflowMetadata';
-import { getLightchainSourceGenerationAccessForWorkflow } from '../features/lightchain/sourceFeatureAccess';
 import {
   buildLightchainFeatureHref,
   getLightchainFeature,
@@ -110,6 +109,15 @@ const aspectRatios = [
 ];
 
 const MAX_MODEL_MATRIX_PATTERNS = 3;
+
+const heavyEntitlementMessage = (reason: string | null, loading = false): string => {
+  if (loading || reason === 'heavy_entitlement_read_pending') return 'Heavy利用条件を確認しています…';
+  if (reason === 'heavy_generation_disabled') return 'Heavy生成機能は未実装です';
+  if (reason && /(terms|rights|attestation|binding)/i.test(reason)) {
+    return 'Heavy側の規約同意・権利表明が必要です';
+  }
+  return 'Heavy利用条件を確認できません';
+};
 
 const backgroundOptions = [
   { id: 'white', name: '白背景', prompt: 'white background, studio lighting' },
@@ -994,6 +1002,8 @@ export function GeneratePage() {
   const [overlayStrokeColor, setOverlayStrokeColor] = useState('#000000');
   const [overlayStrokeWidth, setOverlayStrokeWidth] = useState(2);
   const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(getInitialGenerationModel);
+  const [heavyEntitlement, setHeavyEntitlement] = useState<CloudflareHeavyEntitlement | null>(null);
+  const [heavyEntitlementLoading, setHeavyEntitlementLoading] = useState(false);
   const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
   const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
   
@@ -1043,11 +1053,59 @@ export function GeneratePage() {
   const featureParam = searchParams.get('feature');
   const locationFeature = featureParam ? findFeatureFromQuery(featureParam) : null;
   const selectedFeature = locationFeature ?? (featureParam ? null : selectedFeatureState);
-  // Only source-observed generation permission may admit a provider request.
-  // Unknown workflows stay fail-closed without adding a Heavy-only checkbox.
-  const sourceGenerationAccess = getLightchainSourceGenerationAccessForWorkflow(selectedFeature?.id ?? '');
-  const rightsConfirmed = sourceGenerationAccess === 'permitted';
+  const selectedFeatureId = selectedFeature?.id;
   const currentPath = typeof window === 'undefined' ? '' : window.location.pathname;
+  // Every image-generation route in this page, including the historical
+  // /editor/changeColor entry, is Heavy-owned. The read-only entitlement
+  // response is only a closed UI preflight; the Heavy handler remains the
+  // authority for the request-scoped attestation.
+  const heavyEntitlementAction = selectedFeature?.id === 'model-matrix' ? 'model-matrix' : 'generate-image';
+  const heavyEntitlementReady = noImageGenerationMode
+    || (heavyEntitlement?.allowed === true && heavyEntitlement.requestScopedAttestationRequired === false);
+  // This is only the shared request's caller declaration; the Heavy handler
+  // revalidates the current request-scoped entitlement before side effects.
+  const providerRightsConfirmed = heavyEntitlementReady;
+  const heavyEntitlementReason = heavyEntitlement?.reason
+    ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
+  const heavyEntitlementDisplayMessage = heavyEntitlementMessage(heavyEntitlementReason, heavyEntitlementLoading);
+
+  useEffect(() => {
+    let cancelled = false;
+    const brandId = currentBrand?.id;
+    if (noImageGenerationMode || !brandId || !selectedFeatureId) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    if (!cloudflareDataPlane) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    setHeavyEntitlementLoading(true);
+    void cloudflareDataPlane.getHeavyEntitlement(brandId, heavyEntitlementAction)
+      .then((status) => {
+        if (!cancelled) setHeavyEntitlement(status);
+      })
+      .catch(() => {
+        // A missing/unreadable server entitlement is closed; it is not a
+        // reason to trust the browser's rightsConfirmed field.
+        if (!cancelled) setHeavyEntitlement({
+          allowed: false,
+          reason: 'heavy_entitlement_unavailable',
+          termsVersion: null,
+          rightsVersion: null,
+          termsAcceptanceId: null,
+          rightsAttestationId: null,
+          requestBinding: null,
+          requestScopedAttestationRequired: true,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setHeavyEntitlementLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [currentBrand?.id, heavyEntitlementAction, selectedFeatureId]);
   const [variationStrength, setVariationStrength] = useState(50);
   
   // Upscale options
@@ -1478,8 +1536,8 @@ export function GeneratePage() {
         return;
       }
 
-      if (!noImageGenerationMode && !rightsConfirmed) {
-        toast.error('権限がありません');
+      if (!noImageGenerationMode && !heavyEntitlementReady) {
+        toast.error(heavyEntitlementDisplayMessage);
         return;
       }
 
@@ -1627,7 +1685,7 @@ export function GeneratePage() {
         textOverlay,
         lightchainCompat: lightchainCompat ?? undefined,
         legalSafety: {
-          rightsConfirmed,
+          rightsConfirmed: providerRightsConfirmed,
         },
       };
       const { generateMaterialMetadata, materialPromptLines } = buildGenerateMaterialContext(
@@ -1752,7 +1810,7 @@ export function GeneratePage() {
                 subheadline: campaignSubheadline,
                 cta: campaignCTA,
               },
-              rightsConfirmed,
+              rightsConfirmed: providerRightsConfirmed,
               ...buildRemoteGenerationContext(planningFeature, generationPrompt, selectedRatio),
               ...generateMaterialMetadata,
             });
@@ -2241,7 +2299,7 @@ export function GeneratePage() {
               height: ratio.height,
               count: generateCount,
               legalSafety: {
-                rightsConfirmed,
+                rightsConfirmed: providerRightsConfirmed,
               },
               campaignMeta: {
                 title: campaignTitle,
@@ -2294,7 +2352,7 @@ export function GeneratePage() {
               height: ratio.height,
               count: generateCount,
               legalSafety: {
-                rightsConfirmed,
+                rightsConfirmed: providerRightsConfirmed,
               },
             }
           }));
@@ -3723,7 +3781,7 @@ export function GeneratePage() {
     if (!selectedFeature) return true;
     if (isGenerating) return true;
     if (featureConfig?.requiresImage && !referenceImage) return true;
-    if (!noImageGenerationMode && !rightsConfirmed) return true;
+    if (!noImageGenerationMode && !heavyEntitlementReady) return true;
     switch (selectedFeature.id) {
       case 'design-gacha':
         return !prompt.trim() && !referenceImage;
@@ -3774,7 +3832,7 @@ export function GeneratePage() {
   }[generationFlowStage];
   const unifiedFlowState = deriveUnifiedWorkspaceFlowState({
     inputReady: generationFlowStage === 'ready' || generationFlowStage === 'generating' || generationFlowStage === 'complete',
-    rightsReady: noImageGenerationMode || rightsConfirmed,
+    rightsReady: noImageGenerationMode || heavyEntitlementReady,
     generating: isGenerating,
     completed: generatedImages.length > 0 || Boolean(optimizedPromptResult),
     failed: Boolean(generationError),
@@ -4351,9 +4409,13 @@ export function GeneratePage() {
               </details>
             )}
 
-            {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && !rightsConfirmed && (
-              <div role="status" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100">
-                権限がありません
+            {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && !heavyEntitlementReady && (
+              <div
+                role="status"
+                data-testid="heavy-entitlement-gate"
+                className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100"
+              >
+                <p>{heavyEntitlementDisplayMessage}</p>
               </div>
             )}
 

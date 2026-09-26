@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { build } from 'esbuild';
 import { Miniflare, convertV4MiniflareOptions, type V4WorkerOptions } from 'miniflare';
 import { IMAGE_MODEL, decodeImage } from '../src/image-ai-contracts.ts';
-import { pngFixture } from './image-ai-fixture.ts';
+import { pngFixture, TEST_HEAVY_DOCUMENT_DIGEST, TEST_HEAVY_DOCUMENT_VERSION, TEST_HEAVY_RIGHTS_VERSION, TEST_HEAVY_TERMS_VERSION } from './image-ai-fixture.ts';
 import { PROTECTED_IMAGE_EDIT_MODE,protectedImageSaveRequestId } from '../../../src/lib/protectedImageEditContract.ts';
 type Json = Record<string, any>;
 
@@ -48,7 +48,11 @@ test('actual workerd/Auth/D1/private R2: three image actions, exact provider byt
       serviceBindings:{ MAIL:async(request:Request) => { mail.push((await request.json() as {text:string}).text); return Response.json({messageId:'local-fixture'}); } } },
     { ...common,name:'heavy',routes:['heavy.test/*'],script:heavy.outputFiles[0].text,d1Databases:{DB:'heavy-db'},r2Buckets:{PRIVATE_MEDIA:'heavy-private'},
       bindings:{AUTH_ISSUER:'https://auth.test',FRONTEND_ORIGINS:'https://heavy.test',MEDIA_READ_SECRET:'local-image-runtime-media-secret-1234567890',
-        AI_IMAGE_ENABLED:'true',AI_IMAGE_ALLOWED_ACTIONS:'generate-image,edit-image,model-matrix'},
+        AI_IMAGE_ENABLED:'true',AI_IMAGE_ALLOWED_ACTIONS:'generate-image,edit-image,model-matrix',
+        HEAVY_IMAGE_ENTITLEMENT_ENABLED:'true',HEAVY_TERMS_VERSION:TEST_HEAVY_TERMS_VERSION,
+        HEAVY_RIGHTS_ATTESTATION_VERSION:TEST_HEAVY_RIGHTS_VERSION,
+        HEAVY_TERMS_DOCUMENT_VERSION:TEST_HEAVY_DOCUMENT_VERSION,HEAVY_TERMS_DOCUMENT_DIGEST:TEST_HEAVY_DOCUMENT_DIGEST,
+        HEAVY_RIGHTS_DOCUMENT_VERSION:TEST_HEAVY_DOCUMENT_VERSION,HEAVY_RIGHTS_DOCUMENT_DIGEST:TEST_HEAVY_DOCUMENT_DIGEST},
       serviceBindings:{AUTH_SERVICE:'auth',MODEL:async(request:Request) => {
         const form = await request.formData(); const model = request.headers.get('x-model')!;
         assert.equal(model,IMAGE_MODEL); assert.equal(Number(form.get('width')),output.width); assert.equal(Number(form.get('height')),output.height);
@@ -64,10 +68,17 @@ test('actual workerd/Auth/D1/private R2: three image actions, exact provider byt
       for (const statement of statements.map(s=>s.trim()).filter(Boolean)) await db.prepare(statement).run();
     }
   }
-  const call = (worker:string,path:string,token?:string,value?:unknown,id?:string,method=value===undefined?'GET':'POST') =>
-    mf.dispatchFetch(`https://${worker}.test${path}`,{method,redirect:'manual',headers:{origin:`https://${worker}.test`,
-      ...(token?{authorization:`Bearer ${token}`} : {}),...(value===undefined?{}:{'content-type':'application/json'}),...(id?{'Idempotency-Key':id}:{})},
-      ...(value===undefined?{}:{body:JSON.stringify(value)})});
+  const call = async (worker:string,path:string,token?:string,value?:unknown,id?:string,method=value===undefined?'GET':'POST') => {
+    let effectiveValue = value;
+    const providerAction = /^\/v1\/provider-actions\/([^/]+)$/.exec(path);
+    if (worker === 'heavy' && providerAction && id && value && typeof value === 'object' && !Array.isArray(value)) {
+      const proof = await db.prepare('SELECT preparation_id,input_digest FROM heavy_generation_preparations WHERE request_id=? ORDER BY created_at DESC LIMIT 1').bind(id).first<Json>();
+      if (proof?.preparation_id) effectiveValue = { ...(value as Json), preparationId: proof.preparation_id, inputDigest: proof.input_digest };
+    }
+    return mf.dispatchFetch(`https://${worker}.test${path}`,{method,redirect:'manual',headers:{origin:`https://${worker}.test`,
+      ...(token?{authorization:`Bearer ${token}`} : {}),...(effectiveValue===undefined?{}:{'content-type':'application/json'}),...(id?{'Idempotency-Key':id}:{})},
+      ...(effectiveValue===undefined?{}:{body:JSON.stringify(effectiveValue)})});
+  };
   const json = async(response:Awaited<ReturnType<typeof call>>) => { assert.equal(response.status,200,await response.clone().text()); return response.json() as Promise<Json>; };
   async function register(name:string) {
     const credentials={email:`${name}@example.test`,password:'local-only-image-runtime-password-4729'};
@@ -81,9 +92,28 @@ test('actual workerd/Auth/D1/private R2: three image actions, exact provider byt
   const brandResponse = await call('heavy','/v1/brands',owner.token,{name:'Image Runtime'}); assert.equal(brandResponse.status,201);
   const brand = (await brandResponse.json() as Json).id;
   let db = await mf.getD1Database('DB','heavy'); let bucket = await mf.getR2Bucket('PRIVATE_MEDIA','heavy');
+  for (const profile of [owner.profile, maker.profile, outsider.profile]) {
+    await db.prepare(`INSERT INTO heavy_terms_acceptances
+      (id,user_id,terms_version,document_version,document_digest,accepted_at,recorded_at,acceptance_source)
+      VALUES(?,?,?,?,?,?,?,?)`).bind(`terms-${profile.id}-v1`,profile.id,TEST_HEAVY_TERMS_VERSION,TEST_HEAVY_DOCUMENT_VERSION,TEST_HEAVY_DOCUMENT_DIGEST,
+      '2026-09-06T00:00:00.000Z','2026-09-06T00:00:00.000Z','test-fixture').run();
+  }
+  const attest = async (requestId:string,action:string,token:string,input:Json) => {
+    const preparationResponse = await call('heavy','/v1/heavy/entitlement/prepare',token,{brandId:brand,action,requestId,input});
+    assert.equal(preparationResponse.status,200,await preparationResponse.clone().text());
+    const preparation = await preparationResponse.json() as Json;
+    const response = await call('heavy','/v1/heavy/entitlement/attestation',token,{
+      brandId:brand,action,requestId,termsAccepted:true,rightsAttested:true,rightsVersion:TEST_HEAVY_RIGHTS_VERSION,
+      termsDocumentVersion:TEST_HEAVY_DOCUMENT_VERSION,termsDocumentDigest:TEST_HEAVY_DOCUMENT_DIGEST,
+      rightsDocumentVersion:TEST_HEAVY_DOCUMENT_VERSION,rightsDocumentDigest:TEST_HEAVY_DOCUMENT_DIGEST,
+      preparationId:preparation.preparationId,inputDigest:preparation.inputDigest,input,
+    });
+    assert.equal(response.status,200,await response.clone().text());
+  };
   await db.prepare('INSERT INTO brand_members(id,brand_id,user_id,role,joined_at) VALUES(?,?,?,?,?)').bind('local-maker',brand,maker.profile.id,'editor',new Date().toISOString()).run();
-  const basic = {brandId:brand,prompt:'Original cotton garment, studio product photograph',width:512,height:512,legalSafety:{rightsConfirmed:true}};
+  const basic = {brandId:brand,prompt:'Original cotton garment, studio product photograph',width:512,height:512,seed:172903,legalSafety:{rightsConfirmed:true}};
   const id = crypto.randomUUID();
+  await attest(id,'generate-image',maker.token,basic);
   const first = await json(await call('heavy','/v1/provider-actions/generate-image',maker.token,basic,id));
   assert.equal(first.success,true); assert.equal(first.providerModel,IMAGE_MODEL); assert.equal(calls.length,1);
   const privateRead = await mf.dispatchFetch(first.imageUrl); assert.equal(privateRead.status,200);
@@ -94,14 +124,16 @@ test('actual workerd/Auth/D1/private R2: three image actions, exact provider byt
   assert.equal((await call('heavy','/v1/generated-images/'+first.imageId+'/content',outsider.token)).status,404);
   assert.equal((await call('heavy','/v1/image-ai/usage?brand_id='+brand,outsider.token)).status,403);
   const asURL = (bytes:Uint8Array) => `data:${decodeImage(Buffer.from(bytes).toString('base64'),false).contentType};base64,${Buffer.from(bytes).toString('base64')}`;
-  output = edit; const editID = crypto.randomUUID();
   const editInput = {...basic,prompt:'Change only the two pocket colors to mustard yellow; retain the other garment details.',imageUrls:[asURL(garment.bytes)],parentImageId:first.imageId,generation:2};
+  output = edit; const editID = crypto.randomUUID(); await attest(editID,'edit-image',maker.token,editInput);
   const edited = await json(await call('heavy','/v1/provider-actions/edit-image',maker.token,editInput,editID)); assert.equal(edited.success,true);
   assert.deepEqual(new Uint8Array(await (calls[1].form.get('input_image_0') as File).arrayBuffer()),garment.bytes);
   assert.equal((await db.prepare('SELECT parent_image_id FROM generated_images WHERE id=?').bind(edited.imageId).first<Json>())!.parent_image_id,first.imageId);
   output = fitting;
-  const fitted = await json(await call('heavy','/v1/provider-actions/model-matrix',maker.token,{...basic,width:768,height:1024,
-    imageUrl:asURL(garment.bytes),modelReferenceImageUrl:asURL(person.bytes),bodyTypes:['regular'],ageGroups:['30s'],gender:'male'},crypto.randomUUID()));
+  const fittingInput = {...basic,width:768,height:1024,
+    imageUrl:asURL(garment.bytes),modelReferenceImageUrl:asURL(person.bytes),bodyTypes:['regular'],ageGroups:['30s'],gender:'male'};
+  const fittingID = crypto.randomUUID(); await attest(fittingID,'model-matrix',maker.token,fittingInput);
+  const fitted = await json(await call('heavy','/v1/provider-actions/model-matrix',maker.token,fittingInput,fittingID));
   assert.equal(fitted.success,true); assert.equal(fitted.matrix[0].ageGroup,'30s');
   assert.deepEqual(new Uint8Array(await (calls[2].form.get('input_image_1') as File).arrayBuffer()),person.bytes);
   const fittingRead = await mf.dispatchFetch(fitted.imageUrl); assert.equal(fittingRead.status,200); assert.deepEqual(new Uint8Array(await fittingRead.arrayBuffer()),fitting.bytes);
@@ -142,6 +174,7 @@ test('actual workerd/Auth/D1/private R2: three image actions, exact provider byt
   const recoveredRead = await mf.dispatchFetch(recovered.imageUrl); assert.deepEqual(new Uint8Array(await recoveredRead.arrayBuffer()),edit.bytes);
   output = garment; hook = async()=>new Response('uncertain provider response',{status:503});
   const unknownID = crypto.randomUUID(); const unknownInput = {...basic,count:2};
+  await attest(unknownID,'generate-image',maker.token,unknownInput);
   const unknown = await json(await call('heavy','/v1/provider-actions/generate-image',maker.token,unknownInput,unknownID)); assert.equal(unknown.state,'unknown'); assert.equal(unknown.success,false);
   assert.equal(unknown.usage.estimatedMicroUSD,null); assert.equal(unknown.usage.unknownEstimateCount,1);
   await json(await call('heavy','/v1/provider-actions/generate-image',maker.token,unknownInput,unknownID));
@@ -150,6 +183,7 @@ test('actual workerd/Auth/D1/private R2: three image actions, exact provider byt
   // late delivery. A viewer cannot reconcile an unfinished save into existence.
   hook = async()=> { await db.prepare("UPDATE brand_members SET role='viewer' WHERE id='local-maker'").run(); return null; };
   const revokedID = crypto.randomUUID();
+  await attest(revokedID,'generate-image',maker.token,basic);
   assert.equal((await call('heavy','/v1/provider-actions/generate-image',maker.token,basic,revokedID)).status,403);
   assert.equal((await bucket.list({prefix:'generated-images/'})).objects.length,3);
   const before = await db.prepare('SELECT state FROM heavy_ai_requests WHERE request_id=?').bind(revokedID).first<Json>();
@@ -167,6 +201,7 @@ test('actual workerd/Auth/D1/private R2: three image actions, exact provider byt
   const plan = {mode:PROTECTED_IMAGE_EDIT_MODE,sourceWidth:512,sourceHeight:512,sourceSha256:'a'.repeat(64),maskSha256:'b'.repeat(64),guideIndex:1,coveragePercent:20};
   const protectedInput = {...basic,count:4,featureType:'canvas-partial-edit',imageUrls:[asURL(garment.bytes),asURL(finalPng)],protectedEdit:plan};
   const beforeProtectedUsage = await json(await call('heavy','/v1/image-ai/usage?brand_id='+brand,owner.token));
+  await attest(protectedID,'edit-image',owner.token,protectedInput);
   const intermediate = await json(await call('heavy','/v1/provider-actions/edit-image',owner.token,protectedInput,protectedID));
   assert.equal(intermediate.requiresProtectedComposite,true); assert.equal(calls.length,9);
   assert.match(String(calls.at(-1)!.form.get('prompt')),/white.*edit|editable.*white/i);

@@ -567,6 +567,13 @@ providerの実生成receipt、保存→再利用→reload→source sync/reconcil
 G618、H602 billing、strict clean release gateは未達。provider、upload、課金、publish、秘密情報入力は行っていない。
 Goalはactive。
 
+# Goal progress — 2026-09-27 r365
+
+Heavy API deploy後のproduction D1 migration readbackで、`0012`〜`0014`が未適用と判明したため、対象DB
+`heavy-chain-production-db`へ3本をremote applyした。各migrationはsuccess、再読込は`No migrations to apply!`。
+`/v1/health`はHTTP 200を維持し、未認証prepareはHTTP 401で、flag false・provider未実行のfail-closed境界を確認した。
+証跡`work/heavy-chain-entitlement-postdeploy-readback-20260927-r1.md`へ追記済み。Goalはactive。
+
 # Goal progress — 2026-09-25 r277
 
 fresh Companion read-onlyでLight本家とHeavy Zeaburの同じvideo入口を1回ずつ取得。Lightはtitleのみでsemantic body
@@ -10517,3 +10524,54 @@ lease release confirmed、retained/unknown 0、foreign mutation falseで完了�
 persistence/video/lifecycle 37/37は有効なままだが、実provider receipt・R2 readback・画像scorecardは新たに得られていない。
 ユーザーの「今後は生成前に聞かない」許可は保持する一方、source側の明示`permitted` readbackまたは正規のoperator判断なしに
 権利ゲートを変更しない。Goalはactive。
+
+# Goal progress — 2026-09-27 r362
+
+Heavy専用のrequest-scoped entitlement/preflight境界を実装した。Cloudflare Heavy APIに、認証済みbrand/editorへ
+結び付く準備証明（5分TTL、normalized input・input digest・source digest・action・brand・userの完全一致）を追加し、
+terms acceptanceとrights attestationは準備証明・承認済み文書version/digest・明示的な同意/権利表明が揃わなければ
+拒否する。generation admission、provider前、候補ごと、R2保存前、commit/reconcile前にも再検証する。D1 migrationは
+`0012_heavy_entitlement_plumbing.sql`、`0013_heavy_entitlement_documents.sql`、`0014_heavy_generation_preparations.sql`。
+クライアントにはopaqueなpreflight proof、acceptance、attestation送信の型/APIを追加したが、規約同意・権利表明の
+自動送信は実装していない。Heavy entitlement flagはOFFのままで、`sourceFeatureAccess.ts`は変更していない。
+
+現行差分のfresh検証は、Heavy API全112/112、entitlement 10/10、runtime 1/1（synthetic decodable PNGであり実provider
+ではない）、Heavy preflight/Light parity系71/71、Canvas/UI系14/14、root typecheck、build（2566 modules）、
+`lint --max-warnings=0`、`git diff --check`がPASSした。実provider submit、R2の本番readback、remote durable
+save→reuse→reload→reconciliation、video provider、deploy、billing、publish、secret投入は0件。
+
+2026-09-26T21:58:19Z取得のstrict release gateは、古いproduction UI/route/ops証跡（48時間超）、monitor/UI pair欠落、
+G618 stale、H601/H602 production evidence、real-generation scorecard欠落、dirty worktreeをfail-closedで検出した。
+同gate時点のlint警告はr362で修正済みだが、gate全体は未達。Goalはactive。
+
+# Goal progress — 2026-09-27 r363
+
+Heavy APIをCloudflare version `3ec28a85-638a-42df-a6b4-2eb1ff62ea10`へ、Heavy Webを
+`177a966e-d50e-4085-b0ed-64a51566b137`へ配信した。APIは`/v1/health` HTTP 200、未認証Heavy entitlementは401で、
+`HEAVY_IMAGE_ENTITLEMENT_ENABLED=false`とWorkers AI設定を維持。Webのproduction buildは2566 modules、Cloudflare
+Web suite 17/17、large asset upload 2 unique objectsがPASSした。
+
+同じ認証済みCompanion profileで配信後の`/generate?feature=campaign-image`、`/canvas/new`、`/designProduction`、
+`/model`、`/flow/GenerateShortVideo`をtask-owned tabでreadbackし、各transactionがverified/known_no_effect、
+external action 0、cleanup complete。配信後bodyには旧Light由来の`権限がありません`が残っていない。証跡は
+`work/heavy-chain-entitlement-postdeploy-readback-20260927-r1.md`。これはUI/APIのfail-closed配信と認証継続の証拠で、
+generation submit、provider receipt、R2 readback、save/reuse/reload/reconciliation、video provider、billing、publishを
+完了扱いにしない。Goalはactive。
+
+# Goal progress — 2026-09-27 r364
+
+配信後にstrict release gateを再取得（capturedAt=`2026-09-26T22:08:09.902Z`）。typecheck、build、lint
+（`--max-warnings=0`）、`git diff --check`はPASS。失敗は、48時間鮮度を超えたproduction UI/route/launch/mass-market/
+Lightchain/G610/G603/G605/G606/H601/public-entrypoint artifact、monitor/UI pair欠落、G618 stale、H602 production
+readback、real-generation scorecard欠落、dirty worktreeに限定された。H602 billing readinessも、operator decision・quota・
+checkout/no-charge/transaction evidenceが未設定のためfail-closed。
+
+ローカル実装品質とHeavy/API/Webのfail-closed配信は前進したが、production business completionとは分離されている。
+Goalはactive。
+
+# Goal progress — 2026-09-27 r365
+
+Heavy API deploy後のproduction D1 migration readbackで、`0012`〜`0014`が未適用と判明したため、対象DB
+`heavy-chain-production-db`へ3本をremote applyした。各migrationはsuccess、再読込は`No migrations to apply!`。
+`/v1/health`はHTTP 200を維持し、未認証prepareはHTTP 401で、flag false・provider未実行のfail-closed境界を確認した。
+証跡`work/heavy-chain-entitlement-postdeploy-readback-20260927-r1.md`へ追記済み。Goalはactive。

@@ -4,7 +4,7 @@ import { handleCoreRequest, handleMediaReadGateway } from "./core.ts";
 import { configuredTokenVerifier } from "./auth.ts";
 import { saveWorkspaceArtifact,readWorkspaceArtifact } from "./workspace.ts";
 import { handleFeedbackAdminRequest } from "./feedback-admin.ts";
-import { handleImageAIRead } from "./image-ai.ts";
+import { handleHeavyEntitlementAction, handleImageAIRead } from "./image-ai.ts";
 import { readWorkspaceExecutionSteps } from './workspace-execution.ts';
 const MAX_IDENTITY_PART_LENGTH = 512;
 const MAX_CLIENT_REQUEST_ID_LENGTH = 128;
@@ -37,6 +37,19 @@ export interface Env {
   AI_IMAGE_PROVIDER?: string;
   AI_IMAGE_ENABLED?: string;
   AI_IMAGE_ALLOWED_ACTIONS?: string;
+  /** Heavy-only server entitlement gate. Unset/anything other than `true` is closed. */
+  HEAVY_IMAGE_ENTITLEMENT_ENABLED?: string;
+  /** Active Heavy terms/attestation versions are explicit server configuration. */
+  HEAVY_TERMS_VERSION?: string;
+  HEAVY_RIGHTS_ATTESTATION_VERSION?: string;
+  /** Exact approved document identifiers. No version or digest is defaulted. */
+  HEAVY_TERMS_DOCUMENT_VERSION?: string;
+  HEAVY_TERMS_DOCUMENT_DIGEST?: string;
+  HEAVY_RIGHTS_DOCUMENT_VERSION?: string;
+  HEAVY_RIGHTS_DOCUMENT_DIGEST?: string;
+  /** Optional one-document aliases for deployments that share one approved text. */
+  HEAVY_APPROVED_DOCUMENT_VERSION?: string;
+  HEAVY_APPROVED_DOCUMENT_DIGEST?: string;
   /** Bounded provider observation timeout; inference remains single-shot. */
   AI_IMAGE_TIMEOUT_MS?: string;
   AI_MONTHLY_IMAGE_UNITS?: string;
@@ -452,6 +465,8 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     try { return respond(await saveWorkspaceArtifact(request, env)); }
     catch { return respond(errorResponse("workspace_storage_unavailable", 503)); }
   }
+  const heavyEntitlementWrite = await handleHeavyEntitlementAction(request, env);
+  if (heavyEntitlementWrite) return withCors(request, env, heavyEntitlementWrite);
   const imageRead = await handleImageAIRead(request, env);
   if (imageRead) return withCors(request, env, imageRead);
   const coreResponse = await handleCoreRequest(request, env);

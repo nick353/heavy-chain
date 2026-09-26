@@ -38,7 +38,7 @@ const darkPanel = 'rounded-2xl border border-white/10 bg-[#151a1c]';
 const mutedButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-300 transition hover:border-cyan-200/50 hover:bg-white/[0.08] hover:text-white';
 
 function ParityPermissionGate({ testId, marginClass = '' }: { testId: string; marginClass?: string }) {
-  return <button type="button" disabled aria-label="権限がありません" data-testid={testId} className={`${marginClass} h-10 w-full rounded-lg bg-[#434a4c] px-4 py-0 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40`}>権限がありません</button>;
+  return <button type="button" disabled aria-label="この機能は未実装です" data-testid={testId} className={`${marginClass} h-10 w-full rounded-lg bg-[#434a4c] px-4 py-0 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40`}>この機能は未実装です</button>;
 }
 
 const designHistoryFeatureTypes = new Set([

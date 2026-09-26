@@ -72,7 +72,7 @@ import { getErrorMessage } from '../lib/errorMessages';
 import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { withSignedImageUrls } from '../lib/storage';
-import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
+import { asGeneratedImageListRow, cloudflareDataPlane, type CloudflareHeavyEntitlement } from '../lib/cloudflareApi';
 import type { Json } from '../types/database';
 import {
   buildPrintingImagePreviewDataUrl,
@@ -85,7 +85,6 @@ import {
 import { LIGHTCHAIN_MATERIAL_LIBRARY_TABS } from '../lib/lightchainMaterialContract';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
-import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import { buildAssetAnchoredPreviewDataUrl, type AssetAnchoredPreviewMode } from '../features/lightchain/assetAnchoredPreview';
 import {
   buildLightchainProviderPrompt,
@@ -94,10 +93,6 @@ import {
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
   getLightchainUnifiedFeatureWorkflowContract,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
-import {
-  getLightchainSourceGenerationAccess,
-  getLightchainSourceGenerationAccessForWorkflow,
-} from '../features/lightchain/sourceFeatureAccess';
 import {
   buildLightchainParityInputRoles,
   buildLightchainParityRuntime,
@@ -1405,6 +1400,15 @@ const lightWearDesignDetailImages = [
   'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/6a1d37284e65c215fe6fcd1994972a78.webp?x-oss-process=image/resize,m_lfit,w_1920,limit_1/format,webp',
 ] as const;
 
+const heavyEntitlementMessage = (reason: string | null, loading = false): string => {
+  if (loading || reason === 'heavy_entitlement_read_pending') return 'Heavy利用条件を確認しています…';
+  if (reason === 'heavy_generation_disabled') return 'Heavy生成機能は未実装です';
+  if (reason && /(terms|rights|attestation|binding)/i.test(reason)) {
+    return 'Heavy側の規約同意・権利表明が必要です';
+  }
+  return 'Heavy利用条件を確認できません';
+};
+
 export function LightchainWorkbenchPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1477,6 +1481,8 @@ export function LightchainWorkbenchPage() {
   const [lightchainResultPreviewOpen, setLightchainResultPreviewOpen] = useState(false);
   const [lightchainGenerationRunning, setLightchainGenerationRunning] = useState(false);
   const [lightchainGenerationError, setLightchainGenerationError] = useState<string | null>(null);
+  const [heavyEntitlement, setHeavyEntitlement] = useState<CloudflareHeavyEntitlement | null>(null);
+  const [heavyEntitlementLoading, setHeavyEntitlementLoading] = useState(false);
   const [resumeInputReadback, setResumeInputReadback] = useState<'restored' | 'unavailable' | null>(null);
   const [workspaceText, setWorkspaceText] = useState('');
   // Light Chain opens the Agent workspace with the project sidebar expanded.
@@ -1963,7 +1969,7 @@ export function LightchainWorkbenchPage() {
         </label>
         <button
           type="button"
-          disabled={!fittingReferenceImageUrl || getLightchainSourceGenerationAccess('model-matrix') !== 'permitted'}
+          disabled={!fittingReferenceImageUrl || heavyEntitlement?.allowed !== true || heavyEntitlement.requestScopedAttestationRequired !== false}
           className="w-full rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500 dark:disabled:bg-white/10 dark:disabled:text-neutral-500"
         >
           画像から単語への変換
@@ -2130,13 +2136,55 @@ export function LightchainWorkbenchPage() {
   const workflowRightsGate = selectedFeatureWorkflow?.rightsGate ?? '';
   const lightchainProviderRoute = selectedFeatureWorkflow?.providerRoute ?? 'unsupported';
   const lightchainProviderSupported = selectedFeatureWorkflow !== null;
-  const sourceGenerationAccess = getLightchainSourceGenerationAccessForWorkflow(selectedTool.id);
-  const sourceGenerationNotPermitted = sourceGenerationAccess !== 'permitted';
-  const sourceModelGenerationDenied = lightchainProviderRoute === 'model-matrix'
-    && sourceGenerationAccess === 'denied';
-  // Light Chain has no separate rights checkbox. Only a current source
-  // permission readback admits a provider request; denied/unknown stay closed.
-  const providerRightsConfirmed = sourceGenerationAccess === 'permitted';
+  const heavyEntitlementAction = lightchainProviderSupported
+    ? lightchainProviderRoute
+    : null;
+  const heavyEntitlementReady = heavyEntitlementAction !== null
+    && heavyEntitlement?.allowed === true
+    && heavyEntitlement.requestScopedAttestationRequired === false;
+  const heavyEntitlementReason = heavyEntitlement?.reason
+    ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
+  const heavyEntitlementDisplayMessage = heavyEntitlementMessage(heavyEntitlementReason, heavyEntitlementLoading);
+  // Heavy status is requestless and therefore only a closed UI preflight. The
+  // provider handler remains the authority for the request-scoped attestation.
+  const providerRightsConfirmed = heavyEntitlementReady;
+
+  useEffect(() => {
+    let cancelled = false;
+    const brandId = currentBrand?.id;
+    if (!brandId || !heavyEntitlementAction) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    if (!cloudflareDataPlane) {
+      setHeavyEntitlement(null);
+      setHeavyEntitlementLoading(false);
+      return () => { cancelled = true; };
+    }
+    setHeavyEntitlementLoading(true);
+    void cloudflareDataPlane.getHeavyEntitlement(brandId, heavyEntitlementAction)
+      .then((status) => {
+        if (!cancelled) setHeavyEntitlement(status);
+      })
+      .catch(() => {
+        if (!cancelled) setHeavyEntitlement({
+          allowed: false,
+          reason: 'heavy_entitlement_unavailable',
+          termsVersion: null,
+          rightsVersion: null,
+          termsAcceptanceId: null,
+          rightsAttestationId: null,
+          requestBinding: null,
+          requestScopedAttestationRequired: true,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setHeavyEntitlementLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [currentBrand?.id, heavyEntitlementAction]);
+
   const activeSourceCategory = getLightchainVisibleCategoryId(selectedTool.category);
   const isPrintingImageGenerationRunning = printingGenerationStatus === 'pending' || printingGenerationStatus === 'processing';
   const isPrintingImageGenerationLocked = isPrintingImageGenerationRunning || printingGenerationRequestRef.current !== null;
@@ -2204,7 +2252,7 @@ export function LightchainWorkbenchPage() {
 
   const unifiedFlowState = deriveUnifiedWorkspaceFlowState({
     inputReady: hasCurrentInput || Boolean(nextStepConfirmed),
-    rightsReady: !lightchainProviderSupported || providerRightsConfirmed,
+    rightsReady: !lightchainProviderSupported || heavyEntitlementReady,
     generating: lightchainGenerationRunning || isPrintingImageGenerationRunning,
     completed: Boolean(lightchainResult) || workspaceArtifacts.length > 0,
     failed: Boolean(lightchainGenerationError || printingGenerationError),
@@ -2358,10 +2406,10 @@ export function LightchainWorkbenchPage() {
   // Light's canonical /model first paint exposes its plan-locked affordance
   // before a garment is selected. Preserve that observed surface while
   // keeping the actual generation flow available once the required input is
-  // present; this is not an entitlement assertion or rights confirmation.
+  // present; entitlement feedback is rendered by the Heavy gate below.
   const showModelPermissionGate = isModelRoute
     && selectedTool.id === 'ai-fitting'
-    && (!garmentImageUrl || sourceModelGenerationDenied);
+    && !garmentImageUrl;
   const lightchainToolPanelConfig = useMemo(() => {
     const base = {
       notice: null as string | null,
@@ -3003,8 +3051,8 @@ export function LightchainWorkbenchPage() {
 
   const handlePrintingImageGenerate = async () => {
     if (isPrintingImageGenerationLocked) return;
-    if (sourceGenerationNotPermitted) {
-      const message = sourceGenerationAccess === 'denied' ? '権限がありません' : '生成可否を確認できません';
+    if (!heavyEntitlementReady) {
+      const message = heavyEntitlementDisplayMessage;
       setPrintingGenerationError(message);
       toast.error(message);
       return;
@@ -3346,8 +3394,8 @@ export function LightchainWorkbenchPage() {
   };
 
   const handleLightchainPreviewGenerate = async (overrides?: LightchainPreviewOverrides) => {
-    if (sourceGenerationNotPermitted) {
-      const message = sourceGenerationAccess === 'denied' ? '権限がありません' : '生成可否を確認できません';
+    if (!heavyEntitlementReady) {
+      const message = heavyEntitlementDisplayMessage;
       setLightchainGenerationError(message);
       toast.error(message);
       return;
@@ -3965,7 +4013,7 @@ export function LightchainWorkbenchPage() {
   const specialProviderGenerationLocked = !lightchainProviderSupported
     || brandResolutionPending
     || lightchainGenerationRunning
-    || sourceGenerationNotPermitted
+    || !heavyEntitlementReady
     || (workspaceStyle?.kind === 'agent' && !providerRightsConfirmed);
   const handleBrandRefresh = async () => {
     if (brandRefreshRunning) return;
@@ -4025,6 +4073,13 @@ export function LightchainWorkbenchPage() {
       return (
         <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-3 text-xs font-semibold leading-5 text-amber-100" data-testid="lightchain-special-provider-gate">
           この機能のプロバイダが未接続のため、生成は開始されません。
+        </p>
+      );
+    }
+    if (!heavyEntitlementReady) {
+      return (
+        <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-3 text-xs font-semibold leading-5 text-amber-100" data-testid="heavy-entitlement-gate">
+          {heavyEntitlementDisplayMessage}
         </p>
       );
     }
@@ -5243,14 +5298,15 @@ export function LightchainWorkbenchPage() {
                     追加
                   </button>
                 ) : showModelPermissionGate ? (
-                  <PermissionLockedButton
-                    testId="lightchain-model-permission"
-                    marginClass=""
-                    className="!rounded-lg !bg-[#0bc1b8] !text-xs !font-medium !leading-[17.1429px] !text-[#111817] !opacity-100"
-                    disabled={false}
-                    showSourceIcon
-                    buttonType="submit"
-                  />
+                  <button
+                    type="button"
+                    data-testid="lightchain-model-permission"
+                    aria-label="衣服画像を選択してください"
+                    className="inline-flex items-center justify-center rounded-lg bg-[#0bc1b8] px-5 py-3 text-xs font-medium leading-[17.1429px] text-[#111817]"
+                    onClick={() => toast('衣服画像を選択してください')}
+                  >
+                    衣服画像を選択してください
+                  </button>
                 ) : (
                   <button
                     type="button"
@@ -5364,10 +5420,10 @@ export function LightchainWorkbenchPage() {
                     disabled
                     data-testid="lightchain-fitting-batch-permission"
                     data-track-id="GENERATE_CLICK"
-                    aria-label="権限がありません"
+                    aria-label={heavyEntitlementDisplayMessage}
                     className="inline-flex h-10 w-full max-w-60 flex-1 items-center justify-center gap-2 rounded-lg bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 opacity-40 transition-colors disabled:cursor-not-allowed"
                   >
-                    権限がありません
+                    {heavyEntitlementDisplayMessage}
                     <Sparkles className="size-4" aria-hidden="true" />
                   </button>
                 </div>
@@ -7015,7 +7071,7 @@ export function LightchainWorkbenchPage() {
             <textarea id="lightchain-wear-board-prompt" value={wearBoardPrompt} onChange={(event) => setWearBoardPrompt(event.target.value)} className="mt-1 min-h-16 w-full resize-none rounded-lg border border-white/10 bg-[#151b1d] p-2 text-[10px] leading-4 text-neutral-100 outline-none focus:border-cyan-300/60" />
             <div className="mt-2 flex items-center justify-between text-[10px] text-neutral-400"><span>強化モード</span><button type="button" role="switch" aria-checked={wearBoardStrongMode} onClick={() => setWearBoardStrongMode((value) => !value)} className={`h-4 w-8 rounded-full p-0.5 ${wearBoardStrongMode ? 'bg-cyan-300' : 'bg-neutral-600'}`}><span className={`block h-3 w-3 rounded-full bg-white transition ${wearBoardStrongMode ? 'translate-x-4' : ''}`} /></button></div>
             <div className="mt-3 grid grid-cols-2 gap-2"><div className="relative text-[10px] text-neutral-400">生成設定<button type="button" role="combobox" aria-label="生成設定" aria-expanded={wearBoardOpenMenu === 'generation'} onClick={() => setWearBoardOpenMenu((value) => value === 'generation' ? null : 'generation')} className="mt-1 flex w-full items-center justify-between rounded bg-[#30383b] px-2 py-1 text-left text-[10px] text-neutral-100">{wearBoardGenerationSetting}<span>⌄</span></button>{wearBoardOpenMenu === 'generation' && <div role="menu" className="absolute left-0 right-0 top-full z-30 rounded bg-[#30383b] p-1 shadow-xl"><button type="button" role="menuitem" className="w-full rounded px-2 py-1 text-left text-[10px] text-neutral-100 hover:bg-white/10" onClick={() => { setWearBoardGenerationSetting('自動'); setWearBoardOpenMenu(null); }}>自動</button></div>}</div><div className="relative text-[10px] text-neutral-400">解像度<button type="button" role="combobox" aria-label="解像度" aria-expanded={wearBoardOpenMenu === 'resolution'} onClick={() => setWearBoardOpenMenu((value) => value === 'resolution' ? null : 'resolution')} className="mt-1 flex w-full items-center justify-between rounded bg-[#30383b] px-2 py-1 text-left text-[10px] text-neutral-100">{wearBoardResolution}<span>⌄</span></button>{wearBoardOpenMenu === 'resolution' && <div role="menu" className="absolute left-0 right-0 top-full z-30 rounded bg-[#30383b] p-1 shadow-xl"><button type="button" role="menuitem" className="w-full rounded px-2 py-1 text-left text-[10px] text-neutral-100 hover:bg-white/10" onClick={() => { setWearBoardResolution('4K'); setWearBoardOpenMenu(null); }}>4K</button><button type="button" role="menuitem" className="w-full rounded px-2 py-1 text-left text-[10px] text-neutral-100 hover:bg-white/10" onClick={() => { setWearBoardResolution('2K'); setWearBoardOpenMenu(null); }}>2K</button></div>}</div></div>
-            <button type="button" disabled className="mt-3 w-full rounded-lg bg-[#10c8c0] px-3 py-0.5 text-[10px] font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-70" data-testid="lightchain-wear-board-permission">権限がありません</button>
+            <button type="button" disabled className="mt-3 w-full rounded-lg bg-[#10c8c0] px-3 py-0.5 text-[10px] font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-70" data-testid="lightchain-wear-board-permission">{heavyEntitlementDisplayMessage}</button>
           </div>
 
           <div className="absolute left-[55.8%] top-[19.6%] z-10 w-[13.1%] min-w-[180px] overflow-hidden rounded-xl bg-white shadow-2xl">
@@ -8078,7 +8134,15 @@ export function LightchainWorkbenchPage() {
                           {control}
                         </span>
                       ))}
-                      <PermissionLockedButton testId="lightchain-model-permission" marginClass="" className="rounded-lg bg-[#65d3cf] text-neutral-950" />
+                      <button
+                        type="button"
+                        disabled
+                        aria-label={heavyEntitlementDisplayMessage}
+                        data-testid="lightchain-model-permission"
+                        className="rounded-lg bg-[#65d3cf] px-5 py-2.5 text-base font-medium text-neutral-950 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {heavyEntitlementDisplayMessage}
+                      </button>
                     </div>
                   </section>
                 ) : isFeatureDetail && selectedTool.id === 'printing-image' ? (
@@ -8550,10 +8614,10 @@ export function LightchainWorkbenchPage() {
                           <button
                             type="button"
                             data-testid={`lightchain-${selectedTool.id}-permission`}
-                            onClick={() => toast.error('この機能は現在のLight Chain権限では利用できません')}
+                            onClick={() => toast.error(heavyEntitlementDisplayMessage)}
                             className={selectedTool.id === 'image-repair' ? 'float-right inline-flex h-10 w-72 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#65d3cf] to-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs transition-all hover:brightness-105' : 'inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs transition-all hover:brightness-105'}
                           >
-                            権限がありません
+                            {heavyEntitlementDisplayMessage}
                           </button>
                         ) : (
                           <button

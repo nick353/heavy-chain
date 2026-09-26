@@ -22,7 +22,7 @@ test('Lightchain parity does not add a Heavy-only rights checkbox', async () => 
   ]);
   const source = [parityPages, materialWorkbench, workbench, modelLibrary].join('\n');
 
-  assert.match(source, /PermissionLockedButton/);
+  assert.match(source, /ParityPermissionGate/);
   assert.match(source, /testId="creator-permission"/);
   assert.match(source, /providerRightsConfirmed/);
   assert.match(source, /data-testid="lightchain-fabric-design-input"/);
@@ -73,8 +73,9 @@ test('AI fitting exposes Gallery selection and the source permission surface bef
   assert.doesNotMatch(source, /Lightchainの「権限がありません」はプラン規制として維持/);
   assert.match(source, /Gallery素材を選択/);
   assert.match(source, /data-testid="fitting-model-gallery-select"/);
-  assert.match(source, /getLightchainSourceGenerationAccess\('model-matrix'\)/);
-  assert.match(source, /権限がありません/);
+  assert.match(source, /const heavyGenerationReady = heavyEntitlement\?\.allowed === true[\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(source, /Heavy利用条件を確認できません/);
+  assert.doesNotMatch(source, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|type="checkbox"/);
 });
 
@@ -91,8 +92,10 @@ test('Heavy parity surfaces do not render the Light-missing rights checkbox or b
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|GENERATION_LEGAL_COPY/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
   const generate = sources[0];
-  assert.match(generate, /getLightchainSourceGenerationAccessForWorkflow\(selectedFeature\?\.id \?\? ''\)/);
-  assert.match(generate, /const rightsConfirmed = sourceGenerationAccess === 'permitted'/);
+  assert.match(generate, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(generate, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.match(generate, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
+  assert.doesNotMatch(generate, /isLightchainGenerationSurface|sourceGenerationAccess|getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(generate, /const rightsConfirmed = true/);
   assert.doesNotMatch(generate, /sourceModelGenerationDenied/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);

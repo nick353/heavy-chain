@@ -21936,3 +21936,53 @@ Companion navigationはbrowser readback verified、external action false。終�
 confirmed、retained/unknown 0、foreign mutation false。実provider receipt、remote durable save/reuse/reload/reconciliation、
 画像scorecard、billing、monitor/UI、G618は未達のまま。ユーザーの今後の生成許可は保持するが、正規のsource `permitted`
 readbackまたはoperator判断が得られるまで権利ゲートは変更しない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r362
+
+Heavy-only entitlement plumbing is now present locally. The server requires an authenticated, editor-scoped,
+short-lived preparation proof bound to the exact normalized request and source digests; terms acceptance and rights
+attestation require explicit positive fields plus configured approved document version/digest and cannot bypass the
+preparation. Generation revalidates this proof before admission, provider dispatch, per-candidate work, private R2,
+commit, and reconciliation. The client exposes prepare/accept/attest primitives and opaque proof attachment, but never
+auto-consents. Heavy remains disabled and Light `sourceFeatureAccess.ts` remains unchanged.
+
+Fresh local evidence: Cloudflare API 112/112, entitlement 10/10, runtime 1/1 synthetic PNG (not a real-provider claim),
+client preflight and parity suites 71/71, Canvas/UI suite 14/14, typecheck, production build (2566 modules), strict lint
+(`--max-warnings=0`), and `git diff --check` pass. The release gate captured at 2026-09-26T21:58:19Z remains fail-closed
+because multiple production artifacts are older than 48 hours or missing, monitor/UI and G618 are not current, H601/H602
+production evidence and the real-generation scorecard are absent, and this worktree is intentionally dirty.
+
+No provider submission, R2 production readback, durable save/reuse/reload/reconciliation, video provider execution, deploy,
+billing, publish, secret entry, or destructive cleanup was performed. Goal active.
+
+# Heavy Chain current state — 2026-09-27 r363
+
+Fail-closed entitlement code is now deployed: Heavy API version `3ec28a85-638a-42df-a6b4-2eb1ff62ea10` and Heavy Web
+version `177a966e-d50e-4085-b0ed-64a51566b137`. API `/v1/health` returned 200 and unauthenticated Heavy entitlement returned
+401. The Heavy entitlement flag remains false and Workers AI is configured; no real provider request was dispatched.
+
+One fresh authenticated Companion session read back `/generate?feature=campaign-image`, `/canvas/new`, `/designProduction`,
+`/model`, and `/flow/GenerateShortVideo`. Every transaction was verified, known-no-effect, external-action-free, and cleaned
+up. The deployed Heavy body no longer contains the legacy Light `権限がありません` marker. Evidence:
+`work/heavy-chain-entitlement-postdeploy-readback-20260927-r1.md`.
+
+This closes the stale production UI/API code-path blocker only. Approved Heavy terms/rights documents and explicit records,
+real provider receipt/R2 reuse-reload-reconciliation, video provider, monitor/UI, G618, H601/H602, scorecard, and strict
+release remain open. Goal active.
+
+# Heavy Chain current state — 2026-09-27 r364
+
+Post-deploy strict release-gate capture `2026-09-26T22:08:09.902Z` is `ok=false`. Local typecheck/build/lint with
+`--max-warnings=0`/diff-check all pass. Remaining gate failures are stale or missing production UI/route/launch/mass-market/
+Lightchain/G610/G603/G605/G606/H601/public-entrypoint artifacts, the monitor/UI pair, stale G618, incomplete H602 production
+readback/billing readiness, missing real-generation scorecard, and the intentionally dirty worktree. No provider, payment,
+publish, or destructive action was used to clear them. Goal active.
+
+# Heavy Chain current state — 2026-09-27 r365
+
+The production D1 migration readback after the Heavy API deploy found three pending Heavy entitlement migrations. They were
+applied remotely to the exact `heavy-chain-production-db` target: `0012_heavy_entitlement_plumbing.sql`,
+`0013_heavy_entitlement_documents.sql`, and `0014_heavy_generation_preparations.sql`. A fresh migration listing returned
+`No migrations to apply!`; `/v1/health` stayed HTTP 200 and unauthenticated preparation stayed HTTP 401. The flag remains
+false and no provider request was made. Evidence was appended to `work/heavy-chain-entitlement-postdeploy-readback-20260927-r1.md`.
+Goal active.

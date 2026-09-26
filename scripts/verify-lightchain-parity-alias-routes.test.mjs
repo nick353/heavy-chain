@@ -21,6 +21,9 @@ test('keeps permission and purchase boundaries visible in the parity screens', (
   // intentionally removed. The source permission surface is separate from
   // rights-attestation UI, which Light Chain does not render.
   assert.doesNotMatch(parityPagesSource, /PermissionLockedButton/);
+  assert.match(parityPagesSource, /aria-label="この機能は未実装です"/);
+  assert.match(parityPagesSource, />この機能は未実装です<\/button>/);
+  assert.doesNotMatch(parityPagesSource, /権限がありません/);
   assert.match(permissionComponentSource, /権限がありません/);
   assert.match(parityPagesSource, /AIフィッティングを開く/);
   assert.match(parityPagesSource, /生成履歴/);
@@ -42,7 +45,7 @@ test('keeps the model-library alias on the shared workflow contract', () => {
   assert.match(modelLibrarySource, /data-workflow-result-destinations=\{modelLibraryWorkflowContract\?\.resultDestinations\.join\(','\) \?\? ''\}/);
   assert.match(modelLibrarySource, /data-workflow-rights-gate=\{modelLibraryWorkflowContract\?\.rightsGate \?\? ''\}/);
   assert.match(modelLibrarySource, /data-testid="model-library-permission-surface"/);
-  assert.match(modelLibrarySource, /権限がありません/);
+  assert.match(modelLibrarySource, /Heavy利用条件を確認できません/);
   assert.doesNotMatch(modelLibrarySource, /生成直前に権利確認を行います/);
   assert.match(modelLibrarySource, /getLightchainUnifiedFeatureWorkflowContract\('model-library'\)/);
   assert.match(modelLibrarySource, /buildGenerationIntentHref/);
