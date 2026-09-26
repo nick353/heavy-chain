@@ -22007,6 +22007,18 @@ unknown-effect tabs and no external action. Evidence: `work/heavy-chain-entitlem
 This closes only the current UI/API/authenticated-surface freshness check. Heavy approved terms/rights documents and digests,
 explicit acceptance/attestation, real provider receipt, private-R2 save/reuse/reload/reconciliation, video provider,
 monitor/UI and G618, H601/H602, and the real-generation scorecard remain open. Goal active.
+
+# Heavy Chain current state — 2026-09-27 r369
+
+API設定を明示したlocal buildでG603を再実行し、garment/mask/print layer/Canvas save/reloadの証跡が
+ok=true/failed=[]になった。G606 stress harnessはrequestless Heavy entitlement GETを明示的にfail-closed mockし、
+contract test 4/4、1200 images、600 Canvas objects、renderedTilesInitial=60、consoleErrors/requestFailures=0、
+cleanup completeでok=true。変更コミットはda49077。
+
+strict release gate heavy-release-gate-current-20260927-r3はG603/G606、route matrix、dirty worktreeを通過。
+残りはproduction monitor/UI pair、launch operations、production mass-market QA、production all-feature previews、
+G618、H601、H602、real-generation scorecard、H602 billing readiness。権利文書・explicit attestation、
+実provider/R2/video/billing/publishは未達。Goal active。
 # Heavy Chain current state — 2026-09-27 r368
 
 現行Lightchain manifestの33 feature routeとlauncherの計34 routeを、同一Companion sessionで認証済み

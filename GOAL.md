@@ -567,6 +567,7 @@ providerの実生成receipt、保存→再利用→reload→source sync/reconcil
 G618、H602 billing、strict clean release gateは未達。provider、upload、課金、publish、秘密情報入力は行っていない。
 Goalはactive。
 
+
 # Goal progress — 2026-09-27 r365
 
 Heavy API deploy後のproduction D1 migration readbackで、`0012`〜`0014`が未適用と判明したため、対象DB
@@ -10612,3 +10613,15 @@ G605/G610のlocal fresh checksはpass。G606は1200 images/600 Canvas objectsの
 gate required `renderedTilesInitial >= 60`を満たさない。G603はgarment/mask assertions後の
 `canvas_save_button_not_ready`とroute exceptionでfail。実provider・R2・video・billing・publishは未実行。
 Goalはactive。
+
+# Goal progress — 2026-09-27 r369
+
+G603/G606のローカル証跡を、権利ゲート緩和なしで更新した。G603はAPI設定済みlocal buildと既存mockで
+garment→manual mask→print layer→Canvas save→reloadがok=true/failed=[]。G606はrequestless Heavy entitlement
+GETをfail-closed mockし、contract test 4/4、1200 images、600 Canvas objects、renderedTilesInitial=60、
+console/request errors 0、cleanup completeでok=true。strict release gate r3はG603/G606、route matrix、
+dirty worktreeを通過した。
+
+残るgate failureはproduction monitor/UI pair、launch operations、production mass-market QA、production
+Lightchain all-feature previews、G618、H601、H602、real-generation scorecard、H602 billing readiness。
+Heavy terms/rights文書・digest・explicit attestation、実provider/R2/video/billing/publishは未達。Goalはactive。
