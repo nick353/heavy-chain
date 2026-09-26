@@ -25,7 +25,7 @@
     "FRONTEND_ORIGINS": "https://heavy-chain-web.nichika2000823.workers.dev,https://heavy-chain.zeabur.app",
     "AI_IMAGE_PROVIDER": "workers_ai",
     "AI_IMAGE_ENABLED": "true",
-    "HEAVY_IMAGE_ENTITLEMENT_ENABLED": "false",
+    "HEAVY_IMAGE_ENTITLEMENT_ENABLED": "true",
     "HEAVY_TERMS_VERSION": "heavy-terms-v1",
     "HEAVY_RIGHTS_ATTESTATION_VERSION": "heavy-rights-v1",
     "HEAVY_TERMS_DOCUMENT_VERSION": "heavy-terms-document-v1",
