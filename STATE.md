@@ -21994,3 +21994,16 @@ The 38-file Heavy entitlement/preflight, Light parity, UI/API, test, and Goal/ST
 failure; typecheck, build, strict lint, and diff-check pass. Remaining failures are fresh production UI/route/monitor/
 launch/mass-market artifacts, G610/G603/G605/G606/G618 freshness, H601/H602 production evidence, and the real-generation
 scorecard. Provider, billing, and publishing were not guessed or forced. Goal active.
+
+# Heavy Chain current state — 2026-09-27 r367
+
+Fresh authenticated Companion readback after deploy covered `/model`, `/gallery`, `/history`, `/jobs`, `/canvas/new`,
+`/generate?feature=campaign-image`, `/designProduction`, and `/flow/GenerateShortVideo`. All returned complete semantic and
+same-tab visual evidence; the old Light `権限がありません` marker was absent. Heavy surfaces show explicit Heavy-specific
+fail-closed messaging and the campaign-image `生成する` control remains disabled. API health is 200, unauthenticated entitlement
+and prepare are 401, and remote D1 reports no pending migrations. Companion terminal cleanup is complete with no retained or
+unknown-effect tabs and no external action. Evidence: `work/heavy-chain-entitlement-postdeploy-readback-20260927-r2.md`.
+
+This closes only the current UI/API/authenticated-surface freshness check. Heavy approved terms/rights documents and digests,
+explicit acceptance/attestation, real provider receipt, private-R2 save/reuse/reload/reconciliation, video provider,
+monitor/UI and G618, H601/H602, and the real-generation scorecard remain open. Goal active.

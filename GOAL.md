@@ -574,6 +574,18 @@ Heavy API deploy後のproduction D1 migration readbackで、`0012`〜`0014`が�
 `/v1/health`はHTTP 200を維持し、未認証prepareはHTTP 401で、flag false・provider未実行のfail-closed境界を確認した。
 証跡`work/heavy-chain-entitlement-postdeploy-readback-20260927-r1.md`へ追記済み。Goalはactive。
 
+# Goal progress — 2026-09-27 r367
+
+同一のtask-owned Companion profileで、Heavy配信後のhydrated production UIを再読込した。`/model`、`/gallery`、
+`/history`、`/jobs`、`/canvas/new`、`/generate?feature=campaign-image`、`/designProduction`、
+`/flow/GenerateShortVideo`の全8 routeで、semantic documentと同一tab visual screenshotを取得。旧Light由来の
+`権限がありません`は全チェックで不在、Heavy面は`Heavy生成機能は未実装です`または`Heavy利用条件を確認できません`へ
+分離され、生成ボタンはfail-closed disabledのまま。証跡は`work/heavy-chain-entitlement-postdeploy-readback-20260927-r2.md`。
+API health=200、未認証entitlement/prepare=401、D1=No migrations to apply!も再確認した。Companion cleanupはowned tab close、
+lease release、retained/unknown 0、foreign mutation false、external action false。これは認証継続とUI境界のfresh proofであり、
+Heavy terms/rights document・explicit attestation、実provider/R2 receipt、video、monitor/UI、H601/H602、scorecardを完了扱いにしない。
+Goalはactive。
+
 # Goal progress — 2026-09-27 r366
 
 今回の38ファイルのHeavy entitlement/preflight、Light parity、UI/API変更、テスト、Goal/STATE記録をcommit
