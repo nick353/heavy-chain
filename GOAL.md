@@ -10637,3 +10637,16 @@ strict release gate `heavy-release-gate-current-20260927-r5-full` はlaunch oper
 production monitor/UI pair、production mass-market QA、production Lightchain all-feature previews、G618、H601、H602、
 real-generation scorecard、H602 billing readiness。Heavy terms/rights文書・digest・explicit attestation、実provider/R2/video/
 billing/publishは引き続き未達。Goalはactive。
+
+# Goal progress — 2026-09-27 r371
+
+H602 Cloudflare local contract verifierの誤判定を修正した。Heavyのserver-owned `entitlement` policy gateは課金由来の
+transaction/entitlement surfaceではないため、検査をbilling-derived route/identifierに限定し、同時にHeavy entitlement
+sourceのOFF-by-default、空production policyのfail-closed、生成入力を含むrequest bindingを検証対象へ追加した。
+Heavy policy surfaceは許可しつつ`billingEntitlementId`、`transactionId`、billing routeは拒否する境界テストを追加し、
+`npm run test:h602-cloudflare-billing` 3/3、`npm run verify:h602-billing` `ok=true`、`releaseApproval=false`を確認した。
+
+strict gate `heavy-release-gate-current-20260927-r6-full`で`command:H602 billing readiness`の失敗は解消した。残る失敗は
+production monitor/UI pair、production mass-market QA、production Lightchain all-feature previews、G618、H601、H602、
+real-generation scorecardであり、いずれも認証済みfresh readbackまたはoperator/provider証跡が必要。H602 production
+proof、実provider/R2/video/billing/publish、秘密情報投入は行っていない。Goalはactive。

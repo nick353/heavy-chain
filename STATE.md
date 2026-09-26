@@ -22045,3 +22045,15 @@ Full strict gate `heavy-release-gate-current-20260927-r5-full` now clears launch
 monitor/UI pair, production mass-market QA, production all-feature previews, G618, H601, H602, real-generation scorecard, and H602
 billing readiness. No Heavy provider, R2 persistence/reuse/reload/reconciliation, video provider, payment, publish, secret insertion,
 or destructive cleanup was performed. Goal active。
+
+# Heavy Chain current state — 2026-09-27 r371
+
+H602 local Cloudflare readinessの`no_transaction_entitlement_surface`は、Heavyのfail-closed policy entitlementを課金
+transaction surfaceとして扱う検査分類の誤りだった。検査をbilling-derived route/identifierへ限定し、Heavy entitlementの
+explicit-true-only flag、empty-policy fail-closed、normalized generation inputsを含む`heavy-request-binding.v2`を追加で
+検証するよう更新した。Heavy policyは許可し、billingEntitlement/transactionId/billing routeは拒否する境界テストを追加。
+`test:h602-cloudflare-billing` 3/3、`verify:h602-billing` `ok=true`・`releaseApproval=false`をfresh確認した。
+
+strict gate r6 fullではH602 local command blockerが消え、残りはproduction monitor/UI pair、mass-market QA、Lightchain
+all-feature previews、G618、H601、H602 production completion、real-generation scorecard。H602 production proof、実provider
+receipt、R2/video/billing/publish、secret投入は未実行。Goal active。

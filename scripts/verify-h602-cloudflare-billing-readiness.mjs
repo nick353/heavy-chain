@@ -10,6 +10,7 @@ export const H602_CLOUDFLARE_CONTRACT_PATHS = [
   'cloudflare/heavy-api/src/index.ts',
   'cloudflare/heavy-api/src/image-ai.ts',
   'cloudflare/heavy-api/src/image-ai-contracts.ts',
+  'cloudflare/heavy-api/src/heavy-entitlement.ts',
   'cloudflare/heavy-api/test/image-ai.test.ts',
   'cloudflare/heavy-api/test/image-ai.runtime.ts',
   'cloudflare/heavy-api/MONITORING.md',
@@ -25,7 +26,17 @@ const ACTIVE_CLOUDFLARE_PATHS = [
   'cloudflare/heavy-api/src/index.ts',
   'cloudflare/heavy-api/src/image-ai.ts',
   'cloudflare/heavy-api/src/image-ai-contracts.ts',
+  'cloudflare/heavy-api/src/heavy-entitlement.ts',
 ];
+
+/**
+ * Heavy's policy gate is intentionally named an entitlement, but it is not a
+ * billing entitlement.  Detect only billing-derived routes/identifiers here;
+ * a generic `entitlement` token would reject the approved Heavy fail-closed
+ * policy and make this H602 contract impossible to satisfy.
+ */
+export const H602_BILLING_TRANSACTION_ENTITLEMENT_PATTERN =
+  /(?:\/v1\/(?:billing|payments?|purchases?|checkout|subscriptions?)(?:\/|["'`)]|$)|\b(?:billing|payment|purchase|checkout|subscription|storekit|premium)[A-Za-z0-9_-]*(?:entitlement|transaction|receipt)[A-Za-z0-9_-]*|\b(?:entitlement|transaction|receipt)[A-Za-z0-9_-]*(?:billing|payment|purchase|checkout|subscription|storekit|premium)[A-Za-z0-9_-]*|\btransaction[_-]?(?:id|receipt|status|result)[A-Za-z0-9_-]*)/i;
 
 const REQUIRED_ACTIONS = new Set(['generate-image', 'edit-image', 'model-matrix']);
 
@@ -151,6 +162,14 @@ export function verifyH602CloudflareBillingReadiness(options = {}) {
     hasText(imageContracts, 'inputTiles * 59 + outputTiles * 287') &&
       hasText(imageContracts, 'inputTiles * 5.37 + outputTiles * 26.05'));
 
+  const heavyEntitlement = sources.get('cloudflare/heavy-api/src/heavy-entitlement.ts') ?? '';
+  check('heavy_entitlement:server_flag_is_explicit_true_only', hasText(heavyEntitlement, "env.HEAVY_IMAGE_ENTITLEMENT_ENABLED?.trim() === 'true'"));
+  check('heavy_entitlement:empty_policy_fails_closed', hasText(heavyEntitlement, 'Empty production configuration is closed.'));
+  check('heavy_entitlement:request_binding_includes_generation_inputs',
+    hasText(heavyEntitlement, "schema: 'heavy-request-binding.v2'") &&
+      hasText(heavyEntitlement, 'normalizedGenerationInputs'));
+  check('heavy_entitlement:disabled_reason_is_fail_closed', hasText(heavyEntitlement, "'heavy_generation_disabled'"));
+
   const workerEntry = sources.get('cloudflare/heavy-api/src/index.ts') ?? '';
   check('worker_entry:image_readback_handler', hasText(workerEntry, 'handleImageAIRead'));
   check('worker_entry:health_route', hasText(workerEntry, 'url.pathname === "/v1/health"'));
@@ -178,7 +197,12 @@ export function verifyH602CloudflareBillingReadiness(options = {}) {
     ['cloudflare_active_path:no_purchase_surface', /\bpurchase\b/i],
     ['cloudflare_active_path:no_charge_surface', /\bcharge\b/i],
     ['cloudflare_active_path:no_apple_billing_surface', /\b(?:apple[_ -]?id|app[_ -]?store)\b/i],
-    ['cloudflare_active_path:no_transaction_entitlement_surface', /\b(?:transaction|entitlement)\b/i],
+    // Heavy's server-owned policy gate deliberately uses the word
+    // "entitlement".  H602 must reject billing-derived transaction or
+    // entitlement surfaces, not confuse that policy gate with checkout
+    // authority.  Keep this matcher structural so a route/identifier cannot
+    // be smuggled in by merely changing prose.
+    ['cloudflare_active_path:no_transaction_entitlement_surface', H602_BILLING_TRANSACTION_ENTITLEMENT_PATTERN],
   ]) check(label, !pattern.test(activeSource));
 
   const localContractOk = failures.length === 0;
