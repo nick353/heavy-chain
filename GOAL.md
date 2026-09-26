@@ -567,7 +567,6 @@ providerの実生成receipt、保存→再利用→reload→source sync/reconcil
 G618、H602 billing、strict clean release gateは未達。provider、upload、課金、publish、秘密情報入力は行っていない。
 Goalはactive。
 
-
 # Goal progress — 2026-09-27 r365
 
 Heavy API deploy後のproduction D1 migration readbackで、`0012`〜`0014`が未適用と判明したため、対象DB
@@ -10625,3 +10624,16 @@ dirty worktreeを通過した。
 残るgate failureはproduction monitor/UI pair、launch operations、production mass-market QA、production
 Lightchain all-feature previews、G618、H601、H602、real-generation scorecard、H602 billing readiness。
 Heavy terms/rights文書・digest・explicit attestation、実provider/R2/video/billing/publishは未達。Goalはactive。
+
+# Goal progress — 2026-09-27 r370
+
+Companionの同一task-owned sessionで現行LightchainのLaunch Operations 9導線（desktop 5 / mobile 4）を再読した。
+Dashboard、Generate、Gallery、Canvas、Contactをproduction origin上でsemantic+visual readbackし、各visible checkbox 0件、
+login redirectなし、生成submit・決済・公開なしを確認した。Canvas desktopは現行画面の`CANVAS / Canvasを準備しています`を
+readbackし、mobileは編集画面まで到達した。証跡は`output/playwright/g830-launch-ops-production-current-r4/summary.json`。
+Companion cleanupはsession closed、task tab closed、foreign mutation false、unknown effect false。
+
+strict release gate `heavy-release-gate-current-20260927-r5-full` はlaunch operations blockerを解消した。残る失敗は
+production monitor/UI pair、production mass-market QA、production Lightchain all-feature previews、G618、H601、H602、
+real-generation scorecard、H602 billing readiness。Heavy terms/rights文書・digest・explicit attestation、実provider/R2/video/
+billing/publishは引き続き未達。Goalはactive。

@@ -22033,3 +22033,15 @@ G603、G606、G618、H601、H602、real-generation scorecard、H602 billing read
 G606の1200/600 fixtureはpassだがrenderedTilesInitialがgate閾値未達、G603は`canvas_save_button_not_ready`。
 Heavyの承認済みterms/rights文書・digest・explicit acceptance/attestation、real provider receipt、
 private R2 save/reuse/reload/reconciliation、video provider、billing/publishは未達。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r370
+
+Fresh Companion launch-operations readback `output/playwright/g830-launch-ops-production-current-r4/summary.json` covers 9 current
+production routes (desktop 5, mobile 4) in one authenticated Companion session. Semantic and same-tab visual readback passed,
+visible checkboxes are zero, login redirect is false, and generation/payment/publish actions were not touched. The session closed its
+owned tab with no retained or unknown-effect resources and `foreignTabsMutated=false`.
+
+Full strict gate `heavy-release-gate-current-20260927-r5-full` now clears launch operations. Remaining failures are production
+monitor/UI pair, production mass-market QA, production all-feature previews, G618, H601, H602, real-generation scorecard, and H602
+billing readiness. No Heavy provider, R2 persistence/reuse/reload/reconciliation, video provider, payment, publish, secret insertion,
+or destructive cleanup was performed. Goal active。
