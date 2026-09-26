@@ -1,100 +1,83 @@
 {
   "schema": "heavy-chain.companion-authenticated-production-evidence.v1",
-  "capturedAt": "2026-09-24T09:31:26.288Z",
   "source": "aos_chrome_companion_profile_instance",
-  "taskId": "01a0b8d1-3935-75c1-8cea-b58769f7fb15",
-  "sessionId": "session_d288286d-3916-49c2-920a-a5f27024ae8b",
-  "tabId": 1980928279,
+  "capturedAt": "2026-09-26T22:19:32.000Z",
+  "taskId": "01a0d9bd-feb5-7812-bd45-9b23062f6b33",
+  "sessionId": "session_1d4ef3fb-39f5-4737-9597-0279a4e717b7",
+  "tabId": 1980930928,
   "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
   "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
   "authSecretExported": false,
-  "routes": [
-    {
-      "path": "/model",
-      "tabId": 1980928279,
-      "capturedAt": "2026-09-24T09:29:32.648Z",
-      "title": "Lightchain AI",
-      "readyState": "complete",
-      "authMarker": "avatar",
-      "routeMarkers": ["AIフィッティング", "シングルタスク", "マルチタスク", "衣服の画像 (0/4)", "参考画像", "権限がありません", "生成履歴"],
-      "semanticReadback": "verified",
-      "visualReadback": "verified",
-      "hydrationWait": "30 seconds completed before same-tab readback"
-    },
-    {
-      "path": "/gallery",
-      "tabId": 1980928281,
-      "capturedAt": "2026-09-24T09:29:53.293Z",
-      "title": "Lightchain AI",
-      "readyState": "complete",
-      "authMarker": "avatar",
-      "routeMarkers": ["ギャラリー", "11枚の画像", "検索", "お気に入り", "詳細を見る"],
-      "semanticReadback": "verified",
-      "visualReadback": "verified",
-      "hydrationWait": "30 seconds completed before same-tab readback"
-    },
-    {
-      "path": "/history",
-      "tabId": 1980928280,
-      "capturedAt": "2026-09-24T09:29:54.393Z",
-      "title": "Lightchain AI",
-      "readyState": "complete",
-      "authMarker": "avatar",
-      "routeMarkers": ["生成履歴", "続きから再開", "失敗を確認", "保存済みを見る", "TIMELINE 12", "進行中 0", "失敗 1", "保存済み 11"],
-      "semanticReadback": "verified",
-      "visualReadback": "verified",
-      "hydrationWait": "30 seconds completed before same-tab readback"
-    },
-    {
-      "path": "/jobs",
-      "tabId": 1980928283,
-      "capturedAt": "2026-09-24T09:31:26.288Z",
-      "title": "Lightchain AI",
-      "readyState": "complete",
-      "authMarker": "avatar",
-      "routeMarkers": ["制作キュー", "再開できる作業 0件", "止まった作業 1件", "完了した成果物 9件"],
-      "semanticReadback": "verified",
-      "visualReadback": "verified",
-      "hydrationWait": "30 seconds completed before same-tab readback"
-    },
-    {
-      "path": "/canvas/new",
-      "tabId": 1980928284,
-      "capturedAt": "2026-09-24T09:31:05.743Z",
-      "title": "Lightchain AI",
-      "readyState": "complete",
-      "authMarker": "canvas-save",
-      "routeMarkers": ["CANVAS", "ブランド: Nisen", "画像を置いて、機能を選ぶ", "派生ツリー", "保存", "権限がありません"],
-      "semanticReadback": "verified",
-      "visualReadback": "verified",
-      "hydrationWait": "30 seconds completed before same-tab readback"
-    }
-  ],
   "businessCompletion": {
     "providerReceipt": "unverified",
     "sourceSync": "unverified",
     "reconciliation": "unverified",
     "cleanup": "verified"
   },
-  "blockers": [
-    "provider_receipt_and_source_sync_not_proven",
-    "generation_save_reuse_reconciliation_not_proven"
+  "routes": [
+    {
+      "path": "/model",
+      "capturedAt": "2026-09-26T22:18:41.000Z",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["AIフィッティング", "生成履歴", "Heavy生成機能は未実装です"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    },
+    {
+      "path": "/gallery",
+      "capturedAt": "2026-09-26T22:18:48.000Z",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["ギャラリー", "13枚の画像", "詳細を見る"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    },
+    {
+      "path": "/history",
+      "capturedAt": "2026-09-26T22:18:55.000Z",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["生成履歴", "続きから再開", "保存済みを見る"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    },
+    {
+      "path": "/jobs",
+      "capturedAt": "2026-09-26T22:19:02.000Z",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["PRODUCTION QUEUE", "制作キュー", "新しく作る"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    },
+    {
+      "path": "/canvas/new",
+      "capturedAt": "2026-09-26T22:19:09.000Z",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "canvas-save",
+      "routeMarkers": ["CANVAS", "画像を置く", "素材を見る", "Heavy利用条件を確認できません"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    }
   ],
   "cleanup": {
     "foreignTabsMutated": false,
     "taskTabRetained": false,
     "leaseReleasedAfterReadback": true,
     "sessionClosed": true,
-    "closedTabIds": [1980928279, 1980928280, 1980928281, 1980928283, 1980928284],
-    "leasesReleasedCount": 2,
     "retainedTabCount": 0,
     "unknownTabCount": 0,
-    "externalActionExecuted": false,
-    "finalStatus": {
-      "logicalSessionCount": 0,
-      "exactTabLeaseCount": 0,
-      "pendingOperationCount": 0,
-      "taskTabCount": 0
-    }
+    "externalActionExecuted": false
   }
 }
