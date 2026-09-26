@@ -574,6 +574,14 @@ Heavy API deploy後のproduction D1 migration readbackで、`0012`〜`0014`が�
 `/v1/health`はHTTP 200を維持し、未認証prepareはHTTP 401で、flag false・provider未実行のfail-closed境界を確認した。
 証跡`work/heavy-chain-entitlement-postdeploy-readback-20260927-r1.md`へ追記済み。Goalはactive。
 
+# Goal progress — 2026-09-27 r366
+
+今回の38ファイルのHeavy entitlement/preflight、Light parity、UI/API変更、テスト、Goal/STATE記録をcommit
+`d767b29`（`feat: add Heavy entitlement preflight boundary`）へ保全した。commit後のstrict release gateは`git_dirty`を
+解消し、typecheck/build/lint/diff-checkもPASS。残りはproduction UI/route/monitor/launch/mass-marketのfresh artifact、
+G610/G603/G605/G606/G618の鮮度、H601/H602 production evidence、実画像scorecardであり、provider・課金・公開を推測して
+通してはいない。Goalはactive。
+
 # Goal progress — 2026-09-25 r277
 
 fresh Companion read-onlyでLight本家とHeavy Zeaburの同じvideo入口を1回ずつ取得。Lightはtitleのみでsemantic body

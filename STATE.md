@@ -21986,3 +21986,11 @@ applied remotely to the exact `heavy-chain-production-db` target: `0012_heavy_en
 `No migrations to apply!`; `/v1/health` stayed HTTP 200 and unauthenticated preparation stayed HTTP 401. The flag remains
 false and no provider request was made. Evidence was appended to `work/heavy-chain-entitlement-postdeploy-readback-20260927-r1.md`.
 Goal active.
+
+# Heavy Chain current state — 2026-09-27 r366
+
+The 38-file Heavy entitlement/preflight, Light parity, UI/API, test, and Goal/STATE changes are preserved in commit
+`d767b29` (`feat: add Heavy entitlement preflight boundary`). The post-commit strict release gate has no `git_dirty`
+failure; typecheck, build, strict lint, and diff-check pass. Remaining failures are fresh production UI/route/monitor/
+launch/mass-market artifacts, G610/G603/G605/G606/G618 freshness, H601/H602 production evidence, and the real-generation
+scorecard. Provider, billing, and publishing were not guessed or forced. Goal active.
