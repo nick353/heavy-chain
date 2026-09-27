@@ -1,0 +1,57 @@
+{
+  "schema": "heavy-chain.image-production-health-readback.v1",
+  "capturedAt": "2026-09-27T10:59:40Z",
+  "sourceRevision": "f58d85a",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "providerCall": false,
+    "externalEffects": 0
+  },
+  "origin": "https://heavy-chain-api.nichika2000823.workers.dev",
+  "probes": [
+    {
+      "method": "GET",
+      "path": "/v1/health",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "service": "heavy-api",
+        "media": "private-r2",
+        "heavyEntitlementEnabled": true
+      },
+      "meaning": "public liveness and configured private-media/entitlement flags only; not provider or business completion"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/heavy/entitlement",
+      "status": 401,
+      "body": { "error": "unauthorized" },
+      "meaning": "unauthenticated entitlement read is fail-closed"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/image-ai/usage",
+      "status": 400,
+      "body": { "success": false, "error": "invalid_brand_id" },
+      "meaning": "request validation rejected missing brand scope before any provider action"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/provider-actions/model-matrix",
+      "status": 404,
+      "body": { "error": "not_found" },
+      "meaning": "no unauthenticated provider-action read or accidental side effect"
+    }
+  ],
+  "notProven": [
+    "authenticated consumer-auth session",
+    "organization verification",
+    "OpenAI image provider receipt",
+    "D1/R2 save-reuse-reload-reconciliation",
+    "billing/no-charge completion",
+    "strict release gate"
+  ],
+  "nextGate": "Use the approved authenticated Heavy image surface for one authorized request after Astra-approved Sunburst migration; read the same request receipt and then verify durable persistence."
+}

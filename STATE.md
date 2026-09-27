@@ -23337,3 +23337,7 @@ shell環境の`OPENAI_API_KEY`変数名のみpresence確認。secret値は未読
 # Heavy Chain current state — 2026-09-27 r631
 
 画像waveの本番Heavy Workerをread-onlyでfresh確認し、現行secret listに`OPENAI_API_KEY`と`MEDIA_READ_SECRET`が存在することを確認。`OPENAI_IMAGE_API_KEY`は不要なaliasで、server adapterは`OPENAI_API_KEY`を受け付ける。secret値は未読で、Organization Verification、実provider receipt、R2/reconciliationは未証明。動画はdeferred。正本は`work/heavy-chain-openai-image-binding-audit-20260927-r1.json`と更新済み`work/heavy-chain-image-resume-manifest-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r632
+
+公開Heavy APIをfresh read-only確認。`/v1/health`は200でservice/Private R2/Heavy entitlementの稼働設定を返し、未認証entitlementは401、provider-action GETは404、usageはbrand scope不足で400。稼働とfail-closed境界は確認できたが、authenticated provider receipt、OpenAI verification、D1/R2 reconciliationは未証明。動画はdeferred。正本は`work/heavy-chain-image-production-health-readback-20260927-r1.json`と更新済みresume manifest、Goal active。

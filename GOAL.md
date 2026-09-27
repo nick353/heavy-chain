@@ -11852,3 +11852,7 @@ shell環境に`OPENAI_API_KEY`という変数名が存在することだけを�
 # Goal progress — 2026-09-27 r631
 
 画像waveの本番Heavy Workerをread-onlyでfresh確認し、`npx wrangler secret list --config wrangler.production.jsonc`の結果として`OPENAI_API_KEY`と`MEDIA_READ_SECRET`のsecret名が現行Workerに存在することを確認した。`OPENAI_IMAGE_API_KEY`名は無くてもserver adapterが`OPENAI_API_KEY` aliasを受け付ける。secret値は未読、runtime invocation・Organization Verification・authenticated provider receipt・R2保存は未確認。正本は`work/heavy-chain-openai-image-binding-audit-20260927-r1.json`および更新済み`work/heavy-chain-image-resume-manifest-20260927-r1.json`。動画はdeferred、Goal active。
+
+# Goal progress — 2026-09-27 r632
+
+公開Heavy APIのfresh read-only readbackを実行し、`GET /v1/health`が`200`で`status=ok`、`service=heavy-api`、`media=private-r2`、`heavyEntitlementEnabled=true`を返すことを確認した。未認証のentitlement readは`401 unauthorized`、provider-actionのGETは`404 not_found`、usageはbrand scope不足で`400 invalid_brand_id`となり、未認証provider実行や偶発的副作用は確認されなかった。これは稼働・fail-closed境界の証拠であり、provider receipt/R2 persistence/Organization Verificationを完了扱いにはしない。正本は`work/heavy-chain-image-production-health-readback-20260927-r1.json`と更新済みresume manifest。動画はdeferred、Goal active。
