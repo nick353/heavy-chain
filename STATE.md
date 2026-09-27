@@ -23628,3 +23628,7 @@ enablementは未承認。別routeでreviewを代替せず、enforcement OFFとpr
 現環境のtool inventoryにはGraphが要求する`native_reviewer_default`がなく、利用可能なのは
 `opencode_go_deepseek_v4_flash_reviewer`のみだった。required routeを別adapterで置換することは許可されないため、
 final review resultは未生成・production enablementは未承認のまま。Astra/Lunaのverified実装結果は保持する。
+
+# Strict release gate fresh readback — 2026-09-28
+
+clean worktreeのstrict release gateを同じ実行でfresh取得した。syntax、security、Heavy/OpenAI選択、Cloudflare image QA、video fail-closed、workspace/provider persistence、Canvas readback、Light provider/parity、OpenAI static、scorecard provenance、G614/G632/G633/H601/H602 static、typecheck、build、lint、diff checkはPASS。gate全体はFAILで、残る4項目はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、current generation visual scorecard artifactのみ。APIキーは同じ値のまま、追加probe・ローテーション・secret変更・provider submit・deploy・課金・公開・動画変更は0。正本は`output/playwright/10m-product-readiness-g615/release-gate-summary.json`とno-rotation plan readback、Goal active。
