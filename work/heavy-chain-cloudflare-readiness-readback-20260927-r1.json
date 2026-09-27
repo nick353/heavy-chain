@@ -1,0 +1,12 @@
+{
+  "schema": "heavy-chain.cloudflare-readiness-readback.v1",
+  "capturedAt": "2026-09-27T07:28:19.260Z",
+  "gitHead": "7a6a451",
+  "checks": [
+    {"command":"npm run verify:openai-provider --silent","status":"pass","passedChecks":7},
+    {"command":"npm run verify:goal-readiness:incomplete-ok --silent","status":"pass","passedChecks":5}
+  ],
+  "proofLimits":["authenticated production generation","AI quality","R2 readback","browser business completion"],
+  "externalEffects":{"provider":0,"billing":0,"publication":0,"migration":0,"deploy":0},
+  "decision":"cloudflare_and_active_readiness_contracts_verified_production_business_completion_unproven"
+}
