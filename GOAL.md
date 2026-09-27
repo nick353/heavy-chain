@@ -11128,3 +11128,9 @@ G618は公式monitor URL/brand/token未設定、generation scorecardは同一run
 Supabase公式organization readbackで`tier_free`を確認し、公式docs上はFree paused projectがデータ/設定を保持したまま最大90日以内に復帰でき、paused中はcompute課金なしと確認した。
 ただしResumeは本番availabilityを変えるため、Adaptiveの再評価を試みたところtransport closedとなり、同接続の再試行はせず、Astra判断なしのResumeは実行していない。
 証跡は`work/heavy-chain-h602-supabase-resume-decision-20260927-r1.json`。H602 live readback、monitor/G618、provider/R2/scorecardの残件は継続。Goal active。
+
+# Goal progress — 2026-09-27 r456
+
+Adaptive transportは新しいturnでも`Transport closed`が継続したため、Resumeや別の本番変更へ迂回しなかった。代わりにmonitor/G618/H602/scorecardの正確な再開CLIと受入条件を
+sourceからfresh確認し、tokenを保存しないrestart packetを`work/heavy-chain-restart-packet-20260927-r1.json`へ固定した。strict gateは外部状態が変わるまで前回の4 blockerを維持し、
+ローカルbuild/provider/DB書込み・決済・公開は行っていない。Goal active。

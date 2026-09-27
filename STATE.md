@@ -22612,3 +22612,9 @@ Supabase organization readbackはFree plan（`tier_free`）で、公式docsはpa
 本番Resumeは可逆でもavailabilityを変えるため、Adaptive replanを試みたがtransport closedとなり、同接続を再試行せずAstra承認前のResumeを見送った。
 H602の再開条件は「正常なAdaptive transportでAstra判断 → 必要なら一回だけResume → fresh status → GET-only live constraint readback」。provider、課金設定、決済、公開、秘密操作は0。
 正本補足は`work/heavy-chain-h602-supabase-resume-decision-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r456
+
+Adaptive runtime statusは新しいturnでも`Transport closed`で、同一接続の再送はしていない。`monitor-production-health.mjs`、G618 verifier、H602 readback、scorecardのsourceをfresh確認し、
+復旧後に実行するGET-only monitor・96時間G618・H602 live readback・scorecardのコマンド契約をrestart packetへ保存した。monitor tokenは未設定・未保存、Supabase Resume、provider generation、
+R2 chain、課金、公開、秘密操作は0。正本補足は`work/heavy-chain-restart-packet-20260927-r1.json`。Goal active。
