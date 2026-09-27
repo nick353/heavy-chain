@@ -12000,3 +12000,7 @@ Adaptive runtime/packageをfresh再確認。Graph runtimeと外部role process�
 # Goal progress — 2026-09-27 r668
 
 Heavy API production auth boundaryをfresh read-only再確認。healthは200で`private-r2`/`heavyEntitlementEnabled=true`、未認証profile/entitlementは401、brandなしusageは400。consumer-auth session、authenticated provider receipt、R2 reconciliation、monitor token/brandは依然未取得。これは稼働とclosed boundaryの証拠であり、生成完了の証拠ではない。外部効果・provider submit・deploy・課金・公開・secret読取は0、動画はdeferred。正本は`work/heavy-chain-production-auth-boundary-fresh-readback-20260927-r3.json`。
+
+# Goal progress — 2026-09-27 r669
+
+Companionのtask-owned read-only availabilityを確認。接続済みProfileは1つ、brokerは正常、active operation/reconciliationは0。ただしHeavy tab、task-owned session/lease、consumer-auth token、auth-state fileは存在しなかった。foreign tabsはadopt/cleanupせず、今回作成したread-only sessionのみowner cleanup receipt `completed`で閉じた。consumer-authを推測・抽出する経路はないため、provider generationは開始していない。正本は`work/heavy-chain-companion-auth-availability-readback-20260927-r1.json`。

@@ -1,0 +1,30 @@
+{
+  "schema": "heavy_chain_companion_auth_availability_readback.v1",
+  "capturedAt": "2026-09-27T12:24:26.823Z",
+  "taskId": "01a0d9bd-feb5-7812-bd45-9b23062f6b33",
+  "surface": "aos_chrome_companion_profile_instance",
+  "readOnly": true,
+  "broker": {
+    "connected": true,
+    "connectedProfileCount": 1,
+    "logicalSessionCountBefore": 0,
+    "exactLeaseCountBefore": 0,
+    "pendingOperationCount": 0,
+    "reconciliationPendingActiveCount": 0
+  },
+  "availability": {
+    "heavyTabPresent": false,
+    "heavyTaskOwnedSessionPresent": false,
+    "consumerAuthTokenObtained": false,
+    "authStateFileObtained": false,
+    "foreignTabsAdopted": false
+  },
+  "cleanup": {
+    "sessionClosed": true,
+    "ownerCleanupStatus": "completed",
+    "leasesReleased": 0,
+    "foreignTabsMutated": false,
+    "externalActionExecuted": false
+  },
+  "decision": "consumer_auth_required_but_not_available; do_not_extract_or_infer_credentials; continue_without_browser_mutation"
+}

@@ -23485,3 +23485,7 @@ Adaptive runtime/packageのfresh readbackで、Graph/live processは利用可能
 # Heavy Chain current state — 2026-09-27 r668
 
 Production Heavy APIのauth boundaryをfresh readback。health 200（private-r2、Heavy entitlement enabled）、未認証profile/entitlement 401、brandなしusage 400。consumer-auth session、authenticated provider receipt、R2 reconciliation、monitor token/brandは未取得。provider/deploy/billing/publication/secret readは0、動画deferred、Goal active。正本は`work/heavy-chain-production-auth-boundary-fresh-readback-20260927-r3.json`。
+
+# Heavy Chain current state — 2026-09-27 r669
+
+Companion broker/profileは正常（connected profile 1、active operation/reconciliation 0）だが、Heavy tab・task-owned auth session/lease・consumer-auth token・auth-state fileはない。foreign tabsには触れず、read-only availability sessionはowner cleanup receipt completedで終了。provider/deploy/billing/publication/secret readは0、動画deferred、Goal active。正本は`work/heavy-chain-companion-auth-availability-readback-20260927-r1.json`。
