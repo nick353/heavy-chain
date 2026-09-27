@@ -23573,3 +23573,7 @@ Cloudflare production deployment一覧をread-onlyでfresh確認。最新version
 # Heavy Chain current state — 2026-09-28 r691
 
 現行sourceの`wrangler deploy --dry-run`をread-only実行し、OpenAI候補bundle（OpenAI provider/backend、upload 245.31 KiB、gzip 50.12 KiB）の生成可否を確認。dry-runはdeploy・secret検証・OpenAI送信を行わない。現行OpenAI allowlistは`gpt-image-2`、`gpt-image-1.5`、`gpt-image-1`、`gpt-image-1-mini`で、Sunburst専用modelは未実装。live versionは依然Workers AI、同じキーは401、provider submit・deploy・課金・公開・動画変更は0。Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r692
+
+Cloudflareの全versionをread-onlyで確認し、OpenAI設定済みの旧versionは`9a7a49c5...`（2026-09-21）と`c314b5fe...`（2026-09-24）の2つ、live versionは`529f72bc...`でWorkers AIと確定。旧OpenAI versionは現行Heavy provider/entitlement/QA source commit `182ef86`より前に作成されているため、既存versionの昇格は行わず、将来は現行sourceからcontrolled deployする。provider submit・deploy・課金・公開・キー変更・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。

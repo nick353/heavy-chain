@@ -12088,3 +12088,7 @@ Cloudflare production deployment一覧をread-onlyでfresh確認。最新version
 # Goal progress — 2026-09-28 r691
 
 現行sourceのCloudflare dry-runを実行し、OpenAI選択の候補bundleが作成可能なことを確認した。これは本番deployやprovider receiptではない。候補のOpenAI model allowlistにはSunburst専用modelがなく、live versionはWorkers AIのまま。同じキーの401、認証済みconsumer session、実OpenAI生成receipt、remote save/reuse/reload/reconciliation、visual scorecard、monitor/UI、G618、H602、strict gateは未完了。キーのローテーション・secret変更・deploy・課金・公開・動画変更は0、Goal active。次は外部で同じキーが2xxになった後に、Astra verified engineering・runtime切替・一回の生成へ進む。
+
+# Goal progress — 2026-09-28 r692
+
+Cloudflare全versionをread-only確認。OpenAI設定の既存versionは2つあるが、いずれも現行source commit `182ef86`より前の古いversionで、現行Heavy entitlement/QA境界を含むとは証明できない。liveはWorkers AI versionのままなので、古いOpenAI versionを昇格せず、認証・Astra・controlled deployの順序を維持する。provider submit・deploy・課金・公開・キー変更・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
