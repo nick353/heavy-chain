@@ -12028,3 +12028,7 @@ Heavy OpenAI regression guardをstrict release gateへ統合し、production wra
 # Goal progress — 2026-09-28 r676
 
 現行HEAD `5e02b3e`に対してHeavy OpenAI provider選択4/4、Cloudflare OpenAI/provider回帰114/114、Light provider coverage22/22、OpenAI static readiness `ok=true`をfresh検証。コード側のHeavy/Light境界はgreenだが、これはlive provider receipt・remote persistence・production releaseの代替ではない。同じAPIキーはローテーションせず、read-only `/v1/models`は401。strict gateはmonitor/UI、G618、H602、generation scorecardの4項目でFAIL、動画deferred、Goal active。正本は`work/heavy-chain-openai-migration-readback-20260928-r2.json`。
+
+# Goal progress — 2026-09-28 r677
+
+Task-owned CompanionでHeavy Web `/designProduction`をread-only fresh取得したが、表示はworkspace準備／認証状態確認shellに留まり、authenticated workspace・consumer-auth session・provider receiptは得られなかった。transactionはknown-no-effect、cleanup completed、foreign tabs変更0。したがってproduction monitor/UI pairは未達のまま。provider submit・deploy・課金・公開・動画変更は0、同じAPIキーは401、Goal active。正本は`work/heavy-chain-web-auth-session-fresh-readback-20260928-r2.json`。
