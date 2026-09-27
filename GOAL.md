@@ -10967,3 +10967,8 @@ G618、H601、H602、generation scorecard）は維持。provider生成、課金�
 manifest/Companion/provider non-promotion contract 15/15をpassした。認証state・monitor tokenを推測せず、local artifactを
 production証跡へ昇格しない境界は正常。実認証済みproduction readback、route verifierのAstra判断付き仕様整合、provider/R2/video/
 monitor/G618/H601/H602/scorecardは未完了。Goal active。
+
+# Goal progress — 2026-09-27 r430
+
+実認証とmonitorの環境値はまだ未設定。ただし、Heavy capability gating 9/9、Lightchain permission parity 12/12、
+provider coverage 22/22をfresh再確認した。Heavy側のpermission表示を除去しつつ、Light本家のプラン制限を表すsource componentは保持できている。本番provider/R2/video/monitor/G618/H601/H602/scorecardは未完了。Goal active。

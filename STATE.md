@@ -22429,3 +22429,10 @@ Lightchain all-feature previewへ昇格せず、strict gateのproduction blocker
 `npm run test:release-gate-lightchain` は15/15でpass。local verifierのmode/auth-state/base URL/output isolation境界と、
 Lightchain production manifest・Companion evidence・provider completion非昇格の契約は維持されている。これは本番認証を
 生成したり、staleなall-feature artifactをproductionへ昇格したりする結果ではない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r430
+
+認証・monitor環境の有無をfresh確認したが、`HEAVY_CHAIN_MONITOR_API_URL` / brand ID / token、`HEAVY_CHAIN_AUTH_STATE` /
+`LIGHTCHAIN_UI_AUTH_STATE`、QA imageは引き続き未設定だった。その一方で、Heavy capability gating 9/9、
+Lightchain permission parity 12/12、provider coverage 22/22をfresh再実行した。`権限がありません`はsource Lightchain
+componentのみに限定され、Heavy生成面に混入していないことを確認。本番認証、provider送信、課金、公開、秘密操作は行っていない。Goal active。
