@@ -22624,3 +22624,10 @@ R2 chain、課金、公開、秘密操作は0。正本補足は`work/heavy-chain
 video/provider/persistence/authのlocal boundary suiteをfresh実行し、合計43 assertionsが全てpassした。Videoはimage generationへ誤routingせず、source/credential/readback不足でfail-closed、
 durable save/reopenとprovider promotion guard、private media reconciliation plan、auth session/lock/bootstrapを確認した。実provider、R2、monitor、H602 live DB、課金、公開、秘密取得は0。
 正本補足は`work/heavy-chain-local-boundary-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r458
+
+Companion同一task-owned authenticated sessionでLaunch Operationsのdesktop 5 route・mobile 4 routeをfresh readbackし、全9 routeでexpected text、same-origin URL、readyState complete、semantic+visual readback verified、visible checkbox 0、login redirect falseを確認した。
+viewport restore後にtask-terminal cleanupを実行し、sessionClosed=true、leasesReleased=1、closed tab 1、foreignTabsMutated=false、externalActionExecuted=false、unknownEffect=falseを確認した。`npm run verify:launch-ops`はpass。
+strict gateを`2026-09-27T05:07:26.822Z`にfresh実行し、launch operationsはpass、残る4件はproduction monitor/UI pair（UI artifact missing）、G618 scale ops baseline（fresh 96h monitor/fixture不足）、H602 production completion（6 blockers）、generation scorecard（visual-scorecard artifact missing）。
+provider生成、R2 chain、rights/legal承諾、課金、公開、secret insertionは0。正本は`output/playwright/g830-launch-ops-production-current-r3/summary.json`および`output/playwright/10m-product-readiness-g615/release-gate-summary.json`。Goal active。

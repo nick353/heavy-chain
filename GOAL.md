@@ -11141,3 +11141,10 @@ sourceからfresh確認し、tokenを保存しないrestart packetを`work/heavy
 media reconciliation 5/5、auth session admission 9/9、auth lock 4/4、auth bootstrap hydration 7/7（計43 assertions）をpassした。
 これらはvideo/persistence/authのfail-closed契約を強化するが、production provider receipt・R2 chain・monitor/G618・H602 live readback・visual scorecardの代替ではない。
 証跡は`work/heavy-chain-local-boundary-readback-20260927-r1.json`。Goal active。
+
+# Goal progress — 2026-09-27 r458
+
+Companion同一task-owned authenticated sessionでLaunch Operationsのdesktop 5 route・mobile 4 routeをfresh readbackし、全9 routeのexpected text、same-origin URL、readyState、semantic+visual readback、visible checkbox 0、login redirect falseを確認した。
+viewport restoreと`companion_close_session(taskTerminal=true)`を完了し、session/lease/tab cleanup、foreignTabsMutated=false、externalActionExecuted=falseを確認した。正本は
+`output/playwright/g830-launch-ops-production-current-r3/summary.json`。`npm run verify:launch-ops`はpassに更新された。full strict gateはfresh実行し、launch operationsは解消、残る4件はproduction monitor/UI pair、G618 scale ops baseline、H602 billing completion、generation scorecard。
+provider生成、権利承諾、課金、公開、secret insertion、destructive cleanupは行っていない。Goal active。
