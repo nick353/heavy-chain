@@ -1,0 +1,26 @@
+{
+  "schema": "heavy-chain.release-doctor-readback.v1",
+  "capturedAt": "2026-09-27T07:08:00Z",
+  "gitHead": "f8911a9",
+  "command": "npm run release:doctor",
+  "exitCode": 1,
+  "mode": "read-only/local checks only",
+  "checks": {
+    "releaseBlockers": "ok",
+    "gitClean": "ok",
+    "proofTarget": "stop"
+  },
+  "firstStop": "proof target",
+  "reason": "No valid release evidence surface was supplied; browser-use, Chrome-plugin, and Companion evidence paths are all absent.",
+  "externalEffects": {
+    "send": 0,
+    "submit": 0,
+    "publish": 0,
+    "delete": 0,
+    "auth": 0,
+    "payment": 0,
+    "dbMutation": 0,
+    "deploy": 0
+  },
+  "decision": "release_proof_target_missing"
+}

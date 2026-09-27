@@ -22850,3 +22850,7 @@ release gateとgeneration scorecardを同一HEAD `4fab7f4dafd7ab1b1dad6f795bd175
 # Heavy Chain current state — 2026-09-27 r512
 
 security/operations/billingのlocal側をfresh再検証した。G620 security 5/5、G614 operations、G632 incident response、G633 scale alerting、H602 Cloudflare contract 3/3とverifierをpass。H602は`contractStatus=verified_local`だが`productionProof=not_verified`、`releaseApproval=false`を維持した。正本は`work/heavy-chain-local-ops-readback-20260927-r1.json`。外部provider、課金、checkout、deploy、writeは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r513
+
+`npm run release:doctor`をfresh実行し、local release blockersとgit cleanはpassしたが、proof targetで停止した。browser-use、Chrome-plugin、Companionのrelease evidence surfaceがいずれも未指定で、production release proofを生成できない。正本は`work/heavy-chain-release-doctor-readback-20260927-r1.json`。send/submit/publish/delete/auth/payment/DB mutation/deployは0。Goal active。
