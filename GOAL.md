@@ -11644,3 +11644,7 @@ Adaptive runtime/packageを再度fresh readbackした。別タスクのPlanner a
 # Goal progress — 2026-09-27 r584
 
 Light Chainのローカル耐久性をfresh再検証した。`verify:lightchain-local-lifecycle`と`verify:lightchain-local-evidence-continuity`はいずれもexit 0で、save-once→reload-readback→Library reuse、5件のnegative case、cleanup、networkCalls=0を確認した。正本は`work/heavy-chain-light-local-continuity-readback-20260927-r1.json`。これはHeavy production provider/R2/video/monitor/G618/H601/H602/scorecard/release gateの完了を示さない。Goal active。
+
+# Goal progress — 2026-09-27 r585
+
+remote save fail-closed、reconciliation、Board persistence、video source-editor persistenceの決定的ローカル契約をfresh実行し、16 tests / 16 passed / 0 failedを確認した。Cloudflare構成時のlocal-only成功拒否、同一request ID照合、mismatched identity停止、video durable-save gateを再確認した。provider生成、実R2書込、課金、公開、deploy、secret読取は0。正本は`work/heavy-chain-persistence-video-boundary-readback-20260927-r1.json`で、live remote/provider receiptとは区別する。Goal active。

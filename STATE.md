@@ -23128,3 +23128,7 @@ Adaptive runtimeはgraph/live process availableだがcapacity guardは`capacity_
 # Heavy Chain current state — 2026-09-27 r584
 
 Light Chainのlocal lifecycle/evidence continuityをfresh実行し、save-once、reload、Library reuse、negative gates、cleanupまで成功。networkCalls=0で外部効果なし。Heavyのproduction provider/R2/video証跡やstrict gateとは別レイヤーとして扱う。正本は`work/heavy-chain-light-local-continuity-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r585
+
+remote save/reconciliation/videoのlocal contractを16/16 pass。Cloudflare時のlocal-only成功拒否と同一request-id照合は維持されているが、live remote R2/provider receiptは未取得。Adaptive transportは再接続待ちで、既存Astra runのclaim/start/replayはしていない。正本は`work/heavy-chain-persistence-video-boundary-readback-20260927-r1.json`、Goal active。
