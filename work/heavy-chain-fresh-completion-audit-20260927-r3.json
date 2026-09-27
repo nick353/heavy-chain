@@ -1,0 +1,68 @@
+{
+  "schema": "heavy-chain.fresh-completion-audit.v1",
+  "capturedAt": "2026-09-27T10:48:45.537Z",
+  "sourceRevision": "0d19358b61dfd6f52e35c3b8d276836a8a87aaa7",
+  "scope": "full-goal-audit-with-image-wave-priority-video-unchanged",
+  "goalStatus": "active",
+  "completionAudit": {
+    "ok": false,
+    "summaryPath": "output/playwright/10m-completion-audit/summary.json",
+    "blockerCount": 12,
+    "blockers": [
+      "goal_not_accepted:G617",
+      "goal_not_accepted:G619",
+      "goal_not_accepted:G669",
+      "goal_not_accepted:G670",
+      "human_item_open:H601",
+      "human_item_open:H602",
+      "proof_not_complete:g617_same_run_fresh_all_10",
+      "proof_not_complete:g619_real_beta_evidence",
+      "proof_not_complete:g618_scale_ops",
+      "proof_not_complete:g668_current_production_mass_market_qa",
+      "proof_not_complete:g659_lightchain_order_preview_production_readback",
+      "proof_not_complete:production_h602_billing_completion_readback"
+    ],
+    "commandFailures": [
+      "g619_beta_evidence_verifier",
+      "release_gate_verifier"
+    ]
+  },
+  "releaseGate": {
+    "ok": false,
+    "summaryPath": "output/playwright/10m-completion-audit/release-gate-summary.json",
+    "capturedAt": "2026-09-27T10:35:01.681Z",
+    "failedChecks": [
+      "readback:production monitor and UI pair",
+      "readback:G618 scale ops baseline",
+      "readback:production H602 billing completion readback",
+      "command:generation scorecard"
+    ],
+    "passedStaticChecks": [
+      "security audit",
+      "typecheck",
+      "build",
+      "lint",
+      "git diff check"
+    ]
+  },
+  "imageProviderReadiness": {
+    "ok": true,
+    "summaryPath": "output/playwright/cloudflare-generation-readiness/summary.json",
+    "capturedAt": "2026-09-27T10:48:45.537Z",
+    "checksPassed": 7,
+    "checksTotal": 7,
+    "proofLimits": [
+      "static local contract only",
+      "does not prove authenticated production generation, AI quality, R2 readback, or browser business completion"
+    ]
+  },
+  "externalEffects": {
+    "providerCalls": 0,
+    "r2Writes": 0,
+    "billingOrPurchase": 0,
+    "publicationOrDeploy": 0,
+    "secretReads": 0,
+    "destructiveCleanup": 0
+  },
+  "nextAction": "Do not fabricate scorecard, monitor/UI pair, G618, H602, or provider receipt. After Adaptive/Astra verified start recovers, implement only the approved image provider boundary and then rerun image-focused deterministic tests before any authenticated production readback."
+}

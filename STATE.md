@@ -23309,3 +23309,7 @@ OpenAI readiness `7/7`、Cloudflare runtime `6/6`、Light unified workflow `6/6`
 # Heavy Chain current state — 2026-09-27 r624
 
 画像生成のfresh source searchで、LightchainWorkbenchのfallback metadata、LightchainMaterialWorkbenchとFittingのlegacy Workers fallback、Heavy serverのprovider selectionとD1/R2 receipt/readbackを追加確認した。新規provider dispatchの変更対象と既存readback互換面を分離し、未確認のfallback除去やscope拡張は行っていない。Adaptive/bootstrap processは不在で、closed transportへの再試行・手動claim・relaunchはしていない。正本は更新済み`work/heavy-chain-provider-boundary-map-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r625
+
+現行HEAD `0d19358`のfresh completion auditは12 blockers、strict release gateは4 failures。production monitor/UI pair、G618 freshness、production H602 completion、generation scorecardがrelease阻害要因で、security/typecheck/build/lint/git diffはpass。画像provider readinessは7/7のstatic-local契約のみで、authenticated production receipt・R2 readback・quality・business completionは未証明。正本は`work/heavy-chain-fresh-completion-audit-20260927-r3.json`、動画はdeferred、Goal active。
