@@ -23081,3 +23081,7 @@ Runway permission/installationをfresh readbackし、未インストール・未
 # Heavy Chain current state — 2026-09-27 r570
 
 Runwayの依存関係・permission・installation状態をfresh確認した。依存はoptionalで解決済みだが、pluginは未インストール・未接続、provider tool未露出。global permissionはlow-risk actionsであり接続証明ではない。正本は`work/heavy-chain-provider-connection-readback-20260927-r3.json`。provider/video生成、課金、secret、公開、deployは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r571
+
+Planner admission期限後のfresh readbackで、別task admissionはcompletedになったがHeavy側capacityは`capacity_blocked`のまま。Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、claim/startなし、workflow fork候補なし。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r2.json`。source/provider/billing/R2/publication変更は0、Goal active。

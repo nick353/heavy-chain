@@ -11597,3 +11597,7 @@ Runwayの接続権限をread-only確認し、現ワークスペースでは`inst
 # Goal progress — 2026-09-27 r570
 
 Runwayのplugin依存関係・権限・接続状態を`2026-09-27T08:31:44Z`にfresh readbackした。依存解決は成功しoptionalだが、`installed=false`、`connectionConfirmed=false`、`toolExposed=false`、permissionは`not_installed`、global permissionは`Allow low-risk actions`。正本は`work/heavy-chain-provider-connection-readback-20260927-r3.json`。provider/video receipt、課金、secret読取、外部効果は0。Goal active。
+
+# Goal progress — 2026-09-27 r571
+
+別タスクのPlanner admission期限通過後にAdaptive runtime/packageをfresh readbackした。別task admissionは`completed`へ遷移したが、Heavy host capacityは依然`capacity_blocked`、`live_capacity_observable=false`、Heavy packageは`waiting_human`/`automatic_dispatch_disabled`、claim/startなし、fork候補なし。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r2.json`。同じpackageの重複claim、代替route、source/provider/billing/R2/publication変更は0。Goal active。
