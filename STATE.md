@@ -23425,3 +23425,7 @@ production dry-runはOpenAI候補configを通過したが、bundleに承認済�
 # Heavy Chain current state — 2026-09-27 r653
 
 OpenAI API read-only model listは401 invalid_api_key。環境keyはpresentだが有効性を証明できず、Heavy consumer-auth token・monitor token・brand IDも不足。直接provider生成・秘密値の保存・Heavy receipt迂回は0、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r654
+
+Light Chain画像/non-video parityのfresh local契約は122/122 PASS。provider coverage、routing、permission、adapter、workflow、UI boundaryは緑。ただしproduction認証・実provider receipt・remote save/reuse/reload/reconciliation・visual scorecardは未証明。video providerは未変更、fail-closed、Goal active。

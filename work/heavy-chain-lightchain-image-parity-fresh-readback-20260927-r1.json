@@ -1,0 +1,34 @@
+{
+  "schema": "heavy-chain.lightchain-image-parity-fresh-readback.v1",
+  "capturedAt": "2026-09-27T11:34:32Z",
+  "sourceRevision": "ff003b368fd36250f16d048966f80816ec31ad25",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "providerSubmit": false,
+    "billing": false,
+    "deploy": false,
+    "secretValuesRead": false,
+    "publication": false
+  },
+  "commands": [
+    {"command": "npm run test:lightchain-provider-coverage --silent", "passed": 22, "failed": 0},
+    {"command": "npm run test:lightchain-parity-contract --silent", "passed": 9, "failed": 0},
+    {"command": "npm run test:lightchain-permission-parity --silent", "passed": 12, "failed": 0},
+    {"command": "npm run test:lightchain-unified-workflow-contract --silent", "passed": 6, "failed": 0},
+    {"command": "npm run test:lightchain-entry-routing --silent", "passed": 30, "failed": 0},
+    {"command": "npm run test:lightchain-provider-adapter --silent", "passed": 17, "failed": 0},
+    {"command": "npm run test:lightchain-all-feature-workflows-contract --silent", "passed": 5, "failed": 0},
+    {"command": "npm run test:lightchain-ui-control-boundaries --silent", "passed": 21, "failed": 0}
+  ],
+  "summary": {
+    "passed": 122,
+    "failed": 0,
+    "videoProviderChanged": false,
+    "videoRowsRemainFailClosed": true,
+    "imageParityContractGreen": true
+  },
+  "interpretation": "Current local Light Chain image/non-video parity contracts, routing, provider adapter, permission boundaries, unified workflow, and UI control boundaries are green. This does not prove authenticated production generation or remote persistence.",
+  "nextGate": "Use an authenticated Heavy consumer session and valid provider credential to obtain a same-run image receipt and remote save/readback; retain the passing parity contracts."
+}
