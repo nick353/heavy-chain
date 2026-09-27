@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T10:57:44Z",
-  "sourceRevision": "6a0b1f91539c665990a8f8d1afa883b745a436ee",
+  "capturedAt": "2026-09-27T11:02:59Z",
+  "sourceRevision": "93889857b9259ca8227bb1c77933a612a81cb018",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -19,7 +19,7 @@
     "work/heavy-chain-image-deployment-readback-20260927-r1.json"
   ],
   "freshReadback": {
-    "observedAt": "2026-09-27T10:59:40Z",
+    "observedAt": "2026-09-27T11:02:59Z",
     "evidenceRefsPresent": true,
     "runtimeProcessObserved": false,
     "worktree": "clean",
