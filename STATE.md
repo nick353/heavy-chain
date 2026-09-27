@@ -22998,3 +22998,7 @@ H602のproduction completionをfresh再実行し、`ok=false`・6 blocker（quot
 # Heavy Chain current state — 2026-09-27 r549
 
 同一HEAD `ae3abf1`で10M completion auditをfresh実行し、`ok=false`・16 blockersを再確認。G617/G619/G669/G670の未accept、H601/H602 open、G617/G619/G618/G668/G659/H601/H602/public entrypointのproof不足、G619 verifierとrelease gateのcommand failureが残る。summaryは`output/playwright/10m-completion-audit/summary.json`（2026-09-27T07:41:07.031Z）。Adaptive transportは`Transport closed`で、既存runの再起動・代替route・重複起動は行っていない。外部効果、provider、課金、公開、secret、deploy、破壊操作は0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r550
+
+選択したproduction public entrypointをread-only HTTPでfresh確認し、`ok=true`（rootはsame-origin login redirect 307、session endpoint 200/null）を取得した。一方、10M auditは2xx公開shellのみを要求し、unified release gateはprotected redirectも受入れるため、同じ証跡に対するverifier契約差分を`work/heavy-chain-public-entrypoint-verifier-drift-20260927-r1.md`へ固定した。監査を勝手に緩めず、authenticated UI/provider完了へ昇格していない。外部効果は0。Goal active。
