@@ -11023,6 +11023,13 @@ Heavy label不在を実証した。初期loading中の0件queryは採用せず�
 これでLight plan-lockを誤って削除しない境界はさらに明確になったが、production provider、remote persistence、monitor、H601/H602、
 scorecard、strict gateは未完了。Goal active。
 
+# Goal progress — 2026-09-27 r441
+
+認証・Heavy/Light所有境界のlocal受入を再確認し、provider coverage 22/22、permission parity 12/12、Heavy capability/auth brand
+resolution 11/11をpassした。既知LightへのHeavy entitlement漏れは現行コード上抑止され、未知/未提供はfail-closedのまま。これは
+production API bearerや実provider receiptの代替ではなく、コード変更も行っていない。monitor/UI、R2 persistence、H601/H602、scorecard、
+strict gateは未完了。Goal active。
+
 # Goal progress — 2026-09-27 r440
 
 認証不足を推測で埋めずにfresh readbackした。Web側のtask-owned sessionはauthenticated/emailVerifiedで継続しているが、Cloudflare

@@ -22505,3 +22505,10 @@ profileからAPI originの`/v1/profile`を開くと本文は`{"error":"unauthori
 認証tokenは抽出・保存・APIへ再利用せず、provider dispatch・外部効果・課金・公開は0。証跡は
 `work/heavy-chain-auth-api-continuity-readback-20260927-r1.json`。Companion session/lease/pending/reconciliationは全て0でcleanup完了。
 production monitor/UI、実provider receipt、remote persistence、H601/H602、scorecard、strict gateは未完了。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r441
+
+認証境界に関連するlocal契約を再実行した。Lightchain provider coverage 22/22、permission parity 12/12、Heavy capability/auth
+brand resolution 11/11がpassし、既知Light featureではHeavy entitlementを呼ばず、未知/未提供featureはdefault-deny、Heavy featureだけが
+server entitlementへ進む契約を確認した。コード変更は行っていない。production API bearer、monitor/UI、provider receipt、remote persistence、
+H601/H602、scorecard、strict gateは未完了。Goal active。
