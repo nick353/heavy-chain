@@ -7,7 +7,7 @@
 - Captured: `2026-09-27T15:38:11+09:00`
 - Branch: `heavy-chain/checkpoint-20260926`
 - Worktree: clean after commit `9961a42`
-- Goal: `blocked` (same Adaptive capacity blocker repeated across the resumed audit threshold)
+- Goal: `active` after user resume; the core Astra package remains blocked by the same Adaptive capacity/hold condition
 - Adaptive runtime: Graph/live process available, but `capacity_guard=capacity_blocked`, `live_capacity_observable=false`, active routes empty
 - Heavy package: `heavy-cross-surface-astra-engineering` = `waiting_human`, `automatic_dispatch=false`, `claim_id=null`, `start_receipt=null`
 - Heavy-related capacity-recovery Graph fork: none

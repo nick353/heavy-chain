@@ -11054,11 +11054,11 @@ workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/fina
 
 # Goal progress — 2026-09-27 r491
 
-Goal再開後、capacity待ちの独立準備としてHeavy/Light境界focused suiteをfresh実行した。Heavy capability/preflight、Canvas/Chat entitlement/readback、Fitting preview、Light permission parityの合計40/40（28/28 + 12/12）がpass。これはlocal contract証拠であり、Fitting/Canvasの実provider attestation、production auth、R2 durable chain、video、monitor/G618、H601/H602、scorecard、strict release gateの完了を証明しない。再開用operator packetを`work/heavy-chain-current-operator-inputs-20260927-r2.md`へ固定し、commit `b21b84d`で保存した。外部効果は0。Goalはblocked状態を維持し、capacity回復時に同一Astra packageを再開する。
+Goal再開後、capacity待ちの独立準備としてHeavy/Light境界focused suiteをfresh実行した。Heavy capability/preflight、Canvas/Chat entitlement/readback、Fitting preview、Light permission parityの合計40/40（28/28 + 12/12）がpass。これはlocal contract証拠であり、Fitting/Canvasの実provider attestation、production auth、R2 durable chain、video、monitor/G618、H601/H602、scorecard、strict release gateの完了を証明しない。再開用operator packetを`work/heavy-chain-current-operator-inputs-20260927-r2.md`へ固定し、commit `b21b84d`で保存した。外部効果は0。Goalはactiveのまま、capacity回復時に同一Astra packageを再開する。
 
 # Goal progress — 2026-09-27 r492
 
-capacity待ちの独立準備を続行し、`npm run typecheck`と`npm run build`をfresh passした。buildはVite 8.0.16で全2567 modulesを変換し、生成bundleまで完了。local contract/readinessの証拠を強化しただけで、production auth、provider生成、R2、video、monitor、billing、publicationは未実施。Goalはblocked状態だが、read-only/local verificationは停止していない。
+capacity待ちの独立準備を続行し、`npm run typecheck`と`npm run build`をfresh passした。buildはVite 8.0.16で全2567 modulesを変換し、生成bundleまで完了。local contract/readinessの証拠を強化しただけで、production auth、provider生成、R2、video、monitor、billing、publicationは未実施。Goalはactiveのまま、read-only/local verificationは停止していない。
 
 # Goal progress — 2026-09-27 r437
 
