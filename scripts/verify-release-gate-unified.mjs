@@ -349,6 +349,21 @@ const commandChecks = [
     args: ['run', 'test:canvas-generation-readback', '--silent'],
   },
   {
+    name: 'Light Chain provider coverage regression',
+    command: 'npm',
+    args: ['run', 'test:lightchain-provider-coverage', '--silent'],
+  },
+  {
+    name: 'Light Chain parity contract regression',
+    command: 'npm',
+    args: ['run', 'test:lightchain-parity-contract', '--silent'],
+  },
+  {
+    name: 'OpenAI static readiness regression',
+    command: 'npm',
+    args: ['run', 'verify:openai-provider', '--silent'],
+  },
+  {
     name: 'generation scorecard',
     command: 'npm',
     args: ['run', 'verify:generation-scorecard', '--silent'],
