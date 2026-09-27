@@ -22316,3 +22316,10 @@ deploy後strict gateを再実行（capturedAt `2026-09-27T02:34:52.067Z`、`ok=f
 `scorecard_artifact_missing:output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`となった。これは
 scorecard validatorの不具合ではなく、実生成・same-run readback・画像評価の正本証跡が未作成であることを確認したもの。既存の
 provider/R2 evidenceを推測でscorecardへ転記したり、画像評価を捏造したりはしていない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r414
+
+H601の静的legal-safety guardをfresh実行し、`ok=true`・全check passを確認した。証跡は
+`work/heavy-chain-h601-static-guard-20260927-r1.json`（`checkedAt=2026-09-27T02:54:17.056Z`）。ただしこれはコード境界の検証であり、
+operator/counselの最終法務決定、production UI readback、provider生成、課金、公開を完了扱いにするものではない。H601 production
+artifactの現行仕様への更新は、旧fixtureを現行Heavy terms/rights gateへ合わせるAstra判断後に行う。Goal active。

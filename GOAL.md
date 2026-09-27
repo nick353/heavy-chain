@@ -10873,3 +10873,10 @@ Lightchainのmaterial workbenchにも残っていたHeavy entitlement依存を�
 `output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`が存在しないため失敗した。これにより、
 残件は「検証コマンドを実行していない」ではなく、実provider生成、same-run job/image/storage/signed-URL readback、画像ごとの
 5軸評価がまだ正本化されていないことを再確認した。秘密・認証Cookie・権利表明を推測せず、scorecardやreadbackの捏造も行っていない。Goal active。
+
+# Goal progress — 2026-09-27 r414
+
+H601静的legal-safety guardをfresh実行し、全check pass（`ok=true`）を確認した。これはbrowser/Cloudflareのrights gate、provider
+payload、durable admission、旧provider endpoint不在を検証するlocal evidenceである。一方、operator/counsel最終決定、production
+H601 readback、実provider・課金・公開は未完了であり、静的passをrelease gateのproduction証跡へ置換していない。証跡は
+`work/heavy-chain-h601-static-guard-20260927-r1.json`。Goal active。
