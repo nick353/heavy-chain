@@ -23248,3 +23248,10 @@ H601 legal safety、H602 Cloudflare contract `3/3`、G620 security ops、G614 op
 scale alertingをfresh PASS。production H602 completion、no-real-charge/transaction readback、production traffic/qualityは未証明。
 provider/R2/billing/deploy/publication/secret読取は0。正本は
 `work/heavy-chain-security-rights-billing-ops-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r610
+
+Light parity contractをfresh検証し、parity `9/9`、route integrity `34/34`、unified workflow `6/6`、UI controls `21/21`をPASS。
+all-feature contractはプロセス終了・出力未捕捉のため未検証。authenticated production parity、OpenAI client-default実装、
+provider receipt、remote persistenceは未完了。provider/R2/billing/deploy/publication/secret読取は0。正本は
+`work/heavy-chain-light-parity-contract-readback-20260927-r1.json`。Goal active。
