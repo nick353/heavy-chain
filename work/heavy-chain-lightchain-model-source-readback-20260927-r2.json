@@ -1,0 +1,41 @@
+{
+  "schema": "heavy-chain.lightchain-model-source-readback.v2",
+  "capturedAt": "2026-09-27T03:51:01.321Z",
+  "surface": "aos_chrome_companion_profile_instance",
+  "profileInstanceId": "profile_37fd31b6-ed53-4a35-8604-ab92ffbab05a",
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "route": "/model-library/head-form",
+  "title": "Lightchain AI",
+  "settled": {
+    "visualReadback": "verified",
+    "visualCapturedAt": "2026-09-27T03:50:21.440Z",
+    "readyState": "complete",
+    "semanticWait": "role=heading, text=顔変更, nth=0"
+  },
+  "readback": {
+    "legacyPermissionLabelCount": 1,
+    "generationHistoryCount": 1,
+    "titleMatchCount": 3,
+    "heavyLabelCount": 0,
+    "permissionControlTestId": "lightchain-model-tool-permission",
+    "pageHeading": "顔変更"
+  },
+  "effects": {
+    "browserMutationExecuted": false,
+    "externalActionExecuted": false,
+    "providerCompletion": "unverified",
+    "sourceSync": "unverified",
+    "reconciliationRequired": false,
+    "replayAllowed": false
+  },
+  "cleanup": {
+    "sessionClosed": true,
+    "taskTabClosed": true,
+    "leaseReleased": true,
+    "foreignTabsMutated": false,
+    "externalActionExecuted": false,
+    "recordedAt": "2026-09-27T03:51:04.761Z"
+  },
+  "interpretation": "The Light plan-locked head-form surface is still intentionally present and contains no Heavy label. This confirms the boundary after settled visual readback; it does not authorize removing the Light plan lock or prove provider generation, source sync, persistence, billing, or release acceptance."
+}

@@ -11015,3 +11015,10 @@ Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leas
 前回未完了だったLightの`/model-library/model-change-form`をfresh readbackし、旧permission label 0件、visual/semantic readback、
 cleanupを確認した。これでLight model sourceのbounded gapは解消したが、head-formのplan-lockは意図的に保持し、実provider・remote
 persistence・monitor・H601/H602・scorecardのproduction blockersは残した。Goal active。
+
+# Goal progress — 2026-09-27 r439
+
+Lightの`/model-library/head-form`をloading後のsettled readbackまで確認し、旧permission label 1件とLight plan-lock、生成履歴、
+Heavy label不在を実証した。初期loading中の0件queryは採用せず、同一tabのvisual/semantic readbackとcleanupを正本にした。
+これでLight plan-lockを誤って削除しない境界はさらに明確になったが、production provider、remote persistence、monitor、H601/H602、
+scorecard、strict gateは未完了。Goal active。

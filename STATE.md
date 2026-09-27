@@ -22488,3 +22488,11 @@ Light本家の`/model-library/model-change-form`を新しいtask-owned Companion
 provider dispatch・external actionは0、reconciliation不要、replay不可、tab close/lease release/foreign mutationなしだった。
 証拠は`work/heavy-chain-lightchain-model-change-source-readback-20260927-r2.json`。前回のbounded readback gapは解消したが、
 `/model-library/head-form`のLight plan-lock surface、実provider、source sync、remote persistence、billing、release gateは別問題として維持する。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r439
+
+Light本家の`/model-library/head-form`をsettledまでfresh readbackした。初期loading画面をPASS扱いせず、`顔変更` headingの
+semantic wait後に同一tabのvisual readbackを確認し、旧`権限がありません` 1件、`生成履歴` 1件、`顔変更` 3件、Heavy label 0件、
+permission control test id `lightchain-model-tool-permission`を確認した。browser/provider/external effectは0、replay不可、
+session close・tab close・lease release・foreign mutationなし。証拠は`work/heavy-chain-lightchain-model-source-readback-20260927-r2.json`。
+loading中のquery 0件を本番仕様の証拠へ昇格せず、Light plan-lock保持の判断を補強した。Goal active。
