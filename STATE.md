@@ -22970,3 +22970,7 @@ Heavy capability/preflight、Canvas/Chat entitlement、Fitting preview、Light p
 # Heavy Chain current state — 2026-09-27 r542
 
 capacity recovery候補をfresh確認し、`workflow_list(limit=100,status=capacity_blocked)`は空だった。従って`workflow_fork(capacity_recovery=true)`対象はなく、既存managed packageを保持して重複fork・代替起動は行わない。正本は`work/heavy-chain-adaptive-fork-eligibility-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r543
+
+G618 verifierとrelease-gate sourceをfresh読解し、再開に必要なHTTPS API origin、brand UUID、read-only live session token、96時間window、failure/storage/scale thresholds、production monitor/UI pairの正確な入力名と受入条件を秘密値なしで固定した。正本は`work/heavy-chain-g618-production-input-packet-20260927-r1.md`。外部効果・secret insertionは0。Goal active。

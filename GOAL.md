@@ -11469,6 +11469,10 @@ Heavy capability/preflight、Canvas/Chat entitlement、Fitting preview、Light p
 
 capacity recovery候補をfresh確認し、`workflow_list(limit=100,status=capacity_blocked)`は空だった。従って`workflow_fork(capacity_recovery=true)`対象はなく、既存managed packageを保持して重複fork・代替起動は行わない。正本は`work/heavy-chain-adaptive-fork-eligibility-20260927-r1.json`。Goal active。
 
+# Goal progress — 2026-09-27 r543
+
+G618 verifierとrelease-gate sourceをfresh読解し、再開に必要なHTTPS API origin、brand UUID、read-only live session token、96時間window、failure/storage/scale thresholds、production monitor/UI pairの正確な入力名と受入条件を秘密値なしで固定した。正本は`work/heavy-chain-g618-production-input-packet-20260927-r1.md`。外部効果・secret insertionは0。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。
