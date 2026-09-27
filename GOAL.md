@@ -12104,3 +12104,7 @@ Cloudflare全versionをread-only確認。OpenAI設定の既存versionは2つあ�
 # Goal progress — 2026-09-28 r695
 
 read-only completion auditをfresh実行し、ローカル契約（security、video fail-closed、workspace/provider persistence、Light parity、OpenAI static）はPASSした一方、全体は未完了。G617/G619/G669/G670、H601/H602、G618、G659/G668、current visual scorecard、production monitor/UIが未達で、strict gateは4項目FAIL。auditはsubmit/payment/publish/deploy/secret操作を一切行っていない。Goal active、正本は`output/playwright/heavy-completion-audit-20260928-current/summary.json`と`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r696
+
+現行sourceのSunburst実装候補箇所をline-levelで監査し、HeavyのGenerate/Canvas/ChatとOpenAI adapter/parser/QAを対象、LightchainWorkbenchPageとvideoを対象外として固定した。Sunburst未実装、Astra verified invocation未取得、Luna handoff未開始のためコード変更は行っていない。Goal active、正本は`work/heavy-chain-sunburst-source-audit-20260928-r1.json`。

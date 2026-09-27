@@ -1,0 +1,69 @@
+{
+  "schema": "heavy_chain.sunburst_source_audit.v1",
+  "capturedAt": "2026-09-27T17:57:29Z",
+  "sourceRevision": "370368b",
+  "scope": "image_generation_only",
+  "video": "deferred",
+  "externalEffects": false,
+  "heavyOwnedSurfaces": [
+    {
+      "path": "src/pages/GeneratePage.tsx",
+      "lines": "654-673,1099-1117,1832-1842",
+      "evidence": "Heavy surface resolves HEAVY_IMAGE_PROVIDER, but the OpenAI UI option defaults to gpt-image-1-mini and sends the selected provider/model."
+    },
+    {
+      "path": "src/pages/CanvasEditorPage.tsx",
+      "lines": "2374-2381,3118-3144,3298-3328",
+      "evidence": "Heavy generate sends HEAVY_IMAGE_PROVIDER without an explicit model; result metadata preserves provider/backend identity and candidate accounting."
+    },
+    {
+      "path": "src/components/ChatEditor.tsx",
+      "lines": "161-174",
+      "evidence": "Heavy chat generation sends HEAVY_IMAGE_PROVIDER; edit path delegates to the shared image edit flow."
+    },
+    {
+      "path": "cloudflare/heavy-api/src/openai-image.ts",
+      "lines": "4-16,60-74",
+      "evidence": "OpenAI generation/edit allowlists omit gpt-image-2.5-sunburst; generation and edit fallback defaults remain gpt-image-1-mini."
+    },
+    {
+      "path": "cloudflare/heavy-api/src/image-ai-contracts.ts",
+      "lines": "1-5,190-208",
+      "evidence": "Request parser allowlist omits Sunburst and rejects unsupported model/provider values before provider work."
+    }
+  ],
+  "lightOwnedSurfaces": [
+    {
+      "path": "src/pages/LightchainWorkbenchPage.tsx",
+      "lines": "178,3167-3196,3580-3638",
+      "evidence": "Light provider selection and metadata retain Workers AI defaults; this surface remains outside the Heavy Sunburst migration."
+    }
+  ],
+  "qaBoundaries": [
+    {
+      "path": "scripts/hc-10m-real-generation-qa.mjs",
+      "lines": "14-15",
+      "evidence": "QA accepts provider/backend pairs for Workers AI and OpenAI."
+    },
+    {
+      "path": "scripts/verify-cloudflare-image-qa.test.mjs",
+      "lines": "22,48-56",
+      "evidence": "Deterministic QA covers matching OpenAI provenance and rejects mismatched backend provenance."
+    }
+  ],
+  "requiredBoundedChange": [
+    "Add gpt-image-2.5-sunburst to the intended OpenAI model validation surfaces.",
+    "Use gpt-image-2.5-sunburst as the new-generation default when no explicit supported model is selected.",
+    "Preserve explicit supported OpenAI model selections and reject unsupported selections without substitution.",
+    "Preserve legacy Workers/OpenAI receipt readback, no fallback, no replay, and video-diff zero.",
+    "Keep LightchainWorkbenchPage and video behavior unchanged."
+  ],
+  "currentLocalEvidence": {
+    "heavyProviderSelection": "4/4",
+    "lightProviderCoverage": "22/22",
+    "scorecardProvenance": "3/3",
+    "openAiStatic": "7/7",
+    "completionAudit": "read-only audit failed only on production/acceptance evidence and stale required proof paths"
+  },
+  "implementationGate": "verified Astra engineering invocation and bounded Luna handoff required before source mutation"
+}

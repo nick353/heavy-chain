@@ -60,7 +60,8 @@
     "work/heavy-chain-openai-api-auth-readback-20260928-r3.json",
     "work/heavy-chain-release-gate-current-readback-20260928-r1.json",
     "output/playwright/heavy-completion-audit-20260928-current/summary.json",
-    "output/playwright/heavy-completion-audit-20260928-current/release-gate-summary.json"
+    "output/playwright/heavy-completion-audit-20260928-current/release-gate-summary.json",
+    "work/heavy-chain-sunburst-source-audit-20260928-r1.json"
   ],
   "freshReadback": {
     "observedAt": "2026-09-27T17:53:36Z",

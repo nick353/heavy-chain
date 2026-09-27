@@ -23589,3 +23589,7 @@ Cloudflareの全versionをread-onlyで確認し、OpenAI設定済みの旧versio
 # Heavy Chain current state — 2026-09-28 r695
 
 read-only 10分completion auditをfresh実行。security、video fail-closed、workspace/provider persistence、Light parity、OpenAI staticはPASSだが、audit全体はFAIL。G617 fresh 10-feature generation、G619 beta evidence、G618 scale fixture、G659/G668 production proof、H601/H602 proof、current visual scorecardが未達で、strict gateもmonitor/UI、G618、H602、scorecardの4項目FAIL。生成・deploy・課金・公開・secret値読取・動画変更は0。正本は`output/playwright/heavy-completion-audit-20260928-current/summary.json`、`release-gate-summary.json`、`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r696
+
+現行revision `370368b`のSunburst source auditをread-only作成。HeavyのGenerate/Canvas/Chat、OpenAI adapter/parser、QA境界をline-levelで固定し、LightchainWorkbenchPageとvideoを変更対象外として明示。現行OpenAI default/allowlistは`gpt-image-1-mini`等でSunburst未実装。Astra verified invocationとLuna handoffが揃うまでsource mutationは0。正本は`work/heavy-chain-sunburst-source-audit-20260928-r1.json`。
