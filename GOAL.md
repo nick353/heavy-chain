@@ -11589,3 +11589,7 @@ Runwayの接続権限をread-only確認し、現ワークスペースでは`inst
 # Goal progress — 2026-09-27 r568
 
 現行HEAD `6e8b162`に対して`npm run verify:release-gate --silent`を一度だけfresh実行し、`2026-09-27T08:24:47.245Z`、`exitCode=1`、`ok=false`を確認した。失敗は4件（production monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecard）で前回から変わらない。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r5.json`と`output/playwright/10m-product-readiness-g615/release-gate-summary.json`。generation submit、課金/checkout、公開、deploy、破壊cleanup、provider receipt、R2 durable chain、video receiptは0。Goal active。
+
+# Goal progress — 2026-09-27 r569
+
+同一現HEAD `1d6972d`で`npm run verify:10m-completion:incomplete-ok`をfresh実行し、`2026-09-27T08:27:19.879Z`、`ok=false`、16 blockersを確認した。G617/G619/G669/G670の受入未完了、H601/H602 open、provider/R2/video/monitor/G618/scorecardのproof不足、G619とrelease gateのcommand failureを明示した。正本は`work/heavy-chain-completion-audit-20260927-r6.json`。合成証跡で埋めず、外部効果は0。Goal active。

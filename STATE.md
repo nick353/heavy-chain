@@ -23073,3 +23073,7 @@ Runway permission/installationをfresh readbackし、未インストール・未
 # Heavy Chain current state — 2026-09-27 r568
 
 現行HEAD `6e8b162`に対するstrict release gateを`2026-09-27T08:24:47.245Z`にfresh実行した。`ok=false`、失敗はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecardの4件。未証明のprovider/R2/videoを合格扱いにせず、外部効果・課金・公開・deploy・破壊cleanup・secret読取は0。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r5.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r569
+
+10M completion auditを`2026-09-27T08:27:19.879Z`にfresh実行し、`ok=false`・16 blockersを確認した。G617/G619/G669/G670のgoal未受入、H601/H602 open、実provider/R2/video/monitor/G618/scorecard proof不足、G619/release gate verifier failureを正本へ固定した。正本は`work/heavy-chain-completion-audit-20260927-r6.json`。Goal active、外部効果は0。
