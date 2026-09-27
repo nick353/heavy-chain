@@ -438,7 +438,7 @@ async function verifyFeatureWorkflow(page, tool) {
   // workspace affordance while keeping provider/rights gates separate.
   const generateButton = page.getByRole('button', { name: /AI生成|更新|保存|開始|追加/ }).first();
   const hasSafeLocalAction = await generateButton.isVisible({ timeout: 1000 }).catch(() => false);
-  const rightsGateVisible = await page.getByRole('button', { name: /権利を確認してAI生成|権限がありません/ }).first().isVisible({ timeout: 1000 }).catch(() => false);
+  const rightsGateVisible = await page.getByRole('button', { name: /権利を確認してAI生成|権限がありません|Heavy利用条件/ }).first().isVisible({ timeout: 1000 }).catch(() => false);
   recordFeatureAssertion(result, 'safe_local_action_or_workspace_visible', hasSafeLocalAction || rightsGateVisible || isReadOnlyWorkspaceTool(tool.id), {
     hasSafeLocalAction,
     rightsGateVisible,
@@ -1210,7 +1210,7 @@ function getControlAuditSelector() {
 
 function classifyVisibleControl(control) {
   const label = `${control.name} ${control.href ?? ''}`.replace(/\s+/g, ' ').trim();
-  if (control.disabled || control.ariaDisabled === 'true' || /権利を確認してAI生成|権限がありません/.test(label)) return 'permission_blocked';
+  if (control.disabled || control.ariaDisabled === 'true' || /権利を確認してAI生成|権限がありません|Heavy利用条件/.test(label)) return 'permission_blocked';
   if (/生成|開始|保存|削除|ダウンロード|再試行|アップロード|ログアウト|ログイン|購入|課金|支払い|OpenAI|Runway|動画|送信|確定|決定|作成/.test(label)) return 'effectful_or_provider';
   if (control.role === 'tab') return 'safe_tab';
   if (control.role === 'checkbox' || control.role === 'switch' || control.role === 'radio' || control.type === 'checkbox' || control.type === 'radio' || control.ariaPressed != null) return 'safe_toggle';
@@ -1492,7 +1492,14 @@ function isReadOnlyWorkspaceTool(toolId) {
 }
 
 function matchesLightchainSignature(tool, body) {
-  const hasGenerationAndHistory = (body.includes('AI生成') || body.includes('権限がありません')) && /履歴/.test(body);
+  // Heavy's explicit terms/rights gate replaced the old Light-only
+  // `権限がありません` marker on the same parity routes. The verifier must
+  // recognize both surfaces without treating Heavy admission as Light access.
+  const hasGenerationGate = body.includes('AI生成')
+    || body.includes('権限がありません')
+    || body.includes('Heavy利用条件')
+    || body.includes('Heavy生成機能');
+  const hasGenerationAndHistory = hasGenerationGate && /履歴/.test(body);
   if (tool.id === 'fashion-studio') return body.includes('ファッションスタジオ') && body.includes('スタジオ案履歴') && body.includes('360度表示');
   if (tool.id === 'marketing-home') return body.includes('マーケティングワークスペース') && body.includes('おすすめのシーン');
   if (tool.id === 'design-agent') return body.includes('今日は何から始めますか') && body.includes('商品企画') && body.includes('AIグラフィックデザイン');
