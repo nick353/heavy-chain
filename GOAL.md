@@ -1,4 +1,23 @@
-# Goal progress — 2026-09-26 r386
+# Goal progress — 2026-09-27 r387
+
+## Heavy entitlement generation receipt — 2026-09-27
+
+Heavyの旧権限ブロッカーを、明示的terms acceptance・request-scoped rights attestation・同一seedの
+preflight/attestation/provider admissionへ修正し、本番で実生成した。API healthの
+`heavyEntitlementEnabled=true`、Heavy API 112/112、root typecheck、Light permission parity 12/12、
+D1 request state `completed`、private R2 object readback exit 0を確認。request、attestation、preparation、
+generated imageの正本IDは`work/heavy-chain-heavy-entitlement-generation-readback-20260927-r3.md`に固定した。
+
+認証・provider実行・D1/R2保存は進捗したが、同一receiptのreuse/reload/reconciliation、video provider、
+monitor/UI、G618、H601/H602、real-generation scorecard、strict releaseは未完了。Light Chainのplan起因
+permission surfaceは変更していない。Goalはactive。
+
+## H602 and strict gate current boundary — 2026-09-27
+
+H602 fail-closed readbackを`2026-09-27T00:03:18.063Z`へ更新したが、quota enforcement、checkout-disabled、
+no-real-charge proof、transaction/entitlement readback、operator decision、live constraint readbackは未達。
+最新strict gateは`ok=false`で、production monitor/UI、期限切れMass-market/Light feature証跡、G618、H601、
+H602、旧scorecard artifactが残る。資格情報・法務判断・決済値を推測して埋めず、独立して更新できる証跡から進める。
 
 ## Fresh local gate and source-evidence reconciliation — 2026-09-26
 

@@ -1,4 +1,33 @@
-# Heavy Chain current state — 2026-09-26 r264
+# Heavy Chain current state — 2026-09-27 r265
+
+## Heavy entitlement and real provider generation receipt — 2026-09-27
+
+Heavyの旧`権限がありません`境界を、明示的なterms acceptanceとrequest-scoped rights
+attestationへ置き換えた本番経路を実生成で確認した。API healthは`heavyEntitlementEnabled=true`
+を返し、Heavy API suite 112/112、root typecheck、Light permission parity/source-access 12/12をPASS。
+request `dba13266-5776-453f-9df4-fbeeedacf557`はD1で`completed`、terms acceptance、rights attestation、
+preparation、request binding、generated image rowを同じrequestへ結び付け、candidateは
+`completed`/`error_code=null`。private R2 object
+`generated-images/ai-dba13266-5776-453f-9df4-fbeeedacf557-0`をremote readbackし、取得終了コード0を確認した。
+詳細は`work/heavy-chain-heavy-entitlement-generation-readback-20260927-r3.md`。
+
+これはHeavyの認証・provider実行・D1/R2保存の証明であり、同一receiptのreuse/reload/reconciliationと
+scorecardを自動的に完了扱いにはしない。Light Chainのplan起因permission surfaceは変更していない。
+Goalはactiveのまま継続する。
+
+## Fresh H602 fail-closed readback — 2026-09-27
+
+既存のH602 production readbackを`verify:h602-production-completion-readback`で再評価した。最新artifactは
+`capturedAt=2026-09-27T00:03:18.063Z`だが、quota enforcement=false、production checkout=true、
+no-real-charge proof=0、transaction/entitlement readbackなし、live constraint readbackなし、operator
+final decisionなし。決済・Apple ID・OTP・秘密・identity・公開は実行せず、H602を完了扱いにしていない。
+
+## Current strict gate snapshot — 2026-09-27
+
+最新release gate（`2026-09-26T23:54:28.177Z`）は`ok=false`。Heavy認証は失敗項目に含まれない。
+残りはproduction monitor/UI pair、Mass-market QAとLight all-featureの期限切れ証跡、G618 baseline、
+H601 production rights readback、H602 completion、旧generation scorecard artifactの7系統。
+monitor token/auth stateや法務・課金の決定値を推測せず、偽の証跡は作成していない。
 
 ## Fresh local gate and source-evidence reconciliation — 2026-09-26
 
