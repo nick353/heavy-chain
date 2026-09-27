@@ -22804,6 +22804,10 @@ Lightchain release gate contractは16/16 pass。release doctorはproof target/gi
 
 # Heavy Chain current state — 2026-09-27 r504
 
+# Heavy Chain current state — 2026-09-27 r505
+
+fresh runtime/package readbackはgraph available・process live_verifiedを確認したが、capacity guardは`capacity_blocked`、Heavy packageは`waiting_human`/`automatic_dispatch_disabled`/`claim_id=null`。既存計画を保持し、外部効果0、Goal active。
+
 現行HEAD `f15d319`で要件別completion audit r2を保存。証拠の鮮度・local/production境界・未達要件を再整理し、completionDecisionは`not_complete`を維持。Astra capacity/automatic hold、provider/auth/billing/publication未実行、Goal active。
 
 fresh 10M auditは`ok=false`/16 blockers、unified release gateは`ok=false`/4 failures。最新の残件はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、real-generation scorecard。ローカル契約検証は継続、外部効果は0、Goal active。
