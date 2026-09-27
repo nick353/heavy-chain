@@ -22771,3 +22771,7 @@ capacity待ちの独立準備として、Heavy/Light focused suiteは40/40 pass�
 # Heavy Chain current state — 2026-09-27 r493
 
 G618 verifierは必要なCloudflare origin/brand/live session/baseline limits欠落で安全にfail-closedし、browser/buildを開始しなかった。10M verifierの旧artifact pathと最新release gateのcurrent artifact差をdrift reportへ記録。Astra承認なしにverifierのcanonical pathやfreshness境界は変更しない。Goalはactive、local準備は継続。
+
+# Heavy Chain current state — 2026-09-27 r494
+
+Video provider boundary/contract/editor persistenceとprovider persistence/readbackのlocal suiteを合計22/22 pass。fail-closedとdurable receipt guardの整合を確認したが、実provider・R2・remote lifecycleの本番証拠は未取得。Adaptive capacity/Heavy packageのholdは継続、Goalはactive。

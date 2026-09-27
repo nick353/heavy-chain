@@ -11064,6 +11064,10 @@ capacity待ちの独立準備を続行し、`npm run typecheck`と`npm run build
 
 capacity待ちの独立準備として、`npm run verify:g618-scale-ops`を実行し、明示Cloudflare API origin・brand・live session・baseline limitsが無いためbrowser/buildを開始せずfail-closedすることを確認した。併せて10M verifierと最新release gateのartifact path差を`work/heavy-chain-10m-provenance-drift-20260927-r1.md`へ固定し、canonical registryをAstra engineering承認なしに変更しない境界を明示した。記録commitは`68cd2a8`。外部効果、secret、provider、billing、publicationは0。Goalはactiveで、capacity回復までread-only準備を継続する。
 
+# Goal progress — 2026-09-27 r494
+
+video/persistence laneの独立local検証をfresh実行した。Video provider boundary 1/1、video provider contract 3/3、video editor persistence 4/4、provider persistence/readback 14/14で合計22/22 pass。Videoは画像生成へ誤routingせず、source/credential/same-run readback不足でfail-closedし、durable receiptなしのpromotionを止めることを確認した。これはlocal contract証拠であり、実video provider、R2本番、remote durable save→reuse→reload→reconciliationの実receiptを証明しない。外部効果は0。Goalはactiveで、capacity回復までlocal準備を継続する。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
