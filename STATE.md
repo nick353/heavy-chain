@@ -22410,3 +22410,16 @@ passだが、production artifact freshness・実provider・remote persistenceの
 Lightchain test契約修正後にstrict release gateをfresh実行し、`capturedAt=2026-09-27T03:04:04.448Z`、`ok=false`を確認した。
 失敗は従来と同じ7件（production monitor/UI、mass-market QA、Lightchain all-feature previews、G618、H601 production rights、
 H602 production completion、generation scorecard）で、local parity修正による新規failureはない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r428
+
+`npm run verify:lightchain-all-features` を local mode で fresh 実行した。artifact は
+`output/playwright/lightchain-all-feature-workflows-20260927T030638Z-yonFtO/SUMMARY.json`、featureCount は31、
+assertionsは375、console/page/request failureは0、context/browser/preview cleanupは全て完了したが、`ok=false`。
+失敗は、(1) `model-face`/`model-change`/`body-shape`/`clothing-size`/`pose-change`/`background-change`/`angle-change`/
+`model-custom` のdesktop/mobile route signature timeout、(2) `model-library` のsafe local action判定、(3) `fabric-image` と
+source readback (`creator`/`tools-fabric`/`model`) の旧 `権限がありません` 期待値である。実ページ本文はモデル系ルートを描画し、
+console・page error・request failureは無かったため、少なくとも一部は verifier の旧generation/permission契約と現行の
+Heavy/Light ownership仕様の不整合である。ただしこれは実装を修正してよい根拠ではなく、Light本家の旧plan surfaceを残すべき
+範囲とHeavy側の権限表示を除去すべき範囲をAstraで確定した後に、必要な検証契約だけを更新する。local artifactをproduction
+Lightchain all-feature previewへ昇格せず、strict gateのproduction blockerは未解消。provider生成、課金、公開、秘密投入は行っていない。

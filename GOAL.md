@@ -10951,3 +10951,13 @@ Heavy-only UI不在を確認し、local parityを補強した。一方、product
 
 Lightchain test契約修正後のstrict gateをfresh取得した（`2026-09-27T03:04:04.448Z`）。失敗はproduction monitor/UI、mass-market、
 Lightchain all-feature、G618、H601、H602、generation scorecardの7件だけで、local parity変更による新規失敗はなかった。Goal active。
+
+# Goal progress — 2026-09-27 r428
+
+Lightchain全31 featureのlocal workflowをfresh実行し、artifact `output/playwright/lightchain-all-feature-workflows-20260927T030638Z-yonFtO/SUMMARY.json` を取得した。
+375 assertions、console/page/request failure 0、cleanup完了を確認したが、`ok=false`。失敗はモデル系8ルートのdesktop/mobile
+signature timeout、model-libraryのworkspace action判定、fabric/source readbackに残る旧`権限がありません`期待値だった。
+本文描画自体は確認できたため、current Heavy/Light仕様とverifier契約の不一致が含まれる。一方、Light本家のplan-locked surfaceを
+Heavy側と混同しない必要があるため、Astraのownership/acceptance判断なしにverifierやpermission表示を変更しない。local結果は
+production all-feature previewの証跡へ昇格せず、strict gateの7 blocker（production monitor/UI、mass-market、Lightchain preview、
+G618、H601、H602、generation scorecard）は維持。provider生成、課金、公開、秘密投入は行っていない。Goal active。
