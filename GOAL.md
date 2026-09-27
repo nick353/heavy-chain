@@ -11365,6 +11365,10 @@ Light Chain parityのrelease manifest 16/16、all-feature workflow contract 5/5�
 
 env sourceをnon-secret診断した。`.env.production.example`の6 required keyはexample/placeholder originでproductionに使用不可、`.env.production.local`は5 required keyが欠落し`PUBLIC_URL`もplaceholder/local扱い。例示値のコピーやconfig mutationは行わず、正本を`work/heavy-chain-env-source-diagnosis-20260927-r1.json`へ固定した。Goal active。
 
+# Goal progress — 2026-09-27 r517
+
+Cloudflare release readback validatorとrelease-doctor contract regressionをfresh実行し、15/15をpassした。validatorはlocal contractを非承認として扱い、provider receipt/authenticated-production artifactのunsupported宣言を維持する。現行fixture contractを明示したdoctorは`cloudflare_release_readback_contract_missing stale_observation missing_input`で停止し、実provider/authenticated readbackを架空生成していない。証跡は`work/heavy-chain-release-doctor-readback-20260927-r1.json`へ追記。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

@@ -40,4 +40,11 @@
     "optionalDeploymentKeysPresent": 0
   },
   "updatedDecision": "release_proof_surface_accepted_environment_contract_missing"
+  ,"contractValidatorTests": {
+    "command": "node --test scripts/verify-cloudflare-release-readback.test.mjs scripts/release-doctor-readback-contract.test.mjs",
+    "passed": 15,
+    "failed": 0,
+    "interpretation": "Validator and doctor boundaries pass; local contract remains non-approving and unsupported provider/authenticated-production evidence remains rejected."
+  },
+  "currentDoctorStopWithExplicitContract": "cloudflare_release_readback_contract_missing stale_observation missing_input"
 }
