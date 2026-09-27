@@ -23038,3 +23038,7 @@ public entrypoint readback反映後にunified release gateをfresh再実行し�
 # Heavy Chain current state — 2026-09-27 r559
 
 別実装のHeavy `/fitting`をfresh Companionで5秒settle後にreadbackし、既存Gallery衣服素材、avatar、readyState complete、semantic/visual verified、旧`権限がありません`なしを確認した。高精度AI切り抜きはenabledだが、AI生成はcutout完了とHeavy規約/権利表明が揃うまでdisabled。`/v1/heavy/entitlement?action=model-matrix`、profile/brands、generated-images、media/readをread-only観測し、provider submit 0、console 0。Resource Timing出力にtoken queryが含まれたため証跡へは一切保存せず、request bodyも読まなかった。正本は`work/heavy-chain-fitting-readback-diagnosis-20260927-r1.json`。session cleanupはok、task tab close、lease release confirmed、external effect 0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r560
+
+Adaptive runtime・Opus plan・Heavy Astra packageのfresh readbackを`work/heavy-chain-adaptive-continuation-readback-20260927-r1.json`へ固定した。planはfingerprint一致の`plan_valid=true`、Opus verified、runtimeはgraph/live process availableだがcapacity guardが`capacity_blocked`。packageは`waiting_human`/`automatic_dispatch_disabled`でclaim/startなし、fork候補なし。未承認の再起動・代替route・provider・課金・secret・公開は行わず、read-only証跡と独立工程を継続する。Goal active。
