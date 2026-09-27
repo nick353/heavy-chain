@@ -11485,6 +11485,10 @@ Video provider laneの再開条件をsource/contractからfresh抽出した。so
 
 Video local contractをfresh再検証し、provider boundary 1/1、provider contract 3/3、editor persistence 4/4の合計8/8 pass。画像生成fallback禁止、3条件admission、local reload、Cloudflare receipt必須、stable project matchingを確認した。正本は`work/heavy-chain-video-local-readback-20260927-r1.json`。production video provider/durable media receiptは未証明。Goal active。
 
+# Goal progress — 2026-09-27 r547
+
+H602 production completion laneの再開条件を、`verify-h602-production-completion-readback.mjs`、`verify-h602-operator-readiness.mjs`、H601/H602 checklist、billing runbookからfresh抽出した。quota enforcement=true、production checkout=false、redacted sandbox tester、verified no-real-charge proof>0、transaction/entitlement readback=true、hash-only/allowlist hardening、safe operator decision JSONの必須条件と、再実行コマンドを`work/heavy-chain-h602-production-input-packet-20260927-r1.md`へ固定した。Apple ID/OTP、checkout、購入、identity、公開、secret、billing mutationは行っていない。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

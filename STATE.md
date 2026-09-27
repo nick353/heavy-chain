@@ -22986,3 +22986,7 @@ Video provider laneの再開条件をsource/contractからfresh抽出した。so
 # Heavy Chain current state — 2026-09-27 r546
 
 Video local contractをfresh再検証し、provider boundary 1/1、provider contract 3/3、editor persistence 4/4の合計8/8 pass。画像生成fallback禁止、3条件admission、local reload、Cloudflare receipt必須、stable project matchingを確認した。正本は`work/heavy-chain-video-local-readback-20260927-r1.json`。production video provider/durable media receiptは未証明。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r547
+
+H602 production completion laneの再開条件を、`verify-h602-production-completion-readback.mjs`、`verify-h602-operator-readiness.mjs`、H601/H602 checklist、billing runbookからfresh抽出した。quota enforcement=true、production checkout=false、redacted sandbox tester、verified no-real-charge proof>0、transaction/entitlement readback=true、hash-only/allowlist hardening、safe operator decision JSONの必須条件と、再実行コマンドを`work/heavy-chain-h602-production-input-packet-20260927-r1.md`へ固定した。Apple ID/OTP、checkout、購入、identity、公開、secret、billing mutationは行っていない。Goal active。
