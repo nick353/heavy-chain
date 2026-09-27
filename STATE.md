@@ -22574,3 +22574,19 @@ Heavy Chainの完全体プランを `work/heavy-chain-complete-plan-20260927.md`
 → monitor/UIとG618 → H601のapproved rights → 1回の実provider receipt → private-R2 save/reuse/reload/reconciliation →
 H602 live constraint/operator decision → scorecard → strict gate zero failures。token/cookie抽出、法的attestation代行、課金・購入・公開・
 破壊的cleanupは引き続き禁止境界として明記した。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r451
+
+現行productionのmass-market QAをCompanionでfresh取得し、desktop 16・mobile 10 route、semantic/visual readback、origin、cleanupを確認した。
+`campaign-image`とCanvasはHeavy terms/rights gateを表示し、規約・権利checkboxは未承諾、生成submitはdisabledのまま。Lightの
+`/model-library` plan-lock `権限がありません`は意図どおり残った。正本は
+`output/playwright/g836-prod-mass-market-current-20260927-r1/SUMMARY.json`。旧Light-only verifier契約をLight permission surfaceまたは
+Heavy rights gateの二択へ更新し、H601も`output/playwright/g836-prod-h601-rights-check-20260927-r1/summary.json`へ現行gate readbackを固定した。
+terms/rights承諾、generation、provider、billing、公開、secret insertionは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r452
+
+strict gateのskip-commands fresh readbackでmass-market QAとH601 rights readbackがpassし、残るreadback blockerはproduction monitor/UI、G618 scale ops、
+H602 billing completionとなった。full command側のgeneration scorecardはprovider receipt・private R2 save/reuse/reload/reconciliation・visual scorecardが
+揃うまで未達のまま。Companion taskTerminal cleanupは`closed:[1980931085]`、leases released、foreignTabsMutated=false、externalActionExecuted=falseを返した。
+Goal active。

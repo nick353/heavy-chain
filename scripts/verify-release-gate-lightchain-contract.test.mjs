@@ -261,6 +261,21 @@ test('accepts current Lightchain Companion mass-market evidence', () => {
   assert.equal(validateCompanionMassMarketQa(companionMassMarketFixture()), true);
 });
 
+test('accepts current Heavy rights-gated generation evidence without weakening Light plan locks', () => {
+  const evidence = companionMassMarketFixture();
+  const replaceAssertion = (routeKey, assertion) => {
+    for (const route of [...evidence.routes, ...evidence.mobile]) {
+      if (route.key === routeKey) {
+        route.assertions = route.assertions.filter((item) => item.name !== 'lightchain_permission_surface_visible');
+        route.assertions.push({ name: assertion, passed: true, details: {} });
+      }
+    }
+  };
+  replaceAssertion('generate-campaign', 'heavy_rights_gate_visible');
+  replaceAssertion('mobile-generate-campaign', 'heavy_rights_gate_visible');
+  return assert.equal(validateCompanionMassMarketQa(evidence), true);
+});
+
 test('rejects promoted or uncleared Companion mass-market evidence', () => {
   assert.equal(validateCompanionMassMarketQa(companionMassMarketFixture({
     businessCompletion: { providerReceipt: 'verified', sourceSync: 'verified', reconciliation: 'verified' },

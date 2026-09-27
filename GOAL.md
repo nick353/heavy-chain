@@ -11093,3 +11093,18 @@ business completionを未確認のまま維持した。Goal active。
 Heavy Chainの完全体プランを `work/heavy-chain-complete-plan-20260927.md` に固定した。現時点の依存順は、正規monitor/auth read path
 → monitor/UIとG618 → H601のapproved rights → 1回の実provider receipt → private-R2 save/reuse/reload/reconciliation →
 H602 live constraint/operator decision → scorecard → strict gate zero failures。スレッド履歴との不整合はなく、Goalは継続中。
+
+# Goal progress — 2026-09-27 r451
+
+同一のCompanion sessionで現行productionのmass-market routeをdesktop 16件・mobile 10件fresh readbackした。Heavy-owned
+`campaign-image`は`権限がありません`ではなくterms/rightsの明示ゲートと未チェックcheckbox、disabled生成を表示し、Light固有の
+`/model-library` plan-lockは`権限がありません`を維持していた。この境界に合わせ、mass-market verifierはLight permission surfaceまたは
+Heavy rights gateのどちらも正規状態として受け入れるよう更新し、fresh artifactは
+`output/playwright/g836-prod-mass-market-current-20260927-r1/SUMMARY.json`へ固定した。H601も同じ現行Heavy rights gate readbackへ更新し、
+旧Light期待値との衝突を解消した。terms/rights承諾、generation submit、provider、課金、公開は未実行。Goal active。
+
+# Goal progress — 2026-09-27 r452
+
+strict gateをfresh再実行し、mass-market QAとH601 rights readbackは解消した。skip-commands確認時の残件はproduction monitor/UI、G618 scale ops、
+H602 billing completionで、full command実行時はgeneration scorecardの正規provider artifact不足も残る見込み。Companion sessionはtaskTerminal cleanupで
+tab close、lease release、foreign mutationなしを確認した。Goal active。

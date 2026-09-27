@@ -66,7 +66,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production mass-market QA current',
-    path: 'work/heavy-chain-companion-mass-market-qa-20260925-r1.json',
+    latestSummaryPrefix: 'g836-prod-mass-market-current-20260927-r1',
     validate: validateCompanionMassMarketQa,
     expect: 'fresh Companion readback of the current Lightchain launcher, protected generation permission surfaces, history/jobs/gallery/canvas/brand routes, desktop/mobile semantic+visual evidence, no exported auth secret, no console/page/request failures, and terminal cleanup',
   },
@@ -189,13 +189,13 @@ const requiredReadbacks = [
   },
   {
     name: 'production H601 rights readback',
-    path: 'output/playwright/g831-prod-h601-rights-check-r1/summary.json',
+    path: 'output/playwright/g836-prod-h601-rights-check-20260927-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       hasPassingAssertion(json, 'generate_route_loaded') &&
-      hasPassingAssertion(json, 'h601_permission_surface_visible') &&
-      hasPassingAssertion(json, 'rights_checkbox_absent'),
-    expect: 'production authenticated /generate exposes the Light permission surface and no rights checkbox',
+      ((hasPassingAssertion(json, 'h601_permission_surface_visible') && hasPassingAssertion(json, 'rights_checkbox_absent')) ||
+        (hasPassingAssertion(json, 'heavy_rights_gate_visible') && hasPassingAssertion(json, 'rights_checkbox_present'))),
+    expect: 'production authenticated /generate exposes either the Light plan lock or the explicit Heavy rights gate; no gate is auto-accepted',
   },
   {
     name: 'production chosen public entrypoint readback',
@@ -640,9 +640,9 @@ export function validateCompanionMassMarketQa(evidence) {
     ['dashboard', 'current_lightchain_launcher_visible'],
     ['dashboard', 'current_lightchain_feature_cards_are_linked'],
     ['mobile-dashboard', 'current_lightchain_launcher_compact'],
-    ['generate-campaign', 'lightchain_permission_surface_visible'],
+    ['generate-campaign', ['lightchain_permission_surface_visible', 'heavy_rights_gate_visible']],
     ['generate-campaign', 'upload_first_generation_screen_hides_advanced_controls'],
-    ['mobile-generate-campaign', 'lightchain_permission_surface_visible'],
+    ['mobile-generate-campaign', ['lightchain_permission_surface_visible', 'heavy_rights_gate_visible']],
     ['mobile-generate-campaign', 'upload_first_generation_screen_hides_advanced_controls'],
     ['mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar'],
     ['mobile-generate-campaign', 'mobile_generate_starts_at_material_form'],
@@ -679,11 +679,11 @@ export function validateCompanionMassMarketQa(evidence) {
     Number(route?.bodyLength || 0) > 80 &&
     !/権利確認|権利を確認しました|rights.?confirmation|rights.?checkbox/i.test(route?.domExcerpt || '')
   );
-  const assertionsValid = requiredAssertions.every(([routeKey, assertionName]) =>
-    routeKey === 'desktop-history'
-      ? hasRouteAssertion(evidence, 'history', assertionName)
-      : hasRouteAssertion(evidence, routeKey, assertionName)
-  );
+  const assertionsValid = requiredAssertions.every(([routeKey, assertionName]) => {
+    const names = Array.isArray(assertionName) ? assertionName : [assertionName];
+    const assertionRouteKey = routeKey === 'desktop-history' ? 'history' : routeKey;
+    return names.some((name) => hasRouteAssertion(evidence, assertionRouteKey, name));
+  });
   return evidence?.schema === 'heavy-chain.companion-mass-market-qa.v1' &&
     evidence?.workflow === 'mass-market-user-journey-qa' &&
     evidence?.source === 'aos_chrome_companion_profile_instance' &&
