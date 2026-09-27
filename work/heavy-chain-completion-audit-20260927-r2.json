@@ -1,0 +1,113 @@
+{
+  "schema": "heavy_chain_completion_audit.v1",
+  "capturedAt": "2026-09-27T15:54:47+09:00",
+  "goal": "Heavy Chainを完全体へ進める",
+  "goalStatus": "active",
+  "sourceRevision": "c58bdc5",
+  "requirements": [
+    {
+      "id": "dirty_worktree",
+      "status": "pass",
+      "evidence": ["git status --short", "git diff --check", "c58bdc5"],
+      "gap": null
+    },
+    {
+      "id": "lightchain_parity",
+      "status": "production_readback_plus_local_contract_with_one_stale_assertion",
+      "evidence": [
+        "output/playwright/g831-prod-lightchain-all-features-current-20260927-r1/SUMMARY.json",
+        "work/heavy-chain-heavy-permission-boundary-audit-20260927-r1.json",
+        "parity routes 34/34",
+        "unified workflow 6/6",
+        "source board parity 8/8",
+        "all-feature contract 5/5",
+        "UI control boundaries 21/21",
+        "material contract 28/28",
+        "provider adapter 17/17"
+      ],
+      "gap": "scripts/verify-parity-entry-history-readback.test.ts still expects data-testid=oriented-design-persisted-history removed by source-parity commit 53a74f6; provider completion and remote persistence remain separate requirements"
+    },
+    {
+      "id": "auth_continuity",
+      "status": "partial",
+      "evidence": [
+        "work/heavy-chain-goal-readiness-20260927-r1.json",
+        "work/heavy-chain-runway-connection-readback-20260927-r1.json",
+        "auth continuity local suites 27/27"
+      ],
+      "gap": "Runway MCP, monitor bearer/brand scope, and non-local UI auth-state are not available"
+    },
+    {
+      "id": "provider_generation_receipt",
+      "status": "not_proven",
+      "evidence": ["output/playwright/10m-completion-audit/summary.json"],
+      "gap": "G617 same-run fresh all-10 provider receipt is missing"
+    },
+    {
+      "id": "remote_save_reuse_reload_reconciliation",
+      "status": "local_contract_only",
+      "evidence": [
+        "work/heavy-chain-workspace-persistence-preflight-20260927.json",
+        "provider persistence/readback local 14/14",
+        "durable/readback local 23/23"
+      ],
+      "gap": "authenticated workspace POST/readback and canonical R2 reconciliation are missing"
+    },
+    {
+      "id": "video_provider",
+      "status": "boundary_only",
+      "evidence": [
+        "work/heavy-chain-video-provider-preflight-20260927.json",
+        "video boundary/contract/editor persistence local 8/8"
+      ],
+      "gap": "no production video provider receipt or durable media reconciliation"
+    },
+    {
+      "id": "monitor_and_operations",
+      "status": "operations_pass_monitor_incomplete",
+      "evidence": [
+        "output/playwright/g830-launch-ops-production-current-r3/summary.json",
+        "output/playwright/10m-completion-audit/summary.json",
+        "output/playwright/10m-product-readiness-g615/release-gate-summary.json"
+      ],
+      "gap": "production monitor/UI pair and G618 baseline are missing"
+    },
+    {
+      "id": "security_rights_billing_boundaries",
+      "status": "local_guard_pass_human_completion_open",
+      "evidence": [
+        "work/heavy-chain-local-ops-rights-billing-readback-20260927-r1.json",
+        "output/playwright/g774-h602-production-completion-current-r1/summary.json",
+        "G620/H601/H602 local contract checks pass"
+      ],
+      "gap": "H601 final operator/counsel decisions and H602 live proof are missing"
+    },
+    {
+      "id": "strict_release_gate",
+      "status": "fail",
+      "evidence": [
+        "output/playwright/10m-completion-audit/summary.json capturedAt 2026-09-27T06:50:52.998Z",
+        "output/playwright/10m-product-readiness-g615/release-gate-summary.json capturedAt 2026-09-27T06:52:20.321Z"
+      ],
+      "gap": "four failed entries remain: monitor/UI, G618, H602, generation scorecard"
+    }
+  ],
+  "externalEffects": {
+    "provider": false,
+    "billing": false,
+    "publication": false,
+    "secretInsertion": false,
+    "destructiveCleanup": false
+  },
+  "completionDecision": "not_complete",
+  "nextDependencyOrder": [
+    "official Runway or approved provider connection plus monitor/auth read path",
+    "production monitor/UI and G618",
+    "H601 operator/counsel decision",
+    "one same-run provider generation",
+    "private save/reuse/reload/reconciliation",
+    "H602 live constraint and operator decision",
+    "visual scorecard",
+    "strict gate ok=true"
+  ]
+}
