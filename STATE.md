@@ -23030,3 +23030,7 @@ public entrypoint readback反映後にunified release gateをfresh再実行し�
 # Heavy Chain current state — 2026-09-27 r557
 
 正規Heavy `/canvas/new`をfresh Companionで4秒settle後にreadbackし、readyState complete、Canvas保存marker、Nisenブランド、旧`権限がありません`なし、semantic/visual verifiedを確認した。Heavy entitlement endpoint（`/v1/heavy/entitlement?action=generate-image`）とprofile/brands readbackが発生し、画面は「Heavy側の規約同意・権利表明が必要です」を表示している。これは権限不足ではなくrequest-scoped consent/rights attestationの設計済みgateで、provider submitは0。consoleはwarning 6・error 0、credential/bodyは取得していない。正本は`work/heavy-chain-canvas-readback-diagnosis-20260927-r1.json`。session cleanupはok、task tab close、lease release confirmed、external effect 0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r558
+
+正規Heavy `/generate?feature=campaign-image`をfresh Companionで4.5秒settle後にreadbackし、Heavy entitlement gate、terms checkbox、request-scoped rights attestation checkboxが表示され、旧`権限がありません`は不在、provider submitなし、console 0件を確認。商品画像未選択のため`生成する`はdisabledで、入力＋同意＋権利表明が揃うまでfail-closedする正しい状態。Resource Timingはconsumer-auth、profile、brands、usage、Heavy entitlement各familyを観測し、credential/bodyは取得していない。正本は`work/heavy-chain-generate-readback-diagnosis-20260927-r1.json`。session cleanupはok、task tab close、lease release confirmed、external effect 0。Goal active。

@@ -1,0 +1,57 @@
+{
+  "schema": "heavy-chain.generate-readback-diagnosis.v1",
+  "capturedAt": "2026-09-27T08:05:30.349Z",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "route": "/generate?feature=campaign-image",
+  "sessionId": "session_0009dcdf-affe-4b1c-9aca-8ebf5426d75a",
+  "tabId": 1980931134,
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "page": {
+    "title": "Lightchain AI",
+    "readyState": "complete",
+    "semanticReadback": "verified",
+    "visualReadback": "verified",
+    "authMarker": "avatar",
+    "feature": "campaign-image",
+    "legacyPermissionText": false,
+    "heavyEntitlementGateVisible": true,
+    "attestationControlsVisible": {
+      "terms": true,
+      "rights": true
+    },
+    "requiredInputState": "商品画像未選択",
+    "generateButtonDisabled": true,
+    "providerSubmitDispatched": false
+  },
+  "networkReadback": {
+    "source": "performance_resource_timing",
+    "historicalReplay": false,
+    "consoleCount": 0,
+    "redactionApplied": true,
+    "observedEndpointFamilies": [
+      "/api/auth/get-session",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/profile",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/brands",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/image-ai/usage",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/heavy/entitlement?action=generate-image"
+    ],
+    "requestBodiesOrCredentialsRead": false
+  },
+  "businessCompletion": {
+    "providerReceipt": "unverified",
+    "sourceSync": "unverified",
+    "reconciliation": "unverified"
+  },
+  "cleanup": {
+    "schema": "aos.chrome_companion.owner_cleanup_receipt.v1",
+    "ok": true,
+    "sessionClosed": true,
+    "taskTabClosed": true,
+    "leasesReleased": 1,
+    "retained": [],
+    "unknown_effect": [],
+    "externalActionExecuted": false,
+    "recorded_at": "2026-09-27T08:05:30.349Z"
+  },
+  "decision": "no_権限がありません_blocker;_generation_is_fail_closed_until_input_plus_terms_plus_request_scoped_rights_attestation_are_complete"
+}
