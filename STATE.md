@@ -23091,3 +23091,6 @@ Light parity/provider、video boundary、Canvas/provider persistence、UI contro
 # Heavy Chain current state — 2026-09-27 r573
 
 H601/H602のローカル契約は実装済みだがoperator acceptanceは未完了。H602 productionはquota false、checkout true、no-real-charge proof 0、transaction/entitlement readback false。G618はCloudflare live baseline不足で停止。正本は`work/heavy-chain-ops-boundary-readback-20260927-r1.json`。Goal active。
+# Heavy Chain current state — 2026-09-27 r574
+
+strict release gateは現行HEADで未合格。失敗はproduction monitor/UI、G618 freshness、production H602、generation scorecardの4件。未証明artifactの捏造や外部効果は行っていない。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r6.json`。Goal active。
