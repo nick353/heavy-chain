@@ -23549,3 +23549,7 @@ Generation scorecard verifierをOpenAI provider/backend provenance必須へ強�
 # Heavy Chain current state — 2026-09-28 r685
 
 同じ既存APIキーをローテーションせず、値を表示・保存せずにOpenAI `GET /v1/models`をfresh再確認。キー形状は存在、`sk-proj-`、164文字、空白/バックスラッシュなしで、応答はHTTP 401 `invalid_request_error` / `invalid_api_key`。これはcredentialがモデル・課金・組織/プロジェクト境界以前にOpenAI側で拒否されている状態であり、同じ値で生成を再送しても復旧しない。production/provider/deploy/billing/publication/video変更は0、Goal active。正本は`work/heavy-chain-openai-api-auth-readback-20260928-r3.json`。
+
+# Heavy Chain current state — 2026-09-28 r686
+
+Opus 5.5の更新plan `aa040f17-6308-444f-8290-cfc78589de2a`で「同じキー・ローテーションなし」を新しい不変制約として固定。Astra engineering package `heavy-chain-no-rotation-20260928-r2`はbounded specificationを返したが、native invocation identityを独立検証できないためblockedとして記録し、実装起動は許可していない。キー値の表示・保存・変更、外部生成・deploy・課金・公開・動画変更は0。Heavy 4/4、Light 22/22、scorecard provenance 3/3、OpenAI static 7/7をfresh PASS。strict gateもfresh実行し、production monitor/UI、G618、H602、generation scorecardの4項目のみFAIL。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`とAdaptive dispatch readback。Goal active。

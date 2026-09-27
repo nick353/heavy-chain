@@ -12064,3 +12064,7 @@ Chrome Companionの同一task-owned read-only sessionでOpenAI PlatformのAPI-ke
 # Goal progress — 2026-09-28 r685
 
 同じAPIキーをローテーションせず、値を表示・保存せずにOpenAI公式Bearer認証のread-only `GET /v1/models`をfresh再確認。キー形状は存在、`sk-proj-`、164文字、空白/バックスラッシュなしで、HTTP 401 `invalid_request_error` / `invalid_api_key`を取得した。これはcredential自体がOpenAI側で拒否されている証拠で、同じ値のままprovider生成を再送しても復旧しない。現時点で安全に進められるコード側のOpenAI固定・Light parity・provenance gateは完了済みだが、認証済みproduction生成receipt、remote save/reuse/reload/reconciliation、monitor/UI、G618、H602、strict gateは未完了。provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-openai-api-auth-readback-20260928-r3.json`。
+
+# Goal progress — 2026-09-28 r686
+
+ユーザー条件の変更（既存キーをそのまま使い、ローテーションしない）をOpus 5.5でplan `aa040f17-6308-444f-8290-cfc78589de2a`へ反映した。401中は外部送信を増やさず、同一キーのread-only `GET /v1/models`が2xxになった後だけ一回の生成へ進む依存順を固定。Astra engineeringはbounded outputを返したが、実runtime invocation identityの独立証拠がないためblocked扱いで、実装へ昇格していない。fresh local回帰はHeavy OpenAI 4/4、Light provider 22/22、scorecard provenance 3/3、OpenAI static 7/7。strict gateは2026-09-27T17:36:22Z時点でmonitor/UI、G618、H602、generation scorecardの4項目FAIL。キーのローテーション・secret変更・provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`。

@@ -1,7 +1,7 @@
 {
   "schema": "heavy_chain.release_gate_current_readback.v1",
-  "capturedAt": "2026-09-27T17:25:46.262Z",
-  "sourceRevision": "874f489",
+  "capturedAt": "2026-09-27T17:36:22.731Z",
+  "sourceRevision": "29713bf",
   "command": "npm run verify:release-gate -- --command-timeout-ms 600000",
   "ok": false,
   "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
@@ -56,5 +56,15 @@
       "reason": "visual-scorecard.json is missing; no current 10-feature scorecard artifact exists"
     }
   ],
-  "nextSafeAction": "Do not fabricate any failed artifact. Keep the same-key 401 credential unchanged; only proceed to authenticated production readbacks after the existing credential becomes accepted externally."
+  "freshReadback": {
+    "strictGateSummary": "output/playwright/10m-product-readiness-g615/release-gate-summary.json",
+    "localRegressionEvidence": {
+      "heavyOpenAiProviderSelection": "4/4",
+      "lightProviderCoverage": "22/22",
+      "scorecardProviderProvenance": "3/3",
+      "openAiStaticReadiness": "7/7"
+    },
+    "sameKeyAuth": "unchanged; last read-only GET /v1/models was 401 invalid_api_key"
+  },
+  "nextSafeAction": "Do not fabricate any failed artifact. Keep the same-key 401 credential unchanged and do not add another auth probe until the external account/secret state is reported repaired; then perform exactly one same-source read-only 2xx recheck before any provider generation."
 }
