@@ -1,0 +1,92 @@
+{
+  "schema": "heavy-chain.current-requirement-matrix.v2",
+  "capturedAt": "2026-09-28",
+  "sourceRevision": "fbedddc",
+  "goalStatus": "active",
+  "currentWave": "image_generation",
+  "video": "deferred_by_user",
+  "externalEffects": 0,
+  "requirements": [
+    {
+      "id": "dirty-worktree",
+      "status": "pass",
+      "evidence": ["git status --short --branch", "fbedddc"]
+    },
+    {
+      "id": "light-parity",
+      "status": "local_contract_pass_production_unverified",
+      "evidence": ["Light provider/parity focused suites remain green"],
+      "remaining": "authenticated production route/provider parity and remote durable readback"
+    },
+    {
+      "id": "auth-continuation",
+      "status": "local_auth_pass_openai_auth_invalid",
+      "evidence": ["cloudflare/consumer-auth npm test: 78/78", "Heavy API npm test: 114/114", "heavy-chain-openai-api-auth-readback-20260928-r1.json"],
+      "remaining": "valid OpenAI credential and authenticated Heavy consumer session/entitlement readback"
+    },
+    {
+      "id": "image-provider",
+      "status": "not_ready",
+      "evidence": ["heavy-chain-image-production-version-config-readback-20260927-r1.json"],
+      "remaining": "production 100% version is workers_ai; Sunburst source migration and verified Astra engineering gate are missing"
+    },
+    {
+      "id": "provider-receipt",
+      "status": "legacy_workers_receipt_only",
+      "evidence": ["heavy-chain-heavy-entitlement-generation-readback-20260927-r3.md"],
+      "remaining": "same-run OpenAI receipt after approved migration; do not count the legacy Workers AI receipt"
+    },
+    {
+      "id": "remote-durable",
+      "status": "local_contract_only",
+      "evidence": ["provider persistence/readback local suite: 14/14"],
+      "remaining": "authenticated save -> reuse -> reload -> reconciliation against live D1/R2"
+    },
+    {
+      "id": "video-provider",
+      "status": "deferred_by_user_current_wave",
+      "evidence": ["no video source/provider/deploy changes in current wave"]
+    },
+    {
+      "id": "monitor-operations",
+      "status": "not_ready",
+      "evidence": ["heavy-chain-release-gate-current-readback-20260928-r1.json"],
+      "remaining": "fresh monitor/UI pair and G618 scale-ops baseline; monitor URL/brand/token inputs are absent"
+    },
+    {
+      "id": "security-rights",
+      "status": "static_pass_operator_decision_missing",
+      "evidence": ["fresh H601/G620/G632/G633 checks in current release gate"],
+      "remaining": "final operator/legal decision and required policy locators"
+    },
+    {
+      "id": "billing",
+      "status": "production_not_ready",
+      "evidence": ["fresh H602 static check; production H602 failed in current gate"],
+      "remaining": "quota, checkout-disabled, redacted no-charge proof, transaction/entitlement readback, operator release decision"
+    },
+    {
+      "id": "quality-release",
+      "status": "not_ready",
+      "evidence": ["current release gate generation scorecard failure"],
+      "remaining": "current 10-feature visual scorecard, fresh monitor/UI, and all other gate failures"
+    }
+  ],
+  "dependencyOrder": [
+    "adaptive-capacity-recovery",
+    "verified-astra-engineering-gate",
+    "sunburst-source-migration",
+    "deterministic-regression",
+    "valid-openai-auth-readback",
+    "authorized-production-deploy-and-version-readback",
+    "authenticated-openai-provider-receipt",
+    "remote-save-reuse-reload-reconciliation",
+    "quality-and-business-readback",
+    "strict-release-gate"
+  ],
+  "completion": {
+    "ok": false,
+    "reason": "OpenAI credential, Astra gate, production provider binding, remote persistence, operations, billing, and quality requirements remain unproven",
+    "nextConcreteAction": "Do not retry the invalid credential or replay a blocked Astra package; resume only after fresh capacity and valid credential state changes."
+  }
+}
