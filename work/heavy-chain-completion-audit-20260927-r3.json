@@ -1,0 +1,31 @@
+{
+  "schema": "heavy_chain_completion_audit.v2",
+  "capturedAt": "2026-09-27T07:29:30Z",
+  "sourceRevision": "97ce952",
+  "goalStatus": "active",
+  "requirements": [
+    {"id":"dirty_worktree","status":"pass","evidence":["git status --short","git diff --check","97ce952"]},
+    {"id":"lightchain_parity","status":"production_readback_plus_local_contract_with_one_stale_assertion","evidence":["route parity 34/34","unified workflow 6/6","source board 8/8","material 28/28","UI boundaries 21/21","provider adapter 17/17","production all-feature readback"],"gap":"legacy oriented-design-persisted-history assertion targets removed UI and remains non-gating"},
+    {"id":"auth_continuity","status":"partial","evidence":["auth local suites 27/27","Companion authenticated route evidence"],"gap":"monitor bearer/brand scope and non-local auth-state are unavailable"},
+    {"id":"provider_generation_receipt","status":"not_proven","evidence":["10m completion audit","generation scorecard missing"],"gap":"same-run authenticated provider receipt with image/job/storage readback is missing"},
+    {"id":"remote_save_reuse_reload_reconciliation","status":"local_contract_only","evidence":["durable/readback local 23/23","Canvas/Library contract 43/43","printing contract 247/247"],"gap":"authenticated workspace POST/readback and canonical R2 reconciliation are missing"},
+    {"id":"video_provider","status":"boundary_only","evidence":["video boundary/contract/editor persistence local suites"],"gap":"production video provider receipt and durable media reconciliation are missing"},
+    {"id":"monitor_and_operations","status":"operations_pass_monitor_incomplete","evidence":["G614/G632/G633 local/production ops readback","release gate"],"gap":"production monitor/UI pair and G618 fresh baseline are missing"},
+    {"id":"security_rights_billing_boundaries","status":"local_guard_pass_human_completion_open","evidence":["G620 security pass","H601 legal safety pass","H602 Cloudflare contract pass","operator boundary readback"],"gap":"H601 operator/legal inputs and H602 quota/checkout/no-real-charge/transaction/operator proof are missing"},
+    {"id":"strict_release_gate","status":"fail","evidence":["release gate 2026-09-27T07:23:14.167Z","generation scorecard 2026-09-27T07:25:30.208Z"],"gap":"four failures remain: production monitor/UI, G618, H602 completion, generation scorecard"}
+  ],
+  "local_contract_additions":["printing 247/247","Canvas/Library 43/43","H602 billing readiness pass","security audit pass"],
+  "nextDependencyOrder":[
+    "official monitor/auth/provider connection and exact production origin",
+    "production monitor/UI pair plus G618 fresh baseline",
+    "H601 operator/counsel safety decision and locator inputs",
+    "one same-run authenticated Heavy provider generation receipt",
+    "private R2 save/reuse/reload/reconciliation",
+    "video provider receipt and durable media reconciliation",
+    "H602 live constraint, quota/checkout/no-real-charge/transaction proof and operator decision",
+    "generation visual scorecard from the same accepted run",
+    "strict release gate ok=true"
+  ],
+  "externalEffects":{"provider":false,"billing":false,"publication":false,"secretInsertion":false,"destructiveCleanup":false},
+  "completionDecision":"not_complete"
+}
