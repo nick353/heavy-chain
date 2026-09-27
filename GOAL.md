@@ -11796,3 +11796,7 @@ Opus計画に対応するreceipt/readback経路をfresh source auditで固定し
 # Goal progress — 2026-09-27 r617
 
 画像移行前のdeterministic baselineをfresh実行した。Heavy API suite `114/114`、provider persistence/readback `14/14`、Cloudflare image QA contract `6/6`がPASS。これは現行旧モデル既定のローカル契約を示すだけで、新しい`gpt-image-2.5-sunburst`実装、authenticated production OpenAI receipt、remote readback、provider-aware QA完了を示さない。正本は`work/heavy-chain-openai-image-baseline-tests-20260927-r1.json`。コード/provider/R2/billing/deploy/publication/secret変更は0、Goal active。
+
+# Goal progress — 2026-09-27 r618
+
+旧モデル参照をfresh auditし、実装対象を`openai-image.ts`だけでなくrequest parserの`image-ai-contracts.ts`まで確定した。parserがprovider解決前にモデルを拒否するため、新規`gpt-image-2.5-sunburst`を受け入れるにはこの経路も同じallowlist境界で扱う必要がある。GeneratePageとlegacy explicit fixturesは別々に保持する。これは技術境界の追加記録で、コード/provider/R2/billing/deploy/publication/secret変更は0。正本は`work/heavy-chain-openai-image-model-surface-audit-20260927-r1.json`、Astra blockerは`native_start_receipt_metadata_unavailable`、Goal active。

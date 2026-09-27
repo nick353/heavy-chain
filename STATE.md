@@ -23281,3 +23281,7 @@ Opus計画の実装境界を、`image-ai.ts`（receipt/readback、D1/R2再検証
 # Heavy Chain current state — 2026-09-27 r617
 
 画像移行前baselineをfresh取得。Heavy API `114/114`、provider persistence/readback `14/14`、Cloudflare image QA contract `6/6`がPASS。現行adapter/receiptの回帰基準は固定できたが、`gpt-image-2.5-sunburst` default、provider-aware QA、authenticated production receipt/readbackは未実装・未証明。Astra packageは`native_start_receipt_metadata_unavailable`、外部provider/R2/deploy/billing/publication/secretは0。正本は`work/heavy-chain-openai-image-baseline-tests-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r618
+
+旧モデル参照のfresh auditで、変更時の必須surfaceを`openai-image.ts`、`image-ai-contracts.ts`、GeneratePage、adapter/runtime fixturesへ分離した。request parserの独立allowlistを見落とすとprovider到達前に新モデルが拒否されるため、Astra engineering scopeへ渡す。legacy explicit fixturesは互換証拠として保持し、fallback/replay/videoは変更しない。Astra blockerは`native_start_receipt_metadata_unavailable`、外部効果0。正本は`work/heavy-chain-openai-image-model-surface-audit-20260927-r1.json`、Goal active。

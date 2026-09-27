@@ -1,0 +1,50 @@
+{
+  "schema": "heavy_chain.openai_image.model_surface_audit.v1",
+  "captured_at": "2026-09-27",
+  "source_revision": "d5f4c59",
+  "scope": "image_generation_only",
+  "findings": [
+    {
+      "path": "cloudflare/heavy-api/src/openai-image.ts",
+      "ranges": ["6-17", "60-75"],
+      "finding": "OpenAI adapter allowlists legacy models and defaults generation/edit resolution to gpt-image-1-mini; it must be changed within the accepted plan."
+    },
+    {
+      "path": "cloudflare/heavy-api/src/image-ai-contracts.ts",
+      "ranges": ["5", "190-207"],
+      "finding": "The request parser independently validates caller generationModel/providerModel against an OpenAI model set. Any new gpt-image-2.5-sunburst default or explicit selection must include this parser surface or it will fail before provider resolution."
+    },
+    {
+      "path": "src/pages/GeneratePage.tsx",
+      "ranges": ["651-660"],
+      "finding": "OpenAI UI option still defaults to gpt-image-1-mini when the provider is selected."
+    },
+    {
+      "path": "cloudflare/heavy-api/test/openai-image.test.ts",
+      "ranges": ["10", "31", "38", "44-53", "73-78"],
+      "finding": "Adapter tests encode legacy generation/edit defaults and must be updated with explicit legacy compatibility plus the new generation default."
+    },
+    {
+      "path": "cloudflare/heavy-api/test/image-ai.test.ts",
+      "ranges": ["182", "199-212"],
+      "finding": "Runtime fixtures explicitly set legacy OpenAI models; these are compatibility fixtures and should remain explicit rather than silently changing."
+    }
+  ],
+  "compatibility_boundary": {
+    "new_default": "gpt-image-2.5-sunburst",
+    "legacy_receipts_readable": ["gpt-image-1-mini", "gpt-image-1", "gpt-image-1.5", "gpt-image-2", "chatgpt-image-latest", "@cf/black-forest-labs/flux-2-klein-4b"],
+    "explicit_selection": "preserve supported explicit choices; reject unsupported values before admission",
+    "fallback": "none",
+    "replay": "none",
+    "video": "unchanged"
+  },
+  "external_effects": {
+    "provider_calls": 0,
+    "r2_writes": 0,
+    "deploys": 0,
+    "billing": 0,
+    "publication": 0,
+    "secret_reads": 0
+  },
+  "blocker": "Astra package run_openai_image_astra_engineering_20260927_r1 remains blocked by native_start_receipt_metadata_unavailable; no source mutation is authorized until a verified Astra engineering specification exists."
+}
