@@ -23449,3 +23449,7 @@ Cloudflare production secret名は存在するが値は未読。local OpenAI key
 # Heavy Chain current state — 2026-09-27 r659
 
 公式docsではSunburst modelとdated snapshot、Image API generation/edit endpointsを確認。一方local allowlist/default・bundleには未反映で、Astra verified engineering receiptが必要。organization verification may be required、認証/実provider/remote reconciliationは未完、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r660
+
+Astra再開用の画像移行packet v2を固定。official model evidenceとsource ownership、no-replay/legacy receipt境界、fresh evidence、runtime/auth blockersを集約。source変更・provider submitは0、動画はdeferred、Goal active。

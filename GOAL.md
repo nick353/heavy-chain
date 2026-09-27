@@ -11964,3 +11964,7 @@ Goal全体のread-only completion auditをfresh実行。73 goalはaccepted、G61
 # Goal progress — 2026-09-27 r659
 
 公式OpenAI docsをfresh確認。`gpt-image-2.5-sunburst`とdated snapshot `gpt-image-2.5-sunburst-2026-09-08`は公式Image APIのgeneration/edit modelとして存在し、organization verificationが必要になる場合がある。一方、Heavyのlocal allowlist/defaultとdry-run bundleには未反映。公式仕様を根拠化したが、Astra設計receipt前のsource変更・provider呼出しは行っていない。正本は`work/heavy-chain-openai-image-official-model-readback-20260927-r1.json`。
+
+# Goal progress — 2026-09-27 r660
+
+Astra再開時に渡せる画像移行packet v2を作成。公式Sunburst根拠、owned source surfaces、legacy receipt/no-replay境界、fresh local/production evidence、runtime/auth blockers、必要なAstra outputを一つに固定した。source mutationとprovider submitは0、動画はdeferred、Goal active。正本は`work/heavy-chain-openai-image-astra-implementation-packet-20260927-r2.json`。

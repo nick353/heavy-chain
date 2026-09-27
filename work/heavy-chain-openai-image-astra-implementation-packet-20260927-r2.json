@@ -1,0 +1,73 @@
+{
+  "schema": "heavy-chain.openai-image-astra-implementation-packet.v2",
+  "capturedAt": "2026-09-27T11:42:36Z",
+  "sourceRevision": "2d687edd5470b263731786d969abf3b63e5145d5",
+  "handoffType": "existing_accepted_intent_with_fresh_official_model_evidence",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "sourceMutation": false,
+    "externalEffects": 0,
+    "providerSubmit": false,
+    "billing": false,
+    "deploy": false
+  },
+  "acceptedIntent": {
+    "plan": "work/heavy-chain-openai-image-opus-plan-20260927-r2.json",
+    "default": "gpt-image-2.5-sunburst",
+    "datedSnapshotOption": "gpt-image-2.5-sunburst-2026-09-08",
+    "backend": "openai-images-api",
+    "imageEndpoints": ["/v1/images/generations", "/v1/images/edits"],
+    "preserveLegacyReceiptReadback": true,
+    "rejectUnsupportedProviderOrModel": true,
+    "noFallback": true,
+    "noReplay": true,
+    "mockOnlyQA": true,
+    "videoDiff": false
+  },
+  "officialModelEvidence": {
+    "artifact": "work/heavy-chain-openai-image-official-model-readback-20260927-r1.json",
+    "sources": [
+      "https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst",
+      "https://developers.openai.com/api/docs/guides/image-generation",
+      "https://developers.openai.com/api/reference/cli/resources/images/methods/generate"
+    ],
+    "organizationVerificationMayBeRequired": true
+  },
+  "ownedSourceSurfaces": [
+    {"path": "cloudflare/heavy-api/src/openai-image.ts", "lines": "4-17,52-74,110-158"},
+    {"path": "cloudflare/heavy-api/src/image-ai-contracts.ts", "lines": "1-5,190-205"},
+    {"path": "cloudflare/heavy-api/src/image-ai.ts", "lines": "42-64,198-234,272-315,351-515"},
+    {"path": "src/pages/GeneratePage.tsx", "lines": "650-662"},
+    {"path": "src/components/ChatEditor.tsx", "lines": "162-170"},
+    {"path": "src/pages/CanvasEditorPage.tsx", "lines": "2375-2381"},
+    {"path": "scripts/hc-10m-real-generation-qa.mjs", "lines": "22-145"},
+    {"path": "scripts/verify-provider-persistence-readback.test.ts", "lines": "69-178,264-267"}
+  ],
+  "freshEvidence": {
+    "heavyApiRegression": "114/114",
+    "lightImageParity": "122/122",
+    "imageLocalContracts": "23/23",
+    "productionProvider": "workers_ai",
+    "localCandidateProvider": "openai",
+    "sunburstInCurrentBundle": false,
+    "authenticatedProviderReceipt": false,
+    "remoteSaveReuseReloadReconciliation": false
+  },
+  "requiredAstraOutput": [
+    "verified start receipt with actual model/effort and existing claim context",
+    "bounded parser/backend/UI/QA specification using official Sunburst evidence",
+    "legacy receipt/readback compatibility decision",
+    "explicit no-fallback/no-replay and video-unchanged confirmation",
+    "bounded Luna handoff only after engineering gate"
+  ],
+  "hardBlockers": [
+    "adaptive_runtime_process_absent",
+    "native_start_receipt_metadata_unavailable",
+    "local_OpenAI_key_rejected_401",
+    "Heavy_consumer_auth_session_and_brand_context_absent",
+    "do_not_relaunch_same_claim_or_manual_claim",
+    "do_not_mutate_source_before_verified_astra_gate"
+  ],
+  "nextAction": "When Adaptive runtime reconnects normally, read the existing Astra claim/run with this packet; do not replay the closed transport or manually claim it."
+}
