@@ -11155,7 +11155,7 @@ Light Chain dashboardを同一task-owned authenticated Companion profileでfresh
 
 # Goal progress — 2026-09-27 r460
 
-Heavy/Lightのpermission境界をsourceとlocal契約で再監査した。runtime sourceで`権限がありません`を描画するのはLight Chain専用componentのみで、Heavy-owned `campaign-image`/`model-matrix`は明示的なHeavy terms/rights gateへ分離されている。parity 12件、routing 30件、material 28件、video boundary 1件、typecheckをfresh passし、Lightのplan-lockを壊す修正は不要と確定した。証跡は`work/heavy-chain-heavy-permission-boundary-audit-20260927-r1.json`。provider生成、rights承諾、課金、公開は0。strict gate残件4件は不変。Goal active。
+Heavy/Lightのpermission境界をsourceとlocal契約で再監査した。Heavy-owned生成surfaceにはLightの`権限がありません` plan-lock badgeがなく、`campaign-image`/`model-matrix`は明示的なHeavy terms/rights gateへ分離されている。汎用認証エラー文言はfail-closedのため維持する。parity 12件、routing 30件、material 28件、video boundary 1件、typecheckをfresh passし、Lightのplan-lockを壊す修正は不要と確定した。証跡は`work/heavy-chain-heavy-permission-boundary-audit-20260927-r1.json`。provider生成、rights承諾、課金、公開は0。strict gate残件4件は不変。Goal active。
 
 # Goal progress — 2026-09-27 r461
 
