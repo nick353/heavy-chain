@@ -23070,3 +23070,6 @@ Runwayの未接続状態を反映したcompletion audit r5をfresh固定した�
 # Heavy Chain current state — 2026-09-27 r567
 
 Runway permission/installationをfresh readbackし、未インストール・未接続でprovider tool未露出のexact blockerを固定した。global permissionはlow-risk actionsだが、Runway接続証跡にはならない。正本は`work/heavy-chain-provider-connection-readback-20260927-r2.json`。Goal active。
+# Heavy Chain current state — 2026-09-27 r568
+
+現行HEAD `6e8b162`に対するstrict release gateを`2026-09-27T08:24:47.245Z`にfresh実行した。`ok=false`、失敗はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecardの4件。未証明のprovider/R2/videoを合格扱いにせず、外部効果・課金・公開・deploy・破壊cleanup・secret読取は0。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r5.json`。Goal active。

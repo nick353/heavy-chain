@@ -11586,3 +11586,6 @@ Runway接続未確認を反映して要件別completion auditを更新した。p
 # Goal progress — 2026-09-27 r567
 
 Runwayの接続権限をread-only確認し、現ワークスペースでは`installed=false`、`connectionConfirmed=false`、permission readbackは`not_installed`、global permissionは`Allow low-risk actions`だった。provider toolが未露出である正確なblockerを`work/heavy-chain-provider-connection-readback-20260927-r2.json`へ固定した。接続・生成・課金・secret読取は0。Goal active。
+# Goal progress — 2026-09-27 r568
+
+現行HEAD `6e8b162`に対して`npm run verify:release-gate --silent`を一度だけfresh実行し、`2026-09-27T08:24:47.245Z`、`exitCode=1`、`ok=false`を確認した。失敗は4件（production monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecard）で前回から変わらない。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r5.json`と`output/playwright/10m-product-readiness-g615/release-gate-summary.json`。generation submit、課金/checkout、公開、deploy、破壊cleanup、provider receipt、R2 durable chain、video receiptは0。Goal active。
