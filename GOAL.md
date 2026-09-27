@@ -10905,3 +10905,8 @@ production artifactまたはoperator/provider/monitor認証証跡で、未設定
 H602 production completion readbackをfresh実行した。migrationsとredacted sandbox testerは確認できたが、quota enforcement、checkout
 disabled、no-real-charge proof、transaction/entitlement readback、operator release decision、live constraint readbackが未達で、
 `ok=false`を維持した。Apple ID/OTP、課金、購入、billing設定変更、公開は行っていない。H602を完了扱いにせずfail-closedで保持する。Goal active。
+
+# Goal progress — 2026-09-27 r419
+
+H601 operator-readinessをfresh確認した。静的guardはpassだが、operator/counsel最終決定とTerms/Privacy、安全・保持・権利・参照・
+likeness・marketing wordingの10項目が未添付で、`acceptance=not_claimed`。法務判断をCodexが代行せず、H601 production gateを未達のまま維持する。Goal active。

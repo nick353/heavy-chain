@@ -22353,3 +22353,9 @@ G618（612.19h stale）、H601 production rights（60.48h stale）、H602 produc
 `liveProductionReadbackPerformed=false`、`ok=false`を確認した。migrations適用済み・sandbox tester登録済みだが、quota enforcementがfalse、
 production checkoutがtrue、verified no-real-charge proofが0、transaction/entitlement readbackがfalse、operator final checkout decisionと
 live constraint readbackが未取得である。Apple credential/OTP、purchase、billing mutationは行わず、H602はfail-closedのまま保持した。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r419
+
+`npm run verify:h601-operator-readiness`をfresh実行し、product-side static guardはpassしたが、operator final decisionは未添付で
+`acceptance=not_claimed`のままを確認した。Terms/Privacy locator、retention・upload rights・brand/reference・person/likeness・copyright/
+marketing・commercial-useの各方針、counsel/operator reviewの10項目が欠落している。法務最終化を推測で埋めず、H601は未完了のまま保持した。Goal active。
