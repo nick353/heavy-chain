@@ -364,6 +364,11 @@ const commandChecks = [
     args: ['run', 'verify:openai-provider', '--silent'],
   },
   {
+    name: 'generation scorecard provider provenance regression',
+    command: 'npm',
+    args: ['run', 'test:generation-scorecard-provider', '--silent'],
+  },
+  {
     name: 'generation scorecard',
     command: 'npm',
     args: ['run', 'verify:generation-scorecard', '--silent'],

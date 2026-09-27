@@ -134,6 +134,7 @@
     "verify:10m-completion:incomplete-ok": "node scripts/verify-10m-completion-audit.mjs --allow-incomplete",
     "verify:g610-retention": "npm run build && node scripts/verify-g610-retention-project-search.mjs",
     "verify:release-gate": "node scripts/verify-release-gate-unified.mjs",
+    "test:generation-scorecard-provider": "node --test scripts/verify-generation-quality-scorecard-provider.test.mjs",
     "test:release-gate-lightchain-manifest": "node --test scripts/verify-release-gate-lightchain-manifest.test.mjs",
     "test:release-gate-lightchain": "node --test scripts/verify-release-gate-lightchain-manifest.test.mjs scripts/verify-release-gate-lightchain-contract.test.mjs",
     "verify:chrome-plugin-proof": "node scripts/verify-chrome-plugin-proof.mjs",

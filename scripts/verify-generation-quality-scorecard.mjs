@@ -32,6 +32,8 @@ const DEFAULT_SCORECARDS = [
     scorecard: 'output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json',
     readback: 'output/playwright/hc-10m-real-generation-qa-20260626/readback-after-worker.json',
     expectedFeatures: Object.keys(FEATURE_REQUIREMENTS),
+    requiredProvider: 'openai',
+    requiredBackendProvider: 'openai-images-api',
   },
   {
     name: 'polish',
@@ -44,6 +46,8 @@ const DEFAULT_SCORECARDS = [
     scorecard: 'output/playwright/g677-openai-mini-low-cost-proof/visual-scorecard.json',
     readback: 'output/playwright/g677-openai-mini-low-cost-proof/readback-merged-before-cleanup.json',
     expectedFeatures: Object.keys(FEATURE_REQUIREMENTS),
+    requiredProvider: 'openai',
+    requiredBackendProvider: 'openai-images-api',
   },
 ];
 
@@ -53,6 +57,8 @@ const scorecardPath = args.scorecard || args.path;
 const readbackPath = args.readback || null;
 const allowMissingReadback = Boolean(args['allow-missing-readback']);
 const expectedFeatures = parseExpectedFeatures(args['expected-features']);
+const requiredProvider = parseOptionalString(args['required-provider']);
+const requiredBackendProvider = parseOptionalString(args['required-backend-provider']);
 
 if (!scorecardPath) {
   runDefaultScorecards();
@@ -99,6 +105,7 @@ if (!readback && !allowMissingReadback) {
 if (readback) {
   validateReadback(readback, rows, issues);
   validateScorecardReadbackPairing(readback, rows, issues);
+  validateProviderProvenance(readback, requiredProvider, requiredBackendProvider, issues);
 }
 
 for (const row of rows) {
@@ -113,6 +120,9 @@ const result = {
   readbackPath: readbackPath ? path.relative(process.cwd(), path.resolve(process.cwd(), String(readbackPath))) : null,
   rows: rows.length,
   summary,
+  providerRequirement: requiredProvider || requiredBackendProvider
+    ? { provider: requiredProvider, backendProvider: requiredBackendProvider }
+    : null,
   passed: issues.length === 0,
   issues,
 };
@@ -249,6 +259,41 @@ function validateScorecardReadbackPairing(readback, rows, issues) {
   }
 }
 
+function validateProviderProvenance(readback, expectedProvider, expectedBackendProvider, issues) {
+  if (!expectedProvider && !expectedBackendProvider) return;
+
+  const candidates = [
+    readback,
+    readback?.receipt,
+    readback?.providerReceipt,
+    readback?.provider_provenance,
+    ...arrayFrom(readback?.jobs),
+    ...arrayFrom(readback?.images),
+    ...arrayFrom(readback?.storage),
+  ];
+  const pairs = candidates
+    .filter((value) => value && typeof value === 'object' && !Array.isArray(value))
+    .map((value) => ({
+      provider: typeof value.provider === 'string' ? value.provider : null,
+      backendProvider: typeof value.backendProvider === 'string'
+        ? value.backendProvider
+        : (typeof value.backend_provider === 'string' ? value.backend_provider : null),
+    }))
+    .filter((value) => value.provider || value.backendProvider);
+
+  if (!pairs.length) {
+    issues.push('readback_provider_provenance_missing');
+    return;
+  }
+
+  const matching = pairs.some((value) =>
+    (!expectedProvider || value.provider === expectedProvider) &&
+    (!expectedBackendProvider || value.backendProvider === expectedBackendProvider));
+  if (!matching) {
+    issues.push(`readback_provider_provenance_mismatch:${expectedProvider || '*'}:${expectedBackendProvider || '*'}`);
+  }
+}
+
 function validateExpectedFeatures(rows, expected, issues) {
   if (!expected.length) return;
   const seen = new Set(rows.map((row) => row.feature).filter(Boolean));
@@ -312,6 +357,12 @@ function parseExpectedFeatures(value) {
   return String(value).split(',').map((item) => item.trim()).filter(Boolean);
 }
 
+function parseOptionalString(value) {
+  if (!value || value === true) return null;
+  const normalized = String(value).trim();
+  return normalized || null;
+}
+
 function artifactReadIssue(kind, absolutePath, error) {
   const relativePath = path.relative(process.cwd(), absolutePath);
   const code = error?.code === 'ENOENT' ? 'missing' : 'invalid';
@@ -321,7 +372,7 @@ function artifactReadIssue(kind, absolutePath, error) {
 function runDefaultScorecards() {
   const results = [];
   for (const item of DEFAULT_SCORECARDS) {
-    const result = spawnSync(process.execPath, [
+    const commandArgs = [
       fileURLToPath(import.meta.url),
       '--scorecard',
       item.scorecard,
@@ -329,7 +380,11 @@ function runDefaultScorecards() {
       item.readback,
       '--expected-features',
       item.expectedFeatures.join(','),
-    ], { cwd: process.cwd(), encoding: 'utf8' });
+    ];
+    if (item.requiredProvider) {
+      commandArgs.push('--required-provider', item.requiredProvider, '--required-backend-provider', item.requiredBackendProvider);
+    }
+    const result = spawnSync(process.execPath, commandArgs, { cwd: process.cwd(), encoding: 'utf8' });
     const stdout = result.stdout.trim();
     const stderr = result.stderr.trim();
     if (stdout) {
