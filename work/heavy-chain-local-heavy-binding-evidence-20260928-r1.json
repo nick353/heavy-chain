@@ -59,6 +59,10 @@
     "backendTypecheck": {
       "command": "npm run typecheck (cloudflare/heavy-api)",
       "exitCode": 0
+    },
+    "webTypecheck": {
+      "command": "npm run typecheck (repository root)",
+      "exitCode": 0
     }
   },
   "fileSha256": {
