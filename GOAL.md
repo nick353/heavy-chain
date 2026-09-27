@@ -11574,3 +11574,7 @@ completion auditを現行HEAD `68aa346`へ更新し、全要件を再分類し�
 # Goal progress — 2026-09-27 r564
 
 fresh source handoffのevidence fingerprint `e1a53b09218665e6f142f2c8922d612dd6d4dbf85ea058888271c8f6da128eae`を既存Opus planへ登録し、Adaptive planをversion 4へ更新した。`plan_valid=true`は維持、`engineering_ready=false`・`waiting_human`は変わらない。Astra packageの重複claim/startや代替routeは行っていない。Goal active。
+
+# Goal progress — 2026-09-27 r565
+
+実provider/video laneの接続可能性をfresh discoveryし、Runwayが利用可能だが未接続・未インストール状態であることを確認した。公式接続導線のsuggestionを発行したが、connectionConfirmedはfalseのまま保持。provider生成、receipt、課金、公開、secret読取は0。正本は`work/heavy-chain-provider-tool-discovery-20260927-r1.json`。Goal active。

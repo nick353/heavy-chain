@@ -23058,3 +23058,7 @@ strict release gateを同一HEADでfresh実行し、`2026-09-27T08:14:00.555Z`�
 # Heavy Chain current state — 2026-09-27 r564
 
 source handoffのevidence fingerprintをAdaptive planへ登録し、plan version 4・`plan_valid=true`をfresh確認した。engineering_readyはfalse、packageは引き続き`waiting_human`。重複起動、provider、課金、公開、secret、R2 mutationは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r565
+
+Runway providerの利用可能性をfresh確認し、接続導線を発行した。未接続のためprovider receiptやvideo receiptは未生成。正本は`work/heavy-chain-provider-tool-discovery-20260927-r1.json`。Goal active。
