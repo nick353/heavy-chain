@@ -23212,3 +23212,12 @@ fresh Companion readbackでHeavy生成URLを同一profile/generationから確認
 operation effect stateは`known_no_effect`、mutation dispatchはfalse、dispatch countは0、replay不可。provider/R2/billing/
 publication/secret読取は0、session cleanupはcompleted。正本は`work/heavy-chain-auth-hydration-delayed-readback-20260927-r1.json`。
 認証済みfeature surface到達は未証明で、次はauth hydration修復またはauthenticated task target確保。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r605
+
+現行HEADでOpenAI静的readiness `7/7`、QA fixture `6/6`、provider persistence `14/14`、Light provider adapter `17/17`、
+Light permission parity `12/12`をfresh PASS。source auditでは新規LightリクエストのWorkers既定が
+`ChatEditor.tsx`、`CanvasEditorPage.tsx`、`LightchainWorkbenchPage.tsx`、`GeneratePage.tsx`に残り、protected editとQA
+harnessもWorkers identity固定。Astra Light/QA packageは`native_start_receipt_metadata_unavailable`、runtimeは
+`capacity_blocked`。provider/R2/deploy/billing/publication/secret読取は0。正本は
+`work/heavy-chain-openai-boundary-test-readback-20260927-r1.json`。Goal active。

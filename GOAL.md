@@ -11728,3 +11728,11 @@ fresh Companion readbackでHeavy生成URLを同一profile/generationから確認
 dispatch countは0、replay不可、session cleanupはcompleted。provider/R2/課金/公開/secret読取は0で、認証済みfeature surface
 到達の証拠にはならない。正本は`work/heavy-chain-auth-hydration-delayed-readback-20260927-r1.json`。次はauth hydration修復
 または有効なauthenticated task targetの確保であり、タイムアウトしたreadを再送しない。Goal active。
+
+# Goal progress — 2026-09-27 r605
+
+現行HEADでOpenAI静的readiness `7/7`、QA fixture `6/6`、provider persistence `14/14`、Light provider adapter `17/17`、
+Light permission parity `12/12`をfresh PASSした。新規LightリクエストにはWorkers既定が残り、protected editとQA harnessも
+Workers identity固定であることをsource auditへ再固定した。Astra Light/QA packageは引き続き
+`native_start_receipt_metadata_unavailable`、runtimeは`capacity_blocked`。provider/R2/deploy/billing/publication/secret読取は0。
+正本は`work/heavy-chain-openai-boundary-test-readback-20260927-r1.json`。Goal active。
