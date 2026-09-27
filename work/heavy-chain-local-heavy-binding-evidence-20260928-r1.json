@@ -63,6 +63,11 @@
     "webTypecheck": {
       "command": "npm run typecheck (repository root)",
       "exitCode": 0
+    },
+    "webBuild": {
+      "command": "npm run build (repository root)",
+      "exitCode": 0,
+      "modulesTransformed": 2568
     }
   },
   "fileSha256": {

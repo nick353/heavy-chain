@@ -23681,3 +23681,4 @@ Sunburst未実装、Astra verified invocation/capacity、同じキーの401、�
 `npm run verify:release-gate -- --out output/playwright/heavy-release-gate-current-20260928-r3.json`をfresh実行。gateはFAILだが、未達は
 production monitor/UI、G618 scale baseline、production H602 billing readback、current generation visual scorecardの4項目に限定。
 generation submit、payment/checkout、publish、destructive cleanup、deployは全て未実行。正本は`output/playwright/heavy-release-gate-current-20260928-r3.json`とlocal binding evidence。
+その後、root `npm run build`もPASS（2,568 modules transformed）。これはproduction artifactのローカル生成成功であり、本番deployやprovider生成receiptではない。
