@@ -22359,3 +22359,9 @@ live constraint readbackが未取得である。Apple credential/OTP、purchase�
 `npm run verify:h601-operator-readiness`をfresh実行し、product-side static guardはpassしたが、operator final decisionは未添付で
 `acceptance=not_claimed`のままを確認した。Terms/Privacy locator、retention・upload rights・brand/reference・person/likeness・copyright/
 marketing・commercial-useの各方針、counsel/operator reviewの10項目が欠落している。法務最終化を推測で埋めず、H601は未完了のまま保持した。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r420
+
+Companion task statusをfresh readbackし、profile build provenance mismatchなし、connected=true、logical sessions/leases/pending
+operations=0、reconciliation active count=0、recovery state=done、task recovery primary blocker=nullを確認した。過去のquarantined
+task tabは1件あるがcleanup eligible=0で、foreign tabを採用・削除せず保持している。今回のtask-owned browser cleanupは完了。Goal active。

@@ -10910,3 +10910,9 @@ disabled、no-real-charge proof、transaction/entitlement readback、operator re
 
 H601 operator-readinessをfresh確認した。静的guardはpassだが、operator/counsel最終決定とTerms/Privacy、安全・保持・権利・参照・
 likeness・marketing wordingの10項目が未添付で、`acceptance=not_claimed`。法務判断をCodexが代行せず、H601 production gateを未達のまま維持する。Goal active。
+
+# Goal progress — 2026-09-27 r420
+
+Companionのtask-scoped cleanup/readinessをfresh確認した。接続・build provenanceは正常、session/lease/pending operationは0、active
+reconciliationは0、recoveryはdoneで、task blockerはnull。quarantined task tab 1件はcleanup eligibleではないため、foreign resourceの
+adoptionや削除は行っていない。ブラウザ側の安全なcleanup境界は完了。Goal active。
