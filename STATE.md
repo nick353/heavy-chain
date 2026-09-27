@@ -23305,3 +23305,7 @@ OpenAI readiness `7/7`、Cloudflare runtime `6/6`、Light unified workflow `6/6`
 # Heavy Chain current state — 2026-09-27 r623
 
 画像生成だけを現行waveに限定し、動画はdeferredとして保持。現行HEAD `db6cc3b`のsource boundaryを、Heavy server model/parser、Light client defaults、protected edit、QA receipt validator、persistence/readbackに分けてfresh記録した。新OpenAI default/provider-aware実装は未開始で、旧Workers receipt互換・no-fallback/no-replay・動画差分ゼロを受入条件として維持する。正本は`work/heavy-chain-provider-boundary-map-20260927-r1.json`。Adaptive transport closed、Astra start receipt不足、production provider/R2/reconciliation、H601/H602/G618、scorecard、strict releaseは未完了。provider/R2/billing/deploy/publication/secret/破壊的cleanupは0、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r624
+
+画像生成のfresh source searchで、LightchainWorkbenchのfallback metadata、LightchainMaterialWorkbenchとFittingのlegacy Workers fallback、Heavy serverのprovider selectionとD1/R2 receipt/readbackを追加確認した。新規provider dispatchの変更対象と既存readback互換面を分離し、未確認のfallback除去やscope拡張は行っていない。Adaptive/bootstrap processは不在で、closed transportへの再試行・手動claim・relaunchはしていない。正本は更新済み`work/heavy-chain-provider-boundary-map-20260927-r1.json`、Goal active。

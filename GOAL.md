@@ -11820,3 +11820,7 @@ H601/H602 operator readiness、H602 production completion、G618 scale-opsをfre
 # Goal progress — 2026-09-27 r623
 
 画像生成waveの未実装境界をfresh source auditで固定した。`openai-image.ts`と`image-ai-contracts.ts`の旧allowlist/default、ChatEditor・CanvasEditorPage・LightchainWorkbenchPage・GeneratePageのWorkers固定、protected editのWorkers identity固定、`hc-10m-real-generation-qa.mjs`のWorkers receipt固定、D1/R2 receipt/readback面を依存関係付きで`work/heavy-chain-provider-boundary-map-20260927-r1.json`へ記録した。動画laneはdeferredのまま変更せず、provider/R2/billing/deploy/publication/secret/破壊的cleanupは0。Adaptive transport closedとAstra native start receipt不足のためソース実装は未開始、Goal active。
+
+# Goal progress — 2026-09-27 r624
+
+画像生成の追加legacy surfaceをfresh検索で確認した。LightchainWorkbench、LightchainMaterialWorkbench、FittingのWorkers fallbackは新規provider dispatchではなく既存receipt/readback互換面として分類し、`cloudflare/heavy-api/src/image-ai.ts`のOpenAI既定・Workers明示fallback・D1/R2 commit/GET readbackをsource-of-truthとして追記した。Adaptive/bootstrap processは見つからず、無関係なopencode_go_rolesだけを確認したため、closed transportへの再接続・再dispatch・source mutationは行っていない。正本は更新済みの`work/heavy-chain-provider-boundary-map-20260927-r1.json`、Goal active。

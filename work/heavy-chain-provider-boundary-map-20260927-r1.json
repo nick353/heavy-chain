@@ -85,6 +85,43 @@
       }
     ]
   },
+  "additionalLegacySurfacesObserved": [
+    {
+      "path": "src/pages/LightchainWorkbenchPage.tsx",
+      "lines": "3167-3170,3194-3197,3580-3583",
+      "finding": "provider/backend fallback metadata still names Workers when provider result fields are absent; the main generation call already uses LIGHTCHAIN_GENERATION_PROVIDER.",
+      "classification": "legacy-readback-compatibility-review",
+      "scopeDecision": "Do not remove fallback values without Astra-approved provider-aware receipt semantics; missing provider fields must not be fabricated."
+    },
+    {
+      "path": "src/pages/LightchainMaterialWorkbenchPage.tsx",
+      "lines": "3677-3689",
+      "finding": "protected material/print result display falls back to Workers identity and Cloudflare model.",
+      "classification": "legacy-readback-compatibility-review",
+      "scopeDecision": "Keep outside the current bounded implementation until protected edit OpenAI mask/receipt contract is approved."
+    },
+    {
+      "path": "src/pages/FittingPage.tsx",
+      "lines": "1560-1564,1622-1625",
+      "finding": "fitting artifact history falls back backendProvider to cloudflare-workers-ai while preserving provider/model fields.",
+      "classification": "legacy-readback-compatibility-review",
+      "scopeDecision": "Do not broaden the image migration into fitting without a separate Astra decision; preserve existing readback fixtures."
+    },
+    {
+      "path": "cloudflare/heavy-api/src/image-ai.ts",
+      "lines": "42-63,198-220,284-327,624-648",
+      "finding": "server provider selection already defaults OpenAI and keeps Workers explicit; durable candidate commit and GET readback derive provider/backend/model from request and row metadata.",
+      "classification": "server-source-of-truth",
+      "scopeDecision": "Treat this as the persistence contract to protect while updating model allowlists and provider-aware QA."
+    }
+  ],
+  "freshSearchSummary": {
+    "searchedGlobs": ["src", "cloudflare", "scripts"],
+    "excluded": ["node_modules", "work"],
+    "observedWorkersIdentityReferences": "legacy fixtures, protected edit, fitting/material fallbacks, and QA harness",
+    "observedOpenAIDefaultReferences": "server configured provider plus GeneratePage selection; model remains gpt-image-1-mini",
+    "runtimeProcess": "no adaptive/bootstrap runtime process observed; only unrelated opencode_go_roles.py processes"
+  },
   "implementationDependencies": [
     "verified Astra engineering start receiptの復旧",
     "承認済みOpus image planを再利用したAstra bounded specification",
