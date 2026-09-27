@@ -10892,3 +10892,10 @@ business completion、deploy/live traffic-zeroは未証明のまま保持して�
 monitor/production QAに必要な環境変数の存在をfresh確認した（secret値は取得・表示していない）。Monitor API URL、brand ID、
 monitor token、Playwright auth state、QA image envは未設定で、既定のQA画像だけが存在する。従って、monitor/G618/mass-marketの
 正規producerを走らせるには環境側の認証バインドが必要であり、Cookieやtokenを推測・抽出して補うことはしない。Goal active。
+
+# Goal progress — 2026-09-27 r417
+
+strict release gateをfresh実行した（`capturedAt=2026-09-27T02:55:31.038Z`、`ok=false`）。security/H601 local/H602 local、
+typecheck、build、lint、diff-check、G614/G632/G633はpassし、失敗はproduction monitor/UI、mass-market QA、Lightchain all-feature、
+G618、H601 production rights、H602 production completion、generation scorecardの7件だけだった。残件はいずれも stale/missing
+production artifactまたはoperator/provider/monitor認証証跡で、未設定token/auth stateを推測して埋めることはしない。Goal active。
