@@ -1,0 +1,59 @@
+{
+  "schema": "heavy-chain.image-independent-contracts-readback.v1",
+  "capturedAt": "2026-09-27T11:07:21Z",
+  "sourceRevision": "9c03c1b",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "providerSubmit": false,
+    "deploy": false,
+    "payment": false,
+    "secretRead": false,
+    "externalEffects": 0
+  },
+  "checks": [
+    {
+      "command": "npm run test:lightchain-provider-coverage --silent",
+      "passed": 22,
+      "failed": 0,
+      "meaning": "Light non-video provider routing, rights, durable result and continuation contracts"
+    },
+    {
+      "command": "npm run test:lightchain-parity-contract --silent",
+      "passed": 9,
+      "failed": 0,
+      "meaning": "Light parity mapping/provenance contract"
+    },
+    {
+      "command": "npm run test:auth-session-recovery --silent",
+      "passed": 3,
+      "failed": 0,
+      "meaning": "bounded auth refresh/retry behavior"
+    },
+    {
+      "command": "npm run test:auth-hydration-readback --silent",
+      "passed": 4,
+      "failed": 0,
+      "meaning": "same-session hydration and cleanup evidence boundaries"
+    },
+    {
+      "command": "npm run verify:openai-provider --silent",
+      "passed": 7,
+      "failed": 0,
+      "meaning": "static OpenAI/Cloudflare transport and persistence contract"
+    }
+  ],
+  "aggregate": {
+    "passed": 45,
+    "failed": 0,
+    "localDeterministicGreen": true
+  },
+  "proofLimits": [
+    "does not prove authenticated production generation",
+    "does not prove OpenAI organization verification",
+    "does not prove real provider receipt or provider quality",
+    "does not prove live D1/R2 save-reuse-reload-reconciliation",
+    "does not prove browser business completion or strict release gate"
+  ],
+  "nextGate": "Resume Astra-approved image migration, then rerun these checks post-diff before any authorized production deployment."
+}
