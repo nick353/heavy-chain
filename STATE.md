@@ -1,4 +1,14 @@
-# Heavy Chain current state — 2026-09-27 r280
+# Heavy Chain current state — 2026-09-27 r281
+
+## Heavy feature readback and action boundary — 2026-09-27
+
+認証済みCompanionの同一owner sessionでHeavy生成系featureをread-only走査した。`model-matrix`と`design-gacha`は
+Heavy利用条件・terms checkbox checked・rights checkbox unchecked・FLUX.2 Klein 4B・disabled生成を確認した。
+`campaign-image`、`product-shots`、`scene-coordinate`はHeavy gate自体は表示されたが、`Heavy利用条件を確認できません`で
+terms/rights controlが出ず、生成はdisabledのまま。`chat-edit`はLight compatibility editorでHeavy gate対象外だった。
+これは旧Lightの`権限がありません`復活ではなく、featureごとのprovider/entitlement境界を可視化した証拠。provider dispatch・課金・公開・uploadは0、
+task-owned tab cleanupはcompleted。証跡は`work/heavy-chain-companion-heavy-feature-readback-20260927.json`。
+次はgenerate-image entitlement unavailableの原因切り分け、Heavy-enabled actionのprovider receipt→remote persistence、monitor contextである。
 
 ## Fresh Heavy authenticated brand readback — 2026-09-27
 

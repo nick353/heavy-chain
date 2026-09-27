@@ -1,4 +1,13 @@
-# Goal progress — 2026-09-27 r402
+# Goal progress — 2026-09-27 r403
+
+## Heavy feature readback and action boundary — 2026-09-27
+
+同一ownerの認証済みCompanion sessionで生成featureをread-only走査した。`model-matrix`／`design-gacha`はHeavy利用条件、
+terms checked、rights unchecked、FLUX.2 Klein 4B、disabled生成を確認。`campaign-image`／`product-shots`／`scene-coordinate`は
+Heavy gateはあるが`Heavy利用条件を確認できません`でterms/rights controlがなく、disabled生成を確認した。`chat-edit`はLight
+compatibility editorでHeavy gate対象外。provider dispatch・課金・公開・uploadは0、cleanupはcompleted。証跡は
+`work/heavy-chain-companion-heavy-feature-readback-20260927.json`。Goalはactiveで、次はgenerate-image entitlement unavailableの
+原因、Heavy-enabled actionのprovider receipt→remote persistence、monitor contextを処理する。
 
 ## Fresh Heavy authenticated brand readback — 2026-09-27
 
