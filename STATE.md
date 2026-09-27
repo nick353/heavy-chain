@@ -22926,3 +22926,7 @@ Lightchain route parity 34/34、material contract 28/28、UI control boundaries 
 # Heavy Chain current state — 2026-09-27 r531
 
 印刷系の現行local contractをfresh再検証した。`npm run test:fabric-material-synthesis`は3/3、`npm run test:printing-foundation`は244/244で合計247/247 pass。fabric material、manual printable surface、garment segmentation、surface conformer/ROI、composition、history、handoff、security boundaryを含む。便利名として試した3つの未登録npm scriptは入口名の不一致であり、対象テストはprinting-foundationへ内包され全てpass。正本は`work/heavy-chain-printing-contract-readback-20260927-r1.json`。provider/R2/authenticated production receipt、課金、公開、削除、deployは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r532
+
+`npm run verify:release-gate`をfresh実行し、前回のgeneration scorecard欠落は今回の結果から消え、失敗は3件へ減少した。残件はproduction monitor/UI pair（UI summary ENOENT）、G618 scale-ops baselineのfresh evidence不足、production H602 billing completion readbackのquota/checkout/no-real-charge/transaction-entitlement/operator proof不足。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r2.json`。submit、provider mutation、billing、publication、deploy、destructive cleanup、secret insertionは0。Goal active。

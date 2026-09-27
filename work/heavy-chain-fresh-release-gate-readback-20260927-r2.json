@@ -1,0 +1,34 @@
+{
+  "schema": "heavy-chain.fresh-release-gate-readback.v2",
+  "capturedAt": "2026-09-27T07:23:14.167Z",
+  "gitHead": "71f96b542e934c3599e2bbeec0776610ef4c4189",
+  "command": "npm run verify:release-gate",
+  "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
+  "exitCode": 1,
+  "ok": false,
+  "failed": [
+    {
+      "name": "production monitor and UI pair",
+      "error": "ENOENT: output/playwright/g835-production-ui-current-r1/summary.json",
+      "next": "Create matching API-only production-monitor.v2 and authenticated production UI v2 summaries with exact origin, zero failures, cleanup, and nonempty shared runId."
+    },
+    {
+      "name": "G618 scale ops baseline",
+      "next": "Refresh output/playwright/10m-product-readiness-g618/summary.json with a fresh usable timestamp/mtime and valid baseline evidence."
+    },
+    {
+      "name": "production H602 billing completion readback",
+      "next": "Refresh or repair output/playwright/g774-h602-production-completion-current-r1/summary.json with quota enforcement, checkout disabled until operator release, verified no-real-charge proof, transaction/entitlement readback, and no remaining blockers."
+    }
+  ],
+  "improvement": "The previous generation-scorecard failure is no longer present in this fresh release-gate result; the remaining set is three production evidence/operator-boundary items.",
+  "externalEffects": {
+    "providerSubmit": 0,
+    "billing": 0,
+    "publication": 0,
+    "deploy": 0,
+    "destructiveCleanup": 0,
+    "secretInsertion": 0
+  },
+  "decision": "release_not_complete_three_production_or_operator_evidence_blockers_remain"
+}
