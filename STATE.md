@@ -23255,3 +23255,9 @@ Light parity contractをfresh検証し、parity `9/9`、route integrity `34/34`�
 all-feature contractはプロセス終了・出力未捕捉のため未検証。authenticated production parity、OpenAI client-default実装、
 provider receipt、remote persistenceは未完了。provider/R2/billing/deploy/publication/secret読取は0。正本は
 `work/heavy-chain-light-parity-contract-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r611
+
+現行HEADでtypecheck exit 0、`git diff --check` PASS。lintはプロセス終了・exit code未捕捉のため未検証。OpenAI client実装、
+provider receipt、remote persistence、strict releaseは未完了。provider/R2/billing/deploy/publication/secret読取は0。正本は
+`work/heavy-chain-static-integrity-readback-20260927-r2.json`。Goal active。
