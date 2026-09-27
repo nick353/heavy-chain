@@ -23085,3 +23085,6 @@ Runwayの依存関係・permission・installation状態をfresh確認した。�
 # Heavy Chain current state — 2026-09-27 r571
 
 Planner admission期限後のfresh readbackで、別task admissionはcompletedになったがHeavy側capacityは`capacity_blocked`のまま。Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、claim/startなし、workflow fork候補なし。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r2.json`。source/provider/billing/R2/publication変更は0、Goal active。
+# Heavy Chain current state — 2026-09-27 r572
+
+Light parity/provider、video boundary、Canvas/provider persistence、UI control、permission/source-accessの決定的ローカルテストを現行HEAD `ac5fa7e`でfresh実行し、98/98 passed。外部効果はなく、provider/R2/video/monitor/G618/H601/H602/strict gateのproduction証跡は未完了。正本は`work/heavy-chain-local-boundary-test-readback-20260927-r1.json`。Goal active。

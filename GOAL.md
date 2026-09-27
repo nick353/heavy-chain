@@ -11601,3 +11601,6 @@ Runwayのplugin依存関係・権限・接続状態を`2026-09-27T08:31:44Z`にf
 # Goal progress — 2026-09-27 r571
 
 別タスクのPlanner admission期限通過後にAdaptive runtime/packageをfresh readbackした。別task admissionは`completed`へ遷移したが、Heavy host capacityは依然`capacity_blocked`、`live_capacity_observable=false`、Heavy packageは`waiting_human`/`automatic_dispatch_disabled`、claim/startなし、fork候補なし。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r2.json`。同じpackageの重複claim、代替route、source/provider/billing/R2/publication変更は0。Goal active。
+# Goal progress — 2026-09-27 r572
+
+現行HEAD `ac5fa7e`でLight parity/provider、video fail-closed、Canvas generation/provider persistence、UI control、permission/source-accessの決定的ローカルテストをfresh実行し、98 tests / 98 passed / 0 failedを確認した。provider生成、課金、R2 mutation、公開、secret読取は0。正本は`work/heavy-chain-local-boundary-test-readback-20260927-r1.json`。この証跡はproduction provider receipt・remote durable chain・video receipt・monitor/G618・H601/H602・strict release gateの完了を証明しない。Goal active。
