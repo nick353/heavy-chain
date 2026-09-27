@@ -11628,3 +11628,7 @@ Companionのtask-owned temporary tabでcanonical dashboardをread-only取得し�
 # Goal progress — 2026-09-27 r580
 
 Adaptive runtimeと既存Heavy packageをfresh readbackした。runtimeはgraph available/live process verifiedだが`capacity_blocked`・`live_capacity_observable=false`、Heavy packageは`waiting_human`/`automatic_dispatch_disabled`、claim/startなし、fork候補なし。別Daily AI admissionはin-flightだがHeavyへ流用・割込みしない。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r3.json`。Goal active。
+
+# Goal progress — 2026-09-27 r581
+
+現行HEAD `3ef5deb`でHeavy/Light ownership・entitlement・permission parityの決定的境界テストを再実行し、43 tests / 43 passed / 0 failedを確認した。既知Light featureのHeavy entitlement除外、Heavy-only consentの分離、unsupported/video fail-closed、durable result/Canvas lineage gateをfreshに再確認した。provider生成、R2 mutation、課金、公開、deploy、secret読取は0。正本は`work/heavy-chain-light-heavy-boundary-readback-20260927-r1.json`。この証跡はproduction provider receipt、remote durable chain、video receipt、monitor/G618、H601/H602、scorecard、strict gateの完了を示さない。Goal active。

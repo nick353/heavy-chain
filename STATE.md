@@ -23112,3 +23112,7 @@ canonical dashboardのpublic readbackはcleanup完了・foreign tab変更なし�
 # Heavy Chain current state — 2026-09-27 r580
 
 Heavy側のcapacityとpackageは変化なし。別Planner admissionはHeavyのrunではないためadoptせず、代替route/fork/重複claimも行っていない。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r3.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r581
+
+現行HEAD `3ef5deb`でLight/Heavy境界をfresh検証し、43/43 pass。既知Light featureはHeavy entitlementを呼ばず、Heavyは明示consent・unsupported/video fail-closed・durable promotion gateを維持している。provider/R2/billing/publication/secret外部効果は0。正本は`work/heavy-chain-light-heavy-boundary-readback-20260927-r1.json`。Astra packageはcapacity-blockedのままで、Heavy adapterとproduction証跡は未完了。Goal active。
