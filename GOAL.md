@@ -11972,3 +11972,7 @@ Astra再開時に渡せる画像移行packet v2を作成。公式Sunburst根拠�
 # Goal progress — 2026-09-27 r661
 
 ユーザー提供のOpenAI APIキーを保存・表示せず、`GET /v1/models`のread-only確認だけを実行した。HTTP 200、モデル一覧138件、承認済み`gpt-image-2.5-sunburst`の存在を確認。画像生成・課金・Heavy receipt迂回・deploy・secret保存は0。これはローカルcredentialの有効性だけを示し、Heavy consumer-auth、Organization Verification、Sunburst実装、認証済みHeavy provider receipt、R2 reconciliation、strict releaseを完了扱いにはしない。動画はdeferred。正本は`work/heavy-chain-openai-api-auth-readback-20260927-r2.json`と更新済みauth inventory/resume manifest、Goalは未完了のまま。
+
+# Goal progress — 2026-09-27 r662
+
+Astraの新しい境界レビューをread-onlyで実施し、`CanvasEditorPage`と`ChatEditor`はHeavy-ownedでOpenAI/Sunburst移行候補、`GeneratePage`・`LightchainWorkbenchPage`・動画は対象外と確定した。production wranglerの`AI_IMAGE_PROVIDER=openai` bindingもfresh確認し、現行HEAD `bfc55e8`でprovider persistence `14/14`とHeavy OpenAI adapter/image runtime `28/28`をPASSした。Astraの実行identity/start receiptが未検証のため、ソース変更・Luna起動・provider生成は開始していない。動画はdeferred、外部効果・deploy・課金・secret値読取は0。正本は`work/heavy-chain-astra-callsite-boundary-and-baseline-readback-20260927-r1.json`。

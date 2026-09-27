@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
   "capturedAt": "2026-09-27T11:48:50Z",
-  "sourceRevision": "7407b594f340c55ee9b3df8b282c4e8cbd1ac6be",
+  "sourceRevision": "bfc55e8ca2bea72835441cfb2ec418776abfdd40",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -45,13 +45,17 @@
     "work/heavy-chain-image-auth-path-inventory-20260927-r1.json",
     "work/heavy-chain-openai-image-official-model-readback-20260927-r1.json",
     "work/heavy-chain-openai-image-astra-implementation-packet-20260927-r2.json",
-    "work/heavy-chain-openai-api-auth-readback-20260927-r2.json"
+    "work/heavy-chain-openai-api-auth-readback-20260927-r2.json",
+    "work/heavy-chain-astra-callsite-boundary-and-baseline-readback-20260927-r1.json"
   ],
   "freshReadback": {
     "observedAt": "2026-09-27T11:48:50Z",
     "evidenceRefsPresent": true,
     "runtimeProcessObserved": false,
     "openaiReadonlyModelList": "200_sunburst_present",
+    "heavyProviderBinding": "production_openai",
+    "freshLocalBaseline": "provider_persistence_14_of_14_and_heavy_adapter_runtime_28_of_28",
+    "astraCallsiteDisposition": "heavy_canvas_chat_only_light_generate_and_designproduction_untouched",
     "worktree": "clean",
     "dependencyGraph": "acyclic",
     "sourceMutation": false,
@@ -65,11 +69,11 @@
       "owner": "root",
       "action": "After a normal Adaptive runtime reconnection, read the existing image Astra package/run; do not replay its closed transport, manually claim, or fork it.",
       "successEvidence": "fresh runtime/package readback with verified start metadata",
-      "currentBlocker": "no adaptive/bootstrap runtime process observed; local OpenAI model-list auth is now usable"
+      "currentBlocker": "managed Astra package returned a bounded disposition, but no independently verifiable invocation identity/start receipt is available"
     },
     {
       "id": "image-astra-engineering-gate",
-      "status": "blocked_by_runtime-recovery",
+      "status": "blocked_by_unverified_astra_invocation",
       "dependsOn": ["runtime-recovery-readonly"],
       "owner": "native_astra_engineering",
       "ownedPaths": [

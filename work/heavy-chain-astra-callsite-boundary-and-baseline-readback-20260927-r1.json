@@ -1,0 +1,63 @@
+{
+  "schema": "heavy-chain.image-astra-callsite-boundary-readback.v1",
+  "capturedAt": "2026-09-27T12:10:00Z",
+  "sourceRevision": "bfc55e8ca2bea72835441cfb2ec418776abfdd40",
+  "scope": {
+    "wave": "image_generation_only",
+    "video": "deferred_by_user",
+    "sourceMutation": false,
+    "providerSubmission": false,
+    "deploy": false,
+    "billing": false,
+    "secretValueRead": false
+  },
+  "callsiteDisposition": {
+    "src/pages/CanvasEditorPage.tsx": {
+      "surface": "Heavy /canvas/:projectId?",
+      "evidence": ["imports CloudflareHeavyEntitlement", "uses Heavy auth/readiness fences", "generate-image action explicitly sends workers_ai"],
+      "astraBoundedDecision": "change the explicit image request to OpenAI with selected supported model, defaulting to gpt-image-2.5-sunburst"
+    },
+    "src/components/ChatEditor.tsx": {
+      "surface": "Heavy readiness-gated chat edit",
+      "evidence": ["Heavy readiness gate is required", "chat-edit request explicitly sends workers_ai/flux-2-klein-4b"],
+      "astraBoundedDecision": "change the explicit image-edit request to OpenAI with selected supported model, defaulting to gpt-image-2.5-sunburst"
+    },
+    "src/pages/GeneratePage.tsx": {
+      "surface": "distinct VITE_GENERATION_PROVIDER surface",
+      "astraBoundedDecision": "outside this Heavy package; no change"
+    },
+    "src/pages/LightchainWorkbenchPage.tsx": {
+      "surface": "Light /designProduction",
+      "evidence": ["uses LIGHTCHAIN_GENERATION_PROVIDER"],
+      "astraBoundedDecision": "outside this Heavy package; no change"
+    },
+    "video": {
+      "astraBoundedDecision": "deferred; no change"
+    }
+  },
+  "providerBinding": {
+    "cloudflare/heavy-api/wrangler.production.jsonc": {
+      "AI_IMAGE_PROVIDER": "openai",
+      "AI_IMAGE_ENABLED": "true"
+    },
+    "runtimeContract": "configured provider is openai unless AI_IMAGE_PROVIDER=workers_ai is explicitly set; provider mismatch remains fail-closed"
+  },
+  "freshDeterministicBaseline": {
+    "npm run test:provider-persistence-readback": {"exitCode": 0, "passed": 14, "failed": 0},
+    "node --experimental-strip-types --test cloudflare/heavy-api/test/openai-image.test.ts cloudflare/heavy-api/test/image-ai.test.ts": {"exitCode": 0, "passed": 28, "failed": 0},
+    "gitStatus": "clean",
+    "sourceRevisionMatchesArtifact": true
+  },
+  "remainingBlockers": [
+    "Astra runtime invocation identity/start receipt is not independently verifiable in the managed dispatch ledger",
+    "OpenAI Sunburst source migration has not been applied",
+    "Post-migration deterministic regression is not available",
+    "Authenticated Heavy consumer receipt, Organization Verification, remote save/reuse/reload/reconciliation, visual scorecard, and strict release remain unproven"
+  ],
+  "safety": {
+    "keyHandling": "user key was used only for redacted read-only GET /v1/models; value was not printed or persisted",
+    "noReplay": true,
+    "noFallback": true,
+    "noVideoChange": true
+  }
+}

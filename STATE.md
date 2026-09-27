@@ -23457,3 +23457,7 @@ Astra再開用の画像移行packet v2を固定。official model evidenceとsour
 # Heavy Chain current state — 2026-09-27 r661
 
 ユーザー提供キーは保存・表示せず、OpenAI `GET /v1/models`をread-only実行してHTTP 200、138 models、Sunburst presentを確認。ローカル認証は前進したが、Heavy consumer-auth/organization verification、verified Astra receipt、Sunburst source実装、Heavy provider receipt、R2/reconciliation、deploy・billing・releaseは未完。画像waveのみ継続し、動画はdeferred。正本は`work/heavy-chain-openai-api-auth-readback-20260927-r2.json`。
+
+# Heavy Chain current state — 2026-09-27 r662
+
+Astra境界レビューで、HeavyのCanvas/Chat call siteだけをOpenAI/Sunburst移行対象とし、Lightの`/designProduction`、別GeneratePage surface、動画を変更対象外に固定した。production wranglerの`AI_IMAGE_PROVIDER=openai`を確認し、現行HEAD `bfc55e8`のprovider persistence `14/14`、Heavy adapter/runtime `28/28`をfresh PASS。Astra実行identity/start receiptが未検証なので、source mutation・Luna起動・provider submitは0。動画はdeferred、Goal active。正本は`work/heavy-chain-astra-callsite-boundary-and-baseline-readback-20260927-r1.json`。
