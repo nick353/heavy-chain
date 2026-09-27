@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T11:18:05Z",
-  "sourceRevision": "883b67b570b9709042e72d7520330110e443740d",
+  "capturedAt": "2026-09-27T11:19:22Z",
+  "sourceRevision": "3019c7c96e98be3bd1cda33f1ad31de3e2ef4ea3",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -25,10 +25,11 @@
     "work/heavy-chain-image-quality-release-readback-20260927-r1.json",
     "work/heavy-chain-current-requirement-matrix-20260927-r1.json",
     "work/heavy-chain-openai-image-astra-handoff-20260927-r1.json",
-    "work/heavy-chain-current-source-integrity-readback-20260927-r1.json"
+    "work/heavy-chain-current-source-integrity-readback-20260927-r1.json",
+    "work/heavy-chain-light-production-route-readback-blocker-20260927-r1.json"
   ],
   "freshReadback": {
-    "observedAt": "2026-09-27T11:18:05Z",
+    "observedAt": "2026-09-27T11:19:22Z",
     "evidenceRefsPresent": true,
     "runtimeProcessObserved": false,
     "worktree": "clean",

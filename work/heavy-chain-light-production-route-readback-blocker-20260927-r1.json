@@ -1,0 +1,40 @@
+{
+  "schema": "heavy-chain.light-production-route-readback-blocker.v1",
+  "capturedAt": "2026-09-27T11:19:22Z",
+  "sourceRevision": "3019c7c96e98be3bd1cda33f1ad31de3e2ef4ea3",
+  "scope": {
+    "readOnly": true,
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "externalEffects": 0,
+    "providerSubmit": false,
+    "deploy": false
+  },
+  "checks": [
+    {
+      "command": "npm run verify:lightchain-route-readback --silent",
+      "exitCode": 1,
+      "error": "route_readback_comparator_failed:route_readback_files_required",
+      "meaning": "production route readback inputs are missing"
+    },
+    {
+      "command": "npm run test:lightchain-route-readback --silent",
+      "exitCode": 1,
+      "meaning": "route-readback contract cannot pass without the required route artifacts"
+    }
+  ],
+  "localParityContext": {
+    "providerCoverage": "22/22",
+    "parityContract": "9/9",
+    "productionParity": "not_proven"
+  },
+  "blocker": {
+    "code": "light_production_route_readback_missing",
+    "requiredInputs": [
+      "authenticated Light production route readback files",
+      "same-run route/provider identity",
+      "fresh semantic and visual comparison evidence"
+    ]
+  },
+  "nextGate": "Obtain an approved authenticated Light production session and produce route readbacks; do not infer production parity from local contracts."
+}

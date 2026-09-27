@@ -11900,3 +11900,7 @@ Goal要求をcurrent evidenceへ一対一で対応付けたcompletion matrixを�
 # Goal progress — 2026-09-27 r643
 
 現行HEADでsource integrityをfresh確認。Heavy API OpenAI `114/114`、provider persistence `14/14`、typecheck、lint、build、git diff checkをすべてexit 0でPASSした。これはmigration前のローカルbaselineであり、Sunburst実装・production OpenAI・receipt/R2・quality/releaseを完了扱いにはしない。正本は`work/heavy-chain-current-source-integrity-readback-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。
+
+# Goal progress — 2026-09-27 r644
+
+Light production route comparatorをfresh実行し、route readback files不足でexit 1（`route_readback_comparator_failed:route_readback_files_required`）、route-readback testもexit 1を確認。local provider/parity `22/22`・`9/9`は維持されるが、authenticated production route parityは未証明。正本は`work/heavy-chain-light-production-route-readback-blocker-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。
