@@ -1,6 +1,7 @@
 {
   "schema": "heavy_chain.release_gate_current_readback.v1",
-  "capturedAt": "2026-09-27T16:53:48.657Z",
+  "capturedAt": "2026-09-27T17:08:52.784Z",
+  "sourceRevision": "888aefa",
   "command": "npm run verify:release-gate -- --command-timeout-ms 600000",
   "ok": false,
   "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
@@ -24,7 +25,8 @@
     "G633": true,
     "H601Static": true,
     "H602Static": true,
-    "heavyOpenAIProviderRegression": true
+    "heavyOpenAIProviderRegression": true,
+    "heavyProviderAgnosticQaRegression": true
   },
   "failed": [
     {
