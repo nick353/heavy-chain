@@ -1,7 +1,7 @@
 {
   "schema": "heavy_chain.release_gate_current_readback.v1",
-  "capturedAt": "2026-09-27T17:08:52.784Z",
-  "sourceRevision": "888aefa",
+  "capturedAt": "2026-09-27T17:14:00.788Z",
+  "sourceRevision": "1050521",
   "command": "npm run verify:release-gate -- --command-timeout-ms 600000",
   "ok": false,
   "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
@@ -26,7 +26,13 @@
     "H601Static": true,
     "H602Static": true,
     "heavyOpenAIProviderRegression": true,
-    "heavyProviderAgnosticQaRegression": true
+    "heavyProviderAgnosticQaRegression": true,
+    "videoProviderBoundaryRegression": true,
+    "videoProviderContractRegression": true,
+    "videoEditorPersistenceRegression": true,
+    "workspaceHandoffPersistenceRegression": true,
+    "providerPersistenceReadbackRegression": true,
+    "canvasGenerationReadbackRegression": true
   },
   "failed": [
     {
