@@ -23264,4 +23264,4 @@ provider receipt、remote persistence、strict releaseは未完了。provider/R2
 
 # Heavy Chain current state — 2026-09-27 r612
 
-ユーザー指示でvideo laneをdeferredにし、image_generation_onlyへ縮小。公式OpenAI image guideの現行モデルは`gpt-image-2.5-sunburst`/`gpt-image-2.5-flare`だが、Heavy server adapterは旧モデルallowlistと`gpt-image-1-mini` default、Light新規経路はWorkers default、QA harnessはWorkers receipt固定のまま。Opus再計画は`opus55-e82eb27f42e6471191638da019ce57e4`で`opencode_timeout`、verified=false。Astra start receiptもnullのため実装0・外部効果0。正本は`work/heavy-chain-openai-image-current-spec-readback-20260927-r1.json`、Goal active。
+ユーザー指示でvideo laneをdeferredにし、image_generation_onlyへ縮小。公式OpenAI image guideの現行モデルは`gpt-image-2.5-sunburst`/`gpt-image-2.5-flare`だが、Heavy server adapterは旧モデルallowlistと`gpt-image-1-mini` default、Light新規経路はWorkers default、QA harnessはWorkers receipt固定のまま。Opus再計画は`opus55-e82eb27f42e6471191638da019ce57e4`で`opencode_timeout`、verified=false。Astra start receiptもnullのため実装0・外部効果0。fresh official/local evidence packetを追加し、次のAstra判断へ渡せる状態にした。正本は`work/heavy-chain-openai-image-current-spec-readback-20260927-r1.json`および`work/heavy-chain-openai-image-evidence-packet-20260927-r1.json`、Goal active。

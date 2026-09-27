@@ -1,0 +1,60 @@
+{
+  "schema": "heavy_chain_openai_image_evidence_packet.v1",
+  "captured_at": "2026-09-27",
+  "scope": "image_generation_only",
+  "source_revision": "1d3ce08314ea0a400a42c3aef24cb4c7dbf16375",
+  "official_evidence": [
+    {
+      "url": "https://developers.openai.com/api/docs/guides/image-generation",
+      "lines": "962-969,1123-1129,5749-5751,5771-5773",
+      "excerpt_summary": "The official guide shows gpt-image-2.5-sunburst in Images API examples, documents Sunburst and Flare quality settings, and says new integrations should use a GPT Image 2.5 model.",
+      "retrieved": "2026-09-27"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/deprecations",
+      "lines": "1012-1021",
+      "excerpt_summary": "Sora 2 and Videos API shutdown is listed as 2026-09-24 with no recommended replacement; video remains deferred for this image-only wave.",
+      "retrieved": "2026-09-27"
+    }
+  ],
+  "local_evidence": {
+    "server": {
+      "path": "cloudflare/heavy-api/src/openai-image.ts",
+      "lines": "4-17,60-75",
+      "facts": [
+        "provider=openai",
+        "backendProvider=openai-images-api",
+        "generation allowlist contains gpt-image-2, gpt-image-1.5, gpt-image-1, gpt-image-1-mini",
+        "generation default is gpt-image-1-mini",
+        "edit allowlist and edit default are separate"
+      ]
+    },
+    "ui": {
+      "path": "src/pages/GeneratePage.tsx",
+      "lines": "650-661",
+      "facts": [
+        "provider defaults to workers_ai unless VITE_GENERATION_PROVIDER is exactly openai",
+        "OpenAI UI default model is gpt-image-1-mini"
+      ]
+    },
+    "tests": {
+      "path": "cloudflare/heavy-api/test/openai-image.test.ts",
+      "lines": "10,31,38,73-78",
+      "facts": [
+        "deterministic tests encode gpt-image-1-mini generation default",
+        "edit test uses gpt-image-1",
+        "unsupported model rejection is covered"
+      ]
+    }
+  },
+  "astra_package": {
+    "run_id": "run_openai_image_model_engineering_20260927_r2",
+    "package_id": "heavy-openai-image-model-engineering-r2",
+    "claim_id": "claim-pid-39115-18fd492574524ca3a9295651390bf590-heavy-openai-image-model-engineering-r2",
+    "status": "blocked",
+    "exact_blocker": "native_start_receipt_metadata_unavailable",
+    "verified": false,
+    "implementation_authorized": false
+  },
+  "next_action": "After a verified Astra start receipt, pass this packet to the bounded Luna implementation; do not infer a model migration solely from the presence of new documentation examples."
+}
