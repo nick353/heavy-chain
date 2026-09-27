@@ -50,8 +50,8 @@
     {
       "id": "monitor-operations",
       "status": "not_ready",
-      "evidence": ["heavy-chain-release-gate-current-readback-20260928-r1.json"],
-      "remaining": "fresh monitor/UI pair and G618 scale-ops baseline; monitor URL/brand/token inputs are absent"
+      "evidence": ["heavy-chain-release-gate-current-readback-20260928-r1.json", "verify:g618-scale-ops:blocked-before-build"],
+      "remaining": "fresh monitor/UI pair and G618 scale-ops baseline; explicit API origin, brand, and live session token are absent"
     },
     {
       "id": "security-rights",
@@ -62,13 +62,13 @@
     {
       "id": "billing",
       "status": "production_not_ready",
-      "evidence": ["fresh H602 static check; production H602 failed in current gate"],
+      "evidence": ["fresh H602 static check; production H602 failed in current gate", "verify:h602-production-completion-readback:fail-closed"],
       "remaining": "quota, checkout-disabled, redacted no-charge proof, transaction/entitlement readback, operator release decision"
     },
     {
       "id": "quality-release",
       "status": "not_ready",
-      "evidence": ["current release gate generation scorecard failure"],
+      "evidence": ["current release gate generation scorecard failure", "verify:generation-scorecard:primary-artifact-missing"],
       "remaining": "current 10-feature visual scorecard, fresh monitor/UI, and all other gate failures"
     }
   ],
