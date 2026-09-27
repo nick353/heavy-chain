@@ -22274,4 +22274,13 @@ fresh readback（capture `2026-09-27T01:30:37Z`）ではHeavy gating `6/6`、Lig
 
 # Heavy Chain current state — 2026-09-27 r375
 
+# Heavy Chain current state — 2026-09-27 r376
+
+Heavy/Light ownership境界の誤判定を修正し、`HEAVY_OWNED_FEATURE_IDS` と `isHeavyOwnedFeature` を導入した。Heavy所有は
+`campaign-image`、`model-matrix`、`design-gacha`、`product-shots`、`scene-coordinate`に限定し、`remove-bg`を含むLight機能や未知IDはHeavy entitlement laneへ入らない。focused Heavy gating 7/7、Light parity 6/6、Light workflow contract 5/5、typecheck、build、diff-checkがpass。コミットは`3bd14a8`。
+
+Cloudflare Webの正規手順（Web tests 14/14、Cloudflare build、R2 asset upload、Wrangler dry-run）を通過し、Worker version `1d66c8a1-d097-49b0-a304-f76a43fd94c4`を`heavy-chain-web.nichika2000823.workers.dev`へdeployした。fresh Companion readbackで`remove-bg`はHeavy terms/rights UIなし、Heavy entitlement関連network entryなし、`campaign-image`はterms/rights gateあり、`design-gacha`は`Heavyでは未提供`でprovider submitなしを確認した。外部provider送信、課金、公開、秘密投入は行っていない。Goal active。
+
+## Prior r375 readback
+
 Fresh task-owned Companion readback on `https://heavy-chain-web.nichika2000823.workers.dev/generate?feature=campaign-image` confirmed the current Heavy gate is rendered without the old Light `権限がありません` marker. The terms checkbox was checked by default, the per-request rights checkbox was present and unchecked, and `生成する` stayed disabled until that explicit attestation and the remaining required inputs. An app-owned `design-v1.png` reference was accepted by the browser and read back on the exact same tab (`fileCount=1`, visible `商品 design-v1.png`); the upload's temporary `unknown_effect` was reconciled from the same-tab visual/semantic proof without replay. Companion reconciliation completion and terminal session cleanup both passed (`foreignTabsMutated=false`, retained/unknown tabs 0, active leases 0, pending operations 0). No provider submit, billing, publish, or secret operation was dispatched in this UI pass; the existing real provider/R2 receipt remains the provider evidence. Goal active。
