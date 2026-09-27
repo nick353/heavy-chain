@@ -28,6 +28,16 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { cloudflareDataPlane, type CloudflareHeavyEntitlement } from '../lib/cloudflareApi';
+import {
+  canSubmitHeavyCapability,
+  classifyHeavyEntitlementError,
+  HEAVY_UNIMPLEMENTED_MESSAGE,
+  hasHeavyTermsAndRightsPolicy,
+  isHeavyEntitlementReady,
+  resolveHeavyCapability,
+  resolveHeavyEntitlementState,
+  type HeavyEntitlementState,
+} from '../lib/heavyCapability';
 import { Button, Textarea, Input } from '../components/ui';
 import { FEATURES, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
@@ -112,6 +122,16 @@ const MAX_MODEL_MATRIX_PATTERNS = 3;
 
 const heavyEntitlementMessage = (reason: string | null, loading = false): string => {
   if (loading || reason === 'heavy_entitlement_read_pending') return 'Heavy利用条件を確認しています…';
+  if (reason === 'heavy_unimplemented') return HEAVY_UNIMPLEMENTED_MESSAGE;
+  if (reason === '401' || (reason && /(?:^|[^0-9])401(?:[^0-9]|$)|unauthori[sz]ed|session_missing|auth_required/i.test(reason))) {
+    return 'Heavy利用条件を確認するにはログインしてください';
+  }
+  if (reason === '403' || (reason && /(?:^|[^0-9])403(?:[^0-9]|$)|forbidden|not_allowed|permission/i.test(reason))) {
+    return 'このブランドではHeavyを利用できません';
+  }
+  if (reason === '5xx' || (reason && /(?:^|[^0-9])5[0-9]{2}(?:[^0-9]|$)|unavailable|server_error/i.test(reason))) {
+    return 'Heavy利用条件を確認できません';
+  }
   if (reason === 'heavy_generation_disabled') return 'Heavy生成は本番設定の有効化待ちです';
   if (reason && /terms_acceptance_required|terms_required/i.test(reason)) return 'Heavy利用条件を確認して同意してください';
   if (reason && /rights_attestation|request_binding|input_digest/i.test(reason)) return 'この生成リクエストの権利表明を確認してください';
@@ -1006,6 +1026,15 @@ export function GeneratePage() {
   const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(getInitialGenerationModel);
   const [heavyEntitlement, setHeavyEntitlement] = useState<CloudflareHeavyEntitlement | null>(null);
   const [heavyEntitlementLoading, setHeavyEntitlementLoading] = useState(false);
+  const [heavyEntitlementState, setHeavyEntitlementState] = useState<HeavyEntitlementState>('unsupported');
+  const [heavyEntitlementError, setHeavyEntitlementError] = useState<unknown>(null);
+  const heavyEntitlementRequestRef = useRef(0);
+  const heavyEntitlementContextRef = useRef<{
+    userId: string | null;
+    brandId: string | null;
+    featureId: string | null;
+    action: string;
+  }>({ userId: null, brandId: null, featureId: null, action: 'heavy-unimplemented' });
   const [heavyTermsAccepted, setHeavyTermsAccepted] = useState(false);
   const [heavyRightsAttested, setHeavyRightsAttested] = useState(false);
   const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
@@ -1059,56 +1088,97 @@ export function GeneratePage() {
   const selectedFeature = locationFeature ?? (featureParam ? null : selectedFeatureState);
   const selectedFeatureId = selectedFeature?.id;
   const currentPath = typeof window === 'undefined' ? '' : window.location.pathname;
-  // Every image-generation route in this page, including the historical
-  // /editor/changeColor entry, is Heavy-owned. The read-only entitlement
-  // response is only a closed UI preflight; the Heavy handler remains the
-  // authority for the request-scoped attestation.
-  const heavyEntitlementAction = selectedFeature?.id === 'model-matrix' ? 'model-matrix' : 'generate-image';
-  const heavyPolicyConfigured = Boolean(
-    heavyEntitlement?.termsVersion && heavyEntitlement.termsDocumentVersion && heavyEntitlement.termsDocumentDigest &&
-    heavyEntitlement.rightsVersion && heavyEntitlement.rightsDocumentVersion && heavyEntitlement.rightsDocumentDigest &&
-    heavyEntitlement.reason !== 'heavy_generation_disabled',
-  );
-  const heavyEntitlementReady = noImageGenerationMode || (
-    heavyPolicyConfigured && heavyTermsAccepted && heavyRightsAttested
-  );
+  // Heavy capability is a small default-deny map. The Light compatibility
+  // editor and prompt optimizer remain outside this Heavy entitlement lane.
+  const heavySurface = selectedFeature?.id !== 'chat-edit' && selectedFeature?.id !== 'optimize-prompt';
+  const heavyCapability = heavySurface
+    ? resolveHeavyCapability(selectedFeature?.id)
+    : { featureId: selectedFeature?.id ?? null, action: 'heavy-unimplemented' as const, supported: false };
+  const heavyCapabilitySupported = heavyCapability.supported;
+  const heavyEntitlementAction = heavyCapability.action;
+  const heavyPolicyConfigured = Boolean(hasHeavyTermsAndRightsPolicy(heavyEntitlement));
+  const heavyEntitlementReady = noImageGenerationMode
+    || !heavySurface
+    || (
+      heavyCapability.supported
+      && heavyEntitlementState === 'ready'
+      && isHeavyEntitlementReady(heavyEntitlement)
+      && heavyPolicyConfigured && heavyTermsAccepted && heavyRightsAttested
+    );
   // This is only the shared request's caller declaration; the Heavy handler
   // revalidates the current request-scoped entitlement before side effects.
   const providerRightsConfirmed = heavyEntitlementReady;
-  const heavyEntitlementReason = heavyEntitlement?.reason
-    ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
+  const heavyEntitlementReason = !heavyCapability.supported
+    ? 'heavy_unimplemented'
+    : heavyEntitlementState === '5xx'
+      ? (heavyEntitlementError ? classifyHeavyEntitlementError(heavyEntitlementError) : '5xx')
+      : heavyEntitlement?.reason
+        ?? (heavyEntitlementError ? classifyHeavyEntitlementError(heavyEntitlementError) : null)
+        ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
   const heavyEntitlementDisplayMessage = heavyEntitlementMessage(heavyEntitlementReason, heavyEntitlementLoading);
+  heavyEntitlementContextRef.current = {
+    userId: user?.id ?? null,
+    brandId: currentBrand?.id ?? null,
+    featureId: selectedFeatureId ?? null,
+    action: heavyEntitlementAction,
+  };
 
   useEffect(() => {
     let cancelled = false;
+    const requestId = heavyEntitlementRequestRef.current + 1;
+    heavyEntitlementRequestRef.current = requestId;
     const brandId = currentBrand?.id;
-    if (noImageGenerationMode || !brandId || !selectedFeatureId) {
+    const userId = user?.id;
+    const requestIdentity = heavyEntitlementContextRef.current;
+    const isCurrentRequest = () => (
+      !cancelled
+      && heavyEntitlementRequestRef.current === requestId
+      && heavyEntitlementContextRef.current.userId === requestIdentity.userId
+      && heavyEntitlementContextRef.current.brandId === requestIdentity.brandId
+      && heavyEntitlementContextRef.current.featureId === requestIdentity.featureId
+      && heavyEntitlementContextRef.current.action === requestIdentity.action
+      && user?.id === requestIdentity.userId
+      && currentBrand?.id === requestIdentity.brandId
+      && selectedFeatureId === requestIdentity.featureId
+      && heavyEntitlementAction === requestIdentity.action
+    );
+    const clearEntitlement = (state: HeavyEntitlementState, error: unknown = null) => {
       setHeavyEntitlement(null);
       setHeavyEntitlementLoading(false);
+      setHeavyEntitlementState(state);
+      setHeavyEntitlementError(error);
       setHeavyTermsAccepted(false);
       setHeavyRightsAttested(false);
+    };
+    if (noImageGenerationMode || !heavySurface || !heavyCapabilitySupported) {
+      clearEntitlement(!heavySurface ? 'ready' : 'unsupported');
+      return () => { cancelled = true; };
+    }
+    if (!userId || !brandId) {
+      clearEntitlement('401', new Error('cloudflare_session_missing'));
       return () => { cancelled = true; };
     }
     if (!cloudflareDataPlane) {
-      setHeavyEntitlement(null);
-      setHeavyEntitlementLoading(false);
-      setHeavyTermsAccepted(false);
-      setHeavyRightsAttested(false);
+      clearEntitlement('5xx', new Error('cloudflare_api_not_configured'));
       return () => { cancelled = true; };
     }
     setHeavyEntitlementLoading(true);
-      void cloudflareDataPlane.getHeavyEntitlement(brandId, heavyEntitlementAction)
+    setHeavyEntitlementState('hydrating');
+    setHeavyEntitlementError(null);
+    void cloudflareDataPlane.getHeavyEntitlement(brandId, heavyEntitlementAction)
       .then((status) => {
-        if (!cancelled) {
+        if (isCurrentRequest()) {
           setHeavyEntitlement(status);
           setHeavyTermsAccepted(Boolean(status.termsAcceptanceId));
           setHeavyRightsAttested(false);
+          setHeavyEntitlementError(null);
+          setHeavyEntitlementState(resolveHeavyEntitlementState({ supported: heavyCapabilitySupported }, status, false));
         }
       })
-      .catch(() => {
+      .catch((error) => {
         // A missing/unreadable server entitlement is closed; it is not a
         // reason to trust the browser's rightsConfirmed field.
-        if (!cancelled) setHeavyEntitlement({
+        if (isCurrentRequest()) setHeavyEntitlement({
           allowed: false,
           reason: 'heavy_entitlement_unavailable',
           termsVersion: null,
@@ -1118,16 +1188,18 @@ export function GeneratePage() {
           requestBinding: null,
           requestScopedAttestationRequired: true,
         });
-        if (!cancelled) {
+        if (isCurrentRequest()) {
           setHeavyTermsAccepted(false);
           setHeavyRightsAttested(false);
+          setHeavyEntitlementError(error);
+          setHeavyEntitlementState(resolveHeavyEntitlementState({ supported: heavyCapabilitySupported }, null, false, error));
         }
       })
       .finally(() => {
-        if (!cancelled) setHeavyEntitlementLoading(false);
+        if (isCurrentRequest()) setHeavyEntitlementLoading(false);
       });
     return () => { cancelled = true; };
-  }, [currentBrand?.id, heavyEntitlementAction, selectedFeatureId]);
+  }, [currentBrand?.id, heavyCapability.action, heavyCapabilitySupported, heavyEntitlementAction, heavySurface, selectedFeatureId, user?.id]);
   const [variationStrength, setVariationStrength] = useState(50);
   
   // Upscale options
@@ -1542,7 +1614,31 @@ export function GeneratePage() {
         return;
       }
 
-      const heavyConsent = noImageGenerationMode ? undefined : {
+      const submitCapability = heavySurface ? resolveHeavyCapability(selectedFeature?.id) : null;
+      if (heavySurface) {
+        const capabilityContextIsCurrent = submitCapability?.featureId === heavyCapability.featureId
+          && submitCapability.action === heavyCapability.action
+          && heavyEntitlementContextRef.current.userId === (user?.id ?? null)
+          && heavyEntitlementContextRef.current.brandId === currentBrand.id
+          && heavyEntitlementContextRef.current.featureId === (selectedFeature?.id ?? null)
+          && heavyEntitlementContextRef.current.action === heavyCapability.action;
+        const submitAllowed = capabilityContextIsCurrent && canSubmitHeavyCapability({
+          featureId: selectedFeature?.id,
+          entitlementState: heavyEntitlementState,
+          termsAccepted: heavyTermsAccepted,
+          rightsAttested: heavyRightsAttested,
+          userId: user?.id,
+          brandId: currentBrand.id,
+          currentUserId: user?.id,
+          currentBrandId: currentBrand.id,
+        });
+        if (!submitAllowed) {
+          toast.error(!submitCapability?.supported ? HEAVY_UNIMPLEMENTED_MESSAGE : heavyEntitlementDisplayMessage);
+          return;
+        }
+      }
+
+      const heavyConsent = noImageGenerationMode || !heavySurface ? undefined : {
         termsAccepted: heavyTermsAccepted,
         rightsAttested: heavyRightsAttested,
       };
@@ -3820,7 +3916,7 @@ export function GeneratePage() {
     if (!selectedFeature) return true;
     if (isGenerating) return true;
     if (featureConfig?.requiresImage && !referenceImage) return true;
-    if (!noImageGenerationMode && !heavyEntitlementReady) return true;
+    if (heavySurface && !noImageGenerationMode && !heavyEntitlementReady) return true;
     switch (selectedFeature.id) {
       case 'design-gacha':
         return !prompt.trim() && !referenceImage;
@@ -4448,14 +4544,14 @@ export function GeneratePage() {
               </details>
             )}
 
-            {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && !heavyEntitlementReady && (
+            {heavySurface && !heavyEntitlementReady && (
               <div
                 role="status"
                 data-testid="heavy-entitlement-gate"
                 className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100"
               >
                 <p>{heavyEntitlementDisplayMessage}</p>
-                {heavyPolicyConfigured && (
+                {heavyCapability.supported && heavyEntitlementState === 'ready' && heavyPolicyConfigured && (
                   <div className="mt-3 grid gap-2 text-xs font-normal leading-5">
                     <details className="rounded-xl border border-amber-300/70 bg-white/70 p-3 dark:border-amber-700/70 dark:bg-neutral-950/40" data-testid="heavy-terms-copy">
                       <summary className="cursor-pointer font-semibold">Heavy利用条件の全文（terms v1 / rights v1）</summary>

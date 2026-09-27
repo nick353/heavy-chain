@@ -22257,3 +22257,13 @@ production flagはfalseのまま、acceptance/attestationのproduction D1直投�
 Light parity/provider 34/34、typecheck、build、lint、diff-checkがpass。実provider receipt、R2 save/reuse/reload/reconciliation、
 video、monitor/UI、G618、H601/H602 production、scorecard、billing、publishは未達。次の境界はflag falseのAPI/Web deployとfresh readback、
 その後の認証済み同意による1回限りの実生成・same-run証跡である。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r373
+
+Heavy旧provider actionのUI/API capability境界を、Opus 5.5の改訂方針、Astraの設計・engineering handoff、Luna実装、Verifier、最終Reviewerの順に確定した。変更はHeavy作業treeに限定され、`src/lib/heavyCapability.ts`、`src/pages/GeneratePage.tsx`、`scripts/verify-heavy-capability-gating.test.mjs`の3ファイルだけである。
+
+capability mapはdefault-denyで、`campaign-image → generate-image`、`model-matrix → model-matrix`のみ対応、`design-gacha`／`product-shots`／`scene-coordinate`／unknownは`heavy-unimplemented`として`Heavyでは未提供`を表示する。未対応featureではterms/rights UIを出さず、entitlement GET・submit・provider actionへ到達しない。対応featureはhydrating／401／403／5xx／readyを区別し、6つのterms/rights文書フィールド、terms同意、rights attestation、現在のuser/brand/feature/actionが揃うまで送信不可。stale response guardも追加した。Light Chainの権限面とbackend allowlistは変更していない。
+
+fresh readback（capture `2026-09-27T01:30:37Z`）ではHeavy gating `6/6`、Light permission parity `6/6`、Light all-feature contract `5/5`、`npm run typecheck`、`npm run build`、`git diff --check`がすべて成功し、protected backend/Light path diffは空だった。最終Reviewerはlocal boundaryをapprovedとした。Adaptive workflow `run_ee879c207feb415b`のverify/final_reviewはpass/approvedへ到達し、現在finalize待ちである。
+
+このapprovedはlocal capability boundaryに限定する。production entitlement/provider readback、workspace save→reuse→reload→reconciliation、video provider、monitor/operations、strict release gate、未設定のmonitor env/auth stateは未完了であり、health・local test・Companion readbackだけでbusiness completionとは扱わない。deploy、provider dispatch、課金、公開、secret投入、破壊的cleanupはこのsliceで実行していない。Goal active。

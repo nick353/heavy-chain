@@ -10823,3 +10823,11 @@ Heavy Generate UIは、設定済みポリシーをfresh readbackした後に利�
 flag有効化、課金・公開はまだ実行していない。次はこの差分をcommitしてflag falseのままAPI/Webへdeployし、fresh UI/API readback後、
 認証済み同意を1回だけ使った実provider生成とsame-run receipt/D1/R2 readbackを行う。失敗またはunknown effectなら同じrequestを照合し、再送せずflagをfalseへ戻す。
 Goalはactive。
+
+# Goal progress — 2026-09-27 r404
+
+Heavy capability境界のlocal sliceを完了判定した。Opus 5.5改訂planは、明示的default-deny map、未対応featureの`Heavyでは未提供`、terms/rights非表示・entitlement/provider no-effect、対応featureのhydrating/401/403/5xx/ready、ready時のterms+rights、Light/backend非変更を受入条件にした。Astra engineering/designが所有範囲とstale guard・no-effect testを確定し、Lunaが実装した。
+
+実装は`src/lib/heavyCapability.ts`、`src/pages/GeneratePage.tsx`、`scripts/verify-heavy-capability-gating.test.mjs`に限定。fresh検証はHeavy gating `6/6`、Light parity `6/6`、Light all-feature contract `5/5`、typecheck、production build、diff-checkがpass、protected backend/Light diffは空。Verifierと最終Reviewer（Astra）は、current artifactのliteral source/test evidenceとexit codeを確認してlocal boundaryをpass/approvedとした。
+
+残作業は別gateとして保持する：production entitlement/provider receipt、private R2/durable workspace save→reuse→reload→reconciliation、video provider、monitor/UIとoperations、G618、H601/H602、real-generation scorecard、strict release gate。環境変数・認証stateなどの秘密は推測せず、provider dispatch・課金・公開・deploy・破壊的操作は行っていない。Goalはactive。
