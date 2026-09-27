@@ -11996,3 +11996,7 @@ Heavy APIのproduction auth boundaryをfresh read-only確認。`/v1/health`は20
 # Goal progress — 2026-09-27 r667
 
 Adaptive runtime/packageをfresh再確認。Graph runtimeと外部role processはliveだが、`capacity_guard=capacity_blocked`・`live_capacity_observable=false`・`no_immediate_retry`。別タスクのPlanner admissionは期限切れ表示でも`in_flight`かつ所有者がHeavyではなく、Heavy Astra r6は`blocked`・`launch_allowed=false`・`invocation_id=null`のまま。foreign leaseの解放、同一packageの再送、手動claim/start、代替route、workflow forkは行わない。ソース・provider・deploy・billing・publication・secret値読取は0、動画はdeferred、Goalはactive。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r5.json`。
+
+# Goal progress — 2026-09-27 r668
+
+Heavy API production auth boundaryをfresh read-only再確認。healthは200で`private-r2`/`heavyEntitlementEnabled=true`、未認証profile/entitlementは401、brandなしusageは400。consumer-auth session、authenticated provider receipt、R2 reconciliation、monitor token/brandは依然未取得。これは稼働とclosed boundaryの証拠であり、生成完了の証拠ではない。外部効果・provider submit・deploy・課金・公開・secret読取は0、動画はdeferred。正本は`work/heavy-chain-production-auth-boundary-fresh-readback-20260927-r3.json`。

@@ -23481,3 +23481,7 @@ Production Heavy APIのread-only boundaryはfresh確認済み。health 200、未
 # Heavy Chain current state — 2026-09-27 r667
 
 Adaptive runtime/packageのfresh readbackで、Graph/live processは利用可能だがcapacity guardは`capacity_blocked`、live capacityは観測不能、即時retryは禁止。別タスク所有のPlanner admissionは`in_flight`のままで、Heavy Astra r6は`blocked`・`launch_allowed=false`・verified invocation identityなし。foreign leaseのrelease、同一package replay、手動claim/start、代替route/forkは行っていない。source/provider/deploy/billing/publication/secret readは0、動画はdeferred、Goal active。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r5.json`。
+
+# Heavy Chain current state — 2026-09-27 r668
+
+Production Heavy APIのauth boundaryをfresh readback。health 200（private-r2、Heavy entitlement enabled）、未認証profile/entitlement 401、brandなしusage 400。consumer-auth session、authenticated provider receipt、R2 reconciliation、monitor token/brandは未取得。provider/deploy/billing/publication/secret readは0、動画deferred、Goal active。正本は`work/heavy-chain-production-auth-boundary-fresh-readback-20260927-r3.json`。
