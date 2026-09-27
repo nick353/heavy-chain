@@ -11578,3 +11578,7 @@ fresh source handoffのevidence fingerprint `e1a53b09218665e6f142f2c8922d612dd6d
 # Goal progress — 2026-09-27 r565
 
 実provider/video laneの接続可能性をfresh discoveryし、Runwayが利用可能だが未接続・未インストール状態であることを確認した。公式接続導線のsuggestionを発行したが、connectionConfirmedはfalseのまま保持。provider生成、receipt、課金、公開、secret読取は0。正本は`work/heavy-chain-provider-tool-discovery-20260927-r1.json`。Goal active。
+
+# Goal progress — 2026-09-27 r566
+
+Runway接続未確認を反映して要件別completion auditを更新した。provider/video laneを`available_but_not_connected`として明示し、実provider receiptやR2/video reconciliationを未完了のまま保持。次の依存順をRunway connection readback → Astra adapter → monitor/G618 → H601 → provider → R2 → video → H602 → scorecard → strict gateへ固定した。正本は`work/heavy-chain-completion-audit-20260927-r5.json`。Goal active。
