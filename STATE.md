@@ -22755,3 +22755,7 @@ blocked後の新turnで復旧を試行。runtime/graph/live processは生存し�
 # Heavy Chain current state — 2026-09-27 r489
 
 10M completion auditのfresh readbackは`ok=false`/16 blockers、release gateは`ok=false`/4 failures。release gate上はcurrent production mass-market QAとLightchain all-feature order previewsがpass、残りはmonitor/UI pair、G618、production H602、real-generation scorecard。10M verifierは旧G668/G659 artifact pathを参照しており、gateとの証跡差を診断した。コード・provider・auth secret・billing・R2・publicationは未変更。Adaptive capacity/packageは`capacity_blocked`/`waiting_human`で継続。
+
+# Heavy Chain current state — 2026-09-27 r490
+
+再開後3回目のblocked auditで、Adaptive runtime/graph/live processは生存、ただし`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空。`heavy-cross-surface-astra-engineering`は`waiting_human`、`automatic_dispatch=false`、`claim_id=null`、`start_receipt=null`。Heavy Graphにcapacity-recovery fork対象はなく、manual claim/start・重複package・代替routeは行わない。同一blockerの3回連続を確認したためGoal statusを`blocked`へ更新する。外部効果は0。

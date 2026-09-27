@@ -11048,6 +11048,10 @@ workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/fina
 
 新turnで`npm run verify:10m-completion:incomplete-ok`をfresh実行し、`capturedAt=2026-09-27T06:31:48.295Z`、`ok=false`、16 blockerを確認した。続くrelease gateは`capturedAt=2026-09-27T06:31:50.431Z`、`ok=false`で、現行の実質的な4失敗はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、real-generation visual scorecard。current production mass-market QAとLightchain all-feature order previewsは同gateではpassへ更新された。一方10M verifierはG668/G659等で旧artifact pathを参照しており、現行release gateとのprovenance系統差を確認した。これは証跡整合の診断であり、未実施provider/auth/billing/publicationを完了扱いにせず、verifier変更もAstra engineering承認なしには行わない。Adaptive packageはcapacity/holdのまま。
 
+# Goal progress — 2026-09-27 r490
+
+再開後3回目のfresh blocked audit。runtime/graph/live processは利用可能だが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空。既存Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`/`start_receipt=null`で不変、Heavy関連に`capacity_blocked`のGraph fork対象も存在しない。同一host-managed capacity/意図的holdが再開後3回連続したため、Goalを`blocked`へ更新する。Opus plan、ソース、provider、認証secret、課金、R2、公開、削除、deployは保持・未実行。再開条件はcapacity/approval状態の変化後に同一packageをfresh status→claim→startできること。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
