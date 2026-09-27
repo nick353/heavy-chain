@@ -23525,3 +23525,7 @@ Goal readiness verifierを現行HEAD `e5621a4`でfresh実行し、Cloudflare run
 # Heavy Chain current state — 2026-09-28 r679
 
 Heavyの10分QA runnerをprovider-agnosticに修正し、Workers AI legacy receipt互換を維持しながら、OpenAI `openai-images-api` receiptを一致backend付きで受入、provider/backend driftをfail-closedにした。新規回帰8/8、Heavy OpenAI選択4/4、lint/typecheck/diff check PASS。strict gateをfresh再実行し、新QA回帰はPASSしたが、production monitor/UI、G618、production H602、generation scorecardの4項目は継続FAIL。キーのローテーション・provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r680
+
+Video provider boundary/contract/persistence、workspace handoff、provider persistence、Canvas generationの回帰をrelease gateへ追加。clean treeでstrict gateをfresh実行し、Heavy/OpenAI QA、video boundary/contract、video persistence、workspace handoff、provider persistence、Canvas readbackは全てPASS。production monitor/UI、G618、production H602、generation scorecardの4項目だけがFAIL。video providerは未admitのままfail-closed、同じAPIキーは変更せず、provider submit・deploy・課金・公開は0、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`。
