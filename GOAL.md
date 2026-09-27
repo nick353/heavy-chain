@@ -11582,3 +11582,7 @@ fresh source handoffのevidence fingerprint `e1a53b09218665e6f142f2c8922d612dd6d
 # Goal progress — 2026-09-27 r566
 
 Runway接続未確認を反映して要件別completion auditを更新した。provider/video laneを`available_but_not_connected`として明示し、実provider receiptやR2/video reconciliationを未完了のまま保持。次の依存順をRunway connection readback → Astra adapter → monitor/G618 → H601 → provider → R2 → video → H602 → scorecard → strict gateへ固定した。正本は`work/heavy-chain-completion-audit-20260927-r5.json`。Goal active。
+
+# Goal progress — 2026-09-27 r567
+
+Runwayの接続権限をread-only確認し、現ワークスペースでは`installed=false`、`connectionConfirmed=false`、permission readbackは`not_installed`、global permissionは`Allow low-risk actions`だった。provider toolが未露出である正確なblockerを`work/heavy-chain-provider-connection-readback-20260927-r2.json`へ固定した。接続・生成・課金・secret読取は0。Goal active。

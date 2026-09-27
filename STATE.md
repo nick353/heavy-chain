@@ -23066,3 +23066,7 @@ Runway providerの利用可能性をfresh確認し、接続導線を発行した
 # Heavy Chain current state — 2026-09-27 r566
 
 Runwayの未接続状態を反映したcompletion audit r5をfresh固定した。provider/videoはavailable but not connected、その他のproduction・billing・scorecard gateも未完了。正本は`work/heavy-chain-completion-audit-20260927-r5.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r567
+
+Runway permission/installationをfresh readbackし、未インストール・未接続でprovider tool未露出のexact blockerを固定した。global permissionはlow-risk actionsだが、Runway接続証跡にはならない。正本は`work/heavy-chain-provider-connection-readback-20260927-r2.json`。Goal active。
