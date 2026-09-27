@@ -12129,3 +12129,7 @@ verified receiptなしでlaunch不可。Goalはactiveを維持し、外部認証
 既存Graphのverified readbackにより、Heavy固有のrights/entitlement plumbingとlocal regressionは実装済みと確認した。
 一方、production enforcementはOFFで、approved terms/rights文書が未activeのため、本番provider生成やdeployへ昇格しない。
 Goalはactiveを維持し、認証・文書・provider・billingの独立gateを混同しない。
+# Entitlement final-review boundary — 2026-09-28
+
+rights/entitlement実装はverifiedだが、Graphの`final_review`結果が未生成であり、本番有効化の承認ではない。required
+reviewer routeを別adapterで置換せず、terms/rights文書・auth/provider・billingの各gateを独立して保持する。

@@ -23618,3 +23618,8 @@ Adaptive plan version 7をreadbackし、graph/runtime processは起動してい�
 Heavy API 107/107、runtime 1/1、Light parity/source 12/12、Cloudflare image contract 12/12、typecheck/build/diff check
 passまで完了していることを確認した。ただしproduction enforcementはOFF、approved terms/rights wordingとproduction
 document configは未active、provider/deploy/billing/publicationは未実行。これは本番完了ではなく、実装済みローカル境界として保持する。
+# Entitlement final-review boundary — 2026-09-28
+
+rights/entitlement Graphのlatest stageは`final_review`で、required routeは`native_reviewer_default`、modelは`gpt-6-astra`。
+plan/implementation/repair/verifyのverified evidenceはあるが、final reviewer resultはまだ存在しないため、production
+enablementは未承認。別routeでreviewを代替せず、enforcement OFFとprovider/deploy/billing未実行を維持する。
