@@ -23640,3 +23640,9 @@ clean worktreeのstrict release gateを同じ実行でfresh取得した。syntax
 # Fresh production boundary readback — 2026-09-28
 
 認証なしのread-only curlでproduction境界をfresh確認。Heavy API healthは200（private-r2、Heavy entitlement enabled）、consumer-auth healthは200（heavy app、D1、email設定済み）、profile/Heavy entitlementは401、Web rootと`/designProduction`はloginへ307 redirect。認証済みconsumer session、provider receipt、remote persistence/reconciliation、monitor/UI business completionは未成立。APIキー変更・再送・provider submit・deploy・課金・公開・動画変更は0。正本は`work/heavy-chain-production-boundary-fresh-readback-20260928-r1.json`。
+
+# Companion auth boundary readback — 2026-09-28
+
+task-owned AOS Chrome Companionの同一profile sessionでproduction Webのrootと`/designProduction`をread-only取得。両routeとも`Lightchain AI`の「workspaceを準備しています／認証状態とブランド設定を確認しています」shellで止まり、authenticated workspace・provider receiptは未成立。read_urlsの2/2、same-page screenshot、externalActionExecuted=false、task session/tab cleanup完了を確認した。APIキー・secret・入力・submit・provider・deploy・課金・公開・動画は0。正本は`work/heavy-chain-companion-auth-boundary-fresh-readback-20260928-r1.json`。
+
+Adaptive writebackは同一readback直後に`Transport closed`で失敗。再送・別route置換はせず、サーバー側plan v13を保持し、normal reconnection後にevent `companion-auth-boundary-fresh-readback-20260928-r1`を一度だけ記録する待ち状態とした。

@@ -64,6 +64,7 @@
     "output/playwright/heavy-completion-audit-20260928-current/release-gate-summary.json",
     "work/heavy-chain-sunburst-source-audit-20260928-r1.json"
     ,"work/heavy-chain-production-boundary-fresh-readback-20260928-r1.json"
+    ,"work/heavy-chain-companion-auth-boundary-fresh-readback-20260928-r1.json"
   ],
   "freshReadback": {
     "observedAt": "2026-09-27T17:53:36Z",
@@ -85,6 +86,9 @@
     "completionAudit": "fresh_read_only_audit_failed_with_explicit_proof_and_release_gate_blockers",
     "productionBoundary": "health_200_consumer_auth_health_200_profile_401_entitlement_401_web_login_307",
     "productionBoundaryCapturedAt": "2026-09-27T18:18:31Z",
+    "companionAuthBoundary": "workspace_preparing_auth_brand_hydration_pending_authenticated_workspace_false",
+    "companionAuthBoundaryCapturedAt": "2026-09-27T18:20:17Z",
+    "adaptiveProgressWriteback": "pending_transport_closed_event_companion-auth-boundary-fresh-readback-20260928-r1",
     "strictGate": "FAIL",
     "strictGateCapturedAt": "2026-09-27T18:11:37.127Z",
     "strictGateFailures": [

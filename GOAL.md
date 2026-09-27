@@ -12,6 +12,12 @@ fresh read-only確認で、primary visual scorecard/readbackとG677 fallback sco
 
 認証なしのread-only確認でHeavy API health 200、consumer-auth health 200、profile/Heavy entitlement 401、Web rootと`/designProduction`のlogin redirect 307を取得。稼働しているhealthは認証済みworkspaceやprovider生成の証明ではない。APIキーは変更せず、provider submit・deploy・課金・公開・動画変更は0。Goalはactive。正本は`work/heavy-chain-production-boundary-fresh-readback-20260928-r1.json`。
 
+## Companion auth boundary readback — 2026-09-28
+
+task-owned Chrome Companionでproduction Webのrootと`/designProduction`をread-only確認。2/2ともworkspace準備／認証・ブランドhydration待ちのshellで、authenticated workspace・provider receiptは未成立。screen/semantic readbackとcleanupは完了し、browser external action、APIキー変更、provider submit、deploy、課金、公開、動画変更は0。Goalはactive。正本は`work/heavy-chain-companion-auth-boundary-fresh-readback-20260928-r1.json`。
+
+同じreadbackのAdaptive writebackは`Transport closed`で失敗したため、同じ接続への再送やroute置換は行わず、server plan v13とpending eventを保持。通常のAdaptive再接続後に一度だけwritebackする。
+
 ## Heavy feature readback and action boundary — 2026-09-27
 
 同一ownerの認証済みCompanion sessionで生成featureをread-only走査した。`model-matrix`／`design-gacha`はHeavy利用条件、
