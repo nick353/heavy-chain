@@ -23365,3 +23365,7 @@ production wrangler dry-runは`AI_IMAGE_PROVIDER=openai`をbundleへ入れるが
 # Heavy Chain current state — 2026-09-27 r638
 
 Light provider `22/22`、Light parity `9/9`、auth recovery `3/3`、auth hydration `4/4`、OpenAI static readiness `7/7`をfresh PASS、合計45/45。ローカル契約のみで、本番provider receipt・Organization Verification・R2/reconciliation・strict releaseは未完了。動画はdeferred。正本は`work/heavy-chain-image-independent-contracts-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r639
+
+G620/G614/G632/G633、H601 static、H602 local contractはfresh PASS。H601 operator 10 missing、H602 quota=false・checkout=true・no-charge/transaction proofなし、G618 monitor inputs不足、G619 beta ready session 0。release gateはnot ready。動画はdeferred。正本は`work/heavy-chain-security-billing-ops-fresh-readback-20260927-r1.json`と更新済みresume manifest、Goal active。

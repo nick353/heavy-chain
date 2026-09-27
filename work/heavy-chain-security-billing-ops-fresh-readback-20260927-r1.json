@@ -1,0 +1,78 @@
+{
+  "schema": "heavy-chain.security-billing-ops-fresh-readback.v1",
+  "capturedAt": "2026-09-27T11:08:39Z",
+  "sourceRevision": "3d8333f",
+  "scope": {
+    "readOnly": true,
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "externalEffects": 0,
+    "payment": false,
+    "deploy": false,
+    "secretRead": false
+  },
+  "passedStaticGates": [
+    { "id": "G620", "command": "npm run verify:g620-security-ops --silent", "ok": true, "checks": 5 },
+    { "id": "G614", "command": "npm run verify:g614-ops --silent", "ok": true },
+    { "id": "G632", "command": "npm run verify:g632-incident-response --silent", "ok": true },
+    { "id": "G633", "command": "npm run verify:g633-scale-alerting-plan --silent", "ok": true },
+    { "id": "H601-static", "command": "npm run verify:h601-legal-safety --silent", "ok": true, "checks": 18 },
+    { "id": "H602-local-contract", "command": "npm run verify:h602-billing --silent", "ok": true, "productionProof": "not_verified", "releaseApproval": false }
+  ],
+  "openGates": [
+    {
+      "id": "H601-operator",
+      "command": "npm run verify:h601-operator-readiness --silent",
+      "ok": false,
+      "missingCount": 10,
+      "blockers": [
+        "operator_final_h601_decision_missing",
+        "final_terms_locator_is_attached",
+        "final_privacy_locator_is_attached",
+        "retention_deletion_export_decision_is_attached",
+        "upload_rights_policy_decision_is_attached",
+        "brand_reference_policy_decision_is_attached",
+        "person_likeness_policy_decision_is_attached",
+        "copyright_marketing_claims_decision_is_attached",
+        "commercial_use_wording_decision_is_attached",
+        "counsel_operator_review_is_attached"
+      ]
+    },
+    {
+      "id": "H602-operator",
+      "command": "npm run verify:h602-operator-readiness --silent",
+      "ok": false,
+      "missingCount": 6,
+      "billingSettings": {
+        "generationQuotaEnforced": false,
+        "productionCheckoutEnabled": true,
+        "verifiedNoRealChargeProofCount": 0,
+        "transactionOrEntitlementReadback": false
+      }
+    },
+    {
+      "id": "G618",
+      "command": "npm run verify:g618-scale-ops --silent",
+      "ok": false,
+      "blocker": "explicit Cloudflare API origin, brand, live session and valid baseline limits are missing"
+    },
+    {
+      "id": "G619-beta",
+      "commands": [
+        "npm run verify:g619-beta-readiness --silent",
+        "npm run verify:g619-beta-evidence --silent"
+      ],
+      "ok": false,
+      "readySessions": 0,
+      "missingCount": 18,
+      "requires": ["consent", "production target", "useful duration", "redaction review", "usable behavior evidence"]
+    }
+  ],
+  "releaseInterpretation": {
+    "securityAndOperationsStaticContracts": "pass",
+    "humanPolicyAndBillingAcceptance": "open",
+    "productionScaleAndBetaEvidence": "open",
+    "releaseGate": "not_ready"
+  },
+  "nextGate": "Keep checkout and public release closed; obtain safe operator decision artifacts and monitor/beta inputs, while image Astra migration remains separately blocked by runtime."
+}
