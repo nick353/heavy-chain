@@ -1,4 +1,10 @@
-# Goal progress — 2026-09-27 r391
+# Goal progress — 2026-09-27 r392
+
+## External context preflight — 2026-09-27
+
+fresh preflightでLight本番auth stateとmonitor URL/brand/tokenが未設定、g835 UI artifactもmissingである
+ことを確認し、`work/heavy-chain-external-context-preflight-20260927.json`へ固定した。これは同じ外部依存を
+再確認した証拠であり、秘密値や認証を推測してworkspace/release gateを進める根拠にはしない。Goalはactive。
 
 ## Real Heavy generation visual QA — 2026-09-27
 

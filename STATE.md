@@ -1,4 +1,12 @@
-# Heavy Chain current state — 2026-09-27 r269
+# Heavy Chain current state — 2026-09-27 r270
+
+## External context preflight — 2026-09-27
+
+fresh read-only preflightで`HEAVY_CHAIN_MONITOR_API_URL`、brand ID、monitor token、
+`LIGHTCHAIN_UI_AUTH_STATE`はいずれも未設定、production auth stateとg835 UI artifactはmissing、
+monitor artifactのみpresentだった。証跡は`work/heavy-chain-external-context-preflight-20260927.json`。
+この状態でauth/tokenを推測せず、workspace save/reuse、production Light parity、monitor/UI readbackを
+開始していない。
 
 ## Real Heavy image visual QA — 2026-09-27
 
