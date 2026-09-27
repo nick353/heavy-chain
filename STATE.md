@@ -23453,3 +23453,7 @@ Cloudflare production secret名は存在するが値は未読。local OpenAI key
 # Heavy Chain current state — 2026-09-27 r660
 
 Astra再開用の画像移行packet v2を固定。official model evidenceとsource ownership、no-replay/legacy receipt境界、fresh evidence、runtime/auth blockersを集約。source変更・provider submitは0、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r661
+
+ユーザー提供キーは保存・表示せず、OpenAI `GET /v1/models`をread-only実行してHTTP 200、138 models、Sunburst presentを確認。ローカル認証は前進したが、Heavy consumer-auth/organization verification、verified Astra receipt、Sunburst source実装、Heavy provider receipt、R2/reconciliation、deploy・billing・releaseは未完。画像waveのみ継続し、動画はdeferred。正本は`work/heavy-chain-openai-api-auth-readback-20260927-r2.json`。

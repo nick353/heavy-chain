@@ -1,0 +1,31 @@
+{
+  "schema": "heavy-chain.openai-api-auth-readback.v1",
+  "capturedAt": "2026-09-27T11:48:50Z",
+  "sourceRevision": "7407b594f340c55ee9b3df8b282c4e8cbd1ac6be",
+  "request": "GET https://api.openai.com/v1/models",
+  "scope": {
+    "readOnly": true,
+    "generation": false,
+    "billing": false,
+    "deploy": false,
+    "secretValueLogged": false,
+    "responseRedacted": true,
+    "video": "deferred_by_user"
+  },
+  "environment": {
+    "OPENAI_API_KEY": "user_supplied_and_readonly_check_succeeded",
+    "HEAVY_CHAIN_MONITOR_TOKEN": "absent",
+    "HEAVY_CHAIN_MONITOR_API_URL": "absent",
+    "HEAVY_CHAIN_MONITOR_BRAND_ID": "absent"
+  },
+  "result": {
+    "httpStatus": 200,
+    "providerObject": "list",
+    "modelsRead": true,
+    "modelCount": 138,
+    "sunburstAvailability": "present",
+    "generationAttempted": false
+  },
+  "interpretation": "The user-supplied credential passed a redacted read-only model-list check and includes the approved Sunburst model. This establishes local OpenAI credential usability only; it does not prove Heavy consumer authentication, organization verification, provider receipt, R2 persistence, or production deployment configuration.",
+  "nextGate": "Resume the approved Heavy receipt path after a verified Astra implementation gate; do not submit direct image generation or store the credential in the repository."
+}

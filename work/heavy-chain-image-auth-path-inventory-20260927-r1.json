@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-auth-path-inventory.v1",
-  "capturedAt": "2026-09-27T11:40:18Z",
-  "sourceRevision": "0b927973749b6b66267afe4616bfb807ee26f712",
+  "capturedAt": "2026-09-27T11:48:50Z",
+  "sourceRevision": "7407b594f340c55ee9b3df8b282c4e8cbd1ac6be",
   "scope": {
     "currentWave": "image_generation",
     "video": "deferred_by_user",
@@ -13,7 +13,7 @@
     "publication": false
   },
   "localCredentialNames": {
-    "OPENAI_API_KEY": "present_but_previous_readonly_call_rejected_401",
+    "OPENAI_API_KEY": "user_supplied_and_readonly_model_list_check_succeeded",
     "HEAVY_CHAIN_MONITOR_TOKEN": "absent",
     "HEAVY_CHAIN_MONITOR_API_URL": "absent",
     "HEAVY_CHAIN_MONITOR_BRAND_ID": "absent",
@@ -29,6 +29,6 @@
     "adaptiveOrBootstrapProcessObserved": false,
     "closedTransportReplayed": false
   },
-  "interpretation": "A production secret name exists, but its value and usability are unverified; the local key was rejected by OpenAI, and Heavy consumer-auth/monitor context is absent. No credential was substituted or exposed.",
-  "nextGate": "Restore the approved consumer-auth session and a valid provider credential, then use the Heavy receipt path for image generation."
+  "interpretation": "The user-supplied local credential passed a redacted read-only model-list check and the approved Sunburst model is present. A production secret name exists, but its value and usability remain unverified; Heavy consumer-auth/monitor context is still absent. No credential was saved or exposed.",
+  "nextGate": "Use the approved Heavy receipt path only after the verified Astra implementation gate and Heavy consumer-auth/organization-verification context are available."
 }

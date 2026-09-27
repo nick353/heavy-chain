@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T11:42:36Z",
-  "sourceRevision": "2d687ed",
+  "capturedAt": "2026-09-27T11:48:50Z",
+  "sourceRevision": "7407b594f340c55ee9b3df8b282c4e8cbd1ac6be",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -44,12 +44,14 @@
     "work/heavy-chain-full-completion-audit-fresh-20260927-r1/release-gate-summary.json",
     "work/heavy-chain-image-auth-path-inventory-20260927-r1.json",
     "work/heavy-chain-openai-image-official-model-readback-20260927-r1.json",
-    "work/heavy-chain-openai-image-astra-implementation-packet-20260927-r2.json"
+    "work/heavy-chain-openai-image-astra-implementation-packet-20260927-r2.json",
+    "work/heavy-chain-openai-api-auth-readback-20260927-r2.json"
   ],
   "freshReadback": {
-    "observedAt": "2026-09-27T11:42:36Z",
+    "observedAt": "2026-09-27T11:48:50Z",
     "evidenceRefsPresent": true,
     "runtimeProcessObserved": false,
+    "openaiReadonlyModelList": "200_sunburst_present",
     "worktree": "clean",
     "dependencyGraph": "acyclic",
     "sourceMutation": false,
@@ -63,7 +65,7 @@
       "owner": "root",
       "action": "After a normal Adaptive runtime reconnection, read the existing image Astra package/run; do not replay its closed transport, manually claim, or fork it.",
       "successEvidence": "fresh runtime/package readback with verified start metadata",
-      "currentBlocker": "no adaptive/bootstrap runtime process observed"
+      "currentBlocker": "no adaptive/bootstrap runtime process observed; local OpenAI model-list auth is now usable"
     },
     {
       "id": "image-astra-engineering-gate",
