@@ -22378,3 +22378,10 @@ production evidence 7件は未解消。Goal active。
 video providerのlocal境界をfresh検証した。`npm run test:video-provider-boundary` 1/1、`npm run test:video-provider-contract`
 3/3がpassし、Video Workstationはimage generationへ誤routingせず、source/credential/same-run readbackが揃うまでfail-closed、
 不完全な入力からfallback requestを発明しないことを確認した。実video provider dispatch・receipt・remote persistenceは未実行。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r423
+
+remote durable boundaryのlocal contractをfresh検証した。`test:provider-persistence-readback` 14/14、
+`test:workspace-handoff-persistence` 3/3、`test:video-editor-persistence` 4/4がpass。provider provenance、canonical storage path、
+result/History/Canvas promotion、workspace handoff、video source-editor save/reopenはreceipt未確認時にfail-closedする。ただし実production
+provider receipt、R2 save→reuse→reload→reconciliationはまだ未実行。Goal active。
