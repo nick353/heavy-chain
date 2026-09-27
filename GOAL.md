@@ -11525,6 +11525,10 @@ public entrypoint readback反映後にunified release gateをfresh再実行し�
 
 正規Companion証跡とLight/Heavy境界passを反映してstrict release gateをfresh再実行した。`2026-09-27T07:59:03.869Z`、HEAD `a9bc8ae`、`ok=false`で失敗は4件（production monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecard）。canonical Companion evidence r3は専用verifier passだが、provider receipt・source sync・reconciliation・R2・billing・scorecardへ昇格させていない。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r4.json`。provider submit、課金、公開、deploy、破壊cleanup、secret insertionは0。Goal active。
 
+# Goal progress — 2026-09-27 r556
+
+正規Heavy `/model`をfresh Companionで4秒settle後にreadbackし、現在は`権限がありません`・Heavy規約/権利エラー表示なし、avatarあり、readyState complete、semantic/visual verified、衣服画像picker enabled、provider submitなしを確認した。Resource Timingはconsumer-auth session、profile、brands、generated-images、private media/readの各familyを観測し、console 0件・credential/body非取得。従って現行の画面ブロッカーは権限ではなく入力未選択で、実生成receipt→remote save→reuse/reload→reconciliationは別gateとして未証明。正本は`work/heavy-chain-model-readback-diagnosis-20260927-r1.json`。session cleanupはok、task tab close、lease release confirmed、external effect 0。Goal active。
+
 要件別completion auditを現行証拠へ更新し、`work/heavy-chain-completion-audit-20260927-r2.json`へ固定した。dirty worktree、Light現行parityの各local suite、operations/local guardはpassまたはreadback済みだが、履歴testidの契約ドリフト、provider receipt、remote R2 chain、video receipt、monitor/G618、H601/H602、scorecard、strict gateは未完了のまま。外部効果は0、Goal active。
 
 10M completion auditを`2026-09-27T06:50:52.998Z`にfresh実行し、`ok=false`/16 blockersを確認。続くunified release gateを`2026-09-27T06:52:20.321Z`にfresh実行し、失敗はproduction monitor/UI、G618 scale ops、production H602 billing completion、generation scorecardの4件に固定された。外部provider・課金・公開・秘密投入・破壊操作は0。Goal active。

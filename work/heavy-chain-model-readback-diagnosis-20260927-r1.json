@@ -1,0 +1,52 @@
+{
+  "schema": "heavy-chain.model-readback-diagnosis.v1",
+  "capturedAt": "2026-09-27T08:01:58.662Z",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "route": "/model",
+  "sessionId": "session_9621b7c5-76f1-48d7-a2a4-eb412f04da73",
+  "tabId": 1980931130,
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "page": {
+    "title": "Lightchain AI",
+    "readyState": "complete",
+    "semanticReadback": "verified",
+    "visualReadback": "verified",
+    "authMarker": "avatar",
+    "legacyPermissionText": false,
+    "heavyTermsOrRightsErrorVisible": false,
+    "requiredInputState": "衣服画像を選択してください",
+    "inputPickerDisabled": false,
+    "providerSubmitDispatched": false
+  },
+  "networkReadback": {
+    "source": "performance_resource_timing",
+    "historicalReplay": false,
+    "consoleCount": 0,
+    "redactionApplied": true,
+    "observedEndpointFamilies": [
+      "/api/auth/get-session",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/profile",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/brands",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/generated-images",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/media/read"
+    ],
+    "requestBodiesOrCredentialsRead": false
+  },
+  "businessCompletion": {
+    "providerReceipt": "unverified",
+    "sourceSync": "unverified",
+    "reconciliation": "unverified"
+  },
+  "cleanup": {
+    "schema": "aos.chrome_companion.owner_cleanup_receipt.v1",
+    "ok": true,
+    "sessionClosed": true,
+    "taskTabClosed": true,
+    "leasesReleased": 1,
+    "retained": [],
+    "unknown_effect": [],
+    "externalActionExecuted": false,
+    "recorded_at": "2026-09-27T08:01:58.662Z"
+  },
+  "decision": "no_current_権限がありません_blocker;_generation_requires_user_inputs_and_separate_provider_receipt_gate"
+}
