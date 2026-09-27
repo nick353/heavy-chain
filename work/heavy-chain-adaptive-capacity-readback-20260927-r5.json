@@ -1,0 +1,58 @@
+{
+  "schema": "heavy_chain_adaptive_capacity_readback.v1",
+  "capturedAt": "2026-09-27T12:20:36.300Z",
+  "sourceRevision": "d116f8d",
+  "scope": "Heavy image-only Sunburst wave; video deferred",
+  "plan": {
+    "planId": "f1f23121-a565-4b9a-8130-8fc974f3c1ed",
+    "version": 1,
+    "planValid": true,
+    "engineeringReady": false,
+    "nextAction": "astra_engineering"
+  },
+  "runtime": {
+    "graphRuntimeAvailable": true,
+    "externalRoleProcessLiveVerified": true,
+    "activeRoutes": [],
+    "capacityGuard": {
+      "blockerCode": "capacity_blocked",
+      "liveCapacityObservable": false,
+      "retryPolicy": "no_immediate_retry",
+      "recovery": "workflow_fork_with_capacity_recovery_after_fresh_state_readback"
+    },
+    "runtimeIdentityMatch": true,
+    "runtimeProcessMatch": false
+  },
+  "plannerAdmission": {
+    "ownerTurn": "01a0e1d7-3d34-7eb0-882f-135394ea22d0:2026-09-27-daily-ai",
+    "modelRoute": "native_planner_default",
+    "status": "in_flight",
+    "leaseExpired": true,
+    "ownedByHeavyTask": false
+  },
+  "heavyAstraPackage": {
+    "runId": "run_heavy_image_astra_engineering_20260927_r6",
+    "packageId": "heavy-openai-image-astra-engineering-r6",
+    "state": "blocked",
+    "launchAllowed": false,
+    "claimId": "/root",
+    "invocationId": null,
+    "verified": false,
+    "blocker": "runtime_invocation_identity_unverified_and_local_heavy_provider_binding_revision_and_test_evidence_missing"
+  },
+  "otherTask": {
+    "threadId": "01a0e1d7-3d34-7eb0-882f-135394ea22d0",
+    "status": "active",
+    "turnState": "in_progress"
+  },
+  "effects": {
+    "sourceMutation": false,
+    "providerSubmission": false,
+    "deployment": false,
+    "billing": false,
+    "publication": false,
+    "secretRead": false,
+    "videoTouched": false
+  },
+  "decision": "keep_goal_active; do_not_replay_or_release_foreign_lease; continue_read_only_preparation"
+}
