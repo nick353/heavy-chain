@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T17:53:36Z",
-  "sourceRevision": "a86dd7f",
+  "capturedAt": "2026-09-27T18:00:44Z",
+  "sourceRevision": "9714e12",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -82,6 +82,30 @@
     "externalEffects": 0,
     "completionAudit": "fresh_read_only_audit_failed_with_explicit_proof_and_release_gate_blockers"
   },
+  "latestAstraReadback": {
+    "runId": "run_heavy_image_astra_engineering_20260927_r6",
+    "packageId": "heavy-openai-image-astra-engineering-r6",
+    "ownerTaskId": "/root",
+    "claimId": "/root",
+    "sourceRevision": "370368b",
+    "status": "bounded_implementation_spec_complete_runtime_identity_unverified",
+    "verified": false,
+    "invocationId": null,
+    "implementationSpecReady": true,
+    "lunaAuthorized": false,
+    "boundedScope": [
+      "cloudflare/heavy-api/src/openai-image.ts",
+      "cloudflare/heavy-api/src/image-ai-contracts.ts",
+      "src/pages/GeneratePage.tsx"
+    ],
+    "preservedScope": [
+      "src/pages/CanvasEditorPage.tsx",
+      "src/components/ChatEditor.tsx",
+      "src/pages/LightchainWorkbenchPage.tsx",
+      "video provider and video files"
+    ],
+    "readback": "Astra did not independently expose invocation identity; no Luna handoff, source mutation, provider call, deploy, or auth probe was performed."
+  },
   "steps": [
     {
       "id": "runtime-recovery-readonly",
@@ -90,7 +114,7 @@
       "owner": "root",
       "action": "After a normal Adaptive runtime reconnection, read the existing image Astra package/run; do not replay its closed transport, manually claim, or fork it.",
       "successEvidence": "fresh runtime/package readback with verified start metadata",
-      "currentBlocker": "capacity_blocked and managed Astra package returned no independently verifiable invocation identity/start receipt"
+      "currentBlocker": "managed Astra package returned a bounded specification but no independently verifiable invocation identity/start receipt"
     },
     {
       "id": "image-astra-engineering-gate",
@@ -114,7 +138,8 @@
         "unsupported model/provider fails closed",
         "no fallback, replay, or video diff"
       ],
-      "successEvidence": "verified Astra engineering start/result receipt plus bounded Luna handoff"
+      "successEvidence": "verified Astra engineering start/result receipt plus bounded Luna handoff",
+      "latestReadback": "bounded_implementation_spec_complete_runtime_identity_unverified"
     },
     {
       "id": "image-luna-implementation",
