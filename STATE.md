@@ -23136,3 +23136,7 @@ remote save/reconciliation/videoのlocal contractを16/16 pass。Cloudflare時�
 # Heavy Chain current state — 2026-09-27 r586
 
 Fitting/Canvas cross-surface handoffを現行ソースへ更新。Heavy adapterの変更対象と、ChatEditor fail-closed・Light entitlement bypass・server proof contractの保持条件を明文化した。ソース変更は0、provider/R2/billing/publication/secret外部効果は0。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r3.md`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r587
+
+H602 local billing contract 3/3、Lightchain release-gate contract 16/16 pass。production billing receipt・release approvalは未取得で、外部効果は0。正本は`work/heavy-chain-billing-release-contract-readback-20260927-r1.json`、Goal active。

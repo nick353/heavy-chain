@@ -11652,3 +11652,7 @@ remote save fail-closed、reconciliation、Board persistence、video source-edit
 # Goal progress — 2026-09-27 r586
 
 Fitting/CanvasのAstra handoffを現行HEADへ更新した。Fittingの`generateModelMatrix`、Canvasのprovider wrapperとHeavy-capable actionがrequestless `rightsConfirmed`に留まり、既存Cloudflare server wrapperはproof fieldsを受け取ればrequest-scoped preparation/attestationを実行できることを行番号付きで固定した。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r3.md`。Adaptive transport closedのため既存runを再送せず、Goal active。
+
+# Goal progress — 2026-09-27 r587
+
+H602 Cloudflare billing contract 3/3とLightchain release-gate contract 16/16をfresh実行し、合計19/19 pass。ローカル請求契約がrelease approvalを付与しないこと、production-only証跡の不足・不完全Companion evidence・rights checkbox混入をgateが拒否することを確認した。実charge、checkout、provider、公開、deploy、secret読取は0。正本は`work/heavy-chain-billing-release-contract-readback-20260927-r1.json`。Goal active。
