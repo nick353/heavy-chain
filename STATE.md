@@ -22962,3 +22962,7 @@ Cloudflare provider/readiness static checksをfresh passした。`verify:openai-
 # Heavy Chain current state — 2026-09-27 r540
 
 Adaptive plan/runtime/packageをfresh readbackした。Opus plan v3はvalid、graph/routerはavailable、外部role processはliveだが、capacityは`capacity_blocked`・`live_capacity_observable=false`、既存Heavy Astra packageは`waiting_human`/`automatic_dispatch_disabled`/claimなし/start receiptなし。重複登録・manual claim/start・代替route・forkは行わず、readbackを`work/heavy-chain-adaptive-readback-20260927-r1.json`へ固定した。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r541
+
+Heavy capability/preflight、Canvas/Chat entitlement、Fitting preview、Light permission/source admissionのcross-surface contractを同一HEADでfresh実行し、30/30 pass。unsupported/default-deny、stale input、Light/Heavy権限分離、Chat fail-closedを確認した。これはlocal/mock証拠で、Astra adapter実装・provider receipt・R2は未完了。正本は`work/heavy-chain-cross-surface-local-readback-20260927-r1.json`。Goal active。

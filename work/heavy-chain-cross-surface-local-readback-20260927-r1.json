@@ -1,0 +1,13 @@
+{
+  "schema": "heavy-chain.cross-surface-local-readback.v1",
+  "capturedAt": "2026-09-27T07:33:00Z",
+  "gitHead": "8e8be67",
+  "commands": [
+    "node --experimental-strip-types --test scripts/verify-heavy-capability-gating.test.mjs scripts/verify-heavy-generation-preflight.test.ts scripts/verify-canvas-chat-editor-entitlement.test.mjs scripts/verify-fitting-preview-readiness.test.ts scripts/verify-lightchain-permission-parity.test.ts scripts/verify-lightchain-source-feature-access.test.ts"
+  ],
+  "passed": 30,
+  "failed": 0,
+  "coverage":["Heavy capability default-deny","request preparation fail-closed","Canvas/Chat readiness","Fitting preview","Light permission parity","source admission separation"],
+  "externalEffects":{"provider":0,"billing":0,"R2":0,"publication":0,"secrets":0},
+  "decision":"cross_surface_local_contracts_verified_implementation_still_requires_astra_engineering_for_request_adapter"
+}
