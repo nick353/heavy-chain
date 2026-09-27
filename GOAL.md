@@ -11812,3 +11812,7 @@ Goal全体のfresh completion auditを現行HEAD `1bb1c768`で実行した。`ok
 # Goal progress — 2026-09-27 r621
 
 H601/H602 operator readiness、H602 production completion、G618 scale-opsをfresh実行した。H601は10項目（Terms/Privacy、保持・権利・brand/likeness・commercial-use・operator JSON等）、H602は6項目（quota、checkout disabled、machine no-charge/transaction readback、operator decision等）が未達。G618はCloudflare origin/brand/live session/baseline limits不足で開始前fail-closed。Codexはlegal/billing/identity/OTP/provider/secret/publication操作を行っていない。正本は`work/heavy-chain-human-gates-g618-readback-20260927-r1.json`、Goal active。
+
+# Goal progress — 2026-09-27 r622
+
+現行HEADでOpenAI provider readiness `7/7`、Cloudflare runtime contract `6/6`、Light unified workflow `6/6`、Heavy capability/preflight boundary `18/18`をfresh PASS。legacy active invocationはfail-closed、Heavy default-denyとLight/Heavy境界を維持している。ただし実provider生成receipt、remote save/reuse/reload/reconciliation、video provider、strict release gateは未証明。正本は`work/heavy-chain-openai-runtime-boundary-fresh-20260927-r1.json`。外部効果0、Goal active。

@@ -1,0 +1,33 @@
+{
+  "schema": "heavy_chain.openai_runtime_boundary_readback.v1",
+  "captured_at": "2026-09-27T10:41:37Z",
+  "source_revision": "51e5247",
+  "scope": "local_deterministic_no_provider_no_deploy",
+  "checks": [
+    {"name":"verify:openai-provider","status":"pass","count":"7/7","proof_limit":"no authenticated production generation or R2/business completion"},
+    {"name":"test:cloudflare-runtime","status":"pass","count":"6/6"},
+    {"name":"test:lightchain-unified-workflow-contract","status":"pass","count":"6/6","note":"video detail row remains dedicated while this contract covers video-excluded features"},
+    {"name":"heavy capability/preflight/canvas/chat/fitting boundary","status":"pass","count":"18/18"}
+  ],
+  "confirmed": [
+    "OpenAI/Cloudflare route and durable receipt contracts remain statically intact",
+    "legacy active invocation paths remain fail-closed",
+    "Heavy capability and entitlement boundaries remain explicit/default-deny",
+    "Light unified workflow contract does not promote historical production evidence"
+  ],
+  "not_confirmed": [
+    "real provider generation receipt",
+    "remote durable save/reuse/reload/reconciliation",
+    "video provider execution",
+    "strict release gate completion"
+  ],
+  "external_effects": {
+    "provider_calls": 0,
+    "r2_writes": 0,
+    "billing": 0,
+    "publication": 0,
+    "deploy": 0,
+    "secret_reads": 0,
+    "destructive_cleanup": 0
+  }
+}
