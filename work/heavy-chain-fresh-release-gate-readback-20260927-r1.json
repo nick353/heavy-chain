@@ -1,0 +1,38 @@
+{
+  "schema": "heavy-chain.fresh-release-gate-readback.v1",
+  "capturedAt": "2026-09-27T07:01:04.858Z",
+  "gitHead": "4fab7f4dafd7ab1b1dad6f795bd1756373d3009a",
+  "commands": {
+    "releaseGate": {
+      "command": "npm run verify:release-gate --silent",
+      "exitCode": 1,
+      "summaryPath": "output/playwright/10m-product-readiness-g615/release-gate-summary.json",
+      "summaryCapturedAt": "2026-09-27T06:59:44.460Z",
+      "ok": false,
+      "failed": [
+        "readback:production monitor and UI pair",
+        "readback:G618 scale ops baseline",
+        "readback:production H602 billing completion readback",
+        "command:generation scorecard"
+      ]
+    },
+    "generationScorecard": {
+      "command": "npm run verify:generation-scorecard --silent",
+      "exitCode": 1,
+      "verifiedAt": "2026-09-27T07:01:04.858Z",
+      "failedDefault": "primary",
+      "scorecardPath": "output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json",
+      "readbackPath": "output/playwright/hc-10m-real-generation-qa-20260626/readback-after-worker.json",
+      "issue": "scorecard_artifact_missing:output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json"
+    }
+  },
+  "externalEffect": {
+    "providerCalls": 0,
+    "billing": 0,
+    "publication": 0,
+    "secretInsertion": 0,
+    "destructiveOperations": 0
+  },
+  "decision": "not_complete",
+  "remainingBoundary": "The four release-gate failures require production monitor/G618 evidence, H602 operator/billing proof, and an approved canonical real-generation scorecard artifact. No verifier source or provider path was changed in this readback."
+}

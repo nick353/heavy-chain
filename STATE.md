@@ -22830,3 +22830,7 @@ Lightchain all-feature 5/5、UI境界21/21、material 28/28、provider adapter 1
 `work/heavy-chain-parity-history-contract-diagnosis-20260927-r1.md`へ固定した。外部効果は0、Goal active。
 
 Light/provider parity・video ledger・Lab・workspace handoff・Canvas document/view・unified persistence local suiteは46/46 pass。未登録npm scriptは対象node test entrypointで再確認済み。local証拠はproduction receipt/R2/authの代替ではなく、Adaptive capacity/Heavy package holdは継続、Goalはactive。
+
+# Heavy Chain current state — 2026-09-27 r508
+
+release gateとgeneration scorecardを同一HEAD `4fab7f4dafd7ab1b1dad6f795bd1756373d3009a`でfresh再実行した。`verify:release-gate` は `2026-09-27T06:59:44.460Z` のsummaryで `ok=false`、残件はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion、generation scorecardの4件。`verify:generation-scorecard` は `2026-09-27T07:01:04.858Z` にexit 1で、原因は旧primary path `output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`の欠落。正本は `work/heavy-chain-fresh-release-gate-readback-20260927-r1.json`。verifier source、provider、auth secret、課金、公開、破壊操作は変更・実行していない。Goal active。
