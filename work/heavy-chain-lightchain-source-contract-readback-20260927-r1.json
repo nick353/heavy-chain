@@ -1,0 +1,18 @@
+{
+  "schema": "heavy-chain.lightchain-source-contract-readback.v1",
+  "capturedAt": "2026-09-27T07:23:00Z",
+  "gitHead": "33ead76",
+  "checks": [
+    {"command":"npm run test:lightchain-pre-source-gate","passed":5,"failed":0},
+    {"command":"npm run test:lightchain-parity-contract","passed":9,"failed":0},
+    {"command":"npm run test:lightchain-provider-adapter","passed":17,"failed":0}
+  ],
+  "totalPassed": 31,
+  "externalEffects": {
+    "provider": 0,
+    "networkCalls": 0,
+    "billing": 0,
+    "publication": 0
+  },
+  "decision": "Lightchain_source_and_provider_contracts_verified_production_unproven"
+}

@@ -11413,6 +11413,10 @@ Heavy core lifecycleをfresh検証し、model-matrix 3/3、Canvas generation rea
 
 Lightchain local lifecycleとevidence continuityをfresh passした。deterministic result→save-once→reload→Library reuse→cleanup、およびpre-source admission→negative gates 5件→cleanupを確認し、networkCalls=0・externalActionExecuted=false。正本は`work/heavy-chain-lightchain-local-lifecycle-readback-20260927-r1.json`。production provider/R2 proofではない。Goal active。
 
+# Goal progress — 2026-09-27 r529
+
+Lightchain pre-source gate 5/5、parity contract 9/9、provider adapter 17/17をfresh passし、合計31/31。source snapshot hash/change/cross-run拒否、33-row/30-object mapping、video fail-closed、Heavy entitlement分離、multi-image/provider provenanceを再確認した。正本は`work/heavy-chain-lightchain-source-contract-readback-20260927-r1.json`。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

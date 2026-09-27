@@ -22914,3 +22914,7 @@ Heavy core lifecycleをfresh検証し、model-matrix 3/3、Canvas generation rea
 # Heavy Chain current state — 2026-09-27 r528
 
 Lightchain local lifecycleとevidence continuityをfresh passした。deterministic result→save-once→reload→Library reuse→cleanup、およびpre-source admission→negative gates 5件→cleanupを確認し、networkCalls=0・externalActionExecuted=false。正本は`work/heavy-chain-lightchain-local-lifecycle-readback-20260927-r1.json`。production provider/R2 proofではない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r529
+
+Lightchain pre-source gate 5/5、parity contract 9/9、provider adapter 17/17をfresh passし、合計31/31。source snapshot hash/change/cross-run拒否、33-row/30-object mapping、video fail-closed、Heavy entitlement分離、multi-image/provider provenanceを再確認した。正本は`work/heavy-chain-lightchain-source-contract-readback-20260927-r1.json`。Goal active。
