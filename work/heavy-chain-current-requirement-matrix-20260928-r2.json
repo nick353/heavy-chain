@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.current-requirement-matrix.v2",
   "capturedAt": "2026-09-28",
-  "sourceRevision": "fbedddc",
+  "sourceRevision": "6751dfd",
   "goalStatus": "active",
   "currentWave": "image_generation",
   "video": "deferred_by_user",
@@ -10,7 +10,7 @@
     {
       "id": "dirty-worktree",
       "status": "pass",
-      "evidence": ["git status --short --branch", "fbedddc"]
+      "evidence": ["git status --short --branch", "6751dfd"]
     },
     {
       "id": "light-parity",
@@ -27,8 +27,8 @@
     {
       "id": "image-provider",
       "status": "not_ready",
-      "evidence": ["heavy-chain-image-production-version-config-readback-20260927-r1.json"],
-      "remaining": "production 100% version is workers_ai; Sunburst source migration and verified Astra engineering gate are missing"
+      "evidence": ["heavy-chain-image-production-version-config-readback-20260927-r1.json", "heavy-chain-openai-migration-readback-20260928-r2.json", "6751dfd local Heavy source migration with tests/build passed"],
+      "remaining": "production 100% version is workers_ai; valid OpenAI auth, authorized deploy/readback, and verified provider receipt are missing"
     },
     {
       "id": "provider-receipt",
