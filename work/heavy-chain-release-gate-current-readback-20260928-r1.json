@@ -1,7 +1,7 @@
 {
   "schema": "heavy_chain.release_gate_current_readback.v1",
-  "capturedAt": "2026-09-27T17:16:24.047Z",
-  "sourceRevision": "58d79b7",
+  "capturedAt": "2026-09-27T17:25:46.262Z",
+  "sourceRevision": "874f489",
   "command": "npm run verify:release-gate -- --command-timeout-ms 600000",
   "ok": false,
   "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
@@ -35,7 +35,8 @@
     "canvasGenerationReadbackRegression": true,
     "lightchainProviderCoverageRegression": true,
     "lightchainParityContractRegression": true,
-    "openAIStaticReadinessRegression": true
+    "openAIStaticReadinessRegression": true,
+    "generationScorecardProviderProvenanceRegression": true
   },
   "failed": [
     {
