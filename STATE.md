@@ -23050,3 +23050,7 @@ strict release gateを同一HEADでfresh実行し、`2026-09-27T08:14:00.555Z`�
 # Heavy Chain current state — 2026-09-27 r562
 
 現行HEAD `68aa346`を基準に要件別completion auditをfresh固定した。証明済みはclean worktree、Light現行parity/readback、auth continuityの一部、local security/printing/Canvas契約。未証明は実provider、remote R2 save/reuse/reload/reconciliation、video、monitor/UI、G618、H601/H602、scorecard、strict gate。正本は`work/heavy-chain-completion-audit-20260927-r4.json`、Goalはactiveのまま。
+
+# Heavy Chain current state — 2026-09-27 r563
+
+既存Astra packageに渡すsource handoffを現行HEAD `d377918`でfresh更新した。Fitting/Canvasの未接続proofフィールドと、ChatEditor fail-closed境界を行番号付きで固定。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r2.md`。変更は文書のみで、Goal active。

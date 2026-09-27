@@ -11566,3 +11566,7 @@ Adaptive runtime・Opus plan・Heavy Astra packageを同一runでfresh readback�
 # Goal progress — 2026-09-27 r562
 
 completion auditを現行HEAD `68aa346`へ更新し、全要件を再分類した。dirty worktree、Light現行local/production readback、認証継続、local security/printing/Canvas契約は証跡あり。一方、実provider receipt、remote R2 durable chain、video receipt、production monitor/UI、G618、H601/H602 operator proof、generation scorecard、strict gateは未完了。依存順をAstra adapter → monitor/G618 → H601 → provider → R2 chain → video → H602 → scorecard → strict gateへ固定し、正本を`work/heavy-chain-completion-audit-20260927-r4.json`へ更新した。Goal active。
+
+# Goal progress — 2026-09-27 r563
+
+既存Astra package再開用のsource handoffを現行HEAD `d377918`へfresh更新した。Fitting/Canvasの現行行番号と、`generateModelMatrix`・Canvas direct provider経路が`rightsConfirmed`のみで共有`heavyConsent`/`heavyPreparation`未接続であること、ChatEditorはfail-closed維持対象であることを固定した。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r2.md`。コード変更、provider、課金、R2、公開、secretは0。Goal active。
