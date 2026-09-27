@@ -23120,3 +23120,7 @@ Heavy側のcapacityとpackageは変化なし。別Planner admissionはHeavyのru
 # Heavy Chain current state — 2026-09-27 r582
 
 Adaptive runtimeはgraph/live process availableだがcapacity guardは`capacity_blocked`、Heavy packageは`waiting_human` / `automatic_dispatch_disabled`、claim/startなし。別Planner admissionはHeavyとは無関係にcancelledで、流用・割込みしていない。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r4.json`。provider/R2/billing/publication/secret外部効果は0、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r583
+
+`typecheck`と`lint`をfresh実行し、両方exit 0。ソースの静的整合性は維持されているが、production provider/R2/video証跡、monitor/G618、H601/H602、scorecard、strict gateは未完了。正本は`work/heavy-chain-static-integrity-readback-20260927-r1.json`、Goal active。

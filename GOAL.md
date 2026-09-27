@@ -11636,3 +11636,7 @@ Adaptive runtimeと既存Heavy packageをfresh readbackした。runtimeはgraph 
 # Goal progress — 2026-09-27 r582
 
 Adaptive runtime/packageを再度fresh readbackした。別タスクのPlanner admissionは`cancelled`へ遷移したが、Heavy packageは`waiting_human` / `automatic_dispatch_disabled`、`capacity_blocked`、claim/startなし、fork候補なしのまま。既存Opus planは再利用可能で、HeavyのAstra実行を手動claim/start・代替route・重複forkで迂回していない。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r4.json`。独立したLight/Heavy境界検証は継続し、Goal active。
+
+# Goal progress — 2026-09-27 r583
+
+現行ソースの静的整合性をfresh確認し、`npm run typecheck --silent`と`npm run lint --silent`がともにexit 0だった。provider生成、R2 mutation、課金、公開、deploy、secret読取は0。正本は`work/heavy-chain-static-integrity-readback-20260927-r1.json`。これはproduction provider/R2/video/monitor/G618/H601/H602/scorecard/release gateの完了証明ではない。Goal active。
