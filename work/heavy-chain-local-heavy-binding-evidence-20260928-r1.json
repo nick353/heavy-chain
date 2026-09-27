@@ -1,6 +1,6 @@
 {
   "schema": "heavy_chain_local_binding_evidence.v1",
-  "capturedAt": "2026-09-27T18:42:37Z",
+  "capturedAt": "2026-09-27T18:45:18Z",
   "sourceRevision": {
     "head": "520d7bdfd5f1c5bcf38b46aa3b357b8f2794e52e",
     "baseline": "370368b",
@@ -48,7 +48,18 @@
     "cancelled": 0,
     "skipped": 0,
     "externalEffects": 0,
-    "providerCalls": 0
+    "providerCalls": 0,
+    "backendSuite": {
+      "command": "npm test (cloudflare/heavy-api)",
+      "exitCode": 0,
+      "tests": 114,
+      "passed": 114,
+      "failed": 0
+    },
+    "backendTypecheck": {
+      "command": "npm run typecheck (cloudflare/heavy-api)",
+      "exitCode": 0
+    }
   },
   "fileSha256": {
     "src/components/ChatEditor.tsx": "11b2cd4d454ead765d6d0d405570c89523a577921b44d3f5e6fa83d3153e015a",

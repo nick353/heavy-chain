@@ -23674,3 +23674,4 @@ HeavyのChat/Canvas/Generate呼び出しが`HEAVY_IMAGE_PROVIDER`に固定され
 OpenAI adapter、persistence/readback境界を含むfocused local testsは18/18 PASS（provider call 0、external effect 0）。
 正本は`work/heavy-chain-local-heavy-binding-evidence-20260928-r1.json`。source diffはbaseline `370368b`から0、worktree clean。
 Sunburst未実装、Astra verified invocation/capacity、同じキーの401、実生成・remote save/reuse/reload/reconciliationは未解消。
+追加でCloudflare Heavy APIの既存全テスト114/114と`npm run typecheck`もPASS。これはmock/local backendの健全性証拠で、OpenAI外部認証・Sunburst実装・production receiptを代替しない。

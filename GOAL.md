@@ -12183,3 +12183,4 @@ HeavyのChat/Canvas/Generateが`HEAVY_IMAGE_PROVIDER`を使い、LightchainWorkb
 focused testsは18/18 PASS、source diffはbaseline `370368b`から0、worktree clean。正本は
 `work/heavy-chain-local-heavy-binding-evidence-20260928-r1.json`。これはローカル結線証拠であり、Sunburst実装、Astraの
 verified runtime receipt、同じキーの401解消、実provider生成、remote save/reuse/reload/reconciliation、strict gateを完了扱いにはしない。
+追加でCloudflare Heavy APIの既存全テスト114/114とbackend typecheckがPASS。local backendの契約・認証・D1/R2/readbackは健全だが、同じキーの401、Sunburst未実装、verified Astra runtime、production生成receiptとremote再利用readbackは未達のまま。
