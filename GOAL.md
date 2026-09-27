@@ -11401,6 +11401,10 @@ G618 scale-ops verifierをfresh実行し、Cloudflare API origin、brand、live 
 
 G619 beta readinessをfresh実行し、3 sessionすべて`ready=false`、`readySessions=0`、missing 18件を確認。同意・録画許可、5分以上の実時間、friction/no-friction、redaction review、usable behavior evidence、scaffold置換が不足している。実参加者・録画・公開を捏造せず、`work/heavy-chain-g619-readback-20260927-r1.json`へ固定した。Goal active。
 
+# Goal progress — 2026-09-27 r526
+
+Lightchain provider coverage 22/22、media gateway/reference 9/9、edge gateway 2/2、media inventory reconciliation 5/5、workspace handoff persistence 3/3をfresh passし、合計41/41。Cloudflare private R2 gateway、owner scope、fail-closed persistence/handoff、provider promotion guardを確認したが、remote write/readbackの本番証拠ではない。正本は`work/heavy-chain-media-contract-readback-20260927-r1.json`。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

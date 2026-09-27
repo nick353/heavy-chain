@@ -1,0 +1,21 @@
+{
+  "schema": "heavy-chain.media-contract-readback.v1",
+  "capturedAt": "2026-09-27T07:18:00Z",
+  "gitHead": "6ba6017",
+  "checks": [
+    {"command":"npm run test:lightchain-provider-coverage","passed":22,"failed":0},
+    {"command":"npm run test:media-gateway-boundary","passed":9,"failed":0},
+    {"command":"npm run test:media-gateway-edge-boundary","passed":2,"failed":0},
+    {"command":"npm run test:media-inventory-reconciliation","passed":5,"failed":0},
+    {"command":"npm run test:workspace-handoff-persistence","passed":3,"failed":0}
+  ],
+  "totalPassed": 41,
+  "externalEffects": {
+    "provider": 0,
+    "r2Write": 0,
+    "remoteRead": 0,
+    "billing": 0,
+    "publication": 0
+  },
+  "decision": "media_and_handoff_local_contracts_verified_remote_proof_unproven"
+}
