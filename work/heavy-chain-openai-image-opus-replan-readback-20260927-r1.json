@@ -1,0 +1,23 @@
+{
+  "schema": "heavy_chain_openai_image_opus_replan_readback.v1",
+  "captured_at": "2026-09-27",
+  "scope": "image_generation_only",
+  "planner_route": "opencode_opus55_planner",
+  "invocation_id": "opus55-55f6d156bd1c4693bbca50dd5cd36bf0",
+  "status": "blocked",
+  "role_execution": {
+    "contract": "role_execution.v1",
+    "attempted": false,
+    "verified": false,
+    "exact_blocker": "Unexpected adaptive_plan provenance field(s): evidence_packet, local_lines, official_lines, source_revision, video_scope."
+  },
+  "retry_policy": "Do not resend the same payload in this turn; correct provenance shape at a later replan boundary.",
+  "evidence_packet": "work/heavy-chain-openai-image-evidence-packet-20260927-r1.json",
+  "external_effects": {
+    "provider_calls": 0,
+    "deploy": 0,
+    "billing": 0,
+    "secrets_read": 0,
+    "publication": 0
+  }
+}
