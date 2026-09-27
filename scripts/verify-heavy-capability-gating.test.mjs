@@ -178,3 +178,19 @@ test('Lightchain Workbench keeps Heavy entitlement out of known Light features',
   assert.match(page, /cloudflareDataPlane\.getHeavyEntitlement\(brandId, heavyEntitlementAction\)/);
   assert.match(page, /if \(!brandId \|\| !heavyEntitlementAction\)/);
 });
+
+test('Lightchain material workbench keeps Heavy entitlement out of known material features', async () => {
+  const page = await readFile(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(page, /const materialFeatureId = isPrinting \? 'printing-image' : 'fabric-image';/);
+  assert.match(page, /const heavyOwnedFeature = isHeavyOwnedFeature\(materialFeatureId\);/);
+  assert.match(page, /const heavyEntitlementReady = !heavyOwnedFeature \|\|/);
+  assert.match(page, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
+  assert.match(page, /rightsReady: !heavyOwnedFeature \|\| heavyEntitlementReady/);
+
+  const effectStart = page.indexOf('useEffect(() => {', page.indexOf('const heavyEntitlementReady'));
+  const heavyGuard = page.indexOf('if (!heavyOwnedFeature || !brandId)', effectStart);
+  const entitlementCall = page.indexOf("cloudflareDataPlane.getHeavyEntitlement(brandId, 'edit-image')", effectStart);
+  assert.ok(effectStart >= 0, 'material entitlement effect must exist for future Heavy-owned branches');
+  assert.ok(heavyGuard > effectStart, 'material effect must guard known Light features');
+  assert.ok(heavyGuard < entitlementCall, 'Heavy entitlement GET must follow the ownership guard');
+});

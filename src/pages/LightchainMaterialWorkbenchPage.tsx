@@ -179,6 +179,7 @@ import {
   getLightchainMaterialTab,
 } from '../lib/lightchainMaterialContract';
 import { buildLightchainProviderPrompt } from '../features/lightchain/providerAdapter';
+import { isHeavyOwnedFeature } from '../lib/heavyCapability';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import {
   buildLightchainParityRuntime,
@@ -1546,6 +1547,8 @@ function LightchainMaterialWorkbenchSession() {
     || brandState.status !== 'success_nonempty'
     || !currentBrand?.id;
   const workflowContract = getLightchainUnifiedFeatureWorkflowContract(isPrinting ? 'printing-image' : 'fabric-image');
+  const materialFeatureId = isPrinting ? 'printing-image' : 'fabric-image';
+  const heavyOwnedFeature = isHeavyOwnedFeature(materialFeatureId);
   // This is a source-product entitlement readback, not a rights confirmation.
   // Unknown/denied states remain fail-closed until an authoritative source
   // entitlement adapter admits the module.
@@ -1553,8 +1556,10 @@ function LightchainMaterialWorkbenchSession() {
   const sourceFabricAdmitted = sourceFabricAccess === 'admitted';
   const [heavyEntitlement, setHeavyEntitlement] = useState<CloudflareHeavyEntitlement | null>(null);
   const [heavyEntitlementLoading, setHeavyEntitlementLoading] = useState(false);
-  const heavyEntitlementReady = heavyEntitlement?.allowed === true
-    && heavyEntitlement.requestScopedAttestationRequired === false;
+  const heavyEntitlementReady = !heavyOwnedFeature || (
+    heavyEntitlement?.allowed === true
+      && heavyEntitlement.requestScopedAttestationRequired === false
+  );
   const heavyEntitlementReason = heavyEntitlement?.reason
     ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
   const heavyEntitlementDisplayMessage = heavyEntitlementMessage(heavyEntitlementReason, heavyEntitlementLoading);
@@ -1562,7 +1567,7 @@ function LightchainMaterialWorkbenchSession() {
   useEffect(() => {
     let cancelled = false;
     const brandId = currentBrand?.id;
-    if (!brandId) {
+    if (!heavyOwnedFeature || !brandId) {
       setHeavyEntitlement(null);
       setHeavyEntitlementLoading(false);
       return () => { cancelled = true; };
@@ -1593,7 +1598,7 @@ function LightchainMaterialWorkbenchSession() {
         if (!cancelled) setHeavyEntitlementLoading(false);
       });
     return () => { cancelled = true; };
-  }, [currentBrand?.id]);
+  }, [currentBrand?.id, heavyOwnedFeature]);
 
   const libraryHandoff = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -1634,7 +1639,7 @@ function LightchainMaterialWorkbenchSession() {
   const [isGenerating, setIsGenerating] = useState(false);
   // This is only the shared request's caller declaration. Heavy revalidates
   // the current request-scoped entitlement before any provider side effect.
-  const providerRightsConfirmed = heavyEntitlementReady;
+  const providerRightsConfirmed = !heavyOwnedFeature || heavyEntitlementReady;
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
   const generatedResultsRef = useRef(generatedResults);
   generatedResultsRef.current = generatedResults;
@@ -5137,7 +5142,7 @@ function LightchainMaterialWorkbenchSession() {
     inputReady: isPrinting
       ? printingReadinessCompleteCount === printingReadinessSteps.length
       : Boolean(fabricDesign && fabricBase),
-    rightsReady: heavyEntitlementReady,
+    rightsReady: !heavyOwnedFeature || heavyEntitlementReady,
     generating: isGenerating,
     completed: generatedResults.length > 0,
     failed: Boolean(generationError),
