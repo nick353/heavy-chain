@@ -22440,3 +22440,7 @@ componentのみに限定され、Heavy生成面に混入していないことを
 # Heavy Chain current state — 2026-09-27 r431
 
 Companionの新しいtask-owned sessionで、production Workerの`/generate?feature=campaign-image`をsettledまでread-only確認した。Heavy gateは`Heavy側の利用条件と権利表明を確認してください` に収束し、terms checkboxはchecked、request-level rights attestationは表示されるがunchecked、旧`権限がありません`は0件。browser mutation/provider/external actionは0で、visual readbackとsame-tab cleanupを完了した。証拠は`work/heavy-chain-companion-heavy-entitlement-settled-readback-20260927-r2.json`。法的attestationを自動操作せず、provider生成、R2、課金、公開、scorecardは未実行。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r432
+
+新しいHeavy entitlement・Companion readback後に`npm run verify:release-gate`をfresh実行した。出力は`output/playwright/10m-product-readiness-g615/release-gate-summary.json`、`capturedAt=2026-09-27T03:31:49.454Z`、`ok=false`。production monitor/UI、mass-market QA、Lightchain all-feature order previews、G618、H601 rights、H602 billing completion、generation scorecardの7件は変化なし。Goal active。

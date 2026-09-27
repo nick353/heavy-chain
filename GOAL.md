@@ -10976,3 +10976,7 @@ provider coverage 22/22をfresh再確認した。Heavy側のpermission表示を�
 # Goal progress — 2026-09-27 r431
 
 Companionでproduction WorkerのHeavy生成面をfresh readbackした。settled Heavy gate、terms checked、rights attestation visible/unchecked、旧permission label 0件、provider/external action 0、visual readback、session/lease/pending-operation cleanupを確認。認証済みブラウザshellは利用可能だが、本人の法的rights attestationを自動代行せず、provider/R2/video/monitor/G618/H601/H602/scorecardは未完了のまま。Goal active。
+
+# Goal progress — 2026-09-27 r432
+
+Heavy entitlementのfresh UI readback後にstrict release gateを再取得した。`capturedAt=2026-09-27T03:31:49.454Z`、`ok=false` で、7 blockerは変化なし。UI gateの認証済みreadbackはprovider receipt、R2 reconciliation、monitor、H601/H602、scorecardの代替にはならない。Goal active。
