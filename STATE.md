@@ -22906,3 +22906,7 @@ G619 beta readinessをfresh実行し、3 sessionすべて`ready=false`、`readyS
 # Heavy Chain current state — 2026-09-27 r526
 
 Lightchain provider coverage 22/22、media gateway/reference 9/9、edge gateway 2/2、media inventory reconciliation 5/5、workspace handoff persistence 3/3をfresh passし、合計41/41。Cloudflare private R2 gateway、owner scope、fail-closed persistence/handoff、provider promotion guardを確認したが、remote write/readbackの本番証拠ではない。正本は`work/heavy-chain-media-contract-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r527
+
+Heavy core lifecycleをfresh検証し、model-matrix 3/3、Canvas generation readback 10/10、Fitting history 12/12、generation lifecycle 2/2、Generate result readback 4/4、Canvas save recovery/view/client 23/23の合計54/54をpass。lost response no-replay、foreign scope拒否、durable local readback、Canvas/Fitting lineageを確認したが、実remote/provider効果は0。正本は`work/heavy-chain-core-lifecycle-readback-20260927-r1.json`。Goal active。

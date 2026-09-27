@@ -11405,6 +11405,10 @@ G619 beta readinessをfresh実行し、3 sessionすべて`ready=false`、`readyS
 
 Lightchain provider coverage 22/22、media gateway/reference 9/9、edge gateway 2/2、media inventory reconciliation 5/5、workspace handoff persistence 3/3をfresh passし、合計41/41。Cloudflare private R2 gateway、owner scope、fail-closed persistence/handoff、provider promotion guardを確認したが、remote write/readbackの本番証拠ではない。正本は`work/heavy-chain-media-contract-readback-20260927-r1.json`。Goal active。
 
+# Goal progress — 2026-09-27 r527
+
+Heavy core lifecycleをfresh検証し、model-matrix 3/3、Canvas generation readback 10/10、Fitting history 12/12、generation lifecycle 2/2、Generate result readback 4/4、Canvas save recovery/view/client 23/23の合計54/54をpass。lost response no-replay、foreign scope拒否、durable local readback、Canvas/Fitting lineageを確認したが、実remote/provider効果は0。正本は`work/heavy-chain-core-lifecycle-readback-20260927-r1.json`。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

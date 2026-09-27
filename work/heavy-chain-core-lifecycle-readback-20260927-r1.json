@@ -1,0 +1,22 @@
+{
+  "schema": "heavy-chain.core-lifecycle-readback.v1",
+  "capturedAt": "2026-09-27T07:20:00Z",
+  "gitHead": "9a20f89",
+  "checks": [
+    {"command":"npm run test:model-matrix-verification","passed":3,"failed":0},
+    {"command":"npm run test:canvas-generation-readback","passed":10,"failed":0},
+    {"command":"npm run test:fitting-history-readback","passed":12,"failed":0},
+    {"command":"npm run test:generation-flow-lifecycle","passed":2,"failed":0},
+    {"command":"npm run test:generate-result-readback","passed":4,"failed":0},
+    {"command":"npm run test:canvas-save-recovery","passed":23,"failed":0}
+  ],
+  "totalPassed": 54,
+  "externalEffects": {
+    "provider": 0,
+    "remoteWrite": 0,
+    "remoteReplay": 0,
+    "billing": 0,
+    "publication": 0
+  },
+  "decision": "core_lifecycle_and_recovery_contracts_verified_production_unproven"
+}
