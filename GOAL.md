@@ -26,6 +26,13 @@ release合格とは扱わず、同じproduction証跡不足が残る。資格情
 Pattern Vector付近で停滞し、SIGINT後にcleanup完了・`verification_interrupted_by_signal`を記録した。
 部分artifactは完了証明ではない。
 
+## Video/provider contract recheck — 2026-09-27
+
+video provider boundary/contract/editor persistence、provider persistence/readback、workspace handoff、
+Light provider coverage、unified workflow contractをfresh検証し、各suite `1/1`、`3/3`、`4/4`、`14/14`、
+`3/3`、`22/22`、`6/6`でPASS。これは本番video provider receiptやremote business reuse/reload/reconciliation
+の完了ではなく、未証明状態をfail-closedに保つ契約の再確認である。
+
 ## Fresh local gate and source-evidence reconciliation — 2026-09-26
 
 現行作業ツリーでrelease gateを再取得し、ローカル検証を省略しない実行では

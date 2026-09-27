@@ -37,6 +37,14 @@ Mass-market/Light feature証跡、G618、H601、H602、旧generation scorecard a
 Pattern Vector付近で長時間停滞したため、所有プロセスへSIGINTを送り、`verification_interrupted_by_signal`
 とcleanup完了を記録して停止した。部分artifactは受入証跡へ昇格していない。
 
+## Video/provider persistence contract recheck — 2026-09-27
+
+資格情報や外部効果を使わず、video provider boundary/contract/editor persistence、provider
+persistence/readback、workspace handoff、Light provider coverage、unified workflow contractをfreshに再検証。
+順に`1/1`、`3/3`、`4/4`、`14/14`、`3/3`、`22/22`、`6/6` PASS。これはvideo providerを本番へ接続した証明
+ではなく、source・credential・same-run receipt・remote persistenceが未確認のままfail-closedになることと、
+Light全非video行のprovider/lineage契約が現行コードで維持されていることの証拠である。
+
 ## Fresh local gate and source-evidence reconciliation — 2026-09-26
 
 release gateのfresh実行で、syntax/security/G614/G632/G633/H601/H602 static/typecheck/build/lint/
