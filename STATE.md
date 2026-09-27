@@ -22870,3 +22870,7 @@ env sourceをnon-secret診断した。`.env.production.example`の6 required key
 # Heavy Chain current state — 2026-09-27 r517
 
 Cloudflare release readback validatorとrelease-doctor contract regressionをfresh実行し、15/15をpassした。validatorはlocal contractを非承認として扱い、provider receipt/authenticated-production artifactのunsupported宣言を維持する。現行fixture contractを明示したdoctorは`cloudflare_release_readback_contract_missing stale_observation missing_input`で停止し、実provider/authenticated readbackを架空生成していない。証跡は`work/heavy-chain-release-doctor-readback-20260927-r1.json`へ追記。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r518
+
+`.env.example`の非secret公開設定を一時プロセス環境へ読み込むread-only診断でenv checkをpassさせたが、release doctorはCloudflare readback contract missingで停止した。既存`contracts/cloudflare-release-readback.v1.json`を明示すると`stale_observation`/`missing_input`になり、fixture/local-only contractであることを確認。実provider receiptやauthenticated production readbackを作らず、証跡を同じ`work/heavy-chain-release-doctor-readback-20260927-r1.json`へ追記した。Goal active。

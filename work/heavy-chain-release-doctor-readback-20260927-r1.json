@@ -47,4 +47,20 @@
     "interpretation": "Validator and doctor boundaries pass; local contract remains non-approving and unsupported provider/authenticated-production evidence remains rejected."
   },
   "currentDoctorStopWithExplicitContract": "cloudflare_release_readback_contract_missing stale_observation missing_input"
+  ,"exampleEnvDiagnostic": {
+    "command": "set -a; source .env.example; set +a; RELEASE_COMPANION_EVIDENCE=output/playwright/g830-launch-ops-production-current-r4/summary.json npm run release:doctor",
+    "exitCode": 1,
+    "envCheck": "pass",
+    "firstStop": "cloudflare_release_readback_contract_missing",
+    "outputTail": "cloudflare_release_readback_contract_missing",
+    "interpretation": "The non-secret public settings in .env.example satisfy the shape check for this read-only diagnostic; they do not establish current production release authority."
+  },
+  "explicitContractDiagnostic": {
+    "command": "set -a; source .env.example; set +a; RELEASE_COMPANION_EVIDENCE=output/playwright/g830-launch-ops-production-current-r4/summary.json RELEASE_CLOUDFLARE_READBACK_CONTRACT=contracts/cloudflare-release-readback.v1.json npm run release:doctor",
+    "exitCode": 1,
+    "envCheck": "pass",
+    "firstStop": "cloudflare_release_readback_contract_missing",
+    "details": ["stale_observation", "missing_input"],
+    "interpretation": "The checked-in contract is a fixture/local-only declaration with unavailable current artifacts; it cannot be promoted to production proof."
+  }
 }
