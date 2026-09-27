@@ -11212,3 +11212,7 @@ Heavy/Lightのremote durable save→reuse→reload→reconciliation境界をsour
 # Goal progress — 2026-09-27 r474
 
 Astra technical decision readbackを得た。local-onlyカードは継続表示してよいが、`remoteReadbackStatus`（verified/unavailable/not_checked）と`imageAccessStatus`（available/unavailable）をpresentation stateとして分離し、remote検証をlocal ID・過去のremoteSaveStatus・merge結果から推測しない。既存のremote save/provider promotion fail-closedは変更せず、ParityPages/Library/Workbench/Galleryのカードを provenance label付きで扱い、Canvas/Libraryのlocal編集は許可しつつremote完了・provider昇格の証拠にしない。追加でCanvasEditorの`sourceArtifactId` handoffとGallery reuseリンクの本文を確認したが、Astra receiptはactual execution verification=false、正確なhandler変更範囲はまだ未承認。証跡は同じ`work/heavy-chain-remote-read-provenance-diagnosis-20260927-r1.json`へ追記し、コード変更は0。Goal active。
+
+# Goal progress — 2026-09-27 r475
+
+Heavy entitlementの全生成面をcross-surface監査した。現行HEADではGeneratePageのHeavy ownership/capability map、Light Workbench/materialのHeavy entitlement bypass、unsupported/unknownのdefault-deny、server側のterms acceptance・request attestation・input digest・request bindingが整合し、Heavy/Light境界focused suite（9/9、22/22、12/12、3/3）とtypecheckがpassした。旧agentの「Light機能へHeavyゲートが誤適用」という報告は現行HEADではstaleであり、Light plan-lockを削除する修正は不要。一方、FittingPage/CanvasEditorPageの直接provider経路はstatus GETと`rightsConfirmed`だけで、GeneratePageと同じheavyConsent/heavyPreparationを渡さないため、serverのrequest-scoped attestationを満たせず、直接Fitting/Canvas生成は未完成。これは新しいcross-surface実装スコープが必要であり、Astra engineeringの承認なしに変更しない。正本は`work/heavy-chain-heavy-entitlement-cross-surface-audit-20260927-r1.json`。provider生成、権利承諾、課金、公開、secret操作は0。Goal active。
