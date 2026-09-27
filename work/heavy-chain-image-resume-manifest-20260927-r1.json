@@ -1,6 +1,6 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T18:09:18Z",
+  "capturedAt": "2026-09-27T18:10:09Z",
   "sourceRevision": "518d2a4",
   "goalStatus": "active",
   "scope": {
@@ -84,7 +84,7 @@
   },
   "latestAstraReadback": {
     "adaptivePlanId": "aa040f17-6308-444f-8290-cfc78589de2a",
-    "adaptivePlanVersion": 9,
+    "adaptivePlanVersion": 10,
     "runId": "run_heavy_image_astra_engineering_20260927_r6",
     "packageId": "heavy-openai-image-astra-engineering-r6",
     "ownerTaskId": "/root",
@@ -134,7 +134,10 @@
     "requiredModel": "gpt-6-astra",
     "status": "waiting_for_final_review_result",
     "resultPresent": false,
-    "productionEnablement": "not_authorized"
+    "productionEnablement": "not_authorized",
+    "requiredRouteAvailable": false,
+    "availableReviewerAdapter": "opencode_go_deepseek_v4_flash_reviewer",
+    "substitutionAllowed": false
   },
   "steps": [
     {

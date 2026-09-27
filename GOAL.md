@@ -12133,3 +12133,7 @@ Goalはactiveを維持し、認証・文書・provider・billingの独立gateを
 
 rights/entitlement実装はverifiedだが、Graphの`final_review`結果が未生成であり、本番有効化の承認ではない。required
 reviewer routeを別adapterで置換せず、terms/rights文書・auth/provider・billingの各gateを独立して保持する。
+# Final-review route capability readback — 2026-09-28
+
+Graphのrequired reviewer routeが現環境に存在せず、別のOpenCode Go reviewerへ置換できないため、final reviewは未完了。
+このroute不足を承認・本番有効化の証拠にはせず、Goalはactiveで保持する。

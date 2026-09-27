@@ -23623,3 +23623,8 @@ document configは未active、provider/deploy/billing/publicationは未実行。
 rights/entitlement Graphのlatest stageは`final_review`で、required routeは`native_reviewer_default`、modelは`gpt-6-astra`。
 plan/implementation/repair/verifyのverified evidenceはあるが、final reviewer resultはまだ存在しないため、production
 enablementは未承認。別routeでreviewを代替せず、enforcement OFFとprovider/deploy/billing未実行を維持する。
+# Final-review route capability readback — 2026-09-28
+
+現環境のtool inventoryにはGraphが要求する`native_reviewer_default`がなく、利用可能なのは
+`opencode_go_deepseek_v4_flash_reviewer`のみだった。required routeを別adapterで置換することは許可されないため、
+final review resultは未生成・production enablementは未承認のまま。Astra/Lunaのverified実装結果は保持する。
