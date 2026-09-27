@@ -12108,3 +12108,9 @@ read-only completion auditをfresh実行し、ローカル契約（security、vi
 # Goal progress — 2026-09-28 r696
 
 現行sourceのSunburst実装候補箇所をline-levelで監査し、HeavyのGenerate/Canvas/ChatとOpenAI adapter/parser/QAを対象、LightchainWorkbenchPageとvideoを対象外として固定した。Sunburst未実装、Astra verified invocation未取得、Luna handoff未開始のためコード変更は行っていない。Goal active、正本は`work/heavy-chain-sunburst-source-audit-20260928-r1.json`。
+# Heavy no-rotation Astra boundary — 2026-09-28
+
+同じAPIキーの維持条件を守ったまま、AstraはSunburst model/parser/Heavy Generateの限定実装仕様を確定した。しかし
+実行identityの独立証明がないため、仕様は診断用に保存し、Luna実装・認証再probe・deploy・provider生成へ進めていない。
+Light Chainと動画は変更対象外で、正本の`lunaAuthorized=false`を維持する。次は外部で同じ鍵/account状態が変わった後に
+同一sourceのGET `/v1/models`を一度だけ再確認し、verified Astra receiptが得られた場合だけbounded implementationへ進む。

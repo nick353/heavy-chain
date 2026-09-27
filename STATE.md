@@ -23593,3 +23593,11 @@ read-only 10分completion auditをfresh実行。security、video fail-closed、w
 # Heavy Chain current state — 2026-09-28 r696
 
 現行revision `370368b`のSunburst source auditをread-only作成。HeavyのGenerate/Canvas/Chat、OpenAI adapter/parser、QA境界をline-levelで固定し、LightchainWorkbenchPageとvideoを変更対象外として明示。現行OpenAI default/allowlistは`gpt-image-1-mini`等でSunburst未実装。Astra verified invocationとLuna handoffが揃うまでsource mutationは0。正本は`work/heavy-chain-sunburst-source-audit-20260928-r1.json`。
+# Heavy no-rotation Astra boundary — 2026-09-28
+
+同じOpenAI APIキーをローテーションせず、Astra engineering package `heavy-openai-image-astra-engineering-r6` を
+既存run `run_heavy_image_astra_engineering_20260927_r6` で再開した。AstraはSunburst既定、OpenAI allowlist/parser、
+Heavy Generateの限定変更範囲を確定したが、`role_execution.v1` の実行identityは独立検証できず `verified=false`、
+`invocationId=null`、`lunaAuthorized=false` のまま。したがってコード編集、Luna実装、deploy、同じ鍵の再probe、provider
+生成は行っていない。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`、残りは外部の同じ鍵/account状態修復、
+一度だけの同一source 2xx auth再確認、verified Astra receipt後のbounded Luna実装である。
