@@ -1,10 +1,10 @@
 {
   "schema": "heavy_chain.no_rotation_plan_readback.v1",
-  "capturedAt": "2026-09-27T18:59:02Z",
+  "capturedAt": "2026-09-27T18:59:58Z",
   "sourceRevision": "520d7bdfd5f1c5bcf38b46aa3b357b8f2794e52e",
   "plan": {
     "planId": "aa040f17-6308-444f-8290-cfc78589de2a",
-    "version": 24,
+    "version": 25,
     "intentFingerprint": "heavy-image-wave-same-key-no-rotation-v1",
     "dependencyFingerprint": "heavy-chain-head-29713bf-auth-401-gate-v1",
     "constraint": "Use the existing credential unchanged; no rotation, reissue, secret mutation, or alternate credential.",
@@ -212,12 +212,12 @@
   ],
   "latestProgress": {
     "workPackageId": "external-auth-repair-20260928",
-    "eventId": "heavy-auth-light-contract-suite-20260928-r1",
+    "eventId": "heavy-auth-hydration-readback-contract-20260928-r1",
     "outcome": "waiting_human",
     "nextAction": "waiting_human",
-    "reason": "Light unified workflow/parity/pre-source contracts and auth lock/admission/bootstrap/recovery contracts pass 45/45. The 16 completion blockers, same-key auth failure, and Astra runtime/capacity gate remain unchanged; no irreversible action ran.",
-    "evidenceFingerprint": "heavy-auth-light-suite-45of45-d6e3a7d",
-    "adaptivePlanVersion": 24
+    "reason": "Auth hydration readback contract passes 4/4, including rejection of login markers, rights UI, insufficient settle, unhealthy deployment, incomplete cleanup, and secret-bearing evidence. The 16 completion blockers, same-key auth failure, and Astra runtime/capacity gate remain unchanged; no irreversible action ran.",
+    "evidenceFingerprint": "heavy-auth-hydration-4of4-ce369ca",
+    "adaptivePlanVersion": 25
   },
   "productionReadback": {
     "capturedAt": "2026-09-27T18:18:31Z",

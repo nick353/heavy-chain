@@ -23692,3 +23692,4 @@ G617/G619/G618/G668/G659/H601/public-entrypoint/H602のproduction proof不足、
 submit/payment/OTP・CAPTCHA・secret/publication/destructive cleanup/deployは全て未実行。正本は`output/playwright/heavy-completion-audit-current-20260928-r2/summary.json`。
 root `npm run lint`もPASS。ローカル品質ゲートはtypecheck/build/lintと契約テストが全て通過し、本番証跡待ちだけが残る。
 Light unified workflow/parity/pre-sourceとauth lock/admission/bootstrap/recoveryの追加契約テストも45/45 PASS。認証実装のlocal fail-closed境界は確認済みだが、production consumer sessionとOpenAI外部credentialの有効性は別問題として未解消。
+auth hydration readback contractも4/4 PASS。login marker、rights UI、unhealthy deployment、cleanup不足、secret-bearing evidenceをfail-closedできることを確認した。

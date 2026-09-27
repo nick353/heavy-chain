@@ -103,6 +103,13 @@
         "authBootstrapHydration": "7/7",
         "authSessionRecovery": "3/3"
       }
+    },
+    "authHydrationReadbackContract": {
+      "command": "npm run test:auth-hydration-readback",
+      "exitCode": 0,
+      "tests": 4,
+      "passed": 4,
+      "failed": 0
     }
   },
   "fileSha256": {
