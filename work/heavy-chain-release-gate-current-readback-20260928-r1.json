@@ -1,6 +1,6 @@
 {
   "schema": "heavy_chain.release_gate_current_readback.v1",
-  "capturedAt": "2026-09-27T15:59:45.052Z",
+  "capturedAt": "2026-09-27T16:53:48.657Z",
   "command": "npm run verify:release-gate -- --command-timeout-ms 600000",
   "ok": false,
   "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
@@ -23,7 +23,8 @@
     "G632": true,
     "G633": true,
     "H601Static": true,
-    "H602Static": true
+    "H602Static": true,
+    "heavyOpenAIProviderRegression": true
   },
   "failed": [
     {
@@ -32,7 +33,7 @@
     },
     {
       "name": "G618 scale ops baseline",
-      "reason": "canonical summary is stale (captured 2026-09-01; older than 48h)"
+      "reason": "explicit API origin, brand, and live monitor session token are absent; verifier stopped before build/browser"
     },
     {
       "name": "production H602 billing completion readback",
@@ -43,5 +44,5 @@
       "reason": "visual-scorecard.json is missing; no current 10-feature scorecard artifact exists"
     }
   ],
-  "nextSafeAction": "Do not fabricate any failed artifact. Restore a valid OpenAI credential and verified Astra migration gate first; then create only the corresponding authenticated production readbacks."
+  "nextSafeAction": "Do not fabricate any failed artifact. Keep the same-key 401 credential unchanged; only proceed to authenticated production readbacks after the existing credential becomes accepted externally."
 }
