@@ -3,7 +3,7 @@
   "capturedAt": "2026-09-28",
   "probeAt": "2026-09-27T16:47:00Z",
   "scope": "read-only OpenAI model-list check; no image generation, no deployment, no billing",
-  "credentialSource": "existing process environment variable only",
+  "credentialSource": "existing process environment variable; matching shell assignment detected without reading or persisting its value",
   "credentialValuePersisted": false,
   "credentialValueLogged": false,
   "request": {
