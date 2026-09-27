@@ -22763,3 +22763,7 @@ blocked後の新turnで復旧を試行。runtime/graph/live processは生存し�
 # Heavy Chain current state — 2026-09-27 r491
 
 capacity待ちの独立準備として、Heavy/Light focused suiteは40/40 pass（Heavy側28/28、Light permission parity 12/12）。local guardの健全性を確認しただけで、実provider、production auth、R2、video、monitor、billing、publicationは未実施。再開packet `work/heavy-chain-current-operator-inputs-20260927-r2.md`をcommit `b21b84d`で保存。Goalはblockedだが、ローカルread-only準備は継続可能。
+
+# Heavy Chain current state — 2026-09-27 r492
+
+`npm run typecheck`と`npm run build`がfresh pass。Vite buildは2567 modulesを変換し、dist生成まで成功。Heavy/Light local contractは健全だが、production proofを昇格させる証拠ではない。Adaptive packageのcapacity/holdが解消するまで、secret/provider/billing/publicationは触れず、local準備を継続する。
