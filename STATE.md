@@ -22791,3 +22791,7 @@ G620 static security 5/5、H601 legal-safety、H602 contract 3/3、security audi
 # Heavy Chain current state — 2026-09-27 r498
 
 Lightchain release gate contractは16/16 pass。release doctorはproof target/git clean pass後にCloudflare env 6項目不足で停止。configurationを推測せず、production provider/secret/deploy/publicationは未実施。Goalはactive、Adaptive capacity/Heavy package holdは継続。
+
+# Heavy Chain current state — 2026-09-27 r499
+
+Light/provider parity・video ledger・Lab・workspace handoff・Canvas document/view・unified persistence local suiteは46/46 pass。未登録npm scriptは対象node test entrypointで再確認済み。local証拠はproduction receipt/R2/authの代替ではなく、Adaptive capacity/Heavy package holdは継続、Goalはactive。
