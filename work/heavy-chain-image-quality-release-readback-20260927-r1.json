@@ -1,0 +1,38 @@
+{
+  "schema": "heavy-chain.image-quality-release-readback.v1",
+  "capturedAt": "2026-09-27T11:11:29Z",
+  "sourceRevision": "4ff63b3",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "providerSubmit": false,
+    "deploy": false,
+    "externalEffects": 0
+  },
+  "checks": [
+    {
+      "id": "generation-scorecard",
+      "command": "npm run verify:generation-scorecard --silent",
+      "ok": false,
+      "failedDefault": "primary",
+      "rows": 0,
+      "issue": "scorecard_artifact_missing:output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json",
+      "meaning": "no current visual quality artifact exists to score"
+    },
+    {
+      "id": "mass-market-qa",
+      "command": "npm run verify:mass-market-qa --silent",
+      "ok": false,
+      "issue": "auth_state_missing:output/playwright/prod-auth-refresh-20260625/auth-state.json",
+      "meaning": "production-authenticated mass-market QA did not start"
+    }
+  ],
+  "releaseImpact": {
+    "visualQualityProof": "missing",
+    "productionBusinessReadback": "missing",
+    "strictReleaseGate": "not_ready",
+    "providerReceipt": "not_proven"
+  },
+  "nextGate": "After authenticated production Heavy image receipt and remote persistence readback exist, generate fresh visual scorecard and authenticated mass-market QA evidence before release gate."
+}

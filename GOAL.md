@@ -11884,3 +11884,7 @@ production wrangler configのdry-runを実行し、候補bundleの`AI_IMAGE_PROV
 # Goal progress — 2026-09-27 r639
 
 security/operations static gates G620・G614・G632・G633、H601 static、H602 local contractはPASS。一方、H601 operatorは10項目不足、H602はgeneration quota=false・production checkout=true・no-real-charge proof 0・transaction readbackなし、G618はmonitor inputs不足、G619 betaはready session 0・evidence不足。security/operations契約は収束したが、human/billing/scale/beta/releaseは未完了。正本は`work/heavy-chain-security-billing-ops-fresh-readback-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。
+
+# Goal progress — 2026-09-27 r640
+
+画像品質・本番QAをfresh確認。generation scorecardはvisual-scorecard artifact missingで`rows=0`、mass-market QAはproduction auth-state missingで開始前fail-closed。visual quality、authenticated business readback、strict releaseは未証明で、provider/R2/billing/publication効果は0。正本は`work/heavy-chain-image-quality-release-readback-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。

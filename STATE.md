@@ -23369,3 +23369,7 @@ Light provider `22/22`、Light parity `9/9`、auth recovery `3/3`、auth hydrati
 # Heavy Chain current state — 2026-09-27 r639
 
 G620/G614/G632/G633、H601 static、H602 local contractはfresh PASS。H601 operator 10 missing、H602 quota=false・checkout=true・no-charge/transaction proofなし、G618 monitor inputs不足、G619 beta ready session 0。release gateはnot ready。動画はdeferred。正本は`work/heavy-chain-security-billing-ops-fresh-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r640
+
+generation scorecardはscorecard artifact missing・rows 0、mass-market QAはproduction auth-state missingでfail-closed。品質・本番business readback・strict releaseは未完了。provider/R2/billing/publicationは0、動画はdeferred。正本は`work/heavy-chain-image-quality-release-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
