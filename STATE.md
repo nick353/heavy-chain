@@ -23321,3 +23321,7 @@ OpenAI readiness `7/7`、Cloudflare runtime `6/6`、Light unified workflow `6/6`
 # Heavy Chain current state — 2026-09-27 r627
 
 画像waveの再開依存関係を`work/heavy-chain-image-resume-manifest-20260927-r1.json`へ固定。実装前のruntime/Astra gate、実装後のdeterministic regression、authenticated provider receipt、remote durable reconciliation、strict release gateを分離し、H601/H602/G618を独立待ちとして明示した。Adaptive runtime processは未確認、source mutation・provider/R2/billing/deploy/publication/secretは0、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r628
+
+再開マニフェストのfresh readbackで、4つのauthoritative evidence refsが存在し、依存グラフはacyclic、worktreeはclean、Adaptive runtime processは不在、source mutation/external effectsは0を確認。正本は更新済み`work/heavy-chain-image-resume-manifest-20260927-r1.json`、Goal active。

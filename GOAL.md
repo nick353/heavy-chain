@@ -11836,3 +11836,7 @@ H601/H602 operator readiness、H602 production completion、G618 scale-opsをfre
 # Goal progress — 2026-09-27 r627
 
 画像waveの再開マニフェストを作成し、runtime復旧後の依存順を固定した。runtime readback → verified Astra engineering → bounded Luna implementation → deterministic regression → authenticated provider receipt → remote save/reuse/reload/reconciliation → strict release gateの順で、H601/H602/G618は独立のhuman/monitor待ちとして分離した。動画はdeferred、外部効果は0。正本は`work/heavy-chain-image-resume-manifest-20260927-r1.json`、Goal active。
+
+# Goal progress — 2026-09-27 r628
+
+再開マニフェストのfresh readbackを実行し、参照する4つの正本artifactがすべて存在、依存グラフがacyclic、worktree clean、runtime process不在、source mutation/external effectが0であることを確認した。マニフェストへこのreadbackを追記し、runtime復旧時の再開条件を機械的に照合できるようにした。Goal active。
