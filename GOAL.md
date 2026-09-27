@@ -11196,3 +11196,7 @@ Runwayのローカル経路もfresh確認した。`codex plugin list`に`runway-
 # Goal progress — 2026-09-27 r470
 
 restart packetのlocator整合をfresh監査し、参照先3件がすべて存在し、strict gateの失敗が4件（monitor/UI、G618、H602、generation scorecard）であることを固定した。正本補足は`work/heavy-chain-restart-packet-audit-20260927-r1.json`。これは準備証跡であり、provider/legal/billing/monitor/releaseの完了へ昇格させていない。Goal active。
+
+# Goal progress — 2026-09-27 r471
+
+Goalの明示要件（dirty worktree、Light parity、auth continuity、provider receipt、remote persistence、video、operations、security/rights/billing、strict gate）を一項目ずつ現行artifactへ対応付けた完了監査を作成した。正本補足は`work/heavy-chain-completion-audit-20260927-r1.json`。passはdirty worktree、Light parity、local guard/operationsの範囲に限定し、provider/R2/video/monitor/G618/H601/H602/scorecard/strict gateの未証明を残した。Goal active。

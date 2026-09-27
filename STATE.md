@@ -22679,3 +22679,7 @@ G617、production monitor/G618、H601、H602の未完了入力を`work/heavy-cha
 # Heavy Chain current state — 2026-09-27 r470
 
 restart packetの3 locator（Runway readback、完全体プラン、local ops/rights/billing readback）が全て存在することをfresh監査し、strict gate正本の失敗4件を再確認した。監査証跡は`work/heavy-chain-restart-packet-audit-20260927-r1.json`。準備資料の存在確認を本番provider、法務、課金、monitor、scorecardの完了とは扱わず、Goal activeを維持する。
+
+# Heavy Chain current state — 2026-09-27 r471
+
+Goalの要件別completion auditを`work/heavy-chain-completion-audit-20260927-r1.json`へ固定した。dirty worktree、Light parity、local security/operations guardはpassまたはcurrent readback済みだが、正規provider receipt、remote save/reuse/reload/reconciliation、video receipt、monitor/G618、H601/H602 human/operator proof、generation scorecard、strict gateは未完了。外部効果はprovider/billing/publication/secret/destructive cleanup全て0。Goal active。
