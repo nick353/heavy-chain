@@ -23006,3 +23006,7 @@ H602のproduction completionをfresh再実行し、`ok=false`・6 blocker（quot
 # Heavy Chain current state — 2026-09-27 r551
 
 public entrypoint readback反映後にunified release gateをfresh再実行し、`2026-09-27T07:45:29.674Z`のsummaryで失敗は4件のまま（production monitor/UI pair、G618 scale-ops、production H602、generation scorecard）。public entrypoint項目はprotected redirect契約で失敗項目に含まれず、10M監査側の旧2xx契約との差分だけが残った。外部効果、provider、課金、公開、secret、deploy、破壊操作は0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r552
+
+新規task-owned Companion sessionでLightchainの`/model`、`/gallery`、`/history`、`/jobs`、`/canvas/new`をfresh readbackした。全5 routeが`readyState=complete`、認証marker（avatarまたはcanvas-save）、semantic/visual readback verifiedとなり、Galleryは18枚表示、CanvasはNisenブランドとHeavy利用条件の確認状態を表示した。session closeは`owner_cleanup_receipt.v1`で`ok=true`、task tab closed、lease release confirmed、retained/unknown-effect 0、external effect 0。正本は`work/heavy-chain-companion-authenticated-evidence-20260927-r2.json`。ただし現行verifierは旧originを固定しているため`origin_mismatch`のみでfailし、fresh origin driftを`work/heavy-chain-companion-authenticated-evidence-origin-drift-20260927-r1.md`へ記録した。provider receipt、source sync、reconciliation、production generation、R2、billing、publicationは未証明。Goal active。

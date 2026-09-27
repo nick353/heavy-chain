@@ -1,0 +1,90 @@
+{
+  "schema": "heavy-chain.companion-authenticated-production-evidence.v1",
+  "source": "aos_chrome_companion_profile_instance",
+  "capturedAt": "2026-09-27T07:52:05.300Z",
+  "taskId": "01a0d9bd-feb5-7812-bd45-9b23062f6b33",
+  "sessionId": "session_fe4c0251-60a1-49a6-a1a1-20950334fb6f",
+  "tabId": 1980931126,
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "origin": "https://heavy-chain-web.nichikatanaka.workers.dev",
+  "authSecretExported": false,
+  "businessCompletion": {
+    "providerReceipt": "unverified",
+    "sourceSync": "unverified",
+    "reconciliation": "unverified",
+    "cleanup": "verified"
+  },
+  "routes": [
+    {
+      "path": "/model",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["AIフィッティング", "生成履歴"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    },
+    {
+      "path": "/gallery",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["ギャラリー", "18枚の画像", "詳細を見る"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    },
+    {
+      "path": "/history",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["生成履歴", "続きから再開"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    },
+    {
+      "path": "/jobs",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "avatar",
+      "routeMarkers": ["制作キュー", "再開できる作業"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    },
+    {
+      "path": "/canvas/new",
+      "title": "Lightchain AI",
+      "readyState": "complete",
+      "authMarker": "canvas-save",
+      "routeMarkers": ["CANVAS", "画像を置く", "素材を見る", "ブランド: Nisen", "Heavy利用条件を確認しています…"],
+      "semanticReadback": "verified",
+      "visualReadback": "verified",
+      "legacyPermissionText": false
+    }
+  ],
+  "cleanup": {
+    "foreignTabsMutated": false,
+    "taskTabRetained": false,
+    "leaseReleasedAfterReadback": true,
+    "sessionClosed": true,
+    "retainedTabCount": 0,
+    "unknownTabCount": 0,
+    "externalActionExecuted": false,
+    "cleanupReceipt": {
+      "schema": "aos.chrome_companion.owner_cleanup_receipt.v1",
+      "status": "completed",
+      "ok": true,
+      "closed": [1980931126],
+      "missing": [],
+      "retained": [],
+      "skipped": [],
+      "unknown_effect": [],
+      "lease_release_confirmed": true,
+      "recorded_at": "2026-09-27T07:51:49.952Z"
+    }
+  }
+}
