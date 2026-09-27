@@ -12048,3 +12048,7 @@ Video provider boundary/contract/persistence、workspace handoff、provider pers
 # Goal progress — 2026-09-28 r681
 
 Light Chain provider coverage/parityとOpenAI static readinessをstrict release gateへ追加し、clean fresh gateでPASS。readbackはcommit `2d2cb15`へ保存した。コード側のHeavy/Light境界とローカル回帰はgreenだが、Goalの完了条件ではない。残る未達はproduction monitor/UI、G618 scale ops、production H602 billing readback、generation scorecardの4項目。次の依存順は、(1) consumer-auth付きworkspace/monitor readback、(2)認証済みHeavy OpenAI実生成receiptとvisual scorecard、(3) remote durable save→reuse→reload→reconciliation、(4) G618/H602本番readback、(5)全証跡を揃えたstrict release gate再実行。同じAPIキーはローテーションせず、provider submit・deploy・課金・公開・動画変更は0、Goal active。
+
+# Goal progress — 2026-09-28 r682
+
+同じAPIキーをローテーションせず、OpenAI公式Bearer認証のread-only `/v1/models`を再確認。HTTP 401で`invalid_api_key`が返り、キー形状（存在、`sk-proj-`、164文字、空白/バックスラッシュなし）を確認した。organization/project headerを足して解決する段階ではなく、credential自体がOpenAI側で拒否されているため、同じ値のままのprovider再送は停止する。認証済みconsumer workspace/monitor、実生成receipt、visual scorecard、R2再利用/再読込/reconciliation、G618/H602は未完了。ローテーション・secret変更・provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-openai-api-auth-readback-20260928-r2.json`。
