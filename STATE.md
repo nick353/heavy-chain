@@ -1,4 +1,13 @@
-# Heavy Chain current state — 2026-09-27 r272
+# Heavy Chain current state — 2026-09-27 r273
+
+## Fresh gate and boundary contract recheck — 2026-09-27
+
+read-onlyのrelease gateを`2026-09-27T00:37:11.196Z`にfresh実行した。local static/readbackは維持されたが、
+production monitor/UI、期限切れmass-market QA、期限切れLight all-feature、G618、production H601、
+production H602、旧10-feature generation scorecardの7系統は未達のままだった。再送・課金・公開・破壊的cleanupは
+行っていない。続けてprovider persistence `14/14`、video contract `3/3`、video boundary `1/1`、H602 static
+`3/3`、H601 legal-safety `ok=true`をfresh確認した。これらは本番workspace save/reuse/reload/reconciliation、
+video provider receipt、法務operator readback、billing completionを代替しない。
 
 ## Heavy readiness label separation — 2026-09-27
 

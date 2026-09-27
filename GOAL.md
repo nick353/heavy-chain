@@ -1,4 +1,12 @@
-# Goal progress — 2026-09-27 r394
+# Goal progress — 2026-09-27 r395
+
+## Fresh gate and boundary contract recheck — 2026-09-27
+
+read-only release gateを`2026-09-27T00:37:11.196Z`へ更新した。未達はproduction monitor/UI、期限切れ
+mass-market QA、期限切れLight all-feature、G618、production H601、production H602、旧10-feature
+generation scorecardの7系統で変化なし。追加のprovider persistence `14/14`、video contract `3/3`、video
+boundary `1/1`、H602 static `3/3`、H601 legal-safety `ok=true`を確認した。外部receiptがないものは完了扱いにせず、
+Goalはactive。
 
 ## Heavy readiness label separation — 2026-09-27
 
