@@ -11844,3 +11844,7 @@ H601/H602 operator readiness、H602 production completion、G618 scale-opsをfre
 # Goal progress — 2026-09-27 r629
 
 公式OpenAI documentationをfresh取得し、`gpt-image-2.5-sunburst`の現行model ID、Images APIのgenerations/edits endpoint、quality options、単一画像操作にはImage APIを使う方針を確認した。既存Opus planのdefaultは公式仕様と整合する。Organization Verificationが必要になる場合があるため、production provider call前のread-only account verification stepを再開マニフェストへ追加した。正本は`work/heavy-chain-openai-image-official-readback-20260927-r1.json`、provider/billing/secret外部効果は0、Goal active。
+
+# Goal progress — 2026-09-27 r630
+
+shell環境に`OPENAI_API_KEY`という変数名が存在することだけを確認した（値は未読）。これはWorker secret binding、Organization Verification、authenticated provider receiptの証明ではないため、公式readback artifactに`secretValueRead=false`と`workerSecretBindingVerified=false`を追記した。Adaptive runtimeは不在のまま、Goal active。

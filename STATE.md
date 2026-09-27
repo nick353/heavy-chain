@@ -23329,3 +23329,7 @@ OpenAI readiness `7/7`、Cloudflare runtime `6/6`、Light unified workflow `6/6`
 # Heavy Chain current state — 2026-09-27 r629
 
 公式OpenAI docsのfresh readbackで、`gpt-image-2.5-sunburst`は現行画像生成・編集model、Images APIは`/v1/images/generations`と`/v1/images/edits`を提供し、単一画像操作の採用方針と整合することを確認。Organization Verificationが必要になる可能性をproduction前read-only gateとして追加した。正本は`work/heavy-chain-openai-image-official-readback-20260927-r1.json`、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r630
+
+shell環境の`OPENAI_API_KEY`変数名のみpresence確認。secret値は未読で、Worker binding・Organization Verification・provider receiptは未証明。正本は更新済み`work/heavy-chain-openai-image-official-readback-20260927-r1.json`、Adaptive runtime processは不在、Goal active。

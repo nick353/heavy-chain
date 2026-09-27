@@ -34,7 +34,11 @@
   "newExternalPrerequisite": {
     "code": "openai_organization_verification_may_be_required",
     "status": "not_checked",
-    "action": "Do not infer or attempt verification. Before the first authorized production provider call, read the account's official verification state through the approved auth surface and stop if unavailable."
+    "action": "Do not infer or attempt verification. Before the first authorized production provider call, read the account's official verification state through the approved auth surface and stop if unavailable.",
+    "shellEnvKeyNamePresence": true,
+    "shellEnvKeyName": "OPENAI_API_KEY",
+    "secretValueRead": false,
+    "workerSecretBindingVerified": false
   },
   "externalEffects": {
     "officialDocsRead": true,
