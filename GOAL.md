@@ -11840,3 +11840,7 @@ H601/H602 operator readiness、H602 production completion、G618 scale-opsをfre
 # Goal progress — 2026-09-27 r628
 
 再開マニフェストのfresh readbackを実行し、参照する4つの正本artifactがすべて存在、依存グラフがacyclic、worktree clean、runtime process不在、source mutation/external effectが0であることを確認した。マニフェストへこのreadbackを追記し、runtime復旧時の再開条件を機械的に照合できるようにした。Goal active。
+
+# Goal progress — 2026-09-27 r629
+
+公式OpenAI documentationをfresh取得し、`gpt-image-2.5-sunburst`の現行model ID、Images APIのgenerations/edits endpoint、quality options、単一画像操作にはImage APIを使う方針を確認した。既存Opus planのdefaultは公式仕様と整合する。Organization Verificationが必要になる場合があるため、production provider call前のread-only account verification stepを再開マニフェストへ追加した。正本は`work/heavy-chain-openai-image-official-readback-20260927-r1.json`、provider/billing/secret外部効果は0、Goal active。

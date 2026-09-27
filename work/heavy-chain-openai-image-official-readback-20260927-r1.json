@@ -1,0 +1,47 @@
+{
+  "schema": "heavy-chain.openai-image-official-readback.v1",
+  "capturedAt": "2026-09-27T10:54:36Z",
+  "sourceRevision": "9ceafc54fe5451798bd3277e0add3841c4edc9b1",
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst",
+      "claims": [
+        "gpt-image-2.5-sunburst is the current default and most capable image generation/editing model",
+        "direct Image API support includes /v1/images/generations and /v1/images/edits",
+        "quality supports low, medium, high, xhigh, max, and auto",
+        "undated model id gpt-image-2.5-sunburst is valid; dated snapshot is also documented"
+      ]
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/image-generation",
+      "claims": [
+        "Image API is the recommended path for a single generate/edit operation",
+        "use gpt-image-2.5-sunburst or gpt-image-2.5-flare directly in the Image API",
+        "organization verification may be required before using GPT Image models",
+        "multiple input images and mask behavior are documented for edits"
+      ]
+    }
+  ],
+  "implementationImpact": {
+    "acceptedDefault": "gpt-image-2.5-sunburst",
+    "acceptedBackend": "openai-images-api",
+    "acceptedEndpoints": ["/v1/images/generations", "/v1/images/edits"],
+    "parserAndAdapterMustAgree": true,
+    "legacyReceiptReadback": "preserve",
+    "fallbackOrReplay": "forbidden",
+    "video": "unchanged_deferred"
+  },
+  "newExternalPrerequisite": {
+    "code": "openai_organization_verification_may_be_required",
+    "status": "not_checked",
+    "action": "Do not infer or attempt verification. Before the first authorized production provider call, read the account's official verification state through the approved auth surface and stop if unavailable."
+  },
+  "externalEffects": {
+    "officialDocsRead": true,
+    "providerCalls": 0,
+    "billing": 0,
+    "deploy": 0,
+    "secretReads": 0
+  },
+  "status": "official_model_contract_confirmed_plan_remains_valid"
+}
