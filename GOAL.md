@@ -10835,3 +10835,7 @@ Heavy capability境界のlocal sliceを完了判定した。Opus 5.5改訂plan�
 # Goal progress — 2026-09-27 r405
 
 コミット後のstrict release gateを新規出力へfresh実行した（capturedAt `2026-09-27T01:38:05.017Z`、`ok=false`）。local capability変更でdirty worktree blockerは発生していない。未達はproduction monitor/UI、mass-market QA、Lightchain all-feature previews、G618、H601、H602、generation scorecardの7件で、production/operator/providerの正本証跡が必要な別工程として維持する。Goalはactive。
+
+# Goal progress — 2026-09-27 r406
+
+Fresh task-owned Companion evidence now confirms the Heavy campaign-image gate itself is usable and fail-closed: the old Light permission marker is absent, terms are visible/checked, the request-level rights attestation is visible/unchecked until deliberate confirmation, and the generate button remains disabled before that attestation and required inputs. An app-owned `design-v1.png` was uploaded and verified on the exact tab; the one upload readback uncertainty was reconciled from same-tab evidence, with no replay and complete owner cleanup. This pass intentionally did not dispatch a provider submit, billing, or publish action; the previously captured real Heavy provider/R2 receipt remains the generation proof. Goal remains active. Remaining release blockers are unchanged: production monitor/UI, mass-market QA, Lightchain all-feature previews, G618, H601/H602, and the generation scorecard.
