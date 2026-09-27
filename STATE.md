@@ -22647,3 +22647,7 @@ permission境界監査後に`npm run build`をfresh実行し、`tsc -b`とVite p
 # Heavy Chain current state — 2026-09-27 r462
 
 Supabase公式readbackは`heavy-chain-production`=`INACTIVE`。`npm run verify:h602-production-completion-readback`をfresh実行し、`capturedAt=2026-09-27T05:17:16.540Z`、`liveProductionReadbackPerformed=false`、6 blockerを確認した。正本は`output/playwright/g774-h602-production-completion-current-r1/summary.json`。billing設定・Supabase restore・DB書込み・Apple/OTP・purchase・公開は0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r463
+
+strict gate正本を`2026-09-27T05:17:59.697Z`にfresh取得した。`ok=false`、failedはproduction monitor/UI pair、G618 scale ops baseline、H602 production completion、generation scorecardの4件。正本は`output/playwright/10m-product-readiness-g615/release-gate-summary.json`。auth input、Supabase restore、provider/R2、billing、publicationは0。Goal active。
