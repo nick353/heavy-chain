@@ -1,0 +1,50 @@
+{
+  "schema": "heavy_chain.full_goal_completion_audit.v2",
+  "captured_at": "2026-09-27T10:34:59.413Z",
+  "source_revision": "1bb1c768ed083f566e885bfde50c75d74d9e975e",
+  "commands": {
+    "completion": "npm run verify:10m-completion:incomplete-ok --silent",
+    "release_gate": "npm run verify:release-gate --silent"
+  },
+  "status": "incomplete",
+  "blocker_count": 16,
+  "blockers": [
+    "goal_not_accepted:G617",
+    "goal_not_accepted:G619",
+    "goal_not_accepted:G669",
+    "goal_not_accepted:G670",
+    "human_item_open:H601",
+    "human_item_open:H602",
+    "proof_not_complete:g617_same_run_fresh_all_10",
+    "proof_not_complete:g619_real_beta_evidence",
+    "proof_not_complete:g618_scale_ops",
+    "proof_not_complete:g668_current_production_mass_market_qa",
+    "proof_not_complete:g659_lightchain_order_preview_production_readback",
+    "proof_not_complete:production_h601_rights_readback",
+    "proof_not_complete:production_chosen_public_entrypoint_readback",
+    "proof_not_complete:production_h602_billing_completion_readback",
+    "command_failed:g619_beta_evidence_verifier",
+    "command_failed:release_gate_verifier"
+  ],
+  "release_gate_failures": [
+    "readback:production monitor and UI pair (missing g835 production UI summary)",
+    "readback:G618 scale ops baseline (artifact older than 48 hours)",
+    "readback:production H602 billing completion (no verified no-real-charge/transaction entitlement proof)",
+    "command:generation scorecard (visual-scorecard artifact missing)"
+  ],
+  "human_gates": {
+    "H601": "open: final legal/policy wording, retention, brand/reference, likeness, and marketing claims",
+    "H602": "open: operator billing/checkout decision and transaction or verified no-real-charge proof"
+  },
+  "external_effects": {
+    "provider_api_call": false,
+    "r2_write": false,
+    "billing": false,
+    "publication": false,
+    "deploy": false,
+    "secret_read": false,
+    "destructive_cleanup": false
+  },
+  "runtime_note": "Adaptive runtime readback returned Transport closed after the audit; no restart, manual claim, alternate route, or replay was issued.",
+  "next_action": "Preserve the active Goal; resume only dependency-ready work after runtime readback recovers. Do not close H601/H602 or fabricate G617/G619/G618/scorecard evidence."
+}

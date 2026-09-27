@@ -23285,3 +23285,7 @@ Opus計画の実装境界を、`image-ai.ts`（receipt/readback、D1/R2再検証
 # Heavy Chain current state — 2026-09-27 r618
 
 旧モデル参照のfresh auditで、変更時の必須surfaceを`openai-image.ts`、`image-ai-contracts.ts`、GeneratePage、adapter/runtime fixturesへ分離した。request parserの独立allowlistを見落とすとprovider到達前に新モデルが拒否されるため、Astra engineering scopeへ渡す。legacy explicit fixturesは互換証拠として保持し、fallback/replay/videoは変更しない。Astra blockerは`native_start_receipt_metadata_unavailable`、外部効果0。正本は`work/heavy-chain-openai-image-model-surface-audit-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r619
+
+現行HEAD `1bb1c768`のfresh completion auditは16 blockersで未完了。release gateの残件はproduction monitor/UI pair、G618 scale ops、production H602 billing completion、generation scorecard。H601/H602はoperator decision待ち、G617/G619/G668/G659とchosen public entrypointのproduction証跡も未完了。Adaptive runtimeはreadback時に`Transport closed`を返したため、再起動・手動claim・alternate route・replayはしていない。正本は`work/heavy-chain-full-goal-completion-audit-20260927-r2.json`、Goal active。
