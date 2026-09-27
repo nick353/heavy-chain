@@ -22974,3 +22974,7 @@ capacity recovery候補をfresh確認し、`workflow_list(limit=100,status=capac
 # Heavy Chain current state — 2026-09-27 r543
 
 G618 verifierとrelease-gate sourceをfresh読解し、再開に必要なHTTPS API origin、brand UUID、read-only live session token、96時間window、failure/storage/scale thresholds、production monitor/UI pairの正確な入力名と受入条件を秘密値なしで固定した。正本は`work/heavy-chain-g618-production-input-packet-20260927-r1.md`。外部効果・secret insertionは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r544
+
+実Heavy provider receiptとworkspace durable readbackの再開条件をsourceからfresh抽出した。readback-first、exclusive attempt journal、same-run request/job/image scope、candidate/phase completion、checksum・signed media検証、uncertain effect no-replayを秘密値なしで固定した。正本は`work/heavy-chain-provider-receipt-input-packet-20260927-r1.md`。provider submit、課金、公開、cleanupは0。Goal active。
