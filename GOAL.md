@@ -10936,3 +10936,8 @@ remote receiptなしではpromotion/reopenを成功扱いにしない境界は�
 
 現行の明示的Heavy ownership実装と不一致だったLightchain parity assertionsだけを更新し、実装のHeavy/Light境界は変更しなかった。
 Lightchain parity 12/12、Heavy capability gating 9/9、typecheckをpass。これでlocal test failureを解消し、Light誤権限の再発なしを確認した。Goal active。
+
+# Goal progress — 2026-09-27 r425
+
+provider coverageの旧static assertionsを現行Heavy ownership境界へ整合し、実装を変更せず22/22 passした。Light機能をHeavyへ
+送らないこと、Heavy機能だけserver entitlement gateを使うこと、provider routeを緩めていないことを確認した。Goal active。

@@ -22392,3 +22392,9 @@ Lightchain parity testの旧Heavy-only文字列契約を、現行の明示的Hea
 `heavyConsent`のLight bypassと`!heavyOwnedFeature`付きWorkbench entitlementを検証する形へ整合。fresh検証は
 `npm run test:lightchain-permission-parity` 12/12、Heavy capability gating 9/9、`npm run typecheck` pass。
 Light機能をHeavy laneへ戻す変更は行っていない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r425
+
+Lightchain provider coverageにも残っていた旧Heavy-only static assertions 5件を、現行の
+`heavyOwnedFeature && lightchainProviderSupported` / `!heavyOwnedFeature || ...` 境界へ更新した。実装・provider routeは変更せず、
+`npm run test:lightchain-provider-coverage`をfresh再実行して22/22 pass。LightのHeavy entitlement bypassとHeavyのserver gateを同時に確認した。Goal active。
