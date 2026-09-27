@@ -1,4 +1,12 @@
-# Heavy Chain current state — 2026-09-27 r277
+# Heavy Chain current state — 2026-09-27 r278
+
+## Fresh Companion auth hydration readback — 2026-09-27
+
+古いsession/tabを再利用せず新規Companion sessionを作成し、同一originを3回read-only確認した。titleは
+`Lightchain AI`だが、bodyは毎回`WORKSPACE ワークスペースを準備しています 認証状態とブランド設定を確認しています。`
+で止まり、Light本番のauthenticated feature/brand readbackには進まなかった。reload後も同じ状態で、provider dispatch・
+外部効果・課金・公開は0、session cleanupはcompleted。証跡は`work/heavy-chain-companion-auth-readback-20260927-r1.json`。
+これはブラウザ接続の証明であってLight認証成功の証明ではない。
 
 ## Workspace API reconciliation contract recheck — 2026-09-27
 

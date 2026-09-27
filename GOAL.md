@@ -1,4 +1,11 @@
-# Goal progress — 2026-09-27 r399
+# Goal progress — 2026-09-27 r400
+
+## Fresh Companion auth hydration readback — 2026-09-27
+
+新規Companion sessionでproduction Webを3回read-only確認し、毎回`Lightchain AI`のworkspace準備／認証状態確認画面で
+止まった。reload後もhydrationせず、provider/billing/publishは0、cleanupはcompleted。証跡を
+`work/heavy-chain-companion-auth-readback-20260927-r1.json`へ保存した。Light authenticated feature/brand readbackと
+monitor API contextは依然未達。Goalはactive。
 
 ## Workspace API reconciliation contract recheck — 2026-09-27
 
