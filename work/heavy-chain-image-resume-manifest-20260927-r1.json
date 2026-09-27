@@ -108,6 +108,15 @@
     ],
     "readback": "Astra did not independently expose invocation identity; no Luna handoff, source mutation, provider call, deploy, or auth probe was performed."
   },
+  "adaptiveRuntimeReadback": {
+    "capturedAt": "2026-09-27T18:03:51Z",
+    "capacityGuard": "capacity_blocked_live_capacity_unobservable_no_immediate_retry",
+    "routerAvailable": true,
+    "graphRuntimeAvailable": true,
+    "runtimeIdentity": "build_config_match_process_match_false",
+    "newAstraInvocationStarted": false,
+    "interpretation": "Existing Astra package remains blocked and launch-ineligible; no replacement or route substitution was attempted."
+  },
   "steps": [
     {
       "id": "runtime-recovery-readonly",
