@@ -23289,3 +23289,7 @@ Opus計画の実装境界を、`image-ai.ts`（receipt/readback、D1/R2再検証
 # Heavy Chain current state — 2026-09-27 r619
 
 現行HEAD `1bb1c768`のfresh completion auditは16 blockersで未完了。release gateの残件はproduction monitor/UI pair、G618 scale ops、production H602 billing completion、generation scorecard。H601/H602はoperator decision待ち、G617/G619/G668/G659とchosen public entrypointのproduction証跡も未完了。Adaptive runtimeはreadback時に`Transport closed`を返したため、再起動・手動claim・alternate route・replayはしていない。正本は`work/heavy-chain-full-goal-completion-audit-20260927-r2.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r620
+
+Light provider coverage `22/22`、permission/source parity `12/12`、auth recovery `3/3`、auth hydration `4/4`をfresh PASS。Light/認証のdeterministic境界は維持されているが、production provider/R2/reconciliation、video provider、monitor/G618/H601/H602/beta/scorecard/release gateは未完了。外部効果0。正本は`work/heavy-chain-light-auth-contracts-20260927-r1.json`、Goal active。

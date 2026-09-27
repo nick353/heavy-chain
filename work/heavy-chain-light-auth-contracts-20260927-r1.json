@@ -1,0 +1,32 @@
+{
+  "schema": "heavy_chain.light_auth_contracts_readback.v1",
+  "captured_at": "2026-09-27",
+  "source_revision": "b609df3",
+  "scope": "local_deterministic_contracts_only",
+  "tests": [
+    {"command":"npm run test:lightchain-provider-coverage","status":"pass","tests":22},
+    {"command":"npm run test:lightchain-permission-parity","status":"pass","tests":12},
+    {"command":"npm run test:auth-session-recovery","status":"pass","tests":3},
+    {"command":"npm run test:auth-hydration-readback","status":"pass","tests":4}
+  ],
+  "confirmed": [
+    "non-video Light provider routes, prompts, result destinations, and durable-promotion guards are deterministic and passing",
+    "Light parity keeps Heavy-only consent separate and remains fail-closed for unobserved source access",
+    "auth refresh/retry and authenticated hydration readback contracts pass"
+  ],
+  "not_confirmed": [
+    "authenticated production provider receipt",
+    "remote durable save/reuse/reload/reconciliation",
+    "video provider receipt",
+    "production monitor/UI pair, G618, H601/H602 production proof, beta evidence, or strict release completion"
+  ],
+  "external_effects": {
+    "provider_calls": 0,
+    "r2_writes": 0,
+    "billing": 0,
+    "publication": 0,
+    "deploy": 0,
+    "secret_reads": 0,
+    "destructive_cleanup": 0
+  }
+}

@@ -11804,3 +11804,7 @@ Opus計画に対応するreceipt/readback経路をfresh source auditで固定し
 # Goal progress — 2026-09-27 r619
 
 Goal全体のfresh completion auditを現行HEAD `1bb1c768`で実行した。`ok=false`、blocker 16件。release gateも再実行し、未達はproduction monitor/UI pair、G618 scale-ops freshness、production H602 billing completion、generation scorecard。H601/H602は人間項目としてopenのまま、G617/G619/G668/G659/公開entrypointのproduction証跡も未完了。provider/R2/billing/deploy/publication/secret/破壊cleanupは0。正本は`work/heavy-chain-full-goal-completion-audit-20260927-r2.json`。Goal active。
+
+# Goal progress — 2026-09-27 r620
+
+現行HEADでLight provider coverage `22/22`、Light permission/source parity `12/12`、auth session recovery `3/3`、auth hydration readback `4/4`をfresh PASSした。これはローカルdeterministic契約の収束であり、authenticated production provider receipt、remote durable save/reuse/reload/reconciliation、video receipt、production release gateを完了扱いにはしない。正本は`work/heavy-chain-light-auth-contracts-20260927-r1.json`。外部provider/R2/billing/publication/deploy/secret/破壊cleanupは0、Goal active。
