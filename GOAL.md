@@ -11680,3 +11680,7 @@ G620 security-ops、G614 operations docs、G632 incident response、G633 scale a
 # Goal progress — 2026-09-27 r593
 
 G619 beta readinessをfresh監査した。統合beta構造契約は3/3 passだが、実betaは3セッションすべて`ready=false`、0/3 ready、missingCount=18。参加同意・5分以上の行動証跡・摩擦記録・redaction review・usable behavior artifactが未取得で、代替証跡を作成していない。正本は`work/heavy-chain-beta-readiness-readback-20260927-r1.json`、Goal active。
+
+# Goal progress — 2026-09-27 r594
+
+Goal readiness static verifierをfresh実行し、5/5 checks pass。Cloudflare runtime/auth/media/AI adapters、legacy Supabase runtime除去、legacy edge entrypoint不在を確認した。本番生成、R2、browser completion、deploy、migrationは未実行。正本は`work/heavy-chain-goal-readiness-readback-20260927-r1.json`、Goal active。
