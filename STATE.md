@@ -23180,3 +23180,7 @@ LightのWorkers固定箇所をread-only確認。Opus 5.5のfresh判断は、ク�
 # Heavy Chain current state — 2026-09-27 r597
 
 OpenAI-primary Light client auditを`work/heavy-chain-openai-light-client-audit-20260927-r1.json`へ固定。Heavy server defaultは静的完了、Light bounded 6 pathsは未修正。追加のlegacy references（LightchainMaterialWorkbenchPage、FittingPage、canvasImageEditResults）はscope外として分離。Opus planは有効だが、Astra dispatch `run_openai_light_client_unification_20260927_r2` は`native_start_receipt_metadata_unavailable`でblocked、verified=false、implementation/provider execution 0。provider/R2/deploy/billing/publication/secret外部効果0。Goal active。verified native Astra start receipt復旧後に同じbounded scopeを実装する。
+
+# Heavy Chain current state — 2026-09-27 r598
+
+Adaptive runtimeはavailable/live process runningだがcapacity guardは`capacity_blocked`。Light OpenAI packageは`native_start_receipt_metadata_unavailable`でblockedのまま。auth/video/persistence/release-gateのローカル契約をfresh再検証し、auth 7/7、video boundary+contract 4/4、video persistence 4/4、Light release contract 16/16、H601 static、H602 local contractを確認。G618は明示Cloudflare origin/brand/session/limits不足で開始前停止、H601 operator readinessは10 missing、scorecard primary artifact missing、strict gateは4 failures（production monitor/UI、G618、production H602、scorecard）。正本は`work/heavy-chain-continuation-readback-20260927-r1.json`。外部provider/R2/billing/deploy/publication/secret/破壊cleanupは0、Goal active。
