@@ -22711,3 +22711,7 @@ fresh strict gate `output/playwright/10m-product-readiness-g615/release-gate-sum
 # Heavy Chain current state — 2026-09-27 r478
 
 provider呼び出しとentitlement readを横断再監査した。`LightchainWorkbenchPage.tsx` と`LightchainMaterialWorkbenchPage.tsx` は`isHeavyOwnedFeature`でHeavy ownershipを明示判定し、fabric/printing等の既知Light featureではHeavy entitlementを呼ばない。`FittingPage.tsx`の`model-matrix`と`CanvasEditorPage.tsx`のHeavy経路だけが、status GET/`rightsConfirmed`に留まり、GeneratePageと同じrequest-scoped `heavyConsent`/`heavyPreparation`を未接続。Focused suiteはHeavy capability/preflight、Canvas/Chat entitlement/readback、Fitting preview、Light permission parityを合計40/40 pass。ソース変更・provider・auth secret・課金・公開は0。Astra packageは引き続き`waiting_human`/`automatic_dispatch_disabled`でclaim/startなし、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r479
+
+保存済みOpus計画`324a1767-2456-4822-a565-89d1c9cb3e4b`をfresh readし、`plan_valid=true`、受入条件と依存関係を確認した。40/40 focused boundary testsの証拠fingerprint `f0d7414f5613f94ecc9bd5abff773f740f2b41b73482d17effabda4297f3301e`をAdaptive plan progressへ`waiting_human`として記録し、plan versionは2へ更新。`engineering_ready=false`、次工程はAstra engineeringのまま。実装・provider・auth secret・課金・公開は0、Goal active。

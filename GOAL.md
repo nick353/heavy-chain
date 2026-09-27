@@ -11004,6 +11004,10 @@ operator decision 10項目未添付、generation scorecard artifact missingを�
 Apple/決済/法的判断/production monitor token/実provider receipt/scorecard等の正規証跡であるため、fail-closedを維持した。
 Goal active。
 
+# Goal progress — 2026-09-27 r479
+
+保存済みOpus計画`324a1767-2456-4822-a565-89d1c9cb3e4b`をfresh readし、`plan_valid=true`、受入条件と依存関係を確認した。40/40 focused boundary testsの証拠fingerprint `f0d7414f5613f94ecc9bd5abff773f740f2b41b73482d17effabda4297f3301e`をAdaptive plan progressへ`waiting_human`として記録し、plan versionは2へ更新。`engineering_ready=false`、次工程はAstra engineeringのまま。実装・provider・auth secret・課金・公開は0、Goal active。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
