@@ -23042,3 +23042,7 @@ public entrypoint readback反映後にunified release gateをfresh再実行し�
 # Heavy Chain current state — 2026-09-27 r560
 
 Adaptive runtime・Opus plan・Heavy Astra packageのfresh readbackを`work/heavy-chain-adaptive-continuation-readback-20260927-r1.json`へ固定した。planはfingerprint一致の`plan_valid=true`、Opus verified、runtimeはgraph/live process availableだがcapacity guardが`capacity_blocked`。packageは`waiting_human`/`automatic_dispatch_disabled`でclaim/startなし、fork候補なし。未承認の再起動・代替route・provider・課金・secret・公開は行わず、read-only証跡と独立工程を継続する。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r561
+
+strict release gateを同一HEADでfresh実行し、`2026-09-27T08:14:00.555Z`に失敗4件（production monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecard）を再確認した。Companionは新規session open/list/closeまで正常、Heavy canonical tabなしのためforeign/user tabsを触らず、provider・R2・課金・公開・secret・送信は0。Goal active。

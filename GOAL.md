@@ -11558,3 +11558,7 @@ provider呼び出しとentitlement readを横断再監査した。`LightchainWor
 # Goal progress — 2026-09-27 r560
 
 Adaptive runtime・Opus plan・Heavy Astra packageを同一runでfresh readbackした。Opus plan v3はfingerprint一致で`plan_valid=true`、Opus verified、engineering scopeはFitting/Canvasのrequest-scoped adapter、ChatEditor fail-closed。runtimeはgraph available・live role process verifiedだが`capacity_blocked`、`live_capacity_observable=false`、active routes 0、`runtime_process_match=false`。managed packageは`waiting_human`/`automatic_dispatch_disabled`、claim/startなし、ready packageなし、capacity-blocked workflow fork候補も0だった。従って重複claim/start、代替route、fork、provider・課金・secret・公開を行わず、独立read-only継続を選択した。正本は`work/heavy-chain-adaptive-continuation-readback-20260927-r1.json`。Goal active。
+
+# Goal progress — 2026-09-27 r561
+
+同一HEAD `1f222bd`でstrict release gateを一度だけfresh実行し、`2026-09-27T08:14:00.555Z`、`ok=false`、失敗4件（production monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecard）を再確認した。Companionの新規read-only sessionは正常にopen/list/closeできたが、Profile 2にHeavy canonical tabはなく、foreign/user tabsのadopt・cleanup・別surface fallbackは行っていない。外部provider、R2、課金、公開、secret、送信は0。Goal active。
