@@ -11720,3 +11720,11 @@ QA receipt境界についてOpus 5.5のverified planを取得した。実サー�
 # Goal progress — 2026-09-27 r603
 
 fresh Companion readbackでHeavy生成URLを同一profile/generationから確認した。titleは`Lightchain AI`、本文は`GENERATE 生成画面を準備しています 素材アップロードと生成の準備をしています。`に留まり、authenticated feature surfaceへ到達しなかった。旧resume targetは`resume_target_missing`、fresh readは`task_target_not_provisioned`で、認証済みprovider receipt・workspace readbackの根拠にはならない。browser mutation/provider dispatch/R2/billing/publication/secret読取は0、session cleanupはcompleted。正本は`work/heavy-chain-auth-hydration-readback-20260927-r2.json`、Goal active。
+
+# Goal progress — 2026-09-27 r604
+
+同じproduction generate URLで`デザインワークスペースへようこそ`の表示を15秒待つread-only確認を行ったが、
+`page.waitFor`は`operation_timeout`で終了した。operation effect stateは`known_no_effect`、mutation dispatchはfalse、
+dispatch countは0、replay不可、session cleanupはcompleted。provider/R2/課金/公開/secret読取は0で、認証済みfeature surface
+到達の証拠にはならない。正本は`work/heavy-chain-auth-hydration-delayed-readback-20260927-r1.json`。次はauth hydration修復
+または有効なauthenticated task targetの確保であり、タイムアウトしたreadを再送しない。Goal active。
