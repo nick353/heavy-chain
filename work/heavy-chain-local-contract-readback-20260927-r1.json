@@ -1,0 +1,36 @@
+{
+  "schema": "heavy-chain.local-contract-readback.v1",
+  "capturedAt": "2026-09-27T07:04:00Z",
+  "gitHead": "b0282c0",
+  "checks": [
+    {
+      "command": "npm run test:lightchain-permission-parity",
+      "passed": 12,
+      "failed": 0
+    },
+    {
+      "command": "npm run test:provider-persistence-readback",
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "command": "npm run test:video-provider-boundary",
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "command": "npm run test:video-provider-contract",
+      "passed": 3,
+      "failed": 0
+    }
+  ],
+  "totalPassed": 30,
+  "externalEffect": {
+    "providerCalls": 0,
+    "r2Writes": 0,
+    "billing": 0,
+    "publication": 0
+  },
+  "interpretation": "Local permission, durable-persistence guard, and video fail-closed contracts pass. These checks do not prove authenticated production provider generation, remote R2 lifecycle, or release-gate completion.",
+  "decision": "local_contracts_verified_production_unproven"
+}

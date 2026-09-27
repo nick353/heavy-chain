@@ -22838,3 +22838,7 @@ release gateとgeneration scorecardを同一HEAD `4fab7f4dafd7ab1b1dad6f795bd175
 # Heavy Chain current state — 2026-09-27 r509
 
 10M completion auditを`2026-09-27T07:01:54.577Z`に同一HEADでfresh実行した。`ok=false`、blockerは16件で、G617/G619/G669/G670未accept、H601/H602 open、G617/G619/G618/G668/G659/H601/H602/public entrypointのproof不足、G619 verifierとrelease-gate command failureを再確認した。10Mコマンド自体は`exitCode=0`（incomplete-ok）だが、業務完了を示さない。証跡は`work/heavy-chain-fresh-release-gate-readback-20260927-r1.json`へ追記済み。外部効果は0、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r510
+
+独立したlocal contractをfresh再検証し、Light権限parity 12/12、provider persistence/readback 14/14、video boundary 1/1、video contract 3/3の合計30/30をpassした。正本は`work/heavy-chain-local-contract-readback-20260927-r1.json`。これはlocal fail-closedとdurable guardの証拠であり、authenticated production provider、R2 lifecycle、billing、publicationの完了証拠ではない。外部効果は0、Goal active。
