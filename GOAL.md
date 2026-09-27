@@ -12068,3 +12068,7 @@ Chrome Companionの同一task-owned read-only sessionでOpenAI PlatformのAPI-ke
 # Goal progress — 2026-09-28 r686
 
 ユーザー条件の変更（既存キーをそのまま使い、ローテーションしない）をOpus 5.5でplan `aa040f17-6308-444f-8290-cfc78589de2a`へ反映した。401中は外部送信を増やさず、同一キーのread-only `GET /v1/models`が2xxになった後だけ一回の生成へ進む依存順を固定。Astra engineeringはbounded outputを返したが、実runtime invocation identityの独立証拠がないためblocked扱いで、実装へ昇格していない。fresh local回帰はHeavy OpenAI 4/4、Light provider 22/22、scorecard provenance 3/3、OpenAI static 7/7。strict gateは2026-09-27T17:36:22Z時点でmonitor/UI、G618、H602、generation scorecardの4項目FAIL。キーのローテーション・secret変更・provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`と`work/heavy-chain-release-gate-current-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r687
+
+外部の認証/account状態に変化がないことを確認したため、同じキーのprobeを繰り返さず、Adaptive planを`waiting_human`へ遷移させた。これはGoal完了やGoal停止ではなく、同一キーの外部修復後に一回だけread-only 2xx再確認を行うための待機状態。生成、deploy、課金、公開、動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。

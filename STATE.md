@@ -23553,3 +23553,7 @@ Generation scorecard verifierをOpenAI provider/backend provenance必須へ強�
 # Heavy Chain current state — 2026-09-28 r686
 
 Opus 5.5の更新plan `aa040f17-6308-444f-8290-cfc78589de2a`で「同じキー・ローテーションなし」を新しい不変制約として固定。Astra engineering package `heavy-chain-no-rotation-20260928-r2`はbounded specificationを返したが、native invocation identityを独立検証できないためblockedとして記録し、実装起動は許可していない。キー値の表示・保存・変更、外部生成・deploy・課金・公開・動画変更は0。Heavy 4/4、Light 22/22、scorecard provenance 3/3、OpenAI static 7/7をfresh PASS。strict gateもfresh実行し、production monitor/UI、G618、H602、generation scorecardの4項目のみFAIL。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`、`work/heavy-chain-release-gate-current-readback-20260928-r1.json`、Adaptive dispatch readback。Goal active。
+
+# Heavy Chain current state — 2026-09-28 r687
+
+外部状態に変化がないため、同じAPIキーへの追加probe・provider送信・deployは行わず、Adaptive planを`waiting_human`へ更新。再開条件は同一キーの同一secret/account stateが外部で修復され、同一ソースのread-only `GET /v1/models`が2xxになること。その後も生成は一回だけ許可する。worktreeはclean、動画deferred、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
