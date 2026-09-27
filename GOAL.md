@@ -11980,3 +11980,7 @@ Astraの新しい境界レビューをread-onlyで実施し、`CanvasEditorPage`
 # Goal progress — 2026-09-27 r663
 
 Adaptive runtimeをread-only再確認し、Graph runtimeと外部role processはliveだが、capacity guardは`capacity_blocked`（期限切れの別planner leaseが残存）で、即時再試行は行わなかった。既存Astra package r6はverified invocation identityなしでblockedのまま。ソース変更・Luna起動・provider生成・deploy・課金・secret値読取は0、動画はdeferred。Goalは未完了のまま継続する。
+
+# Goal progress — 2026-09-27 r664
+
+静的readinessをfresh実行し、Goal readiness `5/5`、OpenAI provider readiness `7/7`をPASSした。いずれもauthenticated production generation、R2保存、品質、browser business completionを証明しない。外部API生成・課金・deploy・secret読取は0、動画はdeferred。正本は`work/heavy-chain-static-readiness-fresh-readback-20260927-r2.json`。

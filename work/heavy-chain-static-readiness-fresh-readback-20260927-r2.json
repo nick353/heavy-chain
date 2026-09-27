@@ -1,0 +1,26 @@
+{
+  "schema": "heavy-chain.static-readiness-fresh-readback.v1",
+  "capturedAt": "2026-09-27T12:11:42.447Z",
+  "sourceRevision": "d91ea8b",
+  "scope": "read_only_local_static_no_provider_submit_no_payment_no_deploy",
+  "goalReadiness": {
+    "command": "npm run verify:goal-readiness:incomplete-ok",
+    "exitCode": 0,
+    "checksPassed": 5,
+    "checksFailed": 0,
+    "limits": ["no authenticated production generation proof", "no AI quality proof", "no R2 persistence proof", "no browser business completion proof"]
+  },
+  "openAIProviderReadiness": {
+    "command": "npm run verify:openai-provider",
+    "exitCode": 0,
+    "checksPassed": 7,
+    "checksFailed": 0,
+    "limits": ["no authenticated production generation proof", "no R2 readback proof", "no browser business completion proof"]
+  },
+  "irreversibleActions": {
+    "externalApiCall": "not_touched",
+    "generationSubmit": "not_clicked",
+    "deploy": "not_run",
+    "payment": "not_run"
+  }
+}

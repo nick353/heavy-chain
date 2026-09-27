@@ -23465,3 +23465,7 @@ Astra境界レビューで、HeavyのCanvas/Chat call siteだけをOpenAI/Sunbur
 # Heavy Chain current state — 2026-09-27 r663
 
 Adaptive Graph runtimeと外部role processはliveだが、capacity guardが`capacity_blocked`で即時再試行不可。期限切れの別planner leaseを勝手に解放せず、既存Astra r6のblocked state（verified invocation identityなし）を維持した。画像waveのみ継続し、source mutation・Luna起動・provider submit・deploy・課金・secret値読取は0、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r664
+
+Goal readiness `5/5`とOpenAI provider readiness `7/7`をfresh PASS。これはローカル静的契約のみで、production provider receipt、remote durable save/reuse/reload/reconciliation、visual quality、strict releaseの証拠ではない。Astra r6はverified invocation identityなしでblocked、capacity guardも継続。画像waveのみ、動画はdeferred、Goal active。正本は`work/heavy-chain-static-readiness-fresh-readback-20260927-r2.json`。

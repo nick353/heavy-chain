@@ -46,7 +46,8 @@
     "work/heavy-chain-openai-image-official-model-readback-20260927-r1.json",
     "work/heavy-chain-openai-image-astra-implementation-packet-20260927-r2.json",
     "work/heavy-chain-openai-api-auth-readback-20260927-r2.json",
-    "work/heavy-chain-astra-callsite-boundary-and-baseline-readback-20260927-r1.json"
+    "work/heavy-chain-astra-callsite-boundary-and-baseline-readback-20260927-r1.json",
+    "work/heavy-chain-static-readiness-fresh-readback-20260927-r2.json"
   ],
   "freshReadback": {
     "observedAt": "2026-09-27T11:48:50Z",
@@ -56,6 +57,7 @@
     "heavyProviderBinding": "production_openai",
     "freshLocalBaseline": "provider_persistence_14_of_14_and_heavy_adapter_runtime_28_of_28",
     "astraCallsiteDisposition": "heavy_canvas_chat_only_light_generate_and_designproduction_untouched",
+    "staticReadiness": "goal_5_of_5_openai_provider_7_of_7",
     "worktree": "clean",
     "dependencyGraph": "acyclic",
     "sourceMutation": false,
