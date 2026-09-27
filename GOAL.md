@@ -12024,3 +12024,7 @@ Heavy Webのread-only HTTP session readbackをfresh取得。`/_health`は200でC
 # Goal progress — 2026-09-28 r675
 
 Heavy OpenAI regression guardをstrict release gateへ統合し、production wranglerのOpenAI設定、Heavy UI provider selector、server-side credential boundary、Light Chain分離を4/4で検証。lint/typecheckもPASS。fresh strict gateは4つの既存production readback不足（monitor/UI、G618、H602、scorecard）でFAIL。既存APIキーは同じ値のままread-only `/v1/models`が401で、ローテーション・secret変更・provider submit・deploy・課金・公開は0。動画はdeferred、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`、`work/heavy-chain-openai-api-auth-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r676
+
+現行HEAD `5e02b3e`に対してHeavy OpenAI provider選択4/4、Cloudflare OpenAI/provider回帰114/114、Light provider coverage22/22、OpenAI static readiness `ok=true`をfresh検証。コード側のHeavy/Light境界はgreenだが、これはlive provider receipt・remote persistence・production releaseの代替ではない。同じAPIキーはローテーションせず、read-only `/v1/models`は401。strict gateはmonitor/UI、G618、H602、generation scorecardの4項目でFAIL、動画deferred、Goal active。正本は`work/heavy-chain-openai-migration-readback-20260928-r2.json`。

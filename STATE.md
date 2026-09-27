@@ -23509,3 +23509,7 @@ Image resume manifestを現行HEAD `723aa09`へ更新し、最新のcapacity/aut
 # Heavy Chain current state — 2026-09-28 r675
 
 Heavy画像生成のOpenAI固定・Light境界・production config drift guardを現行HEAD `ed71cff`へ反映。strict release gateへHeavy OpenAI regression 4/4を追加し、lint/typecheckもPASS。fresh gateは依然`ok=false`で、production monitor/UI、G618、production H602、generation scorecardの4項目が未達。同じ既存APIキーはread-only `/v1/models`で401、ローテーション・secret変更・provider submit・deploy・課金・公開は0。動画はdeferred、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`、`work/heavy-chain-openai-api-auth-readback-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r676
+
+現行HEAD `5e02b3e`でHeavy OpenAI provider選択4/4、Cloudflare OpenAI/provider回帰114/114、Light provider coverage22/22、OpenAI static readiness `ok=true`をfresh再実行。いずれもprovider submit・deploy・課金・公開を行わないlocal証拠。同じAPIキーは変更せずread-only `/v1/models`が401のまま。strict gateの4未達（monitor/UI、G618、H602、generation scorecard）は未解消、Goal active。動画deferred。正本は`work/heavy-chain-openai-migration-readback-20260928-r2.json`と`work/heavy-chain-release-gate-current-readback-20260928-r1.json`。
