@@ -1,4 +1,11 @@
-# Goal progress — 2026-09-27 r400
+# Goal progress — 2026-09-27 r401
+
+## Delayed Companion auth hydration now verified — 2026-09-27
+
+初回readback時点ではfallbackだったが、同じowner sessionで約15秒待機後に`/designProduction`へ遷移し、
+`デザインワークスペースへようこそ`とブランド／プロジェクト一覧をfresh semantic+visual確認した。
+Light本番authenticated workspace hydrationはverified。provider dispatch・課金・公開は0、cleanupはcompleted。
+monitor API context、全feature matrix、workspace save/reuse/reload/reconciliationは次の独立gateとして残る。Goalはactive。
 
 ## Fresh Companion auth hydration readback — 2026-09-27
 

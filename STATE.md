@@ -1,4 +1,13 @@
-# Heavy Chain current state — 2026-09-27 r278
+# Heavy Chain current state — 2026-09-27 r279
+
+## Delayed Companion auth hydration now verified — 2026-09-27
+
+初回の同一origin readbackは認証／ブランドhydration前のfallbackを観測したが、同じownerのsessionで約15秒待機後に
+`/designProduction`へ遷移した。fresh semantic+visual readbackで`デザインワークスペースへようこそ`、ブランド／
+プロジェクト一覧（既存campaign-image等）を確認し、Light本番authenticated workspace hydrationはverifiedへ更新した。
+provider dispatch・課金・公開は0、session cleanupはcompleted。証跡は
+`work/heavy-chain-companion-auth-readback-20260927-r1.json`。monitor API context、同一sessionの全feature readback、
+workspace save/reuse/reload/reconciliationは依然別工程。
 
 ## Fresh Companion auth hydration readback — 2026-09-27
 
