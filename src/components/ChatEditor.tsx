@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Plus } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { editImageWithPrompt, generateImage } from '../lib/imageApi';
+import { HEAVY_IMAGE_PROVIDER } from '../lib/heavyImageProvider';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
   validateLegalSafetyInput,
@@ -163,8 +164,7 @@ export function ChatEditor({
       } else {
         // Generate new image
         result = await generateImage(userInput, currentBrand.id, {
-          generationProvider: 'workers_ai',
-          generationModel: 'flux-2-klein-4b',
+          generationProvider: HEAVY_IMAGE_PROVIDER,
           featureType: 'chat-edit',
           width: 1024,
           height: 1024,

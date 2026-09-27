@@ -57,6 +57,7 @@ import {
 import { useAuthStore } from '../stores/authStore';
 import { captureAuthBrandFence,assertAuthBrandFence } from '../lib/authBrandSelection';
 import { CLOUDFLARE_PROTECTED_EDIT_NOTICE } from '../lib/cloudflareProtectedImageEdit';
+import { HEAVY_IMAGE_PROVIDER } from '../lib/heavyImageProvider';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import type Konva from 'konva';
@@ -2376,7 +2377,7 @@ export function CanvasEditorPage() {
               prompt: generatePrompt,
               width: 1024,
               height: 1024,
-              generationProvider: 'workers_ai',
+              generationProvider: HEAVY_IMAGE_PROVIDER,
             }
           }));
           if (Array.isArray(data?.images) && data.images.length > 0) {

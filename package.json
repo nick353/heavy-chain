@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test:lightchain-provider-coverage": "node --experimental-strip-types --test scripts/verify-lightchain-provider-coverage.test.ts",
+    "test:heavy-openai-provider-selection": "node --experimental-strip-types --test scripts/verify-heavy-openai-provider-selection.test.ts",
     "test:lightchain-unified-workflow-contract": "node --experimental-strip-types --test scripts/verify-lightchain-unified-workflow-contract.test.ts",
     "verify:lightchain-local-lifecycle": "node scripts/verify-lightchain-local-lifecycle.mjs",
     "verify:lightchain-local-evidence-continuity": "node scripts/verify-lightchain-local-evidence-continuity.mjs",

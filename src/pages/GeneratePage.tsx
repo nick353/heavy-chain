@@ -57,7 +57,11 @@ import {
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
 import { generateImage } from '../lib/imageApi';
-import { CLOUDFLARE_IMAGE_MODEL, CLOUDFLARE_IMAGE_NOTICE } from '../lib/cloudflareImageAI';
+import {
+  HEAVY_IMAGE_PROVIDER,
+  resolveHeavyImageProviderConfiguration,
+} from '../lib/heavyImageProvider';
+import { CLOUDFLARE_IMAGE_MODEL } from '../lib/cloudflareImageAI';
 import {
   buildGenerationIntentHref,
   hydrateGenerationIntentSource,
@@ -648,20 +652,24 @@ const isPrintEligibleDesignGachaResult = (image: GeneratedResult) => (
 );
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
-const generationProvider = import.meta.env.VITE_GENERATION_PROVIDER === 'openai' ? 'openai' as const : 'workers_ai' as const;
-const hostedImageGenerationMode = generationProvider === 'workers_ai' || generationProvider === 'openai';
+const heavyImageProviderConfiguration = resolveHeavyImageProviderConfiguration(import.meta.env.VITE_GENERATION_PROVIDER);
 const noImageGenerationMode = false;
 
-const generationModelOptions = generationProvider === 'openai' ? [{
+const OPENAI_GENERATION_MODEL_OPTIONS = [{
   id: import.meta.env.VITE_DEFAULT_GENERATION_MODEL || 'gpt-image-1-mini', provider: 'openai' as const,
   label: 'OpenAI候補', title: 'OpenAI画像モデル', cost: '実行後に利用量表示（請求額ではありません）', description: 'サーバー側キー・画像API',
-}] as const : [{
+}] as const;
+const WORKERS_AI_GENERATION_MODEL_OPTIONS = [{
   id: CLOUDFLARE_IMAGE_MODEL, provider: 'workers_ai' as const, label: 'Cloudflare候補', title: 'FLUX.2 Klein 4B',
   cost: '実行後に利用量表示（請求額ではありません）', description: '品質検証中・参照512px',
 }] as const;
 
+const getGenerationModelOptions = (provider: 'openai' | 'workers_ai') => (
+  provider === 'openai' ? OPENAI_GENERATION_MODEL_OPTIONS : WORKERS_AI_GENERATION_MODEL_OPTIONS
+);
+
 const getInitialGenerationModel = () => {
-  return generationModelOptions[0].id;
+  return OPENAI_GENERATION_MODEL_OPTIONS[0].id;
 };
 
 const debugLog = (message: string, details?: Record<string, unknown>) => {
@@ -1038,7 +1046,6 @@ export function GeneratePage() {
   }>({ userId: null, brandId: null, featureId: null, action: 'heavy-unimplemented' });
   const [heavyTermsAccepted, setHeavyTermsAccepted] = useState(false);
   const [heavyRightsAttested, setHeavyRightsAttested] = useState(false);
-  const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
   const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
   
   // Reference image state
@@ -1098,6 +1105,22 @@ export function GeneratePage() {
     : { featureId: selectedFeature?.id ?? null, action: 'heavy-unimplemented' as const, supported: false };
   const heavyCapabilitySupported = heavyCapability.supported;
   const heavyEntitlementAction = heavyCapability.action;
+  // GeneratePage is a shared shell. Only features explicitly owned by Heavy
+  // use the Heavy OpenAI contract; all other catalog features keep their
+  // existing Light provider selection.
+  const lightGenerationProvider = import.meta.env.VITE_GENERATION_PROVIDER === 'openai' ? 'openai' as const : 'workers_ai' as const;
+  const generationProvider = heavySurface ? HEAVY_IMAGE_PROVIDER : lightGenerationProvider;
+  const generationProviderConfigurationError = heavySurface
+    ? heavyImageProviderConfiguration.configurationError
+    : null;
+  const hostedImageGenerationMode = generationProvider === 'workers_ai' || generationProvider === HEAVY_IMAGE_PROVIDER;
+  const generationModelOptions = getGenerationModelOptions(generationProvider);
+  const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
+  useEffect(() => {
+    if (!generationModelOptions.some((option) => option.id === selectedGenerationModel)) {
+      setSelectedGenerationModel(generationModelOptions[0].id);
+    }
+  }, [generationModelOptions, selectedGenerationModel]);
   const heavyPolicyConfigured = Boolean(hasHeavyTermsAndRightsPolicy(heavyEntitlement));
   const heavyEntitlementReady = noImageGenerationMode
     || !heavySurface
@@ -1616,6 +1639,11 @@ export function GeneratePage() {
         return;
       }
 
+      if (heavySurface && generationProviderConfigurationError) {
+        toast.error('Heavy画像生成はOpenAI設定が必要です。Workers AIへは自動切替しません。');
+        return;
+      }
+
       const submitCapability = heavySurface ? resolveHeavyCapability(selectedFeature?.id) : null;
       if (heavySurface) {
         const capabilityContextIsCurrent = submitCapability?.featureId === heavyCapability.featureId
@@ -1806,7 +1834,7 @@ export function GeneratePage() {
         referenceImage: processedImageUrl,
         referenceType: effectiveReferenceType,
         generationProvider: selectedGenerationModelOption.provider,
-        generationModel: selectedGenerationModel,
+        generationModel: selectedGenerationModelOption.id,
         textOverlay,
         lightchainCompat: lightchainCompat ?? undefined,
         legalSafety: {
@@ -1923,7 +1951,7 @@ export function GeneratePage() {
           for (let index = 0; index < generationTotal; index += 1) {
             const result = await generateImage(generationPrompt, currentBrand.id, {
               generationProvider: selectedGenerationModelOption.provider,
-              generationModel: selectedGenerationModel,
+              generationModel: selectedGenerationModelOption.id,
               featureType: planningFeature.id,
               negativePrompt: productionNegativePrompt,
               width: ratio.width,
@@ -4472,8 +4500,6 @@ export function GeneratePage() {
             )}
 
             {renderFeatureForm()}
-            {cloudflareDataPlane && generationProvider === 'workers_ai' && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">{CLOUDFLARE_IMAGE_NOTICE}</p>}
-
             {!isGenerating && !generationError && (
               <div className={`mt-5 rounded-2xl border p-4 shadow-soft ${
                 generationFlowStage === 'blocked'
