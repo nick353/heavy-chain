@@ -12032,3 +12032,7 @@ Heavy OpenAI regression guardをstrict release gateへ統合し、production wra
 # Goal progress — 2026-09-28 r677
 
 Task-owned CompanionでHeavy Web `/designProduction`をread-only fresh取得したが、表示はworkspace準備／認証状態確認shellに留まり、authenticated workspace・consumer-auth session・provider receiptは得られなかった。transactionはknown-no-effect、cleanup completed、foreign tabs変更0。したがってproduction monitor/UI pairは未達のまま。provider submit・deploy・課金・公開・動画変更は0、同じAPIキーは401、Goal active。正本は`work/heavy-chain-web-auth-session-fresh-readback-20260928-r2.json`。
+
+# Goal progress — 2026-09-28 r678
+
+Goal readiness verifierを現行HEAD `e5621a4`でfresh実行し5/5 PASS（Cloudflare runtime、legacy Supabase除去、auth/media、AI adapter、active gate）。これはstatic readinessの確認であり、authenticated production generation・AI quality・R2 persistence・browser business completionの代替ではない。provider submit・deploy・課金・公開・動画変更は0、Goal active。

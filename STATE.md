@@ -23517,3 +23517,7 @@ Heavy画像生成のOpenAI固定・Light境界・production config drift guard�
 # Heavy Chain current state — 2026-09-28 r677
 
 Task-owned CompanionでHeavy Web `/designProduction`をread-only fresh取得。画面は`Lightchain AI`のworkspace準備／認証状態確認shellで、authenticated workspace・consumer-auth session・provider receiptは未成立。browser transactionはknown-no-effect、task-owned sessionはcleanup completed、foreign tabs変更0。これはmonitor/UI pair合格ではない。正本は`work/heavy-chain-web-auth-session-fresh-readback-20260928-r2.json`。同じAPIキーは401のまま、provider submit・deploy・課金・公開・動画変更は0、Goal active。
+
+# Heavy Chain current state — 2026-09-28 r678
+
+Goal readiness verifierを現行HEAD `e5621a4`でfresh実行し、Cloudflare runtime contract、legacy Supabase runtime除去、auth/media adapter、AI adapter、active gateのlegacy edge entrypoint除去を5/5 PASS。これはstatic readinessのみで、authenticated production generation、AI quality、R2 persistence、browser business completionを証明しない。provider submit・deploy・課金・公開・動画変更は0、Goal active。
