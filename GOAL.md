@@ -11024,6 +11024,10 @@ Adaptive MCPの`runtime_status`、既存Astra package status、保存済みOpus 
 
 Goal再開後にAdaptive transportは復旧し、`runtime_status`はgraph runtime availableを返した。ただし`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、同じmanaged packageは`waiting_human`/`automatic_dispatch_disabled`/`claim_id=null`のまま。保存済みOpus planは`plan_valid=true`、`engineering_ready=false`。このfresh runtime証拠をplan version 3へ`waiting_human` progressとして記録した。新規run、代替route、source/provider/auth/billing/publication変更は0。Goal active。
 
+# Goal progress — 2026-09-27 r484
+
+workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/final_review`で、`capacity_blocked`の復旧対象が存在しないことを確認した。従ってruntimeの推奨`workflow_fork`はこのHeavy packageへ適用できない。managed packageの`automatic_dispatch=false`は意図的holdであり、同じrunのmanifestを書き換えたり新規r2/r3 packageを作ったりせず、既存plan/packageを保持する。Goal active。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
