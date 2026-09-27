@@ -10843,3 +10843,7 @@ Fresh task-owned Companion evidence now confirms the Heavy campaign-image gate i
 # Goal progress — 2026-09-27 r407
 
 Heavy/Light境界修正を`3bd14a8`としてcommitし、Cloudflare Web version `1d66c8a1-d097-49b0-a304-f76a43fd94c4`へdeployした。fresh production readbackは、`remove-bg`でHeavy terms/rights gateが消え、Heavy entitlement関連network entryがなく、`campaign-image`ではHeavy gateが維持され、`design-gacha`では`Heavyでは未提供`が維持されることを確認した。Web tests 14/14、focused Heavy gating 7/7、Light parity 6/6、Light workflow contract 5/5、typecheck、build、diff-check、Wrangler dry-runがpass。provider生成、課金、公開、秘密投入は行っていない。Goalはactive。残りのrelease blockerはproduction monitor/UI、mass-market QA、Lightchain all-feature previews、G618、H601/H602、generation scorecard。
+
+# Goal progress — 2026-09-27 r408
+
+strict gate fresh run `output/playwright/10m-product-readiness-g615/release-gate-summary.json`は`ok=false`・失敗7件。今回のUI境界不具合は解消したが、production monitor/UI、mass-market QA、Lightchain all-feature previews、G618、H601、H602 production completion、generation scorecardは別の認証済み・operator・provider証跡が必要。環境にはmonitor API URL/brand ID/tokenとPlaywright auth stateがなく、秘密や認証Cookieの推測・抽出は行わない。Goalはactive。
