@@ -10853,3 +10853,7 @@ strict gate fresh run `output/playwright/10m-product-readiness-g615/release-gate
 Lightchainのmaterial workbenchにも残っていたHeavy entitlement依存を、既知のLight feature idに限定して除去した。`fabric-image` / `printing-image`ではHeavy rights gate・Heavy entitlement GET・Heavy-specific停止条件を使わず、Heavy所有またはunknownはfail-closedのまま維持した。`6ad0445`としてcommitし、Cloudflare Worker `e24f4f5e-58ce-4dd5-bec6-8dbe9d5f80de`へdeploy。focused gating 9/9、Light suites 62/62、Web 14/14、typecheck、build、diff-checkがpass。fresh Companion readbackでもHeavyバナー/entitlement通信の不在、Light UI、semantic+visual、cleanupを確認した。
 
 最新strict gate（capturedAt `2026-09-27T02:34:52.067Z`）は`ok=false`・失敗7件を維持：production monitor/UI pair、mass-market QA、Lightchain all-feature previews、G618、H601、H602 production completion、generation scorecard。monitor/auth stateは未供給で、実provider生成、R2 durable proof、video、課金、公開、秘密投入は行っていない。Goalはactive。
+
+# Goal progress — 2026-09-27 r410
+
+認証済みCompanionの同一profileで`/generate?feature=generate-image`を再読込し、`権限がありません`・`権利`・`利用条件`が各0件、visual readback verified、external action false、cleanup completeを確認した。Heavy/Light境界修正の本番挙動としては期待どおりだが、旧H601 artifactの`h601_permission_surface_visible`期待と矛盾するため、H601 gateは現行仕様の権利・安全面を証明するfixture/validatorへ更新する必要がある。これは仕様変更を伴うため、Astraの技術判断後に修正する。Goalはactive。

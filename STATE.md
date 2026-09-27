@@ -22296,3 +22296,7 @@ Lightchain material workbenchの別境界バグを修正し、既知のLight fea
 Cloudflare Webを再deployし、Worker version `e24f4f5e-58ce-4dd5-bec6-8dbe9d5f80de`を確認した。fresh Companion readback（`/lightchain/fabric-image`）ではLight UIと`AI生成`が表示され、Heavy規約バナー・権利表示・Heavy entitlement network entryはなく、入力不足によるdisabledのみ。semantic＋visual readback、同一profile cleanup、lease解放、external action falseを確認した。
 
 deploy後strict gateを再実行（capturedAt `2026-09-27T02:34:52.067Z`、`ok=false`）。失敗7件はproduction monitor/UI pair（UI artifact missing）、production mass-market QA（56.98h stale）、production Lightchain all-feature previews（56.32h stale）、G618（611.85h staleかつblocker）、H601 rights（60.14h stale）、H602 production billing completion（blockers 6）、generation scorecard（artifact missing）で変わらない。monitor env/auth stateは未供給で、provider生成、課金、公開、秘密投入は行っていない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r379
+
+同じ認証済みCompanion profileでH601相当の`/generate?feature=generate-image`をfresh readbackした。`権限がありません`、`権利`、`利用条件`はいずれもsemantic query 0件、titleは`Lightchain AI`、visual screenshotは28KB台、external action false、task-owned tab/session cleanup completeだった。これは現在のHeavy/Light境界修正と整合するが、旧H601 production readback artifactが期待するLight permission surface（`h601_permission_surface_visible`）とは逆の状態であり、release-gateのH601 validator/fixtureは現行仕様に合わせた再設計が必要。provider生成・送信、課金、公開、秘密操作は行っていない。Goal active。
