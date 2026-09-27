@@ -11088,3 +11088,8 @@ Lightchain all-feature artifactをstrict release gateへ反映し、full gateを
 残る6件はproduction monitor/UI、production mass-market QA、G618 scale ops、H601 rights、H602 billing completion、generation scorecard。
 dirty worktreeはcommitで解消済み。provider生成、R2、video provider、課金、公開、secret insertion、destructive cleanupは行わず、
 business completionを未確認のまま維持した。Goal active。
+# Goal progress — 2026-09-27 r450
+
+Heavy Chainの完全体プランを `work/heavy-chain-complete-plan-20260927.md` に固定した。現時点の依存順は、正規monitor/auth read path
+→ monitor/UIとG618 → H601のapproved rights → 1回の実provider receipt → private-R2 save/reuse/reload/reconciliation →
+H602 live constraint/operator decision → scorecard → strict gate zero failures。スレッド履歴との不整合はなく、Goalは継続中。

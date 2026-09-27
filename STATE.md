@@ -22568,3 +22568,9 @@ Lightchain all-feature artifactをstrict release gateへ反映し、full gateを
 2026-09-27T04:27台で、dirty worktreeは解消済み。Lightchain all-feature preview blockerは消え、残る6件はproduction monitor/UI、
 production mass-market QA、G618 scale ops、H601 rights、H602 billing completion、generation scorecard。今回もprovider生成、R2、
 video provider、課金、公開、secret insertion、destructive cleanupは行っていない。Goal active。
+# Heavy Chain current state — 2026-09-27 r450
+
+Heavy Chainの完全体プランを `work/heavy-chain-complete-plan-20260927.md` に固定した。現時点の依存順は、正規monitor/auth read path
+→ monitor/UIとG618 → H601のapproved rights → 1回の実provider receipt → private-R2 save/reuse/reload/reconciliation →
+H602 live constraint/operator decision → scorecard → strict gate zero failures。token/cookie抽出、法的attestation代行、課金・購入・公開・
+破壊的cleanupは引き続き禁止境界として明記した。Goal active。
