@@ -1,0 +1,50 @@
+{
+  "schema": "heavy-chain.openai-image-current-recovery-evidence.v1",
+  "capturedAt": "2026-09-27T15:50:09.265Z",
+  "sourceRevision": "f8fdf8d324fca4019a33d72790fbbdccb89e4bd8",
+  "sourceMutation": false,
+  "scope": {
+    "wave": "image_generation",
+    "video": "deferred_by_user",
+    "providerSubmit": false,
+    "deployment": false,
+    "billing": false,
+    "publication": false
+  },
+  "acceptedIntent": {
+    "defaultModel": "gpt-image-2.5-sunburst",
+    "backend": "openai-images-api",
+    "preserveLegacyReceipts": true,
+    "rejectUnsupportedSelections": true,
+    "noFallback": true,
+    "noReplay": true,
+    "mockOnlyUntilAstra": true
+  },
+  "currentSourceHashes": {
+    "cloudflare/heavy-api/src/openai-image.ts": "16b5ec399825aaf1b0253e56d25e903d7602abd1219ee6afb43b360340a35247",
+    "cloudflare/heavy-api/src/image-ai-contracts.ts": "7a3345912cf2b40f383ea5ba6c059e47246d1a74c2776367946066adb34faf63",
+    "cloudflare/heavy-api/src/image-ai.ts": "a03ae5c9f292aa09222191ecb53e8bd8e3151d488c0b9865bd53c4ca01b8e04b",
+    "src/components/ChatEditor.tsx": "5c1def8c8b3e1df1494d805961e9ebf74ca5a4b5d077d16c95c6fde5cb89b835",
+    "src/pages/CanvasEditorPage.tsx": "fd46d55c71e37c9a493f1c7ede9848dc6dd3ce42c0c67feaa3f50ee5139215a5",
+    "src/pages/GeneratePage.tsx": "af527a0a4eed03741288a19ea59f023397fb11a62ed73d27edb96d618abfdf2a",
+    "src/pages/LightchainWorkbenchPage.tsx": "dbd5b15410b004584f7ba3ecab98c7e474102fc8abbd95b0b404c6d37258317d",
+    "scripts/hc-10m-real-generation-qa.mjs": "3539915c0ffcc7889e61ee240c68f9a0c638c0da06d725eb8f13a2f40c219546",
+    "scripts/verify-provider-persistence-readback.test.ts": "d82e167cbf4dfd37dee9eec2b934feafc430fb135b8af8ad7e76142865ba0d07"
+  },
+  "runtime": {
+    "graphAvailable": true,
+    "capacityBlocker": "capacity_blocked",
+    "liveCapacityObservable": false,
+    "runtimeProcessMatch": false,
+    "foreignAdmissions": "expired_in_flight_daily_ai; untouched",
+    "heavyRun": "run_9d61b530fc6946b4",
+    "heavyRunDisposition": "blocked_at_risk_analysis; source fork completed from blocked state; no capacity recovery code"
+  },
+  "requiredBeforeMutation": [
+    "verified native Astra engineering receipt with actual invocation identity",
+    "call-site Heavy/Light ownership decision",
+    "deterministic tests updated for Sunburst and legacy compatibility",
+    "fresh authenticated Heavy consumer session and brand context"
+  ],
+  "nextAction": "After capacity guard clears, start a new bounded Astra r7 claim using this exact source revision and hashes; do not replay old r4/r6 claims."
+}
