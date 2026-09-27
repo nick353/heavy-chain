@@ -10,6 +10,10 @@ sha256 `41c182141a91ced4ea2f08659c5f090256632b7be47c4ac8ee52e50a82ba8b47`と一�
 これは1件のHeavy実生成品質証拠であり、旧10-feature release scorecard、publication approval、Light本番
 parityを代替しない。
 
+同じreceiptをproduction D1からread-onlyで再照合し、`heavy_ai_requests`、`heavy_ai_candidates`、
+`generated_images`のrequest/job/candidate/image/storage path、model、bytes、sha256が全て一致した。
+Wrangler readbackは`changes=0`、`rows_written=0`、`served_by_primary=true`で、追加生成・再送・D1 writeはない。
+
 ## Fresh strict release-gate readback — 2026-09-27
 
 `npm run verify:release-gate -- --command-timeout-ms 600000`をfresh実行し、captureは
@@ -22155,6 +22159,3 @@ production flagはfalseのまま、acceptance/attestationのproduction D1直投�
 Light parity/provider 34/34、typecheck、build、lint、diff-checkがpass。実provider receipt、R2 save/reuse/reload/reconciliation、
 video、monitor/UI、G618、H601/H602 production、scorecard、billing、publishは未達。次の境界はflag falseのAPI/Web deployとfresh readback、
 その後の認証済み同意による1回限りの実生成・same-run証跡である。Goal active。
-同じreceiptをproduction D1からread-onlyで再照合し、`heavy_ai_requests`、`heavy_ai_candidates`、
-`generated_images`のrequest/job/candidate/image/storage path、model、bytes、sha256が全て一致した。
-Wrangler readbackは`changes=0`、`rows_written=0`、`served_by_primary=true`で、追加生成・再送・D1 writeはない。
