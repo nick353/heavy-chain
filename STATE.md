@@ -23545,3 +23545,7 @@ Chrome Companionのtask-owned read-only preflightでOpenAI PlatformのAPI-key設
 # Heavy Chain current state — 2026-09-28 r684
 
 Generation scorecard verifierをOpenAI provider/backend provenance必須へ強化し、Workers AI receiptやprovenance欠落を拒否する回帰3/3を追加。clean strict release gateをfresh実行し、新しいscorecard provenance regression、Heavy/Light parity、OpenAI static、video/persistence回帰、lint/typecheck/build/securityはPASS。残るFAILはproduction monitor/UI、G618 scale ops、production H602 billing readback、現行10-feature visual scorecardの4項目で変化なし。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`、commit `795696a`。外部生成・provider submit・deploy・課金・公開・動画変更は0、Goal active。
+
+# Heavy Chain current state — 2026-09-28 r685
+
+同じ既存APIキーをローテーションせず、値を表示・保存せずにOpenAI `GET /v1/models`をfresh再確認。キー形状は存在、`sk-proj-`、164文字、空白/バックスラッシュなしで、応答はHTTP 401 `invalid_request_error` / `invalid_api_key`。これはcredentialがモデル・課金・組織/プロジェクト境界以前にOpenAI側で拒否されている状態であり、同じ値で生成を再送しても復旧しない。production/provider/deploy/billing/publication/video変更は0、Goal active。正本は`work/heavy-chain-openai-api-auth-readback-20260928-r3.json`。

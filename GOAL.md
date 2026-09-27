@@ -12060,3 +12060,7 @@ Chrome Companionの同一task-owned read-only sessionでOpenAI PlatformのAPI-ke
 # Goal progress — 2026-09-28 r684
 
 現行10-feature scorecardが旧Workers AI証跡で誤ってreleaseへ昇格しないよう、verifierに`openai` / `openai-images-api` provenance必須条件を追加。OpenAI一致、Workers AI不一致、provenance欠落の回帰3/3をPASSし、strict gateへ新回帰を組み込んだ。clean fresh gateは新回帰を含む全local/static checksがPASSした一方、production monitor/UI、G618、production H602、現行visual scorecardの4項目はFAILのまま。認証済みOpenAI実生成receiptとremote save/reuse/reload/reconciliationが得られるまでscorecardを作成・昇格しない。同じキーのローテーション・provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r685
+
+同じAPIキーをローテーションせず、値を表示・保存せずにOpenAI公式Bearer認証のread-only `GET /v1/models`をfresh再確認。キー形状は存在、`sk-proj-`、164文字、空白/バックスラッシュなしで、HTTP 401 `invalid_request_error` / `invalid_api_key`を取得した。これはcredential自体がOpenAI側で拒否されている証拠で、同じ値のままprovider生成を再送しても復旧しない。現時点で安全に進められるコード側のOpenAI固定・Light parity・provenance gateは完了済みだが、認証済みproduction生成receipt、remote save/reuse/reload/reconciliation、monitor/UI、G618、H602、strict gateは未完了。provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-openai-api-auth-readback-20260928-r3.json`。
