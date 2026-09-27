@@ -23541,3 +23541,7 @@ Light Chain provider coverage/parityとOpenAI static readinessをstrict release 
 # Heavy Chain current state — 2026-09-28 r683
 
 Chrome Companionのtask-owned read-only preflightでOpenAI PlatformのAPI-key設定URLを確認したが、現行profileは`/login?next=.../api-keys`へredirectされ、dashboard認証状態は未成立。キー入力・表示・作成・削除・ローテーション・課金操作は0、browser effectはknown-no-effect、session cleanupはcompleted、foreign tabs変更0。したがって同じAPIキーをdashboard側で検証・復旧する経路も現在のprofileにはなく、HTTP 401 `invalid_api_key`と整合する。正本は`work/heavy-chain-openai-dashboard-auth-readback-20260928-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-28 r684
+
+Generation scorecard verifierをOpenAI provider/backend provenance必須へ強化し、Workers AI receiptやprovenance欠落を拒否する回帰3/3を追加。clean strict release gateをfresh実行し、新しいscorecard provenance regression、Heavy/Light parity、OpenAI static、video/persistence回帰、lint/typecheck/build/securityはPASS。残るFAILはproduction monitor/UI、G618 scale ops、production H602 billing readback、現行10-feature visual scorecardの4項目で変化なし。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`、commit `795696a`。外部生成・provider submit・deploy・課金・公開・動画変更は0、Goal active。

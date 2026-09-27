@@ -12056,3 +12056,7 @@ Light Chain provider coverage/parityとOpenAI static readinessをstrict release 
 # Goal progress — 2026-09-28 r683
 
 Chrome Companionの同一task-owned read-only sessionでOpenAI PlatformのAPI-key設定URLをfresh確認。ページはAPI-key管理画面ではなくlogin redirectへ遷移し、現行profileにdashboard認証がないことをsemantic＋visual readbackで確認した。キー値の入力・表示・変更、課金、provider生成は行わず、session cleanup completed・foreign tabs変更0。したがって同じキーをローテーションせずに続行するには、外部の正規secret/account stateが変わった後にread-only `/v1/models`を一度再確認する必要がある。Goalの残件（consumer workspace/monitor、OpenAI実生成receipt、scorecard、R2再利用/reload/reconciliation、G618/H602、strict gate、video）は継続未完了。正本は`work/heavy-chain-openai-dashboard-auth-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r684
+
+現行10-feature scorecardが旧Workers AI証跡で誤ってreleaseへ昇格しないよう、verifierに`openai` / `openai-images-api` provenance必須条件を追加。OpenAI一致、Workers AI不一致、provenance欠落の回帰3/3をPASSし、strict gateへ新回帰を組み込んだ。clean fresh gateは新回帰を含む全local/static checksがPASSした一方、production monitor/UI、G618、production H602、現行visual scorecardの4項目はFAILのまま。認証済みOpenAI実生成receiptとremote save/reuse/reload/reconciliationが得られるまでscorecardを作成・昇格しない。同じキーのローテーション・provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`。
