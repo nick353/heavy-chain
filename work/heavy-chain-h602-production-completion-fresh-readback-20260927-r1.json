@@ -1,0 +1,58 @@
+{
+  "schema": "heavy-chain.h602-production-completion-fresh-readback.v1",
+  "capturedAt": "2026-09-27T11:21:09Z",
+  "sourceRevision": "4ec40a2",
+  "scope": {
+    "readOnly": true,
+    "liveProductionReadbackPerformed": false,
+    "billingMutation": false,
+    "checkout": false,
+    "purchase": false,
+    "secretRead": false,
+    "externalEffects": 0
+  },
+  "sourceReadback": "output/playwright/h602-production-billing-readback-20260630/summary.json",
+  "migrationAlignment": {
+    "h602MigrationApplied": true,
+    "purchaseProofMigrationsApplied": true
+  },
+  "billingSettings": {
+    "generationQuotaEnforced": false,
+    "productionCheckoutEnabled": true,
+    "sandboxTestersNoRealCharge": true,
+    "appleBillingMode": "operator_managed",
+    "readbackRowCount": 1
+  },
+  "purchaseProof": {
+    "latestProofSource": "human_attestation",
+    "latestProofStatus": "human_attested",
+    "verifiedNoRealChargeProofCount": 0,
+    "transactionOrEntitlementReadback": false,
+    "rawValuesPrinted": false
+  },
+  "checks": {
+    "sourceReadbackExists": true,
+    "quotaEnforcementEnabled": false,
+    "productionCheckoutDisabled": false,
+    "purchaseProofMigrationsApplied": true,
+    "sandboxTesterRegisteredRedacted": true,
+    "humanAttestationNotMachineVerification": true,
+    "h602IncompleteFailClosed": true
+  },
+  "blockers": [
+    "production_generation_quota_enforced_is_false",
+    "production_checkout_enabled_is_true",
+    "verified_no_real_charge_proof_missing",
+    "transaction_or_entitlement_readback_missing",
+    "operator_final_checkout_public_release_decision_missing",
+    "live_constraint_readback_not_performed"
+  ],
+  "hardStops": [
+    "Apple ID credential entry",
+    "OTP/security prompt handling",
+    "real or sandbox purchase",
+    "billing settings mutation",
+    "external public publishing"
+  ],
+  "nextGate": "Keep checkout/public release closed in practice; obtain safe operator decision and approved production readback before H602 acceptance."
+}
