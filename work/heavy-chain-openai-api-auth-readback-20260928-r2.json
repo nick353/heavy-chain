@@ -1,0 +1,49 @@
+{
+  "schema": "heavy_chain.openai_api_auth_readback.v1",
+  "capturedAt": "2026-09-27T17:19:52Z",
+  "scope": "same-credential read-only OpenAI authentication diagnosis; no image generation, no deployment, no billing",
+  "credentialSource": "existing process environment variable",
+  "credentialValuePersisted": false,
+  "credentialValueLogged": false,
+  "rotationPerformed": false,
+  "sameCredentialRecheck": true,
+  "request": {
+    "method": "GET",
+    "path": "/v1/models",
+    "authorizationHeaderSent": true,
+    "organizationHeaderSent": false,
+    "projectHeaderSent": false
+  },
+  "response": {
+    "httpStatus": 401,
+    "errorType": "invalid_request_error",
+    "errorCode": "invalid_api_key",
+    "messageRedacted": "Incorrect API key provided",
+    "modelsCount": null,
+    "sunburstPresent": false,
+    "bodyStored": false,
+    "requestIdStored": false
+  },
+  "credentialShape": {
+    "present": true,
+    "prefix": "sk-proj-",
+    "length": 164,
+    "trimmed": true,
+    "whitespace": false,
+    "backslash": false
+  },
+  "interpretation": {
+    "keyReadiness": "invalid_or_unusable",
+    "providerGenerationAllowed": false,
+    "likelyCauseClass": "credential_rejected_by_openai_before_model_or_billing_scope",
+    "organizationOrProjectHeadersCouldNotBeTested": true,
+    "nextAction": "Keep the credential unchanged and obtain a valid authorized credential through the approved secret channel; do not retry provider generation with this credential."
+  },
+  "effects": {
+    "providerSubmission": false,
+    "deployment": false,
+    "billing": false,
+    "publication": false,
+    "videoTouched": false
+  }
+}
