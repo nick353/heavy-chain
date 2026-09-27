@@ -22533,3 +22533,11 @@ H602のlive constraint readbackをread-onlyで試行した。Supabase CLIのlink
 H602 readback境界の記録後にstrict release gateをfresh再実行した。`capturedAt=2026-09-27T04:05:37.472Z`、`ok=false`で、
 production monitor/UI、mass-market QA、Lightchain all-feature previews、G618、H601 rights、H602 billing completion、generation scorecardの
 7 blockerは不変だった。H602のlive値を推測で埋めず、production artifactを昇格させていない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r445
+
+認証境界を実装・本番経路の両面で照合した。Heavy APIは専用`consumer-auth` WorkerへBearerを渡してidentityを検証し、
+monitorも同じlive consumer-auth tokenとbrand scopeを必須とする。一方、Web側はhost-only HttpOnly cookieから同一ブラウザ内で
+tokenを一時利用する設計で、tokenをファイル・環境変数・証跡へ抽出する代替経路はない。API healthは200だが、Bearerなしの`/v1/profile`は401。
+したがって現状の不足はログインUIの再表示ではなく、正規の同一セッションからAPI/monitorへ渡る認証連続性のreadbackであり、既存の
+`HEAVY_CHAIN_MONITOR_TOKEN`未設定とstrict gate 7 blockersを維持する。Goal active。

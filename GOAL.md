@@ -11056,3 +11056,10 @@ monitor/API bearerとbrand scopeの正規注入であり、strict gate 7 blocker
 
 変更後のstrict gateを`2026-09-27T04:05:37.472Z`にfresh再取得し、`ok=false`、7 blocker不変を確認した。H602のlive制約値は
 DB password/DNSのため未取得のまま保持し、local/static passをproduction completionへ昇格していない。Goal active。
+
+# Goal progress — 2026-09-27 r445
+
+Heavy APIの専用`consumer-auth`/Bearer検証とmonitorのtoken+brand scope必須条件を実装・本番readbackで照合した。Webの認証UIが
+表示できることとAPI/monitor用の正規Bearerがあることは別であり、Bearerなしの`/v1/profile`は401、API healthだけは200だった。
+tokenを抽出・保存・環境変数化せず、認証不足を迂回しない。再開条件は同一正規セッションを使ったmonitorのGET-only readbackで、strict gate 7 blockerと
+provider/persistence/H601/H602/scorecard未達は継続する。Goal active。
