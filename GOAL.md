@@ -10921,3 +10921,8 @@ adoptionや削除は行っていない。ブラウザ側の安全なcleanup境�
 
 Lightchain release-gate contract testsをfresh実行し、15/15 passした。これはcurrent manifestとproduction/local・Companion/provider
 completion境界が正しいことを確認するlocal evidenceであり、stale/missing production artifactを置換しない。Goal active。
+
+# Goal progress — 2026-09-27 r422
+
+Video provider boundary/contractをfresh検証し、1/1 + 3/3 passした。videoのsource・credential・same-run readback必須とimage誤routing
+防止を確認したが、実video provider receipt・R2 persistence・production readbackは未達のまま保持している。Goal active。
