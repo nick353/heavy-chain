@@ -1,4 +1,12 @@
-# Heavy Chain current state — 2026-09-27 r266
+# Heavy Chain current state — 2026-09-27 r267
+
+## Heavy auth surface regression audit — 2026-09-27
+
+Heavy consentとLight plan permissionの分離を再確認するlocal auditを実行した。Light permission/source
+parityは`12/12`、fitting preview、video boundary、Canvas/ChatEditor、route/entry parityを合わせて
+`42/42` PASS。Heavy専用rights checkboxや旧Light `権限がありません`をHeavy generation surfaceへ
+戻す変更は無く、Light Chainの旧plan surfaceは保持されている。これは本番認証済み全画面の証明では
+ないが、今回のHeavy認証修正で既存のLight境界を壊していないことを確認した。
 
 ## Heavy-aware local Light feature verifier completed — 2026-09-27
 

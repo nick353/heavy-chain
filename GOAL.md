@@ -1,4 +1,11 @@
-# Goal progress — 2026-09-27 r388
+# Goal progress — 2026-09-27 r389
+
+## Heavy auth / Light plan regression audit — 2026-09-27
+
+Heavy consent flowとLight Chainのplan由来permission surfaceを再監査し、permission/source parity
+`12/12`、fitting preview・video boundary・Canvas/ChatEditor・route/entry parity `42/42`をPASS。
+Heavy側の生成面へLightの旧`権限がありません`を戻さず、Light側のplan制限も緩和していない。Production
+authenticated parityやprovider以後のreceiptは別ゲートとして未完了のまま保持する。Goalはactive。
 
 ## Heavy-aware Light feature verifier re-run — 2026-09-27
 
