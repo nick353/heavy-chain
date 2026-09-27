@@ -1,6 +1,6 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T17:52:28Z",
+  "capturedAt": "2026-09-27T17:53:36Z",
   "sourceRevision": "a86dd7f",
   "goalStatus": "active",
   "scope": {
@@ -58,10 +58,12 @@
     "work/heavy-chain-openai-receipt-boundary-source-audit-20260927-r1.json",
     "work/heavy-chain-no-rotation-plan-readback-20260928-r1.json",
     "work/heavy-chain-openai-api-auth-readback-20260928-r3.json",
-    "work/heavy-chain-release-gate-current-readback-20260928-r1.json"
+    "work/heavy-chain-release-gate-current-readback-20260928-r1.json",
+    "output/playwright/heavy-completion-audit-20260928-current/summary.json",
+    "output/playwright/heavy-completion-audit-20260928-current/release-gate-summary.json"
   ],
   "freshReadback": {
-    "observedAt": "2026-09-27T17:50:36Z",
+    "observedAt": "2026-09-27T17:53:36Z",
     "evidenceRefsPresent": true,
     "runtimeProcessObserved": true,
     "openaiReadonlyModelList": "401_invalid_api_key_same_key_no_rotation",
@@ -76,7 +78,8 @@
     "worktree": "clean",
     "dependencyGraph": "acyclic",
     "sourceMutation": false,
-    "externalEffects": 0
+    "externalEffects": 0,
+    "completionAudit": "fresh_read_only_audit_failed_with_explicit_proof_and_release_gate_blockers"
   },
   "steps": [
     {
