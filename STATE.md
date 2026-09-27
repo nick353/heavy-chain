@@ -1,4 +1,13 @@
-# Heavy Chain current state — 2026-09-27 r279
+# Heavy Chain current state — 2026-09-27 r280
+
+## Fresh Heavy authenticated brand readback — 2026-09-27
+
+同一originの遅延hydration後、Heavy本番`/brand/settings`をfresh semantic+visual readbackした。titleは
+`Heavy Chain | AI制作ワークスペース`へ切り替わり、HEAVY CHAINの生成履歴・ジョブ・AIフィッティング・ブランド設定、
+ブランド情報、チームメンバー、Heavy側quota説明が表示された。これはHeavyのブラウザ認証／ブランドhydrationが通った証拠で、
+provider dispatch・課金・公開・外部効果は0、session cleanupはcompleted。証跡は
+`work/heavy-chain-companion-auth-readback-20260927-r1.json`。Heavyのgenerate/feature画面、monitor API context、
+workspace save/reuse/reload/reconciliation、video provider、H601/H602/G618、strict gateは別工程として未完了。
 
 ## Delayed Companion auth hydration now verified — 2026-09-27
 

@@ -1,4 +1,12 @@
-# Goal progress — 2026-09-27 r401
+# Goal progress — 2026-09-27 r402
+
+## Fresh Heavy authenticated brand readback — 2026-09-27
+
+遅延hydration後のHeavy本番`/brand/settings`を同一originでfresh semantic+visual確認した。titleは
+`Heavy Chain | AI制作ワークスペース`となり、Heavyメニュー、ブランド情報・チームメンバー、Heavy側quota説明まで表示された。
+Heavyのブラウザ認証／ブランドhydrationはverifiedへ更新した。provider dispatch・課金・公開・外部効果は0、cleanupはcompleted。
+残りはHeavy generate/feature readback、monitor URL/brand/token、production workspace save/reuse/reload/reconciliation、
+video provider、H601/H602/G618、strict gateであり、Goalはactive。
 
 ## Delayed Companion auth hydration now verified — 2026-09-27
 
