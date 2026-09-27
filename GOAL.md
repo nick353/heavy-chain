@@ -11353,6 +11353,10 @@ security/operations/billingのlocal側をfresh再検証した。G620 security 5/
 
 `npm run release:doctor`をfresh実行し、local release blockersとgit cleanはpassしたが、proof targetで停止した。browser-use、Chrome-plugin、Companionのrelease evidence surfaceがいずれも未指定で、production release proofを生成できない。正本は`work/heavy-chain-release-doctor-readback-20260927-r1.json`。send/submit/publish/delete/auth/payment/DB mutation/deployは0。Goal active。
 
+# Goal progress — 2026-09-27 r514
+
+Light Chain parityのrelease manifest 16/16、all-feature workflow contract 5/5、unified workflow contract 6/6をfresh passした。local contract readbackは合計84/84 passへ更新。Companion/local証拠をproduction provider completionへ昇格させる検証は拒否されることも確認済み。外部効果は0、Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

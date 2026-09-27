@@ -27,9 +27,24 @@
       "command": "npm run test:auth-lock && npm run test:auth-session-admission && npm run test:auth-bootstrap-hydration && npm run test:auth-session-recovery && npm run test:auth-hydration-readback",
       "passed": 27,
       "failed": 0
+    },
+    {
+      "command": "npm run test:release-gate-lightchain",
+      "passed": 16,
+      "failed": 0
+    },
+    {
+      "command": "npm run test:lightchain-all-feature-workflows-contract",
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "command": "npm run test:lightchain-unified-workflow-contract",
+      "passed": 6,
+      "failed": 0
     }
   ],
-  "totalPassed": 57,
+  "totalPassed": 84,
   "externalEffect": {
     "providerCalls": 0,
     "r2Writes": 0,

@@ -22854,3 +22854,7 @@ security/operations/billingのlocal側をfresh再検証した。G620 security 5/
 # Heavy Chain current state — 2026-09-27 r513
 
 `npm run release:doctor`をfresh実行し、local release blockersとgit cleanはpassしたが、proof targetで停止した。browser-use、Chrome-plugin、Companionのrelease evidence surfaceがいずれも未指定で、production release proofを生成できない。正本は`work/heavy-chain-release-doctor-readback-20260927-r1.json`。send/submit/publish/delete/auth/payment/DB mutation/deployは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r514
+
+Light Chain parityのrelease manifest 16/16、all-feature workflow contract 5/5、unified workflow contract 6/6をfresh passした。local contract readbackは合計84/84 passへ更新。Companion/local証拠をproduction provider completionへ昇格させる検証は拒否されることも確認済み。外部効果は0、Goal active。
