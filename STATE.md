@@ -22954,3 +22954,7 @@ operator/production境界を同一HEADでfresh再検証した。H602 local Cloud
 # Heavy Chain current state — 2026-09-27 r538
 
 Cloudflare provider/readiness static checksをfresh passした。`verify:openai-provider`は7/7、`verify:goal-readiness:incomplete-ok`は5/5。Cloudflare adapter・legacy runtime removal・private media・active gateは確認済みだが、production generation/R2/browser business completionは未証明。正本は`work/heavy-chain-cloudflare-readiness-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r539
+
+既存Astra engineering packageの再開に必要なFitting/Canvas/Image API/ChatEditorの現行行番号付きsource packetをread-onlyで作成した。Fitting/Canvasはrequestless entitlementと`rightsConfirmed`までは存在するが、`generateModelMatrix`およびCanvas/Chatの直接provider経路に`heavyConsent`/`heavyPreparation`が未接続であることを明示した。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r1.md`。コード変更・provider・外部効果は0。Goal active。
