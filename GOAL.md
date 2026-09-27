@@ -11562,3 +11562,7 @@ Adaptive runtime・Opus plan・Heavy Astra packageを同一runでfresh readback�
 # Goal progress — 2026-09-27 r561
 
 同一HEAD `1f222bd`でstrict release gateを一度だけfresh実行し、`2026-09-27T08:14:00.555Z`、`ok=false`、失敗4件（production monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecard）を再確認した。Companionの新規read-only sessionは正常にopen/list/closeできたが、Profile 2にHeavy canonical tabはなく、foreign/user tabsのadopt・cleanup・別surface fallbackは行っていない。外部provider、R2、課金、公開、secret、送信は0。Goal active。
+
+# Goal progress — 2026-09-27 r562
+
+completion auditを現行HEAD `68aa346`へ更新し、全要件を再分類した。dirty worktree、Light現行local/production readback、認証継続、local security/printing/Canvas契約は証跡あり。一方、実provider receipt、remote R2 durable chain、video receipt、production monitor/UI、G618、H601/H602 operator proof、generation scorecard、strict gateは未完了。依存順をAstra adapter → monitor/G618 → H601 → provider → R2 chain → video → H602 → scorecard → strict gateへ固定し、正本を`work/heavy-chain-completion-audit-20260927-r4.json`へ更新した。Goal active。
