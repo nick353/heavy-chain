@@ -1,4 +1,11 @@
-# Goal progress — 2026-09-27 r389
+# Goal progress — 2026-09-27 r390
+
+## Fresh strict gate confirmation — 2026-09-27
+
+strict gateを`2026-09-27T00:23:12.536Z`に再取得。ローカルstatic/typecheck/build/lint/diffとHeavy
+認証はPASSを維持し、外部readback 6系統（monitor/UI、mass-market、Light all-feature、G618、H601、
+H602）とgeneration scorecard artifactのみが未達だった。これは前回の診断状態が変わっていないことの
+fresh証拠であり、課金・法務・秘密・本番authを捏造してgateを通していない。Goalはactive。
 
 ## Heavy auth / Light plan regression audit — 2026-09-27
 

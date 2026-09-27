@@ -1,4 +1,13 @@
-# Heavy Chain current state — 2026-09-27 r267
+# Heavy Chain current state — 2026-09-27 r268
+
+## Fresh strict release-gate readback — 2026-09-27
+
+`npm run verify:release-gate -- --command-timeout-ms 600000`をfresh実行し、captureは
+`2026-09-27T00:23:12.536Z`。syntax、security、G614、G632、G633、H601/H602 static、typecheck、
+build、lint、diff checkはPASS。Heavy認証は失敗項目に含まれない。未達はproduction monitor/UI、
+current mass-market QA、production Light all-feature、G618、production H601、production H602、
+および旧10-feature generation scorecard artifactの7件で、外部auth/monitor/legal/billingの実証値を
+推測せず保持した。tracked worktreeはclean。
 
 ## Heavy auth surface regression audit — 2026-09-27
 
