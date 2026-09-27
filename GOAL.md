@@ -12008,3 +12008,7 @@ Companionのtask-owned read-only availabilityを確認。接続済みProfileは1
 # Goal progress — 2026-09-27 r670
 
 Companion read-onlyでCloudflare Heavy Web originとZeabur originを同時確認。両方とも`Lightchain AI` shellと「Workspaceを準備中／認証状態とブランド設定を確認中」を返し、読込・スクリーンショット・task-owned cleanupは成功したが、authenticated workspace・consumer-auth token・provider receiptは証明されなかった。フォーム、ログイン、provider操作は0。正本は`work/heavy-chain-companion-heavy-web-auth-probe-20260927-r1.json`。
+
+# Goal progress — 2026-09-27 r671
+
+Heavy Webのread-only HTTP session readbackをfresh取得。`/_health`は200でCloudflare hosting/authProviderを確認し、`/api/auth/get-session`は200だがbody `null`。Web runtimeは健全だがconsumer-auth sessionは未成立で、provider receiptは未試行。外部効果・認証入力・provider submit・deploy・課金・公開・secret読取は0。正本は`work/heavy-chain-web-auth-session-fresh-readback-20260927-r1.json`。

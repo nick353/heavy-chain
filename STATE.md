@@ -23493,3 +23493,7 @@ Companion broker/profileは正常（connected profile 1、active operation/recon
 # Heavy Chain current state — 2026-09-27 r670
 
 Cloudflare Heavy WebとZeabur Heavy Webをread-onlyでfresh確認。両originはshell表示とauth/brand準備状態まで到達したが、authenticated workspace、consumer-auth token、provider receiptは未取得。Companionのtemporary tabs/sessionは全てcleanup済み、foreign tabsは不変、外部効果0。動画deferred、Goal active。正本は`work/heavy-chain-companion-heavy-web-auth-probe-20260927-r1.json`。
+
+# Heavy Chain current state — 2026-09-27 r671
+
+Heavy Web `/_health`は200、`/api/auth/get-session`は200/null。Cloudflare web/auth runtimeは稼働しているがconsumer-auth sessionは未成立。provider receipt、R2 reconciliation、billing/release proofは未取得。外部効果・secret read・動画変更0、Goal active。正本は`work/heavy-chain-web-auth-session-fresh-readback-20260927-r1.json`。

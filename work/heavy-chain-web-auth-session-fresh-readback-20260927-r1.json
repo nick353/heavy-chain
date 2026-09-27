@@ -1,0 +1,27 @@
+{
+  "schema": "heavy_chain_web_auth_session_readback.v1",
+  "capturedAt": "2026-09-27T12:26:17.300Z",
+  "sourceRevision": "73aa2f9",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "readOnly": true,
+  "responses": {
+    "/_health": {
+      "httpStatus": 200,
+      "body": {
+        "service": "heavy-chain-web",
+        "hosting": "cloudflare",
+        "authProvider": "cloudflare"
+      }
+    },
+    "/api/auth/get-session": {
+      "httpStatus": 200,
+      "body": null
+    }
+  },
+  "interpretation": {
+    "webRuntimeHealthy": true,
+    "consumerAuthSessionPresent": false,
+    "providerReceipt": "not_attempted",
+    "externalEffect": false
+  }
+}
