@@ -13,6 +13,7 @@ parityを代替しない。
 同じreceiptをproduction D1からread-onlyで再照合し、`heavy_ai_requests`、`heavy_ai_candidates`、
 `generated_images`のrequest/job/candidate/image/storage path、model、bytes、sha256が全て一致した。
 Wrangler readbackは`changes=0`、`rows_written=0`、`served_by_primary=true`で、追加生成・再送・D1 writeはない。
+構造化した照合packetは`work/heavy-real-generation-reconciliation-20260927.json`に固定した。
 
 ## Fresh strict release-gate readback — 2026-09-27
 

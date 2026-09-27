@@ -9,6 +9,7 @@ Heavy実生成receiptの同一R2 objectをremote downloadし、sha256一致と�
 
 同一requestをproduction D1からもread-only再照合し、request/candidate/generated imageの完了状態、
 model、bytes、sha256、canonical R2 pathを一致確認した。`changes=0`で、同一receiptの永続化証拠を強化した。
+照合packetは`work/heavy-real-generation-reconciliation-20260927.json`に保存し、再送なしを明記した。
 
 ## Fresh strict gate confirmation — 2026-09-27
 
