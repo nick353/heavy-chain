@@ -83,6 +83,10 @@
         "videoProviderBoundary": "1/1",
         "releaseGateLightchain": "16/16"
       }
+    },
+    "webLint": {
+      "command": "npm run lint (repository root)",
+      "exitCode": 0
     }
   },
   "fileSha256": {

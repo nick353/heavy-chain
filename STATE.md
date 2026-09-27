@@ -23690,3 +23690,4 @@ Light provider coverage 22/22、Light parity contract 9/9、Cloudflare runtime 6
 `verify:10m-completion:incomplete-ok`をfresh実行。auditはFAIL、明示blockerは16件。G617/G619/G669/G670、H601/H602の受入未完了、
 G617/G619/G618/G668/G659/H601/public-entrypoint/H602のproduction proof不足、G619 verifier/release gate command failureを確認。
 submit/payment/OTP・CAPTCHA・secret/publication/destructive cleanup/deployは全て未実行。正本は`output/playwright/heavy-completion-audit-current-20260928-r2/summary.json`。
+root `npm run lint`もPASS。ローカル品質ゲートはtypecheck/build/lintと契約テストが全て通過し、本番証跡待ちだけが残る。
