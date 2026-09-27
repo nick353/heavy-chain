@@ -1,0 +1,73 @@
+{
+  "schema": "heavy_chain_auth_runtime_readback.v1",
+  "capturedAt": "2026-09-28",
+  "scope": "read-only authentication/runtime diagnosis; no provider submission, no deployment, no billing",
+  "production": {
+    "apiHealth": {
+      "url": "https://heavy-chain-api.nichika2000823.workers.dev/v1/health",
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "service": "heavy-api",
+        "media": "private-r2",
+        "heavyEntitlementEnabled": true
+      }
+    },
+    "apiUnauthenticatedRead": {
+      "profileStatus": 401,
+      "profileBody": { "error": "unauthorized" },
+      "entitlementStatus": 401,
+      "entitlementBody": { "error": "unauthorized" },
+      "interpretation": "expected without a bearer; not evidence of a provider or auth-service outage"
+    },
+    "webHealth": {
+      "url": "https://heavy-chain-web.nichika2000823.workers.dev/_health",
+      "status": "read",
+      "body": {
+        "service": "heavy-chain-web",
+        "hosting": "cloudflare",
+        "authProvider": "cloudflare"
+      }
+    },
+    "browserAuthBoundary": {
+      "runId": "heavy-auth-readback-20260928-r1",
+      "webSession": "authenticated_session_present",
+      "apiWithoutBearer": "unauthorized",
+      "sessionTokenPersisted": false,
+      "sessionTokenLogged": false,
+      "providerCredentialAccessed": false,
+      "cleanupComplete": true,
+      "externalActionExecuted": false
+    },
+    "deployments": {
+      "consumerAuthLatest100Percent": "5557eac5-fc06-4465-bea3-4dd21b7195ad",
+      "heavyApiLatest100Percent": "529f72bc-c79e-45e4-a9cb-39f8407259ab",
+      "heavyApiProductionBinding": "AUTH_SERVICE=consumer-auth",
+      "heavyApiIssuer": "https://consumer-auth.nichika2000823.workers.dev"
+    }
+  },
+  "sourceDiagnosis": {
+    "browserSessionToBearer": "src/lib/cloudflareBrowserAuth.ts maps the same-origin Better Auth session token to the client access_token shape",
+    "apiBearerTransport": "src/lib/cloudflareApi.ts sends Authorization: Bearer from the current session and rechecks session identity before protected calls",
+    "apiVerifier": "cloudflare/heavy-api/src/auth.ts forwards only that bearer to the bound consumer-auth /v1/identity route",
+    "consumerAuthIdentity": "cloudflare/consumer-auth/src/index.ts requires a bearer, verified email, unexpired live session, and provider-session validation",
+    "productionConfig": "cloudflare/heavy-api/wrangler.production.jsonc binds consumer-auth and enables OpenAI image admission"
+  },
+  "deterministicVerification": {
+    "consumerAuthTests": { "command": "npm test", "scope": "cloudflare/consumer-auth", "passed": 78, "failed": 0 },
+    "heavyApiTests": { "command": "npm test", "scope": "cloudflare/heavy-api", "passed": 114, "failed": 0 },
+    "providerPersistenceReadback": { "passed": 14, "failed": 0 },
+    "imageApiInputNormalization": { "passed": 1, "failed": 0 },
+    "lightchainProviderCoverage": { "passed": 22, "failed": 0 },
+    "lightchainParityContract": { "passed": 9, "failed": 0 },
+    "lightchainParityBehaviorLedger": { "passed": 6, "failed": 0 },
+    "lightchainPermissionParity": { "passed": 12, "failed": 0 }
+  },
+  "remainingBlockers": [
+    "No same-run authenticated Heavy bearer readback for profile/entitlement has been captured without exposing or persisting the token.",
+    "No real OpenAI image generation receipt and durable reuse/reload/reconciliation readback exists.",
+    "The accepted Sunburst migration still awaits a verified native Astra engineering gate before source mutation.",
+    "Release gate remains red for scorecard, production monitor/UI pair, stale G618 artifact, and H602 production completion proof."
+  ],
+  "nextAction": "Obtain a same-run authenticated in-app entitlement readback through the existing browser session without extracting the token; then resume the verified Astra-gated image migration and provider receipt path."
+}
