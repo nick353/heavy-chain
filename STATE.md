@@ -1,4 +1,12 @@
-# Heavy Chain current state — 2026-09-27 r271
+# Heavy Chain current state — 2026-09-27 r272
+
+## Heavy readiness label separation — 2026-09-27
+
+Heavyのfitting preview readiness helperが旧Lightプラン表示の`権限がありません`を返さず、Heavy固有の
+`Heavy利用条件`を返すように修正した。Light-onlyのsource parity componentにあるプラン制限表示は変更して
+いない。対象テストは16件（直近対象10件）PASS、Heavy source pathに旧ラベルを残していないことを確認した。
+これはUI/コード境界の修正であり、本番providerの再生成、workspace save/reuse/reload/reconciliation、
+video receipt、strict release gateの外部未達を完了扱いにはしない。
 
 ## Fresh persistence and video contract recheck — 2026-09-27
 

@@ -1,4 +1,12 @@
-# Goal progress — 2026-09-27 r393
+# Goal progress — 2026-09-27 r394
+
+## Heavy readiness label separation — 2026-09-27
+
+Heavyのfitting preview readinessから旧Lightプラン表示`権限がありません`を除き、未同意時は
+`Heavy利用条件`を返すようにした。Light-onlyのplan surfaceは保持し、対象テスト16件（直近対象10件）と
+source pathの確認をPASS。これはHeavy生成面の表示境界を直す変更で、production auth/provider receipt、
+workspace persistence/reuse/reload/reconciliation、video、monitor、H601/H602、G618、旧10-feature
+scorecard、strict gateを完了扱いにはしない。Goalはactive。
 
 ## Fresh persistence/video contract recheck — 2026-09-27
 
