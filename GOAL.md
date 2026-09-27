@@ -11044,6 +11044,10 @@ workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/fina
 
 公式Adaptive bootstrap installを同一pinned versionで再実行し、LangGraph 1.2.9 / SQLite checkpointer 3.1.0、DB存在、self-test `available=true`を確認した。続くfresh `runtime_status`とpackage statusでも`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`/`start_receipt=null`で変化なし。runtime再整備ではhost-managed capacity/意図的holdは解除されなかった。コード・provider・auth secret・billing・R2・publication・削除は0。Goalはactiveのまま、claim/start可能なcapacity状態を待つ。
 
+# Goal progress — 2026-09-27 r489
+
+新turnで`npm run verify:10m-completion:incomplete-ok`をfresh実行し、`capturedAt=2026-09-27T06:31:48.295Z`、`ok=false`、16 blockerを確認した。続くrelease gateは`capturedAt=2026-09-27T06:31:50.431Z`、`ok=false`で、現行の実質的な4失敗はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、real-generation visual scorecard。current production mass-market QAとLightchain all-feature order previewsは同gateではpassへ更新された。一方10M verifierはG668/G659等で旧artifact pathを参照しており、現行release gateとのprovenance系統差を確認した。これは証跡整合の診断であり、未実施provider/auth/billing/publicationを完了扱いにせず、verifier変更もAstra engineering承認なしには行わない。Adaptive packageはcapacity/holdのまま。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
