@@ -12092,3 +12092,7 @@ Cloudflare production deployment一覧をread-onlyでfresh確認。最新version
 # Goal progress — 2026-09-28 r692
 
 Cloudflare全versionをread-only確認。OpenAI設定の既存versionは2つあるが、いずれも現行source commit `182ef86`より前の古いversionで、現行Heavy entitlement/QA境界を含むとは証明できない。liveはWorkers AI versionのままなので、古いOpenAI versionを昇格せず、認証・Astra・controlled deployの順序を維持する。provider submit・deploy・課金・公開・キー変更・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r693
+
+過去のverified Opus計画にあったSunburst要件を再監査し、現行計画から欠落しないよう正本へ復元した。画像waveの完了条件は、`gpt-image-2.5-sunburst`既定・receipt記録・旧receipt互換・fallback/replay禁止・mock-only QA・video差分0を含む。現行allowlistにSunburstはなく、Astra engineering receipt未検証のため、コード変更・旧version昇格・本番生成はまだ開始しない。Goal active、正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。

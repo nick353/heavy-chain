@@ -23577,3 +23577,7 @@ Cloudflare production deployment一覧をread-onlyでfresh確認。最新version
 # Heavy Chain current state — 2026-09-28 r692
 
 Cloudflareの全versionをread-onlyで確認し、OpenAI設定済みの旧versionは`9a7a49c5...`（2026-09-21）と`c314b5fe...`（2026-09-24）の2つ、live versionは`529f72bc...`でWorkers AIと確定。旧OpenAI versionは現行Heavy provider/entitlement/QA source commit `182ef86`より前に作成されているため、既存versionの昇格は行わず、将来は現行sourceからcontrolled deployする。provider submit・deploy・課金・公開・キー変更・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r693
+
+以前のverified Opus画像計画に含まれていた受入条件（新規OpenAI画像の既定を`gpt-image-2.5-sunburst`、receipt記録、旧receipt互換、fallback/replay禁止、mock-only QA、video差分0）を現行no-rotation正本へ復元。現行sourceのOpenAI allowlistは旧modelのみでSunburst未実装のため、認証が直ってもSunburst実装・parser/Light parity・deterministic QA・fresh gateが先であり、既存OpenAI versionの昇格や生成を行わない。provider submit・deploy・課金・公開・キー変更・動画変更は0、Goal active。
