@@ -12119,3 +12119,8 @@ Light Chainと動画は変更対象外で、正本の`lunaAuthorized=false`を�
 fresh runtime readbackで、Adaptiveのrouter/graph自体はavailableだが、capacity guardが`capacity_blocked`でlive capacityを
 観測できず、即時retry禁止であることを確認した。既存Astra packageはblocked・launch不可のため、別route・別モデル・新規runで
 実行identityを迂回しない。現行Goalはactiveのまま、同じAPIキーの外部状態変化とverified Astra receiptを待つ。
+# Fresh runtime recheck — 2026-09-28
+
+Adaptive plan version 7をfresh readbackした。runtimeはaliveだがcapacity guardは変わらず、既存Astra packageも
+verified receiptなしでlaunch不可。Goalはactiveを維持し、外部認証状態または実行identityの変化が確認されるまで同じ
+外部操作を再送しない。

@@ -23607,3 +23607,8 @@ Adaptive runtimeをfresh readbackした。router/graphは稼働しているが�
 不可視、retry policyは`no_immediate_retry`、runtime identityはbuild/config一致のみでprocess一致ではない。既存Astra package
 `run_heavy_image_astra_engineering_20260927_r6`は`launch_allowed=false`のblocked状態で、利用可能routeにもnative Astraの新規実行証明はない。
 重複起動、別モデル置換、forkによる回避はせず、Astra verified receiptと同じAPIキーの401状態が変わるまで変更・生成を止める。
+# Fresh runtime recheck — 2026-09-28
+
+Adaptive plan version 7をreadbackし、graph/runtime processは起動しているが、capacity guardは引き続き
+`capacity_blocked`、live capacity不可視、即時retry禁止、`runtime_process_match=false`であることを確認した。
+既存Astra packageはblocked/launch不可のまま。認証401の同じキーを再送せず、別route・別run・別モデルへ迂回していない。
