@@ -22691,3 +22691,7 @@ G619の3 scaffold sessionをfresh verifier出力から分解し、各session共�
 # Heavy Chain current state — 2026-09-27 r473
 
 remote durable save→reuse→reload→reconciliationの読み込み側を技術診断した。Cloudflare有効時のsave/importはremote receipt不足でfail-closedだが、ParityPages/Library/Workbench/Galleryはremote readbackまたはsigned URL失敗時にlocal-first/fallbackを表示する。local continuityとしては合理的だが、remote proofと混同しないprovenance state・reuse gateが未検証。`work/heavy-chain-remote-read-provenance-diagnosis-20260927-r1.json`へ証拠と受入候補を固定し、Astra engineering scope待ちにした。focused local evidence/lifecycle、workspace handoff 3/3、provider persistence/readback 14/14、gallery boundary 2/2はpass。provider/R2、monitor/G618、billing、publication、secret、destructive cleanupは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r474
+
+Astra readbackは、local-onlyカードの可視性を維持しながらremote検証とimage accessを別状態にする方針を示した。`remoteReadbackStatus` と `imageAccessStatus` をpresentation stateとして持ち、local reuseは許可してもremote completion/provider promotionを満たさない。ParityPagesのproject cards、LibraryのCanvas copy/import、Galleryのreuse/Canvasリンク、CanvasEditorのlocal `sourceArtifactId` handoffを具体的に確認したが、Astra実行receiptのverification=falseと、mutation前に必要なhandler scope不足のため実装は保留。`work/heavy-chain-remote-read-provenance-diagnosis-20260927-r1.json`を更新、コード・外部効果は0。Goal active。
