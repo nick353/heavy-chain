@@ -23405,3 +23405,7 @@ H601 static guardはPASSだがoperator decision・policy locators・counsel revi
 # Heavy Chain current state — 2026-09-27 r648
 
 画像ウェーブのfresh static/local evidenceはgoal readiness 5/5、OpenAI provider 7/7、Heavy API OpenAI 114/114、persistence 14/14、input normalization 1/1。production 100% versionは`workers_ai`で、configの`openai`とdrift。Adaptive runtime/Astra receipt、Luna移行、authenticated provider receipt、remote reconciliationは未証明。deploy/secret値読取/課金/公開は0、動画はdeferred。正本は`work/heavy-chain-image-current-wave-fresh-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r649
+
+本番API healthのfresh readbackは200、未認証entitlementは401、brand未指定usageは400、model-matrixは404。稼働・認証境界のみ確認し、認証済み画像生成やR2/D1 reconciliationは未証明。production versionは`workers_ai`でconfigの`openai`とdrift、動画はdeferred、Goal active。

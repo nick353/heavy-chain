@@ -11920,3 +11920,7 @@ H601 operator readinessをfresh実行。static guard/source readbackはPASSだ�
 # Goal progress — 2026-09-27 r648
 
 画像生成ウェーブのfresh readbackを取得。Cloudflare静的goal readiness 5/5、OpenAI provider readiness 7/7、Heavy API OpenAI契約114/114、provider persistence 14/14、入力正規化1/1はPASS。ただし本番100% version `529f72bc-c79e-45e4-a9cb-39f8407259ab` は `workers_ai` のままで、production configの `openai` とdriftしている。Adaptive runtime/Astra verified receipt、Luna移行、認証済みOpenAI実provider receipt、remote save→reuse→reload→reconciliationは未証明。外部効果・deploy・secret値読取・課金・公開は0、動画はdeferred、Goal active。正本は`work/heavy-chain-image-current-wave-fresh-readback-20260927-r1.json`と更新済みresume manifest。
+
+# Goal progress — 2026-09-27 r649
+
+本番APIのfresh read-only health readbackを追加。`/v1/health`は200でservice=heavy-api・media=private-r2・heavyEntitlementEnabled=true、未認証entitlementは401、brand未指定usageは400、model-matrixは404。これは稼働・認証境界の確認であり、認証済み生成receipt・provider実行・R2/D1 reconciliationの証明ではない。動画はdeferred、外部効果・deploy・secret値読取・課金・公開は0、Goal active。

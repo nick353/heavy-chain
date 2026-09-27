@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-current-wave-fresh-readback.v1",
-  "capturedAt": "2026-09-27T11:25:13Z",
-  "sourceRevision": "3acce01f8f2a1db7efe836ae435055b29f8394af",
+  "capturedAt": "2026-09-27T11:26:13Z",
+  "sourceRevision": "0754aa3",
   "scope": {
     "currentWave": "image_generation",
     "video": "deferred_by_user",
@@ -53,7 +53,13 @@
     "liveVersionAllowedActions": ["generate-image", "edit-image", "model-matrix"],
     "secretNamesPresent": ["MEDIA_READ_SECRET", "OPENAI_API_KEY"],
     "secretValuesRead": false,
-    "bindingReadback": ["D1", "R2", "AUTH_SERVICE", "AI"]
+    "bindingReadback": ["D1", "R2", "AUTH_SERVICE", "AI"],
+    "healthEndpoints": {
+      "/v1/health": {"status": 200, "body": {"status": "ok", "service": "heavy-api", "media": "private-r2", "heavyEntitlementEnabled": true}},
+      "/v1/heavy/entitlement": {"status": 401, "body": {"error": "unauthorized"}},
+      "/v1/image-ai/usage": {"status": 400, "body": {"success": false, "error": "invalid_brand_id"}},
+      "/v1/provider-actions/model-matrix": {"status": 404, "body": {"error": "not_found"}}
+    }
   },
   "remainingBlockers": [
     "adaptive_runtime_process_not_observed",
