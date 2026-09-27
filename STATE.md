@@ -23353,3 +23353,7 @@ shell環境の`OPENAI_API_KEY`変数名のみpresence確認。secret値は未読
 # Heavy Chain current state — 2026-09-27 r635
 
 公式OpenAI Organization Verification画面は未認証ブラウザからloginへリダイレクトされ、verification stateは読めなかった。ログイン・認証変更・secret操作は0。Worker secret bindingは別readbackで確認済みだが、Organization Verificationと実provider receiptは未証明。動画はdeferred。正本は`work/heavy-chain-openai-organization-verification-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r636
+
+本番100%配信versionのbinding readbackで`AI_IMAGE_PROVIDER=workers_ai`を確認。local production configの`openai`とはdriftがあり、production OpenAI providerは未反映。deploy/provider call/課金/secret読取は行わず、Astra gate・deterministic regression・明示deploy承認が先。動画はdeferred。正本は`work/heavy-chain-image-production-version-config-readback-20260927-r1.json`と更新済みresume manifest、Goal active。

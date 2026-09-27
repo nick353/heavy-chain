@@ -1,0 +1,41 @@
+{
+  "schema": "heavy-chain.image-production-version-config-readback.v1",
+  "capturedAt": "2026-09-27T11:05:00Z",
+  "sourceRevision": "385d7405a5d6ddf8bdb3d2eaa4bd7d99586d22f6",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "versionMutation": false,
+    "externalEffects": 0
+  },
+  "worker": "heavy-chain-api",
+  "versionId": "529f72bc-c79e-45e4-a9cb-39f8407259ab",
+  "versionCreatedAt": "2026-09-26T23:49:15.592Z",
+  "routing": "100%",
+  "source": "Unknown (version_upload)",
+  "deployedBindings": {
+    "AI_IMAGE_PROVIDER": "workers_ai",
+    "AI_IMAGE_ENABLED": "true",
+    "AI_IMAGE_ALLOWED_ACTIONS": "generate-image,edit-image,model-matrix",
+    "AI_IMAGE_TIMEOUT_MS": "90000",
+    "HEAVY_IMAGE_ENTITLEMENT_ENABLED": "true",
+    "secretNames": ["MEDIA_READ_SECRET", "OPENAI_API_KEY"],
+    "d1Binding": "DB",
+    "r2Binding": "PRIVATE_MEDIA",
+    "authServiceBinding": "AUTH_SERVICE",
+    "aiBinding": "AI"
+  },
+  "localProductionConfig": {
+    "file": "cloudflare/heavy-api/wrangler.production.jsonc",
+    "AI_IMAGE_PROVIDER": "openai",
+    "AI_IMAGE_ENABLED": "true"
+  },
+  "conclusion": {
+    "productionOpenAIProviderActive": false,
+    "configurationDrift": "production version is still workers_ai while local production config selects openai",
+    "localHeadDeployed": false,
+    "providerReceipt": "not_proven",
+    "nextGate": "After Astra-approved source migration and deterministic verification, perform an explicitly authorized production deployment, then verify the new version binding readback before any provider probe."
+  }
+}
