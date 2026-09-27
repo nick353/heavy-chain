@@ -22404,3 +22404,9 @@ Lightchain provider coverageにも残っていた旧Heavy-only static assertions
 Lightchain unified workflow contract 6/6、material contract + garment mask refinement 28/28をfresh検証した。video-excluded shared
 lifecycle、source navigation、Light header/input order、material mask、auth-brand fence、Heavy-only UI不在を確認。local parity surfaceは
 passだが、production artifact freshness・実provider・remote persistenceの未達は別gateとして残る。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r427
+
+Lightchain test契約修正後にstrict release gateをfresh実行し、`capturedAt=2026-09-27T03:04:04.448Z`、`ok=false`を確認した。
+失敗は従来と同じ7件（production monitor/UI、mass-market QA、Lightchain all-feature previews、G618、H601 production rights、
+H602 production completion、generation scorecard）で、local parity修正による新規failureはない。Goal active。

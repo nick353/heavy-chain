@@ -10946,3 +10946,8 @@ provider coverageの旧static assertionsを現行Heavy ownership境界へ整合�
 
 Lightchain unified workflow 6/6、material contract/garment mask 28/28をfresh passした。Lightのinput order・header・auth brand fence・
 Heavy-only UI不在を確認し、local parityを補強した。一方、production provider receipt・R2/video readback・stale artifactは未解消。Goal active。
+
+# Goal progress — 2026-09-27 r427
+
+Lightchain test契約修正後のstrict gateをfresh取得した（`2026-09-27T03:04:04.448Z`）。失敗はproduction monitor/UI、mass-market、
+Lightchain all-feature、G618、H601、H602、generation scorecardの7件だけで、local parity変更による新規失敗はなかった。Goal active。
