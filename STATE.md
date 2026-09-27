@@ -1,4 +1,18 @@
-# Heavy Chain current state — 2026-09-27 r265
+# Heavy Chain current state — 2026-09-27 r266
+
+## Heavy-aware local Light feature verifier completed — 2026-09-27
+
+`verify:lightchain-all-features -- --mode=local`をHeavy固有の`Heavy利用条件`/`Heavy生成機能`
+ゲートを認識する検証器（commit `976813b`）で再実行した。全31 featureのdesktop/mobile、desktop/mobile
+video 4、source 7を走査し、browser・preview・contextのcleanupも完了した。旧実行のようなPattern Vector
+付近のtimeoutやSIGINTは再発していない。
+
+ただし`ok=false`で、失敗は次の4件に限定された。`fabric-image`のsource permission surface、creatorの
+旧Light `権限がありません` label、tools/fabricの旧Light permission label、modelの旧Light label群である。
+これはHeavyの明示terms/rights gateまたはbrand情報未hydrationと、immutableなLight source readbackの差分を
+示すもので、Light Chainのplan起因permissionを変更する根拠ではない。新しいauthenticated Light source
+captureが得られるまでsource JSONを上書きせず、production parityの合格にも昇格しない。
+
 
 ## Heavy entitlement and real provider generation receipt — 2026-09-27
 

@@ -1,4 +1,16 @@
-# Goal progress — 2026-09-27 r387
+# Goal progress — 2026-09-27 r388
+
+## Heavy-aware Light feature verifier re-run — 2026-09-27
+
+検証器commit `976813b`でHeavy専用のterms/rights gateをLight旧permission markerと混同しないようにし、
+local all-feature runを最後まで完走させた。31/31 desktop、31/31 mobile、video 4、source 7の全経路を
+readし、cleanupも完了。旧runの停滞・SIGINT blockerは解消した。
+
+受入`ok=false`の残りは4件だけで、`fabric-image`の旧Light permission surface、creatorの旧Light
+`権限がありません`、tools/fabricの同label、modelの旧label群。Heavy側の生成認証修正を戻さず、Light
+Chainのplan由来permission surfaceも変更せず、immutable source readbackと現行Heavy UIの差分として保持する。
+これはlocal parityの診断であり、authenticated production Light parity、provider receipt、remote
+persistence/reuse/reload/reconciliation、strict releaseの完了証跡ではない。Goalはactive。
 
 ## Heavy entitlement generation receipt — 2026-09-27
 
