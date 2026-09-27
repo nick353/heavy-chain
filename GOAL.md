@@ -11377,6 +11377,10 @@ Cloudflare release readback validatorとrelease-doctor contract regressionをfre
 
 provider receipt schemaとauthenticated production readback schemaのmaterialized artifactをrepository全体で検索し、現行contract fixture以外は0件だった。従ってrelease doctorのproduction stopはartifact欠落として正しく、local contractや過去readbackを昇格させず、実provider/authenticated evidenceの取得を次の外部依存として保持した。Goal active。
 
+# Goal progress — 2026-09-27 r520
+
+Cloudflare runtime contract 6/6とsecurity auditをfresh passした。legacy Supabase runtimeはactive pathから不在、security auditはsecret値を表示せずpass。正本は`work/heavy-chain-runtime-security-readback-20260927-r1.json`。provider/deploy/billing/publication/writeは0で、production effectは未証明のまま。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

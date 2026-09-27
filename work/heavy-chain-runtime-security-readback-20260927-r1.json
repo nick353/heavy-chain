@@ -1,0 +1,27 @@
+{
+  "schema": "heavy-chain.runtime-security-readback.v1",
+  "capturedAt": "2026-09-27T07:14:00Z",
+  "gitHead": "346b3ae",
+  "checks": {
+    "cloudflareRuntime": {
+      "command": "npm run verify:cloudflare-runtime --silent",
+      "passed": 6,
+      "failed": 0,
+      "ok": true,
+      "legacySupabaseRuntime": "absent"
+    },
+    "securityAudit": {
+      "command": "npm run security:audit --silent",
+      "passed": true,
+      "secretValuesPrinted": false
+    }
+  },
+  "externalEffects": {
+    "provider": 0,
+    "deployment": 0,
+    "billing": 0,
+    "publication": 0,
+    "writes": 0
+  },
+  "decision": "runtime_security_contracts_verified_production_effects_unproven"
+}

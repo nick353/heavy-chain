@@ -22878,3 +22878,7 @@ Cloudflare release readback validatorとrelease-doctor contract regressionをfre
 # Heavy Chain current state — 2026-09-27 r519
 
 provider receipt schemaとauthenticated production readback schemaのmaterialized artifactをrepository全体で検索し、現行contract fixture以外は0件だった。従ってrelease doctorのproduction stopはartifact欠落として正しく、local contractや過去readbackを昇格させず、実provider/authenticated evidenceの取得を次の外部依存として保持した。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r520
+
+Cloudflare runtime contract 6/6とsecurity auditをfresh passした。legacy Supabase runtimeはactive pathから不在、security auditはsecret値を表示せずpass。正本は`work/heavy-chain-runtime-security-readback-20260927-r1.json`。provider/deploy/billing/publication/writeは0で、production effectは未証明のまま。Goal active。
