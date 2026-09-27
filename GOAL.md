@@ -11976,3 +11976,7 @@ Astra再開時に渡せる画像移行packet v2を作成。公式Sunburst根拠�
 # Goal progress — 2026-09-27 r662
 
 Astraの新しい境界レビューをread-onlyで実施し、`CanvasEditorPage`と`ChatEditor`はHeavy-ownedでOpenAI/Sunburst移行候補、`GeneratePage`・`LightchainWorkbenchPage`・動画は対象外と確定した。production wranglerの`AI_IMAGE_PROVIDER=openai` bindingもfresh確認し、現行HEAD `bfc55e8`でprovider persistence `14/14`とHeavy OpenAI adapter/image runtime `28/28`をPASSした。Astraの実行identity/start receiptが未検証のため、ソース変更・Luna起動・provider生成は開始していない。動画はdeferred、外部効果・deploy・課金・secret値読取は0。正本は`work/heavy-chain-astra-callsite-boundary-and-baseline-readback-20260927-r1.json`。
+
+# Goal progress — 2026-09-27 r663
+
+Adaptive runtimeをread-only再確認し、Graph runtimeと外部role processはliveだが、capacity guardは`capacity_blocked`（期限切れの別planner leaseが残存）で、即時再試行は行わなかった。既存Astra package r6はverified invocation identityなしでblockedのまま。ソース変更・Luna起動・provider生成・deploy・課金・secret値読取は0、動画はdeferred。Goalは未完了のまま継続する。

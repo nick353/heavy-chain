@@ -23461,3 +23461,7 @@ Astra再開用の画像移行packet v2を固定。official model evidenceとsour
 # Heavy Chain current state — 2026-09-27 r662
 
 Astra境界レビューで、HeavyのCanvas/Chat call siteだけをOpenAI/Sunburst移行対象とし、Lightの`/designProduction`、別GeneratePage surface、動画を変更対象外に固定した。production wranglerの`AI_IMAGE_PROVIDER=openai`を確認し、現行HEAD `bfc55e8`のprovider persistence `14/14`、Heavy adapter/runtime `28/28`をfresh PASS。Astra実行identity/start receiptが未検証なので、source mutation・Luna起動・provider submitは0。動画はdeferred、Goal active。正本は`work/heavy-chain-astra-callsite-boundary-and-baseline-readback-20260927-r1.json`。
+
+# Heavy Chain current state — 2026-09-27 r663
+
+Adaptive Graph runtimeと外部role processはliveだが、capacity guardが`capacity_blocked`で即時再試行不可。期限切れの別planner leaseを勝手に解放せず、既存Astra r6のblocked state（verified invocation identityなし）を維持した。画像waveのみ継続し、source mutation・Luna起動・provider submit・deploy・課金・secret値読取は0、動画はdeferred、Goal active。
