@@ -1,0 +1,14 @@
+{
+  "schema": "heavy-chain.video-local-readback.v1",
+  "capturedAt": "2026-09-27T07:36:00Z",
+  "gitHead": "5d900b7",
+  "checks": [
+    {"command":"npm run test:video-provider-boundary","passed":1,"failed":0},
+    {"command":"npm run test:video-provider-contract","passed":3,"failed":0},
+    {"command":"npm run test:video-editor-persistence","passed":4,"failed":0}
+  ],
+  "totalPassed":8,
+  "confirmed":["no image-generation fallback","source/credential/receipt gate","duration/resolution validation","local draft reload","remote receipt required when Cloudflare enabled","stable project matching"],
+  "externalEffects":{"provider":0,"billing":0,"publication":0,"deletion":0},
+  "decision":"video_local_contract_verified_production_provider_and_durable_media_receipt_unproven"
+}

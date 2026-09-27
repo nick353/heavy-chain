@@ -11481,6 +11481,10 @@ G618 verifierとrelease-gate sourceをfresh読解し、再開に必要なHTTPS A
 
 Video provider laneの再開条件をsource/contractからfresh抽出した。source permission、server credential、same-run receipt/readbackの3条件、provider/input/idempotency、video workspace remote persistence、Canvas handoff、media checksum/scope reconciliationを正本化した。正本は`work/heavy-chain-video-provider-input-packet-20260927-r1.md`。provider call、secret、課金、公開、削除は0。Goal active。
 
+# Goal progress — 2026-09-27 r546
+
+Video local contractをfresh再検証し、provider boundary 1/1、provider contract 3/3、editor persistence 4/4の合計8/8 pass。画像生成fallback禁止、3条件admission、local reload、Cloudflare receipt必須、stable project matchingを確認した。正本は`work/heavy-chain-video-local-readback-20260927-r1.json`。production video provider/durable media receiptは未証明。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。
