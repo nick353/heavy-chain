@@ -23445,3 +23445,7 @@ Heavy API全体回帰は114/114 PASS。localのauth/admission・OpenAI adapter�
 # Heavy Chain current state — 2026-09-27 r658
 
 Cloudflare production secret名は存在するが値は未読。local OpenAI keyは401、Heavy consumer-auth/monitor/browser auth-stateとAdaptive runtime processは不在。代替credentialやprovider submitは0、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r659
+
+公式docsではSunburst modelとdated snapshot、Image API generation/edit endpointsを確認。一方local allowlist/default・bundleには未反映で、Astra verified engineering receiptが必要。organization verification may be required、認証/実provider/remote reconciliationは未完、動画はdeferred、Goal active。

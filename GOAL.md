@@ -11960,3 +11960,7 @@ Goal全体のread-only completion auditをfresh実行。73 goalはaccepted、G61
 # Goal progress — 2026-09-27 r658
 
 画像認証経路のinventoryをread-onlyでfresh取得。Cloudflare production secret名は`MEDIA_READ_SECRET`/`OPENAI_API_KEY`のみ確認できるが値は未読、local OpenAI keyは直前の401で使用不可、Heavy consumer-auth session・monitor token/API/brand・browser auth-stateは不在、Adaptive runtime processも不在。秘密値・代替credential・provider submitは扱っていない。動画はdeferred、Goal active。正本は`work/heavy-chain-image-auth-path-inventory-20260927-r1.json`と更新済みresume manifest。
+
+# Goal progress — 2026-09-27 r659
+
+公式OpenAI docsをfresh確認。`gpt-image-2.5-sunburst`とdated snapshot `gpt-image-2.5-sunburst-2026-09-08`は公式Image APIのgeneration/edit modelとして存在し、organization verificationが必要になる場合がある。一方、Heavyのlocal allowlist/defaultとdry-run bundleには未反映。公式仕様を根拠化したが、Astra設計receipt前のsource変更・provider呼出しは行っていない。正本は`work/heavy-chain-openai-image-official-model-readback-20260927-r1.json`。

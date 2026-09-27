@@ -1,0 +1,37 @@
+{
+  "schema": "heavy-chain.openai-image-official-model-readback.v1",
+  "capturedAt": "2026-09-27T11:41:34Z",
+  "sourceRevision": "482ea0a82b1659dcefae87319e347d738335a406",
+  "scope": {
+    "readOnly": true,
+    "providerSubmit": false,
+    "billing": false,
+    "deploy": false,
+    "secretValuesRead": false,
+    "video": "deferred_by_user"
+  },
+  "officialSources": [
+    "https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst",
+    "https://developers.openai.com/api/docs/guides/image-generation",
+    "https://developers.openai.com/api/reference/cli/resources/images/methods/generate"
+  ],
+  "officialModel": {
+    "id": "gpt-image-2.5-sunburst",
+    "datedSnapshot": "gpt-image-2.5-sunburst-2026-09-08",
+    "supports": ["image_generation", "image_editing", "text_input", "image_input"],
+    "imageEndpoints": ["/v1/images/generations", "/v1/images/edits"],
+    "quality": ["low", "medium", "high", "xhigh", "max", "auto"],
+    "video": false,
+    "organizationVerificationMayBeRequired": true
+  },
+  "localSourceMismatch": {
+    "allowlistFiles": [
+      "cloudflare/heavy-api/src/openai-image.ts",
+      "cloudflare/heavy-api/src/image-ai-contracts.ts"
+    ],
+    "currentDefault": "gpt-image-1-mini",
+    "sunburstAllowed": false,
+    "sunburstBundledInDryRun": false
+  },
+  "nextGate": "Astra must bound the allowlist/default/UI/receipt compatibility change before Luna edits; no direct source mutation or provider call was made."
+}

@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-current-wave-fresh-readback.v1",
-  "capturedAt": "2026-09-27T11:40:18Z",
-  "sourceRevision": "0b92797",
+  "capturedAt": "2026-09-27T11:41:34Z",
+  "sourceRevision": "482ea0a",
   "scope": {
     "currentWave": "image_generation",
     "video": "deferred_by_user",
@@ -138,6 +138,13 @@
     "secretValuesRead": false,
     "consumerAuthAvailable": false,
     "monitorContextAvailable": false
+  },
+  "officialModelReadback": {
+    "artifact": "work/heavy-chain-openai-image-official-model-readback-20260927-r1.json",
+    "modelId": "gpt-image-2.5-sunburst",
+    "datedSnapshot": "gpt-image-2.5-sunburst-2026-09-08",
+    "localAllowlistContainsModel": false,
+    "organizationVerificationMayBeRequired": true
   },
   "nextGate": "Recover the existing Adaptive runtime and obtain the already-registered Astra image engineering receipt; do not replay the closed transport or deploy while the live provider remains workers_ai."
 }
