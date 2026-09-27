@@ -159,9 +159,9 @@ test('routes Heavy generation through the server entitlement gate without a UI r
 
   assert.match(workbench, /const specialProviderGenerationLocked = !lightchainProviderSupported[\s\S]*brandResolutionPending[\s\S]*lightchainGenerationRunning/);
   assert.match(workbench, /data-testid="lightchain-special-provider-gate"/);
-  assert.match(workbench, /const heavyEntitlementAction = lightchainProviderSupported/);
-  assert.match(workbench, /const heavyEntitlementReady = heavyEntitlementAction !== null/);
-  assert.match(workbench, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.match(workbench, /const heavyEntitlementAction = heavyOwnedFeature && lightchainProviderSupported/);
+  assert.match(workbench, /const heavyEntitlementReady = !heavyOwnedFeature \|\| \([\s\S]*?heavyEntitlementAction !== null/);
+  assert.match(workbench, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
   assert.match(workbench, /if \(!heavyEntitlementReady\)[\s\S]*?return;/);
   assert.doesNotMatch(workbench, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(workbench, /lightchainRightsConfirmationModal|rightsConfirmationOpen|rightsConfirmationDraft|data-testid="lightchain-rights-confirmation"/);
@@ -203,8 +203,8 @@ test('passes only source-admitted request-local rights into every provider route
 
 test('keeps dedicated material generation behind the Heavy entitlement gate', () => {
   const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(material, /const providerRightsConfirmed = heavyEntitlementReady/);
-  assert.match(material, /const heavyEntitlementReady = heavyEntitlement\?\.allowed === true/);
+  assert.match(material, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
+  assert.match(material, /const heavyEntitlementReady = !heavyOwnedFeature \|\| \([\s\S]*?heavyEntitlement\?\.allowed === true/);
   assert.doesNotMatch(material, /getLightchainSourceGenerationAccess\(/);
   assert.doesNotMatch(material, /pendingRightsGenerationRef|rightsConfirmationOpen|rightsConfirmationDraft|PermissionLockedButton|権利を確認してAI生成/);
   assert.match(material, /const rightsConfirmedForRequest = providerRightsConfirmed/);
