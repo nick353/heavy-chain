@@ -11610,3 +11610,6 @@ G618/H601/H602のread-only verifierをfresh実行した。H601 legal safetyはpa
 # Goal progress — 2026-09-27 r574
 
 現行HEAD `8eff129`でstrict release gateをfresh実行し、`2026-09-27T08:40:47.866Z`、`exitCode=1`、失敗4件を確認した。production monitor/UI pairはUI summary欠落、G618はbaseline freshness不足、production H602は本番billing証跡不足、generation scorecardはvisual scorecard artifact欠落。submit、checkout、公開、deploy、破壊cleanupは0。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r6.json`。Goal active。
+# Goal progress — 2026-09-27 r575
+
+Runwayのplugin・permission・dependencyをfresh readbackし、`installed=false`、`connectionConfirmed=false`、`toolExposed=false`、permission=`not_installed`を再確認した。公式接続suggestionを発行したが、suggestion自体はinstall/connectやprovider receiptを意味しない。正本は`work/heavy-chain-provider-connection-readback-20260927-r4.json`。Goal active。
