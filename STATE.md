@@ -22655,3 +22655,7 @@ strict gate正本を`2026-09-27T05:17:59.697Z`にfresh取得した。`ok=false`�
 # Heavy Chain current state — 2026-09-27 r464
 
 `npm run verify:goal-readiness:incomplete-ok -- --out work/heavy-chain-goal-readiness-20260927-r1.json`をfresh実行し、5/5 local checks pass。Cloudflare auth/media/provider adapterとlegacy edge除去はverifiedだが、production generation・R2 durable chain・browser business completionはauditのproof limitにより未証明。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r465
+
+G620/G614/G632/G633、H601 legal safety、H602 Cloudflare contract、Launch Operationsはfresh pass。`verify:h601-operator-readiness`は`ok=false`で、operator final H601 decisionと10件のsafe policy/operator readbackが未添付。H601は安全ガードpassとoperator acceptance未達を分離して扱う。正本補足は`work/heavy-chain-local-ops-rights-billing-readback-20260927-r1.json`。法的承認、provider、billing、deployment、publicationは0。Goal active。
