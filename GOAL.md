@@ -11016,6 +11016,10 @@ Goal active。
 
 Adaptive MCPの`runtime_status`、既存Astra package status、保存済みOpus plan readをfresh取得しようとしたが、3呼出しすべて同一の`Transport closed`で失敗した。シェルreadbackでは外部role processは存在する一方、graph runtime PIDは現行process一覧に無く、`git diff --check`はpass、10M audit artifactは16 blockerのまま。Transport closed後の同一接続再試行・強制再起動・新規package登録は行っていない。既存plan/packageは保持し、runtimeの正常再接続後に同じIDでread-only再開する。Goal active。
 
+# Goal progress — 2026-09-27 r482
+
+次turnのfresh readbackでもAdaptive `runtime_status`は同一`Transport closed`で、`opencode_go_roles` processだけが生存しgraph runtime processは不在だった。Astra packageのclaim/start、source mutation、provider/auth/billing/publicationは実行不能なまま。既存run/packageを再登録・再送せず、同一実質blocker（Adaptive runtime unavailable）が継続したため、blocked auditの条件を満たすか判定する。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
