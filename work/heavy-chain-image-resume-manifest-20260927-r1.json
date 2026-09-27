@@ -48,7 +48,8 @@
     "work/heavy-chain-openai-api-auth-readback-20260927-r2.json",
     "work/heavy-chain-astra-callsite-boundary-and-baseline-readback-20260927-r1.json",
     "work/heavy-chain-static-readiness-fresh-readback-20260927-r2.json",
-    "work/heavy-chain-release-gate-fresh-readback-20260927-r2.json"
+    "work/heavy-chain-release-gate-fresh-readback-20260927-r2.json",
+    "work/heavy-chain-production-auth-boundary-fresh-readback-20260927-r2.json"
   ],
   "freshReadback": {
     "observedAt": "2026-09-27T11:48:50Z",

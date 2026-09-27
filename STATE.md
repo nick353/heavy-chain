@@ -23473,3 +23473,7 @@ Goal readiness `5/5`とOpenAI provider readiness `7/7`をfresh PASS。これは�
 # Heavy Chain current state — 2026-09-27 r665
 
 fresh strict release gateは`ok=false`。production monitor/UI、G618、H602 production billing readback、generation scorecardが未達。local readinessはgreenだが、production completion・quality・releaseは未証明。Astra r6とAdaptive capacity blockerは継続し、source mutation・provider submit・deploy・課金・公開・secret値読取は0、動画はdeferred、Goal active。正本は`work/heavy-chain-release-gate-fresh-readback-20260927-r2.json`。
+
+# Heavy Chain current state — 2026-09-27 r666
+
+Production Heavy APIのread-only boundaryはfresh確認済み。health 200、未認証profile/entitlement 401、brandなしusage 400。consumer-auth session、monitor token/brand、authenticated generation receipt、R2 reconciliationは未取得。Astra r6のverified invocation blockerとcapacity blockerは継続、source mutation・provider submit・deploy・課金・公開・secret値読取は0、動画はdeferred、Goal active。正本は`work/heavy-chain-production-auth-boundary-fresh-readback-20260927-r2.json`。

@@ -1,0 +1,24 @@
+{
+  "schema": "heavy-chain.production-auth-boundary-readback.v1",
+  "capturedAt": "2026-09-27T12:16:28Z",
+  "sourceRevision": "e31a490",
+  "origin": "https://heavy-chain-api.nichika2000823.workers.dev",
+  "readbacks": {
+    "/v1/health": {"httpStatus": 200, "body": {"status": "ok", "service": "heavy-api", "media": "private-r2", "heavyEntitlementEnabled": true}},
+    "/v1/profile": {"httpStatus": 401, "body": {"error": "unauthorized"}},
+    "/v1/heavy/entitlement": {"httpStatus": 401, "body": {"error": "unauthorized"}},
+    "/v1/image-ai/usage": {"httpStatus": 400, "body": {"success": false, "error": "invalid_brand_id"}}
+  },
+  "scope": {
+    "readOnly": true,
+    "providerSubmit": false,
+    "r2Write": false,
+    "billing": false,
+    "deploy": false,
+    "secretRead": false
+  },
+  "limits": [
+    "No authenticated consumer-auth session was used",
+    "No authenticated Heavy generation receipt or R2 reconciliation is proven"
+  ]
+}
