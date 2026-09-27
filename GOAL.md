@@ -11570,3 +11570,7 @@ completion auditを現行HEAD `68aa346`へ更新し、全要件を再分類し�
 # Goal progress — 2026-09-27 r563
 
 既存Astra package再開用のsource handoffを現行HEAD `d377918`へfresh更新した。Fitting/Canvasの現行行番号と、`generateModelMatrix`・Canvas direct provider経路が`rightsConfirmed`のみで共有`heavyConsent`/`heavyPreparation`未接続であること、ChatEditorはfail-closed維持対象であることを固定した。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r2.md`。コード変更、provider、課金、R2、公開、secretは0。Goal active。
+
+# Goal progress — 2026-09-27 r564
+
+fresh source handoffのevidence fingerprint `e1a53b09218665e6f142f2c8922d612dd6d4dbf85ea058888271c8f6da128eae`を既存Opus planへ登録し、Adaptive planをversion 4へ更新した。`plan_valid=true`は維持、`engineering_ready=false`・`waiting_human`は変わらない。Astra packageの重複claim/startや代替routeは行っていない。Goal active。

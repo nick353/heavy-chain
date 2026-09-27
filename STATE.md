@@ -23054,3 +23054,7 @@ strict release gateを同一HEADでfresh実行し、`2026-09-27T08:14:00.555Z`�
 # Heavy Chain current state — 2026-09-27 r563
 
 既存Astra packageに渡すsource handoffを現行HEAD `d377918`でfresh更新した。Fitting/Canvasの未接続proofフィールドと、ChatEditor fail-closed境界を行番号付きで固定。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r2.md`。変更は文書のみで、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r564
+
+source handoffのevidence fingerprintをAdaptive planへ登録し、plan version 4・`plan_valid=true`をfresh確認した。engineering_readyはfalse、packageは引き続き`waiting_human`。重複起動、provider、課金、公開、secret、R2 mutationは0。Goal active。
