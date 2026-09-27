@@ -10831,3 +10831,7 @@ Heavy capability境界のlocal sliceを完了判定した。Opus 5.5改訂plan�
 実装は`src/lib/heavyCapability.ts`、`src/pages/GeneratePage.tsx`、`scripts/verify-heavy-capability-gating.test.mjs`に限定。fresh検証はHeavy gating `6/6`、Light parity `6/6`、Light all-feature contract `5/5`、typecheck、production build、diff-checkがpass、protected backend/Light diffは空。Verifierと最終Reviewer（Astra）は、current artifactのliteral source/test evidenceとexit codeを確認してlocal boundaryをpass/approvedとした。
 
 残作業は別gateとして保持する：production entitlement/provider receipt、private R2/durable workspace save→reuse→reload→reconciliation、video provider、monitor/UIとoperations、G618、H601/H602、real-generation scorecard、strict release gate。環境変数・認証stateなどの秘密は推測せず、provider dispatch・課金・公開・deploy・破壊的操作は行っていない。Goalはactive。
+
+# Goal progress — 2026-09-27 r405
+
+コミット後のstrict release gateを新規出力へfresh実行した（capturedAt `2026-09-27T01:38:05.017Z`、`ok=false`）。local capability変更でdirty worktree blockerは発生していない。未達はproduction monitor/UI、mass-market QA、Lightchain all-feature previews、G618、H601、H602、generation scorecardの7件で、production/operator/providerの正本証跡が必要な別工程として維持する。Goalはactive。

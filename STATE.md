@@ -22267,3 +22267,7 @@ capability mapはdefault-denyで、`campaign-image → generate-image`、`model-
 fresh readback（capture `2026-09-27T01:30:37Z`）ではHeavy gating `6/6`、Light permission parity `6/6`、Light all-feature contract `5/5`、`npm run typecheck`、`npm run build`、`git diff --check`がすべて成功し、protected backend/Light path diffは空だった。最終Reviewerはlocal boundaryをapprovedとした。Adaptive workflow `run_ee879c207feb415b`のverify/final_reviewはpass/approvedへ到達し、現在finalize待ちである。
 
 このapprovedはlocal capability boundaryに限定する。production entitlement/provider readback、workspace save→reuse→reload→reconciliation、video provider、monitor/operations、strict release gate、未設定のmonitor env/auth stateは未完了であり、health・local test・Companion readbackだけでbusiness completionとは扱わない。deploy、provider dispatch、課金、公開、secret投入、破壊的cleanupはこのsliceで実行していない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r374
+
+コミット後にstrict release gateをfresh再取得した。artifact `output/playwright/heavy-capability-release-gate-20260927-r1/summary.json`、capturedAt `2026-09-27T01:38:05.017Z`、`ok=false`。今回のlocal capability commitによるdirty worktree失敗はなく、残る7件はproduction monitor/UI pair、mass-market QA、Lightchain all-feature order previews、G618 scale ops、H601 rights、H602 billing completion、generation scorecardで、いずれも別のproduction/operator/provider証跡を要する。再送、deploy、課金、公開、破壊的cleanupは行っていない。Goal active。
