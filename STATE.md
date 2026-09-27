@@ -22735,3 +22735,7 @@ Goal再開後にAdaptive transportは復旧し、`runtime_status`はgraph runtim
 # Heavy Chain current state — 2026-09-27 r484
 
 workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/final_review`で、`capacity_blocked`の復旧対象が存在しないことを確認した。従ってruntimeの推奨`workflow_fork`はこのHeavy packageへ適用できない。managed packageの`automatic_dispatch=false`は意図的holdであり、同じrunのmanifestを書き換えたり新規r2/r3 packageを作ったりせず、既存plan/packageを保持する。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r485
+
+再開後2回目のfresh readbackでも`runtime_status`はgraph/live processを確認したが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`で変化なし。Astra claim/startは未発行。重複run・manifest変更・代替route・provider/auth/billing/publicationは0。blocked auditは再開後2回目としてGoal activeを維持する。
