@@ -22597,3 +22597,11 @@ full strict gateを`2026-09-27T04:47:22.651Z`に実行した。`ok=false`、fail
 H602 billing completion、generation scorecardの4件。mass-market QAとH601 rights readbackはfresh current artifactでpassし、worktreeのtracked変更はcommit済み。
 monitor/G618は正規token+brand scope、H602はlive constraint・quota/checkout・no-real-charge・transaction/entitlement・operator decision、scorecardは
 同一run provider receiptとprivate-R2 chainが再開条件。token/cookie抽出、rights承諾、決済、公開、provider dispatchは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r454
+
+公式Supabase MCPで`heavy-chain-production`（`ghwjymozrwmcrpjqvbmo`）をread-only確認し、プロジェクト状態`INACTIVE`を取得した。公式table readbackはconnection timeoutで、
+DB password・service role・browser tokenを表示/保存せず、restore・migration・DB書込みは行っていない。CLI 2.106.0のhelpでは`db query`と`db advisors`が存在する。
+`npm run verify:h602-billing`はlocal contract `ok=true`（production proofはnot verified）、`verify:h602-production-completion-readback`と`verify:h602-operator-readiness`は既存readbackの6 blockerを再確認、
+`verify:g618-scale-ops`はexplicit Cloudflare origin/brand/live session/limits不足、`verify:generation-scorecard`はcanonical visual-scorecard artifact missingでfailした。
+正本補足は`work/heavy-chain-h602-supabase-official-readback-20260927-r1.json`。Goal active。
