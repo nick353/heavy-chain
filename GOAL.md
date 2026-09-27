@@ -11856,3 +11856,7 @@ shell環境に`OPENAI_API_KEY`という変数名が存在することだけを�
 # Goal progress — 2026-09-27 r632
 
 公開Heavy APIのfresh read-only readbackを実行し、`GET /v1/health`が`200`で`status=ok`、`service=heavy-api`、`media=private-r2`、`heavyEntitlementEnabled=true`を返すことを確認した。未認証のentitlement readは`401 unauthorized`、provider-actionのGETは`404 not_found`、usageはbrand scope不足で`400 invalid_brand_id`となり、未認証provider実行や偶発的副作用は確認されなかった。これは稼働・fail-closed境界の証拠であり、provider receipt/R2 persistence/Organization Verificationを完了扱いにはしない。正本は`work/heavy-chain-image-production-health-readback-20260927-r1.json`と更新済みresume manifest。動画はdeferred、Goal active。
+
+# Goal progress — 2026-09-27 r633
+
+Cloudflare `wrangler deployments list --config wrangler.production.jsonc`をread-only実行し、Heavy APIの本番deployment履歴と直近version `529f72bc-c79e-45e4-a9cb-39f8407259ab`（100% traffic）を確認した。Cloudflare出力のsourceはUnknownでGit SHA対応がないため、現行local HEADが本番へ反映済みとは断定しない。deployは実行しておらず、provider/R2/billing/publication/secret効果は0。正本は`work/heavy-chain-image-deployment-readback-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。

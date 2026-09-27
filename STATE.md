@@ -23341,3 +23341,7 @@ shell環境の`OPENAI_API_KEY`変数名のみpresence確認。secret値は未読
 # Heavy Chain current state — 2026-09-27 r632
 
 公開Heavy APIをfresh read-only確認。`/v1/health`は200でservice/Private R2/Heavy entitlementの稼働設定を返し、未認証entitlementは401、provider-action GETは404、usageはbrand scope不足で400。稼働とfail-closed境界は確認できたが、authenticated provider receipt、OpenAI verification、D1/R2 reconciliationは未証明。動画はdeferred。正本は`work/heavy-chain-image-production-health-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r633
+
+本番Heavy APIのCloudflare deployment履歴をread-only確認。直近version `529f72bc-...`は100%配信だがsourceがUnknownでGit SHA不明のため、local HEADとの対応は未証明。deployは行わず、provider receipt/R2/reconciliation/課金/publicationも未実行。動画はdeferred。正本は`work/heavy-chain-image-deployment-readback-20260927-r1.json`と更新済みresume manifest、Goal active。

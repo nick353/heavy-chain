@@ -1,0 +1,46 @@
+{
+  "schema": "heavy-chain.image-deployment-readback.v1",
+  "capturedAt": "2026-09-27T11:00:00Z",
+  "sourceRevision": "adaa176",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "deployTriggered": false,
+    "externalEffects": 0
+  },
+  "worker": "heavy-chain-api",
+  "config": "cloudflare/heavy-api/wrangler.production.jsonc",
+  "latestDeployment": {
+    "createdAt": "2026-09-26T23:49:16.139Z",
+    "author": "nichika2000823@gmail.com",
+    "source": "Unknown (deployment)",
+    "message": "-",
+    "versionId": "529f72bc-c79e-45e4-a9cb-39f8407259ab",
+    "traffic": "100%",
+    "versionCreatedAt": "2026-09-26T23:49:15.592Z",
+    "tag": "-"
+  },
+  "historyHighlights": [
+    {
+      "createdAt": "2026-09-24T20:26:03.053Z",
+      "versionId": "c314b5fe-49e1-4777-805d-63f70feaf8b3",
+      "message": "Exact workspace save readback reconciliation",
+      "traffic": "100%"
+    },
+    {
+      "createdAt": "2026-09-26T23:43:04.942Z",
+      "versionId": "38d2396d-0bbb-4ba7-95ff-cacb9c3400cc",
+      "message": "-",
+      "traffic": "100%"
+    }
+  ],
+  "conclusion": {
+    "productionDeploymentExists": true,
+    "latestVersionIsFullyRouted": true,
+    "gitShaCorrespondence": "unknown",
+    "currentLocalHeadIsProvenDeployed": false,
+    "providerReceipt": "not_proven",
+    "nextGate": "Complete Astra-approved image migration and deterministic checks, then deploy only within the approved release boundary and perform fresh health plus authenticated provider readback."
+  }
+}

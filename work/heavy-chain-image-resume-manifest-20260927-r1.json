@@ -15,7 +15,8 @@
     "work/heavy-chain-openai-image-opus-plan-20260927-r2.json",
     "work/heavy-chain-openai-image-official-readback-20260927-r1.json",
     "work/heavy-chain-openai-image-binding-audit-20260927-r1.json",
-    "work/heavy-chain-image-production-health-readback-20260927-r1.json"
+    "work/heavy-chain-image-production-health-readback-20260927-r1.json",
+    "work/heavy-chain-image-deployment-readback-20260927-r1.json"
   ],
   "freshReadback": {
     "observedAt": "2026-09-27T10:59:40Z",
