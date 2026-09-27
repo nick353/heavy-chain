@@ -1,0 +1,33 @@
+{
+  "schema": "heavy-chain.image-production-dry-run-fresh-readback.v1",
+  "capturedAt": "2026-09-27T11:32:19Z",
+  "sourceRevision": "f4adc6da4a652a692d705b929d7d1dfa5cf469cf",
+  "command": "npx wrangler deploy --dry-run --config wrangler.production.jsonc --outdir <temporary-directory>",
+  "exitCode": 0,
+  "scope": {
+    "readOnly": true,
+    "upload": false,
+    "deploy": false,
+    "providerSubmit": false,
+    "secretValuesRead": false,
+    "billing": false,
+    "publication": false,
+    "video": "deferred_by_user"
+  },
+  "candidateConfig": {
+    "AI_IMAGE_PROVIDER": "openai",
+    "AI_IMAGE_ENABLED": "true",
+    "AI_IMAGE_ALLOWED_ACTIONS": ["generate-image", "edit-image", "model-matrix"],
+    "bindings": ["D1", "R2", "AUTH_SERVICE", "AI"]
+  },
+  "bundledOpenAIModels": [
+    "gpt-image-1",
+    "gpt-image-1-mini",
+    "gpt-image-1.5",
+    "gpt-image-2",
+    "gpt-image-latest"
+  ],
+  "requiredAcceptedModelAbsent": "gpt-image-2.5-sunburst",
+  "interpretation": "The local production candidate is configured for OpenAI, but the accepted Sunburst model identifier is not present in the current bundle. No deployment was attempted.",
+  "nextGate": "After verified Astra engineering guidance, update the image model/parser/UI scope and deterministic tests, then rerun this dry-run before any authorized deploy."
+}

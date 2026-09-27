@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-current-wave-fresh-readback.v1",
-  "capturedAt": "2026-09-27T11:30:43Z",
-  "sourceRevision": "068f17c",
+  "capturedAt": "2026-09-27T11:32:19Z",
+  "sourceRevision": "f4adc6d",
   "scope": {
     "currentWave": "image_generation",
     "video": "deferred_by_user",
@@ -90,6 +90,14 @@
     "primaryRows": 0,
     "issue": "scorecard_artifact_missing:output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json",
     "historicalArtifactsPromoted": false
+  },
+  "productionDryRun": {
+    "artifact": "work/heavy-chain-image-production-dry-run-fresh-readback-20260927-r2.json",
+    "exitCode": 0,
+    "candidateProvider": "openai",
+    "liveProviderUnchanged": "workers_ai",
+    "sunburstBundled": false,
+    "deployAttempted": false
   },
   "nextGate": "Recover the existing Adaptive runtime and obtain the already-registered Astra image engineering receipt; do not replay the closed transport or deploy while the live provider remains workers_ai."
 }

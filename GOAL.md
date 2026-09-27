@@ -11932,3 +11932,7 @@ strict release gateをskipなしでfresh実行。node syntax、security audit、
 # Goal progress — 2026-09-27 r651
 
 画像generation scorecard verifierをfresh実行。primary scorecardはrows=0で、`output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`が未存在のためFAIL。過去の単一候補・historical artifactはprimaryへコピーせず、実provider同一runの画像・job・storage・signed URL・五軸visual reviewが揃うまで品質合格扱いにしない。動画はdeferred、Goal active。正本は`work/heavy-chain-image-generation-scorecard-fresh-readback-20260927-r1.json`と更新済みresume manifest。
+
+# Goal progress — 2026-09-27 r652
+
+Cloudflare production dry-runをfresh実行。候補configはOpenAI・image actions enabled・D1/R2/AUTH_SERVICE/AI bindingsを確認したが、bundle内モデルは`gpt-image-1`、`gpt-image-1-mini`、`gpt-image-1.5`、`gpt-image-2`、`gpt-image-latest`のみで、承認済みSunburst identifierは未反映。本番live versionは変更せず、deploy/upload/provider submitは0。動画はdeferred、Goal active。正本は`work/heavy-chain-image-production-dry-run-fresh-readback-20260927-r2.json`と更新済みresume manifest。

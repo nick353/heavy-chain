@@ -23417,3 +23417,7 @@ strict release gateは未承認。local command 16件はPASSしたが、producti
 # Heavy Chain current state — 2026-09-27 r651
 
 画像generation scorecardはprimary rows=0、実provider同一runのvisual-scorecardが未存在でFAIL。historical artifactの流用はしていない。認証済み生成receiptとremote persistence readback後に、実画像・job pairing・storage/signed URL・五軸reviewを同一runで作る必要がある。動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r652
+
+production dry-runはOpenAI候補configを通過したが、bundleに承認済みSunburst modelは未反映。live Workerは変更なし、deploy/upload/provider submit/secret値読取は0。Astra設計receipt後にモデル/parser/UI/testを更新し、再度dry-runが必要。動画はdeferred、Goal active。
