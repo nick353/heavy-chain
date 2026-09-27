@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T11:27:37Z",
-  "sourceRevision": "3a5a396",
+  "capturedAt": "2026-09-27T11:30:43Z",
+  "sourceRevision": "068f17c",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -33,10 +33,11 @@
     "work/heavy-chain-goal-readiness-fresh-20260927-r1.json",
     "work/heavy-chain-openai-image-readiness-fresh-20260927-r1.json",
     "work/heavy-chain-image-current-wave-fresh-readback-20260927-r1.json",
-    "work/heavy-chain-image-release-gate-full-readback-20260927-r1.json"
+    "work/heavy-chain-image-release-gate-full-readback-20260927-r1.json",
+    "work/heavy-chain-image-generation-scorecard-fresh-readback-20260927-r1.json"
   ],
   "freshReadback": {
-    "observedAt": "2026-09-27T11:27:37Z",
+    "observedAt": "2026-09-27T11:30:43Z",
     "evidenceRefsPresent": true,
     "runtimeProcessObserved": false,
     "worktree": "clean",

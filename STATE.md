@@ -23413,3 +23413,7 @@ H601 static guardはPASSだがoperator decision・policy locators・counsel revi
 # Heavy Chain current state — 2026-09-27 r650
 
 strict release gateは未承認。local command 16件はPASSしたが、production monitor/UI pair、G618 scale ops、H602 production completion readbackが未達、generation scorecardはvisual-scorecard artifact missingでFAIL。provider submit/deploy/課金/secret値読取/公開は0、動画はdeferred。正本は`work/heavy-chain-image-release-gate-full-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r651
+
+画像generation scorecardはprimary rows=0、実provider同一runのvisual-scorecardが未存在でFAIL。historical artifactの流用はしていない。認証済み生成receiptとremote persistence readback後に、実画像・job pairing・storage/signed URL・五軸reviewを同一runで作る必要がある。動画はdeferred、Goal active。

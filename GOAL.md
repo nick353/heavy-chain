@@ -11928,3 +11928,7 @@ H601 operator readinessをfresh実行。static guard/source readbackはPASSだ�
 # Goal progress — 2026-09-27 r650
 
 strict release gateをskipなしでfresh実行。node syntax、security audit、G614、G632、G633、H601、H602 readiness、typecheck、build、lint、git diff checkはPASS（16 local command passes）。ただしproduction monitor/UI pair、G618 scale ops baseline、H602 production completion readbackが未達で、generation scorecardはvisual-scorecard artifact missingでFAIL。gateは未承認。外部効果・provider submit・課金・deployは0、動画はdeferred。正本は`work/heavy-chain-image-release-gate-full-readback-20260927-r1.json`と更新済みresume manifest。
+
+# Goal progress — 2026-09-27 r651
+
+画像generation scorecard verifierをfresh実行。primary scorecardはrows=0で、`output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`が未存在のためFAIL。過去の単一候補・historical artifactはprimaryへコピーせず、実provider同一runの画像・job・storage・signed URL・五軸visual reviewが揃うまで品質合格扱いにしない。動画はdeferred、Goal active。正本は`work/heavy-chain-image-generation-scorecard-fresh-readback-20260927-r1.json`と更新済みresume manifest。
