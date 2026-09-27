@@ -10861,3 +10861,8 @@ Lightchainのmaterial workbenchにも残っていたHeavy entitlement依存を�
 # Goal progress — 2026-09-27 r411
 
 ローディング完了後のfresh production readbackで、`/generate?feature=campaign-image`のHeavy gateが`Heavy利用条件を確認するにはログインしてください`として表示された。旧`権限がありません`は出ていない。Companionのsemantic＋visual readback、external action false、session/tab cleanupを確認した。これで、Lightchain境界修正は維持しつつ、Heavy実生成に必要な残存認証stateが本物のブロッカーであることを切り分けた。H601 artifact/validatorはこの現行メッセージと認証不足を反映する設計へAstra判断後に更新する。Goalはactive。
+# Goal progress — 2026-09-27 r412
+
+同一Companion sessionで`/generate?feature=campaign-image`のHeavy entitlementをsettleまで待って再確認した。Heavy entitlement resource timingを観測し、初期の一時的なlogin-required表示ではなく、現在は`Heavy側の利用条件と権利表明を確認してください`へ収束。terms全文は表示、既存terms同意はchecked、リクエスト単位rights attestationはunchecked、生成submitは0回。visual viewport/fullPage、same-tab semantic readback、external action false、cleanup completeを記録した。認証済みshellとHeavy entitlement endpointの利用状態は確認できたため、旧r411の「認証state不足」は暫定判断として訂正する。
+
+残るHeavy側のUI blockerは、入力素材・プロンプトの権利を利用者本人が確認して行う明示的attestationと通常の必須入力である。本人の法的表明を自動でチェックしたり、provider生成を推測でdispatchしたりしない。H601 production artifact/validatorは旧Light permission surface期待のままなので、現行Heavy terms/rights安全証跡に合わせたAstra判断後の更新が必要。production provider receipt、R2 durable save/reuse/reload/reconciliation、video、monitor/UI、G618、H601/H602、scorecard、billing、publishは未完了。Goal active。

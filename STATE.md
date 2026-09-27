@@ -22304,3 +22304,8 @@ deploy後strict gateを再実行（capturedAt `2026-09-27T02:34:52.067Z`、`ok=f
 # Heavy Chain current state — 2026-09-27 r380
 
 ローディング完了を`page.waitFor`で確認してから`/generate?feature=campaign-image`を再読込した。Heavy gateは表示され、`data-testid=heavy-entitlement-gate`の文言は`Heavy利用条件を確認するにはログインしてください`（初期pending表示も同一gateで確認）。旧`権限がありません`ではなく、現行のHeavy認証不足メッセージである。visual readback 58,869 bytes、provider/external action false、session/tab cleanup complete。したがって現行UIの残ブロッカーはHeavy認証state不足であり、旧H601 fixtureの期待値は廃止・更新対象。Goal active。
+# Heavy Chain current state — 2026-09-27 r412
+
+同一Companion sessionで`/generate?feature=campaign-image`をローディング完了まで待ってfresh readbackした。Heavy entitlement endpointのresource timingを確認し、gateは初期の一時的な`Heavy利用条件を確認するにはログインしてください`から、settled stateの`Heavy側の利用条件と権利表明を確認してください`へ収束した。terms全文は表示され、既存terms checkboxはchecked、リクエスト単位のrights attestationはuncheckedで、生成は未dispatch。visual screenshotはviewport 58,869 bytes / fullPage 54,487 bytes、external action false、provider receipt unverified、foreign tab mutation false、cleanup complete。証跡は`work/heavy-chain-heavy-entitlement-settled-readback-20260927-r1.json`。
+
+したがって旧r380の「Heavy認証state不足」は暫定readbackとして訂正する。現行production UIの実ブロッカーは、利用者が入力素材とプロンプトの権利を確認して行う明示的なリクエスト単位attestation、および生成入力不足である。これは本人の法的表明なので自動代行・推測はしない。H601の旧`h601_permission_surface_visible` fixture/validatorが現行Heavy terms/rights gateと不整合である点は残り、Astra判断後に現行仕様の安全証跡へ更新する。provider generation、R2、video、billing、publish、secret投入は未実行。Goal active。
