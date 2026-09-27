@@ -12044,3 +12044,7 @@ Heavyの10分QA runnerをprovider-agnosticに修正。Workers AI legacy receipt�
 # Goal progress — 2026-09-28 r680
 
 Video provider boundary/contract/persistence、workspace handoff、provider persistence、Canvas generationの回帰をstrict gateへ統合。clean treeでfresh gateを実行し、Heavy/OpenAI QAと全追加回帰はPASSした。残るFAILはproduction monitor/UI、G618、production H602、generation scorecardの4項目のみ。video providerは未admitのまま誤生成を防ぐfail-closed状態を維持し、provider submit・deploy・課金・公開は0、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r681
+
+Light Chain provider coverage/parityとOpenAI static readinessをstrict release gateへ追加し、clean fresh gateでPASS。readbackはcommit `2d2cb15`へ保存した。コード側のHeavy/Light境界とローカル回帰はgreenだが、Goalの完了条件ではない。残る未達はproduction monitor/UI、G618 scale ops、production H602 billing readback、generation scorecardの4項目。次の依存順は、(1) consumer-auth付きworkspace/monitor readback、(2)認証済みHeavy OpenAI実生成receiptとvisual scorecard、(3) remote durable save→reuse→reload→reconciliation、(4) G618/H602本番readback、(5)全証跡を揃えたstrict release gate再実行。同じAPIキーはローテーションせず、provider submit・deploy・課金・公開・動画変更は0、Goal active。
