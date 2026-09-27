@@ -47,3 +47,19 @@ test('fitting local preview preserves the duplicate-pattern cap', () => {
     ['一度に3パターンまで'],
   );
 });
+
+test('Heavy fitting preview names its own terms gate instead of the Light plan label', () => {
+  assert.deepEqual(
+    buildFittingPreviewBlockers({
+      currentBrandLoaded: true,
+      rightsConfirmed: false,
+      isGenerating: false,
+      garmentImageUrl: 'gallery://garment-1',
+      productDescription: 'Heavy terms boundary check',
+      selectedBodyTypesCount: 1,
+      selectedAgeGroupsCount: 1,
+      patternCount: 1,
+    }),
+    ['Heavy利用条件'],
+  );
+});
