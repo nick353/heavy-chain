@@ -23409,3 +23409,7 @@ H601 static guardはPASSだがoperator decision・policy locators・counsel revi
 # Heavy Chain current state — 2026-09-27 r649
 
 本番API healthのfresh readbackは200、未認証entitlementは401、brand未指定usageは400、model-matrixは404。稼働・認証境界のみ確認し、認証済み画像生成やR2/D1 reconciliationは未証明。production versionは`workers_ai`でconfigの`openai`とdrift、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r650
+
+strict release gateは未承認。local command 16件はPASSしたが、production monitor/UI pair、G618 scale ops、H602 production completion readbackが未達、generation scorecardはvisual-scorecard artifact missingでFAIL。provider submit/deploy/課金/secret値読取/公開は0、動画はdeferred。正本は`work/heavy-chain-image-release-gate-full-readback-20260927-r1.json`と更新済みresume manifest、Goal active。

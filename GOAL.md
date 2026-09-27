@@ -11924,3 +11924,7 @@ H601 operator readinessをfresh実行。static guard/source readbackはPASSだ�
 # Goal progress — 2026-09-27 r649
 
 本番APIのfresh read-only health readbackを追加。`/v1/health`は200でservice=heavy-api・media=private-r2・heavyEntitlementEnabled=true、未認証entitlementは401、brand未指定usageは400、model-matrixは404。これは稼働・認証境界の確認であり、認証済み生成receipt・provider実行・R2/D1 reconciliationの証明ではない。動画はdeferred、外部効果・deploy・secret値読取・課金・公開は0、Goal active。
+
+# Goal progress — 2026-09-27 r650
+
+strict release gateをskipなしでfresh実行。node syntax、security audit、G614、G632、G633、H601、H602 readiness、typecheck、build、lint、git diff checkはPASS（16 local command passes）。ただしproduction monitor/UI pair、G618 scale ops baseline、H602 production completion readbackが未達で、generation scorecardはvisual-scorecard artifact missingでFAIL。gateは未承認。外部効果・provider submit・課金・deployは0、動画はdeferred。正本は`work/heavy-chain-image-release-gate-full-readback-20260927-r1.json`と更新済みresume manifest。
