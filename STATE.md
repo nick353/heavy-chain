@@ -23521,3 +23521,7 @@ Task-owned CompanionでHeavy Web `/designProduction`をread-only fresh取得。�
 # Heavy Chain current state — 2026-09-28 r678
 
 Goal readiness verifierを現行HEAD `e5621a4`でfresh実行し、Cloudflare runtime contract、legacy Supabase runtime除去、auth/media adapter、AI adapter、active gateのlegacy edge entrypoint除去を5/5 PASS。これはstatic readinessのみで、authenticated production generation、AI quality、R2 persistence、browser business completionを証明しない。provider submit・deploy・課金・公開・動画変更は0、Goal active。
+
+# Heavy Chain current state — 2026-09-28 r679
+
+Heavyの10分QA runnerをprovider-agnosticに修正し、Workers AI legacy receipt互換を維持しながら、OpenAI `openai-images-api` receiptを一致backend付きで受入、provider/backend driftをfail-closedにした。新規回帰8/8、Heavy OpenAI選択4/4、lint/typecheck/diff check PASS。strict gateをfresh再実行し、新QA回帰はPASSしたが、production monitor/UI、G618、production H602、generation scorecardの4項目は継続FAIL。キーのローテーション・provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`。
