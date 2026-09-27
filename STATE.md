@@ -22910,3 +22910,7 @@ Lightchain provider coverage 22/22、media gateway/reference 9/9、edge gateway 
 # Heavy Chain current state — 2026-09-27 r527
 
 Heavy core lifecycleをfresh検証し、model-matrix 3/3、Canvas generation readback 10/10、Fitting history 12/12、generation lifecycle 2/2、Generate result readback 4/4、Canvas save recovery/view/client 23/23の合計54/54をpass。lost response no-replay、foreign scope拒否、durable local readback、Canvas/Fitting lineageを確認したが、実remote/provider効果は0。正本は`work/heavy-chain-core-lifecycle-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r528
+
+Lightchain local lifecycleとevidence continuityをfresh passした。deterministic result→save-once→reload→Library reuse→cleanup、およびpre-source admission→negative gates 5件→cleanupを確認し、networkCalls=0・externalActionExecuted=false。正本は`work/heavy-chain-lightchain-local-lifecycle-readback-20260927-r1.json`。production provider/R2 proofではない。Goal active。

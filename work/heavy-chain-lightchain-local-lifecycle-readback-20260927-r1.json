@@ -1,0 +1,28 @@
+{
+  "schema": "heavy-chain.lightchain-local-lifecycle-readback.v1",
+  "capturedAt": "2026-09-27T07:22:00Z",
+  "gitHead": "01bf725",
+  "checks": {
+    "localLifecycle": {
+      "command": "npm run verify:lightchain-local-lifecycle",
+      "ok": true,
+      "runId": "run_heavy_chain_lightchain_local_lifecycle_20260831_r193",
+      "stages": ["deterministic-local-result","save-once","reload-readback","library-reuse-handoff","cleanup"]
+    },
+    "evidenceContinuity": {
+      "command": "npm run verify:lightchain-local-evidence-continuity",
+      "ok": true,
+      "runId": "run_heavy_chain_lightchain_evidence_continuity_20260831_r195",
+      "stages": ["pre-source-admission","result","save-once","reload-readback","library-reuse","negative-gates","cleanup"],
+      "negativeCases": 5,
+      "downstreamStarts": 1
+    }
+  },
+  "externalEffects": {
+    "networkCalls": 0,
+    "provider": 0,
+    "publication": 0,
+    "billing": 0
+  },
+  "decision": "Lightchain_local_lifecycle_verified_production_unproven"
+}
