@@ -11742,3 +11742,10 @@ Workers identity固定であることをsource auditへ再固定した。Astra L
 strict release gateのfresh終了結果は`ok=false`。未達はproduction monitor/UI pair、G618 scale-ops baseline、production
 H602 billing completion readback、generation scorecardの4系統で、ローカルOpenAI/Light境界テストの合格とは別の本番証跡である。
 provider/R2/billing/deploy/publication/secret読取は0。正本は`work/heavy-chain-release-gate-readback-20260927-r8.json`。Goal active。
+
+# Goal progress — 2026-09-27 r607
+
+video boundary `1/1`、video contract `3/3`、video persistence `4/4`、workspace handoff `3/3`、auth recovery `3/3`、
+auth hydration readback `4/4`をfresh PASS。videoはimage fallbackへ流れず、remote receiptなしの保存・Canvas handoffを成功扱いにせず、
+auth retry/hydrationもfail-closed境界を維持している。これは本番video/provider receiptやremote save/reuse/reload/reconciliationを
+証明しない。provider/R2/billing/deploy/publication/secret読取は0。正本は`work/heavy-chain-video-auth-contract-readback-20260927-r1.json`。Goal active。
