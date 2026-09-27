@@ -22512,3 +22512,10 @@ production monitor/UI、実provider receipt、remote persistence、H601/H602、s
 brand resolution 11/11がpassし、既知Light featureではHeavy entitlementを呼ばず、未知/未提供featureはdefault-deny、Heavy featureだけが
 server entitlementへ進む契約を確認した。コード変更は行っていない。production API bearer、monitor/UI、provider receipt、remote persistence、
 H601/H602、scorecard、strict gateは未完了。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r442
+
+認証境界検証後にstrict release gateをfresh再実行した。`capturedAt=2026-09-27T03:57:23.782Z`、`ok=false`で、失敗7件は
+production monitor/UI pair（UI artifact missing）、production mass-market QA（stale）、production Lightchain all-feature previews（stale）、
+G618（stale）、production H601 rights（stale）、production H602 billing completion（remaining blockers）、generation scorecard（command fail）で変化なし。
+認証済みWeb sessionの存在だけではAPI bearer/monitor証跡・provider receipt・billing/legal proofにならない。Goal active。

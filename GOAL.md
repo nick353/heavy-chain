@@ -11037,3 +11037,9 @@ API `/v1/profile` は同じブラウザ表示からは `unauthorized`。した�
 sessionとbrand scopeの注入である。token/cookieは抽出・保存・再利用せず、provider/external effectは0、Companion cleanupも完了。
 証跡 `work/heavy-chain-auth-api-continuity-readback-20260927-r1.json`。production monitor/UI、provider receipt、R2 persistence、
 H601/H602、scorecard、strict gateは未完了。Goal active。
+
+# Goal progress — 2026-09-27 r442
+
+fresh strict gate（`2026-09-27T03:57:23.782Z`）を取得したが`ok=false`、7 blockerは不変。production monitor/UI、mass-market、Lightchain all-feature、
+G618、H601、H602、generation scorecardはいずれも正規の現行artifactまたはhuman/provider証跡が不足している。Web側auth continuityは確認済みだが、
+API bearer/monitor tokenの代替ではなく、秘密の抽出・推測・偽artifact生成は行っていない。Goal active。
