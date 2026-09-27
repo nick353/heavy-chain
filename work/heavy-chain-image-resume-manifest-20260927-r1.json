@@ -83,6 +83,8 @@
     "completionAudit": "fresh_read_only_audit_failed_with_explicit_proof_and_release_gate_blockers"
   },
   "latestAstraReadback": {
+    "adaptivePlanId": "aa040f17-6308-444f-8290-cfc78589de2a",
+    "adaptivePlanVersion": 5,
     "runId": "run_heavy_image_astra_engineering_20260927_r6",
     "packageId": "heavy-openai-image-astra-engineering-r6",
     "ownerTaskId": "/root",
