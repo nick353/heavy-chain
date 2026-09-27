@@ -12169,3 +12169,9 @@ Adaptiveのrouter・Graph runtime・role processはliveへ復旧したが、capa
 未観測、既存Astra packageは`launch_allowed=false`のままである。新しいAstra invocation、fork、replay、source変更は行わず、
 plan v15へruntime境界を一度だけ記録した。認証済みworkspace、同じキーの2xx、verified Astra receipt、provider生成receiptは
 依然未達であり、Goalはactiveのまま継続する。
+
+# Adaptive runtime restart readback — 2026-09-28
+
+Graph runtimeの再起動後、build/config identityは一致したがprocess identity mismatchとcapacity未観測が残った。
+role processはliveだがAstra packageは`launch_allowed=false`であり、plan v16へruntime境界を記録した。認証・provider・source・
+deploy・課金・公開・動画は変更していない。
