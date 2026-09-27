@@ -22541,3 +22541,9 @@ monitorも同じlive consumer-auth tokenとbrand scopeを必須とする。一�
 tokenを一時利用する設計で、tokenをファイル・環境変数・証跡へ抽出する代替経路はない。API healthは200だが、Bearerなしの`/v1/profile`は401。
 したがって現状の不足はログインUIの再表示ではなく、正規の同一セッションからAPI/monitorへ渡る認証連続性のreadbackであり、既存の
 `HEAVY_CHAIN_MONITOR_TOKEN`未設定とstrict gate 7 blockersを維持する。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r446
+
+認証境界のlocal runtime testsをfresh実行し、consumer-auth 78/78、Heavy API auth/identity/entitlement 18/18がpassした。
+これは専用Auth Worker・issuer・UUID/profile検証、失効/期限、binding欠落時のfail-closed、Heavy terms/rights/preparation/attestationの
+request bindingを確認するlocal証拠であり、production bearer、monitor、provider receipt、課金、公開の代替ではない。Goal active。

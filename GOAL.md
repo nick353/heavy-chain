@@ -11063,3 +11063,8 @@ Heavy APIの専用`consumer-auth`/Bearer検証とmonitorのtoken+brand scope必�
 表示できることとAPI/monitor用の正規Bearerがあることは別であり、Bearerなしの`/v1/profile`は401、API healthだけは200だった。
 tokenを抽出・保存・環境変数化せず、認証不足を迂回しない。再開条件は同一正規セッションを使ったmonitorのGET-only readbackで、strict gate 7 blockerと
 provider/persistence/H601/H602/scorecard未達は継続する。Goal active。
+
+# Goal progress — 2026-09-27 r446
+
+consumer-auth runtime 78/78、Heavy API auth/identity/entitlement 18/18をfresh passした。local実装の認証・権利・request bindingは健全だが、
+productionの正規Bearer/brand scope readback、monitor/UI、provider/R2、H601/H602、scorecardは未達のまま。Goal active。
