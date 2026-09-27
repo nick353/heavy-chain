@@ -11457,6 +11457,10 @@ Cloudflare provider/readiness static checksをfresh passした。`verify:openai-
 
 既存Astra engineering packageの再開に必要なFitting/Canvas/Image API/ChatEditorの現行行番号付きsource packetをread-onlyで作成した。Fitting/Canvasはrequestless entitlementと`rightsConfirmed`までは存在するが、`generateModelMatrix`およびCanvas/Chatの直接provider経路に`heavyConsent`/`heavyPreparation`が未接続であることを明示した。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r1.md`。コード変更・provider・外部効果は0。Goal active。
 
+# Goal progress — 2026-09-27 r540
+
+Adaptive plan/runtime/packageをfresh readbackした。Opus plan v3はvalid、graph/routerはavailable、外部role processはliveだが、capacityは`capacity_blocked`・`live_capacity_observable=false`、既存Heavy Astra packageは`waiting_human`/`automatic_dispatch_disabled`/claimなし/start receiptなし。重複登録・manual claim/start・代替route・forkは行わず、readbackを`work/heavy-chain-adaptive-readback-20260927-r1.json`へ固定した。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

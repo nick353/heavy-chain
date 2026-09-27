@@ -1,0 +1,10 @@
+{
+  "schema": "heavy-chain.adaptive-readback.v1",
+  "capturedAt": "2026-09-27T07:29:39Z",
+  "gitHead": "87e4908",
+  "plan": {"id":"324a1767-2456-4822-a565-89d1c9cb3e4b","version":3,"valid":true,"engineeringReady":false},
+  "runtime": {"graphAvailable":true,"routerAvailable":true,"capacityGuard":"capacity_blocked","liveCapacityObservable":false,"externalRoleProcessLive":true,"activeRoutes":[]},
+  "package": {"runId":"heavy-cross-surface-consent-adapter-20260927","ownerTaskId":"/root","packageId":"heavy-cross-surface-astra-engineering","state":"waiting_human","holdReason":"automatic_dispatch_disabled","claimId":null,"startReceipt":null},
+  "action": "Do not claim/start manually, fork without an eligible capacity-blocked Graph run, or register a duplicate package. Resume the same managed package after host capacity/approval changes.",
+  "externalEffects": {"provider":0,"billing":0,"publication":0,"deploy":0,"secrets":0}
+}

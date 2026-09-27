@@ -22958,3 +22958,7 @@ Cloudflare provider/readiness static checksをfresh passした。`verify:openai-
 # Heavy Chain current state — 2026-09-27 r539
 
 既存Astra engineering packageの再開に必要なFitting/Canvas/Image API/ChatEditorの現行行番号付きsource packetをread-onlyで作成した。Fitting/Canvasはrequestless entitlementと`rightsConfirmed`までは存在するが、`generateModelMatrix`およびCanvas/Chatの直接provider経路に`heavyConsent`/`heavyPreparation`が未接続であることを明示した。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r1.md`。コード変更・provider・外部効果は0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r540
+
+Adaptive plan/runtime/packageをfresh readbackした。Opus plan v3はvalid、graph/routerはavailable、外部role processはliveだが、capacityは`capacity_blocked`・`live_capacity_observable=false`、既存Heavy Astra packageは`waiting_human`/`automatic_dispatch_disabled`/claimなし/start receiptなし。重複登録・manual claim/start・代替route・forkは行わず、readbackを`work/heavy-chain-adaptive-readback-20260927-r1.json`へ固定した。Goal active。
