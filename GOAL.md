@@ -11311,4 +11311,10 @@ fresh strict gate `output/playwright/10m-product-readiness-g615/release-gate-sum
 
 # Goal progress — 2026-09-27 r478
 
+# Goal progress — 2026-09-27 r500
+
+Lightchain parity/provider/persistence readbackの追加確認は24/25 pass、1 failureだった。失敗は
+`scripts/verify-parity-entry-history-readback.test.ts`の`oriented-design-persisted-history`期待で、現行
+`LightchainOrientedDesignPage`は`53a74f6`で本家ソース一致のプロジェクト／参考事例UIへ置換され、旧履歴パネルとtestidを意図的に削除している。従って旧テストと現行UIの契約ドリフトと診断し、履歴パネルを推測復元せず、`work/heavy-chain-parity-history-contract-diagnosis-20260927-r1.md`へ証拠と次のAstra判断範囲を固定した。provider/R2/auth/billing/publication/破壊操作は0。Goal active。
+
 provider呼び出しとentitlement readを横断再監査した。`LightchainWorkbenchPage.tsx` と `LightchainMaterialWorkbenchPage.tsx` は`isHeavyOwnedFeature`でHeavy ownershipを明示判定し、fabric/printing等の既知Light featureではHeavy entitlementを呼ばない。`FittingPage.tsx`の`model-matrix`と`CanvasEditorPage.tsx`のHeavy経路だけが、status GET/`rightsConfirmed`に留まり、GeneratePageと同じrequest-scoped `heavyConsent`/`heavyPreparation`を未接続。Focused suiteはHeavy capability/preflight、Canvas/Chat entitlement/readback、Fitting preview、Light permission parityを合計40/40 pass。ソース変更・provider・auth secret・課金・公開は0。Astra packageは引き続き`waiting_human`/`automatic_dispatch_disabled`でclaim/startなし、Goal active。
