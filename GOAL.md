@@ -11012,6 +11012,10 @@ Goal active。
 
 `verify:goal-readiness:incomplete-ok`はCloudflare runtime/static契約を5/5 passしたが、production generation・AI quality・R2 persistence・browser business completionは証明しない。続けて`verify:10m-completion:incomplete-ok`をfresh実行し、`ok=false`、16 blocker（G617/G619/G669/G670未accept、H601/H602 open、provider/monitor/G618/mass-market/Lightchain/H601/H602 proof不足、G619 verifierとrelease gate command failure）を確認した。これは現行Goalの未達を正しく保持する結果であり、外部効果・auth secret・provider・課金・公開は0。Goal active。
 
+# Goal progress — 2026-09-27 r481
+
+Adaptive MCPの`runtime_status`、既存Astra package status、保存済みOpus plan readをfresh取得しようとしたが、3呼出しすべて同一の`Transport closed`で失敗した。シェルreadbackでは外部role processは存在する一方、graph runtime PIDは現行process一覧に無く、`git diff --check`はpass、10M audit artifactは16 blockerのまま。Transport closed後の同一接続再試行・強制再起動・新規package登録は行っていない。既存plan/packageは保持し、runtimeの正常再接続後に同じIDでread-only再開する。Goal active。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
