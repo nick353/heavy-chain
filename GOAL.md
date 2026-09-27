@@ -11020,6 +11020,10 @@ Adaptive MCPの`runtime_status`、既存Astra package status、保存済みOpus 
 
 次turnのfresh readbackでもAdaptive `runtime_status`は同一`Transport closed`で、`opencode_go_roles` processだけが生存しgraph runtime processは不在だった。Astra packageのclaim/start、source mutation、provider/auth/billing/publicationは実行不能なまま。既存run/packageを再登録・再送せず、同一実質blocker（Adaptive runtime unavailable）が継続したため、blocked auditの条件を満たすか判定する。
 
+# Goal progress — 2026-09-27 r483
+
+Goal再開後にAdaptive transportは復旧し、`runtime_status`はgraph runtime availableを返した。ただし`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、同じmanaged packageは`waiting_human`/`automatic_dispatch_disabled`/`claim_id=null`のまま。保存済みOpus planは`plan_valid=true`、`engineering_ready=false`。このfresh runtime証拠をplan version 3へ`waiting_human` progressとして記録した。新規run、代替route、source/provider/auth/billing/publication変更は0。Goal active。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
