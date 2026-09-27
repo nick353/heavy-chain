@@ -23116,3 +23116,7 @@ Heavy側のcapacityとpackageは変化なし。別Planner admissionはHeavyのru
 # Heavy Chain current state — 2026-09-27 r581
 
 現行HEAD `3ef5deb`でLight/Heavy境界をfresh検証し、43/43 pass。既知Light featureはHeavy entitlementを呼ばず、Heavyは明示consent・unsupported/video fail-closed・durable promotion gateを維持している。provider/R2/billing/publication/secret外部効果は0。正本は`work/heavy-chain-light-heavy-boundary-readback-20260927-r1.json`。Astra packageはcapacity-blockedのままで、Heavy adapterとproduction証跡は未完了。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r582
+
+Adaptive runtimeはgraph/live process availableだがcapacity guardは`capacity_blocked`、Heavy packageは`waiting_human` / `automatic_dispatch_disabled`、claim/startなし。別Planner admissionはHeavyとは無関係にcancelledで、流用・割込みしていない。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r4.json`。provider/R2/billing/publication/secret外部効果は0、Goal active。

@@ -11632,3 +11632,7 @@ Adaptive runtimeと既存Heavy packageをfresh readbackした。runtimeはgraph 
 # Goal progress — 2026-09-27 r581
 
 現行HEAD `3ef5deb`でHeavy/Light ownership・entitlement・permission parityの決定的境界テストを再実行し、43 tests / 43 passed / 0 failedを確認した。既知Light featureのHeavy entitlement除外、Heavy-only consentの分離、unsupported/video fail-closed、durable result/Canvas lineage gateをfreshに再確認した。provider生成、R2 mutation、課金、公開、deploy、secret読取は0。正本は`work/heavy-chain-light-heavy-boundary-readback-20260927-r1.json`。この証跡はproduction provider receipt、remote durable chain、video receipt、monitor/G618、H601/H602、scorecard、strict gateの完了を示さない。Goal active。
+
+# Goal progress — 2026-09-27 r582
+
+Adaptive runtime/packageを再度fresh readbackした。別タスクのPlanner admissionは`cancelled`へ遷移したが、Heavy packageは`waiting_human` / `automatic_dispatch_disabled`、`capacity_blocked`、claim/startなし、fork候補なしのまま。既存Opus planは再利用可能で、HeavyのAstra実行を手動claim/start・代替route・重複forkで迂回していない。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r4.json`。独立したLight/Heavy境界検証は継続し、Goal active。
