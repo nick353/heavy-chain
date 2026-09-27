@@ -23241,3 +23241,10 @@ auth境界も維持。provider/R2/billing/deploy/publication/secret読取は0。
 beta/G618/mass-market/Light all-feature production readback、production H601/H602、public entrypoint、generation scorecard、
 release verifier failureが未証明。provider/R2/billing/deploy/publication/secret読取は0。正本は
 `work/heavy-chain-10m-completion-audit-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r609
+
+H601 legal safety、H602 Cloudflare contract `3/3`、G620 security ops、G614 operations docs、G632 incident response、G633
+scale alertingをfresh PASS。production H602 completion、no-real-charge/transaction readback、production traffic/qualityは未証明。
+provider/R2/billing/deploy/publication/secret読取は0。正本は
+`work/heavy-chain-security-rights-billing-ops-readback-20260927-r1.json`。Goal active。
