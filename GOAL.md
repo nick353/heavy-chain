@@ -1,4 +1,11 @@
-# Goal progress — 2026-09-27 r396
+# Goal progress — 2026-09-27 r397
+
+## Video provider production preflight — 2026-09-27
+
+production D1のread-only検索でvideo/motion/story系generation jobは0件だった。証跡を
+`work/heavy-chain-video-provider-preflight-20260927.json`へ保存し、provider receiptがないことを明示した。
+local video contract/boundary PASSだけでは本番video admission、remote media、reuse/reload/reconciliationを証明しない。
+Goalはactive。
 
 ## Workspace persistence preflight — 2026-09-27
 

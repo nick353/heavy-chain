@@ -1,4 +1,11 @@
-# Heavy Chain current state — 2026-09-27 r274
+# Heavy Chain current state — 2026-09-27 r275
+
+## Video provider production preflight — 2026-09-27
+
+production D1をread-only検索し、`feature_type`にvideo/motion/storyを含むgeneration jobは0件だった。
+したがって現行productionにはvideo provider receiptを示す行がなく、D1/R2/provider writeは0件。
+証跡は`work/heavy-chain-video-provider-preflight-20260927.json`。local video contractがPASSでも、本番video
+source/credential admission、same-run provider dispatch、remote media readback、reuse/reload/reconciliationは未達。
 
 ## Workspace persistence preflight — 2026-09-27
 
