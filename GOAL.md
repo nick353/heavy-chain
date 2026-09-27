@@ -16,7 +16,7 @@ permission surfaceは変更していない。Goalはactive。
 
 H602 fail-closed readbackを`2026-09-27T00:03:18.063Z`へ更新したが、quota enforcement、checkout-disabled、
 no-real-charge proof、transaction/entitlement readback、operator decision、live constraint readbackは未達。
-最新strict gateは`ok=false`で、production monitor/UI、期限切れMass-market/Light feature証跡、G618、H601、
+最新strict gate（`2026-09-27T00:10:05.046Z`）は`ok=false`で、production monitor/UI、期限切れMass-market/Light feature証跡、G618、H601、
 H602、旧scorecard artifactが残る。資格情報・法務判断・決済値を推測して埋めず、独立して更新できる証跡から進める。
 
 ## Readback-only gate refresh — 2026-09-27
