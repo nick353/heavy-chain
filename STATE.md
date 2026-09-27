@@ -22309,3 +22309,10 @@ deploy後strict gateを再実行（capturedAt `2026-09-27T02:34:52.067Z`、`ok=f
 同一Companion sessionで`/generate?feature=campaign-image`をローディング完了まで待ってfresh readbackした。Heavy entitlement endpointのresource timingを確認し、gateは初期の一時的な`Heavy利用条件を確認するにはログインしてください`から、settled stateの`Heavy側の利用条件と権利表明を確認してください`へ収束した。terms全文は表示され、既存terms checkboxはchecked、リクエスト単位のrights attestationはuncheckedで、生成は未dispatch。visual screenshotはviewport 58,869 bytes / fullPage 54,487 bytes、external action false、provider receipt unverified、foreign tab mutation false、cleanup complete。証跡は`work/heavy-chain-heavy-entitlement-settled-readback-20260927-r1.json`。
 
 したがって旧r380の「Heavy認証state不足」は暫定readbackとして訂正する。現行production UIの実ブロッカーは、利用者が入力素材とプロンプトの権利を確認して行う明示的なリクエスト単位attestation、および生成入力不足である。これは本人の法的表明なので自動代行・推測はしない。H601の旧`h601_permission_surface_visible` fixture/validatorが現行Heavy terms/rights gateと不整合である点は残り、Astra判断後に現行仕様の安全証跡へ更新する。provider generation、R2、video、billing、publish、secret投入は未実行。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r413
+
+`npm run verify:generation-scorecard`をfresh実行したが、正規の実provider visual scorecardが存在せず、`primary`で
+`scorecard_artifact_missing:output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`となった。これは
+scorecard validatorの不具合ではなく、実生成・same-run readback・画像評価の正本証跡が未作成であることを確認したもの。既存の
+provider/R2 evidenceを推測でscorecardへ転記したり、画像評価を捏造したりはしていない。Goal active。

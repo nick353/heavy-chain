@@ -10866,3 +10866,10 @@ Lightchainのmaterial workbenchにも残っていたHeavy entitlement依存を�
 同一Companion sessionで`/generate?feature=campaign-image`のHeavy entitlementをsettleまで待って再確認した。Heavy entitlement resource timingを観測し、初期の一時的なlogin-required表示ではなく、現在は`Heavy側の利用条件と権利表明を確認してください`へ収束。terms全文は表示、既存terms同意はchecked、リクエスト単位rights attestationはunchecked、生成submitは0回。visual viewport/fullPage、same-tab semantic readback、external action false、cleanup completeを記録した。認証済みshellとHeavy entitlement endpointの利用状態は確認できたため、旧r411の「認証state不足」は暫定判断として訂正する。
 
 残るHeavy側のUI blockerは、入力素材・プロンプトの権利を利用者本人が確認して行う明示的attestationと通常の必須入力である。本人の法的表明を自動でチェックしたり、provider生成を推測でdispatchしたりしない。H601 production artifact/validatorは旧Light permission surface期待のままなので、現行Heavy terms/rights安全証跡に合わせたAstra判断後の更新が必要。production provider receipt、R2 durable save/reuse/reload/reconciliation、video、monitor/UI、G618、H601/H602、scorecard、billing、publishは未完了。Goal active。
+
+# Goal progress — 2026-09-27 r413
+
+生成品質スコアカードの正規コマンドをfresh実行した。`npm run verify:generation-scorecard`は、primary artifact
+`output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`が存在しないため失敗した。これにより、
+残件は「検証コマンドを実行していない」ではなく、実provider生成、same-run job/image/storage/signed-URL readback、画像ごとの
+5軸評価がまだ正本化されていないことを再確認した。秘密・認証Cookie・権利表明を推測せず、scorecardやreadbackの捏造も行っていない。Goal active。
