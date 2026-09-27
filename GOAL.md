@@ -11437,6 +11437,10 @@ Lightchain route parity 34/34、material contract 28/28、UI control boundaries 
 
 r532のrelease-gate要約をtop-level `failed`まで再照合し、実際の失敗は4件（production monitor/UI、G618、H602、generation scorecard）であることを訂正した。r2 artifactはreadback項目だけを抽出しており不完全だったため、正本を`work/heavy-chain-fresh-release-gate-readback-20260927-r3.json`へ更新。H602 billing readiness、typecheck、build、lint、git diff checkはpassだが、production completionは未達。Goal active。
 
+# Goal progress — 2026-09-27 r535
+
+追加のCanvas/Libraryローカル契約をfresh再検証し、partial edit 15/15、source metadata 6/6、Library handoff 10/10、Canvas brand readback 1/1、local upload persistence 11/11の合計43/43をpass。remote provider receipt、authenticated R2 durable chain、billing、publicationは0。正本は`work/heavy-chain-canvas-contract-readback-20260927-r1.json`。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

@@ -22938,3 +22938,7 @@ Lightchain route parity 34/34、material contract 28/28、UI control boundaries 
 # Heavy Chain current state — 2026-09-27 r534
 
 r532のrelease-gate要約をtop-level `failed`まで再照合し、実際の失敗は4件（production monitor/UI、G618、H602、generation scorecard）であることを訂正した。r2 artifactはreadback項目だけを抽出しており不完全だったため、正本を`work/heavy-chain-fresh-release-gate-readback-20260927-r3.json`へ更新。H602 billing readiness、typecheck、build、lint、git diff checkはpassだが、production completionは未達。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r535
+
+追加のCanvas/Libraryローカル契約をfresh再検証し、partial edit 15/15、source metadata 6/6、Library handoff 10/10、Canvas brand readback 1/1、local upload persistence 11/11の合計43/43をpass。remote provider receipt、authenticated R2 durable chain、billing、publicationは0。正本は`work/heavy-chain-canvas-contract-readback-20260927-r1.json`。Goal active。

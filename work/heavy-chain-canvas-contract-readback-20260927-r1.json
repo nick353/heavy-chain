@@ -1,0 +1,22 @@
+{
+  "schema": "heavy-chain.canvas-contract-readback.v1",
+  "capturedAt": "2026-09-27T07:26:52Z",
+  "gitHead": "46ce1cd",
+  "checks": [
+    {"command":"npm run test:canvas-partial-edit","passed":15,"failed":0},
+    {"command":"npm run test:canvas-source-metadata","passed":6,"failed":0},
+    {"command":"npm run test:library-canvas-handoff","passed":10,"failed":0},
+    {"command":"npm run test:canvas-brand-readback","passed":1,"failed":0},
+    {"command":"npm run test:canvas-local-upload-persistence","passed":11,"failed":0}
+  ],
+  "totalPassed": 43,
+  "externalEffects": {
+    "providerSubmit": 0,
+    "networkCalls": 0,
+    "billing": 0,
+    "publication": 0,
+    "deploy": 0,
+    "destructiveCleanup": 0
+  },
+  "decision": "canvas_local_contracts_verified_remote_provider_and_authenticated_durable_proof_unproven"
+}
