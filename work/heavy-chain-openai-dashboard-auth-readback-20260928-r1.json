@@ -1,0 +1,25 @@
+{
+  "schema": "heavy_chain.openai_dashboard_auth_readback.v1",
+  "capturedAt": "2026-09-27T17:23:12Z",
+  "surface": "aos_chrome_companion_profile_instance",
+  "scope": "read-only API-key settings route preflight; no login input, no key inspection, no create/delete/rotate, no billing",
+  "requestedUrl": "https://platform.openai.com/settings/organization/api-keys",
+  "observedUrl": "https://platform.openai.com/login?next=%2Fsettings%2Forganization%2Fapi-keys",
+  "title": "OpenAI Platform",
+  "authenticatedDashboard": false,
+  "apiKeyManagementVisible": false,
+  "credentialValueRead": false,
+  "browserEffect": "known_no_effect",
+  "externalActionExecuted": false,
+  "cleanup": {
+    "sessionClosed": true,
+    "ownerCleanup": "completed",
+    "foreignTabsMutated": false,
+    "unknownEffect": false
+  },
+  "interpretation": {
+    "dashboardSession": "not_authenticated",
+    "sameKeyCannotBeValidatedAgainstDashboardInCurrentProfile": true,
+    "nextAction": "Do not enter credentials or alter API-key state automatically; recheck the same key only after an authorized secret-channel or account-state change is observed."
+  }
+}

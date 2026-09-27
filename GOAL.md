@@ -12052,3 +12052,7 @@ Light Chain provider coverage/parityとOpenAI static readinessをstrict release 
 # Goal progress — 2026-09-28 r682
 
 同じAPIキーをローテーションせず、OpenAI公式Bearer認証のread-only `/v1/models`を再確認。HTTP 401で`invalid_api_key`が返り、キー形状（存在、`sk-proj-`、164文字、空白/バックスラッシュなし）を確認した。organization/project headerを足して解決する段階ではなく、credential自体がOpenAI側で拒否されているため、同じ値のままのprovider再送は停止する。認証済みconsumer workspace/monitor、実生成receipt、visual scorecard、R2再利用/再読込/reconciliation、G618/H602は未完了。ローテーション・secret変更・provider submit・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-openai-api-auth-readback-20260928-r2.json`。
+
+# Goal progress — 2026-09-28 r683
+
+Chrome Companionの同一task-owned read-only sessionでOpenAI PlatformのAPI-key設定URLをfresh確認。ページはAPI-key管理画面ではなくlogin redirectへ遷移し、現行profileにdashboard認証がないことをsemantic＋visual readbackで確認した。キー値の入力・表示・変更、課金、provider生成は行わず、session cleanup completed・foreign tabs変更0。したがって同じキーをローテーションせずに続行するには、外部の正規secret/account stateが変わった後にread-only `/v1/models`を一度再確認する必要がある。Goalの残件（consumer workspace/monitor、OpenAI実生成receipt、scorecard、R2再利用/reload/reconciliation、G618/H602、strict gate、video）は継続未完了。正本は`work/heavy-chain-openai-dashboard-auth-readback-20260928-r1.json`。

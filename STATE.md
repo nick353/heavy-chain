@@ -23537,3 +23537,7 @@ Light Chain provider coverage/parityとOpenAI static readinessをstrict release 
 # Heavy Chain current state — 2026-09-28 r682
 
 同じ既存APIキーを変更せず、OpenAI公式のBearer認証形式でread-only `/v1/models`を再確認。HTTP 401、`invalid_request_error` / `invalid_api_key`を取得し、キー形状は`sk-proj-`・164文字・前後空白/バックスラッシュなし、organization/project headerは未設定だった。これはモデル・課金・権限スコープ以前にcredentialがOpenAI側で拒否された証拠であり、同じ値のまま生成を再送しても復旧しない。ローテーションやsecret変更は行わず、正規のsecret channelで同一キーの有効化・再発行以外の権限変更を待つ。正本は`work/heavy-chain-openai-api-auth-readback-20260928-r2.json`。provider submit・deploy・課金・公開・動画変更は0、Goal active。
+
+# Heavy Chain current state — 2026-09-28 r683
+
+Chrome Companionのtask-owned read-only preflightでOpenAI PlatformのAPI-key設定URLを確認したが、現行profileは`/login?next=.../api-keys`へredirectされ、dashboard認証状態は未成立。キー入力・表示・作成・削除・ローテーション・課金操作は0、browser effectはknown-no-effect、session cleanupはcompleted、foreign tabs変更0。したがって同じAPIキーをdashboard側で検証・復旧する経路も現在のprofileにはなく、HTTP 401 `invalid_api_key`と整合する。正本は`work/heavy-chain-openai-dashboard-auth-readback-20260928-r1.json`。Goal active。
