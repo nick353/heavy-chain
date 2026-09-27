@@ -11749,3 +11749,10 @@ video boundary `1/1`、video contract `3/3`、video persistence `4/4`、workspac
 auth hydration readback `4/4`をfresh PASS。videoはimage fallbackへ流れず、remote receiptなしの保存・Canvas handoffを成功扱いにせず、
 auth retry/hydrationもfail-closed境界を維持している。これは本番video/provider receiptやremote save/reuse/reload/reconciliationを
 証明しない。provider/R2/billing/deploy/publication/secret読取は0。正本は`work/heavy-chain-video-auth-contract-readback-20260927-r1.json`。Goal active。
+
+# Goal progress — 2026-09-27 r608
+
+10M completion auditをfresh実行し、`ok=false`・16 blockersを確認した。未達はG617/G619/G669/G670のgoal acceptance、
+H601/H602、fresh 10-feature generation、beta/G618/mass-market/Light all-feature production readback、production H601/H602、
+public entrypoint、generation scorecard、release verifier failure。ローカル契約PASSを本番完了へ昇格せず、provider/R2/billing/
+deploy/publication/secret読取は0。正本は`work/heavy-chain-10m-completion-audit-readback-20260927-r1.json`。Goal active。
