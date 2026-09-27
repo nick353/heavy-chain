@@ -11872,3 +11872,7 @@ deployment readbackを含む画像waveのresume manifestを現行HEAD `9388985`�
 # Goal progress — 2026-09-27 r636
 
 本番100%配信version `529f72bc-c79e-45e4-a9cb-39f8407259ab`を`wrangler versions view`でread-only確認したところ、実deploymentの`AI_IMAGE_PROVIDER`は`workers_ai`だった。ローカル`wrangler.production.jsonc`は`openai`を選択しているため、本番はOpenAI設定へ未反映であり、実OpenAI provider receiptはまだ成立しない。勝手なdeploy・provider call・課金・secret読取は行っていない。正本は`work/heavy-chain-image-production-version-config-readback-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。
+
+# Goal progress — 2026-09-27 r637
+
+production wrangler configのdry-runを実行し、候補bundleの`AI_IMAGE_PROVIDER=openai`設定は確認できたが、bundle内のmodelは旧`gpt-image-*`のみで`gpt-image-2.5-sunburst`は未実装だった。dry-runはremote deploy/provider call/課金/secret読取なし。Astra承認済みモデル/parser/UI/QA変更前のdeployはfail-closedとした。正本は`work/heavy-chain-image-production-dry-run-readback-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。

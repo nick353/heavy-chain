@@ -1,0 +1,44 @@
+{
+  "schema": "heavy-chain.image-production-dry-run-readback.v1",
+  "capturedAt": "2026-09-27T11:06:30Z",
+  "sourceRevision": "3dec0ff",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "dryRunOnly": true,
+    "remoteDeploy": false,
+    "providerCall": false,
+    "externalEffects": 0
+  },
+  "command": "npx wrangler deploy --dry-run --config wrangler.production.jsonc --outdir <temporary-dir>",
+  "candidateBindings": {
+    "AI_IMAGE_PROVIDER": "openai",
+    "AI_IMAGE_ENABLED": "true",
+    "HEAVY_IMAGE_ENTITLEMENT_ENABLED": "true",
+    "AI_IMAGE_ALLOWED_ACTIONS": "generate-image,edit-image,model-matrix",
+    "d1": "heavy-chain-production-db",
+    "r2": "heavy-chain-private-media",
+    "authService": "consumer-auth"
+  },
+  "bundle": {
+    "totalUploadBytes": 251197,
+    "gzipBytes": 51323,
+    "modelsFound": [
+      "gpt-image-1",
+      "gpt-image-1-mini",
+      "gpt-image-1.5",
+      "gpt-image-2",
+      "gpt-image-latest"
+    ],
+    "sunburstFound": false,
+    "backendIdentityFound": "openai-images-api",
+    "workersFallbackIdentityFound": true
+  },
+  "conclusion": {
+    "productionConfigCandidateUsesOpenAI": true,
+    "sunburstImplementationPresent": false,
+    "safeToDeploy": false,
+    "reason": "Astra-approved model/parser/UI/QA migration is not yet implemented or verified",
+    "nextGate": "Obtain the existing Astra engineering start receipt, implement the accepted model surface, rerun deterministic tests, then repeat this dry-run before any authorized deploy."
+  }
+}

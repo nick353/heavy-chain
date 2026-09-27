@@ -23357,3 +23357,7 @@ shell環境の`OPENAI_API_KEY`変数名のみpresence確認。secret値は未読
 # Heavy Chain current state — 2026-09-27 r636
 
 本番100%配信versionのbinding readbackで`AI_IMAGE_PROVIDER=workers_ai`を確認。local production configの`openai`とはdriftがあり、production OpenAI providerは未反映。deploy/provider call/課金/secret読取は行わず、Astra gate・deterministic regression・明示deploy承認が先。動画はdeferred。正本は`work/heavy-chain-image-production-version-config-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r637
+
+production wrangler dry-runは`AI_IMAGE_PROVIDER=openai`をbundleへ入れるが、Sunburst model IDは存在せず旧allowlistのみ。remote deploy/provider call/課金/secret読取は0。Astra実装gate未取得のためsafe-to-deploy=false。動画はdeferred。正本は`work/heavy-chain-image-production-dry-run-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
