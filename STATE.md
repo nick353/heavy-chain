@@ -22460,3 +22460,14 @@ Lightchainの現行route/contract境界を追加検証した。`npm run test:lig
 `npm run test:lightchain-parity-contract` は9/9でpass。これらはread-onlyのlocal/static/contract証拠であり、production認証、provider生成、
 R2 persistence、monitor、G618、H601/H602、scorecardの未達を解消しない。Astraのownership/acceptance判断なしにstale verifierの期待値や
 Light本家のplan-lock surfaceを変更していない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r436
+
+認証・human-boundary系のfail-closed readbackをfresh化した。`verify:h602-production-completion-readback` は
+`ok=false`のまま、production quota enforcement=false、checkout enabled=true、verified no-real-charge proof=0、
+transaction/entitlement readback=false、live constraint readback未実施を明示した。`verify:h601-operator-readiness` は
+product-side guardのみpassし、Terms/Privacy locator、retention、upload-rights、brand/reference、person/likeness、
+copyright/marketing、commercial-use、counsel/operator decisionの10項目が未添付。`verify:generation-scorecard` はprimary
+scorecard artifact missingでfail。strict gateも`capturedAt=2026-09-27T03:41:55.831Z`、`ok=false`、7 blockers
+(production monitor/UI、mass-market QA、Lightchain all-feature、G618、H601、H602、generation scorecard)を再確認した。
+CodexはApple login、OTP、決済、法的確定、秘密投入を行っていない。Goal active。

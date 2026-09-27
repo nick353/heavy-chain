@@ -10995,3 +10995,11 @@ Lightchainのroute/readback/parity契約を追加でfresh検証し、production 
 parity alias routes 5/5、parity contract 9/9をpassした。local/static契約の健全性は確認できたが、実認証・実provider receipt・
 R2 save/reuse/reload/reconciliation・video・monitor/G618・H601/H602・generation scorecardは依然未完了。Heavy/Light acceptance契約の
 変更はAstra判断前なので行っていない。Goal active。
+
+# Goal progress — 2026-09-27 r436
+
+認証・human-boundary系のreadbackを更新し、H602のquota/checkout/verified proof/transaction readback不足、H601の安全な
+operator decision 10項目未添付、generation scorecard artifact missingを明示した。strict gateは
+`2026-09-27T03:41:55.831Z`に再実行し、7 blockerは変化なし。現時点で不足しているものは秘密を推測して埋める種類ではなく、
+Apple/決済/法的判断/production monitor token/実provider receipt/scorecard等の正規証跡であるため、fail-closedを維持した。
+Goal active。
