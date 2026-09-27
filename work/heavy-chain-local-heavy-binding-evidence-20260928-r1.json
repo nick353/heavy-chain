@@ -1,0 +1,68 @@
+{
+  "schema": "heavy_chain_local_binding_evidence.v1",
+  "capturedAt": "2026-09-27T18:42:37Z",
+  "sourceRevision": {
+    "head": "520d7bdfd5f1c5bcf38b46aa3b357b8f2794e52e",
+    "baseline": "370368b",
+    "sourceDiffCount": 0,
+    "worktreeClean": true,
+    "diffCheck": "pass"
+  },
+  "heavyCallsites": {
+    "chatEditor": {
+      "file": "src/components/ChatEditor.tsx",
+      "line": 167,
+      "binding": "HEAVY_IMAGE_PROVIDER"
+    },
+    "canvasEditor": {
+      "file": "src/pages/CanvasEditorPage.tsx",
+      "line": 2380,
+      "binding": "HEAVY_IMAGE_PROVIDER"
+    },
+    "generatePage": {
+      "file": "src/pages/GeneratePage.tsx",
+      "lines": [1112, 1116, 1117, 1836, 1953],
+      "binding": "heavySurface => HEAVY_IMAGE_PROVIDER; configuration error fails closed"
+    },
+    "lightChain": {
+      "file": "src/pages/LightchainWorkbenchPage.tsx",
+      "line": 178,
+      "binding": "LIGHTCHAIN_GENERATION_PROVIDER",
+      "boundary": "separate from Heavy"
+    }
+  },
+  "heavyApi": {
+    "providerConfig": "cloudflare/heavy-api/src/image-ai.ts:43",
+    "providerMismatchGuard": "cloudflare/heavy-api/src/image-ai.ts:48-50",
+    "openaiAdapter": "cloudflare/heavy-api/src/openai-image.ts",
+    "currentOpenAiGenerationModels": ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"],
+    "sunburstImplemented": false,
+    "externalProviderCalled": false
+  },
+  "tests": {
+    "command": "node --experimental-strip-types --test scripts/verify-heavy-openai-provider-selection.test.ts scripts/verify-provider-persistence-readback.test.ts",
+    "exitCode": 0,
+    "tests": 18,
+    "passed": 18,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "externalEffects": 0,
+    "providerCalls": 0
+  },
+  "fileSha256": {
+    "src/components/ChatEditor.tsx": "11b2cd4d454ead765d6d0d405570c89523a577921b44d3f5e6fa83d3153e015a",
+    "src/pages/CanvasEditorPage.tsx": "4b63fb3fcb1cb2b73d0ed273f4b6e48dec89a48193a57bd2810528303816b4f0",
+    "src/pages/GeneratePage.tsx": "4dcae800500ef9feaa26893265ce042e776804a05c75c09be945f06703725a97",
+    "src/pages/LightchainWorkbenchPage.tsx": "dbd5b15410b004584f7ba3ecab98c7e474102fc8abbd95b0b404c6d37258317d",
+    "cloudflare/heavy-api/src/image-ai.ts": "a03ae5c9f292aa09222191ecb53e8bd8e3151d488c0b9865bd53c4ca01b8e04b",
+    "cloudflare/heavy-api/src/image-ai-contracts.ts": "7a3345912cf2b40f383ea5ba6c059e47246d1a74c2776367946066adb34faf63",
+    "cloudflare/heavy-api/src/openai-image.ts": "16b5ec399825aaf1b0253e56d25e903d7602abd1219ee6afb43b360340a35247"
+  },
+  "remainingBlockers": [
+    "Astra runtime identity and launch receipt are still unverified; managed package remains blocked by capacity/runtime identity mismatch",
+    "Sunburst model support is not implemented",
+    "The unchanged key still returns 401 invalid_api_key; no new provider probe was sent in this run",
+    "No real generation, durable remote save/reuse/reload, reconciliation, deploy, billing, publication, or video evidence"
+  ]
+}

@@ -12175,3 +12175,11 @@ plan v15へruntime境界を一度だけ記録した。認証済みworkspace、�
 Graph runtimeの再起動後、build/config identityは一致したがprocess identity mismatchとcapacity未観測が残った。
 role processはliveだがAstra packageは`launch_allowed=false`であり、plan v16へruntime境界を記録した。認証・provider・source・
 deploy・課金・公開・動画は変更していない。
+
+# Local Heavy binding evidence — 2026-09-28
+
+HeavyのChat/Canvas/Generateが`HEAVY_IMAGE_PROVIDER`を使い、LightchainWorkbenchPageが
+`LIGHTCHAIN_GENERATION_PROVIDER`で分離されていることを再検証。provider selectionとprovider persistence/readbackの
+focused testsは18/18 PASS、source diffはbaseline `370368b`から0、worktree clean。正本は
+`work/heavy-chain-local-heavy-binding-evidence-20260928-r1.json`。これはローカル結線証拠であり、Sunburst実装、Astraの
+verified runtime receipt、同じキーの401解消、実provider生成、remote save/reuse/reload/reconciliation、strict gateを完了扱いにはしない。

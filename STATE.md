@@ -23666,3 +23666,11 @@ Graph runtimeが再起動されbuild/config identityは一致したが、root pr
 role processはliveでheartbeatもfreshだが、Astra packageは`launch_allowed=false`。event
 `adaptive-runtime-build-match-capacity-still-blocked-20260928-r1`をplan v16へ一度だけ記録した。重複起動・別route・provider・
 source・deploy・課金・公開・動画は変更せず、Goalはactiveを維持する。
+
+# Local Heavy binding evidence — 2026-09-28
+
+HeavyのChat/Canvas/Generate呼び出しが`HEAVY_IMAGE_PROVIDER`に固定され、LightchainWorkbenchPageが
+`LIGHTCHAIN_GENERATION_PROVIDER`で独立していることをline-levelで再確認した。Cloudflare側のprovider mismatch guard、
+OpenAI adapter、persistence/readback境界を含むfocused local testsは18/18 PASS（provider call 0、external effect 0）。
+正本は`work/heavy-chain-local-heavy-binding-evidence-20260928-r1.json`。source diffはbaseline `370368b`から0、worktree clean。
+Sunburst未実装、Astra verified invocation/capacity、同じキーの401、実生成・remote save/reuse/reload/reconciliationは未解消。

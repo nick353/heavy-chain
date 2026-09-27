@@ -1,0 +1,349 @@
+{
+  "schema": "heavy_chain.no_rotation_plan_readback.v1",
+  "capturedAt": "2026-09-27T18:42:37Z",
+  "sourceRevision": "520d7bdfd5f1c5bcf38b46aa3b357b8f2794e52e",
+  "plan": {
+    "planId": "aa040f17-6308-444f-8290-cfc78589de2a",
+    "version": 17,
+    "intentFingerprint": "heavy-image-wave-same-key-no-rotation-v1",
+    "dependencyFingerprint": "heavy-chain-head-29713bf-auth-401-gate-v1",
+    "constraint": "Use the existing credential unchanged; no rotation, reissue, secret mutation, or alternate credential.",
+    "authGate": "One same-source read-only GET /v1/models must return valid HTTP 2xx before one controlled generation is considered.",
+    "video": "deferred"
+  },
+  "inheritedImageModelRequirement": {
+    "sourceArtifact": "work/heavy-chain-openai-image-opus-plan-20260927-r2.json",
+    "plannerRoute": "opencode_opus55_planner",
+    "plannerVerified": true,
+    "scope": "image_generation_only",
+    "requiredDefaultModel": "gpt-image-2.5-sunburst",
+    "acceptance": [
+      "New OpenAI image generation without a model uses gpt-image-2.5-sunburst and records it in the receipt.",
+      "Explicit supported models remain unchanged; unsupported models fail without substitution.",
+      "Legacy Workers receipts and old OpenAI model receipts remain readable without rewrite or regeneration.",
+      "OpenAI failure never falls back to Workers or another model and never replays an old receipt.",
+      "QA remains deterministic/mock-only with zero provider/network calls.",
+      "Video files remain unchanged."
+    ],
+    "preserved": true,
+    "implementationStatus": "not_implemented"
+  },
+  "planner": {
+    "route": "opencode_opus55_planner",
+    "provider": "opencode",
+    "modelId": "opencode/claude-opus-5-5",
+    "invocationId": "ses_f1c12d25dffe51uBeOV5aUWP8U",
+    "verified": true,
+    "readOnly": true
+  },
+  "astraEngineering": {
+    "runId": "run_heavy_image_astra_engineering_20260927_r6",
+    "packageId": "heavy-openai-image-astra-engineering-r6",
+    "route": "native_astra_engineering",
+    "provider": "openai",
+    "modelId": "gpt-6-astra",
+    "ownerTaskId": "/root",
+    "claimId": "/root",
+    "sourceRevision": "370368b",
+    "status": "bounded_implementation_spec_complete_runtime_identity_unverified",
+    "verified": false,
+    "blocker": "runtime_invocation_identity_unverified",
+    "invocationId": null,
+    "actualRoute": null,
+    "actualReasoningEffort": null,
+    "implementationSpecReady": true,
+    "lunaAuthorized": false,
+    "outputUse": "bounded specification retained for diagnosis only; no implementation authorization",
+    "boundedScope": {
+      "backend": [
+        "cloudflare/heavy-api/src/openai-image.ts",
+        "cloudflare/heavy-api/src/image-ai-contracts.ts"
+      ],
+      "heavyUi": [
+        "src/pages/GeneratePage.tsx"
+      ],
+      "preserveWithoutChange": [
+        "src/pages/CanvasEditorPage.tsx",
+        "src/components/ChatEditor.tsx",
+        "src/pages/LightchainWorkbenchPage.tsx",
+        "video provider and video files"
+      ],
+      "acceptance": [
+        "Model-omitted OpenAI Heavy generation defaults to gpt-image-2.5-sunburst and records the model in the receipt.",
+        "Explicit supported models remain unchanged; unsupported models fail without substitution.",
+        "Legacy Workers/OpenAI receipts remain readable; no fallback or replay is introduced.",
+        "Deterministic/mock QA proves Heavy/Light/video boundaries without provider calls."
+      ]
+    }
+  },
+  "adaptiveRuntimeReadback": {
+    "capturedAt": "2026-09-27T18:39:16Z",
+    "routerAvailable": true,
+    "graphRuntimeAvailable": true,
+    "capacityGuard": {
+      "blockerCode": "capacity_blocked",
+      "liveCapacityObservable": false,
+      "recovery": "workflow_fork_with_capacity_recovery_after_fresh_state_readback",
+      "retryPolicy": "no_immediate_retry"
+    },
+    "runtimeIdentity": {
+      "buildConfigMatch": true,
+      "processMatch": false,
+      "scope": "build_config_only"
+    },
+    "latestRuntimeStatus": {
+      "graphRuntimeAvailable": true,
+      "graphRuntimeProcessAlive": true,
+      "roleProcessLiveVerified": true,
+      "roleProcessStatus": "running",
+      "roleProcessActiveRoutes": [],
+      "roleProcessHeartbeatAgeSeconds": 0.001,
+      "roleProcessMaxProviderChildrenPerSession": 5,
+      "existingAstraPackage": "blocked_launch_allowed_false",
+      "newAstraInvocationStarted": false
+    },
+    "availableExternalRoutes": [
+      "opencode_go_deepseek_v4_flash_reviewer",
+      "opencode_go_deepseek_v4_flash_verifier",
+      "opencode_go_kimi3_designer",
+      "opencode_go_minimax_m3_executor",
+      "opencode_go_model"
+    ],
+    "newAstraInvocationStarted": false,
+    "interpretation": "Graph runtime restarted with build/config identity matching, and the role process is live, but process identity still differs and capacity remains unobservable and capacity_blocked. No new verified Astra invocation can be claimed; the existing managed Astra package remains blocked and must not be replayed or replaced."
+  },
+  "rightsEntitlementGraphReadback": {
+    "runId": "run_a2a45df3974f4cd0",
+    "status": "waiting",
+    "latestStage": "final_review",
+    "capturedAt": "2026-09-27T18:08:12Z",
+    "astra": {
+      "invocationId": "/root/astra_engineering_heavy_entitlement_v1",
+      "modelId": "gpt-6-astra",
+      "route": "native_astra_engineering",
+      "verified": true,
+      "status": "completed"
+    },
+    "luna": {
+      "verified": true,
+      "status": "completed",
+      "localChecks": [
+        "Heavy API tests 107/107",
+        "Synthetic runtime 1/1",
+        "Entitlement-focused 5/5",
+        "Image AI focused 22/22",
+        "Light parity/source 12/12",
+        "Cloudflare image contract 12/12",
+        "typecheck/build/diff check pass"
+      ]
+    },
+    "productionBoundary": {
+      "enforcement": "OFF",
+      "termsRightsWording": "not_active",
+      "providerDeployment": "not_executed",
+      "productionDocuments": "required",
+      "billingPublication": "not_executed"
+    },
+    "interpretation": "Rights/entitlement plumbing is locally implemented and verified, but production activation and provider generation remain intentionally blocked pending approved terms/rights documents and separate auth/provider gates."
+  },
+  "rightsEntitlementFinalReviewBoundary": {
+    "runId": "run_a2a45df3974f4cd0",
+    "stage": "final_review",
+    "stageObjective": "Review the integrated entitlement result against the approved plan and verification evidence.",
+    "requiredRoute": "native_reviewer_default",
+    "requiredModel": "gpt-6-astra",
+    "status": "waiting_for_final_review_result",
+    "resultPresent": false,
+    "routeCapabilityReadback": {
+      "requiredRouteAvailable": false,
+      "availableReviewerAdapter": "opencode_go_deepseek_v4_flash_reviewer",
+      "substitutionAllowed": false
+    },
+    "productionEnablement": "not_authorized",
+    "interpretation": "The Graph has verified plan/implementation/repair/verify evidence but no final reviewer result; do not treat the waiting stage as approval or production enablement."
+  },
+  "freshLocalEvidence": {
+    "heavyOpenAiProviderSelection": "4/4",
+    "lightProviderCoverage": "22/22",
+    "scorecardProviderProvenance": "3/3",
+    "openAiStaticReadiness": "7/7",
+    "strictGateCapturedAt": "2026-09-27T18:11:37.127Z",
+    "strictGate": "FAIL",
+    "strictGateSummaryPath": "output/playwright/10m-product-readiness-g615/release-gate-summary.json",
+    "strictGateFailed": [
+      "readback:production monitor and UI pair",
+      "readback:G618 scale ops baseline",
+      "readback:production H602 billing completion readback",
+      "command:generation scorecard"
+    ],
+    "strictGateLocalCommands": "syntax/security/regressions/typecheck/build/lint/diff all passed",
+    "heavyBindingEvidence": {
+      "capturedAt": "2026-09-27T18:42:37Z",
+      "sourceDiffFromBaseline": 0,
+      "focusedTests": "18/18",
+      "providerCalls": 0,
+      "externalEffects": 0,
+      "readbackPath": "work/heavy-chain-local-heavy-binding-evidence-20260928-r1.json"
+    }
+  },
+  "independentGateAudit": {
+    "capturedAt": "2026-09-27T18:19:12Z",
+    "scorecardPrimary": "missing",
+    "scorecardPrimaryReadback": "missing",
+    "scorecardFallbackG677": "missing",
+    "scorecardPromotion": "not_allowed_single_candidate_or_historical_artifact_is_not_a_current_ten_feature_scorecard",
+    "g618MonitorApiUrl": "missing",
+    "g618MonitorBrandId": "missing",
+    "g618MonitorToken": "missing",
+    "externalEffects": 0,
+    "interpretation": "No safe local artifact can satisfy the current visual scorecard or G618 production baseline; both require fresh authorized production evidence and are not fabricated."
+  },
+  "remainingBlockers": [
+    "same credential rejected by OpenAI with 401 invalid_api_key",
+    "consumer-auth session and monitor/UI authorization unavailable",
+    "Sunburst model/parser/Light parity implementation with verified Astra receipt",
+    "live runtime provider drift requiring controlled deploy",
+    "fresh G617/G619/G659/G668 production evidence",
+    "fresh H601/H602 operator and billing completion proof",
+    "production monitor/UI pair",
+    "G618 scale ops baseline",
+    "production H602 billing completion readback",
+    "current OpenAI visual scorecard"
+  ],
+  "latestProgress": {
+    "workPackageId": "external-auth-repair-20260928",
+    "eventId": "heavy-local-binding-evidence-20260928-r1",
+    "outcome": "waiting_human",
+    "nextAction": "waiting_human",
+    "reason": "Heavy and Light provider boundaries plus persistence/readback contracts are locally verified 18/18 with zero provider calls and zero external effects. Astra runtime identity/capacity and same-key auth remain unresolved; no source, provider, deploy, billing, publication, or video mutation is authorized.",
+    "evidenceFingerprint": "heavy-local-binding-520d7bd-18of18-source-diff0",
+    "adaptivePlanVersion": 17
+  },
+  "productionReadback": {
+    "capturedAt": "2026-09-27T18:18:31Z",
+    "apiHealth": {"status": 200, "service": "heavy-api", "media": "private-r2", "heavyEntitlementEnabled": true},
+    "apiProfile": {"status": 401, "error": "unauthorized"},
+    "apiHeavyEntitlement": {"status": 401, "error": "unauthorized"},
+    "webHealth": {"status": 200, "service": "heavy-chain-web", "hosting": "cloudflare", "authProvider": "cloudflare"},
+    "webSession": {"status": 307, "location": "/login?redirect=%2F%3F"},
+    "consumerAuthHealth": {"status": 200, "service": "consumer-auth", "appId": "heavy", "storage": "cloudflare-d1"},
+    "webDesignProduction": {"status": 307, "location": "/login?redirect=%2FdesignProduction%3F"},
+    "sourceProviderConfig": "openai",
+    "interpretation": "Hosting and unauthenticated health boundaries are healthy; web routes redirect to login and authenticated consumer session/provider receipt remain unavailable.",
+    "evidencePath": "work/heavy-chain-production-boundary-fresh-readback-20260928-r1.json"
+  },
+  "companionAuthReadback": {
+    "capturedAt": "2026-09-27T18:20:17Z",
+    "runId": "heavy-auth-boundary-companion-20260928-r1",
+    "surface": "aos_chrome_companion_profile_instance",
+    "routesRead": 2,
+    "authenticatedWorkspace": false,
+    "workspaceShell": "workspace_preparing_auth_brand_hydration_pending",
+    "providerReceipt": false,
+    "externalActionExecuted": false,
+    "cleanupComplete": true,
+    "evidencePath": "work/heavy-chain-companion-auth-boundary-fresh-readback-20260928-r1.json"
+  },
+  "cloudflareDeploymentReadback": {
+    "capturedAt": "2026-09-27T17:44:24Z",
+    "command": "npx wrangler deployments list --config wrangler.production.jsonc",
+    "latestDeployment": {
+      "versionId": "529f72bc-c79e-45e4-a9cb-39f8407259ab",
+      "createdAt": "2026-09-26T23:49:15.592Z",
+      "traffic": "100%",
+      "source": "Unknown (deployment)",
+      "message": ""
+    },
+    "sourceProviderConfig": "openai",
+    "runtimeProvider": "not_exposed_by_deployments_list",
+    "deploymentPerformed": false,
+    "interpretation": "The latest deployment is identified and receives 100% traffic, but the deployment listing does not expose the runtime AI provider. Source configuration is not a runtime provider receipt; no provider claim is made."
+  },
+  "cloudflareVersionReadback": {
+    "capturedAt": "2026-09-27T17:46:15Z",
+    "command": "npx wrangler versions view 529f72bc-c79e-45e4-a9cb-39f8407259ab --config wrangler.production.jsonc",
+    "versionId": "529f72bc-c79e-45e4-a9cb-39f8407259ab",
+    "traffic": "100%",
+    "secretNames": ["MEDIA_READ_SECRET", "OPENAI_API_KEY"],
+    "runtimeProvider": "workers_ai",
+    "sourceProviderConfig": "openai",
+    "configurationDrift": true,
+    "deploymentPerformed": false,
+    "secretValuesRead": false,
+    "interpretation": "The live version still selects Workers AI despite the current source production config selecting OpenAI. Secret presence is not secret validity, and this readback does not prove an OpenAI provider receipt."
+  },
+  "cloudflareDryRunReadback": {
+    "capturedAt": "2026-09-27T17:46:15Z",
+    "command": "npx wrangler deploy --dry-run --config wrangler.production.jsonc",
+    "result": "PASS",
+    "uploadBytes": 251197,
+    "gzipBytes": 51323,
+    "candidateProvider": "openai",
+    "candidateProviderBackend": "openai-images-api",
+    "candidateModels": ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"],
+    "externalEffect": false,
+    "interpretation": "The current source bundle is deployable with OpenAI selected, but the dry-run does not deploy, validate the secret, call OpenAI, or prove the live runtime. No Sunburst-specific model is present in the current OpenAI allowlist."
+  },
+  "cloudflareVersionInventoryReadback": {
+    "capturedAt": "2026-09-27T17:49:23Z",
+    "command": "npx wrangler versions view <all listed versions> --config wrangler.production.jsonc",
+    "openAiConfiguredVersions": [
+      {"versionId": "9a7a49c5-23d9-4a4a-87f7-667d3d7907ec", "createdAt": "2026-09-21T02:10:55.428Z"},
+      {"versionId": "c314b5fe-49e1-4777-805d-63f70feaf8b3", "createdAt": "2026-09-24T20:26:02.548Z"}
+    ],
+    "liveVersion": {"versionId": "529f72bc-c79e-45e4-a9cb-39f8407259ab", "provider": "workers_ai"},
+    "currentSourceProviderCommit": "182ef86",
+    "promotionDecision": "do_not_promote_stale_version",
+    "interpretation": "OpenAI-configured versions exist but predate the current Heavy provider/entitlement/QA source updates. They cannot be treated as equivalent to the current source bundle; a fresh controlled deployment will be needed after auth and engineering gates pass."
+  },
+  "completionAuditReadback": {
+    "capturedAt": "2026-09-27T17:53:36.036Z",
+    "command": "npm run verify:10m-completion:incomplete-ok -- --out output/playwright/heavy-completion-audit-20260928-current --command-timeout-ms 600000 --release-gate-timeout-ms 600000",
+    "summaryPath": "output/playwright/heavy-completion-audit-20260928-current/summary.json",
+    "mode": "read-only-completion-audit-no-submit-no-payment-no-publish",
+    "ok": false,
+    "goalFailures": ["G617 blocked-exact", "G619 queued", "G669 blocked-exact", "G670 blocked-exact"],
+    "humanOpen": ["H601", "H602"],
+    "proofFailures": [
+      "g617_same_run_fresh_all_10",
+      "g619_real_beta_evidence",
+      "g618_scale_ops",
+      "g668_current_production_mass_market_qa",
+      "g659_lightchain_order_preview_production_readback",
+      "production_h601_rights_readback",
+      "production_chosen_public_entrypoint_readback",
+      "production_h602_billing_completion_readback"
+    ],
+    "commandFailures": ["g619_beta_evidence_verifier", "release_gate_verifier"],
+    "strictGateFailures": [
+      "production monitor and UI pair",
+      "G618 scale ops baseline",
+      "production H602 billing completion readback",
+      "generation scorecard"
+    ],
+    "irreversibleActions": {
+      "generationSubmit": "not_clicked",
+      "purchasePaymentCheckout": "not_touched",
+      "identityOtpCaptchaSecrets": "not_touched",
+      "externalPublish": "not_touched",
+      "destructiveCleanup": "not_touched",
+      "deploy": "not_run"
+    }
+  },
+  "sunburstSourceAudit": {
+    "path": "work/heavy-chain-sunburst-source-audit-20260928-r1.json",
+    "sourceRevision": "370368b",
+    "verifiedReadOnly": true,
+    "implementationGate": "verified Astra engineering invocation and bounded Luna handoff required before source mutation"
+  },
+  "effects": {
+    "credentialValuePersisted": false,
+    "credentialRotated": false,
+    "providerSubmission": false,
+    "deployment": false,
+    "billing": false,
+    "publication": false,
+    "videoTouched": false
+  },
+  "nextAction": "Keep the same key unchanged and do not retry while OpenAI still returns 401. First obtain verified native Astra identity and external auth/account repair; after both gates pass, implement Sunburst within the bounded scope, run deterministic regression, perform one controlled deploy, then one provider generation with receipt and R2 reuse/reload/reconciliation. Separately refresh monitor/UI, G618, H602, and visual scorecard evidence before rerunning the strict gate."
+}
