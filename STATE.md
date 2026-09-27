@@ -22553,3 +22553,12 @@ request bindingを確認するlocal証拠であり、production bearer、monitor
 H602 production-completion fail-closed verifierを`2026-09-27T04:12:07.663Z`にfresh再実行した。`ok=false`のまま、
 quota enforcement=false、production checkout=true、verified no-real-charge proof=0、transaction/entitlement readback=false、
 operator final decision未添付、live constraint readback未実施の6 blockerを再確認した。billing設定変更、決済、Apple ID/OTP、購入、公開は行っていない。Goal active。
+# Heavy Chain current state — 2026-09-27 r448
+
+同一の認証済みCompanion sessionでcurrent Lightchain manifestの31 non-video featureをdesktop/mobile readbackし、video dashboard/detailも
+desktop/mobileで確認した。全routeで同一production origin、settled body、semantic+visual readback、visible checkbox 0、login redirect false、
+console/page/request failure 0を確認し、viewport restoreとtaskTerminal cleanupを完了した。正本は
+output/playwright/g831-prod-lightchain-all-features-current-20260927-r1/SUMMARY.json、補足は
+work/heavy-chain-lightchain-allfeatures-companion-readback-20260927-r1.md。provider receipt/source sync/reconciliationは
+未確認のまま保持した。strict gateはLightchain all-feature blockerを解消し、production monitor/UI、mass-market QA、G618、H601、H602、
+generation scorecardの残件に縮小した。Goal active。
