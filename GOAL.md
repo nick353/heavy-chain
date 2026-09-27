@@ -10931,3 +10931,8 @@ Video provider boundary/contractをfresh検証し、1/1 + 3/3 passした。video
 
 provider persistence、workspace handoff、video editor persistenceのlocal testsをfresh実行し、14/14 + 3/3 + 4/4 passした。
 remote receiptなしではpromotion/reopenを成功扱いにしない境界は確認できたが、production R2のsave/reuse/reload/reconciliationは未達。Goal active。
+
+# Goal progress — 2026-09-27 r424
+
+現行の明示的Heavy ownership実装と不一致だったLightchain parity assertionsだけを更新し、実装のHeavy/Light境界は変更しなかった。
+Lightchain parity 12/12、Heavy capability gating 9/9、typecheckをpass。これでlocal test failureを解消し、Light誤権限の再発なしを確認した。Goal active。

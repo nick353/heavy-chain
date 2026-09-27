@@ -22385,3 +22385,10 @@ remote durable boundaryのlocal contractをfresh検証した。`test:provider-pe
 `test:workspace-handoff-persistence` 3/3、`test:video-editor-persistence` 4/4がpass。provider provenance、canonical storage path、
 result/History/Canvas promotion、workspace handoff、video source-editor save/reopenはreceipt未確認時にfail-closedする。ただし実production
 provider receipt、R2 save→reuse→reload→reconciliationはまだ未実行。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r424
+
+Lightchain parity testの旧Heavy-only文字列契約を、現行の明示的Heavy ownership境界へ更新した。実装は変更せず、
+`heavyConsent`のLight bypassと`!heavyOwnedFeature`付きWorkbench entitlementを検証する形へ整合。fresh検証は
+`npm run test:lightchain-permission-parity` 12/12、Heavy capability gating 9/9、`npm run typecheck` pass。
+Light機能をHeavy laneへ戻す変更は行っていない。Goal active。
