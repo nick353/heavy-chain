@@ -1,0 +1,31 @@
+{
+  "schema": "heavy_chain.openai_api_auth_readback.v1",
+  "capturedAt": "2026-09-28",
+  "scope": "read-only OpenAI model-list check; no image generation, no deployment, no billing",
+  "credentialSource": "existing process environment variable only",
+  "credentialValuePersisted": false,
+  "credentialValueLogged": false,
+  "request": {
+    "method": "GET",
+    "path": "/v1/models",
+    "authorizationHeaderSent": true
+  },
+  "response": {
+    "httpStatus": 401,
+    "modelsCount": null,
+    "sunburstPresent": false,
+    "bodyStored": false
+  },
+  "interpretation": {
+    "keyReadiness": "invalid_or_unusable",
+    "providerGenerationAllowed": false,
+    "nextAction": "Obtain a valid authorized OpenAI credential through the approved secret channel before any provider call; do not retry generation with this credential."
+  },
+  "effects": {
+    "providerSubmission": false,
+    "deployment": false,
+    "billing": false,
+    "publication": false,
+    "videoTouched": false
+  }
+}
