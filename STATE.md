@@ -23196,3 +23196,7 @@ Security/operations契約をfresh確認。`security:audit`、G620 5/5、G614、G
 # Heavy Chain current state — 2026-09-27 r601
 
 実provider QAのWorkers固定をfresh確認。QA safety testsは6/6 passだが、`hc-10m-real-generation-qa.mjs`はreceipt provider/backendをWorkers固定しておりOpenAI receiptを拒否する。OpenAI証跡を取得する前にprovider-aware validationと既存Workers readback互換を追加する必要がある。Astra起動receipt未復旧のためソース変更なし。Goal active、外部provider/R2/billing/deploy/publication/secretは0。
+
+# Heavy Chain current state — 2026-09-27 r602
+
+Opus 5.5 verified planでQA receiptのbounded契約を確定。OpenAI identityは`openai` + `openai-images-api`、旧Workers identityは完全一致allowlistとして保持する。新Astra packageはclaim済みだがnative invocation receipt不足でblocked、QAソース変更0。Light client packageも同じ起動receipt依存で未実装。Goal active、provider/R2/billing/deploy/publication/secretは0。

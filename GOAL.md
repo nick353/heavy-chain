@@ -11712,3 +11712,7 @@ Security/operationsの独立契約をfresh再検証し、`security:audit`、G620
 # Goal progress — 2026-09-27 r601
 
 実provider証跡の正式QA経路をfresh監査した。`scripts/verify-cloudflare-image-qa.test.mjs`は6/6 passだが、`scripts/hc-10m-real-generation-qa.mjs`のreceipt validationが`workers_ai` / `cloudflare-workers-ai`固定で、OpenAI receiptを受け入れない。したがって実OpenAI生成をこのQA経路で完了扱いにすることはできない。修正対象はprovider-aware receipt validation、旧Workers receipt互換、no-replay維持に限定し、verified Astra engineering receipt復旧後に実装する。正本は`work/heavy-chain-continuation-readback-20260927-r1.json`。provider call、R2、billing、deploy、publication、secret読取は0、Goal active。
+
+# Goal progress — 2026-09-27 r602
+
+QA receipt境界についてOpus 5.5のverified planを取得した。実サーバーのOpenAI receipt identityは`provider=openai`、`backendProvider=openai-images-api`（`cloudflare/heavy-api/src/openai-image.ts:4-5,152-157`）とread-only確認できた。新規Astra package `run_openai_qa_receipt_20260927_r1` はclaimまで成功したが、native invocation metadataが返らず`native_start_receipt_metadata_unavailable`でblocked、implementation 0。したがってQA修正も未実施。Opus invocation `ses_f1dc43b81ffe28zh5OwOXrVXWN`はverified、cost reconciled。正本は`work/heavy-chain-continuation-readback-20260927-r1.json`、Goal active。
