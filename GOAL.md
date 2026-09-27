@@ -1,4 +1,11 @@
-# Goal progress — 2026-09-27 r395
+# Goal progress — 2026-09-27 r396
+
+## Workspace persistence preflight — 2026-09-27
+
+production D1のread-only queryで実生成requestはcompletedだが、同requestの`wa-*` workspace artifact jobは0件、
+workspace artifact feature/status行も未観測だった。証跡を`work/heavy-chain-workspace-persistence-preflight-20260927.json`
+へ保存し、D1/R2/provider writeと再送は0件と記録した。save→reuse→reload→reconciliationは完了扱いにせず、
+認証済みworkspace save/readback receiptが取れるまでこの工程をpendingにする。Goalはactive。
 
 ## Fresh gate and boundary contract recheck — 2026-09-27
 

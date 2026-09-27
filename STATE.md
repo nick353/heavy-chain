@@ -1,4 +1,12 @@
-# Heavy Chain current state — 2026-09-27 r273
+# Heavy Chain current state — 2026-09-27 r274
+
+## Workspace persistence preflight — 2026-09-27
+
+production D1をread-only照合し、実生成request `dba13266-5776-453f-9df4-fbeeedacf557`は
+`campaign-image`/`completed`として存在する一方、同requestに紐づく`wa-*` workspace artifact jobは0件だった。
+generation_jobsのfeature/status集計にもworkspace artifact行はなく、D1/R2/providerのwrite・再送は0件。
+証跡は`work/heavy-chain-workspace-persistence-preflight-20260927.json`。したがってworkspaceのsave→reuse→reload→
+reconciliationは未証明で、認証済みPOST/GET receiptと同一ownerのcanonical R2 readbackが次の必須工程になる。
 
 ## Fresh gate and boundary contract recheck — 2026-09-27
 
