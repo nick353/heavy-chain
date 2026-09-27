@@ -1,0 +1,109 @@
+{
+  "schema": "heavy-chain.current-requirement-matrix.v1",
+  "capturedAt": "2026-09-27T11:12:22Z",
+  "sourceRevision": "c0000835000bb36131bcfcfe0a3f5089c520c34e",
+  "goalStatus": "active",
+  "currentWave": "image_generation",
+  "video": "deferred_by_user",
+  "externalEffects": 0,
+  "requirements": [
+    {
+      "id": "dirty-worktree",
+      "requirement": "clean working tree and traceable state",
+      "status": "pass",
+      "evidence": ["git status --short --branch", "work/heavy-chain-image-resume-manifest-20260927-r1.json"]
+    },
+    {
+      "id": "light-parity",
+      "requirement": "Light provider/parity contracts converge",
+      "status": "local_contract_pass_production_unverified",
+      "evidence": ["work/heavy-chain-image-independent-contracts-readback-20260927-r1.json"],
+      "remaining": "authenticated production parity and remote durable readback"
+    },
+    {
+      "id": "auth-continuation",
+      "requirement": "auth recovery and account verification available",
+      "status": "local_recovery_pass_account_verification_unavailable",
+      "evidence": [
+        "work/heavy-chain-image-independent-contracts-readback-20260927-r1.json",
+        "work/heavy-chain-openai-organization-verification-readback-20260927-r1.json"
+      ],
+      "remaining": "authenticated official OpenAI session and authenticated Heavy consumer session"
+    },
+    {
+      "id": "image-provider",
+      "requirement": "OpenAI image provider active with accepted model",
+      "status": "not_ready",
+      "evidence": [
+        "work/heavy-chain-image-production-version-config-readback-20260927-r1.json",
+        "work/heavy-chain-image-production-dry-run-readback-20260927-r1.json"
+      ],
+      "remaining": "production is workers_ai; local candidate lacks gpt-image-2.5-sunburst"
+    },
+    {
+      "id": "provider-receipt",
+      "requirement": "same-run authenticated real provider receipt",
+      "status": "not_started",
+      "evidence": ["work/heavy-chain-image-resume-manifest-20260927-r1.json"],
+      "remaining": "Astra-approved migration, Organization Verification, authenticated Heavy request"
+    },
+    {
+      "id": "remote-durable",
+      "requirement": "save -> reuse -> reload -> reconciliation",
+      "status": "local_contract_only",
+      "evidence": ["work/heavy-chain-image-baseline-tests-20260927-r2.json"],
+      "remaining": "live D1/R2 objects and exact receipt/object readback"
+    },
+    {
+      "id": "video-provider",
+      "requirement": "video provider",
+      "status": "deferred_by_user_current_wave",
+      "evidence": ["work/heavy-chain-image-resume-manifest-20260927-r1.json"]
+    },
+    {
+      "id": "monitor-operations",
+      "requirement": "monitor and operations readiness",
+      "status": "static_pass_scale_monitor_inputs_missing",
+      "evidence": ["work/heavy-chain-security-billing-ops-fresh-readback-20260927-r1.json"],
+      "remaining": "G618 origin/brand/live session/baseline limits"
+    },
+    {
+      "id": "security-rights",
+      "requirement": "security and rights boundary",
+      "status": "static_pass_operator_decision_missing",
+      "evidence": ["work/heavy-chain-security-billing-ops-fresh-readback-20260927-r1.json"],
+      "remaining": "H601 safe operator decision and policy locators"
+    },
+    {
+      "id": "billing",
+      "requirement": "billing boundary and no-charge proof",
+      "status": "local_contract_pass_production_not_ready",
+      "evidence": ["work/heavy-chain-security-billing-ops-fresh-readback-20260927-r1.json"],
+      "remaining": "H602 quota, checkout state, no-charge proof, transaction/entitlement readback"
+    },
+    {
+      "id": "quality-release",
+      "requirement": "visual quality, business QA, strict release gate",
+      "status": "not_ready",
+      "evidence": ["work/heavy-chain-image-quality-release-readback-20260927-r1.json"],
+      "remaining": "visual scorecard artifact and authenticated mass-market QA"
+    }
+  ],
+  "dependencyOrder": [
+    "runtime-recovery-readonly",
+    "image-astra-engineering-gate",
+    "image-luna-implementation",
+    "image-deterministic-regression",
+    "openai-organization-verification-readonly",
+    "authorized-production-deploy-and-version-readback",
+    "authenticated-openai-provider-readback",
+    "remote-save-reuse-reload-reconciliation",
+    "quality-and-business-readback",
+    "strict-release-gate"
+  ],
+  "completion": {
+    "ok": false,
+    "reason": "multiple requirements remain missing or production-unverified",
+    "nextConcreteAction": "wait for normal Adaptive runtime reconnection, then resume the existing Astra image package without replay"
+  }
+}

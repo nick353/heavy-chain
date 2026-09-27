@@ -23373,3 +23373,7 @@ G620/G614/G632/G633、H601 static、H602 local contractはfresh PASS。H601 oper
 # Heavy Chain current state — 2026-09-27 r640
 
 generation scorecardはscorecard artifact missing・rows 0、mass-market QAはproduction auth-state missingでfail-closed。品質・本番business readback・strict releaseは未完了。provider/R2/billing/publicationは0、動画はdeferred。正本は`work/heavy-chain-image-quality-release-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r641
+
+Goal requirement matrixを作成し、current evidenceと依存順を固定。local契約は複数PASSだが、production OpenAI/receipt/R2/quality、人間policy・billing・monitor・beta、strict releaseは未完了。動画はdeferred。正本は`work/heavy-chain-current-requirement-matrix-20260927-r1.json`と更新済みresume manifest、Goal active。
