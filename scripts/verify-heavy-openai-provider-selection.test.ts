@@ -43,3 +43,17 @@ test('Light Chain provider surface remains separately owned', async () => {
   assert.match(source, /LIGHTCHAIN_GENERATION_PROVIDER/);
   assert.match(source, /workers_ai/);
 });
+
+test('production Heavy API config and adapter remain OpenAI-authoritative', async () => {
+  const [productionConfig, imageAi, openAiImage] = await Promise.all([
+    readFile(new URL('../cloudflare/heavy-api/wrangler.production.jsonc', import.meta.url), 'utf8'),
+    readFile(new URL('../cloudflare/heavy-api/src/image-ai.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../cloudflare/heavy-api/src/openai-image.ts', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(productionConfig, /"AI_IMAGE_PROVIDER"\s*:\s*"openai"/);
+  assert.match(imageAi, /env\.AI_IMAGE_PROVIDER\?\.trim\(\) === 'workers_ai' \? 'workers_ai' : 'openai'/);
+  assert.match(imageAi, /requested && requested !== provider/);
+  assert.match(openAiImage, /env\.OPENAI_IMAGE_API_KEY\?\.trim\(\) \|\| env\.OPENAI_API_KEY\?\.trim\(\)/);
+  assert.doesNotMatch(openAiImage, /VITE_OPENAI|localStorage|getItem\(['"]OPENAI/);
+});
