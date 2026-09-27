@@ -22775,3 +22775,7 @@ G618 verifierは必要なCloudflare origin/brand/live session/baseline limits欠
 # Heavy Chain current state — 2026-09-27 r494
 
 Video provider boundary/contract/editor persistenceとprovider persistence/readbackのlocal suiteを合計22/22 pass。fail-closedとdurable receipt guardの整合を確認したが、実provider・R2・remote lifecycleの本番証拠は未取得。Adaptive capacity/Heavy packageのholdは継続、Goalはactive。
+
+# Heavy Chain current state — 2026-09-27 r495
+
+Auth lock/session admission/bootstrap/recovery/hydration readbackのlocal suiteは27/27 pass。session authorityとsecret-bearing evidence rejectionは健全だが、production consumer authの実readbackは未取得。Adaptive capacity/Heavy package holdは継続、Goalはactive。

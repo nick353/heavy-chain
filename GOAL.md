@@ -11068,6 +11068,10 @@ capacity待ちの独立準備として、`npm run verify:g618-scale-ops`を実�
 
 video/persistence laneの独立local検証をfresh実行した。Video provider boundary 1/1、video provider contract 3/3、video editor persistence 4/4、provider persistence/readback 14/14で合計22/22 pass。Videoは画像生成へ誤routingせず、source/credential/same-run readback不足でfail-closedし、durable receiptなしのpromotionを止めることを確認した。これはlocal contract証拠であり、実video provider、R2本番、remote durable save→reuse→reload→reconciliationの実receiptを証明しない。外部効果は0。Goalはactiveで、capacity回復までlocal準備を継続する。
 
+# Goal progress — 2026-09-27 r495
+
+認証継続laneの独立local検証をfresh実行した。auth lock 4/4、session admission 9/9、bootstrap hydration 7/7、session recovery 3/3、hydration readback 4/4で合計27/27 pass。tab lock、session admission、stale authority invalidation、bounded refresh retry、secret-bearing evidence rejectionを確認した。これはlocal auth/session契約証拠であり、consumer-authenticated production session、monitor token、実provider receiptを証明しない。外部効果は0。Goalはactiveで、capacity回復までlocal準備を継続する。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
