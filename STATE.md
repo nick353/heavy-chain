@@ -23581,3 +23581,7 @@ Cloudflareの全versionをread-onlyで確認し、OpenAI設定済みの旧versio
 # Heavy Chain current state — 2026-09-28 r693
 
 以前のverified Opus画像計画に含まれていた受入条件（新規OpenAI画像の既定を`gpt-image-2.5-sunburst`、receipt記録、旧receipt互換、fallback/replay禁止、mock-only QA、video差分0）を現行no-rotation正本へ復元。現行sourceのOpenAI allowlistは旧modelのみでSunburst未実装のため、認証が直ってもSunburst実装・parser/Light parity・deterministic QA・fresh gateが先であり、既存OpenAI versionの昇格や生成を行わない。provider submit・deploy・課金・公開・キー変更・動画変更は0、Goal active。
+
+# Heavy Chain current state — 2026-09-28 r694
+
+画像resume manifestを現行truthへ更新。過去の`200_sunburst_present`/`production_openai`という古いreadbackを、現行の同じキー401とsource OpenAI/live Workers AI driftへ訂正し、no-rotation plan、auth r3、current strict gateをauthoritative evidenceへ追加。Sunburst要件・旧receipt互換・no fallback/replay・video差分0を保持し、Goal active。外部生成・deploy・課金・公開・キー変更・動画変更は0。正本は`work/heavy-chain-image-resume-manifest-20260927-r1.json`と`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
