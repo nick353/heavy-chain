@@ -10916,3 +10916,8 @@ likeness・marketing wordingの10項目が未添付で、`acceptance=not_claimed
 Companionのtask-scoped cleanup/readinessをfresh確認した。接続・build provenanceは正常、session/lease/pending operationは0、active
 reconciliationは0、recoveryはdoneで、task blockerはnull。quarantined task tab 1件はcleanup eligibleではないため、foreign resourceの
 adoptionや削除は行っていない。ブラウザ側の安全なcleanup境界は完了。Goal active。
+
+# Goal progress — 2026-09-27 r421
+
+Lightchain release-gate contract testsをfresh実行し、15/15 passした。これはcurrent manifestとproduction/local・Companion/provider
+completion境界が正しいことを確認するlocal evidenceであり、stale/missing production artifactを置換しない。Goal active。

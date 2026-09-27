@@ -22365,3 +22365,10 @@ marketing・commercial-useの各方針、counsel/operator reviewの10項目が�
 Companion task statusをfresh readbackし、profile build provenance mismatchなし、connected=true、logical sessions/leases/pending
 operations=0、reconciliation active count=0、recovery state=done、task recovery primary blocker=nullを確認した。過去のquarantined
 task tabは1件あるがcleanup eligible=0で、foreign tabを採用・削除せず保持している。今回のtask-owned browser cleanupは完了。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r421
+
+`npm run test:release-gate-lightchain`をfresh実行し、Lightchain release-gate manifest/contract tests 15/15 passを確認した。
+current manifest、production-vs-local分離、Companion auth-state不在許容、provider completion非昇格、mass-market/route matrix/launch
+operationsの受入境界を検証した。ただしこれはartifactのfreshnessやproduction business completionを作るものではなく、stale/missing
+production evidence 7件は未解消。Goal active。
