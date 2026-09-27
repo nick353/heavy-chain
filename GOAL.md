@@ -19,6 +19,13 @@ no-real-charge proof、transaction/entitlement readback、operator decision、li
 最新strict gateは`ok=false`で、production monitor/UI、期限切れMass-market/Light feature証跡、G618、H601、
 H602、旧scorecard artifactが残る。資格情報・法務判断・決済値を推測して埋めず、独立して更新できる証跡から進める。
 
+## Readback-only gate refresh — 2026-09-27
+
+H602更新後にreadback-only gate（`2026-09-27T00:09:15.460Z`）を取得した。commandを省略したためstrict
+release合格とは扱わず、同じproduction証跡不足が残る。資格情報不要のLight local all-feature runは
+Pattern Vector付近で停滞し、SIGINT後にcleanup完了・`verification_interrupted_by_signal`を記録した。
+部分artifactは完了証明ではない。
+
 ## Fresh local gate and source-evidence reconciliation — 2026-09-26
 
 現行作業ツリーでrelease gateを再取得し、ローカル検証を省略しない実行では

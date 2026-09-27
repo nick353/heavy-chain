@@ -29,6 +29,14 @@ final decisionなし。決済・Apple ID・OTP・秘密・identity・公開は�
 H601 production rights readback、H602 completion、旧generation scorecard artifactの7系統。
 monitor token/auth stateや法務・課金の決定値を推測せず、偽の証跡は作成していない。
 
+## Readback-only gate refresh and local verifier stop — 2026-09-27
+
+H602更新後のreadback-only gateを`2026-09-27T00:09:15.460Z`に取得した。外部効果を伴うcommandは
+省略したため、これはstrict release acceptanceではない。production monitor/UI、期限切れMass-market/Light
+feature証跡、G618、H601、H602が引き続き未達。資格情報不要のLight local all-feature verifierは
+Pattern Vector付近で長時間停滞したため、所有プロセスへSIGINTを送り、`verification_interrupted_by_signal`
+とcleanup完了を記録して停止した。部分artifactは受入証跡へ昇格していない。
+
 ## Fresh local gate and source-evidence reconciliation — 2026-09-26
 
 release gateのfresh実行で、syntax/security/G614/G632/G633/H601/H602 static/typecheck/build/lint/
