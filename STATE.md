@@ -23489,3 +23489,7 @@ Production Heavy APIのauth boundaryをfresh readback。health 200（private-r2�
 # Heavy Chain current state — 2026-09-27 r669
 
 Companion broker/profileは正常（connected profile 1、active operation/reconciliation 0）だが、Heavy tab・task-owned auth session/lease・consumer-auth token・auth-state fileはない。foreign tabsには触れず、read-only availability sessionはowner cleanup receipt completedで終了。provider/deploy/billing/publication/secret readは0、動画deferred、Goal active。正本は`work/heavy-chain-companion-auth-availability-readback-20260927-r1.json`。
+
+# Heavy Chain current state — 2026-09-27 r670
+
+Cloudflare Heavy WebとZeabur Heavy Webをread-onlyでfresh確認。両originはshell表示とauth/brand準備状態まで到達したが、authenticated workspace、consumer-auth token、provider receiptは未取得。Companionのtemporary tabs/sessionは全てcleanup済み、foreign tabsは不変、外部効果0。動画deferred、Goal active。正本は`work/heavy-chain-companion-heavy-web-auth-probe-20260927-r1.json`。

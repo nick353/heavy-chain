@@ -1,0 +1,38 @@
+{
+  "schema": "heavy_chain_companion_heavy_web_auth_probe.v1",
+  "capturedAt": "2026-09-27T12:25:36.741Z",
+  "sourceRevision": "c2a3d81",
+  "surface": "aos_chrome_companion_profile_instance",
+  "readOnly": true,
+  "urls": [
+    {
+      "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+      "title": "Lightchain AI",
+      "status": "read",
+      "text": "◎ 日本語 ヘルプセンター WORKSPACE ワークスペースを準備しています 認証状態とブランド設定を確認しています。時間がかかる場合でも、画面を閉じずに再読み込みできます。",
+      "textSha256": "1c0e829b9798a3b77905d6fadfbe23f00a6a168505c0bfdca9491efad27cdb0c",
+      "screenshotCaptured": true
+    },
+    {
+      "origin": "https://heavy-chain.zeabur.app",
+      "title": "Lightchain AI",
+      "status": "read",
+      "text": "◎ 日本語 ヘルプセンター WORKSPACE ワークスペースを準備しています 認証状態とブランド設定を確認しています。時間がかかる場合でも、画面を閉じずに再読み込みできます。",
+      "textSha256": "1c0e829b9798a3b77905d6fadfbe23f00a6a168505c0bfdca9491efad27cdb0c",
+      "screenshotCaptured": true
+    }
+  ],
+  "interpretation": {
+    "webReadSucceeded": true,
+    "authenticatedWorkspaceProven": false,
+    "consumerAuthTokenObtained": false,
+    "providerReceiptObtained": false,
+    "externalActionExecuted": false
+  },
+  "cleanup": {
+    "readTabsClosed": true,
+    "sessionClosed": true,
+    "cleanupComplete": true,
+    "foreignTabsMutated": false
+  }
+}

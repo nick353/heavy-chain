@@ -12004,3 +12004,7 @@ Heavy API production auth boundaryをfresh read-only再確認。healthは200で`
 # Goal progress — 2026-09-27 r669
 
 Companionのtask-owned read-only availabilityを確認。接続済みProfileは1つ、brokerは正常、active operation/reconciliationは0。ただしHeavy tab、task-owned session/lease、consumer-auth token、auth-state fileは存在しなかった。foreign tabsはadopt/cleanupせず、今回作成したread-only sessionのみowner cleanup receipt `completed`で閉じた。consumer-authを推測・抽出する経路はないため、provider generationは開始していない。正本は`work/heavy-chain-companion-auth-availability-readback-20260927-r1.json`。
+
+# Goal progress — 2026-09-27 r670
+
+Companion read-onlyでCloudflare Heavy Web originとZeabur originを同時確認。両方とも`Lightchain AI` shellと「Workspaceを準備中／認証状態とブランド設定を確認中」を返し、読込・スクリーンショット・task-owned cleanupは成功したが、authenticated workspace・consumer-auth token・provider receiptは証明されなかった。フォーム、ログイン、provider操作は0。正本は`work/heavy-chain-companion-heavy-web-auth-probe-20260927-r1.json`。
