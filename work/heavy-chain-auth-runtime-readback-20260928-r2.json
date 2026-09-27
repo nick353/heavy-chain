@@ -56,6 +56,9 @@
   "deterministicVerification": {
     "consumerAuthTests": { "command": "npm test", "scope": "cloudflare/consumer-auth", "passed": 78, "failed": 0 },
     "heavyApiTests": { "command": "npm test", "scope": "cloudflare/heavy-api", "passed": 114, "failed": 0 },
+    "browserAuthContract": { "command": "node --test scripts/verify-cloudflare-browser-auth.test.mjs", "passed": 9, "failed": 0 },
+    "authSessionAdmission": { "command": "node --test scripts/verify-auth-session-admission.test.ts", "passed": 9, "failed": 0 },
+    "authStoreContract": { "command": "node --test scripts/verify-cloudflare-auth-store.test.mjs", "passed": 24, "failed": 0 },
     "providerPersistenceReadback": { "passed": 14, "failed": 0 },
     "imageApiInputNormalization": { "passed": 1, "failed": 0 },
     "lightchainProviderCoverage": { "passed": 22, "failed": 0 },
