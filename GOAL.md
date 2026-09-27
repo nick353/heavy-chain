@@ -12080,3 +12080,7 @@ Chrome Companionの同一task-owned read-only sessionでOpenAI PlatformのAPI-ke
 # Goal progress — 2026-09-28 r689
 
 Cloudflare production deployment一覧をread-onlyでfresh確認。最新version `529f72bc-c79e-45e4-a9cb-39f8407259ab` は100% trafficだが、一覧からruntime AI providerは判別できないため、source configの`openai`だけで実行時providerを完了扱いにしない。deploy・provider submit・課金・公開・動画変更は0、同じAPIキーもローテーションしていない。認証済みconsumer session、同一キーのread-only 2xx、実provider生成receipt、remote save/reuse/reload/reconciliation、visual scorecard、monitor/UI、G618、H602、strict gateは未完了。Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r690
+
+同じ100%配信version `529f72bc-c79e-45e4-a9cb-39f8407259ab`をread-only確認し、live `AI_IMAGE_PROVIDER=workers_ai`、source production config=`openai`のdriftを確定した。Secret名`OPENAI_API_KEY`の存在は確認できるが、値・有効性・OpenAI receiptは未確認。source変更を本番へdeployせず、同じキーのローテーション・provider submit・課金・公開・動画変更も0。次の順序は、外部で同じキーが2xxになることの確認 → Astraのverified engineering receipt → 明示承認されたruntime切替deploy → 一回のOpenAI生成receipt → remote save/reuse/reload/reconciliation → scorecard・monitor/UI・G618・H602 → strict gate再実行。Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。

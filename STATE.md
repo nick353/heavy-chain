@@ -23565,3 +23565,7 @@ Opus 5.5の更新plan `aa040f17-6308-444f-8290-cfc78589de2a`で「同じキー�
 # Heavy Chain current state — 2026-09-28 r689
 
 Cloudflare production deployment一覧をread-onlyでfresh確認。最新version `529f72bc-c79e-45e4-a9cb-39f8407259ab` が100% trafficだが、一覧はruntime AI providerを公開しないため、source configの`openai`を実行時provider receiptとは扱わない。deployは行わず、認証済みconsumer session、同じキーの2xx、実provider生成receipt、remote save/reuse/reload/reconciliation、visual scorecard、monitor/UI、G618、H602は未達。キーのローテーション・secret変更・provider submit・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r690
+
+同じversion `529f72bc-c79e-45e4-a9cb-39f8407259ab`を`wrangler versions view`でread-only確認。Secret名は`MEDIA_READ_SECRET`と`OPENAI_API_KEY`のみで値は未読だが、live `AI_IMAGE_PROVIDER`は`workers_ai`、source production configは`openai`でconfiguration driftが残る。OpenAIへ切り替えるdeploy、provider submit、課金、公開、キー変更は行っていない。認証済みconsumer session、同じキーの2xx、OpenAI実生成receipt、remote save/reuse/reload/reconciliation、visual scorecard、monitor/UI、G618、H602は未達。Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
