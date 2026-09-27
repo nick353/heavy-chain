@@ -11080,6 +11080,10 @@ remote durable/readbackとmonitor/operationsの独立local検証をfresh実行�
 
 security/rights/billing境界の独立検証をfresh実行した。G620 static security 5/5、H601 legal-safety全checks、H602 Cloudflare contract 3/3、security auditをpass。秘密値は出力せず、payment/checkout、legal policy finalization、production proofは未実行。H601/H602の人間/operator decisionとconsumer-authenticated production readbackは未完了のままfail-closedで保持した。外部効果は0。Goalはactive。
 
+# Goal progress — 2026-09-27 r498
+
+release準備をfresh確認した。Lightchain release gate contract testsは16/16 pass。`release:doctor`は明示したlocal proof targetとgit cleanをpassした後、必要なCloudflare env 6項目（`VITE_CLOUDFLARE_API_BASE_URL`、`VITE_CLOUDFLARE_API_ENABLED`、`VITE_MEDIA_PROVIDER_ORDER`、`VITE_MEDIA_GATEWAY_URL`、`VITE_GENERATION_PROVIDER`、`PUBLIC_URL`）が0/6のため安全停止した。値は推測投入せず、provider/secret/deploy/公開は0。Goalはactiveで、不足入力をowner packetに保持する。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
