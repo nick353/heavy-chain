@@ -11660,3 +11660,7 @@ H602 Cloudflare billing contract 3/3とLightchain release-gate contract 16/16を
 # Goal progress — 2026-09-27 r588
 
 Cloudflare/OpenAI provider transportとAPI-less generationの静的readinessをfresh実行し、両方`ok=true`。provider transport、model-matrix、protected edit、durable receipt contract、private media persistence、legacy marker除去を確認した。ただし本番認証済み生成、AI品質、live R2 readback、provider receiptは未証明のまま保持した。正本は`work/heavy-chain-generation-transport-readback-20260927-r1.json`。外部API、submit、payment、deploy、secret読取は0、Goal active。
+
+# Goal progress — 2026-09-27 r589
+
+auth session recovery / hydration readbackの決定的テストをfresh実行し、7 tests / 7 passed。認証失敗時の一度だけのrefresh/retry、通常エラーの非再試行、同一session readback、login/rights/secret-bearing evidenceの拒否を確認した。正本は`work/heavy-chain-auth-continuity-readback-20260927-r1.json`。本番authenticated browser/provider receiptとは区別し、外部効果は0。Goal active。

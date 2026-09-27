@@ -23144,3 +23144,7 @@ H602 local billing contract 3/3、Lightchain release-gate contract 16/16 pass。
 # Heavy Chain current state — 2026-09-27 r588
 
 provider transport/API-less generationの静的readinessは両方ok。Cloudflare transportとdurable receiptのコード契約は確認済みだが、live provider/R2/production証跡は未完了。正本は`work/heavy-chain-generation-transport-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r589
+
+Auth session recovery/hydrationは7/7 pass。ローカル認証継続契約は確認済みだが、live authenticated Heavy browser/provider receiptは未完了。正本は`work/heavy-chain-auth-continuity-readback-20260927-r1.json`、Goal active。
