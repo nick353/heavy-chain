@@ -11648,3 +11648,7 @@ Light Chainのローカル耐久性をfresh再検証した。`verify:lightchain-
 # Goal progress — 2026-09-27 r585
 
 remote save fail-closed、reconciliation、Board persistence、video source-editor persistenceの決定的ローカル契約をfresh実行し、16 tests / 16 passed / 0 failedを確認した。Cloudflare構成時のlocal-only成功拒否、同一request ID照合、mismatched identity停止、video durable-save gateを再確認した。provider生成、実R2書込、課金、公開、deploy、secret読取は0。正本は`work/heavy-chain-persistence-video-boundary-readback-20260927-r1.json`で、live remote/provider receiptとは区別する。Goal active。
+
+# Goal progress — 2026-09-27 r586
+
+Fitting/CanvasのAstra handoffを現行HEADへ更新した。Fittingの`generateModelMatrix`、Canvasのprovider wrapperとHeavy-capable actionがrequestless `rightsConfirmed`に留まり、既存Cloudflare server wrapperはproof fieldsを受け取ればrequest-scoped preparation/attestationを実行できることを行番号付きで固定した。正本は`work/heavy-chain-cross-surface-astra-input-20260927-r3.md`。Adaptive transport closedのため既存runを再送せず、Goal active。
