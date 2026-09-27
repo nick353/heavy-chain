@@ -11393,6 +11393,10 @@ H601 legal safety guardは17/17 passしたが、operator readinessは`ok=false`�
 
 H602 production completion readbackをfresh実行し、`ok=false`/6 blockerを確認。quota enforcement false、production checkout true、verified no-real-charge proof不足、transaction/entitlement readback不足、operator final decision不足、live constraint未実施。Codexはbilling mutation、checkout、購入、Apple ID/OTP、公開を行わず、`work/heavy-chain-h602-production-readback-20260927-r1.json`へ固定した。Goal active。
 
+# Goal progress — 2026-09-27 r524
+
+G618 scale-ops verifierをfresh実行し、Cloudflare API origin、brand、live session token、valid baseline limitsの明示入力不足で安全停止した。build/browserは開始されず、monitor/provider/deploy/billing効果は0。正本は`work/heavy-chain-g618-readback-20260927-r1.json`。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

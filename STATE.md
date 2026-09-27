@@ -22894,3 +22894,7 @@ H601 legal safety guardは17/17 passしたが、operator readinessは`ok=false`�
 # Heavy Chain current state — 2026-09-27 r523
 
 H602 production completion readbackをfresh実行し、`ok=false`/6 blockerを確認。quota enforcement false、production checkout true、verified no-real-charge proof不足、transaction/entitlement readback不足、operator final decision不足、live constraint未実施。Codexはbilling mutation、checkout、購入、Apple ID/OTP、公開を行わず、`work/heavy-chain-h602-production-readback-20260927-r1.json`へ固定した。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r524
+
+G618 scale-ops verifierをfresh実行し、Cloudflare API origin、brand、live session token、valid baseline limitsの明示入力不足で安全停止した。build/browserは開始されず、monitor/provider/deploy/billing効果は0。正本は`work/heavy-chain-g618-readback-20260927-r1.json`。Goal active。

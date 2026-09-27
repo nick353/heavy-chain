@@ -1,0 +1,22 @@
+{
+  "schema": "heavy-chain.g618-readback.v1",
+  "capturedAt": "2026-09-27T07:16:00Z",
+  "gitHead": "8e8cff2",
+  "command": "npm run verify:g618-scale-ops",
+  "exitCode": 1,
+  "firstStop": "explicit_monitor_inputs_missing",
+  "requiredInputs": [
+    "HEAVY_CHAIN_MONITOR_API_URL",
+    "HEAVY_CHAIN_MONITOR_BRAND_ID",
+    "HEAVY_CHAIN_MONITOR_TOKEN",
+    "valid_baseline_limits"
+  ],
+  "buildOrBrowserStarted": false,
+  "externalEffects": {
+    "monitorWrite": 0,
+    "provider": 0,
+    "deployment": 0,
+    "billing": 0
+  },
+  "decision": "g618_monitor_inputs_missing_fail_closed"
+}
