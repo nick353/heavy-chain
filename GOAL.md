@@ -11357,6 +11357,10 @@ security/operations/billingのlocal側をfresh再検証した。G620 security 5/
 
 Light Chain parityのrelease manifest 16/16、all-feature workflow contract 5/5、unified workflow contract 6/6をfresh passした。local contract readbackは合計84/84 passへ更新。Companion/local証拠をproduction provider completionへ昇格させる検証は拒否されることも確認済み。外部効果は0、Goal active。
 
+# Goal progress — 2026-09-27 r515
+
+既存の最新Companion readback `output/playwright/g830-launch-ops-production-current-r4/summary.json` をproof surfaceに指定してrelease doctorをread-only再実行した。proof targetは受理され、次の停止点はenv checkへ進んだ。必要な6キー（Cloudflare API base/enabled、media provider order/gateway、generation provider、PUBLIC_URL）が不足し、追加secret groupは存在するが値の投入や表示は行っていない。正本は`work/heavy-chain-release-doctor-readback-20260927-r1.json`へ追記。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

@@ -23,4 +23,21 @@
     "deploy": 0
   },
   "decision": "release_proof_target_missing"
+  ,"companionReadbackRetry": {
+    "command": "RELEASE_COMPANION_EVIDENCE=output/playwright/g830-launch-ops-production-current-r4/summary.json npm run release:doctor",
+    "exitCode": 1,
+    "proofTarget": "accepted",
+    "firstStop": "env:check",
+    "missingRequiredKeys": [
+      "VITE_CLOUDFLARE_API_BASE_URL",
+      "VITE_CLOUDFLARE_API_ENABLED",
+      "VITE_MEDIA_PROVIDER_ORDER",
+      "VITE_MEDIA_GATEWAY_URL",
+      "VITE_GENERATION_PROVIDER",
+      "PUBLIC_URL"
+    ],
+    "additionalSecretGroupsPresent": true,
+    "optionalDeploymentKeysPresent": 0
+  },
+  "updatedDecision": "release_proof_surface_accepted_environment_contract_missing"
 }

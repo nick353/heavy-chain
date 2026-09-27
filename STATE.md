@@ -22858,3 +22858,7 @@ security/operations/billingのlocal側をfresh再検証した。G620 security 5/
 # Heavy Chain current state — 2026-09-27 r514
 
 Light Chain parityのrelease manifest 16/16、all-feature workflow contract 5/5、unified workflow contract 6/6をfresh passした。local contract readbackは合計84/84 passへ更新。Companion/local証拠をproduction provider completionへ昇格させる検証は拒否されることも確認済み。外部効果は0、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r515
+
+既存の最新Companion readback `output/playwright/g830-launch-ops-production-current-r4/summary.json` をproof surfaceに指定してrelease doctorをread-only再実行した。proof targetは受理され、次の停止点はenv checkへ進んだ。必要な6キー（Cloudflare API base/enabled、media provider order/gateway、generation provider、PUBLIC_URL）が不足し、追加secret groupは存在するが値の投入や表示は行っていない。正本は`work/heavy-chain-release-doctor-readback-20260927-r1.json`へ追記。Goal active。
