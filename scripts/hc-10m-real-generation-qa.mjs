@@ -10,6 +10,10 @@ import { collectWorkspaceReadback } from './collect-workspace-live-readback.mjs'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const actions = new Set(['generate-image','edit-image','model-matrix']);
 const states = new Set(['planned','running','completed','failed','unknown','storing']);
+const PROVIDER_BACKENDS = new Map([
+  ['workers_ai', 'cloudflare-workers-ai'],
+  ['openai', 'openai-images-api'],
+]);
 const canonical = value => Array.isArray(value) ? '[' + value.map(canonical).join(',') + ']'
   : value && typeof value === 'object' ? '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonical(value[key])).join(',') + '}'
   : JSON.stringify(value);
@@ -69,8 +73,11 @@ export async function runImageQA(options, journal, fetchImpl = fetch) {
     return report;
   }
   const receipt = observed.data;
+  const provider = typeof receipt?.provider === 'string' ? receipt.provider : '';
+  const backendProvider = typeof receipt?.backendProvider === 'string' ? receipt.backendProvider : '';
+  const providerIdentityValid = PROVIDER_BACKENDS.get(provider) === backendProvider;
   if (observed.status !== 200 || receipt?.requestId !== options.requestId || receipt?.jobId !== 'ai-' + options.requestId ||
-      receipt?.provider !== 'workers_ai' || receipt?.backendProvider !== 'cloudflare-workers-ai' || !states.has(receipt?.state)) {
+      !providerIdentityValid || !states.has(receipt?.state)) {
     report.blockers.push({code: observed.status === 404 ? 'request_not_found_no_replay' : 'receipt_unavailable_or_invalid'});
     return report;
   }
@@ -81,7 +88,7 @@ export async function runImageQA(options, journal, fetchImpl = fetch) {
     requiresProtectedComposite:receipt.requiresProtectedComposite === true,
     requestedCandidateCount:Number.isSafeInteger(receipt.requestedCandidateCount) ? receipt.requestedCandidateCount : null,
     persistedCandidateCount:Number.isSafeInteger(receipt.persistedCandidateCount) ? receipt.persistedCandidateCount : null,
-    provider:'workers_ai', backendProvider:'cloudflare-workers-ai' };
+    provider, backendProvider };
   const expected = receipt.requestedCandidateCount;
   const candidates = receipt.images;
   if (receipt.success !== true || receipt.state !== 'completed' || !Number.isSafeInteger(expected) || expected < 1 || expected > 4 || receipt.persistedCandidateCount !== expected ||

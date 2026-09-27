@@ -44,6 +44,21 @@ test('default is receipt and real persisted-byte readback, with no submission or
   assert.ok(f.calls.every(c=>c.init.method==='GET'));
   assert.doesNotMatch(JSON.stringify(r),/qa-fixture-session-secret|Bearer/);
 });
+test('accepts an OpenAI receipt with matching backend provenance',async()=>{
+  const f=fixture({receipt:{provider:'openai',backendProvider:'openai-images-api'}});
+  const r=await runImageQA(options,f.journal,f.fetch);
+  assert.equal(r.persistedResultVerified,true);
+  assert.equal(r.receipt.provider,'openai');
+  assert.equal(r.receipt.backendProvider,'openai-images-api');
+  assert.equal(f.calls.filter(c=>c.init.method==='POST').length,0);
+});
+test('rejects provider/backend drift without replaying or submitting',async()=>{
+  const f=fixture({receipt:{provider:'openai',backendProvider:'cloudflare-workers-ai'}});
+  const r=await runImageQA(options,f.journal,f.fetch);
+  assert.equal(r.persistedResultVerified,false);
+  assert.equal(r.blockers[0].code,'receipt_unavailable_or_invalid');
+  assert.equal(f.calls.filter(c=>c.init.method==='POST').length,0);
+});
 test('explicit submission durably records before POST and lost response resolves without a second inference',async()=>{
   const f=fixture({available:false,lostResponse:true});
   const first=await runImageQA(submit,f.journal,f.fetch);

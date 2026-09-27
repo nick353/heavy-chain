@@ -314,6 +314,11 @@ const commandChecks = [
     args: ['run', 'test:heavy-openai-provider-selection', '--silent'],
   },
   {
+    name: 'Heavy provider-agnostic QA receipt regression',
+    command: 'node',
+    args: ['--test', 'scripts/verify-cloudflare-image-qa.test.mjs'],
+  },
+  {
     name: 'generation scorecard',
     command: 'npm',
     args: ['run', 'verify:generation-scorecard', '--silent'],
