@@ -23192,3 +23192,7 @@ Security/operations契約をfresh確認。`security:audit`、G620 5/5、G614、G
 # Heavy Chain current state — 2026-09-27 r600
 
 現行HEADのtypecheck/lintはpass、OpenAI provider static readiness 7/7、goal readiness incomplete-ok 5/5。静的ゲートは維持されたが、production provider/R2/browser/business proofは未取得。Light OpenAI client実装とstrict gate 4 failuresは継続。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r601
+
+実provider QAのWorkers固定をfresh確認。QA safety testsは6/6 passだが、`hc-10m-real-generation-qa.mjs`はreceipt provider/backendをWorkers固定しておりOpenAI receiptを拒否する。OpenAI証跡を取得する前にprovider-aware validationと既存Workers readback互換を追加する必要がある。Astra起動receipt未復旧のためソース変更なし。Goal active、外部provider/R2/billing/deploy/publication/secretは0。

@@ -11708,3 +11708,7 @@ Security/operationsの独立契約をfresh再検証し、`security:audit`、G620
 # Goal progress — 2026-09-27 r600
 
 現行HEADで`typecheck`、`lint`、OpenAI provider static readiness 7/7、goal-readiness incomplete-ok 5/5をfresh確認。静的整合性は維持されているが、これらはauthenticated production generation、R2 readback、browser business completion、provider quality、release approvalの証明ではない。Light OpenAI client実装、production monitor/UI、G618、production H602、generation scorecardは未完了のまま。正本は`work/heavy-chain-continuation-readback-20260927-r1.json`、Goal active。
+
+# Goal progress — 2026-09-27 r601
+
+実provider証跡の正式QA経路をfresh監査した。`scripts/verify-cloudflare-image-qa.test.mjs`は6/6 passだが、`scripts/hc-10m-real-generation-qa.mjs`のreceipt validationが`workers_ai` / `cloudflare-workers-ai`固定で、OpenAI receiptを受け入れない。したがって実OpenAI生成をこのQA経路で完了扱いにすることはできない。修正対象はprovider-aware receipt validation、旧Workers receipt互換、no-replay維持に限定し、verified Astra engineering receipt復旧後に実装する。正本は`work/heavy-chain-continuation-readback-20260927-r1.json`。provider call、R2、billing、deploy、publication、secret読取は0、Goal active。
