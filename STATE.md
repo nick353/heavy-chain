@@ -22452,3 +22452,11 @@ production WorkerのLight source parityをCompanionでfresh readbackした。`/c
 # Heavy Chain current state — 2026-09-27 r434
 
 Light本家のモデルsource routeを追証した。`/model-library/head-form` は旧`権限がありません` 1件、生成履歴 1件、タイトル一致3件、Heavy label 0件で、Lightのplan-locked surfaceを保持している。`/model-library/model-change-form` は境界時間内のreadbackが不完全となり、replayせず、内部動作と外部効果0、session cleanupを完了した。証拠は`work/heavy-chain-lightchain-model-source-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r435
+
+Lightchainの現行route/contract境界を追加検証した。`npm run test:lightchain-production-visual-fixture` は4/4、
+`npm run test:lightchain-route-readback-comparator` は8/8、`node --test scripts/verify-lightchain-parity-alias-routes.test.mjs` は5/5、
+`npm run test:lightchain-parity-contract` は9/9でpass。これらはread-onlyのlocal/static/contract証拠であり、production認証、provider生成、
+R2 persistence、monitor、G618、H601/H602、scorecardの未達を解消しない。Astraのownership/acceptance判断なしにstale verifierの期待値や
+Light本家のplan-lock surfaceを変更していない。Goal active。

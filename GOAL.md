@@ -10988,3 +10988,10 @@ Light本家の`/creator` / `/tools/fabric` / `/model`をproductionでfresh readb
 # Goal progress — 2026-09-27 r434
 
 Lightモデルrouteの本家表示を確認し、`/model-library/head-form`では旧plan lockの`権限がありません`と生成履歴が存在し、Heavy文字列はなかった。model-change routeはbounded incompleteとして記録し、replayしなかった。これでLightの旧plan surfaceとHeavyの新しいrights gateの境界を実証で補強した。Goal active。
+
+# Goal progress — 2026-09-27 r435
+
+Lightchainのroute/readback/parity契約を追加でfresh検証し、production visual fixture 4/4、route-readback comparator 8/8、
+parity alias routes 5/5、parity contract 9/9をpassした。local/static契約の健全性は確認できたが、実認証・実provider receipt・
+R2 save/reuse/reload/reconciliation・video・monitor/G618・H601/H602・generation scorecardは依然未完了。Heavy/Light acceptance契約の
+変更はAstra判断前なので行っていない。Goal active。
