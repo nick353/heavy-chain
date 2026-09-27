@@ -1,5 +1,15 @@
 # Heavy Chain current state — 2026-09-27 r268
 
+## Real Heavy image visual QA — 2026-09-27
+
+同一Heavy request `dba13266-5776-453f-9df4-fbeeedacf557`のR2 objectをremote downloadし、receipt記載の
+sha256 `41c182141a91ced4ea2f08659c5f090256632b7be47c4ac8ee52e50a82ba8b47`と一致、1024x1024 JPEGとして
+目視確認した。白Tシャツのproduct-hero構図・衣服輪郭・artifact safety・commercial usefulnessを評価し、
+独立scorecardは`Needs polish`（5軸平均4.2）、validatorは1 row / 1 needs-polish / issues 0でPASS。
+証跡は`work/heavy-real-generation-visual-scorecard-20260927.json`と同ディレクトリのdownload object。
+これは1件のHeavy実生成品質証拠であり、旧10-feature release scorecard、publication approval、Light本番
+parityを代替しない。
+
 ## Fresh strict release-gate readback — 2026-09-27
 
 `npm run verify:release-gate -- --command-timeout-ms 600000`をfresh実行し、captureは

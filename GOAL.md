@@ -1,5 +1,12 @@
 # Goal progress — 2026-09-27 r390
 
+## Real Heavy generation visual QA — 2026-09-27
+
+Heavy実生成receiptの同一R2 objectをremote downloadし、sha256一致と画像内容をfresh確認した。1件の
+独立visual scorecardを`Needs polish`（5軸平均4.2）として保存し、quality validatorはissues 0でPASS。
+これは品質判断を捏造せず、publication approvalなし・10-feature generation scorecardの代替なしとして
+記録した。Goalはactive。
+
 ## Fresh strict gate confirmation — 2026-09-27
 
 strict gateを`2026-09-27T00:23:12.536Z`に再取得。ローカルstatic/typecheck/build/lint/diffとHeavy
