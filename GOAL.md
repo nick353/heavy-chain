@@ -11828,3 +11828,7 @@ H601/H602 operator readiness、H602 production completion、G618 scale-opsをfre
 # Goal progress — 2026-09-27 r625
 
 現行HEAD `0d19358`でcompletion auditをfresh実行し、`ok=false`・12 blockersを確認した。strict release gateは4 failures（production monitor/UI pair、G618 scale ops freshness、production H602 completion、generation scorecard）、一方でsecurity audit、typecheck、build、lint、git diff checkはpass。画像provider static readinessは`7/7` passだが、本番provider/R2/quality/business proofではない。正本は`work/heavy-chain-fresh-completion-audit-20260927-r3.json`。動画は変更せず、外部provider/R2/billing/deploy/publication/secret/破壊的cleanupは0、Goal active。
+
+# Goal progress — 2026-09-27 r626
+
+画像生成のlocal deterministic baselineをfresh再検証した。Heavy API/OpenAI suite `114/114`、provider persistence/readback `14/14`、Cloudflare runtime `6/6`、合計`134 pass / 0 fail`。OpenAI adapter、auth/entitlement、R2/reconciliation、legacy fail-closed境界の回帰はgreenだが、新default実装、authenticated production receipt、live R2、visual scorecardは未証明。動画は変更せず、正本は`work/heavy-chain-image-baseline-tests-20260927-r2.json`、Goal active。

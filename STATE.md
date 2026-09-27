@@ -23313,3 +23313,7 @@ OpenAI readiness `7/7`、Cloudflare runtime `6/6`、Light unified workflow `6/6`
 # Heavy Chain current state — 2026-09-27 r625
 
 現行HEAD `0d19358`のfresh completion auditは12 blockers、strict release gateは4 failures。production monitor/UI pair、G618 freshness、production H602 completion、generation scorecardがrelease阻害要因で、security/typecheck/build/lint/git diffはpass。画像provider readinessは7/7のstatic-local契約のみで、authenticated production receipt・R2 readback・quality・business completionは未証明。正本は`work/heavy-chain-fresh-completion-audit-20260927-r3.json`、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r626
+
+画像local deterministic baselineをfresh実行し、Heavy API/OpenAI `114/114`、provider persistence/readback `14/14`、Cloudflare runtime `6/6`、合計134 passを確認。これは本番provider/R2/visual qualityの証明ではなく、現行旧defaultの回帰基準。Adaptive runtime processは不在のためclosed transportへの再送はしていない。正本は`work/heavy-chain-image-baseline-tests-20260927-r2.json`、動画はdeferred、Goal active。

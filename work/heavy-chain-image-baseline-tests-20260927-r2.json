@@ -1,0 +1,63 @@
+{
+  "schema": "heavy-chain.image-baseline-tests.v1",
+  "capturedAt": "2026-09-27T10:50:31Z",
+  "sourceRevision": "0d19358b61dfd6f52e35c3b8d276836a8a87aaa7",
+  "scope": "image-generation-local-deterministic-baseline_video-unchanged",
+  "tests": [
+    {
+      "command": "npm test -- --test-name-pattern='OpenAI'",
+      "workingDirectory": "cloudflare/heavy-api",
+      "passed": 114,
+      "failed": 0,
+      "durationMs": 6144,
+      "externalEffects": {
+        "providerCalls": 0,
+        "r2Writes": 0,
+        "billing": 0,
+        "deploy": 0
+      }
+    },
+    {
+      "command": "npm run test:provider-persistence-readback --silent",
+      "workingDirectory": ".",
+      "passed": 14,
+      "failed": 0,
+      "externalEffects": {
+        "providerCalls": 0,
+        "r2Writes": 0,
+        "billing": 0,
+        "deploy": 0
+      }
+    },
+    {
+      "command": "npm run test:cloudflare-runtime --silent",
+      "workingDirectory": ".",
+      "passed": 6,
+      "failed": 0,
+      "externalEffects": {
+        "providerCalls": 0,
+        "r2Writes": 0,
+        "billing": 0,
+        "deploy": 0
+      }
+    }
+  ],
+  "aggregate": {
+    "passed": 134,
+    "failed": 0,
+    "status": "local_deterministic_baseline_green"
+  },
+  "notProven": [
+    "new gpt-image-2.5-sunburst implementation",
+    "authenticated production OpenAI receipt",
+    "live R2 save/reuse/reload/reconciliation",
+    "AI visual quality scorecard",
+    "browser business completion"
+  ],
+  "video": "unchanged_deferred",
+  "adaptive": {
+    "runtimeProcessObserved": false,
+    "closedTransportReplay": false,
+    "sourceMutation": false
+  }
+}
