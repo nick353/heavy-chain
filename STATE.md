@@ -1,4 +1,11 @@
-# Heavy Chain current state — 2026-09-27 r270
+# Heavy Chain current state — 2026-09-27 r271
+
+## Fresh persistence and video contract recheck — 2026-09-27
+
+現行revisionでprovider persistence/readback suite `14/14`、video provider contract `3/3`、video
+provider boundary `1/1`をfresh実行した。completed persistence前のHistory/Gallery/Canvas昇格、canonical
+storage ownership、同一request readback、video source/credential/readback不足時のfail-closedが維持されている。
+これは本番workspace save/reuse/reload/reconciliationやvideo provider receiptの完了証拠ではない。
 
 ## External context preflight — 2026-09-27
 

@@ -1,4 +1,10 @@
-# Goal progress — 2026-09-27 r392
+# Goal progress — 2026-09-27 r393
+
+## Fresh persistence/video contract recheck — 2026-09-27
+
+provider persistence/readback `14/14`、video contract `3/3`、video boundary `1/1`をfresh PASS。
+local contractはremote receiptなしの昇格やvideo provider未admit時の迂回を防いでいるが、本番save/reuse/reload/
+reconciliationとvideo receiptは未達のまま保持した。Goalはactive。
 
 ## External context preflight — 2026-09-27
 
