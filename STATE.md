@@ -22448,3 +22448,7 @@ Companionの新しいtask-owned sessionで、production Workerの`/generate?feat
 # Heavy Chain current state — 2026-09-27 r433
 
 production WorkerのLight source parityをCompanionでfresh readbackした。`/creator` は旧`権限がありません` 0件、生成履歴あり、`/tools/fabric` は旧permission 0件、`AI生成` 1件、参考画像入力面あり、`/model` は旧permission 0件、生成履歴あり、衣服画像ラベルありだった。各routeのvisual readback、browser no-effect、session/lease/pending/reconciliation cleanupを確認。証拠は`work/heavy-chain-lightchain-source-parity-readback-20260927-r1.json`。旧source fixtureの期待値は現行本家表示と不一致だが、Astra判断なしにpermission表示やverifier受入を変更しない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r434
+
+Light本家のモデルsource routeを追証した。`/model-library/head-form` は旧`権限がありません` 1件、生成履歴 1件、タイトル一致3件、Heavy label 0件で、Lightのplan-locked surfaceを保持している。`/model-library/model-change-form` は境界時間内のreadbackが不完全となり、replayせず、内部動作と外部効果0、session cleanupを完了した。証拠は`work/heavy-chain-lightchain-model-source-readback-20260927-r1.json`。Goal active。

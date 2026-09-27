@@ -10984,3 +10984,7 @@ Heavy entitlementのfresh UI readback後にstrict release gateを再取得した
 # Goal progress — 2026-09-27 r433
 
 Light本家の`/creator` / `/tools/fabric` / `/model`をproductionでfresh readbackし、旧`権限がありません`は3 routeとも0件だった。代わり、creatorは生成履歴、fabricはAI生成と参考入力、modelは生成履歴と衣服画像ラベルを確認。これで旧source fixtureがstaleである実証を追加したが、Heavy/Lightの所有境界とverifier契約はAstra判断まで変更しない。Goal active。
+
+# Goal progress — 2026-09-27 r434
+
+Lightモデルrouteの本家表示を確認し、`/model-library/head-form`では旧plan lockの`権限がありません`と生成履歴が存在し、Heavy文字列はなかった。model-change routeはbounded incompleteとして記録し、replayしなかった。これでLightの旧plan surfaceとHeavyの新しいrights gateの境界を実証で補強した。Goal active。

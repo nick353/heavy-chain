@@ -1,0 +1,36 @@
+{
+  "schema": "heavy-chain.lightchain-model-source-readback.v1",
+  "capturedAt": "2026-09-27T03:37:42.652Z",
+  "surface": "aos_chrome_companion_profile_instance",
+  "profileInstanceId": "profile_37fd31b6-ed53-4a35-8604-ab92ffbab05a",
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "routes": {
+    "/model-library/head-form": {
+      "legacyPermissionLabelCount": 1,
+      "generationHistoryCount": 1,
+      "titleMatchCount": 3,
+      "heavyLabelCount": 0,
+      "browserEffect": "known_no_effect",
+      "visualReadback": "verified"
+    },
+    "/model-library/model-change-form": {
+      "readback": "incomplete",
+      "exactBlocker": "browser_readback_unavailable_after_bounded_route_wait",
+      "appliedReadOnlyActions": 3,
+      "remainingReadOnlyActions": 5,
+      "reconciliationRequired": false,
+      "replayAllowed": false,
+      "providerCompletion": "unverified"
+    }
+  },
+  "cleanup": {
+    "sessionClosed": true,
+    "logicalSessionCount": 0,
+    "exactTabLeaseCount": 0,
+    "pendingOperationCount": 0,
+    "reconciliationPendingActiveCount": 0,
+    "cleanupEligibleTaskTabCount": 0
+  },
+  "interpretation": "The confirmed model source route retains the Light plan-locked permission surface and does not show Heavy text. The second route was not promoted to a successful readback; its bounded incomplete observation is retained as such and was not replayed."
+}
