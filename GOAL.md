@@ -11315,6 +11315,10 @@ fresh strict gate `output/playwright/10m-product-readiness-g615/release-gate-sum
 
 # Goal progress — 2026-09-27 r501
 
+# Goal progress — 2026-09-27 r502
+
+Lightchain all-feature contract 5/5、UI control boundaries 21/21、material contract 28/28、provider adapter 17/17をfresh passし、追加71 assertionsを通過した。現行Light surfaceの未解決local failureは`oriented-design-persisted-history`の旧テスト期待1件に限定。Heavy provider/auth/R2/billing/publicationは未実行、Goal active。
+
 履歴契約ドリフトの切り分け後、独立したLightchain現行契約を追加検証した。parity routes 34/34、unified workflow contract 6/6、source board parity 8/8をpass。誤った未登録script名を使った試行はコード失敗ではなく入口名の誤りで、正しい`test:lightchain-parity-routes`とnode test entrypointで再確認済み。履歴testidの1 failureは未修正のまま、provider/R2/auth/billing/publication/破壊操作は0。Goal active。
 
 Lightchain parity/provider/persistence readbackの追加確認は24/25 pass、1 failureだった。失敗は
