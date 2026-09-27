@@ -1,0 +1,71 @@
+{
+  "schema": "heavy_chain.human_gates_g618_readback.v1",
+  "captured_at": "2026-09-27T10:40:36Z",
+  "source_revision": "69a2fdf",
+  "checks": {
+    "h601_operator_readiness": {
+      "status": "not_claimed",
+      "missing_count": 10,
+      "missing": [
+        "final Terms locator",
+        "final Privacy locator",
+        "retention/deletion/export decision",
+        "upload-rights policy",
+        "brand/reference policy",
+        "person/likeness policy",
+        "copyright/marketing claims",
+        "commercial-use wording",
+        "counsel/operator review",
+        "safe operator decision JSON"
+      ]
+    },
+    "h602_operator_readiness": {
+      "status": "not_claimed",
+      "missing_count": 6,
+      "billing_settings": {
+        "generation_quota_enforced": false,
+        "production_checkout_enabled": true,
+        "sandbox_tester_redacted": true
+      },
+      "purchase_proof": {
+        "verified_no_real_charge_count": 0,
+        "transaction_or_entitlement_readback": false,
+        "human_attestation_not_machine_verification": true
+      }
+    },
+    "h602_production_completion": {
+      "status": "fail_closed",
+      "live_production_readback_performed": false,
+      "migrations_applied": true,
+      "blockers": [
+        "production_generation_quota_enforced_is_false",
+        "production_checkout_enabled_is_true",
+        "verified_no_real_charge_proof_missing",
+        "transaction_or_entitlement_readback_missing",
+        "operator_final_checkout_public_release_decision_missing",
+        "live_constraint_readback_not_performed"
+      ]
+    },
+    "g618_scale_ops": {
+      "status": "blocked_before_start",
+      "required_inputs": [
+        "HEAVY_CHAIN_MONITOR_API_URL",
+        "HEAVY_CHAIN_MONITOR_BRAND_ID",
+        "HEAVY_CHAIN_MONITOR_TOKEN",
+        "valid_baseline_limits"
+      ],
+      "build_or_browser_started": false
+    }
+  },
+  "safety": {
+    "legal_finalization": false,
+    "billing_mutation": false,
+    "checkout": false,
+    "purchase": false,
+    "identity_or_otp": false,
+    "provider_generation": false,
+    "secret_values_read": false,
+    "publication": false
+  },
+  "next_action": "Keep H601/H602 waiting_human and G618 fail-closed; resume only after safe operator evidence or explicit runtime inputs are available."
+}

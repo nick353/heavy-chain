@@ -11808,3 +11808,7 @@ Goal全体のfresh completion auditを現行HEAD `1bb1c768`で実行した。`ok
 # Goal progress — 2026-09-27 r620
 
 現行HEADでLight provider coverage `22/22`、Light permission/source parity `12/12`、auth session recovery `3/3`、auth hydration readback `4/4`をfresh PASSした。これはローカルdeterministic契約の収束であり、authenticated production provider receipt、remote durable save/reuse/reload/reconciliation、video receipt、production release gateを完了扱いにはしない。正本は`work/heavy-chain-light-auth-contracts-20260927-r1.json`。外部provider/R2/billing/publication/deploy/secret/破壊cleanupは0、Goal active。
+
+# Goal progress — 2026-09-27 r621
+
+H601/H602 operator readiness、H602 production completion、G618 scale-opsをfresh実行した。H601は10項目（Terms/Privacy、保持・権利・brand/likeness・commercial-use・operator JSON等）、H602は6項目（quota、checkout disabled、machine no-charge/transaction readback、operator decision等）が未達。G618はCloudflare origin/brand/live session/baseline limits不足で開始前fail-closed。Codexはlegal/billing/identity/OTP/provider/secret/publication操作を行っていない。正本は`work/heavy-chain-human-gates-g618-readback-20260927-r1.json`、Goal active。

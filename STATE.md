@@ -23293,3 +23293,7 @@ Opus計画の実装境界を、`image-ai.ts`（receipt/readback、D1/R2再検証
 # Heavy Chain current state — 2026-09-27 r620
 
 Light provider coverage `22/22`、permission/source parity `12/12`、auth recovery `3/3`、auth hydration `4/4`をfresh PASS。Light/認証のdeterministic境界は維持されているが、production provider/R2/reconciliation、video provider、monitor/G618/H601/H602/beta/scorecard/release gateは未完了。外部効果0。正本は`work/heavy-chain-light-auth-contracts-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r621
+
+H601/H602 operator readinessとH602 production completionをfresh再確認し、H601 missing 10、H602 missing 6、quota=false、checkout=true、verified no-charge=0、transaction/entitlement=falseを記録。G618は必要なCloudflare monitor inputs不足でbrowser/build開始前にfail-closed。法務・課金・購入・identity/OTP・provider・secret・公開は0。正本は`work/heavy-chain-human-gates-g618-readback-20260927-r1.json`、Goal active。
