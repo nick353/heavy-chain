@@ -22300,3 +22300,7 @@ deploy後strict gateを再実行（capturedAt `2026-09-27T02:34:52.067Z`、`ok=f
 # Heavy Chain current state — 2026-09-27 r379
 
 同じ認証済みCompanion profileでH601相当の`/generate?feature=generate-image`をfresh readbackした。`権限がありません`、`権利`、`利用条件`はいずれもsemantic query 0件、titleは`Lightchain AI`、visual screenshotは28KB台、external action false、task-owned tab/session cleanup completeだった。これは現在のHeavy/Light境界修正と整合するが、旧H601 production readback artifactが期待するLight permission surface（`h601_permission_surface_visible`）とは逆の状態であり、release-gateのH601 validator/fixtureは現行仕様に合わせた再設計が必要。provider生成・送信、課金、公開、秘密操作は行っていない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r380
+
+ローディング完了を`page.waitFor`で確認してから`/generate?feature=campaign-image`を再読込した。Heavy gateは表示され、`data-testid=heavy-entitlement-gate`の文言は`Heavy利用条件を確認するにはログインしてください`（初期pending表示も同一gateで確認）。旧`権限がありません`ではなく、現行のHeavy認証不足メッセージである。visual readback 58,869 bytes、provider/external action false、session/tab cleanup complete。したがって現行UIの残ブロッカーはHeavy認証state不足であり、旧H601 fixtureの期待値は廃止・更新対象。Goal active。

@@ -10857,3 +10857,7 @@ Lightchainのmaterial workbenchにも残っていたHeavy entitlement依存を�
 # Goal progress — 2026-09-27 r410
 
 認証済みCompanionの同一profileで`/generate?feature=generate-image`を再読込し、`権限がありません`・`権利`・`利用条件`が各0件、visual readback verified、external action false、cleanup completeを確認した。Heavy/Light境界修正の本番挙動としては期待どおりだが、旧H601 artifactの`h601_permission_surface_visible`期待と矛盾するため、H601 gateは現行仕様の権利・安全面を証明するfixture/validatorへ更新する必要がある。これは仕様変更を伴うため、Astraの技術判断後に修正する。Goalはactive。
+
+# Goal progress — 2026-09-27 r411
+
+ローディング完了後のfresh production readbackで、`/generate?feature=campaign-image`のHeavy gateが`Heavy利用条件を確認するにはログインしてください`として表示された。旧`権限がありません`は出ていない。Companionのsemantic＋visual readback、external action false、session/tab cleanupを確認した。これで、Lightchain境界修正は維持しつつ、Heavy実生成に必要な残存認証stateが本物のブロッカーであることを切り分けた。H601 artifact/validatorはこの現行メッセージと認証不足を反映する設計へAstra判断後に更新する。Goalはactive。
