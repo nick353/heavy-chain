@@ -22398,3 +22398,9 @@ Light機能をHeavy laneへ戻す変更は行っていない。Goal active。
 Lightchain provider coverageにも残っていた旧Heavy-only static assertions 5件を、現行の
 `heavyOwnedFeature && lightchainProviderSupported` / `!heavyOwnedFeature || ...` 境界へ更新した。実装・provider routeは変更せず、
 `npm run test:lightchain-provider-coverage`をfresh再実行して22/22 pass。LightのHeavy entitlement bypassとHeavyのserver gateを同時に確認した。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r426
+
+Lightchain unified workflow contract 6/6、material contract + garment mask refinement 28/28をfresh検証した。video-excluded shared
+lifecycle、source navigation、Light header/input order、material mask、auth-brand fence、Heavy-only UI不在を確認。local parity surfaceは
+passだが、production artifact freshness・実provider・remote persistenceの未達は別gateとして残る。Goal active。

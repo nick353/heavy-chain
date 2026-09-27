@@ -10941,3 +10941,8 @@ Lightchain parity 12/12、Heavy capability gating 9/9、typecheckをpass。こ�
 
 provider coverageの旧static assertionsを現行Heavy ownership境界へ整合し、実装を変更せず22/22 passした。Light機能をHeavyへ
 送らないこと、Heavy機能だけserver entitlement gateを使うこと、provider routeを緩めていないことを確認した。Goal active。
+
+# Goal progress — 2026-09-27 r426
+
+Lightchain unified workflow 6/6、material contract/garment mask 28/28をfresh passした。Lightのinput order・header・auth brand fence・
+Heavy-only UI不在を確認し、local parityを補強した。一方、production provider receipt・R2/video readback・stale artifactは未解消。Goal active。
