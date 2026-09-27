@@ -11788,3 +11788,7 @@ deploy/publication/secret読取は0。正本は`work/heavy-chain-static-integrit
 # Goal progress — 2026-09-27 r615
 
 Opus 5.5の再計画を正しい入力形式でverified完了した。invocationは`ses_f1d9b43bbffedGfuLVDFGM1TNW`、modelは`opencode/claude-opus-5-5`、costは`$0.095851`でreconciled。新規OpenAI画像既定を`gpt-image-2.5-sunburst`へ寄せ、旧OpenAI/Workers receipt readback互換、明示選択保持、fallback/replay禁止、mock-only QA、video差分ゼロを受入条件化した。Astra未検証packageとreceipt QA path特定が残り、Luna実装は未開始。正本は`work/heavy-chain-openai-image-opus-plan-20260927-r2.json`。provider/R2/billing/deploy/publication/secret読取は0、Goal active。
+
+# Goal progress — 2026-09-27 r616
+
+Opus計画に対応するreceipt/readback経路をfresh source auditで固定した。`image-ai.ts`のprovider identity、D1/R2保存前entitlement再検証、同一request receipt、GET readback、`hc-10m-real-generation-qa.mjs`のcandidate/workspace/storage検証、provider persistence assertions、Gallery readbackを範囲化した。QA harnessのWorkers固定はprovider-aware化が必要だが、no-replay/readback境界は維持する。Astra package `run_openai_image_astra_engineering_20260927_r1` は`native_start_receipt_metadata_unavailable`でblocked、実装・Luna起動は0。正本は`work/heavy-chain-openai-image-receipt-readback-path-map-20260927-r1.json`。provider/R2/billing/deploy/publication/secret読取は0、Goal active。

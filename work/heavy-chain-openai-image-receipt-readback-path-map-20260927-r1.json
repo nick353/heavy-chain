@@ -1,0 +1,56 @@
+{
+  "schema": "heavy_chain.openai_image.receipt_readback_path_map.v1",
+  "captured_at": "2026-09-27",
+  "source_revision": "5f7f100",
+  "scope": "image_generation_only",
+  "video_scope": "deferred_no_changes",
+  "verified_paths": [
+    {
+      "path": "cloudflare/heavy-api/src/image-ai.ts",
+      "ranges": ["208-235", "237-269", "272-337", "386-515", "651-657"],
+      "evidence": "provider/backendProvider identity is carried into durable metadata; commitStoredCandidate revalidates entitlement before D1 commit; receipt performs owner/entitlement checks, R2 HEAD, generated_images readback, signed media readback, providerTaskId/model/persistence fields, and exposes same-request recovery without re-inference; GET routes to the same receipt path."
+    },
+    {
+      "path": "scripts/hc-10m-real-generation-qa.mjs",
+      "ranges": ["71-105", "110-124", "126-147"],
+      "evidence": "QA reads an existing receipt, verifies job scope, candidate identity, workspace execution steps, canonical links/storage checksums, and durable attempt/readback files; current provider/backend assertion is Workers-fixed and must become provider-aware while preserving no-replay behavior."
+    },
+    {
+      "path": "scripts/verify-provider-persistence-readback.test.ts",
+      "ranges": ["155-178", "249-262"],
+      "evidence": "deterministic source assertions cover providerModel/providerTaskId/persistence metadata and GeneratePage-to-artifact-to-Canvas receipt preservation."
+    },
+    {
+      "path": "cloudflare/heavy-api/test/image-ai.test.ts",
+      "ranges": ["197-216"],
+      "evidence": "fixture covers OpenAI provider admission, receipt provenance, R2 persistence, and stored provider identity; fixture model remains legacy and must be updated only within the accepted OpenAI image plan."
+    },
+    {
+      "path": "src/pages/GalleryPage.tsx",
+      "ranges": ["163-168"],
+      "evidence": "gallery readback renders provider receipt fields from persisted result metadata."
+    }
+  ],
+  "required_followup": [
+    "Make OpenAI receipt validation accept openai/openai-images-api and preserve legacy Workers receipts.",
+    "Change only the accepted new OpenAI image default to gpt-image-2.5-sunburst; preserve explicit allowlisted choices and reject unsupported models.",
+    "Keep failure paths no-fallback/no-replay and keep QA mock-only; do not call provider or deploy from this packet."
+  ],
+  "astra_dispatch": {
+    "run_id": "run_openai_image_astra_engineering_20260927_r1",
+    "package_id": "heavy-openai-image-astra-engineering-r1",
+    "claim_id": "claim-pid-39115-18fd492574524ca3a9295651390bf590-heavy-openai-image-astra-engineering-r1",
+    "status": "blocked",
+    "blocker": "native_start_receipt_metadata_unavailable",
+    "implementation_started": false
+  },
+  "external_effects": {
+    "provider_calls": 0,
+    "r2_writes": 0,
+    "deploys": 0,
+    "billing": 0,
+    "publication": 0,
+    "secret_reads": 0
+  },
+  "next_action": "Resume the claimed Astra engineering package only after a fresh verified native start receipt; then dispatch bounded Luna implementation in server, receipt QA, GeneratePage, and deterministic tests."
+}

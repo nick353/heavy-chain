@@ -23273,3 +23273,7 @@ provider receipt、remote persistence、strict releaseは未完了。provider/R2
 # Heavy Chain current state — 2026-09-27 r615
 
 Opus 5.5 verified planを取得（`ses_f1d9b43bbffedGfuLVDFGM1TNW`、`opencode/claude-opus-5-5`、$0.095851 reconciled）。新規画像既定は`gpt-image-2.5-sunburst`、既存receipt互換、明示選択、no fallback/replay、mock-only QA、video差分ゼロを受入条件とする。Astra packageのverified start receiptとreceipt QA path特定が残るためLuna実装未開始。正本は`work/heavy-chain-openai-image-opus-plan-20260927-r2.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r616
+
+Opus計画の実装境界を、`image-ai.ts`（receipt/readback、D1/R2再検証、GET readback）、`hc-10m-real-generation-qa.mjs`（receipt/workspace/storage/no-replay）、provider persistence test、`image-ai.test.ts`、Gallery readbackへ分解して固定した。QAのWorkers identity固定はprovider-aware化対象だが、旧Workers receipt互換とno-fallback/no-replayを保持する。Astra package `run_openai_image_astra_engineering_20260927_r1` は`native_start_receipt_metadata_unavailable`でblocked、ソース変更・Luna実装・provider/R2/deploy/billing/publication/secretは0。正本は`work/heavy-chain-openai-image-receipt-readback-path-map-20260927-r1.json`、Goal active。
