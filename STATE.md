@@ -22547,3 +22547,9 @@ tokenを一時利用する設計で、tokenをファイル・環境変数・証�
 認証境界のlocal runtime testsをfresh実行し、consumer-auth 78/78、Heavy API auth/identity/entitlement 18/18がpassした。
 これは専用Auth Worker・issuer・UUID/profile検証、失効/期限、binding欠落時のfail-closed、Heavy terms/rights/preparation/attestationの
 request bindingを確認するlocal証拠であり、production bearer、monitor、provider receipt、課金、公開の代替ではない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r447
+
+H602 production-completion fail-closed verifierを`2026-09-27T04:12:07.663Z`にfresh再実行した。`ok=false`のまま、
+quota enforcement=false、production checkout=true、verified no-real-charge proof=0、transaction/entitlement readback=false、
+operator final decision未添付、live constraint readback未実施の6 blockerを再確認した。billing設定変更、決済、Apple ID/OTP、購入、公開は行っていない。Goal active。
