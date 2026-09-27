@@ -23124,3 +23124,7 @@ Adaptive runtimeはgraph/live process availableだがcapacity guardは`capacity_
 # Heavy Chain current state — 2026-09-27 r583
 
 `typecheck`と`lint`をfresh実行し、両方exit 0。ソースの静的整合性は維持されているが、production provider/R2/video証跡、monitor/G618、H601/H602、scorecard、strict gateは未完了。正本は`work/heavy-chain-static-integrity-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r584
+
+Light Chainのlocal lifecycle/evidence continuityをfresh実行し、save-once、reload、Library reuse、negative gates、cleanupまで成功。networkCalls=0で外部効果なし。Heavyのproduction provider/R2/video証跡やstrict gateとは別レイヤーとして扱う。正本は`work/heavy-chain-light-local-continuity-readback-20260927-r1.json`、Goal active。

@@ -11640,3 +11640,7 @@ Adaptive runtime/packageを再度fresh readbackした。別タスクのPlanner a
 # Goal progress — 2026-09-27 r583
 
 現行ソースの静的整合性をfresh確認し、`npm run typecheck --silent`と`npm run lint --silent`がともにexit 0だった。provider生成、R2 mutation、課金、公開、deploy、secret読取は0。正本は`work/heavy-chain-static-integrity-readback-20260927-r1.json`。これはproduction provider/R2/video/monitor/G618/H601/H602/scorecard/release gateの完了証明ではない。Goal active。
+
+# Goal progress — 2026-09-27 r584
+
+Light Chainのローカル耐久性をfresh再検証した。`verify:lightchain-local-lifecycle`と`verify:lightchain-local-evidence-continuity`はいずれもexit 0で、save-once→reload-readback→Library reuse、5件のnegative case、cleanup、networkCalls=0を確認した。正本は`work/heavy-chain-light-local-continuity-readback-20260927-r1.json`。これはHeavy production provider/R2/video/monitor/G618/H601/H602/scorecard/release gateの完了を示さない。Goal active。
