@@ -1,0 +1,39 @@
+{
+  "schema": "heavy-chain.goal-readiness.v3",
+  "capturedAt": "2026-09-27T11:24:24.928Z",
+  "objective": "Keep Heavy runtime and active readiness checks on Cloudflare auth, private media, and provider adapters.",
+  "irreversibleActions": {
+    "externalApiCall": "not_touched",
+    "generationSubmit": "not_clicked",
+    "migrationApply": "not_run",
+    "deploy": "not_run"
+  },
+  "checks": [
+    {
+      "id": "cloudflare_runtime_contract_present",
+      "passed": true
+    },
+    {
+      "id": "legacy_supabase_runtime_removed",
+      "passed": true,
+      "details": []
+    },
+    {
+      "id": "cloudflare_auth_media_adapters_present",
+      "passed": true
+    },
+    {
+      "id": "cloudflare_ai_adapter_present",
+      "passed": true
+    },
+    {
+      "id": "no_legacy_edge_entrypoint_in_active_gate",
+      "passed": true
+    }
+  ],
+  "ok": true,
+  "proofLimits": [
+    "This static verifier cannot establish authenticated production generation, AI quality, R2 persistence, or browser business completion.",
+    "Production deployment and live traffic-zero evidence require separate same-run readback."
+  ]
+}

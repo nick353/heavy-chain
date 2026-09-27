@@ -1,0 +1,69 @@
+{
+  "schema": "heavy-chain.image-current-wave-fresh-readback.v1",
+  "capturedAt": "2026-09-27T11:25:13Z",
+  "sourceRevision": "3acce01f8f2a1db7efe836ae435055b29f8394af",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "externalEffects": 0,
+    "providerSubmit": false,
+    "deploy": false,
+    "secretValuesRead": false,
+    "billing": false,
+    "publication": false
+  },
+  "localEvidence": {
+    "goalReadiness": {
+      "artifact": "work/heavy-chain-goal-readiness-fresh-20260927-r1.json",
+      "ok": true,
+      "checksPassed": 5,
+      "checksFailed": 0
+    },
+    "openAIProviderReadiness": {
+      "artifact": "work/heavy-chain-openai-image-readiness-fresh-20260927-r1.json",
+      "ok": true,
+      "checksPassed": 7,
+      "checksFailed": 0,
+      "mode": "static-local-no-provider-submit-no-payment-no-deploy"
+    },
+    "heavyApiOpenAIContract": {
+      "command": "npm test -- --test-name-pattern='OpenAI'",
+      "passed": 114,
+      "failed": 0
+    },
+    "providerPersistenceReadback": {
+      "command": "npm run test:provider-persistence-readback --silent",
+      "passed": 14,
+      "failed": 0
+    },
+    "inputNormalization": {
+      "command": "npm run test:image-api-input-normalization --silent",
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "productionReadback": {
+    "worker": "heavy-api",
+    "latest100PercentVersion": "529f72bc-c79e-45e4-a9cb-39f8407259ab",
+    "versionCreatedAt": "2026-09-26T23:49:15.592Z",
+    "configuredProductionProvider": "openai",
+    "liveVersionProvider": "workers_ai",
+    "liveVersionImageEnabled": true,
+    "liveVersionAllowedActions": ["generate-image", "edit-image", "model-matrix"],
+    "secretNamesPresent": ["MEDIA_READ_SECRET", "OPENAI_API_KEY"],
+    "secretValuesRead": false,
+    "bindingReadback": ["D1", "R2", "AUTH_SERVICE", "AI"]
+  },
+  "remainingBlockers": [
+    "adaptive_runtime_process_not_observed",
+    "verified_astra_engineering_receipt_unavailable",
+    "luna_image_migration_not_started",
+    "authenticated_openai_organization_and_provider_receipt_missing",
+    "remote_save_reuse_reload_reconciliation_not_verified",
+    "live_worker_provider_drift_workers_ai_vs_openai_config",
+    "h601_operator_decision_and_policy_locators_missing",
+    "h602_quota_charge_and_transaction_readback_missing"
+  ],
+  "nextGate": "Recover the existing Adaptive runtime and obtain the already-registered Astra image engineering receipt; do not replay the closed transport or deploy while the live provider remains workers_ai."
+}

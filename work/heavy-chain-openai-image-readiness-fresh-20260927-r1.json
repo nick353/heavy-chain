@@ -1,0 +1,45 @@
+{
+  "schema": "heavy-chain.cloudflare-generation-readiness.v1",
+  "capturedAt": "2026-09-27T11:24:28.255Z",
+  "mode": "static-local-no-provider-submit-no-payment-no-deploy",
+  "irreversibleActions": {
+    "externalApiCall": "not_touched",
+    "generationSubmit": "not_clicked",
+    "deploy": "not_run"
+  },
+  "checks": [
+    {
+      "id": "cloudflare_provider_action_transport",
+      "passed": true
+    },
+    {
+      "id": "generation_and_model_matrix_routes",
+      "passed": true
+    },
+    {
+      "id": "protected_edit_route",
+      "passed": true
+    },
+    {
+      "id": "durable_receipt_and_acknowledgement",
+      "passed": true
+    },
+    {
+      "id": "private_media_persistence",
+      "passed": true
+    },
+    {
+      "id": "generate_and_canvas_use_cloudflare_client",
+      "passed": true
+    },
+    {
+      "id": "legacy_runtime_markers_absent",
+      "passed": true
+    }
+  ],
+  "ok": true,
+  "proofLimits": [
+    "This gate does not prove authenticated production generation, AI quality, R2 readback, or browser business completion.",
+    "No historical Supabase test data or provider response is copied into this report."
+  ]
+}
