@@ -11616,3 +11616,6 @@ Runwayのplugin・permission・dependencyをfresh readbackし、`installed=false
 # Goal progress — 2026-09-27 r576
 
 10M completion auditを現行HEAD `93be839`でfresh実行し、structured non-completion・16 blockersを確認した。G617/G619/G669/G670未受入、H601/H602 open、real provider/beta/G618/mass-market/G659/H601/H602/public-entrypoint proof不足、G619/release gate command failureを維持した。正本は`work/heavy-chain-completion-audit-20260927-r7.json`。Goal active。
+# Goal progress — 2026-09-27 r577
+
+chosen public entrypointのread-only HTTP/auth boundaryをfresh実行し、`ok=true`（rootは307で同一origin `/login`へfail-closed redirect、session endpoint 200、未認証body=`null`）を得た。続くstrict release gateは4件失敗を維持した（monitor/UI pair、G618、production H602、generation scorecard）。正本は`work/heavy-chain-public-entrypoint-readback-20260927-r1.json`と`work/heavy-chain-fresh-release-gate-readback-20260927-r7.json`。Goal active。
