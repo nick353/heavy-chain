@@ -11912,3 +11912,7 @@ Light production UI/navigation verifierをfresh実行。origin bindingは正し�
 # Goal progress — 2026-09-27 r646
 
 H602 production completion readbackをfresh実行し、migration alignmentは確認できたが、generation quota=false、production checkout=true、verified no-real-charge proof 0、transaction/entitlement readbackなし、live constraint query未実施を確認。課金変更・購入・credential/OTP・公開は行わず、H602はfail-closedのまま。正本は`work/heavy-chain-h602-production-completion-fresh-readback-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。
+
+# Goal progress — 2026-09-27 r647
+
+H601 operator readinessをfresh実行。static guard/source readbackはPASSだが、operator final decisionとTerms/Privacy、retention/deletion/export、upload-rights、brand/reference、person/likeness、copyright/marketing、commercial-use、counsel reviewの10項目が未添付。Codexはlegal finalization・identity/OTP・secret/publicationを行わず、H601はfail-closed。正本は`work/heavy-chain-h601-operator-readiness-fresh-readback-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。

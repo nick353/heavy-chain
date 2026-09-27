@@ -23397,3 +23397,7 @@ Light production UI/navigationはorigin binding passだが明示auth-state不足
 # Heavy Chain current state — 2026-09-27 r646
 
 H602 production readbackはmigration alignmentのみ確認。quota=false、checkout=true、no-charge proof 0、transaction/entitlement readbackなし、live constraint query未実施。課金・購入・公開・secret readは0、H602 fail-closed。動画はdeferred。正本は`work/heavy-chain-h602-production-completion-fresh-readback-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r647
+
+H601 static guardはPASSだがoperator decision・policy locators・counsel reviewの10項目未添付。legal finalization/identity/OTP/secret/publicationは0、H601 fail-closed。動画はdeferred。正本は`work/heavy-chain-h601-operator-readiness-fresh-readback-20260927-r1.json`と更新済みresume manifest、Goal active。

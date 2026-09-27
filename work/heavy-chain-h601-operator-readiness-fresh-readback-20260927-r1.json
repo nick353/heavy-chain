@@ -1,0 +1,50 @@
+{
+  "schema": "heavy-chain.h601-operator-readiness-fresh-readback.v1",
+  "capturedAt": "2026-09-27T11:21:58Z",
+  "sourceRevision": "6e1ed9d",
+  "scope": {
+    "readOnly": true,
+    "staticGuard": true,
+    "operatorAcceptance": false,
+    "legalFinalization": false,
+    "externalEffects": 0,
+    "secretRead": false,
+    "publication": false
+  },
+  "sourceReadback": "output/playwright/g779-h601-legal-safety-current-r1/summary.json",
+  "operatorDecisionReadback": {
+    "attached": false,
+    "read": false,
+    "finalH601Status": null,
+    "allowedKeysOnly": null,
+    "safeValuesOnly": null
+  },
+  "staticChecks": {
+    "h601StaticGuardOk": true,
+    "sourceReadbackExists": true,
+    "h601RemainsOpenUntilOperatorDecision": true
+  },
+  "missingCount": 10,
+  "blockers": [
+    "operator_final_h601_decision_missing",
+    "final_terms_locator_is_attached",
+    "final_privacy_locator_is_attached",
+    "retention_deletion_export_decision_is_attached",
+    "upload_rights_policy_decision_is_attached",
+    "brand_reference_policy_decision_is_attached",
+    "person_likeness_policy_decision_is_attached",
+    "copyright_marketing_claims_decision_is_attached",
+    "commercial_use_wording_decision_is_attached",
+    "counsel_operator_review_is_attached",
+    "operator_decision_json_uses_safe_summary_fields_only"
+  ],
+  "hardStops": [
+    "legal finalization by Codex",
+    "identity verification",
+    "OTP/CAPTCHA/security prompt handling",
+    "secret entry",
+    "external public publishing",
+    "billing/checkout/payment/purchase"
+  ],
+  "nextGate": "Attach safe operator decision JSON and policy locators, then rerun H601 static and strict operator readiness; do not invent legal approval."
+}
