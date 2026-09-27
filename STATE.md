@@ -23421,3 +23421,7 @@ strict release gateは未承認。local command 16件はPASSしたが、producti
 # Heavy Chain current state — 2026-09-27 r652
 
 production dry-runはOpenAI候補configを通過したが、bundleに承認済みSunburst modelは未反映。live Workerは変更なし、deploy/upload/provider submit/secret値読取は0。Astra設計receipt後にモデル/parser/UI/testを更新し、再度dry-runが必要。動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r653
+
+OpenAI API read-only model listは401 invalid_api_key。環境keyはpresentだが有効性を証明できず、Heavy consumer-auth token・monitor token・brand IDも不足。直接provider生成・秘密値の保存・Heavy receipt迂回は0、動画はdeferred、Goal active。

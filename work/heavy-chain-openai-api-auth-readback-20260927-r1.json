@@ -1,0 +1,29 @@
+{
+  "schema": "heavy-chain.openai-api-auth-readback.v1",
+  "capturedAt": "2026-09-27T11:33:28Z",
+  "sourceRevision": "cfe1bcf5db4e22408bd95edeee827502b997b036",
+  "request": "GET https://api.openai.com/v1/models",
+  "scope": {
+    "readOnly": true,
+    "generation": false,
+    "billing": false,
+    "deploy": false,
+    "secretValueLogged": false,
+    "responseRedacted": true,
+    "video": "deferred_by_user"
+  },
+  "environment": {
+    "OPENAI_API_KEY": "present_but_rejected",
+    "HEAVY_CHAIN_MONITOR_TOKEN": "absent",
+    "HEAVY_CHAIN_MONITOR_API_URL": "absent",
+    "HEAVY_CHAIN_MONITOR_BRAND_ID": "absent"
+  },
+  "result": {
+    "httpStatus": 401,
+    "providerCode": "invalid_api_key",
+    "modelsRead": false,
+    "sunburstAvailability": "unverified"
+  },
+  "interpretation": "The configured OpenAI key cannot be used for authenticated model readback. No generation or Heavy receipt attempt was made, and no replacement secret was invented.",
+  "nextGate": "Obtain a valid authorized OpenAI credential and Heavy consumer-auth session/brand context through the approved path; then perform the Heavy provider receipt workflow rather than direct provider submission."
+}

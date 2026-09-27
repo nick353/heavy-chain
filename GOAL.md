@@ -11936,3 +11936,7 @@ strict release gateをskipなしでfresh実行。node syntax、security audit、
 # Goal progress — 2026-09-27 r652
 
 Cloudflare production dry-runをfresh実行。候補configはOpenAI・image actions enabled・D1/R2/AUTH_SERVICE/AI bindingsを確認したが、bundle内モデルは`gpt-image-1`、`gpt-image-1-mini`、`gpt-image-1.5`、`gpt-image-2`、`gpt-image-latest`のみで、承認済みSunburst identifierは未反映。本番live versionは変更せず、deploy/upload/provider submitは0。動画はdeferred、Goal active。正本は`work/heavy-chain-image-production-dry-run-fresh-readback-20260927-r2.json`と更新済みresume manifest。
+
+# Goal progress — 2026-09-27 r653
+
+OpenAI APIのモデル一覧をread-onlyで確認しようとしたが、環境の`OPENAI_API_KEY`はHTTP 401 `invalid_api_key`で拒否された。Heavy monitor token/API URL/brand IDもabsent。キー値は表示・保存せず、直接生成やHeavy receiptの迂回も行っていない。動画はdeferred、Goal active。正本は`work/heavy-chain-openai-api-auth-readback-20260927-r1.json`と更新済みresume manifest。
