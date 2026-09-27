@@ -8,6 +8,10 @@
 
 fresh read-only確認で、primary visual scorecard/readbackとG677 fallback scorecardが現行checkoutに存在しないこと、G618 monitor API URL・brand ID・tokenが全て未設定であることを確認。古い単一candidate scorecardを10-feature証拠へ昇格せず、外部生成・deploy・課金・公開・キー変更・動画変更は0。Goalはactive。次の再開条件は、認証済みproduction contextと同じAPIキーの2xx後に、新規provider receiptを取得してscorecardとG618を同じrunの証跡から作ること。
 
+## Fresh production boundary readback — 2026-09-28
+
+認証なしのread-only確認でHeavy API health 200、consumer-auth health 200、profile/Heavy entitlement 401、Web rootと`/designProduction`のlogin redirect 307を取得。稼働しているhealthは認証済みworkspaceやprovider生成の証明ではない。APIキーは変更せず、provider submit・deploy・課金・公開・動画変更は0。Goalはactive。正本は`work/heavy-chain-production-boundary-fresh-readback-20260928-r1.json`。
+
 ## Heavy feature readback and action boundary — 2026-09-27
 
 同一ownerの認証済みCompanion sessionで生成featureをread-only走査した。`model-matrix`／`design-gacha`はHeavy利用条件、

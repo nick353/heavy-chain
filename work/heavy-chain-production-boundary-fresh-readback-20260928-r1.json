@@ -1,0 +1,46 @@
+{
+  "schema": "heavy-chain.production-boundary-fresh-readback.v1",
+  "capturedAt": "2026-09-27T18:18:31Z",
+  "source": "read-only-curl-no-auth-no-provider-no-billing",
+  "endpoints": {
+    "heavyApiHealth": {
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "service": "heavy-api",
+        "media": "private-r2",
+        "heavyEntitlementEnabled": true
+      }
+    },
+    "consumerAuthHealth": {
+      "status": 200,
+      "body": {
+        "service": "consumer-auth",
+        "appId": "heavy",
+        "storage": "cloudflare-d1",
+        "emailConfigured": true,
+        "emailBudgetConfigured": true
+      }
+    },
+    "profile": { "status": 401, "body": { "error": "unauthorized" } },
+    "heavyEntitlement": { "status": 401, "body": { "error": "unauthorized" } },
+    "webRoot": {
+      "status": 307,
+      "location": "https://heavy-chain-web.nichika2000823.workers.dev/login?redirect=%2F%3F"
+    },
+    "webDesignProduction": {
+      "status": 307,
+      "location": "https://heavy-chain-web.nichika2000823.workers.dev/login?redirect=%2FdesignProduction%3F"
+    }
+  },
+  "interpretation": "Hosting and unauthenticated health boundaries are live, but consumer authentication is not established in this read-only context; no authenticated workspace, provider receipt, R2 reconciliation, monitor/UI pair, or business completion is proven.",
+  "effects": {
+    "providerSubmit": false,
+    "billing": false,
+    "publication": false,
+    "deploy": false,
+    "secretRead": false,
+    "apiKeyChanged": false,
+    "videoTouched": false
+  }
+}

@@ -23636,3 +23636,7 @@ clean worktreeのstrict release gateを同じ実行でfresh取得した。syntax
 # Independent gate input audit — 2026-09-28
 
 外部効果なしのfresh read-only確認で、strict gateの未達入力をさらに固定した。primary visual scorecard、同一run readback、G677 fallback scorecardはいずれも現行checkoutに存在せず、既存の1件scorecardや歴史artifactを10-feature primaryへ昇格しない。G618に必要なmonitor API URL、brand ID、tokenも全てmissing。APIキー、provider、deploy、billing、publication、videoは触らず、Goalはactiveのまま。正本はno-rotation plan readbackとimage resume manifest。
+
+# Fresh production boundary readback — 2026-09-28
+
+認証なしのread-only curlでproduction境界をfresh確認。Heavy API healthは200（private-r2、Heavy entitlement enabled）、consumer-auth healthは200（heavy app、D1、email設定済み）、profile/Heavy entitlementは401、Web rootと`/designProduction`はloginへ307 redirect。認証済みconsumer session、provider receipt、remote persistence/reconciliation、monitor/UI business completionは未成立。APIキー変更・再送・provider submit・deploy・課金・公開・動画変更は0。正本は`work/heavy-chain-production-boundary-fresh-readback-20260928-r1.json`。
