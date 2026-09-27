@@ -22330,3 +22330,10 @@ artifactの現行仕様への更新は、旧fixtureを現行Heavy terms/rights g
 auth/media/AI adapter、active gateのlegacy edge entrypoint不在を全てpass（`ok=true`）で確認した。これは静的readinessであり、
 authenticated production generation、AI quality、R2 persistence、browser business completion、deployment/live traffic-zeroを証明しない。
 外部API、generation submit、migration、deployは未実行。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r416
+
+monitor/production QAに必要な環境変数の存在だけをfresh確認した（値は読み出していない）。
+`HEAVY_CHAIN_MONITOR_API_URL`、`HEAVY_CHAIN_MONITOR_BRAND_ID`、`HEAVY_CHAIN_MONITOR_TOKEN`、`HEAVY_CHAIN_AUTH_STATE`、
+`HEAVY_CHAIN_QA_IMAGE`はいずれも未設定で、既定のローカルQA画像は存在する。このためmonitor/G618/mass-market Playwrightを
+秘密推測なしに実行できる状態ではない。Goal active。
