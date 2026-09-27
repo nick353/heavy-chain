@@ -23014,3 +23014,7 @@ public entrypoint readback反映後にunified release gateをfresh再実行し�
 # Heavy Chain current state — 2026-09-27 r553
 
 現行正規Cloudflare Web origin `https://heavy-chain-web.nichika2000823.workers.dev`を新規task-owned Companion sessionで再確認した。`/model`、`/gallery`、`/history`、`/jobs`、`/canvas/new`の5 routeすべてで`readyState=complete`、semantic/visual readback verified、avatarまたはcanvas-save相当の認証済みmarker、旧`権限がありません`文言なしを確認。Gallery/Historyは保存データ取得中の状態、Jobsは0件queue、CanvasはNisenブランドとHeavy規約確認状態を正直に記録した。session closeは`owner_cleanup_receipt.v1`で`ok=true`、task tab 1件close、lease release confirmed、retained/unknown-effect 0、external effect 0。正本は`work/heavy-chain-companion-authenticated-evidence-20260927-r3.json`、`npm run verify:companion-auth -- --evidence work/heavy-chain-companion-authenticated-evidence-20260927-r3.json`はpass。provider receipt、source sync、reconciliation、production generation、R2、billing、publicationは未証明。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r554
+
+現行HEADでHeavy/Light境界のfocused testを再実行し、`verify-heavy-capability-gating.test.mjs`と`verify-lightchain-permission-parity.test.ts`の15/15をpass。Lightchain Workbench/material workbenchでは既知Light featureにHeavy entitlementを呼ばず、Light parityのHeavy-only rights checkbox不在、Heavy parityのHeavy consent分離、401/403/5xx fail-closedを確認した。過去agentの古いHEAD由来の「Workbenchが全Light機能をHeavy entitlementで遮断する」所見は現行ソースでは解消済みで、コード変更は行っていない。provider、課金、公開、R2、deploy、secretは0。Goal active。
