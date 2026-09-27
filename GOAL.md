@@ -12076,3 +12076,7 @@ Chrome Companionの同一task-owned read-only sessionでOpenAI PlatformのAPI-ke
 # Goal progress — 2026-09-28 r688
 
 認証probeを増やさず、productionの非認証read-only boundaryをfresh確認。Heavy API health 200、profile/Heavy entitlement 401、Heavy Web health 200、web session 200/null、sourceのproduction provider configはopenai。稼働とclosed auth boundaryは確認できたが、authenticated consumer session、実provider receipt、remote save/reuse/reload/reconciliation、strict gateの4未達は解消していない。外部生成・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r689
+
+Cloudflare production deployment一覧をread-onlyでfresh確認。最新version `529f72bc-c79e-45e4-a9cb-39f8407259ab` は100% trafficだが、一覧からruntime AI providerは判別できないため、source configの`openai`だけで実行時providerを完了扱いにしない。deploy・provider submit・課金・公開・動画変更は0、同じAPIキーもローテーションしていない。認証済みconsumer session、同一キーのread-only 2xx、実provider生成receipt、remote save/reuse/reload/reconciliation、visual scorecard、monitor/UI、G618、H602、strict gateは未完了。Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。

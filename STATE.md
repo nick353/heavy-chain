@@ -23561,3 +23561,7 @@ Opus 5.5の更新plan `aa040f17-6308-444f-8290-cfc78589de2a`で「同じキー�
 # Heavy Chain current state — 2026-09-28 r688
 
 認証probeを増やさず、productionの非認証read-only boundaryをfresh確認。Heavy API healthは200（private-r2、Heavy entitlement enabled）、profile/Heavy entitlementは401、Heavy Web healthは200、web sessionは200/null。sourceのproduction `AI_IMAGE_PROVIDER`はopenai。これは稼働・設定・closed auth boundaryの証拠であり、authenticated consumer session、実provider receipt、remote reconciliationの証拠ではない。外部生成・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r689
+
+Cloudflare production deployment一覧をread-onlyでfresh確認。最新version `529f72bc-c79e-45e4-a9cb-39f8407259ab` が100% trafficだが、一覧はruntime AI providerを公開しないため、source configの`openai`を実行時provider receiptとは扱わない。deployは行わず、認証済みconsumer session、同じキーの2xx、実provider生成receipt、remote save/reuse/reload/reconciliation、visual scorecard、monitor/UI、G618、H602は未達。キーのローテーション・secret変更・provider submit・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
