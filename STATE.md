@@ -22635,3 +22635,7 @@ provider生成、R2 chain、rights/legal承諾、課金、公開、secret insert
 # Heavy Chain current state — 2026-09-27 r459
 
 Light Chain `/dashboard`を同一task-owned authenticated Companion profileでfresh readbackした。production origin、title `Lightchain AI`、readyState complete、semantic/visual readback verified、browserMutationExecuted=false、externalActionExecuted=falseを確認し、session close・tab close・lease release・foreignTabsMutated=false・unknownEffect=falseでcleanup完了。正本補足は`work/heavy-chain-lightchain-dashboard-companion-readback-20260927-r1.json`。Companion証跡はPlaywrightの非local `auth-state.json`を代替しないためproduction monitor/UI pairへ昇格していない。Adaptive runtimeは`Transport closed`継続で同一接続を再試行せず、monitor/G618/H602/scorecardの残件と再開条件は変化なし。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r460
+
+Heavy/Light permission境界をsource/local契約でfresh監査した。`権限がありません` runtime surfaceはLight専用componentに限定され、Heavy-owned featureは`Heavy利用条件`のterms/rights gateで閉じる構成を確認。`test:lightchain-permission-parity` 12/12、`test:lightchain-entry-routing` 30/30、`test:lightchain-material-contract` 28/28、`test:video-provider-boundary` 1/1、typecheck pass。正本補足は`work/heavy-chain-heavy-permission-boundary-audit-20260927-r1.json`。Lightのplan-lockを削除せず、Heavy permission badgeを追加で消す変更も不要。provider/R2、rights承諾、課金、公開は0。Goal active。

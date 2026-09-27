@@ -11152,3 +11152,7 @@ provider生成、権利承諾、課金、公開、secret insertion、destructive
 # Goal progress — 2026-09-27 r459
 
 Light Chain dashboardを同一task-owned authenticated Companion profileでfresh readbackし、production origin、readyState complete、semantic/visual readback verified、browser/provider/external effect 0、session/tab/lease cleanup完了を確認した。証跡は`work/heavy-chain-lightchain-dashboard-companion-readback-20260927-r1.json`。ただしこれはPlaywright `auth-state.json`を含まないため、strict gateのproduction monitor/UI pairへは昇格させていない。Adaptive runtimeは`Transport closed`のままで、同一接続の再試行はしていない。残る4件（monitor/UI、G618、H602、generation scorecard）と、正規Bearer/brand scope・live DB/API・provider/R2・human/operator証跡の再開条件は不変。Goal active。
+
+# Goal progress — 2026-09-27 r460
+
+Heavy/Lightのpermission境界をsourceとlocal契約で再監査した。runtime sourceで`権限がありません`を描画するのはLight Chain専用componentのみで、Heavy-owned `campaign-image`/`model-matrix`は明示的なHeavy terms/rights gateへ分離されている。parity 12件、routing 30件、material 28件、video boundary 1件、typecheckをfresh passし、Lightのplan-lockを壊す修正は不要と確定した。証跡は`work/heavy-chain-heavy-permission-boundary-audit-20260927-r1.json`。provider生成、rights承諾、課金、公開は0。strict gate残件4件は不変。Goal active。
