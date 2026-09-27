@@ -1,6 +1,6 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T18:05:50Z",
+  "capturedAt": "2026-09-27T18:06:42Z",
   "sourceRevision": "518d2a4",
   "goalStatus": "active",
   "scope": {
@@ -84,7 +84,7 @@
   },
   "latestAstraReadback": {
     "adaptivePlanId": "aa040f17-6308-444f-8290-cfc78589de2a",
-    "adaptivePlanVersion": 6,
+    "adaptivePlanVersion": 7,
     "runId": "run_heavy_image_astra_engineering_20260927_r6",
     "packageId": "heavy-openai-image-astra-engineering-r6",
     "ownerTaskId": "/root",
@@ -109,7 +109,7 @@
     "readback": "Astra did not independently expose invocation identity; no Luna handoff, source mutation, provider call, deploy, or auth probe was performed."
   },
   "adaptiveRuntimeReadback": {
-    "capturedAt": "2026-09-27T18:03:51Z",
+    "capturedAt": "2026-09-27T18:06:30Z",
     "capacityGuard": "capacity_blocked_live_capacity_unobservable_no_immediate_retry",
     "routerAvailable": true,
     "graphRuntimeAvailable": true,
