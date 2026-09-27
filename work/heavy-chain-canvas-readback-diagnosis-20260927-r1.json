@@ -1,0 +1,49 @@
+{
+  "schema": "heavy-chain.canvas-readback-diagnosis.v1",
+  "capturedAt": "2026-09-27T08:03:04.201Z",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "route": "/canvas/new",
+  "sessionId": "session_d473367c-b5c7-4ed8-a01c-ef7cd7aff5a0",
+  "tabId": 1980931132,
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "page": {
+    "title": "Lightchain AI",
+    "readyState": "complete",
+    "semanticReadback": "verified",
+    "visualReadback": "verified",
+    "authMarker": "canvas-save",
+    "brand": "Nisen",
+    "legacyPermissionText": false,
+    "heavyTermsRightsState": "consent_and_rights_attestation_required",
+    "heavyTermsRightsText": "Heavy側の規約同意・権利表明が必要です",
+    "generationControl": "visible_not_disabled_without_input",
+    "providerSubmitDispatched": false
+  },
+  "networkReadback": {
+    "source": "performance_resource_timing",
+    "historicalReplay": false,
+    "heavyEntitlementEndpointObserved": true,
+    "heavyEntitlementEndpointFamily": "/v1/heavy/entitlement?action=generate-image",
+    "profileAndBrandsEndpointObserved": true,
+    "requestBodiesOrCredentialsRead": false,
+    "consoleWarnings": 6,
+    "consoleErrors": 0
+  },
+  "businessCompletion": {
+    "providerReceipt": "unverified",
+    "sourceSync": "unverified",
+    "reconciliation": "unverified"
+  },
+  "cleanup": {
+    "schema": "aos.chrome_companion.owner_cleanup_receipt.v1",
+    "ok": true,
+    "sessionClosed": true,
+    "taskTabClosed": true,
+    "leasesReleased": 1,
+    "retained": [],
+    "unknown_effect": [],
+    "externalActionExecuted": false,
+    "recorded_at": "2026-09-27T08:03:04.201Z"
+  },
+  "decision": "no_権限がありません_blocker;_Heavy_consent_and_rights_gate_is_visible_as_designed_and_requires_request_scoped_attestation_before_generation"
+}
