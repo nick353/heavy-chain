@@ -11180,3 +11180,7 @@ security/operations/rights/billingのlocal契約をfresh再検証した。G620�
 # Goal progress — 2026-09-27 r466
 
 G619 beta readiness/evidenceと10M completion auditをfresh実行した。G619は`readySessions=0`、3 session全てで実同意、5分以上duration、friction/no-friction note、redaction review、behavior evidence artifact、scaffold placeholder置換が不足。10M audit（`2026-09-27T05:21:47.934Z`）はG617=`blocked-exact`、G619=`queued`、H601/H602=`open`を確認した。実参加者・同意・実セッションを架空生成せず、G619はhuman-neededとして維持する。Goal active。
+
+# Goal progress — 2026-09-27 r467
+
+G617の正規provider経路を再調査した。公式Runwayアプリはディレクトリ上で利用可能だが、現在の接続状態は`not_installed`で、当スレッドにRunway MCP toolは露出していない。旧localhost OAuth、token/cookie抽出、直接provider呼出しは行わず、未接続状態と再開条件を`work/heavy-chain-runway-connection-readback-20260927-r1.json`へ固定した。再開条件は、ユーザー側で公式Runwayアプリを接続した後、同一runのprovider receipt→storage/readback→visual scorecard→reconciliationを取得すること。G617の証跡を架空生成せず、Goal active。

@@ -22663,3 +22663,7 @@ G620/G614/G632/G633、H601 legal safety、H602 Cloudflare contract、Launch Oper
 # Heavy Chain current state — 2026-09-27 r466
 
 `verify:g619-beta-readiness`は`ok=false`、`readySessions=0`、missingCount=18。`verify:g619-beta-evidence`も実証跡不足でfail。`verify:10m-completion:incomplete-ok`の正本`output/playwright/10m-completion-audit/summary.json`は`capturedAt=2026-09-27T05:21:47.934Z`、G617 blocked-exact、G619 queued、H601/H602 openを示す。G619の実参加者同意・実時間・redaction・behavior artifactをCodexが捏造せず、provider/billing/publicationは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r467
+
+G617のprovider/auth境界をfresh確認した。公式Runwayアプリは利用可能として検出されたが、現セッションでは未接続（`not_installed`）で、当スレッドのRunway MCP tool露出も未確認。token/cookie抽出、旧localhost OAuth、直接provider呼出し、課金、公開、外部効果は0。正本補足は`work/heavy-chain-runway-connection-readback-20260927-r1.json`。公式Runway接続後に、同一runのprovider receipt、保存/readback、visual scorecard、reconciliationを取得するまでG617はblocked-exactのまま維持する。Goal active。
