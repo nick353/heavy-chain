@@ -22346,3 +22346,10 @@ legal-safety、H602 local billing、typecheck、build、lint、diff-check、G614
 monitor/UI pair（UI artifact missing）、mass-market QA（57.33h stale）、Lightchain all-feature previews（56.66h stale）、
 G618（612.19h stale）、H601 production rights（60.48h stale）、H602 production completion（blocker 6）、generation scorecard
 （正規scorecard artifact missing）。外部生成、課金、公開、secret投入、破壊的cleanupは行っていない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r418
+
+`npm run verify:h602-production-completion-readback`をfresh実行し、`capturedAt=2026-09-27T02:58:57.914Z`、
+`liveProductionReadbackPerformed=false`、`ok=false`を確認した。migrations適用済み・sandbox tester登録済みだが、quota enforcementがfalse、
+production checkoutがtrue、verified no-real-charge proofが0、transaction/entitlement readbackがfalse、operator final checkout decisionと
+live constraint readbackが未取得である。Apple credential/OTP、purchase、billing mutationは行わず、H602はfail-closedのまま保持した。Goal active。
