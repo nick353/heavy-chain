@@ -11736,3 +11736,9 @@ Light permission parity `12/12`をfresh PASSした。新規Lightリクエスト�
 Workers identity固定であることをsource auditへ再固定した。Astra Light/QA packageは引き続き
 `native_start_receipt_metadata_unavailable`、runtimeは`capacity_blocked`。provider/R2/deploy/billing/publication/secret読取は0。
 正本は`work/heavy-chain-openai-boundary-test-readback-20260927-r1.json`。Goal active。
+
+# Goal progress — 2026-09-27 r606
+
+strict release gateのfresh終了結果は`ok=false`。未達はproduction monitor/UI pair、G618 scale-ops baseline、production
+H602 billing completion readback、generation scorecardの4系統で、ローカルOpenAI/Light境界テストの合格とは別の本番証跡である。
+provider/R2/billing/deploy/publication/secret読取は0。正本は`work/heavy-chain-release-gate-readback-20260927-r8.json`。Goal active。

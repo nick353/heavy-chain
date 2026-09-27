@@ -23221,3 +23221,9 @@ Light permission parity `12/12`をfresh PASS。source auditでは新規Lightリ�
 harnessもWorkers identity固定。Astra Light/QA packageは`native_start_receipt_metadata_unavailable`、runtimeは
 `capacity_blocked`。provider/R2/deploy/billing/publication/secret読取は0。正本は
 `work/heavy-chain-openai-boundary-test-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r606
+
+strict release gateをfresh実行し、`2026-09-27T09:56:05.466Z`に`ok=false`、未達4件
+（production monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecard）を確認。
+provider/R2/billing/deploy/publication/secret読取は0。正本は`work/heavy-chain-release-gate-readback-20260927-r8.json`。Goal active。
