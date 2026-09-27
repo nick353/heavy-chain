@@ -1,0 +1,23 @@
+{
+  "schema": "heavy-chain.release-gate-fresh-readback.v1",
+  "capturedAt": "2026-09-27T12:13:08Z",
+  "sourceRevision": "f061c30",
+  "command": "npm run verify:release-gate",
+  "exitCode": 1,
+  "ok": false,
+  "summaryPath": "output/playwright/10m-product-readiness-g615/release-gate-summary.json",
+  "failed": [
+    "readback:production monitor and UI pair",
+    "readback:G618 scale ops baseline",
+    "readback:production H602 billing completion readback",
+    "command:generation scorecard"
+  ],
+  "externalEffects": {
+    "providerSubmit": 0,
+    "deploy": 0,
+    "billing": 0,
+    "publication": 0,
+    "secretRead": 0
+  },
+  "interpretation": "Fresh strict gate failure; local static readiness and regression green do not establish production completion."
+}

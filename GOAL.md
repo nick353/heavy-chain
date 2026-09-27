@@ -11984,3 +11984,7 @@ Adaptive runtimeをread-only再確認し、Graph runtimeと外部role processは
 # Goal progress — 2026-09-27 r664
 
 静的readinessをfresh実行し、Goal readiness `5/5`、OpenAI provider readiness `7/7`をPASSした。いずれもauthenticated production generation、R2保存、品質、browser business completionを証明しない。外部API生成・課金・deploy・secret読取は0、動画はdeferred。正本は`work/heavy-chain-static-readiness-fresh-readback-20260927-r2.json`。
+
+# Goal progress — 2026-09-27 r665
+
+strict release gateをfresh実行し、exit 1。production monitor/UI pair、G618 scale ops、production H602 billing readback、generation scorecardの4項目が未達。provider submit・deploy・課金・公開・secret読取は0。production proofが揃うまでrelease完了扱いにしない。正本は`work/heavy-chain-release-gate-fresh-readback-20260927-r2.json`。

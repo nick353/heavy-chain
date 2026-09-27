@@ -23469,3 +23469,7 @@ Adaptive Graph runtimeと外部role processはliveだが、capacity guardが`cap
 # Heavy Chain current state — 2026-09-27 r664
 
 Goal readiness `5/5`とOpenAI provider readiness `7/7`をfresh PASS。これはローカル静的契約のみで、production provider receipt、remote durable save/reuse/reload/reconciliation、visual quality、strict releaseの証拠ではない。Astra r6はverified invocation identityなしでblocked、capacity guardも継続。画像waveのみ、動画はdeferred、Goal active。正本は`work/heavy-chain-static-readiness-fresh-readback-20260927-r2.json`。
+
+# Heavy Chain current state — 2026-09-27 r665
+
+fresh strict release gateは`ok=false`。production monitor/UI、G618、H602 production billing readback、generation scorecardが未達。local readinessはgreenだが、production completion・quality・releaseは未証明。Astra r6とAdaptive capacity blockerは継続し、source mutation・provider submit・deploy・課金・公開・secret値読取は0、動画はdeferred、Goal active。正本は`work/heavy-chain-release-gate-fresh-readback-20260927-r2.json`。
