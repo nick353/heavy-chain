@@ -23349,3 +23349,7 @@ shell環境の`OPENAI_API_KEY`変数名のみpresence確認。secret値は未読
 # Heavy Chain current state — 2026-09-27 r634
 
 画像waveのresume manifestを現行HEAD `9388985`へ再固定。evidence refs 8件、依存グラフacyclic、worktree clean、runtime process不在、source mutation/external effects 0を確認。完了監査の今回実行はartifact更新がなく、未確認結果として扱った。動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r635
+
+公式OpenAI Organization Verification画面は未認証ブラウザからloginへリダイレクトされ、verification stateは読めなかった。ログイン・認証変更・secret操作は0。Worker secret bindingは別readbackで確認済みだが、Organization Verificationと実provider receiptは未証明。動画はdeferred。正本は`work/heavy-chain-openai-organization-verification-readback-20260927-r1.json`と更新済みresume manifest、Goal active。

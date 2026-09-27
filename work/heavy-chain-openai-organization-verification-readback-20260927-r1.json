@@ -1,0 +1,28 @@
+{
+  "schema": "heavy-chain.openai-organization-verification-readback.v1",
+  "capturedAt": "2026-09-27T11:04:30Z",
+  "sourceRevision": "802ce96",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "accountMutation": false,
+    "secretRead": false,
+    "externalEffects": 0
+  },
+  "officialSurface": "https://platform.openai.com/organization/settings/verification",
+  "observed": {
+    "finalUrl": "https://platform.openai.com/login?next=%2Forganization%2Fsettings%2Fverification",
+    "title": "しばらくお待ちください...",
+    "loginRequired": true,
+    "verificationStateVisible": false,
+    "verificationChanged": false
+  },
+  "conclusion": {
+    "organizationVerification": "not_proven",
+    "exactBlocker": "official account surface has no authenticated browser session",
+    "workerSecretBinding": "independently proven by secret-name readback, but not a substitute for account verification",
+    "providerCall": "not_started",
+    "nextReentry": "When an authenticated official account session is available, read verification state only; do not change verification or secrets."
+  }
+}
