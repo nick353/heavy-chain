@@ -11076,6 +11076,10 @@ video/persistence laneの独立local検証をfresh実行した。Video provider 
 
 remote durable/readbackとmonitor/operationsの独立local検証をfresh実行した。Gallery/local-first、inventory/read-only plan、source byte/revision、workspace lineage/handoff、Canvas promotion guardの合計23/23、production monitor、scale-ops、release-readback、incident-responseの合計24/24がpass。foreign/stale/uncertain evidence、checksum mismatch、private-R2不備、implicit default、local evidenceのrelease昇格をfail-closedする境界を確認した。これはlocal contract証拠で、実provider、R2、consumer-authenticated monitor、G618本番windowは未実行。外部効果は0。Goalはactive。
 
+# Goal progress — 2026-09-27 r497
+
+security/rights/billing境界の独立検証をfresh実行した。G620 static security 5/5、H601 legal-safety全checks、H602 Cloudflare contract 3/3、security auditをpass。秘密値は出力せず、payment/checkout、legal policy finalization、production proofは未実行。H601/H602の人間/operator decisionとconsumer-authenticated production readbackは未完了のままfail-closedで保持した。外部効果は0。Goalはactive。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。

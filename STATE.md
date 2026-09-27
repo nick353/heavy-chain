@@ -22783,3 +22783,7 @@ Auth lock/session admission/bootstrap/recovery/hydration readbackのlocal suite�
 # Heavy Chain current state — 2026-09-27 r496
 
 Remote durable/readback関連23/23、monitor/scale-ops/release-readback/incident-response関連24/24をfresh pass。local-only証拠とproduction proofの昇格境界、foreign/stale/uncertain拒否、readback/promotion guardを再確認。実provider/R2/production monitor/G618は未実施、Adaptive capacity/Heavy package holdは継続、Goalはactive。
+
+# Heavy Chain current state — 2026-09-27 r497
+
+G620 static security 5/5、H601 legal-safety、H602 contract 3/3、security auditがfresh pass。H601/H602の人間/operator判断とproduction proofは未取得で、課金・checkout・秘密投入は未実施。Adaptive capacity/Heavy package holdは継続、Goalはactive。
