@@ -10733,3 +10733,5 @@ Heavy Generate UIは、設定済みポリシーをfresh readbackした後に利�
 flag有効化、課金・公開はまだ実行していない。次はこの差分をcommitしてflag falseのままAPI/Webへdeployし、fresh UI/API readback後、
 認証済み同意を1回だけ使った実provider生成とsame-run receipt/D1/R2 readbackを行う。失敗またはunknown effectなら同じrequestを照合し、再送せずflagをfalseへ戻す。
 Goalはactive。
+同一requestをproduction D1からもread-only再照合し、request/candidate/generated imageの完了状態、
+model、bytes、sha256、canonical R2 pathを一致確認した。`changes=0`で、同一receiptの永続化証拠を強化した。
