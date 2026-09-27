@@ -11668,3 +11668,7 @@ auth session recovery / hydration readbackの決定的テストをfresh実行し
 # Goal progress — 2026-09-27 r590
 
 Adaptiveのロールプロセスheartbeatをfresh確認した。`status=running`、`active_routes=[]`、`role_contract=role_execution.v1`だが、MCPのruntime/package/workflow readback入口は`Transport closed`。プロセス再起動・Heavy runの再dispatch・claim/start/replayは行わず、復旧後に同じrunを再読する正本を`work/heavy-chain-adaptive-transport-readback-20260927-r1.json`へ固定した。Goal active。
+
+# Goal progress — 2026-09-27 r591
+
+`npm run verify:cloudflare-runtime --silent`をfresh実行し、6 tests / 6 passed。Cloudflare-only active path、legacy direct/wrapper fail-closed、missing entrypoint拒否、legacy package dependency拒否を確認した。provider生成、R2、課金、公開、deploy、secret読取は0。正本は`work/heavy-chain-cloudflare-runtime-readback-20260927-r1.json`。Goal active。

@@ -23152,3 +23152,7 @@ Auth session recovery/hydrationは7/7 pass。ローカル認証継続契約は�
 # Heavy Chain current state — 2026-09-27 r590
 
 Adaptive role processはheartbeat上running・active_routesなし。MCP status入口はTransport closedでpackage/capacityの再読backができないため、既存Heavy runを保持し、再起動・再dispatch・claim/start/replayをしていない。正本は`work/heavy-chain-adaptive-transport-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r591
+
+Cloudflare runtime contract 6/6 pass。実provider/R2/production readbackは未完了のまま、legacy fallbackはfail-closedで維持。正本は`work/heavy-chain-cloudflare-runtime-readback-20260927-r1.json`、Goal active。
