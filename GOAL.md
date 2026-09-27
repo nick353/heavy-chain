@@ -11816,3 +11816,7 @@ H601/H602 operator readiness、H602 production completion、G618 scale-opsをfre
 # Goal progress — 2026-09-27 r622
 
 現行HEADでOpenAI provider readiness `7/7`、Cloudflare runtime contract `6/6`、Light unified workflow `6/6`、Heavy capability/preflight boundary `18/18`をfresh PASS。legacy active invocationはfail-closed、Heavy default-denyとLight/Heavy境界を維持している。ただし実provider生成receipt、remote save/reuse/reload/reconciliation、video provider、strict release gateは未証明。正本は`work/heavy-chain-openai-runtime-boundary-fresh-20260927-r1.json`。外部効果0、Goal active。
+
+# Goal progress — 2026-09-27 r623
+
+画像生成waveの未実装境界をfresh source auditで固定した。`openai-image.ts`と`image-ai-contracts.ts`の旧allowlist/default、ChatEditor・CanvasEditorPage・LightchainWorkbenchPage・GeneratePageのWorkers固定、protected editのWorkers identity固定、`hc-10m-real-generation-qa.mjs`のWorkers receipt固定、D1/R2 receipt/readback面を依存関係付きで`work/heavy-chain-provider-boundary-map-20260927-r1.json`へ記録した。動画laneはdeferredのまま変更せず、provider/R2/billing/deploy/publication/secret/破壊的cleanupは0。Adaptive transport closedとAstra native start receipt不足のためソース実装は未開始、Goal active。

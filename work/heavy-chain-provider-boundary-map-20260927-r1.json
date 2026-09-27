@@ -1,0 +1,126 @@
+{
+  "schema": "heavy-chain.provider-boundary-map.v1",
+  "capturedAt": "2026-09-27T10:43:45Z",
+  "sourceRevision": "db6cc3b262effab15a87e080e54ab1c44802f2e1",
+  "scope": "image_generation_now_video_deferred_full_goal_remaining",
+  "intent": "画像生成だけを現行waveの実装対象とし、動画laneは変更せずdeferredのまま保持する。",
+  "sourceBoundaries": {
+    "heavyServerModelAndParser": [
+      {
+        "path": "cloudflare/heavy-api/src/openai-image.ts",
+        "lines": "4-17,60-75",
+        "finding": "OpenAI生成/edit allowlistは旧モデル群で、未指定generate/editのdefaultはgpt-image-1-mini。provider identityはopenai/openai-images-apiでreceiptにx-request-idを保持する。",
+        "requiredChange": "承認済みOpus planに従い、新規generate defaultをgpt-image-2.5-sunburstへ更新し、明示選択のsupported modelと旧receipt readback互換を維持する。"
+      },
+      {
+        "path": "cloudflare/heavy-api/src/image-ai-contracts.ts",
+        "lines": "5,190-207",
+        "finding": "request parserがprovider解決前に独立したOPENAI_IMAGE_MODELS setでgenerationModel/providerModelを検査するため、adapterだけの更新では新modelを拒否する。",
+        "requiredChange": "同一allowlist/default契約をparserにも反映し、unsupported modelをfail-closedで拒否する。"
+      }
+    ],
+    "lightClientGenerationDefaults": [
+      {
+        "path": "src/components/ChatEditor.tsx",
+        "lines": "160-174",
+        "finding": "新規generation requestがgenerationProvider=workers_ai、generationModel=flux-2-klein-4bを固定指定する。",
+        "requiredChange": "新規画像生成をOpenAI既定へ寄せ、旧Workers receiptのread-only互換と自動fallback禁止を保つ。"
+      },
+      {
+        "path": "src/pages/CanvasEditorPage.tsx",
+        "lines": "2373-2381,3118,3298",
+        "finding": "Canvasのgenerate requestと一部missing-receipt relabelがWorkers固定。",
+        "requiredChange": "provider-aware request/receipt handlingへ変更し、legacy Workers identityを明示互換として残す。"
+      },
+      {
+        "path": "src/pages/LightchainWorkbenchPage.tsx",
+        "lines": "178-179及びreceipt fallback箇所",
+        "finding": "VITE_GENERATION_PROVIDERがopenai以外をworkers_aiへ正規化し、結果receipt fallbackもWorkersを前提とする。",
+        "requiredChange": "OpenAI default/explicit selectionを受け、provider/model/task idを欠損時に捏造せずfail-closedで表示する。"
+      },
+      {
+        "path": "src/pages/GeneratePage.tsx",
+        "lines": "651-659",
+        "finding": "provider defaultはWorkers、OpenAI UI model defaultはgpt-image-1-mini。",
+        "requiredChange": "新規画像経路だけを承認済みOpenAI defaultへ更新し、video UIや既存Workers pathは変更しない。"
+      }
+    ],
+    "protectedEditAndQa": [
+      {
+        "path": "src/lib/cloudflareProtectedImageEdit.ts",
+        "lines": "48-99",
+        "finding": "protected edit finalizationはWorkers provider/backend/modelと後合成metadataを固定検証する。",
+        "requiredChange": "OpenAI editを追加する場合はmask/receipt/後合成契約を先に設計し、現行Workers protected editのidentity検証を弱めない。"
+      },
+      {
+        "path": "scripts/hc-10m-real-generation-qa.mjs",
+        "lines": "71-105",
+        "finding": "real-generation QAがreceipt provider/backendをWorkers固定し、OpenAI receiptを拒否する。",
+        "requiredChange": "provider-aware allowlistへ変更し、OpenAI identityとlegacy Workers identityを完全一致検証する。submission/readback/no-replay契約は保持する。"
+      },
+      {
+        "path": "scripts/verify-cloudflare-image-qa.test.mjs",
+        "finding": "fixtureがWorkers identityを前提にするため、provider-aware fixtureとlegacy compatibility fixtureを分離する必要がある。"
+      }
+    ],
+    "persistenceAndReadback": [
+      {
+        "path": "cloudflare/heavy-api/src/image-ai.ts",
+        "lines": "D1/R2 persistence and GET readback path",
+        "finding": "receipt、D1/R2保存、GET再読back、revalidationの既存契約はあるが、live provider/R2 receiptは未取得。",
+        "requiredChange": "provider identity/model/task idを保存・再読backし、save→reuse→reload→reconciliationの同一receipt照合を実証する。"
+      },
+      {
+        "path": "cloudflare/heavy-api/test/image-ai.test.ts",
+        "finding": "legacy OpenAI/Workers fixturesを回帰証拠として維持し、新default/provider-aware receipt casesを追加する。"
+      },
+      {
+        "path": "scripts/verify-provider-persistence-readback.test.ts",
+        "finding": "provider receiptをartifacts/Canvasへ保持する14件の決定的テストは現状green。production proofではない。"
+      },
+      {
+        "path": "src/pages/GalleryPage.tsx",
+        "lines": "1272",
+        "finding": "provider receipt/persistence readbackの表示面。"
+      }
+    ]
+  },
+  "implementationDependencies": [
+    "verified Astra engineering start receiptの復旧",
+    "承認済みOpus image planを再利用したAstra bounded specification",
+    "bounded Luna実装（server allowlist/parser、Light image defaults、provider-aware QA）",
+    "deterministic focused tests and typecheck/lint",
+    "authenticated production provider receipt/readback",
+    "remote save→reuse→reload→reconciliationのfresh proof",
+    "strict release gateの再実行"
+  ],
+  "preservedNonGoals": [
+    "video provider and video UI changes are deferred",
+    "no automatic fallback or replay",
+    "legacy Workers receipt readback remains compatible",
+    "no billing, checkout, purchase, publication, deploy, secret read, or destructive cleanup"
+  ],
+  "currentBlockers": [
+    {
+      "code": "adaptive_transport_closed",
+      "impact": "new Astra/Luna dispatch cannot be admitted or started; existing runs are preserved and not replayed"
+    },
+    {
+      "code": "native_start_receipt_metadata_unavailable",
+      "impact": "run_openai_image_astra_engineering_20260927_r1 is blocked with verified=false and implementation=0"
+    },
+    {
+      "code": "production_provider_and_remote_readback_unproven",
+      "impact": "local green contracts cannot be promoted to completion"
+    }
+  ],
+  "externalEffects": {
+    "providerCalls": 0,
+    "r2Writes": 0,
+    "billingOrPurchase": 0,
+    "publicationOrDeploy": 0,
+    "secretReads": 0,
+    "destructiveCleanup": 0
+  },
+  "status": "goal_active_source_map_recorded_implementation_pending"
+}
