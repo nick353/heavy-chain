@@ -10847,3 +10847,9 @@ Heavy/Light境界修正を`3bd14a8`としてcommitし、Cloudflare Web version `
 # Goal progress — 2026-09-27 r408
 
 strict gate fresh run `output/playwright/10m-product-readiness-g615/release-gate-summary.json`は`ok=false`・失敗7件。今回のUI境界不具合は解消したが、production monitor/UI、mass-market QA、Lightchain all-feature previews、G618、H601、H602 production completion、generation scorecardは別の認証済み・operator・provider証跡が必要。環境にはmonitor API URL/brand ID/tokenとPlaywright auth stateがなく、秘密や認証Cookieの推測・抽出は行わない。Goalはactive。
+
+# Goal progress — 2026-09-27 r409
+
+Lightchainのmaterial workbenchにも残っていたHeavy entitlement依存を、既知のLight feature idに限定して除去した。`fabric-image` / `printing-image`ではHeavy rights gate・Heavy entitlement GET・Heavy-specific停止条件を使わず、Heavy所有またはunknownはfail-closedのまま維持した。`6ad0445`としてcommitし、Cloudflare Worker `e24f4f5e-58ce-4dd5-bec6-8dbe9d5f80de`へdeploy。focused gating 9/9、Light suites 62/62、Web 14/14、typecheck、build、diff-checkがpass。fresh Companion readbackでもHeavyバナー/entitlement通信の不在、Light UI、semantic+visual、cleanupを確認した。
+
+最新strict gate（capturedAt `2026-09-27T02:34:52.067Z`）は`ok=false`・失敗7件を維持：production monitor/UI pair、mass-market QA、Lightchain all-feature previews、G618、H601、H602 production completion、generation scorecard。monitor/auth stateは未供給で、実provider生成、R2 durable proof、video、課金、公開、秘密投入は行っていない。Goalはactive。

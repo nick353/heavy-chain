@@ -22288,3 +22288,11 @@ Fresh task-owned Companion readback on `https://heavy-chain-web.nichika2000823.w
 # Heavy Chain current state — 2026-09-27 r377
 
 Deploy後にstrict release gateをfresh実行した（capturedAt `2026-09-27T02:10:55.225Z`）。今回のHeavy/Light境界修正とWeb deployは反映済みだが、gateは`ok=false`で失敗7件を維持した。残件はproduction monitor/UI pair（UI artifact missing）、production mass-market QA（56時間超でstale）、production Lightchain all-feature previews（55時間超でstale）、G618（2026-09-01 artifact、monitor証跡不足）、H601 rights、H602 production billing completion、generation scorecard。Monitor/API URL・brand ID・tokenとPlaywright auth stateは環境に存在せず、秘密や認証Cookieを推測・抽出せずに停止した。provider生成、課金、公開、秘密投入は行っていない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r378
+
+Lightchain material workbenchの別境界バグを修正し、既知のLight feature id（`fabric-image` / `printing-image`）ではHeavy entitlement GET、Heavy rights gate、Heavy-specific停止条件を使わないようにした。Heavy所有featureとunknown idは従来どおりfail-closed。コミットは`6ad0445`。focused Heavy/Light gating 9/9、Light parity/provider/material/readback suites 62/62、Cloudflare Web 14/14、typecheck、production build、diff-checkがpassした。
+
+Cloudflare Webを再deployし、Worker version `e24f4f5e-58ce-4dd5-bec6-8dbe9d5f80de`を確認した。fresh Companion readback（`/lightchain/fabric-image`）ではLight UIと`AI生成`が表示され、Heavy規約バナー・権利表示・Heavy entitlement network entryはなく、入力不足によるdisabledのみ。semantic＋visual readback、同一profile cleanup、lease解放、external action falseを確認した。
+
+deploy後strict gateを再実行（capturedAt `2026-09-27T02:34:52.067Z`、`ok=false`）。失敗7件はproduction monitor/UI pair（UI artifact missing）、production mass-market QA（56.98h stale）、production Lightchain all-feature previews（56.32h stale）、G618（611.85h staleかつblocker）、H601 rights（60.14h stale）、H602 production billing completion（blockers 6）、generation scorecard（artifact missing）で変わらない。monitor env/auth stateは未供給で、provider生成、課金、公開、秘密投入は行っていない。Goal active。
