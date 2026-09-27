@@ -1,4 +1,11 @@
-# Heavy Chain current state — 2026-09-27 r276
+# Heavy Chain current state — 2026-09-27 r277
+
+## Workspace API reconciliation contract recheck — 2026-09-27
+
+workspace save/evidence/collector/usage、Heavy image-AI unknown recovery、print probe restartをまとめて
+`38/38` PASS。lost response後の同一request GET-only reconciliation、二重POST防止、canonical R2 identity、
+private bytes/checksum、protected final-save link、quota unknownのfail-closedを確認した。これはoffline/mockの
+契約証拠であり、認証済みproduction workspace POST/GET receiptと同一ownerのremote reconciliationは未達。
 
 ## Local persistence lifecycle recheck — 2026-09-27
 

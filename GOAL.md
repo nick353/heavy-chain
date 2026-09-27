@@ -1,4 +1,11 @@
-# Goal progress — 2026-09-27 r398
+# Goal progress — 2026-09-27 r399
+
+## Workspace API reconciliation contract recheck — 2026-09-27
+
+workspace save/evidence/collector/usage、Heavy image-AI recovery、print probe restartの契約テストを
+`38/38` fresh PASS。same-request GET-only recovery、二重POST防止、canonical R2、private checksum、protected
+final-save link、quota unknown fail-closedを確認した。production authenticated receiptがないため、remote
+save/reuse/reload/reconciliationは未完了のまま。Goalはactive。
 
 ## Local persistence lifecycle recheck — 2026-09-27
 
