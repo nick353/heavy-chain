@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-current-wave-fresh-readback.v1",
-  "capturedAt": "2026-09-27T11:36:28Z",
-  "sourceRevision": "b2b3ab6",
+  "capturedAt": "2026-09-27T11:37:22Z",
+  "sourceRevision": "c51ca94",
   "scope": {
     "currentWave": "image_generation",
     "video": "deferred_by_user",
@@ -121,6 +121,16 @@
     "artifact": "work/heavy-chain-image-full-regression-fresh-readback-20260927-r1.json",
     "passed": 114,
     "failed": 0
+  },
+  "fullGoalAudit": {
+    "summary": "work/heavy-chain-full-completion-audit-fresh-20260927-r1/summary.json",
+    "releaseGate": "work/heavy-chain-full-completion-audit-fresh-20260927-r1/release-gate-summary.json",
+    "ok": false,
+    "acceptedGoals": 73,
+    "unacceptedGoals": ["G617", "G619", "G669", "G670"],
+    "openHumanItems": ["H601", "H602"],
+    "proofsIncomplete": 8,
+    "commandsFailed": ["g619 beta evidence verifier", "release gate verifier"]
   },
   "nextGate": "Recover the existing Adaptive runtime and obtain the already-registered Astra image engineering receipt; do not replay the closed transport or deploy while the live provider remains workers_ai."
 }

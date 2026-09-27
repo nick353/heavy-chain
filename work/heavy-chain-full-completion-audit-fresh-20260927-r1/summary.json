@@ -1,0 +1,654 @@
+{
+  "schema": "heavy-chain.10m-completion-audit.v1",
+  "capturedAt": "2026-09-27T11:37:22.385Z",
+  "mode": "read-only-completion-audit-no-submit-no-payment-no-publish",
+  "allowIncomplete": true,
+  "summaryPath": "work/heavy-chain-full-completion-audit-fresh-20260927-r1/summary.json",
+  "irreversibleActions": {
+    "generationSubmit": "not_clicked",
+    "purchasePaymentCheckout": "not_touched",
+    "identityOtpCaptchaSecrets": "not_touched",
+    "externalPublish": "not_touched",
+    "destructiveCleanup": "not_touched",
+    "deploy": "not_run"
+  },
+  "goals": [
+    {
+      "id": "G601",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G602",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G603",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G604",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G605",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G606",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G607",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G608",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G609",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G610",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G611",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G612",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G613",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G614",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G615",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G616",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G617",
+      "status": "blocked-exact",
+      "passed": false
+    },
+    {
+      "id": "G618",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G619",
+      "status": "queued",
+      "passed": false
+    },
+    {
+      "id": "G620",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G621",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G622",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G623",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G624",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G625",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G626",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G627",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G628",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G629",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G630",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G631",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G632",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G633",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G634",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G635",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G636",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G637",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G638",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G639",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G640",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G641",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G642",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G643",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G644",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G645",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G646",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G647",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G648",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G649",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G650",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G651",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G652",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G653",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G654",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G655",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G656",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G657",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G658",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G659",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G660",
+      "status": "accepted",
+      "passed": true
+    },
+    {
+      "id": "G661",
+      "status": "accepted-prod",
+      "passed": true
+    },
+    {
+      "id": "G662",
+      "status": "accepted-prod-ui",
+      "passed": true
+    },
+    {
+      "id": "G663",
+      "status": "accepted-local",
+      "passed": true
+    },
+    {
+      "id": "G664",
+      "status": "accepted-prod",
+      "passed": true
+    },
+    {
+      "id": "G665",
+      "status": "accepted-prod-blocked",
+      "passed": true
+    },
+    {
+      "id": "G666",
+      "status": "accepted-prod",
+      "passed": true
+    },
+    {
+      "id": "G667",
+      "status": "accepted-prod",
+      "passed": true
+    },
+    {
+      "id": "G668",
+      "status": "accepted-prod",
+      "passed": true
+    },
+    {
+      "id": "G669",
+      "status": "blocked-exact",
+      "passed": false
+    },
+    {
+      "id": "G670",
+      "status": "blocked-exact",
+      "passed": false
+    },
+    {
+      "id": "G671",
+      "status": "accepted-local",
+      "passed": true
+    },
+    {
+      "id": "G672",
+      "status": "accepted-local",
+      "passed": true
+    },
+    {
+      "id": "G673",
+      "status": "accepted-local",
+      "passed": true
+    },
+    {
+      "id": "G676",
+      "status": "accepted-local",
+      "passed": true
+    },
+    {
+      "id": "G677",
+      "status": "accepted-prod-split",
+      "passed": true
+    },
+    {
+      "id": "G678",
+      "status": "accepted-prod-internal",
+      "passed": true
+    },
+    {
+      "id": "G679",
+      "status": "accepted-local",
+      "passed": true
+    },
+    {
+      "id": "G680",
+      "status": "accepted-prod",
+      "passed": true
+    },
+    {
+      "id": "G681",
+      "status": "accepted-prod",
+      "passed": true
+    },
+    {
+      "id": "G682",
+      "status": "accepted-prod",
+      "passed": true
+    }
+  ],
+  "humanItems": [
+    {
+      "id": "H601",
+      "status": "open",
+      "passed": false
+    },
+    {
+      "id": "H602",
+      "status": "open",
+      "passed": false
+    }
+  ],
+  "proofs": [
+    {
+      "id": "g617_same_run_fresh_all_10",
+      "goal": "G617",
+      "path": "output/playwright/g617-same-run-fresh-generation-hc-g617-same-run-fresh-20260630T063740Z/readback.json",
+      "exists": false,
+      "passed": false,
+      "expect": "same-run fresh generation completed all 10 features with no prior assets, no failed jobs, image/storage readback, and visual scorecard pass"
+    },
+    {
+      "id": "g619_real_beta_evidence",
+      "goal": "G619",
+      "path": "output/playwright/g619-real-beta-evidence/summary.json",
+      "exists": true,
+      "passed": false,
+      "expect": "real consented beta evidence verifier ok=true with at least 3 sessions"
+    },
+    {
+      "id": "g618_scale_ops",
+      "goal": "G618",
+      "path": "output/playwright/g764-g618-scale-ops-r1/summary.json",
+      "exists": true,
+      "passed": false,
+      "expect": "G618 scale/ops baseline ok=true with no blockers"
+    },
+    {
+      "id": "g620_security_ops",
+      "goal": "G620",
+      "path": "output/playwright/g764-g620-security-ops-r1/summary.json",
+      "exists": true,
+      "passed": true,
+      "expect": "G620 security operations ok=true with no blockers"
+    },
+    {
+      "id": "g668_current_production_mass_market_qa",
+      "goal": "G668",
+      "path": "output/playwright/prod-post-g668-dashboard-recent-preview-20260702-r1/SUMMARY.json",
+      "exists": false,
+      "passed": false,
+      "expect": "current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready Gemini generate route, Dashboard recent images without broken placeholders, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix preview/context, clear Model Library generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures"
+    },
+    {
+      "id": "g659_lightchain_order_preview_production_readback",
+      "goal": "G659",
+      "path": "output/playwright/prod-post-g659-lightchain-order-preview-20260701-r2/SUMMARY.json",
+      "exists": false,
+      "passed": false,
+      "expect": "G659 production Lightchain all-feature workflow ok=true with 33 features, 33 tool-specific order-sheet preview assertions, no console/page/request failures, and cleanup closed"
+    },
+    {
+      "id": "production_h601_rights_readback",
+      "goal": "H601",
+      "path": "output/playwright/prod-h601-rights-check-20260701-r1/summary.json",
+      "exists": true,
+      "passed": false,
+      "expect": "production authenticated /generate exposes the Light permission surface and no rights checkbox"
+    },
+    {
+      "id": "production_chosen_public_entrypoint_readback",
+      "goal": "public-entrypoint",
+      "path": "output/playwright/g835-chosen-public-entrypoint-readback-r1/summary.json",
+      "exists": true,
+      "passed": false,
+      "expect": "chosen public entrypoint https://heavy-chain-web.nichika2000823.workers.dev is reachable without submit/payment/publish actions"
+    },
+    {
+      "id": "production_h602_billing_completion_readback",
+      "goal": "H602",
+      "path": "output/playwright/g774-h602-production-completion-current-r1/summary.json",
+      "exists": true,
+      "passed": false,
+      "expect": "production H602 readback ok=true with hardening/hash-only/artifact-allowlist migrations applied, raw receipt/payload storage blocked, verified no-real-charge proof, transaction/entitlement readback, and no remaining blockers"
+    }
+  ],
+  "commands": [
+    {
+      "name": "g619 beta evidence verifier",
+      "command": "npm run verify:g619-beta-evidence",
+      "startedAt": "2026-09-27T11:37:22.410Z",
+      "durationMs": 586,
+      "timeoutMs": 600000,
+      "status": 1,
+      "timedOut": false,
+      "signal": null,
+      "stdoutTail": "> node scripts/verify-g619-beta-evidence.mjs\n\n{\n  \"ok\": false,\n  \"summaryPath\": \"output/playwright/g619-real-beta-evidence/summary.json\",\n  \"blockers\": [\n    \"check_failed:session_g619_beta_001_has_consent\",\n    \"check_failed:session_g619_beta_001_uses_production_target\",\n    \"check_failed:session_g619_beta_001_has_useful_duration\",\n    \"check_failed:session_g619_beta_001_redaction_review_passed\",\n    \"check_failed:session_g619_beta_001_has_friction_list_or_no_friction_note\",\n    \"check_failed:session_g619_beta_001_artifact_sessions_beta_001_notes_md_is_not_scaffold_placeholder_text\",\n    \"check_failed:session_g619_beta_001_has_usable_behavior_evidence_artifact\",\n    \"check_failed:session_g619_beta_002_has_consent\",\n    \"check_failed:session_g619_beta_002_uses_production_target\",\n    \"check_failed:session_g619_beta_002_has_useful_duration\",\n    \"check_failed:session_g619_beta_002_redaction_review_passed\",\n    \"check_failed:session_g619_beta_002_has_friction_list_or_no_friction_note\",\n    \"check_failed:session_g619_beta_002_artifact_sessions_beta_002_notes_md_is_not_scaffold_placeholder_text\",\n    \"check_failed:session_g619_beta_002_has_usable_behavior_evidence_artifact\",\n    \"check_failed:session_g619_beta_003_has_consent\",\n    \"check_failed:session_g619_beta_003_uses_production_target\",\n    \"check_failed:session_g619_beta_003_has_useful_duration\",\n    \"check_failed:session_g619_beta_003_redaction_review_passed\",\n    \"check_failed:session_g619_beta_003_has_friction_list_or_no_friction_note\",\n    \"check_failed:session_g619_beta_003_artifact_sessions_beta_003_notes_md_is_not_scaffold_placeholder_text\",\n    \"check_failed:session_g619_beta_003_has_usable_behavior_evidence_artifact\"\n  ]\n}",
+      "stderrTail": ""
+    },
+    {
+      "name": "H601 legal safety verifier",
+      "command": "npm run verify:h601-legal-safety",
+      "startedAt": "2026-09-27T11:37:22.996Z",
+      "durationMs": 557,
+      "timeoutMs": 600000,
+      "status": 0,
+      "timedOut": false,
+      "signal": null,
+      "stdoutTail": "},\n    {\n      \"name\": \"human legal gate remains explicit and open\",\n      \"passed\": true,\n      \"details\": {\n        \"file\": \"goals/HUMAN_NEEDED.md\"\n      }\n    },\n    {\n      \"name\": \"current safety runtime has no legacy provider endpoint\",\n      \"passed\": true,\n      \"details\": {\n        \"files\": [\n          \"src/lib/legalSafetyGuard.ts\",\n          \"cloudflare/heavy-api/src/legalSafety.ts\",\n          \"cloudflare/heavy-api/src/image-ai-contracts.ts\",\n          \"src/lib/cloudflareImageAI.ts\"\n        ]\n      }\n    }\n  ],\n  \"failures\": [],\n  \"irreversibleActions\": {\n    \"billingPurchasePaymentCheckout\": \"not_touched\",\n    \"identityOtpCaptchaSecrets\": \"not_touched\",\n    \"externalPublicPublish\": \"not_touched\",\n    \"legalPolicyFinalization\": \"not_run\"\n  }\n}",
+      "stderrTail": ""
+    },
+    {
+      "name": "H602 billing readiness verifier",
+      "command": "npm run verify:h602-billing",
+      "startedAt": "2026-09-27T11:37:23.553Z",
+      "durationMs": 608,
+      "timeoutMs": 600000,
+      "status": 0,
+      "timedOut": false,
+      "signal": null,
+      "stdoutTail": "\"cloudflare/heavy-api/migrations/0011_image_ai.sql\",\n      \"cloudflare/heavy-api/src/index.ts\",\n      \"cloudflare/heavy-api/src/image-ai.ts\",\n      \"cloudflare/heavy-api/src/image-ai-contracts.ts\",\n      \"cloudflare/heavy-api/src/heavy-entitlement.ts\",\n      \"cloudflare/heavy-api/test/image-ai.test.ts\",\n      \"cloudflare/heavy-api/test/image-ai.runtime.ts\",\n      \"cloudflare/heavy-api/MONITORING.md\",\n      \"cloudflare/heavy-api/IMAGE_AI.md\"\n    ],\n    \"provider\": \"cloudflare_openai_images_api\",\n    \"quota\": \"bounded_worker_and_brand_admission\",\n    \"receipts\": \"d1_request_and_candidate_readback\",\n    \"notPerformed\": [\n      \"provider call\",\n      \"billing or checkout operation\",\n      \"deployment\",\n      \"external write\"\n    ]\n  },\n  \"externalEffects\": {\n    \"network\": false,\n    \"provider\": false,\n    \"billing\": false,\n    \"checkout\": false,\n    \"deployment\": false,\n    \"writes\": false\n  }\n}",
+      "stderrTail": ""
+    },
+    {
+      "name": "release gate verifier",
+      "command": "npm run verify:release-gate -- --out work/heavy-chain-full-completion-audit-fresh-20260927-r1/release-gate-summary.json",
+      "startedAt": "2026-09-27T11:37:24.161Z",
+      "durationMs": 111386,
+      "timeoutMs": 1800000,
+      "status": 1,
+      "timedOut": false,
+      "signal": null,
+      "stdoutTail": "> heavy-chain@1.0.1 verify:release-gate\n> node scripts/verify-release-gate-unified.mjs --out work/heavy-chain-full-completion-audit-fresh-20260927-r1/release-gate-summary.json\n\n{\n  \"ok\": false,\n  \"outPath\": \"work/heavy-chain-full-completion-audit-fresh-20260927-r1/release-gate-summary.json\",\n  \"failed\": [\n    \"readback:production monitor and UI pair\",\n    \"readback:G618 scale ops baseline\",\n    \"readback:production H602 billing completion readback\",\n    \"command:generation scorecard\"\n  ]\n}",
+      "stderrTail": ""
+    }
+  ],
+  "blockers": [
+    {
+      "id": "goal_not_accepted:G617",
+      "message": "G617 is blocked-exact, not accepted."
+    },
+    {
+      "id": "goal_not_accepted:G619",
+      "message": "G619 is queued, not accepted."
+    },
+    {
+      "id": "goal_not_accepted:G669",
+      "message": "G669 is blocked-exact, not accepted."
+    },
+    {
+      "id": "goal_not_accepted:G670",
+      "message": "G670 is blocked-exact, not accepted."
+    },
+    {
+      "id": "human_item_open:H601",
+      "message": "H601 is open, not closed."
+    },
+    {
+      "id": "human_item_open:H602",
+      "message": "H602 is open, not closed."
+    },
+    {
+      "id": "proof_not_complete:g617_same_run_fresh_all_10",
+      "message": "g617_same_run_fresh_all_10 does not prove completion.",
+      "path": "output/playwright/g617-same-run-fresh-generation-hc-g617-same-run-fresh-20260630T063740Z/readback.json",
+      "expect": "same-run fresh generation completed all 10 features with no prior assets, no failed jobs, image/storage readback, and visual scorecard pass"
+    },
+    {
+      "id": "proof_not_complete:g619_real_beta_evidence",
+      "message": "g619_real_beta_evidence does not prove completion.",
+      "path": "output/playwright/g619-real-beta-evidence/summary.json",
+      "expect": "real consented beta evidence verifier ok=true with at least 3 sessions"
+    },
+    {
+      "id": "proof_not_complete:g618_scale_ops",
+      "message": "g618_scale_ops does not prove completion.",
+      "path": "output/playwright/g764-g618-scale-ops-r1/summary.json",
+      "expect": "G618 scale/ops baseline ok=true with no blockers"
+    },
+    {
+      "id": "proof_not_complete:g668_current_production_mass_market_qa",
+      "message": "g668_current_production_mass_market_qa does not prove completion.",
+      "path": "output/playwright/prod-post-g668-dashboard-recent-preview-20260702-r1/SUMMARY.json",
+      "expect": "current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready Gemini generate route, Dashboard recent images without broken placeholders, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix preview/context, clear Model Library generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures"
+    },
+    {
+      "id": "proof_not_complete:g659_lightchain_order_preview_production_readback",
+      "message": "g659_lightchain_order_preview_production_readback does not prove completion.",
+      "path": "output/playwright/prod-post-g659-lightchain-order-preview-20260701-r2/SUMMARY.json",
+      "expect": "G659 production Lightchain all-feature workflow ok=true with 33 features, 33 tool-specific order-sheet preview assertions, no console/page/request failures, and cleanup closed"
+    },
+    {
+      "id": "proof_not_complete:production_h601_rights_readback",
+      "message": "production_h601_rights_readback does not prove completion.",
+      "path": "output/playwright/prod-h601-rights-check-20260701-r1/summary.json",
+      "expect": "production authenticated /generate exposes the Light permission surface and no rights checkbox"
+    },
+    {
+      "id": "proof_not_complete:production_chosen_public_entrypoint_readback",
+      "message": "production_chosen_public_entrypoint_readback does not prove completion.",
+      "path": "output/playwright/g835-chosen-public-entrypoint-readback-r1/summary.json",
+      "expect": "chosen public entrypoint https://heavy-chain-web.nichika2000823.workers.dev is reachable without submit/payment/publish actions"
+    },
+    {
+      "id": "proof_not_complete:production_h602_billing_completion_readback",
+      "message": "production_h602_billing_completion_readback does not prove completion.",
+      "path": "output/playwright/g774-h602-production-completion-current-r1/summary.json",
+      "expect": "production H602 readback ok=true with hardening/hash-only/artifact-allowlist migrations applied, raw receipt/payload storage blocked, verified no-real-charge proof, transaction/entitlement readback, and no remaining blockers"
+    },
+    {
+      "id": "command_failed:g619_beta_evidence_verifier",
+      "message": "g619 beta evidence verifier failed.",
+      "status": 1,
+      "timedOut": false
+    },
+    {
+      "id": "command_failed:release_gate_verifier",
+      "message": "release gate verifier failed.",
+      "status": 1,
+      "timedOut": false
+    }
+  ],
+  "warnings": [],
+  "adoptedPaths": {
+    "g617Dir": "output/playwright/g617-same-run-fresh-generation-hc-g617-same-run-fresh-20260630T063740Z"
+  },
+  "ok": false,
+  "summary": {
+    "ok": false,
+    "blockers": 16,
+    "acceptedGoals": 76,
+    "requiredGoals": 80,
+    "closedHumanItems": 0,
+    "requiredHumanItems": 2,
+    "passedProofs": 1,
+    "requiredProofs": 9
+  }
+}

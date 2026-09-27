@@ -1,0 +1,769 @@
+{
+  "schema": "heavy-chain.release-gate-unified.v1",
+  "capturedAt": "2026-09-27T11:37:24.769Z",
+  "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
+  "outPath": "work/heavy-chain-full-completion-audit-fresh-20260927-r1/release-gate-summary.json",
+  "allowDirty": false,
+  "maxArtifactAgeHours": 48,
+  "irreversibleActions": {
+    "generationSubmit": "not_clicked",
+    "purchasePaymentCheckout": "not_touched",
+    "externalPublish": "not_touched",
+    "destructiveCleanup": "not_touched",
+    "deploy": "not_run"
+  },
+  "readbacks": [
+    {
+      "name": "Companion authenticated production UI evidence",
+      "path": "work/heavy-chain-companion-authenticated-evidence-20260921.json",
+      "expected": "fresh Companion same-session production evidence for /model, /gallery, /history, /jobs, and /canvas/new with semantic+visual readback and no exported auth secret",
+      "passed": true,
+      "safeSummary": {
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-26T22:19:32.000Z",
+        "workflow": "heavy-chain.companion-authenticated-production-evidence.v1"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-26T22:19:32.000Z",
+        "mtime": "2026-09-26T22:25:54.330Z",
+        "ageHours": 13.3,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "Companion production route matrix",
+      "path": "work/heavy-chain-companion-production-route-matrix-20260921.json",
+      "expected": "fresh Companion semantic+visual readback for every current Lightchain feature route, both video routes, and the launcher, with no exported auth secret and business completion left unverified",
+      "passed": true,
+      "safeSummary": {
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-26T22:33:20.813Z",
+        "workflow": "heavy-chain.companion-production-route-matrix.v1"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-26T22:33:20.813Z",
+        "mtime": "2026-09-26T22:33:29.804Z",
+        "ageHours": 13.07,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "production monitor and UI pair",
+      "path": {
+        "monitor": "output/playwright/g835-production-monitor-current-r1/summary.json",
+        "ui": "output/playwright/g835-production-ui-current-r1/summary.json"
+      },
+      "expected": "API-only production-monitor.v2 plus fresh authenticated production UI v2, exact origin, zero failures, cleanup, and matching nonempty runId",
+      "passed": false,
+      "error": "ENOENT: no such file or directory, open 'output/playwright/g835-production-ui-current-r1/summary.json'",
+      "next": "Create both output/playwright/g835-production-monitor-current-r1/summary.json and output/playwright/g835-production-ui-current-r1/summary.json; expected API-only production-monitor.v2 plus fresh authenticated production UI v2, exact origin, zero failures, cleanup, and matching nonempty runId."
+    },
+    {
+      "name": "launch operations",
+      "path": "output/playwright/g830-launch-ops-production-current-r3/SUMMARY.json",
+      "expected": "fresh current Lightchain Companion launch readback with one authenticated session, desktop/mobile route evidence, no login redirect, no rights checkbox, no external submit, and cleanup",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-27T05:06:48.285Z",
+        "workflow": "current-lightchain-launch-operations-readback"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-27T05:06:48.285Z",
+        "mtime": "2026-09-27T05:07:14.231Z",
+        "ageHours": 6.51,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "production mass-market QA current",
+      "path": "output/playwright/g836-prod-mass-market-current-20260927-r1/SUMMARY.json",
+      "expected": "fresh Companion readback of the current Lightchain launcher, protected generation permission surfaces, history/jobs/gallery/canvas/brand routes, desktop/mobile semantic+visual evidence, no exported auth secret, no console/page/request failures, and terminal cleanup",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-27T04:44:06.300Z",
+        "workflow": "mass-market-user-journey-qa"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-27T04:44:06.300Z",
+        "mtime": "2026-09-27T04:44:59.029Z",
+        "ageHours": 6.89,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "production Lightchain all-feature order previews",
+      "path": "output/playwright/g831-prod-lightchain-all-features-current-20260927-r1/SUMMARY.json",
+      "expected": "current-manifest production Lightchain workflow ok=true for 33 features, either as exact feature rows or 31 non-video rows plus four unique video route readbacks, with passing desktop/mobile assertions, no console/page/request failures, and cleanup closed",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-27T04:26:15.417Z",
+        "workflow": "lightchain-all-feature-workflows"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-27T04:26:15.417Z",
+        "mtime": "2026-09-27T04:28:44.831Z",
+        "ageHours": 7.19,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "G610 retention workspace search",
+      "path": "output/playwright/g610-retention-project-search-current-20260927-r2/SUMMARY.json",
+      "expected": "latest G610 summary ok=true, failed=[], >=10 assertions, browser/context closed, preview process exited and port free",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-26T22:22:51.274Z",
+        "workflow": "g610-retention-project-search"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-26T22:22:51.274Z",
+        "mtime": "2026-09-26T22:23:02.017Z",
+        "ageHours": 13.24,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "G603 garment Canvas",
+      "path": "output/playwright/g603-garment-layer-canvas-20260922-r8-current/SUMMARY.json",
+      "expected": "ok=true and failed=[]",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-26T22:43:57.189Z",
+        "workflow": "g603-garment-cut-layer-canvas"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-26T22:43:57.189Z",
+        "mtime": "2026-09-26T22:44:06.632Z",
+        "ageHours": 12.89,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "G605 onboarding templates",
+      "path": "output/playwright/g605-onboarding-templates-20260922-r3-current/SUMMARY.json",
+      "expected": "ok=true, failed=[], preview process exited, port free",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-26T22:22:33.211Z",
+        "workflow": "g605-onboarding-templates"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-26T22:22:33.211Z",
+        "mtime": "2026-09-26T22:22:46.289Z",
+        "ageHours": 13.25,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "G606 performance scale",
+      "path": "output/playwright/g830-g606-performance-current-20260927-r5/SUMMARY.json",
+      "expected": "ok=true with Gallery >=60 initial tiles and Canvas >=180 objects",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": null,
+        "workflow": null
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-26T22:40:42.803Z",
+        "mtime": "2026-09-26T22:40:42.929Z",
+        "ageHours": 12.94,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "G608 security audit",
+      "path": "output/playwright/g831-g608-goal-readiness-current-r1/audit-readiness.json",
+      "expected": "complete/ok/passed with blockers=[], expected requirement IDs exactly once, all requirements passed, and summary counts matching requirements",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-25T19:09:52.606Z",
+        "workflow": "heavy-chain.goal-readiness.v3"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-25T19:09:52.606Z",
+        "mtime": "2026-09-25T19:09:52.609Z",
+        "ageHours": 40.46,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "G618 scale ops baseline",
+      "path": "output/playwright/10m-product-readiness-g618/summary.json",
+      "expected": "ok=true, blockers=[], v2 schema, explicit monitor expectations, commands/checks passed, imageCount>=1200, canvasObjectCount>=600, nested performance and production-monitor v2 evidence valid, and no unresolved warnings",
+      "passed": false,
+      "safeSummary": {
+        "ok": false,
+        "failed": [],
+        "blockers": 1,
+        "warnings": 0,
+        "capturedAt": "2026-09-01T14:44:02.838Z",
+        "workflow": "heavy-chain.g618.scale-ops-baseline.v1"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-01T14:44:02.838Z",
+        "mtime": "2026-09-01T14:45:42.461Z",
+        "ageHours": 620.89,
+        "maxArtifactAgeHours": 48,
+        "passed": false
+      },
+      "next": "Refresh output/playwright/10m-product-readiness-g618/summary.json; artifact is older than 48h or lacks a usable timestamp/mtime."
+    },
+    {
+      "name": "G620 security operations",
+      "path": "output/playwright/g764-g620-security-ops-r1/summary.json",
+      "expected": "ok=true, current v3 static Cloudflare security schema, no retired-provider references, all required checks passed, and no irreversible actions touched",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-25T19:09:52.846Z",
+        "workflow": "heavy-chain.g620.security-ops.v3"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-25T19:09:52.846Z",
+        "mtime": "2026-09-25T19:09:52.849Z",
+        "ageHours": 40.46,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "G632 incident response drill",
+      "path": "output/playwright/g632-incident-response-drill/summary.json",
+      "expected": "ok=true, blockers=[], >=5 incident scenarios passed, and no irreversible actions touched",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-27T11:27:43.302Z",
+        "workflow": "heavy-chain.g632.incident-response-drill.v1"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-27T11:27:43.302Z",
+        "mtime": "2026-09-27T11:27:43.316Z",
+        "ageHours": 0.16,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "G633 scale and alerting plan",
+      "path": "output/playwright/g633-scale-alerting-plan/summary.json",
+      "expected": "ok=true, blockers=[], scale/load/alerting approval plan checked, and no irreversible actions touched",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-27T11:27:43.967Z",
+        "workflow": "heavy-chain.g633.scale-alerting-plan.v1"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-27T11:27:43.967Z",
+        "mtime": "2026-09-27T11:27:43.974Z",
+        "ageHours": 0.16,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "production H601 rights readback",
+      "path": "output/playwright/g836-prod-h601-rights-check-20260927-r1/summary.json",
+      "expected": "production authenticated /generate exposes either the Light plan lock or the explicit Heavy rights gate; no gate is auto-accepted",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-27T04:44:06.300Z",
+        "workflow": "heavy-chain.production-h601-rights-readback.v1"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-27T04:44:06.300Z",
+        "mtime": "2026-09-27T04:45:40.185Z",
+        "ageHours": 6.89,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "production chosen public entrypoint readback",
+      "path": "output/playwright/g835-chosen-public-entrypoint-readback-r1/summary.json",
+      "expected": "chosen public entrypoint https://heavy-chain-web.nichika2000823.workers.dev is reachable without submit/payment/publish actions",
+      "passed": true,
+      "safeSummary": {
+        "ok": true,
+        "failed": [],
+        "blockers": 0,
+        "warnings": 0,
+        "capturedAt": "2026-09-27T08:45:59.442Z",
+        "workflow": "heavy-chain.chosen-public-entrypoint-readback.v2"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-27T08:45:59.442Z",
+        "mtime": "2026-09-27T08:46:00.189Z",
+        "ageHours": 2.86,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      }
+    },
+    {
+      "name": "production H602 billing completion readback",
+      "path": "output/playwright/g774-h602-production-completion-current-r1/summary.json",
+      "expected": "production H602 readback ok=true with quota enforcement, purchase-proof hardening/hash-only/artifact-allowlist migrations applied, raw receipt/payload storage blocked, checkout disabled until operator release, redacted sandbox tester, verified no-real-charge proof >0, transaction/entitlement readback=true, and no remaining blockers",
+      "passed": false,
+      "safeSummary": {
+        "ok": false,
+        "failed": [],
+        "blockers": 6,
+        "warnings": 0,
+        "capturedAt": "2026-09-27T11:21:09.446Z",
+        "workflow": "heavy-chain.h602.production-completion-readback.v1"
+      },
+      "freshness": {
+        "source": "artifact_timestamp",
+        "timestamp": "2026-09-27T11:21:09.446Z",
+        "mtime": "2026-09-27T11:21:09.450Z",
+        "ageHours": 0.27,
+        "maxArtifactAgeHours": 48,
+        "passed": true
+      },
+      "next": "Refresh or repair output/playwright/g774-h602-production-completion-current-r1/summary.json; expected production H602 readback ok=true with quota enforcement, purchase-proof hardening/hash-only/artifact-allowlist migrations applied, raw receipt/payload storage blocked, checkout disabled until operator release, redacted sandbox tester, verified no-real-charge proof >0, transaction/entitlement readback=true, and no remaining blockers."
+    }
+  ],
+  "commands": [
+    {
+      "name": "node syntax: release gate",
+      "command": "node --check scripts/verify-release-gate-unified.mjs",
+      "startedAt": "2026-09-27T11:37:24.935Z",
+      "durationMs": 200,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: release doctor",
+      "command": "node --check scripts/release-doctor.mjs",
+      "startedAt": "2026-09-27T11:37:25.136Z",
+      "durationMs": 220,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: production monitor",
+      "command": "node --check scripts/monitor-production-health.mjs",
+      "startedAt": "2026-09-27T11:37:25.356Z",
+      "durationMs": 204,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: launch ops",
+      "command": "node --check scripts/verify-launch-operations-readiness.mjs",
+      "startedAt": "2026-09-27T11:37:25.560Z",
+      "durationMs": 179,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: mass-market QA",
+      "command": "node --check scripts/verify-mass-market-qa.mjs",
+      "startedAt": "2026-09-27T11:37:25.739Z",
+      "durationMs": 193,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: G614 operations verifier",
+      "command": "node --check scripts/verify-g614-operations-docs.mjs",
+      "startedAt": "2026-09-27T11:37:25.932Z",
+      "durationMs": 209,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: G618 scale ops verifier",
+      "command": "node --check scripts/verify-g618-scale-ops-baseline.mjs",
+      "startedAt": "2026-09-27T11:37:26.141Z",
+      "durationMs": 179,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: G620 security ops verifier",
+      "command": "node --check scripts/verify-g620-security-ops.mjs",
+      "startedAt": "2026-09-27T11:37:26.320Z",
+      "durationMs": 190,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: G632 incident response verifier",
+      "command": "node --check scripts/verify-g632-incident-response-drill.mjs",
+      "startedAt": "2026-09-27T11:37:26.510Z",
+      "durationMs": 185,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: G633 scale alerting verifier",
+      "command": "node --check scripts/verify-g633-scale-alerting-plan.mjs",
+      "startedAt": "2026-09-27T11:37:26.695Z",
+      "durationMs": 205,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: H601 legal safety verifier",
+      "command": "node --check scripts/verify-h601-legal-safety-guard.mjs",
+      "startedAt": "2026-09-27T11:37:26.900Z",
+      "durationMs": 198,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "node syntax: H602 billing verifier",
+      "command": "node --check scripts/verify-h602-cloudflare-billing-readiness.mjs",
+      "startedAt": "2026-09-27T11:37:27.098Z",
+      "durationMs": 195,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "security audit",
+      "command": "npm run security:audit --silent",
+      "startedAt": "2026-09-27T11:37:27.293Z",
+      "durationMs": 1828,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": [
+        "Security audit passed. No secret values were printed."
+      ]
+    },
+    {
+      "name": "generation scorecard",
+      "command": "npm run verify:generation-scorecard --silent",
+      "startedAt": "2026-09-27T11:37:29.121Z",
+      "durationMs": 911,
+      "timeoutMs": 600000,
+      "status": 1,
+      "passed": false,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": [
+        "      \"summary\": {",
+        "        \"pass\": 0,",
+        "        \"needsPolish\": 0,",
+        "        \"fail\": 0",
+        "      },",
+        "      \"passed\": false,",
+        "      \"issues\": [",
+        "        \"scorecard_artifact_missing:output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json\"",
+        "      ]",
+        "    }",
+        "  ]",
+        "}"
+      ]
+    },
+    {
+      "name": "G614 operations docs",
+      "command": "npm run verify:g614-ops --silent",
+      "startedAt": "2026-09-27T11:37:30.032Z",
+      "durationMs": 681,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": [
+        "{",
+        "  \"ok\": true,",
+        "  \"summaryPath\": \"output/playwright/g614-operations-docs/summary.json\",",
+        "  \"blockers\": []",
+        "}"
+      ]
+    },
+    {
+      "name": "G632 incident response drill",
+      "command": "npm run verify:g632-incident-response --silent",
+      "startedAt": "2026-09-27T11:37:30.713Z",
+      "durationMs": 743,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": [
+        "{",
+        "  \"ok\": true,",
+        "  \"summaryPath\": \"/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/output/playwright/g632-incident-response-drill/summary.json\",",
+        "  \"blockers\": []",
+        "}"
+      ]
+    },
+    {
+      "name": "G633 scale and alerting plan",
+      "command": "npm run verify:g633-scale-alerting-plan --silent",
+      "startedAt": "2026-09-27T11:37:31.456Z",
+      "durationMs": 630,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": [
+        "{",
+        "  \"ok\": true,",
+        "  \"summaryPath\": \"output/playwright/g633-scale-alerting-plan/summary.json\",",
+        "  \"blockers\": []",
+        "}"
+      ]
+    },
+    {
+      "name": "H601 legal safety guard",
+      "command": "npm run verify:h601-legal-safety --silent",
+      "startedAt": "2026-09-27T11:37:32.086Z",
+      "durationMs": 627,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": [
+        "        ]",
+        "      }",
+        "    }",
+        "  ],",
+        "  \"failures\": [],",
+        "  \"irreversibleActions\": {",
+        "    \"billingPurchasePaymentCheckout\": \"not_touched\",",
+        "    \"identityOtpCaptchaSecrets\": \"not_touched\",",
+        "    \"externalPublicPublish\": \"not_touched\",",
+        "    \"legalPolicyFinalization\": \"not_run\"",
+        "  }",
+        "}"
+      ]
+    },
+    {
+      "name": "H602 billing readiness",
+      "command": "npm run verify:h602-billing --silent",
+      "startedAt": "2026-09-27T11:37:32.713Z",
+      "durationMs": 658,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": [
+        "      \"external write\"",
+        "    ]",
+        "  },",
+        "  \"externalEffects\": {",
+        "    \"network\": false,",
+        "    \"provider\": false,",
+        "    \"billing\": false,",
+        "    \"checkout\": false,",
+        "    \"deployment\": false,",
+        "    \"writes\": false",
+        "  }",
+        "}"
+      ]
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck --silent",
+      "startedAt": "2026-09-27T11:37:33.371Z",
+      "durationMs": 767,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "build",
+      "command": "npm run build --silent",
+      "startedAt": "2026-09-27T11:37:34.138Z",
+      "durationMs": 50340,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": [
+        "\u001b[33m[PLUGIN_TIMINGS] \u001b[0mYour build spent significant time in plugin `vite:asset-import-meta-url`. See https://rolldown.rs/options/checks#plugintimings for more details.",
+        "\u001b[33m[PLUGIN_TIMINGS] \u001b[0mYour build spent significant time in plugins. Here is a breakdown:",
+        "  - vite:asset-import-meta-url (52%)",
+        "  - vite:asset (38%)",
+        "See https://rolldown.rs/options/checks#plugintimings for more details.",
+        "\u001b[33m[PLUGIN_TIMINGS] \u001b[0mYour build spent significant time in plugins. Here is a breakdown:",
+        "  - vite:worker-import-meta-url (23%)",
+        "  - vite:css-post (19%)",
+        "  - vite:build-import-analysis (19%)",
+        "  - vite:css (9%)",
+        "  - vite:asset-import-meta-url (8%)",
+        "See https://rolldown.rs/options/checks#plugintimings for more details."
+      ]
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint --silent -- --max-warnings=0",
+      "startedAt": "2026-09-27T11:38:24.480Z",
+      "durationMs": 50998,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    },
+    {
+      "name": "git diff check",
+      "command": "git diff --check",
+      "startedAt": "2026-09-27T11:39:15.478Z",
+      "durationMs": 42,
+      "timeoutMs": 600000,
+      "status": 0,
+      "passed": true,
+      "timedOut": false,
+      "signal": null,
+      "outputTail": []
+    }
+  ],
+  "blockers": [],
+  "warnings": [],
+  "stopConditions": [
+    "billing_purchase_payment_checkout",
+    "identity_otp_captcha_security_prompt",
+    "secret_entry",
+    "external_public_publish",
+    "destructive_cleanup_outside_marker_scoped_artifacts",
+    "new_paid_external_vendor_or_monitoring_service"
+  ],
+  "ok": false,
+  "failed": [
+    "readback:production monitor and UI pair",
+    "readback:G618 scale ops baseline",
+    "readback:production H602 billing completion readback",
+    "command:generation scorecard"
+  ]
+}
