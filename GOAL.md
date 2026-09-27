@@ -11656,3 +11656,7 @@ Fitting/CanvasのAstra handoffを現行HEADへ更新した。Fittingの`generate
 # Goal progress — 2026-09-27 r587
 
 H602 Cloudflare billing contract 3/3とLightchain release-gate contract 16/16をfresh実行し、合計19/19 pass。ローカル請求契約がrelease approvalを付与しないこと、production-only証跡の不足・不完全Companion evidence・rights checkbox混入をgateが拒否することを確認した。実charge、checkout、provider、公開、deploy、secret読取は0。正本は`work/heavy-chain-billing-release-contract-readback-20260927-r1.json`。Goal active。
+
+# Goal progress — 2026-09-27 r588
+
+Cloudflare/OpenAI provider transportとAPI-less generationの静的readinessをfresh実行し、両方`ok=true`。provider transport、model-matrix、protected edit、durable receipt contract、private media persistence、legacy marker除去を確認した。ただし本番認証済み生成、AI品質、live R2 readback、provider receiptは未証明のまま保持した。正本は`work/heavy-chain-generation-transport-readback-20260927-r1.json`。外部API、submit、payment、deploy、secret読取は0、Goal active。
