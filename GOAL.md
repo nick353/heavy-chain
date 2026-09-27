@@ -12084,3 +12084,7 @@ Cloudflare production deployment一覧をread-onlyでfresh確認。最新version
 # Goal progress — 2026-09-28 r690
 
 同じ100%配信version `529f72bc-c79e-45e4-a9cb-39f8407259ab`をread-only確認し、live `AI_IMAGE_PROVIDER=workers_ai`、source production config=`openai`のdriftを確定した。Secret名`OPENAI_API_KEY`の存在は確認できるが、値・有効性・OpenAI receiptは未確認。source変更を本番へdeployせず、同じキーのローテーション・provider submit・課金・公開・動画変更も0。次の順序は、外部で同じキーが2xxになることの確認 → Astraのverified engineering receipt → 明示承認されたruntime切替deploy → 一回のOpenAI生成receipt → remote save/reuse/reload/reconciliation → scorecard・monitor/UI・G618・H602 → strict gate再実行。Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r691
+
+現行sourceのCloudflare dry-runを実行し、OpenAI選択の候補bundleが作成可能なことを確認した。これは本番deployやprovider receiptではない。候補のOpenAI model allowlistにはSunburst専用modelがなく、live versionはWorkers AIのまま。同じキーの401、認証済みconsumer session、実OpenAI生成receipt、remote save/reuse/reload/reconciliation、visual scorecard、monitor/UI、G618、H602、strict gateは未完了。キーのローテーション・secret変更・deploy・課金・公開・動画変更は0、Goal active。次は外部で同じキーが2xxになった後に、Astra verified engineering・runtime切替・一回の生成へ進む。
