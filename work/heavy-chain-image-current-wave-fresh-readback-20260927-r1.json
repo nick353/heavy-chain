@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-current-wave-fresh-readback.v1",
-  "capturedAt": "2026-09-27T11:37:22Z",
-  "sourceRevision": "c51ca94",
+  "capturedAt": "2026-09-27T11:40:18Z",
+  "sourceRevision": "0b92797",
   "scope": {
     "currentWave": "image_generation",
     "video": "deferred_by_user",
@@ -131,6 +131,13 @@
     "openHumanItems": ["H601", "H602"],
     "proofsIncomplete": 8,
     "commandsFailed": ["g619 beta evidence verifier", "release gate verifier"]
+  },
+  "authPathInventory": {
+    "artifact": "work/heavy-chain-image-auth-path-inventory-20260927-r1.json",
+    "productionSecretNamesVisible": ["MEDIA_READ_SECRET", "OPENAI_API_KEY"],
+    "secretValuesRead": false,
+    "consumerAuthAvailable": false,
+    "monitorContextAvailable": false
   },
   "nextGate": "Recover the existing Adaptive runtime and obtain the already-registered Astra image engineering receipt; do not replay the closed transport or deploy while the live provider remains workers_ai."
 }

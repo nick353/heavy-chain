@@ -11956,3 +11956,7 @@ Heavy API全体の決定論的回帰をfresh実行し、114/114 PASS。認証adm
 # Goal progress — 2026-09-27 r657
 
 Goal全体のread-only completion auditをfresh実行。73 goalはaccepted、G617/G619/G669/G670は未受入、H601/H602はopen、production proof 8件が未完、g619 verifierとrelease gate commandがFAIL。ローカル画像回帰はgreenだが、Goal全体は未完了。provider submit・課金・deploy・公開は0、動画はdeferred。正本は`work/heavy-chain-full-completion-audit-fresh-20260927-r1/summary.json`とnested release-gate report。
+
+# Goal progress — 2026-09-27 r658
+
+画像認証経路のinventoryをread-onlyでfresh取得。Cloudflare production secret名は`MEDIA_READ_SECRET`/`OPENAI_API_KEY`のみ確認できるが値は未読、local OpenAI keyは直前の401で使用不可、Heavy consumer-auth session・monitor token/API/brand・browser auth-stateは不在、Adaptive runtime processも不在。秘密値・代替credential・provider submitは扱っていない。動画はdeferred、Goal active。正本は`work/heavy-chain-image-auth-path-inventory-20260927-r1.json`と更新済みresume manifest。

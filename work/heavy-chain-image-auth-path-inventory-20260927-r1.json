@@ -1,0 +1,34 @@
+{
+  "schema": "heavy-chain.image-auth-path-inventory.v1",
+  "capturedAt": "2026-09-27T11:40:18Z",
+  "sourceRevision": "0b927973749b6b66267afe4616bfb807ee26f712",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "secretValuesRead": false,
+    "providerSubmit": false,
+    "billing": false,
+    "deploy": false,
+    "publication": false
+  },
+  "localCredentialNames": {
+    "OPENAI_API_KEY": "present_but_previous_readonly_call_rejected_401",
+    "HEAVY_CHAIN_MONITOR_TOKEN": "absent",
+    "HEAVY_CHAIN_MONITOR_API_URL": "absent",
+    "HEAVY_CHAIN_MONITOR_BRAND_ID": "absent",
+    "consumerAuthSession": "absent",
+    "browserAuthStateFiles": "absent"
+  },
+  "cloudflareProductionSecretNames": {
+    "command": "npx wrangler secret list --config wrangler.production.jsonc",
+    "names": ["MEDIA_READ_SECRET", "OPENAI_API_KEY"],
+    "valuesRead": false
+  },
+  "runtime": {
+    "adaptiveOrBootstrapProcessObserved": false,
+    "closedTransportReplayed": false
+  },
+  "interpretation": "A production secret name exists, but its value and usability are unverified; the local key was rejected by OpenAI, and Heavy consumer-auth/monitor context is absent. No credential was substituted or exposed.",
+  "nextGate": "Restore the approved consumer-auth session and a valid provider credential, then use the Heavy receipt path for image generation."
+}
