@@ -1,0 +1,61 @@
+{
+  "schema": "heavy-chain.recovery-readback.v1",
+  "capturedAt": "2026-09-27T15:45:11.780Z",
+  "revision": "6aa02b4f8842bba0c96b2abbc45ab3fa2371c893",
+  "branch": "heavy-chain/checkpoint-20260926",
+  "workingTree": "clean",
+  "scope": "image-only; video deferred",
+  "runtime": {
+    "graphAvailable": true,
+    "capacityBlocker": "capacity_blocked",
+    "liveCapacityObservable": false,
+    "foreignAdmissionsUntouched": true,
+    "recoveryAttempt": {
+      "sourceRun": "run_9d61b530fc6946b4",
+      "forkRun": "run_8e5c434b719d41ed",
+      "forkStatus": "completed_from_blocked_source",
+      "capacityRecoveryFork": "not_applicable_source_blocker_code_missing"
+    }
+  },
+  "productionReadback": {
+    "health": 200,
+    "profile": 401,
+    "heavyEntitlement": 401,
+    "imageUsage": "400_invalid_brand_id",
+    "secretNames": ["MEDIA_READ_SECRET", "OPENAI_API_KEY"],
+    "secretValuesExposed": false,
+    "providerSubmit": false,
+    "deployment": false
+  },
+  "localChecks": {
+    "verifyOpenAIProvider": "pass",
+    "providerPersistenceReadback": "14/14 pass",
+    "imageApiInputNormalization": "1/1 pass",
+    "lightchainProviderCoverage": "22/22 pass",
+    "lightchainParityContract": "9/9 pass",
+    "lightchainParityBehaviorLedger": "6/6 pass",
+    "lightchainPermissionParity": "12/12 pass",
+    "cloudflareImageApiOnly": "4/4 pass",
+    "typecheck": "pass",
+    "build": "pass",
+    "lint": "pass",
+    "gitDiffCheck": "pass"
+  },
+  "releaseGate": {
+    "ok": false,
+    "failedChecks": [
+      "generation_scorecard_artifact_missing",
+      "production_monitor_ui_pair_missing",
+      "g618_scale_ops_stale",
+      "h602_production_completion_readback_has_six_blockers"
+    ],
+    "artifact": "/tmp/heavy-gate-recovery-20260927.json"
+  },
+  "nextAction": "obtain a verified native Astra engineering receipt after the foreign capacity guard clears; then make only the bounded Heavy image migration changes and rerun deterministic checks",
+  "externalEffects": {
+    "providerGeneration": false,
+    "billing": false,
+    "publication": false,
+    "destructiveCleanup": false
+  }
+}
