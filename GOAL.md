@@ -11465,6 +11465,10 @@ Adaptive plan/runtime/packageをfresh readbackした。Opus plan v3はvalid、gr
 
 Heavy capability/preflight、Canvas/Chat entitlement、Fitting preview、Light permission/source admissionのcross-surface contractを同一HEADでfresh実行し、30/30 pass。unsupported/default-deny、stale input、Light/Heavy権限分離、Chat fail-closedを確認した。これはlocal/mock証拠で、Astra adapter実装・provider receipt・R2は未完了。正本は`work/heavy-chain-cross-surface-local-readback-20260927-r1.json`。Goal active。
 
+# Goal progress — 2026-09-27 r542
+
+capacity recovery候補をfresh確認し、`workflow_list(limit=100,status=capacity_blocked)`は空だった。従って`workflow_fork(capacity_recovery=true)`対象はなく、既存managed packageを保持して重複fork・代替起動は行わない。正本は`work/heavy-chain-adaptive-fork-eligibility-20260927-r1.json`。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

@@ -1,0 +1,9 @@
+{
+  "schema": "heavy-chain.adaptive-fork-eligibility.v1",
+  "capturedAt": "2026-09-27T07:33:30Z",
+  "gitHead": "5edb7c5",
+  "query": "workflow_list(limit=100,status=capacity_blocked)",
+  "runs": [],
+  "decision": "No eligible capacity-blocked Graph run exists; workflow_fork(capacity_recovery=true) is not applicable. Preserve the existing managed package and do not create a duplicate.",
+  "externalEffects":{"provider":0,"billing":0,"publication":0,"workflowFork":0}
+}

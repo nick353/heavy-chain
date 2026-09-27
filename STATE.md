@@ -22966,3 +22966,7 @@ Adaptive plan/runtime/packageをfresh readbackした。Opus plan v3はvalid、gr
 # Heavy Chain current state — 2026-09-27 r541
 
 Heavy capability/preflight、Canvas/Chat entitlement、Fitting preview、Light permission/source admissionのcross-surface contractを同一HEADでfresh実行し、30/30 pass。unsupported/default-deny、stale input、Light/Heavy権限分離、Chat fail-closedを確認した。これはlocal/mock証拠で、Astra adapter実装・provider receipt・R2は未完了。正本は`work/heavy-chain-cross-surface-local-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r542
+
+capacity recovery候補をfresh確認し、`workflow_list(limit=100,status=capacity_blocked)`は空だった。従って`workflow_fork(capacity_recovery=true)`対象はなく、既存managed packageを保持して重複fork・代替起動は行わない。正本は`work/heavy-chain-adaptive-fork-eligibility-20260927-r1.json`。Goal active。
