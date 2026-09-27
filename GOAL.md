@@ -11160,3 +11160,7 @@ Heavy/Lightのpermission境界をsourceとlocal契約で再監査した。Heavy-
 # Goal progress — 2026-09-27 r461
 
 permission境界監査後のproduction buildをfresh実行し、`tsc -b`とVite build（2567 modules）がpassした。コード変更はなく、distは既存のignore対象。Heavy/Lightの表示境界とLight plan-lockは維持し、strict gateの4件は外部auth/provider/live readback待ちで不変。Goal active。
+
+# Goal progress — 2026-09-27 r462
+
+Supabase公式project readbackで`heavy-chain-production`が引き続き`INACTIVE`であることを確認し、H602 production-completion fail-closed readbackを`2026-09-27T05:17:16.540Z`にfresh更新した。6 blocker（quota enforcement false、production checkout true、verified no-real-charge proof不足、transaction/entitlement readback不足、operator final decision不足、live constraint未実施）を再確認。restore、billing mutation、Apple/OTP、purchase、公開、secret操作は行っていない。Goal active。

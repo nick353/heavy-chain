@@ -22643,3 +22643,7 @@ Heavy/Light permission境界をsource/local契約でfresh監査した。Heavy-ow
 # Heavy Chain current state — 2026-09-27 r461
 
 permission境界監査後に`npm run build`をfresh実行し、`tsc -b`とVite production build（2567 modules）がpassした。tracked source変更はなくdistはignore対象。Heavyのterms/rights gateとLightのplan-lock境界は維持し、strict gate残件4件は正規auth/API/provider/live billing readback待ち。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r462
+
+Supabase公式readbackは`heavy-chain-production`=`INACTIVE`。`npm run verify:h602-production-completion-readback`をfresh実行し、`capturedAt=2026-09-27T05:17:16.540Z`、`liveProductionReadbackPerformed=false`、6 blockerを確認した。正本は`output/playwright/g774-h602-production-completion-current-r1/summary.json`。billing設定・Supabase restore・DB書込み・Apple/OTP・purchase・公開は0。Goal active。
