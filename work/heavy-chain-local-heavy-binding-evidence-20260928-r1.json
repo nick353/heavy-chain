@@ -68,6 +68,21 @@
       "command": "npm run build (repository root)",
       "exitCode": 0,
       "modulesTransformed": 2568
+    },
+    "boundaryContractSuite": {
+      "exitCode": 0,
+      "tests": 60,
+      "passed": 60,
+      "failed": 0,
+      "commands": {
+        "lightProviderCoverage": "22/22",
+        "lightParityContract": "9/9",
+        "cloudflareRuntimeContract": "6/6",
+        "h602CloudflareBillingContract": "3/3",
+        "generationScorecardProvider": "3/3",
+        "videoProviderBoundary": "1/1",
+        "releaseGateLightchain": "16/16"
+      }
     }
   },
   "fileSha256": {

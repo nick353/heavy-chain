@@ -12187,3 +12187,4 @@ verified runtime receipt、同じキーの401解消、実provider生成、remote
 
 fresh strict gateを再実行し、FAILはproduction monitor/UI、G618、H602、current visual scorecardの4項目に限定された。submit/payment/publish/destructive cleanup/deployは全て未実行で、古い証跡を完了扱いにしていない。正本は`output/playwright/heavy-release-gate-current-20260928-r3.json`。
 root `npm run build`もPASSし、2,568 modules transformedを証跡化した。本番の認証・deploy・実provider生成・remote readbackの証明には昇格させていない。
+Light/provider/runtime/billing/scorecard/video/release境界の契約テストも合計60/60 PASS。残る未達は本番側の認証済みreceipt、remote durable readback、monitor/G618/H602/visual scorecardとAstra実行identityである。

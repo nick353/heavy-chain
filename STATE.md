@@ -23682,3 +23682,5 @@ Sunburst未実装、Astra verified invocation/capacity、同じキーの401、�
 production monitor/UI、G618 scale baseline、production H602 billing readback、current generation visual scorecardの4項目に限定。
 generation submit、payment/checkout、publish、destructive cleanup、deployは全て未実行。正本は`output/playwright/heavy-release-gate-current-20260928-r3.json`とlocal binding evidence。
 その後、root `npm run build`もPASS（2,568 modules transformed）。これはproduction artifactのローカル生成成功であり、本番deployやprovider生成receiptではない。
+
+Light provider coverage 22/22、Light parity contract 9/9、Cloudflare runtime 6/6、H602 local contract 3/3、scorecard provenance 3/3、video fail-closed 1/1、Lightchain release contract 16/16（合計60/60）もPASS。全てlocal/mock契約であり、本番認証・実生成・deployを代替しない。
