@@ -11501,6 +11501,10 @@ H602のproduction completionをfresh再実行し、`ok=false`・6 blocker（quot
 
 選択したproduction public entrypointをread-only HTTPでfresh確認し、`ok=true`（rootはsame-origin login redirect 307、session endpoint 200/null）を取得した。一方、10M auditは2xx公開shellのみを要求し、unified release gateはprotected redirectも受入れるため、同じ証跡に対するverifier契約差分を`work/heavy-chain-public-entrypoint-verifier-drift-20260927-r1.md`へ固定した。監査を勝手に緩めず、authenticated UI/provider完了へ昇格していない。外部効果は0。Goal active。
 
+# Goal progress — 2026-09-27 r551
+
+public entrypoint readback反映後にunified release gateをfresh再実行し、`2026-09-27T07:45:29.674Z`のsummaryで失敗は4件のまま（production monitor/UI pair、G618 scale-ops、production H602、generation scorecard）。public entrypoint項目はprotected redirect契約で失敗項目に含まれず、10M監査側の旧2xx契約との差分だけが残った。外部効果、provider、課金、公開、secret、deploy、破壊操作は0。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。
