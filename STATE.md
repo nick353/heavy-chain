@@ -23381,3 +23381,7 @@ Goal requirement matrixを作成し、current evidenceと依存順を固定。lo
 # Heavy Chain current state — 2026-09-27 r642
 
 Opus承認済み画像planを、現行コードrevision・receipt/readback経路・deterministic結果付きAstra handoff packetへ整理。source mutation/provider/deploy/billing/secret readは0。Adaptive runtime不在・Astra start receipt不足のため、ソース変更は開始していない。動画はdeferred。正本は`work/heavy-chain-openai-image-astra-handoff-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r643
+
+OpenAI Heavy API 114/114、provider persistence 14/14、typecheck/lint/build/git diff checkをfresh exit 0。これはpre-migration local baselineで、本番OpenAI/receipt/R2/releaseは未完了。動画はdeferred。正本は`work/heavy-chain-current-source-integrity-readback-20260927-r1.json`と更新済みresume manifest、Goal active。

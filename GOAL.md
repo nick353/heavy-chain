@@ -11896,3 +11896,7 @@ Goal要求をcurrent evidenceへ一対一で対応付けたcompletion matrixを�
 # Goal progress — 2026-09-27 r642
 
 既存Opus承認済みplanと現行HEADのコード境界・receipt/readback経路・45/45 deterministic結果・134/134 image baselineを、Astra再開用handoff packetへ統合した。これは新しい意図ではなく既存planの再開資料で、ソース変更・provider call・deploy・課金・secret読取は0。Adaptive runtime不在とAstra start receipt不足は継続。正本は`work/heavy-chain-openai-image-astra-handoff-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。
+
+# Goal progress — 2026-09-27 r643
+
+現行HEADでsource integrityをfresh確認。Heavy API OpenAI `114/114`、provider persistence `14/14`、typecheck、lint、build、git diff checkをすべてexit 0でPASSした。これはmigration前のローカルbaselineであり、Sunburst実装・production OpenAI・receipt/R2・quality/releaseを完了扱いにはしない。正本は`work/heavy-chain-current-source-integrity-readback-20260927-r1.json`と更新済みresume manifest、動画はdeferred、Goal active。

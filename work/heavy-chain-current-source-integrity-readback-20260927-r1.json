@@ -1,0 +1,49 @@
+{
+  "schema": "heavy-chain.current-source-integrity-readback.v1",
+  "capturedAt": "2026-09-27T11:18:05Z",
+  "sourceRevision": "883b67b570b9709042e72d7520330110e443740d",
+  "scope": {
+    "localOnly": true,
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "providerSubmit": false,
+    "deploy": false,
+    "billing": false,
+    "secretRead": false,
+    "externalEffects": 0
+  },
+  "checks": [
+    {
+      "command": "npm test -- --test-name-pattern='OpenAI'",
+      "directory": "cloudflare/heavy-api",
+      "exitCode": 0,
+      "passed": 114,
+      "failed": 0
+    },
+    {
+      "command": "npm run test:provider-persistence-readback --silent",
+      "exitCode": 0,
+      "passed": 14,
+      "failed": 0
+    },
+    { "command": "npm run typecheck --silent", "exitCode": 0 },
+    { "command": "npm run lint --silent", "exitCode": 0 },
+    { "command": "npm run build --silent", "exitCode": 0 },
+    { "command": "git diff --check", "exitCode": 0 }
+  ],
+  "aggregate": {
+    "openAiHeavyApiPassed": 114,
+    "providerPersistencePassed": 14,
+    "deterministicFailures": 0,
+    "sourceIntegrity": "green"
+  },
+  "proofLimits": [
+    "does not prove gpt-image-2.5-sunburst implementation",
+    "does not prove production version is openai",
+    "does not prove Organization Verification",
+    "does not prove authenticated provider receipt",
+    "does not prove live D1/R2 reconciliation",
+    "does not prove visual quality or strict release"
+  ],
+  "nextGate": "Use this as the pre-migration baseline; after Astra-approved source changes, rerun the same suite and compare the source revision."
+}
