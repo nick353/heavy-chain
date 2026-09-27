@@ -12072,3 +12072,7 @@ Chrome Companionの同一task-owned read-only sessionでOpenAI PlatformのAPI-ke
 # Goal progress — 2026-09-28 r687
 
 外部の認証/account状態に変化がないことを確認したため、同じキーのprobeを繰り返さず、Adaptive planを`waiting_human`へ遷移させた。これはGoal完了やGoal停止ではなく、同一キーの外部修復後に一回だけread-only 2xx再確認を行うための待機状態。生成、deploy、課金、公開、動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Goal progress — 2026-09-28 r688
+
+認証probeを増やさず、productionの非認証read-only boundaryをfresh確認。Heavy API health 200、profile/Heavy entitlement 401、Heavy Web health 200、web session 200/null、sourceのproduction provider configはopenai。稼働とclosed auth boundaryは確認できたが、authenticated consumer session、実provider receipt、remote save/reuse/reload/reconciliation、strict gateの4未達は解消していない。外部生成・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。

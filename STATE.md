@@ -23557,3 +23557,7 @@ Opus 5.5の更新plan `aa040f17-6308-444f-8290-cfc78589de2a`で「同じキー�
 # Heavy Chain current state — 2026-09-28 r687
 
 外部状態に変化がないため、同じAPIキーへの追加probe・provider送信・deployは行わず、Adaptive planを`waiting_human`へ更新。再開条件は同一キーの同一secret/account stateが外部で修復され、同一ソースのread-only `GET /v1/models`が2xxになること。その後も生成は一回だけ許可する。worktreeはclean、動画deferred、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r688
+
+認証probeを増やさず、productionの非認証read-only boundaryをfresh確認。Heavy API healthは200（private-r2、Heavy entitlement enabled）、profile/Heavy entitlementは401、Heavy Web healthは200、web sessionは200/null。sourceのproduction `AI_IMAGE_PROVIDER`はopenai。これは稼働・設定・closed auth boundaryの証拠であり、authenticated consumer session、実provider receipt、remote reconciliationの証拠ではない。外部生成・deploy・課金・公開・動画変更は0、Goal active。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`。
