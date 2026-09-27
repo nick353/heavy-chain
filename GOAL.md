@@ -11204,3 +11204,7 @@ Goalの明示要件（dirty worktree、Light parity、auth continuity、provider
 # Goal progress — 2026-09-27 r472
 
 G619 verifierの現行3 sessionを要件単位で読み、全セッションでconsent、production target、5分duration、redaction review、friction/no-friction、実notes、usable behavior evidenceの7項目が不足していることを確認した。実参加者や証拠を捏造せず、収集順・hard stop・acceptance commandを`work/heavy-chain-g619-human-session-action-packet-20260927-r1.md`へ固定した。Goal active。
+
+# Goal progress — 2026-09-27 r473
+
+Heavy/Lightのremote durable save→reuse→reload→reconciliation境界をsourceとfocused testで技術診断した。書き込み側はCloudflare有効時にremote receiptが無ければ成功表示・遷移を止める一方、`LightchainParityPages`、Library、Workbench、Galleryの読み込み側はremote list/signing失敗時にlocal-firstまたはdeterministic source fallbackを表示する設計を維持している。これは直ちに不具合とは断定せず、local/offline continuityとして意図されている可能性を残すが、remote completion proofとUI可用性が混同されないprovenance契約が必要と判定した。証跡は`work/heavy-chain-remote-read-provenance-diagnosis-20260927-r1.json`。local evidence/lifecycle、workspace handoff 3/3、provider persistence/readback 14/14、gallery boundary 2/2はpass、provider/R2実行・外部効果は0。次はAstra engineeringで「local-only表示を維持しつつremote未確認カードの再利用昇格を明示的に止める」最小仕様を決め、承認済み範囲だけを実装する。Goal active。
