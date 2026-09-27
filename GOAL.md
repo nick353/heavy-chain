@@ -11433,6 +11433,10 @@ Lightchain route parity 34/34、material contract 28/28、UI control boundaries 
 
 独立した`npm run verify:generation-scorecard --silent`をfresh実行し、`passed=false`・primary rows 0・`visual-scorecard.json`欠落を再確認した。r532のrelease-gate summaryではこのcommand failureが列挙されなかったが、独立verifierは未達であり、generation scorecardを完了扱いに戻さない。正本は`work/heavy-chain-generation-scorecard-readback-20260927-r1.json`。provider、課金、公開、deploy、secret insertionは0。Goal active。
 
+# Goal progress — 2026-09-27 r534
+
+r532のrelease-gate要約をtop-level `failed`まで再照合し、実際の失敗は4件（production monitor/UI、G618、H602、generation scorecard）であることを訂正した。r2 artifactはreadback項目だけを抽出しており不完全だったため、正本を`work/heavy-chain-fresh-release-gate-readback-20260927-r3.json`へ更新。H602 billing readiness、typecheck、build、lint、git diff checkはpassだが、production completionは未達。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

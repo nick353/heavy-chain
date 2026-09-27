@@ -1,0 +1,26 @@
+{
+  "schema": "heavy-chain.fresh-release-gate-readback.v3",
+  "capturedAt": "2026-09-27T07:23:14.167Z",
+  "gitHead": "71f96b542e934c3599e2bbeec0776610ef4c4189",
+  "command": "npm run verify:release-gate",
+  "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
+  "exitCode": 1,
+  "ok": false,
+  "failed": [
+    "readback:production monitor and UI pair",
+    "readback:G618 scale ops baseline",
+    "readback:production H602 billing completion readback",
+    "command:generation scorecard"
+  ],
+  "clarification": "The release-gate JSON includes command:generation scorecard in its top-level failed list; the earlier r2 artifact filtered only readback entries and was incomplete. The independent scorecard verifier also fails because the primary visual-scorecard.json is missing.",
+  "local_passes": ["H602 billing readiness", "typecheck", "build", "lint", "git diff check"],
+  "externalEffects": {
+    "providerSubmit": 0,
+    "billing": 0,
+    "publication": 0,
+    "deploy": 0,
+    "destructiveCleanup": 0,
+    "secretInsertion": 0
+  },
+  "decision": "release_not_complete_four_blockers_remain"
+}

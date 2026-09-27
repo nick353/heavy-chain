@@ -22934,3 +22934,7 @@ Lightchain route parity 34/34、material contract 28/28、UI control boundaries 
 # Heavy Chain current state — 2026-09-27 r533
 
 独立した`npm run verify:generation-scorecard --silent`をfresh実行し、`passed=false`・primary rows 0・`visual-scorecard.json`欠落を再確認した。r532のrelease-gate summaryではこのcommand failureが列挙されなかったが、独立verifierは未達であり、generation scorecardを完了扱いに戻さない。正本は`work/heavy-chain-generation-scorecard-readback-20260927-r1.json`。provider、課金、公開、deploy、secret insertionは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r534
+
+r532のrelease-gate要約をtop-level `failed`まで再照合し、実際の失敗は4件（production monitor/UI、G618、H602、generation scorecard）であることを訂正した。r2 artifactはreadback項目だけを抽出しており不完全だったため、正本を`work/heavy-chain-fresh-release-gate-readback-20260927-r3.json`へ更新。H602 billing readiness、typecheck、build、lint、git diff checkはpassだが、production completionは未達。Goal active。
