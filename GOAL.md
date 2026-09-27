@@ -11040,6 +11040,10 @@ workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/fina
 
 ユーザーの「自力で復旧」指示を受け、blocked後の新しいturnとしてAdaptive公式復旧手順を再実行した。runtimeはgraph/live processを返したが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`/`start_receipt=null`のまま。Heavy関連の既存Graphに`blocker_code=capacity_blocked`のrunはなく、`workflow_fork(capacity_recovery=true)`を適用できない。route_taskは同じplanを再利用し、`exact_blocker=waiting_human`、`planner_required=false`を返したが、新規workflow_startには新しいplanner receiptが必要であり、既存packageの意図的holdを迂回するための起動には使わない。手動claim/start、manifest変更、r2/r3重複run、代替provider/route、runtime kill/restartは実施していない。Goalはactiveのまま、次の安全な再開条件はhost capacity/approval状態の変化後に同一packageをfresh status→claim→startできること。
 
+# Goal progress — 2026-09-27 r488
+
+公式Adaptive bootstrap installを同一pinned versionで再実行し、LangGraph 1.2.9 / SQLite checkpointer 3.1.0、DB存在、self-test `available=true`を確認した。続くfresh `runtime_status`とpackage statusでも`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`/`start_receipt=null`で変化なし。runtime再整備ではhost-managed capacity/意図的holdは解除されなかった。コード・provider・auth secret・billing・R2・publication・削除は0。Goalはactiveのまま、claim/start可能なcapacity状態を待つ。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。

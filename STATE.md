@@ -22747,3 +22747,7 @@ workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/fina
 # Heavy Chain current state — 2026-09-27 r487
 
 blocked後の新turnで復旧を試行。runtime/graph/live processは生存しているが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空。Heavy packageは`waiting_human`、`automatic_dispatch=false`、`claim_id=null`、`start_receipt=null`。workflow一覧をfresh照合した結果、Heavy関連にcapacity-blocked Graph runは無く、復旧fork対象は存在しない。route_taskは既存planを再利用するGraph/resume判定を返したが、意図的holdを迂回する新規workflowは作成していない。コード・provider・auth secret・billing・R2・publication・destructive操作は0。
+
+# Heavy Chain current state — 2026-09-27 r488
+
+公式bootstrap installを実行し、pinned Adaptive runtimeのself-testは`available=true`、DB存在、LangGraph 1.2.9 / SQLite checkpointer 3.1.0を確認。fresh runtime/package readback後も`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、`heavy-cross-surface-astra-engineering`は`waiting_human`/`automatic_dispatch=false`/`claim_id=null`/`start_receipt=null`。runtime破損ではなくhost capacityと意図的package holdが残る。Heavyソース、provider、認証secret、課金、R2、公開、破壊操作は未実施。
