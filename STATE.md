@@ -23377,3 +23377,7 @@ generation scorecardはscorecard artifact missing・rows 0、mass-market QAはpr
 # Heavy Chain current state — 2026-09-27 r641
 
 Goal requirement matrixを作成し、current evidenceと依存順を固定。local契約は複数PASSだが、production OpenAI/receipt/R2/quality、人間policy・billing・monitor・beta、strict releaseは未完了。動画はdeferred。正本は`work/heavy-chain-current-requirement-matrix-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r642
+
+Opus承認済み画像planを、現行コードrevision・receipt/readback経路・deterministic結果付きAstra handoff packetへ整理。source mutation/provider/deploy/billing/secret readは0。Adaptive runtime不在・Astra start receipt不足のため、ソース変更は開始していない。動画はdeferred。正本は`work/heavy-chain-openai-image-astra-handoff-20260927-r1.json`と更新済みresume manifest、Goal active。

@@ -1,0 +1,86 @@
+{
+  "schema": "heavy-chain.openai-image-astra-handoff.v1",
+  "capturedAt": "2026-09-27T11:13:20Z",
+  "sourceRevision": "c0000835000bb36131bcfcfe0a3f5089c520c34e",
+  "handoffType": "existing_plan_evidence_packet_not_new_intent",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "sourceMutation": false,
+    "externalEffects": 0
+  },
+  "acceptedIntent": {
+    "plan": "work/heavy-chain-openai-image-opus-plan-20260927-r2.json",
+    "default": "gpt-image-2.5-sunburst",
+    "backend": "openai-images-api",
+    "preserveExplicitSupportedSelection": true,
+    "preserveLegacyWorkersAndOpenAIReceiptReadback": true,
+    "rejectUnsupportedProviderOrModel": true,
+    "noFallback": true,
+    "noReplay": true,
+    "mockOnlyQA": true,
+    "videoDiff": false
+  },
+  "ownedSourceSurfaces": [
+    {
+      "path": "cloudflare/heavy-api/src/openai-image.ts",
+      "lines": "4-17,52-74,110-158",
+      "role": "OpenAI model allowlists/default, server secret aliases, Images API generations/edits request, provider receipt identity"
+    },
+    {
+      "path": "cloudflare/heavy-api/src/image-ai-contracts.ts",
+      "lines": "1-5,190-205",
+      "role": "independent request parser allowlist and Workers model boundary before provider resolution"
+    },
+    {
+      "path": "cloudflare/heavy-api/src/image-ai.ts",
+      "lines": "42-64,198-234,272-315,351-515",
+      "role": "provider config, R2/D1 immutable commit, receipt readback, entitlement revalidation, idempotency and no-replay action path"
+    },
+    {
+      "path": "src/components/ChatEditor.tsx",
+      "lines": "162-170",
+      "role": "Light generation currently sends explicit workers_ai/flux model"
+    },
+    {
+      "path": "src/pages/CanvasEditorPage.tsx",
+      "lines": "2375-2381",
+      "role": "Canvas generation currently sends explicit workers_ai"
+    },
+    {
+      "path": "scripts/hc-10m-real-generation-qa.mjs",
+      "lines": "22-145",
+      "role": "readback/submit boundary, current Workers receipt assertions, live token/brand/request requirements, durable attempt journal"
+    },
+    {
+      "path": "scripts/verify-provider-persistence-readback.test.ts",
+      "lines": "69-178,264-267",
+      "role": "provider result, remote artifact, history/canvas promotion and persistence guards"
+    }
+  ],
+  "currentEvidence": {
+    "localIndependentContracts": "45 pass / 0 fail",
+    "imageBaseline": "134 pass / 0 fail",
+    "productionHealth": "200 status=ok",
+    "productionVersionProvider": "workers_ai",
+    "localProductionConfigProvider": "openai",
+    "dryRunSunburstPresent": false,
+    "organizationVerification": "official surface redirected to login",
+    "authenticatedProviderReceipt": "not_started",
+    "r2SaveReuseReloadReconciliation": "not_started"
+  },
+  "requiredAstraOutput": [
+    "verified start receipt with actual model/effort and existing claim context",
+    "bounded implementation specification covering parser/backend/UI/QA surfaces",
+    "legacy receipt/readback compatibility decision",
+    "explicit no-fallback/no-replay and video-unchanged confirmation",
+    "bounded Luna handoff only after engineering gate"
+  ],
+  "hardBlockers": [
+    "adaptive_runtime_process_absent",
+    "native_start_receipt_metadata_unavailable",
+    "do_not_relaunch_same_claim_or_manual_claim",
+    "do_not_mutate_source_before_verified_astra_gate"
+  ],
+  "nextAction": "After normal Adaptive runtime reconnection, read the existing Astra claim/run with this packet; do not replay the closed transport."
+}
