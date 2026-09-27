@@ -22767,3 +22767,7 @@ capacity待ちの独立準備として、Heavy/Light focused suiteは40/40 pass�
 # Heavy Chain current state — 2026-09-27 r492
 
 `npm run typecheck`と`npm run build`がfresh pass。Vite buildは2567 modulesを変換し、dist生成まで成功。Heavy/Light local contractは健全だが、production proofを昇格させる証拠ではない。Adaptive packageのcapacity/holdが解消するまで、secret/provider/billing/publicationは触れず、local準備を継続する。
+
+# Heavy Chain current state — 2026-09-27 r493
+
+G618 verifierは必要なCloudflare origin/brand/live session/baseline limits欠落で安全にfail-closedし、browser/buildを開始しなかった。10M verifierの旧artifact pathと最新release gateのcurrent artifact差をdrift reportへ記録。Astra承認なしにverifierのcanonical pathやfreshness境界は変更しない。Goalはactive、local準備は継続。

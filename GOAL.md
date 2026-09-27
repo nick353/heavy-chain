@@ -11060,6 +11060,10 @@ Goal再開後、capacity待ちの独立準備としてHeavy/Light境界focused s
 
 capacity待ちの独立準備を続行し、`npm run typecheck`と`npm run build`をfresh passした。buildはVite 8.0.16で全2567 modulesを変換し、生成bundleまで完了。local contract/readinessの証拠を強化しただけで、production auth、provider生成、R2、video、monitor、billing、publicationは未実施。Goalはactiveのまま、read-only/local verificationは停止していない。
 
+# Goal progress — 2026-09-27 r493
+
+capacity待ちの独立準備として、`npm run verify:g618-scale-ops`を実行し、明示Cloudflare API origin・brand・live session・baseline limitsが無いためbrowser/buildを開始せずfail-closedすることを確認した。併せて10M verifierと最新release gateのartifact path差を`work/heavy-chain-10m-provenance-drift-20260927-r1.md`へ固定し、canonical registryをAstra engineering承認なしに変更しない境界を明示した。記録commitは`68cd2a8`。外部効果、secret、provider、billing、publicationは0。Goalはactiveで、capacity回復までread-only準備を継続する。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
