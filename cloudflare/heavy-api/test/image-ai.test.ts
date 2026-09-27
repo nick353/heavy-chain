@@ -164,6 +164,36 @@ test('real SQLite/R2 contract: generation result, quota, private content, Galler
   assert.equal(usage.providerBilling,null); assert.equal(usage.accountFreeAllocationRemaining,null);
 });
 
+test('provider omission defaults to OpenAI, and a missing key fails before admission or provider calls',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close()); delete s.env.AI_IMAGE_PROVIDER;
+  const providerImage=pngFixture(1024,1024,[40,120,80]); const originalFetch=globalThis.fetch; let providerCalls=0;
+  globalThis.fetch=async(input: RequestInfo|URL, init?: RequestInit) => {
+    providerCalls++; assert.equal(String(input),'https://api.openai.com/v1/images/generations');
+    assert.equal(init?.headers && new Headers(init.headers).get('authorization'),'Bearer server-only-test-key');
+    return Response.json({data:[{b64_json:Buffer.from(providerImage).toString('base64'),mime_type:'image/png'}]},
+      {headers:{'x-request-id':'req-openai-default-fixture'}});
+  };
+  try {
+    const missing=await s.call(url+'generate-image','alice',s.input(),crypto.randomUUID());
+    assert.equal(missing.status,503); assert.deepEqual(await missing.json(),{success:false,error:'openai_image_api_key_missing'});
+    assert.equal(providerCalls,0); assert.equal(s.calls.length,0);
+    assert.equal(s.db.sql.prepare('SELECT COUNT(*) AS n FROM heavy_ai_requests').get()!.n,0);
+    s.env.OPENAI_API_KEY='server-only-test-key';
+    const result=await json(await s.call(url+'generate-image','alice',{...s.input(),generationModel:'gpt-image-1-mini'},crypto.randomUUID()));
+    assert.equal(result.provider,'openai'); assert.equal(result.backendProvider,'openai-images-api');
+    assert.equal(result.images[0].providerTaskId,'req-openai-default-fixture'); assert.equal(providerCalls,1); assert.equal(s.calls.length,0);
+  } finally { globalThis.fetch=originalFetch; }
+});
+
+test('explicit Workers AI remains available, while a mismatched provider is rejected',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  const worker=await json(await s.call(url+'generate-image','alice',{...s.input(),generationProvider:'workers_ai'},crypto.randomUUID()));
+  assert.equal(worker.provider,'workers_ai'); assert.equal(worker.backendProvider,'cloudflare-workers-ai'); assert.equal(s.calls.length,1);
+  delete s.env.AI_IMAGE_PROVIDER;
+  const mismatch=await s.call(url+'generate-image','alice',{...s.input(),generationProvider:'workers_ai'},crypto.randomUUID());
+  assert.equal(mismatch.status,422); assert.deepEqual(await mismatch.json(),{success:false,error:'image_provider_not_enabled'}); assert.equal(s.calls.length,1);
+});
+
 test('OpenAI provider uses the same authenticated admission, R2 persistence, receipt and Gallery provenance',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close());
   s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_MODEL='gpt-image-1-mini';

@@ -48,6 +48,7 @@ test('actual workerd/Auth/D1/private R2: three image actions, exact provider byt
       serviceBindings:{ MAIL:async(request:Request) => { mail.push((await request.json() as {text:string}).text); return Response.json({messageId:'local-fixture'}); } } },
     { ...common,name:'heavy',routes:['heavy.test/*'],script:heavy.outputFiles[0].text,d1Databases:{DB:'heavy-db'},r2Buckets:{PRIVATE_MEDIA:'heavy-private'},
       bindings:{AUTH_ISSUER:'https://auth.test',FRONTEND_ORIGINS:'https://heavy.test',MEDIA_READ_SECRET:'local-image-runtime-media-secret-1234567890',
+        AI_IMAGE_PROVIDER:'workers_ai',
         AI_IMAGE_ENABLED:'true',AI_IMAGE_ALLOWED_ACTIONS:'generate-image,edit-image,model-matrix',
         HEAVY_IMAGE_ENTITLEMENT_ENABLED:'true',HEAVY_TERMS_VERSION:TEST_HEAVY_TERMS_VERSION,
         HEAVY_RIGHTS_ATTESTATION_VERSION:TEST_HEAVY_RIGHTS_VERSION,

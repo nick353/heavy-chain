@@ -33,7 +33,7 @@ export interface Env {
   /** Comma-separated exact browser origins allowed to call this Worker. */
   FRONTEND_ORIGINS?: string;
   AI?: { run(model: string, input: unknown): Promise<unknown> };
-  /** `workers_ai` is the default. `openai` is opt-in and requires a server secret. */
+  /** `openai` is the default; `workers_ai` is an explicit fallback. OpenAI requires a server secret. */
   AI_IMAGE_PROVIDER?: string;
   AI_IMAGE_ENABLED?: string;
   AI_IMAGE_ALLOWED_ACTIONS?: string;

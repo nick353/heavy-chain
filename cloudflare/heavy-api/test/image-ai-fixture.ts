@@ -86,6 +86,7 @@ export function imageSetup() {
   let autoProvisionEntitlement = true;
   const revoked=new Set<string>();
   const env={ DB: db,PRIVATE_MEDIA: bucket,MEDIA_READ_SECRET: 'local-image-test-only-secret-1234567890',FRONTEND_ORIGINS: 'https://heavy.test',
+    AI_IMAGE_PROVIDER: 'workers_ai',
     AI_IMAGE_ENABLED: 'true',AI_IMAGE_ALLOWED_ACTIONS: 'generate-image,edit-image,model-matrix',
     HEAVY_IMAGE_ENTITLEMENT_ENABLED: 'true',HEAVY_TERMS_VERSION: TEST_HEAVY_TERMS_VERSION,
     HEAVY_RIGHTS_ATTESTATION_VERSION: TEST_HEAVY_RIGHTS_VERSION,

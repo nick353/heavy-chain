@@ -39,7 +39,8 @@ type ProviderKind = 'workers_ai' | 'openai';
 type ProviderConfig = { provider: ProviderKind; backendProvider: string; model: string };
 type SourceCandidate = { id?: string; storagePath?: string; revision?: number | string; contentDigest?: string };
 
-const configuredProvider = (env: Env): ProviderKind => env.AI_IMAGE_PROVIDER?.trim() === OPENAI_IMAGE_PROVIDER ? 'openai' : 'workers_ai';
+// OpenAI is the server default; Workers AI remains an explicit fallback only.
+const configuredProvider = (env: Env): ProviderKind => env.AI_IMAGE_PROVIDER?.trim() === 'workers_ai' ? 'workers_ai' : 'openai';
 const providerConfig = (env: Env, action: ImageAction, body: Json): ProviderConfig => {
   const provider = configuredProvider(env);
   const effectiveAction: ImageAction = action === 'generate-image' && Array.isArray(body.imageUrls) && body.imageUrls.length
