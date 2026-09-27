@@ -1,0 +1,30 @@
+{
+  "schema": "heavy-chain.fresh-release-gate-readback.v3",
+  "capturedAt": "2026-09-27T07:59:03.869Z",
+  "gitHead": "a9bc8ae",
+  "command": "npm run verify:release-gate --silent",
+  "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
+  "exitCode": 1,
+  "ok": false,
+  "failed": [
+    "readback:production monitor and UI pair",
+    "readback:G618 scale ops baseline",
+    "readback:production H602 billing completion readback",
+    "command:generation scorecard"
+  ],
+  "freshCompanionEvidence": {
+    "path": "work/heavy-chain-companion-authenticated-evidence-20260927-r3.json",
+    "verifier": "pass",
+    "scope": "authenticated route continuity only; provider receipt, source sync, reconciliation, and business completion remain unverified"
+  },
+  "clarification": "The canonical Companion route evidence now passes its dedicated verifier, but the release gate still correctly fails the four independent production/scorecard requirements above. No local browser readback is promoted to provider, R2, billing, monitor, or scorecard completion.",
+  "externalEffects": {
+    "providerSubmit": 0,
+    "billing": 0,
+    "publication": 0,
+    "deploy": 0,
+    "destructiveCleanup": 0,
+    "secretInsertion": 0
+  },
+  "decision": "release_not_complete_four_blockers_remain"
+}

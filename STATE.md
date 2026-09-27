@@ -23018,3 +23018,7 @@ public entrypoint readback反映後にunified release gateをfresh再実行し�
 # Heavy Chain current state — 2026-09-27 r554
 
 現行HEADでHeavy/Light境界のfocused testを再実行し、`verify-heavy-capability-gating.test.mjs`と`verify-lightchain-permission-parity.test.ts`の15/15をpass。Lightchain Workbench/material workbenchでは既知Light featureにHeavy entitlementを呼ばず、Light parityのHeavy-only rights checkbox不在、Heavy parityのHeavy consent分離、401/403/5xx fail-closedを確認した。過去agentの古いHEAD由来の「Workbenchが全Light機能をHeavy entitlementで遮断する」所見は現行ソースでは解消済みで、コード変更は行っていない。provider、課金、公開、R2、deploy、secretは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r555
+
+正規Companion証跡とLight/Heavy境界passを反映してstrict release gateをfresh再実行した。`2026-09-27T07:59:03.869Z`、HEAD `a9bc8ae`、`ok=false`で失敗は4件（production monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecard）。canonical Companion evidence r3は専用verifier passだが、provider receipt・source sync・reconciliation・R2・billing・scorecardへ昇格させていない。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r4.json`。provider submit、課金、公開、deploy、破壊cleanup、secret insertionは0。Goal active。
