@@ -11052,6 +11052,10 @@ workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/fina
 
 再開後3回目のfresh blocked audit。runtime/graph/live processは利用可能だが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空。既存Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`/`start_receipt=null`で不変、Heavy関連に`capacity_blocked`のGraph fork対象も存在しない。同一host-managed capacity/意図的holdが再開後3回連続したため、Goalを`blocked`へ更新する。Opus plan、ソース、provider、認証secret、課金、R2、公開、削除、deployは保持・未実行。再開条件はcapacity/approval状態の変化後に同一packageをfresh status→claim→startできること。
 
+# Goal progress — 2026-09-27 r491
+
+Goal再開後、capacity待ちの独立準備としてHeavy/Light境界focused suiteをfresh実行した。Heavy capability/preflight、Canvas/Chat entitlement/readback、Fitting preview、Light permission parityの合計40/40（28/28 + 12/12）がpass。これはlocal contract証拠であり、Fitting/Canvasの実provider attestation、production auth、R2 durable chain、video、monitor/G618、H601/H602、scorecard、strict release gateの完了を証明しない。再開用operator packetを`work/heavy-chain-current-operator-inputs-20260927-r2.md`へ固定し、commit `b21b84d`で保存した。外部効果は0。Goalはblocked状態を維持し、capacity回復時に同一Astra packageを再開する。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。

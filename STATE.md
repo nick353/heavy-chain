@@ -22759,3 +22759,7 @@ blocked後の新turnで復旧を試行。runtime/graph/live processは生存し�
 # Heavy Chain current state — 2026-09-27 r490
 
 再開後3回目のblocked auditで、Adaptive runtime/graph/live processは生存、ただし`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空。`heavy-cross-surface-astra-engineering`は`waiting_human`、`automatic_dispatch=false`、`claim_id=null`、`start_receipt=null`。Heavy Graphにcapacity-recovery fork対象はなく、manual claim/start・重複package・代替routeは行わない。同一blockerの3回連続を確認したためGoal statusを`blocked`へ更新する。外部効果は0。
+
+# Heavy Chain current state — 2026-09-27 r491
+
+capacity待ちの独立準備として、Heavy/Light focused suiteは40/40 pass（Heavy側28/28、Light permission parity 12/12）。local guardの健全性を確認しただけで、実provider、production auth、R2、video、monitor、billing、publicationは未実施。再開packet `work/heavy-chain-current-operator-inputs-20260927-r2.md`をcommit `b21b84d`で保存。Goalはblockedだが、ローカルread-only準備は継続可能。
