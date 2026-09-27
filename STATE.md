@@ -23160,3 +23160,7 @@ Cloudflare runtime contract 6/6 pass。実provider/R2/production readbackは未�
 # Heavy Chain current state — 2026-09-27 r592
 
 G620/G614/G632/G633/launch-opsはsuccess。security・operationsの静的契約は確認済みだが、live production monitor/UI pairと実provider証跡は未完了。正本は`work/heavy-chain-ops-security-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r593
+
+Beta構造契約はpass、実beta受入は0/3。実セッションの同意・録画許可・5分行動証跡・redaction/behavior artifactが必要で、placeholderを完了扱いにしていない。正本は`work/heavy-chain-beta-readiness-readback-20260927-r1.json`、Goal active。
