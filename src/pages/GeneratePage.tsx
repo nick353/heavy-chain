@@ -33,6 +33,7 @@ import {
   classifyHeavyEntitlementError,
   HEAVY_UNIMPLEMENTED_MESSAGE,
   hasHeavyTermsAndRightsPolicy,
+  isHeavyOwnedFeature,
   isHeavyEntitlementReady,
   resolveHeavyCapability,
   resolveHeavyEntitlementState,
@@ -1088,9 +1089,10 @@ export function GeneratePage() {
   const selectedFeature = locationFeature ?? (featureParam ? null : selectedFeatureState);
   const selectedFeatureId = selectedFeature?.id;
   const currentPath = typeof window === 'undefined' ? '' : window.location.pathname;
-  // Heavy capability is a small default-deny map. The Light compatibility
-  // editor and prompt optimizer remain outside this Heavy entitlement lane.
-  const heavySurface = selectedFeature?.id !== 'chat-edit' && selectedFeature?.id !== 'optimize-prompt';
+  // Heavy ownership is explicit. Every other known catalog feature stays on
+  // the Light surface, while owned-but-unsupported Heavy features remain
+  // closed by resolveHeavyCapability below.
+  const heavySurface = isHeavyOwnedFeature(selectedFeature?.id);
   const heavyCapability = heavySurface
     ? resolveHeavyCapability(selectedFeature?.id)
     : { featureId: selectedFeature?.id ?? null, action: 'heavy-unimplemented' as const, supported: false };

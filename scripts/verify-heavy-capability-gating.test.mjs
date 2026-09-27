@@ -4,10 +4,12 @@ import test from 'node:test';
 
 import {
   HEAVY_CAPABILITY_ACTIONS,
+  HEAVY_OWNED_FEATURE_IDS,
   HEAVY_UNIMPLEMENTED_ACTION,
   canSubmitHeavyCapability,
   classifyHeavyEntitlementError,
   hasHeavyTermsAndRightsPolicy,
+  isHeavyOwnedFeature,
   resolveHeavyCapability,
   resolveHeavyEntitlementState,
 } from '../src/lib/heavyCapability.ts';
@@ -44,6 +46,23 @@ test('Heavy capability map is explicit and default-deny', () => {
   }
 });
 
+test('Heavy ownership is explicit and Light or unknown ids stay outside the Heavy lane', () => {
+  assert.deepEqual([...HEAVY_OWNED_FEATURE_IDS], [
+    'campaign-image',
+    'model-matrix',
+    'design-gacha',
+    'product-shots',
+    'scene-coordinate',
+  ]);
+  for (const featureId of [...HEAVY_OWNED_FEATURE_IDS]) {
+    assert.equal(isHeavyOwnedFeature(featureId), true, featureId);
+  }
+  for (const featureId of ['remove-bg', 'chat-edit', 'optimize-prompt', 'future-feature', null, undefined]) {
+    assert.equal(isHeavyOwnedFeature(featureId), false, String(featureId));
+  }
+  assert.equal(isHeavyOwnedFeature(' campaign-image '), true);
+});
+
 test('supported entitlement state is hydrating or ready, and ready requires both policies', () => {
   const capability = resolveHeavyCapability('campaign-image');
   assert.equal(resolveHeavyEntitlementState(capability, null, true), 'hydrating');
@@ -66,6 +85,7 @@ test('unsupported UI path has no entitlement or provider side effect', async () 
   let entitlementCalls = 0;
   let providerActionCalls = 0;
   const guardedHeavyPath = async (featureId) => {
+    if (!isHeavyOwnedFeature(featureId)) return { skipped: true, action: HEAVY_UNIMPLEMENTED_ACTION };
     const capability = resolveHeavyCapability(featureId);
     if (!capability.supported) return { skipped: true, action: capability.action };
     entitlementCalls += 1;
@@ -75,6 +95,15 @@ test('unsupported UI path has no entitlement or provider side effect', async () 
 
   const result = await guardedHeavyPath('design-gacha');
   assert.deepEqual(result, { skipped: true, action: HEAVY_UNIMPLEMENTED_ACTION });
+  assert.equal(entitlementCalls, 0);
+  assert.equal(providerActionCalls, 0);
+
+  for (const featureId of ['remove-bg', 'chat-edit', 'optimize-prompt', 'future-feature']) {
+    assert.deepEqual(await guardedHeavyPath(featureId), {
+      skipped: true,
+      action: HEAVY_UNIMPLEMENTED_ACTION,
+    }, featureId);
+  }
   assert.equal(entitlementCalls, 0);
   assert.equal(providerActionCalls, 0);
 
@@ -108,6 +137,10 @@ test('direct unsupported HTTP 503 is classified without a provider call', async 
 
 test('GeneratePage renders unsupported copy, hydrates only supported capabilities, and guards stale responses', async () => {
   const page = await readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8');
+  assert.match(page, /isHeavyOwnedFeature\(selectedFeature\?\.id\)/);
+  assert.match(page, /const heavySurface = isHeavyOwnedFeature\(selectedFeature\?\.id\);/);
+  assert.doesNotMatch(page, /const heavySurface = selectedFeature\?\.id !== 'chat-edit'/);
+  assert.doesNotMatch(page, /const heavySurface = selectedFeature\?\.id !== 'optimize-prompt'/);
   assert.match(page, /resolveHeavyCapability\(selectedFeature\?\.id\)/);
   assert.match(page, /if \(noImageGenerationMode \|\| !heavySurface \|\| !heavyCapabilitySupported\)/);
   assert.match(page, /heavyEntitlementState === 'ready' && heavyPolicyConfigured/);

@@ -17,6 +17,19 @@ export const HEAVY_CAPABILITY_ACTIONS = {
   'scene-coordinate': HEAVY_UNIMPLEMENTED_ACTION,
 } as const;
 
+/**
+ * Heavy owns only these feature ids.  Keep ownership separate from action
+ * support so an owned-but-not-yet-implemented feature remains a Heavy closed
+ * state instead of falling through to the Light surface.
+ */
+export const HEAVY_OWNED_FEATURE_IDS: ReadonlySet<string> = new Set([
+  'campaign-image',
+  'model-matrix',
+  'design-gacha',
+  'product-shots',
+  'scene-coordinate',
+]);
+
 export type HeavyCapabilityAction = (typeof HEAVY_CAPABILITY_ACTIONS)[keyof typeof HEAVY_CAPABILITY_ACTIONS];
 export type HeavyEntitlementState = 'unsupported' | 'hydrating' | '401' | '403' | '5xx' | 'ready';
 
@@ -41,6 +54,12 @@ const normalizeFeatureId = (featureId: unknown): string | null => {
   if (typeof featureId !== 'string') return null;
   const normalized = featureId.trim();
   return normalized || null;
+};
+
+/** Resolve whether a feature belongs to the Heavy entitlement surface. */
+export const isHeavyOwnedFeature = (featureId: unknown): boolean => {
+  const normalizedFeatureId = normalizeFeatureId(featureId);
+  return normalizedFeatureId !== null && HEAVY_OWNED_FEATURE_IDS.has(normalizedFeatureId);
 };
 
 /** Resolve one feature to its exact Heavy action. Unknown ids are denied. */
