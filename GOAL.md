@@ -11072,6 +11072,10 @@ video/persistence laneの独立local検証をfresh実行した。Video provider 
 
 認証継続laneの独立local検証をfresh実行した。auth lock 4/4、session admission 9/9、bootstrap hydration 7/7、session recovery 3/3、hydration readback 4/4で合計27/27 pass。tab lock、session admission、stale authority invalidation、bounded refresh retry、secret-bearing evidence rejectionを確認した。これはlocal auth/session契約証拠であり、consumer-authenticated production session、monitor token、実provider receiptを証明しない。外部効果は0。Goalはactiveで、capacity回復までlocal準備を継続する。
 
+# Goal progress — 2026-09-27 r496
+
+remote durable/readbackとmonitor/operationsの独立local検証をfresh実行した。Gallery/local-first、inventory/read-only plan、source byte/revision、workspace lineage/handoff、Canvas promotion guardの合計23/23、production monitor、scale-ops、release-readback、incident-responseの合計24/24がpass。foreign/stale/uncertain evidence、checksum mismatch、private-R2不備、implicit default、local evidenceのrelease昇格をfail-closedする境界を確認した。これはlocal contract証拠で、実provider、R2、consumer-authenticated monitor、G618本番windowは未実行。外部効果は0。Goalはactive。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
