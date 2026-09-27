@@ -319,6 +319,36 @@ const commandChecks = [
     args: ['--test', 'scripts/verify-cloudflare-image-qa.test.mjs'],
   },
   {
+    name: 'Video provider fail-closed boundary regression',
+    command: 'npm',
+    args: ['run', 'test:video-provider-boundary', '--silent'],
+  },
+  {
+    name: 'Video provider contract regression',
+    command: 'npm',
+    args: ['run', 'test:video-provider-contract', '--silent'],
+  },
+  {
+    name: 'Video editor persistence regression',
+    command: 'npm',
+    args: ['run', 'test:video-editor-persistence', '--silent'],
+  },
+  {
+    name: 'Workspace handoff persistence regression',
+    command: 'npm',
+    args: ['run', 'test:workspace-handoff-persistence', '--silent'],
+  },
+  {
+    name: 'Provider persistence readback regression',
+    command: 'npm',
+    args: ['run', 'test:provider-persistence-readback', '--silent'],
+  },
+  {
+    name: 'Canvas generation readback regression',
+    command: 'npm',
+    args: ['run', 'test:canvas-generation-readback', '--silent'],
+  },
+  {
     name: 'generation scorecard',
     command: 'npm',
     args: ['run', 'verify:generation-scorecard', '--silent'],
