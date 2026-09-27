@@ -11022,3 +11022,11 @@ Lightの`/model-library/head-form`をloading後のsettled readbackまで確認�
 Heavy label不在を実証した。初期loading中の0件queryは採用せず、同一tabのvisual/semantic readbackとcleanupを正本にした。
 これでLight plan-lockを誤って削除しない境界はさらに明確になったが、production provider、remote persistence、monitor、H601/H602、
 scorecard、strict gateは未完了。Goal active。
+
+# Goal progress — 2026-09-27 r440
+
+認証不足を推測で埋めずにfresh readbackした。Web側のtask-owned sessionはauthenticated/emailVerifiedで継続しているが、Cloudflare
+API `/v1/profile` は同じブラウザ表示からは `unauthorized`。したがって不足はログイン画面の復旧ではなく、monitor/API用の正規Bearer
+sessionとbrand scopeの注入である。token/cookieは抽出・保存・再利用せず、provider/external effectは0、Companion cleanupも完了。
+証跡 `work/heavy-chain-auth-api-continuity-readback-20260927-r1.json`。production monitor/UI、provider receipt、R2 persistence、
+H601/H602、scorecard、strict gateは未完了。Goal active。

@@ -1,0 +1,39 @@
+{
+  "schema": "heavy-chain.auth-api-continuity-readback.v1",
+  "capturedAt": "2026-09-27T03:55:51.023Z",
+  "webOrigin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "apiOrigin": "https://heavy-chain-api.nichika2000823.workers.dev",
+  "browserSurface": "aos_chrome_companion_profile_instance",
+  "webSession": {
+    "sessionEndpoint": "/api/auth/get-session",
+    "authenticated": true,
+    "emailVerified": true,
+    "sessionTokenRetained": false,
+    "sessionTokenUsedForApi": false
+  },
+  "apiReadback": {
+    "route": "/v1/profile",
+    "httpResult": "unauthorized",
+    "bearerProvided": false,
+    "providerReceipt": false,
+    "sourceSync": false
+  },
+  "monitorInputs": {
+    "HEAVY_CHAIN_MONITOR_API_URL": "missing",
+    "HEAVY_CHAIN_MONITOR_BRAND_ID": "missing",
+    "HEAVY_CHAIN_MONITOR_TOKEN": "missing",
+    "LIGHTCHAIN_UI_AUTH_STATE": "missing"
+  },
+  "effects": {
+    "browserMutationExecuted": false,
+    "externalActionExecuted": false,
+    "providerDispatch": false,
+    "foreignTabsMutated": false,
+    "cleanupComplete": true,
+    "activeCompanionSessions": 0,
+    "activeCompanionLeases": 0,
+    "pendingOperations": 0,
+    "activeReconciliation": 0
+  },
+  "interpretation": "Web session continuity is confirmed, but the API monitor requires a separately injected current bearer session and brand scope. No credential was exported, copied, or used to fabricate the monitor artifact. Production monitor/UI, provider receipt, durable persistence, and strict release remain unproven."
+}

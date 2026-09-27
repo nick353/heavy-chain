@@ -22496,3 +22496,12 @@ semantic wait後に同一tabのvisual readbackを確認し、旧`権限があり
 permission control test id `lightchain-model-tool-permission`を確認した。browser/provider/external effectは0、replay不可、
 session close・tab close・lease release・foreign mutationなし。証拠は`work/heavy-chain-lightchain-model-source-readback-20260927-r2.json`。
 loading中のquery 0件を本番仕様の証拠へ昇格せず、Light plan-lock保持の判断を補強した。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r440
+
+認証継続をfreshに確認した。task-owned CompanionのWeb session endpointは認証済み・email verifiedを返し、Heavy生成面は
+`Heavy側の利用条件と権利表明を確認してください`、terms checked、request-level rights uncheckedへsettleした。一方、同じ
+profileからAPI originの`/v1/profile`を開くと本文は`{"error":"unauthorized"}`で、monitor用Bearerをブラウザ表示だけからは得られない。
+認証tokenは抽出・保存・APIへ再利用せず、provider dispatch・外部効果・課金・公開は0。証跡は
+`work/heavy-chain-auth-api-continuity-readback-20260927-r1.json`。Companion session/lease/pending/reconciliationは全て0でcleanup完了。
+production monitor/UI、実provider receipt、remote persistence、H601/H602、scorecard、strict gateは未完了。Goal active。
