@@ -1,0 +1,51 @@
+{
+  "schema": "heavy_chain_openai_receipt_boundary_source_audit.v1",
+  "capturedAt": "2026-09-27T12:27:01.300Z",
+  "sourceRevision": "91bed54",
+  "readOnly": true,
+  "acceptedPlan": "f1f23121-a565-4b9a-8130-8fc974f3c1ed",
+  "observations": {
+    "backend": {
+      "openaiImageBackend": "openai-images-api",
+      "configuredProviderDefault": "openai",
+      "currentOpenAiDefaultModel": "gpt-image-1-mini",
+      "currentOpenAiAllowlist": ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"],
+      "providerMismatchRejected": true,
+      "receiptFieldsPreserved": ["provider", "backendProvider", "providerModel", "providerTaskId"]
+    },
+    "heavyCallSites": {
+      "CanvasEditorPage": {
+        "currentExplicitProvider": "workers_ai",
+        "migrationDisposition": "Heavy-owned; Astra packet says select OpenAI/Sunburst"
+      },
+      "ChatEditor": {
+        "currentExplicitProvider": "workers_ai",
+        "currentExplicitModel": "flux-2-klein-4b",
+        "migrationDisposition": "Heavy-owned; Astra packet says select OpenAI/Sunburst"
+      }
+    },
+    "lightAndVideo": {
+      "LightchainWorkbenchPage": "outside migration; preserve",
+      "video": "deferred; preserve"
+    },
+    "qaBoundary": {
+      "hc10mRunnerReceiptExpectation": "workers_ai/cloudflare-workers-ai",
+      "planRequirement": "legacy readback compatibility plus OpenAI provider receipt path"
+    },
+    "productionConfig": {
+      "aiImageProvider": "openai",
+      "aiImageEnabled": "true",
+      "serverSecretRequired": true
+    }
+  },
+  "effects": {
+    "sourceMutation": false,
+    "providerSubmission": false,
+    "deployment": false,
+    "billing": false,
+    "publication": false,
+    "secretRead": false,
+    "videoTouched": false
+  },
+  "nextDependency": "verified Astra engineering receipt before any source mutation"
+}

@@ -12012,3 +12012,7 @@ Companion read-onlyでCloudflare Heavy Web originとZeabur originを同時確認
 # Goal progress — 2026-09-27 r671
 
 Heavy Webのread-only HTTP session readbackをfresh取得。`/_health`は200でCloudflare hosting/authProviderを確認し、`/api/auth/get-session`は200だがbody `null`。Web runtimeは健全だがconsumer-auth sessionは未成立で、provider receiptは未試行。外部効果・認証入力・provider submit・deploy・課金・公開・secret読取は0。正本は`work/heavy-chain-web-auth-session-fresh-readback-20260927-r1.json`。
+
+# Goal progress — 2026-09-27 r672
+
+現行HEADのOpenAI receipt境界をread-only監査。backendはOpenAIを既定としreceipt provenance/no-mismatch guardを保持する一方、allowlist/defaultは旧モデル、HeavyのCanvas/Chat call siteはWorkers指定、既存QA runnerはWorkers receipt前提であることを確認。production bindingはOpenAI。Lightchainと動画は変更対象外。これはAstra/Luna移行前の差分証拠であり、source/provider/deploy/billing/publication/secret/video変更は0。正本は`work/heavy-chain-openai-receipt-boundary-source-audit-20260927-r1.json`。

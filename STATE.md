@@ -23497,3 +23497,7 @@ Cloudflare Heavy WebとZeabur Heavy Webをread-onlyでfresh確認。両originは
 # Heavy Chain current state — 2026-09-27 r671
 
 Heavy Web `/_health`は200、`/api/auth/get-session`は200/null。Cloudflare web/auth runtimeは稼働しているがconsumer-auth sessionは未成立。provider receipt、R2 reconciliation、billing/release proofは未取得。外部効果・secret read・動画変更0、Goal active。正本は`work/heavy-chain-web-auth-session-fresh-readback-20260927-r1.json`。
+
+# Heavy Chain current state — 2026-09-27 r672
+
+現行ソース監査で、OpenAI backend bindingは存在するが、旧モデルdefault/allowlist、Canvas/ChatのWorkers明示指定、Workers前提QA runnerが残っていることを確認。これは承認済みSunburst移行の未実装差分で、Astra verified receipt前のため編集していない。Light/videoは保護、provider/deploy/billing/publication/secret readは0、Goal active。正本は`work/heavy-chain-openai-receipt-boundary-source-audit-20260927-r1.json`。
