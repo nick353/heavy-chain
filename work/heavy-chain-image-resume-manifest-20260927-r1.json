@@ -88,7 +88,7 @@
     "productionBoundaryCapturedAt": "2026-09-27T18:18:31Z",
     "companionAuthBoundary": "workspace_preparing_auth_brand_hydration_pending_authenticated_workspace_false",
     "companionAuthBoundaryCapturedAt": "2026-09-27T18:20:17Z",
-    "adaptiveProgressWriteback": "pending_transport_closed_event_companion-auth-boundary-fresh-readback-20260928-r1",
+    "adaptiveProgressWriteback": "recorded_event_companion-auth-boundary-fresh-readback-20260928-r1",
     "strictGate": "FAIL",
     "strictGateCapturedAt": "2026-09-27T18:11:37.127Z",
     "strictGateFailures": [
@@ -110,7 +110,7 @@
   },
   "latestAstraReadback": {
     "adaptivePlanId": "aa040f17-6308-444f-8290-cfc78589de2a",
-    "adaptivePlanVersion": 13,
+    "adaptivePlanVersion": 14,
     "runId": "run_heavy_image_astra_engineering_20260927_r6",
     "packageId": "heavy-openai-image-astra-engineering-r6",
     "ownerTaskId": "/root",

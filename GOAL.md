@@ -12155,3 +12155,10 @@ reviewer routeを別adapterで置換せず、terms/rights文書・auth/provider�
 
 Graphのrequired reviewer routeが現環境に存在せず、別のOpenCode Go reviewerへ置換できないため、final reviewは未完了。
 このroute不足を承認・本番有効化の証拠にはせず、Goalはactiveで保持する。
+
+# Adaptive writeback recovery — 2026-09-28
+
+Adaptive plan readが復旧し、保留していた`companion-auth-boundary-fresh-readback-20260928-r1`を一度だけwritebackした。
+サーバーplan v14、`engineering_ready=false`、`next_action=waiting_human`をfresh確認した。これはGoal完了ではなく、
+認証済みworkspace・同じキーの2xx・verified Astra receipt・provider生成receiptを待つ正本状態である。
+同じAPIキー、provider、deploy、課金、公開、動画は変更していない。

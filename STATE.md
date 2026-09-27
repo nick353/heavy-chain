@@ -23646,3 +23646,9 @@ clean worktreeのstrict release gateを同じ実行でfresh取得した。syntax
 task-owned AOS Chrome Companionの同一profile sessionでproduction Webのrootと`/designProduction`をread-only取得。両routeとも`Lightchain AI`の「workspaceを準備しています／認証状態とブランド設定を確認しています」shellで止まり、authenticated workspace・provider receiptは未成立。read_urlsの2/2、same-page screenshot、externalActionExecuted=false、task session/tab cleanup完了を確認した。APIキー・secret・入力・submit・provider・deploy・課金・公開・動画は0。正本は`work/heavy-chain-companion-auth-boundary-fresh-readback-20260928-r1.json`。
 
 Adaptive writebackは同一readback直後に`Transport closed`で失敗。再送・別route置換はせず、サーバー側plan v13を保持し、normal reconnection後にevent `companion-auth-boundary-fresh-readback-20260928-r1`を一度だけ記録する待ち状態とした。
+
+# Adaptive writeback recovery — 2026-09-28
+
+Adaptive plan readが復旧し、保留していた`companion-auth-boundary-fresh-readback-20260928-r1`を一度だけwritebackした。
+サーバーplanはv14、`engineering_ready=false`、`next_action=waiting_human`をfresh確認。ローカル正本からtransport失敗の
+pending表示を除去し、manifestも記録済みへ同期した。同じAPIキー、provider、deploy、課金、公開、動画は変更せず、Goalはactive。
