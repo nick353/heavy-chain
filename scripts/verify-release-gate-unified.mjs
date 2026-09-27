@@ -309,6 +309,11 @@ const commandChecks = [
     args: ['run', 'security:audit', '--silent'],
   },
   {
+    name: 'Heavy OpenAI provider selection regression',
+    command: 'npm',
+    args: ['run', 'test:heavy-openai-provider-selection', '--silent'],
+  },
+  {
     name: 'generation scorecard',
     command: 'npm',
     args: ['run', 'verify:generation-scorecard', '--silent'],
