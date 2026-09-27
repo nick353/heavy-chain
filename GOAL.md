@@ -11381,6 +11381,10 @@ provider receipt schemaとauthenticated production readback schemaのmaterialize
 
 Cloudflare runtime contract 6/6とsecurity auditをfresh passした。legacy Supabase runtimeはactive pathから不在、security auditはsecret値を表示せずpass。正本は`work/heavy-chain-runtime-security-readback-20260927-r1.json`。provider/deploy/billing/publication/writeは0で、production effectは未証明のまま。Goal active。
 
+# Goal progress — 2026-09-27 r521
+
+Goal readiness static verifierを`2026-09-27T07:14:38.882Z`にfresh実行し、Cloudflare runtime、legacy Supabase removal、auth/media adapter、AI adapter、active gateの5/5をpass。外部API、generation submit、migration、deployは未実行。正本は`work/heavy-chain-goal-readiness-readback-20260927-r1.json`で、production generation/R2/browser business completionは未証明のまま。Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。

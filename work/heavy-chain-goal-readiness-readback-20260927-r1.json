@@ -1,0 +1,26 @@
+{
+  "schema": "heavy-chain.goal-readiness-readback.v1",
+  "capturedAt": "2026-09-27T07:14:38.882Z",
+  "gitHead": "b2dc395",
+  "command": "npm run verify:goal-readiness:incomplete-ok",
+  "exitCode": 0,
+  "ok": true,
+  "checks": {
+    "cloudflareRuntimeContract": true,
+    "legacySupabaseRuntimeRemoved": true,
+    "cloudflareAuthMediaAdapters": true,
+    "cloudflareAiAdapter": true,
+    "noLegacyEdgeEntrypointInActiveGate": true
+  },
+  "irreversibleActions": {
+    "externalApiCall": "not_touched",
+    "generationSubmit": "not_clicked",
+    "migrationApply": "not_run",
+    "deploy": "not_run"
+  },
+  "proofLimits": [
+    "Does not establish authenticated production generation, AI quality, R2 persistence, or browser business completion.",
+    "Production deployment and traffic-zero evidence require separate same-run readback."
+  ],
+  "decision": "static_readiness_verified_production_unproven"
+}
