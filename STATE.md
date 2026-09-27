@@ -23106,3 +23106,6 @@ Runwayは依然として未インストール・未接続でprovider tool未露�
 # Heavy Chain current state — 2026-09-27 r578
 
 公開entrypointのread-only auth boundaryは確認済みだが、10M public-shell acceptanceは未達。認証保護を解除せず、16 blockersを維持している。正本は`work/heavy-chain-completion-audit-20260927-r8.json`。Goal active。
+# Heavy Chain current state — 2026-09-27 r579
+
+canonical dashboardのpublic readbackはcleanup完了・foreign tab変更なし。authenticated production UI pairは未生成のまま。正本は`work/heavy-chain-companion-public-readback-20260927-r1.json`。Goal active。

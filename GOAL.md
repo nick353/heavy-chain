@@ -11622,3 +11622,6 @@ chosen public entrypointのread-only HTTP/auth boundaryをfresh実行し、`ok=t
 # Goal progress — 2026-09-27 r578
 
 公開entrypoint readback後の10M completion auditをfresh実行し、blockerは16件のまま。HTTP/auth boundary自体は合格したが、10M監査は2xxのpublic Heavy shellを要求し、現行rootは認証保護の307 login redirectのため、要件未達として正しく保持された。正本は`work/heavy-chain-completion-audit-20260927-r8.json`。Goal active。
+# Goal progress — 2026-09-27 r579
+
+Companionのtask-owned temporary tabでcanonical dashboardをread-only取得し、semantic/visual readback、text hash、cleanup receiptを確認した。provider・submit・billing・公開・secret読取は0。認証済みproduction UI完了証跡ではない。正本は`work/heavy-chain-companion-public-readback-20260927-r1.json`。Goal active。
