@@ -1,4 +1,10 @@
-# Goal progress — 2026-09-27 r397
+# Goal progress — 2026-09-27 r398
+
+## Local persistence lifecycle recheck — 2026-09-27
+
+local lifecycleのsave-once→reload-readback→library reuse→cleanup、pre-source evidence continuity、workspace
+handoff `3/3`、Canvas recovery/view/browser transport `23/23`をfresh PASSした。network/provider/billing/publication
+は0件で、production workspace save/reuse/reload/reconciliation receiptとは分離して記録した。Goalはactive。
 
 ## Video provider production preflight — 2026-09-27
 

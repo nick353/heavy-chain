@@ -1,4 +1,11 @@
-# Heavy Chain current state — 2026-09-27 r275
+# Heavy Chain current state — 2026-09-27 r276
+
+## Local persistence lifecycle recheck — 2026-09-27
+
+資格情報不要のlocal lifecycleをfresh実行し、deterministic result→save-once→reload-readback→library reuse/handoff→
+cleanupを`ok=true`で完了した。pre-source evidence continuityもnegative gate 5件を含め`ok=true`、workspace
+handoff `3/3`、Canvas save/recovery/view/browser transport `23/23`をPASS。全てnetwork/provider/billing/publication
+なしのlocal証拠であり、production workspace save/reuse/reload/reconciliationの代替ではない。
 
 ## Video provider production preflight — 2026-09-27
 
