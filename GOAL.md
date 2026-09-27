@@ -11792,3 +11792,7 @@ Opus 5.5の再計画を正しい入力形式でverified完了した。invocation
 # Goal progress — 2026-09-27 r616
 
 Opus計画に対応するreceipt/readback経路をfresh source auditで固定した。`image-ai.ts`のprovider identity、D1/R2保存前entitlement再検証、同一request receipt、GET readback、`hc-10m-real-generation-qa.mjs`のcandidate/workspace/storage検証、provider persistence assertions、Gallery readbackを範囲化した。QA harnessのWorkers固定はprovider-aware化が必要だが、no-replay/readback境界は維持する。Astra package `run_openai_image_astra_engineering_20260927_r1` は`native_start_receipt_metadata_unavailable`でblocked、実装・Luna起動は0。正本は`work/heavy-chain-openai-image-receipt-readback-path-map-20260927-r1.json`。provider/R2/billing/deploy/publication/secret読取は0、Goal active。
+
+# Goal progress — 2026-09-27 r617
+
+画像移行前のdeterministic baselineをfresh実行した。Heavy API suite `114/114`、provider persistence/readback `14/14`、Cloudflare image QA contract `6/6`がPASS。これは現行旧モデル既定のローカル契約を示すだけで、新しい`gpt-image-2.5-sunburst`実装、authenticated production OpenAI receipt、remote readback、provider-aware QA完了を示さない。正本は`work/heavy-chain-openai-image-baseline-tests-20260927-r1.json`。コード/provider/R2/billing/deploy/publication/secret変更は0、Goal active。

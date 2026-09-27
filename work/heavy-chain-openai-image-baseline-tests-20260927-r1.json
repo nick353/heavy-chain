@@ -1,0 +1,42 @@
+{
+  "schema": "heavy_chain.openai_image.baseline_tests.v1",
+  "captured_at": "2026-09-27",
+  "source_revision": "e4cd6ee",
+  "scope": "image_generation_only",
+  "tests": [
+    {
+      "command": "npm test -- --test-name-pattern='OpenAI'",
+      "cwd": "cloudflare/heavy-api",
+      "status": "pass",
+      "tests": 114,
+      "failed": 0,
+      "note": "The package test script includes the full Heavy API suite; all tests completed successfully, including OpenAI adapter, admission, receipt, persistence, and readback coverage."
+    },
+    {
+      "command": "npm run test:provider-persistence-readback",
+      "cwd": ".",
+      "status": "pass",
+      "tests": 14,
+      "failed": 0
+    },
+    {
+      "command": "node --test scripts/verify-cloudflare-image-qa.test.mjs",
+      "cwd": ".",
+      "status": "pass",
+      "tests": 6,
+      "failed": 0
+    }
+  ],
+  "interpretation": {
+    "confirmed": [
+      "Current deterministic Heavy API and provider persistence contracts are green before the model/default migration.",
+      "No provider/network call, R2 write, deploy, billing, publication, or secret read was made."
+    ],
+    "not_confirmed": [
+      "The new gpt-image-2.5-sunburst default is not implemented.",
+      "Production authenticated OpenAI generation and remote receipt/readback are not proven.",
+      "The QA harness still requires provider-aware receipt validation."
+    ]
+  },
+  "next_action": "Use this baseline after the verified Astra engineering gate and bounded Luna implementation; rerun the same commands plus the provider-aware QA contract."
+}
