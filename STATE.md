@@ -22639,3 +22639,7 @@ Light Chain `/dashboard`を同一task-owned authenticated Companion profileでfr
 # Heavy Chain current state — 2026-09-27 r460
 
 Heavy/Light permission境界をsource/local契約でfresh監査した。`権限がありません` runtime surfaceはLight専用componentに限定され、Heavy-owned featureは`Heavy利用条件`のterms/rights gateで閉じる構成を確認。`test:lightchain-permission-parity` 12/12、`test:lightchain-entry-routing` 30/30、`test:lightchain-material-contract` 28/28、`test:video-provider-boundary` 1/1、typecheck pass。正本補足は`work/heavy-chain-heavy-permission-boundary-audit-20260927-r1.json`。Lightのplan-lockを削除せず、Heavy permission badgeを追加で消す変更も不要。provider/R2、rights承諾、課金、公開は0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r461
+
+permission境界監査後に`npm run build`をfresh実行し、`tsc -b`とVite production build（2567 modules）がpassした。tracked source変更はなくdistはignore対象。Heavyのterms/rights gateとLightのplan-lock境界は維持し、strict gate残件4件は正規auth/API/provider/live billing readback待ち。Goal active。
