@@ -1,0 +1,47 @@
+{
+  "schema": "heavy_chain.release_gate_current_readback.v1",
+  "capturedAt": "2026-09-27T15:59:45.052Z",
+  "command": "npm run verify:release-gate -- --command-timeout-ms 600000",
+  "ok": false,
+  "mode": "readback-plus-local-static-checks-no-submit-no-payment-no-cleanup",
+  "irreversibleActions": {
+    "generationSubmit": "not_clicked",
+    "purchasePaymentCheckout": "not_touched",
+    "externalPublish": "not_touched",
+    "destructiveCleanup": "not_touched",
+    "deploy": "not_run"
+  },
+  "passed": {
+    "syntax": true,
+    "securityAudit": true,
+    "typecheck": true,
+    "build": true,
+    "lint": true,
+    "diffCheck": true,
+    "G614": true,
+    "G620": true,
+    "G632": true,
+    "G633": true,
+    "H601Static": true,
+    "H602Static": true
+  },
+  "failed": [
+    {
+      "name": "production monitor and UI pair",
+      "reason": "g835-production-ui-current-r1/summary.json is missing; matching fresh monitor/UI run is unavailable"
+    },
+    {
+      "name": "G618 scale ops baseline",
+      "reason": "canonical summary is stale (captured 2026-09-01; older than 48h)"
+    },
+    {
+      "name": "production H602 billing completion readback",
+      "reason": "quota enforcement, checkout-disabled, no-real-charge proof, transaction/entitlement readback, and operator release decision remain unproven"
+    },
+    {
+      "name": "generation scorecard",
+      "reason": "visual-scorecard.json is missing; no current 10-feature scorecard artifact exists"
+    }
+  ],
+  "nextSafeAction": "Do not fabricate any failed artifact. Restore a valid OpenAI credential and verified Astra migration gate first; then create only the corresponding authenticated production readbacks."
+}
