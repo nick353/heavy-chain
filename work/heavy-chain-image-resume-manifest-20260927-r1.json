@@ -1,0 +1,138 @@
+{
+  "schema": "heavy-chain.image-resume-manifest.v1",
+  "capturedAt": "2026-09-27T10:52:00Z",
+  "sourceRevision": "51bc12e46fee6133a88dcbb34383bf7a915f7688",
+  "goalStatus": "active",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "externalEffectsAllowedNow": false
+  },
+  "authoritativeEvidence": [
+    "work/heavy-chain-provider-boundary-map-20260927-r1.json",
+    "work/heavy-chain-fresh-completion-audit-20260927-r3.json",
+    "work/heavy-chain-image-baseline-tests-20260927-r2.json",
+    "work/heavy-chain-openai-image-opus-plan-20260927-r2.json"
+  ],
+  "steps": [
+    {
+      "id": "runtime-recovery-readonly",
+      "status": "waiting_external_state",
+      "dependsOn": [],
+      "owner": "root",
+      "action": "After a normal Adaptive runtime reconnection, read the existing image Astra package/run; do not replay its closed transport, manually claim, or fork it.",
+      "successEvidence": "fresh runtime/package readback with verified start metadata",
+      "currentBlocker": "no adaptive/bootstrap runtime process observed"
+    },
+    {
+      "id": "image-astra-engineering-gate",
+      "status": "blocked_by_runtime-recovery",
+      "dependsOn": ["runtime-recovery-readonly"],
+      "owner": "native_astra_engineering",
+      "ownedPaths": [
+        "cloudflare/heavy-api/src/openai-image.ts",
+        "cloudflare/heavy-api/src/image-ai-contracts.ts",
+        "src/pages/GeneratePage.tsx",
+        "src/components/ChatEditor.tsx",
+        "src/pages/CanvasEditorPage.tsx",
+        "src/pages/LightchainWorkbenchPage.tsx",
+        "scripts/hc-10m-real-generation-qa.mjs",
+        "scripts/verify-cloudflare-image-qa.test.mjs"
+      ],
+      "acceptance": [
+        "new image generation default follows accepted Opus plan",
+        "explicit supported model selection is preserved",
+        "legacy Workers/OpenAI receipt readback remains compatible",
+        "unsupported model/provider fails closed",
+        "no fallback, replay, or video diff"
+      ],
+      "successEvidence": "verified Astra engineering start/result receipt plus bounded Luna handoff"
+    },
+    {
+      "id": "image-luna-implementation",
+      "status": "blocked_by-astra-gate",
+      "dependsOn": ["image-astra-engineering-gate"],
+      "owner": "native_luna_executor",
+      "action": "Implement only the Astra-approved image model/parser/UI/QA scope; preserve legacy receipt fixtures and server D1/R2 readback.",
+      "successEvidence": "source diff, deterministic tests, no unrelated video or billing changes"
+    },
+    {
+      "id": "image-deterministic-regression",
+      "status": "baseline_green_waiting_for_migration",
+      "dependsOn": ["image-luna-implementation"],
+      "owner": "root",
+      "commands": [
+        "npm test -- --test-name-pattern='OpenAI' (cloudflare/heavy-api)",
+        "npm run test:provider-persistence-readback --silent",
+        "npm run test:cloudflare-runtime --silent",
+        "npm run typecheck --silent",
+        "npm run lint --silent"
+      ],
+      "currentBaseline": "134 pass / 0 fail before model migration",
+      "successEvidence": "fresh post-diff results and git diff check"
+    },
+    {
+      "id": "authenticated-openai-provider-readback",
+      "status": "not_started",
+      "dependsOn": ["image-deterministic-regression"],
+      "owner": "root",
+      "action": "Use the authorized authenticated Heavy surface for one image request, then read the same request receipt; do not submit billing, publish, or replay.",
+      "successEvidence": "same-run provider receipt with openai/openai-images-api identity, provider task id, user/brand scope, and no-replay readback",
+      "externalEffectBoundary": "provider call is the only intended effect; no R2 write or billing mutation may be inferred without receipt"
+    },
+    {
+      "id": "remote-save-reuse-reload-reconciliation",
+      "status": "not_started",
+      "dependsOn": ["authenticated-openai-provider-readback"],
+      "owner": "root",
+      "action": "Verify durable save, Gallery/Canvas reuse, reload, and exact request/object reconciliation from the same receipt.",
+      "successEvidence": "fresh D1/R2/GET readback, matching request/image/storage identities, reconciliation and cleanup proof"
+    },
+    {
+      "id": "strict-release-gate",
+      "status": "blocked_by-production-evidence",
+      "dependsOn": ["remote-save-reuse-reload-reconciliation"],
+      "owner": "root",
+      "action": "Run full release gate only after production monitor/UI pair, G618 freshness, H602 production proof, and generation scorecard are fresh.",
+      "currentFailures": [
+        "production monitor/UI pair",
+        "G618 scale ops baseline",
+        "production H602 billing completion",
+        "generation scorecard"
+      ],
+      "successEvidence": "release-gate-summary.json ok=true with no blockers or failed commands"
+    }
+  ],
+  "parallelIndependentWork": [
+    {
+      "id": "h601-rights-readback",
+      "status": "human_policy_open",
+      "action": "Keep legal/operator decisions open; do not invent Terms, rights, likeness, retention, or commercial-use policy."
+    },
+    {
+      "id": "h602-billing-readback",
+      "status": "human_billing_open",
+      "action": "Keep checkout disabled/operator decision open; do not purchase, charge, or fabricate no-charge proof."
+    },
+    {
+      "id": "g618-scale-ops",
+      "status": "missing_monitor_inputs",
+      "action": "Run only when approved monitor URL, brand, live session/token, and baseline limits are available; otherwise fail closed."
+    }
+  ],
+  "completionInvariants": [
+    "local green tests are not production completion",
+    "provider receipt is not R2 persistence proof",
+    "queued/health/preflight is not business completion",
+    "unknown effect is reconciled, never replayed",
+    "video remains unchanged in this wave"
+  ],
+  "externalEffects": {
+    "providerCalls": 0,
+    "r2Writes": 0,
+    "billingOrPurchase": 0,
+    "publicationOrDeploy": 0,
+    "secretReads": 0,
+    "destructiveCleanup": 0
+  }
+}

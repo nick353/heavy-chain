@@ -23317,3 +23317,7 @@ OpenAI readiness `7/7`、Cloudflare runtime `6/6`、Light unified workflow `6/6`
 # Heavy Chain current state — 2026-09-27 r626
 
 画像local deterministic baselineをfresh実行し、Heavy API/OpenAI `114/114`、provider persistence/readback `14/14`、Cloudflare runtime `6/6`、合計134 passを確認。これは本番provider/R2/visual qualityの証明ではなく、現行旧defaultの回帰基準。Adaptive runtime processは不在のためclosed transportへの再送はしていない。正本は`work/heavy-chain-image-baseline-tests-20260927-r2.json`、動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r627
+
+画像waveの再開依存関係を`work/heavy-chain-image-resume-manifest-20260927-r1.json`へ固定。実装前のruntime/Astra gate、実装後のdeterministic regression、authenticated provider receipt、remote durable reconciliation、strict release gateを分離し、H601/H602/G618を独立待ちとして明示した。Adaptive runtime processは未確認、source mutation・provider/R2/billing/deploy/publication/secretは0、動画はdeferred、Goal active。
