@@ -1,0 +1,66 @@
+{
+  "schema": "heavy_chain_openai_image_current_spec_readback.v1",
+  "captured_at": "2026-09-27",
+  "scope": "image_generation_only",
+  "video_scope": "deferred_by_user",
+  "official_openai_evidence": {
+    "deprecations_url": "https://developers.openai.com/api/docs/deprecations",
+    "image_generation_url": "https://developers.openai.com/api/docs/guides/image-generation",
+    "image_models_documented": [
+      "gpt-image-2.5-sunburst",
+      "gpt-image-2.5-flare"
+    ],
+    "video_status": "Sora 2 and Videos API shutdown date 2026-09-24; no recommended replacement listed",
+    "provider_calls_performed": 0
+  },
+  "local_source_readback": {
+    "server_adapter": {
+      "path": "cloudflare/heavy-api/src/openai-image.ts",
+      "current_allowlist": [
+        "gpt-image-2",
+        "gpt-image-1.5",
+        "gpt-image-1",
+        "gpt-image-1-mini"
+      ],
+      "current_default": "gpt-image-1-mini",
+      "receipt_identity": {
+        "provider": "openai",
+        "backendProvider": "openai-images-api"
+      }
+    },
+    "light_defaults_still_workers": [
+      "src/components/ChatEditor.tsx:166-167",
+      "src/pages/CanvasEditorPage.tsx:2379",
+      "src/pages/LightchainWorkbenchPage.tsx:178,3580-3581",
+      "src/pages/GeneratePage.tsx:651-659"
+    ],
+    "qa_harness_workers_fixed": [
+      "scripts/hc-10m-real-generation-qa.mjs:73-84",
+      "scripts/verify-cloudflare-image-qa.test.mjs:22"
+    ]
+  },
+  "adaptive_replan": {
+    "route": "graph",
+    "planner_required": true,
+    "opus_invocation_id": "opus55-e82eb27f42e6471191638da019ce57e4",
+    "planner_status": "blocked",
+    "blocker": "opencode_timeout: planner exceeded 120 seconds",
+    "verified_plan": false,
+    "native_astra_start_receipt": null,
+    "implementation_authorized": false
+  },
+  "next_bounded_scope": [
+    "Re-enter Astra engineering only after a verified current image-model plan or equivalent valid technical handoff.",
+    "Update server image-model allowlist/default using an explicit current OpenAI model selection rule.",
+    "Unify Light new-request default to OpenAI while preserving explicit Workers selection and legacy Workers receipt readback.",
+    "Make QA receipt validation accept only exact OpenAI or legacy Workers identity pairs with no mixed/unknown values.",
+    "Keep video lane deferred and fail-closed; do not add an invented OpenAI video provider."
+  ],
+  "external_effects": {
+    "deploy": 0,
+    "billing": 0,
+    "secrets_read": 0,
+    "publication": 0,
+    "r2_or_remote_persistence": 0
+  }
+}

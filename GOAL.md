@@ -11776,3 +11776,7 @@ OpenAI client-default実装、provider receipt、remote persistenceを証明し�
 現行HEADでtypecheckをfresh PASS（exit 0）、`git diff --check`もPASSした。lintはプロセス終了を確認したが終了コードを捕捉できず、
 未検証として保持した。OpenAI client実装、本番provider receipt、remote persistence、strict releaseは未完了。provider/R2/billing/
 deploy/publication/secret読取は0。正本は`work/heavy-chain-static-integrity-readback-20260927-r2.json`。Goal active。
+
+# Goal progress — 2026-09-27 r612
+
+ユーザー指定により動画laneを今回の対象から外し、画像生成だけへスコープを縮小した。公式OpenAI docsのfresh readbackでは現行画像モデルが`gpt-image-2.5-sunburst`/`gpt-image-2.5-flare`、現行server adapterのallowlist/defaultは旧`gpt-image-*`/`gpt-image-1-mini`のまま。Light新規既定は複数箇所でWorkers AI固定、QA harnessもWorkers identity固定。Opus再計画は`opencode_timeout`でverified planにならず、同じ呼出しは再送していない。画像移行のAstra実装権限は未取得のためソース変更なし。正本は`work/heavy-chain-openai-image-current-spec-readback-20260927-r1.json`。provider/R2/billing/deploy/publication/secret読取は0、Goal active。
