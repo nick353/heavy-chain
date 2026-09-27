@@ -11692,3 +11692,7 @@ OpenAI primary migrationを現行HEAD `182ef86`へ反映した。Heavy image gen
 # Goal progress — 2026-09-27 r596
 
 Light client wiringをread-onlyで再監査し、ChatEditor、Canvas、Lightchain Workbench、GeneratePage、protected-editにWorkers AI固定またはreceipt identity前提が残ることを確認した。Opus 5.5 fresh planは、OpenAI既定・Workers明示fallback・旧receipt読取互換・自動fallback禁止を決定した。一方、現行protected-editはWorkers AIガイド画像＋後合成で、サーバーはmask入力を拒否するため、Astraのprovider-aware receipt/server契約が必要。Astra managed dispatchは誤ったhold指定によりclaim前で待機し、変更・provider・secret・deploy外部効果は0。正本は`work/heavy-chain-openai-primary-readback-20260927-r1.json`、Goal active。
+
+# Goal progress — 2026-09-27 r597
+
+OpenAI-primary Light client auditをfresh固定した。Heavyサーバー既定値は完了済みだが、Lightの6 bounded paths（ChatEditor、Canvas、Lightchain Workbench、GeneratePage、protected-edit）にWorkers固定/defaultまたはreceipt identity relabelが残る。LightchainMaterialWorkbenchPage、FittingPage、canvasImageEditResultsのlegacy referencesは現時点のAstra bounded scope外として分離した。Opus 5.5の判断（OpenAI既定、Workers明示fallback、旧receipt読取互換、自動fallback/replay禁止、guide-image＋provider-edit＋local composite維持）はfreshで有効。一方、Astra managed dispatch `run_openai_light_client_unification_20260927_r2` は `native_start_receipt_metadata_unavailable` でblocked、role execution verified=false、実装0。ソース変更、provider生成、R2、deploy、billing、publication、secret読取は0。正本は`work/heavy-chain-openai-light-client-audit-20260927-r1.json`、Goal active。次はverified native Astra start receipt復旧後にbounded実装を起動する。

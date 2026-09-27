@@ -23176,3 +23176,7 @@ OpenAIをHeavyのサーバー側image provider既定値へ切り替え、product
 # Heavy Chain current state — 2026-09-27 r596
 
 LightのWorkers固定箇所をread-only確認。Opus 5.5のfresh判断は、クライアント既定値をOpenAIに寄せ、旧Workers receiptを読み取り互換にし、自動fallbackを禁止するもの。ただしprotected editは現状Workers AIガイド＋後合成であり、OpenAI editのmask/receipt契約を先に設計しないと壊れる。Astra dispatchは`run_openai_light_client_unification_20260927`のclaim前で`package_not_claimable:external_effect_requires_human`。実provider、R2、deploy、billing、publication、secret読取は0。正本は`work/heavy-chain-openai-primary-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r597
+
+OpenAI-primary Light client auditを`work/heavy-chain-openai-light-client-audit-20260927-r1.json`へ固定。Heavy server defaultは静的完了、Light bounded 6 pathsは未修正。追加のlegacy references（LightchainMaterialWorkbenchPage、FittingPage、canvasImageEditResults）はscope外として分離。Opus planは有効だが、Astra dispatch `run_openai_light_client_unification_20260927_r2` は`native_start_receipt_metadata_unavailable`でblocked、verified=false、implementation/provider execution 0。provider/R2/deploy/billing/publication/secret外部効果0。Goal active。verified native Astra start receipt復旧後に同じbounded scopeを実装する。
