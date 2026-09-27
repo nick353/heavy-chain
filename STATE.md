@@ -22739,3 +22739,11 @@ workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/fina
 # Heavy Chain current state — 2026-09-27 r485
 
 再開後2回目のfresh readbackでも`runtime_status`はgraph/live processを確認したが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`で変化なし。Astra claim/startは未発行。重複run・manifest変更・代替route・provider/auth/billing/publicationは0。blocked auditは再開後2回目としてGoal activeを維持する。
+
+# Heavy Chain current state — 2026-09-27 r486
+
+再開後3回目のfresh blocked audit。runtime/graph/live processは確認できるが、capacityは`capacity_blocked`、`live_capacity_observable=false`、active routesは空。`heavy-cross-surface-astra-engineering` packageは`waiting_human`、`automatic_dispatch=false`、`claim_id=null`、`start_receipt=null`で変化せず、Astra engineeringは未起動。同一blockerが3回連続したためGoal statusを`blocked`へ更新する。既存のOpus plan/package、コード、外部状態は保持し、provider/auth/billing/publication/destructive操作は実施していない。再開後はcapacity回復をfresh確認し、同じplan/packageでclaim/startしてから実装へ進む。
+
+# Heavy Chain current state — 2026-09-27 r487
+
+blocked後の新turnで復旧を試行。runtime/graph/live processは生存しているが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空。Heavy packageは`waiting_human`、`automatic_dispatch=false`、`claim_id=null`、`start_receipt=null`。workflow一覧をfresh照合した結果、Heavy関連にcapacity-blocked Graph runは無く、復旧fork対象は存在しない。route_taskは既存planを再利用するGraph/resume判定を返したが、意図的holdを迂回する新規workflowは作成していない。コード・provider・auth secret・billing・R2・publication・destructive操作は0。

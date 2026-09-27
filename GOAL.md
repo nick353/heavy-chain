@@ -11032,6 +11032,14 @@ workflow一覧をfresh readし、Heavy関連Graphは完了または`waiting/fina
 
 再開後2回目のfresh readbackでも`runtime_status`はgraph/live processを確認したが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`で変化なし。Astra claim/startは未発行。重複run・manifest変更・代替route・provider/auth/billing/publicationは0。blocked auditは再開後2回目としてGoal activeを維持する。
 
+# Goal progress — 2026-09-27 r486
+
+再開後3回目のblocked auditとしてruntime/packageをfresh確認した。graph/live processは利用可能だが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、既存Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`/`start_receipt=null`のままで、Astra claim/startを発行できない。同一の実質ブロッカーが再開後3回連続で再現し、workflow fork対象もなく、plan/packageを作り直す・manifestを書き換える・代替routeで置換する経路はない。したがってGoalを`blocked`へ更新する。ソース、provider生成、認証secret、課金、R2、公開、削除、deployは0。再開条件はAdaptive capacityが利用可能になり、既存plan/packageを同じIDでAstra engineeringへclaim/startできること。
+
+# Goal progress — 2026-09-27 r487
+
+ユーザーの「自力で復旧」指示を受け、blocked後の新しいturnとしてAdaptive公式復旧手順を再実行した。runtimeはgraph/live processを返したが、`capacity_guard=capacity_blocked`、`live_capacity_observable=false`、active routes空、Heavy packageは`waiting_human`/`automatic_dispatch=false`/`claim_id=null`/`start_receipt=null`のまま。Heavy関連の既存Graphに`blocker_code=capacity_blocked`のrunはなく、`workflow_fork(capacity_recovery=true)`を適用できない。route_taskは同じplanを再利用し、`exact_blocker=waiting_human`、`planner_required=false`を返したが、新規workflow_startには新しいplanner receiptが必要であり、既存packageの意図的holdを迂回するための起動には使わない。手動claim/start、manifest変更、r2/r3重複run、代替provider/route、runtime kill/restartは実施していない。Goalはactiveのまま、次の安全な再開条件はhost capacity/approval状態の変化後に同一packageをfresh status→claim→startできること。
+
 # Goal progress — 2026-09-27 r437
 
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
