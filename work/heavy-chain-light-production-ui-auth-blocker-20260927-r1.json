@@ -1,0 +1,43 @@
+{
+  "schema": "heavy-chain.light-production-ui-auth-blocker.v1",
+  "capturedAt": "2026-09-27T11:20:19Z",
+  "sourceRevision": "c9181cbb86c2253eaeefac9085af64a442050cee",
+  "scope": {
+    "readOnly": true,
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "providerSubmit": false,
+    "deploy": false,
+    "externalEffects": 0
+  },
+  "targetOrigin": {
+    "baseUrl": "https://heavy-chain-web.nichikata2000823.workers.dev",
+    "bound": true
+  },
+  "checks": [
+    {
+      "command": "npm run verify:lightchain-ui --silent",
+      "exitCode": 1,
+      "authEnv": "LIGHTCHAIN_UI_AUTH_STATE",
+      "authStateSupplied": false,
+      "preflight": "fail_closed",
+      "reason": "explicit_auth_state_required",
+      "productionParity": "not_verified"
+    },
+    {
+      "command": "npm run verify:lightchain-navigation --silent",
+      "exitCode": 1,
+      "authEnv": "LIGHTCHAIN_NAV_AUTH_STATE",
+      "authStateSupplied": false,
+      "preflight": "fail_closed",
+      "reason": "explicit_auth_state_required",
+      "productionParity": "not_verified"
+    }
+  ],
+  "conclusion": {
+    "originBinding": "pass",
+    "authenticatedUiReadback": "missing",
+    "authenticatedNavigationReadback": "missing",
+    "nextGate": "Provide an approved authenticated production browser state through the existing auth-state boundary, then rerun UI/navigation readback; do not bypass preflight or infer parity from local tests."
+  }
+}

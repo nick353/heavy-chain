@@ -23389,3 +23389,7 @@ OpenAI Heavy API 114/114、provider persistence 14/14、typecheck/lint/build/git
 # Heavy Chain current state — 2026-09-27 r644
 
 Light route comparatorはroute readback files不足でexit 1、route-readback testもexit 1。local parityはgreenだがproduction route/provider parityは未証明。動画はdeferred。正本は`work/heavy-chain-light-production-route-readback-blocker-20260927-r1.json`と更新済みresume manifest、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r645
+
+Light production UI/navigationはorigin binding passだが明示auth-state不足でfail-closed。`LIGHTCHAIN_UI_AUTH_STATE`/`LIGHTCHAIN_NAV_AUTH_STATE`が再開条件。authenticated UI/navigation、route/provider parityは未完了。動画はdeferred。正本は`work/heavy-chain-light-production-ui-auth-blocker-20260927-r1.json`と更新済みresume manifest、Goal active。
