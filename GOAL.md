@@ -11108,3 +11108,10 @@ Heavy rights gateのどちらも正規状態として受け入れるよう更新
 strict gateをfresh再実行し、mass-market QAとH601 rights readbackは解消した。skip-commands確認時の残件はproduction monitor/UI、G618 scale ops、
 H602 billing completionで、full command実行時はgeneration scorecardの正規provider artifact不足も残る見込み。Companion sessionはtaskTerminal cleanupで
 tab close、lease release、foreign mutationなしを確認した。Goal active。
+
+# Goal progress — 2026-09-27 r453
+
+full strict gateを`2026-09-27T04:47:22.651Z`に実行した。mass-market QAとH601 rightsはpass済みで、残る4件はproduction monitor/UI pair、
+G618 scale ops baseline、H602 billing completion、generation scorecard。前者3件は正規Bearer/brand scope・live DB/API read path・operator/billing proofが
+必要であり、scorecardは同一runの実provider receiptとprivate-R2 save/reuse/reload/reconciliationが必要である。認証情報抽出、法的承諾、課金、公開、
+provider dispatchは行っていない。Goal active。
