@@ -23088,3 +23088,6 @@ Planner admission期限後のfresh readbackで、別task admissionはcompleted�
 # Heavy Chain current state — 2026-09-27 r572
 
 Light parity/provider、video boundary、Canvas/provider persistence、UI control、permission/source-accessの決定的ローカルテストを現行HEAD `ac5fa7e`でfresh実行し、98/98 passed。外部効果はなく、provider/R2/video/monitor/G618/H601/H602/strict gateのproduction証跡は未完了。正本は`work/heavy-chain-local-boundary-test-readback-20260927-r1.json`。Goal active。
+# Heavy Chain current state — 2026-09-27 r573
+
+H601/H602のローカル契約は実装済みだがoperator acceptanceは未完了。H602 productionはquota false、checkout true、no-real-charge proof 0、transaction/entitlement readback false。G618はCloudflare live baseline不足で停止。正本は`work/heavy-chain-ops-boundary-readback-20260927-r1.json`。Goal active。

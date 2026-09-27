@@ -11604,3 +11604,6 @@ Runwayのplugin依存関係・権限・接続状態を`2026-09-27T08:31:44Z`にf
 # Goal progress — 2026-09-27 r572
 
 現行HEAD `ac5fa7e`でLight parity/provider、video fail-closed、Canvas generation/provider persistence、UI control、permission/source-accessの決定的ローカルテストをfresh実行し、98 tests / 98 passed / 0 failedを確認した。provider生成、課金、R2 mutation、公開、secret読取は0。正本は`work/heavy-chain-local-boundary-test-readback-20260927-r1.json`。この証跡はproduction provider receipt・remote durable chain・video receipt・monitor/G618・H601/H602・strict release gateの完了を証明しない。Goal active。
+# Goal progress — 2026-09-27 r573
+
+G618/H601/H602のread-only verifierをfresh実行した。H601 legal safetyはpass、H602 local Cloudflare contractはpassだがproduction proofとrelease approvalは未確認。G618は明示的Cloudflare origin/brand/live session/baseline不足で未実行、H601 operator readinessは10件、H602 operator readinessは6件の本番・operator blockerを返した。外部効果・課金・checkout・deploy・公開・secret読取は0。正本は`work/heavy-chain-ops-boundary-readback-20260927-r1.json`。Goal active。
