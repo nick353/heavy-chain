@@ -22842,3 +22842,7 @@ release gateとgeneration scorecardを同一HEAD `4fab7f4dafd7ab1b1dad6f795bd175
 # Heavy Chain current state — 2026-09-27 r510
 
 独立したlocal contractをfresh再検証し、Light権限parity 12/12、provider persistence/readback 14/14、video boundary 1/1、video contract 3/3の合計30/30をpassした。正本は`work/heavy-chain-local-contract-readback-20260927-r1.json`。これはlocal fail-closedとdurable guardの証拠であり、authenticated production provider、R2 lifecycle、billing、publicationの完了証拠ではない。外部効果は0、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r511
+
+認証継続系をfresh再検証し、auth lock 4/4、session admission 9/9、bootstrap hydration 7/7、session recovery 3/3、auth hydration readback 4/4の合計27/27をpassした。local contract readbackは合計57/57 passへ更新。これはproduction consumer authの実readbackではなく、秘密を含まないoffline契約検証である。外部効果は0、Goal active。

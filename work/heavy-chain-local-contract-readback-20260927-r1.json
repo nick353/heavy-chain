@@ -22,9 +22,14 @@
       "command": "npm run test:video-provider-contract",
       "passed": 3,
       "failed": 0
+    },
+    {
+      "command": "npm run test:auth-lock && npm run test:auth-session-admission && npm run test:auth-bootstrap-hydration && npm run test:auth-session-recovery && npm run test:auth-hydration-readback",
+      "passed": 27,
+      "failed": 0
     }
   ],
-  "totalPassed": 30,
+  "totalPassed": 57,
   "externalEffect": {
     "providerCalls": 0,
     "r2Writes": 0,

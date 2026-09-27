@@ -11341,6 +11341,10 @@ release gateとgeneration scorecardを同一HEAD `4fab7f4dafd7ab1b1dad6f795bd175
 
 独立したlocal contractをfresh再検証し、Light権限parity 12/12、provider persistence/readback 14/14、video boundary 1/1、video contract 3/3の合計30/30をpassした。正本は`work/heavy-chain-local-contract-readback-20260927-r1.json`。これはlocal fail-closedとdurable guardの証拠であり、authenticated production provider、R2 lifecycle、billing、publicationの完了証拠ではない。外部効果は0、Goal active。
 
+# Goal progress — 2026-09-27 r511
+
+認証継続系をfresh再検証し、auth lock 4/4、session admission 9/9、bootstrap hydration 7/7、session recovery 3/3、auth hydration readback 4/4の合計27/27をpassした。local contract readbackは合計57/57 passへ更新。これはproduction consumer authの実readbackではなく、秘密を含まないoffline契約検証である。外部効果は0、Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。
