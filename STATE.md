@@ -23505,3 +23505,7 @@ Heavy Web `/_health`は200、`/api/auth/get-session`は200/null。Cloudflare web
 # Heavy Chain current state — 2026-09-27 r673
 
 Image resume manifestを現行HEAD `723aa09`へ更新し、最新のcapacity/auth/Companion/source auditを正本参照へ追加。Goal active、video deferred、provider/R2/billing/publication/deploy/secret readは0。Astra verified receiptとconsumer-auth sessionが揃うまで、Sunburst source mutationとprovider callは開始しない。
+
+# Heavy Chain current state — 2026-09-28 r675
+
+Heavy画像生成のOpenAI固定・Light境界・production config drift guardを現行HEAD `ed71cff`へ反映。strict release gateへHeavy OpenAI regression 4/4を追加し、lint/typecheckもPASS。fresh gateは依然`ok=false`で、production monitor/UI、G618、production H602、generation scorecardの4項目が未達。同じ既存APIキーはread-only `/v1/models`で401、ローテーション・secret変更・provider submit・deploy・課金・公開は0。動画はdeferred、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`、`work/heavy-chain-openai-api-auth-readback-20260928-r1.json`。

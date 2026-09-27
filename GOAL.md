@@ -12020,3 +12020,7 @@ Heavy Webのread-only HTTP session readbackをfresh取得。`/_health`は200でC
 # Goal progress — 2026-09-27 r673
 
 画像waveのresume manifestを現行HEAD `723aa09`へ同期し、r667以降のAdaptive capacity、production auth、Companion auth availability/Web probe、Web session、OpenAI receipt-boundary監査をauthoritativeEvidenceへ追加。`runtimeProcessObserved=true`、consumer-auth sessionはweb `null`/monitor token absent、provider receipt未開始、externalEffectsは全て0。次の依存はverified Astra engineering receiptであり、同じblocked packageの再送やforeign lease releaseは行わない。
+
+# Goal progress — 2026-09-28 r675
+
+Heavy OpenAI regression guardをstrict release gateへ統合し、production wranglerのOpenAI設定、Heavy UI provider selector、server-side credential boundary、Light Chain分離を4/4で検証。lint/typecheckもPASS。fresh strict gateは4つの既存production readback不足（monitor/UI、G618、H602、scorecard）でFAIL。既存APIキーは同じ値のままread-only `/v1/models`が401で、ローテーション・secret変更・provider submit・deploy・課金・公開は0。動画はdeferred、Goal active。正本は`work/heavy-chain-release-gate-current-readback-20260928-r1.json`、`work/heavy-chain-openai-api-auth-readback-20260928-r1.json`。
