@@ -11716,3 +11716,7 @@ Security/operationsの独立契約をfresh再検証し、`security:audit`、G620
 # Goal progress — 2026-09-27 r602
 
 QA receipt境界についてOpus 5.5のverified planを取得した。実サーバーのOpenAI receipt identityは`provider=openai`、`backendProvider=openai-images-api`（`cloudflare/heavy-api/src/openai-image.ts:4-5,152-157`）とread-only確認できた。新規Astra package `run_openai_qa_receipt_20260927_r1` はclaimまで成功したが、native invocation metadataが返らず`native_start_receipt_metadata_unavailable`でblocked、implementation 0。したがってQA修正も未実施。Opus invocation `ses_f1dc43b81ffe28zh5OwOXrVXWN`はverified、cost reconciled。正本は`work/heavy-chain-continuation-readback-20260927-r1.json`、Goal active。
+
+# Goal progress — 2026-09-27 r603
+
+fresh Companion readbackでHeavy生成URLを同一profile/generationから確認した。titleは`Lightchain AI`、本文は`GENERATE 生成画面を準備しています 素材アップロードと生成の準備をしています。`に留まり、authenticated feature surfaceへ到達しなかった。旧resume targetは`resume_target_missing`、fresh readは`task_target_not_provisioned`で、認証済みprovider receipt・workspace readbackの根拠にはならない。browser mutation/provider dispatch/R2/billing/publication/secret読取は0、session cleanupはcompleted。正本は`work/heavy-chain-auth-hydration-readback-20260927-r2.json`、Goal active。

@@ -23200,3 +23200,7 @@ Security/operations契約をfresh確認。`security:audit`、G620 5/5、G614、G
 # Heavy Chain current state — 2026-09-27 r602
 
 Opus 5.5 verified planでQA receiptのbounded契約を確定。OpenAI identityは`openai` + `openai-images-api`、旧Workers identityは完全一致allowlistとして保持する。新Astra packageはclaim済みだがnative invocation receipt不足でblocked、QAソース変更0。Light client packageも同じ起動receipt依存で未実装。Goal active、provider/R2/billing/deploy/publication/secretは0。
+
+# Heavy Chain current state — 2026-09-27 r603
+
+fresh Companion readbackでHeavy生成URLを同一profile/generationから確認した。titleは`Lightchain AI`、本文は`GENERATE 生成画面を準備しています 素材アップロードと生成の準備をしています。`に留まり、authenticated feature surfaceへ到達しなかった。旧resume targetは`resume_target_missing`、fresh readは`task_target_not_provisioned`で、認証済みprovider receipt・workspace readbackの根拠にはならない。browser mutation/provider dispatch/R2/billing/publication/secret読取は0、session cleanupはcompleted。正本は`work/heavy-chain-auth-hydration-readback-20260927-r2.json`。Goal active。
