@@ -22471,3 +22471,12 @@ copyright/marketing、commercial-use、counsel/operator decisionの10項目が�
 scorecard artifact missingでfail。strict gateも`capturedAt=2026-09-27T03:41:55.831Z`、`ok=false`、7 blockers
 (production monitor/UI、mass-market QA、Lightchain all-feature、G618、H601、H602、generation scorecard)を再確認した。
 CodexはApple login、OTP、決済、法的確定、秘密投入を行っていない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r437
+
+Companionのfresh statusと既存runのresume readbackを確認した。接続profileはcurrent buildでconnected、
+active session/lease/pending/reconciliationは0件でruntime recoveryもdoneだったが、当タスクのtask-owned Heavy Chain tabは
+現在存在しなかった。`heavy-auth-readback-20260927-r1`の`prepare_resume`は`no_dispatch`、targetなし、
+`external_action_executed=false`、`replay_allowed=false`で、再送可能な残作業も登録されていない。foreign tabをclaim/adoptせず、
+認証cookie/tokenを抽出せず、session cleanupを完了した。したがって次のproduction readbackには明示的な正規auth-stateまたは
+同じCompanion targetの再確立が必要であり、現在のshell環境値欠落を迂回できない。Goal active。

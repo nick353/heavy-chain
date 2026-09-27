@@ -11003,3 +11003,9 @@ operator decision 10項目未添付、generation scorecard artifact missingを�
 `2026-09-27T03:41:55.831Z`に再実行し、7 blockerは変化なし。現時点で不足しているものは秘密を推測して埋める種類ではなく、
 Apple/決済/法的判断/production monitor token/実provider receipt/scorecard等の正規証跡であるため、fail-closedを維持した。
 Goal active。
+
+# Goal progress — 2026-09-27 r437
+
+Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
+既存auth readback runは`no_dispatch`で対象tabなし、replay不可だったため、foreign tabのadoptや認証情報の抽出は行わなかった。
+これにより「ブラウザが接続済みである」ことと「production verifierが要求するauth-state/tokenがある」ことを分離して確定した。Goal active。
