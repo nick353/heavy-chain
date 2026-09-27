@@ -11192,3 +11192,7 @@ Runwayのローカル経路もfresh確認した。`codex plugin list`に`runway-
 # Goal progress — 2026-09-27 r469
 
 外部接続が戻った時に再開手順を取り違えないよう、G617、production monitor/G618、H601、H602の正規入力・禁止境界・completion chainを`work/heavy-chain-current-operator-inputs-20260927-r1.md`へ統合した。これは秘密値・法的承認・決済・provider実行を代行せず、各laneのexact restart conditionと証跡locatorだけを固定するhandoffである。Goal active。
+
+# Goal progress — 2026-09-27 r470
+
+restart packetのlocator整合をfresh監査し、参照先3件がすべて存在し、strict gateの失敗が4件（monitor/UI、G618、H602、generation scorecard）であることを固定した。正本補足は`work/heavy-chain-restart-packet-audit-20260927-r1.json`。これは準備証跡であり、provider/legal/billing/monitor/releaseの完了へ昇格させていない。Goal active。

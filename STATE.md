@@ -22675,3 +22675,7 @@ G617のprovider/auth境界をfresh確認した。公式Runwayアプリは利用�
 # Heavy Chain current state — 2026-09-27 r469
 
 G617、production monitor/G618、H601、H602の未完了入力を`work/heavy-chain-current-operator-inputs-20260927-r1.md`へ統合した。Runway接続、monitor Bearer/brand scope、Playwright auth-state、H601 operator/counsel decision、H602 live read path/operator decisionを混同せず、外部状態が戻った時にcompletion chainを依存順で再開できるようにした。新しいprovider/billing/legal/publication効果は0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r470
+
+restart packetの3 locator（Runway readback、完全体プラン、local ops/rights/billing readback）が全て存在することをfresh監査し、strict gate正本の失敗4件を再確認した。監査証跡は`work/heavy-chain-restart-packet-audit-20260927-r1.json`。準備資料の存在確認を本番provider、法務、課金、monitor、scorecardの完了とは扱わず、Goal activeを維持する。
