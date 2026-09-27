@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T17:50:36Z",
-  "sourceRevision": "58de466",
+  "capturedAt": "2026-09-27T17:52:28Z",
+  "sourceRevision": "a86dd7f",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
