@@ -22796,6 +22796,10 @@ Lightchain release gate contractは16/16 pass。release doctorはproof target/gi
 
 # Heavy Chain current state — 2026-09-27 r500
 
+# Heavy Chain current state — 2026-09-27 r501
+
+履歴契約診断後の独立検証はparity routes 34/34、unified workflow contract 6/6、source board parity 8/8をpass。Lightchain現行source-shaped surfaceは維持され、履歴testidの単独failure以外に新たなlocal blockerは増えていない。Astra packageは引き続きcapacity/automatic holdでclaim/startなし、外部効果は0、Goal active。
+
 追加のLightchain parity/provider/persistence確認は24/25 pass、1 failure。失敗は
 `verify-parity-entry-history-readback.test.ts`が`data-testid="oriented-design-persisted-history"`を要求する一方、
 現行`LightchainOrientedDesignPage`は`53a74f6`で旧履歴パネルを削除し本家プロジェクト／参考事例UIへ寄せたことによる契約ドリフト。現行source-parity checksは履歴パネルを要求していないため、無承認で旧UIを復元せず、診断とAstra再開条件を

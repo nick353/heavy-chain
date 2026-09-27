@@ -11313,6 +11313,10 @@ fresh strict gate `output/playwright/10m-product-readiness-g615/release-gate-sum
 
 # Goal progress — 2026-09-27 r500
 
+# Goal progress — 2026-09-27 r501
+
+履歴契約ドリフトの切り分け後、独立したLightchain現行契約を追加検証した。parity routes 34/34、unified workflow contract 6/6、source board parity 8/8をpass。誤った未登録script名を使った試行はコード失敗ではなく入口名の誤りで、正しい`test:lightchain-parity-routes`とnode test entrypointで再確認済み。履歴testidの1 failureは未修正のまま、provider/R2/auth/billing/publication/破壊操作は0。Goal active。
+
 Lightchain parity/provider/persistence readbackの追加確認は24/25 pass、1 failureだった。失敗は
 `scripts/verify-parity-entry-history-readback.test.ts`の`oriented-design-persisted-history`期待で、現行
 `LightchainOrientedDesignPage`は`53a74f6`で本家ソース一致のプロジェクト／参考事例UIへ置換され、旧履歴パネルとtestidを意図的に削除している。従って旧テストと現行UIの契約ドリフトと診断し、履歴パネルを推測復元せず、`work/heavy-chain-parity-history-contract-diagnosis-20260927-r1.md`へ証拠と次のAstra判断範囲を固定した。provider/R2/auth/billing/publication/破壊操作は0。Goal active。
