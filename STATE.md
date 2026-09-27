@@ -22800,6 +22800,10 @@ Lightchain release gate contractは16/16 pass。release doctorはproof target/gi
 
 # Heavy Chain current state — 2026-09-27 r502
 
+# Heavy Chain current state — 2026-09-27 r503
+
+fresh 10M auditは`ok=false`/16 blockers、unified release gateは`ok=false`/4 failures。最新の残件はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、real-generation scorecard。ローカル契約検証は継続、外部効果は0、Goal active。
+
 Lightchain all-feature 5/5、UI境界21/21、material 28/28、provider adapter 17/17をfresh pass。Light現行surfaceのlocal contractは追加71 assertionsで健全性を確認し、残る失敗は履歴testidの契約ドリフト1件。Astra packageはcapacity/automatic hold継続、外部効果0、Goal active。
 
 履歴契約診断後の独立検証はparity routes 34/34、unified workflow contract 6/6、source board parity 8/8をpass。Lightchain現行source-shaped surfaceは維持され、履歴testidの単独failure以外に新たなlocal blockerは増えていない。Astra packageは引き続きcapacity/automatic holdでclaim/startなし、外部効果は0、Goal active。
