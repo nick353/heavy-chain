@@ -22631,3 +22631,7 @@ Companion同一task-owned authenticated sessionでLaunch Operationsのdesktop 5 
 viewport restore後にtask-terminal cleanupを実行し、sessionClosed=true、leasesReleased=1、closed tab 1、foreignTabsMutated=false、externalActionExecuted=false、unknownEffect=falseを確認した。`npm run verify:launch-ops`はpass。
 strict gateを`2026-09-27T05:07:26.822Z`にfresh実行し、launch operationsはpass、残る4件はproduction monitor/UI pair（UI artifact missing）、G618 scale ops baseline（fresh 96h monitor/fixture不足）、H602 production completion（6 blockers）、generation scorecard（visual-scorecard artifact missing）。
 provider生成、R2 chain、rights/legal承諾、課金、公開、secret insertionは0。正本は`output/playwright/g830-launch-ops-production-current-r3/summary.json`および`output/playwright/10m-product-readiness-g615/release-gate-summary.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r459
+
+Light Chain `/dashboard`を同一task-owned authenticated Companion profileでfresh readbackした。production origin、title `Lightchain AI`、readyState complete、semantic/visual readback verified、browserMutationExecuted=false、externalActionExecuted=falseを確認し、session close・tab close・lease release・foreignTabsMutated=false・unknownEffect=falseでcleanup完了。正本補足は`work/heavy-chain-lightchain-dashboard-companion-readback-20260927-r1.json`。Companion証跡はPlaywrightの非local `auth-state.json`を代替しないためproduction monitor/UI pairへ昇格していない。Adaptive runtimeは`Transport closed`継続で同一接続を再試行せず、monitor/G618/H602/scorecardの残件と再開条件は変化なし。Goal active。

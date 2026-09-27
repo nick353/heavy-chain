@@ -11148,3 +11148,7 @@ Companion同一task-owned authenticated sessionでLaunch Operationsのdesktop 5 
 viewport restoreと`companion_close_session(taskTerminal=true)`を完了し、session/lease/tab cleanup、foreignTabsMutated=false、externalActionExecuted=falseを確認した。正本は
 `output/playwright/g830-launch-ops-production-current-r3/summary.json`。`npm run verify:launch-ops`はpassに更新された。full strict gateはfresh実行し、launch operationsは解消、残る4件はproduction monitor/UI pair、G618 scale ops baseline、H602 billing completion、generation scorecard。
 provider生成、権利承諾、課金、公開、secret insertion、destructive cleanupは行っていない。Goal active。
+
+# Goal progress — 2026-09-27 r459
+
+Light Chain dashboardを同一task-owned authenticated Companion profileでfresh readbackし、production origin、readyState complete、semantic/visual readback verified、browser/provider/external effect 0、session/tab/lease cleanup完了を確認した。証跡は`work/heavy-chain-lightchain-dashboard-companion-readback-20260927-r1.json`。ただしこれはPlaywright `auth-state.json`を含まないため、strict gateのproduction monitor/UI pairへは昇格させていない。Adaptive runtimeは`Transport closed`のままで、同一接続の再試行はしていない。残る4件（monitor/UI、G618、H602、generation scorecard）と、正規Bearer/brand scope・live DB/API・provider/R2・human/operator証跡の再開条件は不変。Goal active。
