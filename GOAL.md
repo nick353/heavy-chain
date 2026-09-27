@@ -12162,3 +12162,10 @@ Adaptive plan readが復旧し、保留していた`companion-auth-boundary-fres
 サーバーplan v14、`engineering_ready=false`、`next_action=waiting_human`をfresh確認した。これはGoal完了ではなく、
 認証済みworkspace・同じキーの2xx・verified Astra receipt・provider生成receiptを待つ正本状態である。
 同じAPIキー、provider、deploy、課金、公開、動画は変更していない。
+
+# Adaptive runtime fresh readback — 2026-09-28
+
+Adaptiveのrouter・Graph runtime・role processはliveへ復旧したが、capacity guardは`capacity_blocked`、live capacityは
+未観測、既存Astra packageは`launch_allowed=false`のままである。新しいAstra invocation、fork、replay、source変更は行わず、
+plan v15へruntime境界を一度だけ記録した。認証済みworkspace、同じキーの2xx、verified Astra receipt、provider生成receiptは
+依然未達であり、Goalはactiveのまま継続する。

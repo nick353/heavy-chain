@@ -1,6 +1,6 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T18:19:12Z",
+  "capturedAt": "2026-09-27T18:29:48Z",
   "sourceRevision": "606ec26",
   "goalStatus": "active",
   "scope": {
@@ -88,7 +88,9 @@
     "productionBoundaryCapturedAt": "2026-09-27T18:18:31Z",
     "companionAuthBoundary": "workspace_preparing_auth_brand_hydration_pending_authenticated_workspace_false",
     "companionAuthBoundaryCapturedAt": "2026-09-27T18:20:17Z",
-    "adaptiveProgressWriteback": "recorded_event_companion-auth-boundary-fresh-readback-20260928-r1",
+    "adaptiveProgressWriteback": "recorded_event_adaptive-runtime-fresh-readback-20260928-r1",
+    "adaptiveRuntimeReadback": "graph_available_role_process_live_capacity_blocked_launch_allowed_false",
+    "adaptiveRuntimeCapturedAt": "2026-09-27T18:29:48Z",
     "strictGate": "FAIL",
     "strictGateCapturedAt": "2026-09-27T18:11:37.127Z",
     "strictGateFailures": [
@@ -110,7 +112,7 @@
   },
   "latestAstraReadback": {
     "adaptivePlanId": "aa040f17-6308-444f-8290-cfc78589de2a",
-    "adaptivePlanVersion": 14,
+    "adaptivePlanVersion": 15,
     "runId": "run_heavy_image_astra_engineering_20260927_r6",
     "packageId": "heavy-openai-image-astra-engineering-r6",
     "ownerTaskId": "/root",

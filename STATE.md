@@ -23652,3 +23652,10 @@ Adaptive writebackは同一readback直後に`Transport closed`で失敗。再送
 Adaptive plan readが復旧し、保留していた`companion-auth-boundary-fresh-readback-20260928-r1`を一度だけwritebackした。
 サーバーplanはv14、`engineering_ready=false`、`next_action=waiting_human`をfresh確認。ローカル正本からtransport失敗の
 pending表示を除去し、manifestも記録済みへ同期した。同じAPIキー、provider、deploy、課金、公開、動画は変更せず、Goalはactive。
+
+# Adaptive runtime fresh readback — 2026-09-28
+
+Adaptiveのrouter・Graph runtime・role processはlive（heartbeat fresh、active routeなし）へ復旧したが、capacity guardは
+`capacity_blocked`、live capacityは未観測、既存Astra packageは`launch_allowed=false`のまま。新しいAstra invocationや
+fork/replayは開始せず、event `adaptive-runtime-fresh-readback-20260928-r1`をplan v15へ一度だけ記録した。provider、source、
+deploy、課金、公開、動画は変更せず、Goalはactiveを維持する。
