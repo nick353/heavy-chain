@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-current-wave-fresh-readback.v1",
-  "capturedAt": "2026-09-27T11:34:32Z",
-  "sourceRevision": "ff003b3",
+  "capturedAt": "2026-09-27T11:35:28Z",
+  "sourceRevision": "ee72856",
   "scope": {
     "currentWave": "image_generation",
     "video": "deferred_by_user",
@@ -111,6 +111,11 @@
     "passed": 122,
     "failed": 0,
     "videoChanged": false
+  },
+  "imageLocalContracts": {
+    "artifact": "work/heavy-chain-image-local-contract-fresh-readback-20260927-r1.json",
+    "passed": 23,
+    "failed": 0
   },
   "nextGate": "Recover the existing Adaptive runtime and obtain the already-registered Astra image engineering receipt; do not replay the closed transport or deploy while the live provider remains workers_ai."
 }

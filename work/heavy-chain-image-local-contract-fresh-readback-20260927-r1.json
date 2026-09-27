@@ -1,0 +1,29 @@
+{
+  "schema": "heavy-chain.image-local-contract-fresh-readback.v1",
+  "capturedAt": "2026-09-27T11:35:28Z",
+  "sourceRevision": "ee72856535ce36ad16d63c1024dc77f30488a4c1",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "providerSubmit": false,
+    "billing": false,
+    "deploy": false,
+    "secretValuesRead": false,
+    "publication": false
+  },
+  "commands": [
+    {"command": "npm run test:generated-image-identity --silent", "passed": 8, "failed": 0},
+    {"command": "npm run test:image-api-input-normalization --silent", "passed": 1, "failed": 0},
+    {"command": "npm run test:provider-persistence-readback --silent", "passed": 14, "failed": 0}
+  ],
+  "summary": {
+    "passed": 23,
+    "failed": 0,
+    "identityContractGreen": true,
+    "inputNormalizationGreen": true,
+    "providerPersistenceContractGreen": true
+  },
+  "interpretation": "Local image identity, input normalization, and provider-to-persistence promotion contracts are green. These deterministic tests do not establish an authenticated production provider receipt or live R2/D1 reconciliation.",
+  "nextGate": "Preserve these contracts while obtaining valid Heavy consumer authentication and a same-run production image receipt."
+}

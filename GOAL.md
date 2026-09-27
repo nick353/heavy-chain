@@ -11944,3 +11944,7 @@ OpenAI APIのモデル一覧をread-onlyで確認しようとしたが、環境�
 # Goal progress — 2026-09-27 r654
 
 Light Chainの画像/non-video parity契約をfresh実行。provider coverage 22、parity contract 9、permission parity 12、unified workflow 6、entry routing 30、provider adapter 17、all-feature contract 5、UI control boundaries 21、合計122/122 PASS。video providerは変更せずfail-closed確認のみ。これはlocal契約の証明であり、authenticated production generation・remote persistence・visual qualityの証明ではない。動画はdeferred、Goal active。正本は`work/heavy-chain-lightchain-image-parity-fresh-readback-20260927-r1.json`と更新済みresume manifest。
+
+# Goal progress — 2026-09-27 r655
+
+画像local contractをfresh実行。generated-image identity 8/8、input normalization 1/1、provider persistence readback 14/14、合計23/23 PASS。これはcanonical identity・入力変換・結果の保存昇格契約を証明するが、authenticated production provider receiptやlive R2/D1 reconciliationは証明しない。動画はdeferred、Goal active。正本は`work/heavy-chain-image-local-contract-fresh-readback-20260927-r1.json`と更新済みresume manifest。

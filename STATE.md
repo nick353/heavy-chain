@@ -23429,3 +23429,7 @@ OpenAI API read-only model listは401 invalid_api_key。環境keyはpresentだ�
 # Heavy Chain current state — 2026-09-27 r654
 
 Light Chain画像/non-video parityのfresh local契約は122/122 PASS。provider coverage、routing、permission、adapter、workflow、UI boundaryは緑。ただしproduction認証・実provider receipt・remote save/reuse/reload/reconciliation・visual scorecardは未証明。video providerは未変更、fail-closed、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r655
+
+画像local contractはidentity 8/8、input normalization 1/1、provider persistence 14/14、合計23/23 PASS。local証拠はgreenだが、production provider/auth/remote reconciliationは未証明。動画はdeferred、Goal active。
