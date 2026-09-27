@@ -11948,3 +11948,7 @@ Light Chainの画像/non-video parity契約をfresh実行。provider coverage 22
 # Goal progress — 2026-09-27 r655
 
 画像local contractをfresh実行。generated-image identity 8/8、input normalization 1/1、provider persistence readback 14/14、合計23/23 PASS。これはcanonical identity・入力変換・結果の保存昇格契約を証明するが、authenticated production provider receiptやlive R2/D1 reconciliationは証明しない。動画はdeferred、Goal active。正本は`work/heavy-chain-image-local-contract-fresh-readback-20260927-r1.json`と更新済みresume manifest。
+
+# Goal progress — 2026-09-27 r656
+
+Heavy API全体の決定論的回帰をfresh実行し、114/114 PASS。認証admission、OpenAI adapter、model bounds、private R2/D1 persistence、receipt reconciliation、owner/brand/rights/quota、workspace save/reuse/reload/no-replayを含む。live provider call・production visual quality・signed URLの証明ではない。動画はdeferred、Goal active。正本は`work/heavy-chain-image-full-regression-fresh-readback-20260927-r1.json`と更新済みresume manifest。

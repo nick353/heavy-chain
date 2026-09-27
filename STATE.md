@@ -23433,3 +23433,7 @@ Light Chain画像/non-video parityのfresh local契約は122/122 PASS。provider
 # Heavy Chain current state — 2026-09-27 r655
 
 画像local contractはidentity 8/8、input normalization 1/1、provider persistence 14/14、合計23/23 PASS。local証拠はgreenだが、production provider/auth/remote reconciliationは未証明。動画はdeferred、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r656
+
+Heavy API全体回帰は114/114 PASS。localのauth/admission・OpenAI adapter・private persistence・reconciliation・rights/quota境界はgreenだが、production provider/auth/visual qualityは未証明。動画はdeferred、Goal active。

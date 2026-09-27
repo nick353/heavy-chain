@@ -1,0 +1,34 @@
+{
+  "schema": "heavy-chain.image-full-regression-fresh-readback.v1",
+  "capturedAt": "2026-09-27T11:36:28Z",
+  "sourceRevision": "b2b3ab60e77f7ff3714a9c88b4a6cc3dd7bfe287",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "providerSubmit": false,
+    "billing": false,
+    "deploy": false,
+    "secretValuesRead": false,
+    "publication": false
+  },
+  "command": "npm test --silent (cloudflare/heavy-api)",
+  "result": {
+    "passed": 114,
+    "failed": 0,
+    "cancelled": 0,
+    "durationMs": 4996
+  },
+  "coverageMeaning": [
+    "authenticated admission and fail-closed identity",
+    "OpenAI provider adapter and model bounds",
+    "private R2/D1 persistence and exact receipt reconciliation",
+    "owner/brand/role/rights/quota boundaries",
+    "workspace save, reuse, reload, and no-replay behavior"
+  ],
+  "limits": [
+    "local deterministic tests do not prove a live authenticated provider call",
+    "local deterministic tests do not prove production visual quality or signed URL readback"
+  ],
+  "nextGate": "Keep the 114/114 baseline while obtaining a valid Heavy consumer-auth session and same-run production provider receipt."
+}
