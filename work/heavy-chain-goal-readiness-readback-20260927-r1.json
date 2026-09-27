@@ -1,17 +1,17 @@
 {
-  "schema": "heavy-chain.goal-readiness-readback.v1",
-  "capturedAt": "2026-09-27T07:14:38.882Z",
-  "gitHead": "b2dc395",
-  "command": "npm run verify:goal-readiness:incomplete-ok",
+  "schema": "heavy_chain_goal_readiness_readback.v1",
+  "capturedAt": "2026-09-27T09:03:32.547Z",
+  "head": "e869872",
+  "command": "npm run verify:goal-readiness:incomplete-ok --silent",
   "exitCode": 0,
   "ok": true,
-  "checks": {
-    "cloudflareRuntimeContract": true,
-    "legacySupabaseRuntimeRemoved": true,
-    "cloudflareAuthMediaAdapters": true,
-    "cloudflareAiAdapter": true,
-    "noLegacyEdgeEntrypointInActiveGate": true
-  },
+  "checks": [
+    "Cloudflare runtime contract present",
+    "legacy Supabase runtime removed",
+    "Cloudflare auth/media adapters present",
+    "Cloudflare AI adapter present",
+    "no legacy edge entrypoint in active gate"
+  ],
   "irreversibleActions": {
     "externalApiCall": "not_touched",
     "generationSubmit": "not_clicked",
@@ -19,8 +19,7 @@
     "deploy": "not_run"
   },
   "proofLimits": [
-    "Does not establish authenticated production generation, AI quality, R2 persistence, or browser business completion.",
-    "Production deployment and traffic-zero evidence require separate same-run readback."
-  ],
-  "decision": "static_readiness_verified_production_unproven"
+    "Static verifier only; no authenticated production generation, AI quality, R2 persistence, or browser business completion is established.",
+    "Production deployment and live traffic-zero require separate same-run readback."
+  ]
 }
