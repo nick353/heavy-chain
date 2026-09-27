@@ -1,0 +1,19 @@
+{
+  "schema": "heavy-chain.lightchain-route-ui-readback.v1",
+  "capturedAt": "2026-09-27T07:25:00Z",
+  "gitHead": "7a6bf5e",
+  "checks": [
+    {"command":"npm run test:lightchain-parity-routes","passed":34,"failed":0},
+    {"command":"npm run test:lightchain-material-contract","passed":28,"failed":0},
+    {"command":"npm run test:lightchain-ui-control-boundaries","passed":21,"failed":0},
+    {"command":"npm run test:lightchain-color-edit-contract","passed":2,"failed":0}
+  ],
+  "totalPassed": 85,
+  "externalEffects": {
+    "provider": 0,
+    "networkCalls": 0,
+    "billing": 0,
+    "publication": 0
+  },
+  "decision": "Lightchain_route_material_ui_contracts_verified_production_unproven"
+}
