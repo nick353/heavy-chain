@@ -11184,3 +11184,7 @@ G619 beta readiness/evidenceと10M completion auditをfresh実行した。G619�
 # Goal progress — 2026-09-27 r467
 
 G617の正規provider経路を再調査した。公式Runwayアプリはディレクトリ上で利用可能だが、現在の接続状態は`not_installed`で、当スレッドにRunway MCP toolは露出していない。旧localhost OAuth、token/cookie抽出、直接provider呼出しは行わず、未接続状態と再開条件を`work/heavy-chain-runway-connection-readback-20260927-r1.json`へ固定した。再開条件は、ユーザー側で公式Runwayアプリを接続した後、同一runのprovider receipt→storage/readback→visual scorecard→reconciliationを取得すること。G617の証跡を架空生成せず、Goal active。
+
+# Goal progress — 2026-09-27 r468
+
+Runwayのローカル経路もfresh確認した。`codex plugin list`に`runway-mcp@personal`のinstalled/enabled entryはなく、当スレッドのRunway toolも0件だった。これはHeavy Chain側のコード不具合ではなく、正規provider接続・plugin load・ユーザー認証が未成立という外部依存である。旧localhost bridgeや認証cacheのコピーで迂回せず、証跡を同じ`work/heavy-chain-runway-connection-readback-20260927-r1.json`へ更新した。Goal active。

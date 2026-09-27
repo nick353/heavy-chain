@@ -22667,3 +22667,7 @@ G620/G614/G632/G633、H601 legal safety、H602 Cloudflare contract、Launch Oper
 # Heavy Chain current state — 2026-09-27 r467
 
 G617のprovider/auth境界をfresh確認した。公式Runwayアプリは利用可能として検出されたが、現セッションでは未接続（`not_installed`）で、当スレッドのRunway MCP tool露出も未確認。token/cookie抽出、旧localhost OAuth、直接provider呼出し、課金、公開、外部効果は0。正本補足は`work/heavy-chain-runway-connection-readback-20260927-r1.json`。公式Runway接続後に、同一runのprovider receipt、保存/readback、visual scorecard、reconciliationを取得するまでG617はblocked-exactのまま維持する。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r468
+
+ローカルCodex plugin readbackでも`runway-mcp@personal`のinstalled/enabled entryが存在しないことを確認した。当スレッドのRunway MCP toolは0件で、公式Runwayアプリの接続状態も`not_installed`。これは旧localhost bridgeや`mcp-auth` cacheを流用して埋める種類の不足ではないため、認証情報を抽出・複製せず、G617のprovider receipt生成は接続成立まで保留する。正本補足は`work/heavy-chain-runway-connection-readback-20260927-r1.json`。Goal active。
