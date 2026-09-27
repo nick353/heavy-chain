@@ -22699,3 +22699,7 @@ Astra readbackは、local-onlyカードの可視性を維持しながらremote�
 # Heavy Chain current state — 2026-09-27 r475
 
 Heavy entitlementの全生成面をcross-surface監査した。現行HEADではGeneratePageのHeavy ownership/capability map、Light Workbench/materialのHeavy entitlement bypass、unsupported/unknownのdefault-deny、server側のterms acceptance・request attestation・input digest・request bindingが整合し、Heavy/Light境界focused suite（9/9、22/22、12/12、3/3）とtypecheckがpassした。旧agentの「Light機能へHeavyゲートが誤適用」という報告は現行HEADではstaleであり、Light plan-lockを削除する修正は不要。一方、FittingPage/CanvasEditorPageの直接provider経路はstatus GETと`rightsConfirmed`だけで、GeneratePageと同じheavyConsent/heavyPreparationを渡さないため、serverのrequest-scoped attestationを満たせず、直接Fitting/Canvas生成は未完成。これは新しいcross-surface実装スコープが必要であり、Astra engineeringの承認なしに変更しない。正本は`work/heavy-chain-heavy-entitlement-cross-surface-audit-20260927-r1.json`。provider生成、権利承諾、課金、公開、secret操作は0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r476
+
+新しいcross-surface phaseについてOpus 5.5のread-only planning handoffをverifiedで取得した。推奨は、Fitting/Canvasへ共通Heavy consent/preparation/attestation adapterを追加し、GeneratePageへhandoffは採らず、ChatEditorは今回fail-closedのままにするbounded scope。受入条件はrequest-local consent/preparation、入力変更時のdigest/binding無効化、`rightsConfirmed`単独非権限化、GeneratePage/Light/server契約不変、mock-only検証と外部効果0。計画は`324a1767-2456-4822-a565-89d1c9cb3e4b`へ保存し、詳細は`work/heavy-chain-cross-surface-opus-plan-20260927-r1.md`へ固定した。native Astra engineering packageは登録したが、Adaptive runtimeの`capacity_guard=capacity_blocked`と`automatic_dispatch_disabled`によりclaim/start receiptを取得できず、実装は開始していない。Goal active。
