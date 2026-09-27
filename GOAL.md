@@ -11593,3 +11593,7 @@ Runwayの接続権限をread-only確認し、現ワークスペースでは`inst
 # Goal progress — 2026-09-27 r569
 
 同一現HEAD `1d6972d`で`npm run verify:10m-completion:incomplete-ok`をfresh実行し、`2026-09-27T08:27:19.879Z`、`ok=false`、16 blockersを確認した。G617/G619/G669/G670の受入未完了、H601/H602 open、provider/R2/video/monitor/G618/scorecardのproof不足、G619とrelease gateのcommand failureを明示した。正本は`work/heavy-chain-completion-audit-20260927-r6.json`。合成証跡で埋めず、外部効果は0。Goal active。
+
+# Goal progress — 2026-09-27 r570
+
+Runwayのplugin依存関係・権限・接続状態を`2026-09-27T08:31:44Z`にfresh readbackした。依存解決は成功しoptionalだが、`installed=false`、`connectionConfirmed=false`、`toolExposed=false`、permissionは`not_installed`、global permissionは`Allow low-risk actions`。正本は`work/heavy-chain-provider-connection-readback-20260927-r3.json`。provider/video receipt、課金、secret読取、外部効果は0。Goal active。

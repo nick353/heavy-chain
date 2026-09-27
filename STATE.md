@@ -23077,3 +23077,7 @@ Runway permission/installationをfresh readbackし、未インストール・未
 # Heavy Chain current state — 2026-09-27 r569
 
 10M completion auditを`2026-09-27T08:27:19.879Z`にfresh実行し、`ok=false`・16 blockersを確認した。G617/G619/G669/G670のgoal未受入、H601/H602 open、実provider/R2/video/monitor/G618/scorecard proof不足、G619/release gate verifier failureを正本へ固定した。正本は`work/heavy-chain-completion-audit-20260927-r6.json`。Goal active、外部効果は0。
+
+# Heavy Chain current state — 2026-09-27 r570
+
+Runwayの依存関係・permission・installation状態をfresh確認した。依存はoptionalで解決済みだが、pluginは未インストール・未接続、provider tool未露出。global permissionはlow-risk actionsであり接続証明ではない。正本は`work/heavy-chain-provider-connection-readback-20260927-r3.json`。provider/video生成、課金、secret、公開、deployは0。Goal active。
