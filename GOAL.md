@@ -11122,3 +11122,9 @@ Supabaseの公式プロジェクト一覧・プロジェクトreadbackを取得�
 公式table readbackはconnection timeoutとなり、production restore・DB書込み・課金状態変更は行っていない。CLI 2.106.0の`db query`/`advisors`経路は利用可能だが、
 本番DBがinactiveのためH602 live constraintの証明には昇格させていない。ローカルH602 Cloudflare contractはpass、production completion/operator readinessはfail-closed、
 G618は公式monitor URL/brand/token未設定、generation scorecardは同一runのprovider/R2/visual artifact不足のままである。strict gateの残り4件は変化なし。Goal active。
+
+# Goal progress — 2026-09-27 r455
+
+Supabase公式organization readbackで`tier_free`を確認し、公式docs上はFree paused projectがデータ/設定を保持したまま最大90日以内に復帰でき、paused中はcompute課金なしと確認した。
+ただしResumeは本番availabilityを変えるため、Adaptiveの再評価を試みたところtransport closedとなり、同接続の再試行はせず、Astra判断なしのResumeは実行していない。
+証跡は`work/heavy-chain-h602-supabase-resume-decision-20260927-r1.json`。H602 live readback、monitor/G618、provider/R2/scorecardの残件は継続。Goal active。

@@ -22605,3 +22605,10 @@ DB password・service role・browser tokenを表示/保存せず、restore・mig
 `npm run verify:h602-billing`はlocal contract `ok=true`（production proofはnot verified）、`verify:h602-production-completion-readback`と`verify:h602-operator-readiness`は既存readbackの6 blockerを再確認、
 `verify:g618-scale-ops`はexplicit Cloudflare origin/brand/live session/limits不足、`verify:generation-scorecard`はcanonical visual-scorecard artifact missingでfailした。
 正本補足は`work/heavy-chain-h602-supabase-official-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r455
+
+Supabase organization readbackはFree plan（`tier_free`）で、公式docsはpaused Free projectの復帰がデータ/設定を保持し、paused中のcompute課金は発生しないと説明している。
+本番Resumeは可逆でもavailabilityを変えるため、Adaptive replanを試みたがtransport closedとなり、同接続を再試行せずAstra承認前のResumeを見送った。
+H602の再開条件は「正常なAdaptive transportでAstra判断 → 必要なら一回だけResume → fresh status → GET-only live constraint readback」。provider、課金設定、決済、公開、秘密操作は0。
+正本補足は`work/heavy-chain-h602-supabase-resume-decision-20260927-r1.json`。Goal active。
