@@ -62,5 +62,15 @@
     "firstStop": "cloudflare_release_readback_contract_missing",
     "details": ["stale_observation", "missing_input"],
     "interpretation": "The checked-in contract is a fixture/local-only declaration with unavailable current artifacts; it cannot be promoted to production proof."
+  },
+  "evidenceRegistrySearch": {
+    "patterns": [
+      "heavy-chain.cloudflare-provider-receipt.v1",
+      "heavy-chain.cloudflare-authenticated-production-readback.v1"
+    ],
+    "materializedMatches": ["contracts/cloudflare-release-readback.v1.json"],
+    "providerReceiptArtifacts": 0,
+    "authenticatedProductionReadbackArtifacts": 0,
+    "decision": "production_evidence_missing"
   }
 }
