@@ -11188,3 +11188,7 @@ G617の正規provider経路を再調査した。公式Runwayアプリはディ�
 # Goal progress — 2026-09-27 r468
 
 Runwayのローカル経路もfresh確認した。`codex plugin list`に`runway-mcp@personal`のinstalled/enabled entryはなく、当スレッドのRunway toolも0件だった。これはHeavy Chain側のコード不具合ではなく、正規provider接続・plugin load・ユーザー認証が未成立という外部依存である。旧localhost bridgeや認証cacheのコピーで迂回せず、証跡を同じ`work/heavy-chain-runway-connection-readback-20260927-r1.json`へ更新した。Goal active。
+
+# Goal progress — 2026-09-27 r469
+
+外部接続が戻った時に再開手順を取り違えないよう、G617、production monitor/G618、H601、H602の正規入力・禁止境界・completion chainを`work/heavy-chain-current-operator-inputs-20260927-r1.md`へ統合した。これは秘密値・法的承認・決済・provider実行を代行せず、各laneのexact restart conditionと証跡locatorだけを固定するhandoffである。Goal active。
