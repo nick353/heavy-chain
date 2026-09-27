@@ -11625,3 +11625,6 @@ chosen public entrypointのread-only HTTP/auth boundaryをfresh実行し、`ok=t
 # Goal progress — 2026-09-27 r579
 
 Companionのtask-owned temporary tabでcanonical dashboardをread-only取得し、semantic/visual readback、text hash、cleanup receiptを確認した。provider・submit・billing・公開・secret読取は0。認証済みproduction UI完了証跡ではない。正本は`work/heavy-chain-companion-public-readback-20260927-r1.json`。Goal active。
+# Goal progress — 2026-09-27 r580
+
+Adaptive runtimeと既存Heavy packageをfresh readbackした。runtimeはgraph available/live process verifiedだが`capacity_blocked`・`live_capacity_observable=false`、Heavy packageは`waiting_human`/`automatic_dispatch_disabled`、claim/startなし、fork候補なし。別Daily AI admissionはin-flightだがHeavyへ流用・割込みしない。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r3.json`。Goal active。

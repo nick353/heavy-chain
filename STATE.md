@@ -23109,3 +23109,6 @@ Runwayは依然として未インストール・未接続でprovider tool未露�
 # Heavy Chain current state — 2026-09-27 r579
 
 canonical dashboardのpublic readbackはcleanup完了・foreign tab変更なし。authenticated production UI pairは未生成のまま。正本は`work/heavy-chain-companion-public-readback-20260927-r1.json`。Goal active。
+# Heavy Chain current state — 2026-09-27 r580
+
+Heavy側のcapacityとpackageは変化なし。別Planner admissionはHeavyのrunではないためadoptせず、代替route/fork/重複claimも行っていない。正本は`work/heavy-chain-adaptive-capacity-readback-20260927-r3.json`。Goal active。
