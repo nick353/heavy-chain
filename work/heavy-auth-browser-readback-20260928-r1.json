@@ -1,0 +1,25 @@
+{
+  "schema": "heavy-chain.auth-browser-readback.v1",
+  "capturedAt": "2026-09-27T15:52:40.212Z",
+  "surface": "AOS Chrome Companion read-only URLs",
+  "runId": "heavy-auth-readback-20260928-r1",
+  "profile": {
+    "connected": true,
+    "buildCompatibility": "current",
+    "cleanupComplete": true,
+    "externalActionExecuted": false
+  },
+  "readback": {
+    "apiHealth": "200_ok",
+    "apiProfile": "401_unauthorized",
+    "heavyEntitlement": "401_unauthorized",
+    "webSessionEndpoint": "authenticated_session_present"
+  },
+  "secretHandling": {
+    "sessionTokenPersisted": false,
+    "sessionTokenLogged": false,
+    "providerCredentialAccessed": false
+  },
+  "conclusion": "Web login state does not currently authorize the Heavy API consumer endpoints; no generation or provider submission was attempted.",
+  "nextAction": "Resolve the supported Heavy API consumer-auth binding, then repeat profile and entitlement readback before any provider call."
+}
