@@ -23632,3 +23632,7 @@ final review resultは未生成・production enablementは未承認のまま。A
 # Strict release gate fresh readback — 2026-09-28
 
 clean worktreeのstrict release gateを同じ実行でfresh取得した。syntax、security、Heavy/OpenAI選択、Cloudflare image QA、video fail-closed、workspace/provider persistence、Canvas readback、Light provider/parity、OpenAI static、scorecard provenance、G614/G632/G633/H601/H602 static、typecheck、build、lint、diff checkはPASS。gate全体はFAILで、残る4項目はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、current generation visual scorecard artifactのみ。APIキーは同じ値のまま、追加probe・ローテーション・secret変更・provider submit・deploy・課金・公開・動画変更は0。正本は`output/playwright/10m-product-readiness-g615/release-gate-summary.json`とno-rotation plan readback、Goal active。
+
+# Independent gate input audit — 2026-09-28
+
+外部効果なしのfresh read-only確認で、strict gateの未達入力をさらに固定した。primary visual scorecard、同一run readback、G677 fallback scorecardはいずれも現行checkoutに存在せず、既存の1件scorecardや歴史artifactを10-feature primaryへ昇格しない。G618に必要なmonitor API URL、brand ID、tokenも全てmissing。APIキー、provider、deploy、billing、publication、videoは触らず、Goalはactiveのまま。正本はno-rotation plan readbackとimage resume manifest。

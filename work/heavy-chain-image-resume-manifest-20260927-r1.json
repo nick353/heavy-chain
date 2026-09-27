@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T18:14:24Z",
-  "sourceRevision": "bc19bdd",
+  "capturedAt": "2026-09-27T18:19:12Z",
+  "sourceRevision": "606ec26",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -90,11 +90,20 @@
       "production H602 billing completion readback",
       "generation scorecard"
     ],
-    "strictGateLocalChecks": "all syntax/security/regression/typecheck/build/lint/diff commands passed"
+    "strictGateLocalChecks": "all syntax/security/regression/typecheck/build/lint/diff commands passed",
+    "scorecardPrimaryArtifact": "missing",
+    "scorecardPrimaryReadbackArtifact": "missing",
+    "scorecardFallbackG677Artifact": "missing",
+    "g618MonitorInputs": {
+      "apiUrl": "missing",
+      "brandId": "missing",
+      "token": "missing"
+    },
+    "independentGateAudit": "fresh read-only audit; no historical or single-candidate artifact promoted"
   },
   "latestAstraReadback": {
     "adaptivePlanId": "aa040f17-6308-444f-8290-cfc78589de2a",
-    "adaptivePlanVersion": 11,
+    "adaptivePlanVersion": 12,
     "runId": "run_heavy_image_astra_engineering_20260927_r6",
     "packageId": "heavy-openai-image-astra-engineering-r6",
     "ownerTaskId": "/root",

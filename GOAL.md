@@ -4,6 +4,10 @@
 
 現行HEAD `bc19bdd`のclean worktreeで`npm run verify:release-gate -- --command-timeout-ms 600000`を同じ実行のまま完了。local syntax/security/Heavy OpenAI regression/Cloudflare image QA/video fail-closed/video persistence/workspace handoff/provider persistence/Canvas readback/Light coverage/parity/OpenAI static/scorecard provenance/G614/G632/G633/H601/H602 static/typecheck/build/lint/diff checkはPASS。gateはFAILだが、残りはproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecardの4項目だけ。APIキーは変更・表示・保存せず、401状態で再probeなし、provider submit・deploy・課金・公開・動画変更は0。Goalはactive。正本は`output/playwright/10m-product-readiness-g615/release-gate-summary.json`、`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`、`work/heavy-chain-image-resume-manifest-20260927-r1.json`。
 
+## Independent gate input audit — 2026-09-28
+
+fresh read-only確認で、primary visual scorecard/readbackとG677 fallback scorecardが現行checkoutに存在しないこと、G618 monitor API URL・brand ID・tokenが全て未設定であることを確認。古い単一candidate scorecardを10-feature証拠へ昇格せず、外部生成・deploy・課金・公開・キー変更・動画変更は0。Goalはactive。次の再開条件は、認証済みproduction contextと同じAPIキーの2xx後に、新規provider receiptを取得してscorecardとG618を同じrunの証跡から作ること。
+
 ## Heavy feature readback and action boundary — 2026-09-27
 
 同一ownerの認証済みCompanion sessionで生成featureをread-only走査した。`model-matrix`／`design-gacha`はHeavy利用条件、
