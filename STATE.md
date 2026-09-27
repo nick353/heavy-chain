@@ -23612,3 +23612,9 @@ Adaptive runtimeをfresh readbackした。router/graphは稼働しているが�
 Adaptive plan version 7をreadbackし、graph/runtime processは起動しているが、capacity guardは引き続き
 `capacity_blocked`、live capacity不可視、即時retry禁止、`runtime_process_match=false`であることを確認した。
 既存Astra packageはblocked/launch不可のまま。認証401の同じキーを再送せず、別route・別run・別モデルへ迂回していない。
+# Rights/entitlement implementation boundary — 2026-09-28
+
+既存Graph `run_a2a45df3974f4cd0` のfresh historyで、Heavy rights/entitlement plumbingはAstra/Luna verified、
+Heavy API 107/107、runtime 1/1、Light parity/source 12/12、Cloudflare image contract 12/12、typecheck/build/diff check
+passまで完了していることを確認した。ただしproduction enforcementはOFF、approved terms/rights wordingとproduction
+document configは未active、provider/deploy/billing/publicationは未実行。これは本番完了ではなく、実装済みローカル境界として保持する。

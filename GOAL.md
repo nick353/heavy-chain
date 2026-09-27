@@ -12124,3 +12124,8 @@ fresh runtime readbackで、Adaptiveのrouter/graph自体はavailableだが、ca
 Adaptive plan version 7をfresh readbackした。runtimeはaliveだがcapacity guardは変わらず、既存Astra packageも
 verified receiptなしでlaunch不可。Goalはactiveを維持し、外部認証状態または実行identityの変化が確認されるまで同じ
 外部操作を再送しない。
+# Rights/entitlement implementation boundary — 2026-09-28
+
+既存Graphのverified readbackにより、Heavy固有のrights/entitlement plumbingとlocal regressionは実装済みと確認した。
+一方、production enforcementはOFFで、approved terms/rights文書が未activeのため、本番provider生成やdeployへ昇格しない。
+Goalはactiveを維持し、認証・文書・provider・billingの独立gateを混同しない。
