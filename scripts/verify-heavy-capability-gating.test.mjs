@@ -166,3 +166,15 @@ test('GeneratePage renders unsupported copy, hydrates only supported capabilitie
   assert.ok(authGuard < dataPlaneGuard, 'auth guard must precede data-plane access');
   assert.ok(dataPlaneGuard < entitlementCall, 'data-plane guard must precede entitlement GET');
 });
+
+test('Lightchain Workbench keeps Heavy entitlement out of known Light features', async () => {
+  const page = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(page, /isHeavyOwnedFeature\(selectedTool\.id\)/);
+  assert.match(page, /const heavyEntitlementAction = heavyOwnedFeature && lightchainProviderSupported/);
+  assert.match(page, /const heavyEntitlementReady = !heavyOwnedFeature \|\|/);
+  assert.match(page, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
+  assert.match(page, /rightsReady: !lightchainProviderSupported \|\| !heavyOwnedFeature \|\| heavyEntitlementReady/);
+  assert.doesNotMatch(page, /const heavyEntitlementAction = lightchainProviderSupported\s*\n\s*\? lightchainProviderRoute/);
+  assert.match(page, /cloudflareDataPlane\.getHeavyEntitlement\(brandId, heavyEntitlementAction\)/);
+  assert.match(page, /if \(!brandId \|\| !heavyEntitlementAction\)/);
+});

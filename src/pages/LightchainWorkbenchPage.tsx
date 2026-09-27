@@ -104,6 +104,7 @@ import {
   type CanvasSourceMetadata,
 } from '../features/canvasSourceMetadata';
 import { resolveHeavyRouteForRow } from '../features/lightchain/heavyRouteMapping';
+import { isHeavyOwnedFeature } from '../lib/heavyCapability';
 import {
   assertCompletedImageEditResult,
   assertCompletedModelMatrixResult,
@@ -2136,18 +2137,21 @@ export function LightchainWorkbenchPage() {
   const workflowRightsGate = selectedFeatureWorkflow?.rightsGate ?? '';
   const lightchainProviderRoute = selectedFeatureWorkflow?.providerRoute ?? 'unsupported';
   const lightchainProviderSupported = selectedFeatureWorkflow !== null;
-  const heavyEntitlementAction = lightchainProviderSupported
+  const heavyOwnedFeature = isHeavyOwnedFeature(selectedTool.id);
+  const heavyEntitlementAction = heavyOwnedFeature && lightchainProviderSupported
     ? lightchainProviderRoute
     : null;
-  const heavyEntitlementReady = heavyEntitlementAction !== null
-    && heavyEntitlement?.allowed === true
-    && heavyEntitlement.requestScopedAttestationRequired === false;
+  const heavyEntitlementReady = !heavyOwnedFeature || (
+    heavyEntitlementAction !== null
+      && heavyEntitlement?.allowed === true
+      && heavyEntitlement.requestScopedAttestationRequired === false
+  );
   const heavyEntitlementReason = heavyEntitlement?.reason
     ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
   const heavyEntitlementDisplayMessage = heavyEntitlementMessage(heavyEntitlementReason, heavyEntitlementLoading);
   // Heavy status is requestless and therefore only a closed UI preflight. The
   // provider handler remains the authority for the request-scoped attestation.
-  const providerRightsConfirmed = heavyEntitlementReady;
+  const providerRightsConfirmed = !heavyOwnedFeature || heavyEntitlementReady;
 
   useEffect(() => {
     let cancelled = false;
@@ -2252,7 +2256,7 @@ export function LightchainWorkbenchPage() {
 
   const unifiedFlowState = deriveUnifiedWorkspaceFlowState({
     inputReady: hasCurrentInput || Boolean(nextStepConfirmed),
-    rightsReady: !lightchainProviderSupported || heavyEntitlementReady,
+    rightsReady: !lightchainProviderSupported || !heavyOwnedFeature || heavyEntitlementReady,
     generating: lightchainGenerationRunning || isPrintingImageGenerationRunning,
     completed: Boolean(lightchainResult) || workspaceArtifacts.length > 0,
     failed: Boolean(lightchainGenerationError || printingGenerationError),
@@ -5420,10 +5424,10 @@ export function LightchainWorkbenchPage() {
                     disabled
                     data-testid="lightchain-fitting-batch-permission"
                     data-track-id="GENERATE_CLICK"
-                    aria-label={heavyEntitlementDisplayMessage}
+                    aria-label={heavyOwnedFeature ? heavyEntitlementDisplayMessage : 'タスクを追加してください'}
                     className="inline-flex h-10 w-full max-w-60 flex-1 items-center justify-center gap-2 rounded-lg bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 opacity-40 transition-colors disabled:cursor-not-allowed"
                   >
-                    {heavyEntitlementDisplayMessage}
+                    {heavyOwnedFeature ? heavyEntitlementDisplayMessage : 'タスクを追加してください'}
                     <Sparkles className="size-4" aria-hidden="true" />
                   </button>
                 </div>
@@ -7071,7 +7075,7 @@ export function LightchainWorkbenchPage() {
             <textarea id="lightchain-wear-board-prompt" value={wearBoardPrompt} onChange={(event) => setWearBoardPrompt(event.target.value)} className="mt-1 min-h-16 w-full resize-none rounded-lg border border-white/10 bg-[#151b1d] p-2 text-[10px] leading-4 text-neutral-100 outline-none focus:border-cyan-300/60" />
             <div className="mt-2 flex items-center justify-between text-[10px] text-neutral-400"><span>強化モード</span><button type="button" role="switch" aria-checked={wearBoardStrongMode} onClick={() => setWearBoardStrongMode((value) => !value)} className={`h-4 w-8 rounded-full p-0.5 ${wearBoardStrongMode ? 'bg-cyan-300' : 'bg-neutral-600'}`}><span className={`block h-3 w-3 rounded-full bg-white transition ${wearBoardStrongMode ? 'translate-x-4' : ''}`} /></button></div>
             <div className="mt-3 grid grid-cols-2 gap-2"><div className="relative text-[10px] text-neutral-400">生成設定<button type="button" role="combobox" aria-label="生成設定" aria-expanded={wearBoardOpenMenu === 'generation'} onClick={() => setWearBoardOpenMenu((value) => value === 'generation' ? null : 'generation')} className="mt-1 flex w-full items-center justify-between rounded bg-[#30383b] px-2 py-1 text-left text-[10px] text-neutral-100">{wearBoardGenerationSetting}<span>⌄</span></button>{wearBoardOpenMenu === 'generation' && <div role="menu" className="absolute left-0 right-0 top-full z-30 rounded bg-[#30383b] p-1 shadow-xl"><button type="button" role="menuitem" className="w-full rounded px-2 py-1 text-left text-[10px] text-neutral-100 hover:bg-white/10" onClick={() => { setWearBoardGenerationSetting('自動'); setWearBoardOpenMenu(null); }}>自動</button></div>}</div><div className="relative text-[10px] text-neutral-400">解像度<button type="button" role="combobox" aria-label="解像度" aria-expanded={wearBoardOpenMenu === 'resolution'} onClick={() => setWearBoardOpenMenu((value) => value === 'resolution' ? null : 'resolution')} className="mt-1 flex w-full items-center justify-between rounded bg-[#30383b] px-2 py-1 text-left text-[10px] text-neutral-100">{wearBoardResolution}<span>⌄</span></button>{wearBoardOpenMenu === 'resolution' && <div role="menu" className="absolute left-0 right-0 top-full z-30 rounded bg-[#30383b] p-1 shadow-xl"><button type="button" role="menuitem" className="w-full rounded px-2 py-1 text-left text-[10px] text-neutral-100 hover:bg-white/10" onClick={() => { setWearBoardResolution('4K'); setWearBoardOpenMenu(null); }}>4K</button><button type="button" role="menuitem" className="w-full rounded px-2 py-1 text-left text-[10px] text-neutral-100 hover:bg-white/10" onClick={() => { setWearBoardResolution('2K'); setWearBoardOpenMenu(null); }}>2K</button></div>}</div></div>
-            <button type="button" disabled className="mt-3 w-full rounded-lg bg-[#10c8c0] px-3 py-0.5 text-[10px] font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-70" data-testid="lightchain-wear-board-permission">{heavyEntitlementDisplayMessage}</button>
+            <button type="button" disabled className="mt-3 w-full rounded-lg bg-[#10c8c0] px-3 py-0.5 text-[10px] font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-70" data-testid="lightchain-wear-board-permission">{heavyOwnedFeature ? heavyEntitlementDisplayMessage : '生成準備中'}</button>
           </div>
 
           <div className="absolute left-[55.8%] top-[19.6%] z-10 w-[13.1%] min-w-[180px] overflow-hidden rounded-xl bg-white shadow-2xl">
@@ -8137,11 +8141,11 @@ export function LightchainWorkbenchPage() {
                       <button
                         type="button"
                         disabled
-                        aria-label={heavyEntitlementDisplayMessage}
+                        aria-label={heavyOwnedFeature ? heavyEntitlementDisplayMessage : '衣服画像を選択してください'}
                         data-testid="lightchain-model-permission"
                         className="rounded-lg bg-[#65d3cf] px-5 py-2.5 text-base font-medium text-neutral-950 disabled:cursor-not-allowed disabled:opacity-70"
                       >
-                        {heavyEntitlementDisplayMessage}
+                        {heavyOwnedFeature ? heavyEntitlementDisplayMessage : '衣服画像を選択してください'}
                       </button>
                     </div>
                   </section>
@@ -8614,10 +8618,17 @@ export function LightchainWorkbenchPage() {
                           <button
                             type="button"
                             data-testid={`lightchain-${selectedTool.id}-permission`}
-                            onClick={() => toast.error(heavyEntitlementDisplayMessage)}
+                            onClick={() => {
+                              if (heavyOwnedFeature) {
+                                toast.error(heavyEntitlementDisplayMessage);
+                                return;
+                              }
+                              void handleLightchainPreviewGenerate();
+                            }}
+                            disabled={heavyOwnedFeature || aiGenerateDisabled || lightchainGenerationRunning}
                             className={selectedTool.id === 'image-repair' ? 'float-right inline-flex h-10 w-72 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#65d3cf] to-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs transition-all hover:brightness-105' : 'inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 shadow-xs transition-all hover:brightness-105'}
                           >
-                            {heavyEntitlementDisplayMessage}
+                            {heavyOwnedFeature ? heavyEntitlementDisplayMessage : 'AI生成'}
                           </button>
                         ) : (
                           <button
