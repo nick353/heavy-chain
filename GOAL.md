@@ -11220,3 +11220,7 @@ Heavy entitlementの全生成面をcross-surface監査した。現行HEADではG
 # Goal progress — 2026-09-27 r476
 
 新しいcross-surface phaseについてOpus 5.5のread-only planning handoffをverifiedで取得した。推奨は、Fitting/Canvasへ共通Heavy consent/preparation/attestation adapterを追加し、GeneratePageへhandoffは採らず、ChatEditorは今回fail-closedのままにするbounded scope。受入条件はrequest-local consent/preparation、入力変更時のdigest/binding無効化、`rightsConfirmed`単独非権限化、GeneratePage/Light/server契約不変、mock-only検証と外部効果0。計画は`324a1767-2456-4822-a565-89d1c9cb3e4b`へ保存し、詳細は`work/heavy-chain-cross-surface-opus-plan-20260927-r1.md`へ固定した。native Astra engineering packageは登録したが、Adaptive runtimeの`capacity_guard=capacity_blocked`と`automatic_dispatch_disabled`によりclaim/start receiptを取得できず、実装は開始していない。Goal active。
+
+# Goal progress — 2026-09-27 r477
+
+fresh strict gate `output/playwright/10m-product-readiness-g615/release-gate-summary.json`（2026-09-27T05:53:18.990Z）を実行し、結果は`ok=false`。失敗は4件に固定され、production monitor/UI pair（UI v2 artifact欠落）、G618 scale-ops baseline（48時間超の期限切れ）、production H602 billing completion readback（6 blocker）、generation scorecard（real-generation visual-scorecard欠落）。同gateはgeneration submit/payment/checkout/publish/destructive cleanup/deployを一切実行していない。Cross-surfaceのHeavy preflight・Canvas/Chat entitlement・Fitting preview focused testsは19/19 pass。Lightchain Workbench現行HEADは`isHeavyOwnedFeature`によりHeavy所有featureだけをHeavy entitlementへ送る実装で、旧agentのLight誤ゲート報告はstale。Astra engineering packageのfresh statusは`waiting_human`, `automatic_dispatch_disabled`, `claim_id=null`, `start_receipt=null`、runtimeは`capacity_blocked`である。Goal active。
