@@ -118,5 +118,25 @@
       "deploy": "not_run"
     },
     "interpretation": "Fresh gate confirms the same four missing/insufficient inputs; no external side effect occurred."
+  },
+  "freshCompletionAudit": {
+    "capturedAt": "2026-09-27T18:52:30.665Z",
+    "path": "output/playwright/heavy-completion-audit-current-20260928-r2/summary.json",
+    "ok": false,
+    "blockerCount": 16,
+    "blockerCategories": [
+      "G617/G619/G669/G670 goal acceptance not closed",
+      "H601/H602 human decisions open",
+      "G617/G619/G618/G668/G659/H601/public entrypoint/H602 proof incomplete",
+      "G619 verifier and release gate command failed"
+    ],
+    "irreversibleActions": {
+      "generationSubmit": "not_clicked",
+      "purchasePaymentCheckout": "not_touched",
+      "identityOtpCaptchaSecrets": "not_touched",
+      "externalPublish": "not_touched",
+      "destructiveCleanup": "not_touched",
+      "deploy": "not_run"
+    }
   }
 }
