@@ -22898,3 +22898,7 @@ H602 production completion readbackをfresh実行し、`ok=false`/6 blockerを�
 # Heavy Chain current state — 2026-09-27 r524
 
 G618 scale-ops verifierをfresh実行し、Cloudflare API origin、brand、live session token、valid baseline limitsの明示入力不足で安全停止した。build/browserは開始されず、monitor/provider/deploy/billing効果は0。正本は`work/heavy-chain-g618-readback-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r525
+
+G619 beta readinessをfresh実行し、3 sessionすべて`ready=false`、`readySessions=0`、missing 18件を確認。同意・録画許可、5分以上の実時間、friction/no-friction、redaction review、usable behavior evidence、scaffold置換が不足している。実参加者・録画・公開を捏造せず、`work/heavy-chain-g619-readback-20260927-r1.json`へ固定した。Goal active。

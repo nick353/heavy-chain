@@ -1,0 +1,27 @@
+{
+  "schema": "heavy-chain.g619-readback.v1",
+  "capturedAt": "2026-09-27T07:16:30Z",
+  "gitHead": "10c49d5",
+  "command": "npm run verify:g619-beta-readiness",
+  "exitCode": 0,
+  "ok": false,
+  "acceptance": "not_claimed",
+  "readySessions": 0,
+  "sessionCount": 3,
+  "missingPerSession": [
+    "consent_confirmed_recording_allowed_public_sharing_false",
+    "duration_minutes_at_least_5",
+    "friction_or_no_friction_note",
+    "redaction_review_passed",
+    "usable_behavior_evidence_artifact",
+    "replace_scaffold_placeholder_notes"
+  ],
+  "missingCount": 18,
+  "externalEffects": {
+    "participantContact": 0,
+    "recording": 0,
+    "publication": 0,
+    "provider": 0
+  },
+  "decision": "g619_real_beta_evidence_missing_fail_closed"
+}
