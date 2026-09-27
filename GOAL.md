@@ -11684,3 +11684,11 @@ G619 beta readinessをfresh監査した。統合beta構造契約は3/3 passだ�
 # Goal progress — 2026-09-27 r594
 
 Goal readiness static verifierをfresh実行し、5/5 checks pass。Cloudflare runtime/auth/media/AI adapters、legacy Supabase runtime除去、legacy edge entrypoint不在を確認した。本番生成、R2、browser completion、deploy、migrationは未実行。正本は`work/heavy-chain-goal-readiness-readback-20260927-r1.json`、Goal active。
+
+# Goal progress — 2026-09-27 r595
+
+OpenAI primary migrationを現行HEAD `182ef86`へ反映した。Heavy image generate/editはOpenAIを既定とし、`workers_ai`は明示指定時だけ残した。production wrangler、docs、fixtures、focused testsを更新し、Heavy API focused 114/114、Light provider adapter 17/17、Cloudflare runtime 6/6、typecheck、goal-readiness static 5/5、OpenAI static readiness 7/7をfresh確認した。provider生成、R2書込、課金、公開、deploy、secret読取は0。Light client/provider wiring、本番OpenAI receipt、live R2 readback、video、monitor/G618/H601/H602/scorecard/release gateは未完了。正本は`work/heavy-chain-openai-primary-readback-20260927-r1.json`、Goal active。
+
+# Goal progress — 2026-09-27 r596
+
+Light client wiringをread-onlyで再監査し、ChatEditor、Canvas、Lightchain Workbench、GeneratePage、protected-editにWorkers AI固定またはreceipt identity前提が残ることを確認した。Opus 5.5 fresh planは、OpenAI既定・Workers明示fallback・旧receipt読取互換・自動fallback禁止を決定した。一方、現行protected-editはWorkers AIガイド画像＋後合成で、サーバーはmask入力を拒否するため、Astraのprovider-aware receipt/server契約が必要。Astra managed dispatchは誤ったhold指定によりclaim前で待機し、変更・provider・secret・deploy外部効果は0。正本は`work/heavy-chain-openai-primary-readback-20260927-r1.json`、Goal active。

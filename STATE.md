@@ -23168,3 +23168,11 @@ Beta構造契約はpass、実beta受入は0/3。実セッションの同意・�
 # Heavy Chain current state — 2026-09-27 r594
 
 Goal readiness static checks 5/5 pass。runtime/auth/media/AI adapterの静的準備は確認済みだが、live production/business evidenceは未完了。正本は`work/heavy-chain-goal-readiness-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r595
+
+OpenAIをHeavyのサーバー側image provider既定値へ切り替え、production wranglerも`AI_IMAGE_PROVIDER=openai`へ更新した。`workers_ai`は明示fallbackのみ。現行HEADは`182ef86`、focused 114/114、Light provider 17/17、Cloudflare runtime 6/6、typecheck、static readinessはpass。実OpenAI生成・R2・deploy・billing・publication・secret読取は0。Lightの既存Workers/Cloudflare client wiring、本番consumer-auth/provider receipt、remote save/reuse/reload/reconciliation、video、strict release gatesは未完了。正本は`work/heavy-chain-openai-primary-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r596
+
+LightのWorkers固定箇所をread-only確認。Opus 5.5のfresh判断は、クライアント既定値をOpenAIに寄せ、旧Workers receiptを読み取り互換にし、自動fallbackを禁止するもの。ただしprotected editは現状Workers AIガイド＋後合成であり、OpenAI editのmask/receipt契約を先に設計しないと壊れる。Astra dispatchは`run_openai_light_client_unification_20260927`のclaim前で`package_not_claimable:external_effect_requires_human`。実provider、R2、deploy、billing、publication、secret読取は0。正本は`work/heavy-chain-openai-primary-readback-20260927-r1.json`、Goal active。
