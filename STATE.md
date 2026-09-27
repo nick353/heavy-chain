@@ -23501,3 +23501,7 @@ Heavy Web `/_health`は200、`/api/auth/get-session`は200/null。Cloudflare web
 # Heavy Chain current state — 2026-09-27 r672
 
 現行ソース監査で、OpenAI backend bindingは存在するが、旧モデルdefault/allowlist、Canvas/ChatのWorkers明示指定、Workers前提QA runnerが残っていることを確認。これは承認済みSunburst移行の未実装差分で、Astra verified receipt前のため編集していない。Light/videoは保護、provider/deploy/billing/publication/secret readは0、Goal active。正本は`work/heavy-chain-openai-receipt-boundary-source-audit-20260927-r1.json`。
+
+# Heavy Chain current state — 2026-09-27 r673
+
+Image resume manifestを現行HEAD `723aa09`へ更新し、最新のcapacity/auth/Companion/source auditを正本参照へ追加。Goal active、video deferred、provider/R2/billing/publication/deploy/secret readは0。Astra verified receiptとconsumer-auth sessionが揃うまで、Sunburst source mutationとprovider callは開始しない。

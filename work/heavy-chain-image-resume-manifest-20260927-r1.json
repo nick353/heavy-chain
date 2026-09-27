@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T11:48:50Z",
-  "sourceRevision": "bfc55e8ca2bea72835441cfb2ec418776abfdd40",
+  "capturedAt": "2026-09-27T12:27:51Z",
+  "sourceRevision": "723aa09",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -49,17 +49,27 @@
     "work/heavy-chain-astra-callsite-boundary-and-baseline-readback-20260927-r1.json",
     "work/heavy-chain-static-readiness-fresh-readback-20260927-r2.json",
     "work/heavy-chain-release-gate-fresh-readback-20260927-r2.json",
-    "work/heavy-chain-production-auth-boundary-fresh-readback-20260927-r2.json"
+    "work/heavy-chain-production-auth-boundary-fresh-readback-20260927-r2.json",
+    "work/heavy-chain-adaptive-capacity-readback-20260927-r5.json",
+    "work/heavy-chain-production-auth-boundary-fresh-readback-20260927-r3.json",
+    "work/heavy-chain-companion-auth-availability-readback-20260927-r1.json",
+    "work/heavy-chain-companion-heavy-web-auth-probe-20260927-r1.json",
+    "work/heavy-chain-web-auth-session-fresh-readback-20260927-r1.json",
+    "work/heavy-chain-openai-receipt-boundary-source-audit-20260927-r1.json"
   ],
   "freshReadback": {
-    "observedAt": "2026-09-27T11:48:50Z",
+    "observedAt": "2026-09-27T12:27:51Z",
     "evidenceRefsPresent": true,
-    "runtimeProcessObserved": false,
+    "runtimeProcessObserved": true,
     "openaiReadonlyModelList": "200_sunburst_present",
     "heavyProviderBinding": "production_openai",
     "freshLocalBaseline": "provider_persistence_14_of_14_and_heavy_adapter_runtime_28_of_28",
     "astraCallsiteDisposition": "heavy_canvas_chat_only_light_generate_and_designproduction_untouched",
     "staticReadiness": "goal_5_of_5_openai_provider_7_of_7",
+    "productionAuthBoundary": "health_200_profile_401_entitlement_401_usage_invalid_brand_400",
+    "consumerAuthSession": "web_session_null_and_monitor_token_absent",
+    "companionAuthSurface": "connected_profile_but_no_heavy_tab_or_task_owned_auth_session",
+    "openaiReceiptBoundary": "backend_openai_default_but_legacy_model_and_workers_callsite_diff_remain",
     "worktree": "clean",
     "dependencyGraph": "acyclic",
     "sourceMutation": false,
@@ -73,7 +83,7 @@
       "owner": "root",
       "action": "After a normal Adaptive runtime reconnection, read the existing image Astra package/run; do not replay its closed transport, manually claim, or fork it.",
       "successEvidence": "fresh runtime/package readback with verified start metadata",
-      "currentBlocker": "managed Astra package returned a bounded disposition, but no independently verifiable invocation identity/start receipt is available"
+      "currentBlocker": "capacity_blocked and managed Astra package returned no independently verifiable invocation identity/start receipt"
     },
     {
       "id": "image-astra-engineering-gate",
@@ -130,6 +140,7 @@
       "action": "Use the authorized authenticated Heavy surface for one image request, then read the same request receipt; do not submit billing, publish, or replay.",
       "successEvidence": "same-run provider receipt with openai/openai-images-api identity, provider task id, user/brand scope, and no-replay readback",
       "externalEffectBoundary": "provider call is the only intended effect; no R2 write or billing mutation may be inferred without receipt"
+      ,"currentBlocker": "consumer_auth_session_missing_and_Astra_engineering_gate_unverified"
     },
     {
       "id": "openai-organization-verification-readonly",

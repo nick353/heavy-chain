@@ -12016,3 +12016,7 @@ Heavy Webのread-only HTTP session readbackをfresh取得。`/_health`は200でC
 # Goal progress — 2026-09-27 r672
 
 現行HEADのOpenAI receipt境界をread-only監査。backendはOpenAIを既定としreceipt provenance/no-mismatch guardを保持する一方、allowlist/defaultは旧モデル、HeavyのCanvas/Chat call siteはWorkers指定、既存QA runnerはWorkers receipt前提であることを確認。production bindingはOpenAI。Lightchainと動画は変更対象外。これはAstra/Luna移行前の差分証拠であり、source/provider/deploy/billing/publication/secret/video変更は0。正本は`work/heavy-chain-openai-receipt-boundary-source-audit-20260927-r1.json`。
+
+# Goal progress — 2026-09-27 r673
+
+画像waveのresume manifestを現行HEAD `723aa09`へ同期し、r667以降のAdaptive capacity、production auth、Companion auth availability/Web probe、Web session、OpenAI receipt-boundary監査をauthoritativeEvidenceへ追加。`runtimeProcessObserved=true`、consumer-auth sessionはweb `null`/monitor token absent、provider receipt未開始、externalEffectsは全て0。次の依存はverified Astra engineering receiptであり、同じblocked packageの再送やforeign lease releaseは行わない。
