@@ -22846,3 +22846,7 @@ release gateとgeneration scorecardを同一HEAD `4fab7f4dafd7ab1b1dad6f795bd175
 # Heavy Chain current state — 2026-09-27 r511
 
 認証継続系をfresh再検証し、auth lock 4/4、session admission 9/9、bootstrap hydration 7/7、session recovery 3/3、auth hydration readback 4/4の合計27/27をpassした。local contract readbackは合計57/57 passへ更新。これはproduction consumer authの実readbackではなく、秘密を含まないoffline契約検証である。外部効果は0、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r512
+
+security/operations/billingのlocal側をfresh再検証した。G620 security 5/5、G614 operations、G632 incident response、G633 scale alerting、H602 Cloudflare contract 3/3とverifierをpass。H602は`contractStatus=verified_local`だが`productionProof=not_verified`、`releaseApproval=false`を維持した。正本は`work/heavy-chain-local-ops-readback-20260927-r1.json`。外部provider、課金、checkout、deploy、writeは0。Goal active。

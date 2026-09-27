@@ -1,0 +1,25 @@
+{
+  "schema": "heavy-chain.local-ops-readback.v1",
+  "capturedAt": "2026-09-27T07:06:13.685Z",
+  "gitHead": "c8c1949",
+  "checks": {
+    "g620SecurityOps": "pass 5/5",
+    "g614OperationsDocs": "pass",
+    "g632IncidentResponse": "pass",
+    "g633ScaleAlertingPlan": "pass",
+    "h602CloudflareContract": "pass 3/3 local contract tests; verifier ok=true"
+  },
+  "h602": {
+    "contractStatus": "verified_local",
+    "productionProof": "not_verified",
+    "releaseApproval": false
+  },
+  "externalEffects": {
+    "provider": 0,
+    "billing": 0,
+    "checkout": 0,
+    "deployment": 0,
+    "writes": 0
+  },
+  "decision": "local_ops_verified_production_billing_unproven"
+}
