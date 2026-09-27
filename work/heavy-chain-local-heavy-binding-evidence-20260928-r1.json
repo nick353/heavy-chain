@@ -87,6 +87,22 @@
     "webLint": {
       "command": "npm run lint (repository root)",
       "exitCode": 0
+    },
+    "authLightContractSuite": {
+      "exitCode": 0,
+      "tests": 45,
+      "passed": 45,
+      "failed": 0,
+      "commands": {
+        "lightUnifiedWorkflow": "6/6",
+        "lightPreSourceGate": "5/5",
+        "lightParityLedger": "6/6",
+        "lightAllFeatureWorkflows": "5/5",
+        "authLock": "4/4",
+        "authSessionAdmission": "9/9",
+        "authBootstrapHydration": "7/7",
+        "authSessionRecovery": "3/3"
+      }
     }
   },
   "fileSha256": {

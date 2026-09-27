@@ -23691,3 +23691,4 @@ Light provider coverage 22/22、Light parity contract 9/9、Cloudflare runtime 6
 G617/G619/G618/G668/G659/H601/public-entrypoint/H602のproduction proof不足、G619 verifier/release gate command failureを確認。
 submit/payment/OTP・CAPTCHA・secret/publication/destructive cleanup/deployは全て未実行。正本は`output/playwright/heavy-completion-audit-current-20260928-r2/summary.json`。
 root `npm run lint`もPASS。ローカル品質ゲートはtypecheck/build/lintと契約テストが全て通過し、本番証跡待ちだけが残る。
+Light unified workflow/parity/pre-sourceとauth lock/admission/bootstrap/recoveryの追加契約テストも45/45 PASS。認証実装のlocal fail-closed境界は確認済みだが、production consumer sessionとOpenAI外部credentialの有効性は別問題として未解消。
