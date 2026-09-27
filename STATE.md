@@ -22423,3 +22423,9 @@ console・page error・request failureは無かったため、少なくとも一
 Heavy/Light ownership仕様の不整合である。ただしこれは実装を修正してよい根拠ではなく、Light本家の旧plan surfaceを残すべき
 範囲とHeavy側の権限表示を除去すべき範囲をAstraで確定した後に、必要な検証契約だけを更新する。local artifactをproduction
 Lightchain all-feature previewへ昇格せず、strict gateのproduction blockerは未解消。provider生成、課金、公開、秘密投入は行っていない。
+# Heavy Chain current state — 2026-09-27 r429
+
+追加のfail-closed契約をfresh検証した。`npm run test:lightchain-all-feature-workflows-contract` は5/5、
+`npm run test:release-gate-lightchain` は15/15でpass。local verifierのmode/auth-state/base URL/output isolation境界と、
+Lightchain production manifest・Companion evidence・provider completion非昇格の契約は維持されている。これは本番認証を
+生成したり、staleなall-feature artifactをproductionへ昇格したりする結果ではない。Goal active。

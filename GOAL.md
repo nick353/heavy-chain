@@ -10961,3 +10961,9 @@ signature timeout、model-libraryのworkspace action判定、fabric/source readb
 Heavy側と混同しない必要があるため、Astraのownership/acceptance判断なしにverifierやpermission表示を変更しない。local結果は
 production all-feature previewの証跡へ昇格せず、strict gateの7 blocker（production monitor/UI、mass-market、Lightchain preview、
 G618、H601、H602、generation scorecard）は維持。provider生成、課金、公開、秘密投入は行っていない。Goal active。
+# Goal progress — 2026-09-27 r429
+
+追加のlocal契約確認として、all-feature verifierのfail-closed/auth/output isolation contract 5/5、Lightchain release-gate
+manifest/Companion/provider non-promotion contract 15/15をpassした。認証state・monitor tokenを推測せず、local artifactを
+production証跡へ昇格しない境界は正常。実認証済みproduction readback、route verifierのAstra判断付き仕様整合、provider/R2/video/
+monitor/G618/H601/H602/scorecardは未完了。Goal active。
