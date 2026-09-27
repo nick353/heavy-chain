@@ -1,0 +1,29 @@
+{
+  "schema": "heavy-chain.printing-contract-readback.v1",
+  "capturedAt": "2026-09-27T07:21:48Z",
+  "gitHead": "0afb3aa",
+  "checks": [
+    {
+      "command": "npm run test:fabric-material-synthesis",
+      "passed": 3,
+      "failed": 0,
+      "status": "passed"
+    },
+    {
+      "command": "npm run test:printing-foundation",
+      "passed": 244,
+      "failed": 0,
+      "status": "passed"
+    }
+  ],
+  "totalPassed": 247,
+  "externalEffects": {
+    "provider": 0,
+    "networkCalls": 0,
+    "billing": 0,
+    "publication": 0,
+    "deletion": 0
+  },
+  "note": "The attempted convenience script names test:printing-composition-interactions, test:manual-printable-surface, and test:printing-compatibility-fixes are not registered npm scripts; their covered tests are included in test:printing-foundation and passed.",
+  "decision": "printing_local_contracts_verified_production_provider_and_remote_readback_unproven"
+}
