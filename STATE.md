@@ -22930,3 +22930,7 @@ Lightchain route parity 34/34、material contract 28/28、UI control boundaries 
 # Heavy Chain current state — 2026-09-27 r532
 
 `npm run verify:release-gate`をfresh実行し、前回のgeneration scorecard欠落は今回の結果から消え、失敗は3件へ減少した。残件はproduction monitor/UI pair（UI summary ENOENT）、G618 scale-ops baselineのfresh evidence不足、production H602 billing completion readbackのquota/checkout/no-real-charge/transaction-entitlement/operator proof不足。正本は`work/heavy-chain-fresh-release-gate-readback-20260927-r2.json`。submit、provider mutation、billing、publication、deploy、destructive cleanup、secret insertionは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r533
+
+独立した`npm run verify:generation-scorecard --silent`をfresh実行し、`passed=false`・primary rows 0・`visual-scorecard.json`欠落を再確認した。r532のrelease-gate summaryではこのcommand failureが列挙されなかったが、独立verifierは未達であり、generation scorecardを完了扱いに戻さない。正本は`work/heavy-chain-generation-scorecard-readback-20260927-r1.json`。provider、課金、公開、deploy、secret insertionは0。Goal active。

@@ -1,0 +1,23 @@
+{
+  "schema": "heavy-chain.generation-scorecard-readback.v1",
+  "capturedAt": "2026-09-27T07:25:30.208Z",
+  "gitHead": "aa1fb9b",
+  "command": "npm run verify:generation-scorecard --silent",
+  "exitCode": 0,
+  "passed": false,
+  "failedDefault": "primary",
+  "scorecardPath": "output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json",
+  "readbackPath": "output/playwright/hc-10m-real-generation-qa-20260626/readback-after-worker.json",
+  "rows": 0,
+  "issues": [
+    "scorecard_artifact_missing:output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json"
+  ],
+  "externalEffects": {
+    "providerSubmit": 0,
+    "billing": 0,
+    "publication": 0,
+    "deploy": 0,
+    "secretInsertion": 0
+  },
+  "decision": "generation_scorecard_not_proven_primary_artifact_missing"
+}
