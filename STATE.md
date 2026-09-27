@@ -22978,3 +22978,7 @@ G618 verifierとrelease-gate sourceをfresh読解し、再開に必要なHTTPS A
 # Heavy Chain current state — 2026-09-27 r544
 
 実Heavy provider receiptとworkspace durable readbackの再開条件をsourceからfresh抽出した。readback-first、exclusive attempt journal、same-run request/job/image scope、candidate/phase completion、checksum・signed media検証、uncertain effect no-replayを秘密値なしで固定した。正本は`work/heavy-chain-provider-receipt-input-packet-20260927-r1.md`。provider submit、課金、公開、cleanupは0。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r545
+
+Video provider laneの再開条件をsource/contractからfresh抽出した。source permission、server credential、same-run receipt/readbackの3条件、provider/input/idempotency、video workspace remote persistence、Canvas handoff、media checksum/scope reconciliationを正本化した。正本は`work/heavy-chain-video-provider-input-packet-20260927-r1.md`。provider call、secret、課金、公開、削除は0。Goal active。
