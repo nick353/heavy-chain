@@ -22480,3 +22480,11 @@ active session/lease/pending/reconciliationは0件でruntime recoveryもdoneだ�
 `external_action_executed=false`、`replay_allowed=false`で、再送可能な残作業も登録されていない。foreign tabをclaim/adoptせず、
 認証cookie/tokenを抽出せず、session cleanupを完了した。したがって次のproduction readbackには明示的な正規auth-stateまたは
 同じCompanion targetの再確立が必要であり、現在のshell環境値欠落を迂回できない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r438
+
+Light本家の`/model-library/model-change-form`を新しいtask-owned Companion transactionでread-only確認した。
+`権限がありません` queryは0件、titleは`Lightchain AI`、visual readback/readyStateはverified/complete、browser mutation・
+provider dispatch・external actionは0、reconciliation不要、replay不可、tab close/lease release/foreign mutationなしだった。
+証拠は`work/heavy-chain-lightchain-model-change-source-readback-20260927-r2.json`。前回のbounded readback gapは解消したが、
+`/model-library/head-form`のLight plan-lock surface、実provider、source sync、remote persistence、billing、release gateは別問題として維持する。Goal active。

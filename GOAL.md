@@ -11009,3 +11009,9 @@ Goal active。
 Companionのruntimeをfresh readbackし、profile/buildは正常、sessions/leases/pending/reconciliationは0件、recoveryはdoneを確認した。
 既存auth readback runは`no_dispatch`で対象tabなし、replay不可だったため、foreign tabのadoptや認証情報の抽出は行わなかった。
 これにより「ブラウザが接続済みである」ことと「production verifierが要求するauth-state/tokenがある」ことを分離して確定した。Goal active。
+
+# Goal progress — 2026-09-27 r438
+
+前回未完了だったLightの`/model-library/model-change-form`をfresh readbackし、旧permission label 0件、visual/semantic readback、
+cleanupを確認した。これでLight model sourceのbounded gapは解消したが、head-formのplan-lockは意図的に保持し、実provider・remote
+persistence・monitor・H601/H602・scorecardのproduction blockersは残した。Goal active。

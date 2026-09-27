@@ -1,0 +1,32 @@
+{
+  "schema": "heavy-chain.lightchain-model-change-source-readback.v1",
+  "capturedAt": "2026-09-27T03:47:41.352Z",
+  "surface": "aos_chrome_companion_profile_instance",
+  "profileInstanceId": "profile_37fd31b6-ed53-4a35-8604-ab92ffbab05a",
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "route": "/model-library/model-change-form",
+  "title": "Lightchain AI",
+  "readback": {
+    "legacyPermissionLabelCount": 0,
+    "query": "権限がありません",
+    "queryCount": 0,
+    "visualReadback": "verified",
+    "readyState": "complete"
+  },
+  "effects": {
+    "browserMutationExecuted": false,
+    "externalActionExecuted": false,
+    "providerCompletion": "unverified",
+    "sourceSync": "unverified",
+    "reconciliationRequired": false,
+    "replayAllowed": false
+  },
+  "cleanup": {
+    "taskTabClosed": true,
+    "leaseReleased": true,
+    "foreignTabsMutated": false,
+    "externalActionExecuted": false
+  },
+  "interpretation": "The previous bounded readback gap for this route is resolved. This is Light source UI evidence only; it does not prove provider generation, source sync, remote persistence, billing, or release acceptance. The separate /model-library/head-form plan-lock surface remains unchanged."
+}
