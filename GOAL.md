@@ -11333,6 +11333,10 @@ fresh strict gate `output/playwright/10m-product-readiness-g615/release-gate-sum
 
 release gateとgeneration scorecardを同一HEAD `4fab7f4dafd7ab1b1dad6f795bd1756373d3009a`でfresh再実行した。`verify:release-gate` は `2026-09-27T06:59:44.460Z` のsummaryで `ok=false`、残件はproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion、generation scorecardの4件。`verify:generation-scorecard` は `2026-09-27T07:01:04.858Z` にexit 1で、原因は旧primary path `output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`の欠落。正本は `work/heavy-chain-fresh-release-gate-readback-20260927-r1.json`。verifier source、provider、auth secret、課金、公開、破壊操作は変更・実行していない。Goal active。
 
+# Goal progress — 2026-09-27 r509
+
+10M completion auditを`2026-09-27T07:01:54.577Z`に同一HEADでfresh実行した。`ok=false`、blockerは16件で、G617/G619/G669/G670未accept、H601/H602 open、G617/G619/G618/G668/G659/H601/H602/public entrypointのproof不足、G619 verifierとrelease-gate command failureを再確認した。10Mコマンド自体は`exitCode=0`（incomplete-ok）だが、業務完了を示さない。証跡は`work/heavy-chain-fresh-release-gate-readback-20260927-r1.json`へ追記済み。外部効果は0、Goal active。
+
 `verify-parity-entry-history-readback.test.ts`の位置づけをsourceとpackage scriptsから確認した。該当testは通常の`test:lightchain-*` suiteや`verify:release-gate`から参照されず、release gate contract 16/16とmanifest 1/1はfresh pass。従って履歴testidは現行release gateを直接阻害しない非ゲーティング契約ドリフトとして保持し、無断修正は行わない。Goal active。
 
 再開時のfresh Adaptive readbackでgraph runtimeはavailable、外部role processはlive_verifiedだが、Heavy packageは`waiting_human`、`automatic_dispatch_disabled`、`claim_id=null`、runtimeは`capacity_blocked`のまま。既存Opus plan/packageを保持し、manual claim・代替route・重複起動は行わず、Goal activeを維持した。
