@@ -1,0 +1,31 @@
+{
+  "schema": "heavy-chain.env-source-diagnosis.v1",
+  "capturedAt": "2026-09-27T07:11:00Z",
+  "requiredKeys": [
+    "VITE_CLOUDFLARE_API_BASE_URL",
+    "VITE_CLOUDFLARE_API_ENABLED",
+    "VITE_MEDIA_PROVIDER_ORDER",
+    "VITE_MEDIA_GATEWAY_URL",
+    "VITE_GENERATION_PROVIDER",
+    "PUBLIC_URL"
+  ],
+  "sources": {
+    ".env.production.example": {
+      "requiredKeys": "all present but example/placeholder origins",
+      "usableForProduction": false
+    },
+    ".env.production.local": {
+      "missingRequiredKeys": [
+        "VITE_CLOUDFLARE_API_BASE_URL",
+        "VITE_CLOUDFLARE_API_ENABLED",
+        "VITE_MEDIA_PROVIDER_ORDER",
+        "VITE_MEDIA_GATEWAY_URL",
+        "VITE_GENERATION_PROVIDER"
+      ],
+      "publicUrl": "placeholder_or_local",
+      "usableForProduction": false
+    }
+  },
+  "decision": "do_not_copy_example_values_or_mutate_config",
+  "reason": "The authoritative production origin, API endpoint, provider order, and generation provider are not established by current non-secret files."
+}
