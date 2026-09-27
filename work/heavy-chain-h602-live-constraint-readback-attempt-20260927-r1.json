@@ -1,0 +1,38 @@
+{
+  "schema": "heavy-chain.h602.live-constraint-readback-attempt.v1",
+  "capturedAt": "2026-09-27T04:04:34.232Z",
+  "projectRef": "ghwjymozrwmcrpjqvbmo",
+  "scope": "read_only_billing_constraint_probe",
+  "attempts": [
+    {
+      "surface": "supabase_cli_db_query_linked",
+      "result": "blocked",
+      "reason": "linked database query requires SUPABASE_DB_PASSWORD; no password was available in the process environment"
+    },
+    {
+      "surface": "supabase_rest_billing_settings",
+      "result": "blocked",
+      "reason": "execution environment DNS could not resolve the project host (curl exit 6)"
+    }
+  ],
+  "liveConstraintReadbackPerformed": false,
+  "valuesRead": [],
+  "staticVerification": {
+    "h602CloudflareContract": "pass",
+    "supabaseSecurityBoundary": "pass"
+  },
+  "externalEffects": {
+    "database": false,
+    "billing": false,
+    "checkout": false,
+    "provider": false,
+    "deployment": false,
+    "publication": false
+  },
+  "credentialHandling": {
+    "serviceRolePrinted": false,
+    "browserSessionTokenUsed": false,
+    "newCredentialCreated": false
+  },
+  "remainingBlocker": "A current authorized read path (linked DB password or an approved network/API route) is required before production quota and checkout settings can be claimed as read back."
+}

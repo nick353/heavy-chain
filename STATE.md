@@ -22519,3 +22519,11 @@ H601/H602、scorecard、strict gateは未完了。Goal active。
 production monitor/UI pair（UI artifact missing）、production mass-market QA（stale）、production Lightchain all-feature previews（stale）、
 G618（stale）、production H601 rights（stale）、production H602 billing completion（remaining blockers）、generation scorecard（command fail）で変化なし。
 認証済みWeb sessionの存在だけではAPI bearer/monitor証跡・provider receipt・billing/legal proofにならない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r443
+
+H602のlive constraint readbackをread-onlyで試行した。Supabase CLIのlinked queryは`SUPABASE_DB_PASSWORD`未設定で停止し、
+既存のproject service-roleを表示・保存・ブラウザtokenへ変換せずに行ったREST readbackは、この実行環境のDNS解決失敗（curl exit 6）で到達できなかった。
+そのためproduction quota/checkoutの現行値は推測せず、`work/heavy-chain-h602-live-constraint-readback-attempt-20260927-r1.json`に
+未取得の事実を記録した。H602 Cloudflare contractとSupabase security boundaryの静的検証はpass、DB/billing/checkout/provider/deployment/publicationの外部効果は0。
+現行のH602 fail-closed、strict gate 7 blockers、認証・provider・remote persistence・H601・scorecard未達は維持。Goal active。

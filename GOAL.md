@@ -11043,3 +11043,11 @@ H601/H602、scorecard、strict gateは未完了。Goal active。
 fresh strict gate（`2026-09-27T03:57:23.782Z`）を取得したが`ok=false`、7 blockerは不変。production monitor/UI、mass-market、Lightchain all-feature、
 G618、H601、H602、generation scorecardはいずれも正規の現行artifactまたはhuman/provider証跡が不足している。Web側auth continuityは確認済みだが、
 API bearer/monitor tokenの代替ではなく、秘密の抽出・推測・偽artifact生成は行っていない。Goal active。
+
+# Goal progress — 2026-09-27 r443
+
+H602のlive constraintをread-onlyで取得できるか確認したが、Supabase linked queryはDB password未設定、REST readbackは実行環境のDNS解決失敗で未到達だった。
+既存のservice-role値を表示・保存せず、browser tokenも使用していない。静的H602 Cloudflare contractとSupabase security boundaryはpassし、
+DB/billing/checkout/provider/deployment/publicationの外部効果は0。現行値を推測してartifactを作らず、証拠は
+`work/heavy-chain-h602-live-constraint-readback-attempt-20260927-r1.json`に固定した。再開条件は承認済みのDB read pathまたは
+monitor/API bearerとbrand scopeの正規注入であり、strict gate 7 blockerとH602/H601/scorecard/provider/persistence未達は継続する。Goal active。
