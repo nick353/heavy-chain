@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.current-requirement-matrix.v2",
   "capturedAt": "2026-09-28",
-  "sourceRevision": "6751dfd",
+  "sourceRevision": "42e07b8",
   "goalStatus": "active",
   "currentWave": "image_generation",
   "video": "deferred_by_user",
@@ -68,7 +68,7 @@
     {
       "id": "quality-release",
       "status": "not_ready",
-      "evidence": ["current release gate generation scorecard failure", "verify:generation-scorecard:primary-artifact-missing"],
+      "evidence": ["current release gate generation scorecard failure", "verify:generation-scorecard:primary-artifact-missing", "Heavy OpenAI regression gate: 4/4 passed"],
       "remaining": "current 10-feature visual scorecard, fresh monitor/UI, and all other gate failures"
     }
   ],
