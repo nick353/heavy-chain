@@ -1,11 +1,13 @@
 {
   "schema": "heavy_chain.openai_api_auth_readback.v1",
   "capturedAt": "2026-09-28",
-  "probeAt": "2026-09-27T16:47:00Z",
+  "probeAt": "2026-09-27T16:51:34Z",
   "scope": "read-only OpenAI model-list check; no image generation, no deployment, no billing",
   "credentialSource": "existing process environment variable; matching shell assignment detected without reading or persisting its value",
   "credentialValuePersisted": false,
   "credentialValueLogged": false,
+  "rotationPerformed": false,
+  "sameCredentialRecheck": true,
   "request": {
     "method": "GET",
     "path": "/v1/models",
