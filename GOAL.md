@@ -11848,3 +11848,7 @@ H601/H602 operator readiness、H602 production completion、G618 scale-opsをfre
 # Goal progress — 2026-09-27 r630
 
 shell環境に`OPENAI_API_KEY`という変数名が存在することだけを確認した（値は未読）。これはWorker secret binding、Organization Verification、authenticated provider receiptの証明ではないため、公式readback artifactに`secretValueRead=false`と`workerSecretBindingVerified=false`を追記した。Adaptive runtimeは不在のまま、Goal active。
+
+# Goal progress — 2026-09-27 r631
+
+画像waveの本番Heavy Workerをread-onlyでfresh確認し、`npx wrangler secret list --config wrangler.production.jsonc`の結果として`OPENAI_API_KEY`と`MEDIA_READ_SECRET`のsecret名が現行Workerに存在することを確認した。`OPENAI_IMAGE_API_KEY`名は無くてもserver adapterが`OPENAI_API_KEY` aliasを受け付ける。secret値は未読、runtime invocation・Organization Verification・authenticated provider receipt・R2保存は未確認。正本は`work/heavy-chain-openai-image-binding-audit-20260927-r1.json`および更新済み`work/heavy-chain-image-resume-manifest-20260927-r1.json`。動画はdeferred、Goal active。

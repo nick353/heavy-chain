@@ -23333,3 +23333,7 @@ OpenAI readiness `7/7`、Cloudflare runtime `6/6`、Light unified workflow `6/6`
 # Heavy Chain current state — 2026-09-27 r630
 
 shell環境の`OPENAI_API_KEY`変数名のみpresence確認。secret値は未読で、Worker binding・Organization Verification・provider receiptは未証明。正本は更新済み`work/heavy-chain-openai-image-official-readback-20260927-r1.json`、Adaptive runtime processは不在、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r631
+
+画像waveの本番Heavy Workerをread-onlyでfresh確認し、現行secret listに`OPENAI_API_KEY`と`MEDIA_READ_SECRET`が存在することを確認。`OPENAI_IMAGE_API_KEY`は不要なaliasで、server adapterは`OPENAI_API_KEY`を受け付ける。secret値は未読で、Organization Verification、実provider receipt、R2/reconciliationは未証明。動画はdeferred。正本は`work/heavy-chain-openai-image-binding-audit-20260927-r1.json`と更新済み`work/heavy-chain-image-resume-manifest-20260927-r1.json`、Goal active。

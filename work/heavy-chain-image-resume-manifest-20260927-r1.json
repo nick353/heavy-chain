@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T10:52:00Z",
-  "sourceRevision": "51bc12e46fee6133a88dcbb34383bf7a915f7688",
+  "capturedAt": "2026-09-27T10:57:44Z",
+  "sourceRevision": "6a0b1f91539c665990a8f8d1afa883b745a436ee",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -13,10 +13,11 @@
     "work/heavy-chain-fresh-completion-audit-20260927-r3.json",
     "work/heavy-chain-image-baseline-tests-20260927-r2.json",
     "work/heavy-chain-openai-image-opus-plan-20260927-r2.json",
-    "work/heavy-chain-openai-image-official-readback-20260927-r1.json"
+    "work/heavy-chain-openai-image-official-readback-20260927-r1.json",
+    "work/heavy-chain-openai-image-binding-audit-20260927-r1.json"
   ],
   "freshReadback": {
-    "observedAt": "2026-09-27T10:53:26Z",
+    "observedAt": "2026-09-27T10:57:44Z",
     "evidenceRefsPresent": true,
     "runtimeProcessObserved": false,
     "worktree": "clean",
@@ -96,7 +97,8 @@
       "dependsOn": ["image-deterministic-regression"],
       "owner": "root",
       "action": "Read the official account verification state through the approved auth surface before first authorized production GPT Image call; do not alter verification or secrets.",
-      "successEvidence": "fresh account-scoped readback proving verification is available, or an exact fail-closed blocker"
+      "successEvidence": "fresh account-scoped readback proving verification is available, or an exact fail-closed blocker",
+      "currentReadOnlyEvidence": "Worker secret names are present, but account verification state is not exposed by the current read-only Worker secret surface"
     },
     {
       "id": "remote-save-reuse-reload-reconciliation",

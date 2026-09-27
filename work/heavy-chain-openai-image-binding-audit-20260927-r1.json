@@ -1,0 +1,51 @@
+{
+  "schema": "heavy-chain.openai-image-binding-audit.v1",
+  "capturedAt": "2026-09-27T10:57:44Z",
+  "sourceRevision": "6a0b1f91539c665990a8f8d1afa883b745a436ee",
+  "scope": {
+    "currentWave": "image_generation",
+    "video": "deferred_by_user",
+    "readOnly": true,
+    "secretValuesRead": false,
+    "externalEffects": 0
+  },
+  "staticConfiguration": {
+    "workerConfig": "cloudflare/heavy-api/wrangler.production.jsonc",
+    "configuredImageProvider": "openai",
+    "acceptedServerSecretAliases": ["OPENAI_IMAGE_API_KEY", "OPENAI_API_KEY"],
+    "configuredOpenAIBaseUrlDefault": "https://api.openai.com/v1",
+    "sourceResolverAcceptsAlias": true,
+    "sourceResolverPath": "cloudflare/heavy-api/src/openai-image.ts"
+  },
+  "workerSecretNameReadback": {
+    "command": "npx wrangler secret list --config wrangler.production.jsonc",
+    "workerConfig": "cloudflare/heavy-api/wrangler.production.jsonc",
+    "namesObserved": ["MEDIA_READ_SECRET", "OPENAI_API_KEY"],
+    "openAIImageApiKeyNameObserved": false,
+    "openAiApiKeyAliasObserved": true,
+    "secretValueRead": false,
+    "runtimeInvocationVerified": false
+  },
+  "shellEnvironment": {
+    "openAiApiKeyNamePresent": true,
+    "secretValueRead": false
+  },
+  "organizationVerification": {
+    "status": "not_checked",
+    "requiredReadback": "approved account-scoped OpenAI verification surface before first authorized GPT Image production call"
+  },
+  "providerReadback": {
+    "status": "not_started",
+    "reason": "No authenticated Heavy provider request was sent in this read-only audit",
+    "receipt": null,
+    "r2Persistence": null,
+    "billingMutation": false
+  },
+  "conclusion": {
+    "serverSecretNameBoundary": "present_by_current_worker_secret_list",
+    "keyValidity": "unknown",
+    "organizationVerification": "unknown",
+    "authenticatedProductionReceipt": "not_proven",
+    "nextGate": "complete organization verification readback, then use one authorized Heavy image request with same-run receipt/readback"
+  }
+}
