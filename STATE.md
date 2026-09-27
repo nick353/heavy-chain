@@ -23601,3 +23601,9 @@ Heavy Generateの限定変更範囲を確定したが、`role_execution.v1` の�
 `invocationId=null`、`lunaAuthorized=false` のまま。したがってコード編集、Luna実装、deploy、同じ鍵の再probe、provider
 生成は行っていない。正本は`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`、残りは外部の同じ鍵/account状態修復、
 一度だけの同一source 2xx auth再確認、verified Astra receipt後のbounded Luna実装である。
+# Adaptive runtime capacity boundary — 2026-09-28
+
+Adaptive runtimeをfresh readbackした。router/graphは稼働しているが、capacity guardは`capacity_blocked`、live capacityは
+不可視、retry policyは`no_immediate_retry`、runtime identityはbuild/config一致のみでprocess一致ではない。既存Astra package
+`run_heavy_image_astra_engineering_20260927_r6`は`launch_allowed=false`のblocked状態で、利用可能routeにもnative Astraの新規実行証明はない。
+重複起動、別モデル置換、forkによる回避はせず、Astra verified receiptと同じAPIキーの401状態が変わるまで変更・生成を止める。
