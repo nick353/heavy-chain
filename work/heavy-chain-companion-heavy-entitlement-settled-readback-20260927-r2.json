@@ -1,0 +1,41 @@
+{
+  "schema": "heavy-chain.companion-heavy-entitlement-settled-readback.v1",
+  "capturedAt": "2026-09-27T03:29:03.456Z",
+  "surface": "aos_chrome_companion_profile_instance",
+  "profileInstanceId": "profile_37fd31b6-ed53-4a35-8604-ab92ffbab05a",
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "route": "/generate?feature=campaign-image",
+  "title": "Lightchain AI",
+  "readback": {
+    "settledHeavyGate": "Heavy側の利用条件と権利表明を確認してください",
+    "heavyTermsAcceptanceVisible": true,
+    "heavyTermsAcceptanceChecked": true,
+    "heavyRightsAttestationVisible": true,
+    "heavyRightsAttestationChecked": false,
+    "legacyPermissionLabelCount": 0,
+    "visualScreenshotBytes": 36561
+  },
+  "effects": {
+    "browserMutationExecuted": false,
+    "externalActionExecuted": false,
+    "providerCompletion": "unverified",
+    "sourceSync": "unverified",
+    "businessCompletion": "unverified",
+    "reconciliationRequired": false,
+    "replayAllowed": false
+  },
+  "cleanup": {
+    "sessionClosed": true,
+    "logicalSessionCount": 0,
+    "exactTabLeaseCount": 0,
+    "pendingOperationCount": 0,
+    "reconciliationPendingActiveCount": 0,
+    "cleanupEligibleTaskTabCount": 0,
+    "foreignResourcesMutated": false
+  },
+  "limits": [
+    "Rights attestation is a user legal statement and was not checked automatically.",
+    "This browser readback does not prove provider generation, R2 persistence, billing, publication, or scorecard completion."
+  ]
+}

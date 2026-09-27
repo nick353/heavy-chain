@@ -10972,3 +10972,7 @@ monitor/G618/H601/H602/scorecardは未完了。Goal active。
 
 実認証とmonitorの環境値はまだ未設定。ただし、Heavy capability gating 9/9、Lightchain permission parity 12/12、
 provider coverage 22/22をfresh再確認した。Heavy側のpermission表示を除去しつつ、Light本家のプラン制限を表すsource componentは保持できている。本番provider/R2/video/monitor/G618/H601/H602/scorecardは未完了。Goal active。
+
+# Goal progress — 2026-09-27 r431
+
+Companionでproduction WorkerのHeavy生成面をfresh readbackした。settled Heavy gate、terms checked、rights attestation visible/unchecked、旧permission label 0件、provider/external action 0、visual readback、session/lease/pending-operation cleanupを確認。認証済みブラウザshellは利用可能だが、本人の法的rights attestationを自動代行せず、provider/R2/video/monitor/G618/H601/H602/scorecardは未完了のまま。Goal active。

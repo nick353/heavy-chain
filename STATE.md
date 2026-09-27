@@ -22436,3 +22436,7 @@ Lightchain production manifest・Companion evidence・provider completion非昇�
 `LIGHTCHAIN_UI_AUTH_STATE`、QA imageは引き続き未設定だった。その一方で、Heavy capability gating 9/9、
 Lightchain permission parity 12/12、provider coverage 22/22をfresh再実行した。`権限がありません`はsource Lightchain
 componentのみに限定され、Heavy生成面に混入していないことを確認。本番認証、provider送信、課金、公開、秘密操作は行っていない。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r431
+
+Companionの新しいtask-owned sessionで、production Workerの`/generate?feature=campaign-image`をsettledまでread-only確認した。Heavy gateは`Heavy側の利用条件と権利表明を確認してください` に収束し、terms checkboxはchecked、request-level rights attestationは表示されるがunchecked、旧`権限がありません`は0件。browser mutation/provider/external actionは0で、visual readbackとsame-tab cleanupを完了した。証拠は`work/heavy-chain-companion-heavy-entitlement-settled-readback-20260927-r2.json`。法的attestationを自動操作せず、provider生成、R2、課金、公開、scorecardは未実行。Goal active。
