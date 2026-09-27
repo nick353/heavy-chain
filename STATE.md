@@ -22808,6 +22808,10 @@ Lightchain release gate contractは16/16 pass。release doctorはproof target/gi
 
 # Heavy Chain current state — 2026-09-27 r506
 
+# Heavy Chain current state — 2026-09-27 r507
+
+G619とgeneration scorecardのcommand failureを分離診断。G619はscaffold不足で正当fail-closed、scorecardはhistorical default artifact missingで現行scorecard候補0件。verifier sourceは未変更、Astra engineeringのcanonical artifact registry判断待ち、外部効果0、Goal active。
+
 履歴testid failureはpackage scripts/release gateの実行経路外であることを確認。release gate contract 16/16、manifest 1/1をfresh passし、現行gateの直接blockerではないと分類した。ソース・外部効果は変更なし、Goal active。
 
 fresh runtime/package readbackはgraph available・process live_verifiedを確認したが、capacity guardは`capacity_blocked`、Heavy packageは`waiting_human`/`automatic_dispatch_disabled`/`claim_id=null`。既存計画を保持し、外部効果0、Goal active。
