@@ -1,7 +1,7 @@
 {
   "schema": "heavy-chain.image-resume-manifest.v1",
-  "capturedAt": "2026-09-27T12:27:51Z",
-  "sourceRevision": "723aa09",
+  "capturedAt": "2026-09-27T17:50:36Z",
+  "sourceRevision": "58de466",
   "goalStatus": "active",
   "scope": {
     "currentWave": "image_generation",
@@ -55,21 +55,24 @@
     "work/heavy-chain-companion-auth-availability-readback-20260927-r1.json",
     "work/heavy-chain-companion-heavy-web-auth-probe-20260927-r1.json",
     "work/heavy-chain-web-auth-session-fresh-readback-20260927-r1.json",
-    "work/heavy-chain-openai-receipt-boundary-source-audit-20260927-r1.json"
+    "work/heavy-chain-openai-receipt-boundary-source-audit-20260927-r1.json",
+    "work/heavy-chain-no-rotation-plan-readback-20260928-r1.json",
+    "work/heavy-chain-openai-api-auth-readback-20260928-r3.json",
+    "work/heavy-chain-release-gate-current-readback-20260928-r1.json"
   ],
   "freshReadback": {
-    "observedAt": "2026-09-27T12:27:51Z",
+    "observedAt": "2026-09-27T17:50:36Z",
     "evidenceRefsPresent": true,
     "runtimeProcessObserved": true,
-    "openaiReadonlyModelList": "200_sunburst_present",
-    "heavyProviderBinding": "production_openai",
+    "openaiReadonlyModelList": "401_invalid_api_key_same_key_no_rotation",
+    "heavyProviderBinding": "source_openai_live_workers_ai_configuration_drift",
     "freshLocalBaseline": "provider_persistence_14_of_14_and_heavy_adapter_runtime_28_of_28",
     "astraCallsiteDisposition": "heavy_canvas_chat_only_light_generate_and_designproduction_untouched",
     "staticReadiness": "goal_5_of_5_openai_provider_7_of_7",
     "productionAuthBoundary": "health_200_profile_401_entitlement_401_usage_invalid_brand_400",
     "consumerAuthSession": "web_session_null_and_monitor_token_absent",
     "companionAuthSurface": "connected_profile_but_no_heavy_tab_or_task_owned_auth_session",
-    "openaiReceiptBoundary": "backend_openai_default_but_legacy_model_and_workers_callsite_diff_remain",
+    "openaiReceiptBoundary": "backend_openai_images_api_but_sunburst_missing_and_live_runtime_workers_ai",
     "worktree": "clean",
     "dependencyGraph": "acyclic",
     "sourceMutation": false,
@@ -140,7 +143,7 @@
       "action": "Use the authorized authenticated Heavy surface for one image request, then read the same request receipt; do not submit billing, publish, or replay.",
       "successEvidence": "same-run provider receipt with openai/openai-images-api identity, provider task id, user/brand scope, and no-replay readback",
       "externalEffectBoundary": "provider call is the only intended effect; no R2 write or billing mutation may be inferred without receipt"
-      ,"currentBlocker": "consumer_auth_session_missing_and_Astra_engineering_gate_unverified"
+      ,"currentBlocker": "same_key_invalid_api_key_consumer_auth_session_missing_and_Astra_engineering_gate_unverified"
     },
     {
       "id": "openai-organization-verification-readonly",
@@ -149,7 +152,7 @@
       "owner": "root",
       "action": "Read the official account verification state through the approved auth surface before first authorized production GPT Image call; do not alter verification or secrets.",
       "successEvidence": "fresh account-scoped readback proving verification is available, or an exact fail-closed blocker",
-      "currentReadOnlyEvidence": "Worker secret names are present, but account verification state is not exposed by the current read-only Worker secret surface"
+      "currentReadOnlyEvidence": "Worker secret names are present, but account verification state is not exposed by the current read-only Worker secret surface; the same local credential is rejected by OpenAI with 401 invalid_api_key"
     },
     {
       "id": "remote-save-reuse-reload-reconciliation",
