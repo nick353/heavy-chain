@@ -1,0 +1,40 @@
+{
+  "schema": "heavy-chain.h601-readback.v1",
+  "capturedAt": "2026-09-27T07:15:01.982Z",
+  "gitHead": "5dc0869",
+  "checks": {
+    "legalSafety": {
+      "command": "npm run verify:h601-legal-safety",
+      "ok": true,
+      "passed": 17,
+      "irreversibleActions": "not_touched"
+    },
+    "operatorReadiness": {
+      "command": "npm run verify:h601-operator-readiness",
+      "ok": false,
+      "missingCount": 10,
+      "acceptance": "not_claimed",
+      "operatorDecisionAttached": false
+    }
+  },
+  "missingCategories": [
+    "Terms locator",
+    "Privacy locator",
+    "retention/deletion/export",
+    "upload rights",
+    "brand/reference",
+    "person/likeness",
+    "copyright/marketing",
+    "commercial use",
+    "counsel/operator review",
+    "safe operator decision JSON"
+  ],
+  "externalEffects": {
+    "provider": 0,
+    "billing": 0,
+    "publication": 0,
+    "identity": 0,
+    "secrets": 0
+  },
+  "decision": "legal_static_guard_verified_operator_acceptance_missing"
+}

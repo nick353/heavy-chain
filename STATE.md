@@ -22886,3 +22886,7 @@ Cloudflare runtime contract 6/6とsecurity auditをfresh passした。legacy Sup
 # Heavy Chain current state — 2026-09-27 r521
 
 Goal readiness static verifierを`2026-09-27T07:14:38.882Z`にfresh実行し、Cloudflare runtime、legacy Supabase removal、auth/media adapter、AI adapter、active gateの5/5をpass。外部API、generation submit、migration、deployは未実行。正本は`work/heavy-chain-goal-readiness-readback-20260927-r1.json`で、production generation/R2/browser business completionは未証明のまま。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r522
+
+H601 legal safety guardは17/17 passしたが、operator readinessは`ok=false`・10件不足・acceptance未claimのまま。Terms/Privacy locator、保持・削除・export、upload rights、brand/reference、likeness、copyright/marketing、commercial use、counsel/operator review、安全なdecision JSONが未添付。Codexは法的最終承認やlocatorを捏造せず、`work/heavy-chain-h601-readback-20260927-r1.json`へ固定した。Goal active。
