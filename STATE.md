@@ -23148,3 +23148,7 @@ provider transport/API-less generationの静的readinessは両方ok。Cloudflare
 # Heavy Chain current state — 2026-09-27 r589
 
 Auth session recovery/hydrationは7/7 pass。ローカル認証継続契約は確認済みだが、live authenticated Heavy browser/provider receiptは未完了。正本は`work/heavy-chain-auth-continuity-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r590
+
+Adaptive role processはheartbeat上running・active_routesなし。MCP status入口はTransport closedでpackage/capacityの再読backができないため、既存Heavy runを保持し、再起動・再dispatch・claim/start/replayをしていない。正本は`work/heavy-chain-adaptive-transport-readback-20260927-r1.json`、Goal active。

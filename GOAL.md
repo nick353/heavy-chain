@@ -11664,3 +11664,7 @@ Cloudflare/OpenAI provider transportとAPI-less generationの静的readinessをf
 # Goal progress — 2026-09-27 r589
 
 auth session recovery / hydration readbackの決定的テストをfresh実行し、7 tests / 7 passed。認証失敗時の一度だけのrefresh/retry、通常エラーの非再試行、同一session readback、login/rights/secret-bearing evidenceの拒否を確認した。正本は`work/heavy-chain-auth-continuity-readback-20260927-r1.json`。本番authenticated browser/provider receiptとは区別し、外部効果は0。Goal active。
+
+# Goal progress — 2026-09-27 r590
+
+Adaptiveのロールプロセスheartbeatをfresh確認した。`status=running`、`active_routes=[]`、`role_contract=role_execution.v1`だが、MCPのruntime/package/workflow readback入口は`Transport closed`。プロセス再起動・Heavy runの再dispatch・claim/start/replayは行わず、復旧後に同じrunを再読する正本を`work/heavy-chain-adaptive-transport-readback-20260927-r1.json`へ固定した。Goal active。
