@@ -22444,3 +22444,7 @@ Companionの新しいtask-owned sessionで、production Workerの`/generate?feat
 # Heavy Chain current state — 2026-09-27 r432
 
 新しいHeavy entitlement・Companion readback後に`npm run verify:release-gate`をfresh実行した。出力は`output/playwright/10m-product-readiness-g615/release-gate-summary.json`、`capturedAt=2026-09-27T03:31:49.454Z`、`ok=false`。production monitor/UI、mass-market QA、Lightchain all-feature order previews、G618、H601 rights、H602 billing completion、generation scorecardの7件は変化なし。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r433
+
+production WorkerのLight source parityをCompanionでfresh readbackした。`/creator` は旧`権限がありません` 0件、生成履歴あり、`/tools/fabric` は旧permission 0件、`AI生成` 1件、参考画像入力面あり、`/model` は旧permission 0件、生成履歴あり、衣服画像ラベルありだった。各routeのvisual readback、browser no-effect、session/lease/pending/reconciliation cleanupを確認。証拠は`work/heavy-chain-lightchain-source-parity-readback-20260927-r1.json`。旧source fixtureの期待値は現行本家表示と不一致だが、Astra判断なしにpermission表示やverifier受入を変更しない。Goal active。

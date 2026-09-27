@@ -1,0 +1,49 @@
+{
+  "schema": "heavy-chain.lightchain-source-parity-readback.v1",
+  "capturedAt": "2026-09-27T03:35:26.265Z",
+  "surface": "aos_chrome_companion_profile_instance",
+  "profileInstanceId": "profile_37fd31b6-ed53-4a35-8604-ab92ffbab05a",
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "routes": {
+    "/creator": {
+      "legacyPermissionLabelCount": 0,
+      "generationHistoryCount": 1,
+      "aiGenerationLabelCount": 0,
+      "browserEffect": "known_no_effect",
+      "visualReadback": "verified"
+    },
+    "/tools/fabric": {
+      "legacyPermissionLabelCount": 0,
+      "aiGenerationButtonCount": 1,
+      "referenceUploadControlCount": 4,
+      "fabricTabCount": 1,
+      "browserEffect": "known_no_effect",
+      "visualReadback": "verified"
+    },
+    "/model": {
+      "legacyPermissionLabelCount": 0,
+      "aiGenerationLabelCount": 0,
+      "generationHistoryCount": 1,
+      "clothingImageLabelCount": 1,
+      "browserEffect": "known_no_effect",
+      "visualReadback": "verified"
+    }
+  },
+  "effects": {
+    "providerCompletion": "unverified",
+    "sourceSync": "unverified",
+    "businessCompletion": "unverified",
+    "externalActionExecuted": false,
+    "foreignResourcesMutated": false
+  },
+  "cleanup": {
+    "sessionClosed": true,
+    "logicalSessionCount": 0,
+    "exactTabLeaseCount": 0,
+    "pendingOperationCount": 0,
+    "reconciliationPendingActiveCount": 0,
+    "cleanupEligibleTaskTabCount": 0
+  },
+  "interpretation": "The prior source fixture's permission-label expectations for these routes are stale relative to this fresh production readback; do not change Heavy/Light implementation or verifier acceptance until the ownership decision is explicit."
+}

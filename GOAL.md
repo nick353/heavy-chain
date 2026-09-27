@@ -10980,3 +10980,7 @@ Companionでproduction WorkerのHeavy生成面をfresh readbackした。settled 
 # Goal progress — 2026-09-27 r432
 
 Heavy entitlementのfresh UI readback後にstrict release gateを再取得した。`capturedAt=2026-09-27T03:31:49.454Z`、`ok=false` で、7 blockerは変化なし。UI gateの認証済みreadbackはprovider receipt、R2 reconciliation、monitor、H601/H602、scorecardの代替にはならない。Goal active。
+
+# Goal progress — 2026-09-27 r433
+
+Light本家の`/creator` / `/tools/fabric` / `/model`をproductionでfresh readbackし、旧`権限がありません`は3 routeとも0件だった。代わり、creatorは生成履歴、fabricはAI生成と参考入力、modelは生成履歴と衣服画像ラベルを確認。これで旧source fixtureがstaleである実証を追加したが、Heavy/Lightの所有境界とverifier契約はAstra判断まで変更しない。Goal active。
