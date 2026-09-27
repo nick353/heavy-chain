@@ -1,0 +1,55 @@
+{
+  "schema": "heavy-chain.fitting-readback-diagnosis.v1",
+  "capturedAt": "2026-09-27T08:07:03.591Z",
+  "origin": "https://heavy-chain-web.nichika2000823.workers.dev",
+  "route": "/fitting",
+  "sessionId": "session_db14874e-cb99-4a51-b8ff-716c8cbf8e3b",
+  "tabId": 1980931137,
+  "generation": "gen_7ae525e1-fd46-4915-b5fc-1fa529eb5a65",
+  "page": {
+    "title": "Lightchain AI",
+    "readyState": "complete",
+    "semanticReadback": "verified",
+    "visualReadback": "verified",
+    "authMarker": "avatar",
+    "legacyPermissionText": false,
+    "heavyTermsRightsState": "consent_and_rights_attestation_required",
+    "garmentInputState": "existing_gallery_material_selected",
+    "cutoutControl": "enabled",
+    "generateControl": "AI生成 disabled until cutout_and_consent",
+    "providerSubmitDispatched": false
+  },
+  "networkReadback": {
+    "source": "performance_resource_timing",
+    "historicalReplay": false,
+    "consoleCount": 0,
+    "redactionApplied": true,
+    "observedEndpointFamilies": [
+      "/api/auth/get-session",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/profile",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/brands",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/heavy/entitlement?action=model-matrix",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/generated-images",
+      "https://heavy-chain-api.nichika2000823.workers.dev/v1/media/read"
+    ],
+    "requestBodiesRead": false,
+    "sensitiveQueryMaterialPersisted": false
+  },
+  "businessCompletion": {
+    "providerReceipt": "unverified",
+    "sourceSync": "unverified",
+    "reconciliation": "unverified"
+  },
+  "cleanup": {
+    "schema": "aos.chrome_companion.owner_cleanup_receipt.v1",
+    "ok": true,
+    "sessionClosed": true,
+    "taskTabClosed": true,
+    "leasesReleased": 1,
+    "retained": [],
+    "unknown_effect": [],
+    "externalActionExecuted": false,
+    "recorded_at": "2026-09-27T08:07:03.591Z"
+  },
+  "decision": "no_権限がありません_blocker;_Fitting_requires_cutout_plus_Heavy_consent_and_request_scoped_rights_attestation_before_provider_generation"
+}

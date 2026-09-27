@@ -11537,6 +11537,10 @@ public entrypoint readback反映後にunified release gateをfresh再実行し�
 
 正規Heavy `/generate?feature=campaign-image`をfresh Companionで4.5秒settle後にreadbackし、Heavy entitlement gate、terms checkbox、request-scoped rights attestation checkboxが表示され、旧`権限がありません`は不在、provider submitなし、console 0件を確認。商品画像未選択のため`生成する`はdisabledで、入力＋同意＋権利表明が揃うまでfail-closedする正しい状態。Resource Timingはconsumer-auth、profile、brands、usage、Heavy entitlement各familyを観測し、credential/bodyは取得していない。正本は`work/heavy-chain-generate-readback-diagnosis-20260927-r1.json`。session cleanupはok、task tab close、lease release confirmed、external effect 0。Goal active。
 
+# Goal progress — 2026-09-27 r559
+
+別実装のHeavy `/fitting`をfresh Companionで5秒settle後にreadbackし、既存Gallery衣服素材、avatar、readyState complete、semantic/visual verified、旧`権限がありません`なしを確認した。高精度AI切り抜きはenabledだが、AI生成はcutout完了とHeavy規約/権利表明が揃うまでdisabled。`/v1/heavy/entitlement?action=model-matrix`、profile/brands、generated-images、media/readをread-only観測し、provider submit 0、console 0。Resource Timing出力にtoken queryが含まれたため証跡へは一切保存せず、request bodyも読まなかった。正本は`work/heavy-chain-fitting-readback-diagnosis-20260927-r1.json`。session cleanupはok、task tab close、lease release confirmed、external effect 0。Goal active。
+
 要件別completion auditを現行証拠へ更新し、`work/heavy-chain-completion-audit-20260927-r2.json`へ固定した。dirty worktree、Light現行parityの各local suite、operations/local guardはpassまたはreadback済みだが、履歴testidの契約ドリフト、provider receipt、remote R2 chain、video receipt、monitor/G618、H601/H602、scorecard、strict gateは未完了のまま。外部効果は0、Goal active。
 
 10M completion auditを`2026-09-27T06:50:52.998Z`にfresh実行し、`ok=false`/16 blockersを確認。続くunified release gateを`2026-09-27T06:52:20.321Z`にfresh実行し、失敗はproduction monitor/UI、G618 scale ops、production H602 billing completion、generation scorecardの4件に固定された。外部provider・課金・公開・秘密投入・破壊操作は0。Goal active。
