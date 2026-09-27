@@ -12184,3 +12184,5 @@ focused testsは18/18 PASS、source diffはbaseline `370368b`から0、worktree 
 `work/heavy-chain-local-heavy-binding-evidence-20260928-r1.json`。これはローカル結線証拠であり、Sunburst実装、Astraの
 verified runtime receipt、同じキーの401解消、実provider生成、remote save/reuse/reload/reconciliation、strict gateを完了扱いにはしない。
 追加でCloudflare Heavy APIの既存全テスト114/114とbackend typecheckがPASS。local backendの契約・認証・D1/R2/readbackは健全だが、同じキーの401、Sunburst未実装、verified Astra runtime、production生成receiptとremote再利用readbackは未達のまま。
+
+fresh strict gateを再実行し、FAILはproduction monitor/UI、G618、H602、current visual scorecardの4項目に限定された。submit/payment/publish/destructive cleanup/deployは全て未実行で、古い証跡を完了扱いにしていない。正本は`output/playwright/heavy-release-gate-current-20260928-r3.json`。

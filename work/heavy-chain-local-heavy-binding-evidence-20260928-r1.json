@@ -79,5 +79,24 @@
     "Sunburst model support is not implemented",
     "The unchanged key still returns 401 invalid_api_key; no new provider probe was sent in this run",
     "No real generation, durable remote save/reuse/reload, reconciliation, deploy, billing, publication, or video evidence"
-  ]
+  ],
+  "freshReleaseGate": {
+    "capturedAt": "2026-09-27T18:46:28.374Z",
+    "path": "output/playwright/heavy-release-gate-current-20260928-r3.json",
+    "ok": false,
+    "failed": [
+      "readback:production monitor and UI pair",
+      "readback:G618 scale ops baseline",
+      "readback:production H602 billing completion readback",
+      "command:generation scorecard"
+    ],
+    "irreversibleActions": {
+      "generationSubmit": "not_clicked",
+      "purchasePaymentCheckout": "not_touched",
+      "externalPublish": "not_touched",
+      "destructiveCleanup": "not_touched",
+      "deploy": "not_run"
+    },
+    "interpretation": "Fresh gate confirms the same four missing/insufficient inputs; no external side effect occurred."
+  }
 }
