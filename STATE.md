@@ -23269,3 +23269,7 @@ provider receipt、remote persistence、strict releaseは未完了。provider/R2
 # Heavy Chain current state — 2026-09-27 r614
 
 証拠packetを渡したOpus再計画は`Unexpected adaptive_plan provenance field(s)`で実行前blocked（invocation id `opus55-55f6d156bd1c4693bbca50dd5cd36bf0`、attempted=false、verified=false）。同じpayloadは再送しない。画像コード変更・provider call・deploy・billing・secret読取・公開は0。正本は`work/heavy-chain-openai-image-opus-replan-readback-20260927-r1.json`、Goal active。
+
+# Heavy Chain current state — 2026-09-27 r615
+
+Opus 5.5 verified planを取得（`ses_f1d9b43bbffedGfuLVDFGM1TNW`、`opencode/claude-opus-5-5`、$0.095851 reconciled）。新規画像既定は`gpt-image-2.5-sunburst`、既存receipt互換、明示選択、no fallback/replay、mock-only QA、video差分ゼロを受入条件とする。Astra packageのverified start receiptとreceipt QA path特定が残るためLuna実装未開始。正本は`work/heavy-chain-openai-image-opus-plan-20260927-r2.json`、Goal active。

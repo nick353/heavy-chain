@@ -1,0 +1,57 @@
+{
+  "schema": "heavy_chain_openai_image_opus_plan.v1",
+  "captured_at": "2026-09-27",
+  "scope": "image_generation_only",
+  "video_scope": "deferred_no_diff",
+  "planner": {
+    "route": "opencode_opus55_planner",
+    "model_id": "opencode/claude-opus-5-5",
+    "invocation_id": "ses_f1d9b43bbffedGfuLVDFGM1TNW",
+    "verified": true,
+    "status": "completed",
+    "actual_usd": 0.095851
+  },
+  "facts": {
+    "official": [
+      "OpenAI image guide uses gpt-image-2.5-sunburst in Images API examples.",
+      "GPT Image 2.5 Sunburst and Flare are documented; new integrations should use GPT Image 2.5."
+    ],
+    "local": [
+      "cloudflare/heavy-api/src/openai-image.ts allowlist/default are old gpt-image-* / gpt-image-1-mini.",
+      "src/pages/GeneratePage.tsx defaults provider to workers_ai and OpenAI model to gpt-image-1-mini.",
+      "cloudflare/heavy-api/test/openai-image.test.ts encodes the old default."
+    ]
+  },
+  "acceptance": [
+    "New OpenAI image generation without a model uses gpt-image-2.5-sunburst and records it in the receipt.",
+    "Explicit supported models remain unchanged; unsupported models fail without substitution.",
+    "Legacy Workers receipts and old OpenAI model receipts remain readable without rewrite or regeneration.",
+    "OpenAI failure never falls back to Workers or another model and never replays an old receipt.",
+    "QA is deterministic/mock-only with zero provider/network calls.",
+    "Video files remain unchanged."
+  ],
+  "owned_paths_pending_astra": [
+    "cloudflare/heavy-api/src/openai-image.ts",
+    "src/pages/GeneratePage.tsx",
+    "cloudflare/heavy-api/test/openai-image.test.ts",
+    "receipt QA/readback files to be identified by Astra"
+  ],
+  "dependency_order": [
+    "Verified Astra engineering receipt with exact receipt QA paths",
+    "Implement server model selection and receipt compatibility",
+    "Implement Light provider/model default parity",
+    "Update deterministic tests and mock E2E",
+    "Fresh readback and strict gate"
+  ],
+  "blockers": [
+    "Existing Astra package run_openai_image_model_engineering_20260927_r2 has native_start_receipt_metadata_unavailable.",
+    "Receipt QA path and fixture ownership still need Astra identification."
+  ],
+  "external_effects": {
+    "provider_calls": 0,
+    "deploy": 0,
+    "billing": 0,
+    "secrets_read": 0,
+    "publication": 0
+  }
+}
