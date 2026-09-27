@@ -11134,3 +11134,10 @@ Supabase公式organization readbackで`tier_free`を確認し、公式docs上は
 Adaptive transportは新しいturnでも`Transport closed`が継続したため、Resumeや別の本番変更へ迂回しなかった。代わりにmonitor/G618/H602/scorecardの正確な再開CLIと受入条件を
 sourceからfresh確認し、tokenを保存しないrestart packetを`work/heavy-chain-restart-packet-20260927-r1.json`へ固定した。strict gateは外部状態が変わるまで前回の4 blockerを維持し、
 ローカルbuild/provider/DB書込み・決済・公開は行っていない。Goal active。
+
+# Goal progress — 2026-09-27 r457
+
+外部認証に依存しない境界をfresh検証し、video provider boundary 1/1、video contract 3/3、video persistence 4/4、provider persistence/readback 14/14、
+media reconciliation 5/5、auth session admission 9/9、auth lock 4/4、auth bootstrap hydration 7/7（計43 assertions）をpassした。
+これらはvideo/persistence/authのfail-closed契約を強化するが、production provider receipt・R2 chain・monitor/G618・H602 live readback・visual scorecardの代替ではない。
+証跡は`work/heavy-chain-local-boundary-readback-20260927-r1.json`。Goal active。

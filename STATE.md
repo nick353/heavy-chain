@@ -22618,3 +22618,9 @@ H602の再開条件は「正常なAdaptive transportでAstra判断 → 必要な
 Adaptive runtime statusは新しいturnでも`Transport closed`で、同一接続の再送はしていない。`monitor-production-health.mjs`、G618 verifier、H602 readback、scorecardのsourceをfresh確認し、
 復旧後に実行するGET-only monitor・96時間G618・H602 live readback・scorecardのコマンド契約をrestart packetへ保存した。monitor tokenは未設定・未保存、Supabase Resume、provider generation、
 R2 chain、課金、公開、秘密操作は0。正本補足は`work/heavy-chain-restart-packet-20260927-r1.json`。Goal active。
+
+# Heavy Chain current state — 2026-09-27 r457
+
+video/provider/persistence/authのlocal boundary suiteをfresh実行し、合計43 assertionsが全てpassした。Videoはimage generationへ誤routingせず、source/credential/readback不足でfail-closed、
+durable save/reopenとprovider promotion guard、private media reconciliation plan、auth session/lock/bootstrapを確認した。実provider、R2、monitor、H602 live DB、課金、公開、秘密取得は0。
+正本補足は`work/heavy-chain-local-boundary-readback-20260927-r1.json`。Goal active。
