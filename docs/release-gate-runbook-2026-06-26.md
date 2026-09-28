@@ -24,6 +24,16 @@ npm run verify:release-gate -- --allow-dirty --out output/playwright/10m-product
 
 `--skip-commands` is only for debugging readback parsing. It must exit as a failed/non-acceptance proof and cannot be used for release readiness.
 
+### Pre-launch scope (H602 deferred)
+
+Before the product is sold or publicly launched, the gate may be run with
+`--scope pre-launch`. This keeps every non-billing readback and command strict,
+records the production H602 billing completion readback as `DEFERRED`, and is
+never release approval. It does not delete or weaken H602 code or history.
+Before selling or public launch, rerun the default strict gate (`--scope full`,
+or no scope) and complete H602 under the operator-owned billing/payment
+boundary.
+
 The default readback artifact freshness window is 48 hours, and each artifact must carry an embedded timestamp such as `capturedAt`, `measuredAt`, or `captured_at`. File mtime is not accepted as release evidence. Override the window only for deliberate historical audits:
 
 ```bash

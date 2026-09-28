@@ -1,5 +1,19 @@
 # Goal progress — 2026-09-27 r403
 
+## H602 pre-launch deferral and monitor authentication boundary — 2026-09-28
+
+H602の請求・販売準備は、現段階がプレローンチであるため物理削除せず、release gateへ明示的な
+`--scope pre-launch`を追加して延期扱いにした。pre-launchはH602だけを`DEFERRED`として記録し、
+その他のreadback・command gateを一切緩和しない。既定値と`--scope full`は従来どおりH602を必須とし、
+未知のscopeはfail-closedにする。pre-launchの成功は販売・公開リリース承認ではない。
+
+Heavyの認証済みworkspaceから正規に確認できたmonitor contextは、canonical API origin
+`https://heavy-chain-api.nichika2000823.workers.dev`と現在のbrand ID（`98718413-7ea3-4a1f-87b1-1804ae2ec957`）
+まで。監視用tokenは別発行UI／endpointが存在せず、現行のconsumer bearerはブラウザのHttpOnly/in-memory
+境界にあるため、抽出・貼り付け・CLIへの自動移送は行わない。monitor tokenが必要なG618/production
+monitorは未達のまま保持し、認証基盤側で正規のread-only運用資格情報が用意されるまで完了扱いにしない。
+法的権利同意・公開操作・支払い／プラン操作は引き続き本人境界である。
+
 ## Fresh strict release gate — 2026-09-28
 
 現行HEAD `bc19bdd`のclean worktreeで`npm run verify:release-gate -- --command-timeout-ms 600000`を同じ実行のまま完了。local syntax/security/Heavy OpenAI regression/Cloudflare image QA/video fail-closed/video persistence/workspace handoff/provider persistence/Canvas readback/Light coverage/parity/OpenAI static/scorecard provenance/G614/G632/G633/H601/H602 static/typecheck/build/lint/diff checkはPASS。gateはFAILだが、残りはproduction monitor/UI pair、G618 scale ops baseline、production H602 billing completion readback、generation scorecardの4項目だけ。APIキーは変更・表示・保存せず、401状態で再probeなし、provider submit・deploy・課金・公開・動画変更は0。Goalはactive。正本は`output/playwright/10m-product-readiness-g615/release-gate-summary.json`、`work/heavy-chain-no-rotation-plan-readback-20260928-r1.json`、`work/heavy-chain-image-resume-manifest-20260927-r1.json`。

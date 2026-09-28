@@ -13,6 +13,7 @@ const allowDirty = Boolean(args.allowDirty || args['allow-dirty']);
 const skipCommands = Boolean(args.skipCommands || args['skip-commands']);
 const maxArtifactAgeHours = Number(args.maxArtifactAgeHours || args['max-artifact-age-hours'] || 48);
 const defaultCommandTimeoutMs = Number(args.commandTimeoutMs || args['command-timeout-ms'] || 10 * 60 * 1000);
+const H602_READBACK_NAME = 'production H602 billing completion readback';
 const PRODUCTION_ORIGIN = 'https://heavy-chain-web.nichika2000823.workers.dev';
 const PRODUCTION_API_ORIGIN = 'https://heavy-chain-api.nichika2000823.workers.dev';
 const CURRENT_UI_PAGE_NAMES = Object.freeze(['dashboard', 'generate', 'fitting', 'marketing', 'studio', 'models', 'patterns', 'video', 'lab', 'gallery', 'history', 'jobs', 'canvas', 'brand-settings']);
@@ -216,7 +217,7 @@ const requiredReadbacks = [
     expect: 'chosen public entrypoint https://heavy-chain-web.nichika2000823.workers.dev is reachable without submit/payment/publish actions',
   },
   {
-    name: 'production H602 billing completion readback',
+    name: H602_READBACK_NAME,
     path: 'output/playwright/g774-h602-production-completion-current-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
@@ -421,9 +422,15 @@ const commandChecks = [
 ];
 
 function runReleaseGate() {
+const scopeSelection = normalizeReleaseGateScope(args.scope);
 report = {
   schema: 'heavy-chain.release-gate-unified.v1',
   capturedAt: capturedAt.toISOString(),
+  scope: {
+    selected: scopeSelection.value,
+    allowed: ['full', 'pre-launch'],
+    releaseReady: false,
+  },
   mode: skipCommands
     ? 'readback-only-dry-run-no-submit-no-payment-no-cleanup'
     : 'readback-plus-local-static-checks-no-submit-no-payment-no-cleanup',
@@ -451,6 +458,31 @@ report = {
   ],
 };
 
+if (!scopeSelection.valid) {
+  report.scope.releaseReady = false;
+  report.blockers.push({
+    id: 'invalid_release_gate_scope',
+    message: `Unsupported release-gate scope: ${scopeSelection.value}. Allowed values are full and pre-launch.`,
+    next: 'Choose --scope full or --scope pre-launch and rerun.',
+  });
+  report.ok = false;
+  report.failed = ['blocker:invalid_release_gate_scope'];
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
+  console.log(JSON.stringify({ ok: false, outPath, failed: report.failed }, null, 2));
+  process.exit(1);
+}
+
+const readbackPlan = releaseGateReadbackPlan(scopeSelection.value);
+report.deferredReadbacks = readbackPlan.deferred;
+if (scopeSelection.value === 'pre-launch') {
+  report.warnings.push({
+    id: 'pre_launch_scope_not_release_ready',
+    message: 'Pre-launch scope defers H602 billing completion only; a successful pre-launch check is not release approval or permission to sell publicly.',
+    next: 'Before selling or public launch, rerun with --scope full and complete the H602 production readback under the operator billing boundary.',
+  });
+}
+
 if (!allowDirty) {
   checkGitClean();
 } else {
@@ -462,7 +494,7 @@ if (!allowDirty) {
   });
 }
 
-for (const item of requiredReadbacks) {
+for (const item of readbackPlan.required) {
     report.readbacks.push(item.pair ? readbackPairCheck(item) : readbackCheck(item));
 }
 
@@ -483,6 +515,7 @@ report.ok =
   report.blockers.length === 0 &&
   report.readbacks.every((item) => item.passed) &&
   report.commands.every((item) => item.passed);
+report.scope.releaseReady = report.ok && scopeSelection.value === 'full';
 report.failed = [
   ...report.readbacks.filter((item) => !item.passed).map((item) => `readback:${item.name}`),
   ...report.commands.filter((item) => !item.passed).map((item) => `command:${item.name}`),
@@ -1256,6 +1289,28 @@ export function readCurrentLightchainManifest() {
     throw new Error(`lightchain_manifest_invalid:${sourcePath}`);
   }
   return Object.freeze(ids);
+}
+
+export function normalizeReleaseGateScope(rawScope) {
+  const value = rawScope === undefined ? 'full' : String(rawScope);
+  return Object.freeze({
+    valid: value === 'full' || value === 'pre-launch',
+    value,
+  });
+}
+
+export function releaseGateReadbackPlan(scope, entries = requiredReadbacks) {
+  if (scope === 'full') return { required: entries, deferred: [] };
+  if (scope !== 'pre-launch') throw new Error(`invalid_release_gate_scope:${scope}`);
+  return {
+    required: entries.filter((entry) => entry.name !== H602_READBACK_NAME),
+    deferred: [{
+      name: H602_READBACK_NAME,
+      status: 'DEFERRED',
+      reason: 'user-approved pre-launch deferral',
+      reactivateWhen: 'before selling or public launch',
+    }],
+  };
 }
 
 function parseArgs(argv) {
