@@ -23702,6 +23702,10 @@ auth hydration readback contractも4/4 PASS。login marker、rights UI、unhealt
 
 正本originのHeavy APIへ認証なしGETを行い、`/v1/brands`、`/v1/profile`、`/v1/heavy/entitlement`が全てHTTP 401 `unauthorized`でfail-closedすることを確認した。consumer-auth session、OpenAI credential、provider生成要求は送っていない。正本は`work/heavy-chain-canonical-auth-boundary-readback-20260928-r1.json`。
 
+# Consumer-auth health readback — 2026-09-28
+
+`consumer-auth.nichika2000823.workers.dev/health`はHTTP 200で、Heavy app、D1、email/email-budget設定済みを返した。一方、同originの`/v1/identity`は認証なしでHTTP 401。auth serviceの稼働・設定と、authenticated bearer sessionの存在を分離して記録した。アカウント作成、メール送信、provider生成は未実行。正本は`work/heavy-chain-consumer-auth-health-readback-20260928-r1.json`。
+
 # Production health reachability readback — 2026-09-28
 
 Heavy APIの`/v1/health`をGETしたが、現在の実行環境ではDNS解決に失敗しHTTP応答を取得できなかった。これは環境側の到達性観測であり、Workerの稼働状態やprovider credentialの不良を意味しない。正本は`work/heavy-chain-production-health-dns-readback-20260928-r1.json`。この観測からdeploy、secret変更、provider生成は開始しない。

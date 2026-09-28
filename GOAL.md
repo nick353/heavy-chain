@@ -12201,6 +12201,10 @@ production Cloudflare secret listをfresh readbackし、`OPENAI_IMAGE_API_KEY`�
 
 正本originのHeavy APIへ認証なしGETを行い、`/v1/brands`、`/v1/profile`、`/v1/heavy/entitlement`が全てHTTP 401 `unauthorized`でfail-closedすることを確認した。これはconsumer-authenticated workspaceがまだ成立していないことを示すが、OpenAIキーの有効性の証明ではない。provider生成、deploy、課金、公開、動画、secret変更は0。正本は`work/heavy-chain-canonical-auth-boundary-readback-20260928-r1.json`。
 
+# Consumer-auth health readback — 2026-09-28
+
+`consumer-auth.nichika2000823.workers.dev/health`はHTTP 200でHeavy app、D1、email/email-budget設定済みを返した。一方、同originの`/v1/identity`は認証なしでHTTP 401。認証サービスの稼働・設定とauthenticated bearer sessionの存在を分離した。アカウント作成、メール送信、provider生成、deploy、課金、公開、動画、secret変更は0。正本は`work/heavy-chain-consumer-auth-health-readback-20260928-r1.json`。
+
 # Correct canonical origin health readback — 2026-09-28
 
 前回のDNS失敗はoriginの誤記によるものだった。リポジトリ正本の`https://heavy-chain-api.nichika2000823.workers.dev`へGETしHeavy API `/v1/health` HTTP 200、`heavyEntitlementEnabled=true`、`media=private-r2`を確認。同じく正本のHeavy Web `https://heavy-chain-web.nichika2000823.workers.dev/_health`もHTTP 200で、Cloudflare hosting/auth providerを確認した。これはサービス到達性のみで、consumer auth、OpenAI credential、provider生成、remote save/reuse/reload/reconciliationの証拠ではない。正本は`work/heavy-chain-correct-origin-health-readback-20260928-r1.json`。Goalはactive。
