@@ -12287,4 +12287,5 @@ close済み、tab cleanup verified、external action executed=false。正本は`
 
 正規APIモニターの`HEAVY_CHAIN_MONITOR_TOKEN`要件は安全性・current-principal境界のため削除していない。代替として、APIを呼ばず、provider・保存・release gateを証明しない
 `heavy-chain.workspace-readback.v1`のcredential-free Companion観測ビルダーと契約テストを追加した。`releaseEligible=false`、
-`issuerVerified=false`であり、任意JSONやUI観測をproduction monitorの代替にはできない。H602、billing、公開、動画、strict gateは未完了のまま。
+`issuerVerified=false`であり、任意JSONやUI観測をproduction monitorの代替にはできない。今回のfresh UI観測から生成した正本は
+`work/heavy-workspace-observation-readback-20260928-r1.json`。H602、billing、公開、動画、strict gateは未完了のまま。
