@@ -12315,3 +12315,10 @@ close済み、tab cleanup verified、external action executed=false。正本は`
 `heavy-chain.workspace-readback.v1`のcredential-free Companion観測ビルダーと契約テストを追加した。`releaseEligible=false`、
 `issuerVerified=false`であり、任意JSONやUI観測をproduction monitorの代替にはできない。今回のfresh UI観測から生成した正本は
 `work/heavy-workspace-observation-readback-20260928-r1.json`。H602、billing、公開、動画、strict gateは未完了のまま。
+
+# Current continuation readback — 2026-09-28
+
+現行HEAD `cb59634`はclean。修正後のOpenAI receiptは`work/heavy-chain-current-openai-receipt-and-gate-readback-20260928-r1.json`に固定し、
+新規Companion sessionで同じGallery詳細をsemantic＋visual readbackした。`state: completed persistence: completed`を再確認し、
+lease releaseとsession cleanupは成功、foreign tab変更とexternal actionは0。pre-launch gateはH602を`DEFERRED`として残し、
+production monitor/UI pair、G618、current 10-feature visual scorecardのみが未達。monitor tokenを推測・抽出せず、Goalはactiveで継続する。
