@@ -12232,3 +12232,7 @@ task-owned Companion sessionをfreshに開きtab inventoryを確認したが、H
 # Controlled OpenAI binding deploy readback — 2026-09-28
 
 ユーザーが登録した新しいsecret変更を値を読まずに確認した後、現行HEAD `4a077f61ac5d7cc12c53ec92c19ca59e43183bfa`のproduction configをcontrolled deployした。Worker version `4161756a-fe36-44f6-8ddc-f2b761f905b9`が100%配信され、fresh version readbackで`AI_IMAGE_PROVIDER=openai`、`AI_IMAGE_ENABLED=true`、`HEAVY_IMAGE_ENTITLEMENT_ENABLED=true`を確認した。`/v1/health`はHTTP 200。secret値の読取・表示・ローテーション、provider生成、課金、公開、動画変更は0。consumer-authenticated sessionがないため、OpenAI provider receipt、remote save/reuse/reload/reconciliation、scorecard、monitor/UI、G618、H602、strict gateは未完了。正本は`work/heavy-chain-controlled-openai-deploy-readback-20260928-r1.json`。
+
+# Fresh strict gate after controlled binding deploy — 2026-09-28
+
+controlled deploy後に`npm run verify:release-gate -- --out output/playwright/release-gate-current-20260928-r9`をfresh実行した。未達は従来どおりproduction monitor/UI、G618、production H602、generation scorecardの4項目だけで、ローカル契約・typecheck/build/lint/diffは通過した。gate内部のgeneration/payment/publication/destructive cleanup/deployは未実行。本番のcontrolled deployは別artifactで証明済みで、provider submit・課金・公開・動画変更は0。正本は`output/playwright/release-gate-current-20260928-r9`。
