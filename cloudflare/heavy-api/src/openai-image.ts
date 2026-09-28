@@ -71,7 +71,7 @@ export function resolveOpenAIModel(env: Env, action: ImageAction, requested?: un
   }
   const configured = env.OPENAI_IMAGE_MODEL?.trim();
   if (configured && OPENAI_IMAGE_MODELS.has(configured)) return configured;
-  return 'gpt-image-1-mini';
+  return 'gpt-image-2';
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

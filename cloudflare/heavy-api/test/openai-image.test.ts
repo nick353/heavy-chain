@@ -38,6 +38,19 @@ test('OpenAI generation adapter keeps the credential server-side and parses b64 
   assert.deepEqual(await request.json(), { model: 'gpt-image-1-mini', prompt: 'studio product image', n: 1, size: '1024x1024' });
 });
 
+test('OpenAI generation uses gpt-image-2 only when no model is requested or configured', async () => {
+  const requestBox: { value?: Request } = {};
+  const image = pngFixture(8, 8);
+  const result = await runOpenAIImage(env({ OPENAI_IMAGE_MODEL: undefined }), 'generate-image', input(), 0, async (url, init) => {
+    requestBox.value = new Request(url, init);
+    return Response.json({ data: [{ b64_json: Buffer.from(image).toString('base64') }] });
+  });
+  assert.equal(result.providerModel, 'gpt-image-2');
+  const request = requestBox.value;
+  assert(request);
+  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'studio product image', n: 1, size: '1024x1024' });
+});
+
 test('OpenAI edit adapter sends decoded references as multipart without source URLs', async () => {
   const bytes = pngFixture(8, 8);
   const formBox: { value?: FormData } = {};
@@ -72,6 +85,7 @@ test('OpenAI adapter fails closed without a key and does not echo provider error
 
 test('OpenAI model and output dimensions are explicit and bounded', () => {
   assert.equal(resolveOpenAIModel(env(), 'generate-image'), 'gpt-image-1-mini');
+  assert.equal(resolveOpenAIModel(env({ OPENAI_IMAGE_MODEL: undefined }), 'generate-image'), 'gpt-image-2');
   assert.equal(resolveOpenAIModel(env({ OPENAI_IMAGE_EDIT_MODEL: 'gpt-image-1' }), 'edit-image'), 'gpt-image-1');
   assert.deepEqual(openAIExpectedDimensions(768, 1024), [1024, 1536]);
   assert.deepEqual(openAIExpectedDimensions(1024, 1024), [1024, 1024]);
