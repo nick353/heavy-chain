@@ -1,5 +1,15 @@
 # Goal progress — 2026-09-27 r403
 
+## Fresh authenticated workspace readback — 2026-09-28
+
+同じCompanion profileでHeavyの`/brand/settings`をfresh semantic+visual readbackした。タイトルは
+`Heavy Chain | AI制作ワークスペース`で、Heavy Chainの生成履歴・ジョブ・企画デザインツール・AIフィッティング・
+グラフィックツール・ブランド設定、ブランド情報、チームメンバー、Heavy側quota説明が表示され、認証済みHeavy
+workspaceとbrand hydrationを確認した。続けて`/generate`をread-only遷移したが、実際の表示はLightの
+`/designProduction`へ遷移し、既存プロジェクト一覧だけが確認された。したがってHeavy生成entitlement、rights
+同意、provider submit、provider receiptは未達のまま保持する。provider・課金・公開・秘密情報操作は0件で、
+Companion sessionはtask-owned tab cleanup receiptで終了した。
+
 ## H602 pre-launch deferral and monitor authentication boundary — 2026-09-28
 
 H602の請求・販売準備は、現段階がプレローンチであるため物理削除せず、release gateへ明示的な
