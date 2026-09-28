@@ -23693,3 +23693,11 @@ submit/payment/OTP・CAPTCHA・secret/publication/destructive cleanup/deployは�
 root `npm run lint`もPASS。ローカル品質ゲートはtypecheck/build/lintと契約テストが全て通過し、本番証跡待ちだけが残る。
 Light unified workflow/parity/pre-sourceとauth lock/admission/bootstrap/recoveryの追加契約テストも45/45 PASS。認証実装のlocal fail-closed境界は確認済みだが、production consumer sessionとOpenAI外部credentialの有効性は別問題として未解消。
 auth hydration readback contractも4/4 PASS。login marker、rights UI、unhealthy deployment、cleanup不足、secret-bearing evidenceをfail-closedできることを確認した。
+
+# OpenAI image secret-name readback — 2026-09-28
+
+本番Cloudflare secret listをfresh readbackし、`OPENAI_IMAGE_API_KEY`が`OPENAI_API_KEY`と併存して登録されていることを名前だけで確認した。secret値は読まず、保存せず、表示していない。ローカル環境で選択された`OPENAI_API_KEY`の`/v1/models` probeは401であり、本番に登録された値の有効性を証明しない。provider生成、deploy、課金、公開、動画は未実行。正本は`work/heavy-chain-openai-secret-list-readback-20260928-r1.json`で、remote auth 2xxとverified Astra receiptが揃うまで生成を開始しない。
+
+# Production health reachability readback — 2026-09-28
+
+Heavy APIの`/v1/health`をGETしたが、現在の実行環境ではDNS解決に失敗しHTTP応答を取得できなかった。これは環境側の到達性観測であり、Workerの稼働状態やprovider credentialの不良を意味しない。正本は`work/heavy-chain-production-health-dns-readback-20260928-r1.json`。この観測からdeploy、secret変更、provider生成は開始しない。

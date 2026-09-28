@@ -12192,3 +12192,7 @@ fresh 10-minute completion auditでは16 blockerを正本化した。production�
 root lintもPASSし、ローカルコード品質はtypecheck/build/lintおよび契約テストで確認済み。本番認証・Astra receipt・production readbackの未達は残る。
 Light unified/parity/pre-sourceとauth lock/admission/bootstrap/recoveryの追加45/45もPASS。local auth境界は健全だが、production consumer auth・同じAPIキーの401・実provider receiptは未完了。
 auth hydration readback contract 4/4もPASS。production sessionの成立・OpenAI認証・実生成receiptそのものは未達のまま。
+
+# OpenAI image secret-name and health reachability readback — 2026-09-28
+
+production Cloudflare secret listをfresh readbackし、`OPENAI_IMAGE_API_KEY`が`OPENAI_API_KEY`と併存して登録されていることを名前だけで確認した。secret値は読取・保存・表示していない。ローカル環境で選択された`OPENAI_API_KEY`のOpenAI `/v1/models` probeは401であり、production secretの有効性は証明しない。Heavy API `/v1/health`は現在の実行環境でDNS解決に失敗し、HTTP応答を取得できなかったが、これはWorker障害の証明ではない。正本は`work/heavy-chain-openai-secret-list-readback-20260928-r1.json`および`work/heavy-chain-production-health-dns-readback-20260928-r1.json`。provider生成、deploy、課金、公開、動画、secret変更は0。Adaptive plan v27は`waiting_human`／`engineering_ready=false`でfresh readback済み。Goalはactive。
