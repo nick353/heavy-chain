@@ -23755,3 +23755,9 @@ scorecardの4項目。動画はユーザー指定でdeferred、H602はプレロ�
 pre-launch gateの未達はproduction monitor/UI、G618 scale baseline、current generation visual scorecardの3項目に限定された。
 releaseReady=falseは維持され、payment／checkout／publish／provider再送は0。正本は
 `output/playwright/heavy-release-gate-prelaunch-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r699
+
+新規Companion sessionでHeavy Gallery詳細をread-only fresh取得し、同じOpenAI jobの`state: completed persistence: completed`を
+semantic＋visualで再確認した。lease release／session cleanup成功、foreign tab変更0、external action 0。これはmonitor/UI pairのUI側
+fresh evidenceであり、API-only monitor v2とmatching runIdは未成立。Goalはactiveを維持する。
