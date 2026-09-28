@@ -12213,6 +12213,10 @@ Wranglerのproduction deployment/version listをfresh readbackし、Heavy APIの
 
 同じlive versionの詳細をread-only取得し、secret名は3つ存在する一方、`AI_IMAGE_ENABLED=true`で`AI_IMAGE_PROVIDER=workers_ai`、`HEAVY_IMAGE_ENTITLEMENT_ENABLED=true`、`PUBLIC_SHARE_ENABLED=false`であることを確認した。secret登録だけではHeavy=OpenAIへ切り替わっておらず、現行sourceのOpenAI選択とproduction live versionがdriftしている。旧version昇格、blind deploy、provider生成は行っていない。正本は`work/heavy-chain-live-version-binding-readback-20260928-r1.json`。
 
+# Companion session inventory readback — 2026-09-28
+
+task-owned Companion sessionをfreshに開きtab inventoryを確認したが、Heavy origin tabもauthenticated Heavy workspaceも存在しなかった。関連外tabは採用・変更せず、session close cleanupも成功。browser-side entitlement/provider check、アカウント作成、メール送信、provider生成は未実行。正本は`work/heavy-chain-companion-session-inventory-readback-20260928-r1.json`。
+
 # Correct canonical origin health readback — 2026-09-28
 
 前回のDNS失敗はoriginの誤記によるものだった。リポジトリ正本の`https://heavy-chain-api.nichika2000823.workers.dev`へGETしHeavy API `/v1/health` HTTP 200、`heavyEntitlementEnabled=true`、`media=private-r2`を確認。同じく正本のHeavy Web `https://heavy-chain-web.nichika2000823.workers.dev/_health`もHTTP 200で、Cloudflare hosting/auth providerを確認した。これはサービス到達性のみで、consumer auth、OpenAI credential、provider生成、remote save/reuse/reload/reconciliationの証拠ではない。正本は`work/heavy-chain-correct-origin-health-readback-20260928-r1.json`。Goalはactive。

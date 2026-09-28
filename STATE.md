@@ -23714,6 +23714,10 @@ Wranglerのproduction deployment/version listをfresh readbackし、Heavy APIの
 
 同じlive versionの詳細をread-only取得し、secret名は3つ存在する一方、`AI_IMAGE_ENABLED=true`で`AI_IMAGE_PROVIDER=workers_ai`、`HEAVY_IMAGE_ENTITLEMENT_ENABLED=true`、`PUBLIC_SHARE_ENABLED=false`であることを確認した。したがってsecret登録だけではHeavy=OpenAIへ切り替わっておらず、最新live versionは現行sourceのOpenAI選択とdriftしている。旧version昇格やblind deployは行わない。正本は`work/heavy-chain-live-version-binding-readback-20260928-r1.json`。
 
+# Companion session inventory readback — 2026-09-28
+
+task-owned Companion sessionをfreshに開きtab inventoryを確認したが、Heavy origin tabもauthenticated Heavy workspaceも存在しなかった。`chrome://extensions/`、X、Reddit、YouTubeは未採用・未変更。session close cleanupは成功し、leases/pending operations/external actionは0。正本は`work/heavy-chain-companion-session-inventory-readback-20260928-r1.json`。
+
 # Production health reachability readback — 2026-09-28
 
 Heavy APIの`/v1/health`をGETしたが、現在の実行環境ではDNS解決に失敗しHTTP応答を取得できなかった。これは環境側の到達性観測であり、Workerの稼働状態やprovider credentialの不良を意味しない。正本は`work/heavy-chain-production-health-dns-readback-20260928-r1.json`。この観測からdeploy、secret変更、provider生成は開始しない。
