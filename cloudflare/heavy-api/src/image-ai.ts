@@ -277,6 +277,11 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
   if (owner instanceof Response) return owner;
   if (owner !== row.user_id) return fail('image_request_not_found',404);
   const input = JSON.parse(row.input_metadata) as Json;
+  // A completed request already has a durable, request-bound attestation and
+  // persisted provider output.  The short-lived preparation proof gates
+  // admission, but must not make a completed artifact unreadable after its
+  // five-minute preparation window; viewer/editor role and the attestation
+  // binding below remain mandatory for every read.
   const entitlement = await resolveHeavyEntitlement(env, {
     userId: row.user_id,
     brandId: row.brand_id,
@@ -284,8 +289,8 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
     requestId: row.request_id,
     inputDigest: row.fingerprint,
     normalizedInput: isRecord(input.normalizedInput) ? input.normalizedInput : rowNormalizedInput(row),
-    preparationId: row.preparation_id ?? undefined,
-    requirePreparation: true,
+    preparationId: row.state === 'completed' ? undefined : row.preparation_id ?? undefined,
+    requirePreparation: row.state !== 'completed',
   });
   if (!entitlement.allowed) return fail(entitlement.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(entitlement.reason ?? 'heavy_generation_disabled'));
   const editor = row.state === 'completed' ? owner : await requireBrandRole(request,env,row.brand_id,'editor');

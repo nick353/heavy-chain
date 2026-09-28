@@ -218,6 +218,26 @@ test('OpenAI provider uses the same authenticated admission, R2 persistence, rec
   } finally { globalThis.fetch=originalFetch; }
 });
 
+test('completed Heavy receipts remain readable after the short-lived preparation expires',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_MODEL='gpt-image-1-mini';
+  const providerImage=pngFixture(1024,1024,[40,120,80]); const originalFetch=globalThis.fetch;
+  globalThis.fetch=async() => Response.json({data:[{b64_json:Buffer.from(providerImage).toString('base64'),mime_type:'image/png'}]}, {headers:{'x-request-id':'req-openai-expiry-fixture'}});
+  try {
+    const id=crypto.randomUUID();
+    const result=await json(await s.call(url+'generate-image','alice',{...s.input(),generationProvider:'openai',generationModel:'gpt-image-1-mini'},id));
+    assert.equal(result.success,true);
+    const originalNow=Date.now;
+    Date.now=()=>originalNow()+10*60*1000;
+    try {
+      const receipt=await s.call(`/v1/image-ai/requests/${id}`,'alice');
+      assert.equal(receipt.status,200,await receipt.clone().text());
+      const body=await receipt.json() as Json;
+      assert.equal(body.success,true); assert.equal(body.persistenceStatus,'completed'); assert.equal(body.requestId,id);
+    } finally { Date.now=originalNow; }
+  } finally { globalThis.fetch=originalFetch; }
+});
+
 test('OpenAI model-matrix accepts a prompt-only brief and uses the generation endpoint',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close());
   s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_MODEL='gpt-image-2';

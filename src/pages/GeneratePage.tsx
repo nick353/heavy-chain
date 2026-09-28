@@ -48,6 +48,7 @@ import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { getErrorMessage, getFailureRecoveryGuidance } from '../lib/errorMessages';
 import {
   deleteWorkspaceArtifactsPersisted,
+  getWorkspaceArtifactCanonicalStoragePath,
   saveWorkspaceArtifactPersisted,
   type WorkspaceArtifactInput,
 } from '../lib/localWorkspaceArtifacts';
@@ -1801,6 +1802,18 @@ export function GeneratePage() {
           attemptedArtifactIds.push(artifactId);
           const persisted = saveWorkspaceArtifactPersisted({ ...input, id: artifactId, scopeId: user?.id });
           if (!persisted.ok) {
+            // Heavy provider results already have a durable, owner-scoped
+            // Storage path and receipt. A browser-local history write is a
+            // convenience layer; do not turn a successful provider commit
+            // into a generic generation error when that optional layer is
+            // unavailable (for example, a full/private browser storage).
+            if (getWorkspaceArtifactCanonicalStoragePath(input.metadata ?? {})) {
+              debugLog('Local artifact history persistence deferred after durable provider receipt', {
+                artifactId,
+                errorCode: persisted.error.message,
+              });
+              continue;
+            }
             const cleanup = deleteWorkspaceArtifactsPersisted(currentBrand.id, attemptedArtifactIds, user?.id);
             const cleanupMessage = cleanup.ok
               ? ''
