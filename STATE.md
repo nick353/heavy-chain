@@ -23710,6 +23710,10 @@ auth hydration readback contractも4/4 PASS。login marker、rights UI、unhealt
 
 Wranglerのproduction deployment/version listをfresh readbackし、Heavy APIの最新deploymentが2026-09-28T08:50:26Z作成の`Secret Change` version `e7d788f1-39a8-42bf-a8e1-6137f5750793`で100%配信中と確認した。これはsecret-change deploymentがliveである証拠だが、secret値の有効性、source code変更、OpenAI provider生成成功は証明しない。正本は`work/heavy-chain-api-deployment-secret-change-readback-20260928-r1.json`。
 
+# Live version binding readback — 2026-09-28
+
+同じlive versionの詳細をread-only取得し、secret名は3つ存在する一方、`AI_IMAGE_ENABLED=true`で`AI_IMAGE_PROVIDER=workers_ai`、`HEAVY_IMAGE_ENTITLEMENT_ENABLED=true`、`PUBLIC_SHARE_ENABLED=false`であることを確認した。したがってsecret登録だけではHeavy=OpenAIへ切り替わっておらず、最新live versionは現行sourceのOpenAI選択とdriftしている。旧version昇格やblind deployは行わない。正本は`work/heavy-chain-live-version-binding-readback-20260928-r1.json`。
+
 # Production health reachability readback — 2026-09-28
 
 Heavy APIの`/v1/health`をGETしたが、現在の実行環境ではDNS解決に失敗しHTTP応答を取得できなかった。これは環境側の到達性観測であり、Workerの稼働状態やprovider credentialの不良を意味しない。正本は`work/heavy-chain-production-health-dns-readback-20260928-r1.json`。この観測からdeploy、secret変更、provider生成は開始しない。
