@@ -12217,6 +12217,10 @@ Wranglerのproduction deployment/version listをfresh readbackし、Heavy APIの
 
 現行HEADとfresh readbackを用いて、完了／未完了／証拠不足／依存順を`work/heavy-chain-current-requirement-matrix-20260928-r3.json`へ更新した。dirty worktreeはpass、local parity/security契約はpassだがproduction unverified、Astra capacity/identity、authenticated session、live provider binding、OpenAI receipt、remote durable、monitor/G618/H602/scorecard、strict releaseは未完了。videoは現行image waveではdeferredのまま。Goalはactive。
 
+# Adaptive fork eligibility readback — 2026-09-28
+
+`workflow_list(limit=100,status=capacity_blocked)`をfresh実行したが`runs=[]`だった。`workflow_fork(capacity_recovery=true)`を適用できるHeavy Graph runは存在せず、既存Heavy Astra managed packageのfork・replay・手動claim/start・代替routeは行っていない。正本は`work/heavy-chain-adaptive-fork-eligibility-20260928-r1.json`。Goalはactive。
+
 # Companion session inventory readback — 2026-09-28
 
 task-owned Companion sessionをfreshに開きtab inventoryを確認したが、Heavy origin tabもauthenticated Heavy workspaceも存在しなかった。関連外tabは採用・変更せず、session close cleanupも成功。browser-side entitlement/provider check、アカウント作成、メール送信、provider生成は未実行。正本は`work/heavy-chain-companion-session-inventory-readback-20260928-r1.json`。
