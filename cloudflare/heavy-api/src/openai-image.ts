@@ -118,8 +118,12 @@ export async function runOpenAIImage(
   if (!key) throw new Error('openai_image_api_key_missing');
   const candidate = input.candidates[candidateIndex];
   if (!candidate) throw new Error('openai_image_candidate_missing');
-  const edit = action !== 'generate-image' || input.references.length > 0;
-  const modelAction: ImageAction = edit && action === 'generate-image' ? 'edit-image' : action;
+  // A model-matrix brief can be generated without a reference. Only requests
+  // with references (or explicit edit-image actions) use the edits endpoint.
+  // Keeping the endpoint and model resolution aligned prevents a prompt-only
+  // model-matrix request from being sent as an image edit with no image.
+  const edit = action === 'edit-image' || input.references.length > 0;
+  const modelAction: ImageAction = edit ? 'edit-image' : 'generate-image';
   const model = resolveOpenAIModel(env, modelAction, edit ? (env.OPENAI_IMAGE_EDIT_MODEL || env.OPENAI_IMAGE_MODEL) : env.OPENAI_IMAGE_MODEL);
   let response: Response;
   if (!edit) {

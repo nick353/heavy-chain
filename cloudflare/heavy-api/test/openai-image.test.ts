@@ -71,6 +71,27 @@ test('OpenAI edit adapter sends decoded references as multipart without source U
   assert.deepEqual(new Uint8Array(await file.arrayBuffer()), bytes);
 });
 
+test('OpenAI model-matrix without references uses text generation and the requested generation model', async () => {
+  const requestBox: { value?: Request } = {};
+  const image = pngFixture(8, 8);
+  const matrixInput: ImageInput = {
+    ...input(),
+    action: 'model-matrix',
+    featureType: 'model-matrix',
+    prompt: 'blue cotton shirt',
+    candidates: [{ prompt: 'professional adult apparel try-on photograph', descriptor: { bodyType: 'regular' }, seed: 7 }],
+  };
+  const result = await runOpenAIImage(env({ OPENAI_IMAGE_MODEL: 'gpt-image-2' }), 'model-matrix', matrixInput, 0, async (url, init) => {
+    requestBox.value = new Request(url, init);
+    return Response.json({ data: [{ b64_json: Buffer.from(image).toString('base64'), mime_type: 'image/png' }] });
+  });
+  assert.equal(result.providerModel, 'gpt-image-2');
+  const request = requestBox.value;
+  assert(request);
+  assert.equal(request.url, 'https://api.openai.com/v1/images/generations');
+  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'professional adult apparel try-on photograph', n: 1, size: '1024x1024' });
+});
+
 test('OpenAI adapter fails closed without a key and does not echo provider error text', async () => {
   await assert.rejects(
     () => runOpenAIImage(env({ OPENAI_API_KEY: undefined, OPENAI_IMAGE_API_KEY: undefined }), 'generate-image', input(), 0),

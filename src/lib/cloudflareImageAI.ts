@@ -49,7 +49,12 @@ export async function prepareCloudflareImageInput(action: string, body: Body): P
   const source = action === 'model-matrix' ? [body.imageUrl,body.modelReferenceImageUrl].filter(Boolean)
     : body.imageUrls ?? [body.imageUrl ?? body.referenceImage].filter(Boolean);
   if (!Array.isArray(source) || source.length > 4 || source.some(v => typeof v !== 'string' || !v)) throw new Error('Cloudflare画像AIの参照は最大4枚です。参照を省略せず入力を見直してください。');
-  if (action !== 'generate-image' && source.length === 0) throw new Error('このCloudflare画像AI操作には参照画像が必要です。');
+  // OpenAI can create a model-matrix image from the structured product brief
+  // alone. Workers AI and edit flows still require the references enforced
+  // below; the server remains authoritative and rejects a mismatched provider.
+  const promptOnlyOpenAIModelMatrix = action === 'model-matrix' && body.generationProvider === 'openai' &&
+    typeof body.productDescription === 'string' && body.productDescription.trim().length > 0;
+  if (action !== 'generate-image' && source.length === 0 && !promptOnlyOpenAIModelMatrix) throw new Error('このCloudflare画像AI操作には参照画像が必要です。');
   const references: string[] = []; const transforms: Body[] = [];
   for (const [index,raw] of source.entries()) {
     const response = await fetch(raw as string,{ credentials: 'omit' });

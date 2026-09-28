@@ -43,8 +43,10 @@ type SourceCandidate = { id?: string; storagePath?: string; revision?: number | 
 const configuredProvider = (env: Env): ProviderKind => env.AI_IMAGE_PROVIDER?.trim() === 'workers_ai' ? 'workers_ai' : 'openai';
 const providerConfig = (env: Env, action: ImageAction, body: Json): ProviderConfig => {
   const provider = configuredProvider(env);
-  const effectiveAction: ImageAction = action === 'generate-image' && Array.isArray(body.imageUrls) && body.imageUrls.length
-    ? 'edit-image' : action;
+  const hasReferences = action === 'model-matrix'
+    ? Boolean(body.imageUrl || body.modelReferenceImageUrl)
+    : action === 'generate-image' && Array.isArray(body.imageUrls) && body.imageUrls.length > 0;
+  const effectiveAction: ImageAction = action === 'edit-image' || hasReferences ? 'edit-image' : 'generate-image';
   const requested = typeof body.generationProvider === 'string' ? body.generationProvider.trim() : '';
   if (requested && requested !== provider) throw new ImageInputError('image_provider_not_enabled', 422);
   if (provider === OPENAI_IMAGE_PROVIDER) {

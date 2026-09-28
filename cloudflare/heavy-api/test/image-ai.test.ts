@@ -218,6 +218,22 @@ test('OpenAI provider uses the same authenticated admission, R2 persistence, rec
   } finally { globalThis.fetch=originalFetch; }
 });
 
+test('OpenAI model-matrix accepts a prompt-only brief and uses the generation endpoint',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_MODEL='gpt-image-2';
+  const providerImage=pngFixture(1024,1024,[40,120,80]); const originalFetch=globalThis.fetch; let providerURL='';
+  globalThis.fetch=async(input: RequestInfo|URL, init?: RequestInit) => {
+    providerURL=String(input);
+    assert.equal(init?.headers && new Headers(init.headers).get('authorization'),'Bearer server-only-test-key');
+    return Response.json({data:[{b64_json:Buffer.from(providerImage).toString('base64'),mime_type:'image/png'}]}, {headers:{'x-request-id':'req-openai-fitting-fixture'}});
+  };
+  try {
+    const result=await json(await s.call(url+'model-matrix','alice',{...s.input(),generationProvider:'openai',generationModel:'gpt-image-2',productDescription:'blue cotton shirt',bodyTypes:['regular'],ageGroups:['20s']},crypto.randomUUID()));
+    assert.equal(result.success,true); assert.equal(result.provider,'openai'); assert.equal(result.backendProvider,'openai-images-api');
+    assert.equal(result.providerModel,'gpt-image-2'); assert.equal(result.matrix.length,1); assert.equal(providerURL,'https://api.openai.com/v1/images/generations');
+  } finally { globalThis.fetch=originalFetch; }
+});
+
 test('image editing passes each ordered reference as binary multipart, preserves lineage and never exposes URLs/secrets',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close()); const first=pngFixture(128,64); const second=pngFixture(64,128,[180,30,20]);
   const references=[first,second].map(bytes=>'data:image/png;base64,'+Buffer.from(bytes).toString('base64'));

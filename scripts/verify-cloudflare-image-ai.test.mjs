@@ -117,10 +117,15 @@ test('image preparation refuses unsupported/extra inputs before fetching and pre
   for (const [action,body] of [['edit-image',{ maskApplied:true }],['generate-image',{ outputBackground:'transparent' }],
     ['edit-image',{ imageUrls:Array(5).fill('https://image.test') }],['generate-image',{ prompt:'brief', imageUrls:[null] }],
     ['model-matrix',{ modelReferenceImageUrl:'https://person.test' }],
-    ['generate-image',{ prompt:'' }],['generate-image',{ brief:'   ' }],['edit-image',{ prompt:'edit' }],['model-matrix',{ productDescription:'try-on' }]]) {
+    ['generate-image',{ prompt:'' }],['generate-image',{ brief:'   ' }],['edit-image',{ prompt:'edit' }],
+    ['model-matrix',{ productDescription:'try-on' }],['model-matrix',{ generationProvider:'workers_ai',productDescription:'try-on' }]]) {
     await assert.rejects(image.prepareCloudflareImageInput(action,body));
   }
   assert.equal(calls,0);
+  const promptOnly = await image.prepareCloudflareImageInput('model-matrix',{
+    generationProvider:'openai',productDescription:'try-on',brandId:'brand',
+  });
+  assert.deepEqual(promptOnly,{ generationProvider:'openai',productDescription:'try-on',brandId:'brand',referenceTransforms:[],imageUrl:undefined,modelReferenceImageUrl:undefined });
   for (const input of [{ brandId:'brand',prompt:'shirt' },{ brandId:'brand',brief:'shirt brief' }]) {
     assert.deepEqual(await image.prepareCloudflareImageInput('generate-image',input),{...input,referenceTransforms:[],imageUrls:[]});
   }
