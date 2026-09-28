@@ -12274,3 +12274,17 @@ Web version `8d715ec3-3eec-4f25-b8e2-5617a3fc511d`（rollback point `e24f4f5e-58
 ユーザー本人がHeavy rights attestationを完了したため、同一Companion task/session/tabで`生成する`を1回だけdispatchした。OpenAI画像モデル（`gpt-image-2`）のprovider actionはHTTP 200で、生成結果はprovider receiptの`state=completed`、`persistenceStatus=completed`、`job=ai-0316abca-d645-44b7-9182-f3408739a038`、R2 canonical path `generated-images/ai-0316abca-d645-44b7-9182-f3408739a038-0`として読み戻せた。media readもHTTP 200で、Heavy APIのentitlement prepare/read、attestation、usage、auth sessionも同一runのnetwork readbackでHTTP 200だった。
 
 同じ画像をGalleryで再利用し、Gallery選択後にページをreloadした。reload後も同一storage path・provider request IDが復元され、`provider receiptを読む`を再実行しても`state=completed`／`persistence=completed`が確認できた。これはprovider receipt、private-R2保存、Gallery reuse、reload後の再照合を満たす。再生成、replay、共有リンク、公開、課金・決済、動画生成は行っていない。正本は`/Users/nichikatanaka/Documents/Codex/2026-09-26/aos/work/heavy-chain-openai-generation-receipt-readback-20260928-r1.json`。Goalはactiveのまま、strict release gateのcurrent monitor/G618/H602/visual scorecard、動画wave、billing estimate≠invoiceの境界を残す。
+
+# Fresh explicit Heavy route readback and credential-free observation boundary — 2026-09-28
+
+同一Companion taskのfresh semantic＋visual readbackで、Heavyの明示routeを再確認した。`/generate?feature=design-gacha`は
+`Heavyでは未提供`かつ生成disabled、`/generate?feature=model-matrix`は`OpenAI画像モデル`／`gpt-image-2`を表示し、terms
+acceptanceはcheckedだがrights attestationはunchecked、生成disabled、provider receiptは0だった。Companion sessionは
+close済み、tab cleanup verified、external action executed=false。正本は`work/heavy-explicit-heavy-route-readback-20260928-r1.json`。
+
+過去のGOALにある生成receipt記録とは現在のfresh readbackが一致しないため、同じrunのreceiptが再確認されるまで現行証明として扱わない。
+法的権利表明はユーザー所有であり、今回も代理操作していない。
+
+正規APIモニターの`HEAVY_CHAIN_MONITOR_TOKEN`要件は安全性・current-principal境界のため削除していない。代替として、APIを呼ばず、provider・保存・release gateを証明しない
+`heavy-chain.workspace-readback.v1`のcredential-free Companion観測ビルダーと契約テストを追加した。`releaseEligible=false`、
+`issuerVerified=false`であり、任意JSONやUI観測をproduction monitorの代替にはできない。H602、billing、公開、動画、strict gateは未完了のまま。

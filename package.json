@@ -161,6 +161,8 @@
     "verify:internal-ux": "node scripts/verify-internal-ux-consistency.mjs",
     "verify:launch-ops": "node scripts/verify-launch-operations-readiness.mjs",
     "monitor:production": "node scripts/monitor-production-health.mjs",
+    "monitor:workspace-observation": "node scripts/build-workspace-observation-readback.mjs",
+    "test:workspace-observation-readback": "node --test scripts/verify-workspace-observation-readback.test.mjs",
     "release:doctor": "node scripts/release-doctor.mjs",
     "env:check": "node scripts/check-env.mjs",
     "security:audit": "node scripts/security-audit.mjs",
