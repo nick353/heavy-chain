@@ -12196,3 +12196,11 @@ auth hydration readback contract 4/4もPASS。production sessionの成立・Open
 # OpenAI image secret-name and health reachability readback — 2026-09-28
 
 production Cloudflare secret listをfresh readbackし、`OPENAI_IMAGE_API_KEY`が`OPENAI_API_KEY`と併存して登録されていることを名前だけで確認した。secret値は読取・保存・表示していない。ローカル環境で選択された`OPENAI_API_KEY`のOpenAI `/v1/models` probeは401であり、production secretの有効性は証明しない。Heavy API `/v1/health`は現在の実行環境でDNS解決に失敗し、HTTP応答を取得できなかったが、これはWorker障害の証明ではない。正本は`work/heavy-chain-openai-secret-list-readback-20260928-r1.json`および`work/heavy-chain-production-health-dns-readback-20260928-r1.json`。provider生成、deploy、課金、公開、動画、secret変更は0。Adaptive plan v27は`waiting_human`／`engineering_ready=false`でfresh readback済み。Goalはactive。
+
+# Canonical auth boundary readback — 2026-09-28
+
+正本originのHeavy APIへ認証なしGETを行い、`/v1/brands`、`/v1/profile`、`/v1/heavy/entitlement`が全てHTTP 401 `unauthorized`でfail-closedすることを確認した。これはconsumer-authenticated workspaceがまだ成立していないことを示すが、OpenAIキーの有効性の証明ではない。provider生成、deploy、課金、公開、動画、secret変更は0。正本は`work/heavy-chain-canonical-auth-boundary-readback-20260928-r1.json`。
+
+# Correct canonical origin health readback — 2026-09-28
+
+前回のDNS失敗はoriginの誤記によるものだった。リポジトリ正本の`https://heavy-chain-api.nichika2000823.workers.dev`へGETしHeavy API `/v1/health` HTTP 200、`heavyEntitlementEnabled=true`、`media=private-r2`を確認。同じく正本のHeavy Web `https://heavy-chain-web.nichika2000823.workers.dev/_health`もHTTP 200で、Cloudflare hosting/auth providerを確認した。これはサービス到達性のみで、consumer auth、OpenAI credential、provider生成、remote save/reuse/reload/reconciliationの証拠ではない。正本は`work/heavy-chain-correct-origin-health-readback-20260928-r1.json`。Goalはactive。
