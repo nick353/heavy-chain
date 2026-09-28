@@ -23706,6 +23706,10 @@ auth hydration readback contractも4/4 PASS。login marker、rights UI、unhealt
 
 `consumer-auth.nichika2000823.workers.dev/health`はHTTP 200で、Heavy app、D1、email/email-budget設定済みを返した。一方、同originの`/v1/identity`は認証なしでHTTP 401。auth serviceの稼働・設定と、authenticated bearer sessionの存在を分離して記録した。アカウント作成、メール送信、provider生成は未実行。正本は`work/heavy-chain-consumer-auth-health-readback-20260928-r1.json`。
 
+# Heavy API secret-change deployment readback — 2026-09-28
+
+Wranglerのproduction deployment/version listをfresh readbackし、Heavy APIの最新deploymentが2026-09-28T08:50:26Z作成の`Secret Change` version `e7d788f1-39a8-42bf-a8e1-6137f5750793`で100%配信中と確認した。これはsecret-change deploymentがliveである証拠だが、secret値の有効性、source code変更、OpenAI provider生成成功は証明しない。正本は`work/heavy-chain-api-deployment-secret-change-readback-20260928-r1.json`。
+
 # Production health reachability readback — 2026-09-28
 
 Heavy APIの`/v1/health`をGETしたが、現在の実行環境ではDNS解決に失敗しHTTP応答を取得できなかった。これは環境側の到達性観測であり、Workerの稼働状態やprovider credentialの不良を意味しない。正本は`work/heavy-chain-production-health-dns-readback-20260928-r1.json`。この観測からdeploy、secret変更、provider生成は開始しない。

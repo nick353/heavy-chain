@@ -12205,6 +12205,10 @@ production Cloudflare secret listをfresh readbackし、`OPENAI_IMAGE_API_KEY`�
 
 `consumer-auth.nichika2000823.workers.dev/health`はHTTP 200でHeavy app、D1、email/email-budget設定済みを返した。一方、同originの`/v1/identity`は認証なしでHTTP 401。認証サービスの稼働・設定とauthenticated bearer sessionの存在を分離した。アカウント作成、メール送信、provider生成、deploy、課金、公開、動画、secret変更は0。正本は`work/heavy-chain-consumer-auth-health-readback-20260928-r1.json`。
 
+# Heavy API secret-change deployment readback — 2026-09-28
+
+Wranglerのproduction deployment/version listをfresh readbackし、Heavy APIの最新deploymentが2026-09-28T08:50:26Z作成の`Secret Change` version `e7d788f1-39a8-42bf-a8e1-6137f5750793`で100%配信中と確認した。secret値の有効性、source code変更、OpenAI provider生成成功は未証明であり、secret-change deploymentをprovider生成receiptやcontrolled source deployと混同しない。正本は`work/heavy-chain-api-deployment-secret-change-readback-20260928-r1.json`。
+
 # Correct canonical origin health readback — 2026-09-28
 
 前回のDNS失敗はoriginの誤記によるものだった。リポジトリ正本の`https://heavy-chain-api.nichika2000823.workers.dev`へGETしHeavy API `/v1/health` HTTP 200、`heavyEntitlementEnabled=true`、`media=private-r2`を確認。同じく正本のHeavy Web `https://heavy-chain-web.nichika2000823.workers.dev/_health`もHTTP 200で、Cloudflare hosting/auth providerを確認した。これはサービス到達性のみで、consumer auth、OpenAI credential、provider生成、remote save/reuse/reload/reconciliationの証拠ではない。正本は`work/heavy-chain-correct-origin-health-readback-20260928-r1.json`。Goalはactive。
