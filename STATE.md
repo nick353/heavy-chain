@@ -23733,3 +23733,18 @@ Heavy APIの`/v1/health`をGETしたが、現在の実行環境ではDNS解決�
 # Correct canonical origin health readback — 2026-09-28
 
 前回のDNS失敗はoriginの誤記（`nichikata2000823`）によるものだった。リポジトリ正本の`nichika2000823` originへread-only GETし、Heavy API `/v1/health`がHTTP 200（`heavyEntitlementEnabled=true`、`media=private-r2`）、Heavy Web `/_health`がHTTP 200（Cloudflare hosting、Cloudflare auth provider）を返すことを確認した。これはサービス到達性の証拠であり、consumer auth、OpenAI credential、provider生成、remote reconciliationの証明ではない。正本は`work/heavy-chain-correct-origin-health-readback-20260928-r1.json`。
+
+# Heavy Chain current state — 2026-09-28 r697
+
+現行API修正とWeb修正をcontrolled deployし、API version `843f05d3-8825-4ad9-b03f-0f5009647d4`、Web version
+`ddcf4bb0-16af-4a28-85f7-eae6392e83a5`をfresh readbackした。API `/v1/health`はHTTP 200で、Heavy API全118テスト、
+typecheck、Web build、diff checkはPASS。completed Heavy receiptは短期preparation期限後も、owner／attestation境界を保ったまま読めるようになった。
+
+OpenAI実生成は`requestId=996e888c-eb71-49f3-8868-fd57d83c413e`を1回だけ実行し、`job=ai-996e888c-eb71-49f3-8868-fd57d83c413e`、
+`storage=generated-images/ai-996e888c-eb71-49f3-8868-fd57d83c413e-0`、`state=completed`、`persistenceStatus=completed`を
+Galleryと詳細receiptで確認した。Galleryは17枚。再生成・replay・公開・課金・動画変更は0。正本は
+`work/heavy-chain-current-openai-receipt-and-gate-readback-20260928-r1.json`。
+
+修正後strict gateの未達はproduction monitor/UI、G618 scale baseline、production H602 billing completion、current visual
+scorecardの4項目。動画はユーザー指定でdeferred、H602はプレローンチにつき課金操作なし、monitor credentialは正規read-only経路で
+未提供。Goalはactiveであり、remote receiptは確認済みだが、残りの本番証跡は完了扱いにしない。

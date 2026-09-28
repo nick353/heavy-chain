@@ -12253,6 +12253,25 @@ task-owned Companion sessionをfreshに開きtab inventoryを確認したが、H
 
 前回のDNS失敗はoriginの誤記によるものだった。リポジトリ正本の`https://heavy-chain-api.nichika2000823.workers.dev`へGETしHeavy API `/v1/health` HTTP 200、`heavyEntitlementEnabled=true`、`media=private-r2`を確認。同じく正本のHeavy Web `https://heavy-chain-web.nichika2000823.workers.dev/_health`もHTTP 200で、Cloudflare hosting/auth providerを確認した。これはサービス到達性のみで、consumer auth、OpenAI credential、provider生成、remote save/reuse/reload/reconciliationの証拠ではない。正本は`work/heavy-chain-correct-origin-health-readback-20260928-r1.json`。Goalはactive。
 
+# Current OpenAI receipt and strict gate readback — 2026-09-28
+
+現行API修正（completed receiptが短期preparation期限後も読める）とWeb修正をcontrolled deployした。API versionは
+`843f05d3-8825-4ad9-b03f-0f5009647d4`、Web versionは`ddcf4bb0-16af-4a28-85f7-eae6392e83a5`、`/v1/health`はHTTP 200で
+`heavyEntitlementEnabled=true`、`media=private-r2`を返した。Heavy API全118テスト、typecheck、Web build、diff checkはPASS。
+
+OpenAI実生成は同じrequestを再送せず1回のみで、`requestId=996e888c-eb71-49f3-8868-fd57d83c413e`、
+`job=ai-996e888c-eb71-49f3-8868-fd57d83c413e`、`model=gpt-image-2`、`provider=openai`、
+`storage=generated-images/ai-996e888c-eb71-49f3-8868-fd57d83c413e-0`、`state=completed`、
+`persistenceStatus=completed`を確認した。Galleryは17枚で、詳細画面のsemantic＋visual readbackにも同じjobと
+`state: completed persistence: completed`が表示された。生成結果はremote保存済みで、replay・公開・課金は行っていない。
+正本は`work/heavy-chain-current-openai-receipt-and-gate-readback-20260928-r1.json`。
+
+修正後のstrict gateを同一実行でfresh取得した。ローカル契約・security・Light parity・provider persistence・video
+fail-closed・typecheck/build/lint/diffはPASS。release gateの未達は、(1) production monitor/UI pair、(2) G618 scale ops
+baseline、(3) production H602 billing completion readback、(4) current 10-feature generation visual scorecardの4項目のみ。
+動画はユーザー指定によりdeferred、H602はプレローンチのため課金操作なし、monitor credentialは正規read-only経路で未提供のまま。
+正本は`output/playwright/heavy-release-gate-current-20260928-r11.json`。Goalはactiveであり、未証明項目を完了扱いにしない。
+
 # Controlled OpenAI binding deploy readback — 2026-09-28
 
 ユーザーが登録した新しいsecret変更を値を読まずに確認した後、現行HEAD `4a077f61ac5d7cc12c53ec92c19ca59e43183bfa`のproduction configをcontrolled deployした。Worker version `4161756a-fe36-44f6-8ddc-f2b761f905b9`が100%配信され、fresh version readbackで`AI_IMAGE_PROVIDER=openai`、`AI_IMAGE_ENABLED=true`、`HEAVY_IMAGE_ENTITLEMENT_ENABLED=true`を確認した。`/v1/health`はHTTP 200。secret値の読取・表示・ローテーション、provider生成、課金、公開、動画変更は0。consumer-authenticated sessionがないため、OpenAI provider receipt、remote save/reuse/reload/reconciliation、scorecard、monitor/UI、G618、H602、strict gateは未完了。正本は`work/heavy-chain-controlled-openai-deploy-readback-20260928-r1.json`。
