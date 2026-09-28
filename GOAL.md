@@ -12272,6 +12272,13 @@ baseline、(3) production H602 billing completion readback、(4) current 10-feat
 動画はユーザー指定によりdeferred、H602はプレローンチのため課金操作なし、monitor credentialは正規read-only経路で未提供のまま。
 正本は`output/playwright/heavy-release-gate-current-20260928-r11.json`。Goalはactiveであり、未証明項目を完了扱いにしない。
 
+# Pre-launch strict gate readback — 2026-09-28
+
+ユーザー承認済みのプレローンチ範囲で`--scope pre-launch`を同一実行し、H602 billing completionだけを
+`DEFERRED`として扱うことを確認した。pre-launchでもreleaseReadyはfalseで、残る未達はproduction monitor/UI pair、
+G618 scale ops baseline、current generation visual scorecardの3項目だけ。payment、checkout、publish、destructive cleanup、
+provider再送は行っていない。正本は`output/playwright/heavy-release-gate-prelaunch-20260928-r1.json`。
+
 # Controlled OpenAI binding deploy readback — 2026-09-28
 
 ユーザーが登録した新しいsecret変更を値を読まずに確認した後、現行HEAD `4a077f61ac5d7cc12c53ec92c19ca59e43183bfa`のproduction configをcontrolled deployした。Worker version `4161756a-fe36-44f6-8ddc-f2b761f905b9`が100%配信され、fresh version readbackで`AI_IMAGE_PROVIDER=openai`、`AI_IMAGE_ENABLED=true`、`HEAVY_IMAGE_ENTITLEMENT_ENABLED=true`を確認した。`/v1/health`はHTTP 200。secret値の読取・表示・ローテーション、provider生成、課金、公開、動画変更は0。consumer-authenticated sessionがないため、OpenAI provider receipt、remote save/reuse/reload/reconciliation、scorecard、monitor/UI、G618、H602、strict gateは未完了。正本は`work/heavy-chain-controlled-openai-deploy-readback-20260928-r1.json`。

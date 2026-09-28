@@ -23748,3 +23748,10 @@ Galleryと詳細receiptで確認した。Galleryは17枚。再生成・replay・
 修正後strict gateの未達はproduction monitor/UI、G618 scale baseline、production H602 billing completion、current visual
 scorecardの4項目。動画はユーザー指定でdeferred、H602はプレローンチにつき課金操作なし、monitor credentialは正規read-only経路で
 未提供。Goalはactiveであり、remote receiptは確認済みだが、残りの本番証跡は完了扱いにしない。
+
+# Heavy Chain current state — 2026-09-28 r698
+
+ユーザー承認済みのpre-launch scopeでstrict gateをfresh実行。H602 billing completionは正しく`DEFERRED`となり、
+pre-launch gateの未達はproduction monitor/UI、G618 scale baseline、current generation visual scorecardの3項目に限定された。
+releaseReady=falseは維持され、payment／checkout／publish／provider再送は0。正本は
+`output/playwright/heavy-release-gate-prelaunch-20260928-r1.json`。
