@@ -147,6 +147,7 @@ export async function build() {
     VITE_CLOUDFLARE_API_BASE_URL: 'https://heavy-chain-api.nichika2000823.workers.dev',
     VITE_MEDIA_PROVIDER_ORDER: 'cloudflare_r2',
     VITE_MEDIA_GATEWAY_URL: 'https://heavy-chain-api.nichika2000823.workers.dev',
+    VITE_DEFAULT_GENERATION_MODEL: 'gpt-image-2',
   };
   const site = path.join(here, '.build/site');
   run(path.join(root, 'node_modules/.bin/tsc'), ['-b'], env);
