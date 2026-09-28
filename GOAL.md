@@ -12213,6 +12213,10 @@ Wranglerのproduction deployment/version listをfresh readbackし、Heavy APIの
 
 同じlive versionの詳細をread-only取得し、secret名は3つ存在する一方、`AI_IMAGE_ENABLED=true`で`AI_IMAGE_PROVIDER=workers_ai`、`HEAVY_IMAGE_ENTITLEMENT_ENABLED=true`、`PUBLIC_SHARE_ENABLED=false`であることを確認した。secret登録だけではHeavy=OpenAIへ切り替わっておらず、現行sourceのOpenAI選択とproduction live versionがdriftしている。旧version昇格、blind deploy、provider生成は行っていない。正本は`work/heavy-chain-live-version-binding-readback-20260928-r1.json`。
 
+# Current requirement matrix refresh — 2026-09-28
+
+現行HEADとfresh readbackを用いて、完了／未完了／証拠不足／依存順を`work/heavy-chain-current-requirement-matrix-20260928-r3.json`へ更新した。dirty worktreeはpass、local parity/security契約はpassだがproduction unverified、Astra capacity/identity、authenticated session、live provider binding、OpenAI receipt、remote durable、monitor/G618/H602/scorecard、strict releaseは未完了。videoは現行image waveではdeferredのまま。Goalはactive。
+
 # Companion session inventory readback — 2026-09-28
 
 task-owned Companion sessionをfreshに開きtab inventoryを確認したが、Heavy origin tabもauthenticated Heavy workspaceも存在しなかった。関連外tabは採用・変更せず、session close cleanupも成功。browser-side entitlement/provider check、アカウント作成、メール送信、provider生成は未実行。正本は`work/heavy-chain-companion-session-inventory-readback-20260928-r1.json`。
