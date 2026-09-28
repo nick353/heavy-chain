@@ -12236,3 +12236,7 @@ task-owned Companion sessionをfreshに開きtab inventoryを確認したが、H
 # Fresh strict gate after controlled binding deploy — 2026-09-28
 
 controlled deploy後に`npm run verify:release-gate -- --out output/playwright/release-gate-current-20260928-r9`をfresh実行した。未達は従来どおりproduction monitor/UI、G618、production H602、generation scorecardの4項目だけで、ローカル契約・typecheck/build/lint/diffは通過した。gate内部のgeneration/payment/publication/destructive cleanup/deployは未実行。本番のcontrolled deployは別artifactで証明済みで、provider submit・課金・公開・動画変更は0。正本は`output/playwright/release-gate-current-20260928-r9`。
+
+# Companion auth boundary after controlled deploy — 2026-09-28
+
+controlled deploy後に同一Companion profile/task sessionでproduction Webをread-only確認した。semantic＋visual readbackはverifiedだが、titleは`Lightchain AI`でauthenticated Heavy workspaceは成立せず、provider receiptは0。tab cleanupはverified、browser mutation・external action・login/account creation・OTP・provider生成・課金・公開・動画は0。正本は`work/heavy-chain-companion-auth-boundary-fresh-readback-20260928-r4.json`。次の依存はauthenticated Heavy consumer session。
