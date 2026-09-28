@@ -12240,3 +12240,7 @@ controlled deploy後に`npm run verify:release-gate -- --out output/playwright/r
 # Companion auth boundary after controlled deploy — 2026-09-28
 
 controlled deploy後に同一Companion profile/task sessionでproduction Webをread-only確認した。semantic＋visual readbackはverifiedだが、titleは`Lightchain AI`でauthenticated Heavy workspaceは成立せず、provider receiptは0。tab cleanupはverified、browser mutation・external action・login/account creation・OTP・provider生成・課金・公開・動画は0。正本は`work/heavy-chain-companion-auth-boundary-fresh-readback-20260928-r4.json`。次の依存はauthenticated Heavy consumer session。
+
+# Heavy Web OpenAI alignment and generation preparation readback — 2026-09-28
+
+Web version `8d715ec3-3eec-4f25-b8e2-5617a3fc511d`（rollback point `e24f4f5e-58ce-4dd5-bec6-8dbe9d5f80de`）を100%へcontrolled deploy済みで、API側のOpenAI binding version `4161756a-fe36-44f6-8ddc-f2b761f905b9`と合わせた。Companionの同一task/session/tabをreload後にfresh readbackし、現在の生成モデル表示が`OpenAI画像モデル`（`gpt-image-2`）であること、プロンプト長63、terms acceptance=true、rights attestation=false、生成ボタンdisabled=trueをsemantic＋visualで確認した。プロンプト再入力はbrowser-local mutationとしてverifiedだが、provider dispatch・provider receipt・remote save/reuse/reload/reconciliationは0。ユーザー所有の権利表明は代行せず、生成直前の唯一の残存UI blockerとして保持する。正本は`/Users/nichikatanaka/Documents/Codex/2026-09-26/aos/work/heavy-chain-web-deploy-readback-20260928-r1.json`。次はユーザー本人のrights attestation後に一度だけ生成し、同じrunのprovider receipt、private-R2 durable save、reuse/reload/reconciliationを順に取得する。
