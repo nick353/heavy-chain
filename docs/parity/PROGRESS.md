@@ -124,3 +124,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: tsc; workbench-resume / print-design-recovery / canonical-routes / model-tool-settings / dialogue suites equal to baseline (one parallel-run flake re-run singly = 0 fail). Production 1440×900: inputs persist through generation; run `ai-be628dda-c4b8-4d5d-8236-1f2de102dd54` completed in D1; /model?resumeJob=… restores garment, brief and result.
 - 残: model descriptor (gender/age) is not derived from the free-text brief.
 - 次: #19 /model-library.
+
+### Iteration 15 (2026-10-07, /goal) — /model-library 8 forms (#19)
+- 変更: `SourceModelToolSurface` rebuilt to the source layout per form — per-form example media (self-hosted copies in `public/lightchain-assets/`), source wording (titles, header hints, notes, right subtitles), divider rules, label-left rows, segmented 性別/服装タイプ, stepped angle sliders, switch rows (アパレルサイズをキープ, カスタムボディ, new 背面), 参考画像/カスタム tab, Light bottom bar widths (104/96/199), result shown in the main area, file name sr-only. `modelToolSettings`: optional `backView` for angle-change (older saves stay readable). Model-library custom example image self-hosted.
+- 検証: tsc; model-tool-input-parity 34/34 (helper handles radio groups), model-tool-settings-roundtrip 0 fail (default now includes backView), 15 related suites equal to baseline. Light observed via Companion (background tab needs screenshots to render). Production: 8 runs completed in D1 (job ids in ledger); each resumeJob reload restores source, settings and result.
+- 残: Heavy-only 入力と生成 panel; rail icons are lucide approximations (P4).
+- 次: #20 /model-base/style.

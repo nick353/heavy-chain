@@ -69,6 +69,7 @@ export function defaultModelToolSettings(feature: ModelToolFeature): ModelToolSe
   return { aspectRatio: 'スマート', resolution: '1K',
     ...(feature === 'model-change' ? { keepApparelSize: false } : {}),
     ...(feature === 'body-shape' ? { customBody: false } : {}),
+    ...(feature === 'angle-change' ? { backView: false } : {}),
     ...(isModelDescriptionFeature(feature) ? { inputMode: 'reference', customDescription: '' } : {}),
     ...Object.fromEntries((MODEL_TOOL_FIELDS[feature] ?? []).map(field => [field.key, field.initial])) };
 }
@@ -79,10 +80,11 @@ export function readModelToolSettings(feature: ModelToolFeature, value: unknown)
   const fields = [{ key: 'aspectRatio', options: MODEL_ASPECT_OPTIONS }, { key: 'resolution', options: MODEL_RESOLUTION_OPTIONS }, ...(MODEL_TOOL_FIELDS[feature] ?? [])];
   const bodyKeys = ['height', ...MODEL_BODY_MEASUREMENTS.map(({ key }) => key)];
   const hasBodyMeasurements = feature === 'body-shape' && bodyKeys.some(key => Object.hasOwn(raw, key));
-  const keys = fields.map(field => field.key).concat(feature === 'model-change' ? ['keepApparelSize'] : [], isModelDescriptionFeature(feature) ? ['inputMode', 'customDescription'] : [], feature === 'body-shape' ? ['customBody', ...(hasBodyMeasurements ? bodyKeys : [])] : []);
+  const keys = fields.map(field => field.key).concat(feature === 'model-change' ? ['keepApparelSize'] : [], isModelDescriptionFeature(feature) ? ['inputMode', 'customDescription'] : [], feature === 'body-shape' ? ['customBody', ...(hasBodyMeasurements ? bodyKeys : [])] : [], feature === 'angle-change' && Object.hasOwn(raw, 'backView') ? ['backView'] : []);
   if (Object.keys(raw).length !== keys.length || Object.keys(raw).some(key => !keys.includes(key))) return null;
   if (fields.some(field => typeof raw[field.key] !== 'string' || !(field.options as readonly string[]).includes(raw[field.key] as string))) return null;
   if (feature === 'model-change' && typeof raw.keepApparelSize !== 'boolean') return null;
+  if (feature === 'angle-change' && Object.hasOwn(raw, 'backView') && typeof raw.backView !== 'boolean') return null;
   if (feature === 'body-shape') {
     if (typeof raw.customBody !== 'boolean' || (raw.customBody && !hasBodyMeasurements)) return null;
     if (hasBodyMeasurements) {
@@ -124,6 +126,7 @@ export function modelToolSettingsPrompt(feature: ModelToolFeature, value: unknow
     ...(isModelDescriptionFeature(feature) ? [`入力モード: ${settings.inputMode === 'custom' ? 'カスタム' : '参考画像'}`, ...(settings.inputMode === 'custom' ? [`カスタム説明: ${settings.customDescription}`] : [])] : []),
     ...(MODEL_TOOL_FIELDS[feature] ?? []).filter(field => !(feature === 'body-shape' && settings.customBody === true && field.key === 'bodyShape')).map(field => `${field.label}: ${settings[field.key]}`),
     ...(feature === 'body-shape' ? [`カスタムボディ: ${settings.customBody ? 'オン' : 'オフ'}`, ...(settings.customBody ? [`身長: ${settings.height}`, ...MODEL_BODY_MEASUREMENTS.map(({ key, label }) => `${label}: ${settings[key]}cm`)] : [])] : []),
+    ...(feature === 'angle-change' && typeof settings.backView === 'boolean' ? [`背面: ${settings.backView ? 'オン' : 'オフ'}`] : []),
     `画像比率の指定: ${settings.aspectRatio}`, `解像度の指定: ${settings.resolution}`,
   ].join('\n');
 }

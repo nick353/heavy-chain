@@ -283,7 +283,7 @@ export function SourceModelLibrarySurface() {
                 <span>選択</span><span className="rounded bg-[#65d3cf] px-2 py-1 text-neutral-950">必須項目</span>
                 {workspace.slots.secondary&&<button type="button" disabled={locked} onClick={()=>workspace.clearSource('secondary')}>参考図をクリア</button>}
               </div>
-              <img className="h-32 w-28 rounded-lg object-contain" src={workspace.slots.secondary?.imageUrl??'https://jp.linkaigc.com/static/upload-example-head.png'} alt={workspace.slots.secondary?'顔の参考図のプレビュー':'例'} />
+              <img className="h-32 w-28 rounded-lg object-contain" src={workspace.slots.secondary?.imageUrl??'/lightchain-assets/upload-example-head.png'} alt={workspace.slots.secondary?'顔の参考図のプレビュー':'例'} />
             </div>
             {workspace.slots.secondary&&<div className="flex items-center justify-between"><span className="text-sm">参考程度</span><div className="flex w-[280px] gap-1 rounded-lg border border-white/10 p-1" aria-label="顔の参考程度">
               {MODEL_LIBRARY_SIMILARITIES.map(option=><button type="button" key={option} disabled={locked} aria-pressed={settings.customSimilarity===option} onClick={()=>update('customSimilarity',option)} className={`flex-1 rounded px-2 py-1 text-xs ${settings.customSimilarity===option?'bg-[#0bc1b8] text-neutral-950':'text-neutral-300'}`}>{option}</button>)}

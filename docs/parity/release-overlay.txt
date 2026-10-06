@@ -19,3 +19,17 @@ src/pages/PatternDesignDetailPage.tsx
 src/pages/PrintDesignDetailPage.tsx
 src/pages/ChangeColorDetailPage.tsx
 src/pages/LightchainWorkbenchPage.tsx
+src/components/lightchain/SourceModelToolSurface.tsx
+src/components/lightchain/SourceModelLibrarySurface.tsx
+public/lightchain-assets/model-library-custom-demo.mp4
+public/lightchain-assets/upload-example-head.png
+public/lightchain-assets/upload-example-model.png
+public/lightchain-assets/upload-example-model-new.png
+public/lightchain-assets/upload-example-body.png
+public/lightchain-assets/upload-example-size.png
+public/lightchain-assets/upload-example-pose.png
+public/lightchain-assets/upload-example-pose-new.png
+public/lightchain-assets/upload-example-bg.png
+public/lightchain-assets/upload-example-bg-new.png
+public/lightchain-assets/upload-example-view.png
+src/lib/modelToolSettings.ts
