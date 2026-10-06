@@ -645,6 +645,15 @@ function LightchainPrintingWorkspace() {
   );
 }
 
+export function vectorBrief(professional: boolean, layerModes: readonly ('stack' | 'split')[]): string {
+  return [
+    `パターンをベクター画像に変換（${professional ? 'プロフェッショナル版' : '通常版'}）: アップロードしたプリントパターン/グラフィックそのものを、ベクター化しやすいフラットな版に描き直してください。`,
+    '元のモチーフ・配色・構図・比率はそのまま保ち、各色をはっきりした境界の単色の塗りにしてください。グラデーション・ノイズ・質感・影・ぼかしは入れないでください。',
+    '衣服・人物・モックアップ・枠・背景の装飾は追加せず、パターンだけを白い無地の背景に正面から配置してください。画像内の文字は読み取れる範囲で同じ形を保ってください。',
+    professional && layerModes.length > 0 ? `レイヤー分け: ${layerModes.map((mode) => mode === 'stack' ? '積み重ね（重なり順を保つ）' : '分割（色ごとに重ならない領域に分ける）').join('、')}` : '',
+  ].filter(Boolean).join('\n');
+}
+
 export function LightchainVectorSpecialPage() {
   const location=useLocation();
   const isProfessionalFlow=location.pathname==='/tools/vector-special',activeTab=isProfessionalFlow?'プロフェッショナル版':'通常版';
@@ -663,7 +672,7 @@ export function LightchainVectorSpecialPage() {
   },[workspace.result]);
   const handleReferenceImage=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];event.target.value='';if(file)void workspace.upload('primary',file);};
   const toggleLayerMode=(mode:'stack'|'split')=>{if(locked)return;workspace.setInputState({...workspace.inputState,layerModes:layerModes.includes(mode)?(layerModes.length>1?layerModes.filter(value=>value!==mode):layerModes):[...layerModes,mode]});};
-  const generate=()=>workspace.generate({brief:workspace.brief||`パターンをベクター画像に変換 (${activeTab})\nレイヤー分け: ${layerModes.join(',')}`});
+  const generate=()=>workspace.generate({brief:workspace.brief||vectorBrief(isProfessionalFlow,layerModes)});
 
   // Light /tools/pattern-to-vector & /tools/vector-special, measured at 1440×900: shared デザインツール frame with the
   // two 278px ベクター tabs, 564×280 dashed upload box, (pro) 160×165 積み重ね/分割 cards, 使用回数 and AI生成 at (404,828).
