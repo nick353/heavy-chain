@@ -40,3 +40,10 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: parity tests 67/70 identical before/after (3 pre-existing failures: launcher order ×2, Wear Design Lab card regex). Codex review: only finding = style panel empty after selection → recorded as unconfirmed-light. Deployed `6ac4f1bc4a4c47e13ede41e9`, Companion readback matches Light geometry (video 408–1032, keyword box bottom ≈796, button y≈831).
 - **Blocker (P3)**: `wrangler` is logged in (OAuth, account ffa9a931…, d1 write scope) but Claude Code's auto-mode classifier denied a read-only remote D1 query as "Production Reads". Needs the user to allow it (permission rule) — do not work around.
 - 次: /printing, /tools/fabric, then 素材 group.
+
+### 2026-10-06 iteration 3 — /printing = AIグラフィックデザイン
+- 調査: Light `/printing` is the graphic-design tool (catalog id graphic-design → strict31 `print-design-project`), Heavy had mapped it to printing-image (garment+print). Light empty and after-upload states captured (one neutral test image uploaded to Light, no Light generation; upload outcome visually confirmed, not replayed).
+- 変更: new `src/pages/LightchainGraphicDesignPage.tsx` on `useCanonicalImageWorkspace('print-design-project')` (edit-image); sanitizer keeps `assist` + `referenceStrengths`; App routes /printing to it; sr-only selected file name for upload confirmation; brief asks for a flat print graphic.
+- 検証: tsc, graphic-design test 3/3, routing 29/30 (1 pre-existing), Codex review (2 findings fixed). Deployed; Companion: layout matches Light (card 368–1072, video 592, settings panel). Provider run `ai-5aabfebc-f7fe-4fcd-af08-6ed5b42df8b7` succeeded; reload restored input + result without resubmission.
+- 残: first output rendered a hoodie mockup → brief now requests flat graphic (re-run pending); Gallery/History/Jobs four-surface + D1/R2 identity for this job (P3, blocked on permission).
+- 次: re-run one generation to confirm flat output, then /tools/fabric.

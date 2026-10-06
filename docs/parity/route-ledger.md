@@ -11,7 +11,7 @@ Viewport 1440×900 unless noted. Status: `todo` / `diffing` / `fixed-local` / `d
 | 5 | /asset-center | 素材 | todo | |
 | 6 | /board, /board/edit | 素材 | todo | |
 | 7 | /creator | 作成 | verified | Light account is locked (購入後に使用可能); unlocked layout taken from Light demo video. Fixed: \\n placeholder bug, style panel, video 624px, keyword box 401px, option badges, 32px category button. **unconfirmed-light**: style panel after category selection, generate button label when unlocked |
-| 8 | /printing | 作成 | todo | プリント修正 |
+| 8 | /printing | 作成 | verified | Light = AIグラフィックデザイン (print-design-project), not printing-image. Rebuilt to measured Light layout (empty + after-upload states). Real provider run job `ai-5aabfebc-f7fe-4fcd-af08-6ed5b42df8b7`; reload restores input + result. **unconfirmed-light**: strength labels other than 中, assist analysis output, unlocked generate label, result presentation |
 | 9 | /tools/fabric | 作成 | todo | 生地イメージ |
 | 10 | /tools/printing | 作成 | todo | |
 | 11 | /tools/line-draft-to-tile, /tools/line | 作成 | todo | |

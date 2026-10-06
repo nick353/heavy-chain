@@ -29,6 +29,7 @@ const readStrengths = (value: unknown): [StrengthIndex, StrengthIndex] => {
 export function graphicDesignBrief(referenceCount: number, strengths: readonly StrengthIndex[], assist: boolean): string {
   return [
     'AIグラフィックデザイン: 参考画像から、アパレル向けのオリジナル柄・プリントグラフィックを作成してください。',
+    '出力はプリント用のグラフィック単体（無地の白背景）とし、衣服・人物・モックアップは描かないでください。',
     ...Array.from({ length: referenceCount }, (_, index) => `参考画像${index + 1}の参照強度: ${GRAPHIC_STRENGTH_LEVELS[strengths[index] ?? DEFAULT_STRENGTH]}`),
     assist ? 'アシスト: 参考画像のデザイン要素（モチーフ・配色・構図）を解析して反映してください。' : '',
   ].filter(Boolean).join('\n');
