@@ -1731,6 +1731,7 @@ function LightchainMaterialWorkbenchSession() {
   const [fabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [fabricPrompt, setFabricPrompt] = useState('');
   const [fabricImageRatio, setFabricImageRatio] = useState('画像比率自動');
+  const [fabricBannerVisible, setFabricBannerVisible] = useState(true);
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
   const [printGarmentSelectionMaskUrl, setPrintGarmentSelectionMaskUrl] = useState<string | null>(null);
@@ -6750,9 +6751,9 @@ function LightchainMaterialWorkbenchSession() {
                 ))}
               </nav>
 
-                <div
+                {fabricBannerVisible && <div
                     data-testid="lightchain-fabric-deprecation-banner"
-                    className="mt-2 flex h-16 rounded-lg bg-[#5b1f2a] px-4 py-2 text-base leading-6 text-white"
+                    className="mt-2 flex rounded-lg bg-[#5b1f2a] px-4 py-2 text-sm leading-6 text-white"
                   >
                     <span className="flex-1">
                       この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
@@ -6760,7 +6761,8 @@ function LightchainMaterialWorkbenchSession() {
                         今すぐ体験
                       </Link>
                     </span>
-                </div>
+                    <button type="button" aria-label="閉じる" onClick={() => setFabricBannerVisible(false)} className="ml-3 self-start px-1 text-white/70 hover:text-white">×</button>
+                </div>}
 
               <div className="flex flex-col gap-4">
 
@@ -6824,8 +6826,8 @@ function LightchainMaterialWorkbenchSession() {
                   </section>
                 )}
 
-                <section className="order-3 -mt-[9px] block rounded-xl border border-white/10 bg-[#202629] p-3">
-                  <h6 className="text-sm font-semibold text-white">キーワードを追加してください（任意）</h6>
+                <section className="order-3 block">
+                  <h6 className="text-base font-semibold text-white">キーワードを追加してください（任意）</h6>
                   <textarea
                     id="lightchain-fabric-prompt"
                     value={fabricPrompt}
@@ -6833,7 +6835,7 @@ function LightchainMaterialWorkbenchSession() {
                     placeholder="素材はシルクサテンで、柔らかく光沢感があります。それを上衣またはパンツに置き換えてください。"
                     maxLength={500}
                     rows={3}
-                    className="mt-[33px] h-[100px] w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
+                    className="mt-4 h-[100px] w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
                   />
                   <div className="mt-1 flex items-center justify-between text-xs text-white/45">
                     <span>{fabricPrompt.length} / 500</span>
@@ -6848,12 +6850,12 @@ function LightchainMaterialWorkbenchSession() {
                   </div>
                 </section>
 
-                <div data-testid="lightchain-material-fabric-controls" className="order-4 relative h-[73px]">
+                <div data-testid="lightchain-material-fabric-controls" className="order-4 flex h-[73px] items-end justify-between pb-2">
                   <select
                     aria-label="画像比率自動"
                     value={fabricImageRatio}
                     onChange={(event) => setFabricImageRatio(event.target.value)}
-                    className="absolute left-0 top-[23px] h-[42px] w-[202px] rounded-md border border-white/10 bg-[#111719] px-3 text-sm text-white outline-none focus:border-cyan-300/50"
+                    className="h-[42px] w-[202px] rounded-md border border-white/10 bg-[#111719] px-3 text-sm text-white outline-none focus:border-cyan-300/50"
                   >
                     <option>画像比率自動</option>
                   </select>
@@ -6862,7 +6864,7 @@ function LightchainMaterialWorkbenchSession() {
                     onClick={() => void handleGenerate()}
                     isLoading={isGenerating}
                     disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
-                    className="absolute right-0 top-[25px] h-[40px] w-[288px] bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
+                    className="h-[40px] w-[288px] bg-[#5fd0c8] text-slate-950 hover:brightness-105"
                     size="lg"
                     leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
                   >

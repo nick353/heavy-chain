@@ -6,3 +6,4 @@ src/lib/designProjectArtifacts.ts
 src/pages/LightchainGraphicDesignPage.tsx
 src/App.tsx
 src/hooks/useCanonicalImageWorkspace.ts
+src/components/ImageSelector.tsx

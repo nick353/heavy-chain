@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { 
-  Upload, 
+  Upload, ImagePlus, 
   X, 
   Check, 
   FolderOpen,
@@ -425,7 +425,7 @@ export function ImageSelector({
                   : 'border-transparent bg-[#3a3f40] hover:border-primary-400'
               }`}
             >
-              <Upload className="mb-3 h-6 w-6 text-white/75" aria-hidden="true" />
+              <ImagePlus className="mb-3 h-6 w-6 text-white/75" aria-hidden="true" />
               <p className="text-sm text-white/85">{sourceDropLabel}</p>
               <p className="mt-1 text-xs text-white/55">{sourceDropHint}</p>
               <button
