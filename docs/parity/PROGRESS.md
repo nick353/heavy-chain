@@ -9,6 +9,11 @@ Each iteration: read this file → advance the next open item → append result 
 - Deploy: `zeabur deploy --service-id 6a318803302ffbcd03a92935 --json -i=false` from the release tree (project 69df815a554543d46b0f2485, env 69df815a5ae0a69725e92048). Pre-approved.
 - Do not replay historical unknown-effect operations (Canvas r1008, Studio pendingACK, Pose, Angle back, Wear R07, old Light viewport tab).
 
+## User directive 2026-10-06 (after iteration 3)
+- Every feature that Light shows as 「購入後に使用可能」/「権限がありません」 must be fully generatable in Heavy: same Light layout/inputs, but the run button really generates, saves and restores. Each route's acceptance now includes one real Heavy generation + reload.
+- Known Heavy-side locks to remove: `src/features/lightchain/sourceFeatureAccess.ts` (fabric-image, model-matrix generation 'denied'), `PermissionLockedButton`, `ParityPermissionGate` (「この機能は未実装です」).
+- Cloudflare read permission: user given a `.claude/settings.local.json` allow-rule command for `npx wrangler d1 execute` / `npx wrangler r2`; retry the read-only D1 probe only after the user confirms.
+
 ## Release tree overlay (files that differ from the 2026-10-06 production input)
 - src/pages/LightchainParityPages.tsx, src/components/DesignArtifactThumbnail.tsx, src/index.css, src/lib/designProjectArtifacts.ts (iteration 1)
 
