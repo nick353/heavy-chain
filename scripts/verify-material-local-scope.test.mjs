@@ -7,11 +7,14 @@ const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.S
 const wrapper=ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='LightchainMaterialWorkbenchPage');
 test('material route keeps identity boundaries in both configured and local-only sessions',()=>{
  const code=ts.transpile(wrapper.getText(ast).replace('export ',''),{target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React});
- for(const client of [null,{origin:'https://api.example.test'}]){
+ for(const heavy of [false,true]) for(const client of [null,{origin:'https://api.example.test'}]){
   let auth={user:{id:'alice'},currentBrand:{id:'brand'}},location={pathname:'/tools/fabric'};
-  const render=new Function('useAuthStore','useLocation','cloudflareDataPlane','LightchainMaterialWorkbenchSession','React',`${code};return LightchainMaterialWorkbenchPage;`)(()=>auth,()=>location,client,()=>{}, {createElement:(type,props)=>({type,...props})});
+  const render=new Function('useAuthStore','useLocation','cloudflareDataPlane','LightchainMaterialWorkbenchSession','React','isHeavyWorkspaceRuntime',`${code};return LightchainMaterialWorkbenchPage;`)(()=>auth,()=>location,client,()=>{}, {createElement:(type,props)=>({type,...props})},()=>heavy);
   const a=render();assert.equal(render().key,a.key);
-  for(const next of [{user:{id:'bob'},currentBrand:{id:'brand'}},{user:{id:'alice'},currentBrand:{id:'other'}},{user:null,currentBrand:null}]){auth=next;assert.notEqual(render().key,a.key);}
+  for(const next of [{user:{id:'bob'},currentBrand:{id:'brand'}},{user:null,currentBrand:null}]){auth=next;assert.notEqual(render().key,a.key);}
+  // Heavy resolves its workspace brand on the first generation; that must not remount and wipe the inputs/results.
+  auth={user:{id:'alice'},currentBrand:{id:'other'}};
+  if(heavy)assert.equal(render().key,a.key);else assert.notEqual(render().key,a.key);
   auth={user:{id:'alice'},currentBrand:{id:'brand'}};assert.equal(render().key,a.key);
   location={pathname:'/tools/printing'};assert.notEqual(render().key,a.key);
  }

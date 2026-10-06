@@ -7,3 +7,5 @@ src/pages/LightchainGraphicDesignPage.tsx
 src/App.tsx
 src/hooks/useCanonicalImageWorkspace.ts
 src/components/ImageSelector.tsx
+src/components/lightchain/LightchainDesignToolFrame.tsx
+src/hooks/useHeavyWorkspaceBrandGate.ts

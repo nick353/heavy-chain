@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
+import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
 import { CanonicalImageWorkspaceControls } from '../components/CanonicalImageWorkspaceControls';
 import { createEntryDraftStore } from '../features/designDetail/entryDraftStore';
 import { listDesignConversationProjects, type DesignProjectListClient, type DesignConversationProject } from '../features/designDetail/designProjectList';
@@ -16,6 +17,7 @@ import {
   FolderOpen,
   Grid2X2,
   Image as ImageIcon,
+  ImagePlus,
   Layers,
   Megaphone,
   MessageCircle,
@@ -24,6 +26,7 @@ import {
   FileText,
   Plus,
   Radio,
+  RotateCw,
   Search,
   Shirt,
   ShoppingBag,
@@ -39,6 +42,7 @@ import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../compon
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
+import { LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
 import type { Json } from '../types/database';
@@ -390,6 +394,16 @@ export function LightchainCreatorPage() {
  * surface.  Keep the richer placement/mask workbench available at the legacy
  * Heavy compatibility route, while matching the production entry point here.
  */
+export function printImageBrief(coverage: 'spot' | 'full'): string {
+  return [
+    'プリントイメージ: 1枚目の参考画像の衣服に、2枚目のプリント画像を印刷した仕上がりを作成してください。',
+    coverage === 'full'
+      ? '配置: 全体（衣服の生地全面に柄として繰り返し印刷）'
+      : '配置: スポット（胸元などにワンポイントで印刷）',
+    '衣服の形・色・シワ・陰影と背景は元の参考画像を保ち、プリントは布の質感と陰影に沿って自然に馴染ませてください。',
+  ].join('\n');
+}
+
 export function LightchainPrintingPage() {
   const { user, currentBrand } = useAuthStore();
   return <LightchainPrintingWorkspace key={JSON.stringify([currentBrand?.id, user?.id])} />;
@@ -405,9 +419,10 @@ function LightchainPrintingWorkspace() {
     ...(workspace.slots.secondary.sourceStoragePath?{storagePath:workspace.slots.secondary.sourceStoragePath}:{})}:null;
   const coverage=workspace.inputState.coverage==='full'?'full':workspace.inputState.coverage==='spot'?'spot':null;
   const setCoverage=(value:'spot'|'full')=>{beginDraftEdit('coverage');workspace.setInputState({...workspace.inputState,coverage:value});};
-  const [historyOpen,setHistoryOpen]=useState(false),[printingBannerVisible,setPrintingBannerVisible]=useState(true),[message,setMessage]=useState('');
+  const [historyOpen,setHistoryOpen]=useState(false),[message,setMessage]=useState('');
   const {user,currentBrand}=useAuthStore(),navigate=useNavigate(),location=useLocation();
-  const locked=workspace.status==='running'||workspace.status==='loading'||Boolean(workspace.pendingId);
+  const heavyBrand=useHeavyWorkspaceBrandGate();
+  const locked=heavyBrand.pending||workspace.status==='running'||workspace.status==='loading'||Boolean(workspace.pendingId);
   const persistenceScope=useMemo(()=>user?.id?{origin:cloudflareDataPlane?.origin??window.location.origin,userId:user.id}:undefined,[user?.id]);
   const libraryQuery=new URLSearchParams(location.search);
   const explicitLibrary=libraryQuery.has('libraryArtifactId');
@@ -452,7 +467,15 @@ function LightchainPrintingWorkspace() {
   const handleCanonicalFiles=(event:ChangeEvent<HTMLInputElement>)=>{const [base,pattern]=Array.from(event.target.files??[]).slice(0,2);if(base||pattern){beginDraftEdit();setMessage('');}if(base)void workspace.upload('primary',base);if(pattern)void workspace.upload('secondary',pattern);};
   const reset=()=>{if(locked)return;beginDraftEdit();workspace.clearSource('primary');workspace.clearSource('secondary');setMessage('');
     if(!workspace.jobId&&user?.id&&currentBrand?.id&&persistenceScope)void persistPrintInputState(currentBrand.id,null,[],{garment:null,designs:[]},{scope:persistenceScope}).catch(()=>undefined);};
-  const handleGenerate=()=>workspace.generate({brief:workspace.brief||`プリントイメージ: ${coverage==='full'?'全体':coverage==='spot'?'スポット':'配置未設定'}`});
+  const handleGenerate=()=>workspace.generate({brief:workspace.brief||printImageBrief(coverage==='full'?'full':'spot')});
+  const [printingResultUrl,setPrintingResultUrl]=useState<string|null>(null);
+  useEffect(()=>{const result=workspace.result;let cancelled=false;
+    if(!result){setPrintingResultUrl(null);return;}
+    if(result.imageUrl){setPrintingResultUrl(result.imageUrl);return;}
+    if(!result.storagePath){setPrintingResultUrl(null);return;}
+    void withSignedImageUrls([{storage_path:result.storagePath,image_url:''}]).then(([signed])=>{if(!cancelled)setPrintingResultUrl(signed?.image_url||null);}).catch(()=>{if(!cancelled)setPrintingResultUrl(null);});
+    return()=>{cancelled=true;};
+  },[workspace.result]);
 
   const [canvasHandoffPending,setCanvasHandoffPending]=useState(false),[canvasHandoffMessage,setCanvasHandoffMessage]=useState('');
   const canvasHandoffInFlight=useRef(false),canvasHandoffMounted=useRef(true);
@@ -556,92 +579,68 @@ function LightchainPrintingWorkspace() {
     );
   }
 
-  return (
-    <ParityShell workflowFeature="printing-image" className="lightchain-printing-parity bg-[#171b1c] text-white">
-      <style>{`
-        .lightchain-printing-parity .bg-white { background-color: #252b2d !important; }
-        .lightchain-printing-parity .bg-neutral-50 { background-color: #202629 !important; }
-        .lightchain-printing-parity .bg-neutral-950 { background-color: #0b1113 !important; }
-        .lightchain-printing-parity .bg-amber-50 { background-color: rgba(127, 29, 29, 0.28) !important; }
-        .lightchain-printing-parity .border-neutral-200,
-        .lightchain-printing-parity .border-neutral-300 { border-color: rgba(255, 255, 255, 0.1) !important; }
-        .lightchain-printing-parity .text-neutral-900,
-        .lightchain-printing-parity .text-neutral-700,
-        .lightchain-printing-parity .text-neutral-600 { color: rgba(255, 255, 255, 0.82) !important; }
-        .lightchain-printing-parity .text-neutral-500 { color: rgba(255, 255, 255, 0.46) !important; }
-        .lightchain-printing-parity input[type="file"] { color: rgba(255, 255, 255, 0.7); }
-      `}</style>
-      <div className="relative mx-auto w-full px-4 py-4 sm:px-5 lg:px-4">
-        <aside className="absolute left-4 top-4 hidden h-[746px] w-20 flex-col items-center gap-2 border-r border-white/10 bg-[#171b1c] px-0 py-0 lg:flex" aria-label="ツールバー">
-          {[
-            ['ツールバー', Grid2X2, '/designProduction?category=recommended'],
-            ['デザインツール', WandSparkles, '/tools/fabric'],
-            ['フィッティングツール', Sparkles, '/model'],
-            ['グラフィックデザインツール', ImageIcon, '/tools/printing'],
-            ['衣類生産ツール', FolderOpen, '/tools/fabric'],
-          ].map(([label, Icon, to]) => {
-            const ToolIcon = Icon as typeof Grid2X2;
-            const active = label === 'グラフィックデザインツール';
-            return <Link key={label as string} to={to as string} aria-current={active ? 'page' : undefined} className={`flex min-h-20 w-full flex-col items-center justify-center gap-1 rounded-xl border px-1 text-center text-[10px] leading-4 transition ${active ? 'border-cyan-200/30 bg-cyan-300/15 text-cyan-100' : 'border-transparent text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}><ToolIcon className="mb-1 h-7 w-7" /><span>{label as string}</span></Link>;
-          })}
-        </aside>
-        <div className="relative lg:pl-24">
-        <div className="absolute inset-x-0 top-4 z-10 flex items-center justify-end gap-4">
-          <div className="hidden">
-            <p className="text-xs font-semibold tracking-[0.25em] text-neutral-500">HEAVY CHAIN / GRAPHIC TOOLS</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">プリントイメージ</h1>
-            <p className="mt-2 max-w-2xl text-sm text-neutral-500">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p>
-          </div>
-          <button type="button" className="absolute right-[10px] top-0 h-8 w-[102px] rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-sm text-neutral-700 transition hover:border-neutral-400" onClick={() => setHistoryOpen((open) => !open)}>
-            生成履歴
-          </button>
-        </div>
-
-        <nav className="absolute left-28 top-4 z-10 grid w-[564px] grid-cols-4 rounded-xl border border-neutral-200 bg-neutral-50 p-[2px]" aria-label="素材ツール" role="tablist">
-          {[
-            ['生地イメージ', '/tools/fabric'],
-            ['プリントイメージ', '/tools/printing'],
-            ['線画の実写化', '/tools/line-draft-to-tile'],
-            ['平絵生成', '/tools/line'],
-          ].map(([label, href]) => (
-            <button key={label} type="button" role="tab" aria-selected={href === '/tools/printing'} className={`rounded-sm px-1 py-1 text-[15px] leading-[23px] font-medium transition ${href === '/tools/printing' ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`} onClick={() => navigate(href)}>{label}</button>
-          ))}
-        </nav>
-
-        <div className="mt-0 grid gap-4 lg:grid-cols-[minmax(0,596px)_minmax(0,1fr)]">
-          <section className="relative h-[746px] min-h-0 overflow-hidden rounded-2xl bg-white p-4 pt-[68px] shadow-sm">
-            {printingBannerVisible && <div className="flex h-16 items-start gap-2 rounded-lg bg-amber-50 px-4 py-[15px] text-sm leading-5 text-amber-900">
-              <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<Link className="ml-[15px] underline" to="/designProduction">今すぐ体験</Link></span>
-              <button type="button" aria-label="告知を閉じる" className="shrink-0 text-lg leading-5 text-amber-100/80 transition hover:text-white" onClick={() => setPrintingBannerVisible(false)}>×</button>
-            </div>}
-            <label className="mt-[18px] flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
-              <input className="sr-only" disabled={locked} type="file" accept="image/*" onChange={(event) => handleFile(event, 'base')} />
-              {referenceImage ? <img src={referenceImage.url} alt="参考画像" data-source-slot="primary" data-source-image-id={workspace.slots.primary?.sourceImageId??''} data-source-storage-path={workspace.slots.primary?.sourceStoragePath??''} className="max-h-56 max-w-full rounded-lg object-contain" /> : <><Upload className="h-8 w-8 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">参考画像をアップロードしてください</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
-            </label>
-            <div className="mt-4 flex items-center justify-between"><h2 className="font-semibold">プリントをアップロード</h2><button type="button" className="text-sm text-neutral-500 underline" onClick={() => { reset(); }}>リセット</button></div>
-            <div className="mt-3 grid w-[244px] grid-cols-2 rounded-xl border border-neutral-200 bg-neutral-50 p-1">
-              {(['spot', 'full'] as const).map((value) => <button key={value} type="button" aria-pressed={coverage === value} aria-selected={coverage === value} className={`rounded-lg px-4 py-3 text-sm font-semibold ${coverage === value ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500'}`} disabled={locked} onClick={() => setCoverage(value)}>{value === 'spot' ? 'スポット' : '全体'}</button>)}
-            </div>
-            <label className="mt-3 flex h-[120px] w-[120px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
-              <input className="sr-only" disabled={locked} type="file" accept="image/*" onChange={(event) => handleFile(event, 'pattern')} />
-              {printImage ? <img src={printImage.url} alt="プリント画像" data-source-slot="secondary" data-source-image-id={workspace.slots.secondary?.sourceImageId??''} data-source-storage-path={workspace.slots.secondary?.sourceStoragePath??''} className="h-full w-full rounded-lg object-contain" /> : <><Upload className="h-6 w-6 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">画像をアップロード</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
-            </label>
-            <button type="submit" className="absolute bottom-4 right-4 h-10 w-[288px] rounded-xl bg-neutral-950 px-4 text-sm font-semibold text-white transition hover:bg-neutral-800" disabled={locked||!workspace.slots.primary||!workspace.slots.secondary} onClick={() => void handleGenerate()}>AI生成</button>
-            {message && <p className="mt-3 text-sm text-neutral-600" role="status">{message}</p>}
-          </section>
-
-          <aside className="relative space-y-4" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status}><CanonicalImageWorkspaceControls workspace={workspace} onSourceEdit={beginDraftEdit} />{workspace.result?<div className="relative z-10 space-y-2" data-testid="printing-canvas-handoff">
-    <button type="button" className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={canvasHandoffDisabled} onClick={()=>void handlePrintingCanvasHandoff()}>Canvasで再編集</button>
-    {canvasHandoffMessage&&<p className="text-sm text-neutral-400" role="status">{canvasHandoffMessage}</p>}
-  </div>:null}
-            <section className="flex h-[746px] min-h-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#151a1c] p-4 text-center shadow-sm"><div className="flex size-full flex-col items-center justify-center px-10"><h2 className="text-xl font-bold text-white">プリントイメージ</h2><p className="mt-2 text-sm leading-[21px] text-neutral-400">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p><div className="mt-4 h-[340px] w-full"><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="size-full rounded-lg object-cover" autoPlay controls muted playsInline aria-label="プリントイメージ動画" /></div></div></section>
-            <section className="hidden" aria-label="詳細設定"><h2 className="font-semibold">詳細設定</h2><p>配置・マスク・複数素材を使う場合はこちら。</p><button type="button" onClick={() => void handleGenerate()}>高度な印刷ワークスペース</button></section>
-          </aside>
-        </div>
-        {libraryQuery.get('debug') === '1' && user?.id && currentBrand?.id && persistenceScope && <PrintDraftSafetyControls brandId={currentBrand.id} userId={user.id} origin={persistenceScope.origin} disabled={locked || explicitLibrary || Boolean(workspace.jobId) || Boolean(workspace.pendingId)} />}
-        {historyOpen && <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"><h2 className="font-semibold">生成履歴</h2><p className="mt-3 text-sm text-neutral-500">生成履歴はここに表示されます。</p><button type="button" className="mt-3 text-sm font-semibold text-neutral-700 underline" onClick={() => navigate('/history')}>履歴を開く</button></section>}
-        </div>
+  // Light /tools/printing (プリントイメージ), measured at 1440×900: shared デザインツール frame, 564×280 reference box,
+  // プリントをアップロード + リセット, 244px スポット／全体 toggle, 120px print tile, 288×40 AI生成 pinned bottom-right.
+  const printingControls = (
+    <div className="flex flex-1 flex-col">
+      <label data-testid="print-image-garment-input" className="mt-[18px] flex h-[280px] shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-transparent bg-[#33393b] text-center transition hover:border-[#20d0c4]">
+        <input className="sr-only" disabled={locked} type="file" accept="image/*" aria-label="参考画像をアップロードしてください" onChange={(event) => handleFile(event, 'base')} />
+        {referenceImage ? <>
+          <img src={referenceImage.url} alt="参考画像" data-source-slot="primary" data-source-image-id={workspace.slots.primary?.sourceImageId??''} data-source-storage-path={workspace.slots.primary?.sourceStoragePath??''} className="max-h-full max-w-full object-contain" />
+          <span className="sr-only" data-testid="print-image-file-name">{workspace.slots.primary?.name}</span>
+        </> : <>
+          <ImagePlus aria-hidden="true" className="h-6 w-6 text-neutral-200" />
+          <span className="mt-2 text-base text-neutral-200">参考画像をアップロードしてください</span>
+          <span className="mt-1 text-xs text-neutral-400">20MB以下の画像アップロードしてください</span>
+        </>}
+      </label>
+      <div className="mt-6 flex items-center justify-between">
+        <h2 className="text-base font-normal text-white/90">プリントをアップロード</h2>
+        <button type="button" disabled={locked} className="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white" onClick={() => { reset(); }}><RotateCw aria-hidden="true" className="h-3 w-3" />リセット</button>
       </div>
+      <div role="group" aria-label="プリント範囲" className="mt-3 grid h-[30px] w-[244px] grid-cols-2 rounded-full bg-[#2b3133] p-[2px]">
+        {(['spot', 'full'] as const).map((value) => <button key={value} type="button" aria-pressed={coverage === value} disabled={locked} onClick={() => setCoverage(value)} className={`rounded-full text-sm transition ${coverage === value ? 'bg-[#4b5153] text-white' : 'text-white/70 hover:text-white'}`}>{value === 'spot' ? 'スポット' : '全体'}</button>)}
+      </div>
+      <label data-testid="print-image-print-input" className="mt-4 flex h-[120px] w-[120px] shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-transparent bg-[#33393b] p-2 text-center transition hover:border-[#20d0c4]">
+        <input className="sr-only" disabled={locked} type="file" accept="image/*" aria-label="プリント画像をアップロード" onChange={(event) => handleFile(event, 'pattern')} />
+        {printImage ? <>
+          <img src={printImage.url} alt="プリント画像" data-source-slot="secondary" data-source-image-id={workspace.slots.secondary?.sourceImageId??''} data-source-storage-path={workspace.slots.secondary?.sourceStoragePath??''} className="h-full w-full object-contain" />
+          <span className="sr-only" data-testid="print-image-file-name">{workspace.slots.secondary?.name}</span>
+        </> : <>
+          <span className="text-sm leading-[21px] text-neutral-200">画像をアップロード</span>
+          <span className="mt-1 text-xs leading-[17px] text-neutral-400">20MB以下の画像アップロードしてください</span>
+        </>}
+      </label>
+      {heavyBrand.failed && <p role="alert" className="mt-3 text-sm text-rose-200">ワークスペースを準備できません。ページを再読み込みしてください。</p>}
+      {message && <p className="mt-3 text-sm text-white/70" role="status">{message}</p>}
+      {workspace.error && <p role="alert" className="mt-3 text-sm text-rose-200">{workspace.error}</p>}
+      {workspace.pendingId && <button type="button" disabled={workspace.status==='running'} onClick={()=>void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
+      <div className="mt-auto flex justify-end pt-6">
+        <button type="submit" data-testid="print-image-generate" className="inline-flex h-10 w-[288px] items-center justify-center gap-1 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60" disabled={locked||!workspace.slots.primary||!workspace.slots.secondary} onClick={() => void handleGenerate()}>AI生成<Sparkles aria-hidden="true" className="h-4 w-4" /></button>
+      </div>
+    </div>
+  );
+  const printingResult = (
+    <div className="flex h-full flex-col" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status}>
+      {workspace.result ? (
+        <div data-testid="print-image-result" className="flex h-full flex-col items-center justify-center gap-4 px-10 pb-6 pt-16">
+          {printingResultUrl && <img src={printingResultUrl} alt="プリントイメージ AI生成" className="min-h-0 max-w-full flex-1 rounded-lg object-contain" />}
+          <div className="space-y-2" data-testid="printing-canvas-handoff">
+            <button type="button" className="rounded-lg bg-[#5fd0c8] px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={canvasHandoffDisabled} onClick={()=>void handlePrintingCanvasHandoff()}>Canvasで再編集</button>
+            {canvasHandoffMessage&&<p className="text-sm text-neutral-400" role="status">{canvasHandoffMessage}</p>}
+          </div>
+        </div>
+      ) : workspace.status === 'running' ? (
+        <div className="flex h-full items-center justify-center text-sm text-white/70" role="status">生成中…</div>
+      ) : (
+        <LightchainDesignToolEmptyState title="プリントイメージ" description="プリントイメージを使用し、版下を作成せずに印刷効果を確認できます" videoUrl="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" videoTestId="print-image-empty-video" />
+      )}
+      {libraryQuery.get('debug') === '1' && user?.id && currentBrand?.id && persistenceScope && <PrintDraftSafetyControls brandId={currentBrand.id} userId={user.id} origin={persistenceScope.origin} disabled={locked || explicitLibrary || Boolean(workspace.jobId) || Boolean(workspace.pendingId)} />}
+    </div>
+  );
+  return (
+    <ParityShell workflowFeature="printing-image" className="lightchain-printing-parity bg-[#0b1113] text-white">
+      <LightchainDesignToolFrame active="printing" testId="print-image-page" navigationLocked={locked}>{printingControls}{printingResult}</LightchainDesignToolFrame>
     </ParityShell>
   );
 }

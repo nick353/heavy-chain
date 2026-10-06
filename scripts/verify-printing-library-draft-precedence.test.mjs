@@ -54,7 +54,7 @@ function printingFixture({ search = '', jobId = null, pendingId = null, restore,
   workspace.generate = () => { calls.forbidden.push('provider generation'); throw Error('forbidden provider'); };
   const auth = { user: { id: 'alice' }, currentBrand: { id: 'brand' } }, location = { search };
   const b = {
-    useCanonicalImageWorkspace: () => workspace, useAuthStore: () => auth, useNavigate: () => () => calls.forbidden.push('navigate'), useLocation: () => location,
+    useCanonicalImageWorkspace: () => workspace, useHeavyWorkspaceBrandGate: () => ({ pending: false, failed: false }), useAuthStore: () => auth, useNavigate: () => () => calls.forbidden.push('navigate'), useLocation: () => location,
     cloudflareDataPlane: null, window: { location: { origin: 'https://printing.test' } },
     useRef: initial => { const i = refIndex++; return refs[i] ??= { current: initial }; },
     useState: initial => { const i = stateIndex++; states[i] ??= initial; return [states[i], value => { states[i] = value; }]; },
@@ -101,7 +101,7 @@ for (const boundary of ['read', 'sign', 'fetch', 'blob']) for (const rejects of 
   if (rejects) gate.reject(Error('late failure'));
   else gate.resolve(boundary === 'read' ? snapshot() : boundary === 'sign' ? [{ image_url: 'late-sign' }] : boundary === 'fetch' ? { ok: true, blob: () => { throw Error('stale blob must not run'); } } : new Blob(['late-blob'], { type: 'image/png' }));
   await settle(); assert.deepEqual(f.calls.uploads, []); assert.deepEqual(f.calls.writes, []);
-  assert.equal(f.workspace.inputState.coverage, 'spot'); assert.equal(f.states[2], ''); assert.equal(f.view.draftReady.current, false);
+  assert.equal(f.workspace.inputState.coverage, 'spot'); assert.equal(f.states[1], ''); assert.equal(f.view.draftReady.current, false);
   if (boundary === 'read') assert.equal(f.calls.signs.length, 0);
   f.flushEffects(); f.unmount(); f.safe();
 });
@@ -148,7 +148,7 @@ test('passive draft restoration keeps stored sources and placement without rewri
 });
 for (const failure of ['read', 'sign']) test(`ordinary ${failure} failure blocks automatic persistence until explicit edit`, async () => {
   const f = printingFixture({ restore: failure === 'read' ? async () => { throw Error('read offline'); } : undefined, sign: failure === 'sign' ? async () => { throw Error('sign offline'); } : undefined });
-  f.render(); await settle(); f.render(); assert.equal(f.view.draftReady.current, false); assert.deepEqual(f.calls.writes, []); assert.match(f.states[2], /取得できません/);
+  f.render(); await settle(); f.render(); assert.equal(f.view.draftReady.current, false); assert.deepEqual(f.calls.writes, []); assert.match(f.states[1], /取得できません/);
   f.view.handleFile({ target: { files: [new File(['manual'], 'manual.png', { type: 'image/png' })] } }, 'base'); await settle(); f.render(); await settle();
   assert.equal(f.calls.writes.length, 1); assert.equal(f.view.draftReady.current, true); f.safe(); f.unmount();
 });
