@@ -12,3 +12,4 @@ src/hooks/useHeavyWorkspaceBrandGate.ts
 src/pages/LightchainLineToolsPage.tsx
 src/lib/rasterToSvg.ts
 src/components/lightchain/SvgExportPanel.tsx
+src/pages/LightchainImageRepairPage.tsx

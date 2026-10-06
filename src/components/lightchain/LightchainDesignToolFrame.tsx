@@ -33,13 +33,17 @@ export const LIGHTCHAIN_VECTOR_TOOL_TABS = [
   { id: 'pattern-vector-pro', label: 'パターンをベクター画像に変換（プロフェッショナル版）', route: '/tools/vector-special' },
 ] as const;
 
+export const LIGHTCHAIN_IMAGE_REPAIR_TABS = [
+  { id: 'image-repair', label: '画像修正', route: '/tools/reactor' },
+] as const;
+
 export const LIGHTCHAIN_SVG_CONVERT_TABS = [
   { id: 'svg-convert', label: '平絵をベクター化', route: '/tools/svg-convert' },
 ] as const;
 
 type FrameTab = { readonly id: string; readonly label: string; readonly route: string };
-/** Rail entry highlighted for the current tool group: 0 = デザインツール, 2 = グラフィックデザインツール, 3 = 衣類生産ツール. */
-export type LightchainRailGroup = 0 | 2 | 3;
+/** Rail entry highlighted for the current tool group: 0 = デザインツール, 1 = フィッティングツール, 2 = グラフィックデザインツール, 3 = 衣類生産ツール. */
+export type LightchainRailGroup = 0 | 1 | 2 | 3;
 
 export function LightchainDesignToolRail({ locked = false, activeIndex = 0 }: { locked?: boolean; activeIndex?: LightchainRailGroup }) {
   return (
@@ -71,7 +75,9 @@ export function LightchainDesignToolRail({ locked = false, activeIndex = 0 }: { 
   );
 }
 
-export function LightchainDesignToolFrame({ active, testId, children, workspaceAttributes, navigationLocked = false, tabs = LIGHTCHAIN_DESIGN_TOOL_TABS, railGroup = 0 }: {
+export function LightchainDesignToolFrame({ active, testId, children, workspaceAttributes, navigationLocked = false, tabs = LIGHTCHAIN_DESIGN_TOOL_TABS, railGroup = 0, showNotice = true }: {
+  /** Light shows the deprecation notice on the デザインツール pages but not on 画像修正. */
+  showNotice?: boolean;
   active: string;
   tabs?: ReadonlyArray<FrameTab>;
   railGroup?: LightchainRailGroup;
@@ -90,7 +96,7 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
       <LightchainDesignToolRail locked={navigationLocked} activeIndex={railGroup} />
       <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,596px)_minmax(360px,1fr)]">
         <section className="relative flex min-w-0 flex-col overflow-y-auto scrollbar-hide rounded-lg bg-[#171d20] p-4 shadow-2xl shadow-black/20">
-          <nav className="mb-4 grid gap-0 rounded-xl border border-white/10 px-[3px] py-[1.5px]" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} aria-label="素材ツール" role="tablist">
+          <nav className={`${showNotice ? 'mb-4' : 'mb-2'} grid gap-0 rounded-xl border border-white/10 px-[3px] py-[1.5px]`} style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} aria-label="素材ツール" role="tablist">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -107,7 +113,7 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
               </button>
             ))}
           </nav>
-          {bannerVisible && (
+          {showNotice && bannerVisible && (
             <div data-testid="lightchain-design-tool-deprecation-banner" className="flex rounded-lg bg-[#5b1f2a] px-4 py-2 text-sm leading-6 text-white">
               <span className="flex-1">
                 この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
