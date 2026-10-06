@@ -300,7 +300,7 @@ test('rendered scene selections persist their evidenced ordered references and m
   try {
     const { page } = fixture;
     const prompt = page.getByTestId('design-dialogue-prompt');
-    const send = page.getByRole('button', { name: '送信' });
+    const send = page.getByTestId('design-dialogue-send');
     for (const scene of SCENES) {
       await page.getByTestId(`design-dialogue-scene-${scene.title}`).click();
       await waitForReadyReferences(page, scene.names.length);
@@ -343,7 +343,7 @@ test('multiple file upload, remove compaction, and failed-save retry block parti
     await waitForReadyReferences(page, 1);
     const remainingId = await page.locator('[data-testid="design-dialogue-reference-chip"]').first().getAttribute('data-reference-id');
     assert.notEqual(remainingId, firstId);
-    await page.getByRole('button', { name: '送信' }).click();
+    await page.getByTestId('design-dialogue-send').click();
     await page.waitForFunction(() => {
       return window.__designDialogueSentDraft?.references.some((reference) => reference.name === 'fabric.jpg');
     }, undefined, { timeout: 5_000 });
@@ -355,7 +355,7 @@ test('multiple file upload, remove compaction, and failed-save retry block parti
     await page.getByTestId('design-dialogue-scene-線画から実写化').click();
     await page.getByTestId('design-dialogue-reference-chip').waitFor({ state: 'visible' });
     await page.getByTestId('design-dialogue-reference-retry').waitFor({ state: 'visible' });
-    const send = page.getByRole('button', { name: '送信' });
+    const send = page.getByTestId('design-dialogue-send');
     assert.equal(await send.isDisabled(), true, 'a failed selected reference can never be silently omitted');
     assert.equal((await readSentReferences(page)).references.length, 1, 'failed selection did not navigate with a partial reference list');
     await page.getByRole('button', { name: 'draft1.pngを再試行' }).click();
@@ -410,7 +410,7 @@ test('scope changes during an awaited save fence the old selection before any pa
       await page.evaluate(() => window.__designDialogueReleaseSave());
       await page.waitForFunction(() => window.__designDialogueSaveEntered === false, undefined, { timeout: 5_000 });
       await page.getByTestId('design-dialogue-prompt').fill('新しい範囲のテキストのみ');
-      await page.getByRole('button', { name: '送信' }).click();
+      await page.getByTestId('design-dialogue-send').click();
       const sent = await readSentReferences(page);
       assert.deepEqual(sent.references, [], 'a late old-scope save is never attached to the new user/brand or logout send');
       const state = await page.evaluate(() => window.__designDialogueServerState);
@@ -488,20 +488,20 @@ test('unknown create is durable and reconciles the same ID with GET only across 
     const { page } = fixture;
     await page.evaluate(() => { window.__entryFailCreate = true; });
     await page.getByTestId('design-dialogue-prompt').fill('作成結果が不明な初回入力');
-    await page.getByRole('button', { name: '送信' }).click();
+    await page.getByTestId('design-dialogue-send').click();
     await page.getByTestId('design-dialogue-error').waitFor();
     const before = await page.evaluate(() => ({ id: window.__entryCreateIds[0], state: JSON.parse(window.sessionStorage.getItem('design-dialogue-test-server-state-v1')!) }));
     assert.equal(before.state.createCount, 1);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await installFixtureInPage(page);
     await page.getByTestId('design-dialogue-prompt').fill('作成結果が不明な初回入力');
-    await page.getByRole('button', { name: '送信' }).click();
+    await page.getByTestId('design-dialogue-send').click();
     await page.getByTestId('design-dialogue-error').waitFor();
     const retried = await page.evaluate(() => ({ ids: window.__entryGetIds, state: JSON.parse(window.sessionStorage.getItem('design-dialogue-test-server-state-v1')!) }));
     assert.equal(retried.state.createCount, 1, 'reload cannot replay an uncertain create');
     assert.deepEqual(retried.ids, [before.id], 'reconciliation uses the same proposed ID');
     await page.getByTestId('design-dialogue-prompt').fill('別の独立した初回入力');
-    await page.getByRole('button', { name: '送信' }).click();
+    await page.getByTestId('design-dialogue-send').click();
     await page.getByTestId('design-entry-draft').waitFor();
     const independent = await readSentReferences(page);
     assert.notEqual(independent.projectId, before.id);
@@ -544,7 +544,7 @@ test('detail rejects foreign or missing project/conversation associations withou
   try {
     const { page } = fixture;
     await page.getByTestId('design-dialogue-prompt').fill('所有者だけに見えるプロンプト');
-    await page.getByRole('button', { name: '送信' }).click();
+    await page.getByTestId('design-dialogue-send').click();
     await page.getByTestId('design-entry-draft').waitFor();
     const before = await readSentReferences(page);
     for (const url of [
@@ -570,7 +570,7 @@ test('auth changes while canonical creation awaits fence old-scope navigation an
     const { page } = fixture;
     await page.evaluate(() => { window.__entryHoldCreate = true; });
     await page.getByTestId('design-dialogue-prompt').fill('旧ブランドの入力');
-    await page.getByRole('button', { name: '送信' }).click();
+    await page.getByTestId('design-dialogue-send').click();
     await page.waitForFunction(() => window.__entryCreateEntered === true);
     const ids = await page.evaluate(() => [...window.__entryCreateIds]);
     await page.evaluate(() => window.__designDialogueSetAuth('dialogue-user-a', 'dialogue-brand-b'));

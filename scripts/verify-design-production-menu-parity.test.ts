@@ -19,7 +19,7 @@ test('design production saved cards expose Light-compatible menu and pin persist
   assert.match(source, /アセットライブラリーに保存しました/);
   assert.match(source, /window\.confirm/);
   assert.match(source, /toDesignEntries\(localArtifacts, remoteArtifacts\)/);
-  assert.match(source, /paginate\(displayDesignEntries, projectPage, DESIGN_PROJECT_PAGE_SIZE\)/);
+  assert.match(source, /paginate\(projectGridItems, projectPage, DESIGN_PROJECT_PAGE_SIZE\)/);
   assert.match(source, /designEntryHref\(entry\)/);
   assert.doesNotMatch(source, /source-design-production-untitled-/);
   assert.match(source, /data-testid="design-production-pagination"/);

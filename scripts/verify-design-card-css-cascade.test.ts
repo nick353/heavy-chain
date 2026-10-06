@@ -75,7 +75,7 @@ const TestCard = () => {
       creationCards,
       h('section', { 'data-testid': 'design-production-persisted-projects' },
         h('div', {}, h('h2', {}, '保存済みデザインプロジェクト')),
-        h('div', { className: 'mt-4 grid gap-4 grid-cols-2 sm:grid-cols-5' }, card)),
+        h('div', { className: 'mt-4 grid gap-4 grid-cols-2 sm:grid-cols-5', 'data-testid': 'design-production-project-grid' }, card)),
       pagination,
       h('div', { 'data-testid': 'design-fixture-page-count', 'data-page-count': page.pageCount }, page.pageCount)),
     h('div', { className: 'design-production-parity', 'data-testid': 'dialogue-branch-fixture' }, dialogueTabs));
@@ -103,7 +103,7 @@ test('Design card child sizing is semantic and does not retain the colliding pos
   assert.match(pageSource, /data-design-card-date=""/);
   assert.match(pageSource, /data-design-card-menu=""/);
   assert.match(thumbnailSource, /data-design-card-open=""/);
-  assert.match(pageSource, /paginate\(displayDesignEntries, projectPage, DESIGN_PROJECT_PAGE_SIZE\)/);
+  assert.match(pageSource, /paginate\(projectGridItems, projectPage, DESIGN_PROJECT_PAGE_SIZE\)/);
   assert.match(pageSource, /data-testid="design-production-pagination"/);
 
   const mainPageStart = pageSource.indexOf('export function LightchainDesignProductionPage');

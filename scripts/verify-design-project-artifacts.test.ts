@@ -202,7 +202,7 @@ test('Design page reads scoped real entries, paginates cards, and renders number
   assert.match(retryControl, /startDesignArtifactLoad\(/);
   assert.doesNotMatch(retryControl, /generate|saveWorkspaceArtifactBestEffort/);
   assert.match(source, /data-testid="design-project-empty"/);
-  assert.match(source, /paginate\(displayDesignEntries, projectPage, DESIGN_PROJECT_PAGE_SIZE\)/);
+  assert.match(source, /paginate\(projectGridItems, projectPage, DESIGN_PROJECT_PAGE_SIZE\)/);
   assert.match(source, /designEntryHref\(entry\)/);
   assert.match(source, /createDesignArtifactScopeKey\(designUserId, designBrandId\)/);
   assert.match(source, /persistedDesignScopeKey === designScopeKey\s*\? designArtifactLoadState\s*:\s*\{ status: 'loading' \}/);

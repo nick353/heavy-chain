@@ -107,6 +107,35 @@ export const toDesignEntries = (
   return entries.sort(compareDesignEntries);
 };
 
+export type DesignProjectGridItem<C> =
+  | { kind: 'conversation'; entry: C }
+  | { kind: 'design'; entry: DesignProjectEntry };
+
+const gridTime = (value: string) => {
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : Number.NEGATIVE_INFINITY;
+};
+
+/**
+ * Light shows conversation and saved design projects as one recency-ordered list. Both inputs are already
+ * ordered (design entries may carry pins/canonical ordering), so a stable merge keeps each source's relative order.
+ */
+export const mergeDesignProjectGridItems = <C extends { updatedAt: string }>(
+  conversations: readonly C[],
+  entries: readonly DesignProjectEntry[],
+): DesignProjectGridItem<C>[] => {
+  const merged: DesignProjectGridItem<C>[] = [];
+  let c = 0;
+  let d = 0;
+  while (c < conversations.length || d < entries.length) {
+    const takeConversation = d >= entries.length
+      || (c < conversations.length && gridTime(conversations[c].updatedAt) >= gridTime(entries[d].artifact.createdAt));
+    if (takeConversation) merged.push({ kind: 'conversation', entry: conversations[c++] });
+    else merged.push({ kind: 'design', entry: entries[d++] });
+  }
+  return merged;
+};
+
 export const paginate = <T>(
   items: readonly T[],
   requestedPage: number,

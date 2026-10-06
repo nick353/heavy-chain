@@ -96,9 +96,9 @@ test('Design dialogue source uses verified scene assets, a single input, and the
   assert.match(dialogueSource, /data-design-dialogue-upload-illustration="" src="\/scene-assets\/upload-placeholder\.png"/);
   assert.match(dialogueSource, /data-design-dialogue-prompt=""[\s\S]*?maxLength=\{4000\}/);
   assert.match(dialogueSource, /data-design-dialogue-counter=""/);
-  assert.match(dialogueSource, /data-design-dialogue-send=""[^>]*disabled=\{!prompt\.trim\(\) \|\| !referencesReady\}/);
-  assert.match(dialogueSource, /buildGenerationIntentHref\(\{[\s\S]*feature: 'design-gacha',[\s\S]*workflowVersion: 'design-production-brief-local-v1',[\s\S]*sourceMode: 'local-workflow-intake'/);
-  assert.match(dialogueSource, /sourceReferences = manifest\.map\(\(\{ imageId, storagePath, name \}\) => \(\{[\s\S]*sourceImageId: imageId,[\s\S]*sourceStoragePath: storagePath,[\s\S]*sourceFileName: name/);
+  assert.match(dialogueSource, /data-design-dialogue-send=""[^>]*disabled=\{!prompt\.trim\(\) \|\| !referencesReady \|\| entrySending\}/);
+  // Send creates the scoped design-detail entry (canonical project + conversation) before navigating.
+  assert.match(dialogueSource, /const manifest = controller\.prepareForSend\(\);[\s\S]*const href = await coordinator\.prepare\(prompt, manifest\);[\s\S]*navigate\(href\);/);
   assert.doesNotMatch(dialogueSource, /selectedReferenceImages|画像1を選択|画像2を選択|aria-label="画像[1-5]"/);
   assert.match(dialogueSource, /type="file"[\s\S]*accept="image\/png,image\/jpeg,image\/webp,image\/avif"[\s\S]*multiple/);
   assert.match(dialogueSource, /remainingUnits\.toLocaleString\(\)/);
@@ -234,7 +234,7 @@ test('actual dialogue component and stylesheet preserve measured desktop layout 
     assert.equal(tabColors[1].selected, 'true');
     assert.equal(tabColors[1].color, 'rgb(32, 208, 196)');
     assert.equal(tabColors[1].background, 'rgba(255, 255, 255, 0.15)');
-    const sendButton = page.getByRole('button', { name: '送信' });
+    const sendButton = page.getByTestId('design-dialogue-send');
     assert.equal(await sendButton.isDisabled(), true, 'empty prompt starts disabled');
 
     const sceneCards = page.locator('[data-testid="design-dialogue-scenes"] > button');
@@ -286,19 +286,12 @@ test('actual dialogue component and stylesheet preserve measured desktop layout 
     assert.equal(await page.locator('[data-testid="design-dialogue-counter"]').innerText(), '4000 / 4000');
     await promptBox.fill(prompt);
     assert.equal(await page.locator('[data-testid="design-dialogue-counter"]').innerText(), `${prompt.length} / 4000`);
+    // Without a signed-in user/brand the entry coordinator cannot create the scoped project, so Send must
+    // fail closed with a visible error and must not navigate to the legacy generation intake.
     await sendButton.click();
-    await page.waitForFunction(() => window.__designDialogueLocation?.startsWith('/generate?'));
-    const location = await page.evaluate(() => window.__designDialogueLocation);
-    const expectedHref = await page.evaluate((value) => window.__designDialogueExpectedHref(value), prompt);
-    assert.equal(location, expectedHref, 'send preserves the existing generation-intent href exactly');
-    const params = new URLSearchParams(location!.split('?')[1]);
-    assert.equal(params.get('feature'), 'design-gacha');
-    assert.equal(params.get('prompt'), prompt);
-    assert.equal(params.get('workflowVersion'), 'design-production-brief-local-v1');
-    assert.equal(params.get('sourceWorkspace'), 'design-production');
-    assert.equal(params.get('sourceMode'), 'local-workflow-intake');
-    assert.ok(params.get('sourceResumePath'));
-    assert.ok(params.get('sourceLabel'));
+    await page.getByTestId('design-dialogue-error').waitFor({ timeout: 10_000 });
+    assert.match(await page.getByTestId('design-dialogue-error').innerText(), /design_entry_scope_missing/);
+    assert.equal(await page.evaluate(() => window.__designDialogueLocation), '/designProduction', 'a failed entry never navigates');
     assert.equal(await page.evaluate(() => window.__designDialogueProjectStart), false);
 
     await page.setViewportSize({ width: 768, height: 632 });

@@ -17,7 +17,8 @@ type DesignArtifactThumbnailProps = {
   onOpen: () => void;
 };
 
-const placeholderImage = 'https://jp.linkaigc.com/static/project_default_cover.png';
+export const DESIGN_PROJECT_DEFAULT_COVER = 'https://jp.linkaigc.com/static/project_default_cover.png';
+const placeholderImage = DESIGN_PROJECT_DEFAULT_COVER;
 
 export function DesignArtifactThumbnail({ artifact, userId, brandId, href, onOpen }: DesignArtifactThumbnailProps) {
   const canonicalStoragePath = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
@@ -78,6 +79,7 @@ export function DesignArtifactThumbnail({ artifact, userId, brandId, href, onOpe
             key={`${scopeKey}:${visiblePreview?.requestToken ?? 0}`}
             src={imageUrl}
             alt=""
+            data-design-card-cover=""
             className="h-full w-full object-cover"
             loading="lazy"
             onError={() => controllerRef.current?.onImageError(visiblePreview?.requestToken ?? -1)}

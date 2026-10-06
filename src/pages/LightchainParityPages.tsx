@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
-import { DesignArtifactThumbnail } from '../components/DesignArtifactThumbnail';
+import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../components/DesignArtifactThumbnail';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
@@ -64,6 +64,7 @@ import {
   designHistoryFeatureTypes,
   isCurrentDesignArtifactLoad,
   isCurrentDesignArtifactScope,
+  mergeDesignProjectGridItems,
   paginate,
   toDesignEntries,
   type DesignProjectEntry,
@@ -1158,13 +1159,21 @@ export function LightchainMarketingHomePage() {
 }
 
 /** Read-only conversation cards, separate from the existing generated-image artifacts. */
-export function DesignConversationProjectList({ recent = false, client }: { recent?: boolean; client?: DesignProjectListClient }) {
+type DesignConversationProjectsView = {
+  status: 'loading' | 'ready' | 'error';
+  entries: DesignConversationProject[];
+  error?: string;
+  retry: () => void;
+};
+
+/** Loads verified conversation projects for the current scope; the page merges them into Light's single project grid. */
+export function useDesignConversationProjects(client?: DesignProjectListClient): DesignConversationProjectsView {
   const { user, currentBrand } = useAuthStore();
   const userId = user?.id ?? '';
   const brandId = currentBrand?.id ?? '';
   const scopeKey = JSON.stringify([userId, brandId]);
   const stores = useMemo(() => createEntryDraftStore({ idb: window.indexedDB, dbName: DESIGN_ENTRY_DRAFT_DB }), []);
-  const [retry, setRetry] = useState(0);
+  const [retryCount, setRetry] = useState(0);
   const [state, setState] = useState<{ scopeKey: string; status: 'loading' | 'ready' | 'error'; entries: DesignConversationProject[]; error?: string }>({ scopeKey: '', status: 'loading', entries: [] });
   const epochRef = useRef(0);
   useEffect(() => {
@@ -1186,21 +1195,45 @@ export function DesignConversationProjectList({ recent = false, client }: { rece
         });
     } else setState({ scopeKey, status: 'ready', entries: [] });
     return () => { if (epochRef.current === epoch) epochRef.current += 1; };
-  }, [brandId, client, retry, scopeKey, stores, userId]);
+  }, [brandId, client, retryCount, scopeKey, stores, userId]);
   const visible = state.scopeKey === scopeKey ? state : { status: 'loading' as const, entries: [] };
-  const entries = recent ? visible.entries.slice(0, 5) : visible.entries;
+  const retry = useCallback(() => setRetry((value) => value + 1), []);
+  return { status: visible.status, entries: visible.entries, error: state.scopeKey === scopeKey ? state.error : undefined, retry };
+}
+
+/** Light shows no visible loader for conversation rows; only a confirmed failure is surfaced with its retry. */
+export function DesignConversationProjectStatus({ view }: { view: DesignConversationProjectsView }) {
+  if (view.status === 'loading') return <p role="status" className="sr-only">対話プロジェクトを確認しています。</p>;
+  if (view.status !== 'error') return null;
+  return <div role="alert" data-testid="design-conversation-project-error" className="mb-3 text-sm text-amber-100">
+    <span>対話プロジェクトの保存状態を確認できませんでした。{view.error}</span>
+    <button type="button" data-testid="design-conversation-project-retry" onClick={view.retry} className="ml-3 underline">再確認</button>
+  </div>;
+}
+
+/** Same 220x240 card as a saved design project; a conversation has no cover, so Light's default cover is shown. */
+export function DesignConversationProjectCard({ entry }: { entry: DesignConversationProject }) {
+  return (
+    <article data-design-project-origin="conversation" className="relative h-60 overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40">
+      <Link to={entry.href} data-testid="design-conversation-project-card" data-project-id={entry.projectId} data-conversation-id={entry.conversationId} aria-label={`${entry.title}を開く`} className="block h-full w-full">
+        <div data-design-conversation-cover="" className="flex h-[167px] w-full items-center justify-center bg-white/10">
+          <img src={DESIGN_PROJECT_DEFAULT_COVER} alt="" className="h-12 w-12 object-contain" loading="lazy" />
+        </div>
+        <div data-design-card-title="" className="block w-full overflow-hidden text-left">
+          <p data-design-card-name="" className="truncate font-medium">{entry.title}</p>
+          <p data-design-card-date="" className="mt-2 truncate text-xs text-neutral-400">{formatArtifactDate(entry.updatedAt)}</p>
+        </div>
+      </Link>
+    </article>
+  );
+}
+
+export function DesignConversationProjectList({ recent = false, client }: { recent?: boolean; client?: DesignProjectListClient }) {
+  const view = useDesignConversationProjects(client);
+  const entries = recent ? view.entries.slice(0, 5) : view.entries;
   return <section data-testid="design-conversation-project-list" className="mt-4" aria-label="対話プロジェクト">
-    {visible.status === 'loading' && <p role="status" className="text-sm text-neutral-400">対話プロジェクトを確認しています。</p>}
-    {visible.status === 'error' && <div role="alert" data-testid="design-conversation-project-error" className="mb-3 text-sm text-amber-100">
-      <span>対話プロジェクトの保存状態を確認できませんでした。{state.error}</span>
-      <button type="button" data-testid="design-conversation-project-retry" onClick={() => setRetry((value) => value + 1)} className="ml-3 underline">再確認</button>
-    </div>}
-    <div className="grid gap-3 grid-cols-2 sm:grid-cols-5">{entries.map((entry) => <Link key={JSON.stringify([entry.projectId, entry.conversationId])}
-      to={entry.href} data-testid="design-conversation-project-card" data-project-id={entry.projectId} data-conversation-id={entry.conversationId}
-      className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm transition hover:border-white/30">
-      <MessageCircle aria-hidden="true" className="mb-3 h-5 w-5 text-neutral-400" />
-      <span className="block truncate font-medium">{entry.title}</span><span className="mt-2 block text-xs text-neutral-400">{formatArtifactDate(entry.updatedAt)}</span>
-    </Link>)}</div>
+    <DesignConversationProjectStatus view={view} />
+    <div className="grid gap-2 grid-cols-2 sm:grid-cols-5">{entries.map((entry) => <DesignConversationProjectCard key={JSON.stringify([entry.projectId, entry.conversationId])} entry={entry} />)}</div>
   </section>;
 }
 
@@ -1358,9 +1391,12 @@ export function LightchainDesignProductionPage() {
   }, [currentBrand?.id]);
 
   const displayDesignEntries = designUserId && designBrandId ? displayedEntries : [];
-  const displayDesignArtifacts = displayDesignEntries.map(({ artifact }) => artifact);
-  const page = paginate(displayDesignEntries, projectPage, DESIGN_PROJECT_PAGE_SIZE);
-  const visibleProjectEntries = page.items;
+  const conversationProjects = useDesignConversationProjects();
+  const visibleConversationProjects = designUserId && designBrandId ? conversationProjects.entries : [];
+  // Light renders conversation and saved design projects in one paged "マイプロジェクト" grid.
+  const projectGridItems = mergeDesignProjectGridItems(visibleConversationProjects, displayDesignEntries);
+  const page = paginate(projectGridItems, projectPage, DESIGN_PROJECT_PAGE_SIZE);
+  const visibleProjectItems = page.items;
 
   useEffect(() => {
     if (projectPage !== page.page) setProjectPage(page.page);
@@ -1527,7 +1563,8 @@ export function LightchainDesignProductionPage() {
       onProjectStart={() => setActiveTab('プロジェクトから開始')}
       remainingUnits={remainingUnits}
       recentProjectScopeKey={designScopeKey}
-      recentProjectEntries={displayDesignEntries.slice(0, 5)}
+      recentProjectEntries={displayDesignEntries}
+      recentConversationProjects={conversationProjects}
       recentProjectLoadState={displayedDesignLoadState}
       onRetryRecentProjects={() => { startDesignArtifactLoad(designScopeKey, designUserId, designBrandId); }}
       renderRecentProjectEntry={renderDesignProjectEntry}
@@ -1562,15 +1599,17 @@ export function LightchainDesignProductionPage() {
               <CreationCard icon={<FileText />} title="企画提案書" actionLabel="企画提案書を新規作成" onClick={() => navigate('/agent')} />
             </section>
             <section className="mt-12" data-testid="design-production-persisted-projects">
-              <DesignConversationProjectList />
               <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2></div>
               {displayedDesignLoadState.status === 'loading' && <p className="mt-4 rounded-2xl border border-white/10 px-5 py-8 text-center text-sm text-neutral-400" role="status" data-testid="design-project-loading">デザイン成果物を読み込んでいます。</p>}
               {displayedDesignLoadState.status === 'error' && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-200/5 px-4 py-3 text-sm text-amber-100" role="alert" data-testid="design-project-remote-error"><span>リモートのデザイン成果物を読み込めませんでした。{displayedDesignLoadState.remoteError}</span><button type="button" className="rounded-lg border border-amber-100/30 px-3 py-1.5 text-xs font-semibold hover:bg-white/10" onClick={() => { startDesignArtifactLoad(designScopeKey, designUserId, designBrandId); }} data-testid="design-project-retry">再試行</button></div>}
-              {displayDesignArtifacts.length === 0
-                ? displayedDesignLoadState.status === 'empty'
+              <DesignConversationProjectStatus view={conversationProjects} />
+              {projectGridItems.length === 0
+                ? displayedDesignLoadState.status === 'empty' && conversationProjects.status === 'ready'
                   ? <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-5 py-12 text-center text-sm text-neutral-400" data-testid="design-project-empty">保存確認できたデザイン成果物はまだありません。生成結果を保存すると、ここに表示されます。</div>
                   : null
-                : <><div className="mt-4 grid gap-4 grid-cols-2 sm:grid-cols-5">{visibleProjectEntries.map(renderDesignProjectEntry)}</div><div className="mt-5 flex flex-wrap items-center justify-end gap-2" data-testid="design-production-pagination" aria-label="マイプロジェクトページング"><button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage(Math.max(1, page.page - 1))} disabled={page.page === 1} aria-label="前のページ"><span role="img" aria-label="left"><ChevronLeft className="h-3 w-3" /></span></button>{Array.from({ length: page.pageCount }, (_, index) => <button key={index} type="button" aria-current={index + 1 === page.page ? 'page' : undefined} onClick={() => setProjectPage(index + 1)} className={`px-1.5 text-xs ${index + 1 === page.page ? 'text-white' : 'text-neutral-500'}`}>{index + 1}</button>)}<button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage(Math.min(page.pageCount, page.page + 1))} disabled={page.page === page.pageCount} aria-label="次のページ"><span role="img" aria-label="right"><ChevronRight className="h-3 w-3" /></span></button></div></>}
+                : <><div className="mt-4 grid gap-4 grid-cols-2 sm:grid-cols-5" data-testid="design-production-project-grid">{visibleProjectItems.map((item) => item.kind === 'conversation'
+                  ? <DesignConversationProjectCard key={JSON.stringify([item.entry.projectId, item.entry.conversationId])} entry={item.entry} />
+                  : renderDesignProjectEntry(item.entry))}</div><div className="mt-5 flex flex-wrap items-center justify-end gap-2" data-testid="design-production-pagination" aria-label="マイプロジェクトページング"><button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage(Math.max(1, page.page - 1))} disabled={page.page === 1} aria-label="前のページ"><span role="img" aria-label="left"><ChevronLeft className="h-3 w-3" /></span></button>{Array.from({ length: page.pageCount }, (_, index) => <button key={index} type="button" aria-current={index + 1 === page.page ? 'page' : undefined} onClick={() => setProjectPage(index + 1)} className={`px-1.5 text-xs ${index + 1 === page.page ? 'text-white' : 'text-neutral-500'}`}>{index + 1}</button>)}<button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage(Math.min(page.pageCount, page.page + 1))} disabled={page.page === page.pageCount} aria-label="次のページ"><span role="img" aria-label="right"><ChevronRight className="h-3 w-3" /></span></button></div></>}
             </section>
           </div>
         )}
@@ -1589,6 +1628,7 @@ export function LightchainDialogueParityPanel({
   recentProjectLoadState,
   onRetryRecentProjects,
   renderRecentProjectEntry,
+  recentConversationProjects,
 }: {
   onProjectStart: () => void;
   remainingUnits: number | null;
@@ -1601,6 +1641,8 @@ export function LightchainDialogueParityPanel({
   recentProjectLoadState?: DesignProjectArtifactLoadState<DesignProjectEntry>;
   onRetryRecentProjects?: () => void;
   renderRecentProjectEntry?: (entry: DesignProjectEntry) => ReactNode;
+  /** Parent-owned conversation rows, merged ahead of saved designs in Light's single recent grid. */
+  recentConversationProjects?: DesignConversationProjectsView;
 }) {
   type ReferenceController = ReturnType<typeof createDesignDialogueReferenceController>;
   const { currentBrand, user } = useAuthStore();
@@ -1647,7 +1689,9 @@ export function LightchainDialogueParityPanel({
     : recentScopeIsCurrent
       ? recentProjectLoadState ?? { status: 'loading' as const }
       : { status: 'loading' as const };
-  const visibleRecentProjectEntries = recentScopeIsCurrent ? recentProjectEntries.slice(0, 5) : [];
+  const visibleRecentItems = recentScopeIsCurrent
+    ? mergeDesignProjectGridItems(recentConversationProjects?.entries ?? [], recentProjectEntries).slice(0, 5)
+    : [];
 
   const reportReferenceError = useCallback((error: unknown) => {
     const code = error instanceof Error && /^[a-z0-9_:-]{1,96}$/i.test(error.message)
@@ -1967,8 +2011,8 @@ export function LightchainDialogueParityPanel({
             {dialogueScenes.map(([title, scenePrompt]) => (
               <button key={title} data-testid={`design-dialogue-scene-${title}`} type="button" aria-label={`使ってみる ${title}`} aria-pressed={selectedScene === title} onClick={() => selectScene(title, scenePrompt)} className={`group relative h-[120px] w-[234px] overflow-hidden rounded-2xl border text-left transition hover:border-white/40 ${selectedScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}>
                 <img data-design-dialogue-scene-cover="" src={dialogueSceneCoverByTitle[title]} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover transition-all duration-200 group-hover:blur-[8px]" loading="lazy" />
-                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
-                <span className="absolute inset-x-3 bottom-2 flex items-end justify-between gap-2 text-left"><span><span className="block text-[10px] leading-4 text-white/80 opacity-0 transition-opacity group-hover:opacity-100">使ってみる</span><span className="block truncate text-sm font-semibold leading-5 text-white">{title}</span></span><ArrowRight aria-hidden="true" className="mb-0.5 h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></span>
+                <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
+                <span className="absolute inset-x-3 bottom-2 flex items-end justify-between gap-2 text-left"><span><span className="block text-[10px] leading-4 text-white/80 opacity-0 transition-opacity group-hover:opacity-100">使ってみる</span><span className="block truncate text-base font-medium leading-5 text-white">{title}</span></span><ArrowRight aria-hidden="true" className="mb-0.5 h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></span>
               </button>
             ))}
           </div>
@@ -1976,18 +2020,20 @@ export function LightchainDialogueParityPanel({
             <div className="flex h-8 items-center">
               <h2 className="flex-1 text-lg font-medium leading-7">最近のプロジェクト</h2>
               <button type="button" onClick={onProjectStart} className="flex h-8 w-[108px] shrink-0 items-center justify-end gap-0.5 rounded-lg py-1 pl-3 pr-2 text-neutral-300 hover:bg-white/10" data-testid="design-dialogue-recent-projects-all">
-                <span className="text-base font-medium">すべて表示</span><ChevronRight className="h-4 w-4" />
+                <span className="whitespace-nowrap text-sm font-medium">すべて表示</span><ChevronRight className="h-4 w-4" />
               </button>
             </div>
             {visibleRecentProjectLoadState.status === 'loading' && <p className="rounded-2xl border border-white/10 px-5 py-8 text-center text-sm text-neutral-400" role="status" data-testid="design-dialogue-recent-projects-loading">デザイン成果物を読み込んでいます。</p>}
             {visibleRecentProjectLoadState.status === 'error' && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-200/5 px-4 py-3 text-sm text-amber-100" role="alert" data-testid="design-dialogue-recent-projects-error"><span>リモートのデザイン成果物を読み込めませんでした。{visibleRecentProjectLoadState.remoteError}</span><button type="button" className="rounded-lg border border-amber-100/30 px-3 py-1.5 text-xs font-semibold hover:bg-white/10" onClick={onRetryRecentProjects} data-testid="design-dialogue-recent-projects-retry">再試行</button></div>}
-            {visibleRecentProjectLoadState.status === 'empty' && <div className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-sm text-neutral-400" data-testid="design-dialogue-recent-projects-empty">保存確認できたデザイン成果物はまだありません。</div>}
-            <DesignConversationProjectList recent />
+            {visibleRecentProjectLoadState.status === 'empty' && visibleRecentItems.length === 0 && (recentConversationProjects?.status ?? 'ready') === 'ready' && <div className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-sm text-neutral-400" data-testid="design-dialogue-recent-projects-empty">保存確認できたデザイン成果物はまだありません。</div>}
+            {recentConversationProjects && <DesignConversationProjectStatus view={recentConversationProjects} />}
             <div className="grid" data-testid="design-dialogue-recent-project-grid" aria-label="最近のプロジェクト">
               <button type="button" className="flex h-60 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 text-neutral-300 transition hover:border-white/30 hover:bg-white/10" onClick={onProjectStart} data-testid="design-dialogue-new-file">
                 <Plus className="h-6 w-6" /><span className="mt-2 text-base font-medium">新規ファイル</span>
               </button>
-              {renderRecentProjectEntry && visibleRecentProjectEntries.map((entry) => renderRecentProjectEntry(entry))}
+              {visibleRecentItems.map((item) => item.kind === 'conversation'
+                ? <DesignConversationProjectCard key={JSON.stringify([item.entry.projectId, item.entry.conversationId])} entry={item.entry} />
+                : renderRecentProjectEntry?.(item.entry))}
             </div>
           </section>
           <section className="mt-10 min-h-[calc(100vh-60px)] w-full" data-testid="design-production-reference-cases"><h2 className="mb-4 text-lg font-medium leading-7">参考事例</h2><div className="flex min-h-[70vh] flex-col items-center justify-center gap-2 text-sm text-neutral-500"><div className="flex min-h-[70vh] w-full items-center justify-center rounded-2xl border border-dashed border-white/10">データなし</div></div></section>

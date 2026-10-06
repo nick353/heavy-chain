@@ -219,12 +219,12 @@ test('production wiring consumes only canonical scoped parent entries and shared
   assert.ok(designPageStart >= 0 && designPageEnd > designPageStart);
   assert.doesNotMatch(dialogueSource, /listWorkspaceArtifacts\s*\(/, 'dialogue has no independent local-only artifact read');
   assert.match(designPageSource, /readLocalArtifacts:\s*\(\)\s*=>\s*listWorkspaceArtifacts\(brandId, userId\)[\s\S]*?readRemoteArtifacts:\s*async\s*\(\)[\s\S]*?listGeneratedImages/);
-  assert.match(designPageSource, /recentProjectScopeKey=\{designScopeKey\}[\s\S]*?recentProjectEntries=\{displayDesignEntries\.slice\(0, 5\)\}[\s\S]*?recentProjectLoadState=\{displayedDesignLoadState\}[\s\S]*?onRetryRecentProjects=\{\(\) => \{ startDesignArtifactLoad\(designScopeKey, designUserId, designBrandId\); \}\}[\s\S]*?renderRecentProjectEntry=\{renderDesignProjectEntry\}/);
+  assert.match(designPageSource, /recentProjectScopeKey=\{designScopeKey\}[\s\S]*?recentProjectEntries=\{displayDesignEntries\}[\s\S]*?recentProjectLoadState=\{displayedDesignLoadState\}[\s\S]*?onRetryRecentProjects=\{\(\) => \{ startDesignArtifactLoad\(designScopeKey, designUserId, designBrandId\); \}\}[\s\S]*?renderRecentProjectEntry=\{renderDesignProjectEntry\}/);
   assert.match(designPageSource, /const renderDesignProjectEntry = \(entry: DesignProjectEntry\) => \{[\s\S]*?<DesignRecentProjectEntryCard/);
   assert.match(pageSource, /const href = designEntryHref\(entry\)/);
   assert.match(pageSource, /heavy-design-production-pins:v2:[\s\S]*JSON\.stringify\(\[userId, brandId\]\)/);
   assert.doesNotMatch(pageSource, /heavy-design-production-pins:\$\{brandId\}/, 'brand-only legacy pin data is neither read nor migrated');
-  assert.match(dialogueSource, /visibleRecentProjectEntries = recentScopeIsCurrent \? recentProjectEntries\.slice\(0, 5\) : \[\]/);
+  assert.match(dialogueSource, /mergeDesignProjectGridItems\(recentConversationProjects\?\.entries \?\? \[\], recentProjectEntries\)\.slice\(0, 5\)/);
   assert.match(dialogueSource, /visibleRecentProjectLoadState\.status === 'error'[\s\S]*?onClick=\{onRetryRecentProjects\}/);
   assert.match(cssSource, /\[data-testid="design-production-recent-projects"\][^{]*\{[^}]*width:\s*calc\(100vw\s*-\s*59px\)/);
   assert.match(cssSource, /\[data-testid="design-dialogue-recent-project-grid"\][^{]*\{[^}]*column-gap:\s*8px/);
