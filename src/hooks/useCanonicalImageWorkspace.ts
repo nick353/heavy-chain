@@ -25,7 +25,7 @@ type Source = { name: string; kind: string; imageUrl: string; sourceImageId?: st
 type Status = 'empty' | 'loading' | 'ready' | 'unavailable' | 'running' | 'unknown' | 'saved' | 'error';
 type LibrarySettingsKind = 'absent' | 'null' | 'invalid' | 'valid';
 type LibraryInputReadback = { source: 'local' | 'remote' | 'request' | 'none'; remoteLookup: 'not-needed' | 'matched' | 'no-match' | 'unavailable'; modernSettings:LibrarySettingsKind; legacySettings:LibrarySettingsKind; requestLookup:'not-needed'|'matched'|'identity-mismatch'|'unavailable'; requestModernSettings:LibrarySettingsKind|'not-read'; requestLegacySettings:LibrarySettingsKind|'not-read' };
-export type CanonicalWorkspaceFeature = 'lab' | 'wear-design-lab' | 'wear-design-detail' | 'printing-image' | 'pattern-vector' | 'pattern-vector-pro' | 'model-face' | 'model-change' | 'body-shape' | 'clothing-size' | 'pose-change' | 'background-change' | 'angle-change' | 'model-library' | 'model-custom';
+export type CanonicalWorkspaceFeature = 'lab' | 'print-design-project' | 'wear-design-lab' | 'wear-design-detail' | 'printing-image' | 'pattern-vector' | 'pattern-vector-pro' | 'model-face' | 'model-change' | 'body-shape' | 'clothing-size' | 'pose-change' | 'background-change' | 'angle-change' | 'model-library' | 'model-custom';
 export type CanonicalModelCandidate = {imageId:string;storagePath:string;jobId:string;bodyType:string;ageGroup:string;provider:string};
 type WorkspaceConfig = {modelLibraryCreation?:boolean;initialInputState?:Record<string,Json>;requiredSources?:number;title?:string;promptContext?:string;identityConflict?:boolean};
 const record = (value:unknown): value is Record<string,Json> => Boolean(value) && typeof value==='object' && !Array.isArray(value);
@@ -36,11 +36,15 @@ const readCandidates = (metadata: Record<string,Json | undefined>,currentJobId:s
 };
 const sanitizeInputState=(value:unknown):Record<string,Json>=>{
  if(!record(value))return {};const out:Record<string,Json>={};
- for(const key of ['gender','half','age','nationality','skinColor','bodyType','bodyTypes','ageGroups','coverage','layerModes']){
+ for(const key of ['gender','half','age','nationality','skinColor','bodyType','bodyTypes','ageGroups','coverage','layerModes','assist']){
   const item=value[key];const safe=(v:unknown):v is string=>typeof v==='string'&&v.length<=256&&!/(?:https?:|data:|blob:|bearer\s)/i.test(v);
   if(typeof item==='boolean'||safe(item))out[key]=item;
   else if(Array.isArray(item)&&item.length<=16&&item.every(safe))out[key]=item;
- }return out;
+ }
+ // AIグラフィックデザイン: one 0–4 reference-strength level per uploaded reference.
+ const strengths=value.referenceStrengths;
+ if(Array.isArray(strengths)&&strengths.length<=2&&strengths.every(v=>typeof v==='number'&&Number.isInteger(v)&&v>=0&&v<=4))out.referenceStrengths=strengths;
+ return out;
 };
 const workspaceInputState = (feature: string, value: unknown): Record<string, Json> => isModelToolFeature(feature) ? readModelToolSettings(feature, value) ?? readLegacyModelToolSettings(feature, value) ?? {} : isModelLibraryFeature(feature) ? readModelLibrarySettings(value) ?? sanitizeInputState(value) : sanitizeInputState(value);
 type State = { brief: string; referenceNote: string; slots: Record<SlotKey, Source | null>; result: LightchainResumeResult | null;

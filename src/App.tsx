@@ -68,6 +68,7 @@ const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((mod
 const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
 const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
 const LightchainPrintingPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainPrintingPage })));
+const LightchainGraphicDesignPage = lazy(() => import('./pages/LightchainGraphicDesignPage').then((module) => ({ default: module.LightchainGraphicDesignPage })));
 const LightchainVectorSpecialPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainVectorSpecialPage })));
 const DesignEntryDetailPage = lazy(() => import('./features/designDetail/DesignEntryDetailPage'));
 const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
@@ -1276,7 +1277,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainPrintingPage />
+                    <LightchainGraphicDesignPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

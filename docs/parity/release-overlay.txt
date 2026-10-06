@@ -3,3 +3,6 @@ src/pages/LightchainParityPages.tsx
 src/components/DesignArtifactThumbnail.tsx
 src/index.css
 src/lib/designProjectArtifacts.ts
+src/pages/LightchainGraphicDesignPage.tsx
+src/App.tsx
+src/hooks/useCanonicalImageWorkspace.ts

@@ -69,7 +69,7 @@ test('maps the canonical printing entry to the Light visual parity page', async 
   const routeEnd = source.indexOf('path="/editor/pattern"', routeStart);
   assert.ok(routeStart >= 0 && routeEnd > routeStart, 'canonical printing route is required');
   const route = source.slice(routeStart, routeEnd);
-  assert.match(route, /lazyPage\(\s*\n?\s*<LightchainUnifiedWorkspaceShell>\s*\n?\s*<LightchainPrintingPage \/>/);
+  assert.match(route, /lazyPage\(\s*\n?\s*<LightchainUnifiedWorkspaceShell>\s*\n?\s*<LightchainGraphicDesignPage \/>/);
   assert.doesNotMatch(route, /<LightchainWorkbenchPage \/>/);
 });
 
@@ -270,19 +270,13 @@ test('loading shells do not add a Heavy-only rights-confirmation prompt', async 
 });
 
 test('keeps the canonical printing surface aligned with the Light empty state', async () => {
-  const source = await readFile(parityPagesPath, 'utf8');
-  const pageStart = source.indexOf('export function LightchainPrintingPage()');
-  const pageEnd = source.indexOf('const modelTabs =', pageStart);
-  assert.ok(pageStart >= 0 && pageEnd > pageStart, 'printing parity page is required');
-  const page = source.slice(pageStart, pageEnd);
-  assert.match(page, /window\.location\.pathname === '\/printing'/);
+  const page = await readFile(new URL('../src/pages/LightchainGraphicDesignPage.tsx', import.meta.url), 'utf8');
   assert.match(page, /AIグラフィックデザイン/);
   assert.match(page, /AIでグラフィックを作成/);
   assert.match(page, /画像をアップロードします/);
   assert.match(page, /画像を2枚までアップロードできます/);
   assert.match(page, /生成履歴/);
-  assert.match(page, /handleCanonicalFiles/);
-  assert.match(page, /(?:navigate\('\/lightchain\/printing-image'\)|navigate\(toHeavyWorkspacePath\('\/lightchain\/printing-image'\)\))/);
+  assert.match(page, /useCanonicalImageWorkspace\('print-design-project'/);
 });
 
 test('routes fabric search prompts to the simulation entry', async () => {
