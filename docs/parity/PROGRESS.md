@@ -130,3 +130,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: tsc; model-tool-input-parity 34/34 (helper handles radio groups), model-tool-settings-roundtrip 0 fail (default now includes backView), 15 related suites equal to baseline. Light observed via Companion (background tab needs screenshots to render). Production: 8 runs completed in D1 (job ids in ledger); each resumeJob reload restores source, settings and result.
 - 残: Heavy-only 入力と生成 panel; rail icons are lucide approximations (P4).
 - 次: #20 /model-base/style.
+
+### Iteration 16 (2026-10-07, /goal) — /model-base/style カスタムスタイル (#20)
+- 変更: new `LightchainCustomStylePage` (route moved off LightchainWorkbenchPage): Light list layout (rail, upload zone, library tabs with pill indicator, search, 185×222 cards in 6 columns, status badge), detail view (pencil rename, 完了 badge, モデル画像 thumbnails with 現在の表紙, モデル関連情報 / デザイン要素 chips, 一覧に戻る / 削除), contact dialog. Upload saves the style before uploading, stores images in private media + generated_images, sends a vision analysis request (identity saved first so a reload resumes it), and records elements in style_presets. 再学習 for failed analyses.
+- 発見: JSON-only prompts make Workers AI return an object → recorded as provider unknown; Worker rejects newlines in stored text. Both handled client-side.
+- 検証: tsc; 11 related suites equal to baseline. Production: style 516e966f… created, analysis 57c092c1 completed, status 完了 with 10 elements, rename persisted, list after reload shows the card.
+- 次: #21 marketing.

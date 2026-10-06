@@ -33,3 +33,4 @@ public/lightchain-assets/upload-example-bg.png
 public/lightchain-assets/upload-example-bg-new.png
 public/lightchain-assets/upload-example-view.png
 src/lib/modelToolSettings.ts
+src/pages/LightchainCustomStylePage.tsx
