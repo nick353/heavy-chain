@@ -66,3 +66,11 @@ Each iteration: read this file → advance the next open item → append result 
 - Deploy: 6ac50c234a4c47e13ede4627 RUNNING.
 - Remaining blockers: local workspace artifact save warning (P4 storage quota), Light's reload behaviour for inputs unconfirmed.
 - Next: route #10 /tools/printing (プリントイメージ).
+
+### Iteration 6 (2026-10-07) — /tools/printing プリントイメージ
+- 変更: new shared `src/components/lightchain/LightchainDesignToolFrame.tsx` (rail/tabs/notice/result panel, navigation lock); /tools/printing render in `LightchainPrintingWorkspace` replaced with Light layout while keeping draft restore, Canvas handoff, pending reconcile; `useHeavyWorkspaceBrandGate` resolves Heavy workspace before uploads (/tools/printing and /printing); clearer print brief.
+- 検証: tsc; printing suites all green (canvas handoff 41, library draft 55, scope, draft, failure, composition…); canonical browser test printing alias 1/1 (baseline worktree showed 24 pre-existing browser failures, none new). Production: layout matches Light at 1440×900; real generation `ai-dfa6dbf0…` completed and displayed; reload restored result.
+- Process change: user asked to stop using Codex (2026-10-07). Reviews are now done by Claude Code itself. Earlier Codex rounds on this change found 8 issues, all fixed.
+- Deploy: 6ac51eefd96b7ba6d7cd5adf RUNNING.
+- 残: Light result-panel presentation unconfirmed; print colours drift slightly vs artwork (P4 quality).
+- 次: route #11 /tools/line-draft-to-tile (線画の実写化) and /tools/line (平絵生成) on the shared frame.
