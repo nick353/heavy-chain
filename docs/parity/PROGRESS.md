@@ -74,3 +74,9 @@ Each iteration: read this file → advance the next open item → append result 
 - Deploy: 6ac51eefd96b7ba6d7cd5adf RUNNING.
 - 残: Light result-panel presentation unconfirmed; print colours drift slightly vs artwork (P4 quality).
 - 次: route #11 /tools/line-draft-to-tile (線画の実写化) and /tools/line (平絵生成) on the shared frame.
+
+### Iteration 7 (2026-10-07) — /tools/line-draft-to-tile, /tools/line
+- 変更: `src/pages/LightchainLineToolsPage.tsx` (both tools, shared frame, canonical workspace); hook accepts `line-to-real` / `line-generation` and persists `sourceType` / `styleNote`; App routes switched from the 9.6k-line LightchainWorkbenchPage; frame/printing spacing tightened to Light's measured rhythm.
+- 検証: tsc; related suites equal to baseline (provider-adapter 1, launcher-parity 1, provider-coverage 2 pre-existing failures); printing suites green. Production: both tools generate (`ai-101aadd2…`, `ai-959749a0…`), reload restores everything, geometry matches Light.
+- Light note: direct loads of Light tool URLs often render blank for ~20s; enter via /designProduction or wait before reading.
+- 次: #12 /tools/pattern-to-vector, /tools/vector-special.
