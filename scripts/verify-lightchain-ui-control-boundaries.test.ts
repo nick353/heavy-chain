@@ -169,8 +169,8 @@ test('vector-special keeps the Light geometry contract for the professional pari
   assert.match(frame, /inline-flex h-8 items-center/);
   assert.match(frame, /パターンをベクター画像に変換（プロフェッショナル版）/);
   // Vector surface: two 160×165 layer cards and the 288px run button pinned at the panel bottom.
-  assert.match(vectorBlock, /LightchainDesignToolFrame active=\{isProfessionalFlow/);
-  assert.match(vectorBlock, /tabs=\{LIGHTCHAIN_VECTOR_TOOL_TABS\} railGroup=\{2\}/);
+  assert.match(vectorBlock, /LightchainDesignToolFrame active=\{isSvgConvert \? 'svg-convert' : isProfessionalFlow/);
+  assert.match(vectorBlock, /tabs=\{isSvgConvert \? LIGHTCHAIN_SVG_CONVERT_TABS : LIGHTCHAIN_VECTOR_TOOL_TABS\} railGroup=\{isSvgConvert \? 3 : 2\}/);
   assert.match(vectorBlock, /h-\[165px\] w-\[160px\]/);
   assert.match(vectorBlock, /h-10 w-\[288px\]/);
   assert.doesNotMatch(vectorBlock, /lg:grid-cols-\[564px_minmax\(0,1fr\)\]/);

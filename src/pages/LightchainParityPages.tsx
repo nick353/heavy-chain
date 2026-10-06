@@ -42,7 +42,8 @@ import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../compon
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
-import { LIGHTCHAIN_VECTOR_TOOL_TABS, LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
+import { LIGHTCHAIN_SVG_CONVERT_TABS, LIGHTCHAIN_VECTOR_TOOL_TABS, LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
+import { SvgExportPanel } from '../components/lightchain/SvgExportPanel';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
 import type { Json } from '../types/database';
@@ -645,6 +646,14 @@ function LightchainPrintingWorkspace() {
   );
 }
 
+export function svgConvertBrief(): string {
+  return [
+    '平絵をベクター化: アップロードした平絵（技術画）やプリントを、生産用のベクターファイルにそのまま変換できるクリーンな版に描き直してください。',
+    '輪郭線・縫い目・パーツの位置と形は元画像と同じに保ち、線は均一な太さの単色、面ははっきりした境界の単色の塗りにしてください。',
+    'グラデーション・陰影・質感・ノイズ・人物・背景の装飾は入れず、白い無地の背景に正面から配置してください。',
+  ].join('\n');
+}
+
 export function vectorBrief(professional: boolean, layerModes: readonly ('stack' | 'split')[]): string {
   return [
     `パターンをベクター画像に変換（${professional ? 'プロフェッショナル版' : '通常版'}）: アップロードしたプリントパターン/グラフィックそのものを、ベクター化しやすいフラットな版に描き直してください。`,
@@ -656,8 +665,11 @@ export function vectorBrief(professional: boolean, layerModes: readonly ('stack'
 
 export function LightchainVectorSpecialPage() {
   const location=useLocation();
+  const isSvgConvert=location.pathname==='/tools/svg-convert';
   const isProfessionalFlow=location.pathname==='/tools/vector-special',activeTab=isProfessionalFlow?'プロフェッショナル版':'通常版';
-  const workspace=useCanonicalImageWorkspace(isProfessionalFlow?'pattern-vector-pro':'pattern-vector',{requiredSources:1,title:`パターンをベクター画像に変換（${activeTab}）`,initialInputState:{layerModes:['stack']}});
+  const toolTitle=isSvgConvert?'平絵をベクター化':`パターンをベクター画像に変換（${activeTab}）`;
+  const toolDescription=isSvgConvert?'平絵やプリントを編集可能なベクターファイルに変換し生産に直結':'プリントパターンをベクター画像に変換します';
+  const workspace=useCanonicalImageWorkspace(isSvgConvert?'svg-convert':isProfessionalFlow?'pattern-vector-pro':'pattern-vector',{requiredSources:1,title:toolTitle,initialInputState:{layerModes:['stack']}});
   const referenceImage=workspace.slots.primary?.imageUrl??null;
   const layerModes=Array.isArray(workspace.inputState.layerModes)?workspace.inputState.layerModes.filter((value):value is 'stack'|'split'=>value==='stack'||value==='split'):[];
   const heavyBrand=useHeavyWorkspaceBrandGate();
@@ -672,7 +684,7 @@ export function LightchainVectorSpecialPage() {
   },[workspace.result]);
   const handleReferenceImage=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];event.target.value='';if(file)void workspace.upload('primary',file);};
   const toggleLayerMode=(mode:'stack'|'split')=>{if(locked)return;workspace.setInputState({...workspace.inputState,layerModes:layerModes.includes(mode)?(layerModes.length>1?layerModes.filter(value=>value!==mode):layerModes):[...layerModes,mode]});};
-  const generate=()=>workspace.generate({brief:workspace.brief||vectorBrief(isProfessionalFlow,layerModes)});
+  const generate=()=>workspace.generate({brief:workspace.brief||(isSvgConvert?svgConvertBrief():vectorBrief(isProfessionalFlow,layerModes))});
 
   // Light /tools/pattern-to-vector & /tools/vector-special, measured at 1440×900: shared デザインツール frame with the
   // two 278px ベクター tabs, 564×280 dashed upload box, (pro) 160×165 積み重ね/分割 cards, 使用回数 and AI生成 at (404,828).
@@ -718,19 +730,20 @@ export function LightchainVectorSpecialPage() {
     <div className="flex h-full flex-col" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status}>
       {workspace.result ? (
         <div data-testid="vector-result" className="flex h-full flex-col items-center justify-center gap-3 px-10 pb-6 pt-16">
-          {vectorResultUrl && <img src={vectorResultUrl} alt={`パターンをベクター画像に変換（${activeTab}）`} className="min-h-0 max-w-full flex-1 rounded-lg object-contain" />}
+          {vectorResultUrl && <img src={vectorResultUrl} alt={toolTitle} className="min-h-0 max-w-full flex-1 rounded-lg object-contain" />}
+          {vectorResultUrl && <SvgExportPanel imageUrl={vectorResultUrl} fileName={isSvgConvert ? 'flat-drawing-vector' : 'pattern-vector'} colors={isSvgConvert ? 6 : 8} />}
           <p className="text-xs text-neutral-300">保存された結果はラスター画像です。</p>
         </div>
       ) : workspace.status === 'running' ? (
         <div className="flex h-full items-center justify-center text-sm text-white/70" role="status">生成中…</div>
       ) : (
-        <div className="flex h-full flex-col items-center justify-center px-14 text-center"><h5 className="text-[20px] font-bold leading-[25.2px] text-white">パターンをベクター画像に変換（{activeTab}）</h5><p className="mt-2 text-sm leading-[21px] text-neutral-400">プリントパターンをベクター画像に変換します</p></div>
+        <div className="flex h-full flex-col items-center justify-center px-14 text-center"><h5 className="text-[20px] font-bold leading-[25.2px] text-white">{toolTitle}</h5><p className="mt-2 text-sm leading-[21px] text-neutral-400">{toolDescription}</p></div>
       )}
     </div>
   );
   return (
     <ParityShell workflowFeature="pattern-vector-pro" className="bg-[#0b1113] text-white">
-      <LightchainDesignToolFrame active={isProfessionalFlow ? 'pattern-vector-pro' : 'pattern-vector'} tabs={LIGHTCHAIN_VECTOR_TOOL_TABS} railGroup={2} testId="vector-tool-page" navigationLocked={locked}>{vectorControls}{vectorResult}</LightchainDesignToolFrame>
+      <LightchainDesignToolFrame active={isSvgConvert ? 'svg-convert' : isProfessionalFlow ? 'pattern-vector-pro' : 'pattern-vector'} tabs={isSvgConvert ? LIGHTCHAIN_SVG_CONVERT_TABS : LIGHTCHAIN_VECTOR_TOOL_TABS} railGroup={isSvgConvert ? 3 : 2} testId={isSvgConvert ? 'svg-convert-page' : 'vector-tool-page'} navigationLocked={locked}>{vectorControls}{vectorResult}</LightchainDesignToolFrame>
     </ParityShell>
   );
 }

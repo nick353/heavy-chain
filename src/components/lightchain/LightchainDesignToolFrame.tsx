@@ -33,9 +33,13 @@ export const LIGHTCHAIN_VECTOR_TOOL_TABS = [
   { id: 'pattern-vector-pro', label: 'パターンをベクター画像に変換（プロフェッショナル版）', route: '/tools/vector-special' },
 ] as const;
 
+export const LIGHTCHAIN_SVG_CONVERT_TABS = [
+  { id: 'svg-convert', label: '平絵をベクター化', route: '/tools/svg-convert' },
+] as const;
+
 type FrameTab = { readonly id: string; readonly label: string; readonly route: string };
-/** Rail entry highlighted for the current tool group: 0 = デザインツール, 2 = グラフィックデザインツール. */
-export type LightchainRailGroup = 0 | 2;
+/** Rail entry highlighted for the current tool group: 0 = デザインツール, 2 = グラフィックデザインツール, 3 = 衣類生産ツール. */
+export type LightchainRailGroup = 0 | 2 | 3;
 
 export function LightchainDesignToolRail({ locked = false, activeIndex = 0 }: { locked?: boolean; activeIndex?: LightchainRailGroup }) {
   return (

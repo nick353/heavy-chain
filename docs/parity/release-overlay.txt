@@ -10,3 +10,5 @@ src/components/ImageSelector.tsx
 src/components/lightchain/LightchainDesignToolFrame.tsx
 src/hooks/useHeavyWorkspaceBrandGate.ts
 src/pages/LightchainLineToolsPage.tsx
+src/lib/rasterToSvg.ts
+src/components/lightchain/SvgExportPanel.tsx
