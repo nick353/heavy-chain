@@ -109,7 +109,7 @@ test('maps vector-special to the Light legacy parity surface', async () => {
   const route = app.slice(routeStart, routeEnd);
   assert.match(route, /LightchainVectorSpecialPage/);
   assert.doesNotMatch(route, /LightchainWorkbenchPage/);
-  const page = await readFile(parityPagesPath, 'utf8');
+  const page = (await readFile(parityPagesPath, 'utf8')) + (await readFile(new URL('../src/components/lightchain/LightchainDesignToolFrame.tsx', import.meta.url), 'utf8'));
   assert.match(page, /この機能はまもなく終了します/);
   assert.match(page, /今すぐ体験/);
   assert.match(page, /参考画像をアップロードしてください/);

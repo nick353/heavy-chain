@@ -42,7 +42,7 @@ import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../compon
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
-import { LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
+import { LIGHTCHAIN_VECTOR_TOOL_TABS, LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
 import type { Json } from '../types/database';
@@ -646,79 +646,82 @@ function LightchainPrintingWorkspace() {
 }
 
 export function LightchainVectorSpecialPage() {
-  const location=useLocation(),navigate=useNavigate();
+  const location=useLocation();
   const isProfessionalFlow=location.pathname==='/tools/vector-special',activeTab=isProfessionalFlow?'プロフェッショナル版':'通常版';
   const workspace=useCanonicalImageWorkspace(isProfessionalFlow?'pattern-vector-pro':'pattern-vector',{requiredSources:1,title:`パターンをベクター画像に変換（${activeTab}）`,initialInputState:{layerModes:['stack']}});
   const referenceImage=workspace.slots.primary?.imageUrl??null;
   const layerModes=Array.isArray(workspace.inputState.layerModes)?workspace.inputState.layerModes.filter((value):value is 'stack'|'split'=>value==='stack'||value==='split'):[];
-  const usage=7,locked=workspace.status==='running'||workspace.status==='loading'||Boolean(workspace.pendingId);
-  const handleReferenceImage=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];if(file)void workspace.upload('primary',file);};
-  const reset=()=>{if(locked)return;workspace.clearSource('primary');workspace.setInputState({layerModes:['stack']});};
+  const heavyBrand=useHeavyWorkspaceBrandGate();
+  const usage=7,locked=heavyBrand.pending||workspace.status==='running'||workspace.status==='loading'||Boolean(workspace.pendingId);
+  const [vectorResultUrl,setVectorResultUrl]=useState<string|null>(null);
+  useEffect(()=>{const result=workspace.result;let cancelled=false;
+    if(!result){setVectorResultUrl(null);return;}
+    if(result.imageUrl){setVectorResultUrl(result.imageUrl);return;}
+    if(!result.storagePath){setVectorResultUrl(null);return;}
+    void withSignedImageUrls([{storage_path:result.storagePath,image_url:''}]).then(([signed])=>{if(!cancelled)setVectorResultUrl(signed?.image_url||null);}).catch(()=>{if(!cancelled)setVectorResultUrl(null);});
+    return()=>{cancelled=true;};
+  },[workspace.result]);
+  const handleReferenceImage=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];event.target.value='';if(file)void workspace.upload('primary',file);};
   const toggleLayerMode=(mode:'stack'|'split')=>{if(locked)return;workspace.setInputState({...workspace.inputState,layerModes:layerModes.includes(mode)?(layerModes.length>1?layerModes.filter(value=>value!==mode):layerModes):[...layerModes,mode]});};
   const generate=()=>workspace.generate({brief:workspace.brief||`パターンをベクター画像に変換 (${activeTab})\nレイヤー分け: ${layerModes.join(',')}`});
 
+  // Light /tools/pattern-to-vector & /tools/vector-special, measured at 1440×900: shared デザインツール frame with the
+  // two 278px ベクター tabs, 564×280 dashed upload box, (pro) 160×165 積み重ね/分割 cards, 使用回数 and AI生成 at (404,828).
+  const vectorControls = (
+    <div className="flex flex-1 flex-col">
+      <label data-testid="vector-source-input" className="mt-[18px] flex h-[280px] shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-white/20 bg-[#33393b] text-center transition hover:border-[#20d0c4]">
+        <input className="sr-only" disabled={locked} type="file" accept="image/*" aria-label="参考画像をアップロードしてください" onChange={handleReferenceImage} />
+        {referenceImage ? <>
+          <img src={referenceImage} alt="参考画像" className="max-h-full max-w-full object-contain" />
+          <span className="sr-only" data-testid="vector-file-name">{workspace.slots.primary?.name}</span>
+        </> : <>
+          <ImagePlus aria-hidden="true" className="h-6 w-6 text-neutral-200" />
+          <span className="mt-2 text-base text-neutral-200">参考画像をアップロードしてください</span>
+          <span className="mt-1 text-xs text-neutral-400">20MB以下の画像アップロードしてください</span>
+        </>}
+      </label>
+      {isProfessionalFlow && <>
+        <h6 className="mt-[18px] text-base font-normal leading-5 text-white/90">レイヤー分け方法を選択してください（複数選択可）</h6>
+        <div className="mt-3 flex gap-4">
+          {([['stack', '積み重ね', 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/persistence/font-end/pileUp.png'], ['split', '分割', 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/persistence/font-end/carveUp.png']] as const).map(([mode, label, imageUrl]) => {
+            const selected = layerModes.includes(mode);
+            return (
+              <button key={mode} type="button" aria-pressed={selected} disabled={locked} onClick={() => toggleLayerMode(mode)} className={`relative flex h-[165px] w-[160px] flex-col items-center justify-end rounded-lg border pb-3 text-sm transition ${selected ? 'border-[#20d0c4] bg-[#1f2a2b] font-semibold text-white' : 'border-dashed border-white/15 text-white/70 hover:border-white/30'}`}>
+                {selected && <span aria-hidden="true" className="absolute right-2 top-2 flex size-4 items-center justify-center rounded-full bg-[#20d0c4] text-[10px] leading-none text-[#0b1113]">✓</span>}
+                <img src={imageUrl} alt="" className="absolute left-1/2 top-3 h-[110px] w-[130px] -translate-x-1/2 object-contain" />
+                <span className="relative">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </>}
+      {workspace.error && <p role="alert" className="mt-3 text-sm text-rose-200">{workspace.error}</p>}
+      {workspace.pendingId && <button type="button" disabled={workspace.status==='running'} onClick={()=>void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
+      <div className="mt-auto flex flex-col items-end gap-3 pt-4">
+        {isProfessionalFlow && <span className="pr-4 text-base text-white/70">使用回数 {usage}/30</span>}
+        <button type="button" data-testid={isProfessionalFlow ? 'heavy-pattern-vector-pro-generate' : 'heavy-pattern-vector-generate'} className="inline-flex h-10 w-[288px] items-center justify-center gap-1.5 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60" disabled={locked||!referenceImage} onClick={()=>void generate()}>
+          AI生成{isProfessionalFlow && <span className="inline-flex items-center gap-0.5"><span aria-hidden="true" className="inline-block size-3.5 rounded-full bg-slate-950" />1</span>}
+        </button>
+      </div>
+    </div>
+  );
+  const vectorResult = (
+    <div className="flex h-full flex-col" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status}>
+      {workspace.result ? (
+        <div data-testid="vector-result" className="flex h-full flex-col items-center justify-center gap-3 px-10 pb-6 pt-16">
+          {vectorResultUrl && <img src={vectorResultUrl} alt={`パターンをベクター画像に変換（${activeTab}）`} className="min-h-0 max-w-full flex-1 rounded-lg object-contain" />}
+          <p className="text-xs text-neutral-300">保存された結果はラスター画像です。</p>
+        </div>
+      ) : workspace.status === 'running' ? (
+        <div className="flex h-full items-center justify-center text-sm text-white/70" role="status">生成中…</div>
+      ) : (
+        <div className="flex h-full flex-col items-center justify-center px-14 text-center"><h5 className="text-[20px] font-bold leading-[25.2px] text-white">パターンをベクター画像に変換（{activeTab}）</h5><p className="mt-2 text-sm leading-[21px] text-neutral-400">プリントパターンをベクター画像に変換します</p></div>
+      )}
+    </div>
+  );
   return (
     <ParityShell workflowFeature="pattern-vector-pro" className="bg-[#0b1113] text-white">
-      <div className="relative mx-auto min-h-[calc(100vh-70px)] max-w-[1904px] px-4 py-4 lg:pl-[112px]">
-        <aside className="absolute inset-y-4 left-4 hidden w-20 flex-col items-center gap-2 rounded-xl bg-[#171b1c] px-2 py-3 lg:flex" aria-label="ツールバー">
-          {[
-            ['ツールバー', '/assets/lightchain-toolbar.svg', '/designProduction?category=recommended', false],
-            ['デザインツール', '/assets/lightchain-design.svg', '/tools/fabric', false],
-            ['フィッティング\nツール', '/assets/lightchain-fitting.svg', '/model', false],
-            ['グラフィックデザイン\nツール', '/assets/lightchain-graphic.svg', '/tools/pattern-to-vector', true],
-            ['衣類生産\nツール', '/assets/lightchain-production.svg', '/tools/fabric', false],
-          ].map(([label, iconUrl, to, active]) => {
-            return <Link key={label as string} to={to as string} aria-current={active ? 'page' : undefined} className={`flex min-h-20 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 text-center text-[10px] leading-4 transition ${active ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30' : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}><img src={iconUrl as string} alt="" className="mb-1 h-7 w-7 object-contain" /><span className="whitespace-pre-line">{label as string}</span></Link>;
-          })}
-        </aside>
-        <div className="grid min-h-[calc(100vh-102px)] gap-4 lg:grid-cols-[596px_minmax(0,1fr)]">
-          <section className="relative min-h-[746px] overflow-hidden rounded-xl bg-[#171b1c] p-4 pt-[68px] shadow-2xl shadow-black/20">
-            <nav className="absolute left-4 right-4 top-4 grid h-[36px] grid-cols-[278px_278px] rounded-lg border border-white/10 bg-[#111719] px-[3px] py-[1.5px]" role="tablist" aria-label="ベクター化モード">
-              <button type="button" role="tab" aria-selected={activeTab === '通常版'} className={`h-[31px] overflow-hidden whitespace-nowrap rounded-md px-2 text-sm font-medium leading-5 ${activeTab === '通常版' ? 'bg-[#737d84] text-white' : 'text-white/45'}`} onClick={() => navigate('/tools/pattern-to-vector')}>パターンをベクター画像に変換（通常版）</button>
-              <button type="button" role="tab" aria-selected={activeTab === 'プロフェッショナル版'} className={`h-[31px] overflow-hidden whitespace-nowrap rounded-md px-2 text-sm font-medium leading-5 ${activeTab === 'プロフェッショナル版' ? 'bg-[#737d84] text-white' : 'text-white/45'}`} onClick={() => navigate('/tools/vector-special')}>パターンをベクター画像に変換（プロフェッショナル版）</button>
-            </nav>
-            <div className="flex h-16 items-start gap-2 rounded-lg bg-[#5b1f2a] px-4 py-3 text-sm leading-5 text-white">
-              <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください <Link className="underline" to="/designProduction">今すぐ体験</Link></span>
-              <span aria-hidden="true" className="text-white/80">×</span>
-            </div>
-            <label className="mt-[18px] flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-xl bg-[#252a2d] text-center">
-              <input className="sr-only" disabled={locked} type="file" accept="image/*" onChange={handleReferenceImage} />
-              {referenceImage ? <img src={referenceImage} alt="参考画像" className="max-h-56 max-w-full rounded-lg object-contain" /> : <><Upload className="h-8 w-8 text-white/70" /><span className="mt-2 text-base text-white/85">参考画像をアップロードしてください</span><span className="mt-2 text-xs text-white/45">20MB以下の画像アップロードしてください</span></>}
-            </label>
-            {isProfessionalFlow ? (
-              <>
-                <div className="mt-4 flex items-center justify-between text-sm text-white/85"><span>レイヤー分け方法を選択してください（複数選択可）</span><button type="button" className="text-xs font-semibold text-white/65 underline disabled:cursor-not-allowed disabled:opacity-50" disabled={locked} onClick={reset}>リセット</button></div>
-                <div className="mt-3 grid grid-cols-[160px_160px] gap-4">
-                  {([['stack', '積み重ね'], ['split', '分割']] as const).map(([mode, label]) => (
-                    <button key={mode} type="button" aria-pressed={layerModes.includes(mode)} className={`h-[164px] rounded-xl border px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${layerModes.includes(mode) ? 'border-cyan-300 bg-cyan-300/10 text-white' : 'border-white/10 bg-[#111719] text-white/45'}`} disabled={locked} onClick={() => toggleLayerMode(mode)}>
-                      <span className="relative mx-auto mb-3 block h-16 w-20" aria-hidden="true">
-                        <span className={`absolute left-1/2 top-1/2 block h-8 w-12 -translate-x-1/2 -translate-y-1/2 rounded-md border border-cyan-200/30 bg-cyan-300/20 ${mode === 'stack' ? '-rotate-[18deg]' : '-rotate-[6deg]'}`} />
-                        <span className={`absolute left-1/2 top-1/2 block h-8 w-12 -translate-x-1/2 -translate-y-1/2 rounded-md border border-cyan-100/30 bg-cyan-200/15 ${mode === 'stack' ? 'rotate-[18deg]' : 'rotate-[14deg]'}`} />
-                        <span className={`absolute left-1/2 top-1/2 block h-7 w-7 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-md border border-teal-100/40 bg-teal-200/25 ${mode === 'split' ? 'scale-75' : ''}`} />
-                      </span>{label}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-4 flex flex-col items-end gap-4 text-xs text-white/75"><span>使用回数 {usage} / 30</span><button type="button" className="h-10 w-[288px] rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950" disabled={locked||!referenceImage} onClick={()=>void generate()}>AI生成 <span className="ml-1">1</span></button></div>
-              </>
-            ) : (
-              <button
-                type="button"
-                data-testid="heavy-pattern-vector-generate"
-                onClick={()=>void generate()}
-                disabled={locked||!referenceImage}
-                className="mt-4 h-10 w-full rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                AI生成
-              </button>
-            )}
-          </section>
-          <section data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status} className="relative flex min-h-[746px] flex-col rounded-xl bg-[#232728] p-4"><CanonicalImageWorkspaceControls workspace={workspace} />{workspace.result&&<p className="absolute bottom-4 left-4 text-xs text-neutral-300">保存された結果はラスター画像です。</p>}
-            <button type="button" className="absolute right-4 top-4 flex h-[32px] w-[102px] items-center justify-center rounded-lg border border-white/15 bg-[#171b1c]/80 px-3 text-sm text-white/80" onClick={() => navigate('/history')}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button>
-            <div className="flex flex-1 flex-col items-center justify-center text-center"><h1 className="text-xl font-bold text-white">パターンをベクター画像に変換（{activeTab}）</h1><p className="mt-2 text-sm text-neutral-400">プリントパターンをベクター画像に変換します</p></div>
-          </section>
-        </div>
-      </div>
+      <LightchainDesignToolFrame active={isProfessionalFlow ? 'pattern-vector-pro' : 'pattern-vector'} tabs={LIGHTCHAIN_VECTOR_TOOL_TABS} railGroup={2} testId="vector-tool-page" navigationLocked={locked}>{vectorControls}{vectorResult}</LightchainDesignToolFrame>
     </ParityShell>
   );
 }

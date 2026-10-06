@@ -159,15 +159,20 @@ test('Heavy Chain routes use the current Heavy browser title', async () => {
 
 test('vector-special keeps the Light geometry contract for the professional parity surface', async () => {
   const source = await readFile(parityPagesSourcePath, 'utf8');
+  const frame = await readFile(new URL('../src/components/lightchain/LightchainDesignToolFrame.tsx', import.meta.url), 'utf8');
   const vectorBlock = source.slice(source.indexOf('export function LightchainVectorSpecialPage()'), source.indexOf('const modelTabs ='));
 
-  assert.match(vectorBlock, /lg:grid-cols-\[596px_minmax\(0,1fr\)\]/);
-  assert.match(vectorBlock, /grid-cols-\[278px_278px\]/);
-  assert.match(vectorBlock, /px-\[3px\] py-\[1\.5px\]/);
-  assert.match(vectorBlock, /h-\[31px\].*whitespace-nowrap/s);
-  assert.match(vectorBlock, /grid-cols-\[160px_160px\] gap-4/);
-  assert.match(vectorBlock, /h-\[32px\] w-\[102px\]/);
-  assert.match(vectorBlock, /border-cyan-200\/30/);
+  // Shared Light デザインツール frame: 596px tool panel, 3px/1.5px tab strip, nowrap 31px tabs, 生成履歴 button.
+  assert.match(frame, /lg:grid-cols-\[minmax\(0,596px\)_minmax\(360px,1fr\)\]/);
+  assert.match(frame, /px-\[3px\] py-\[1\.5px\]/);
+  assert.match(frame, /min-h-\[31px\] overflow-hidden whitespace-nowrap/);
+  assert.match(frame, /inline-flex h-8 items-center/);
+  assert.match(frame, /パターンをベクター画像に変換（プロフェッショナル版）/);
+  // Vector surface: two 160×165 layer cards and the 288px run button pinned at the panel bottom.
+  assert.match(vectorBlock, /LightchainDesignToolFrame active=\{isProfessionalFlow/);
+  assert.match(vectorBlock, /tabs=\{LIGHTCHAIN_VECTOR_TOOL_TABS\} railGroup=\{2\}/);
+  assert.match(vectorBlock, /h-\[165px\] w-\[160px\]/);
+  assert.match(vectorBlock, /h-10 w-\[288px\]/);
   assert.doesNotMatch(vectorBlock, /lg:grid-cols-\[564px_minmax\(0,1fr\)\]/);
 });
 
