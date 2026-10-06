@@ -1,13 +1,14 @@
+import { validateNativePrintFinalFrame,type NativePrintFinalFrame } from '../../../src/lib/nativePrintFinalFrame.ts';
 import type { Env } from './index.ts';
 import { requireBrandRole } from './core.ts';
 import { principal } from './domain.ts';
 import { canonical,isRecord,raster } from './image-ai-contracts.ts';
 import { PROTECTED_IMAGE_EDIT_MODE,protectedImageSaveRequestId } from '../../../src/lib/protectedImageEditContract.ts';
+import { WORKSPACE_UPLOAD_MAX_BYTES } from '../../../src/lib/workspaceUploadLimits.ts';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const REQUEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_METADATA_BYTES = 128 * 1024;
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 type Row = { id: string; user_id: string; brand_id: string; job_id?: string; storage_path?: string; input_params?: string; status?: string; feature_type?: string; created_at?: string };
 type Params = { title: string; prompt: string | null; metadata: Record<string,unknown>; canvasProjectId: string | null;
   sourceJobId: string | null; contentType: string; checksum: string; imageAI?: Record<string,unknown>;
@@ -72,14 +73,26 @@ async function imageAISource(env: Env, value: unknown, requestId: string, owner:
   if (!isRecord(value) || typeof value.requestId !== 'string' || !REQUEST_ID.test(value.requestId) ||
       !Number.isSafeInteger(value.candidateIndex) || Number(value.candidateIndex) < 0 || Number(value.candidateIndex) > 3 ||
       await protectedImageSaveRequestId(value.requestId,Number(value.candidateIndex)) !== requestId) return null;
-  const row = await env.DB.prepare(`SELECT r.job_id,r.model,r.input_metadata,c.image_id FROM heavy_ai_requests r
+  const row = await env.DB.prepare(`SELECT r.job_id,r.model,r.input_metadata,r.candidate_count,c.image_id,c.width,c.height FROM heavy_ai_requests r
     JOIN heavy_ai_candidates c ON c.request_id=r.request_id WHERE r.request_id=? AND r.user_id=? AND r.brand_id=?
     AND r.action='edit-image' AND r.state='completed' AND c.candidate_index=? AND c.state='completed'`)
-    .bind(value.requestId,owner,brandId,value.candidateIndex).first<{ job_id: string; model: string; input_metadata: string; image_id: string }>();
+    .bind(value.requestId,owner,brandId,value.candidateIndex).first<{ job_id: string; model: string; input_metadata: string; candidate_count:number; image_id: string; width:number; height:number }>();
   if (!row) return null;
-  const input = JSON.parse(row.input_metadata); const plan = input.metadata?.protectedEdit;
+  let input; try { input = JSON.parse(row.input_metadata); } catch { return null; }
+  const plan = input.metadata?.protectedEdit;
   if (!isRecord(plan) || plan.mode !== PROTECTED_IMAGE_EDIT_MODE) return null;
-  return { row,input,plan,requestId:value.requestId,candidateIndex:Number(value.candidateIndex) };
+  if (row.job_id !== `ai-${value.requestId}` || row.image_id !== `ai-${value.requestId}-${value.candidateIndex}`) return null;
+  let nativePrintFinalFrame: NativePrintFinalFrame | undefined;
+  if (input.metadata?.nativePrintFinalFrame !== undefined) {
+    try {
+      if (!(input.metadata.nativePrintFinalFrame.version==='canvas-protected-openai-contain-v1'&&['canvas-partial-edit','canvas-inpaint'].includes(input.featureType)) && input.featureType !== 'lightchain-printing-image' && !(input.featureType === 'lightchain-fabric-image' && input.metadata.nativePrintFinalFrame.version === 'native-print-openai-contain-v1')) return null;
+      nativePrintFinalFrame = validateNativePrintFinalFrame(input.metadata.nativePrintFinalFrame,plan as {sourceWidth:unknown;sourceHeight:unknown;sourceSha256:unknown;maskSha256:unknown});
+      if(nativePrintFinalFrame.canvasBatch&&(nativePrintFinalFrame.canvasBatch.requestId!==value.requestId||nativePrintFinalFrame.canvasBatch.scopeId!==owner||nativePrintFinalFrame.canvasBatch.brandId!==brandId||nativePrintFinalFrame.canvasBatch.featureType!==input.featureType||row.candidate_count!==4||canonical(nativePrintFinalFrame.canvasBatch)!==canonical(input.metadata.canvasProtectedBatchBinding)))return null;
+      if (input.width !== nativePrintFinalFrame.candidateGeometry.width || input.height !== nativePrintFinalFrame.candidateGeometry.height || row.width !== nativePrintFinalFrame.candidateGeometry.width || row.height !== nativePrintFinalFrame.candidateGeometry.height) return null;
+      if(nativePrintFinalFrame.version !== 'native-print-contain-v1' && (input.provider !== 'openai' || input.backendProvider !== 'openai-images-api' || !isRecord(input.resolvedProvider) || input.resolvedProvider.model !== row.model || input.resolvedProvider.provider !== input.provider || input.resolvedProvider.backendProvider !== input.backendProvider || input.resolvedProvider.requestId !== value.requestId || input.resolvedProvider.action !== 'edit-image' || canonical(nativePrintFinalFrame.mapping) !== canonical(input.metadata.protectedOpenAIProjection))) return null;
+    } catch { return null; }
+  }
+  return { row,input,plan,nativePrintFinalFrame,requestId:value.requestId,candidateIndex:Number(value.candidateIndex) };
 }
 
 function exactWorkspaceObject(object: R2Object | null,job: Row,params: Params): boolean {
@@ -95,7 +108,8 @@ async function commitWorkspaceImage(env: Env,job: Row,params: Params): Promise<v
   const path = `generated-images/${job.id}`;
   const imageMetadata = JSON.stringify({ ...params.metadata,title:params.title,localWorkspaceArtifact:true,
     remoteWorkspaceArtifact:true,sourceJobId:params.sourceJobId,storageProvider:'cloudflare_r2',
-    ...(params.imageAI ? { contentSha256:params.checksum,contentBytes:params.contentBytes } : {}) });
+    contentSha256:params.checksum,
+    ...(params.imageAI ? { contentBytes:params.contentBytes } : {}) });
   await env.DB.batch([
     env.DB.prepare(`INSERT OR IGNORE INTO generated_images
       (id,job_id,brand_id,user_id,storage_path,prompt,feature_type,model_used,generation_params,metadata,created_at,parent_image_id,version)
@@ -145,7 +159,14 @@ export async function readWorkspaceArtifact(request: Request,env: Env,requestId:
   let params: Params & { workspaceFingerprint?: string };
   try { params = JSON.parse(job.input_params ?? '{}'); } catch { return fail('workspace_artifact_not_found',404); }
   if (!params.workspaceFingerprint || !/^[0-9a-f]{64}$/.test(params.checksum) || !isRecord(params.metadata)) return fail('workspace_artifact_not_found',404);
-  if (params.imageAI && !await imageAISource(env,params.imageAI,requestId,owner,job.brand_id)) return fail('workspace_ai_source_unavailable',410);
+  if (params.imageAI) {
+    const ai = await imageAISource(env,params.imageAI,requestId,owner,job.brand_id);
+    if (!ai) return fail('workspace_ai_source_unavailable',410);
+    const storedCanvas=ai.nativePrintFinalFrame?.canvasBatch;
+    if(storedCanvas&&(canonical(params.metadata.canvasProtectedBatchBinding)!==canonical(storedCanvas)||params.canvasProjectId!==storedCanvas.canvasProjectId||params.metadata.parentObjectId!==storedCanvas.parentObjectId||params.metadata.generation!==storedCanvas.generation))return fail('workspace_ai_canvas_context_mismatch',410);
+    if (params.sourceJobId !== ai.row.job_id || job.feature_type !== ai.input.featureType
+      || canonical(params.metadata.nativePrintFinalFrame ?? null) !== canonical(ai.nativePrintFinalFrame ?? null) || canonical(params.metadata.protectedOpenAIProjection ?? null) !== canonical(ai.input.metadata?.protectedOpenAIProjection ?? null)) return fail('workspace_ai_final_contract_mismatch',410);
+  }
   const path = `generated-images/${id}`; const object = await env.PRIVATE_MEDIA.head(path);
   if (!object) return fail(job.status === 'completed' ? 'workspace_content_unavailable' : 'workspace_save_pending',job.status === 'completed' ? 410 : 409);
   if (!exactWorkspaceObject(object,job,params)) return fail('workspace_content_identity_mismatch',410);
@@ -164,7 +185,7 @@ export async function readWorkspaceArtifact(request: Request,env: Env,requestId:
 /** Save a browser result without contacting Supabase or fetching arbitrary URLs. */
 export async function saveWorkspaceArtifact(request: Request, env: Env): Promise<Response> {
   if (!/^Bearer\s+\S+$/i.test(request.headers.get('authorization') ?? '')) return fail('unauthorized', 401);
-  const maxBytes = Math.min(MAX_IMAGE_BYTES, Number(env.MAX_MEDIA_BYTES) > 0 ? Number(env.MAX_MEDIA_BYTES) : MAX_IMAGE_BYTES);
+  const maxBytes = Math.min(WORKSPACE_UPLOAD_MAX_BYTES, Number(env.MAX_MEDIA_BYTES) > 0 ? Number(env.MAX_MEDIA_BYTES) : WORKSPACE_UPLOAD_MAX_BYTES);
   const input = await readInput(request, Math.ceil(maxBytes / 3) * 4 + MAX_METADATA_BYTES + 64 * 1024);
   if (!input) return fail('invalid_or_oversized_workspace_artifact', 400);
   const { brandId, featureType, title, imageUrl, requestId } = input;
@@ -201,9 +222,17 @@ export async function saveWorkspaceArtifact(request: Request, env: Env): Promise
   const checksum = await digest(image.bytes);
   const ai = input.imageAI === undefined ? null : await imageAISource(env,input.imageAI,requestId,owner,brandId);
   if (input.imageAI !== undefined && !ai) return fail('workspace_ai_source_unavailable',409);
+  const callerNative = (metadata as Record<string,unknown>).nativePrintFinalFrame;
+  if (callerNative !== undefined && (!ai?.nativePrintFinalFrame || canonical(callerNative) !== canonical(ai.nativePrintFinalFrame))) return fail('workspace_ai_native_frame_not_authorized',409);
+  const storedCanvas=ai?.nativePrintFinalFrame?.canvasBatch;
+  const callerCanvas=(metadata as Record<string,unknown>).canvasProtectedBatchBinding;
+  if(callerCanvas!==undefined&&(!storedCanvas||canonical(callerCanvas)!==canonical(storedCanvas)))return fail('workspace_ai_canvas_binding_not_authorized',409);
+  if(storedCanvas&&((input.canvasProjectId??null)!==storedCanvas.canvasProjectId||(metadata as Record<string,unknown>).parentObjectId!==storedCanvas.parentObjectId||(metadata as Record<string,unknown>).generation!==storedCanvas.generation))return fail('workspace_ai_canvas_context_mismatch',409);
+  const callerProjection = (metadata as Record<string,unknown>).protectedOpenAIProjection;
+  if(callerProjection !== undefined && (!ai?.input.metadata?.protectedOpenAIProjection || canonical(callerProjection) !== canonical(ai.input.metadata.protectedOpenAIProjection))) return fail('workspace_ai_projection_not_authorized',409);
   if (ai) {
     const dimensions = raster(image.bytes);
-    if (!dimensions || dimensions.contentType !== 'image/png' || dimensions.width !== ai.plan.sourceWidth || dimensions.height !== ai.plan.sourceHeight ||
+    if (!dimensions || dimensions.contentType !== 'image/png' || dimensions.width !== (ai.nativePrintFinalFrame?.original.width ?? ai.plan.sourceWidth) || dimensions.height !== (ai.nativePrintFinalFrame?.original.height ?? ai.plan.sourceHeight) ||
         input.sourceJobId !== ai.row.job_id || featureType !== ai.input.featureType) return fail('workspace_ai_final_contract_mismatch',409);
   }
   const protectedProvider = ai?.input?.provider === 'openai' ? 'openai' : 'workers_ai';
@@ -214,7 +243,7 @@ export async function saveWorkspaceArtifact(request: Request, env: Env): Promise
     sourceJobId: input.sourceJobId ?? null, contentType: image.contentType, checksum,
     ...(ai ? { imageAI:{ requestId:ai.requestId,candidateIndex:ai.candidateIndex },contentBytes:image.bytes.length,
       parentImageId:ai.row.image_id,generation:ai.input.generation,modelUsed:ai.row.model,
-      metadata:{ ...(metadata as Record<string,unknown>),protectedEdit:ai.plan,artifactRole:'protected-edit-final',
+      metadata:{ ...(metadata as Record<string,unknown>),...(storedCanvas?{canvasProtectedBatchBinding:storedCanvas,parentObjectId:storedCanvas.parentObjectId,generation:storedCanvas.generation}:{}),...(ai.nativePrintFinalFrame ? {nativePrintFinalFrame:ai.nativePrintFinalFrame} : {}),...(ai.input.metadata?.protectedOpenAIProjection ? {protectedOpenAIProjection:ai.input.metadata.protectedOpenAIProjection} : {}),protectedEdit:ai.plan,artifactRole:'protected-edit-final',
         protectedRegionComposited:true,maskApplied:true,provider:protectedProvider,backendProvider:protectedBackendProvider,providerModel:ai.row.model,
         providerRequestId:ai.requestId,providerJobId:ai.row.job_id,providerImageId:ai.row.image_id,
         providerStoragePath:`generated-images/${ai.row.image_id}`,batchId:ai.row.job_id,candidateIndex:ai.candidateIndex } } : {}),

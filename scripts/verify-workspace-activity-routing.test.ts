@@ -157,6 +157,21 @@ test('model-matrix Fitting jobs resume to the canonical model lane with saved co
   assert.match(fitting, /sourceResumePath: '\/fitting'/);
 });
 
+test('Heavy model-matrix Jobs/History resume preserves browser-local model inputs', async () => {
+  const activity = await read('../src/lib/workspaceActivity.ts');
+  const generate = await read('../src/pages/GeneratePage.tsx');
+  const contracts = await read('../cloudflare/heavy-api/src/image-ai-contracts.ts');
+  assert.match(activity, /appendLocalModelInputParams/);
+  assert.match(activity, /localSourceReference/);
+  assert.match(activity, /localModelReference/);
+  assert.match(activity, /job\.feature_type === 'model-matrix'/);
+  assert.match(generate, /readLocalModelInputMetadata/);
+  assert.match(generate, /isLocalCanvasAssetReference\(sourceReference\)/);
+  assert.match(generate, /\.\.\.localModelInputMetadata/);
+  assert.match(contracts, /'localSourceReference','localModelReference','sourceFileName'/);
+  assert.doesNotMatch(contracts, /localSourceReference.*data:/u);
+});
+
 test('workspace handoff Canvas objects retain the persisted artifact/job identity', async () => {
   const handoff = await read('../src/lib/workspaceHandoff.ts');
   const marketing = await read('../src/pages/MarketingWorkspacePage.tsx');

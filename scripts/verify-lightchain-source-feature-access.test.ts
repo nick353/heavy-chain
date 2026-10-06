@@ -38,24 +38,23 @@ test('all 31 non-video catalog rows remain non-admitted until source permission 
   }
 });
 
-test('Heavy model-matrix generation uses explicit Heavy consent without Light source permission', async () => {
+test('Heavy model-matrix generation uses login and brand context without a Heavy rights UI', async () => {
   assert.equal(getLightchainSourceGenerationAccess('model-matrix'), 'denied');
   const source = await readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /const heavyPolicyConfigured = Boolean\(/);
-  assert.match(source, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?heavyPolicyConfigured && heavyTermsAccepted && heavyRightsAttested/);
+  assert.match(source, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?Boolean\(user\?\.id\) && Boolean\(currentBrand\?\.id\)/);
   assert.match(source, /const providerRightsConfirmed = heavyEntitlementReady/);
-  assert.match(source, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
-  assert.match(source, /data-testid="heavy-terms-acceptance"/);
-  assert.match(source, /data-testid="heavy-rights-attestation"/);
-  assert.match(source, /const heavyConsent = noImageGenerationMode \|\| !heavySurface \? undefined/);
+  assert.doesNotMatch(source, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
+  assert.doesNotMatch(source, /data-testid="heavy-terms-acceptance"|data-testid="heavy-rights-attestation"|data-testid="heavy-terms-copy"/);
+  assert.doesNotMatch(source, /Heavy利用条件|権利表明|規約同意/);
+  assert.match(source, /const heavyConsent = undefined/);
   assert.doesNotMatch(source, /isLightchainGenerationSurface|sourceGenerationAccess|getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(source, /const rightsConfirmed = true/);
   assert.doesNotMatch(source, /権限がありません/);
 });
 
-test('unified-workbench workflows use Heavy entitlement rather than Light source generation access', async () => {
+test('unified-workbench workflows use login and brand context rather than Light source generation access', async () => {
   const source = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /const heavyEntitlementReady = !heavyOwnedFeature \|\| \([\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(source, /const heavyEntitlementReady = !heavyOwnedFeature \|\| Boolean\(user\?\.id && currentBrand\?\.id\)/);
   assert.match(source, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
   assert.match(source, /if \(!heavyEntitlementReady\)[\s\S]*?return;/);
   assert.doesNotMatch(source, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);

@@ -100,6 +100,16 @@ test('real Canvas SQL: shared editors retain owner; stale revision and foreign/v
   assert.equal(s.row(body.id)?.title,update.title);assert.equal(s.row(body.id)?.revision,1);
 });
 
+test('Heavy Chain workspace is login-only for Canvas writes while Light brands remain editor-only',async t=>{
+  const s=setup();t.after(()=>s.db.sql.close());
+  s.db.sql.prepare('UPDATE brands SET name=? WHERE id=?').run('Heavy Chain Workspace','brand-1');
+  const body=input();
+  assert.equal((await s.call('POST','',body,'viewer')).status,200);
+  const updated=await s.call('PATCH','/'+body.id,{expected_revision:0,title:'Heavy viewer edit',snapshot:{version:1,objects:[]}},'viewer');
+  assert.equal(updated.status,200,await updated.clone().text());
+  assert.equal((await s.call('POST','',input(),'bob')).status,403);
+});
+
 test('real Canvas SQL: lost PATCH receipt is 503; GET reveals one commit and stale retry cannot increment it again',async t=>{
   const s=setup();t.after(()=>s.db.sql.close());const body=input();await s.call('POST','',body);
   const update={title:'One commit',snapshot:{version:1,objects:[]},expected_revision:0};

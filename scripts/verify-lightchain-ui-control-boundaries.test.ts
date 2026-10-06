@@ -13,9 +13,8 @@ const landingSourcePath = new URL('../src/pages/LandingPage.tsx', import.meta.ur
 const loginSourcePath = new URL('../src/pages/LoginPage.tsx', import.meta.url);
 const forgotPasswordSourcePath = new URL('../src/pages/ForgotPasswordPage.tsx', import.meta.url);
 const parityPagesSourcePath = new URL('../src/pages/LightchainParityPages.tsx', import.meta.url);
-const lightchainLogoAssetPath = new URL('../public/assets/lightchain-logo.svg', import.meta.url);
 
-test('public and auth recovery shells use the Lightchain identity without extra Heavy chrome', async () => {
+test('public and auth recovery shells use the Heavy Chain identity without Lightchain branding', async () => {
   const [app, header, login] = await Promise.all([
     readFile(appSourcePath, 'utf8'),
     readFile(publicHeaderSourcePath, 'utf8'),
@@ -23,24 +22,24 @@ test('public and auth recovery shells use the Lightchain identity without extra 
   ]);
   const fallback = app.slice(app.indexOf('function WorkspaceLoadingFallback'), app.indexOf('function PageLoading'));
 
-  assert.match(header, /aria-label="Lightchain AI"/);
-  assert.match(header, /LIGHTCHAIN/);
+  assert.match(header, /aria-label="Heavy Chain"/);
+  assert.match(header, /HeavyChainLogo/);
   assert.match(header, /aria-label="日本語"/);
   assert.match(header, /aria-label="ヘルプセンター"/);
-  assert.doesNotMatch(header, /HeavyChainLogo|HEAVY CHAIN|darkMode/);
+  assert.doesNotMatch(header, /LightchainLogo|Lightchain AI|LIGHTCHAIN/);
 
-  assert.match(fallback, /LIGHTCHAIN/);
+  assert.match(fallback, /HEAVY CHAIN/);
   assert.match(fallback, /ログイン状態を確認しています/);
   assert.doesNotMatch(fallback, /ログイン画面へ|読み込み後にこの導線|grid gap-3 sm:grid-cols-3/);
 
   assert.match(login, /<p className="mb-5[^>]*>HELLO<\/p>/);
-  assert.match(login, /アパレル生成AIシステムLightchain/);
-  assert.match(login, /Light chainは、アパレル業界におけるさまざまな業務で活用できるAI技術/);
+  assert.match(login, /アパレル生成AIシステムHeavy Chain/);
+  assert.match(login, /Heavy Chainは、アパレル業界におけるさまざまな業務で活用できるAI技術/);
   assert.match(login, /アカウントIDを下に入力してログインをお願いします。/);
   assert.match(login, /placeholder="アカウントを入力"/);
   assert.match(login, /placeholder="パスワードを入力する"/);
   assert.doesNotMatch(login, /handleGoogleLogin|handleAppleLogin|>Google<|>Apple<|\/signup|LIGHTCHAIN AI \/ LOGIN/);
-  assert.doesNotMatch(login, /HEAVY CHAIN|Heavy Chain/);
+  assert.doesNotMatch(login, /Lightchain|Light chain|LIGHTCHAIN/);
 });
 
 test('anonymous login controls preserve the observed Lightchain input geometry without a rights checkbox', async () => {
@@ -76,16 +75,16 @@ test('password recovery follows the Lightchain account, code and confirmation fl
   assert.doesNotMatch(forgot, /type="checkbox"|権利確認|rights.?checkbox/iu);
 });
 
-test('the root keeps the Lightchain launcher URL for authenticated users', async () => {
+test('the root keeps the Heavy Chain launcher URL for authenticated users', async () => {
   const [source, landing] = await Promise.all([
     readFile(appSourcePath, 'utf8'),
     readFile(landingSourcePath, 'utf8'),
   ]);
 
   assert.match(source, /path="\/"[\s\S]*?element=\{lazyPage\(<LandingPage \/>\)\}/);
-  assert.match(source, /Lightchain keeps its authenticated launcher at the root/);
+  assert.match(source, /Heavy Chain keeps its authenticated launcher at the root/);
   assert.match(source, /path="\/login"[\s\S]*?<PublicRoute>[\s\S]*?lazyPage\(<LoginPage \/>\)/);
-  assert.match(landing, /document\.title = 'Lightchain AI'/);
+  assert.match(landing, /document\.title = 'Heavy Chain \| AI制作ワークスペース'/);
 });
 
 test('the launcher only renders the account avatar after session admission', async () => {
@@ -119,16 +118,16 @@ test('Lightchain header exposes the current language and help button controls', 
   assert.match(source, /aria-label="ヘルプセンター"/);
 });
 
-test('Lightchain header uses the source logo asset instead of a Heavy icon substitute', async () => {
-  const [layout, launcher, logo] = await Promise.all([
+test('Heavy Chain headers use the Heavy-owned logo instead of the Lightchain asset', async () => {
+  const [layout, launcher] = await Promise.all([
     readFile(layoutSourcePath, 'utf8'),
     readFile(new URL('../src/components/layout/LightchainLauncherHeader.tsx', import.meta.url), 'utf8'),
-    readFile(lightchainLogoAssetPath, 'utf8'),
   ]);
 
-  assert.match(layout, /src="\/assets\/lightchain-logo\.svg"/);
-  assert.match(launcher, /src="\/assets\/lightchain-logo\.svg"/);
-  assert.match(logo, /#20D0C4/);
+  assert.match(layout, /HeavyChainLogo/);
+  assert.match(launcher, /HeavyChainLogo/);
+  assert.doesNotMatch(layout, /LightchainLogo|lightchain-logo\.svg/);
+  assert.doesNotMatch(launcher, /LightchainLogo|lightchain-logo\.svg/);
   assert.doesNotMatch(layout, /<Link2/);
   assert.doesNotMatch(launcher, /<Link2/);
 });
@@ -144,18 +143,18 @@ test('Lightchain header uses the Lightchain avatar identity and account menu', a
   assert.match(source, /\{!isLightchainRoute && \([\s\S]*aria-label="アカウント"/);
 });
 
-test('Lightchain routes use the current Lightchain browser title', async () => {
+test('Heavy Chain routes use the current Heavy browser title', async () => {
   const [source, canvas] = await Promise.all([
     readFile(layoutSourcePath, 'utf8'),
     readFile(canvasSourcePath, 'utf8'),
   ]);
 
-  assert.match(source, /document\.title = isLightchainRoute \? 'Lightchain AI' : 'Heavy Chain \| AI制作ワークスペース'/);
+  assert.match(source, /document\.title = isLightchainRoute \? 'Heavy Chain AI' : 'Heavy Chain \| AI制作ワークスペース'/);
   assert.match(source, /'\/canvas\/new'/);
   assert.match(source, /'\/workflows\/design-exploration'/);
   assert.match(source, /'\/workflows\/ec-product-set'/);
   assert.match(source, /'\/workflows\/sns-campaign'/);
-  assert.match(canvas, /document\.title = 'Lightchain AI'/);
+  assert.match(canvas, /document\.title = 'Heavy Chain \| Canvas'/);
 });
 
 test('vector-special keeps the Light geometry contract for the professional parity surface', async () => {
@@ -250,6 +249,17 @@ test('Agent parity starts with the expanded project sidebar and exposes Lightcha
   assert.match(source, /aria-label="アップロードするファイルを選択"/);
   assert.match(source, /aria-label="アップロードする画像を選択"/);
   assert.match(source, /aria-label=\{workspaceStyle\.kind === 'agent' \? '送信' : 'AI生成'\}/);
+});
+
+test('Agent provider results stay visible with save, download, and retry controls', async () => {
+  const source = await readFile(workbenchSourcePath, 'utf8');
+
+  assert.match(source, /data-testid="lightchain-agent-result"/);
+  assert.match(source, /data-testid="lightchain-agent-result-save"/);
+  assert.match(source, /data-testid="lightchain-agent-result-download"/);
+  assert.match(source, /data-testid="lightchain-agent-generation-error"/);
+  assert.match(source, /data-testid="lightchain-agent-retry"/);
+  assert.match(source, /onClick=\{handleWorkspaceStyleGenerate\}/);
 });
 
 test('Agent new-file opens the Lightchain project creation flow', async () => {

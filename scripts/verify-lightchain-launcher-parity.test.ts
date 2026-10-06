@@ -47,11 +47,11 @@ test('design arrange opens the Light project dashboard before the editor', () =>
   assert.equal(planning.find((feature) => feature.id === 'design-arrange')?.route, '/editor/pattern');
 });
 
-test('launcher uses Lightchain display labels instead of internal readiness labels', () => {
+test('launcher uses Heavy display labels instead of internal readiness labels', () => {
   const fitting = getLightchainLauncherFeatures('fitting');
   const graphics = getLightchainLauncherFeatures('graphics');
 
-  assert.equal(getLightchainLauncherTitle(fitting.find((feature) => feature.id === 'heavychain-lab')!), 'Lightchain Lab');
+  assert.equal(getLightchainLauncherTitle(fitting.find((feature) => feature.id === 'heavychain-lab')!), 'Heavy Chain Lab');
   assert.equal(getLightchainLauncherTitle(fitting.find((feature) => feature.id === 'remove-background')!), '画像修正');
   assert.equal(getLightchainLauncherTitle(graphics.find((feature) => feature.id === 'print-design')!), 'プリントデザイン');
   assert.equal(getLightchainLauncherBadge(getLightchainLauncherFeatures('recommended').find((feature) => feature.id === 'marketing-workspace')!), null);
@@ -60,7 +60,7 @@ test('launcher uses Lightchain display labels instead of internal readiness labe
   assert.equal(getLightchainLauncherBadge(fitting.find((feature) => feature.id === 'remove-background')!), 'まもなく提供終了');
 });
 
-test('launcher preserves the current Lightchain card order and display names', () => {
+test('launcher preserves the current Lightchain card order with Heavy display names', () => {
   const titlesByCategory = Object.fromEntries(
     lightchainCategories.map((category) => [
       category.id,
@@ -93,7 +93,7 @@ test('launcher preserves the current Lightchain card order and display names', (
       'モデル企画ライブラリ',
       'ファッションスタジオ',
       '動画ワークステーション',
-      'Lightchain Lab',
+      'Heavy Chain Lab',
       '画像修正',
     ],
     graphics: [
@@ -204,9 +204,10 @@ test('homepage case-sharing starts at the canonical vertical offset without a He
   assert.doesNotMatch(source, /<section className="border-t border-white\/10 px-5 pb-8 pt-10/);
 });
 
-test('homepage uses the current Lightchain workspace heading', () => {
+test('homepage uses the current Lightchain workspace geometry with Heavy branding', () => {
   const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
-  assert.match(source, /<h1[^>]*>LIGHTCHAIN AI<\/h1>/);
+  assert.match(source, /<h1 className="sr-only">HEAVY CHAIN<\/h1>/);
+  assert.match(source, /<text[^>]*>HEAVY CHAIN AI<\/text>/);
   assert.match(source, /アパレル特化のAIデザインワークスペース/);
   assert.doesNotMatch(source, /<h1[^>]*>アパレル特化のAIデザインワークスペース<\/h1>/);
 });
@@ -236,21 +237,23 @@ test('homepage scopes saved artifacts to the selected Lightchain case tab', () =
   assert.match(source, /\.replace\(\/-provider-result\$\/, ''\)/);
 });
 
-test('homepage uses the Lightchain wide-desktop four-column card grid', () => {
+test('homepage uses the current Lightchain three-column card grid before the 2xl four-column breakpoint', () => {
   const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
   const grid = source.match(/<div className="([^"]+)" data-testid="lightchain-tool-grid">/);
   assert.ok(grid, 'Lightchain tool grid should remain addressable for parity checks');
   assert.match(grid[1], /\bgrid-cols-1\b/);
   assert.match(grid[1], /\bsm:grid-cols-2\b/);
-  assert.match(grid[1], /\bxl:grid-cols-4\b/);
-  assert.doesNotMatch(grid[1], /\b2xl:grid-cols-4\b/);
+  assert.match(grid[1], /\bxl:grid-cols-3\b/);
+  assert.match(grid[1], /\b2xl:grid-cols-4\b/);
 });
 
-test('homepage keeps launcher cards readable at medium desktop widths', () => {
+test('homepage keeps launcher cards on the current Lightchain fixed card geometry', () => {
   const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
-  assert.match(source, /gap-3[^"`]*xl:gap-4/);
-  assert.match(source, /h-\[80px\] w-\[112px\][^"`]*xl:h-\[88px\] xl:w-\[132px\]/);
-  assert.match(source, /text-sm[^"`]*xl:text-base/);
+  assert.match(source, /gap-4[^"`]*rounded-2xl[^"`]*p-4/);
+  assert.match(source, /h-\[88px\] w-\[132px\]/);
+  assert.match(source, /min-h-\[88px\][^"`]*flex-col gap-1/);
+  assert.match(source, /text-\[14px\] font-medium leading-6 text-white/);
+  assert.match(source, /line-clamp-3 text-\[12px\] leading-4 text-\[#aab8b6\]/);
 });
 
 test('homepage uses Light-style gray badges for deferred cards', () => {

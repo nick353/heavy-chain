@@ -73,8 +73,8 @@ test('AI fitting exposes Gallery selection and the source permission surface bef
   assert.doesNotMatch(source, /Lightchainの「権限がありません」はプラン規制として維持/);
   assert.match(source, /Gallery素材を選択/);
   assert.match(source, /data-testid="fitting-model-gallery-select"/);
-  assert.match(source, /const heavyGenerationReady = heavyEntitlement\?\.allowed === true[\s\S]*?requestScopedAttestationRequired === false/);
-  assert.match(source, /Heavy利用条件を確認できません/);
+  assert.match(source, /const heavyGenerationReady = Boolean\(currentBrand\?\.id && user\?\.id\)/);
+  assert.match(source, /生成を準備できません/);
   assert.doesNotMatch(source, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|type="checkbox"/);
 });
@@ -92,12 +92,12 @@ test('Heavy parity surfaces keep Heavy consent separate from the Light-missing r
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|GENERATION_LEGAL_COPY/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
   const generate = sources[0];
-  assert.match(generate, /const heavyPolicyConfigured = Boolean\(/);
-  assert.match(generate, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?heavyPolicyConfigured && heavyTermsAccepted && heavyRightsAttested/);
+  assert.match(generate, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?Boolean\(user\?\.id\) && Boolean\(currentBrand\?\.id\)/);
   assert.match(generate, /const providerRightsConfirmed = heavyEntitlementReady/);
-  assert.match(generate, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
-  assert.match(generate, /data-testid="heavy-terms-acceptance"/);
-  assert.match(generate, /data-testid="heavy-rights-attestation"/);
+  assert.doesNotMatch(generate, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
+  assert.match(generate, /const heavyConsent = undefined/);
+  assert.doesNotMatch(generate, /data-testid="heavy-terms-acceptance"|data-testid="heavy-rights-attestation"|data-testid="heavy-terms-copy"/);
+  assert.doesNotMatch(generate, /Heavy利用条件|権利表明|規約同意/);
   assert.doesNotMatch(generate, /権限がありません/);
   assert.doesNotMatch(generate, /isLightchainGenerationSurface|sourceGenerationAccess|getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(generate, /const rightsConfirmed = true/);

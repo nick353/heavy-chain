@@ -9,6 +9,8 @@ const DIST_ROOT = resolve(process.env.DIST_DIR || join(dirname(fileURLToPath(imp
 const AUTH_DEFAULT = 'https://consumer-auth.nichika2000823.workers.dev';
 const BODY_LIMIT = 16 * 1024;
 const REQUEST_TIMEOUT_MS = 15_000;
+const SCENE_ASSET_NAMES = new Set(['fabric1.jpg', 'fabric2.jpg', 'fabric3.jpg', 'fabric4.jpg', 'fabric5.png', 'draft1.png', 'multi1.jpg', 'multi2.jpg', 'print1.png', 'print2.jpg', 'fabric.png', 'draft.png', 'multi.png', 'print.png', 'upload-placeholder.png']);
+const DESIGN_CARD_ASSET_NAMES = new Set(['clothing2.png', 'clothing1.png', 'print2.png', 'print1.png', 'fabric2.png', 'fabric1.png', 'techpack2.png', 'techpack1.png']);
 
 function authBaseUrl() {
   const raw = Object.hasOwn(process.env, 'AUTH_BASE_URL') ? process.env.AUTH_BASE_URL : AUTH_DEFAULT;
@@ -65,14 +67,29 @@ function contentType(filePath) {
 
 async function serveStatic(req, res, url) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, 'method_not_allowed', 'Only GET and HEAD are supported.');
+  const isSceneAsset = url.pathname === '/scene-assets' || url.pathname.startsWith('/scene-assets/');
+  const isDesignCardAsset = url.pathname === '/design-card-assets' || url.pathname.startsWith('/design-card-assets/');
+  if (isDesignCardAsset && (url.search || !DESIGN_CARD_ASSET_NAMES.has(url.pathname.slice('/design-card-assets/'.length)))) {
+    return json(res, 404, 'not_found', 'Design card asset not found.');
+  }
+  if (isSceneAsset && (url.search || !SCENE_ASSET_NAMES.has(url.pathname.slice('/scene-assets/'.length)))) {
+    return json(res, 404, 'not_found', 'Scene asset not found.');
+  }
   let filePath = safeDistPath(url.pathname);
   if (!filePath) return json(res, 400, 'invalid_path', 'Invalid request path.');
   if (!existsSync(filePath) || !statSync(filePath).isFile()) {
+    if (isSceneAsset || isDesignCardAsset) return json(res, 404, 'not_found', 'Static design asset not found.');
     filePath = join(DIST_ROOT, 'index.html');
   }
   if (!existsSync(filePath) || !statSync(filePath).isFile()) return json(res, 404, 'not_found', 'Resource not found.');
   const size = statSync(filePath).size;
-  const headers = setResetHeaders({ 'Content-Type': contentType(filePath), 'Content-Length': size }, url.pathname);
+  const headers = { 'Content-Type': contentType(filePath), 'Content-Length': size };
+  if (extname(filePath).toLowerCase() === '.html') {
+    headers['Cache-Control'] = 'no-cache';
+  } else if (filePath === safeDistPath(url.pathname) && /^\/assets\/[^/]+\.[A-Za-z0-9_-]{8}\.(?:js|css)$/.test(url.pathname)) {
+    headers['Cache-Control'] = 'public, max-age=31536000, immutable';
+  }
+  setResetHeaders(headers, url.pathname);
   res.writeHead(200, headers);
   if (req.method === 'HEAD') return res.end();
   createReadStream(filePath).on('error', () => res.destroy()).pipe(res);
@@ -137,4 +154,4 @@ const server = createServer(async (req, res) => {
 });
 
 server.on('clientError', (_error, socket) => socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'));
-server.listen(PORT, HOST, () => console.log(`heavy-chain-zeabur-server listening on ${HOST}:${PORT}`));
+server.listen(PORT, HOST, () => console.log(`heavy-chain-zeabur-server listening on ${HOST}:${server.address().port}`));

@@ -12,10 +12,10 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
-import { LightchainLogo } from '../LightchainLogo';
 import { ChevronDown, Globe2, HelpCircle, History, User, UserCircle } from 'lucide-react';
+import { isHeavyWorkspaceRuntime } from '../../lib/heavyWorkspace';
 
-// Source logo provenance: src="/assets/lightchain-logo.svg". The inline component avoids a remote asset dependency.
+// Heavy Chain owns the visible identity; parity route identifiers remain internal compatibility details.
 
 export function Layout() {
   const { user, profile, signOut, isLoading, isInitialized, authRecoveryRequired, authServiceUnavailable } = useAuthStore();
@@ -32,6 +32,12 @@ export function Layout() {
   // Determine if we should show sidebar (only for authenticated users on dashboard pages)
   // Exclude public pages and auth pages
   const isPublicPage = ['/login', '/login-m', '/signup', '/forget-password', '/forgot-password', '/'].includes(location.pathname);
+  // The Heavy deployment uses the Light Chain workspace frame for every
+  // authenticated screen, including legacy Heavy aliases and settings/
+  // workspace routes. Keep the public auth/legal pages on their own shell.
+  // This is a visual/layout decision only; Heavy ownership and provider
+  // boundaries remain enforced by the routed pages and API.
+  const isHeavyWorkspacePage = isHeavyWorkspaceRuntime() && !isPublicPage;
   const showSidebar = Boolean(user && !isPublicPage);
   // Protected routes must not flash the public login CTA while a valid
   // host-only session is being hydrated. The canonical Lightchain workspace
@@ -77,14 +83,16 @@ export function Layout() {
     '/flow/GenerateShortVideo',
   ] as const;
   const lightchainWorkspaceRoutes = ['/gallery', '/history', '/jobs'] as const;
-  const isLightchainRoute = location.pathname === '/dashboard'
+  const isLightchainRoute = isHeavyWorkspacePage
+    || location.pathname === '/dashboard'
     || location.pathname.startsWith('/lightchain')
     || lightchainParityAliases.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
     || lightchainDirectRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
     || lightchainWorkspaceRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
   const isVideoWorkstationRoute = location.pathname === '/flow/GenerateShortVideo'
     || location.pathname.startsWith('/flow/GenerateShortVideo/');
-  const isLightchainPrintRoute = location.pathname === '/lightchain/printing-image';
+  const isLightchainPrintRoute = location.pathname === '/lightchain/printing-image'
+    || (isHeavyWorkspacePage && location.pathname.endsWith('/printing-image'));
 
   const handleLightchainSignOut = async () => {
     await signOut();
@@ -104,7 +112,7 @@ export function Layout() {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = isLightchainRoute ? 'Lightchain AI' : 'Heavy Chain | AI制作ワークスペース';
+    document.title = isLightchainRoute ? 'Heavy Chain AI' : 'Heavy Chain | AI制作ワークスペース';
     return () => {
       document.title = previousTitle;
     };
@@ -117,7 +125,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 text-neutral-800 dark:text-neutral-100 font-sans transition-colors duration-700 overflow-x-clip selection:bg-primary-200 selection:text-primary-900">
-      {/* Lightchain's source header does not render the global skip-link control. */}
+      {/* The compact source-compatible header does not render the global skip-link control. */}
       {!isLightchainRoute && <SkipLink />}
       
       {/* Keyboard Shortcuts Help */}
@@ -129,8 +137,8 @@ export function Layout() {
             <div className={`mx-auto flex items-center justify-between gap-4 lightchain-route-header-inner ${isLightchainRoute ? 'h-[49px] max-w-none px-6' : 'h-[70px] max-w-[1800px] px-4 sm:px-6 lg:px-8'}`}>
               <div className={`flex items-center ${isLightchainRoute ? 'gap-4' : 'gap-7'}`}>
                 {isLightchainRoute ? (
-                  <Link to="/" aria-label="Lightchain AI" className="flex h-6 shrink-0 items-center text-white">
-                    <LightchainLogo />
+                  <Link to="/" aria-label="Heavy Chain" className="flex h-6 shrink-0 items-center text-white">
+                    <HeavyChainLogo height={24} showText className="shrink-0" />
                   </Link>
                 ) : (
                   <Link to="/dashboard" className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">

@@ -3,14 +3,14 @@ import { GenerateLightchainEntry } from '../components/GenerateLightchainEntry';
 import { LightchainLauncherHeader } from '../components/layout/LightchainLauncherHeader';
 
 /**
- * Keep the public entry on the same Lightchain launcher frame as the
+ * Keep the public entry on the same compact launcher frame as the
  * authenticated parity route. Heavy-specific marketing chrome here used to
  * make the first screen diverge before a user could reach the shared tools.
  */
 export function LandingPage() {
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'Lightchain AI';
+    document.title = 'Heavy Chain | AI制作ワークスペース';
     return () => {
       document.title = previousTitle;
     };

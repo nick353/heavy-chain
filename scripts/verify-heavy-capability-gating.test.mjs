@@ -15,8 +15,8 @@ import {
 } from '../src/lib/heavyCapability.ts';
 
 const readyPolicy = {
-  allowed: false,
-  reason: 'terms_acceptance_required',
+  allowed: true,
+  reason: null,
   termsVersion: 'terms-v1',
   termsDocumentVersion: 'terms-doc-v1',
   termsDocumentDigest: 'sha256:terms',
@@ -26,34 +26,39 @@ const readyPolicy = {
 };
 
 test('Heavy capability map is explicit and default-deny', () => {
-  assert.deepEqual(HEAVY_CAPABILITY_ACTIONS, {
-    'campaign-image': 'generate-image',
-    'model-matrix': 'model-matrix',
-    'design-gacha': HEAVY_UNIMPLEMENTED_ACTION,
-    'product-shots': HEAVY_UNIMPLEMENTED_ACTION,
-    'scene-coordinate': HEAVY_UNIMPLEMENTED_ACTION,
-  });
+  const imageFeatureIds = [
+    'marketing-home', 'marketing-detail', 'fitting-clothing-reference',
+    'fitting-background-reference', 'wear-design-lab', 'wear-design-detail',
+    'fashion-studio', 'design-agent', 'lab', 'print-design-project',
+    'print-design-detail', 'fabric-image', 'line-generation', 'line-to-real',
+    'pattern-vector', 'pattern-vector-pro', 'printing-image', 'image-repair',
+    'svg-convert', 'custom-style', 'ai-fitting', 'ai-fitting-reference',
+    'model-library', 'model-face', 'model-change', 'body-shape',
+    'clothing-size', 'pose-change', 'background-change', 'angle-change',
+    'model-custom',
+  ];
+  assert.equal(Object.keys(HEAVY_CAPABILITY_ACTIONS).length, imageFeatureIds.length + 5);
+  for (const featureId of imageFeatureIds) {
+    assert.ok(['edit-image', 'model-matrix'].includes(HEAVY_CAPABILITY_ACTIONS[featureId]), featureId);
+  }
   assert.deepEqual(resolveHeavyCapability('campaign-image'), {
     featureId: 'campaign-image', action: 'generate-image', supported: true,
   });
   assert.deepEqual(resolveHeavyCapability('model-matrix'), {
     featureId: 'model-matrix', action: 'model-matrix', supported: true,
   });
-  for (const featureId of ['design-gacha', 'product-shots', 'scene-coordinate', 'future-feature', null, undefined]) {
+  for (const featureId of ['future-feature', null, undefined]) {
     const capability = resolveHeavyCapability(featureId);
     assert.equal(capability.action, HEAVY_UNIMPLEMENTED_ACTION, String(featureId));
     assert.equal(capability.supported, false, String(featureId));
   }
+  for (const featureId of ['design-gacha', 'product-shots', 'scene-coordinate']) {
+    assert.equal(resolveHeavyCapability(featureId).supported, true, featureId);
+  }
 });
 
 test('Heavy ownership is explicit and Light or unknown ids stay outside the Heavy lane', () => {
-  assert.deepEqual([...HEAVY_OWNED_FEATURE_IDS], [
-    'campaign-image',
-    'model-matrix',
-    'design-gacha',
-    'product-shots',
-    'scene-coordinate',
-  ]);
+  assert.deepEqual([...HEAVY_OWNED_FEATURE_IDS], Object.keys(HEAVY_CAPABILITY_ACTIONS));
   for (const featureId of [...HEAVY_OWNED_FEATURE_IDS]) {
     assert.equal(isHeavyOwnedFeature(featureId), true, featureId);
   }
@@ -63,15 +68,15 @@ test('Heavy ownership is explicit and Light or unknown ids stay outside the Heav
   assert.equal(isHeavyOwnedFeature(' campaign-image '), true);
 });
 
-test('supported entitlement state is hydrating or ready, and ready requires both policies', () => {
+test('supported entitlement state is hydrating or ready, and Heavy readiness is login-first', () => {
   const capability = resolveHeavyCapability('campaign-image');
   assert.equal(resolveHeavyEntitlementState(capability, null, true), 'hydrating');
   assert.equal(resolveHeavyEntitlementState(capability, readyPolicy, false), 'ready');
-  assert.equal(resolveHeavyEntitlementState(capability, { ...readyPolicy, rightsDocumentDigest: null }, false), '5xx');
+  assert.equal(resolveHeavyEntitlementState(capability, { ...readyPolicy, termsDocumentDigest: null, rightsDocumentDigest: null }, false), 'ready');
   assert.equal(hasHeavyTermsAndRightsPolicy(readyPolicy), true);
-  assert.equal(hasHeavyTermsAndRightsPolicy({ ...readyPolicy, rightsDocumentDigest: null }), false);
+  assert.equal(hasHeavyTermsAndRightsPolicy({ ...readyPolicy, termsDocumentDigest: null, rightsDocumentDigest: null }), true);
   assert.equal(hasHeavyTermsAndRightsPolicy({ ...readyPolicy, reason: 'heavy_generation_disabled' }), false);
-  assert.equal(resolveHeavyEntitlementState(resolveHeavyCapability('design-gacha'), readyPolicy, false), 'unsupported');
+  assert.equal(resolveHeavyEntitlementState(resolveHeavyCapability('design-gacha'), readyPolicy, false), 'ready');
 });
 
 test('401, 403, and 5xx entitlement failures remain closed', () => {
@@ -81,7 +86,7 @@ test('401, 403, and 5xx entitlement failures remain closed', () => {
   assert.equal(classifyHeavyEntitlementError({ status: 502 }), '5xx');
 });
 
-test('unsupported UI path has no entitlement or provider side effect', async () => {
+test('unknown UI path has no entitlement or provider side effect', async () => {
   let entitlementCalls = 0;
   let providerActionCalls = 0;
   const guardedHeavyPath = async (featureId) => {
@@ -93,7 +98,7 @@ test('unsupported UI path has no entitlement or provider side effect', async () 
     return { skipped: false, action: capability.action };
   };
 
-  const result = await guardedHeavyPath('design-gacha');
+  const result = await guardedHeavyPath('future-feature');
   assert.deepEqual(result, { skipped: true, action: HEAVY_UNIMPLEMENTED_ACTION });
   assert.equal(entitlementCalls, 0);
   assert.equal(providerActionCalls, 0);
@@ -108,13 +113,20 @@ test('unsupported UI path has no entitlement or provider side effect', async () 
   assert.equal(providerActionCalls, 0);
 
   assert.equal(canSubmitHeavyCapability({
-    featureId: 'design-gacha',
+    featureId: 'future-feature',
     entitlementState: 'ready',
-    termsAccepted: true,
-    rightsAttested: true,
     userId: 'user-1',
     brandId: 'brand-1',
   }), false);
+
+  assert.equal(canSubmitHeavyCapability({
+    featureId: 'campaign-image',
+    entitlementState: 'ready',
+    termsAccepted: false,
+    rightsAttested: false,
+    userId: 'user-1',
+    brandId: 'brand-1',
+  }), true);
 });
 
 test('direct unsupported HTTP 503 is classified without a provider call', async () => {
@@ -135,62 +147,39 @@ test('direct unsupported HTTP 503 is classified without a provider call', async 
   assert.equal(providerSpyCalls, 0);
 });
 
-test('GeneratePage renders unsupported copy, hydrates only supported capabilities, and guards stale responses', async () => {
+test('GeneratePage renders unsupported copy, uses login-only admission, and guards stale responses', async () => {
   const page = await readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8');
   assert.match(page, /isHeavyOwnedFeature\(selectedFeature\?\.id\)/);
   assert.match(page, /const heavySurface = isHeavyOwnedFeature\(selectedFeature\?\.id\);/);
   assert.doesNotMatch(page, /const heavySurface = selectedFeature\?\.id !== 'chat-edit'/);
   assert.doesNotMatch(page, /const heavySurface = selectedFeature\?\.id !== 'optimize-prompt'/);
   assert.match(page, /resolveHeavyCapability\(selectedFeature\?\.id\)/);
-  assert.match(page, /if \(noImageGenerationMode \|\| !heavySurface \|\| !heavyCapabilitySupported\)/);
-  assert.match(page, /heavyEntitlementState === 'ready' && heavyPolicyConfigured/);
+  assert.match(page, /if \(heavySurface && !noImageGenerationMode && !heavyAccessReady\)/);
+  assert.match(page, /const heavyAccessReady = noImageGenerationMode[\s\S]*?heavyCapability\.supported && Boolean\(user\?\.id\)/);
+  assert.doesNotMatch(page, /data-testid="heavy-entitlement-gate"|data-testid="heavy-terms-copy"|data-testid="heavy-terms-acceptance"|data-testid="heavy-rights-attestation"/);
   assert.match(page, /HEAVY_UNIMPLEMENTED_MESSAGE/);
-  assert.match(page, /canSubmitHeavyCapability\(/);
-  assert.match(page, /const requestIdentity = heavyEntitlementContextRef\.current/);
-  assert.match(page, /!cancelled/);
-  assert.match(page, /heavyEntitlementRequestRef\.current === requestId/);
-  assert.match(page, /user\?\.id === requestIdentity\.userId/);
-  assert.match(page, /currentBrand\?\.id === requestIdentity\.brandId/);
-  assert.match(page, /selectedFeatureId === requestIdentity\.featureId/);
-  assert.match(page, /heavyEntitlementAction === requestIdentity\.action/);
-  assert.match(page, /const heavyConsent = noImageGenerationMode \|\| !heavySurface \? undefined : \{/);
-
-  const effectStart = page.indexOf('useEffect(() => {', page.indexOf('heavyEntitlementContextRef'));
-  const unsupportedGuard = page.indexOf('if (noImageGenerationMode || !heavySurface || !heavyCapabilitySupported)', effectStart);
-  const authGuard = page.indexOf('if (!userId || !brandId)', effectStart);
-  const dataPlaneGuard = page.indexOf('if (!cloudflareDataPlane)', effectStart);
-  const entitlementCall = page.indexOf('cloudflareDataPlane.getHeavyEntitlement(brandId, heavyEntitlementAction)', effectStart);
-  assert.ok(effectStart >= 0, 'entitlement effect must exist');
-  assert.ok(unsupportedGuard > effectStart, 'unsupported capability guard must be inside entitlement effect');
-  assert.ok(unsupportedGuard < authGuard, 'unsupported capability guard must precede auth hydration');
-  assert.ok(authGuard < dataPlaneGuard, 'auth guard must precede data-plane access');
-  assert.ok(dataPlaneGuard < entitlementCall, 'data-plane guard must precede entitlement GET');
+  assert.doesNotMatch(page, /canSubmitHeavyCapability\(/);
+  assert.match(page, /const heavyConsent = undefined/);
+  assert.match(page, /There is intentionally no client entitlement\/consent fetch here/);
+  assert.doesNotMatch(page, /getHeavyEntitlement\(/);
 });
 
 test('Lightchain Workbench keeps Heavy entitlement out of known Light features', async () => {
   const page = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   assert.match(page, /isHeavyOwnedFeature\(selectedTool\.id\)/);
-  assert.match(page, /const heavyEntitlementAction = heavyOwnedFeature && lightchainProviderSupported/);
-  assert.match(page, /const heavyEntitlementReady = !heavyOwnedFeature \|\|/);
-  assert.match(page, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
-  assert.match(page, /rightsReady: !lightchainProviderSupported \|\| !heavyOwnedFeature \|\| heavyEntitlementReady/);
-  assert.doesNotMatch(page, /const heavyEntitlementAction = lightchainProviderSupported\s*\n\s*\? lightchainProviderRoute/);
-  assert.match(page, /cloudflareDataPlane\.getHeavyEntitlement\(brandId, heavyEntitlementAction\)/);
-  assert.match(page, /if \(!brandId \|\| !heavyEntitlementAction\)/);
+  assert.match(page, /const heavyAccessReady = !heavyOwnedFeature \|\|/);
+  assert.match(page, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyAccessReady/);
+  assert.match(page, /rightsReady: !lightchainProviderSupported \|\| heavyAccessReady/);
+  assert.doesNotMatch(page, /heavyEntitlementAction/);
+  assert.doesNotMatch(page, /getHeavyEntitlement\(/);
 });
 
 test('Lightchain material workbench keeps Heavy entitlement out of known material features', async () => {
   const page = await readFile(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
   assert.match(page, /const materialFeatureId = isPrinting \? 'printing-image' : 'fabric-image';/);
   assert.match(page, /const heavyOwnedFeature = isHeavyOwnedFeature\(materialFeatureId\);/);
-  assert.match(page, /const heavyEntitlementReady = !heavyOwnedFeature \|\|/);
-  assert.match(page, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
-  assert.match(page, /rightsReady: !heavyOwnedFeature \|\| heavyEntitlementReady/);
-
-  const effectStart = page.indexOf('useEffect(() => {', page.indexOf('const heavyEntitlementReady'));
-  const heavyGuard = page.indexOf('if (!heavyOwnedFeature || !brandId)', effectStart);
-  const entitlementCall = page.indexOf("cloudflareDataPlane.getHeavyEntitlement(brandId, 'edit-image')", effectStart);
-  assert.ok(effectStart >= 0, 'material entitlement effect must exist for future Heavy-owned branches');
-  assert.ok(heavyGuard > effectStart, 'material effect must guard known Light features');
-  assert.ok(heavyGuard < entitlementCall, 'Heavy entitlement GET must follow the ownership guard');
+  assert.match(page, /const heavyAccessReady = !heavyOwnedFeature \|\|/);
+  assert.match(page, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyAccessReady/);
+  assert.match(page, /rightsReady: !heavyOwnedFeature \|\| heavyAccessReady/);
+  assert.doesNotMatch(page, /getHeavyEntitlement\(/);
 });

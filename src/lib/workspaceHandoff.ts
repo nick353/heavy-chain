@@ -7,6 +7,12 @@ import { useCanvasStore } from '../stores/canvasStore';
 import type { Json } from '../types/database';
 import type { MaterialReferenceMetadata } from './workspaceMaterialReferences';
 import { matchesVideoProjectArtifact } from './videoWorkspacePersistence.ts';
+import { isHeavyWorkspaceRuntime, toHeavyWorkspacePath } from './heavyWorkspace';
+import {
+  decodeGenerationSourceReferences,
+  normalizeGenerationSourceReferences,
+  type GenerationSourceReference,
+} from './generationSourceReferences.ts';
 
 export type WorkspaceHandoffFeatureType =
   | 'fashion-studio'
@@ -39,6 +45,7 @@ export interface GenerationIntent extends Record<string, Json | undefined> {
   hairStyle?: string;
   modelCandidateLabel?: string;
   selectedPatternPreview?: PatternPreviewContext;
+  sourceReferences?: GenerationSourceReference[];
   motifPrompt?: string;
   repeatStyle?: string;
   garmentTarget?: string;
@@ -82,6 +89,7 @@ export interface GenerationIntentSourceMetadata {
   sourceImageId?: string;
   sourceStoragePath?: string;
   sourceFileName?: string;
+  sourceReferences?: GenerationSourceReference[];
 }
 
 export interface WorkspaceWorkflowMetadata {
@@ -195,6 +203,26 @@ const isWorkspaceHandoffKind = (value: string | null): value is WorkspaceHandoff
   return value === 'local-workflow-intake';
 };
 
+const appendSourceReferenceManifest = (
+  params: URLSearchParams,
+  source: Pick<GenerationIntentSourceMetadata, 'sourceImageId' | 'sourceStoragePath' | 'sourceFileName' | 'sourceReferences'>,
+) => {
+  if (source.sourceReferences === undefined) return false;
+  const result = normalizeGenerationSourceReferences(source.sourceReferences);
+  if (!result.ok) throw new Error(`invalid_generation_source_references:${result.reason}`);
+
+  const first = result.references[0];
+  for (const key of ['sourceImageId', 'sourceStoragePath', 'sourceFileName'] as const) {
+    const alias = source[key];
+    if (alias && alias !== first[key]) {
+      throw new Error(`generation_source_reference_alias_mismatch:${key}`);
+    }
+    if (first[key]) params.set(key, first[key]!);
+  }
+  params.set('sourceReferences', JSON.stringify(result.references));
+  return true;
+};
+
 export const buildGenerationIntentHref = ({
   feature,
   prompt,
@@ -207,6 +235,7 @@ export const buildGenerationIntentHref = ({
   sourceImageId,
   sourceStoragePath,
   sourceFileName,
+  sourceReferences,
   bodyTypes,
   ageGroups,
   skinTone,
@@ -233,9 +262,17 @@ export const buildGenerationIntentHref = ({
     sourceResumePath,
     sourceMode,
   });
-  if (sourceImageId) params.set('sourceImageId', sourceImageId);
-  if (sourceStoragePath) params.set('sourceStoragePath', sourceStoragePath);
-  if (sourceFileName) params.set('sourceFileName', sourceFileName);
+  const hasSourceReferenceManifest = appendSourceReferenceManifest(params, {
+    sourceImageId,
+    sourceStoragePath,
+    sourceFileName,
+    sourceReferences,
+  });
+  if (!hasSourceReferenceManifest) {
+    if (sourceImageId) params.set('sourceImageId', sourceImageId);
+    if (sourceStoragePath) params.set('sourceStoragePath', sourceStoragePath);
+    if (sourceFileName) params.set('sourceFileName', sourceFileName);
+  }
   if (aspectRatio) params.set('ratio', aspectRatio);
   if (bodyTypes?.length) params.set('bodyTypes', bodyTypes.join(','));
   if (ageGroups?.length) params.set('ageGroups', ageGroups.join(','));
@@ -277,8 +314,13 @@ export const buildLightchainToolHref = ({
     sourceResumePath: source.sourceResumePath,
     sourceMode: source.sourceMode,
   });
+  appendSourceReferenceManifest(params, source);
   if (referenceNote) params.set('referenceNote', referenceNote);
-  return `/lightchain/${encodeURIComponent(toolId)}?${params.toString()}`;
+  // Heavy's laboratory is a first-class Heavy surface. Keep the shared
+  // workbench implementation, but expose a Heavy-owned route so the
+  // product name never leaks into the Heavy URL/entry flow.
+  if (toolId === 'lab' && isHeavyWorkspaceRuntime()) return `/heavy/lab?${params.toString()}`;
+  return toHeavyWorkspacePath(`/lightchain/${encodeURIComponent(toolId)}?${params.toString()}`);
 };
 
 export const hydrateGenerationIntentSource = (params: URLSearchParams): GenerationIntentSourceMetadata | null => {
@@ -295,6 +337,29 @@ export const hydrateGenerationIntentSource = (params: URLSearchParams): Generati
   if (sourceLabel !== config.label) return null;
   if (!workflowVersion || !workspaceAllowedWorkflowVersions[sourceWorkspace].includes(workflowVersion)) return null;
   if (!isWorkspaceHandoffKind(sourceMode) || !allowedSourceModes.has(sourceMode)) return null;
+
+  const manifestValues = params.getAll('sourceReferences');
+  if (manifestValues.length > 1) return null;
+  if (manifestValues.length === 1) {
+    const result = decodeGenerationSourceReferences(manifestValues[0]);
+    if (!result.ok) return null;
+    const first = result.references[0];
+    for (const key of ['sourceImageId', 'sourceStoragePath', 'sourceFileName'] as const) {
+      const aliases = params.getAll(key);
+      if (aliases.length > 1 || (aliases.length === 1 && aliases[0] !== first[key])) return null;
+    }
+    return {
+      sourceWorkspace,
+      workflowVersion,
+      sourceLabel,
+      sourceResumePath,
+      sourceMode,
+      ...(first.sourceImageId ? { sourceImageId: first.sourceImageId } : {}),
+      ...(first.sourceStoragePath ? { sourceStoragePath: first.sourceStoragePath } : {}),
+      ...(first.sourceFileName ? { sourceFileName: first.sourceFileName } : {}),
+      sourceReferences: result.references,
+    };
+  }
 
   return {
     sourceWorkspace,

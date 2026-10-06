@@ -33,7 +33,7 @@ export const buildFittingPreviewBlockers = ({
   if (!garmentImageUrl) blockers.push('衣服画像');
   // Heavy owns this preview helper. Keep Light's plan-locked label in the
   // source parity components, but never surface it from a Heavy readiness path.
-  if (!rightsConfirmed) blockers.push('Heavy利用条件');
+  if (!rightsConfirmed) blockers.push('Heavy生成の準備');
   if (!productDescription.trim()) blockers.push('生成brief');
   if (!selectedBodyTypesCount) blockers.push('体型');
   if (!selectedAgeGroupsCount) blockers.push('年代');

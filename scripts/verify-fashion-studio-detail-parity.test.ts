@@ -22,10 +22,13 @@ test('fashion studio saved-project detail keeps the Light canvas shell landmarks
   assert.match(styleSource, /\.fashion-studio-source-dots[\s\S]*radial-gradient/);
 });
 
-test('AI generation remains an explicit safe boundary in the detail shell', () => {
-  assert.match(source, /入力内容を保持しました。次の生成条件を確認できます。/);
+test('AI generation requires a loaded committed main image and scoped controller', () => {
+  assert.match(source, /loadedMain.identity !== mainIdentity/);
+  assert.match(source, /createFashionStudioDetailGeneration\(createFashionStudioGenerationAdapters/);
+  assert.match(source, /detail.roles.main.status !== 'available'/);
+  assert.doesNotMatch(source, /入力内容を保持しました。次の生成条件を確認できます。/);
   assert.doesNotMatch(source, /権利確認後/);
-  assert.doesNotMatch(source, /fetch\(|axios\.|supabase\.|generateImage|provider/i);
+  assert.doesNotMatch(source, /fetch\(|axios\.|supabase\.|useCanvasStore/);
 });
 
 test('saved Fashion Studio cards expose the Light menu landmarks', () => {

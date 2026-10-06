@@ -80,7 +80,7 @@ test('canvas keeps provider safety fail-closed without rendering a Light-missing
   assert.doesNotMatch(page, /UPLOAD_RIGHTS_CONFIRMATION_LABEL/);
   assert.doesNotMatch(page, /GENERATION_LEGAL_COPY/);
   assert.doesNotMatch(page, /type="checkbox"/);
-  assert.match(page, /const heavyGenerationReady = heavyEntitlement\?\.allowed === true[\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(page, /const heavyGenerationReady = Boolean\(user\?\.id && currentBrand\?\.id\)/);
   assert.match(page, /const rightsConfirmed = heavyGenerationReady/);
   assert.match(page, /legalSafety: \{ rightsConfirmed \}/);
   assert.match(page, /if \(!rightsConfirmed\)/);

@@ -1,0 +1,115 @@
+{
+  "schema": "heavy.handoff.production-baseline.v1",
+  "capturedDate": "2026-10-06",
+  "goalStatus": "paused",
+  "productionUrl": "https://heavy-chain.zeabur.app",
+  "apiUrl": "https://heavy-chain-api.nichika2000823.workers.dev",
+  "deploymentId": "6ac4daea4a4c47e13ede3f11",
+  "observedDeploymentType": "docker",
+  "observedDeploymentStatus": "RUNNING",
+  "packetSha256": "ede8b9b93942cf4d4530b60c84130339b1023cba72042a83df8758da40eaef8b",
+  "releaseContextSha256": "f0048c19fbb01ea2b1cf785238e62adb49a954491d0d44602775166a0f097c2e",
+  "sourceInputCount": 360,
+  "canonicalSourceDifferences": [
+    {
+      "path": "src/components/canvas/PartialEditModal.tsx",
+      "checkpointSha256": "3adcacc15e44936df5163a7deefcb6679b658a656972ba805e960c19c0c6a880",
+      "productionSourceSha256": "186855845e36fa6c29b5cd2de233f1fcf7ccacd0426fac2b3eb60587c2c4958e"
+    },
+    {
+      "path": "src/lib/canvasImageEditResults.ts",
+      "checkpointSha256": "584d6b62d7277561ee5ad46489f72f16057fa531bd1f8d06e7bb2d85a464237f",
+      "productionSourceSha256": "3ffc2425da49a1eb5c4bd8e69c71efde9a1793fe03da6ce513bdcbfc6d9755b6"
+    },
+    {
+      "path": "src/lib/cloudflareApi.ts",
+      "checkpointSha256": "eaa6c04360b6faeec8b2e5a53369a51ad8533604d5d306df3445d754c769c1d1",
+      "productionSourceSha256": "b361fcfa17feaff8ed9587e230e9f3a89a7b48869c9a59fffe572307e04a036f"
+    },
+    {
+      "path": "src/lib/cloudflareImageAI.ts",
+      "checkpointSha256": "03147dca6e4b84a68084ebe38767ad16401150762c08b2cdde7a08749869664d",
+      "productionSourceSha256": "c481b40b85c58215b6f5c56b09739da8d093083f707cc2b636881d9be0f68941"
+    },
+    {
+      "path": "src/lib/cloudflareProtectedImageEdit.ts",
+      "checkpointSha256": "d54efa3c19049ba5b6d085187cb818f9704309ce5359948e313cb9e197fdb5cf",
+      "productionSourceSha256": "3a7d24e340525fcde1e021e7077926093d6c5572ccc5938e9b4d6a04a4c9098f"
+    },
+    {
+      "path": "src/lib/imageApi.ts",
+      "checkpointSha256": "63ed2c9062e6d1cd7ca8e14d61b2fa235b867231a4747ba408626624f33e6e11",
+      "productionSourceSha256": "e0a374f4b2064309745b889b5daf6801f166c9867e1ad2dd7407fd3d9c8b22ff"
+    },
+    {
+      "path": "src/lib/providerResultPersistence.ts",
+      "checkpointSha256": "f7ab0caf076232c780b65c737ea10666a3b8206df30f9b354213997e7ad08d53",
+      "productionSourceSha256": "795defb85b162027592246836638127383d787f3a5a790a313ca0aa13826ee0d"
+    },
+    {
+      "path": "src/pages/CanvasEditorPage.tsx",
+      "checkpointSha256": "c8825e86a976b37f59162a2c85ddc3d5a19ddea234f245cd8b06037396ada4e0",
+      "productionSourceSha256": "f2ba64b556ab6c5228cd5e73516e58b5b6597364e6f4d8cbec56a51188160350"
+    },
+    {
+      "path": "src/pages/LightchainMaterialWorkbenchPage.tsx",
+      "checkpointSha256": "c32be273b226d6f5b24503cf2753cd4563aee4771a6ae9a8cd3e7e6a0e2a6120",
+      "productionSourceSha256": "b7fb31d2c35bab59ed6e2ce7e3a48026337af08b08b8070df8ce6cf787166383"
+    },
+    {
+      "path": "src/stores/canvasStore.ts",
+      "checkpointSha256": "b18e432246080459de3a23a6226053200d3017692769d22f82a0fc58910303de",
+      "productionSourceSha256": "3855de8612295e872f8d7a36b8953d20c42641ea044886ee8ab308c80afa0853"
+    }
+  ],
+  "publicBuildSettings": {
+    "VITE_CLOUDFLARE_API_ENABLED": "true",
+    "VITE_CLOUDFLARE_API_BASE_URL": "https://heavy-chain-api.nichika2000823.workers.dev",
+    "VITE_MEDIA_PROVIDER_ORDER": "cloudflare_r2",
+    "VITE_MEDIA_GATEWAY_URL": "https://heavy-chain-api.nichika2000823.workers.dev",
+    "VITE_GENERATION_PROVIDER": "workers_ai"
+  },
+  "verification": {
+    "relatedBehaviorTestsPassed": 103,
+    "behaviorTestsReusedForCssOnlyChange": true,
+    "frozenCandidateTypeAndBuildExitCode": 0,
+    "fullCanonicalCheckoutTestedAsAWhole": false,
+    "fullGoalComplete": false,
+    "workerOrProtected19Promoted": false,
+    "latestPublicBundleNamesObserved": true,
+    "latestFullPublicArtifactHashReadbackComplete": false
+  },
+  "nativeClipboard": {
+    "cardCountBeforeAndAfter": 49,
+    "clipboardReadbackVerified": true,
+    "explicitNativePasteCount": 1,
+    "addedExactSourceImageOnce": true,
+    "originalTwoIdsGeometryViewPreservedDuringPaste": true,
+    "taskPasteObjectDeletedOnceOnPause": true,
+    "afterCleanupObjectIds": [
+      "w13mb2h10wh",
+      "mu3keorhdms"
+    ],
+    "afterCleanupZoom": 1,
+    "afterCleanupPanX": 0,
+    "afterCleanupPanY": 0,
+    "canvasServerSaveDispatched": false,
+    "generationDispatched": false,
+    "completeFeatureAcceptance": false
+  },
+  "cleanup": {
+    "currentTaskTabClosed": true,
+    "currentSessionClosed": true,
+    "leasesReleased": true,
+    "historicalRetainedTab": 1980935548,
+    "historicalBlocker": "viewport_cleanup_target_mismatch",
+    "globalCleanupComplete": false
+  },
+  "localEvidenceRoot": "/Users/nichikatanaka/Documents/Codex/2026-10-04/heavy-chain/outputs",
+  "localEvidence": [
+    "library-board-visibility-release-20261006",
+    "library-board-visibility-deploy-20261006",
+    "library-board-visibility-native-20261006/handoff-cleanup.json"
+  ],
+  "privacy": "No credentials, raw owner image bytes, clipboard owner scope, or signed Companion authorization capsules included in this portable summary."
+}

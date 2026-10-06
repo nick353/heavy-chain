@@ -33,7 +33,8 @@ node cloudflare/heavy-web/build.mjs
 
 ## 現行サービス境界
 
-- Web: `heavy-chain-web.nichika2000823.workers.dev`
+- Web（Heavy Chain正規入口）: `heavy-chain.zeabur.app`
+- Web（Cloudflare技術エンドポイント）: `heavy-chain-web.nichika2000823.workers.dev`
 - API: `heavy-chain-api.nichika2000823.workers.dev`
 - Auth: `consumer-auth.nichika2000823.workers.dev`
 - AI: `workers_ai`

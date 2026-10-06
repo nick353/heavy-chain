@@ -8,6 +8,7 @@ recordings
 test-results
 playwright-report
 .playwright-cli
+dist
 .codex
 screenshots
 cloudflare

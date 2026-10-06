@@ -40,8 +40,9 @@ test('Heavy UI generation callers do not silently select Workers AI', async () =
 
 test('Light Chain provider surface remains separately owned', async () => {
   const source = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /LIGHTCHAIN_GENERATION_PROVIDER/);
-  assert.match(source, /workers_ai/);
+  assert.match(source, /HEAVY_WORKBENCH_GENERATION_PROVIDER/);
+  assert.match(source, /HEAVY_IMAGE_PROVIDER/);
+  assert.doesNotMatch(source, /generationProvider:\s*LIGHTCHAIN_GENERATION_PROVIDER/);
 });
 
 test('production Heavy API config and adapter remain OpenAI-authoritative', async () => {

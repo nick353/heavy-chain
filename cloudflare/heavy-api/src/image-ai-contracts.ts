@@ -1,3 +1,5 @@
+import {validateProtectedOpenAIProjection,protectedOpenAIProjectionProof,type ProtectedOpenAIProjectionProof} from '../../../src/lib/protectedOpenAIProjection.ts';
+import { validateNativePrintFinalFrame,validateCanvasProtectedBatchBinding } from '../../../src/lib/nativePrintFinalFrame.ts';
 export const IMAGE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b';
 import { PROTECTED_IMAGE_EDIT_MODE } from '../../../src/lib/protectedImageEditContract.ts';
 export const IMAGE_ACTIONS = new Set(['generate-image', 'edit-image', 'model-matrix']);
@@ -8,7 +10,8 @@ export type Raster = { bytes: Uint8Array; contentType: string; width: number; he
 export type Candidate = { prompt: string; descriptor: Json; seed: number };
 export type ImageInput = { action: ImageAction; brandId: string; prompt: string; featureType: string;
   width: number; height: number; references: Raster[]; candidates: Candidate[]; metadata: Json;
-  parentImageId: string | null; generation: number };
+  parentImageId: string | null; generation: number; protectedProjection?:{proof:ProtectedOpenAIProjectionProof;primary:Raster;guide:Raster;guideIndex:number} };
+export type ImageProviderContext = { provider: 'workers_ai' | 'openai'; model: string };
 export class ImageInputError extends Error {
   status: number;
   constructor(code: string, status = 400) { super(code); this.status = status; }
@@ -119,7 +122,9 @@ export async function normalizedImageRequestDigest(
   provider: NormalizedImageProvider,
   authorizedSourceAssets: AuthorizedSourceAsset[],
 ): Promise<{ digest: string; normalized: Json }> {
-  const references = await Promise.all(input.references.map(async (reference, index) => ({
+  const providerReferences=[...input.references];
+  if(input.protectedProjection){providerReferences[0]=input.protectedProjection.primary;providerReferences[input.protectedProjection.guideIndex]=input.protectedProjection.guide;}
+  const references = await Promise.all(providerReferences.map(async (reference, index) => ({
     index,
     contentType: reference.contentType,
     width: reference.width,
@@ -187,15 +192,23 @@ function choices(value: unknown, allowed: Record<string, unknown>, fallback: str
   return value as string[];
 }
 
-export function parseImageInput(action: ImageAction, body: Json): ImageInput {
+const DEFAULT_IMAGE_PROVIDER_CONTEXT: ImageProviderContext = { provider: 'workers_ai', model: IMAGE_MODEL };
+
+export function parseImageInput(
+  action: ImageAction,
+  body: Json,
+  providerContext: ImageProviderContext = DEFAULT_IMAGE_PROVIDER_CONTEXT,
+): ImageInput {
   const brandId = body.brandId ?? body.brand_id;
   if (typeof brandId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(brandId)) throw new ImageInputError('invalid_brand_id');
-  // This field is caller intent only. The Heavy Worker resolves the
-  // request-scoped acceptance/attestation separately before quota, R2, or
-  // provider work; a true browser value is never authority by itself.
-  if (!isRecord(body.legalSafety) || body.legalSafety.rightsConfirmed !== true) throw new ImageInputError('rights_confirmation_required', 403);
-  try { requireLegalSafetyApproval(body.legalSafety,[body.prompt,body.productDescription,body.negativePrompt,body.textOverlay,body.generationIntent]); }
-  catch { throw new ImageInputError('legal_safety_prompt_blocked',403); }
+  // Login and brand membership are the Heavy generation boundary. The old
+  // browser rightsConfirmed declaration is optional and never proof. Keep
+  // the server-side content safety assessment so protected-brand/person-
+  // likeness prompts still fail closed.
+  try {
+    const safety = validateLegalSafetyInput([body.prompt,body.productDescription,body.negativePrompt,body.textOverlay,body.generationIntent]);
+    if (safety.blocked) throw new Error(`legal_safety_prompt_blocked:${safety.reasons.join(',')}`);
+  } catch { throw new ImageInputError('legal_safety_prompt_blocked',403); }
   if (body.maskDataUrl || body.maskApplied === true || body.outputBackground === 'transparent') throw new ImageInputError('image_mask_or_transparency_not_supported', 422);
   // A caller asking for a different provider/model must not be silently routed.
   for (const value of [body.generationModel, body.providerModel]) {
@@ -205,6 +218,9 @@ export function parseImageInput(action: ImageAction, body: Json): ImageInput {
   }
   if (body.generationProvider && !['workers_ai', 'openai'].includes(String(body.generationProvider))) {
     throw new ImageInputError('image_provider_not_supported', 422);
+  }
+  if (body.generationProvider && body.generationProvider !== providerContext.provider) {
+    throw new ImageInputError('image_provider_not_enabled', 422);
   }
   const prompt = requiredText(action === 'model-matrix'
     ? (typeof body.productDescription === 'string' && body.productDescription.trim() ? body.productDescription
@@ -217,7 +233,11 @@ export function parseImageInput(action: ImageAction, body: Json): ImageInput {
   if (![width,height].every(v => typeof v === 'number' && Number.isSafeInteger(v) && v >= 256 && v <= 1920 && v % 8 === 0)) throw new ImageInputError('invalid_image_dimensions');
   const inputURLs = action === 'edit-image' ? body.imageUrls ?? [body.imageUrl]
     : action === 'model-matrix' ? [body.imageUrl, body.modelReferenceImageUrl].filter(Boolean) : body.imageUrls ?? [];
-  if (!Array.isArray(inputURLs) || inputURLs.length > 4 || (action === 'edit-image' && !inputURLs.length)) throw new ImageInputError('image_reference_count_not_supported', 422);
+  const maxReferenceCount = action === 'model-matrix' ? 2
+    : providerContext.provider === 'openai' && OPENAI_IMAGE_MODELS.has(providerContext.model) ? 16 : 4;
+  if (!Array.isArray(inputURLs) || inputURLs.length > maxReferenceCount || (action === 'edit-image' && !inputURLs.length)) {
+    throw new ImageInputError('image_reference_count_not_supported', 422);
+  }
   if (action === 'model-matrix' && body.modelReferenceImageUrl && !body.imageUrl) throw new ImageInputError('fitting_garment_reference_required');
   const references = inputURLs.map(v => decodeImage(v));
   const protectedEdit = body.protectedEdit;
@@ -232,9 +252,40 @@ export function parseImageInput(action: ImageAction, body: Json): ImageInput {
       throw new ImageInputError('invalid_protected_image_edit_plan',422);
     }
   }
+  if (providerContext.provider === 'openai' && protectedEdit !== undefined && body.protectedOpenAIProjection === undefined) throw new ImageInputError('protected_openai_projection_required',422);
   const featureType = typeof body.featureType === 'string' ? requiredText(body.featureType, 256) : action;
+  const canvasBatch=body.canvasProtectedBatchBinding!==undefined?validateCanvasProtectedBatchBinding(body.canvasProtectedBatchBinding):undefined;
+  if(canvasBatch&&(action!=='edit-image'||providerContext.provider!=='openai'||!['canvas-partial-edit','canvas-inpaint'].includes(featureType)||canvasBatch.featureType!==featureType||canvasBatch.brandId!==brandId||body.count!==4))throw new ImageInputError('canvas_protected_batch_binding_invalid',422);
+  if(canvasBatch&&((body.canvasProjectId??null)!==canvasBatch.canvasProjectId||(body.parentObjectId??null)!==canvasBatch.parentObjectId||body.generation!==canvasBatch.generation))throw new ImageInputError('canvas_protected_context_binding_mismatch',422);
+  let nativePrintFinalFrame;
+  if (body.nativePrintFinalFrame !== undefined) {
+    try {
+      if (action !== 'edit-image' || !isRecord(protectedEdit) || (!canvasBatch && featureType !== 'lightchain-printing-image' && !(featureType === 'lightchain-fabric-image' && isRecord(body.nativePrintFinalFrame) && body.nativePrintFinalFrame.version === 'native-print-openai-contain-v1'))) throw new Error('printing_plan_required');
+      nativePrintFinalFrame = validateNativePrintFinalFrame(body.nativePrintFinalFrame, protectedEdit as {sourceWidth:unknown;sourceHeight:unknown;sourceSha256:unknown;maskSha256:unknown});
+      if(canvasBatch&&(nativePrintFinalFrame.version!=='canvas-protected-openai-contain-v1'||canonical(nativePrintFinalFrame.canvasBatch)!==canonical(canvasBatch)))throw new Error('canvas_batch_native_binding_mismatch');
+      if(!canvasBatch&&nativePrintFinalFrame.version==='canvas-protected-openai-contain-v1')throw new Error('canvas_batch_binding_required');
+      if (width !== nativePrintFinalFrame.candidateGeometry.width || height !== nativePrintFinalFrame.candidateGeometry.height) throw new Error('candidate_geometry_unmapped');
+    } catch (error) { throw new ImageInputError(error instanceof Error ? error.message : 'invalid_native_print_final_frame',422); }
+  }
+  let protectedProjection:ImageInput['protectedProjection'];
+  if (body.protectedOpenAIProjection !== undefined) {
+    if (providerContext.provider !== 'openai' || !nativePrintFinalFrame || !['native-print-openai-contain-v1','canvas-protected-openai-contain-v1'].includes(nativePrintFinalFrame.version) || !isRecord(body.protectedOpenAIProjection)) throw new ImageInputError('protected_openai_projection_not_authorized',422);
+    const proof = validateProtectedOpenAIProjection(body.protectedOpenAIProjection,protectedEdit as {sourceWidth:unknown;sourceHeight:unknown;sourceSha256:unknown;maskSha256:unknown});
+    if (canonical(nativePrintFinalFrame.mapping) !== canonical(proof)) throw new ImageInputError('protected_openai_projection_mapping_mismatch',422);
+    const primary=decodeImage(body.protectedOpenAIProjection.primaryDataUrl,false),guide=decodeImage(body.protectedOpenAIProjection.guideDataUrl,false);
+    if(primary.contentType !== 'image/png' || guide.contentType !== 'image/png' || [primary,guide].some(r=>r.width!==proof.candidate.width||r.height!==proof.candidate.height)) throw new ImageInputError('protected_openai_projection_dimensions',422);
+    protectedProjection={proof,primary,guide,guideIndex:Number((protectedEdit as Json).guideIndex)};
+  } else if (nativePrintFinalFrame && nativePrintFinalFrame.version !== 'native-print-contain-v1') throw new ImageInputError('protected_openai_projection_required',422);
   const metadata = compact(Object.fromEntries(['protectedEdit','sourceReadback','generationIntent','materialReference','materialReferences','layerPlan','maskPlan','compositionPreview','lightchainCompat','campaignMeta','textOverlay','style','negativePrompt','referenceTransforms','parentObjectId','skinTone','hairStyle','modelCandidateLabel',
-    'modelReferenceImageUrl','modelReferenceFileName','modelReferenceSourceImageId','modelReferenceSourceStoragePath'].filter(k => body[k] !== undefined).map(k => [k, body[k]]))) as Json;
+    'modelReferenceImageUrl','modelReferenceFileName','modelReferenceSourceImageId','modelReferenceSourceStoragePath',
+    // Heavy model-library uploads are browser-local IndexedDB assets. Persist
+    // only their opaque local reference and display names so same-browser
+    // History/Jobs resume can rehydrate the bytes; never persist image data.
+    'localSourceReference','localModelReference','sourceFileName'].filter(k => body[k] !== undefined).map(k => [k, body[k]]))) as Json;
+  if(canvasBatch&&!nativePrintFinalFrame)throw new ImageInputError('canvas_batch_native_binding_required',422);
+  if(canvasBatch)metadata.canvasProtectedBatchBinding=canvasBatch;
+  if (nativePrintFinalFrame) metadata.nativePrintFinalFrame = nativePrintFinalFrame;
+  if (protectedProjection) metadata.protectedOpenAIProjection = protectedOpenAIProjectionProof(body.protectedOpenAIProjection as never);
   if (new TextEncoder().encode(JSON.stringify(metadata)).length > 128 * 1024) throw new ImageInputError('image_metadata_too_large');
   const suffix = [typeof body.negativePrompt === 'string' && body.negativePrompt ? `Avoid: ${body.negativePrompt}` : '',
     typeof body.style === 'string' && body.style ? `Style: ${body.style}` : '',
@@ -257,7 +308,8 @@ export function parseImageInput(action: ImageAction, body: Json): ImageInput {
     if (isRecord(protectedEdit)) instruction += `\nImage ${protectedEdit.guideIndex} is ONLY a spatial edit guide aligned exactly with image 0: WHITE is the editable region; BLACK is protected. Do not copy this guide, its black/white colors, or its edges into the artwork. Apply the requested change inside the white region and retain image 0 framing. Other references describe the requested material/artwork. The client will restore every protected source pixel after generation; this is reference-guided editing, not native masked inference.`;
     if (action === 'model-matrix') {
       instruction = `Professional full-body apparel try-on photograph. ${descriptor.gender} adult in their ${descriptor.ageGroup}, ${BODY_TYPES[String(descriptor.bodyType)][1]} body type.\n` +
-        (references[0] ? 'Dress the person in EXACTLY the garment in image 0. Preserve its color, print, fabric, pockets, fastenings, proportions and logos; do not substitute a similar item.\n' : '') +
+        'Frame the entire person from the top of the head through both feet, with visible margin above the head and below the feet. Keep both feet and all limbs inside the image; do not crop at the torso, thighs, knees or ankles. Use wider camera framing as needed, including when a supplied person reference is cropped.\n' +
+        (references[0] ? 'Dress the person in EXACTLY the garment in image 0. Preserve its color, print, fabric, pockets, fastenings, proportions and logos; do not substitute a similar item.\nDo not add garment features, decorations or logos absent from image 0.\n' : '') +
         (references[1] ? 'Image 1 is the person reference: preserve their face, hairstyle, pose direction and identity while applying the selected fit and adult age context.\n' : '') +
         (body.skinTone ? `Selected skin tone: ${body.skinTone}.\n` : '') + (body.hairStyle ? `Selected hair length: ${body.hairStyle}.\n` : '') +
         `The garment is worn naturally, not a flat product mockup. Neutral studio background, professional lighting.\nGarment/request: ${prompt}`;
@@ -270,7 +322,7 @@ export function parseImageInput(action: ImageAction, body: Json): ImageInput {
   if (parentImageId !== null && (typeof parentImageId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(parentImageId))) throw new ImageInputError('invalid_parent_image');
   const generation = body.generation ?? 1;
   if (typeof generation !== 'number' || !Number.isSafeInteger(generation) || generation < 1 || generation > 10000) throw new ImageInputError('invalid_image_generation');
-  return { action, brandId, prompt, featureType, width: width as number, height: height as number, references, candidates, metadata, parentImageId, generation };
+  return { action, brandId, prompt, featureType, width: width as number, height: height as number, references, candidates, metadata, ...(protectedProjection?{protectedProjection}:{}), parentImageId, generation };
 }
 
 export function modelMultipart(input: ImageInput, candidate: Candidate): { body: ReadableStream<Uint8Array>; contentType: string } {
@@ -286,4 +338,4 @@ export function imageEstimate(input: Pick<ImageInput, 'width' | 'height' | 'refe
   const outputTiles = tiles(input.width,input.height);
   return { microUSD: inputTiles * 59 + outputTiles * 287, neurons: inputTiles * 5.37 + outputTiles * 26.05 };
 }
-import { requireLegalSafetyApproval } from './legalSafety.ts';
+import { validateLegalSafetyInput } from './legalSafety.ts';

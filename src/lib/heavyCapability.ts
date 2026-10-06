@@ -1,10 +1,11 @@
 /**
  * Heavy image-action capability contract for the Generate surface.
  *
- * Keep this map deliberately small and default-deny.  The Generate page may
- * still contain legacy Lightchain forms for other feature ids, but a Heavy
- * entitlement read or provider request must never be inferred for a feature
- * that is not explicitly admitted here.
+ * Keep this map explicit and default-deny. Every non-video image workflow is
+ * translated to one of the small canonical provider-action values that the
+ * API actually persists; unknown ids never fall through to Light.
+ * Feature-specific prompts and metadata stay on the client, while the server
+ * still owns auth, brand, quota, idempotency, provider and storage checks.
  */
 
 export const HEAVY_UNIMPLEMENTED_ACTION = 'heavy-unimplemented' as const;
@@ -12,25 +13,51 @@ export const HEAVY_UNIMPLEMENTED_ACTION = 'heavy-unimplemented' as const;
 export const HEAVY_CAPABILITY_ACTIONS = {
   'campaign-image': 'generate-image',
   'model-matrix': 'model-matrix',
-  'design-gacha': HEAVY_UNIMPLEMENTED_ACTION,
-  'product-shots': HEAVY_UNIMPLEMENTED_ACTION,
-  'scene-coordinate': HEAVY_UNIMPLEMENTED_ACTION,
+  'design-gacha': 'generate-image',
+  'product-shots': 'generate-image',
+  'scene-coordinate': 'edit-image',
+  'marketing-home': 'edit-image',
+  'marketing-detail': 'edit-image',
+  'fitting-clothing-reference': 'edit-image',
+  'fitting-background-reference': 'edit-image',
+  'wear-design-lab': 'edit-image',
+  'wear-design-detail': 'edit-image',
+  'fashion-studio': 'edit-image',
+  'design-agent': 'edit-image',
+  lab: 'edit-image',
+  'print-design-project': 'edit-image',
+  'print-design-detail': 'edit-image',
+  'fabric-image': 'edit-image',
+  'line-generation': 'edit-image',
+  'line-to-real': 'edit-image',
+  'pattern-vector': 'edit-image',
+  'pattern-vector-pro': 'edit-image',
+  'printing-image': 'edit-image',
+  'image-repair': 'edit-image',
+  'svg-convert': 'edit-image',
+  'custom-style': 'edit-image',
+  'ai-fitting': 'model-matrix',
+  'ai-fitting-reference': 'model-matrix',
+  'model-library': 'model-matrix',
+  'model-face': 'model-matrix',
+  'model-change': 'model-matrix',
+  'body-shape': 'model-matrix',
+  'clothing-size': 'model-matrix',
+  'pose-change': 'model-matrix',
+  'background-change': 'model-matrix',
+  'angle-change': 'model-matrix',
+  'model-custom': 'model-matrix',
 } as const;
 
 /**
- * Heavy owns only these feature ids.  Keep ownership separate from action
- * support so an owned-but-not-yet-implemented feature remains a Heavy closed
- * state instead of falling through to the Light surface.
+ * Heavy owns every non-video image feature plus the legacy entry ids. Unknown
+ * ids remain closed instead of falling through to the Light surface.
  */
 export const HEAVY_OWNED_FEATURE_IDS: ReadonlySet<string> = new Set([
-  'campaign-image',
-  'model-matrix',
-  'design-gacha',
-  'product-shots',
-  'scene-coordinate',
+  ...Object.keys(HEAVY_CAPABILITY_ACTIONS),
 ]);
 
-export type HeavyCapabilityAction = (typeof HEAVY_CAPABILITY_ACTIONS)[keyof typeof HEAVY_CAPABILITY_ACTIONS];
+export type HeavyCapabilityAction = (typeof HEAVY_CAPABILITY_ACTIONS)[keyof typeof HEAVY_CAPABILITY_ACTIONS] | typeof HEAVY_UNIMPLEMENTED_ACTION;
 export type HeavyEntitlementState = 'unsupported' | 'hydrating' | '401' | '403' | '5xx' | 'ready';
 
 export type HeavyCapability = {
@@ -97,24 +124,15 @@ export const classifyHeavyEntitlementError = (error: unknown): Exclude<HeavyEnti
   return '5xx';
 };
 
-const hasDocumentField = (value: unknown): value is string => (
-  typeof value === 'string' && value.trim().length > 0
-);
-
 /**
- * A successful status read is only useful for the consent UI when both the
- * terms and rights policy documents are present.  `allowed` alone is not an
- * authorization proof and therefore does not make the state ready.
+ * Heavy image generation is login-first.  The policy/document fields below
+ * remain on the type because older receipts and compatibility endpoints still
+ * expose them, but they are not a user-facing prerequisite for a new image
+ * request.  The authenticated server still owns membership, quota, safety,
+ * idempotency, and private persistence checks.
  */
 export const hasHeavyTermsAndRightsPolicy = (status: HeavyEntitlementLike | null | undefined): boolean => (
-  !!status
-  && hasDocumentField(status.termsVersion)
-  && hasDocumentField(status.termsDocumentVersion)
-  && hasDocumentField(status.termsDocumentDigest)
-  && hasDocumentField(status.rightsVersion)
-  && hasDocumentField(status.rightsDocumentVersion)
-  && hasDocumentField(status.rightsDocumentDigest)
-  && status.reason !== 'heavy_generation_disabled'
+  !!status && status.reason !== 'heavy_generation_disabled'
 );
 
 export const isHeavyEntitlementReady = (status: HeavyEntitlementLike | null | undefined): boolean => (
@@ -141,8 +159,9 @@ export const resolveHeavyEntitlementState = (
 export const canSubmitHeavyCapability = (input: {
   featureId: unknown;
   entitlementState: HeavyEntitlementState;
-  termsAccepted: boolean;
-  rightsAttested: boolean;
+  /** Legacy compatibility fields; they no longer gate Heavy image submit. */
+  termsAccepted?: boolean;
+  rightsAttested?: boolean;
   userId?: unknown;
   brandId?: unknown;
   currentUserId?: unknown;
@@ -151,7 +170,6 @@ export const canSubmitHeavyCapability = (input: {
   const capability = resolveHeavyCapability(input.featureId);
   if (!capability.supported) return false;
   if (input.entitlementState !== 'ready') return false;
-  if (!input.termsAccepted || !input.rightsAttested) return false;
   if (!input.userId || !input.brandId) return false;
   if (input.currentUserId !== undefined && input.currentUserId !== input.userId) return false;
   if (input.currentBrandId !== undefined && input.currentBrandId !== input.brandId) return false;

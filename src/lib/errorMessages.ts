@@ -73,6 +73,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export type FailureRecoveryKind =
+  | 'image-reconciliation'
   | 'openai-quota'
   | 'gemini-quota'
   | 'provider-quota'
@@ -93,6 +94,14 @@ export interface FailureRecoveryGuidance {
 }
 
 const FAILURE_RECOVERY_GUIDANCE: Record<FailureRecoveryKind, FailureRecoveryGuidance> = {
+  'image-reconciliation': {
+    kind: 'image-reconciliation',
+    title: '同じ生成依頼の結果を確認',
+    userMessage: '生成結果はまだ確認できていません。入力の変更や新しい生成はせず、保持した依頼の状態を照合します。',
+    nextAction: '保持した依頼IDの結果を確認',
+    retryLabel: '同じ依頼の結果を確認',
+    retryHrefFallback: '/jobs',
+  },
   'openai-quota': {
     kind: 'openai-quota',
     title: 'OpenAI画像APIの残高を確認',
@@ -174,6 +183,11 @@ export function getFailureRecoveryGuidance(error: unknown): FailureRecoveryGuida
       ? String((error as { message?: unknown }).message ?? '')
       : '';
   const message = rawMessage.toLowerCase();
+
+  // An unobserved receipt is not proof of failed inference or invalid input.
+  if (/image_outcome_unknown|生成結果を確認できません|再推論せず|生成結果が未確定/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['image-reconciliation'];
+  }
 
   if (/video_provider_not_admitted|provider.*not[_ ]?admitted/.test(message)) {
     return FAILURE_RECOVERY_GUIDANCE['provider-admission'];

@@ -36,7 +36,7 @@ addCheck('browser guard exposes shared rights and safety policy', includes(brows
   'person_or_celebrity_likeness_without_permission',
 ]), { file: files.browserGuard });
 
-addCheck('Cloudflare image boundary requires explicit rights and blocks unsafe prompts', includes(cloudflare, [
+addCheck('Cloudflare safety boundary blocks unsafe prompts while keeping legacy rights helper available', includes(cloudflare, [
   'requireLegalSafetyApproval',
   'legal_safety_rights_confirmation_required',
   'legal_safety_prompt_blocked',
@@ -44,11 +44,10 @@ addCheck('Cloudflare image boundary requires explicit rights and blocks unsafe p
   'protectedBrandTerms',
 ]), { file: files.cloudflareGuard });
 
-addCheck('Cloudflare provider contract carries legal safety metadata', includes(imageContract, [
-  'requireLegalSafetyApproval(body.legalSafety',
-  'body.generationIntent',
-  'body.legalSafety.rightsConfirmed',
-]), { file: files.imageContract });
+addCheck('Cloudflare provider contract validates prompt safety without requiring a Heavy rights declaration', includes(imageContract, [
+  'validateLegalSafetyInput',
+  'legal_safety_prompt_blocked',
+]) && !imageContract.includes('requireLegalSafetyApproval(body.legalSafety'), { file: files.imageContract });
 
 addCheck('Browser Cloudflare client keeps durable admission before provider submission', includes(imageClient, [
   'invokeDurableImageAction',

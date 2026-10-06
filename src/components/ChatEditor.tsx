@@ -29,13 +29,13 @@ export interface ChatEditorHeavyReadiness {
   inputKey: string | null;
 }
 
-const HEAVY_READINESS_UNAVAILABLE_COPY = 'Heavy利用条件を確認できません';
-const HEAVY_INPUT_BINDING_REQUIRED_COPY = 'Heavy利用条件を現在の入力に紐づけて確認できません';
+const HEAVY_READINESS_UNAVAILABLE_COPY = '生成を準備できません';
+const HEAVY_INPUT_BINDING_REQUIRED_COPY = '現在の入力を生成に紐づけて確認できません';
 
 /**
- * Keep the UI gate tied to the exact prompt and source image that the parent
- * admitted. This is only a caller-side consistency check; the Heavy server
- * remains the authority for the request-scoped entitlement.
+ * Login plus the active brand is the Heavy generation preflight. A parent may
+ * optionally provide an input key for stale-input detection, but absence of
+ * that optional diagnostic key must not block a normal authenticated edit.
  */
 export const buildChatEditorInputKey = ({ prompt, imageUrl }: ChatEditorRequestInput): string => (
   JSON.stringify({ imageUrl: imageUrl ?? null, prompt: prompt.trim() })
@@ -50,7 +50,7 @@ export function resolveChatEditorHeavyReadiness(
     return { ready: false, reason: readiness.reason?.trim() || HEAVY_READINESS_UNAVAILABLE_COPY };
   }
   const inputKey = buildChatEditorInputKey(input);
-  if (!readiness.inputKey || readiness.inputKey !== inputKey) {
+  if (readiness.inputKey && readiness.inputKey !== inputKey) {
     return { ready: false, reason: HEAVY_INPUT_BINDING_REQUIRED_COPY };
   }
   return { ready: true, inputKey };

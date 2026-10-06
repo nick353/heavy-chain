@@ -11,6 +11,8 @@ import {
   saveWorkspaceArtifactBestEffort,
   type WorkspaceArtifact,
 } from '../lib/localWorkspaceArtifacts';
+import { assertAuthBrandFence, captureAuthBrandFence } from '../lib/authBrandSelection';
+import { readWorkspaceArtifactImage } from '../lib/workspaceArtifactImageReadback';
 import { withSignedImageUrls } from '../lib/storage';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import type { GeneratedImageListRow } from '../lib/generatedImageQuery';
@@ -19,6 +21,7 @@ import {
 } from '../lib/lightchainUnifiedFeatureCatalog';
 import { buildLightchainLibraryFeatureHref } from '../lib/lightchainLibraryHandoff';
 import { downloadValidatedImage } from '../lib/imageDownload';
+import { copyLibraryCanvasReference } from '../lib/libraryCanvasClipboard';
 
 const DEFAULT_LIBRARY_GROUPS = [
   'マイライブラリー',
@@ -60,7 +63,6 @@ type LibraryFeatureDestination =
   | { kind: 'feature'; featureId: string };
 
 const cardTitle = (card: LibraryCard) => card.kind === 'local' ? card.artifact.title : card.asset.title;
-const cardImageUrl = (card: LibraryCard) => card.kind === 'local' ? card.artifact.imageUrl : card.asset.imageUrl;
 const cardPrompt = (card: LibraryCard) => card.kind === 'local' ? card.artifact.prompt : card.asset.prompt;
 const cardIdentity = (card: LibraryCard) => card.kind === 'local' ? card.artifact.id : card.asset.remoteImageId;
 const cardIsFavorite = (card: LibraryCard) => card.kind === 'local'
@@ -113,6 +115,67 @@ export function LightchainLibraryPage() {
   const [activeGroup, setActiveGroup] = useState<string>('履歴アップロード');
   const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
   const [remoteAssets, setRemoteAssets] = useState<RemoteLibraryAsset[]>([]);
+  const libraryScope = currentBrand?.id && user?.id ? JSON.stringify([currentBrand.id,user.id]) : null;
+  const boardCopyRef = useRef<symbol | null>(null), boardScopeRef = useRef(libraryScope);
+  boardScopeRef.current = libraryScope;
+  useEffect(() => () => { boardCopyRef.current = null; }, [libraryScope]);
+  const handleCopyToBoard = async (card: LibraryCard) => {
+    if (!currentBrand?.id || !user?.id || !libraryScope || boardCopyRef.current) return;
+    if (card.kind === 'local' && (card.artifact.brandId !== currentBrand.id || card.artifact.scopeId !== user.id)) return;
+    const state = useAuthStore.getState(), fence = captureAuthBrandFence(state.brandState, user.id, currentBrand.id);
+    const operation = Symbol('library-board-copy'); boardCopyRef.current = operation;
+    const assertCurrent = () => {
+      const now = useAuthStore.getState();
+      assertAuthBrandFence(fence, captureAuthBrandFence(now.brandState, now.user?.id ?? null, now.currentBrand?.id ?? null), 'library_board_copy');
+      if (boardCopyRef.current !== operation || boardScopeRef.current !== libraryScope) throw new Error('library_board_copy_context_changed');
+    };
+    try {
+      await copyLibraryCanvasReference({ origin: cloudflareDataPlane?.origin ?? window.location.origin, userId: user.id, brandId: currentBrand.id },
+        card.kind === 'local' ? { kind: 'artifact', id: card.artifact.id } : { kind: 'generated-image', id: card.asset.remoteImageId },
+        { assertCurrent, writeText: text => navigator.clipboard.writeText(text) });
+      toast.success('コピーしました。Canvasで貼り付けできます');
+    } catch {
+      try { assertCurrent(); toast.error('素材をコピーできませんでした'); } catch { /* A later scope owns the page. */ }
+    } finally { if (boardCopyRef.current === operation) boardCopyRef.current = null; }
+  };
+  const saveOperationRef = useRef<symbol | null>(null);
+  useEffect(() => {
+    saveOperationRef.current = null;
+    setUploading(false);
+    return () => { saveOperationRef.current = null; };
+  }, [libraryScope]);
+  const beginLibrarySave = () => {
+    if (!currentBrand?.id || !user?.id || saveOperationRef.current) return null;
+    const state = useAuthStore.getState();
+    const captured = captureAuthBrandFence(state.brandState, user.id, currentBrand.id);
+    if (!captured) return null;
+    const operation = Symbol('library-save');
+    saveOperationRef.current = operation;
+    const assertCurrent = () => {
+      const now = useAuthStore.getState();
+      assertAuthBrandFence(captured, captureAuthBrandFence(now.brandState, now.user?.id ?? null, now.currentBrand?.id ?? null), 'library_save');
+      if (saveOperationRef.current !== operation) throw new Error('library_save_scope_changed');
+    };
+    const isCurrent = () => { try { assertCurrent(); return true; } catch { return false; } };
+    setUploading(true);
+    return { assertCurrent, isCurrent, finish: () => {
+      if (saveOperationRef.current === operation) {
+        saveOperationRef.current = null;
+        setUploading(false);
+      }
+    } };
+  };
+  const [localPreviews, setLocalPreviews] = useState<{scope:string | null;urls:Record<string,string>}>({scope:null,urls:{}});
+  const cardImageUrl = (card: LibraryCard) => {
+    if (card.kind === 'remote') return card.asset.imageUrl;
+    const resolved = localPreviews.scope === libraryScope ? localPreviews.urls[card.artifact.id] : '';
+    if (resolved) return resolved;
+    return !getWorkspaceArtifactCanonicalStoragePath(card.artifact.metadata) && !card.artifact.metadata.localAssetRef
+      && /^(?:data:image\/|blob:|\/assets\/)/i.test(card.artifact.imageUrl) ? card.artifact.imageUrl : '';
+  };
+  const [remoteAssetsScope, setRemoteAssetsScope] = useState<string | null>(null);
+  const [remoteLoadError, setRemoteLoadError] = useState(false);
+  const [remoteReload, setRemoteReload] = useState(0);
   const [customGroups, setCustomGroups] = useState<string[]>([]);
   const [groupsHydrated, setGroupsHydrated] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -140,7 +203,7 @@ export function LightchainLibraryPage() {
   );
 
   useEffect(() => {
-    if (!currentBrand?.id) {
+    if (!currentBrand?.id || !user?.id) {
       setArtifacts([]);
       return;
     }
@@ -148,23 +211,14 @@ export function LightchainLibraryPage() {
     const localArtifacts = listWorkspaceArtifacts(currentBrand.id, user?.id);
     setArtifacts(localArtifacts);
 
-    const imageReferences = localArtifacts.map((artifact) => ({
-      storage_path: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata) ?? artifact.imageUrl,
-      image_url: artifact.imageUrl,
-    }));
-    void withSignedImageUrls(imageReferences)
-      .then((signedArtifacts) => {
+    setLocalPreviews({scope:null,urls:{}});
+    const scope = {brandId:currentBrand.id,userId:user.id};
+    void Promise.allSettled(localArtifacts.map(artifact => readWorkspaceArtifactImage(artifact,scope)))
+      .then(results => {
         if (cancelled) return;
-        setArtifacts(localArtifacts.map((artifact, index) => ({
-          ...artifact,
-          imageUrl: (() => {
-            const canonicalStoragePath = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
-            return signedArtifacts[index]?.image_url || (canonicalStoragePath ? '' : artifact.imageUrl);
-          })(),
-        })));
-      })
-      .catch(() => {
-        // Local data URLs remain usable when remote signing is unavailable.
+        const urls: Record<string,string> = {};
+        results.forEach((result,index) => { if (result.status === 'fulfilled') urls[localArtifacts[index].id] = result.value.imageUrl; });
+        setLocalPreviews({scope:JSON.stringify([scope.brandId,scope.userId]),urls});
       });
 
     return () => {
@@ -174,33 +228,41 @@ export function LightchainLibraryPage() {
 
   useEffect(() => {
     const brandId = currentBrand?.id;
-    if (!brandId) {
-      setRemoteAssets([]);
-      return;
-    }
+    setRemoteAssets([]); setRemoteAssetsScope(null); setRemoteLoadError(false);
+    if (!brandId || !user?.id || !libraryScope) return;
 
     let cancelled = false;
     const loadRemoteAssets = async () => {
       if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
       const data = (await cloudflareDataPlane.listGeneratedImages(brandId, { limit: 100, offset: 0 })).map(asGeneratedImageListRow);
+      if (cancelled) return;
       if (!data) {
         if (!cancelled) setRemoteAssets([]);
         return;
       }
 
       // A failed signing pass must not re-expose an expired bearer URL.
-      const signedImages = await withSignedImageUrls(data).catch(() => []);
+      const signedImages = await withSignedImageUrls(data);
       const nextAssets = signedImages
         .map(remoteAssetFromImage)
         .filter((asset): asset is RemoteLibraryAsset => Boolean(asset));
-      if (!cancelled) setRemoteAssets(nextAssets);
+      if (cancelled) return;
+      if (data.some(image => !isVideoGeneratedImage(image)) && nextAssets.length === 0) throw new Error('library_media_unavailable');
+      setRemoteAssets(nextAssets); setRemoteAssetsScope(libraryScope);
     };
 
-    void loadRemoteAssets();
+    void loadRemoteAssets().catch(() => {
+      if (!cancelled) { setRemoteAssets([]); setRemoteAssetsScope(null); setRemoteLoadError(true); }
+    });
     return () => {
       cancelled = true;
     };
-  }, [currentBrand?.id]);
+  }, [currentBrand?.id,user?.id,libraryScope,remoteReload]);
+
+  useEffect(() => {
+    setSelectedAssetId(null); setSelectedIds(new Set()); setPendingDelete(null);
+    setDetailMode(false); setRenameOpen(false); setDownloadOpen(false); setOpenMenuId(null);
+  }, [libraryScope]);
 
   useEffect(() => {
     setGroupsHydrated(false);
@@ -235,12 +297,12 @@ export function LightchainLibraryPage() {
 
   const libraryCards = useMemo<LibraryCard[]>(
     () => [
-      ...artifacts.map((artifact) => ({ kind: 'local' as const, artifact })),
-      ...remoteAssets
+      ...artifacts.filter(artifact => Boolean(libraryScope) && artifact.brandId === currentBrand?.id && artifact.scopeId === user?.id).map((artifact) => ({ kind: 'local' as const, artifact })),
+      ...(remoteAssetsScope === libraryScope && libraryScope ? remoteAssets : [])
         .filter((asset) => !importedRemoteImageIds.has(asset.remoteImageId))
         .map((asset) => ({ kind: 'remote' as const, asset })),
     ],
-    [artifacts, importedRemoteImageIds, remoteAssets],
+    [artifacts, importedRemoteImageIds, remoteAssets, remoteAssetsScope, libraryScope, currentBrand?.id, user?.id],
   );
 
   const selectedAsset = libraryCards.find((card) => (
@@ -267,8 +329,12 @@ export function LightchainLibraryPage() {
     destination: LibraryFeatureDestination = 'none',
   ) => {
     if (!currentBrand?.id || !asset.imageUrl) return;
-    setUploading(true);
+    const operation = beginLibrarySave();
+    if (!operation) return;
     try {
+      operation.assertCurrent();
+      const persistenceContext = await cloudflareDataPlane?.captureArtifactPersistenceContext({ assertContext: operation.assertCurrent });
+      operation.assertCurrent();
       const result = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,
         scopeId: user?.id,
@@ -284,7 +350,8 @@ export function LightchainLibraryPage() {
           sourceImageId: asset.remoteImageId,
           sourceStoragePath: asset.storagePath,
         },
-      });
+      }, { persistenceContext });
+      operation.assertCurrent();
       if (!result.localPersisted) {
         toast.error('生成結果のライブラリー登録確認に失敗しました');
         return;
@@ -311,9 +378,10 @@ export function LightchainLibraryPage() {
         if (destinationPath) navigate(destinationPath);
       }
     } catch (error) {
+      if (!operation.isCurrent()) return;
       toast.error(error instanceof Error ? error.message : '生成結果の登録に失敗しました');
     } finally {
-      setUploading(false);
+      operation.finish();
     }
   };
 
@@ -346,9 +414,14 @@ export function LightchainLibraryPage() {
       return;
     }
 
-    setUploading(true);
+    const operation = beginLibrarySave();
+    if (!operation) return;
     try {
+      operation.assertCurrent();
+      const persistenceContext = await cloudflareDataPlane?.captureArtifactPersistenceContext({ assertContext: operation.assertCurrent });
+      operation.assertCurrent();
       const imageUrl = await readFileAsDataUrl(file);
+      operation.assertCurrent();
       const result = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,
         scopeId: user?.id,
@@ -362,7 +435,8 @@ export function LightchainLibraryPage() {
           originalFileName: file.name,
           mimeType: file.type,
         },
-      });
+      }, { persistenceContext });
+      operation.assertCurrent();
       if (!result.localPersisted) {
         toast.error('素材の保存確認に失敗しました');
         return;
@@ -376,9 +450,10 @@ export function LightchainLibraryPage() {
       setSelectedAssetId(result.artifact.id);
       toast.success('素材をライブラリーに保存しました');
     } catch (error) {
+      if (!operation.isCurrent()) return;
       toast.error(error instanceof Error ? error.message : '素材のアップロードに失敗しました');
     } finally {
-      setUploading(false);
+      operation.finish();
     }
   };
 
@@ -435,16 +510,21 @@ export function LightchainLibraryPage() {
     const title = renameValue.trim();
     if (!title) return;
     if (selectedAsset.kind === 'remote') {
+      const operation = beginLibrarySave();
+      if (!operation) return;
       try {
         if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
-        await cloudflareDataPlane.updateGeneratedImageLibraryTitle(selectedAsset.asset.remoteImageId, title);
+        const persistenceContext = await cloudflareDataPlane.captureArtifactPersistenceContext({ assertContext: operation.assertCurrent });
+        operation.assertCurrent();
+        await cloudflareDataPlane.updateGeneratedImageLibraryTitle(selectedAsset.asset.remoteImageId, title, persistenceContext);
+        operation.assertCurrent();
         setRemoteAssets((current) => current.map((asset) => asset.id === selectedAsset.asset.id ? { ...asset, title } : asset));
         setRenameOpen(false);
         setSelectedAssetId(selectedAsset.asset.id);
         toast.success('名前を保存しました');
       } catch {
-        toast.error('名前の保存に失敗しました');
-      }
+        if (operation.isCurrent()) toast.error('名前の保存に失敗しました');
+      } finally { operation.finish(); }
       return;
     }
     if (!currentBrand?.id) return;
@@ -526,15 +606,20 @@ export function LightchainLibraryPage() {
 
   const handleDeleteCard = async (card: LibraryCard) => {
     if (card.kind === 'remote') {
+      const operation = beginLibrarySave();
+      if (!operation) return;
       try {
         if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
-        await cloudflareDataPlane.deleteGeneratedImage(card.asset.remoteImageId);
+        const persistenceContext = await cloudflareDataPlane.captureArtifactPersistenceContext({ assertContext: operation.assertCurrent });
+        operation.assertCurrent();
+        await cloudflareDataPlane.deleteGeneratedImage(card.asset.remoteImageId, persistenceContext);
+        operation.assertCurrent();
         setRemoteAssets((current) => current.filter((asset) => asset.id !== card.asset.id));
         setSelectedAssetId(null);
         toast.success('画像を削除しました');
       } catch {
-        toast.error('削除に失敗しました');
-      }
+        if (operation.isCurrent()) toast.error('削除に失敗しました');
+      } finally { operation.finish(); }
       return;
     }
 
@@ -604,7 +689,7 @@ export function LightchainLibraryPage() {
           </nav>
           <div className="flex flex-wrap items-center justify-between gap-4 lg:hidden">
             <div>
-              <p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / LIBRARY</p>
+              <p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">HEAVY CHAIN / LIBRARY</p>
               <h1 className="mt-3 text-3xl font-semibold">{activeGroup}</h1>
               <p className="mt-2 text-sm text-neutral-500">生成済みの成果物とアップロード素材を、次のCanvas作業へ同じ系譜で引き継げます。</p>
             </div>
@@ -640,6 +725,12 @@ export function LightchainLibraryPage() {
               <button type="button" className="asset-center-bulk-button" onClick={() => setSelectMode(true)}>一括操作</button>
             )}
           </div>
+          {remoteLoadError && libraryScope && (
+            <div role="alert" className="mt-3 rounded-lg border border-amber-300/30 px-3 py-2 text-sm text-amber-100">
+              保存済み素材を読み込めませんでした。
+              <button type="button" className="ml-3 underline" onClick={() => setRemoteReload(value => value + 1)}>再読み込み</button>
+            </div>
+          )}
           {selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(visibleArtifacts.map(getCardId)))}>全選択</button>}
 
           {visibleArtifacts.length === 0 ? (
@@ -660,15 +751,15 @@ export function LightchainLibraryPage() {
                   <div className="asset-center-card-actions absolute left-0 top-0 z-10 flex w-full items-center justify-center gap-4 p-2 opacity-0 transition-opacity">
                     <button type="button" aria-label="プレビュー" className="asset-center-card-action" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)}><Eye className="h-4 w-4" /></button>
                     {card.kind === 'local' ? (
-                      <button type="button" aria-label="ボードにコピー" className="asset-center-card-action" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(card.artifact.id)}`)}><Copy className="h-4 w-4" /></button>
+                      <button type="button" aria-label="ボードにコピー" className="asset-center-card-action" onClick={() => void handleCopyToBoard(card)}><Copy className="h-4 w-4" /></button>
                     ) : (
-                      <button type="button" aria-label="ボードにコピー" className="asset-center-card-action" onClick={() => void handleImportRemote(card.asset)} disabled={uploading}><Copy className="h-4 w-4" /></button>
+                      <button type="button" aria-label="ボードにコピー" className="asset-center-card-action" onClick={() => void handleCopyToBoard(card)} disabled={uploading}><Copy className="h-4 w-4" /></button>
                     )}
                     <div className="relative">
                       <button type="button" aria-label="詳細" aria-expanded={openMenuId === getCardId(card)} className="asset-center-card-action asset-center-card-menu" onClick={() => setOpenMenuId((current) => current === getCardId(card) ? null : getCardId(card))}><MoreVertical className="h-4 w-4" /></button>
                       {openMenuId === getCardId(card) && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); setSelectedAssetId(getCardId(card)); setDetailMode(true); setRenameValue(cardTitle(card)); setRenameOpen(true); }}>編集する</button>
-                          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); if (card.kind === 'remote') void handleImportRemote(card.asset); else navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(card.artifact.id)}`); }}>キャンバスをコピー</button>
+                          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); void handleCopyToBoard(card); }}>キャンバスをコピー</button>
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); setSelectedAssetId(getCardId(card)); setDownloadFormat('png'); setDownloadOpen(true); }}>ダウンロード</button>
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => { setOpenMenuId(null); setPendingDelete({ card, label: `「${cardTitle(card)}」` }); }}>削除</button>
                         </div>}

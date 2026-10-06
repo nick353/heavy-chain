@@ -45,7 +45,7 @@ test('keeps the model-library alias on the shared workflow contract', () => {
   assert.match(modelLibrarySource, /data-workflow-result-destinations=\{modelLibraryWorkflowContract\?\.resultDestinations\.join\(','\) \?\? ''\}/);
   assert.match(modelLibrarySource, /data-workflow-rights-gate=\{modelLibraryWorkflowContract\?\.rightsGate \?\? ''\}/);
   assert.match(modelLibrarySource, /data-testid="model-library-permission-surface"/);
-  assert.match(modelLibrarySource, /Heavy利用条件を確認できません/);
+  assert.match(modelLibrarySource, /生成を準備できません/);
   assert.doesNotMatch(modelLibrarySource, /生成直前に権利確認を行います/);
   assert.match(modelLibrarySource, /getLightchainUnifiedFeatureWorkflowContract\('model-library'\)/);
   assert.match(modelLibrarySource, /buildGenerationIntentHref/);

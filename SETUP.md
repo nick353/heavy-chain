@@ -7,7 +7,8 @@ Supabase CLI、Supabase credentials、Edge Functions、旧テストデータの�
 
 ## 現行の公開構成
 
-- Web: `https://heavy-chain-web.nichika2000823.workers.dev`
+- Web（Heavy Chain正規入口）: `https://heavy-chain.zeabur.app`
+- Web（Cloudflare技術エンドポイント）: `https://heavy-chain-web.nichika2000823.workers.dev`
 - API/D1/private R2: `https://heavy-chain-api.nichika2000823.workers.dev`
 - Auth: `https://consumer-auth.nichika2000823.workers.dev`
 - 画像AI adapter: Cloudflare `workers_ai`

@@ -1,4 +1,5 @@
 import type { ImageEditResult } from './imageApi';
+import { validateCanvasProtectedBatchBinding } from './nativePrintFinalFrame.ts';
 import { PROTECTED_IMAGE_EDIT_MODE } from './protectedImageEditContract.ts';
 
 export type CanvasImageEditCandidate = {
@@ -15,6 +16,45 @@ export function normalizeCanvasImageEditCandidates(
   result: ImageEditResult,
   limit = 4,
 ): CanvasImageEditCandidate[] {
+  // OpenAI protected finals have independent saved wa job IDs. Their shared
+  // identity is the verified original provider job, never the first saved job.
+  const final = result as ImageEditResult & {
+    canvasProtectedBatchBinding?: unknown;
+    requiresProtectedComposite?: boolean;
+    failedCandidateIndices?: number[];
+  };
+  // A Canvas binding does not reclassify the established Workers path.
+  if (final.canvasProtectedBatchBinding !== undefined && final.provider !== 'workers_ai' && final.provider !== 'openai') return [];
+  const openAIClaim = final.provider === 'openai' && (final.canvasProtectedBatchBinding !== undefined ||
+    final.protectedRegionComposited === true && final.requestedCandidateCount === 4);
+  if (openAIClaim) {
+    let binding;
+    try { binding = validateCanvasProtectedBatchBinding(final.canvasProtectedBatchBinding); }
+    catch { return []; }
+    const batchId = final.batchId;
+    if (!final.success || final.provider !== 'openai' || final.protectedRegionComposited !== true ||
+      final.requiresProtectedComposite !== false || final.persistenceStatus !== 'completed' ||
+      final.requestedCandidateCount !== 4 || final.persistedCandidateCount !== 4 ||
+      final.failedCandidates?.length || final.failedCandidateIndices?.length ||
+      final.requestId !== binding.requestId || !batchId || batchId !== final.providerJobId ||
+      batchId !== `ai-${binding.requestId}` || !Array.isArray(final.images) || final.images.length !== 4) return [];
+    const imageIds = new Set<string>(), paths = new Set<string>(), urls = new Set<string>();
+    const candidates: CanvasImageEditCandidate[] = [];
+    for (const [index, raw] of final.images.entries()) {
+      const candidate = raw as typeof raw & { provider?: string; providerJobId?: string; protectedRegionComposited?: boolean };
+      const { imageId, jobId, imageUrl, storagePath } = candidate;
+      if (candidate.provider !== 'openai' || candidate.protectedRegionComposited !== true ||
+        candidate.batchId !== batchId || candidate.providerJobId !== batchId ||
+        candidate.persistenceStatus !== 'completed' || candidate.candidateIndex !== index ||
+        typeof imageId !== 'string' || !/^wa-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(imageId) ||
+        jobId !== imageId || storagePath !== `generated-images/${imageId}` ||
+        typeof imageUrl !== 'string' || !imageUrl.trim() || imageIds.has(imageId) ||
+        paths.has(storagePath) || urls.has(imageUrl)) return [];
+      imageIds.add(imageId); paths.add(storagePath); urls.add(imageUrl);
+      candidates.push({ imageUrl, jobId, imageId, storagePath, candidateIndex:index, persistenceStatus:'completed', batchId });
+    }
+    return candidates.slice(0, Math.max(1, Math.min(4, Math.trunc(limit))));
+  }
   const rawCandidates = result.images?.length
     ? result.images
     : result.imageUrl

@@ -43,6 +43,6 @@ export default defineConfig({
   preview: {
     port: 4173,
     host: true,
-    allowedHosts: ['heavy-chain-web.nichika2000823.workers.dev'],
+    allowedHosts: ['heavy-chain.zeabur.app', 'heavy-chain-web.nichika2000823.workers.dev'],
   },
 })

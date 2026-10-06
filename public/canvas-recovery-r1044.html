@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; font-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Canvas read-only check r1044</title>
+  <style>
+    body { margin: 3rem auto; padding: 0 1.5rem; max-width: 38rem; font-family: system-ui, sans-serif; color: #202020; background: #f8f8f8; }
+    output { display: block; padding: 1.5rem; border: 2px solid #202020; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <!-- heavy-canvas-readonly-r1044: standalone; never mount the application. -->
+  <h1>Canvas read-only check</h1>
+  <output id="r1044-result" data-status="malformed" data-version="none" data-project-null="false" data-count="false" data-obj1="false" data-obj2="false" data-view="false" data-raw-sha256="none">STOP</output>
+  <p>確認のみ。ここで停止してください。</p>
+  <script>
+  (async () => {
+    'use strict';
+    const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+    const empty = status => ({ status, version: 'none', projectNull: false, count: false, obj1: false, obj2: false, view: false });
+    const originals = [
+      { id: 'w13mb2h10wh', imageId: 'ai-a1d3a15d-4d27-4c93-ad1c-5fe04d438df6-0', y: 68, z: 0 },
+      { id: 'mu3keorhdms', imageId: 'ai-6422c795-febf-4672-982d-e0f31a21d0bf-1', y: 69.5, z: 1 },
+    ];
+
+    // Only exact canonical storage paths and IDs establish identity. URLs,
+    // embedded path substrings, encoded paths and conflicting aliases cannot.
+    const identityMatches = (object, expected) => {
+      if (object.metadata != null && !isRecord(object.metadata)) return false;
+      const metadata = object.metadata || {};
+      if (metadata.parameters != null && !isRecord(metadata.parameters)) return false;
+      const parameters = metadata.parameters || {};
+      const path = 'generated-images/' + expected.imageId;
+      let evidence = false;
+      for (const [record, keys, value] of [
+        [object, ['src', 'storagePath'], path],
+        [metadata, ['galleryStoragePath', 'storagePath'], path],
+        [parameters, ['galleryStoragePath', 'storagePath', 'remoteStoragePath', 'sourceStoragePath', 'backendStoragePath'], path],
+        [object, ['imageId'], expected.imageId],
+        [metadata, ['galleryImageId', 'imageId'], expected.imageId],
+        [parameters, ['galleryImageId', 'imageId'], expected.imageId],
+      ]) {
+        for (const key of keys) {
+          const candidate = record[key];
+          if (candidate === undefined || candidate === null || candidate === '') continue;
+          if (candidate !== value) return false;
+          evidence = true;
+        }
+      }
+      // A bare image ID is insufficient: src or a canonical storage-path alias
+      // must exist. galleryImageUrl is a display URL, never identity evidence.
+      const paths = [object.src, object.storagePath, metadata.galleryStoragePath, metadata.storagePath,
+        parameters.galleryStoragePath, parameters.storagePath, parameters.remoteStoragePath,
+        parameters.sourceStoragePath, parameters.backendStoragePath];
+      return evidence && paths.some(candidate => candidate === path);
+    };
+
+    const objectMatches = (object, expected) => isRecord(object)
+      && object.id === expected.id && object.type === 'image'
+      && object.x === 464 && object.y === expected.y
+      && object.width === 440 && object.height === 440 && object.zIndex === expected.z
+      && (object.scaleX === undefined || object.scaleX === 1)
+      && (object.scaleY === undefined || object.scaleY === 1)
+      && identityMatches(object, expected);
+
+    const evaluate = raw => {
+      if (raw === null) return empty('missing');
+      if (typeof raw !== 'string') return empty('malformed');
+      let payload;
+      try { payload = JSON.parse(raw); } catch { return empty('malformed'); }
+      if (!isRecord(payload)) return empty('malformed');
+      const result = empty('mismatch');
+      if (Number.isSafeInteger(payload.version)) result.version = String(payload.version);
+      if (!isRecord(payload.state) || !Array.isArray(payload.state.objects)) return result;
+      const state = payload.state;
+      const objects = state.objects;
+      result.projectNull = state.currentProjectId === null;
+      result.count = objects.length === 2;
+      result.obj1 = objects.filter(object => isRecord(object) && object.id === originals[0].id).length === 1
+        && objects.some(object => objectMatches(object, originals[0]));
+      result.obj2 = objects.filter(object => isRecord(object) && object.id === originals[1].id).length === 1
+        && objects.some(object => objectMatches(object, originals[1]));
+      result.view = state.zoom === 1 && state.panX === 0 && state.panY === 0;
+      if (payload.version === 3 && result.projectNull && result.count && result.obj1 && result.obj2 && result.view) result.status = 'match';
+      return result;
+    };
+
+    let raw;
+    let result;
+    let digest = 'none';
+    try {
+      // Exactly one read, including missing, denied and corrupt storage cases.
+      raw = localStorage.getItem('heavy-chain-canvas');
+      result = evaluate(raw);
+    } catch {
+      result = empty('malformed');
+    }
+    if (typeof raw === 'string') {
+      try {
+        const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+        if (bytes.byteLength !== 32) throw new Error('hash_unavailable');
+        digest = Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+      } catch {
+        // A match is never published without its raw-byte digest.
+        result.status = 'malformed';
+      }
+    }
+    const output = document.getElementById('r1044-result');
+    const fields = {
+      'status': result.status, 'version': result.version, 'project-null': result.projectNull,
+      'count': result.count, 'obj1': result.obj1, 'obj2': result.obj2, 'view': result.view,
+      'raw-sha256': digest,
+    };
+    for (const [key, value] of Object.entries(fields)) output.setAttribute('data-' + key, String(value));
+    output.textContent = 'STOP';
+  })();
+  </script>
+</body>
+</html>

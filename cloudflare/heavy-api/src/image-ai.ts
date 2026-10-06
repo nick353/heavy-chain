@@ -1,23 +1,31 @@
+import {verifyProtectedOpenAIProjectionRequest} from '../../../src/lib/protectedOpenAIProjection.ts';
 import type { Env } from './index.ts';
 import { principal } from './domain.ts';
 import { requireBrandRole, handleMediaReadGateway } from './core.ts';
 import { IMAGE_MODEL, IMAGE_ACTIONS, ImageInputError, boundedImageJSON, decodeImage, imageEstimate,
   isRecord, modelMultipart, normalizedImageRequestDigest, parseImageInput, sha256, type AuthorizedSourceAsset,
   type ImageAction, type ImageInput, type Json } from './image-ai-contracts.ts';
-import { OPENAI_IMAGE_BACKEND, OPENAI_IMAGE_PROVIDER, openAIExpectedDimensions, resolveOpenAIModel, runOpenAIImage } from './openai-image.ts';
-import { prepareHeavyGeneration, recordHeavyRequestAttestation, recordHeavyTermsAcceptance, resolveHeavyEntitlement, resolveHeavyEntitlementStatus,
+import { MAX_OPENAI_IMAGE_TIMEOUT_MS, OpenAIImageError, OPENAI_IMAGE_BACKEND, OPENAI_IMAGE_PROVIDER, openAIExpectedDimensions, resolveOpenAIModel, runOpenAIImage } from './openai-image.ts';
+import { prepareHeavyGeneration, recordHeavyRequestAttestation, recordHeavyTermsAcceptance, resolveHeavyEntitlement, resolveHeavyEntitlementStatus, resolveHeavyGenerationAccess,
   type HeavyEntitlementReason } from './heavy-entitlement.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_MODEL_TIMEOUT_MS = 45_000;
 const MAX_MODEL_TIMEOUT_MS = 90_000;
-const modelTimeoutMs = (env: Env) => {
+const modelTimeoutMs = (env: Env, provider: ProviderKind) => {
   const value = Number(env.AI_IMAGE_TIMEOUT_MS);
-  return Number.isSafeInteger(value) && value >= DEFAULT_MODEL_TIMEOUT_MS && value <= MAX_MODEL_TIMEOUT_MS
-    ? value
+  const maximum = provider === 'openai' ? MAX_OPENAI_IMAGE_TIMEOUT_MS : MAX_MODEL_TIMEOUT_MS;
+  return Number.isSafeInteger(value) && value >= DEFAULT_MODEL_TIMEOUT_MS && value <= MAX_OPENAI_IMAGE_TIMEOUT_MS
+    ? Math.min(value,maximum)
     : DEFAULT_MODEL_TIMEOUT_MS;
 };
 const STALE_MS = 4 * DEFAULT_MODEL_TIMEOUT_MS + 30_000;
+// The 210s stale window covers one 180s OpenAI observation plus 30s grace.
+// Serial candidates must each get that window; Workers AI retains its current
+// request-age behavior. Admission and reconciliation use the same clock.
+const activeSinceSQL = `CASE WHEN json_extract(r.input_metadata,'$.provider')='openai'
+  THEN COALESCE((SELECT MAX(c.attempted_at) FROM heavy_ai_candidates c WHERE c.request_id=r.request_id),r.created_at)
+  ELSE r.created_at END`;
 type Row = { request_id: string; user_id: string; brand_id: string; action: ImageAction; fingerprint: string;
   execution_id: string; model: string; job_id: string; input_metadata: string; quota_units: number; candidate_count: number;
   reserved_centi_neurons: number; terms_acceptance_id: string | null; rights_attestation_id: string | null;
@@ -35,6 +43,7 @@ const limit = (value: string | undefined, fallback: number, max: number) => {
 };
 const limits = (env: Env) => ({ monthly: limit(env.AI_MONTHLY_IMAGE_UNITS, 25, 10000), accountMonthly: limit(env.AI_ACCOUNT_MONTHLY_IMAGE_UNITS ?? env.AI_MONTHLY_IMAGE_UNITS, 25, 10000), daily: limit(env.AI_DAILY_IMAGE_UNITS, 100, 10000),
   dailyNeuronCenti: limit(env.AI_DAILY_ESTIMATED_NEURONS, 5000, 1000000) * 100, concurrent: 2 });
+async function assertProjectedRequest(value:unknown,body:Json){try{return await verifyProtectedOpenAIProjectionRequest(value,body);}catch{throw new ImageInputError('invalid_protected_openai_projection',422);}}
 type ProviderKind = 'workers_ai' | 'openai';
 type ProviderConfig = { provider: ProviderKind; backendProvider: string; model: string };
 type SourceCandidate = { id?: string; storagePath?: string; revision?: number | string; contentDigest?: string };
@@ -48,6 +57,9 @@ const providerConfig = (env: Env, action: ImageAction, body: Json): ProviderConf
     : action === 'generate-image' && Array.isArray(body.imageUrls) && body.imageUrls.length > 0;
   const effectiveAction: ImageAction = action === 'edit-image' || hasReferences ? 'edit-image' : 'generate-image';
   const requested = typeof body.generationProvider === 'string' ? body.generationProvider.trim() : '';
+  if (requested && !['workers_ai', 'openai'].includes(requested)) {
+    throw new ImageInputError('image_provider_not_supported', 422);
+  }
   if (requested && requested !== provider) throw new ImageInputError('image_provider_not_enabled', 422);
   if (provider === OPENAI_IMAGE_PROVIDER) {
     try {
@@ -129,7 +141,14 @@ async function resolveAuthorizedSourceAssets(env: Env, userId: string, brandId: 
     if (!row) throw new ImageInputError('authorized_source_asset_not_found', 409);
     let metadata: unknown = null;
     try { metadata = row.metadata ? JSON.parse(row.metadata) : null; } catch { metadata = null; }
-    const contentDigest = sourceDigest(metadata, row.candidate_sha256);
+    let contentDigest = sourceDigest(metadata, row.candidate_sha256);
+    // Older ordinary workspace uploads stored their server checksum in R2,
+    // but not in generated_images metadata. Resolve only the owned row's path;
+    // never trust a client checksum or fetch a caller-selected remote URL.
+    if (!contentDigest && row.storage_path.startsWith('generated-images/')) {
+      const object = await env.PRIVATE_MEDIA.head(row.storage_path);
+      contentDigest = sourceDigest(null, object?.customMetadata?.sha256);
+    }
     if (!contentDigest) throw new ImageInputError('authorized_source_asset_digest_unavailable', 409);
     if (candidate.revision !== undefined && String(candidate.revision) !== String(row.version)) {
       throw new ImageInputError('authorized_source_asset_revision_mismatch', 409);
@@ -159,19 +178,10 @@ async function canContinue(request: Request, env: Env, row: Row, enforceEntitlem
   const owner = await requireBrandRole(request, env, row.brand_id, 'editor');
   if (owner instanceof Response) return owner;
   if (owner !== row.user_id || !await read(env,row.request_id)) return fail('image_request_not_found',404);
-  if (enforceEntitlement) {
-    const entitlement = await resolveHeavyEntitlement(env, {
-      userId: row.user_id,
-      brandId: row.brand_id,
-      action: row.action,
-      requestId: row.request_id,
-      inputDigest: row.fingerprint,
-      normalizedInput: rowNormalizedInput(row),
-      preparationId: row.preparation_id ?? undefined,
-      requirePreparation: true,
-    });
-    if (!entitlement.allowed) return fail(entitlement.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(entitlement.reason ?? 'heavy_generation_disabled'));
-  }
+  // `requireBrandRole` above is the generation authorization boundary.  Do
+  // not re-introduce the retired terms/rights ceremony during a later storage
+  // or readback step; those checks made a valid login-only job unreadable.
+  void enforceEntitlement;
   return null;
 }
 
@@ -185,7 +195,7 @@ function rowNormalizedInput(row: Row): Json | undefined {
 }
 
 async function rowEntitlement(env: Env, row: Row) {
-  return resolveHeavyEntitlement(env, {
+  return resolveHeavyGenerationAccess({
     userId: row.user_id,
     brandId: row.brand_id,
     action: row.action,
@@ -193,7 +203,6 @@ async function rowEntitlement(env: Env, row: Row) {
     inputDigest: row.fingerprint,
     normalizedInput: rowNormalizedInput(row),
     preparationId: row.preparation_id ?? undefined,
-    requirePreparation: true,
   });
 }
 
@@ -239,10 +248,20 @@ async function commitStoredCandidate(env: Env, row: Row, output: Output): Promis
 async function reconcile(env: Env, row: Row, finish = false): Promise<Row> {
   if (row.state === 'completed') return row;
   let current = await outputs(env,row.request_id);
+  if (current.every(o => !['planned','running','storing'].includes(o.state))) {
+    // A concurrent GET may already have made this request terminal while the
+    // connected observer held an older row. Preserve that exact decision.
+    const terminal = await read(env,row.request_id);
+    if (terminal && ['completed','unknown','failed'].includes(terminal.state)) return terminal;
+  }
   for (const output of current.filter(o => o.state === 'storing')) {
     try { await commitStoredCandidate(env,row,output); } catch { /* exact pending object remains recoverable */ }
   }
-  const stale = Date.now() - Date.parse(row.created_at) > STALE_MS;
+  const input = JSON.parse(row.input_metadata) as Json;
+  const lastAttempt = input.provider === 'openai'
+    ? current.reduce((latest,o) => o.attempted_at && o.attempted_at > latest ? o.attempted_at : latest,row.created_at)
+    : row.created_at;
+  const stale = Date.now() - Date.parse(lastAttempt) > STALE_MS;
   if (finish || stale) {
     const entitlement = await rowEntitlement(env, row);
     if (!entitlement.allowed) return (await read(env,row.request_id)) ?? row;
@@ -282,15 +301,13 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
   // admission, but must not make a completed artifact unreadable after its
   // five-minute preparation window; viewer/editor role and the attestation
   // binding below remain mandatory for every read.
-  const entitlement = await resolveHeavyEntitlement(env, {
+  const entitlement = resolveHeavyGenerationAccess({
     userId: row.user_id,
     brandId: row.brand_id,
     action: row.action,
     requestId: row.request_id,
     inputDigest: row.fingerprint,
     normalizedInput: isRecord(input.normalizedInput) ? input.normalizedInput : rowNormalizedInput(row),
-    preparationId: row.state === 'completed' ? undefined : row.preparation_id ?? undefined,
-    requirePreparation: row.state !== 'completed',
   });
   if (!entitlement.allowed) return fail(entitlement.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(entitlement.reason ?? 'heavy_generation_disabled'));
   const editor = row.state === 'completed' ? owner : await requireBrandRole(request,env,row.brand_id,'editor');
@@ -326,7 +343,7 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
   const payload: Json = { success, requestId: row.request_id, jobId: row.job_id, state: row.state,
     createdAt:row.created_at,featureType:input.featureType,metadata:input.metadata,
     protectedEdit:(input.metadata as Json).protectedEdit,requiresProtectedComposite:isRecord((input.metadata as Json).protectedEdit),
-    status: row.state, provider, backendProvider, providerModel: row.model,
+    status: row.state, provider, backendProvider, providerModel: row.model,resolvedProvider:input.resolvedProvider,
     persistenceStatus: success ? 'completed' : completed.length ? 'partial' : row.state === 'running' ? 'processing' : 'failed',
     requestedCandidateCount: row.candidate_count, persistedCandidateCount: completed.length, cleanupStatus: 'none',
     inputImageCount: (JSON.parse(row.input_metadata) as Json).inputImageCount,
@@ -347,12 +364,20 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
 async function runModel(env: Env, action: ImageAction, input: ImageInput, index: number, provider: ProviderConfig): Promise<unknown> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const inference = provider.provider === 'openai'
-    ? runOpenAIImage(env, action, input, index)
+    ? runOpenAIImage(env, action, input, index,fetch,provider.model)
     : env.AI!.run(IMAGE_MODEL,{ multipart: modelMultipart(input,input.candidates[index]) });
   // A timeout is UNKNOWN, never a safe retry. Workers AI binding has no abort
   // or provider job lookup in this contract. Losing the observer is not cancel.
-  try { return await Promise.race([inference,new Promise((_,reject) => { timer = setTimeout(() => reject(new Error('image_outcome_unknown')),modelTimeoutMs(env)); })]); }
+  try { return await Promise.race([inference,new Promise((_,reject) => { timer = setTimeout(() => reject(
+    provider.provider === 'openai' ? new OpenAIImageError('timeout') : new Error('image_outcome_unknown'),
+  ),modelTimeoutMs(env,provider.provider)); })]); }
   finally { if (timer) clearTimeout(timer); }
+}
+
+function assertCanvasAdmission(input:ImageInput,requestId:string,user:string){
+ const binding=input.metadata.canvasProtectedBatchBinding;
+ if(binding===undefined)return;
+ if(!isRecord(binding)||binding.requestId!==requestId||binding.scopeId!==user||binding.brandId!==input.brandId||binding.featureType!==input.featureType||!['canvas-partial-edit','canvas-inpaint'].includes(input.featureType)||input.candidates.length!==4)throw new ImageInputError('canvas_protected_admission_identity_mismatch',422);
 }
 
 export async function handleImageAIAction(request: Request, env: Env, action: string): Promise<Response> {
@@ -361,13 +386,15 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
   try {
     const user = await principal(request,env); if (user instanceof Response) return user;
     const raw = await boundedImageJSON(request); const typedAction = action as ImageAction;
-    const input = parseImageInput(typedAction,raw);
+    const provider = providerConfig(env,typedAction,raw);
+    const input = parseImageInput(typedAction,raw,provider);
+    if (raw.protectedOpenAIProjection !== undefined) await assertProjectedRequest(raw.protectedOpenAIProjection,raw);
     const owner = await requireBrandRole(request,env,input.brandId,'editor'); if (owner instanceof Response) return owner;
     if (owner !== user) return fail('unauthorized',401);
     const id = request.headers.get('idempotency-key')?.toLowerCase(); if (!id || !UUID.test(id)) return fail('image_request_id_required',400);
+    assertCanvasAdmission(input,id,user);
     const preparationId = typeof raw.preparationId === 'string' ? raw.preparationId.trim() : '';
     const preparationDigest = typeof raw.inputDigest === 'string' ? raw.inputDigest.trim().toLowerCase() : '';
-    const provider = providerConfig(env,typedAction,raw);
     const normalized = await normalizedRequest(env,user,typedAction,raw,input,provider);
     const fingerprint = normalized.digest;
     if (preparationDigest && preparationDigest !== fingerprint) return fail('heavy_input_digest_mismatch',409);
@@ -379,15 +406,13 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
     if (row && row.user_id === user && row.brand_id === input.brandId && row.fingerprint !== fingerprint) {
       return fail('image_request_conflict',409);
     }
-    const entitlement = await resolveHeavyEntitlement(env, {
+    const entitlement = resolveHeavyGenerationAccess({
       userId: user,
       brandId: input.brandId,
       action,
       requestId: id,
       inputDigest: fingerprint,
       normalizedInput: normalized.normalized,
-      preparationId,
-      requirePreparation: true,
     });
     if (!entitlement.allowed) return fail(entitlement.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(entitlement.reason ?? 'heavy_generation_disabled'));
     // Current entitlement is checked before an idempotent receipt as well as
@@ -409,7 +434,7 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
           await env.PRIVATE_MEDIA.head(`generated-images/${jobId}-${index}`)) return fail('image_request_conflict',409);
     }
     const metadata = JSON.stringify({ inputDigest: fingerprint, normalizedInput: normalized.normalized,
-      provider: provider.provider, backendProvider: provider.backendProvider, prompt: input.prompt, featureType: input.featureType, width: input.width, height: input.height,
+      provider: provider.provider, backendProvider: provider.backendProvider,resolvedProvider:{...provider,action:typedAction,requestId:id}, prompt: input.prompt, featureType: input.featureType, width: input.width, height: input.height,
       metadata: input.metadata, parentImageId: input.parentImageId, generation: input.generation, inputImageCount: input.references.length,
       referenceDimensions: input.references.map(r => ({ width: r.width,height: r.height })),
       termsAcceptanceId: entitlement.termsAcceptanceId, rightsAttestationId: entitlement.rightsAttestationId,
@@ -421,15 +446,14 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
       WHERE COALESCE((SELECT SUM(quota_units) FROM heavy_ai_requests WHERE utc_month=?),0)+? <= ?
       AND COALESCE((SELECT admitted_units FROM heavy_ai_daily WHERE utc_day=?),0)+? <= ?
       AND COALESCE((SELECT admitted_centi_neurons FROM heavy_ai_daily WHERE utc_day=?),0)+? <= ?
-      AND (SELECT COUNT(*) FROM heavy_ai_requests WHERE state='running' AND created_at>?) < ?
-      AND NOT EXISTS(SELECT 1 FROM heavy_ai_requests WHERE user_id=? AND state='running' AND created_at>?)`)
+      AND (SELECT COUNT(*) FROM heavy_ai_requests r WHERE state='running' AND (${activeSinceSQL})>?) < ?
+      AND NOT EXISTS(SELECT 1 FROM heavy_ai_requests r WHERE user_id=? AND state='running' AND (${activeSinceSQL})>?)`)
       .bind(id,user,input.brandId,action,fingerprint,executionId,provider.model,jobId,metadata,count,count,reservedNeuronCenti,
         entitlement.termsAcceptanceId,entitlement.rightsAttestationId,entitlement.requestBinding,preparationId,utcMonth,utcDay,now,now,
         utcMonth,count,quota.accountMonthly,utcDay,count,quota.daily,utcDay,reservedNeuronCenti,quota.dailyNeuronCenti,
         new Date(Date.now()-STALE_MS).toISOString(),quota.concurrent,user,new Date(Date.now()-STALE_MS).toISOString());
-    const admissionEntitlement = await resolveHeavyEntitlement(env, {
+    const admissionEntitlement = resolveHeavyGenerationAccess({
       userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
-      preparationId, requirePreparation: true,
     });
     if (!admissionEntitlement.allowed) return fail(admissionEntitlement.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(admissionEntitlement.reason ?? 'heavy_generation_disabled'));
     let admissionError = false;
@@ -454,17 +478,21 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
       const changed = await env.DB.prepare("UPDATE heavy_ai_candidates SET state='running',attempted_at=? WHERE request_id=? AND candidate_index=? AND state='planned'")
         .bind(new Date().toISOString(),id,index).run();
       if (changed.meta.changes !== 1) break;
-      const beforeProvider = await resolveHeavyEntitlement(env, {
+      const beforeProvider = resolveHeavyGenerationAccess({
         userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
-        preparationId, requirePreparation: true,
       });
       if (!beforeProvider.allowed) { await reconcile(env,row,true); return fail(beforeProvider.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeProvider.reason ?? 'heavy_generation_disabled')); }
       const started = Date.now(); let output: unknown;
       try { output = await runModel(env,typedAction,input,index,provider); }
-      catch {
+      catch (error) {
         const beforeUnknown = await canContinue(request,env,row,true); if (beforeUnknown) { await reconcile(env,row,true); return beforeUnknown; }
-        await env.DB.prepare("UPDATE heavy_ai_candidates SET state='unknown',error_code='image_outcome_unknown',latency_ms=? WHERE request_id=? AND candidate_index=? AND state='running'")
-          .bind(Date.now()-started,id,index).run();
+        const providerError = error instanceof OpenAIImageError ? error : null;
+        const state = providerError?.category === 'request_rejected' ? 'failed' : 'unknown';
+        const descriptor = isRecord(input.candidates[index].descriptor)
+          ? {...input.candidates[index].descriptor,...(providerError ? {providerError:providerError.diagnostics} : {})}
+          : input.candidates[index].descriptor;
+        await env.DB.prepare("UPDATE heavy_ai_candidates SET state=?,error_code=?,latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'")
+          .bind(state,providerError?.errorCode ?? 'image_outcome_unknown',Date.now()-started,JSON.stringify(descriptor),id,index).run();
         break;
       }
       const latency = Date.now()-started;
@@ -473,11 +501,17 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
         if (!isRecord(output) || typeof output.image !== 'string') throw new Error('invalid');
         image = decodeImage(output.image,false);
         const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height) : [input.width,input.height];
+        if (provider.provider === 'openai' && (output.provider !== provider.provider || output.backendProvider !== provider.backendProvider || output.providerModel !== row.model)) throw new Error('provider_authority_mismatch');
         if (image.width !== expected[0] || image.height !== expected[1]) throw new Error('dimensions');
       } catch {
         const beforeInvalid = await canContinue(request,env,row,true); if (beforeInvalid) { await reconcile(env,row,true); return beforeInvalid; }
-        await env.DB.prepare("UPDATE heavy_ai_candidates SET state='failed',error_code='image_provider_invalid_output',latency_ms=? WHERE request_id=? AND candidate_index=?")
-          .bind(latency,id,index).run();
+        const providerError = provider.provider === 'openai' ? new OpenAIImageError('unusable_response',200,undefined,
+          isRecord(output) && typeof output.providerTaskId === 'string' ? output.providerTaskId : undefined) : null;
+        const descriptor = isRecord(input.candidates[index].descriptor)
+          ? {...input.candidates[index].descriptor,...(providerError ? {providerError:providerError.diagnostics} : {})}
+          : input.candidates[index].descriptor;
+        await env.DB.prepare("UPDATE heavy_ai_candidates SET state=?,error_code='image_provider_invalid_output',latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'")
+          .bind(providerError ? 'unknown' : 'failed',latency,JSON.stringify(descriptor),id,index).run();
         break;
       }
       const estimate = imageEstimate(input); const checksum = await sha256(image.bytes); const imageId = `${jobId}-${index}`;
@@ -487,14 +521,14 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
         : input.candidates[index].descriptor;
       // Record immutable output identity BEFORE writing R2, so a lost R2 or D1
       // response can finish this save without paying for another inference.
-      const beforeOutputRecord = await resolveHeavyEntitlement(env, {
+      const beforeOutputRecord = resolveHeavyGenerationAccess({
         userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
-        preparationId, requirePreparation: true,
       });
       if (!beforeOutputRecord.allowed) { await reconcile(env,row,true); return fail(beforeOutputRecord.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeOutputRecord.reason ?? 'heavy_generation_disabled')); }
-      await env.DB.prepare(`UPDATE heavy_ai_candidates SET state='storing',content_type=?,content_bytes=?,sha256=?,width=?,height=?,
+      const recorded = await env.DB.prepare(`UPDATE heavy_ai_candidates SET state='storing',content_type=?,content_bytes=?,sha256=?,width=?,height=?,
         estimated_micro_usd=?,estimated_neurons=?,latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'`)
         .bind(image.contentType,image.bytes.length,checksum,image.width,image.height,estimate.microUSD,estimate.neurons,latency,JSON.stringify(descriptor),id,index).run();
+      if (recorded.meta.changes !== 1) break;
       const access = await canContinue(request,env,row,true); if (access) { await reconcile(env,row,true); return access; }
       try {
         await env.PRIVATE_MEDIA.put(`generated-images/${imageId}`,image.bytes,{ onlyIf: { etagDoesNotMatch: '*' }, httpMetadata: { contentType: image.contentType },
@@ -502,16 +536,14 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
       } catch { /* HEAD the same immutable target even if the PUT response was lost. */ }
       const afterStore = await canContinue(request,env,row,true); if (afterStore) return afterStore;
       const candidate = (await outputs(env,id))[index];
-      const beforeCommit = await resolveHeavyEntitlement(env, {
+      const beforeCommit = resolveHeavyGenerationAccess({
         userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
-        preparationId, requirePreparation: true,
       });
       if (!beforeCommit.allowed) { await reconcile(env,row,true); return fail(beforeCommit.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeCommit.reason ?? 'heavy_generation_disabled')); }
       if (!candidate || !await commitStoredCandidate(env,row,candidate)) break;
     }
-    const beforeReconcile = await resolveHeavyEntitlement(env, {
+    const beforeReconcile = resolveHeavyGenerationAccess({
       userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
-      preparationId, requirePreparation: true,
     });
     if (!beforeReconcile.allowed) return fail(beforeReconcile.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeReconcile.reason ?? 'heavy_generation_disabled'));
     row = await reconcile(env,row,true);
@@ -563,9 +595,11 @@ export async function handleHeavyEntitlementAction(request: Request, env: Env): 
       const providerBrand = providerBody.brandId ?? providerBody.brand_id;
       if (providerBrand !== brandId) return fail('invalid_heavy_entitlement_scope', 400);
       const typedAction = action as ImageAction;
-      const parsed = parseImageInput(typedAction, providerBody);
       const provider = providerConfig(env, typedAction, providerBody);
-      const normalized = await normalizedRequest(env, user, typedAction, providerBody, parsed, provider);
+      const parsed = parseImageInput(typedAction, providerBody, provider);
+      if (providerBody.protectedOpenAIProjection !== undefined) await assertProjectedRequest(providerBody.protectedOpenAIProjection,providerBody);
+      assertCanvasAdmission(parsed,requestId,user);
+    const normalized = await normalizedRequest(env, user, typedAction, providerBody, parsed, provider);
       if (submittedInputDigest && submittedInputDigest !== normalized.digest) return fail('heavy_input_digest_mismatch', 409);
       const result = await prepareHeavyGeneration(env, {
         userId: user, brandId, action, requestId, inputDigest: normalized.digest, normalizedInput: normalized.normalized,
@@ -600,8 +634,10 @@ export async function handleHeavyEntitlementAction(request: Request, env: Env): 
     const providerBrand = providerBody.brandId ?? providerBody.brand_id;
     if (providerBrand !== brandId) return fail('invalid_heavy_entitlement_scope', 400);
     const typedAction = action as ImageAction;
-    const parsed = parseImageInput(typedAction, providerBody);
     const provider = providerConfig(env, typedAction, providerBody);
+    const parsed = parseImageInput(typedAction, providerBody, provider);
+    if (providerBody.protectedOpenAIProjection !== undefined) await assertProjectedRequest(providerBody.protectedOpenAIProjection,providerBody);
+    assertCanvasAdmission(parsed,requestId,user);
     const normalized = await normalizedRequest(env, user, typedAction, providerBody, parsed, provider);
     if (submittedInputDigest && submittedInputDigest !== normalized.digest) return fail('heavy_input_digest_mismatch', 409);
     const result = await recordHeavyRequestAttestation(env, {

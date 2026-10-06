@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { readLightchainResumeInput, readLightchainResumeResult } from '../src/lib/lightchainResume.ts';
+import { readLightchainResumeInput, readLightchainResumeResult, serializeLightchainResumeSlots } from '../src/lib/lightchainResume.ts';
+import { buildLocalCanvasAssetReference } from '../src/lib/canvasLocalAssets.ts';
+import { buildLocalUploadSourceMetadata } from '../src/features/canvasSourceMetadata.ts';
 
 const artifact = (overrides: Record<string, unknown> = {}) => ({
   id: 'artifact-1',
@@ -60,7 +62,8 @@ test('resume input rejects remote signed URLs and unrelated jobs', () => {
     }),
   ], 'job-1');
 
-  assert.equal(result, null);
+  assert.deepEqual(result?.slots, []);
+  assert.equal(result?.unavailableSources, true);
 });
 
 test('resume input restores local slots from provider result materialSlotFiles', () => {
@@ -152,4 +155,47 @@ test('resume hydration is declared after the tool reset effect', async () => {
 
   assert.ok(resetIndex >= 0, 'tool reset effect must clear material slots');
   assert.ok(restoredIndex > resetIndex, 'resume hydration must run after tool reset so restored slots are not cleared');
+});
+
+test('exact job, owner, brand and tool constrain input and result; text-only and empty values survive', () => {
+  const scope = {brandId:'brand-1',scopeId:'owner',toolId:'lab'};
+  const base = artifact({scopeId:'owner',featureType:'lightchain-lab-provider-result',metadata:{toolId:'lab',brief:'',referenceNote:''}});
+  const wrong = [artifact({...base,id:'wrong-brand',brandId:'brand-2'}),artifact({...base,id:'wrong-owner',scopeId:'other'}),
+    artifact({...base,id:'wrong-tool',metadata:{toolId:'other',brief:'WRONG'}}),artifact({...base,id:'wrong-job',sourceJobId:'job-other'})];
+  assert.deepEqual(readLightchainResumeInput([...wrong,base],'job-1',scope),{artifactId:'artifact-1',slots:[],modelFormState:null,brief:'',referenceNote:''});
+  assert.equal(readLightchainResumeInput(wrong,'job-1',scope),null);
+  const textOnly = artifact({...base,metadata:{toolId:'lab',brief:'  exact brief  ',referenceNote:'参考'}});
+  assert.equal(readLightchainResumeInput([textOnly],'job-1',scope)?.brief,'  exact brief  ');
+  assert.equal(readLightchainResumeInput([artifact({...base,metadata:{toolId:'lab',referenceNote:''}})],'job-1',scope)?.brief,undefined);
+  assert.equal(readLightchainResumeResult(wrong,'job-1',scope),null);
+});
+
+test('canonical slots and local IndexedDB identities survive without stale bearer URLs; result never adopts an input path', () => {
+  const localRef = buildLocalCanvasAssetReference('sha256:'+ 'a'.repeat(64));
+  const saved = artifact({metadata:{toolId:'lab',brief:'test',materialSlots:[
+    {key:'primary',fileName:'source.png',materialKind:'model',imageUrl:'https://heavy.test/v1/media/read?token=stale',sourceImageId:'source-1',sourceStoragePath:'generated-images/source-1',persistenceStatus:'persistent'},
+    {key:'secondary',fileName:'background.png',materialKind:'background',imageUrl:localRef,persistenceStatus:'persistent'},
+  ],providerResultArtifact:true,storagePath:'generated-images/result-1'}});
+  const input = readLightchainResumeInput([saved],'job-1');
+  assert.equal(input?.slots[0].sourceImageId,'source-1'); assert.equal(input?.slots[0].sourceStoragePath,'generated-images/source-1');
+  assert.equal(input?.slots[0].imageUrl,''); assert.equal(input?.slots[1].imageUrl,localRef);
+  assert.equal(readLightchainResumeResult([saved],'job-1')?.storagePath,'generated-images/result-1');
+  assert.equal(readLightchainResumeResult([artifact({...saved,metadata:{...saved.metadata,storagePath:undefined}})],'job-1'),null);
+});
+
+test('new slot persistence stores canonical/local references and sanitized metadata, never bytes/blob/bearer URLs', async () => {
+  const metadata = await buildLocalUploadSourceMetadata(new Blob(['fixture'],{type:'image/png'}),{width:8,height:8});
+  const localRef = buildLocalCanvasAssetReference(metadata.sourceRevision.revision);
+  const slots = serializeLightchainResumeSlots({
+    primary:{name:'local.png',kind:'upload',imageUrl:'data:image/png;base64,SECRETB YTES',localAssetRef:localRef,persistenceStatus:'persistent',
+      sourceMetadata:{...metadata,raw:'data:image/png;base64,SECRET',url:'https://heavy.test?token=BEARER'} as any},
+    secondary:{name:'canonical.png',kind:'library',imageUrl:'https://heavy.test/read?token=BEARER',sourceImageId:'owned-image',sourceStoragePath:'generated-images/owned-image'},
+  });
+  assert.equal(slots[0].imageUrl,localRef); assert.equal(slots[1].imageUrl,''); assert.equal(slots[1].sourceStoragePath,'generated-images/owned-image');
+  assert(!JSON.stringify(slots).includes('SECRET')); assert(!JSON.stringify(slots).includes('BEARER'));
+  const unavailable = serializeLightchainResumeSlots({primary:{name:'ephemeral',kind:'upload',imageUrl:'blob:https://heavy.test/temp'}});
+  assert.equal(unavailable[0].persistenceStatus,'session-only'); assert.equal(unavailable[0].imageUrl,'');
+  assert.equal(readLightchainResumeInput([artifact({metadata:{materialSlots:unavailable}})],'job-1')?.unavailableSources,true);
+  const rejected = readLightchainResumeInput([artifact({metadata:{materialSlots:[{key:'primary',fileName:'bad',imageUrl:'/v1/media/read?token=BEARER'}]}})],'job-1');
+  assert.equal(rejected?.slots.length,0); assert.equal(rejected?.unavailableSources,true);
 });

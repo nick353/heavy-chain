@@ -10,11 +10,11 @@ test('Canvas passes parent-owned Heavy readiness and reason into ChatEditor', ()
   assert.match(canvasSource, /The parent status read is requestless/);
 });
 
-test('ChatEditor fails closed without the exact parent-approved prompt/image input', () => {
+test('ChatEditor allows an authenticated parent readiness without an optional input key', () => {
   assert.match(chatSource, /export interface ChatEditorHeavyReadiness/);
   assert.match(chatSource, /if \(!readiness\) return \{ ready: false, reason: HEAVY_READINESS_UNAVAILABLE_COPY \}/);
   assert.match(chatSource, /if \(readiness\.ready !== true\)/);
-  assert.match(chatSource, /!readiness\.inputKey \|\| readiness\.inputKey !== inputKey/);
+  assert.match(chatSource, /readiness\.inputKey && readiness\.inputKey !== inputKey/);
   assert.match(chatSource, /if \(!requestReadiness\.ready\) throw new Error\(requestReadiness\.reason\)/);
   assert.match(chatSource, /rightsConfirmed: requestReadiness\.ready/);
   assert.match(chatSource, /latestReadiness\.inputKey !== requestReadiness\.inputKey/);

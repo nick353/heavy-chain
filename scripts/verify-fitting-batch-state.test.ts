@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { addFittingBatchTask, removeFittingBatchTask, restoreFittingBatchTasks, readFittingBatch, writeFittingBatch, type FittingBatchTask, type FittingBatchStorage } from '../src/lib/fittingBatch.ts';
+const scope = { userId: 'user-a', brandId: 'brand-a', featureId: 'ai-fitting' };
+const task = (n: number): FittingBatchTask => ({ id: `task-${n}`, requestId: `request-${n}`, status: 'ready', input: { garment: 'data:image/png;base64,AA==', garmentName: 'shirt.png', model: null, mode: 'regular', prompt: 'original', aspect: '1:1', resolution: '1K', references: {} } });
+function storage() { const values = new Map<string, unknown>(); return { read: async (key: string) => structuredClone(values.get(key)), write: async (key: string, value: FittingBatchTask[]) => { values.set(key, structuredClone(value)); } } satisfies FittingBatchStorage; }
+test('add freezes input; duplicate IDs do not append; eight accepted ninth refused', () => {
+ let list: FittingBatchTask[] = []; const original = task(0); list = addFittingBatchTask(list, original); original.input.prompt = 'changed'; assert.equal(list[0].input.prompt, 'original');
+ assert.equal(addFittingBatchTask(list, task(0)), list);
+ for(let n=1;n<8;n++) list=addFittingBatchTask(list,task(n)); assert.equal(list.length,8); assert.throws(()=>addFittingBatchTask(list,task(8)),/limit/);
+});
+test('individual removal and clear preserve remaining snapshots', () => { const list=[task(0),task(1)]; assert.deepEqual(removeFittingBatchTask(list,'task-0'),[task(1)]); assert.deepEqual(removeFittingBatchTask(list),[]); });
+test('persisted tasks reload same IDs and bytes; scopes are isolated', async () => { const db=storage(); await writeFittingBatch(db,scope,[task(0)]); assert.deepEqual(await readFittingBatch(db,scope),[task(0)]); for(const other of [{...scope,userId:'user-b'},{...scope,brandId:'brand-b'},{...scope,featureId:'ai-fitting-reference'}]) assert.deepEqual(await readFittingBatch(db,other),[]); });
+test('pending restores unknown under same request; unknown cannot be deleted or silently reset', async () => { const db=storage(); const pending={...task(0),status:'pending' as const}; await writeFittingBatch(db,scope,[pending]); const restored=await readFittingBatch(db,scope); assert.equal(restored[0].status,'unknown'); assert.equal(restored[0].requestId,pending.requestId); assert.throws(()=>removeFittingBatchTask(restored),/reconciliation/); assert.throws(()=>removeFittingBatchTask(restored,restored[0].id),/reconciliation/); assert.equal(addFittingBatchTask(restored,task(0)),restored); });
+test('invalid, duplicate, oversize records and ephemeral image references fail closed', () => { assert.throws(()=>restoreFittingBatchTasks([task(0),task(0)])); assert.throws(()=>restoreFittingBatchTasks(Array.from({length:9},(_,n)=>task(n)))); assert.throws(()=>addFittingBatchTask([],{...task(0),input:{...task(0).input,garment:'blob:lost'}})); assert.throws(()=>restoreFittingBatchTasks([{...task(0),input:{...task(0).input,model:'https://expired'}}])); });
+test('write failure is surfaced; no success snapshot returned', async () => { const db={read:async()=>[],write:async()=>{throw new Error('quota');}}; await assert.rejects(writeFittingBatch(db,scope,[task(0)]),/quota/); });

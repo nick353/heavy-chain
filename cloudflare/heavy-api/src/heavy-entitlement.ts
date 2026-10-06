@@ -74,6 +74,33 @@ export type HeavyEntitlementResult = {
   requestScopedAttestationRequired: boolean;
 };
 
+/**
+ * Generation admission for the authenticated Heavy image surface.
+ *
+ * Heavy used to require a second, request-scoped terms/rights ceremony before
+ * every provider call.  The product contract now makes login + brand
+ * membership the only user-facing prerequisite.  Keep the old entitlement
+ * resolver and its explicit acceptance endpoints available for historical
+ * records and compatibility, but do not make them a prerequisite for a new
+ * image job.  Authentication and brand ownership are checked by the caller
+ * before this helper is reached.
+ */
+export const resolveHeavyGenerationAccess = (request: HeavyEntitlementRequest): HeavyEntitlementResult => ({
+  allowed: true,
+  reason: null,
+  termsVersion: null,
+  termsDocumentVersion: null,
+  termsDocumentDigest: null,
+  rightsVersion: null,
+  rightsDocumentVersion: null,
+  rightsDocumentDigest: null,
+  termsAcceptanceId: null,
+  rightsAttestationId: null,
+  requestBinding: null,
+  inputDigest: request.inputDigest ?? null,
+  requestScopedAttestationRequired: false,
+});
+
 type AcceptanceRow = {
   id: string;
   user_id: string;

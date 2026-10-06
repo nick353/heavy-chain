@@ -155,6 +155,7 @@ export interface CanvasState {
   historyIndex: number;
   
   // Project actions
+  ensureCurrentLocalProjectIdentity:(brandId:string,beforeAssign?:(id:string)=>void)=>string;
   createProject: (name: string, brandId?: string, initialObjects?: CanvasObject[]) => string;
   loadProject: (projectId: string) => void;
   hydrateProject: (project: CanvasProject,replaceCurrentLocalId?:string) => void;
@@ -194,6 +195,12 @@ export interface CanvasState {
   // Derived tree
   getDerivatives: (id: string) => CanvasObject[];
   getAncestors: (id: string) => CanvasObject[];
+}
+
+function assertLocalCanvasIdentityPersisted(id:string,brandId:string){
+  try{const stored=JSON.parse(localStorage.getItem('heavy-chain-canvas')??'null')?.state;
+    if(stored?.currentProjectId!==id||!Array.isArray(stored.projects)||!stored.projects.some((p:{id?:string;brandId?:string})=>p.id===id&&p.brandId===brandId))throw new Error('readback');
+  }catch{throw new Error('canvas_local_identity_persistence_unverified');}
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -271,6 +278,16 @@ export const useCanvasStore = create<CanvasState>()(
       historyIndex: 0,
 
       // Project management
+      ensureCurrentLocalProjectIdentity:(brandId,beforeAssign)=>{
+        if(!brandId)throw new Error('canvas_local_identity_brand_required');
+        const current=get();const existing=current.projects.find(p=>p.id===current.currentProjectId);
+        if(current.currentProjectId&&/^[A-Za-z0-9_-]{1,128}$/.test(current.currentProjectId)){if(existing?.brandId&&existing.brandId!==brandId)throw new Error('canvas_local_identity_brand_mismatch');beforeAssign?.(current.currentProjectId);if(!existing||!existing.brandId){const now=new Date().toISOString();const project:CanvasProject=existing?{...existing,brandId}:{id:current.currentProjectId,name:current.currentProjectName,brandId,objects:[],view:{zoom:current.zoom,panX:current.panX,panY:current.panY},createdAt:now,updatedAt:now};set({projects:[project,...current.projects.filter(p=>p.id!==project.id)]});}assertLocalCanvasIdentityPersisted(current.currentProjectId,brandId);return current.currentProjectId;}
+        const id=`local-${crypto.randomUUID()}`,now=new Date().toISOString();
+        const project:CanvasProject={id,name:current.currentProjectName,brandId,objects:[],view:{zoom:current.zoom,panX:current.panX,panY:current.panY},createdAt:now,updatedAt:now};
+        // Identity assignment never replaces the active draft, selection, history or view.
+        beforeAssign?.(id);
+        set({currentProjectId:id,projects:[project,...current.projects]});assertLocalCanvasIdentityPersisted(id,brandId);return id;
+      },
       createProject: (name, brandId, initialObjects = []) => {
         const id = generateId();
         const now = new Date().toISOString();
@@ -305,6 +322,7 @@ export const useCanvasStore = create<CanvasState>()(
         const project = projects.find(p => p.id === projectId);
         
         if (project) {
+          if(currentProjectId===projectId){const active=get();if(activeObjects.length&&active.history.length===1&&active.historyIndex===0&&active.history[0].length===0)set({history:[activeObjects],historyIndex:0});return;} // Preserve active view and rebuild only an uninitialized reload history.
           const view = normalizeCanvasView(project.view);
           // The persisted project index intentionally omits object payloads to
           // stay below localStorage limits. When a routed Canvas remounts the

@@ -1,6 +1,7 @@
 // Cloudflare's actual image contract. No provider key or arbitrary server-side
 // URL fetching; original local images are retained while bounded PNG copies go
 // to the model. Resizing is recorded, never reported as original-resolution input.
+import { readPendingIdentity, rememberPendingIdentity, forgetPendingIdentity } from './cloudflareImagePendingStore';
 export const CLOUDFLARE_IMAGE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b';
 export const CLOUDFLARE_IMAGE_ACTIONS = new Set(['generate-image','edit-image','model-matrix']);
 export const CLOUDFLARE_IMAGE_NOTICE = 'Cloudflare FLUX.2 Klein 4B（品質検証中）。参照は最大4枚・長辺512pxで送信し、元画像は保持します。範囲編集は参照ガイド＋元画素の合成で対応し、新しい透過出力は未対応です。';
@@ -34,7 +35,6 @@ export async function durableImageRecoveryKey(origin:string,userId:string,action
   const hash = await digest(canonical({action,body:canonicalCloudflareImageBody(body)}));
   return `heavy:image-ai:v1:${origin}:${userId}:${String(body.brandId ?? body.brand_id)}:${hash}`;
 }
-const pending = new Map<string,string>();
 const inFlight = new Map<string,Promise<unknown>>();
 const dataURL = (blob: Blob): Promise<string> => new Promise((resolve,reject) => {
   const reader = new FileReader(); reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('image_reference_encode_failed'));
@@ -48,7 +48,8 @@ export async function prepareCloudflareImageInput(action: string, body: Body): P
   if (action === 'model-matrix' && body.modelReferenceImageUrl && !body.imageUrl) throw new Error('人物参照を使う試着には衣服参照も必要です。人物画像を衣服として送信していません。');
   const source = action === 'model-matrix' ? [body.imageUrl,body.modelReferenceImageUrl].filter(Boolean)
     : body.imageUrls ?? [body.imageUrl ?? body.referenceImage].filter(Boolean);
-  if (!Array.isArray(source) || source.length > 4 || source.some(v => typeof v !== 'string' || !v)) throw new Error('Cloudflare画像AIの参照は最大4枚です。参照を省略せず入力を見直してください。');
+  const maxReferences = action === 'model-matrix' ? 2 : body.generationProvider === 'openai' ? 16 : 4;
+  if (!Array.isArray(source) || source.length > maxReferences || source.some(v => typeof v !== 'string' || !v)) throw new Error(`Cloudflare画像AIの参照は最大${maxReferences}枚です。参照を省略せず入力を見直してください。`);
   // OpenAI can create a model-matrix image from the structured product brief
   // alone. Workers AI and edit flows still require the references enforced
   // below; the server remains authoritative and rejects a mismatched provider.
@@ -73,7 +74,7 @@ export async function prepareCloudflareImageInput(action: string, body: Body): P
       const context = canvas.getContext('2d'); if (!context) throw new Error('image_reference_canvas_unavailable');
       context.drawImage(image,0,0,width,height);
       const png = await new Promise<Blob>((resolve,reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('image_reference_encode_failed')),'image/png'));
-      references.push(await dataURL(png)); transforms.push({ index, sourceWidth,sourceHeight,width,height,resized: scale < 1 });
+      references.push(await dataURL(png)); transforms.push({ index, sourceWidth,sourceHeight,width,height,resized: scale < 1,...(body.generationProvider === 'openai' && body.protectedEdit ? {renderingTransform:{x:0,y:0,scaleX:width/sourceWidth,scaleY:height/sourceHeight}} : {}) });
     } finally { URL.revokeObjectURL(url); }
   }
   const next: Body = { ...body, referenceTransforms: transforms };
@@ -84,18 +85,6 @@ export async function prepareCloudflareImageInput(action: string, body: Body): P
   return next;
 }
 
-function getPending(key: string): string | null {
-  try { return localStorage.getItem(key) ?? pending.get(key) ?? null; } catch { return pending.get(key) ?? null; }
-}
-function remember(key: string,id: string) {
-  pending.set(key,id);
-  try { localStorage.setItem(key,id); if (localStorage.getItem(key) !== id) throw new Error('readback'); }
-  catch { throw new Error('生成依頼IDを保存できません。ブラウザの保存領域を確認してください。推論は開始していません。'); }
-}
-function forget(key: string,id: string) {
-  if (pending.get(key) === id) pending.delete(key);
-  try { if (localStorage.getItem(key) === id) localStorage.removeItem(key); } catch { /* retaining a terminal ID is safe */ }
-}
 function readReceipt(value: unknown,id: string): ImageReceipt {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('image_receipt_invalid');
   const receipt = value as ImageReceipt;
@@ -104,6 +93,12 @@ function readReceipt(value: unknown,id: string): ImageReceipt {
   if (receipt.success && (receipt.persistenceStatus !== 'completed' || !Array.isArray(receipt.images) || !receipt.images.length ||
       receipt.images.some(item => !item || typeof item !== 'object' || !(item as Body).storagePath || !(item as Body).imageUrl))) throw new Error('image_receipt_invalid');
   return receipt;
+}
+
+async function requirePendingIdentity(key: string, id: string): Promise<void> {
+  const current = await readPendingIdentity(key);
+  if (current.state === 'unavailable') throw new Error('image_pending_identity_unavailable', { cause: current.cause });
+  if (current.state !== 'present' || current.requestId !== id) throw new Error('image_pending_identity_conflict');
 }
 
 /** One submission per invocation; after a lost response only the same receipt is
@@ -128,13 +123,20 @@ export async function invokeDurableImageAction<T>(options: {
   const key = await durableImageRecoveryKey(options.origin,options.userId,options.action,identity);
   const run = async (): Promise<T> => {
     await options.assertCurrent();
-    const previous = getPending(key);
+    const pending = await readPendingIdentity(key); await options.assertCurrent();
+    if (pending.state === 'conflict') throw new Error('image_pending_identity_conflict');
+    if (pending.state === 'unavailable' && !pending.requestId) throw new Error('image_pending_identity_unavailable', { cause: pending.cause });
+    const reconcileOnly = pending.state === 'unavailable';
+    const previous = pending.state === 'present' || pending.state === 'unavailable' ? pending.requestId : null;
     if (options.idempotencyKey && previous && previous !== options.idempotencyKey) throw new Error('同じ入力の生成依頼が未照合です。先にその結果を確認してください。');
     const id = previous ?? options.idempotencyKey ?? crypto.randomUUID();
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) throw new Error('image_request_id_invalid');
-    remember(key,id);
+    if (!reconcileOnly) {
+      await rememberPendingIdentity(key,id,options.assertCurrent);
+      await options.assertCurrent();
+    }
     // Full masked-edit inputs must be durable and checked before any inference.
-    await options.beforeSubmit?.(id,key);
+    if (!reconcileOnly) await options.beforeSubmit?.(id,key);
     await options.assertCurrent();
     const path = `/v1/image-ai/requests/${id}`;
     let value: ImageReceipt | undefined;
@@ -143,6 +145,7 @@ export async function invokeDurableImageAction<T>(options: {
       catch (error) { if (!(error instanceof Error && error.message.includes('_404_image_request_not_found'))) throw error; }
     }
     if (!value) {
+      if (reconcileOnly) throw new Error('image_pending_identity_unavailable');
       await options.assertCurrent();
       try {
         value = readReceipt(await options.call(`/v1/provider-actions/${encodeURIComponent(options.action)}`,{
@@ -152,7 +155,11 @@ export async function invokeDurableImageAction<T>(options: {
         // Only definite pre-admission rejection can discard the ID. A generic
         // 401/403 may arrive AFTER inference if the session/brand role changed.
         if (error instanceof Error && (/_(400|413|422|429)_/.test(error.message) ||
-          /_403_(rights_confirmation_required|legal_safety_prompt_blocked)$/.test(error.message))) { await options.onTerminal?.(id,key); forget(key,id); throw error; }
+          /_403_(rights_confirmation_required|legal_safety_prompt_blocked)$/.test(error.message))) {
+          await requirePendingIdentity(key,id); await options.assertCurrent();
+          await options.onTerminal?.(id,key); await options.assertCurrent();
+          await forgetPendingIdentity(key,id,options.assertCurrent); throw error;
+        }
         await options.assertCurrent();
         try { value = readReceipt(await options.call(path),id); }
         catch { throw new Error(`生成結果を確認できません。依頼 ${id} を保持しました。再操作時は同じ依頼を照合します。`); }
@@ -165,13 +172,21 @@ export async function invokeDurableImageAction<T>(options: {
     }
     await options.assertCurrent();
     if (value.state === 'running') throw new Error(`生成依頼 ${id} は処理中です。再推論せず、後で同じ依頼を照合してください。`);
+    if (reconcileOnly) {
+      if (options.finalize || value.requiresProtectedComposite === true) throw new Error('image_pending_identity_unavailable');
+      return (value.state === 'completed' && options.retainUntilAcknowledged ? { ...value,clientRecoveryKey:key } : value) as T;
+    }
     if (value.state === 'completed' && value.requiresProtectedComposite === true && !options.finalize) throw new Error('image_protected_finalizer_required');
     if (value.state === 'completed' && options.finalize) {
       value = readReceipt(await options.finalize(value),id);
       if (!value.success || value.requiresProtectedComposite === true) throw new Error('image_final_save_incomplete');
       await options.assertCurrent();
     }
-    if (value.state === 'failed' || (value.state === 'completed' && !options.retainUntilAcknowledged)) { await options.onTerminal?.(id,key); forget(key,id); }
+    if (value.state === 'failed' || (value.state === 'completed' && !options.retainUntilAcknowledged)) {
+      await requirePendingIdentity(key,id); await options.assertCurrent();
+      await options.onTerminal?.(id,key); await options.assertCurrent();
+      await forgetPendingIdentity(key,id,options.assertCurrent);
+    }
     if (value.state === 'completed' && options.retainUntilAcknowledged) value = { ...value,clientRecoveryKey:key };
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('heavy-image-usage-changed'));
     return value as T;
@@ -197,11 +212,13 @@ export async function acknowledgeDurableImageAction(options: {
       !clientRecoveryKey.startsWith(`heavy:image-ai:v1:${options.origin}:${options.userId}:`)) throw new Error('image_acknowledgement_scope_invalid');
   const run = async () => {
     await options.assertCurrent();
-    const existing = getPending(clientRecoveryKey);
-    if (existing && existing !== requestId) throw new Error('image_acknowledgement_request_mismatch');
+    const existing = await readPendingIdentity(clientRecoveryKey); await options.assertCurrent();
+    if (existing.state === 'unavailable') throw new Error('image_pending_identity_unavailable', { cause: existing.cause });
+    if (existing.state === 'conflict' || existing.state === 'present' && existing.requestId !== requestId) throw new Error('image_acknowledgement_request_mismatch');
+    if (existing.state === 'absent') return;
     await options.cleanup?.();
     await options.assertCurrent();
-    forget(clientRecoveryKey,requestId);
+    await forgetPendingIdentity(clientRecoveryKey,requestId,options.assertCurrent);
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('heavy-image-inputs-changed'));
   };
   if (typeof navigator !== 'undefined' && navigator.locks) await navigator.locks.request(clientRecoveryKey,run);

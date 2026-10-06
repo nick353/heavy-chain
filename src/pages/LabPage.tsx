@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { BarChart3, Check, ChevronRight, FlaskConical, Images, Layers3, Lightbulb, Save, Sparkles, Target } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
@@ -120,10 +121,22 @@ const labReadinessItems = [
 
 function LightchainLabBoardParity() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const libraryArtifactId = new URLSearchParams(location.search).get('libraryArtifactId');
+  const workspace = useCanonicalImageWorkspace('lab');
+  const canContinueLibrary = Boolean(
+    libraryArtifactId &&
+    !workspace.jobId &&
+    !workspace.pendingId &&
+    workspace.status === 'ready' &&
+    workspace.error === null &&
+    workspace.originalInputsAvailable &&
+    workspace.slots.primary?.sourceImageId === libraryArtifactId
+  );
   return (
-    <main className="lightchain-lab-source-board" data-testid="lightchain-lab-source-board">
+    <main className="lightchain-lab-source-board" data-testid="lightchain-lab-source-board" data-resume-job={workspace.result?.jobId ?? ''} data-resume-state={workspace.status} data-resume-inputs={String(workspace.originalInputsAvailable)}>
       <div role="alert" aria-live="polite" className="sr-only" />
-      <h6 className="lightchain-lab-source-title">Lightchain Lab</h6>
+      <h6 className="lightchain-lab-source-title">Heavy Chain Lab</h6>
       <section className="lightchain-lab-source-new-section" aria-label="新規ファイル">
         <div onClick={() => navigate('/flow/laboratory/detail')} className="lightchain-lab-source-new-card cursor-pointer" data-testid="lightchain-lab-new-card" data-track-id="laboratory:project-card">
           <img className="lightchain-lab-source-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
@@ -131,6 +144,14 @@ function LightchainLabBoardParity() {
           <span>新規ファイル</span>
         </div>
       </section>
+      {canContinueLibrary && <section className="my-5 max-w-xl rounded-xl border border-white/10 bg-[#202426] p-4 text-neutral-200" aria-label="Libraryの元画像">
+        <button type="button" className="rounded-lg bg-cyan-700 px-4 py-2" data-testid="lightchain-lab-library-continue" onClick={() => navigate(workspace.continueHref)}>Libraryの元画像で続ける</button>
+      </section>}
+      {workspace.jobId && <section className="my-5 max-w-xl rounded-xl border border-white/10 bg-[#202426] p-4 text-neutral-200" aria-label="保存したラボ画像">
+        {workspace.result && <img src={workspace.result.imageUrl} alt="保存されたラボ画像" className="h-40 w-full object-contain" />}
+        {workspace.error && <p role="alert">{workspace.error}</p>}
+        {workspace.result && <button type="button" className="mt-3 rounded-lg bg-cyan-700 px-4 py-2" onClick={()=>navigate(workspace.continueHref)}>編集を続ける</button>}
+      </section>}
       <h6 className="lightchain-lab-source-reference-title">参考事例</h6>
       <section className="lightchain-lab-source-reference-grid" aria-label="参考事例">
         <div onClick={() => navigate('/flow/laboratory/detail?boardProjectCode=light-lab-reference')} className="lightchain-lab-source-reference-card cursor-pointer" data-testid="lightchain-lab-reference-card" data-track-id="laboratory:project-card">
@@ -580,7 +601,7 @@ export function LabPage() {
         className="mb-5"
       >
         <WorkspaceReadinessStrip
-          eyebrow="LIGHTCHAIN PARITY / LAB START"
+          eyebrow="HEAVY CHAIN / LAB START"
           title="仮説と評価軸を先に揃え、採用候補を決めます"
           description="ラボは実験室であることを明示し、生成前に比較対象・評価軸・次のアクションを確認できる入口にしています。"
           nextAction="仮説 → 評価 → 出力"

@@ -137,7 +137,7 @@ test('keeps the two explicit custom-model entries source-free without weakening 
   assert.match(workbench, /if \(effectiveProviderRoute === 'model-matrix'\)/);
 });
 
-test('routes Heavy generation through the server entitlement gate without a UI rights checkbox', () => {
+test('routes Heavy generation through the authenticated workspace without a UI rights checkbox', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const branches = [
     ['AI fitting', 'if (isFeatureDetail && isFittingDetail)', 'if (isFeatureDetail && selectedTool.id !== \'custom-style\' && workspaceStyle)'],
@@ -154,15 +154,15 @@ test('routes Heavy generation through the server entitlement gate without a UI r
     const endIndex = end ? workbench.indexOf(end, startIndex + start.length) : workbench.length;
     assert.ok(startIndex >= 0 && endIndex > startIndex, `${label} branch boundaries must remain discoverable`);
     const branch = workbench.slice(startIndex, endIndex);
-    assert.match(branch, /renderLightchainProviderGate\(\)/, `${label} must expose the rights gate`);
+    assert.match(branch, /renderLightchainProviderGate\(\)/, `${label} must expose the login/status gate`);
   }
 
   assert.match(workbench, /const specialProviderGenerationLocked = !lightchainProviderSupported[\s\S]*brandResolutionPending[\s\S]*lightchainGenerationRunning/);
   assert.match(workbench, /data-testid="lightchain-special-provider-gate"/);
-  assert.match(workbench, /const heavyEntitlementAction = heavyOwnedFeature && lightchainProviderSupported/);
-  assert.match(workbench, /const heavyEntitlementReady = !heavyOwnedFeature \|\| \([\s\S]*?heavyEntitlementAction !== null/);
-  assert.match(workbench, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
-  assert.match(workbench, /if \(!heavyEntitlementReady\)[\s\S]*?return;/);
+  assert.match(workbench, /const heavyLoginOnlyReady = isHeavyRoute && heavyOwnedFeature && Boolean\(user\?\.id\)/);
+  assert.match(workbench, /const heavyAccessReady = !heavyOwnedFeature \|\| Boolean\(user\?\.id\)/);
+  assert.match(workbench, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyAccessReady/);
+  assert.match(workbench, /void ensureHeavyWorkspace\(\)/);
   assert.doesNotMatch(workbench, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(workbench, /lightchainRightsConfirmationModal|rightsConfirmationOpen|rightsConfirmationDraft|data-testid="lightchain-rights-confirmation"/);
   assert.doesNotMatch(workbench, /data-testid="lightchain-provider-gate"/);
@@ -180,10 +180,11 @@ test('keeps the marketing detail provider flow on the direct Light Chain path', 
   assert.doesNotMatch(branch, /rightsConfirmation|権利確認/);
 });
 
-test('uses the Heavy server entitlement instead of a UI rights confirmation', () => {
+test('uses the authenticated brand context instead of a UI rights confirmation', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(workbench, /Heavy status is requestless and therefore only a closed UI preflight/);
-  assert.match(workbench, /requestScopedAttestationRequired === false/);
+  assert.match(workbench, /Compatibility metadata only; no Heavy rights\/attestation gate remains/);
+  assert.match(workbench, /const heavyAccessReady = !heavyOwnedFeature \|\| Boolean\(user\?\.id\)/);
+  assert.match(workbench, /ensureHeavyWorkspace/);
   assert.doesNotMatch(workbench, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(workbench, /PendingRightsGeneration|pendingRightsGenerationRef|rightsConfirmationOpen|rightsConfirmationDraft/);
   assert.match(workbench, /const rightsConfirmedForRequest = providerRightsConfirmed/);
@@ -201,10 +202,12 @@ test('passes only source-admitted request-local rights into every provider route
   assert.doesNotMatch(workbench, /rightsAlreadyConfirmed/);
 });
 
-test('keeps dedicated material generation behind the Heavy entitlement gate', () => {
+test('keeps dedicated material generation behind the authenticated brand gate', () => {
   const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(material, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
-  assert.match(material, /const heavyEntitlementReady = !heavyOwnedFeature \|\| \([\s\S]*?heavyEntitlement\?\.allowed === true/);
+  assert.match(material, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyAccessReady/);
+  assert.match(material, /const heavyLoginOnlyReady = heavyOwnedFeature && Boolean\(user\?\.id\)/);
+  assert.match(material, /const heavyAccessReady = !heavyOwnedFeature \|\| heavyLoginOnlyReady/);
+  assert.match(material, /ensureHeavyWorkspace/);
   assert.doesNotMatch(material, /getLightchainSourceGenerationAccess\(/);
   assert.doesNotMatch(material, /pendingRightsGenerationRef|rightsConfirmationOpen|rightsConfirmationDraft|PermissionLockedButton|権利を確認してAI生成/);
   assert.match(material, /const rightsConfirmedForRequest = providerRightsConfirmed/);
@@ -214,7 +217,7 @@ test('keeps dedicated material generation behind the Heavy entitlement gate', ()
     2,
     'printing and fabric provider routes must use the request-local confirmation value',
   );
-  assert.match(material, /if \(!heavyEntitlementReady\)/);
+  assert.match(material, /heavyLoginOnlyReady \? 'ログイン済みの個人ワークスペース'/);
   assert.match(material, /legalSafety: \{ rightsConfirmed: !isLocalMaterialPreview && providerRightsConfirmed \}/);
 });
 
@@ -311,10 +314,11 @@ test('keeps direct provider promotion behind durable result and Canvas lineage g
     );
   }
   assert.match(fitting, /id="fitting-history"/);
-  assert.match(
-    fitting,
-    /const authBrandFence = captureCurrentAuthBrandFence\(\)[\s\S]*?const generationBrandId = authBrandFence\.brandId[\s\S]*?assertCurrentAuthBrandFence\(authBrandFence, 'before_provider'\)[\s\S]*?response = await generateModelMatrix\([\s\S]*?generationBrandId[\s\S]*?\}\s*catch \(error\) \{\s*setIsGenerating\(false\);\s*setErrorMessage\(getErrorMessage/,
-  );
+  assert.match(fitting, /const authBrandFence = captureCurrentAuthBrandFence\(generationBrand\.id\)/);
+  assert.match(fitting, /const generationBrandId = authBrandFence\.brandId/);
+  assert.match(fitting, /assertCurrentAuthBrandFence\(authBrandFence, 'before_provider'\)/);
+  assert.match(fitting, /response = await generateModelMatrix\([\s\S]*?generationBrandId/);
+  assert.match(fitting, /setErrorMessage\(getErrorMessage/);
   assert.match(persistence, /provider_result_persistence_unverified/);
 });
 

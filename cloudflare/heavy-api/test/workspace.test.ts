@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
+import { Buffer } from 'node:buffer';
 import { handleRequest, type Env } from '../src/index.ts';
+import sharp from 'sharp';
+import { WORKSPACE_UPLOAD_MAX_BYTES } from '../../../src/lib/workspaceUploadLimits.ts';
 
 class Statement {
   db: DatabaseSync;
@@ -78,6 +81,8 @@ test('workspace save persists real SQL metadata and private R2 bytes with CORS a
   const { remote } = await response.json() as { remote: { imageId: string; storagePath: string } };
   assert.equal(remote.storagePath, `generated-images/wa-${input.requestId}`);
   assert.deepEqual(Buffer.from(bucket.objects.get(remote.storagePath)!.bytes), Buffer.from(png, 'base64'));
+  const storedMetadata = JSON.parse(String(db.sql.prepare('SELECT metadata FROM generated_images WHERE id=?').get(remote.imageId)?.metadata));
+  assert.equal(storedMetadata.contentSha256, bucket.objects.get(remote.storagePath)!.customMetadata.sha256);
   assert.equal(db.sql.prepare('SELECT status FROM generation_jobs').get()?.status, 'completed');
   const read = await handleRequest(new Request(`https://api.test/v1/generated-images/${remote.imageId}/content`, { headers: { authorization: 'Bearer alice' } }), env);
   assert.equal(read.status, 200);
@@ -149,4 +154,94 @@ test('lost commit receipt reconciles the exact committed artifact instead of del
   assert.equal((await save(body())).status, 200);
   assert.equal(bucket.objects.size, 1);
   assert.equal(db.sql.prepare('SELECT COUNT(*) AS n FROM generated_images').get()?.n, 1);
+});
+
+/** Real decodable JPEG with valid APP15 segments, not a forged Blob size. */
+async function jpegOfSize(size: number): Promise<Uint8Array> {
+  const source = await sharp({ create: { width: 1, height: 1, channels: 3, background: '#123456' } }).jpeg().toBuffer();
+  let remaining = size - source.length;
+  assert(remaining >= 4);
+  const parts: Buffer[] = [source.subarray(0, 2)];
+  while (remaining > 0) {
+    let length = Math.min(remaining, 65537);
+    if (remaining > length && remaining - length < 4) length -= 4 - (remaining - length);
+    const segment = Buffer.alloc(length);
+    segment[0] = 0xff; segment[1] = 0xef;
+    segment.writeUInt16BE(length - 2, 2);
+    parts.push(segment); remaining -= length;
+  }
+  parts.push(source.subarray(2));
+  const result = Buffer.concat(parts);
+  assert.equal(result.length, size);
+  assert.equal((await sharp(result).raw().toBuffer({ resolveWithObject: true })).info.width, 1);
+  return result;
+}
+
+// Worker + Node type libraries give Buffer conflicting toString overloads.
+// Encode actual bytes with the portable API; three-byte chunks preserve padding.
+function base64(bytes: Uint8Array): string {
+  const chunkBytes = 3 * 8192;
+  let result = '';
+  for (let offset = 0; offset < bytes.length; offset += chunkBytes) {
+    result += btoa(String.fromCharCode(...bytes.subarray(offset, offset + chunkBytes)));
+  }
+  return result;
+}
+
+test('workspace accepts real raster inputs above 10 MiB through exact 20 MiB with exact stored bytes', async t => {
+  const { db, bucket, save } = setup(); t.after(() => db.sql.close());
+  for (const size of [10 * 1024 * 1024 + 1, WORKSPACE_UPLOAD_MAX_BYTES]) {
+    const bytes = await jpegOfSize(size);
+    const input = { ...body(), imageUrl: `data:image/jpeg;base64,${base64(bytes)}` };
+    const response = await save(input);
+    assert.equal(response.status, 200, await response.clone().text());
+    const stored = bucket.objects.get(`generated-images/wa-${input.requestId}`)!;
+    assert.equal(stored.bytes.length, size);
+    assert.deepEqual(Buffer.from(stored.bytes), bytes);
+  }
+  assert.equal(bucket.puts, 2);
+  assert.equal(db.sql.prepare('SELECT COUNT(*) AS n FROM generated_images').get()?.n, 2);
+});
+
+test('workspace rejects a real 20 MiB plus one byte raster before D1/R2 persistence', async t => {
+  const { db, bucket, save } = setup(); t.after(() => db.sql.close());
+  const bytes = await jpegOfSize(WORKSPACE_UPLOAD_MAX_BYTES + 1);
+  const response = await save({ ...body(), imageUrl: `data:image/jpeg;base64,${base64(bytes)}` });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json() as { error: string }).error, 'invalid_or_oversized_workspace_image');
+  assert.equal(bucket.puts, 0);
+  assert.equal(db.sql.prepare('SELECT COUNT(*) AS n FROM generation_jobs').get()?.n, 0);
+});
+
+test('workspace honors lower configured byte policy and caps higher overrides at 20 MiB', async t => {
+  const { db, bucket, env, save } = setup(); t.after(() => db.sql.close());
+  env.MAX_MEDIA_BYTES = String(8 * 1024 * 1024);
+  const small = await jpegOfSize(8 * 1024 * 1024);
+  assert.equal((await save({ ...body(), imageUrl: `data:image/jpeg;base64,${base64(small)}` })).status, 200);
+  const lowerRejected = await jpegOfSize(8 * 1024 * 1024 + 1);
+  assert.equal((await save({ ...body(), imageUrl: `data:image/jpeg;base64,${base64(lowerRejected)}` })).status, 400);
+  env.MAX_MEDIA_BYTES = String(40 * 1024 * 1024);
+  const capped = await jpegOfSize(WORKSPACE_UPLOAD_MAX_BYTES + 1);
+  assert.equal((await save({ ...body(), imageUrl: `data:image/jpeg;base64,${base64(capped)}` })).status, 400);
+  assert.equal(bucket.puts, 1);
+  assert.equal(db.sql.prepare('SELECT COUNT(*) AS n FROM generation_jobs').get()?.n, 1);
+});
+
+test('oversized streamed envelope without Content-Length is cancelled before persistence', async t => {
+  const { db, bucket, env } = setup(); t.after(() => db.sql.close());
+  const envelope = Math.ceil(WORKSPACE_UPLOAD_MAX_BYTES / 3) * 4 + 128 * 1024 + 64 * 1024;
+  let streamed = 0, cancelled = false;
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) { const chunk = new Uint8Array(512 * 1024); streamed += chunk.length; controller.enqueue(chunk); },
+    cancel() { cancelled = true; },
+  });
+  const request = new Request('https://api.test/v1/workspace-artifacts', {
+    method: 'POST', headers: { authorization: 'Bearer alice', origin: 'https://heavy.test', 'content-type': 'application/json' }, body: stream, duplex: 'half',
+  } as RequestInit);
+  assert.equal(request.headers.has('content-length'), false);
+  const response = await handleRequest(request, env);
+  assert.equal(response.status, 400);
+  assert.equal(cancelled, true); assert(streamed > envelope);
+  assert.equal(bucket.puts, 0);
+  assert.equal(db.sql.prepare('SELECT COUNT(*) AS n FROM generation_jobs').get()?.n, 0);
 });

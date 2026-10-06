@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ExternalLink, Image, PlayCircle } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { isHeavyWorkspaceRuntime } from '../lib/heavyWorkspace';
 import { ActivityTimeline } from '../components/workspace';
 import { emptyWorkspaceActivity, fetchWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
 
@@ -10,6 +11,7 @@ export function HistoryPage() {
     user,
     currentBrand,
     refreshCurrentBrand,
+    ensureHeavyWorkspace,
     isInitialized: authInitialized,
     isLoading: authLoading,
   } = useAuthStore();
@@ -25,7 +27,9 @@ export function HistoryPage() {
     }
 
     let brand = currentBrand;
-    if (!brand && user) {
+    if (isHeavyWorkspaceRuntime() && user) {
+      brand = await ensureHeavyWorkspace();
+    } else if (!brand && user) {
       setBrandResolutionAttempted(false);
       // A hard navigation can finish auth initialization before the async brand
       // hydration callback. Resolve it here as a bounded read-only fallback.
@@ -50,7 +54,7 @@ export function HistoryPage() {
     setIsLoading(true);
     setActivityError(null);
     try {
-      const nextActivity = await fetchWorkspaceActivity(brandId, user?.id);
+      const nextActivity = await fetchWorkspaceActivity(brandId, user?.id, { includeAllLoadedJobs: true });
       if (useAuthStore.getState().currentBrand?.id !== brandId) return;
       setActivity(nextActivity);
     } catch (error) {
@@ -62,7 +66,7 @@ export function HistoryPage() {
         setIsLoading(false);
       }
     }
-  }, [authInitialized, authLoading, currentBrand, refreshCurrentBrand, user]);
+  }, [authInitialized, authLoading, currentBrand, ensureHeavyWorkspace, refreshCurrentBrand, user]);
 
   useEffect(() => {
     void loadActivity();

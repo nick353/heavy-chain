@@ -77,6 +77,28 @@ const CANVAS_EDITOR_PREDICATE = `EXISTS (
   ))
 )`;
 
+// Heavy Chain is intentionally login-only during the internal-beta phase.
+// Light Chain keeps its existing editor write boundary; only the dedicated
+// Heavy workspace allows an authenticated brand member to save Canvas state.
+const CANVAS_HEAVY_MEMBER_PREDICATE = `EXISTS (
+  SELECT 1 FROM brands b WHERE b.id = ? AND (b.owner_id = ? OR EXISTS (
+    SELECT 1 FROM brand_members bm WHERE bm.brand_id = b.id AND bm.user_id = ?
+      AND bm.joined_at IS NOT NULL AND bm.role IN ('owner','admin','editor','viewer')
+  ))
+)`;
+
+async function canvasWritePolicy(env: CoreEnv, brandID: string): Promise<{
+  requiredRole: "viewer" | "editor";
+  predicate: string;
+}> {
+  const row = await env.DB.prepare(`SELECT name FROM brands WHERE id = ? LIMIT 1`).bind(brandID).first<{ name: string }>();
+  const heavy = row?.name === "Heavy Chain Workspace";
+  return {
+    requiredRole: heavy ? "viewer" : "editor",
+    predicate: heavy ? CANVAS_HEAVY_MEMBER_PREDICATE : CANVAS_EDITOR_PREDICATE,
+  };
+}
+
 const sameCanvasJson = (left: unknown, right: unknown): boolean => {
   const remaining: Array<[unknown,unknown]> = [[left,right]];
   while (remaining.length) {
@@ -1471,7 +1493,8 @@ async function readCanvasDocument(request: Request, env: CoreEnv, documentID: st
 async function createCanvasDocument(request: Request, env: CoreEnv): Promise<Response> {
   const input = await readJson(request);
   if (!input || !validID(input.brand_id)) return errorResponse("invalid_canvas_document", 400);
-  const access = await requireBrandRole(request, env, input.brand_id, "editor");
+  const policy = await canvasWritePolicy(env, input.brand_id);
+  const access = await requireBrandRole(request, env, input.brand_id, policy.requiredRole);
   if (access instanceof Response) return access;
   const id = input.id === undefined ? crypto.randomUUID() : (validID(input.id) ? input.id : "invalid");
   const title = boundedText(input.title, 160) ?? "無題のプロジェクト";
@@ -1483,7 +1506,7 @@ async function createCanvasDocument(request: Request, env: CoreEnv): Promise<Res
     await env.DB.prepare(
       `INSERT INTO canvas_documents
        (id, owner_id, brand_id, title, snapshot, snapshot_version, revision, created_at, updated_at)
-       SELECT ?, ?, ?, ?, ?, 1, 0, ?, ? WHERE ${CANVAS_EDITOR_PREDICATE}
+       SELECT ?, ?, ?, ?, ?, 1, 0, ?, ? WHERE ${policy.predicate}
        ON CONFLICT(id) DO NOTHING`,
     ).bind(id, access, input.brand_id, title, snapshot, now, now, input.brand_id, access, access).run();
   } catch {
@@ -1491,7 +1514,7 @@ async function createCanvasDocument(request: Request, env: CoreEnv): Promise<Res
     // identity below; never generate a replacement ID or overwrite the row.
     writeFailed = true;
   }
-  const freshAccess = await requireBrandRole(request, env, input.brand_id, "editor");
+  const freshAccess = await requireBrandRole(request, env, input.brand_id, policy.requiredRole);
   if (freshAccess instanceof Response) return freshAccess;
   if (freshAccess !== access) return errorResponse("unauthorized", 401);
   let row: CanvasDocumentRow | null;
@@ -1516,17 +1539,19 @@ async function updateCanvasDocument(request: Request, env: CoreEnv, documentID: 
   const userID = await principal(request, env);
   if (userID instanceof Response) return userID;
   const current = await env.DB.prepare(`SELECT brand_id FROM canvas_documents WHERE id = ? LIMIT 1`).bind(documentID).first<{ brand_id: string }>();
-  if (!current || !roleAtLeast(await brandRole(env, userID, current.brand_id), "editor")) return errorResponse("not_found", 404);
+  if (!current) return errorResponse("not_found", 404);
+  const policy = await canvasWritePolicy(env, current.brand_id);
+  if (!roleAtLeast(await brandRole(env, userID, current.brand_id), policy.requiredRole)) return errorResponse("not_found", 404);
   let changes = 0;
   try {
     const result = await env.DB.prepare(
       `UPDATE canvas_documents SET title = ?, snapshot = ?, revision = revision + 1, updated_at = ?
-       WHERE id = ? AND brand_id = ? AND revision = ? AND ${CANVAS_EDITOR_PREDICATE}`,
+       WHERE id = ? AND brand_id = ? AND revision = ? AND ${policy.predicate}`,
     ).bind(title ?? "無題のプロジェクト", snapshot, new Date().toISOString(), documentID, current.brand_id, expectedRevision,
       current.brand_id,userID,userID).run();
     changes = result.meta.changes;
   } catch { return errorResponse("canvas_document_unavailable", 503); }
-  const freshAccess = await requireBrandRole(request, env, current.brand_id, "editor");
+  const freshAccess = await requireBrandRole(request, env, current.brand_id, policy.requiredRole);
   if (freshAccess instanceof Response) return freshAccess;
   return changes > 0 ? readCanvasDocument(request, env, documentID) : errorResponse("revision_conflict", 409);
 }

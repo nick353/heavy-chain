@@ -9,6 +9,7 @@ import {
   normalizeCanvasImageEditCandidates,
   settleCanvasImageEditCandidatesSequentially,
 } from '../src/lib/canvasImageEditResults.ts';
+import { PROTECTED_IMAGE_EDIT_MODE } from '../src/lib/protectedImageEditContract.ts';
 import type { ImageEditResult } from '../src/lib/imageApi.ts';
 import type { CanvasObject } from '../src/stores/canvasStore.ts';
 
@@ -83,7 +84,7 @@ test('Cloudflare edit rejects unsupported mask and transparent-output modes befo
   assert.match(image, /if \(body\.maskDataUrl \|\| body\.maskApplied === true \|\| body\.outputBackground === 'transparent'\)/);
   assert.match(image, /Cloudflare画像AIでまだ対応していません/);
   assert.match(image, /const path = `\/v1\/image-ai\/requests\/\$\{id\}`/);
-  assert.match(image, /remember\(key,id\)/);
+  assert.match(image, /rememberPendingIdentity\(key,id,options\.assertCurrent\)/);
 });
 
 test('partial edit submit makes one four-candidate batch and refuses incomplete persistence', async () => {
@@ -101,7 +102,9 @@ test('partial edit submit makes one four-candidate batch and refuses incomplete 
   assert.match(handler, /loadCanvasImage\(candidate\.imageUrl\)/);
   assert.match(handler, /preloadedImagesById\.get\(candidate\.imageId\)/);
   assert.match(handler, /placement\.placed\.length !== 4/);
-  assert.match(handler, /deleteObject\(objectId\)/);
+  assert.doesNotMatch(handler, /deleteObject\(objectId\)/);
+  assert.match(handler, /recoverProtectedCanvasBatchComposite/);
+  assert.match(handler, /assertCanvasCanonicalBatchResult\(result\)/);
   assert.match(handler, /candidates: placement\.placed\.map\(\(\{ candidate \}\) => candidate\)/);
   assert.match(handler, /externalInpaintRequestCount: result\.provider === 'workers_ai' \? result\.requestedCandidateCount : 1/);
   assert.match(handler, /clientSubmissionCount:1/);
@@ -311,4 +314,19 @@ test('a fully erased mask is rejected while a painted selection remains editable
   ]);
   assert.equal(hasEditableMaskPixels(painted), true);
   assert.equal(hasEditableMaskPixels(erasedBackToOpaque), false);
+});
+
+
+test('canonical grouping preserves ordinary and Material count1 saved identities and existing protected Workers grouping', () => {
+ const candidate=(index:number)=>({imageUrl:`https://final.test/${index}`,jobId:`wa-saved-${index}`,imageId:`wa-saved-${index}`,storagePath:`generated-images/wa-saved-${index}`,candidateIndex:index,persistenceStatus:'completed' as const});
+ const material:ImageEditResult={success:true,provider:'openai',protectedRegionComposited:true,requestedCandidateCount:1,persistedCandidateCount:1,persistenceStatus:'completed',images:[candidate(0)]};
+ assert.deepEqual(normalizeCanvasImageEditCandidates(material),[candidate(0)]);
+ const ordinary:ImageEditResult={success:true,provider:'openai',images:[{...candidate(0),jobId:'ordinary'},{...candidate(1),jobId:'ordinary'}]};assert.equal(normalizeCanvasImageEditCandidates(ordinary).length,2);
+ const workers:ImageEditResult={success:true,provider:'workers_ai',protectedRegionComposited:true,maskTreatment:PROTECTED_IMAGE_EDIT_MODE,batchId:'worker-batch',images:Array.from({length:4},(_,i)=>({...candidate(i),batchId:'worker-batch'}))};
+ // The protected Workers mode and grouping path are unchanged.
+ assert.equal(normalizeCanvasImageEditCandidates(workers).length,4);
+ assert(normalizeCanvasImageEditCandidates(workers).every(c=>c.batchId==='worker-batch'));
+ const requestId='12345678-1234-4234-8234-123456789abc';
+ const withBinding={...workers,canvasProtectedBatchBinding:{version:1,requestId,batchStateArtifactId:`canvas-protected-batch-${requestId}`,requestedCandidateCount:4,featureType:'canvas-partial-edit',canvasProjectId:'doc',parentObjectId:'source',generation:1,brandId:'brand',scopeId:'user',generationInputSignature:'a'.repeat(64),source:{kind:'object',objectId:'source',identityDigest:'b'.repeat(64)}}};
+ assert.deepEqual(normalizeCanvasImageEditCandidates(withBinding),normalizeCanvasImageEditCandidates(workers));
 });

@@ -129,7 +129,9 @@ test('Lightchain AI fitting exposes the same library-first garment entry', () =>
   assert.match(lightchainWorkbench, /const providerRequestImageUrl = await prepareProviderImageUrl\(providerSourceImageUrl\)/);
   assert.match(lightchainWorkbench, /imageUrl: providerRequestImageUrl/);
   assert.match(lightchainWorkbench, /const brandResolutionPending = !isAuthInitialized[\s\S]*brandState\.status !== 'success_nonempty'/);
-  assert.match(lightchainWorkbench, /const aiGenerateDisabled = brandResolutionPending/);
+  assert.match(lightchainWorkbench, /const heavyLoginOnlyReady = isHeavyRoute && heavyOwnedFeature && Boolean\(user\?\.id\)/);
+  assert.match(lightchainWorkbench, /const interactiveBrandPending = brandResolutionPending && !heavyLoginOnlyReady/);
+  assert.match(lightchainWorkbench, /const aiGenerateDisabled = interactiveBrandPending/);
 });
 
 test('Lightchain AI fitting readback reflects the selected garment state', () => {
@@ -181,8 +183,9 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /data-testid="fabric-result-history"/);
   assert.match(page, /value=\{fabricPrompt\}[\s\S]*?onChange=\{\(event\) => setFabricPrompt\(event\.target\.value\)\}/);
   assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
-  assert.match(page, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
-  assert.match(page, /const heavyEntitlementReady = !heavyOwnedFeature \|\| \([\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(page, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyAccessReady/);
+  assert.match(page, /const heavyAccessReady = !heavyOwnedFeature \|\| heavyLoginOnlyReady/);
+  assert.match(page, /const heavyLoginOnlyReady = heavyOwnedFeature && Boolean\(user\?\.id\)/);
   assert.doesNotMatch(page, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(page, /rightsConfirmationOpen|rightsConfirmationDraft|lightchain-material-rights-confirmation|権利を確認してAI生成|PermissionLockedButton/);
   assert.match(page, /data-testid="lightchain-print-generate"/);
@@ -223,7 +226,7 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /const handleGenerate = async \(\) => \{/);
   assert.match(page, /const providerResult = await withTimeout\(/);
   assert.match(page, /lightchainFeatureId: 'fabric-image'/);
-  assert.match(page, /maskApplied: true/);
+  assert.match(page, /maskApplied: providerResult\.maskApplied === true/);
   assert.match(page, /protectedRegionComposited: true/);
   assert.match(page, /data-testid="lightchain-fabric-generate"/);
   assert.ok(page.includes("canvas.toBlob"));
@@ -238,17 +241,16 @@ test('fabric direct UI does not add a Heavy-only visible preset picker', () => {
   assert.match(page, /const fabricVariants = \[/);
 });
 
-test('Lightchain parity routes use the Lightchain header identity', () => {
+test('Lightchain parity routes use the Heavy Chain header identity', () => {
   const layout = fs.readFileSync('src/components/layout/Layout.tsx', 'utf8');
   const lightchainHeader = layout.slice(
     layout.indexOf('{isLightchainRoute ? ('),
     layout.indexOf(') : (', layout.indexOf('{isLightchainRoute ? (')),
   );
   assert.match(layout, /import \{ HeavyChainLogo \} from '\.\.\/icons';/);
-  assert.match(lightchainHeader, /aria-label="Lightchain AI"/);
-  assert.match(lightchainHeader, /<LightchainLogo \/>/);
-  assert.doesNotMatch(lightchainHeader, />\s*Lightchain AI\s*</);
-  assert.doesNotMatch(lightchainHeader, /HEAVY CHAIN/);
+  assert.match(lightchainHeader, /aria-label="Heavy Chain"/);
+  assert.match(lightchainHeader, /<HeavyChainLogo/);
+  assert.doesNotMatch(lightchainHeader, /LightchainLogo|Lightchain AI|LIGHTCHAIN/);
   assert.match(layout, /const lightchainWorkspaceRoutes = \['\/gallery', '\/history', '\/jobs'\]/);
 });
 
@@ -269,7 +271,7 @@ test('current /model route uses the provider-capable AI fitting workbench', () =
   assert.doesNotMatch(workbench, />HEAVY CHAIN ORDER SHEET<\/text>/);
 });
 
-test('Lightchain generation entrypoints do not expose the legacy Heavy branding', () => {
+test('Heavy generation entrypoints expose Heavy branding while retaining Lightchain compatibility routes', () => {
   const layout = fs.readFileSync('src/components/layout/Layout.tsx', 'utf8');
   const generate = fs.readFileSync('src/pages/GeneratePage.tsx', 'utf8');
   const parityPages = fs.readFileSync('src/pages/LightchainParityPages.tsx', 'utf8');
@@ -280,7 +282,7 @@ test('Lightchain generation entrypoints do not expose the legacy Heavy branding'
 
   assert.match(layout, /concat\(\['\/generate', '\/editor\/changeColor'\]\)/);
   assert.doesNotMatch(generate, /HEAVY CHAIN \/ ENTRY/);
-  assert.doesNotMatch(generate, /Heavy Chain usage/);
+  assert.match(generate, /Heavy Chain usage/);
   assert.doesNotMatch(parityPages, /Heavy Chainで続ける/);
   assert.doesNotMatch(parityPages, /Heavy Chainでは/);
   assert.doesNotMatch(unifiedCatalog, /title: 'Heavy Chain Lab'/);
@@ -289,7 +291,7 @@ test('Lightchain generation entrypoints do not expose the legacy Heavy branding'
   assert.doesNotMatch(printingComposer, />Heavy Chain \/ printing-image/);
 });
 
-test('Lightchain parity pages do not render Heavy-only identity or prompt defaults', () => {
+test('Lightchain parity pages use Heavy identity without changing their source geometry', () => {
   const parityPages = [
     'src/pages/FashionStudioPage.tsx',
     'src/pages/PatternWorkspacePage.tsx',
@@ -297,9 +299,10 @@ test('Lightchain parity pages do not render Heavy-only identity or prompt defaul
     'src/pages/LabPage.tsx',
   ].map((path) => fs.readFileSync(path, 'utf8')).join('\n');
 
-  assert.doesNotMatch(parityPages, /HEAVY CHAIN|HEAVYCHAIN|Heavy Chain/);
-  assert.match(parityPages, /LIGHTCHAIN \/ STUDIO/);
-  assert.match(parityPages, /LIGHTCHAIN \/ MODELS/);
+  assert.match(parityPages, /HEAVY CHAIN \/ STUDIO/);
+  assert.match(parityPages, /HEAVY CHAIN \/ MODELS/);
+  assert.match(parityPages, /HEAVY CHAIN \/ LAB START/);
+  assert.doesNotMatch(parityPages, /Lightchain AI|LIGHTCHAIN \/ STUDIO|LIGHTCHAIN \/ MODELS|LIGHTCHAIN PARITY/);
   assert.match(parityPages, /ラボで試す/);
 });
 
@@ -325,16 +328,34 @@ test('access-fence abort paths never invoke artifact cleanup', () => {
   assert.match(material, /assertCurrentAuthBrandFence\(authBrandFence, 'printing_preview_stale_cleanup_guard'\);\s*deleteWorkspaceArtifactsPersisted/);
 });
 
-test('History and Jobs lineage labels use the Lightchain identity', () => {
+test('History and Jobs keep Lightchain storage labels but render Heavy identity', () => {
   const summary = fs.readFileSync('src/lib/sourceContextSummary.ts', 'utf8');
   const activity = fs.readFileSync('src/lib/workspaceActivity.ts', 'utf8');
+  const displaySurfaces = [
+    fs.readFileSync('src/pages/JobsPage.tsx', 'utf8'),
+    fs.readFileSync('src/pages/GalleryPage.tsx', 'utf8'),
+    fs.readFileSync('src/components/workspace/ActivityTimeline.tsx', 'utf8'),
+    fs.readFileSync('src/components/workspace/FailureRetryCard.tsx', 'utf8'),
+  ];
 
   assert.match(summary, /'Lightchain機能'/);
   assert.match(summary, /'Lightchain task'/);
   assert.match(summary, /'入力工程（申告）'/);
-  assert.doesNotMatch(summary, /'Heavy Chain機能'|'Heavy Chain task'|'Heavy Chain steps'/);
+  assert.match(summary, /displaySourceSummaryLabel/);
+  for (const surface of displaySurfaces) assert.match(surface, /displaySourceSummaryLabel/);
   assert.match(activity, /'実行記録'/);
   assert.match(activity, /'Lightchain状態'/);
+});
+
+test('Heavy material activity titles and new Canvas projects use Heavy identity', () => {
+  const activity = fs.readFileSync('src/lib/workspaceActivity.ts', 'utf8');
+  const material = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+  assert.match(activity, /const getFeatureLabel = \(featureType: string \| null \| undefined, metadata\?: Json \| null\)/);
+  assert.match(activity, /featureType === 'lightchain-fabric-image'/);
+  assert.match(activity, /heavyChainSource \? 'Heavy Chain 生地イメージ'/);
+  assert.match(activity, /title: getFeatureLabel\(job\.feature_type, job\.input_params\)/);
+  assert.match(material, /const projectBrandLabel = isHeavyRoute \? 'Heavy Chain' : 'Lightchain'/);
+  assert.match(material, /createProject\(`\$\{projectBrandLabel\}: \$\{result\.title\}`/);
 });
 
 test('direct fabric route keeps the Lightchain single-input surface without an extra reference-type toggle', () => {
@@ -392,6 +413,14 @@ test('unified printing workbench keeps garment and print inputs on Lightchain re
   );
   assert.match(designSelector, /allowedReferenceTypes=\{\['pattern'\]\}/);
   assert.doesNotMatch(designSelector, /allowedReferenceTypes=\{\['base', 'pattern'\]\}/);
+});
+
+test('Heavy printing rejects unreadable source files into an explicit retryable state', () => {
+  const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+  assert.match(page, /const sourceLoadFailure = \/画像を読み込めませんでした\|安全なBlob\|image_blob_too_large\|SVG画像\|image_fetch_\/i/);
+  assert.match(page, /if \(heavyOwnedFeature && !sourceLoadFailure\)/);
+  assert.match(page, /setPrintDesignCutoutStates\(\(current\) => \(\{ \.\.\.current, \[index\]: 'error' \}\)\)/);
+  assert.match(page, /data-testid="lightchain-material-retry-printing"/);
 });
 
 test('AI fitting early route has no extra rights confirmation surface', () => {

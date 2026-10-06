@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { readWorkspaceArtifactImage } from '../lib/workspaceArtifactImageReadback';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
@@ -26,7 +27,6 @@ import {
 } from '../lib/legalSafetyGuard';
 import {
   deleteWorkspaceArtifactsPersisted,
-  getWorkspaceArtifactCanonicalStoragePath,
   listWorkspaceArtifacts,
   listWorkspaceGeneratedImages,
   saveWorkspaceArtifactPersisted,
@@ -45,7 +45,7 @@ import {
   prepareFittingDraftMaterialReferenceForPersistence,
 } from '../lib/fittingPersistence';
 import { resolveGeneratedImageUrl, withSignedImageUrls } from '../lib/storage';
-import { asGeneratedImageListRow, cloudflareDataPlane, type CloudflareHeavyEntitlement } from '../lib/cloudflareApi';
+import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import { CLOUDFLARE_IMAGE_NOTICE } from '../lib/cloudflareImageAI';
 import { mergeGeneratedImagesByCanonicalIdentity } from '../lib/generatedImageIdentity';
 import {
@@ -53,6 +53,7 @@ import {
   type GeneratedImageListRow,
 } from '../lib/generatedImageQuery';
 import { useAuthStore } from '../stores/authStore';
+import { isHeavyWorkspaceBrandName, isHeavyWorkspaceRuntime } from '../lib/heavyWorkspace';
 import {
   assertAuthBrandFence,
   captureAuthBrandFence,
@@ -93,6 +94,25 @@ const FITTING_LOCAL_PREVIEW_FEATURE_TYPE = 'model-matrix-local-preview';
 const fittingWorkflowContract = getLightchainUnifiedFeatureWorkflowContract('ai-fitting');
 const FITTING_LOCAL_PREVIEW_BACKEND = 'browser-local-fitting-brief-v1';
 type FittingSourceReadback = typeof FITTING_SOURCE_READBACK;
+
+/**
+ * A Heavy provider result with a canonical remote path is durable even when
+ * the browser's optional local cache is full.  Local cache failures must not
+ * turn an otherwise completed login-only generation into a user-facing
+ * generation failure.
+ */
+const isLocalCacheCapacityError = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const code = (error as { code?: unknown }).code;
+  return code === 'LOCAL_WORKSPACE_QUOTA_EXCEEDED'
+    || code === 'LOCAL_WORKSPACE_STORAGE_WRITE_FAILED'
+    || code === 'LOCAL_WORKSPACE_SAVE_READBACK_FAILED'
+    || code === 'LOCAL_WORKSPACE_REMOTE_PATH_MISSING';
+};
+
+const isRecoverableRemotePersistenceFallback = (error: unknown, hasCanonicalRemotePath: boolean) => (
+  hasCanonicalRemotePath && isLocalCacheCapacityError(error)
+);
 
 type MatrixItem = {
   bodyType: string;
@@ -489,15 +509,6 @@ const isLocalCanvasMaskEngine = (maskEngine?: string | null) => (
 
 const MAX_MODEL_MATRIX_PATTERNS = 3;
 
-const heavyEntitlementMessage = (reason: string | null, loading = false): string => {
-  if (loading || reason === 'heavy_entitlement_read_pending') return 'Heavy利用条件を確認しています…';
-  if (reason === 'heavy_generation_disabled') return 'Heavy生成機能は未実装です';
-  if (reason && /(terms|rights|attestation|binding)/i.test(reason)) {
-    return 'Heavy側の規約同意・権利表明が必要です';
-  }
-  return 'Heavy利用条件を確認できません';
-};
-
 const buildGenerationBlockers = ({
   currentBrandLoaded,
   rightsConfirmed,
@@ -523,7 +534,7 @@ const buildGenerationBlockers = ({
 }) => {
   if (isGenerating) return ['生成中です'];
   const blockers: string[] = [];
-  if (!currentBrandLoaded) blockers.push('ブランド読込');
+  if (!currentBrandLoaded) blockers.push('ログイン');
   if (!garmentImageUrl) blockers.push('衣服画像');
   if (
     !extractedGarmentImageUrl
@@ -533,7 +544,7 @@ const buildGenerationBlockers = ({
   ) {
     blockers.push('高精度AI切り抜き');
   }
-  if (!rightsConfirmed) blockers.push('Heavy利用条件');
+  if (!rightsConfirmed) blockers.push('ログイン');
   if (!productDescription.trim()) blockers.push('生成brief');
   if (!selectedBodyTypesCount) blockers.push('体型');
   if (!selectedAgeGroupsCount) blockers.push('年代');
@@ -610,13 +621,20 @@ const buildFittingPreviewSvg = ({
 };
 
 export function FittingPage() {
+  const { currentBrand, user } = useAuthStore();
+  const scope = JSON.stringify([currentBrand?.id ?? null, user?.id ?? null]);
+  return <FittingWorkspace key={scope} />;
+}
+
+function FittingWorkspace() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setFlowState } = useUnifiedWorkspaceFlow();
   const [searchParams] = useSearchParams();
-  const { user, currentBrand } = useAuthStore();
-  const captureCurrentAuthBrandFence = (): AuthBrandFenceSnapshot | null => {
+  const { user, currentBrand, brandState, isInitialized: isAuthInitialized, isLoading: isAuthLoading, ensureHeavyWorkspace } = useAuthStore();
+  const captureCurrentAuthBrandFence = (brandIdOverride?: string | null): AuthBrandFenceSnapshot | null => {
     const state = useAuthStore.getState();
-    return captureAuthBrandFence(state.brandState, state.user?.id ?? null, state.currentBrand?.id ?? null);
+    return captureAuthBrandFence(state.brandState, state.user?.id ?? null, brandIdOverride ?? state.currentBrand?.id ?? null);
   };
   const assertCurrentAuthBrandFence = (captured: AuthBrandFenceSnapshot | null, phase: string) => {
     const state = useAuthStore.getState();
@@ -647,54 +665,51 @@ export function FittingPage() {
   const fittingDraftRestoredRef = useRef(false);
   const fittingDraftPersistenceErrorRef = useRef(false);
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
-  const [heavyEntitlement, setHeavyEntitlement] = useState<CloudflareHeavyEntitlement | null>(null);
-  const [heavyEntitlementLoading, setHeavyEntitlementLoading] = useState(false);
   const [showGallerySelector, setShowGallerySelector] = useState(false);
   const [showModelGallerySelector, setShowModelGallerySelector] = useState(false);
   const resumeJob = searchParams.get('resumeJob');
   const libraryArtifactId = searchParams.get('libraryArtifactId');
+  // Invalidate pending Library reads during render, including A -> B -> A before passive cleanup.
+  const libraryRenderContextKey = JSON.stringify([
+    user?.id ?? null, currentBrand?.id ?? null, isAuthInitialized, isAuthLoading,
+    brandState.requestGeneration, location.pathname, location.search, location.hash, libraryArtifactId,
+  ]);
+  const libraryRenderContextRef = useRef({ key: libraryRenderContextKey, revision: 0 });
+  if (libraryRenderContextRef.current.key !== libraryRenderContextKey) {
+    libraryRenderContextRef.current = {
+      key: libraryRenderContextKey,
+      revision: libraryRenderContextRef.current.revision + 1,
+    };
+  }
+  const libraryRenderRevision = libraryRenderContextRef.current.revision;
+  const libraryMountLifetimeRef = useRef({ mounted: false, revision: 0 });
+  useLayoutEffect(() => {
+    libraryMountLifetimeRef.current = {
+      mounted: true,
+      revision: libraryMountLifetimeRef.current.revision + 1,
+    };
+    return () => {
+      libraryMountLifetimeRef.current = {
+        mounted: false,
+        revision: libraryMountLifetimeRef.current.revision + 1,
+      };
+    };
+  }, []);
   const heavyFallbackSource = searchParams.get('source') === 'lightchain-model-heavy-fallback';
-  const heavyGenerationReady = heavyEntitlement?.allowed === true
-    && heavyEntitlement.requestScopedAttestationRequired === false;
-  const heavyEntitlementReason = heavyEntitlement?.reason
-    ?? (heavyEntitlementLoading ? 'heavy_entitlement_read_pending' : 'heavy_entitlement_unavailable');
-  const heavyEntitlementDisplayMessage = heavyEntitlementMessage(heavyEntitlementReason, heavyEntitlementLoading);
+  // Heavy is login-first. The server automatically provides a private
+  // personal workspace for persistence, so no brand setup or rights ceremony
+  // is exposed before image generation.
+  const heavyWorkspaceRuntime = isHeavyWorkspaceRuntime();
+  const heavyWorkspaceReady = Boolean(user?.id && isHeavyWorkspaceBrandName(currentBrand?.name));
+  const heavyGenerationReady = Boolean(currentBrand?.id && user?.id);
+  const heavyAccessMessage = 'ログイン後にワークスペースを自動準備します。未ログイン中は生成を準備できません。';
 
   useEffect(() => {
-    let cancelled = false;
-    const brandId = currentBrand?.id;
-    if (!brandId) {
-      setHeavyEntitlement(null);
-      setHeavyEntitlementLoading(false);
-      return () => { cancelled = true; };
-    }
-    if (!cloudflareDataPlane) {
-      setHeavyEntitlement(null);
-      setHeavyEntitlementLoading(false);
-      return () => { cancelled = true; };
-    }
-    setHeavyEntitlementLoading(true);
-    void cloudflareDataPlane.getHeavyEntitlement(brandId, 'model-matrix')
-      .then((status) => {
-        if (!cancelled) setHeavyEntitlement(status);
-      })
-      .catch(() => {
-        if (!cancelled) setHeavyEntitlement({
-          allowed: false,
-          reason: 'heavy_entitlement_unavailable',
-          termsVersion: null,
-          rightsVersion: null,
-          termsAcceptanceId: null,
-          rightsAttestationId: null,
-          requestBinding: null,
-          requestScopedAttestationRequired: true,
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setHeavyEntitlementLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [currentBrand?.id]);
+    const needsHeavyWorkspace = heavyWorkspaceRuntime
+      ? !heavyWorkspaceReady
+      : !currentBrand?.id;
+    if (user?.id && needsHeavyWorkspace) void ensureHeavyWorkspace();
+  }, [currentBrand?.id, currentBrand?.name, ensureHeavyWorkspace, heavyWorkspaceReady, heavyWorkspaceRuntime, user?.id]);
 
   const garmentImageUrl = materialReference.imageUrl || undefined;
   const extractedGarmentImageUrl = materialReference.extractedImageUrl || undefined;
@@ -779,7 +794,7 @@ export function FittingPage() {
       }
 
       let restored = resumed.materialReference;
-      if (!restored.imageUrl && restored.sourceStoragePath) {
+      if (restored.sourceStoragePath) {
         try {
           restored = {
             ...restored,
@@ -828,18 +843,43 @@ export function FittingPage() {
         }
       }
     };
-    void restoreResumeMaterial();
+    void restoreResumeMaterial().catch(() => {
+      if (!cancelled) {
+        setResumeInputReadback('unavailable');
+        setFittingDraftPersistenceStatus('unavailable');
+        setFittingDraftPersistenceMessage('保存済みFitting入力を読み込めませんでした。元の素材を確認してください。');
+      }
+    });
     return () => {
       cancelled = true;
     };
   }, [currentBrand?.id, resetFittingDraftPersistenceState, resumeJob, user?.id]);
 
   useEffect(() => {
-    if (!libraryArtifactId || !currentBrand?.id) return;
+    if (!libraryArtifactId || !currentBrand?.id || !user?.id || !isAuthInitialized || isAuthLoading) return;
     let cancelled = false;
+    const contextRevision = libraryRenderRevision;
+    const lifetimeRevision = libraryMountLifetimeRef.current.revision;
+    const authBrandFence = captureCurrentAuthBrandFence();
+    const isCurrentLibraryContext = () => {
+      const fresh = useAuthStore.getState();
+      if (cancelled || libraryRenderContextRef.current.revision !== contextRevision
+        || !libraryMountLifetimeRef.current.mounted || libraryMountLifetimeRef.current.revision !== lifetimeRevision
+        || !fresh.isInitialized || fresh.isLoading || !authBrandFence
+        || authBrandFence.userId !== user.id || authBrandFence.brandId !== currentBrand.id
+        || authBrandFence.requestGeneration !== brandState.requestGeneration) return false;
+      try {
+        assertCurrentAuthBrandFence(authBrandFence, 'library_restoration');
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    if (!isCurrentLibraryContext()) return;
     const artifact = listWorkspaceArtifacts(currentBrand.id, user?.id)
       .find((candidate) => candidate.id === libraryArtifactId);
     if (!artifact) {
+      if (!isCurrentLibraryContext()) return;
       setResumeInputReadback('unavailable');
       setFittingDraftPersistenceStatus('unavailable');
       setFittingDraftPersistenceMessage('Library素材を読み込めませんでした。Libraryから素材を選び直してください。');
@@ -847,23 +887,15 @@ export function FittingPage() {
     }
 
     const restoreLibraryArtifact = async () => {
-      const sourceStoragePath = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
-      let imageUrl = artifact.imageUrl;
-      if (!imageUrl && sourceStoragePath) {
-        try {
-          imageUrl = await resolveGeneratedImageUrl(sourceStoragePath);
-        } catch {
-          if (!cancelled) {
-            setResumeInputReadback('unavailable');
-            setFittingDraftPersistenceStatus('unavailable');
-            setFittingDraftPersistenceMessage('Library素材の再署名に失敗しました。Libraryから素材を選び直してください。');
-          }
-          return;
-        }
-      }
-      if (!imageUrl || cancelled) return;
+      if (!isCurrentLibraryContext()) return;
+      const restoredSource = await readWorkspaceArtifactImage(artifact,{brandId:currentBrand.id,userId:user.id});
+      if (!isCurrentLibraryContext()) return;
+      const sourceStoragePath = restoredSource.storagePath;
+      const imageUrl = restoredSource.imageUrl;
+      if (!imageUrl) return;
 
       const metadataSourceImageId = artifact.metadata.sourceImageId ?? artifact.metadata.remoteImageId;
+      if (!isCurrentLibraryContext()) return;
       setMaterialReference({
         ...initialMaterialReference,
         imageUrl,
@@ -880,11 +912,13 @@ export function FittingPage() {
       setFittingDraftPersistenceMessage('Library素材を読み込みました。入力条件を確認して次へ進めます。');
     };
 
-    void restoreLibraryArtifact();
+    void restoreLibraryArtifact().catch(() => {
+      if (isCurrentLibraryContext()) { setResumeInputReadback('unavailable'); setFittingDraftPersistenceStatus('unavailable'); setFittingDraftPersistenceMessage('Library素材の元画像を読み込めませんでした。素材を選び直してください。'); }
+    });
     return () => {
       cancelled = true;
     };
-  }, [currentBrand?.id, libraryArtifactId, user?.id]);
+  }, [currentBrand?.id, libraryArtifactId, user?.id, isAuthInitialized, isAuthLoading, brandState.requestGeneration, libraryRenderContextKey, libraryRenderRevision]);
 
   useEffect(() => {
     if (resumeJob || libraryArtifactId || !currentBrand?.id || !user?.id) return;
@@ -894,7 +928,7 @@ export function FittingPage() {
 
     const restoreDraft = async () => {
       let restored = draft.materialReference;
-      if (!restored.imageUrl && restored.sourceStoragePath) {
+      if (restored.sourceStoragePath) {
         try {
           restored = {
             ...restored,
@@ -1009,9 +1043,17 @@ export function FittingPage() {
     });
 
     if (!persisted.ok) {
-      fittingDraftPersistenceErrorRef.current = true;
-      setFittingDraftPersistenceStatus('failed');
-      setFittingDraftPersistenceMessage(`Fitting入力の保存確認に失敗しました。${getErrorMessage(persisted.error)}`);
+      // Draft persistence is an optional local index. A failure here must not
+      // create a visible access gate or block the current Heavy session; the
+      // provider generation path below remains authoritative.
+      console.warn('Heavy fitting draft local persistence skipped.', {
+        code: persisted.error instanceof Error ? (persisted.error as { code?: unknown }).code : undefined,
+      });
+      fittingDraftPersistenceErrorRef.current = false;
+      setFittingDraftPersistenceStatus(preparedMaterialReference.sourceStoragePath ? 'saved' : 'unavailable');
+      setFittingDraftPersistenceMessage(preparedMaterialReference.sourceStoragePath
+        ? 'Fitting入力はHeavyワークスペースに保存済みです。ブラウザのローカルキャッシュは省略しました。'
+        : 'ブラウザのローカルキャッシュを省略しました。このセッションではそのまま生成できます。');
       fittingDraftRestoredRef.current = false;
       return;
     }
@@ -1093,7 +1135,7 @@ export function FittingPage() {
 
   const canGenerate = useMemo(() => {
     return Boolean(
-      currentBrand
+      user?.id
       && heavyGenerationReady
       && !isGenerating
       && garmentImageUrl
@@ -1107,7 +1149,6 @@ export function FittingPage() {
       && patternCount <= MAX_MODEL_MATRIX_PATTERNS,
     );
   }, [
-    currentBrand,
     extractedGarmentImageUrl,
     garmentImageUrl,
     isGenerating,
@@ -1124,7 +1165,7 @@ export function FittingPage() {
   // excludes provider-only entitlement gates; actual Heavy generation below
   // remains guarded by heavyGenerationReady.
   const fittingPreviewBlockers = useMemo(() => buildFittingPreviewBlockers({
-    currentBrandLoaded: Boolean(currentBrand),
+    currentBrandLoaded: Boolean(user?.id),
     rightsConfirmed: true,
     isGenerating,
     garmentImageUrl,
@@ -1133,7 +1174,7 @@ export function FittingPage() {
     selectedAgeGroupsCount: selectedAgeGroups.length,
     patternCount,
   }), [
-    currentBrand,
+    user?.id,
     garmentImageUrl,
     isGenerating,
     patternCount,
@@ -1151,7 +1192,7 @@ export function FittingPage() {
     .map((option) => option.label);
   const genderLabel = genderOptions.find((option) => option.id === gender)?.label ?? '女性';
   const generationBlockers = useMemo(() => buildGenerationBlockers({
-    currentBrandLoaded: Boolean(currentBrand),
+    currentBrandLoaded: Boolean(user?.id),
     rightsConfirmed: heavyGenerationReady,
     isGenerating,
     garmentImageUrl,
@@ -1162,7 +1203,7 @@ export function FittingPage() {
     selectedAgeGroupsCount: selectedAgeGroups.length,
     patternCount,
   }), [
-    currentBrand,
+    user?.id,
     extractedGarmentImageUrl,
     garmentImageUrl,
     isGenerating,
@@ -1208,11 +1249,7 @@ export function FittingPage() {
       return;
     }
     if (!currentBrand?.id) {
-      setErrorMessage('保存先ブランドを取得できませんでした。ブランド設定を確認してください。');
-      return;
-    }
-    if (!heavyGenerationReady) {
-      setErrorMessage(heavyEntitlementDisplayMessage);
+      setErrorMessage('保存先を準備できませんでした。もう一度お試しください。');
       return;
     }
 
@@ -1396,9 +1433,12 @@ export function FittingPage() {
     ));
   };
 
-	  const runGeneration = async (request: LastRequest) => {
-    if (!currentBrand || !user?.id) {
-      setErrorMessage('ブランドを読み込んでからもう一度試してください。');
+  const runGeneration = async (request: LastRequest) => {
+    const generationBrand = currentBrand ?? (user?.id ? await ensureHeavyWorkspace() : null);
+    if (!generationBrand || !user?.id) {
+      setErrorMessage(user?.id
+        ? '利用環境を準備できませんでした。もう一度お試しください。'
+        : 'ログインしてください。');
       return;
 	    }
 	    if (
@@ -1420,11 +1460,6 @@ export function FittingPage() {
     setIsGenerating(true);
     setErrorMessage('');
 
-    if (!heavyGenerationReady) {
-      setIsGenerating(false);
-      setErrorMessage(heavyEntitlementDisplayMessage);
-      return;
-    }
     const legalSafetyAssessment = validateLegalSafetyInput([
       request.productDescription,
       request.materialReference?.fileName,
@@ -1455,7 +1490,7 @@ export function FittingPage() {
       ...(request.compositionPreview ?? {}),
       parityRuntime: parityRuntimeJson,
     };
-    const authBrandFence = captureCurrentAuthBrandFence();
+    const authBrandFence = captureCurrentAuthBrandFence(generationBrand.id);
     if (!authBrandFence) {
       setIsGenerating(false);
       setErrorMessage('ブランドのアクセス確認が完了していないため、生成を開始できません。');
@@ -1587,6 +1622,17 @@ export function FittingPage() {
       });
 
       if (!persisted.ok) {
+        const hasCanonicalRemotePath = Boolean(item.storagePath);
+        if (
+          response.persistenceStatus === 'completed'
+          && isRecoverableRemotePersistenceFallback(persisted.error, hasCanonicalRemotePath)
+        ) {
+          // Provider persistence is the source of truth for a generated Heavy
+          // result. A full browser cache is an optional local-index problem,
+          // not a reason to discard the result or ask the user to retry the
+          // provider request.
+          continue;
+        }
         const cleanup = deleteWorkspaceArtifactsPersisted(generationBrandId, attemptedArtifactIds, user?.id);
         const cleanupMessage = cleanup.ok
           ? ''
@@ -1931,7 +1977,7 @@ export function FittingPage() {
                 },
                 {
                   label: '条件',
-                  detail: heavyGenerationReady ? '商品説明と生成条件が完了' : heavyEntitlementDisplayMessage,
+                  detail: heavyGenerationReady ? '商品説明と生成条件が完了' : heavyAccessMessage,
                   ready: Boolean(productDescription.trim()) && heavyGenerationReady,
                 },
                 {
@@ -2288,14 +2334,6 @@ export function FittingPage() {
                       </button>
                     ))}
                   </div>
-                  {!heavyGenerationReady && (
-                    <div
-                      role="status"
-                      className="flex max-w-xl items-center rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100"
-                    >
-                      {heavyEntitlementDisplayMessage}
-                    </div>
-                  )}
                   <button
                     type="button"
                     onClick={handleGenerate}

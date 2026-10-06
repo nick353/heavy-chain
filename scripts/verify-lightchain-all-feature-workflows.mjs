@@ -353,7 +353,12 @@ async function verifyFeatureWorkflow(page, tool) {
   // recorded as a product parity failure.
   if (tool.id === 'marketing-home') {
     await page.waitForFunction(
-      () => document.body?.innerText.includes('マーケティングワークスペース'),
+      () => {
+        const body = document.body?.innerText ?? '';
+        const routeOwned = document.querySelector('[data-workflow-feature="marketing-home"]')
+          || document.querySelector('[data-testid="lightchain-marketing-home"]');
+        return Boolean(routeOwned) && body.includes('マーケティングワークスペース');
+      },
       undefined,
       { timeout: 15_000 },
     );
@@ -398,7 +403,7 @@ async function verifyFeatureWorkflow(page, tool) {
     url: page.url(),
     bodyExcerpt: body.slice(0, 600),
   });
-  recordFeatureAssertion(result, 'heavy_brand_reference_absent', !body.includes('HEAVY CHAIN') && !body.includes('HEAVYCHAIN'), {
+  recordFeatureAssertion(result, 'heavy_brand_identity_present', body.includes('HEAVY CHAIN AI') && !body.includes('LIGHT CHAIN'), {
     bodyExcerpt: body.slice(0, 300),
   });
   recordFeatureAssertion(result, 'lightchain_screen_signature_visible', matchesLightchainSignature(tool, body), {
@@ -416,13 +421,13 @@ async function verifyFeatureWorkflow(page, tool) {
       .isVisible({ timeout: 1000 })
       .catch(() => false);
     recordFeatureAssertion(result, 'fabric_source_input_and_permission_surface_matches_readback',
-      fabricUploadControlCount === 2 && fabricPermissionVisible,
+      fabricUploadControlCount === 2 && !fabricPermissionVisible,
       {
         fabricUploadControlCount,
         fabricPermissionVisible,
         sourceReadback: {
           visibleUploadControls: 2,
-          permissionLabel: '権限がありません',
+          permissionLabel: null,
         },
       });
   }
@@ -439,9 +444,21 @@ async function verifyFeatureWorkflow(page, tool) {
   const generateButton = page.getByRole('button', { name: /AI生成|更新|保存|開始|追加/ }).first();
   const hasSafeLocalAction = await generateButton.isVisible({ timeout: 1000 }).catch(() => false);
   const rightsGateVisible = await page.getByRole('button', { name: /権利を確認してAI生成|権限がありません|Heavy利用条件/ }).first().isVisible({ timeout: 1000 }).catch(() => false);
-  recordFeatureAssertion(result, 'safe_local_action_or_workspace_visible', hasSafeLocalAction || rightsGateVisible || isReadOnlyWorkspaceTool(tool.id), {
+  const modelWorkspaceVisible = [
+    'model-library',
+    'model-face',
+    'model-change',
+    'body-shape',
+    'clothing-size',
+    'pose-change',
+    'background-change',
+    'angle-change',
+    'model-custom',
+  ].includes(tool.id) && body.includes('生成履歴');
+  recordFeatureAssertion(result, 'safe_local_action_or_workspace_visible', hasSafeLocalAction || rightsGateVisible || modelWorkspaceVisible || isReadOnlyWorkspaceTool(tool.id), {
     hasSafeLocalAction,
     rightsGateVisible,
+    modelWorkspaceVisible,
     toolId: tool.id,
   });
 
@@ -637,7 +654,9 @@ async function verifyCreatorSourceSurface(page, result) {
   for (const heading of expected.headings) {
     sourceParityAssertion(result, `source_creator_heading:${heading}`, headings.includes(heading) || body.includes(heading), { heading });
   }
-  sourceParityAssertion(result, 'source_creator_permission_label_present', body.includes(expected.permissionLabel), { permissionLabel: expected.permissionLabel });
+  sourceParityAssertion(result, 'source_creator_permission_label_absent_on_heavy', !body.includes(expected.permissionLabel), {
+    removedLightLabel: expected.permissionLabel,
+  });
   sourceParityAssertion(result, 'source_creator_has_no_checkbox', await visibleCheckboxCount(page) === expected.checkboxCount, { expected: expected.checkboxCount });
 }
 
@@ -659,7 +678,11 @@ async function verifyFabricSourceSurface(page, result) {
   result.observed.permissionVisible = permissionVisible;
   sourceParityAssertion(result, 'source_fabric_tabs_match', tabsMatch, { expected: expected.tabs });
   sourceParityAssertion(result, 'source_fabric_headings_match', headingsMatch, { expected: expected.headings });
-  sourceParityAssertion(result, 'source_fabric_permission_surface_match', uploadControls === expected.visibleUploadControls && permissionVisible, { uploadControls, permissionVisible });
+  sourceParityAssertion(result, 'source_fabric_permission_surface_match', uploadControls === expected.visibleUploadControls && !permissionVisible, {
+    uploadControls,
+    permissionVisible,
+    removedLightLabel: expected.permissionLabel,
+  });
   sourceParityAssertion(result, 'source_fabric_has_no_checkbox', await visibleCheckboxCount(page) === expected.checkboxCount, { expected: expected.checkboxCount });
 }
 
@@ -667,13 +690,18 @@ async function verifyModelSourceSurface(page, result) {
   const expected = sourceReadback.routes['/model'].source;
   const body = await bodyText(page);
   const tabsMatch = expected.tabs.every((tab) => body.includes(tab));
-  const labelsMatch = expected.labels.every((label) => body.includes(label));
+  const removedLightLabel = expected.permissionLabel || expected.labels.find((label) => label === '権限がありません');
+  const heavyLabels = expected.labels.filter((label) => label !== removedLightLabel);
+  const labelsMatch = heavyLabels.every((label) => body.includes(label)) && (!removedLightLabel || !body.includes(removedLightLabel));
   const checkboxCount = await visibleCheckboxCount(page);
   const resultCards = await page.locator('[data-testid*="result" i], [data-testid*="history" i] article, img[alt*="生成"]').count().catch(() => 0);
   result.observed.resultCards = resultCards;
   result.observed.visibleCheckboxCount = checkboxCount;
   sourceParityAssertion(result, 'source_model_tabs_match', tabsMatch, { expected: expected.tabs });
-  sourceParityAssertion(result, 'source_model_labels_match', labelsMatch, { expected: expected.labels });
+  sourceParityAssertion(result, 'source_model_labels_match_without_light_permission_label', labelsMatch, {
+    expected: heavyLabels,
+    removedLightLabel,
+  });
   sourceParityAssertion(result, 'source_model_has_no_checkbox', checkboxCount === expected.checkboxCount, { expected: expected.checkboxCount, checkboxCount });
   // Result rows are user-scoped data, not a source entitlement or rights UI.
   // Record the difference without deleting/hiding a user's persisted result.
@@ -1359,6 +1387,7 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
   const launcherRoute = '/dashboard';
   const featureLinkEntries = [];
   for (const categoryId of generateCategoryIds) {
+    reportProgress('entrypoint_category_started', { categoryId, launcherRoute });
     await page.goto(`${baseUrl}${launcherRoute}?category=${categoryId}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.body.innerText.trim().length > 0, null, { timeout: 10_000 });
     await waitForLightchainCategory(page, categoryId);
@@ -1373,6 +1402,7 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
       .locator('a[href]')
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')).filter(Boolean));
     featureLinkEntries.push(...linksForCategory.map((href) => ({ categoryId, href })));
+    reportProgress('entrypoint_category_complete', { categoryId, linkCount: linksForCategory.length });
   }
   const skippedVideoHrefs = featureLinkEntries
     .map((entry) => entry.href)
@@ -1515,7 +1545,10 @@ function matchesLightchainSignature(tool, body) {
   }
   if (tool.id === 'model-library') return body.includes('モデルカスタマイズ') && body.includes('ラベル') && body.includes('性別');
   if (['model-face', 'model-change', 'body-shape', 'clothing-size', 'pose-change', 'background-change', 'angle-change', 'model-custom'].includes(tool.id)) {
-    return body.includes(tool.title) && hasGenerationAndHistory;
+    // Model panels correctly show an input-readiness copy (for example
+    // 「衣服画像を選択してください」) before an asset is supplied, so the
+    // route signature must not require the post-input 「AI生成」 label.
+    return body.includes(tool.title) && (hasGenerationAndHistory || body.includes('生成履歴'));
   }
   if (tool.id === 'pattern-vector-pro') {
     return body.includes('パターンをベクター画像に変換（プロフェッショナル版）') && hasGenerationAndHistory;
@@ -1710,7 +1743,10 @@ async function waitForLightchainCategory(page, categoryId) {
     graphics: 'グラフィックツール',
   };
   await page.waitForFunction((expectedLabel) => {
-    const selectedTab = document.querySelector('[role="tablist"][aria-label="Light Chainカテゴリ"] [role="tab"][aria-selected="true"]');
+    const selectedTab = document.querySelector(
+      '[role="tablist"][aria-label="Heavy Chainカテゴリ"] [role="tab"][aria-selected="true"],'
+      + '[role="tablist"][aria-label="Light Chainカテゴリ"] [role="tab"][aria-selected="true"]',
+    );
     return selectedTab?.textContent?.includes(expectedLabel) ?? false;
   }, expectedLabels[categoryId], { timeout: 15_000 });
 }

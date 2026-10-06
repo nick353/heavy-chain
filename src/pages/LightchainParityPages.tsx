@@ -1,6 +1,13 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
+import { CanonicalImageWorkspaceControls } from '../components/CanonicalImageWorkspaceControls';
+import { createEntryDraftStore } from '../features/designDetail/entryDraftStore';
+import { listDesignConversationProjects, type DesignProjectListClient, type DesignConversationProject } from '../features/designDetail/designProjectList';
+import { DESIGN_ENTRY_DRAFT_DB } from '../features/designDetail/designEntryCoordinator';
+import { createDesignEntryCoordinator, type DesignEntryClient } from '../features/designDetail/designEntryCoordinator';
+import { DesignCreationCard } from '../components/design/DesignCreationCard';
 import {
   ArrowRight,
   ChevronLeft,
@@ -10,29 +17,62 @@ import {
   Grid2X2,
   Image as ImageIcon,
   Layers,
+  Megaphone,
+  MessageCircle,
   MoreVertical,
   Palette,
   FileText,
   Plus,
+  Radio,
   Search,
   Shirt,
+  ShoppingBag,
   Sparkles,
+  Store,
   Trash2,
   Upload,
   WandSparkles,
 } from 'lucide-react';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
+import { DesignArtifactThumbnail } from '../components/DesignArtifactThumbnail';
 import { downloadValidatedImage } from '../lib/imageDownload';
-import { persistPrintInputState, restorePrintInputState } from '../lib/printInputPersistence';
+import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
+import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
 import type { Json } from '../types/database';
 import { useAuthStore } from '../stores/authStore';
+import { captureAuthBrandFence, assertAuthBrandFence } from '../lib/authBrandSelection';
+import { normalizeCloudflareGeneratedImageStoragePath } from '../lib/storagePathSafety';
 import {
   getLightchainUnifiedFeatureWorkflowContract,
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
+import { isHeavyWorkspaceRuntime } from '../lib/heavyWorkspace';
+import {
+  createDesignDialogueReferenceController,
+  createSameOriginDesignSceneAssetLoader,
+  type DesignDialogueReferenceClient,
+  type DesignDialogueReferenceFile,
+  type DesignDialogueReferenceState,
+} from '../lib/designDialogueReferences';
+import {
+  createDesignArtifactScopeKey,
+  DESIGN_PROJECT_PAGE_SIZE,
+  designEntryHref,
+  designHistoryFeatureTypes,
+  isCurrentDesignArtifactLoad,
+  isCurrentDesignArtifactScope,
+  paginate,
+  toDesignEntries,
+  type DesignProjectEntry,
+} from '../lib/designProjectArtifacts';
+import {
+  entriesForDesignProjectLoad,
+  runDesignProjectArtifactLoad,
+  type DesignProjectArtifactLoadState,
+} from '../lib/designProjectLoader';
 
 const darkPanel = 'rounded-2xl border border-white/10 bg-[#151a1c]';
 const mutedButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-300 transition hover:border-cyan-200/50 hover:bg-white/[0.08] hover:text-white';
@@ -40,17 +80,6 @@ const mutedButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2
 function ParityPermissionGate({ testId, marginClass = '' }: { testId: string; marginClass?: string }) {
   return <button type="button" disabled aria-label="この機能は未実装です" data-testid={testId} className={`${marginClass} h-10 w-full rounded-lg bg-[#434a4c] px-4 py-0 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40`}>この機能は未実装です</button>;
 }
-
-const designHistoryFeatureTypes = new Set([
-  'campaign-image',
-  'text-to-image',
-  'generate-image',
-  'generate-variations',
-  'marketing-workflow',
-  'fashion-studio',
-  'graphic-pattern-workspace',
-  'design-gacha',
-]);
 
 const fittingHistoryFeatureTypes = new Set(['model-matrix', 'model-matrix-local-preview']);
 
@@ -62,6 +91,64 @@ const formatArtifactDate = (createdAt: string) => {
   if (daysSinceEdit < 30) return `${daysSinceEdit}日前 修正`;
   return `${Math.max(1, Math.floor(daysSinceEdit / 30))}ヶ月前 修正`;
 };
+
+const designProjectPinsStorageKey = (userId: string, brandId: string) => (
+  `heavy-design-production-pins:v2:${encodeURIComponent(JSON.stringify([userId, brandId]))}`
+);
+
+export function DesignRecentProjectEntryCard({
+  entry,
+  userId,
+  brandId,
+  heavyRuntime,
+  pinned,
+  menuOpen,
+  onOpen,
+  onToggleMenu,
+  onTogglePin,
+  onSaveToLibrary,
+  onDelete,
+}: {
+  entry: DesignProjectEntry;
+  userId?: string;
+  brandId?: string;
+  heavyRuntime: boolean;
+  pinned: boolean;
+  menuOpen: boolean;
+  onOpen: () => void;
+  onToggleMenu: () => void;
+  onTogglePin: () => void;
+  onSaveToLibrary: () => void;
+  onDelete: () => void;
+}) {
+  const { artifact } = entry;
+  const href = designEntryHref(entry);
+  return (
+    <article key={artifact.id} data-design-project-origin={entry.origin} className="relative h-60 overflow-visible rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40">
+      <DesignArtifactThumbnail artifact={artifact} userId={userId} brandId={brandId} href={href} onOpen={onOpen} />
+      <button
+        type="button"
+        disabled={!href}
+        title={!href ? 'Canvasで開くためのリモート画像IDがありません' : undefined}
+        className="block h-[96px] w-full cursor-pointer overflow-hidden rounded-b-2xl p-4 pr-12 text-left disabled:cursor-not-allowed"
+        aria-label={`${artifact.title}をCanvasで開く`}
+        data-design-card-title=""
+        onClick={onOpen}
+      >
+        <p data-design-card-name="" className="truncate font-medium">{pinned ? '📌 ' : ''}{artifact.title}</p>
+        <p data-design-card-date="" className="mt-2 truncate text-xs text-neutral-400">{heavyRuntime ? formatArtifactDate(artifact.createdAt) : `${artifact.featureType} ・ ${formatArtifactDate(artifact.createdAt)}`}</p>
+      </button>
+      <div className="absolute right-2 top-2 z-20" data-design-card-menu="">
+        <button type="button" aria-label={`${artifact.title}のメニュー`} aria-expanded={menuOpen} className="rounded-lg bg-black/45 p-2 text-neutral-200 hover:bg-black/70" onClick={(event) => { event.stopPropagation(); onToggleMenu(); }}><MoreVertical className="h-4 w-4" /></button>
+        {menuOpen && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
+          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={onTogglePin}>ピン留め</button>
+          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={onSaveToLibrary}>アセットライブラリに保存</button>
+          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-white/10" onClick={onDelete}>削除</button>
+        </div>}
+      </div>
+    </article>
+  );
+}
 
 function PersistedHistoryPanel({
   artifacts,
@@ -233,8 +320,20 @@ export function LightchainCreatorPage() {
   const [historyArtifacts, setHistoryArtifacts] = useState<WorkspaceArtifact[]>([]);
   const { currentBrand, profile, user } = useAuthStore();
   const navigate = useNavigate();
+  const heavyRuntime = isHeavyWorkspaceRuntime();
   const metadataName = user?.user_metadata?.full_name;
   const displayName = profile?.name?.trim() || (typeof metadataName === 'string' ? metadataName.trim() : '') || user?.email?.split('@')[0] || 'ユーザー';
+  const heavyGenerationHref = (() => {
+    const params = new URLSearchParams({
+      feature: 'design-gacha',
+      prompt: [
+        'インスピレーションデザイン',
+        selectedCategory ? `カテゴリ: ${selectedCategory}` : 'カテゴリ: 未選択',
+        keywords.trim() ? `キーワード: ${keywords.trim()}` : 'キーワード: なし',
+      ].join('\n'),
+    });
+    return `/generate?${params.toString()}`;
+  })();
 
   useEffect(() => {
     const video = document.querySelector<HTMLVideoElement>('video[aria-label="インスピレーション動画"]');
@@ -272,7 +371,7 @@ export function LightchainCreatorPage() {
 
 
         <main className="relative min-h-0 rounded-xl bg-[#151a1c] px-2 py-4 lg:px-8"><button type="button" className="absolute right-2 top-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-200" onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button><section className="flex min-h-full flex-col items-center justify-center pt-8"><h5 className="text-xl font-semibold text-cyan-300">インスピレーション</h5><p className="mt-2 text-sm text-neutral-400">AIで素早くデザイン開発、効率向上・コスト削減</p><div className="mt-[1px] h-[340px] w-full max-w-[1088px] overflow-hidden rounded-lg bg-[#0d1113]"><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1.mp4" className="size-full" autoPlay controls playsInline aria-label="インスピレーション動画" /></div></section></main>
-        <aside className="flex min-h-0 flex-col gap-4"><section className="min-h-[264px] rounded-xl bg-[#262a2b] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><h6 className="mt-4 text-xs font-semibold leading-[1.4286] text-neutral-300">このモジュールは購入後に使用可能。</h6><p className="mt-2 text-xs text-neutral-400">ご担当の営業担当者にご連絡ください</p></div></div></section><section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#262a2b] p-4"><div className="flex items-center justify-between gap-3"><h6 aria-label="キーワードを追加 オプション" className="text-base font-medium leading-4">キーワードを追加</h6><span className="text-xs text-neutral-400">オプション</span></div><div className="relative mt-4 flex h-[323px] min-h-0 flex-col gap-1 rounded-lg border border-white/10 pb-1"><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="min-h-0 flex-1 resize-none rounded-md border border-white/10 bg-[#262a2b] px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます\n\n例1：オートミール色、H型カット、チェック柄生地、通勤用ワンピース… \n\n例2：18歳のヨーロッパ系モデルが両手を後ろに組んでオートミール色のワンピースを着用。ワンピースはチェック柄生地で作られ、U字型襟のデザイン、パフスリーブ、H型カットが特徴。隠しポケット付きで、通勤スタイルを演出" maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="flex h-6 w-full items-center justify-between bg-transparent px-2 text-xs text-neutral-400"><span>文字数: {keywords.length}/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div></div><ParityPermissionGate testId="creator-permission" marginClass="mt-8" /></section></aside>
+        <aside className="flex min-h-0 flex-col gap-4"><section className="min-h-[264px] rounded-xl bg-[#262a2b] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><h6 className="mt-4 text-xs font-semibold leading-[1.4286] text-neutral-300">{heavyRuntime ? 'Heavy Chainで画像生成へ進めます。' : 'このモジュールは購入後に使用可能。'}</h6><p className="mt-2 text-xs text-neutral-400">{heavyRuntime ? 'カテゴリとキーワードを入力してAI生成を開始できます。' : 'ご担当の営業担当者にご連絡ください'}</p></div></div></section><section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#262a2b] p-4"><div className="flex items-center justify-between gap-3"><h6 aria-label="キーワードを追加 オプション" className="text-base font-medium leading-4">キーワードを追加</h6><span className="text-xs text-neutral-400">オプション</span></div><div className="relative mt-4 flex h-[323px] min-h-0 flex-col gap-1 rounded-lg border border-white/10 pb-1"><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="min-h-0 flex-1 resize-none rounded-md border border-white/10 bg-[#262a2b] px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます\n\n例1：オートミール色、H型カット、チェック柄生地、通勤用ワンピース… \n\n例2：18歳のヨーロッパ系モデルが両手を後ろに組んでオートミール色のワンピースを着用。ワンピースはチェック柄生地で作られ、U字型襟のデザイン、パフスリーブ、H型カットが特徴。隠しポケット付きで、通勤スタイルを演出" maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="flex h-6 w-full items-center justify-between bg-transparent px-2 text-xs text-neutral-400"><span>文字数: {keywords.length}/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div></div>{heavyRuntime ? <button type="button" data-testid="heavy-creator-generate" onClick={() => navigate(heavyGenerationHref)} disabled={!selectedCategory} className="mt-8 inline-flex h-10 w-full items-center justify-center rounded-lg bg-cyan-300 px-4 py-0 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50">AI生成</button> : <ParityPermissionGate testId="creator-permission" marginClass="mt-8" />}</section></aside>
       </div>
 
       {historyOpen && <section className="fixed inset-x-4 bottom-4 top-[67px] z-20 overflow-auto rounded-xl border border-white/10 bg-[#262a2b] p-5 shadow-2xl" data-testid="creator-persisted-history"><h2 className="font-semibold">生成履歴</h2><PersistedHistoryPanel artifacts={historyArtifacts} emptyMessage="保存確認できたデザイン成果物はまだありません。provider生成後に保存すると、ここから再利用できます。" reuseLabel="Canvasへ再利用" onReuse={(artifact) => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)} /></section>}
@@ -287,89 +386,113 @@ export function LightchainCreatorPage() {
  * Heavy compatibility route, while matching the production entry point here.
  */
 export function LightchainPrintingPage() {
-  const [referenceImage, setReferenceImage] = useState<{ url: string; file?: File; referenceType: 'base' } | null>(null);
-  const [printImage, setPrintImage] = useState<{ url: string; file?: File; referenceType: 'pattern' } | null>(null);
-  const [coverage, setCoverage] = useState<'spot' | 'full'>('spot');
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [printingBannerVisible, setPrintingBannerVisible] = useState(true);
-  const [message, setMessage] = useState('');
-  const [restored, setRestored] = useState(false);
   const { user, currentBrand } = useAuthStore();
-  const navigate = useNavigate();
-  const persistenceScope = useMemo(
-    () => user?.id ? { origin: cloudflareDataPlane?.origin ?? window.location.origin, userId: user.id } : undefined,
-    [user],
-  );
+  return <LightchainPrintingWorkspace key={JSON.stringify([currentBrand?.id, user?.id])} />;
+}
 
-  useEffect(() => {
-    if (!user?.id || !currentBrand?.id || !persistenceScope) {
-      setRestored(false);
+function LightchainPrintingWorkspace() {
+  const workspace=useCanonicalImageWorkspace('printing-image',{requiredSources:2,title:'プリントイメージ',initialInputState:{coverage:'spot'}});
+  const referenceImage=workspace.slots.primary?{url:workspace.slots.primary.imageUrl,referenceType:'base' as const,
+    ...(workspace.slots.primary.sourceImageId?{galleryImageId:workspace.slots.primary.sourceImageId,fromGallery:true}:{}),
+    ...(workspace.slots.primary.sourceStoragePath?{storagePath:workspace.slots.primary.sourceStoragePath}:{})}:null;
+  const printImage=workspace.slots.secondary?{url:workspace.slots.secondary.imageUrl,referenceType:'pattern' as const,
+    ...(workspace.slots.secondary.sourceImageId?{galleryImageId:workspace.slots.secondary.sourceImageId,fromGallery:true}:{}),
+    ...(workspace.slots.secondary.sourceStoragePath?{storagePath:workspace.slots.secondary.sourceStoragePath}:{})}:null;
+  const coverage=workspace.inputState.coverage==='full'?'full':workspace.inputState.coverage==='spot'?'spot':null;
+  const setCoverage=(value:'spot'|'full')=>{beginDraftEdit('coverage');workspace.setInputState({...workspace.inputState,coverage:value});};
+  const [historyOpen,setHistoryOpen]=useState(false),[printingBannerVisible,setPrintingBannerVisible]=useState(true),[message,setMessage]=useState('');
+  const {user,currentBrand}=useAuthStore(),navigate=useNavigate(),location=useLocation();
+  const locked=workspace.status==='running'||workspace.status==='loading'||Boolean(workspace.pendingId);
+  const persistenceScope=useMemo(()=>user?.id?{origin:cloudflareDataPlane?.origin??window.location.origin,userId:user.id}:undefined,[user?.id]);
+  const libraryQuery=new URLSearchParams(location.search);
+  const explicitLibrary=libraryQuery.has('libraryArtifactId');
+  const libraryIdentity=explicitLibrary?JSON.stringify([libraryQuery.get('libraryArtifactId'),libraryQuery.get('librarySlot')]):null;
+  const draftContext=JSON.stringify([libraryIdentity,workspace.jobId,workspace.pendingId,user?.id,currentBrand?.id,persistenceScope?.origin,persistenceScope?.userId]);
+  const draftContextRef=useRef(draftContext);
+  const draftReady=useRef(false),draftEdited=useRef(false),draftSourceEdited=useRef(false),draftReadyContext=useRef<string|null>(null),draftRestoreGeneration=useRef(0);
+  if(draftContextRef.current!==draftContext){draftRestoreGeneration.current++;draftReady.current=false;draftEdited.current=false;draftSourceEdited.current=false;draftReadyContext.current=null;}
+  draftContextRef.current=draftContext;
+  const beginDraftEdit=(kind:'sources'|'coverage'='sources')=>{draftRestoreGeneration.current++;draftReady.current=true;draftEdited.current=true;if(kind==='sources')draftSourceEdited.current=true;draftReadyContext.current=draftContext;};
+  useEffect(()=>{draftReady.current=false;draftReadyContext.current=null;const generation=++draftRestoreGeneration.current;
+    if(explicitLibrary||workspace.jobId||workspace.pendingId||!user?.id||!currentBrand?.id||!persistenceScope)return;
+    let cancelled=false;
+    const current=()=>!cancelled&&generation===draftRestoreGeneration.current&&draftContextRef.current===draftContext;
+    void restorePrintInputState(currentBrand.id,{scope:persistenceScope}).then(async snapshot=>{
+      if(!current())return;let missingSource=false;
+      for(const [key,image] of [['primary',snapshot.garment],['secondary',snapshot.designs[0]]] as const){
+        if(!current())return;if(!image)continue;
+        try{let url=image.url;if(image.storagePath){const [signed]=await withSignedImageUrls([{storage_path:image.storagePath,image_url:''}]);if(!current())return;if(!signed?.image_url)throw new Error('print_draft_source_unavailable');url=signed.image_url;}
+          if(!current())return;const response=await fetch(url);if(!current())return;if(!response.ok)throw new Error('print_draft_source_unavailable');
+          const blob=await response.blob();if(!current())return;await workspace.upload(key,new File([blob],key==='primary'?'参考画像':'プリント画像',{type:blob.type}),current,
+            image.galleryImageId||image.storagePath?{...(image.galleryImageId?{sourceImageId:image.galleryImageId}:{}),...(image.storagePath?{sourceStoragePath:image.storagePath}:{})}:undefined);
+          if(!current())return;
+        }catch{if(!current())return;missingSource=true;}
+      }
+      if(current()){if(snapshot.editorState)workspace.setInputState({coverage:snapshot.editorState.coverageMode});draftReady.current=!missingSource;draftReadyContext.current=missingSource?null:draftContext;if(missingSource)setMessage('保存済みの入力画像を取得できません。元の保存状態を保持しています。素材を選び直してください。');}
+    }).catch(()=>{if(current()){draftReady.current=false;draftReadyContext.current=null;setMessage('保存済みの入力を取得できません。元の保存状態を保持しています。素材を選び直してください。');}});return()=>{cancelled=true;};
+  },[draftContext,explicitLibrary,workspace.jobId,workspace.pendingId,user?.id,currentBrand?.id,persistenceScope]);
+  useEffect(()=>{if(workspace.jobId||workspace.pendingId||!draftReady.current||!draftEdited.current||draftReadyContext.current!==draftContext||draftContextRef.current!==draftContext||!user?.id||!currentBrand?.id||(!referenceImage&&!printImage))return;
+    const generation=draftRestoreGeneration.current,userId=user.id,brandId=currentBrand.id,auth=useAuthStore.getState(),brandState=auth.brandState;
+    const assertContext=()=>{const latest=useAuthStore.getState();if(draftContextRef.current!==draftContext||draftRestoreGeneration.current!==generation||latest.user?.id!==userId||latest.currentBrand?.id!==brandId||latest.brandState!==brandState)throw new Error('print_draft_context_changed');};
+    if(!draftSourceEdited.current&&!explicitLibrary&&persistenceScope){
+      void updatePrintInputCoverage(currentBrand.id,coverage??'spot',{scope:persistenceScope,assertContext}).then(()=>{if(draftContextRef.current===draftContext&&draftRestoreGeneration.current===generation)setMessage('');}).catch(()=>{if(draftContextRef.current===draftContext&&draftRestoreGeneration.current===generation)setMessage('保存済み配置を確認できないため、範囲を保存できません。元の下書きは保持しています。');});
       return;
     }
-    let cancelled = false;
-    void restorePrintInputState(currentBrand.id, { scope: persistenceScope })
-      .then((snapshot) => {
-        if (cancelled) return;
-        setReferenceImage(snapshot.garment ? { url: snapshot.garment.url, referenceType: 'base' } : null);
-        setPrintImage(snapshot.designs[0] ? { url: snapshot.designs[0].url, referenceType: 'pattern' } : null);
-        setRestored(true);
-      })
-      .catch(() => {
-        if (!cancelled) setRestored(true);
-      });
-    return () => { cancelled = true; };
-  }, [currentBrand?.id, persistenceScope, user?.id]);
+    void persistPrintInputState(currentBrand.id,referenceImage,printImage?[printImage]:[],{garment:null,designs:[]},{scope:persistenceScope,assertContext,
+      editorState: { version:1, coverageMode:coverage??'spot', outputScale:1, placementConfirmed:false, printableSurfaceEnabled:false,
+        layers:printImage?[{designIndex:0,layerId:'print-design-1',transform:{x:0,y:0,scale:1,rotation:0,opacity:1,flipX:false,flipY:false}}]:[] },
+    }).catch(()=>undefined);
+  },[draftContext,workspace.jobId,workspace.pendingId,user?.id,currentBrand?.id,persistenceScope,workspace.slots.primary,workspace.slots.secondary,coverage]);
+  const handleFile=(event:ChangeEvent<HTMLInputElement>,kind:'base'|'pattern')=>{const file=event.target.files?.[0];if(file){beginDraftEdit();void workspace.upload(kind==='base'?'primary':'secondary',file);setMessage('');}};
+  const handleCanonicalFiles=(event:ChangeEvent<HTMLInputElement>)=>{const [base,pattern]=Array.from(event.target.files??[]).slice(0,2);if(base||pattern){beginDraftEdit();setMessage('');}if(base)void workspace.upload('primary',base);if(pattern)void workspace.upload('secondary',pattern);};
+  const reset=()=>{if(locked)return;beginDraftEdit();workspace.clearSource('primary');workspace.clearSource('secondary');setMessage('');
+    if(!workspace.jobId&&user?.id&&currentBrand?.id&&persistenceScope)void persistPrintInputState(currentBrand.id,null,[],{garment:null,designs:[]},{scope:persistenceScope}).catch(()=>undefined);};
+  const handleGenerate=()=>workspace.generate({brief:workspace.brief||`プリントイメージ: ${coverage==='full'?'全体':coverage==='spot'?'スポット':'配置未設定'}`});
 
-  useEffect(() => {
-    if (!restored || !user?.id || !currentBrand?.id || (!referenceImage && !printImage)) return;
-    void persistPrintInputState(
-      currentBrand.id,
-      referenceImage,
-      printImage ? [printImage] : [],
-      { garment: null, designs: [] },
-      { scope: persistenceScope },
-    ).catch(() => undefined);
-  }, [currentBrand?.id, persistenceScope, printImage, referenceImage, restored, user?.id]);
-
-  const handleFile = (event: ChangeEvent<HTMLInputElement>, kind: 'base' | 'pattern') => {
-    const file = event.target.files?.[0];
-    const url = file ? URL.createObjectURL(file) : '';
-    if (kind === 'base') setReferenceImage(file ? { url, file, referenceType: 'base' } : null);
-    else setPrintImage(file ? { url, file, referenceType: 'pattern' } : null);
-    setMessage('');
-  };
-
-  const handleCanonicalFiles = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []).slice(0, 2);
-    const [base, pattern] = files;
-    setReferenceImage(base ? { url: URL.createObjectURL(base), file: base, referenceType: 'base' } : null);
-    setPrintImage(pattern ? { url: URL.createObjectURL(pattern), file: pattern, referenceType: 'pattern' } : null);
-    setMessage('');
-  };
-
-  const handleGenerate = async () => {
-    if (!referenceImage || !printImage) {
-      setMessage('参考画像とプリント画像を選択してください');
-      return;
-    }
-    if (!user?.id || !currentBrand?.id) {
-      setMessage('ログイン状態を確認してから、もう一度お試しください');
-      return;
-    }
-    setMessage('入力を保存しています。生成ワークスペースを開きます…');
-    try {
-      await persistPrintInputState(
-        currentBrand.id,
-        referenceImage,
-        [printImage],
-        { garment: null, designs: [] },
-        { scope: persistenceScope },
-      );
-      navigate('/lightchain/printing-image');
-    } catch (error) {
-      setMessage(error instanceof Error ? `入力の保存に失敗しました: ${error.message}` : '入力の保存に失敗しました');
+  const [canvasHandoffPending,setCanvasHandoffPending]=useState(false),[canvasHandoffMessage,setCanvasHandoffMessage]=useState('');
+  const canvasHandoffInFlight=useRef(false),canvasHandoffMounted=useRef(true);
+  const printingCanvasScope=JSON.stringify([location.pathname,location.search,workspace.toolId,workspace.jobId]);
+  const printingCanvasContext=useRef({workspace,userId:user?.id,brandId:currentBrand?.id,scope:printingCanvasScope});
+  printingCanvasContext.current={workspace,userId:user?.id,brandId:currentBrand?.id,scope:printingCanvasScope};
+  useEffect(()=>{canvasHandoffMounted.current=true;return()=>{canvasHandoffMounted.current=false;};},[]);
+  const canvasHandoffDisabled=canvasHandoffPending||locked||workspace.status==='unknown'||!user?.id||!currentBrand?.id||!cloudflareDataPlane
+    ||!workspace.result?.imageId||!workspace.result.jobId
+    ||normalizeCloudflareGeneratedImageStoragePath(workspace.result.storagePath)!==`generated-images/${workspace.result.imageId}`;
+  const handlePrintingCanvasHandoff=async()=>{
+    if(canvasHandoffInFlight.current||canvasHandoffDisabled)return;
+    const result=workspace.result,client=cloudflareDataPlane;
+    if(!result?.imageId||!result.jobId||!user?.id||!currentBrand?.id||!client)return;
+    const captured=Object.freeze({imageId:result.imageId,storagePath:result.storagePath,jobId:result.jobId,userId:user.id,brandId:currentBrand.id,scope:printingCanvasScope});
+    const auth=useAuthStore.getState();
+    const fence=captureAuthBrandFence(auth.brandState,auth.user?.id??null,auth.currentBrand?.id??null);
+    const assertCurrent=()=>{
+      const latest=printingCanvasContext.current,current=useAuthStore.getState(),output=latest.workspace.result;
+      assertAuthBrandFence(fence,captureAuthBrandFence(current.brandState,current.user?.id??null,current.currentBrand?.id??null),'printing_canvas_handoff');
+      if(!canvasHandoffMounted.current||current.user?.id!==captured.userId||current.currentBrand?.id!==captured.brandId
+        ||latest.userId!==captured.userId||latest.brandId!==captured.brandId||latest.scope!==captured.scope||output!==result
+        ||output?.imageId!==captured.imageId||output.storagePath!==captured.storagePath||output.jobId!==captured.jobId
+        ||latest.workspace.pendingId||['loading','running','unknown'].includes(latest.workspace.status)
+        ||cloudflareDataPlane!==client)throw new Error('printing_canvas_handoff_context_changed');
+    };
+    canvasHandoffInFlight.current=true;setCanvasHandoffPending(true);setCanvasHandoffMessage('');
+    let handedOff=false;
+    try{
+      assertCurrent();
+      if(normalizeCloudflareGeneratedImageStoragePath(captured.storagePath)!==`generated-images/${captured.imageId}`)throw new Error('printing_canvas_handoff_identity_invalid');
+      const images=await client.listGeneratedImages(captured.brandId,{limit:100,order:'newest'});
+      assertCurrent();
+      const matches=images.filter(image=>image.id===captured.imageId);
+      if(matches.length!==1||matches[0].brand_id!==captured.brandId||matches[0].user_id!==captured.userId
+        ||matches[0].job_id!==captured.jobId||matches[0].storage_path!==captured.storagePath)throw new Error('printing_canvas_handoff_saved_image_mismatch');
+      navigate(`/canvas/new?galleryImageId=${encodeURIComponent(captured.imageId)}`);
+      handedOff=true;
+    }catch{
+      if(canvasHandoffMounted.current)setCanvasHandoffMessage('保存済み画像と現在の作業範囲を確認できません。Canvasには移動していません。');
+    }finally{
+      if(!handedOff){canvasHandoffInFlight.current=false;if(canvasHandoffMounted.current)setCanvasHandoffPending(false);}
     }
   };
+
 
   if (window.location.pathname === '/printing') {
     return (
@@ -384,19 +507,19 @@ export function LightchainPrintingPage() {
               <Upload className="h-10 w-10 text-neutral-500" />
               <span className="mt-4 text-sm font-semibold text-neutral-200">画像をアップロードします</span>
               <span className="mt-3 max-w-[250px] text-xs leading-5 text-neutral-400">jpg、jpeg、png、webpに対応しています。サイズ20M以内の画像を2枚までアップロードできます</span>
-              <input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleCanonicalFiles} />
+              <input className="sr-only" disabled={locked} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleCanonicalFiles} />
             </label>
             {(referenceImage || printImage) && (
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {[referenceImage, printImage].map((image, index) => image ? (
                   <img key={`${image.referenceType}-${index}`} src={image.url} alt={index === 0 ? '参考画像' : 'プリント画像'} className="h-24 w-full rounded-lg object-cover" />
                 ) : <div key={`empty-${index}`} className="h-24 rounded-lg border border-dashed border-white/10" />)}
-                <button type="button" className="col-span-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-neutral-300" onClick={() => { setReferenceImage(null); setPrintImage(null); setMessage(''); }}>リセット</button>
+                <button type="button" className="col-span-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-neutral-300" onClick={() => { reset(); }}>リセット</button>
               </div>
             )}
           </section>
 
-          <main className="relative flex min-h-[780px] flex-col rounded-xl bg-[#252a2d] p-4 sm:p-6">
+          <main data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status} className="relative flex min-h-[780px] flex-col rounded-xl bg-[#252a2d] p-4 sm:p-6">
             <button type="button" className="absolute right-4 top-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-200" onClick={() => setHistoryOpen((open) => !open)}>
               <Clock3 className="mr-2 inline h-4 w-4" />生成履歴
             </button>
@@ -406,12 +529,15 @@ export function LightchainPrintingPage() {
               <div className="mt-6 h-[340px] w-full max-w-[1056px] overflow-hidden rounded-lg bg-[#0d1113]">
                 <video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="h-full w-full object-cover" autoPlay controls muted playsInline aria-label="AIグラフィックデザイン動画" />
               </div>
-              {(referenceImage || printImage) && <button type="button" className="mt-6 rounded-xl bg-cyan-300 px-6 py-3 text-sm font-semibold text-neutral-950" onClick={() => void handleGenerate()}>AI生成</button>}
+              {(referenceImage || printImage) && <button type="button" className="mt-6 rounded-xl bg-cyan-300 px-6 py-3 text-sm font-semibold text-neutral-950" disabled={locked||!workspace.slots.primary||!workspace.slots.secondary} onClick={() => void handleGenerate()}>AI生成</button>}
               {message && <p className="mt-3 text-sm text-neutral-300" role="status">{message}</p>}
             </section>
           </main>
 
-          <aside className="min-h-[780px] rounded-xl bg-[#252a2d] p-4" aria-label="生成結果">
+          <aside className="relative min-h-[780px] rounded-xl bg-[#252a2d] p-4" aria-label="生成結果"><CanonicalImageWorkspaceControls workspace={workspace} onSourceEdit={beginDraftEdit} />{workspace.result?<div className="relative z-10 space-y-2" data-testid="printing-canvas-handoff">
+    <button type="button" className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={canvasHandoffDisabled} onClick={()=>void handlePrintingCanvasHandoff()}>Canvasで再編集</button>
+    {canvasHandoffMessage&&<p className="text-sm text-neutral-400" role="status">{canvasHandoffMessage}</p>}
+  </div>:null}
             {historyOpen && (
               <section className="rounded-xl border border-white/10 bg-[#171b1d] p-5" aria-label="生成履歴">
                 <h2 className="font-semibold">生成履歴</h2>
@@ -457,7 +583,7 @@ export function LightchainPrintingPage() {
         <div className="relative lg:pl-24">
         <div className="absolute inset-x-0 top-4 z-10 flex items-center justify-end gap-4">
           <div className="hidden">
-            <p className="text-xs font-semibold tracking-[0.25em] text-neutral-500">LIGHTCHAIN AI / GRAPHIC TOOLS</p>
+            <p className="text-xs font-semibold tracking-[0.25em] text-neutral-500">HEAVY CHAIN / GRAPHIC TOOLS</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">プリントイメージ</h1>
             <p className="mt-2 max-w-2xl text-sm text-neutral-500">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p>
           </div>
@@ -484,26 +610,30 @@ export function LightchainPrintingPage() {
               <button type="button" aria-label="告知を閉じる" className="shrink-0 text-lg leading-5 text-amber-100/80 transition hover:text-white" onClick={() => setPrintingBannerVisible(false)}>×</button>
             </div>}
             <label className="mt-[18px] flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
-              <input className="sr-only" type="file" accept="image/*" onChange={(event) => handleFile(event, 'base')} />
-              {referenceImage ? <img src={referenceImage.url} alt="参考画像" className="max-h-56 max-w-full rounded-lg object-contain" /> : <><Upload className="h-8 w-8 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">参考画像をアップロードしてください</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
+              <input className="sr-only" disabled={locked} type="file" accept="image/*" onChange={(event) => handleFile(event, 'base')} />
+              {referenceImage ? <img src={referenceImage.url} alt="参考画像" data-source-slot="primary" data-source-image-id={workspace.slots.primary?.sourceImageId??''} data-source-storage-path={workspace.slots.primary?.sourceStoragePath??''} className="max-h-56 max-w-full rounded-lg object-contain" /> : <><Upload className="h-8 w-8 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">参考画像をアップロードしてください</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
             </label>
-            <div className="mt-4 flex items-center justify-between"><h2 className="font-semibold">プリントをアップロード</h2><button type="button" className="text-sm text-neutral-500 underline" onClick={() => { setReferenceImage(null); setPrintImage(null); setMessage(''); if (user?.id && currentBrand?.id && persistenceScope) void persistPrintInputState(currentBrand.id, null, [], { garment: null, designs: [] }, { scope: persistenceScope }).catch(() => undefined); }}>リセット</button></div>
+            <div className="mt-4 flex items-center justify-between"><h2 className="font-semibold">プリントをアップロード</h2><button type="button" className="text-sm text-neutral-500 underline" onClick={() => { reset(); }}>リセット</button></div>
             <div className="mt-3 grid w-[244px] grid-cols-2 rounded-xl border border-neutral-200 bg-neutral-50 p-1">
-              {(['spot', 'full'] as const).map((value) => <button key={value} type="button" aria-pressed={coverage === value} aria-selected={coverage === value} className={`rounded-lg px-4 py-3 text-sm font-semibold ${coverage === value ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500'}`} onClick={() => setCoverage(value)}>{value === 'spot' ? 'スポット' : '全体'}</button>)}
+              {(['spot', 'full'] as const).map((value) => <button key={value} type="button" aria-pressed={coverage === value} aria-selected={coverage === value} className={`rounded-lg px-4 py-3 text-sm font-semibold ${coverage === value ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500'}`} disabled={locked} onClick={() => setCoverage(value)}>{value === 'spot' ? 'スポット' : '全体'}</button>)}
             </div>
             <label className="mt-3 flex h-[120px] w-[120px] cursor-pointer flex-col items-center justify-center rounded relative border border-dashed border-transparent bg-neutral-50 p-4 text-center transition hover:border-cyan-300/60">
-              <input className="sr-only" type="file" accept="image/*" onChange={(event) => handleFile(event, 'pattern')} />
-              {printImage ? <img src={printImage.url} alt="プリント画像" className="h-full w-full rounded-lg object-contain" /> : <><Upload className="h-6 w-6 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">画像をアップロード</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
+              <input className="sr-only" disabled={locked} type="file" accept="image/*" onChange={(event) => handleFile(event, 'pattern')} />
+              {printImage ? <img src={printImage.url} alt="プリント画像" data-source-slot="secondary" data-source-image-id={workspace.slots.secondary?.sourceImageId??''} data-source-storage-path={workspace.slots.secondary?.sourceStoragePath??''} className="h-full w-full rounded-lg object-contain" /> : <><Upload className="h-6 w-6 text-neutral-400" /><span className="mt-2 text-base text-neutral-600">画像をアップロード</span><span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span></>}
             </label>
-            <button type="submit" className="absolute bottom-4 right-4 h-10 w-[288px] rounded-xl bg-neutral-950 px-4 text-sm font-semibold text-white transition hover:bg-neutral-800" onClick={() => void handleGenerate()}>AI生成</button>
+            <button type="submit" className="absolute bottom-4 right-4 h-10 w-[288px] rounded-xl bg-neutral-950 px-4 text-sm font-semibold text-white transition hover:bg-neutral-800" disabled={locked||!workspace.slots.primary||!workspace.slots.secondary} onClick={() => void handleGenerate()}>AI生成</button>
             {message && <p className="mt-3 text-sm text-neutral-600" role="status">{message}</p>}
           </section>
 
-          <aside className="space-y-4">
+          <aside className="relative space-y-4" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status}><CanonicalImageWorkspaceControls workspace={workspace} onSourceEdit={beginDraftEdit} />{workspace.result?<div className="relative z-10 space-y-2" data-testid="printing-canvas-handoff">
+    <button type="button" className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={canvasHandoffDisabled} onClick={()=>void handlePrintingCanvasHandoff()}>Canvasで再編集</button>
+    {canvasHandoffMessage&&<p className="text-sm text-neutral-400" role="status">{canvasHandoffMessage}</p>}
+  </div>:null}
             <section className="flex h-[746px] min-h-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#151a1c] p-4 text-center shadow-sm"><div className="flex size-full flex-col items-center justify-center px-10"><h2 className="text-xl font-bold text-white">プリントイメージ</h2><p className="mt-2 text-sm leading-[21px] text-neutral-400">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p><div className="mt-4 h-[340px] w-full"><video src="https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4" className="size-full rounded-lg object-cover" autoPlay controls muted playsInline aria-label="プリントイメージ動画" /></div></div></section>
-            <section className="hidden" aria-label="詳細設定"><h2 className="font-semibold">詳細設定</h2><p>配置・マスク・複数素材を使う場合はこちら。</p><button type="button" onClick={() => navigate('/lightchain/printing-image')}>高度な印刷ワークスペース</button></section>
+            <section className="hidden" aria-label="詳細設定"><h2 className="font-semibold">詳細設定</h2><p>配置・マスク・複数素材を使う場合はこちら。</p><button type="button" onClick={() => void handleGenerate()}>高度な印刷ワークスペース</button></section>
           </aside>
         </div>
+        {libraryQuery.get('debug') === '1' && user?.id && currentBrand?.id && persistenceScope && <PrintDraftSafetyControls brandId={currentBrand.id} userId={user.id} origin={persistenceScope.origin} disabled={locked || explicitLibrary || Boolean(workspace.jobId) || Boolean(workspace.pendingId)} />}
         {historyOpen && <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"><h2 className="font-semibold">生成履歴</h2><p className="mt-3 text-sm text-neutral-500">生成履歴はここに表示されます。</p><button type="button" className="mt-3 text-sm font-semibold text-neutral-700 underline" onClick={() => navigate('/history')}>履歴を開く</button></section>}
         </div>
       </div>
@@ -512,31 +642,16 @@ export function LightchainPrintingPage() {
 }
 
 export function LightchainVectorSpecialPage() {
-  const [activeTab] = useState<'通常版' | 'プロフェッショナル版'>(() => window.location.pathname === '/tools/vector-special' ? 'プロフェッショナル版' : '通常版');
-  const [referenceImage, setReferenceImage] = useState<string | null>(null);
-  const [layerModes, setLayerModes] = useState<Array<'stack' | 'split'>>(['stack']);
-  const [usage, setUsage] = useState(7);
-  const navigate = useNavigate();
-  const isProfessionalFlow = activeTab === 'プロフェッショナル版';
-
-  const handleReferenceImage = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setReferenceImage(URL.createObjectURL(file));
-  };
-
-  const reset = () => {
-    setReferenceImage(null);
-    setLayerModes(['stack']);
-    setUsage(7);
-  };
-
-  const toggleLayerMode = (mode: 'stack' | 'split') => {
-    setLayerModes((current) => {
-      if (current.includes(mode)) return current.length > 1 ? current.filter((value) => value !== mode) : current;
-      return [...current, mode];
-    });
-  };
+  const location=useLocation(),navigate=useNavigate();
+  const isProfessionalFlow=location.pathname==='/tools/vector-special',activeTab=isProfessionalFlow?'プロフェッショナル版':'通常版';
+  const workspace=useCanonicalImageWorkspace(isProfessionalFlow?'pattern-vector-pro':'pattern-vector',{requiredSources:1,title:`パターンをベクター画像に変換（${activeTab}）`,initialInputState:{layerModes:['stack']}});
+  const referenceImage=workspace.slots.primary?.imageUrl??null;
+  const layerModes=Array.isArray(workspace.inputState.layerModes)?workspace.inputState.layerModes.filter((value):value is 'stack'|'split'=>value==='stack'||value==='split'):[];
+  const usage=7,locked=workspace.status==='running'||workspace.status==='loading'||Boolean(workspace.pendingId);
+  const handleReferenceImage=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];if(file)void workspace.upload('primary',file);};
+  const reset=()=>{if(locked)return;workspace.clearSource('primary');workspace.setInputState({layerModes:['stack']});};
+  const toggleLayerMode=(mode:'stack'|'split')=>{if(locked)return;workspace.setInputState({...workspace.inputState,layerModes:layerModes.includes(mode)?(layerModes.length>1?layerModes.filter(value=>value!==mode):layerModes):[...layerModes,mode]});};
+  const generate=()=>workspace.generate({brief:workspace.brief||`パターンをベクター画像に変換 (${activeTab})\nレイヤー分け: ${layerModes.join(',')}`});
 
   return (
     <ParityShell workflowFeature="pattern-vector-pro" className="bg-[#0b1113] text-white">
@@ -563,15 +678,15 @@ export function LightchainVectorSpecialPage() {
               <span aria-hidden="true" className="text-white/80">×</span>
             </div>
             <label className="mt-[18px] flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-xl bg-[#252a2d] text-center">
-              <input className="sr-only" type="file" accept="image/*" onChange={handleReferenceImage} />
+              <input className="sr-only" disabled={locked} type="file" accept="image/*" onChange={handleReferenceImage} />
               {referenceImage ? <img src={referenceImage} alt="参考画像" className="max-h-56 max-w-full rounded-lg object-contain" /> : <><Upload className="h-8 w-8 text-white/70" /><span className="mt-2 text-base text-white/85">参考画像をアップロードしてください</span><span className="mt-2 text-xs text-white/45">20MB以下の画像アップロードしてください</span></>}
             </label>
             {isProfessionalFlow ? (
               <>
-                <div className="mt-4 flex items-center justify-between text-sm text-white/85"><span>レイヤー分け方法を選択してください（複数選択可）</span><button type="button" className="text-xs font-semibold text-white/65 underline" onClick={reset}>リセット</button></div>
+                <div className="mt-4 flex items-center justify-between text-sm text-white/85"><span>レイヤー分け方法を選択してください（複数選択可）</span><button type="button" className="text-xs font-semibold text-white/65 underline disabled:cursor-not-allowed disabled:opacity-50" disabled={locked} onClick={reset}>リセット</button></div>
                 <div className="mt-3 grid grid-cols-[160px_160px] gap-4">
                   {([['stack', '積み重ね'], ['split', '分割']] as const).map(([mode, label]) => (
-                    <button key={mode} type="button" aria-pressed={layerModes.includes(mode)} className={`h-[164px] rounded-xl border px-4 py-3 text-sm font-semibold ${layerModes.includes(mode) ? 'border-cyan-300 bg-cyan-300/10 text-white' : 'border-white/10 bg-[#111719] text-white/45'}`} onClick={() => toggleLayerMode(mode)}>
+                    <button key={mode} type="button" aria-pressed={layerModes.includes(mode)} className={`h-[164px] rounded-xl border px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${layerModes.includes(mode) ? 'border-cyan-300 bg-cyan-300/10 text-white' : 'border-white/10 bg-[#111719] text-white/45'}`} disabled={locked} onClick={() => toggleLayerMode(mode)}>
                       <span className="relative mx-auto mb-3 block h-16 w-20" aria-hidden="true">
                         <span className={`absolute left-1/2 top-1/2 block h-8 w-12 -translate-x-1/2 -translate-y-1/2 rounded-md border border-cyan-200/30 bg-cyan-300/20 ${mode === 'stack' ? '-rotate-[18deg]' : '-rotate-[6deg]'}`} />
                         <span className={`absolute left-1/2 top-1/2 block h-8 w-12 -translate-x-1/2 -translate-y-1/2 rounded-md border border-cyan-100/30 bg-cyan-200/15 ${mode === 'stack' ? 'rotate-[18deg]' : 'rotate-[14deg]'}`} />
@@ -580,13 +695,21 @@ export function LightchainVectorSpecialPage() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-4 flex flex-col items-end gap-4 text-xs text-white/75"><span>使用回数 {usage} / 30</span><button type="button" className="h-10 w-[288px] rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950" onClick={() => { setUsage((count) => Math.min(30, count + 1)); navigate('/tools/vector-special'); }}>AI生成 <span className="ml-1">1</span></button></div>
+                <div className="mt-4 flex flex-col items-end gap-4 text-xs text-white/75"><span>使用回数 {usage} / 30</span><button type="button" className="h-10 w-[288px] rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950" disabled={locked||!referenceImage} onClick={()=>void generate()}>AI生成 <span className="ml-1">1</span></button></div>
               </>
             ) : (
-              <ParityPermissionGate testId="pattern-vector-permission" />
+              <button
+                type="button"
+                data-testid="heavy-pattern-vector-generate"
+                onClick={()=>void generate()}
+                disabled={locked||!referenceImage}
+                className="mt-4 h-10 w-full rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                AI生成
+              </button>
             )}
           </section>
-          <section className="relative flex min-h-[746px] flex-col rounded-xl bg-[#232728] p-4">
+          <section data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status} className="relative flex min-h-[746px] flex-col rounded-xl bg-[#232728] p-4"><CanonicalImageWorkspaceControls workspace={workspace} />{workspace.result&&<p className="absolute bottom-4 left-4 text-xs text-neutral-300">保存された結果はラスター画像です。</p>}
             <button type="button" className="absolute right-4 top-4 flex h-[32px] w-[102px] items-center justify-center rounded-lg border border-white/15 bg-[#171b1c]/80 px-3 text-sm text-white/80" onClick={() => navigate('/history')}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button>
             <div className="flex flex-1 flex-col items-center justify-center text-center"><h1 className="text-xl font-bold text-white">パターンをベクター画像に変換（{activeTab}）</h1><p className="mt-2 text-sm text-neutral-400">プリントパターンをベクター画像に変換します</p></div>
           </section>
@@ -642,7 +765,7 @@ export function LightchainModelPage() {
   return (
     <ParityShell workflowFeature="ai-fitting">
       <div className="mx-auto max-w-[1420px] px-5 py-8 sm:px-8 lg:px-10">
-        <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / FITTING</p><h1 className="mt-3 text-3xl font-semibold">AIフィッティング</h1><p className="mt-2 text-sm text-neutral-400">服、モデル、背景を組み合わせて着用イメージを作成します。</p></div><button type="button" className={mutedButton} onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button></div>
+        <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">HEAVY CHAIN / FITTING</p><h1 className="mt-3 text-3xl font-semibold">AIフィッティング</h1><p className="mt-2 text-sm text-neutral-400">服、モデル、背景を組み合わせて着用イメージを作成します。</p></div><button type="button" className={mutedButton} onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button></div>
         <div className="mt-7"><SegmentedTabs items={['シングルタスク', 'マルチタスク']} active={mode} onChange={setMode} /></div>
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className={`${darkPanel} p-5 sm:p-7`}>
@@ -671,11 +794,51 @@ export function LightchainModelPage() {
 }
 
 const dialogueScenes = [
-  ['生地パターン適用', '画像1の色と生地を変えず、画像2の生地パターンを適用してください', '面料套版'],
-  ['線画から実写化', '画像1の線画を参考に、画像2の雰囲気で実写の商品画像にしてください', '转线稿'],
-  ['デザインミックス', '画像1の色と生地を変えず、襟型を画像2の襟型に変更してください', '款式融合'],
-  ['プリント修正', '画像1の要素を参考に、四方連続のプリントパターンをデザインし、画像2をレイアウトの参考にしてください', '印花设计'],
+  ['生地パターン適用', '服装のデザインを変更せず、異なる生地を服装に適用してください', '面料套版'],
+  ['線画から実写化', 'シャツを白黒線稿の服装デザイン図に変換し、白背景にしてください', '转线稿'],
+  ['デザインミックス', '画像1の色と生地を変更せず、襟型を画像2の襟型に変更してください', '款式融合'],
+  ['プリント修正', '画像1のアジサイ要素を参考に、四方連続のプリントパターンをデザインし、レイアウトとスタイルは画像2を参考にしてください', '印花设计'],
 ] as const;
+
+const dialogueSceneCoverByTitle: Record<string, string> = {
+  生地パターン適用: '/scene-assets/fabric.png',
+  線画から実写化: '/scene-assets/draft.png',
+  デザインミックス: '/scene-assets/multi.png',
+  プリント修正: '/scene-assets/print.png',
+};
+
+const dialogueSceneReferenceAssets: Record<string, Array<{ key: string; name: string }>> = {
+  生地パターン適用: [
+    { key: 'fabric1.jpg', name: 'fabric1.jpg' },
+    { key: 'fabric2.jpg', name: 'fabric2.jpg' },
+    { key: 'fabric3.jpg', name: 'fabric3.jpg' },
+    { key: 'fabric4.jpg', name: 'fabric4.jpg' },
+    { key: 'fabric5.png', name: 'fabric5.png' },
+  ],
+  線画から実写化: [{ key: 'draft1.png', name: 'draft1.png' }],
+  デザインミックス: [
+    { key: 'multi1.jpg', name: 'multi1.jpg' },
+    { key: 'multi2.jpg', name: 'multi2.jpg' },
+  ],
+  プリント修正: [
+    { key: 'print1.png', name: 'print1.png' },
+    { key: 'print2.jpg', name: 'print2.jpg' },
+  ],
+};
+
+const DESIGN_DIALOGUE_SELECTION_ID = 'design-production-dialogue';
+const EMPTY_DESIGN_DIALOGUE_REFERENCES: DesignDialogueReferenceState = {
+  scopeKey: '',
+  references: [],
+  ready: true,
+};
+const designDialogueReferenceStatusLabel: Record<string, string> = {
+  pending: '準備中',
+  saving: '保存中',
+  recovering: '保存状態を確認中',
+  ready: '準備完了',
+  failure: '保存に失敗',
+};
 
 type GalleryReferenceAsset = {
   id: string;
@@ -710,38 +873,6 @@ const sortWorkspaceArtifacts = (artifacts: Iterable<WorkspaceArtifact>) => (
   [...artifacts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 );
 
-// The current Light source renders all 31 project cards in one document. The
-// relative labels below are intentionally source-shaped (the first three are
-// hour-based, followed by the day-based records visible in the canonical page).
-const designProductionSourceProjectAgesHours = [
-  17, 17, 18, 7 * 24, 7 * 24, 8 * 24,
-  ...Array.from({ length: 17 }, () => 10 * 24),
-  ...Array.from({ length: 8 }, () => 11 * 24),
-] as const;
-
-const buildDesignProductionSourceProjectFallbacks = (
-  brandId: string,
-  scopeId?: string,
-): WorkspaceArtifact[] => designProductionSourceProjectAgesHours.map((hours, index) => ({
-  id: `source-design-production-untitled-${index + 1}`,
-  brandId,
-  featureType: 'design-production-source-fallback',
-  title: 'Untitled',
-  imageUrl: '',
-  prompt: null,
-  createdAt: new Date(Date.now() - hours * 3_600_000 - index * 1_000).toISOString(),
-  metadata: { sourceFallback: true, sourceIndex: index + 1 },
-  scopeId,
-}));
-
-const formatDesignProductionSourceArtifactDate = (createdAt: string) => {
-  const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return '日時未確認 修正';
-  const hoursSinceEdit = Math.max(1, Math.floor((Date.now() - date.getTime()) / 3_600_000));
-  if (hoursSinceEdit < 24) return `${hoursSinceEdit}時間前 修正`;
-  return `${Math.max(1, Math.floor(hoursSinceEdit / 24))}日前 修正`;
-};
-
 const mergeWorkspaceArtifact = (current: WorkspaceArtifact[], next: WorkspaceArtifact) => {
   const byId = new Map(current.map((artifact) => [artifact.id, artifact]));
   byId.set(next.id, next);
@@ -751,31 +882,43 @@ const mergeWorkspaceArtifact = (current: WorkspaceArtifact[], next: WorkspaceArt
 const marketingSceneCards = [
   {
     label: 'EC',
+    icon: ShoppingBag,
+    widthClass: 'lg:w-[78.40px]',
     prompt: 'ECサイト向けに、商品の特徴が伝わる販促ビジュアルを作成してください。',
     image: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateMarketingCover.png?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: 'SNS',
+    icon: MessageCircle,
+    widthClass: 'lg:w-[88.36px]',
     prompt: 'SNS向けに、ブランドの雰囲気が伝わる縦長の投稿ビジュアルを作成してください。',
     image: 'https://static-cn.linkaigc.com/workbenches/2026-02/d81b55aa18721b86c37b96a36223a936.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: 'ブランド',
+    icon: Palette,
+    widthClass: 'lg:w-[116.09px]',
     prompt: 'ブランドの世界観を表現するキャンペーンビジュアルを作成してください。',
     image: 'https://static-cn.linkaigc.com/saas/2026-06/a25e632441de5b1198f4e20ae7040568.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: '店舗・オフライン',
+    icon: Store,
+    widthClass: 'lg:w-[172.09px]',
     prompt: '店舗や展示会で使える、商品が見やすい販促パネルを作成してください。',
     image: 'https://static-cn.linkaigc.com/saas/2026-06/3266745d3f905fc8c770cd0894438279.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: 'ライブ配信',
+    icon: Radio,
+    widthClass: 'lg:w-[130.09px]',
     prompt: 'ライブ配信の商品紹介で使える、視認性の高い告知ビジュアルを作成してください。',
     image: 'https://static-cn.linkaigc.com/saas/2026-06/6051a3df009110d3de23c3af3173e418.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: 'プロモーション',
+    icon: Megaphone,
+    widthClass: 'lg:w-[158.09px]',
     prompt: '新商品のプロモーション用に、印象的なキャンペーンビジュアルを作成してください。',
     image: 'https://static-cn.linkaigc.com/saas/2026-06/1b69b85c8eba09e87fbae86a8f98b3b5.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
@@ -942,8 +1085,8 @@ export function LightchainMarketingHomePage() {
         <section className="text-center">
           <h1 className="text-4xl font-semibold tracking-[-0.04em]">マーケティングワークスペースへようこそ</h1>
           <p className="mt-3 text-sm text-neutral-400">今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！</p>
-          <div className="relative mx-auto mt-8 max-w-[980px] rounded-2xl border border-[#0bcabc] bg-[#1a1f22] p-2 shadow-[0_0_28px_rgba(101,211,207,0.14)]">
-            <div className="grid min-h-[206px] grid-cols-[96px_minmax(0,1fr)] items-start gap-4 rounded-2xl bg-[#1d2326] px-4 py-3 text-left">
+          <div className="relative mx-auto mt-8 max-w-[980px] rounded-2xl border border-[#0bcabc] bg-[#1a1f22] p-2 shadow-[0_0_28px_rgba(101,211,207,0.14)] lg:max-w-[958px]">
+            <div className="grid min-h-[206px] grid-cols-[96px_minmax(0,1fr)] items-start gap-4 rounded-2xl bg-[#1d2326] px-4 py-3 text-left lg:grid-cols-[100px_minmax(0,1fr)]">
               <button type="button" aria-label="参考画像を追加" onClick={() => navigate('/marketing/detail')} className="mt-2 flex h-24 w-20 rotate-[-8deg] items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#243039,#101719)] text-neutral-300 transition hover:text-white">
                 <img src="https://jp.linkaigc.com/marketing/upload-placeholder.png" alt="" className="h-full w-full object-cover" />
               </button>
@@ -953,10 +1096,10 @@ export function LightchainMarketingHomePage() {
                 maxLength={4000}
                 aria-label="マーケティングのリクエスト"
                 placeholder="商品画像をアップロードして、デザインのリクエストを教えてください"
-                className="h-full min-h-[150px] w-full resize-none border-0 bg-transparent p-5 pr-24 text-left text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400"
+                className="h-full min-h-[150px] w-full resize-none border-0 bg-transparent p-5 pr-24 text-left text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400 lg:mt-[15px] lg:h-[80px] lg:min-h-[80px]"
               />
             </div>
-            <div className="absolute bottom-5 right-5 flex items-center gap-4 text-xs text-neutral-500">
+            <div className="absolute bottom-5 right-5 flex items-center gap-4 text-xs text-neutral-500 lg:bottom-[21px] lg:right-[18px]">
               <span>{prompt.length} / 4000</span>
               <button type="button" aria-label="送信" disabled={!prompt.trim()} onClick={() => navigate(generationHref(prompt.trim()))} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#65d3cf] disabled:cursor-not-allowed disabled:opacity-40"><ArrowRight className="h-5 w-5 -rotate-45" /></button>
             </div>
@@ -964,20 +1107,20 @@ export function LightchainMarketingHomePage() {
               <div className="absolute left-1/2 top-1/2 z-20 flex w-[min(660px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-full border border-[#65d3cf]/50 bg-[#202829]/95 px-4 py-2 text-left text-xs font-semibold text-neutral-200 shadow-xl" data-testid="lightchain-marketing-tutorial">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#65d3cf] ring-4 ring-[#65d3cf]/30" />
                 <span className="min-w-0 flex-1">ここで参考画像のアップロードや、アイデア（プロンプト）の入力ができます。 1 / 4</span>
-                <button type="button" onClick={dismissTutorial} className="shrink-0 text-[#65d3cf] underline">Next</button>
-                <button type="button" aria-label="スキップ" onClick={dismissTutorial} className="shrink-0 text-lg leading-none text-[#65d3cf]">×</button>
+                <button type="button" onClick={dismissTutorial} className="shrink-0 text-[#65d3cf] underline">次へ</button>
+                <button type="button" aria-label="スキップ" onClick={dismissTutorial} className="shrink-0 text-lg leading-none text-[#65d3cf]">スキップ</button>
               </div>
             )}
           </div>
         </section>
 
-        <section className="mt-6" aria-label="おすすめのシーン">
+        <section className="mt-8" aria-label="おすすめのシーン">
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="mr-1 text-sm text-neutral-300">おすすめのシーン 👉</span>
             {marketingSceneCards.map((scene) => (
-              <button key={scene.label} type="button" onClick={() => setPrompt(scene.prompt)} className="inline-flex items-center gap-2 rounded-xl bg-[#262c30] px-5 py-3 text-sm font-semibold text-neutral-200 transition hover:bg-[#343c41]">
-                <Sparkles className="h-4 w-4 text-neutral-300" />
-                <span>{scene.label}</span>
+              <button key={scene.label} type="button" onClick={() => setPrompt(scene.prompt)} className={`inline-flex h-[40px] shrink-0 items-center gap-2 rounded-xl bg-[#262c30] px-4 py-0 text-sm font-semibold text-neutral-200 transition hover:bg-[#343c41] ${scene.widthClass}`}>
+                <scene.icon className="h-4 w-4 shrink-0 text-neutral-300" />
+                <span className="whitespace-nowrap">{scene.label}</span>
               </button>
             ))}
           </div>
@@ -1014,6 +1157,53 @@ export function LightchainMarketingHomePage() {
   );
 }
 
+/** Read-only conversation cards, separate from the existing generated-image artifacts. */
+export function DesignConversationProjectList({ recent = false, client }: { recent?: boolean; client?: DesignProjectListClient }) {
+  const { user, currentBrand } = useAuthStore();
+  const userId = user?.id ?? '';
+  const brandId = currentBrand?.id ?? '';
+  const scopeKey = JSON.stringify([userId, brandId]);
+  const stores = useMemo(() => createEntryDraftStore({ idb: window.indexedDB, dbName: DESIGN_ENTRY_DRAFT_DB }), []);
+  const [retry, setRetry] = useState(0);
+  const [state, setState] = useState<{ scopeKey: string; status: 'loading' | 'ready' | 'error'; entries: DesignConversationProject[]; error?: string }>({ scopeKey: '', status: 'loading', entries: [] });
+  const epochRef = useRef(0);
+  useEffect(() => {
+    const epoch = ++epochRef.current;
+    const assertContext = () => {
+      const live = useAuthStore.getState();
+      if (epochRef.current !== epoch || live.user?.id !== userId || live.currentBrand?.id !== brandId) throw new Error('design_project_list_scope_stale');
+    };
+    setState((current) => ({ scopeKey, status: 'loading', entries: current.scopeKey === scopeKey ? current.entries : [] }));
+    if (userId && brandId) {
+      void listDesignConversationProjects({ scope: { userId, brandId }, drafts: stores, client, assertContext })
+        .then((entries) => { assertContext(); setState({ scopeKey, status: 'ready', entries }); })
+        .catch((error: unknown) => {
+          try {
+            assertContext();
+            const code = error instanceof Error && /^[a-z0-9_:-]{1,96}$/i.test(error.message) ? error.message : 'design_project_list_failed';
+            setState((current) => ({ scopeKey, status: 'error', entries: current.scopeKey === scopeKey ? current.entries : [], error: code }));
+          } catch { /* old scope cannot publish */ }
+        });
+    } else setState({ scopeKey, status: 'ready', entries: [] });
+    return () => { if (epochRef.current === epoch) epochRef.current += 1; };
+  }, [brandId, client, retry, scopeKey, stores, userId]);
+  const visible = state.scopeKey === scopeKey ? state : { status: 'loading' as const, entries: [] };
+  const entries = recent ? visible.entries.slice(0, 5) : visible.entries;
+  return <section data-testid="design-conversation-project-list" className="mt-4" aria-label="対話プロジェクト">
+    {visible.status === 'loading' && <p role="status" className="text-sm text-neutral-400">対話プロジェクトを確認しています。</p>}
+    {visible.status === 'error' && <div role="alert" data-testid="design-conversation-project-error" className="mb-3 text-sm text-amber-100">
+      <span>対話プロジェクトの保存状態を確認できませんでした。{state.error}</span>
+      <button type="button" data-testid="design-conversation-project-retry" onClick={() => setRetry((value) => value + 1)} className="ml-3 underline">再確認</button>
+    </div>}
+    <div className="grid gap-3 grid-cols-2 sm:grid-cols-5">{entries.map((entry) => <Link key={JSON.stringify([entry.projectId, entry.conversationId])}
+      to={entry.href} data-testid="design-conversation-project-card" data-project-id={entry.projectId} data-conversation-id={entry.conversationId}
+      className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm transition hover:border-white/30">
+      <MessageCircle aria-hidden="true" className="mb-3 h-5 w-5 text-neutral-400" />
+      <span className="block truncate font-medium">{entry.title}</span><span className="mt-2 block text-xs text-neutral-400">{formatArtifactDate(entry.updatedAt)}</span>
+    </Link>)}</div>
+  </section>;
+}
+
 export function LightchainDesignProductionPage() {
   const [activeTab, setActiveTab] = useState('プロジェクトから開始');
   const [dialoguePrompt, setDialoguePrompt] = useState('');
@@ -1021,38 +1211,118 @@ export function LightchainDesignProductionPage() {
   const [activeAssetSlot, setActiveAssetSlot] = useState<0 | 1>(0);
   const [galleryReferenceAssets, setGalleryReferenceAssets] = useState<GalleryReferenceAsset[]>([]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<[string | null, string | null]>([null, null]);
-  const [persistedDesignArtifacts, setPersistedDesignArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const [designArtifactLoadState, setDesignArtifactLoadState] = useState<DesignProjectArtifactLoadState<DesignProjectEntry>>({ status: 'loading' });
+  const [persistedDesignScopeKey, setPersistedDesignScopeKey] = useState<string | null>(null);
+  const designLoadRequestTokenRef = useRef(0);
   const [projectPage, setProjectPage] = useState(1);
   const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
-  const [pinnedProjectIds, setPinnedProjectIds] = useState<Set<string>>(new Set());
-  const [pinsHydrated, setPinsHydrated] = useState(false);
+  const [designPinState, setDesignPinState] = useState<{ scopeKey: string; ids: Set<string>; hydrated: boolean }>({ scopeKey: '', ids: new Set(), hydrated: false });
   const [remainingUnits, setRemainingUnits] = useState<number | null>(null);
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
+  const heavyRuntime = isHeavyWorkspaceRuntime();
   const designBrandId = currentBrand?.id;
   const designUserId = user?.id;
+  const designScopeKey = createDesignArtifactScopeKey(designUserId, designBrandId);
+  const pinnedProjectIds = designPinState.scopeKey === designScopeKey ? designPinState.ids : new Set<string>();
+  const pinsHydrated = designPinState.scopeKey === designScopeKey && designPinState.hydrated;
+  const displayedDesignLoadState: DesignProjectArtifactLoadState<DesignProjectEntry> = persistedDesignScopeKey === designScopeKey
+    ? designArtifactLoadState
+    : { status: 'loading' };
+  const displayedEntries = entriesForDesignProjectLoad(displayedDesignLoadState);
+  const scopedGalleryReferenceAssets = persistedDesignScopeKey === designScopeKey ? galleryReferenceAssets : [];
+  const scopedSelectedAssetIds = persistedDesignScopeKey === designScopeKey ? selectedAssetIds : [null, null];
+
+  const startDesignArtifactLoad = useCallback((scopeKey: string, userId?: string, brandId?: string) => {
+    const requestToken = ++designLoadRequestTokenRef.current;
+    setPersistedDesignScopeKey(scopeKey);
+    setDesignArtifactLoadState({ status: 'loading' });
+    setGalleryReferenceAssets([]);
+    setSelectedAssetIds([null, null]);
+    setProjectPage(1);
+    setOpenProjectMenuId(null);
+
+    const liveAuth = useAuthStore.getState();
+    const liveScopeKey = createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id);
+    if (!userId || !brandId || !isCurrentDesignArtifactLoad(
+      scopeKey,
+      liveScopeKey,
+      requestToken,
+      designLoadRequestTokenRef.current,
+    )) {
+      setDesignArtifactLoadState({ status: 'loading' });
+      return requestToken;
+    }
+
+    const isCurrent = () => {
+      const currentAuth = useAuthStore.getState();
+      return isCurrentDesignArtifactLoad(
+        scopeKey,
+        createDesignArtifactScopeKey(currentAuth.user?.id, currentAuth.currentBrand?.id),
+        requestToken,
+        designLoadRequestTokenRef.current,
+      );
+    };
+
+    void runDesignProjectArtifactLoad({
+      readLocalArtifacts: () => listWorkspaceArtifacts(brandId, userId)
+        .filter((artifact) => designHistoryFeatureTypes.has(artifact.featureType)),
+      readRemoteArtifacts: async () => {
+        if (!isCurrent()) throw new Error('design_artifact_load_stale');
+        if (!cloudflareDataPlane) throw new Error('remote_data_plane_unavailable');
+        const remoteRows = await cloudflareDataPlane.listGeneratedImages(brandId, {
+          limit: 100,
+          offset: 0,
+          order: 'newest',
+        });
+        if (!isCurrent()) throw new Error('design_artifact_load_stale');
+        return remoteRows.map(asGeneratedImageListRow);
+      },
+      signRemoteArtifacts: (rows) => withSignedImageUrls([...rows]),
+      toEntries: (localArtifacts, signedRows) => {
+        const remoteArtifacts = signedRows
+          .map(generatedImageToWorkspaceArtifact)
+          .filter((artifact) => designHistoryFeatureTypes.has(artifact.featureType));
+        return toDesignEntries(localArtifacts, remoteArtifacts);
+      },
+      isCurrent,
+      setState: (state) => {
+        if (!isCurrent()) return;
+        setDesignArtifactLoadState(state);
+        const entries = entriesForDesignProjectLoad(state);
+        const nextReferenceAssets = entries
+          .map(({ artifact }) => artifact)
+          .filter((artifact) => Boolean(artifact.imageUrl))
+          .slice(0, 12)
+          .map((artifact) => ({ id: artifact.id, label: artifact.title, src: artifact.imageUrl }));
+        setGalleryReferenceAssets(nextReferenceAssets);
+        setSelectedAssetIds([nextReferenceAssets[0]?.id ?? null, nextReferenceAssets[1]?.id ?? null]);
+      },
+    });
+    return requestToken;
+  }, []);
 
   const selectedAssets = useMemo(
-    () => selectedAssetIds.map((id) => galleryReferenceAssets.find((asset) => asset.id === id) ?? {
+    () => scopedSelectedAssetIds.map((id) => scopedGalleryReferenceAssets.find((asset) => asset.id === id) ?? {
       id: '',
       label: 'ライブラリーから素材を選択',
       src: '',
     }) as [GalleryReferenceAsset, GalleryReferenceAsset],
-    [galleryReferenceAssets, selectedAssetIds],
+    [scopedGalleryReferenceAssets, scopedSelectedAssetIds],
   );
   const resolvedSelectedAssets = useMemo(
-    () => selectedAssetIds
-      .map((id) => galleryReferenceAssets.find((asset) => asset.id === id))
+    () => scopedSelectedAssetIds
+      .map((id) => scopedGalleryReferenceAssets.find((asset) => asset.id === id))
       .filter((asset): asset is GalleryReferenceAsset => Boolean(asset)),
-    [galleryReferenceAssets, selectedAssetIds],
+    [scopedGalleryReferenceAssets, scopedSelectedAssetIds],
   );
   const trimmedDialoguePrompt = dialoguePrompt.trim();
-  const hasUnresolvableSelectedAssetId = selectedAssetIds.some(
-    (id) => Boolean(id) && !galleryReferenceAssets.some((asset) => asset.id === id),
+  const hasUnresolvableSelectedAssetId = scopedSelectedAssetIds.some(
+    (id) => Boolean(id) && !scopedGalleryReferenceAssets.some((asset) => asset.id === id),
   );
   const hasTwoReferenceAssets = resolvedSelectedAssets.length === 2;
   const canOpenProposal = Boolean(trimmedDialoguePrompt) && hasTwoReferenceAssets;
-  const referenceRequirementMessage = galleryReferenceAssets.length === 0
+  const referenceRequirementMessage = scopedGalleryReferenceAssets.length === 0
     ? '参考素材を2件選択してください。素材がない場合はライブラリーから追加してください。'
     : hasUnresolvableSelectedAssetId
       ? '選択中の参考素材をライブラリーから確認できません。参考素材を2件選択し直してください。'
@@ -1065,53 +1335,11 @@ export function LightchainDesignProductionPage() {
   };
 
   useEffect(() => {
-    let cancelled = false;
-    if (!currentBrand?.id) {
-      setPersistedDesignArtifacts([]);
-      setGalleryReferenceAssets([]);
-      setSelectedAssetIds([null, null]);
-      return () => { cancelled = true; };
-    }
-    const loadArtifacts = async () => {
-      const localArtifacts = listWorkspaceArtifacts(currentBrand.id, user?.id)
-        .filter((artifact) => designHistoryFeatureTypes.has(artifact.featureType));
-      let remoteArtifacts: WorkspaceArtifact[] = [];
-      if (cloudflareDataPlane) {
-        try {
-          const remoteRows = await cloudflareDataPlane.listGeneratedImages(currentBrand.id, {
-            limit: 100,
-            offset: 0,
-            order: 'newest',
-          });
-          const listRows = remoteRows.map(asGeneratedImageListRow);
-          const signedRows = await withSignedImageUrls(listRows).catch(() => listRows);
-          remoteArtifacts = signedRows
-            .map(generatedImageToWorkspaceArtifact);
-        } catch {
-          // Local artifacts remain a safe fallback when the remote read is unavailable.
-        }
-      }
-      if (cancelled) return;
-      const byId = new Map<string, WorkspaceArtifact>();
-      [...remoteArtifacts, ...localArtifacts].forEach((artifact) => {
-        if (!byId.has(artifact.id)) byId.set(artifact.id, artifact);
-      });
-      const artifacts = sortWorkspaceArtifacts(byId.values());
-      setPersistedDesignArtifacts(artifacts);
-      const nextReferenceAssets = artifacts
-        .filter((artifact) => Boolean(artifact.imageUrl))
-        .slice(0, 12)
-        .map((artifact) => ({
-          id: artifact.id,
-          label: artifact.title,
-          src: artifact.imageUrl,
-        }));
-      setGalleryReferenceAssets(nextReferenceAssets);
-      setSelectedAssetIds([nextReferenceAssets[0]?.id ?? null, nextReferenceAssets[1]?.id ?? null]);
+    const requestToken = startDesignArtifactLoad(designScopeKey, designUserId, designBrandId);
+    return () => {
+      if (designLoadRequestTokenRef.current === requestToken) designLoadRequestTokenRef.current += 1;
     };
-    void loadArtifacts();
-    return () => { cancelled = true; };
-  }, [currentBrand?.id, user?.id]);
+  }, [designBrandId, designScopeKey, designUserId, startDesignArtifactLoad]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1129,46 +1357,64 @@ export function LightchainDesignProductionPage() {
     return () => { cancelled = true; };
   }, [currentBrand?.id]);
 
-  const displayDesignArtifacts = useMemo(() => {
-    if (!designBrandId) {
-      return persistedDesignArtifacts;
-    }
-    const existingIds = new Set(persistedDesignArtifacts.map((artifact) => artifact.id));
-    const fallbackArtifacts = buildDesignProductionSourceProjectFallbacks(designBrandId, designUserId)
-      .filter((artifact) => !existingIds.has(artifact.id));
-    return [...persistedDesignArtifacts, ...fallbackArtifacts].slice(0, designProductionSourceProjectAgesHours.length);
-  }, [designBrandId, persistedDesignArtifacts, designUserId]);
-  // Light currently keeps all 31 cards in the document on page 1. Preserve its
-  // six-page indicator and arrow controls while rendering the same all-card
-  // surface for parity and reliable reuse of saved artifacts.
-  const projectPageCount = 6;
-  const visibleProjectArtifacts = displayDesignArtifacts;
+  const displayDesignEntries = designUserId && designBrandId ? displayedEntries : [];
+  const displayDesignArtifacts = displayDesignEntries.map(({ artifact }) => artifact);
+  const page = paginate(displayDesignEntries, projectPage, DESIGN_PROJECT_PAGE_SIZE);
+  const visibleProjectEntries = page.items;
 
   useEffect(() => {
-    const brandId = currentBrand?.id;
-    if (!brandId) {
-      setPinsHydrated(false);
-      setPinnedProjectIds(new Set());
+    if (projectPage !== page.page) setProjectPage(page.page);
+  }, [page.page, projectPage]);
+
+  useEffect(() => {
+    if (!designUserId || !designBrandId) {
+      setDesignPinState({ scopeKey: designScopeKey, ids: new Set(), hydrated: false });
       return;
     }
-    setPinsHydrated(false);
+    let ids = new Set<string>();
     try {
-      const saved = window.localStorage.getItem(`heavy-design-production-pins:${brandId}`);
+      const saved = window.localStorage.getItem(designProjectPinsStorageKey(designUserId, designBrandId));
       const parsed = saved ? JSON.parse(saved) : [];
-      setPinnedProjectIds(new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []));
+      ids = new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []);
     } catch {
-      setPinnedProjectIds(new Set());
+      ids = new Set();
     }
-    setPinsHydrated(true);
-  }, [currentBrand?.id]);
+    const liveAuth = useAuthStore.getState();
+    const liveScopeKey = createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id);
+    if (isCurrentDesignArtifactScope(designScopeKey, liveScopeKey)) {
+      setDesignPinState({ scopeKey: designScopeKey, ids, hydrated: true });
+    }
+  }, [designBrandId, designScopeKey, designUserId]);
 
   useEffect(() => {
-    const brandId = currentBrand?.id;
-    if (!brandId || !pinsHydrated) return;
-    window.localStorage.setItem(`heavy-design-production-pins:${brandId}`, JSON.stringify([...pinnedProjectIds]));
-  }, [currentBrand?.id, pinnedProjectIds, pinsHydrated]);
+    if (!designUserId || !designBrandId || !pinsHydrated || designPinState.scopeKey !== designScopeKey) return;
+    const liveAuth = useAuthStore.getState();
+    const liveScopeKey = createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id);
+    if (!isCurrentDesignArtifactScope(designScopeKey, liveScopeKey)) return;
+    try {
+      window.localStorage.setItem(designProjectPinsStorageKey(designUserId, designBrandId), JSON.stringify([...designPinState.ids]));
+    } catch {
+      // Pin display remains usable for this view when browser storage is unavailable.
+    }
+  }, [designBrandId, designPinState, designScopeKey, designUserId, pinsHydrated]);
+  const toggleDesignProjectPin = (artifactId: string) => {
+    const liveAuth = useAuthStore.getState();
+    const liveScopeKey = createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id);
+    if (!designUserId || !designBrandId || !isCurrentDesignArtifactScope(designScopeKey, liveScopeKey)) return;
+    setDesignPinState((current) => {
+      const nextIds = new Set(current.scopeKey === designScopeKey ? current.ids : []);
+      if (nextIds.has(artifactId)) nextIds.delete(artifactId);
+      else nextIds.add(artifactId);
+      return {
+        scopeKey: designScopeKey,
+        ids: nextIds,
+        hydrated: current.scopeKey === designScopeKey && current.hydrated,
+      };
+    });
+  };
   const saveDesignArtifactToLibrary = async (artifact: WorkspaceArtifact) => {
     if (!currentBrand?.id) return toast.error('ブランドが選択されていないため、ライブラリーへ保存できません');
+    const scopeKey = designScopeKey;
     const result = await saveWorkspaceArtifactBestEffort({
       ...artifact,
       id: undefined,
@@ -1176,12 +1422,26 @@ export function LightchainDesignProductionPage() {
       scopeId: user?.id,
       metadata: { ...artifact.metadata, librarySource: 'design-production-card-menu', libraryGroup: 'マイライブラリー', copiedFromArtifactId: artifact.id },
     });
+    const liveAuth = useAuthStore.getState();
+    if (!isCurrentDesignArtifactScope(
+      scopeKey,
+      createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id),
+    )) return;
     if (!result.localPersisted) return toast.error('ライブラリー保存の確認に失敗しました');
     if (cloudflareDataPlane && !result.remote) {
       toast.error('リモート保存の確認に失敗しました。再送せず、同じ保存依頼を照合してください');
       return;
     }
-    setPersistedDesignArtifacts((current) => mergeWorkspaceArtifact(current, result.artifact));
+    setDesignArtifactLoadState((current) => {
+      const scopedCurrent = persistedDesignScopeKey === scopeKey ? entriesForDesignProjectLoad(current) : [];
+      const nextEntries = toDesignEntries(
+        [...scopedCurrent.filter((entry) => entry.origin === 'local').map((entry) => entry.artifact), result.artifact],
+        scopedCurrent.filter((entry) => entry.origin === 'remote').map((entry) => entry.artifact),
+      );
+      return current.status === 'error'
+        ? { ...current, localEntries: toDesignEntries([...current.localEntries.map((entry) => entry.artifact), result.artifact], []).filter((entry) => entry.origin === 'local') }
+        : nextEntries.length > 0 ? { status: 'ready', entries: nextEntries } : { status: 'empty' };
+    });
     if (result.artifact.imageUrl) {
       setGalleryReferenceAssets((current) => [{
         id: result.artifact.id,
@@ -1192,7 +1452,10 @@ export function LightchainDesignProductionPage() {
     toast.success('アセットライブラリーに保存しました');
   };
   const deleteDesignArtifact = async (artifact: WorkspaceArtifact) => {
-    if (!currentBrand?.id || !window.confirm(`「${artifact.title}」を削除しますか？`)) return;
+    const brandId = designBrandId;
+    const userId = designUserId;
+    const scopeKey = designScopeKey;
+    if (!brandId || !window.confirm(`「${artifact.title}」を削除しますか？`)) return;
     const remoteImageId = typeof artifact.metadata.remoteImageId === 'string'
       ? artifact.metadata.remoteImageId
       : null;
@@ -1203,13 +1466,25 @@ export function LightchainDesignProductionPage() {
       try {
         await cloudflareDataPlane!.deleteGeneratedImage(remoteImageId!);
       } catch {
-        toast.error('削除に失敗しました');
+        const liveAuth = useAuthStore.getState();
+        if (isCurrentDesignArtifactScope(scopeKey, createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id))) {
+          toast.error('削除に失敗しました');
+        }
         return;
       }
     }
-    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, [artifact.id], user?.id);
+    const result = deleteWorkspaceArtifactsPersisted(brandId, [artifact.id], userId);
     if (!result.ok) return toast.error('成果物を削除できませんでした');
-    setPersistedDesignArtifacts((current) => current.filter((item) => item.id !== artifact.id));
+    const liveAuth = useAuthStore.getState();
+    if (!isCurrentDesignArtifactScope(scopeKey, createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id))) return;
+    setDesignArtifactLoadState((current) => {
+      const currentEntries = entriesForDesignProjectLoad(current).filter((entry) => entry.artifact.id !== artifact.id);
+      if (current.status === 'error') {
+        const localEntries = current.localEntries.filter((entry) => entry.artifact.id !== artifact.id);
+        return { ...current, localEntries };
+      }
+      return currentEntries.length > 0 ? { status: 'ready', entries: currentEntries } : { status: 'empty' };
+    });
     setGalleryReferenceAssets((current) => current.filter((asset) => asset.id !== artifact.id));
     setOpenProjectMenuId(null);
     toast.success(isRemoteArtifact ? '画像を削除しました' : 'ローカル成果物を削除しました');
@@ -1227,15 +1502,43 @@ export function LightchainDesignProductionPage() {
       sourceMode: 'local-workflow-intake',
     }));
   };
+  const renderDesignProjectEntry = (entry: DesignProjectEntry) => {
+    const { artifact } = entry;
+    const href = designEntryHref(entry);
+    return (
+      <DesignRecentProjectEntryCard
+        key={artifact.id}
+        entry={entry}
+        userId={designUserId}
+        brandId={designBrandId}
+        heavyRuntime={heavyRuntime}
+        pinned={pinnedProjectIds.has(artifact.id)}
+        menuOpen={openProjectMenuId === artifact.id}
+        onOpen={() => { if (href) navigate(href); }}
+        onToggleMenu={() => setOpenProjectMenuId((current) => current === artifact.id ? null : artifact.id)}
+        onTogglePin={() => { toggleDesignProjectPin(artifact.id); setOpenProjectMenuId(null); }}
+        onSaveToLibrary={() => { void saveDesignArtifactToLibrary(artifact); setOpenProjectMenuId(null); }}
+        onDelete={() => { void deleteDesignArtifact(artifact); }}
+      />
+    );
+  };
   if (activeTab === '対話から開始') {
-    return <LightchainDialogueParityPanel onProjectStart={() => setActiveTab('プロジェクトから開始')} />;
+    return <LightchainDialogueParityPanel
+      onProjectStart={() => setActiveTab('プロジェクトから開始')}
+      remainingUnits={remainingUnits}
+      recentProjectScopeKey={designScopeKey}
+      recentProjectEntries={displayDesignEntries.slice(0, 5)}
+      recentProjectLoadState={displayedDesignLoadState}
+      onRetryRecentProjects={() => { startDesignArtifactLoad(designScopeKey, designUserId, designBrandId); }}
+      renderRecentProjectEntry={renderDesignProjectEntry}
+    />;
   }
   return (
     <ParityShell className="design-production-parity relative overflow-hidden bg-[#171b1c] text-white" workflowFeature="print-design-project">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(180,224,139,0.5),rgba(112,208,239,0.42),rgba(255,255,255,0))]" />
+      <div aria-hidden="true" className="design-production-hero-glow pointer-events-none absolute inset-x-0 top-0" />
       {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</div>}
       <div data-testid="design-production-page" className="relative z-10 mx-auto max-w-[1157px] px-6 py-7 lg:px-0"><div className="text-center"><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1><p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p></div>
-        <div role="tablist" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">{['プロジェクトから開始', '対話から開始'].map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`h-10 ${tab === 'プロジェクトから開始' ? 'w-[210px]' : 'w-[146px]'} rounded-xl px-0 py-1 text-lg font-medium transition ${activeTab === tab ? 'bg-white/15 text-white shadow-sm' : 'text-neutral-400 hover:text-white'}`}>{tab}</button>)}</div>
+        <div role="tablist" data-design-tablist="" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">{['プロジェクトから開始', '対話から開始'].map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`h-10 ${tab === 'プロジェクトから開始' ? 'w-[210px]' : 'w-[146px]'} rounded-xl px-0 py-1 text-lg font-medium transition ${activeTab === tab ? 'shadow-sm' : 'text-neutral-400 hover:text-white'}`}>{tab}</button>)}</div>
         {activeTab === '対話から開始' ? (
           <div role="tabpanel" aria-label="対話から開始">
             <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8">
@@ -1244,23 +1547,31 @@ export function LightchainDesignProductionPage() {
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {dialogueScenes.map(([title, prompt, iconLabel]) => <button key={title} type="button" onClick={() => { setActiveScene(title); setDialoguePrompt(prompt); }} className={`rounded-2xl border bg-white/5 p-4 text-left transition hover:border-white/40 ${activeScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}><div className="flex h-20 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold text-neutral-400">{iconLabel}</div><p className="mt-3 text-sm font-semibold">{title}</p><span className="mt-2 block text-xs text-neutral-400">使ってみる</span></button>)}
               </div>
-              {activeScene && <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-xs font-semibold text-neutral-400">Gallery素材を組み合わせる</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{galleryReferenceAssets.map((asset) => <button key={asset.id} type="button" onClick={() => setSelectedAssets((current) => { const next: [typeof galleryReferenceAssets[number], typeof galleryReferenceAssets[number]] = [...current]; next[activeAssetSlot] = asset; return next; })} className={`overflow-hidden rounded-xl border text-left transition ${selectedAssets[activeAssetSlot].id === asset.id ? 'border-white ring-1 ring-white' : 'border-white/10 hover:border-white/40'}`}><div className="h-24 bg-white/10"><img src={asset.src} alt={asset.label} className="h-full w-full object-cover" loading="lazy" /></div><div className="px-3 py-2 text-xs text-neutral-300">{asset.label}</div></button>)}</div><div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-400"><button type="button" onClick={() => setActiveAssetSlot(0)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 0 ? 'border-white text-white' : 'border-white/10'}`}>画像1を選択</button><button type="button" onClick={() => setActiveAssetSlot(1)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 1 ? 'border-white text-white' : 'border-white/10'}`}>画像2を選択</button></div></div>}
+              {activeScene && <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-xs font-semibold text-neutral-400">Gallery素材を組み合わせる</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{scopedGalleryReferenceAssets.map((asset) => <button key={asset.id} type="button" onClick={() => setSelectedAssets((current) => { const next: [GalleryReferenceAsset, GalleryReferenceAsset] = [...current]; next[activeAssetSlot] = asset; return next; })} className={`overflow-hidden rounded-xl border text-left transition ${selectedAssets[activeAssetSlot].id === asset.id ? 'border-white ring-1 ring-white' : 'border-white/10 hover:border-white/40'}`}><div className="h-24 bg-white/10"><img src={asset.src} alt={asset.label} className="h-full w-full object-cover" loading="lazy" /></div><div className="px-3 py-2 text-xs text-neutral-300">{asset.label}</div></button>)}</div><div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-400"><button type="button" onClick={() => setActiveAssetSlot(0)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 0 ? 'border-white text-white' : 'border-white/10'}`}>画像1を選択</button><button type="button" onClick={() => setActiveAssetSlot(1)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 1 ? 'border-white text-white' : 'border-white/10'}`}>画像2を選択</button></div></div>}
               {activeScene && <div className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 sm:grid-cols-[180px_180px_minmax(0,1fr)]"><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[0].src} alt="画像1" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像1: {selectedAssets[0].label}</p></div><div className="overflow-hidden rounded-xl bg-white/10"><img src={selectedAssets[1].src} alt="画像2" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-400">画像2: {selectedAssets[1].label}</p></div><div><textarea value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/60" aria-label="商品画像をアップロードして、デザインのリクエストを教えてください" /><div className="mt-2 text-right text-xs text-neutral-500">{dialoguePrompt.length} / 4000</div></div></div>}
-              <div className="mt-5 max-w-2xl"><div className="flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2"><Sparkles className="h-4 w-4 text-neutral-400" /><input value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500" placeholder="作りたいデザインを入力してください" /><button type="button" className="rounded-lg bg-white px-4 py-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40" disabled={!canOpenProposal} onClick={openProposal}>提案を見る</button></div>{(!trimmedDialoguePrompt || !hasTwoReferenceAssets) && <div id="design-production-proposal-requirements" className="mt-2 space-y-1 text-xs text-neutral-400" aria-live="polite">{!trimmedDialoguePrompt && <p>依頼文を入力してください。</p>}{!hasTwoReferenceAssets && <div className="flex flex-wrap items-center gap-2"><p>{referenceRequirementMessage}</p>{galleryReferenceAssets.length === 0 && <button type="button" className="rounded-lg border border-white/20 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:border-white/50" onClick={() => navigate('/asset-center')}>ライブラリーを開く</button>}</div>}</div>}</div>
+              <div className="mt-5 max-w-2xl"><div className="flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2"><Sparkles className="h-4 w-4 text-neutral-400" /><input value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500" placeholder="作りたいデザインを入力してください" /><button type="button" className="rounded-lg bg-white px-4 py-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40" disabled={!canOpenProposal} onClick={openProposal}>提案を見る</button></div>{(!trimmedDialoguePrompt || !hasTwoReferenceAssets) && <div id="design-production-proposal-requirements" className="mt-2 space-y-1 text-xs text-neutral-400" aria-live="polite">{!trimmedDialoguePrompt && <p>依頼文を入力してください。</p>}{!hasTwoReferenceAssets && <div className="flex flex-wrap items-center gap-2"><p>{referenceRequirementMessage}</p>{scopedGalleryReferenceAssets.length === 0 && <button type="button" className="rounded-lg border border-white/20 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:border-white/50" onClick={() => navigate('/asset-center')}>ライブラリーを開く</button>}</div>}</div>}</div>
             </section>
           </div>
         ) : (
           <div role="tabpanel" aria-label="プロジェクトから開始">
             <section className="mt-6 grid gap-2 grid-cols-2 sm:grid-cols-5" aria-label="新規ファイル">
-              <div className="flex min-h-[160px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-center"><Plus className="h-8 w-8 text-white" /><span className="mt-4 text-sm font-semibold">新規ファイル</span></div>
+              <DesignNewFileCard />
               <CreationCard icon={<Shirt />} title="インスピレーション" actionLabel="デザインプロジェクトを新規作成" onClick={() => navigate('/creator')} />
               <CreationCard icon={<Palette />} title="ブリン卜修正" actionLabel="プリントプロジェクトを新規作成" onClick={() => navigate('/printing')} />
               <CreationCard icon={<Layers />} title="生地イメージ" actionLabel="生地プロジェクトを新規作成" onClick={() => navigate('/tools/fabric')} />
               <CreationCard icon={<FileText />} title="企画提案書" actionLabel="企画提案書を新規作成" onClick={() => navigate('/agent')} />
             </section>
             <section className="mt-12" data-testid="design-production-persisted-projects">
+              <DesignConversationProjectList />
               <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2></div>
-              {displayDesignArtifacts.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-5 py-12 text-center text-sm text-neutral-400">保存確認できたデザイン成果物はまだありません。生成結果を保存すると、ここに表示されます。</div> : <><div className="mt-4 grid gap-4 grid-cols-2 sm:grid-cols-5">{visibleProjectArtifacts.map((artifact) => <article key={artifact.id} className="relative h-60 overflow-visible rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40"><button type="button" className="block h-full w-full cursor-pointer overflow-hidden rounded-2xl text-left" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}><div className="h-36 bg-white/10">{artifact.imageUrl ? <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="" className="h-12 w-12 object-contain" loading="lazy" />}</div><div className="p-4 pr-12"><p className="truncate font-medium">{pinnedProjectIds.has(artifact.id) ? '📌 ' : ''}{artifact.title}</p><p className="mt-2 truncate text-xs text-neutral-400">{artifact.featureType === 'design-production-source-fallback' ? formatDesignProductionSourceArtifactDate(artifact.createdAt) : `${artifact.featureType} ・ ${formatArtifactDate(artifact.createdAt)}`}</p></div></button><div className="absolute right-2 top-2 z-20"><button type="button" aria-label={`${artifact.title}のメニュー`} aria-expanded={openProjectMenuId === artifact.id} className="rounded-lg bg-black/45 p-2 text-neutral-200 hover:bg-black/70" onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === artifact.id ? null : artifact.id); }}><MoreVertical className="h-4 w-4" /></button>{openProjectMenuId === artifact.id && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl"><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setPinnedProjectIds((current) => { const next = new Set(current); if (next.has(artifact.id)) next.delete(artifact.id); else next.add(artifact.id); return next; }); setOpenProjectMenuId(null); }}>ピン留め</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { void saveDesignArtifactToLibrary(artifact); setOpenProjectMenuId(null); }}>アセットライブラリに保存</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => deleteDesignArtifact(artifact)}>削除</button></div>}</div></article>)}</div><div className="mt-5 flex flex-wrap items-center justify-center gap-2" data-testid="design-production-pagination" aria-label="マイプロジェクトページング"><button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage((page) => Math.max(1, page - 1))} disabled={projectPage === 1} aria-label="前のページ"><span role="img" aria-label="left"><ChevronLeft className="h-3 w-3" /></span></button>{Array.from({ length: projectPageCount }, (_, index) => <span key={index} aria-current={index + 1 === projectPage ? 'page' : undefined} className={`px-1.5 text-xs ${index + 1 === projectPage ? 'text-white' : 'text-neutral-500'}`}>{index + 1}</span>)}<button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage((page) => Math.min(projectPageCount, page + 1))} disabled={projectPage === projectPageCount} aria-label="次のページ"><span role="img" aria-label="right"><ChevronRight className="h-3 w-3" /></span></button></div></>}</section>
+              {displayedDesignLoadState.status === 'loading' && <p className="mt-4 rounded-2xl border border-white/10 px-5 py-8 text-center text-sm text-neutral-400" role="status" data-testid="design-project-loading">デザイン成果物を読み込んでいます。</p>}
+              {displayedDesignLoadState.status === 'error' && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-200/5 px-4 py-3 text-sm text-amber-100" role="alert" data-testid="design-project-remote-error"><span>リモートのデザイン成果物を読み込めませんでした。{displayedDesignLoadState.remoteError}</span><button type="button" className="rounded-lg border border-amber-100/30 px-3 py-1.5 text-xs font-semibold hover:bg-white/10" onClick={() => { startDesignArtifactLoad(designScopeKey, designUserId, designBrandId); }} data-testid="design-project-retry">再試行</button></div>}
+              {displayDesignArtifacts.length === 0
+                ? displayedDesignLoadState.status === 'empty'
+                  ? <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-5 py-12 text-center text-sm text-neutral-400" data-testid="design-project-empty">保存確認できたデザイン成果物はまだありません。生成結果を保存すると、ここに表示されます。</div>
+                  : null
+                : <><div className="mt-4 grid gap-4 grid-cols-2 sm:grid-cols-5">{visibleProjectEntries.map(renderDesignProjectEntry)}</div><div className="mt-5 flex flex-wrap items-center justify-end gap-2" data-testid="design-production-pagination" aria-label="マイプロジェクトページング"><button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage(Math.max(1, page.page - 1))} disabled={page.page === 1} aria-label="前のページ"><span role="img" aria-label="left"><ChevronLeft className="h-3 w-3" /></span></button>{Array.from({ length: page.pageCount }, (_, index) => <button key={index} type="button" aria-current={index + 1 === page.page ? 'page' : undefined} onClick={() => setProjectPage(index + 1)} className={`px-1.5 text-xs ${index + 1 === page.page ? 'text-white' : 'text-neutral-500'}`}>{index + 1}</button>)}<button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40" onClick={() => setProjectPage(Math.min(page.pageCount, page.page + 1))} disabled={page.page === page.pageCount} aria-label="次のページ"><span role="img" aria-label="right"><ChevronRight className="h-3 w-3" /></span></button></div></>}
+            </section>
           </div>
         )}
       </div>
@@ -1268,74 +1579,415 @@ export function LightchainDesignProductionPage() {
   );
 }
 
-function LightchainDialogueParityPanel({ onProjectStart }: { onProjectStart: () => void }) {
-  const [prompt, setPrompt] = useState('');
-  const [selectedScene, setSelectedScene] = useState<string | null>(null);
-  const [selectedReferenceImages, setSelectedReferenceImages] = useState<boolean[]>(() => Array.from({ length: 5 }, () => true));
+export function LightchainDialogueParityPanel({
+  onProjectStart,
+  remainingUnits,
+  referenceClient: referenceClientOverride,
+  entryClient,
+  recentProjectScopeKey: recentProjectScopeKeyProp,
+  recentProjectEntries = [],
+  recentProjectLoadState,
+  onRetryRecentProjects,
+  renderRecentProjectEntry,
+}: {
+  onProjectStart: () => void;
+  remainingUnits: number | null;
+  /** Narrow adapter seam used by rendered behavioral tests; production uses the configured data plane. */
+  referenceClient?: DesignDialogueReferenceClient;
+  entryClient?: DesignEntryClient;
+  /** Canonical parent-load snapshot. A captured scope key prevents old tenant cards from flashing during auth changes. */
+  recentProjectScopeKey?: string;
+  recentProjectEntries?: readonly DesignProjectEntry[];
+  recentProjectLoadState?: DesignProjectArtifactLoadState<DesignProjectEntry>;
+  onRetryRecentProjects?: () => void;
+  renderRecentProjectEntry?: (entry: DesignProjectEntry) => ReactNode;
+}) {
+  type ReferenceController = ReturnType<typeof createDesignDialogueReferenceController>;
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
-  const currentBrandId = currentBrand?.id;
-  const recentProjects = useMemo(
-    () => (currentBrandId ? listWorkspaceArtifacts(currentBrandId, user?.id).slice(0, 5) : []),
-    [currentBrandId, user?.id],
+  const userId = user?.id ?? null;
+  const currentBrandId = currentBrand?.id ?? null;
+  const scopeIdentity = userId && currentBrandId
+    ? JSON.stringify([userId, currentBrandId, DESIGN_DIALOGUE_SELECTION_ID])
+    : '';
+  const client = referenceClientOverride ?? cloudflareDataPlane;
+  const [promptState, setPromptState] = useState({ scopeIdentity: '', value: '' });
+  const [selectedSceneState, setSelectedSceneState] = useState<{ scopeIdentity: string; value: string | null }>({ scopeIdentity: '', value: null });
+  const [referenceState, setReferenceState] = useState<{ scopeIdentity: string; value: DesignDialogueReferenceState }>({
+    scopeIdentity: '',
+    value: EMPTY_DESIGN_DIALOGUE_REFERENCES,
+  });
+  const [referenceActionError, setReferenceActionError] = useState<{ scopeIdentity: string; message: string } | null>(null);
+  const [thumbnailState, setThumbnailState] = useState<{ scopeIdentity: string; urls: Record<string, string> }>({ scopeIdentity: '', urls: {} });
+  const scopeGenerationRef = useRef(0);
+  const entryCoordinatorRef = useRef<ReturnType<typeof createDesignEntryCoordinator> | null>(null);
+  const [entrySending, setEntrySending] = useState(false);
+  const previewRequestGenerationRef = useRef(0);
+  const referenceControllerRef = useRef<{ scopeIdentity: string; generation: number; controller: ReferenceController } | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const retryUploadIdRef = useRef<string | null>(null);
+  const localFilesByReferenceIdRef = useRef(new Map<string, DesignDialogueReferenceFile>());
+  const localPreviewUrlsRef = useRef(new Map<string, string>());
+  const prompt = promptState.scopeIdentity === scopeIdentity ? promptState.value : '';
+  const selectedScene = selectedSceneState.scopeIdentity === scopeIdentity ? selectedSceneState.value : null;
+  const visibleReferenceSnapshot = referenceState.scopeIdentity === scopeIdentity
+    ? referenceState.value
+    : EMPTY_DESIGN_DIALOGUE_REFERENCES;
+  const visibleReferences = visibleReferenceSnapshot.references;
+  const thumbnailUrls = thumbnailState.scopeIdentity === scopeIdentity ? thumbnailState.urls : {};
+  const visibleActionError = referenceActionError?.scopeIdentity === scopeIdentity ? referenceActionError.message : null;
+  const recentScopeIsCurrent = Boolean(
+    recentProjectScopeKeyProp !== undefined
+      && userId
+      && currentBrandId
+      && recentProjectScopeKeyProp === createDesignArtifactScopeKey(userId, currentBrandId),
   );
+  const visibleRecentProjectLoadState = recentProjectScopeKeyProp === undefined || !userId || !currentBrandId
+    ? { status: 'empty' as const }
+    : recentScopeIsCurrent
+      ? recentProjectLoadState ?? { status: 'loading' as const }
+      : { status: 'loading' as const };
+  const visibleRecentProjectEntries = recentScopeIsCurrent ? recentProjectEntries.slice(0, 5) : [];
+
+  const reportReferenceError = useCallback((error: unknown) => {
+    const code = error instanceof Error && /^[a-z0-9_:-]{1,96}$/i.test(error.message)
+      ? error.message
+      : 'design_dialogue_reference_failed';
+    setReferenceActionError({ scopeIdentity, message: `参照画像を保存できませんでした（${code}）` });
+  }, [scopeIdentity]);
+
+  const getCurrentController = useCallback(() => {
+    const current = referenceControllerRef.current;
+    if (!current || !scopeIdentity || current.scopeIdentity !== scopeIdentity || current.generation !== scopeGenerationRef.current) return null;
+    const liveAuth = useAuthStore.getState();
+    if (liveAuth.user?.id !== userId || liveAuth.currentBrand?.id !== currentBrandId) return null;
+    return current.controller;
+  }, [currentBrandId, scopeIdentity, userId]);
+
+  useEffect(() => {
+    entryCoordinatorRef.current?.dispose();
+    entryCoordinatorRef.current = null;
+    setEntrySending(false);
+    referenceControllerRef.current?.controller.dispose();
+    referenceControllerRef.current = null;
+    scopeGenerationRef.current += 1;
+    const generation = scopeGenerationRef.current;
+    if (!userId || !currentBrandId || !client) {
+      setReferenceState({ scopeIdentity, value: EMPTY_DESIGN_DIALOGUE_REFERENCES });
+      return () => {
+        if (scopeGenerationRef.current === generation) scopeGenerationRef.current += 1;
+      };
+    }
+
+    entryCoordinatorRef.current = createDesignEntryCoordinator({
+      scope: { userId, brandId: currentBrandId },
+      client: entryClient,
+      assertScope: () => {
+        const liveAuth = useAuthStore.getState();
+        if (scopeGenerationRef.current !== generation || liveAuth.user?.id !== userId || liveAuth.currentBrand?.id !== currentBrandId) {
+          throw new Error('design_entry_scope_stale');
+        }
+      },
+    });
+    const scope = {
+      userId,
+      brandId: currentBrandId,
+      selectionId: DESIGN_DIALOGUE_SELECTION_ID,
+      generation,
+    };
+    let controllerInstance: ReferenceController | null = null;
+    const controller = createDesignDialogueReferenceController({
+      client,
+      storage: window.localStorage,
+      loadSceneAsset: createSameOriginDesignSceneAssetLoader(),
+      getCurrentScope: () => {
+        if (scopeGenerationRef.current !== generation) return null;
+        const liveAuth = useAuthStore.getState();
+        if (liveAuth.user?.id !== userId || liveAuth.currentBrand?.id !== currentBrandId) return null;
+        return scope;
+      },
+      publish: (snapshot) => {
+        if (scopeGenerationRef.current !== generation) return;
+        const liveAuth = useAuthStore.getState();
+        if (liveAuth.user?.id !== userId || liveAuth.currentBrand?.id !== currentBrandId) return;
+        if (referenceControllerRef.current?.controller !== controllerInstance) return;
+        setReferenceState({ scopeIdentity, value: snapshot });
+      },
+    });
+    controllerInstance = controller;
+    referenceControllerRef.current = { scopeIdentity, generation, controller };
+    try {
+      setReferenceState({ scopeIdentity, value: controller.activate(scope) });
+      void controller.restore().catch((error: unknown) => {
+        if (scopeGenerationRef.current === generation) reportReferenceError(error);
+      });
+    } catch (error) {
+      reportReferenceError(error);
+    }
+
+    return () => {
+      if (scopeGenerationRef.current === generation) scopeGenerationRef.current += 1;
+      entryCoordinatorRef.current?.dispose();
+      entryCoordinatorRef.current = null;
+      controller.dispose();
+      if (referenceControllerRef.current?.controller === controller) referenceControllerRef.current = null;
+      previewRequestGenerationRef.current += 1;
+      for (const url of localPreviewUrlsRef.current.values()) URL.revokeObjectURL(url);
+      localPreviewUrlsRef.current.clear();
+      localFilesByReferenceIdRef.current.clear();
+    };
+  }, [client, currentBrandId, entryClient, reportReferenceError, scopeIdentity, userId]);
+
+  useEffect(() => {
+    const requestGeneration = ++previewRequestGenerationRef.current;
+    let cancelled = false;
+    const urls: Record<string, string> = {};
+    const needsSignedPreview: Array<{ id: string; storagePath: string }> = [];
+    for (const reference of visibleReferences) {
+      const sceneUrl = reference.sceneAssetKey
+        ? `/scene-assets/${encodeURIComponent(reference.sceneAssetKey)}`
+        : null;
+      const localUrl = localPreviewUrlsRef.current.get(reference.id);
+      if (sceneUrl || localUrl) {
+        urls[reference.id] = sceneUrl ?? localUrl!;
+      } else if (reference.kind === 'upload' && reference.status === 'ready' && reference.receipt?.storagePath) {
+        needsSignedPreview.push({ id: reference.id, storagePath: reference.receipt.storagePath });
+      }
+    }
+    setThumbnailState({ scopeIdentity, urls });
+    const isCurrent = () => {
+      if (cancelled || previewRequestGenerationRef.current !== requestGeneration) return false;
+      const liveAuth = useAuthStore.getState();
+      return Boolean(scopeIdentity && liveAuth.user?.id === userId && liveAuth.currentBrand?.id === currentBrandId);
+    };
+    if (needsSignedPreview.length > 0) {
+      void withSignedImageUrls(needsSignedPreview.map(({ storagePath }) => ({ storage_path: storagePath, image_url: '' })))
+        .then((resolved) => {
+          if (!isCurrent()) return;
+          const next = { ...urls };
+          for (const [index, reference] of needsSignedPreview.entries()) {
+            const url = resolved[index]?.image_url;
+            if (typeof url === 'string' && url) next[reference.id] = url;
+          }
+          setThumbnailState({ scopeIdentity, urls: next });
+        })
+        .catch(() => undefined);
+    }
+    return () => { cancelled = true; };
+  }, [currentBrandId, scopeIdentity, userId, visibleReferenceSnapshot]);
+
+  const replaceLocalFilePreview = (referenceId: string, file: DesignDialogueReferenceFile) => {
+    const previous = localPreviewUrlsRef.current.get(referenceId);
+    if (previous) URL.revokeObjectURL(previous);
+    localFilesByReferenceIdRef.current.set(referenceId, file);
+    localPreviewUrlsRef.current.set(referenceId, URL.createObjectURL(file));
+  };
+
+  const handleUploadChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const files = Array.from(input.files ?? []) as DesignDialogueReferenceFile[];
+    input.value = '';
+    input.multiple = true;
+    const controller = getCurrentController();
+    if (!controller) {
+      if (files.length > 0) reportReferenceError(new Error('design_dialogue_reference_scope_missing'));
+      return;
+    }
+
+    const retryId = retryUploadIdRef.current;
+    retryUploadIdRef.current = null;
+    if (retryId) {
+      const replacement = files[0];
+      if (!replacement) return;
+      try {
+        replaceLocalFilePreview(retryId, replacement);
+        const retry = controller.retry(retryId, replacement);
+        setReferenceState({ scopeIdentity, value: controller.snapshot() });
+        await retry;
+      } catch (error) {
+        reportReferenceError(error);
+      }
+      return;
+    }
+
+    const operations: Promise<unknown>[] = [];
+    for (const file of files) {
+      try {
+        const position = controller.snapshot().references.length;
+        const operation = controller.addFile(file);
+        const added = controller.snapshot().references[position];
+        if (added?.kind === 'upload' && added.name === file.name) {
+          replaceLocalFilePreview(added.id, file);
+          setReferenceState({ scopeIdentity, value: controller.snapshot() });
+        }
+        operations.push(operation.catch((error: unknown) => { reportReferenceError(error); }));
+      } catch (error) {
+        reportReferenceError(error);
+      }
+    }
+    await Promise.all(operations);
+  };
+
+  const removeReference = (referenceId: string) => {
+    try {
+      const controller = getCurrentController();
+      if (!controller) throw new Error('design_dialogue_reference_scope_stale');
+      controller.remove(referenceId);
+      const localUrl = localPreviewUrlsRef.current.get(referenceId);
+      if (localUrl) URL.revokeObjectURL(localUrl);
+      localPreviewUrlsRef.current.delete(referenceId);
+      localFilesByReferenceIdRef.current.delete(referenceId);
+      setReferenceState({ scopeIdentity, value: controller.snapshot() });
+      setReferenceActionError(null);
+    } catch (error) {
+      reportReferenceError(error);
+    }
+  };
+
+  const retryReference = (reference: DesignDialogueReferenceState['references'][number]) => {
+    const controller = getCurrentController();
+    if (!controller) {
+      reportReferenceError(new Error('design_dialogue_reference_scope_stale'));
+      return;
+    }
+    if (reference.kind === 'upload' && !localFilesByReferenceIdRef.current.has(reference.id)) {
+      retryUploadIdRef.current = reference.id;
+      if (uploadInputRef.current) {
+        uploadInputRef.current.multiple = false;
+        uploadInputRef.current.click();
+      }
+      return;
+    }
+    void controller.retry(reference.id).catch(reportReferenceError);
+  };
+
+  const selectScene = (title: string, scenePrompt: string) => {
+    setSelectedSceneState({ scopeIdentity, value: title });
+    setPromptState({ scopeIdentity, value: scenePrompt });
+    setReferenceActionError(null);
+    const controller = getCurrentController();
+    if (!controller) {
+      reportReferenceError(new Error('design_dialogue_reference_scope_missing'));
+      return;
+    }
+    for (const reference of controller.snapshot().references) {
+      controller.remove(reference.id);
+      const localUrl = localPreviewUrlsRef.current.get(reference.id);
+      if (localUrl) URL.revokeObjectURL(localUrl);
+      localPreviewUrlsRef.current.delete(reference.id);
+      localFilesByReferenceIdRef.current.delete(reference.id);
+    }
+    setReferenceState({ scopeIdentity, value: controller.snapshot() });
+    const assets = dialogueSceneReferenceAssets[title] ?? [];
+    const operations = assets.map(({ key, name }) => controller.addSceneAsset(key, name)
+      .catch((error: unknown) => { reportReferenceError(error); }));
+    void Promise.all(operations);
+  };
+
+  const sendPrompt = async () => {
+    if (!prompt.trim()) return;
+    const generation = scopeGenerationRef.current;
+    try {
+      const controller = getCurrentController();
+      const coordinator = entryCoordinatorRef.current;
+      if (!controller || !coordinator) throw new Error('design_entry_scope_missing');
+      const manifest = controller.prepareForSend();
+      setEntrySending(true);
+      const href = await coordinator.prepare(prompt, manifest);
+      const liveAuth = useAuthStore.getState();
+      if (scopeGenerationRef.current !== generation || liveAuth.user?.id !== userId || liveAuth.currentBrand?.id !== currentBrandId) return;
+      navigate(href);
+    } catch (error) {
+      if (scopeGenerationRef.current === generation) {
+        const code = error instanceof Error && /^[a-z0-9_:-]{1,96}$/i.test(error.message) ? error.message : 'design_entry_readback_failed';
+        setReferenceActionError({ scopeIdentity, message: `デザインの保存状態を確認できませんでした（${code}）` });
+      }
+    } finally {
+      if (scopeGenerationRef.current === generation) setEntrySending(false);
+    }
+  };
+
+  const referencesReady = visibleReferences.every((reference) => reference.status === 'ready' && Boolean(reference.receipt));
   return (
-    <ParityShell className="bg-[#171b1c] text-white" workflowFeature="print-design-project">
-      <div className="relative z-10 mx-auto max-w-[1157px] px-5 py-7 lg:px-0">
+    <ParityShell className="design-production-parity bg-[#171b1c] relative overflow-hidden text-white" workflowFeature="print-design-project">
+      <div aria-hidden="true" className="design-production-hero-glow pointer-events-none absolute inset-x-0 top-0" />
+      {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</div>}
+      <div data-testid="design-production-page" className="relative z-10 mx-auto max-w-[1157px] px-6 py-7 lg:px-0">
         <div className="text-center">
           <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1>
           <p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p>
         </div>
-        <div role="tablist" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">
+        <div role="tablist" data-design-tablist="" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">
           <button type="button" role="tab" aria-selected={false} onClick={onProjectStart} className="h-10 w-[210px] rounded-xl px-0 py-1 text-lg font-medium text-neutral-400 hover:text-white">プロジェクトから開始</button>
-          <button type="button" role="tab" aria-selected className="h-10 w-[146px] rounded-xl bg-white/15 px-0 py-1 text-lg font-medium text-white shadow-sm">対話から開始</button>
+          <button type="button" role="tab" aria-selected={true} className="h-10 w-[146px] rounded-xl px-0 py-1 text-lg font-medium shadow-sm">対話から開始</button>
         </div>
-        <div role="tabpanel" aria-label="対話から開始" className="relative left-1/2 mt-6 w-[960px] -translate-x-1/2">
-          <div className="relative ml-[144px] h-[198px] w-[792px]">
-            <textarea aria-label="商品画像をアップロードして、デザインのリクエストを教えてください" value={prompt} onChange={(event) => setPrompt(event.target.value)} className="absolute left-0 top-8 h-20 w-[792px] resize-none rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/60" placeholder="商品画像をアップロードして、デザインのリクエストを教えてください" />
-            <span className="absolute left-0 top-[124px] text-xs text-neutral-500">{prompt.length} / 4000</span>
-            <button type="button" disabled={!prompt.trim()} aria-label="送信" onClick={() => navigate(buildGenerationIntentHref({ feature: 'design-gacha', prompt, sourceWorkspace: 'design-production', workflowVersion: 'design-production-brief-local-v1', sourceLabel: workspaceSourceConfig['design-production'].label, sourceResumePath: workspaceSourceConfig['design-production'].resumePath, sourceMode: 'local-workflow-intake' }))} className="absolute -right-1 top-[158px] h-10 w-10 rounded-lg bg-white px-2 text-sm text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40">送信</button>
-          </div>
-          <p className="mt-[63px] text-sm text-neutral-400">下からデザインシーンを選択してお試しください <span aria-hidden="true">↘</span></p>
-          <div className="mt-3 grid w-[960px] grid-cols-4 gap-2" aria-label="デザインシーン">
-            {dialogueScenes.map(([title, scenePrompt]) => {
-              const preview = recentProjects[dialogueScenes.findIndex(([item]) => item === title)]?.imageUrl;
-              return (
-                <button key={title} type="submit" onClick={() => { setSelectedScene(title); setPrompt(scenePrompt); setSelectedReferenceImages(Array.from({ length: 5 }, () => true)); }} className={`h-[120px] w-[234px] overflow-hidden rounded-2xl border bg-white/5 text-left transition hover:border-white/40 ${selectedScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}>
-                  <div className="h-[70px] bg-white/10">{preview && <img src={preview} alt="" className="h-full w-full object-cover" loading="lazy" />}</div>
-                  <span className="block px-3 pt-1 text-xs text-neutral-400">使ってみる</span>
-                  <span className="block truncate px-3 text-sm font-semibold">{title}</span>
-                </button>
-              );
-            })}
-          </div>
-          {selectedScene && <div className="mt-5 w-[792px] rounded-2xl border border-white/10 bg-white/5 p-4" aria-label="参照画像">
-            <div className="flex flex-wrap gap-2">
-              {selectedReferenceImages.map((isSelected, index) => isSelected && (
-                <button key={index} type="button" aria-label={`画像${index + 1}を削除`} onClick={() => setSelectedReferenceImages((current) => current.map((value, currentIndex) => currentIndex === index ? false : value))} className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-200/60 bg-cyan-200/10 px-2.5 py-1.5 text-xs text-neutral-200 hover:border-cyan-100">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/15">画像{index + 1}</span><span aria-hidden="true">×</span>
-                </button>
+        <div role="tabpanel" aria-label="対話から開始" data-testid="design-dialogue-tabpanel" className="relative left-1/2 mt-6 w-[960px] -translate-x-1/2">
+          <section data-design-dialogue-editor="" data-testid="design-dialogue-editor" aria-label="対話エディター">
+            <img data-design-dialogue-upload-illustration="" src="/scene-assets/upload-placeholder.png" alt="" aria-hidden="true" />
+            <button data-design-dialogue-upload-trigger="" type="button" aria-label="参考画像をアップロード" onClick={() => uploadInputRef.current?.click()} />
+            <input
+              ref={uploadInputRef}
+              data-testid="design-dialogue-file-input"
+              className="sr-only"
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/avif"
+              multiple
+              aria-label="参考画像ファイル"
+              onChange={(event) => { void handleUploadChange(event); }}
+            />
+            <div data-design-dialogue-references="" data-testid="design-dialogue-references" aria-label="選択した参考画像">
+              {visibleReferences.map((reference) => (
+                <div key={reference.id} data-design-dialogue-reference="" data-testid="design-dialogue-reference-chip" data-reference-id={reference.id}>
+                  {thumbnailUrls[reference.id]
+                    ? <img data-design-dialogue-reference-thumbnail="" src={thumbnailUrls[reference.id]} alt="" />
+                    : <span data-design-dialogue-reference-thumbnail-placeholder="" aria-hidden="true"><ImageIcon className="h-4 w-4" /></span>}
+                  <span data-design-dialogue-reference-name="" title={reference.name}>{reference.name}</span>
+                  <span data-design-dialogue-reference-status="" aria-live="polite">{designDialogueReferenceStatusLabel[reference.status] ?? reference.status}</span>
+                  {reference.status === 'failure' && <button type="button" data-testid="design-dialogue-reference-retry" aria-label={`${reference.name}を再試行`} onClick={() => retryReference(reference)}>再試行</button>}
+                  <button type="button" data-testid="design-dialogue-reference-remove" aria-label={`${reference.name}を削除`} onClick={() => removeReference(reference.id)}><Trash2 aria-hidden="true" className="h-3.5 w-3.5" /></button>
+                </div>
               ))}
             </div>
-          </div>}
-          <section className="mt-10 flex w-[960px] flex-col gap-4" data-testid="design-production-recent-projects">
+            <textarea
+              data-design-dialogue-prompt=""
+              data-testid="design-dialogue-prompt"
+              data-has-references={visibleReferences.length > 0 ? 'true' : 'false'}
+              aria-label="商品画像をアップロードして、デザインのリクエストを教えてください"
+              value={prompt}
+              onChange={(event) => setPromptState({ scopeIdentity, value: event.target.value })}
+              maxLength={4000}
+              placeholder="商品画像をアップロードして、デザインのリクエストを教えてください"
+            />
+            {visibleActionError && <span data-design-dialogue-error="" data-testid="design-dialogue-error" role="alert">{visibleActionError}</span>}
+            <span data-design-dialogue-counter="" data-testid="design-dialogue-counter" aria-live="polite">{prompt.length} / 4000</span>
+            <button data-design-dialogue-send="" data-testid="design-dialogue-send" type="button" disabled={!prompt.trim() || !referencesReady || entrySending} aria-label="送信" onClick={sendPrompt}><ArrowRight aria-hidden="true" /></button>
+          </section>
+          <p className="mt-[45px] text-sm text-neutral-400">下からデザインシーンを選択してお試しください <span aria-hidden="true">↘</span></p>
+          <div className="mt-3 grid w-[960px] grid-cols-4 gap-2" aria-label="デザインシーン" data-testid="design-dialogue-scenes">
+            {dialogueScenes.map(([title, scenePrompt]) => (
+              <button key={title} data-testid={`design-dialogue-scene-${title}`} type="button" aria-label={`使ってみる ${title}`} aria-pressed={selectedScene === title} onClick={() => selectScene(title, scenePrompt)} className={`group relative h-[120px] w-[234px] overflow-hidden rounded-2xl border text-left transition hover:border-white/40 ${selectedScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}>
+                <img data-design-dialogue-scene-cover="" src={dialogueSceneCoverByTitle[title]} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover transition-all duration-200 group-hover:blur-[8px]" loading="lazy" />
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
+                <span className="absolute inset-x-3 bottom-2 flex items-end justify-between gap-2 text-left"><span><span className="block text-[10px] leading-4 text-white/80 opacity-0 transition-opacity group-hover:opacity-100">使ってみる</span><span className="block truncate text-sm font-semibold leading-5 text-white">{title}</span></span><ArrowRight aria-hidden="true" className="mb-0.5 h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></span>
+              </button>
+            ))}
+          </div>
+          <section className="design-dialogue-recent-projects mt-10 flex flex-col gap-4" data-testid="design-production-recent-projects">
             <div className="flex h-8 items-center">
               <h2 className="flex-1 text-lg font-medium leading-7">最近のプロジェクト</h2>
-              <button type="submit" onClick={onProjectStart} className="flex h-8 w-[108px] items-center justify-end gap-0.5 rounded-lg py-1 pl-3 pr-2 text-neutral-300 hover:bg-white/10">
+              <button type="button" onClick={onProjectStart} className="flex h-8 w-[108px] shrink-0 items-center justify-end gap-0.5 rounded-lg py-1 pl-3 pr-2 text-neutral-300 hover:bg-white/10" data-testid="design-dialogue-recent-projects-all">
                 <span className="text-base font-medium">すべて表示</span><ChevronRight className="h-4 w-4" />
               </button>
             </div>
-            <div className="flex flex-wrap gap-x-2 gap-y-4">
-              <div className="flex h-60 w-[225px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 text-neutral-300 transition hover:border-white/30 hover:bg-white/10" onClick={onProjectStart}>
+            {visibleRecentProjectLoadState.status === 'loading' && <p className="rounded-2xl border border-white/10 px-5 py-8 text-center text-sm text-neutral-400" role="status" data-testid="design-dialogue-recent-projects-loading">デザイン成果物を読み込んでいます。</p>}
+            {visibleRecentProjectLoadState.status === 'error' && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-200/5 px-4 py-3 text-sm text-amber-100" role="alert" data-testid="design-dialogue-recent-projects-error"><span>リモートのデザイン成果物を読み込めませんでした。{visibleRecentProjectLoadState.remoteError}</span><button type="button" className="rounded-lg border border-amber-100/30 px-3 py-1.5 text-xs font-semibold hover:bg-white/10" onClick={onRetryRecentProjects} data-testid="design-dialogue-recent-projects-retry">再試行</button></div>}
+            {visibleRecentProjectLoadState.status === 'empty' && <div className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-sm text-neutral-400" data-testid="design-dialogue-recent-projects-empty">保存確認できたデザイン成果物はまだありません。</div>}
+            <DesignConversationProjectList recent />
+            <div className="grid" data-testid="design-dialogue-recent-project-grid" aria-label="最近のプロジェクト">
+              <button type="button" className="flex h-60 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 text-neutral-300 transition hover:border-white/30 hover:bg-white/10" onClick={onProjectStart} data-testid="design-dialogue-new-file">
                 <Plus className="h-6 w-6" /><span className="mt-2 text-base font-medium">新規ファイル</span>
-              </div>
-              {recentProjects.map((artifact) => (
-                <div key={artifact.id} className="group relative h-60 w-[220px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}>
-                  <div className="h-[220px] bg-white/10">{artifact.imageUrl ? <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="" className="mx-auto mt-20 h-12 w-12 object-contain" loading="lazy" />}</div>
-                  <div className="absolute bottom-0 w-full bg-[#202627] px-3 py-3 text-sm text-neutral-300"><p className="truncate text-base">{artifact.title}</p><p className="mt-1 truncate text-xs text-neutral-400">{formatArtifactDate(artifact.createdAt)}</p></div>
-                  <button type="button" aria-label="" className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg bg-black/45 p-2 text-neutral-200 opacity-0 transition group-hover:opacity-100" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" /></button>
-                </div>
-              ))}
+              </button>
+              {renderRecentProjectEntry && visibleRecentProjectEntries.map((entry) => renderRecentProjectEntry(entry))}
             </div>
           </section>
           <section className="mt-10 min-h-[calc(100vh-60px)] w-full" data-testid="design-production-reference-cases"><h2 className="mb-4 text-lg font-medium leading-7">参考事例</h2><div className="flex min-h-[70vh] flex-col items-center justify-center gap-2 text-sm text-neutral-500"><div className="flex min-h-[70vh] w-full items-center justify-center rounded-2xl border border-dashed border-white/10">データなし</div></div></section>
@@ -1345,11 +1997,22 @@ function LightchainDialogueParityPanel({ onProjectStart }: { onProjectStart: () 
   );
 }
 
-function FileCardIcon({ icon, title }: { icon: ReactNode; title: string; description?: string }) {
+export function FileCardIcon({ icon, title }: { icon: ReactNode; title: string; description?: string }) {
   return <div className="flex flex-col items-center text-center"><div className="flex h-12 w-12 items-center justify-center text-white">{icon}</div><h2 className="mt-4 text-sm font-semibold">{title}</h2></div>;
 }
 
-function CreationCard({
+export function DesignNewFileCard() {
+  return (
+    <div data-design-creation-card="" className="relative flex min-h-[160px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-center">
+      <div data-creation-card-content="">
+        <div data-creation-card-icon=""><Plus className="h-6 w-6" /></div>
+        <span data-creation-card-label="">新規ファイル</span>
+      </div>
+    </div>
+  );
+}
+
+export function CreationCard({
   icon,
   title,
   actionLabel,
@@ -1360,24 +2023,7 @@ function CreationCard({
   actionLabel: string;
   onClick: () => void;
 }) {
-  const actionButtonWidth = {
-    デザインプロジェクトを新規作成: 'w-[228px]',
-    プリントプロジェクトを新規作成: 'w-[228px]',
-    生地プロジェクトを新規作成: 'w-[204px]',
-    企画提案書を新規作成: 'w-[168px]',
-  }[actionLabel] ?? '';
-
-  return (
-    <div className="relative flex min-h-[160px] w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-5 pb-0 text-left transition hover:border-white/40">
-      <FileCardIcon icon={icon} title={title} />
-      <button
-        className={`absolute bottom-0 left-1/2 z-10 inline-flex h-8 -translate-x-1/2 ${actionButtonWidth} cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#0bc1b8] px-4 py-2 text-[12px] font-medium leading-[17.1429px] text-[#111817] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all hover:bg-[#20d0c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/70`}
-        onClick={onClick}
-      >
-        {actionLabel}
-      </button>
-    </div>
-  );
+  return <DesignCreationCard icon={icon} title={title} actionLabel={actionLabel} onClick={onClick} />;
 }
 
 const libraryGroups = ['マイライブラリー', '履歴アップロード', '生成履歴', 'ウェアデザインラボ生成結果', '2026AW', '新規格', 'ノイズバリュー用ホリゾンカラー', 'ライブラリー'] as const;
@@ -1460,7 +2106,7 @@ export function LightchainAssetCenterPage() {
   };
 
 
-  return <ParityShell><div className="mx-auto flex max-w-[1480px] gap-6 px-5 py-8 sm:px-8 lg:px-10"><aside className={`${darkPanel} hidden w-64 shrink-0 p-3 lg:block`}><div className="px-3 py-3 text-xs font-semibold tracking-[0.2em] text-neutral-400">LIBRARY</div>{libraryGroups.map((group) => <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAsset(null); }} className={`flex w-full items-center rounded-xl px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}><FolderOpen className="mr-2 h-4 w-4" />{group}</button>)}</aside><main className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / LIBRARY</p><h1 className="mt-3 text-3xl font-semibold">{activeGroup}</h1><p className="mt-2 text-sm text-neutral-500">生成済みの成果物は、次のCanvas作業へ同じ系譜で引き継げます。</p></div><div className="flex gap-2"><button type="button" className={`${mutedButton} opacity-60`} disabled title="素材の登録は各ワークベンチから行います"><Upload className="mr-2 inline h-4 w-4" />アップロード</button><button type="button" className={`${mutedButton} opacity-60`} disabled title="グループ管理はβ版で準備中"><Plus className="mr-2 inline h-4 w-4" />新規グループ作成</button></div></div><div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4"><div className="flex gap-2"><button type="button" className={`rounded-lg px-3 py-2 text-sm ${filter === '画像／動画' ? 'bg-white text-neutral-950' : 'text-neutral-400'}`} onClick={() => setFilter('画像／動画')}>画像／動画</button><button type="button" className={`rounded-lg px-3 py-2 text-sm ${filter === 'お気に入り' ? 'bg-white text-neutral-950' : 'text-neutral-400'}`} onClick={() => setFilter('お気に入り')}>お気に入り</button></div><label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-400"><Search className="h-4 w-4" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="w-40 bg-transparent outline-none" placeholder="検索" aria-label="ライブラリー検索" /></label></div><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><span className="text-sm text-neutral-400">選択済み ： {selectedIds.size} / {assets.length}</span>{selectMode ? <div className="flex flex-wrap gap-2"><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={handleBulkCopy}>キャンバスをコピー</button><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={() => void handleBulkDownload()}>ダウンロード</button><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={handleBulkDelete}><Trash2 className="mr-2 inline h-4 w-4" />削除</button><button type="button" className={mutedButton} onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}>一括操作を閉じる</button></div> : <button type="button" className={mutedButton} onClick={() => setSelectMode(true)}>一括操作</button>}</div>{selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(assets.filter((asset) => asset.persisted).map((asset) => asset.id)))}>全選択</button>}{assets.length === 0 ? <div className="mt-10 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center"><Grid2X2 className="h-8 w-8 text-neutral-600" /><h2 className="mt-4 font-semibold">まだ素材がありません</h2><p className="mt-2 text-sm text-neutral-500">このグループに保存された生成結果はありません。</p></div> : <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{assets.map((asset) => <article key={asset.id} className={`overflow-hidden rounded-2xl border bg-[#151a1c] ${selectedAsset?.id === asset.id ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>{selectMode && <button type="button" className="w-full border-b border-white/10 px-3 py-2 text-left text-xs text-neutral-300 disabled:opacity-40" disabled={!asset.persisted} onClick={() => toggleSelectedAsset(asset.id)} aria-pressed={selectedIds.has(asset.id)}>{selectedIds.has(asset.id) ? "✓ 選択中" : "選択"}</button>}<button type="button" className="flex h-44 w-full items-center justify-center bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.22),transparent_24%),linear-gradient(135deg,#263438,#111719)]" onClick={() => asset.persisted && setSelectedAsset(persistedArtifacts.find((candidate) => candidate.id === asset.id) ?? null)} aria-label={`${asset.title}を選択`}>{asset.imageUrl ? <img src={asset.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}</button><div className="p-4"><p className="truncate text-sm font-medium">{asset.title}</p><p className="mt-1 truncate text-xs text-neutral-500">{asset.featureType}</p><div className="mt-3 flex gap-2"><button type="button" className="flex-1 rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-400 hover:text-white disabled:opacity-40" disabled={!asset.persisted} onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(asset.id)}`)}>ボードにコピー</button><button type="button" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-400 hover:text-white disabled:opacity-40" disabled={!asset.persisted} onClick={() => setSelectedAsset(persistedArtifacts.find((candidate) => candidate.id === asset.id) ?? null)}>詳細</button></div></div></article>)}</div>}{selectedAsset && <aside className="mt-6 rounded-2xl border border-cyan-200/20 bg-cyan-200/[0.05] p-5" aria-live="polite"><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.2em] text-cyan-200">SELECTED ASSET</p><h2 className="mt-2 font-semibold">{selectedAsset.title}</h2></div><button type="button" className="text-sm text-neutral-400 hover:text-white" onClick={() => setSelectedAsset(null)}>閉じる</button></div><p className="mt-3 text-sm text-neutral-400">{selectedAsset.prompt || '保存済み成果物'}</p><button type="button" className="mt-4 rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(selectedAsset.id)}`)}>Canvasへ送る</button></aside>}</main></div></ParityShell>;
+  return <ParityShell><div className="mx-auto flex max-w-[1480px] gap-6 px-5 py-8 sm:px-8 lg:px-10"><aside className={`${darkPanel} hidden w-64 shrink-0 p-3 lg:block`}><div className="px-3 py-3 text-xs font-semibold tracking-[0.2em] text-neutral-400">LIBRARY</div>{libraryGroups.map((group) => <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAsset(null); }} className={`flex w-full items-center rounded-xl px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}><FolderOpen className="mr-2 h-4 w-4" />{group}</button>)}</aside><main className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">HEAVY CHAIN / LIBRARY</p><h1 className="mt-3 text-3xl font-semibold">{activeGroup}</h1><p className="mt-2 text-sm text-neutral-500">生成済みの成果物は、次のCanvas作業へ同じ系譜で引き継げます。</p></div><div className="flex gap-2"><button type="button" className={`${mutedButton} opacity-60`} disabled title="素材の登録は各ワークベンチから行います"><Upload className="mr-2 inline h-4 w-4" />アップロード</button><button type="button" className={`${mutedButton} opacity-60`} disabled title="グループ管理はβ版で準備中"><Plus className="mr-2 inline h-4 w-4" />新規グループ作成</button></div></div><div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4"><div className="flex gap-2"><button type="button" className={`rounded-lg px-3 py-2 text-sm ${filter === '画像／動画' ? 'bg-white text-neutral-950' : 'text-neutral-400'}`} onClick={() => setFilter('画像／動画')}>画像／動画</button><button type="button" className={`rounded-lg px-3 py-2 text-sm ${filter === 'お気に入り' ? 'bg-white text-neutral-950' : 'text-neutral-400'}`} onClick={() => setFilter('お気に入り')}>お気に入り</button></div><label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-400"><Search className="h-4 w-4" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="w-40 bg-transparent outline-none" placeholder="検索" aria-label="ライブラリー検索" /></label></div><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><span className="text-sm text-neutral-400">選択済み ： {selectedIds.size} / {assets.length}</span>{selectMode ? <div className="flex flex-wrap gap-2"><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={handleBulkCopy}>キャンバスをコピー</button><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={() => void handleBulkDownload()}>ダウンロード</button><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={handleBulkDelete}><Trash2 className="mr-2 inline h-4 w-4" />削除</button><button type="button" className={mutedButton} onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}>一括操作を閉じる</button></div> : <button type="button" className={mutedButton} onClick={() => setSelectMode(true)}>一括操作</button>}</div>{selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(assets.filter((asset) => asset.persisted).map((asset) => asset.id)))}>全選択</button>}{assets.length === 0 ? <div className="mt-10 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center"><Grid2X2 className="h-8 w-8 text-neutral-600" /><h2 className="mt-4 font-semibold">まだ素材がありません</h2><p className="mt-2 text-sm text-neutral-500">このグループに保存された生成結果はありません。</p></div> : <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{assets.map((asset) => <article key={asset.id} className={`overflow-hidden rounded-2xl border bg-[#151a1c] ${selectedAsset?.id === asset.id ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>{selectMode && <button type="button" className="w-full border-b border-white/10 px-3 py-2 text-left text-xs text-neutral-300 disabled:opacity-40" disabled={!asset.persisted} onClick={() => toggleSelectedAsset(asset.id)} aria-pressed={selectedIds.has(asset.id)}>{selectedIds.has(asset.id) ? "✓ 選択中" : "選択"}</button>}<button type="button" className="flex h-44 w-full items-center justify-center bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.22),transparent_24%),linear-gradient(135deg,#263438,#111719)]" onClick={() => asset.persisted && setSelectedAsset(persistedArtifacts.find((candidate) => candidate.id === asset.id) ?? null)} aria-label={`${asset.title}を選択`}>{asset.imageUrl ? <img src={asset.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}</button><div className="p-4"><p className="truncate text-sm font-medium">{asset.title}</p><p className="mt-1 truncate text-xs text-neutral-500">{asset.featureType}</p><div className="mt-3 flex gap-2"><button type="button" className="flex-1 rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-400 hover:text-white disabled:opacity-40" disabled={!asset.persisted} onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(asset.id)}`)}>ボードにコピー</button><button type="button" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-400 hover:text-white disabled:opacity-40" disabled={!asset.persisted} onClick={() => setSelectedAsset(persistedArtifacts.find((candidate) => candidate.id === asset.id) ?? null)}>詳細</button></div></div></article>)}</div>}{selectedAsset && <aside className="mt-6 rounded-2xl border border-cyan-200/20 bg-cyan-200/[0.05] p-5" aria-live="polite"><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.2em] text-cyan-200">SELECTED ASSET</p><h2 className="mt-2 font-semibold">{selectedAsset.title}</h2></div><button type="button" className="text-sm text-neutral-400 hover:text-white" onClick={() => setSelectedAsset(null)}>閉じる</button></div><p className="mt-3 text-sm text-neutral-400">{selectedAsset.prompt || '保存済み成果物'}</p><button type="button" className="mt-4 rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(selectedAsset.id)}`)}>Canvasへ送る</button></aside>}</main></div></ParityShell>;
 }
 
 const orientedDesignProjectImages = [
@@ -1490,16 +2136,53 @@ const orientedDesignReferenceImages = [
   'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/7a1e111e3f302abe404e6c0b347563ca.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
 ] as const;
 
+function orientedDesignLabHref(
+  location: { search: string; hash: string },
+  pathname: string,
+  index?: { key: 'project' | 'reference'; value: number },
+) {
+  const params = new URLSearchParams(location.search);
+  if (!params.has('workspaceFeature')) params.set('workspaceFeature', 'wear-design-lab');
+  if (index) params.set(index.key, String(index.value));
+  return `${pathname}?${params.toString()}${location.hash}`;
+}
+
 export function LightchainOrientedDesignPage() {
-  const navigate = useNavigate();
+  const navigate = useNavigate(),location=useLocation();
+  const explicitFeature=new URLSearchParams(location.search).get('workspaceFeature');
+  const libraryArtifactId = new URLSearchParams(location.search).get('libraryArtifactId');
+  const workspace=useCanonicalImageWorkspace('wear-design-lab',{identityConflict:explicitFeature!==null&&explicitFeature!=='wear-design-lab'});
+  const navigateToDetail = (index?: { key: 'project' | 'reference'; value: number }) => {
+    if (explicitFeature !== null && explicitFeature !== 'wear-design-lab') return;
+    navigate(orientedDesignLabHref(location, '/flow/orientedDesign/detail', index));
+  };
+  const canContinueLibrary = Boolean(
+    libraryArtifactId &&
+    !workspace.jobId &&
+    !workspace.pendingId &&
+    workspace.status === 'ready' &&
+    workspace.error === null &&
+    workspace.originalInputsAvailable &&
+    workspace.slots.primary?.sourceImageId === libraryArtifactId
+  );
 
   return (
     <ParityShell workflowFeature="wear-design-lab" className="oriented-design-parity">
       <div className="oriented-design-content">
         <h6 className="oriented-design-title">ウェアデザインラボ</h6>
+        {workspace.jobId&&<main className="mb-6 rounded-xl border border-white/10 bg-[#202426] p-4" data-testid="oriented-design-resume"
+          data-resume-job={workspace.result?.jobId??''} data-resume-state={workspace.status} data-resume-feature={workspace.toolId} data-resume-inputs={String(workspace.originalInputsAvailable)}>
+          {workspace.result&&<img src={workspace.result.imageUrl} alt="保存されたウェア画像" className="h-40 w-full object-contain" />}
+          {workspace.status==='loading'&&<p role="status">保存された画像を取得しています。</p>}
+          {workspace.error&&<p role="alert">{workspace.error}</p>}
+          {workspace.result&&<button type="button" className="mt-3 rounded-lg bg-cyan-700 px-4 py-2" onClick={()=>navigate(workspace.continueHref)}>編集を続ける</button>}
+        </main>}
+        {canContinueLibrary && <section className="mb-6 rounded-xl border border-white/10 bg-[#202426] p-4" aria-label="Libraryの元画像">
+          <button type="button" className="rounded-lg bg-cyan-700 px-4 py-2" data-testid="lightchain-wear-library-continue" onClick={() => navigate(workspace.continueHref)}>Libraryの元画像で続ける</button>
+        </section>}
         <section>
           <div className="oriented-design-card-grid">
-            <div className="oriented-design-new-card" onClick={() => navigate('/flow/orientedDesign/detail')}>
+            <div className="oriented-design-new-card" onClick={() => navigateToDetail()}>
               <div className="oriented-design-new-card-inner">
                 <img className="oriented-design-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
                 <svg className="oriented-design-project-mark" width="80" height="80" viewBox="0 0 80 80" aria-hidden="true">
@@ -1522,7 +2205,7 @@ export function LightchainOrientedDesignPage() {
               </div>
             </div>
             {orientedDesignProjectImages.map((image, index) => (
-              <div key={`${orientedDesignProjectDates[index]}-${index}`} className="oriented-design-project-card" onClick={() => navigate(`/flow/orientedDesign/detail?project=${index + 1}`)}>
+              <div key={`${orientedDesignProjectDates[index]}-${index}`} className="oriented-design-project-card" onClick={() => navigateToDetail({ key: 'project', value: index + 1 })}>
                 <div className="oriented-design-project-media">
                   {image ? <img src={image} alt="coverImg" loading="lazy" /> : <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="coverImg" className="oriented-design-project-default-cover" loading="lazy" />}
                 </div>
@@ -1539,7 +2222,7 @@ export function LightchainOrientedDesignPage() {
           <h6 id="oriented-design-reference-cases" className="oriented-design-section-title">参考事例</h6>
           <div className="oriented-design-reference-grid">
             {orientedDesignReferenceImages.map((image, index) => (
-              <div key={image} className="oriented-design-project-card" onClick={() => navigate(`/flow/orientedDesign/detail?reference=${index + 1}`)}>
+              <div key={image} className="oriented-design-project-card" onClick={() => navigateToDetail({ key: 'reference', value: index + 1 })}>
                 <div className="oriented-design-project-media"><img src={image} alt="coverImg" loading="lazy" /></div>
                 <div className="oriented-design-project-meta">
                   <div className="oriented-design-project-name">{index === 0 ? 'デザイン要素融合' : 'ディテール変更'}</div>
@@ -1555,24 +2238,24 @@ export function LightchainOrientedDesignPage() {
 }
 
 export function LightchainOrientedDesignDetailPage() {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const location=useLocation(),explicitFeature=new URLSearchParams(location.search).get('workspaceFeature');
+  const toolId=explicitFeature==='wear-design-lab'?'wear-design-lab':'wear-design-detail';
+  const workspace = useCanonicalImageWorkspace(toolId,{identityConflict:explicitFeature!==null&&explicitFeature!=='wear-design-lab'&&explicitFeature!=='wear-design-detail'});
+  const imageUrl = workspace.result?.imageUrl ?? workspace.slots.primary?.imageUrl;
   const navigate = useNavigate();
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setImageUrl(URL.createObjectURL(file));
-  };
-
   return (
-    <main className="dark min-h-[calc(100vh-50px)] overflow-hidden bg-[#181a1d] text-white" data-testid="oriented-design-detail" data-lightchain-parity-shell="oriented-design-detail">
+    <main className="dark min-h-[calc(100vh-50px)] overflow-hidden bg-[#181a1d] text-white" data-testid="oriented-design-detail" data-lightchain-parity-shell="oriented-design-detail"
+      data-resume-feature={workspace.toolId} data-resume-job={workspace.result?.jobId ?? ''} data-resume-state={workspace.status} data-resume-inputs={String(workspace.originalInputsAvailable)} data-current-inputs={String(workspace.inputsAvailable)}
+      data-primary-source={workspace.slots.primary?.sourceImageId ?? workspace.slots.primary?.localAssetRef ?? ''}
+      data-secondary-source={workspace.slots.secondary?.sourceImageId ?? workspace.slots.secondary?.localAssetRef ?? ''}>
       <div className="pointer-events-none absolute inset-0 opacity-70" style={{ backgroundImage: 'radial-gradient(#464b50 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
       <aside className="absolute left-4 top-[74px] z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#202426] shadow-xl">
         <div className="flex h-10 items-center gap-2 border-b border-white/10 px-2 text-sm text-neutral-400">
           <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="PROJECT" className="h-6 w-6 rounded-md object-cover" />
           <span>ウェアデザインラボ</span>
         </div>
-        <button type="button" onClick={() => navigate('/flow/orientedDesign')} className="flex h-11 w-full items-center gap-3 px-3 text-left text-sm text-neutral-400 transition hover:bg-white/5 hover:text-white">
+        <button type="button" onClick={() => navigate(explicitFeature === null || explicitFeature === 'wear-design-detail' ? '/flow/orientedDesign' : orientedDesignLabHref(location, '/flow/orientedDesign'))} className="flex h-11 w-full items-center gap-3 px-3 text-left text-sm text-neutral-400 transition hover:bg-white/5 hover:text-white">
           <ChevronLeft className="h-5 w-5" />
           <span>Untitled</span>
         </button>
@@ -1587,8 +2270,9 @@ export function LightchainOrientedDesignDetailPage() {
             <p className="relative top-[8px] mt-1 text-xs leading-[17.14px] text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</p>
           </>
         )}
-        <input className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" onChange={handleFileChange} />
+        <input disabled={workspace.status==='loading'||workspace.status==='running'||Boolean(workspace.pendingId)} className="sr-only" type="file" aria-label="主素材画像" accept=".png,.jpg,.jpeg,.avif,.webp" onChange={event=>{const file=event.target.files?.[0];if(file)void workspace.upload('primary',file);event.target.value='';}} />
       </label>
+      <CanonicalImageWorkspaceControls workspace={workspace} />
     </main>
   );
 }

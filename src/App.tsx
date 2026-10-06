@@ -1,10 +1,12 @@
 import { lazy as reactLazy, Suspense, useEffect, useState, type ComponentType } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { LightchainLogo } from './components/LightchainLogo';
+import { HeavyChainLogo } from './components/icons';
+import { LightchainLauncherHeader } from './components/layout/LightchainLauncherHeader';
 import { resolveAuthReturnPath } from './lib/authRedirect';
+import { isHeavyWorkspaceRuntime, resolveHeavyCanonicalLocation } from './lib/heavyWorkspace';
 import { LightchainUnifiedWorkspaceShell } from './components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
@@ -67,6 +69,7 @@ const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMat
 const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
 const LightchainPrintingPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainPrintingPage })));
 const LightchainVectorSpecialPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainVectorSpecialPage })));
+const DesignEntryDetailPage = lazy(() => import('./features/designDetail/DesignEntryDetailPage'));
 const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
 const LightchainMarketingHomePage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainMarketingHomePage })));
 const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainLibraryPage').then((module) => ({ default: module.LightchainLibraryPage })));
@@ -198,7 +201,7 @@ function getLoadingCopy(pathname: string) {
   }
   if (pathname.startsWith('/lightchain')) {
     return {
-      eyebrow: 'LIGHTCHAIN AI',
+      eyebrow: 'HEAVY CHAIN',
       title: '制作入口を準備しています',
     description: 'アップロード、マスク確認、抽出、Canvas保存の導線を準備しています。',
     actions: ['画像をアップロード', 'マスクを確認', 'Canvasに保存'],
@@ -223,6 +226,11 @@ function WorkspaceLoadingFallback({
 }) {
   const location = useLocation();
   const copy = getLoadingCopy(location.pathname);
+  const heavyRuntime = isHeavyWorkspaceRuntime();
+  // Keep the Heavy first paint inside the same compact launcher frame as the
+  // authenticated Light-shaped workspace. The fallback can be rendered while
+  // auth is still hydrating, so the frame must not depend on a resolved user.
+  const renderHeader = showHeader || heavyRuntime;
   const [loadingStalled, setLoadingStalled] = useState(false);
 
   useEffect(() => {
@@ -237,13 +245,15 @@ function WorkspaceLoadingFallback({
     <div
       data-testid="workspace-loading-fallback"
       data-loading-state={authRecovery ? 'auth-recovery' : authServiceUnavailable ? 'auth-service-unavailable' : loadingStalled ? 'stalled' : 'lazy-page'}
-      className={`${showHeader ? 'min-h-screen' : 'h-full min-h-full'} bg-[#05090b] px-4 py-8 text-white dark:bg-[#05090b]`}
+      data-heavy-loading-shell={heavyRuntime ? 'compact-light-shaped' : undefined}
+      className={`${renderHeader ? 'min-h-screen' : 'h-full min-h-full'} bg-[#05090b] ${heavyRuntime ? 'px-0 py-0' : 'px-4 py-8'} text-white dark:bg-[#05090b]`}
     >
-      <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1800px] flex-col">
-        {showHeader && (
+      <div className={`mx-auto flex flex-col ${heavyRuntime ? 'min-h-screen max-w-none' : 'min-h-[calc(100vh-64px)] max-w-[1800px]'}`}>
+        {renderHeader && heavyRuntime ? <LightchainLauncherHeader /> : null}
+        {renderHeader && !heavyRuntime && (
           <header className="flex items-center justify-between border-b border-white/10 pb-5">
-            <a href="/" aria-label="Lightchain AI" className="inline-flex items-center text-white">
-              <LightchainLogo />
+            <a href="/" aria-label="Heavy Chain" className="inline-flex items-center text-white">
+              <HeavyChainLogo height={24} showText className="shrink-0" />
             </a>
             <div className="hidden items-center gap-2 text-sm text-neutral-300 sm:flex">
               <span className="inline-flex items-center gap-1 rounded-full px-3 py-2"><span aria-hidden="true">◎</span>日本語</span>
@@ -252,11 +262,11 @@ function WorkspaceLoadingFallback({
           </header>
         )}
 
-        <main className="flex flex-1 items-center justify-center py-12">
+        <main className={`flex flex-1 items-center justify-center py-12 ${heavyRuntime ? 'px-6' : ''}`}>
           <div className="w-full max-w-xl text-center">
             <div className="mb-5 flex items-center justify-center gap-3">
             <div className="spinner" />
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">{authRecovery || authServiceUnavailable ? 'LIGHTCHAIN AI' : copy.eyebrow}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">{authRecovery || authServiceUnavailable ? 'HEAVY CHAIN AI' : copy.eyebrow}</p>
             </div>
             <h1 className="text-2xl font-display font-semibold text-white sm:text-3xl">
               {authRecovery
@@ -267,7 +277,7 @@ function WorkspaceLoadingFallback({
             </h1>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-neutral-400">
               {authRecovery
-                ? 'ログイン後にLightchainの制作ワークスペースへ進めます。'
+                ? 'ログイン後にHeavy Chainの制作ワークスペースへ進めます。'
                 : authServiceUnavailable
                   ? 'ログイン状態は保持したまま、認証サービスの応答を待っています。再ログインは不要です。'
                   : loadingStalled
@@ -314,6 +324,26 @@ function PageLoading() {
 
 function lazyPage(page: React.ReactNode) {
   return <Suspense fallback={<PageLoading />}>{page}</Suspense>;
+}
+
+function HeavyCanonicalRouteBoundary({ toolId: explicitToolId }: { toolId?: string }) {
+  const { toolId } = useParams();
+  const location = useLocation();
+  const sourceToolId = explicitToolId ?? toolId;
+  const canonicalLocation = resolveHeavyCanonicalLocation(
+    sourceToolId,
+    location.search,
+    location.hash,
+  );
+  if (canonicalLocation) {
+    if (sourceToolId === 'model-library' || sourceToolId === 'model-custom') {
+      const params = new URLSearchParams(canonicalLocation.search);
+      params.set('workspaceFeature', sourceToolId);
+      return <Navigate to={{ ...canonicalLocation, search: `?${params.toString()}` }} replace />;
+    }
+    return <Navigate to={canonicalLocation} replace />;
+  }
+  return lazyPage(<LightchainWorkbenchPage />);
 }
 
 function LazyLayout() {
@@ -541,7 +571,7 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
-      {/* Lightchain keeps its authenticated launcher at the root; feature routes below remain protected. */}
+      {/* Heavy Chain keeps its authenticated launcher at the root; feature routes below remain protected. */}
       <Route
         path="/"
         element={lazyPage(<LandingPage />)}
@@ -883,6 +913,118 @@ function AppRoutes() {
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
                     <LabPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/heavy/lab"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <HeavyCanonicalRouteBoundary toolId="lab" />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/heavy"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <GenerateLightchainEntry />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/heavy/fabric-image"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainMaterialWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/heavy/printing-image"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <HeavyCanonicalRouteBoundary toolId="printing-image" />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/heavy/marketing"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainMarketingHomePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/heavy/marketing-home"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainMarketingHomePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/heavy/design-production"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainDesignProductionPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/heavy/:toolId"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <HeavyCanonicalRouteBoundary />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -1354,7 +1496,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
+                    <DesignEntryDetailPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

@@ -87,13 +87,13 @@ test('keeps the official mobile login route on the shared authentication surface
   assert.match(source, /path="\/login-m"[\s\S]*?<LoginPage \/>/);
 });
 
-test('keeps the official Lightchain Lab detail route on the source empty-canvas surface', async () => {
+test('keeps the official Lab detail route on the source empty-canvas surface with Heavy identity', async () => {
   const [app, page] = await Promise.all([
     readFile(appPath, 'utf8'),
     readFile(new URL('../src/pages/LightchainLabDetailPage.tsx', import.meta.url), 'utf8'),
   ]);
   assert.match(app, /path="\/flow\/laboratory\/detail"[\s\S]*?<LightchainLabDetailPage \/>/);
-  assert.match(page, /Lightchain Lab/);
+  assert.match(page, /Heavy Chain Lab/);
   assert.match(page, /Untitled/);
   assert.match(page, /ここをクリックまたはドラッグして画像を追加/);
   assert.match(page, /最大20M/);
@@ -282,7 +282,7 @@ test('keeps the canonical printing surface aligned with the Light empty state', 
   assert.match(page, /画像を2枚までアップロードできます/);
   assert.match(page, /生成履歴/);
   assert.match(page, /handleCanonicalFiles/);
-  assert.match(page, /navigate\('\/lightchain\/printing-image'\)/);
+  assert.match(page, /(?:navigate\('\/lightchain\/printing-image'\)|navigate\(toHeavyWorkspacePath\('\/lightchain\/printing-image'\)\))/);
 });
 
 test('routes fabric search prompts to the simulation entry', async () => {
@@ -375,14 +375,14 @@ test('keeps the official video workstation in the launcher while retaining gener
   assert.doesNotMatch(navigation, /path: '\/video'/);
 });
 
-test('keeps the lazy Lightchain entry branded as Lightchain', async () => {
+test('keeps the lazy Heavy entry branded as Heavy', async () => {
   const source = await readFile(appPath, 'utf8');
   const start = source.indexOf("if (pathname.startsWith('/lightchain'))");
   const end = source.indexOf('\n  }', start);
   assert.ok(start >= 0 && end > start, 'Lightchain loading branch is required');
   const branch = source.slice(start, end);
-  assert.match(branch, /eyebrow: 'LIGHTCHAIN AI'/);
-  assert.doesNotMatch(branch, /eyebrow: 'Heavy Chain'/);
+  assert.match(branch, /eyebrow: 'HEAVY CHAIN'/);
+  assert.doesNotMatch(branch, /eyebrow: 'LIGHTCHAIN AI'/);
 });
 
 test('uses the shared Lightchain launcher on the public entry', async () => {
@@ -394,6 +394,5 @@ test('uses the shared Lightchain launcher on the public entry', async () => {
 
 test('matches the Lightchain launcher column breakpoints', async () => {
   const source = await readFile(entryPath, 'utf8');
-  assert.match(source, /grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4/);
-  assert.doesNotMatch(source, /\b2xl:grid-cols-4\b/);
+  assert.match(source, /grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4/);
 });

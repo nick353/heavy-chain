@@ -1,6 +1,7 @@
-import { useState, type ChangeEvent } from 'react';
 import { ChevronLeft, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
+import { CanonicalImageWorkspaceControls } from '../components/CanonicalImageWorkspaceControls';
 
 const LIGHTCHAIN_LAB_PROJECT_ICON = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/laboratory-icon.png?x-oss-process=image/resize,m_lfit,w_48,limit_1/format,webp';
 
@@ -10,30 +11,31 @@ const LIGHTCHAIN_LAB_PROJECT_ICON = 'https://lightchain-qlxy-prod.oss-cn-hangzho
  * deep-link has the same first state as the source site.
  */
 export function LightchainLabDetailPage() {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setImageUrl(URL.createObjectURL(file));
-  };
+  const workspace = useCanonicalImageWorkspace('lab');
+  const imageUrl = workspace.result?.imageUrl ?? workspace.slots.primary?.imageUrl;
 
   return (
     <main
       className="dark min-h-[calc(100vh-50px)] overflow-hidden bg-[#181a1d] text-white"
       data-testid="lightchain-lab-detail"
       data-lightchain-parity-shell="lab-detail"
+      data-resume-job={workspace.result?.jobId ?? ''}
+      data-resume-state={workspace.status}
+      data-resume-inputs={String(workspace.originalInputsAvailable)}
+      data-current-inputs={String(workspace.inputsAvailable)}
+      data-primary-source={workspace.slots.primary?.sourceImageId ?? workspace.slots.primary?.localAssetRef ?? ''}
+      data-secondary-source={workspace.slots.secondary?.sourceImageId ?? workspace.slots.secondary?.localAssetRef ?? ''}
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-70"
         style={{ backgroundImage: 'radial-gradient(#464b50 1px, transparent 1px)', backgroundSize: '18px 18px' }}
       />
       <aside className="absolute left-4 top-6 z-10 flex h-[84px] w-[264px] flex-col gap-y-2 overflow-hidden rounded-xl border border-white/10 bg-[#202426] p-2 text-neutral-200 shadow-xl">
-        <div className="text-sm text-neutral-400"><img src={LIGHTCHAIN_LAB_PROJECT_ICON} alt="" className="mr-1 inline-block size-5 rounded object-contain" />Lightchain Lab</div>
+        <div className="text-sm text-neutral-400"><img src={LIGHTCHAIN_LAB_PROJECT_ICON} alt="" className="mr-1 inline-block size-5 rounded object-contain" />Heavy Chain Lab</div>
         <div className="h-px w-full bg-white/10" />
         <Link
           to="/flow/laboratory"
-          aria-label="Lightchain Labへ戻る"
+          aria-label="Heavy Chain Labへ戻る"
           className="flex w-fit items-center gap-2 text-base text-neutral-400 transition hover:text-white"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -54,8 +56,9 @@ export function LightchainLabDetailPage() {
             <p className="relative top-[8px] mt-1 text-xs leading-[17.14px] text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</p>
           </>
         )}
-        <input className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" onChange={handleFileChange} />
+        <input disabled={workspace.status==='loading'||workspace.status==='running'||Boolean(workspace.pendingId)} className="sr-only" type="file" aria-label="主素材画像" accept=".png,.jpg,.jpeg,.avif,.webp" onChange={event=>{const file=event.target.files?.[0];if(file)void workspace.upload('primary',file);event.target.value='';}} />
       </label>
+      <CanonicalImageWorkspaceControls workspace={workspace} />
     </main>
   );
 }

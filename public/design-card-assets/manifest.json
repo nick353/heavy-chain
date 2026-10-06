@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "evidence": "work/light-design-creation-hover-r933.md",
+  "acquiredAt": "2026-09-30T06:03:12.650Z",
+  "assets": [
+    {
+      "name": "clothing2.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/marketing/card/clothing2.png",
+      "bytes": 63252,
+      "contentType": "image/png",
+      "sha256": "837bae083046f057584b8ddbe6d680db7ed6826d41c77683164da1e072974645"
+    },
+    {
+      "name": "clothing1.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/marketing/card/clothing1.png",
+      "bytes": 104777,
+      "contentType": "image/png",
+      "sha256": "e15f41cfbbefd32aa9f49602e15c113a099d2051f32356d5475d36f3123de3a1"
+    },
+    {
+      "name": "print2.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/marketing/card/print2.png",
+      "bytes": 71841,
+      "contentType": "image/png",
+      "sha256": "f12326ccecfb8b306fea0273a7b1a54070545cdd2107dc1f9303061bde08dc06"
+    },
+    {
+      "name": "print1.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/marketing/card/print1.png",
+      "bytes": 68255,
+      "contentType": "image/png",
+      "sha256": "7455c7f4781afbfc6b4af93efa3230d853adce9c335374646c82d55196fde8c1"
+    },
+    {
+      "name": "fabric2.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/marketing/card/fabric2.png",
+      "bytes": 116636,
+      "contentType": "image/png",
+      "sha256": "9a5173373286e382311859e86273ebdbd365ab3843928c5bcbbee3fdab486d65"
+    },
+    {
+      "name": "fabric1.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/marketing/card/fabric1.png",
+      "bytes": 62957,
+      "contentType": "image/png",
+      "sha256": "6d0979e642ece535117970ac36e16f130c684434c19a9647448e24333ee384e2"
+    },
+    {
+      "name": "techpack2.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/marketing/card/techpack2.png",
+      "bytes": 81004,
+      "contentType": "image/png",
+      "sha256": "1b61d179226bc56b2b70e5c7a5b06a093d4ed0d536409c35c14f6e71e7c662cf"
+    },
+    {
+      "name": "techpack1.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/marketing/card/techpack1.png",
+      "bytes": 34303,
+      "contentType": "image/png",
+      "sha256": "fa2eb577869bf3d1b92adaa83f16638071f8a156002273d052778219a66f1c41"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {runFittingBatchTask,type FittingBatchExecution,type FittingBatchLock} from '../src/lib/fittingBatchRunner.ts';
+import {type FittingBatchTask,type FittingBatchStorage,type FittingBatchReceipt} from '../src/lib/fittingBatch.ts';
+const scope={userId:'a',brandId:'b',featureId:'ai-fitting'};
+const item=():FittingBatchTask=>({id:'task',requestId:'request',status:'ready',input:{garment:'data:image/png;base64,AA==',garmentName:'shirt',model:null,mode:'regular',prompt:'test',aspect:'1:1',resolution:'1K',references:{}}});
+function fixture(){let tasks=[item()];const events:string[]=[];const storage:FittingBatchStorage={read:async()=>structuredClone(tasks),write:async(_,next)=>{tasks=structuredClone(next);},update:async(_,fn)=>{tasks=fn(structuredClone(tasks));return structuredClone(tasks);}};
+let tail=Promise.resolve();const lock:FittingBatchLock=async(_,run)=>{const prior=tail;let release!:()=>void;tail=new Promise<void>(r=>release=r);await prior;try{return await run();}finally{release();}};
+const receipt:FittingBatchReceipt={requestId:'request',state:'completed',success:true,persistenceStatus:'completed',clientRecoveryKey:'original-key',images:[{imageId:'image',storagePath:'generated-images/image',imageUrl:'data:image/png;base64,AA=='}]};
+const execution:FittingBatchExecution={assertCurrent:()=>{},submit:async task=>{events.push(`submit:${task.requestId}`);return receipt;},read:async id=>{events.push(`read:${id}`);return receipt;},persist:async()=>{events.push('persist');},acknowledge:async()=>{events.push('ack');}};
+return {storage,lock,execution,events,receipt,tasks:()=>tasks};}
+test('success persists before ACK; two tabs queued on same task dispatch once',async()=>{const f=fixture();await Promise.all([runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock),runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock)]);assert.deepEqual(f.events,['submit:request','persist','ack']);assert.equal(f.tasks()[0].status,'completed');});
+test('definite failed receipt becomes failed and cannot be dispatched again',async()=>{const f=fixture();f.execution.submit=async()=>({requestId:'request',state:'failed',success:false});assert.equal(await runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock),'failed');await runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock);assert.equal(f.tasks()[0].status,'failed');assert.deepEqual(f.events,[]);});
+test('unknown receipt and lost response recover only by same request GET',async()=>{for(const lost of [false,true]){const f=fixture();let calls=0;f.execution.submit=async()=>{calls++;if(lost)throw new Error('response disconnected');return {requestId:'request',state:'unknown',success:false};};try{await runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock);}catch{}assert.equal(f.tasks()[0].status,'unknown');await runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock);assert.equal(calls,1);assert.deepEqual(f.events,['read:request','persist','ack']);}});
+test('reload persisted pending does not submit, 404 on GET remains unknown',async()=>{const f=fixture();f.tasks()[0].status='pending';f.execution.read=async()=>{throw new Error('404');};await assert.rejects(runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock));assert.equal(f.tasks()[0].status,'unknown');assert.deepEqual(f.events,[]);});
+test('ACK failure retains saved receipt, next run ACK-only with no repeated save/inference',async()=>{const f=fixture();f.execution.acknowledge=async()=>{f.events.push('ack-failure');throw new Error('ack unavailable');};await assert.rejects(runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock));assert.equal(f.tasks()[0].status,'saved');f.execution.acknowledge=async()=>{f.events.push('ack-success');};await runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock);assert.deepEqual(f.events,['submit:request','persist','ack-failure','ack-success']);});
+test('save failure or mismatched receipt never ACKs or marks complete',async()=>{for(const mismatch of [false,true]){const f=fixture();if(mismatch)f.receipt.requestId='other-request';else f.execution.persist=async()=>{throw new Error('save failed');};await assert.rejects(runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock));assert.equal(f.tasks()[0].status,'unknown');assert.ok(!f.events.includes('ack'));}});
+
+test('scope fence changes before dispatch do not invoke provider',async()=>{const f=fixture();f.execution.assertCurrent=()=>{throw new Error('scope changed');};await assert.rejects(runFittingBatchTask(f.storage,scope,'task',f.execution,f.lock));assert.deepEqual(f.events,[]);assert.equal(f.tasks()[0].status,'ready');});
+
+test('raw durable adapter passes original UUID/retention and does not flatten disconnected response',async()=>{
+ const {createFittingBatchExecution}=await import('../src/lib/fittingBatchExecution.ts');
+ const f=fixture();let captured:unknown;
+ const adapter=createFittingBatchExecution({origin:'http://isolated.test',invokeProviderAction:async(_action,body,options)=>{captured={body,options};throw new Error('transport disconnected');},readImageAIRequest:async id=>({requestId:id,state:'unknown',success:false}),acknowledgeImageAction:async()=>{}},scope,async()=>{},()=>{});
+ await assert.rejects(adapter.submit(item()),/transport disconnected/);
+ const c=captured as {body:Record<string,unknown>;options:{idempotencyKey:string;retainUntilAcknowledged:boolean}};
+ assert.equal(c.options.idempotencyKey,'request');assert.equal(c.options.retainUntilAcknowledged,true);assert.equal(c.body.imageUrl,item().input.garment);
+ assert.equal((await adapter.read('request')).state,'unknown');assert.deepEqual(f.events,[]);
+});

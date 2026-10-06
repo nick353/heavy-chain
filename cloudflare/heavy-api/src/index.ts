@@ -6,6 +6,7 @@ import { saveWorkspaceArtifact,readWorkspaceArtifact } from "./workspace.ts";
 import { handleFeedbackAdminRequest } from "./feedback-admin.ts";
 import { handleHeavyEntitlementAction, handleImageAIRead } from "./image-ai.ts";
 import { readWorkspaceExecutionSteps } from './workspace-execution.ts';
+import { handleDesignAssistantRequest } from './designAssistant.ts';
 const MAX_IDENTITY_PART_LENGTH = 512;
 const MAX_CLIENT_REQUEST_ID_LENGTH = 128;
 const MAX_CONTENT_TYPE_LENGTH = 128;
@@ -474,6 +475,8 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   if (heavyEntitlementWrite) return withCors(request, env, heavyEntitlementWrite);
   const imageRead = await handleImageAIRead(request, env);
   if (imageRead) return withCors(request, env, imageRead);
+  const designAssistantResponse = await handleDesignAssistantRequest(request, env);
+  if (designAssistantResponse) return respond(designAssistantResponse);
   const coreResponse = await handleCoreRequest(request, env);
   if (coreResponse) return respond(coreResponse);
   if (url.pathname === "/v1/media" && request.method === "POST") {

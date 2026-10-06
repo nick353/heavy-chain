@@ -10,6 +10,7 @@ import {
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
 import { listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
+import { displaySourceSummaryLabel } from '../lib/sourceContextSummary';
 import {
   buildGenerationIntentHref,
   handoffWorkspaceToCanvas,
@@ -23,6 +24,7 @@ import {
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
 import { SourceModelLibrarySurface } from '../components/lightchain/SourceModelLibrarySurface';
 import { SourceModelToolSurface } from '../components/lightchain/SourceModelToolSurface';
+import { isHeavyWorkspaceRuntime } from '../lib/heavyWorkspace';
 
 const intents = ['EC標準', 'LOOK確認', '広告検証'] as const;
 const modelCustomizationTabs = ['顔変更', 'モデル変更', '体型', '服のサイズ', 'ポーズ', '背景', 'アングル'] as const;
@@ -290,9 +292,9 @@ export function ModelLibraryPage() {
   const activeIntentMeta = intentMeta[activeIntent];
   const modelLibraryFlowState = deriveUnifiedWorkspaceFlowState({
     inputReady: Boolean(face.trim() && pose.trim() && bodyType.trim() && skinTone.trim() && ageGroup.trim() && productDescription.trim()),
-    // This route prepares the model-library handoff. The provider generation
-    // route owns the generation-time confirmation before model-matrix runs.
-    rightsReady: false,
+    // Heavy image work is login-first. This route only prepares the handoff;
+    // a logged-in user must not see a phantom rights gate before model-matrix.
+    rightsReady: Boolean(user?.id),
     generating: false,
     completed: Boolean(savedArtifactId),
     failed: false,
@@ -561,7 +563,7 @@ export function ModelLibraryPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-              LIGHTCHAIN / MODELS
+              HEAVY CHAIN / MODELS
             </p>
             <h1 className="mt-2 font-display text-3xl font-semibold text-white">
               モデルカスタマイズ
@@ -692,7 +694,7 @@ export function ModelLibraryPage() {
               role="status"
               className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs leading-5 text-neutral-300"
             >
-              Heavy利用条件を確認できません
+              {isHeavyWorkspaceRuntime() ? 'ログイン済みワークスペースから生成できます。' : '生成を準備できません'}
             </p>
           </div>
         </div>
@@ -814,7 +816,7 @@ export function ModelLibraryPage() {
             <div className="mt-4 space-y-3">
               {selectedProfileRows.map((row) => (
                 <div key={row.label} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                  <p className="text-xs font-semibold text-neutral-400">{row.label}</p>
+                  <p className="text-xs font-semibold text-neutral-400">{displaySourceSummaryLabel(row.label)}</p>
                   <p className="mt-1 text-sm leading-5 text-neutral-200">{row.value}</p>
                 </div>
               ))}

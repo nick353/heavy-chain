@@ -3,6 +3,40 @@ import type { Candidate, ImageAction, ImageInput } from './image-ai-contracts.ts
 
 export const OPENAI_IMAGE_PROVIDER = 'openai';
 export const OPENAI_IMAGE_BACKEND = 'openai-images-api';
+export const MAX_OPENAI_IMAGE_TIMEOUT_MS = 180_000;
+export type OpenAIImageErrorCategory = 'timeout' | 'transport_uncertainty' | 'request_rejected' | 'unusable_response';
+const errorCodes: Record<OpenAIImageErrorCategory, string> = {
+  timeout: 'image_provider_timeout',
+  transport_uncertainty: 'image_provider_transport_uncertain',
+  request_rejected: 'image_provider_request_rejected',
+  unusable_response: 'image_provider_invalid_output',
+};
+const SAFE_PROVIDER_ERROR_CODES = new Set([
+  'invalid_api_key', 'invalid_request_error', 'insufficient_quota', 'rate_limit_exceeded',
+  'model_not_found', 'content_policy_violation', 'billing_hard_limit_reached',
+]);
+
+// Retain only fixed categories, HTTP status, allowlisted codes and a bounded
+// request identifier. Raw messages and transport errors can contain secrets.
+export class OpenAIImageError extends Error {
+  readonly category: OpenAIImageErrorCategory;
+  readonly errorCode: string;
+  readonly status?: number;
+  readonly providerCode?: string;
+  readonly providerRequestId?: string;
+  constructor(category: OpenAIImageErrorCategory, status?: number, providerCode?: unknown, providerRequestId?: string | null) {
+    super(errorCodes[category]);
+    this.name = 'OpenAIImageError';
+    this.category = category;
+    this.errorCode = errorCodes[category];
+    this.status = status;
+    this.providerCode = typeof providerCode === 'string' && SAFE_PROVIDER_ERROR_CODES.has(providerCode) ? providerCode : undefined;
+    this.providerRequestId = providerRequestId && /^req[-_][a-zA-Z0-9_-]{1,96}$/.test(providerRequestId) ? providerRequestId : undefined;
+  }
+  get diagnostics() {
+    return { category: this.category, status: this.status, providerCode: this.providerCode, providerRequestId: this.providerRequestId };
+  }
+}
 export const OPENAI_IMAGE_MODELS = new Set([
   'gpt-image-2',
   'gpt-image-1.5',
@@ -90,12 +124,20 @@ function extractImages(value: unknown): OpenAIImageCandidate[] {
   });
 }
 
-function safeProviderError(status: number, value: unknown): Error {
+function safeProviderError(status: number, value: unknown, requestId: string | null): OpenAIImageError {
   const record = asRecord(value);
   const providerError = asRecord(record?.error);
-  const code = typeof providerError?.code === 'string' ? providerError.code :
-    typeof providerError?.type === 'string' ? providerError.type : 'request_failed';
-  return new Error(`openai_image_request_failed:${status}:${code.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 120)}`);
+  const explicitRejection = [400, 401, 403, 404, 413, 415, 422, 429].includes(status) &&
+    ['invalid_request_error', 'authentication_error', 'permission_error', 'rate_limit_error', 'insufficient_quota']
+      .includes(String(providerError?.type ?? ''));
+  // A server/gateway error, timeout response or opaque HTTP error does not
+  // establish that the provider rejected the inference before executing it.
+  return new OpenAIImageError(explicitRejection ? 'request_rejected' : 'transport_uncertainty', status, providerError?.code, requestId);
+}
+
+async function observeResponse(fetchImpl: typeof fetch, url: string, init: RequestInit): Promise<Response> {
+  try { return await fetchImpl(url, init); }
+  catch { throw new OpenAIImageError('transport_uncertainty'); }
 }
 
 function referenceBlob(bytes: Uint8Array, mimeType: string): Blob {
@@ -113,6 +155,7 @@ export async function runOpenAIImage(
   input: ImageInput,
   candidateIndex: number,
   fetchImpl: typeof fetch = fetch,
+  resolvedModel?:string,
 ): Promise<OpenAIImageOutput> {
   const key = apiKey(env);
   if (!key) throw new Error('openai_image_api_key_missing');
@@ -124,10 +167,10 @@ export async function runOpenAIImage(
   // model-matrix request from being sent as an image edit with no image.
   const edit = action === 'edit-image' || input.references.length > 0;
   const modelAction: ImageAction = edit ? 'edit-image' : 'generate-image';
-  const model = resolveOpenAIModel(env, modelAction, edit ? (env.OPENAI_IMAGE_EDIT_MODEL || env.OPENAI_IMAGE_MODEL) : env.OPENAI_IMAGE_MODEL);
+  const model = resolveOpenAIModel(env, modelAction, resolvedModel ?? (edit ? (env.OPENAI_IMAGE_EDIT_MODEL || env.OPENAI_IMAGE_MODEL) : env.OPENAI_IMAGE_MODEL));
   let response: Response;
   if (!edit) {
-    response = await fetchImpl(`${baseURL(env)}/images/generations`, {
+    response = await observeResponse(fetchImpl, `${baseURL(env)}/images/generations`, {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
       body: JSON.stringify({ model, prompt: promptFor(candidate), n: 1, size: imageSize(input.width, input.height) }),
@@ -139,20 +182,27 @@ export async function runOpenAIImage(
     form.set('n', '1');
     form.set('size', imageSize(input.width, input.height));
     form.set('output_format', 'png');
-    input.references.forEach((reference, index) => {
+    const references=[...input.references];
+    if(input.protectedProjection){references[0]=input.protectedProjection.primary;references[input.protectedProjection.guideIndex]=input.protectedProjection.guide;}
+    references.forEach((reference, index) => {
       const contentType = normalizeMimeType(reference.contentType);
       form.append('image[]', referenceBlob(reference.bytes, contentType), `reference-${index + 1}.${extensionFromMimeType(contentType)}`);
     });
-    response = await fetchImpl(`${baseURL(env)}/images/edits`, {
+    response = await observeResponse(fetchImpl, `${baseURL(env)}/images/edits`, {
       method: 'POST',
       headers: { authorization: `Bearer ${key}` },
       body: form,
     });
   }
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw safeProviderError(response.status, data);
+  let data: unknown;
+  const requestId = response.headers.get('x-request-id');
+  try { data = await response.json(); }
+  catch (error) {
+    throw new OpenAIImageError(response.ok && error instanceof SyntaxError ? 'unusable_response' : 'transport_uncertainty', response.status, undefined, requestId);
+  }
+  if (!response.ok) throw safeProviderError(response.status, data, requestId);
   const image = extractImages(data)[0];
-  if (!image?.base64) throw new Error('openai_image_empty_response');
+  if (!image?.base64) throw new OpenAIImageError('unusable_response', response.status, undefined, requestId);
   return {
     image: `data:${image.mimeType};base64,${image.base64}`,
     provider: OPENAI_IMAGE_PROVIDER,

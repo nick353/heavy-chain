@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 import { getAuthErrorMessage } from '../lib/authErrorMessage';
 import { probeAuthService } from '../lib/auth';
 import { resolveAuthReturnPath } from '../lib/authRedirect';
+import { HeavyChainLogo } from '../components/icons';
 import toast from 'react-hot-toast';
 
 export function LoginPage() {
@@ -78,22 +79,22 @@ export function LoginPage() {
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_72%_at_0%_4%,rgba(0,172,174,0.35),transparent_72%),radial-gradient(50%_48%_at_2%_100%,rgba(29,61,201,0.38),transparent_72%),radial-gradient(42%_52%_at_100%_100%,rgba(23,48,151,0.42),transparent_75%)]" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.11] [background-image:radial-gradient(rgba(137,184,214,0.55)_0.7px,transparent_0.7px)] [background-size:8px_8px]" />
       <div className="relative mx-auto grid min-h-screen w-full max-w-[1200px] items-center gap-8 px-6 py-10 lg:ml-auto lg:mr-6 lg:w-[calc(100%-3rem)] lg:grid-cols-[minmax(0,1fr)_416px] lg:px-0">
-        <section className="relative z-10 hidden max-w-[720px] lg:block" aria-labelledby="lightchain-login-hero-title">
+        <section className="relative z-10 hidden max-w-[720px] lg:block" aria-labelledby="heavy-chain-login-hero-title">
           <p className="mb-5 text-[clamp(2.5rem,4vw,4rem)] font-semibold leading-none tracking-[0.015em]">HELLO</p>
-          <h1 id="lightchain-login-hero-title" className="text-[clamp(1.9rem,2.35vw,2.5rem)] font-medium leading-tight tracking-[-0.02em]">
-            アパレル生成AIシステムLightchain <span className="text-[#19c8be]">AI</span>
+          <h1 id="heavy-chain-login-hero-title" className="text-[clamp(1.9rem,2.35vw,2.5rem)] font-medium leading-tight tracking-[-0.02em]">
+            アパレル生成AIシステムHeavy Chain <span className="text-[#19c8be]">AI</span>
           </h1>
           <p className="mt-7 max-w-[690px] text-base leading-7 text-white/75">
-            Light chainは、アパレル業界におけるさまざまな業務で活用できるAI技術を提供しており、企画から販売までの主要プロセスを幅広くサポートします。
+            Heavy Chainは、アパレル業界におけるさまざまな業務で活用できるAI技術を提供しており、企画から販売までの主要プロセスを幅広くサポートします。
           </p>
         </section>
 
         <section className="relative z-10 mx-auto w-full max-w-[416px] rounded-[22px] border border-white/[0.06] bg-[#20252a]/95 px-6 pt-[87px] pb-[57px] shadow-[0_24px_72px_rgba(0,0,0,0.24)] lg:mx-0 lg:justify-self-end sm:px-8 lg:px-0" aria-labelledby="lightchain-login-title">
           <div className="w-full lg:ml-16 lg:w-[352px] lg:translate-x-[3px]">
           <div className="mb-6">
-            <div className="mb-3 flex items-center gap-2.5" aria-label="Lightchain">
-              <img src="/assets/lightchain-logo.svg" alt="" className="h-5 w-5" />
-              <span className="text-xs font-semibold tracking-[0.22em] text-white/85">LIGHTchain</span>
+            <div className="mb-3 flex items-center gap-2.5" aria-label="Heavy Chain">
+              <HeavyChainLogo height={24} showText={false} className="shrink-0" />
+              <span className="text-xs font-semibold tracking-[0.22em] text-white/85">HEAVY CHAIN</span>
             </div>
             <h1 id="lightchain-login-title" className="text-[13px] font-normal leading-6 text-white/80">
               アカウントIDを下に入力してログインをお願いします。

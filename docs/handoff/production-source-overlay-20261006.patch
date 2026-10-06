@@ -1,0 +1,1563 @@
+--- a/src/components/canvas/PartialEditModal.tsx
++++ b/src/components/canvas/PartialEditModal.tsx
+@@ -320,7 +320,6 @@
+           <div className="mt-4">
+             <Textarea
+               data-testid="partial-edit-prompt"
+-              className="text-neutral-900 placeholder:text-neutral-500 dark:text-white dark:placeholder:text-neutral-400"
+               label="部分編集プロンプト"
+               placeholder="例: ベージュTシャツを深いネイビーに変更し、人物と背景はそのまま"
+               value={prompt}
+--- a/src/lib/canvasImageEditResults.ts
++++ b/src/lib/canvasImageEditResults.ts
+@@ -1,5 +1,4 @@
+ import type { ImageEditResult } from './imageApi';
+-import { validateCanvasProtectedBatchBinding } from './nativePrintFinalFrame.ts';
+ import { PROTECTED_IMAGE_EDIT_MODE } from './protectedImageEditContract.ts';
+ 
+ export type CanvasImageEditCandidate = {
+@@ -16,45 +15,6 @@
+   result: ImageEditResult,
+   limit = 4,
+ ): CanvasImageEditCandidate[] {
+-  // OpenAI protected finals have independent saved wa job IDs. Their shared
+-  // identity is the verified original provider job, never the first saved job.
+-  const final = result as ImageEditResult & {
+-    canvasProtectedBatchBinding?: unknown;
+-    requiresProtectedComposite?: boolean;
+-    failedCandidateIndices?: number[];
+-  };
+-  // A Canvas binding does not reclassify the established Workers path.
+-  if (final.canvasProtectedBatchBinding !== undefined && final.provider !== 'workers_ai' && final.provider !== 'openai') return [];
+-  const openAIClaim = final.provider === 'openai' && (final.canvasProtectedBatchBinding !== undefined ||
+-    final.protectedRegionComposited === true && final.requestedCandidateCount === 4);
+-  if (openAIClaim) {
+-    let binding;
+-    try { binding = validateCanvasProtectedBatchBinding(final.canvasProtectedBatchBinding); }
+-    catch { return []; }
+-    const batchId = final.batchId;
+-    if (!final.success || final.provider !== 'openai' || final.protectedRegionComposited !== true ||
+-      final.requiresProtectedComposite !== false || final.persistenceStatus !== 'completed' ||
+-      final.requestedCandidateCount !== 4 || final.persistedCandidateCount !== 4 ||
+-      final.failedCandidates?.length || final.failedCandidateIndices?.length ||
+-      final.requestId !== binding.requestId || !batchId || batchId !== final.providerJobId ||
+-      batchId !== `ai-${binding.requestId}` || !Array.isArray(final.images) || final.images.length !== 4) return [];
+-    const imageIds = new Set<string>(), paths = new Set<string>(), urls = new Set<string>();
+-    const candidates: CanvasImageEditCandidate[] = [];
+-    for (const [index, raw] of final.images.entries()) {
+-      const candidate = raw as typeof raw & { provider?: string; providerJobId?: string; protectedRegionComposited?: boolean };
+-      const { imageId, jobId, imageUrl, storagePath } = candidate;
+-      if (candidate.provider !== 'openai' || candidate.protectedRegionComposited !== true ||
+-        candidate.batchId !== batchId || candidate.providerJobId !== batchId ||
+-        candidate.persistenceStatus !== 'completed' || candidate.candidateIndex !== index ||
+-        typeof imageId !== 'string' || !/^wa-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(imageId) ||
+-        jobId !== imageId || storagePath !== `generated-images/${imageId}` ||
+-        typeof imageUrl !== 'string' || !imageUrl.trim() || imageIds.has(imageId) ||
+-        paths.has(storagePath) || urls.has(imageUrl)) return [];
+-      imageIds.add(imageId); paths.add(storagePath); urls.add(imageUrl);
+-      candidates.push({ imageUrl, jobId, imageId, storagePath, candidateIndex:index, persistenceStatus:'completed', batchId });
+-    }
+-    return candidates.slice(0, Math.max(1, Math.min(4, Math.trunc(limit))));
+-  }
+   const rawCandidates = result.images?.length
+     ? result.images
+     : result.imageUrl
+--- a/src/lib/cloudflareApi.ts
++++ b/src/lib/cloudflareApi.ts
+@@ -1,16 +1,9 @@
+-import {createCanvasProtectedBatchLifecycle,loadCanvasProtectedBatch,canvasBatchHasAllRaw,type CanvasProtectedBatchBinding} from './canvasProtectedBatchComposite';
+-import {validateNativePrintFinalFrame} from './nativePrintFinalFrame';
+-import {prepareProtectedOpenAIProjection} from './prepareProtectedOpenAIProjection';
+-import {finalizeProtectedOpenAIEdit} from './protectedOpenAIImageEdit';
+-import {materializeMaterialPng} from './materialProtectedComposite';
+-import {protectedImageDigest} from './protectedImageEditContract';
+-import { createMaterialProtectedLifecycle,recoverBoundMaterialComposite,nativePrintFinalFrameFor,type NativePrintFrameBinding } from './materialProtectedComposite';
+ import type { Brand, CanvasDocument, Folder, GeneratedImage, Json, User } from '../types/database';
+ import type { GeneratedImageListRow } from './generatedImageQuery';
+ import type { WorkspaceExecutionStep } from './workspaceExecution';
+ import { auth, refreshAuthSession } from './auth';
+ import { CLOUDFLARE_IMAGE_ACTIONS, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
+-import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit,type ProtectedMaterialRecoveryBinding } from './cloudflareProtectedImageEdit';
++import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
+ import { persistProtectedImageInput,listProtectedImageInputs,loadProtectedImageInput,deleteProtectedImageInput } from './cloudflareImageInputCache';
+ import { attachHeavyGenerationPreflight, validateHeavyGenerationPreflight, type HeavyGenerationInput, type HeavyGenerationPreflight } from './heavyGenerationPreflight';
+ import { WORKSPACE_UPLOAD_MAX_BYTES } from './workspaceUploadLimits';
+@@ -697,14 +690,11 @@
+     };
+   }
+ 
+-  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void | Promise<void>; retainUntilAcknowledged?: boolean; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent; materialRecoveryBinding?:ProtectedMaterialRecoveryBinding; canvasProtectedBatchBinding?:CanvasProtectedBatchBinding; nativePrintFrameBinding?:NativePrintFrameBinding } = {}): Promise<T> {
++  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void | Promise<void>; retainUntilAcknowledged?: boolean; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent } = {}): Promise<T> {
+     await options.assertContext?.();
+     if (CLOUDFLARE_IMAGE_ACTIONS.has(action)) {
+       const {userId,assertCurrent,call} = await this.captureRequestContext(options.assertContext);
+-      const nativePrintFinalFrame = options.nativePrintFrameBinding ? await nativePrintFinalFrameFor(options.nativePrintFrameBinding) : undefined;
+-      await assertCurrent();
+-      const protectedBody = nativePrintFinalFrame ? {...body,nativePrintFinalFrame} : body;
+-      const protectedEdit = action === 'edit-image' && body.maskDataUrl ? await prepareProtectedCloudflareEdit(protectedBody) : null;
++      const protectedEdit = action === 'edit-image' && body.maskDataUrl ? await prepareProtectedCloudflareEdit(body) : null;
+       // Heavy preflight, attestation, and provider admission each normalize
+       // the input independently. Pin one candidate seed before the first
+       // normalization so a missing caller seed cannot produce three different
+@@ -713,15 +703,7 @@
+         ? { ...(protectedEdit?.body ?? body), seed: crypto.getRandomValues(new Uint32Array(1))[0] % 2147483647 }
+         : (protectedEdit?.body ?? body);
+       const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(heavyInput, options.heavyPreparation) : heavyInput;
+-      let prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody)); await assertCurrent();
+-      if (protectedEdit && body.generationProvider === 'openai') {
+-        if (!options.materialRecoveryBinding&&!options.canvasProtectedBatchBinding) throw new Error('protected_openai_durable_material_binding_required');
+-        protectedEdit.nativePrintFrameBinding = options.nativePrintFrameBinding;
+-        const projection = await prepareProtectedOpenAIProjection(protectedEdit,prepared);prepared=projection.body;await assertCurrent();
+-        if(options.canvasProtectedBatchBinding){const binding=options.canvasProtectedBatchBinding,batch=await loadCanvasProtectedBatch(binding);if(binding.requestId!==options.idempotencyKey||binding.scopeId!==userId||binding.brandId!==String(body.brandId??body.brand_id)||binding.featureType!==body.featureType||Number(body.count)!==4)throw new Error('canvas_protected_batch_binding_invalid');
+-          const native=validateNativePrintFinalFrame(prepared.nativePrintFinalFrame,protectedEdit.plan);prepared={...prepared,canvasProtectedBatchBinding:binding,nativePrintFinalFrame:validateNativePrintFinalFrame({...native,version:'canvas-protected-openai-contain-v1',original:{width:batch.original.width,height:batch.original.height,digest:batch.original.digest,digestScheme:'sha256-data-url-utf8-v1'},canvasBatch:binding},protectedEdit.plan)};}
+-
+-      }
++      const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody)); await assertCurrent();
+       let requestId = options.idempotencyKey;
+       let heavyPreparation = options.heavyPreparation;
+       if (options.heavyConsent) {
+@@ -756,19 +738,13 @@
+       }
+       const finalBody = heavyPreparation ? attachHeavyGenerationPreflight(prepared, heavyPreparation) : prepared;
+       const scope = {origin:this.origin,userId,brandId:String(finalBody.brandId ?? finalBody.brand_id)};
+-      const materialBinding = options.materialRecoveryBinding;
+-      if (materialBinding && (!protectedEdit || materialBinding.requestId !== requestId || materialBinding.scopeId !== userId
+-        || materialBinding.brandId !== scope.brandId || Number(finalBody.count ?? 1) !== 1)) throw new Error('material_protected_recovery_binding_invalid');
+-      const canvasBinding=options.canvasProtectedBatchBinding;
+-      if(canvasBinding&&(!protectedEdit||body.generationProvider!=='openai'||canvasBinding.requestId!==requestId))throw new Error('canvas_protected_batch_binding_invalid');
+-      const snapshot = protectedEdit ? {...protectedEdit,body:finalBody,...(canvasBinding?{canvasProtectedBatchBinding:canvasBinding}:{}),...(materialBinding ? {materialRecoveryBinding:materialBinding,nativePrintFrameBinding:options.nativePrintFrameBinding} : {})} : null;
+-      const lifecycle = canvasBinding && snapshot ? await createCanvasProtectedBatchLifecycle(canvasBinding,snapshot,{brandId:scope.brandId,userId},assertCurrent) : materialBinding && snapshot ? await createMaterialProtectedLifecycle(materialBinding,snapshot,{brandId:scope.brandId,userId},assertCurrent) : undefined;
++      const snapshot = protectedEdit ? {...protectedEdit,body:finalBody} : null;
+       return invokeDurableImageAction<T>({ origin: this.origin,userId,action,body: finalBody,idempotencyKey:options.heavyConsent ? requestId : options.idempotencyKey,assertCurrent,call,
+         retainUntilAcknowledged:!!protectedEdit || options.retainUntilAcknowledged === true,
+         beforeSubmit:snapshot ? (id,key)=>persistProtectedImageInput(scope,snapshot,id,key) : undefined,
+-        onTerminal:snapshot && !materialBinding && !canvasBinding ? (id,key)=>deleteProtectedImageInput(scope,id,key) : undefined,
+-        finalize:protectedEdit ? receipt=>(receipt.provider === 'openai' ? finalizeProtectedOpenAIEdit : finalizeProtectedCloudflareEdit)({ prepared:snapshot!,receipt,assertCurrent,call,
+-          save:input=>this.saveWorkspaceArtifact(input,call),lifecycle }) : undefined });
++        onTerminal:snapshot ? (id,key)=>deleteProtectedImageInput(scope,id,key) : undefined,
++        finalize:protectedEdit ? receipt=>finalizeProtectedCloudflareEdit({ prepared:protectedEdit,receipt,assertCurrent,call,
++          save:input=>this.saveWorkspaceArtifact(input,call) }) : undefined });
+     }
+     const headers: Record<string, string> = { 'content-type': 'application/json' };
+     if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
+@@ -784,38 +760,6 @@
+     const {userId,assertCurrent} = await this.captureRequestContext();
+     const entries = await listProtectedImageInputs({origin:this.origin,userId,brandId});
+     await assertCurrent(); return entries;
+-  }
+-
+-  /** Material final-save recovery reads only local pixels and workspace receipts. */
+-  async recoverProtectedMaterialComposite(brandId:string,requestId:string,assertContext?:()=>void) {
+-    const {userId,assertCurrent,call} = await this.captureRequestContext(assertContext);
+-    const entry = await loadProtectedImageInput({origin:this.origin,userId,brandId},requestId);
+-    await assertCurrent();
+-    const binding = entry.prepared.materialRecoveryBinding;
+-    if (!binding || binding.requestId !== requestId) throw new Error('material_protected_recovery_binding_invalid');
+-    const artifact = await recoverBoundMaterialComposite(binding,entry.prepared,{brandId,userId},{assertCurrent,
+-      readRemote:id=>this.readWorkspaceArtifact(id,call),save:input=>this.saveWorkspaceArtifact(input,call),
+-      readSavedImage:async path=>{const media = await call('/v1/media/read?'+new URLSearchParams({bucket:'generated-images',path,expiresIn:'3600'}));
+-        if (!media || typeof (media as {url?:unknown}).url !== 'string' || !(media as {url:string}).url.startsWith('https://')) throw new Error('material_protected_saved_png_read_failed');
+-        return (media as {url:string}).url;}});
+-    await assertCurrent();
+-    return { artifact, acknowledgement: { requestId:entry.requestId,clientRecoveryKey:entry.clientRecoveryKey } };
+-  }
+-
+-  /** Canvas completed-batch recovery never enters the generation submission path. */
+-  async recoverProtectedCanvasBatchComposite(brandId:string,requestId:string,assertContext?:()=>void,expectedSourceImageUrl?:string,expectedSourceIdentity?:unknown):Promise<ImageReceipt>{
+-    const {userId,assertCurrent,call}=await this.captureRequestContext(assertContext);
+-    const entry=await loadProtectedImageInput({origin:this.origin,userId,brandId},requestId);await assertCurrent();
+-    const binding=entry.prepared.canvasProtectedBatchBinding;if(!binding||binding.requestId!==requestId||binding.brandId!==brandId||binding.scopeId!==userId)throw new Error('canvas_protected_batch_binding_invalid');
+-    const batch=await loadCanvasProtectedBatch(binding);await assertCurrent();
+-    if(binding.source.kind==='object'){if(expectedSourceIdentity===undefined||await protectedImageDigest(JSON.stringify(expectedSourceIdentity))!==binding.source.identityDigest)throw new Error('canvas_protected_object_source_changed');}
+-    if(expectedSourceImageUrl){const source=await materializeMaterialPng(expectedSourceImageUrl);await assertCurrent();if(source.width!==batch.original.width||source.height!==batch.original.height||await protectedImageDigest(source.dataUrl)!==batch.original.digest)throw new Error('canvas_protected_recovery_source_changed');}
+-    // Only an existing completed operation may be read when raw retention was interrupted.
+-    const receipt=batch.receipt&&await canvasBatchHasAllRaw(binding)?batch.receipt:await call(`/v1/image-ai/requests/${encodeURIComponent(requestId)}`) as ImageReceipt;await assertCurrent();
+-    if(!receipt.success||receipt.state!=='completed')throw new Error('canvas_protected_completed_provider_receipt_required');
+-    const lifecycle=await createCanvasProtectedBatchLifecycle(binding,entry.prepared,{brandId,userId},assertCurrent);
+-    const result=await finalizeProtectedOpenAIEdit({prepared:entry.prepared,receipt,assertCurrent,call,save:input=>this.saveWorkspaceArtifact(input,call),lifecycle});await assertCurrent();
+-    return {...result,clientRecoveryKey:entry.clientRecoveryKey};
+   }
+ 
+   /** Explicit recovery uses the original prepared bytes/settings and UUID.
+@@ -824,8 +768,6 @@
+     const {userId,assertCurrent,call} = await this.captureRequestContext(assertContext);
+     const scope = {origin:this.origin,userId,brandId};
+     const entry = await loadProtectedImageInput(scope,requestId); await assertCurrent();
+-    if (entry.prepared.canvasProtectedBatchBinding) throw new Error('canvas_protected_save_only_recovery_required');
+-    if (entry.prepared.materialRecoveryBinding) throw new Error('material_protected_save_only_recovery_required');
+     if (expectedSourceImageUrl) {
+       const currentSource = await prepareProtectedCloudflareEdit({...entry.prepared.body,imageUrls:[expectedSourceImageUrl],maskDataUrl:entry.prepared.maskDataUrl});
+       if (currentSource.plan.sourceSha256 !== entry.prepared.plan.sourceSha256) throw new Error('image_recovery_source_changed');
+@@ -835,7 +777,7 @@
+       assertCurrent,call,retainUntilAcknowledged:true,
+       beforeSubmit:(id,key)=>persistProtectedImageInput(scope,entry.prepared,id,key),
+       onTerminal:(id,key)=>deleteProtectedImageInput(scope,id,key),
+-      finalize:receipt=>(receipt.provider === 'openai' ? finalizeProtectedOpenAIEdit : finalizeProtectedCloudflareEdit)({prepared:entry.prepared,receipt,assertCurrent,call,save:input=>this.saveWorkspaceArtifact(input,call)})});
++      finalize:receipt=>finalizeProtectedCloudflareEdit({prepared:entry.prepared,receipt,assertCurrent,call,save:input=>this.saveWorkspaceArtifact(input,call)})});
+   }
+ 
+   async getImageUsage(brandId: string): Promise<CloudflareImageUsage> {
+--- a/src/lib/cloudflareImageAI.ts
++++ b/src/lib/cloudflareImageAI.ts
+@@ -74,7 +74,7 @@
+       const context = canvas.getContext('2d'); if (!context) throw new Error('image_reference_canvas_unavailable');
+       context.drawImage(image,0,0,width,height);
+       const png = await new Promise<Blob>((resolve,reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('image_reference_encode_failed')),'image/png'));
+-      references.push(await dataURL(png)); transforms.push({ index, sourceWidth,sourceHeight,width,height,resized: scale < 1,...(body.generationProvider === 'openai' && body.protectedEdit ? {renderingTransform:{x:0,y:0,scaleX:width/sourceWidth,scaleY:height/sourceHeight}} : {}) });
++      references.push(await dataURL(png)); transforms.push({ index, sourceWidth,sourceHeight,width,height,resized: scale < 1 });
+     } finally { URL.revokeObjectURL(url); }
+   }
+   const next: Body = { ...body, referenceTransforms: transforms };
+--- a/src/lib/cloudflareProtectedImageEdit.ts
++++ b/src/lib/cloudflareProtectedImageEdit.ts
+@@ -1,33 +1,17 @@
+-import type {VerifiedProtectedProvider} from './protectedProviderResult';
+-import { validateNativePrintFinalFrame,type CanvasProtectedBatchBinding } from './nativePrintFinalFrame';
+-import { composeNativePrintCandidate,validateNativePrintFrameBinding,type NativePrintFrameBinding } from './materialProtectedComposite';
+-import { buildProviderMaskGuide,composeProviderProtectedResult,type ProviderProtectedComposite } from '../features/lightchain/providerMask';
++import { buildProviderMaskGuide,composeProviderProtectedResult } from '../features/lightchain/providerMask';
+ import { PROTECTED_IMAGE_EDIT_MODE,protectedImageDigest,protectedImageSaveRequestId,type ProtectedImageEditPlan } from './protectedImageEditContract';
+ import { CLOUDFLARE_IMAGE_MODEL,type ImageReceipt } from './cloudflareImageAI';
+ import type { cloudflareDataPlane } from './cloudflareApi';
+ import type { Json } from '../types/database';
+ 
+ type Body = Record<string,unknown>;
+-export type ProtectedEditSaveInput = Parameters<NonNullable<typeof cloudflareDataPlane>['saveWorkspaceArtifact']>[0];
+-export type ProtectedMaterialRecoveryBinding = { version:1; stateArtifactId:string; requestId:string; brandId:string; scopeId:string; generationInputSignature:string };
+-export type ProtectedEditLifecycleContext = { prepared:PreparedProtectedCloudflareEdit; receipt:ImageReceipt; candidate:Body; candidateIndex:0|1|2|3; saveRequestId:string;verifiedProvider?:VerifiedProtectedProvider };
+-export type ProtectedEditLifecycle = {
+-  onCompletedReceipt?(receipt:ImageReceipt):Promise<void>;
+-  composeCandidate?(context:ProtectedEditLifecycleContext,dataUrl:string):Promise<ProviderProtectedComposite>;
+-  refreshVerifiedSavedCandidate?(context:ProtectedEditLifecycleContext,imageUrl:string):Promise<void>;
+-  getVerifiedSavedCandidate?(context:ProtectedEditLifecycleContext):Promise<Record<string,unknown>|undefined>;
+-  onCandidate(context:ProtectedEditLifecycleContext):Promise<{ dataUrl:string }>;
+-  getPersistedComposite(context:ProtectedEditLifecycleContext):Promise<ProviderProtectedComposite|undefined>;
+-  onComposed(context:ProtectedEditLifecycleContext,composite:ProviderProtectedComposite,input:ProtectedEditSaveInput):Promise<Record<string,Json>>;
+-  onSavedCandidate(context:ProtectedEditLifecycleContext,saved:ProtectedEditSaved,imageUrl:string):Promise<void>;
+-};
+-export type PreparedProtectedCloudflareEdit = { body:Body; plan:ProtectedImageEditPlan; sourceImageUrl:string; maskDataUrl:string; materialRecoveryBinding?:ProtectedMaterialRecoveryBinding; canvasProtectedBatchBinding?:CanvasProtectedBatchBinding; nativePrintFrameBinding?:NativePrintFrameBinding };
+-export type ProtectedEditSaved = { success: boolean; remote: { jobId: string; imageId: string; storagePath: string }; metadata?: Body };
++type SaveInput = Parameters<NonNullable<typeof cloudflareDataPlane>['saveWorkspaceArtifact']>[0];
++type Saved = { success: boolean; remote: { jobId: string; imageId: string; storagePath: string }; metadata?: Body };
+ const record = (value: unknown): value is Body => !!value && typeof value === 'object' && !Array.isArray(value);
+ 
+ export const CLOUDFLARE_PROTECTED_EDIT_NOTICE = '範囲編集は白黒の参照ガイドで生成し、範囲外を元画像の画素へ戻して別画像として保存します。モデル自体のマスク編集ではありません。';
+ 
+-export async function prepareProtectedCloudflareEdit(body: Body):Promise<PreparedProtectedCloudflareEdit> {
++export async function prepareProtectedCloudflareEdit(body: Body) {
+   if (typeof body.maskDataUrl !== 'string' || !body.maskDataUrl.startsWith('data:image/png;base64,')) throw new Error('protected_edit_png_mask_required');
+   const references = body.imageUrls ?? [body.imageUrl];
+   if (!Array.isArray(references) || !references.length || references.length > 3 || references.some(v=>typeof v !== 'string' || !v)) {
+@@ -42,31 +26,10 @@
+   // contract; the final compositor restores the original-resolution frame.
+   const scale = Math.max(Math.min(1,1024 / Math.max(guide.width,guide.height)),256 / Math.min(guide.width,guide.height));
+   const width = Math.round(guide.width * scale / 8) * 8; const height = Math.round(guide.height * scale / 8) * 8;
+-  if (body.generationProvider !== 'openai' && (width > 1920 || height > 1920)) throw new Error('protected_edit_source_aspect_ratio_not_supported');
+-  if (body.nativePrintFinalFrame !== undefined) {
+-    validateNativePrintFinalFrame(body.nativePrintFinalFrame,plan);
+-    if (body.generationProvider !== 'openai' && (guide.width < 256 || guide.height < 256 || guide.width > 1920 || guide.height > 1920 || guide.width % 8 || guide.height % 8)) throw new Error('material_protected_native_print_stage_geometry_not_supported');
+-  }
+-  const next: Body = { ...body,imageUrls:[guide.sourceDataUrl,...references.slice(1),guide.guideDataUrl],width:body.nativePrintFinalFrame ? guide.width : width,height:body.nativePrintFinalFrame ? guide.height : height,protectedEdit:plan };
++  if (width > 1920 || height > 1920) throw new Error('protected_edit_source_aspect_ratio_not_supported');
++  const next: Body = { ...body,imageUrls:[guide.sourceDataUrl,...references.slice(1),guide.guideDataUrl],width,height,protectedEdit:plan };
+   for (const key of ['maskDataUrl','maskApplied','maskCoveragePercent','maskWidth','maskHeight','imageUrl']) delete (next as Body)[key];
+   return { body:next,plan,sourceImageUrl:guide.sourceDataUrl,maskDataUrl:body.maskDataUrl };
+-}
+-
+-export function protectedEditCandidateSaveInput(context:ProtectedEditLifecycleContext,composite:{dataUrl:string;width:number;height:number}):ProtectedEditSaveInput {
+-  const { prepared,receipt,candidate:raw,candidateIndex:index,saveRequestId:requestId } = context;
+-  const verified = context.verifiedProvider ?? (receipt.provider === 'workers_ai' && receipt.backendProvider === 'cloudflare-workers-ai' && receipt.providerModel === CLOUDFLARE_IMAGE_MODEL ? {provider:'workers_ai',backendProvider:'cloudflare-workers-ai',model:CLOUDFLARE_IMAGE_MODEL} : undefined);
+-  if (!verified || verified.provider !== receipt.provider || verified.backendProvider !== receipt.backendProvider || verified.model !== receipt.providerModel) throw new Error('protected_edit_verified_provider_required');
+-  const metadata = record(receipt.metadata) ? receipt.metadata as Record<string,Json> : {};
+-  const input: ProtectedEditSaveInput = { requestId,brandId:String(prepared.body.brandId ?? prepared.body.brand_id),
+-        featureType:String(receipt.featureType ?? 'edit-image'),title:'範囲編集結果',imageUrl:composite.dataUrl,
+-        prompt:typeof prepared.body.prompt === 'string' ? prepared.body.prompt : null,sourceJobId:String(receipt.jobId),sourceStoragePath:null,
+-        ...(prepared.canvasProtectedBatchBinding?.canvasProjectId?{canvasProjectId:prepared.canvasProtectedBatchBinding.canvasProjectId}:{}),
+-        imageAI:{ requestId:receipt.requestId,candidateIndex:index },
+-        metadata:{ ...metadata,...(prepared.canvasProtectedBatchBinding?{canvasProtectedBatchBinding:prepared.canvasProtectedBatchBinding,parentObjectId:prepared.canvasProtectedBatchBinding.parentObjectId,generation:prepared.canvasProtectedBatchBinding.generation}:{}),protectedEdit:prepared.plan,protectedRegionComposited:true,maskApplied:true,
+-          provider:verified.provider,backendProvider:verified.backendProvider,providerModel:verified.model,
+-          providerRequestId:receipt.requestId,providerJobId:String(receipt.jobId),providerImageId:String(raw.imageId),providerStoragePath:String(raw.storagePath),
+-          batchId:String(receipt.jobId),candidateIndex:index,artifactRole:'protected-edit-final',outputSize:{width:composite.width,height:composite.height} } };
+-  return input;
+ }
+ 
+ /** Reuse the existing protected compositor and workspace writer. Recovery
+@@ -78,50 +41,42 @@
+   receipt: ImageReceipt;
+   assertCurrent(): Promise<void>;
+   call(path: string,init?: RequestInit): Promise<unknown>;
+-  save(input: ProtectedEditSaveInput): Promise<ProtectedEditSaved>;
+-  lifecycle?: ProtectedEditLifecycle;
++  save(input: SaveInput): Promise<Saved>;
+ }): Promise<ImageReceipt> {
+   const { prepared,receipt } = options;
+   const receiptPlan = receipt.protectedEdit;
+   if (receipt.provider !== 'workers_ai' || receipt.backendProvider !== 'cloudflare-workers-ai' || receipt.providerModel !== CLOUDFLARE_IMAGE_MODEL ||
+       receipt.jobId !== `ai-${receipt.requestId}` || !record(receiptPlan) || Object.entries(prepared.plan).some(([k,v])=>receiptPlan[k] !== v) ||
+       !Array.isArray(receipt.images) || receipt.images.length !== receipt.requestedCandidateCount) throw new Error('protected_edit_receipt_plan_mismatch');
+-  if (prepared.nativePrintFrameBinding) {
+-    await validateNativePrintFrameBinding(prepared.nativePrintFrameBinding,prepared.plan);
+-    const native = validateNativePrintFinalFrame(prepared.body.nativePrintFinalFrame,prepared.plan);
+-    if (JSON.stringify(record(receipt.metadata) ? receipt.metadata.nativePrintFinalFrame : undefined) !== JSON.stringify(native)) throw new Error('protected_edit_native_frame_receipt_mismatch');
+-  }
+   const images: Body[] = [];
+   for (const [index,raw] of receipt.images.entries()) {
+     await options.assertCurrent();
+     if (!record(raw) || raw.candidateIndex !== index || raw.imageId !== `ai-${receipt.requestId}-${index}` || raw.jobId !== receipt.jobId ||
+         raw.storagePath !== `generated-images/${raw.imageId}` || typeof raw.imageUrl !== 'string') throw new Error('protected_edit_candidate_identity_mismatch');
+     const requestId = await protectedImageSaveRequestId(receipt.requestId,index);
+-    const context:ProtectedEditLifecycleContext = { prepared,receipt,candidate:raw,candidateIndex:index as 0|1|2|3,saveRequestId:requestId,verifiedProvider:{provider:'workers_ai',backendProvider:'cloudflare-workers-ai',model:CLOUDFLARE_IMAGE_MODEL} };
+-    const retainedCandidate = await options.lifecycle?.onCandidate(context);
+-    await options.assertCurrent();
+-    const persistedComposite = await options.lifecycle?.getPersistedComposite(context);
+-    await options.assertCurrent();
+     const expectedImageId = `wa-${requestId}`; const expectedPath = `generated-images/${expectedImageId}`;
+-    let saved: ProtectedEditSaved | undefined;
+-    try { saved = await options.call(`/v1/workspace-artifacts/${requestId}`) as ProtectedEditSaved; }
++    let saved: Saved | undefined;
++    try { saved = await options.call(`/v1/workspace-artifacts/${requestId}`) as Saved; }
+     catch (error) {
+-      if (!(error instanceof Error && /_404_workspace_artifact_not_found$/.test(error.message))) throw error;
++      if (!(error instanceof Error && /_(404_workspace_artifact_not_found|409_workspace_save_pending)$/.test(error.message))) throw error;
+     }
+     if (!saved) {
+-      const composite = persistedComposite ?? (prepared.nativePrintFrameBinding
+-        ? await composeNativePrintCandidate(prepared.nativePrintFrameBinding,retainedCandidate?.dataUrl ?? raw.imageUrl,prepared.maskDataUrl)
+-        : await composeProviderProtectedResult({ sourceImageUrl:prepared.sourceImageUrl,providerImageUrl:retainedCandidate?.dataUrl ?? raw.imageUrl,
+-        maskDataUrl:prepared.maskDataUrl,preserveSourceDimensions:true }));
++      const composite = await composeProviderProtectedResult({ sourceImageUrl:prepared.sourceImageUrl,providerImageUrl:raw.imageUrl,
++        maskDataUrl:prepared.maskDataUrl,preserveSourceDimensions:true });
+       await options.assertCurrent();
+-      const input = protectedEditCandidateSaveInput(context,composite);
+-      const materialMetadata = await options.lifecycle?.onComposed(context,composite,input) ?? {};
+-      input.metadata = { ...materialMetadata,...input.metadata };
+-      await options.assertCurrent();
++      const metadata = record(receipt.metadata) ? receipt.metadata as Record<string,Json> : {};
++      const input: SaveInput = { requestId,brandId:String(prepared.body.brandId ?? prepared.body.brand_id),
++        featureType:String(receipt.featureType ?? 'edit-image'),title:'範囲編集結果',imageUrl:composite.dataUrl,
++        prompt:typeof prepared.body.prompt === 'string' ? prepared.body.prompt : null,sourceJobId:String(receipt.jobId),sourceStoragePath:null,
++        imageAI:{ requestId:receipt.requestId,candidateIndex:index },
++        metadata:{ ...metadata,protectedEdit:prepared.plan,protectedRegionComposited:true,maskApplied:true,
++          provider:'workers_ai',backendProvider:'cloudflare-workers-ai',providerModel:String(receipt.providerModel),
++          providerRequestId:receipt.requestId,providerJobId:String(receipt.jobId),providerImageId:String(raw.imageId),providerStoragePath:String(raw.storagePath),
++          batchId:String(receipt.jobId),candidateIndex:index,artifactRole:'protected-edit-final',outputSize:{width:composite.width,height:composite.height} } };
+       try { saved = await options.save(input); }
+       catch (error) {
+         await options.assertCurrent();
+-        try { saved = await options.call(`/v1/workspace-artifacts/${requestId}`) as ProtectedEditSaved; }
++        try { saved = await options.call(`/v1/workspace-artifacts/${requestId}`) as Saved; }
+         catch { throw error; }
+       }
+     }
+@@ -129,20 +84,13 @@
+         saved.remote.jobId !== expectedImageId || saved.metadata?.provider !== 'workers_ai' || saved.metadata?.backendProvider !== 'cloudflare-workers-ai' || saved.metadata?.providerModel !== CLOUDFLARE_IMAGE_MODEL ||
+         saved.metadata?.providerRequestId !== receipt.requestId || saved.metadata?.candidateIndex !== index ||
+         !record(saved.metadata?.protectedEdit) || Object.entries(prepared.plan).some(([k,v])=>(saved!.metadata!.protectedEdit as Body)[k] !== v)) throw new Error('protected_edit_final_save_readback_mismatch');
+-    if (prepared.body.nativePrintFinalFrame && JSON.stringify(saved.metadata?.nativePrintFinalFrame) !== JSON.stringify(prepared.body.nativePrintFinalFrame)) throw new Error('protected_edit_native_frame_saved_mismatch');
+-    const finalWidth = prepared.nativePrintFrameBinding?.original.width ?? prepared.plan.sourceWidth;
+-    const finalHeight = prepared.nativePrintFrameBinding?.original.height ?? prepared.plan.sourceHeight;
+-    if (prepared.nativePrintFrameBinding && (!record(saved.metadata?.outputSize) || saved.metadata.outputSize.width !== finalWidth
+-      || saved.metadata.outputSize.height !== finalHeight)) throw new Error('protected_edit_final_dimensions_mismatch');
+     const query = new URLSearchParams({ bucket:'generated-images',path:expectedPath,expiresIn:'3600' });
+     const media = await options.call(`/v1/media/read?${query}`) as { url?: string };
+     if (typeof media.url !== 'string' || !media.url.startsWith('https://')) throw new Error('protected_edit_final_media_readback_invalid');
+     await options.assertCurrent();
+-    await options.lifecycle?.onSavedCandidate(context,saved,media.url);
+-    await options.assertCurrent();
+     images.push({ ...raw,id:expectedImageId,imageId:expectedImageId,jobId:saved.remote.jobId,storagePath:expectedPath,imageUrl:media.url,
+       batchId:receipt.jobId,providerImageId:raw.imageId,providerJobId:raw.jobId,providerStoragePath:raw.storagePath,
+-      width:finalWidth,height:finalHeight,protectedRegionComposited:true,persistenceStatus:'completed' });
++      width:prepared.plan.sourceWidth,height:prepared.plan.sourceHeight,protectedRegionComposited:true,persistenceStatus:'completed' });
+   }
+   return { ...receipt,images,imageUrl:images[0].imageUrl,imageId:images[0].imageId,jobId:images[0].jobId,storagePath:images[0].storagePath,
+     providerJobId:receipt.jobId,providerImageId:images[0].providerImageId,providerStoragePath:images[0].providerStoragePath,
+--- a/src/lib/imageApi.ts
++++ b/src/lib/imageApi.ts
+@@ -1,6 +1,3 @@
+-import type {CanvasProtectedBatchBinding} from './nativePrintFinalFrame';
+-import type { NativePrintFrameBinding } from './materialProtectedComposite';
+-import type { ProtectedMaterialRecoveryBinding } from './cloudflareProtectedImageEdit';
+ import { normalizeCloudflareGeneratedImageStoragePath, normalizeGeneratedImageStoragePath } from './storagePathSafety';
+ import { cloudflareDataPlane, type HeavyGenerationConsent } from './cloudflareApi';
+ import type { Json } from '../types/database';
+@@ -151,7 +148,7 @@
+ async function invokeImageAction<T>(
+   action: string,
+   body: Record<string, unknown>,
+-  options: { idempotencyKey?: string; assertContext?: ()=>void | Promise<void>; retainUntilAcknowledged?: boolean; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent; materialRecoveryBinding?: ProtectedMaterialRecoveryBinding; canvasProtectedBatchBinding?:CanvasProtectedBatchBinding; nativePrintFrameBinding?: NativePrintFrameBinding } = {},
++  options: { idempotencyKey?: string; assertContext?: ()=>void | Promise<void>; retainUntilAcknowledged?: boolean; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent } = {},
+ ): Promise<T> {
+   if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+   return cloudflareDataPlane.invokeProviderAction<T>(action, body, options);
+@@ -403,8 +400,6 @@
+   options?: LegalSafetyOptions & {
+     outputBackground?: 'auto' | 'transparent';
+     maskDataUrl?: string;
+-    materialRecoveryBinding?: ProtectedMaterialRecoveryBinding; canvasProtectedBatchBinding?:CanvasProtectedBatchBinding;
+-    nativePrintFrameBinding?: NativePrintFrameBinding;
+     parentObjectId?: string | null;
+     canvasProjectId?: string | null;
+     generation?: number;
+@@ -416,7 +411,6 @@
+     maskCoveragePercent?: number;
+     maskWidth?: number;
+     maskHeight?: number;
+-    generationProvider?:'openai'|'workers_ai';
+     providerModel?: string;
+     inputFidelity?: 'low' | 'high';
+     quality?: 'low' | 'medium' | 'high' | 'auto';
+@@ -470,7 +464,6 @@
+       maskCoveragePercent: options?.maskCoveragePercent,
+       maskWidth: options?.maskWidth,
+       maskHeight: options?.maskHeight,
+-      generationProvider: options?.generationProvider,
+       providerModel: options?.providerModel,
+       inputFidelity: options?.inputFidelity,
+       quality: options?.quality,
+@@ -486,9 +479,6 @@
+       assertContext: options?.assertContext,
+       retainUntilAcknowledged: options?.retainUntilAcknowledged,
+       heavyPreparation: options?.heavyPreparation,
+-      materialRecoveryBinding: options?.materialRecoveryBinding,
+-      canvasProtectedBatchBinding:options?.canvasProtectedBatchBinding,
+-      nativePrintFrameBinding: options?.nativePrintFrameBinding,
+     });
+     await options?.assertContext?.();
+     return {
+--- a/src/lib/providerResultPersistence.ts
++++ b/src/lib/providerResultPersistence.ts
+@@ -5,7 +5,6 @@
+   saveWorkspaceArtifactBestEffort,
+   type WorkspaceArtifactBestEffortResult,
+ } from './localWorkspaceArtifacts';
+-import { validateMaterialCompositeArtifact } from './materialProtectedComposite';
+ import type { Json } from '../types/database';
+ import type { ArtifactPersistenceContext } from './cloudflareApi';
+ 
+@@ -94,21 +93,6 @@
+   }
+   if (input.requireRemote && !result.remote) {
+     await options.persistenceContext?.assertCurrent();
+-    // Retain only the exact locally verified protected composite and its inputs.
+-    // Other provider-result failures keep the existing cleanup behavior.
+-    if (input.id && input.reuseCanonicalRemoteArtifact === false && result.localPersisted
+-      && input.metadata?.protectedMaterialComposite) {
+-      const retained = findWorkspaceArtifactPersisted(input.brandId, input.id, input.scopeId);
+-      if (!retained.ok) throw retained.error;
+-      if (retained.artifact && retained.artifact.featureType === input.featureType
+-        && retained.artifact.imageUrl === input.imageUrl
+-        && retained.artifact.brandId === input.brandId && retained.artifact.scopeId === input.scopeId) {
+-        let validated = false;
+-        try { await validateMaterialCompositeArtifact(retained.artifact); validated = true; } catch { /* Invalid records retain the existing cleanup path. */ }
+-        await options.persistenceContext?.assertCurrent();
+-        if (validated) throw new Error(`provider_result_remote_persistence_unverified:${describePersistenceFailure(result)}:protected_composite_retained`);
+-      }
+-    }
+     const cleanup = options.persistenceContext
+       ? await deleteWorkspaceArtifactWithContext(input.brandId, result.artifact.id, input.scopeId, options.persistenceContext)
+       : deleteWorkspaceArtifact(input.brandId, result.artifact.id, input.scopeId);
+--- a/src/pages/CanvasEditorPage.tsx
++++ b/src/pages/CanvasEditorPage.tsx
+@@ -1,11 +1,7 @@
+ import { readOwnerScopedCanvasLocalDraft, type CanvasLocalDraftExport } from '../lib/canvasLocalDraftReadback';
+ import { isLibraryCanvasClipboard, isLibraryCanvasPasteTarget, pasteLibraryCanvasReference } from '../lib/libraryCanvasClipboard';
+-import {promoteCanvasLocalSource,applyCanvasSourcePromotionAlias,canvasSaveObjectsWithPromotedSources} from '../lib/canvasSourcePromotion';
+-import {verifyCanvasProtectedSourcePromotionBridge} from '../lib/canvasProtectedSourcePromotionBridge';
+-import type {ImageEditResult} from '../lib/imageApi';
+-import {canvasObjectSourceCandidates,resolveCanvasProtectedObjectSource,verifyCanvasPinnedObjectSource,loadCanvasProtectedBatchForRequest,prepareCanvasProtectedBatch,assertCanvasCanonicalBatchResult,loadCanvasProtectedBatch,canvasObjectProtectedIdentity,canAcknowledgeCanvasProtectedBatch,type CanvasProtectedBatchBinding,type VerifiedCanvasObjectSource} from '../lib/canvasProtectedBatchComposite';
+ import { lazy, Suspense, useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
+-import { useParams, useNavigate, useSearchParams,useLocation } from 'react-router-dom';
++import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+ import {
+   ArrowLeft,
+   Layers,
+@@ -435,7 +431,6 @@
+   }, []);
+ 
+   const { projectId } = useParams();
+-  const canvasLocation=useLocation();
+   const navigate = useNavigate();
+   const [searchParams] = useSearchParams();
+   const sourceArtifactParam = searchParams.get('sourceArtifactId');
+@@ -539,14 +534,6 @@
+   const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s']);
+   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
+   const [isGenerating, setIsGenerating] = useState(false);
+-  const sourcePromotionBusyRef=useRef(false);
+-  const canvasSaveFlightRef=useRef(false);
+-  const canvasImageTaskCountRef=useRef(0);
+-  const canvasGeneratingRef=useRef(isGenerating);canvasGeneratingRef.current=isGenerating;
+-  const runCanvasImageTask=async<T,>(work:()=>Promise<T>):Promise<T>=>{
+-    if(sourcePromotionBusyRef.current)throw new Error('canvas_source_promotion_busy');
+-    canvasImageTaskCountRef.current++;try{return await work();}finally{canvasImageTaskCountRef.current--;}
+-  };
+   // Heavy image actions require only the authenticated user and the active
+   // brand context. No separate entitlement or rights request is made.
+   const heavyGenerationReady = Boolean(user?.id && currentBrand?.id && heavyWorkspaceReady);
+@@ -581,14 +568,10 @@
+   const [showPartialEditModal, setShowPartialEditModal] = useState(false);
+   const [partialEditingImage, setPartialEditingImage] = useState<string | null>(null);
+   const [partialEditingObjectId, setPartialEditingObjectId] = useState<string | null>(null);
+-  const canvasImagePreviewAttemptRef=useRef(0);
+-  const canvasImagePreviewMountedRef=useRef(true);
+-  const canvasImagePreviewRef=useRef<{objectId:string;kind:'partial'|'edit';source:VerifiedCanvasObjectSource;assertCurrent:()=>void}|null>(null);
+   const partialEditAttemptRef = useRef<{ attempted: boolean; idempotencyKey: string | null }>({ attempted: false, idempotencyKey: null });
+   const inpaintAttemptRef = useRef<{ attempted: boolean; idempotencyKey: string | null }>({ attempted: false, idempotencyKey: null });
+   const imageEditEpochRef = useRef(0);
+   const imageEditRouteRef = useRef(projectId);
+-  const ownedCanvasEditIdentityTransitionRef=useRef<{id:string;fromKey:string;from:string|undefined;to:string;userId:string;brandId:string;epoch:number;resolve:()=>void;reject:(error:Error)=>void}|null>(null);
+   const ownedCanvasRouteTransitionRef = useRef<OwnedCanvasRouteTransition | null>(null);
+   const ownedCanvasRouteTransition = ownedCanvasRouteTransitionRef.current;
+   if (ownedCanvasRouteTransition) {
+@@ -610,9 +593,7 @@
+   } else {
+     imageEditRouteRef.current = projectId;
+   }
+-  useEffect(()=>{const transition=ownedCanvasEditIdentityTransitionRef.current;if(!transition)return;const valid=transition.epoch===imageEditEpochRef.current&&transition.userId===user?.id&&transition.brandId===currentBrand?.id&&useCanvasStore.getState().currentProjectId===transition.to;if(valid&&projectId===transition.to&&canvasLocation.state?.canvasProtectedIdentityTransition===transition.id){ownedCanvasEditIdentityTransitionRef.current=null;imageEditRouteRef.current=projectId;transition.resolve();}else if(!valid||projectId!==transition.from||canvasLocation.key!==transition.fromKey){ownedCanvasEditIdentityTransitionRef.current=null;transition.reject(new Error('canvas_local_identity_route_changed'));}},[projectId,canvasLocation.key,user?.id,currentBrand?.id,useCanvasStore.getState().currentProjectId]);
+   useEffect(() => () => {
+-    ownedCanvasEditIdentityTransitionRef.current?.reject(new Error('canvas_local_identity_unmounted'));ownedCanvasEditIdentityTransitionRef.current=null;
+     imageEditEpochRef.current += 1;
+     ownedCanvasRouteTransitionRef.current = null;
+   },[]);
+@@ -625,7 +606,8 @@
+     const renderCount = canvasImageEditRenderCounterRef.current;
+     const identity = () => {
+       const source = sourceId ? useCanvasStore.getState().objects.find(object=>object.id === sourceId) : null;
+-      return sourceId ? JSON.stringify(source?canvasObjectProtectedIdentity(source):null) : '';
++      const path = source?.metadata?.storagePath ?? source?.metadata?.galleryStoragePath;
++      return sourceId ? JSON.stringify([source?.id,path,source?.metadata?.imageId,source?.metadata?.generation,source?.metadata?.sourceRevision,path ? null : source?.src]) : '';
+     };
+     const sourceIdentity = identity();
+     const readMismatchFlags = (): CanvasSaveContextMismatchFlags => {
+@@ -654,24 +636,6 @@
+       }
+     }, { readMismatchFlags });
+     return assertContext;
+-  };
+-
+-  const ensureProtectedCanvasDocumentContext=async(sourceId:string|null)=>{
+-    const auth=useAuthStore.getState();if(!auth.user?.id||!auth.currentBrand?.id)throw new Error('canvas_local_identity_scope_required');
+-    const fence=captureAuthBrandFence(auth.brandState,auth.user.id,auth.currentBrand.id);const epoch=imageEditEpochRef.current;
+-    let transition:Promise<void>|undefined;
+-    const id=useCanvasStore.getState().ensureCurrentLocalProjectIdentity(auth.currentBrand.id,targetId=>{
+-      if(imageEditRouteRef.current===targetId)return;
+-      if(ownedCanvasEditIdentityTransitionRef.current)throw new Error('canvas_local_identity_transition_pending');
+-      // Install the exact token before the store can synchronously render /new.
+-      transition=new Promise<void>((resolve,reject)=>{ownedCanvasEditIdentityTransitionRef.current={id:crypto.randomUUID(),fromKey:canvasLocation.key,from:projectId,to:targetId,userId:auth.user!.id,brandId:auth.currentBrand!.id,epoch,resolve,reject};});
+-      void transition.catch(()=>{});
+-    });
+-    const latest=useAuthStore.getState();assertAuthBrandFence(fence,captureAuthBrandFence(latest.brandState,latest.user?.id??null,latest.currentBrand?.id??null),'canvas_local_identity');
+-    if(transition){navigate(`/canvas/${id}`,{replace:true,state:{canvasProtectedIdentityTransition:ownedCanvasEditIdentityTransitionRef.current!.id}});await transition;}
+-    const current=useAuthStore.getState();assertAuthBrandFence(fence,captureAuthBrandFence(current.brandState,current.user?.id??null,current.currentBrand?.id??null),'canvas_local_identity');
+-    if(imageEditEpochRef.current!==epoch||imageEditRouteRef.current!==id||useCanvasStore.getState().currentProjectId!==id)throw new Error('canvas_local_identity_route_changed');
+-    const assertContext=captureCanvasImageEditContext(sourceId);assertContext();return assertContext;
+   };
+ 
+   // Invite modal state
+@@ -1046,7 +1010,7 @@
+ 
+   const currentCanvasSaveContent = (documentId?:string) => {
+     const current=useCanvasStore.getState();const title=(current.currentProjectName||'無題のプロジェクト').trim().slice(0,160);
+-    return {title,snapshot:buildCanvasDocumentSnapshot({projectId:documentId??current.currentProjectId,name:title,objects:cloudflareDataPlane&&user?.id&&currentBrand?.id?canvasSaveObjectsWithPromotedSources(current.objects,{origin:cloudflareDataPlane.origin,userId:user.id,brandId:currentBrand.id}):current.objects,
++    return {title,snapshot:buildCanvasDocumentSnapshot({projectId:documentId??current.currentProjectId,name:title,objects:current.objects,
+       view:{zoom:current.zoom,panX:current.panX,panY:current.panY},sourceProjectIds:canvasSourceProjectIdsRef.current})};
+   };
+   const makeCanvasSaveTransport = (scope:CanvasSaveScope,assertContext:()=>void):CanvasSaveTransport => {
+@@ -1176,8 +1140,6 @@
+     }
+ 
+     if (!projectId || projectId === 'new') {
+-      const owned=ownedCanvasEditIdentityTransitionRef.current;
+-      if(owned&&owned.fromKey===canvasLocation.key&&owned.from===projectId&&owned.to===useCanvasStore.getState().currentProjectId&&owned.userId===user?.id&&owned.brandId===currentBrand?.id&&owned.epoch===imageEditEpochRef.current)return;
+       remoteDocumentIdRef.current = null;
+       remoteRevisionRef.current = null;
+       remoteDocumentOwnerRef.current = null;
+@@ -1330,7 +1292,7 @@
+     return () => {
+       cancelled = true;
+     };
+-  }, [projectId,canvasLocation.key, user?.id, currentBrand?.id, heavyWorkspaceReady, loadProject, hydrateProject, clearCanvas, navigate]);
++  }, [projectId, user?.id, currentBrand?.id, heavyWorkspaceReady, loadProject, hydrateProject, clearCanvas, navigate]);
+ 
+   useEffect(() => {
+     if (!heavyWorkspaceReady) return;
+@@ -1747,46 +1709,48 @@
+       : {};
+   };
+ 
+-  const resolveCanvasSourceLocator = useCallback(async(source:string)=>{
+-    const localResolution=await resolveLocalCanvasAsset(source);
+-    if(localResolution){localAssetReleasesRef.current.get(source)?.();localAssetReleasesRef.current.set(source,localResolution.release);return localResolution.source;}
+-    return resolveGeneratedImageUrl(source);
+-  },[]);
+-  const resolveCanvasObjectImageUrl = useCallback(async(object:CanvasObject)=>{
+-    let lastError:unknown;
+-    for(const source of canvasObjectSourceCandidates(object)){try{return await resolveCanvasSourceLocator(source);}catch(error){lastError=error;}}
+-    throw lastError||new Error('画像URLの解決に失敗しました');
+-  },[resolveCanvasSourceLocator]);
+-  const invalidateCanvasImagePreview=()=>{
+-    canvasImagePreviewAttemptRef.current+=1;canvasImagePreviewRef.current=null;
+-    setShowPartialEditModal(false);setPartialEditingImage(null);setPartialEditingObjectId(null);
+-    setShowEditModal(false);setEditingImage(null);setEditingObjectId(null);
+-  };
+-  useEffect(()=>{canvasImagePreviewMountedRef.current=true;return()=>{canvasImagePreviewMountedRef.current=false;canvasImagePreviewAttemptRef.current+=1;canvasImagePreviewRef.current=null;};},[]);
+-  useEffect(()=>{invalidateCanvasImagePreview();},[projectId,user?.id,currentBrand?.id,brandState.requestGeneration,brandState.status,JSON.stringify(selectedIds)]);
+-  const assertCanvasPreviewSourceMatches=(preview:VerifiedCanvasObjectSource,fresh:VerifiedCanvasObjectSource|undefined)=>{
+-    if(!fresh||preview.objectDescriptorDigest!==fresh.objectDescriptorDigest||preview.selectedSource!==fresh.selectedSource||preview.originalPngDigest!==fresh.originalPngDigest||preview.originalPngDataUrl!==fresh.originalPngDataUrl||preview.width!==fresh.width||preview.height!==fresh.height)throw new Error('canvas_image_preview_source_changed');
+-  };
+-  const openCanvasImageEditPreview=async(objectId:string,kind:'partial'|'edit')=>{
+-    invalidateCanvasImagePreview();const attempt=canvasImagePreviewAttemptRef.current;
+-    const selection=JSON.stringify(useCanvasStore.getState().selectedIds),assertContext=captureCanvasImageEditContext(objectId);
+-    const assertCurrent=()=>{assertContext();if(!canvasImagePreviewMountedRef.current||canvasImagePreviewAttemptRef.current!==attempt||JSON.stringify(useCanvasStore.getState().selectedIds)!==selection)throw new Error('canvas_image_preview_changed');};
+-    try{
+-      assertCurrent();const object=useCanvasStore.getState().objects.find(value=>value.id===objectId);if(!object)throw new Error('canvas_image_preview_source_missing');
+-      const source=await resolveCanvasProtectedObjectSource(object,resolveCanvasSourceLocator,assertCurrent,()=>useCanvasStore.getState().objects.find(value=>value.id===objectId));assertCurrent();
+-      canvasImagePreviewRef.current={objectId,kind,source,assertCurrent};
+-      if(kind==='partial'){partialEditAttemptRef.current={attempted:false,idempotencyKey:null};setPartialEditingObjectId(objectId);setPartialEditingImage(source.originalPngDataUrl);setShowPartialEditModal(true);}
+-      else{inpaintAttemptRef.current={attempted:false,idempotencyKey:null};setEditingObjectId(objectId);setEditingImage(source.originalPngDataUrl);setShowEditModal(true);}
+-    }catch(error){if(canvasImagePreviewMountedRef.current&&canvasImagePreviewAttemptRef.current===attempt)toast.error(error instanceof Error?error.message:'画像の準備に失敗しました');}
+-  };
+-  const verifyCanvasObjectBatchSource=async(binding:CanvasProtectedBatchBinding,assertContext:()=>void)=>{
+-    if(binding.source.kind!=='object')return;
+-    const sourceObjectId=binding.source.objectId;
+-    const object=useCanvasStore.getState().objects.find(value=>value.id===sourceObjectId);
+-    if(!object)throw new Error('canvas_protected_object_source_changed');
+-    const objectId=object.id;
+-    return verifyCanvasPinnedObjectSource(binding,object,resolveCanvasSourceLocator,assertContext,()=>useCanvasStore.getState().objects.find(value=>value.id===objectId));
+-  };
++  const resolveCanvasObjectImageUrl = useCallback(async (object: CanvasObject) => {
++    const parameters = object.metadata?.parameters && typeof object.metadata.parameters === 'object'
++      ? object.metadata.parameters as Record<string, unknown>
++      : {};
++    const candidates = Array.from(new Set([
++      object.metadata?.galleryStoragePath,
++      object.metadata?.storagePath,
++      parameters.galleryStoragePath,
++      parameters.storagePath,
++      parameters.remoteStoragePath,
++      parameters.sourceStoragePath,
++      parameters.backendStoragePath,
++      typeof object.metadata?.galleryImageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(object.metadata.galleryImageId.trim())
++        ? `generated-images/${object.metadata.galleryImageId.trim()}`
++        : undefined,
++      typeof object.metadata?.imageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(object.metadata.imageId.trim())
++        ? `generated-images/${object.metadata.imageId.trim()}`
++        : undefined,
++      typeof parameters.imageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(parameters.imageId.trim())
++        ? `generated-images/${parameters.imageId.trim()}`
++        : undefined,
++      object.src,
++      object.metadata?.galleryImageUrl,
++    ].filter((source): source is string => typeof source === 'string' && Boolean(source.trim()))));
++    let lastError: unknown;
++
++    for (const source of candidates) {
++      try {
++        const localResolution = await resolveLocalCanvasAsset(source);
++        if (localResolution) {
++          localAssetReleasesRef.current.get(source)?.();
++          localAssetReleasesRef.current.set(source, localResolution.release);
++          return localResolution.source;
++        }
++        return await resolveGeneratedImageUrl(source);
++      } catch (error) {
++        lastError = error;
++      }
++    }
++
++    throw lastError || new Error('画像URLの解決に失敗しました');
++  }, []);
+ 
+   const buildDerivedLightchainMetadata = (
+     sourceObject: typeof selectedObject,
+@@ -2029,8 +1993,6 @@
+   };
+ 
+   const handleSave = async () => {
+-    if(canvasSaveFlightRef.current)return;canvasSaveFlightRef.current=true;
+-    try{
+     if (!currentBrand?.id || !user?.id) {
+       setCanvasPersistenceStatus('failed');
+       toast.error(user?.id
+@@ -2038,7 +2000,7 @@
+         : 'ログインしてください');
+       return;
+     }
+-    if (sourcePromotionBusyRef.current || activeCanvasSaveRef.current || canvasPersistenceStatus === 'loading' || canvasPersistenceStatus === 'saving' || canvasPersistenceStatus === 'verifying') {
++    if (activeCanvasSaveRef.current || canvasPersistenceStatus === 'loading' || canvasPersistenceStatus === 'saving' || canvasPersistenceStatus === 'verifying') {
+       return;
+     }
+ 
+@@ -2086,32 +2048,6 @@
+       sourceProjectIds:canvasSourceProjectIdsRef.current,
+     });
+     try {
+-      if(cloudflareDataPlane){
+-        const sourceClient=cloudflareDataPlane;
+-        if(canvasGeneratingRef.current||canvasImageTaskCountRef.current)throw new Error('canvas_source_promotion_jobs_not_idle');
+-        sourcePromotionBusyRef.current=true;setCanvasPersistenceStatus('saving');
+-        try{
+-          const assertPromotionContext=()=>{assertSaveContext();if(!isMountedRef.current||canvasGeneratingRef.current||canvasImageTaskCountRef.current)throw new Error('canvas_source_promotion_context_changed');};
+-          const persistenceContext=await cloudflareDataPlane.captureArtifactPersistenceContext({assertContext:assertPromotionContext});
+-          const sourceScope={origin:cloudflareDataPlane.origin,userId:user.id,brandId};
+-          const originalSources=useCanvasStore.getState().objects.filter(object=>object.type==='image'&&isLocalCanvasAssetReference(object.src));
+-          for(const original of originalSources){
+-            assertPromotionContext();
+-            const proof=await promoteCanvasLocalSource({scope:sourceScope,object:original,assertCurrent:persistenceContext.assertCurrent,
+-              readCurrentObject:()=>useCanvasStore.getState().objects.find(object=>object.id===original.id),
+-              readRemote:id=>sourceClient.readWorkspaceArtifact(id,undefined,null,persistenceContext),
+-              saveRemote:input=>sourceClient.saveWorkspaceArtifact(input,undefined,persistenceContext),signedRead:resolveGeneratedImageUrl});
+-            await persistenceContext.assertCurrent();
+-            const latest=useCanvasStore.getState(),current=latest.objects.find(object=>object.id===original.id);
+-            if(!current)throw new Error('canvas_source_promotion_source_changed');
+-            const aliased=applyCanvasSourcePromotionAlias(current,proof);
+-            // Alias only: no updateObject/history, source mutation, or draft hydration.
+-            useCanvasStore.setState({objects:latest.objects.map(object=>object.id===current.id?aliased:object)});
+-            await persistenceContext.assertCurrent();
+-          }
+-        }finally{sourcePromotionBusyRef.current=false;}
+-      }
+-      const promoted=currentCanvasSaveContent();title=promoted.title;snapshot=promoted.snapshot;
+       validateCanvasDocumentSnapshot(snapshot);
+     } catch (error) {
+       reportSaveDiagnostic(error);
+@@ -2249,16 +2185,9 @@
+       if (cloudflareDataPlane) {
+         const acknowledged = new Set<string>();
+         for (const object of readback.snapshot.objects) {
+-          const completion = (object.metadata as { parameters?: { imageAICompletion?: { requestId?: string; clientRecoveryKey?: string; canvasBatch?:CanvasProtectedBatchBinding } } } | undefined)?.parameters?.imageAICompletion;
++          const completion = (object.metadata as { parameters?: { imageAICompletion?: { requestId?: string; clientRecoveryKey?: string } } } | undefined)?.parameters?.imageAICompletion;
+           if (!completion?.requestId || !completion.clientRecoveryKey || acknowledged.has(completion.requestId)) continue;
+           assertSaveContext();
+-          if(completion.canvasBatch){
+-            const boundDocument=completion.canvasBatch.canvasProjectId;
+-            if(!boundDocument||boundDocument!==readback.id&&await initialCanvasDocumentId({origin:cloudflareDataPlane.origin,userId:user.id,brandId},boundDocument)!==readback.id)continue;
+-            assertSaveContext();
+-            if(!await canAcknowledgeCanvasProtectedBatch(completion.canvasBatch,readback.snapshot.objects))continue;
+-            assertSaveContext();
+-          }
+           try { await cloudflareDataPlane.acknowledgeImageAction(completion); acknowledged.add(completion.requestId); }
+           catch { /* The Canvas is saved; retain the ID if client acknowledgement is unavailable. */ }
+         }
+@@ -2309,7 +2238,6 @@
+       if (ownedCanvasRouteTransitionRef.current?.token.save === active) ownedCanvasRouteTransitionRef.current = null;
+       if(activeCanvasSaveRef.current===active)activeCanvasSaveRef.current=null;
+     }
+-    }finally{canvasSaveFlightRef.current=false;}
+   };
+ 
+   const handleObjectSelect = useCallback((id: string | null) => {
+@@ -2829,7 +2757,6 @@
+   }, [addImageToCanvasSafely]);
+ 
+   const handleGenerate = async () => {
+-    if(sourcePromotionBusyRef.current){toast.error('Canvas元画像の保存中です。');return;}
+     if (!currentBrand) {
+       toast.error('利用環境を準備できませんでした。もう一度お試しください。');
+       return;
+@@ -3109,11 +3036,17 @@
+       return;
+     }
+     if (action === 'partial-edit' || action === 'inpaint') {
+-      await openCanvasImageEditPreview(objectId,'partial');
++      partialEditAttemptRef.current = { attempted: false, idempotencyKey: null };
++      setPartialEditingImage(obj.src);
++      setPartialEditingObjectId(objectId);
++      setShowPartialEditModal(true);
+       return;
+     }
+     if (action === 'edit' || action === 'editWithPrompt' || action === 'edit-prompt') {
+-      await openCanvasImageEditPreview(objectId,'edit');
++      inpaintAttemptRef.current = { attempted: false, idempotencyKey: null };
++      setEditingImage(obj.src);
++      setEditingObjectId(objectId);
++      setShowEditModal(true);
+       return;
+     }
+ 
+@@ -3606,31 +3539,12 @@
+ 
+   const recoverCanvasImageEdit = async(entry:PendingProtectedImageSummary):Promise<string> => {
+     if (!cloudflareDataPlane || (entry.canvasProjectId !== useCanvasStore.getState().currentProjectId &&
+-      (!entry.canvasProjectId||!canvasSourceProjectIdsRef.current.includes(entry.canvasProjectId)))) throw new Error('image_recovery_canvas_mismatch');
+-    const recoveryClient=cloudflareDataPlane;
+-    if(entry.canvasProjectId!==useCanvasStore.getState().currentProjectId){const auth=useAuthStore.getState();if(!auth.user?.id||!entry.canvasProjectId||await initialCanvasDocumentId({origin:cloudflareDataPlane.origin,userId:auth.user.id,brandId:entry.brandId},entry.canvasProjectId)!==useCanvasStore.getState().currentProjectId)throw new Error('image_recovery_canvas_alias_unproven');}
+-    const source = entry.parentObjectId?useCanvasStore.getState().objects.find(object=>object.id === entry.parentObjectId)??null:null;
+-    if (entry.parentObjectId&&!source) throw new Error('image_recovery_source_missing');
++      (!entry.canvasProjectId||!canvasSourceProjectIdsRef.current.includes(entry.canvasProjectId))) || !entry.parentObjectId) throw new Error('image_recovery_canvas_mismatch');
++    const source = useCanvasStore.getState().objects.find(object=>object.id === entry.parentObjectId);
++    if (!source) throw new Error('image_recovery_source_missing');
+     const assertContext = captureCanvasImageEditContext(entry.parentObjectId); assertContext();
+-    const canvasBatch=['canvas-partial-edit','canvas-inpaint'].includes(String(entry.featureType));
+-    const retainedBatch=canvasBatch&&source&&user?.id?await loadCanvasProtectedBatchForRequest(entry.brandId,user.id,entry.requestId):undefined;
+-    const verifyRecoverySource=async(binding:CanvasProtectedBatchBinding)=>{
+-      if(binding.source.kind!=='object')return undefined;
+-      const objectId=binding.source.objectId;
+-      assertContext();const object=useCanvasStore.getState().objects.find(value=>value.id===objectId);
+-      if(!object)throw new Error('image_recovery_source_missing');
+-      const batch=await loadCanvasProtectedBatch(binding);assertContext();
+-      if(JSON.stringify(canvasObjectProtectedIdentity(object))===JSON.stringify(batch.sourceProof?.objectDescriptor)||!batch.sourceProof?.selectedSource.startsWith('local-canvas-asset://'))return verifyCanvasObjectBatchSource(binding,assertContext);
+-      const auth=useAuthStore.getState();if(!auth.user?.id||auth.currentBrand?.id!==entry.brandId)throw new Error('image_recovery_promotion_scope_mismatch');
+-      return verifyCanvasProtectedSourcePromotionBridge({binding,object,scope:{origin:recoveryClient.origin,userId:auth.user.id,brandId:auth.currentBrand.id},
+-        canvasProjectId:useCanvasStore.getState().currentProjectId,canvasProjectAliases:canvasSourceProjectIdsRef.current,pending:entry,
+-        assertCurrent:assertContext,readCurrentObject:()=>useCanvasStore.getState().objects.find(value=>value.id===objectId),signedRead:resolveGeneratedImageUrl});
+-    };
+-    const verifiedSource=retainedBatch?await verifyRecoverySource(retainedBatch.binding):undefined;
+-    const sourceUrl=verifiedSource?.originalPngDataUrl??(source&&!canvasBatch?await resolveCanvasObjectImageUrl(source):undefined);assertContext();
+-    if(!canvasBatch&&!source)throw new Error('image_recovery_source_missing');
+-    const result = canvasBatch ? await cloudflareDataPlane.recoverProtectedCanvasBatchComposite(entry.brandId,entry.requestId,assertContext,sourceUrl,verifiedSource?.objectDescriptor) : await cloudflareDataPlane.resumeProtectedImageEdit(entry.brandId,entry.requestId,assertContext,sourceUrl);
+-    if(canvasBatch){assertCanvasCanonicalBatchResult(result);const binding=result.canvasProtectedBatchBinding as CanvasProtectedBatchBinding;await loadCanvasProtectedBatch(binding);await verifyRecoverySource(binding);assertContext();}
++    const sourceUrl = await resolveCanvasObjectImageUrl(source); assertContext();
++    const result = await cloudflareDataPlane.resumeProtectedImageEdit(entry.brandId,entry.requestId,assertContext,sourceUrl);
+     const candidates = normalizeCanvasImageEditCandidates(result);
+     if (!result.success || result.requestedCandidateCount !== 4 || result.persistedCandidateCount !== 4 || candidates.length !== 4 || result.persistenceStatus !== 'completed') throw new Error(`image_recovery_${result.state}_batch_incomplete`);
+     const batchId = candidates[0].batchId ?? candidates[0].jobId;
+@@ -3638,30 +3552,28 @@
+     try {
+       for (const candidate of candidates) {
+         assertContext();
+-        if(canvasBatch)await verifyRecoverySource((result as unknown as {canvasProtectedBatchBinding:CanvasProtectedBatchBinding}).canvasProtectedBatchBinding);
+         if (findRecoveredCanvasCandidate(candidate.imageId,batchId,entry.parentObjectId)) continue;
+         const image = await loadCanvasImage(candidate.imageUrl); assertContext();
+-        if(canvasBatch)await verifyRecoverySource((result as unknown as {canvasProtectedBatchBinding:CanvasProtectedBatchBinding}).canvasProtectedBatchBinding);
+         // Another same-tab invocation may have placed it while loading.
+         if (findRecoveredCanvasCandidate(candidate.imageId,batchId,entry.parentObjectId)) continue;
+         const parameters = {editMode:'inpaint',maskApplied:true,maskTreatment:result.maskTreatment,
+           batchId,candidateIndex:candidate.candidateIndex,provider:result.provider,backendProvider:result.backendProvider,
+           jobId:candidate.jobId,imageId:candidate.imageId,storagePath:candidate.storagePath,persistenceStatus:'completed',
+           requestedCandidateCount:4,persistedCandidateCount:4,clientSubmissionCount:1,
+-          imageAICompletion:{requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey,canvasBatch:(result as unknown as {canvasProtectedBatchBinding?:CanvasProtectedBatchBinding}).canvasProtectedBatchBinding}};
++          imageAICompletion:{requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey}};
+         const id = await addImageToCanvas(candidate.imageUrl,`復旧した範囲編集 ${candidate.candidateIndex + 1}`,{
+-          parentId:entry.parentObjectId??undefined,parentObjectId:entry.parentObjectId,generation:entry.generation,feature:'partial-edit',prompt:entry.prompt,
++          parentId:entry.parentObjectId,parentObjectId:entry.parentObjectId,generation:entry.generation,feature:'partial-edit',prompt:entry.prompt,
+           maskApplied:true,provider:String(result.provider),backendProvider:String(result.backendProvider),status:'completed',
+           jobId:candidate.jobId,imageId:candidate.imageId,storagePath:candidate.storagePath,persistenceStatus:'completed',parameters,
+           ...buildDerivedLightchainMetadata(source,'partial-edit',{prompt:entry.prompt,parameters}),
+-        },entry.parentObjectId??undefined,image);
++        },entry.parentObjectId,image);
+         assertContext(); if (!id) throw new Error('image_recovery_canvas_placement_failed'); created.push(id);
+       }
+       assertContext();
+       if (!candidates.every(candidate=>findRecoveredCanvasCandidate(candidate.imageId,batchId,entry.parentObjectId))) throw new Error('image_recovery_canvas_batch_incomplete');
+       return '4候補をこのCanvasへ復旧しました。重複配置はありません。「保存」でサーバーへ確定してください。';
+     } catch (error) {
+-      assertContext(); throw error; // Finished placements remain available for deduplicated recovery.
++      assertContext(); created.forEach(id=>useCanvasStore.getState().deleteObject(id)); throw error;
+     }
+   };
+ 
+@@ -3674,25 +3586,18 @@
+       throw new Error(BRAND_LIKENESS_BLOCK_COPY);
+     }
+ 
+-    const preview=canvasImagePreviewRef.current;if(!preview||preview.kind!=='partial'||preview.objectId!==partialEditingObjectId)throw new Error('canvas_image_preview_required');preview.assertCurrent();
+     const sourceObject = partialEditingObjectId
+       ? objects.find((item) => item.id === partialEditingObjectId) ?? null
+       : null;
+-    const assertContext = await ensureProtectedCanvasDocumentContext(partialEditingObjectId);
++    const assertContext = captureCanvasImageEditContext(partialEditingObjectId);
+     assertContext();
+     const generation = (sourceObject?.metadata?.generation || 0) + 1;
+     const lightchainEditMetadata = buildLightchainEditMetadata(partialEditingObjectId);
+-    if(!user?.id||!cloudflareDataPlane)throw new Error('canvas_protected_authenticated_scope_required');
+-    const priorRequest=partialEditAttemptRef.current.idempotencyKey;
+-    const requestId=priorRequest??crypto.randomUUID();
+-    const verifiedObjectSource=sourceObject?(priorRequest
+-      ?await verifyCanvasObjectBatchSource((await loadCanvasProtectedBatchForRequest(currentBrand.id,user.id,requestId)).binding,assertContext)
+-      :await resolveCanvasProtectedObjectSource(sourceObject,resolveCanvasSourceLocator,assertContext,()=>useCanvasStore.getState().objects.find(value=>value.id===partialEditingObjectId))):undefined;
+-    assertCanvasPreviewSourceMatches(preview.source,verifiedObjectSource);
+-    const editSource=verifiedObjectSource?.originalPngDataUrl??await resolveGeneratedImageUrl(partialEditingImage);assertContext();
+-    const canvasProtectedBatchBinding=priorRequest?undefined:await prepareCanvasProtectedBatch({sourceImageUrl:editSource,maskDataUrl:payload.maskDataUrl,requestId,featureType:'canvas-partial-edit',brandId:currentBrand.id,scopeId:user.id,canvasProjectId:useCanvasStore.getState().currentProjectId,parentObjectId:partialEditingObjectId,generation,sourceIdentity:verifiedObjectSource?.objectDescriptor,verifiedObjectSource,inputSignature:[payload.prompt,lightchainEditMetadata],assertCurrent:assertContext});
+-    partialEditAttemptRef.current={attempted:true,idempotencyKey:requestId};
+-    const result = priorRequest ? await cloudflareDataPlane.recoverProtectedCanvasBatchComposite(currentBrand.id,requestId,assertContext,editSource,verifiedObjectSource?.objectDescriptor) as unknown as ImageEditResult : await editImageWithPrompt(
++    const editSource = sourceObject
++      ? await resolveCanvasObjectImageUrl(sourceObject)
++      : await resolveGeneratedImageUrl(partialEditingImage);
++    partialEditAttemptRef.current = { attempted: true, idempotencyKey: null };
++    const result = await editImageWithPrompt(
+       editSource,
+       payload.prompt,
+       currentBrand.id,
+@@ -3708,12 +3613,10 @@
+         maskHeight: payload.maskHeight,
+         count:4,
+         featureType:'canvas-partial-edit',
+-        generationProvider:'openai',idempotencyKey:requestId,canvasProtectedBatchBinding,
+         assertContext,
+         ...lightchainEditMetadata,
+       },
+     );
+-    assertCanvasCanonicalBatchResult(result);
+     const candidates = normalizeCanvasImageEditCandidates(result);
+     const hasCompleteCandidateBatch = result.requestedCandidateCount === 4
+       && result.persistedCandidateCount === 4
+@@ -3744,7 +3647,6 @@
+     const createdIds = new Set<string>();
+     const placement = await settleCanvasImageEditCandidatesSequentially(candidates, async (candidate, placementIndex) => {
+       assertContext();
+-      await verifyCanvasObjectBatchSource((result as unknown as {canvasProtectedBatchBinding:CanvasProtectedBatchBinding}).canvasProtectedBatchBinding,assertContext);
+       const existing = findRecoveredCanvasCandidate(candidate.imageId,batchId,partialEditingObjectId);
+       if (existing) return existing.id;
+       const resultParameters = {
+@@ -3755,7 +3657,7 @@
+         maskHeight: payload.maskHeight,
+         externalInpaintRequestCount: result.provider === 'workers_ai' ? result.requestedCandidateCount : 1,
+         clientSubmissionCount:1,
+-        imageAICompletion:result.clientRecoveryKey ? { requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey,canvasBatch:(result as unknown as {canvasProtectedBatchBinding?:CanvasProtectedBatchBinding}).canvasProtectedBatchBinding } : null,
++        imageAICompletion:result.clientRecoveryKey ? { requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey } : null,
+         requestedCandidateCount: result.requestedCandidateCount,
+         persistedCandidateCount: result.persistedCandidateCount,
+         backendProvider,
+@@ -3797,6 +3699,7 @@
+     });
+     assertContext();
+     if (placement.placed.length !== 4 || placement.failed.length > 0) {
++      placement.placed.forEach(({ value: objectId }) => { if (createdIds.has(objectId)) useCanvasStore.getState().deleteObject(objectId); });
+       throw new Error(`partial_edit_canvas_candidate_placement_incomplete:${placement.placed.length}/4`);
+     }
+     const batchProof = buildCanvasImageEditBatchProof({
+@@ -3819,7 +3722,9 @@
+       });
+     });
+ 
+-    invalidateCanvasImagePreview();
++    setShowPartialEditModal(false);
++    setPartialEditingImage(null);
++    setPartialEditingObjectId(null);
+   };
+ 
+   const handleEditModalAction = async (action: string, params: { prompt?: string; maskDataUrl?: string }) => {
+@@ -3837,15 +3742,11 @@
+       generation: (sourceObject?.metadata?.generation || 0) + 1,
+     };
+     try {
+-      const preview=canvasImagePreviewRef.current;if(!preview||preview.kind!=='edit'||preview.objectId!==editingObjectId)throw new Error('canvas_image_preview_required');preview.assertCurrent();
+-      const assertContext = action==='inpaint'?await ensureProtectedCanvasDocumentContext(editingObjectId):captureCanvasImageEditContext(editingObjectId);
++      const assertContext = captureCanvasImageEditContext(editingObjectId);
+       assertContext();
+-      if(action==='inpaint'&&!user?.id)throw new Error('canvas_protected_authenticated_scope_required');
+-      const verifiedObjectSource=action==='inpaint'&&sourceObject?(inpaintAttemptRef.current.idempotencyKey
+-        ?await verifyCanvasObjectBatchSource((await loadCanvasProtectedBatchForRequest(currentBrand.id,user!.id,inpaintAttemptRef.current.idempotencyKey)).binding,assertContext)
+-        :await resolveCanvasProtectedObjectSource(sourceObject,resolveCanvasSourceLocator,assertContext,()=>useCanvasStore.getState().objects.find(value=>value.id===editingObjectId))):undefined;
+-      const freshPreviewSource=verifiedObjectSource??(sourceObject?await resolveCanvasProtectedObjectSource(sourceObject,resolveCanvasSourceLocator,assertContext,()=>useCanvasStore.getState().objects.find(value=>value.id===editingObjectId)):undefined);assertCanvasPreviewSourceMatches(preview.source,freshPreviewSource);
+-      const editSource=freshPreviewSource!.originalPngDataUrl;assertContext();
++      const editSource = sourceObject
++        ? await resolveCanvasObjectImageUrl(sourceObject)
++        : await resolveGeneratedImageUrl(editingImage);
+       if (action === 'prompt') {
+         if (!params.prompt?.trim()) {
+           toast.error('編集したい内容を入力してください');
+@@ -3880,12 +3781,8 @@
+           toast.error(BRAND_LIKENESS_BLOCK_COPY);
+           return false;
+         }
+-        if(!user?.id||!cloudflareDataPlane)throw new Error('canvas_protected_authenticated_scope_required');
+-        const priorRequest=inpaintAttemptRef.current.idempotencyKey;
+-        const requestId=priorRequest??crypto.randomUUID();
+-        const canvasProtectedBatchBinding=priorRequest?undefined:await prepareCanvasProtectedBatch({sourceImageUrl:editSource,maskDataUrl:params.maskDataUrl,requestId,featureType:'canvas-inpaint',brandId:currentBrand.id,scopeId:user.id,canvasProjectId:useCanvasStore.getState().currentProjectId,parentObjectId:editingObjectId,generation:baseMetadata.generation,sourceIdentity:verifiedObjectSource?.objectDescriptor,verifiedObjectSource,inputSignature:[params.prompt,lightchainEditMetadata],assertCurrent:assertContext});
+-        inpaintAttemptRef.current={attempted:true,idempotencyKey:requestId};
+-        const result = priorRequest ? await cloudflareDataPlane.recoverProtectedCanvasBatchComposite(currentBrand.id,requestId,assertContext,editSource,verifiedObjectSource?.objectDescriptor) as unknown as ImageEditResult : await editImageWithPrompt(editSource, params.prompt, currentBrand.id, {
++        inpaintAttemptRef.current = { attempted: true, idempotencyKey: null };
++        const result = await editImageWithPrompt(editSource, params.prompt, currentBrand.id, {
+           rightsConfirmed,
+           maskDataUrl: params.maskDataUrl,
+           parentObjectId: editingObjectId,
+@@ -3894,11 +3791,9 @@
+           maskApplied: true,
+           count:4,
+           featureType:'canvas-inpaint',
+-          generationProvider:'openai',idempotencyKey:requestId,canvasProtectedBatchBinding,
+           assertContext,
+           ...lightchainEditMetadata,
+         });
+-        assertCanvasCanonicalBatchResult(result);
+         const candidates = normalizeCanvasImageEditCandidates(result);
+         const hasCompleteCandidateBatch = result.requestedCandidateCount === 4
+           && result.persistedCandidateCount === 4
+@@ -3928,7 +3823,6 @@
+         const createdIds = new Set<string>();
+         const placement = await settleCanvasImageEditCandidatesSequentially(candidates, async (candidate, placementIndex) => {
+           assertContext();
+-          await verifyCanvasObjectBatchSource((result as unknown as {canvasProtectedBatchBinding:CanvasProtectedBatchBinding}).canvasProtectedBatchBinding,assertContext);
+           const existing = findRecoveredCanvasCandidate(candidate.imageId,batchId,editingObjectId);
+           if (existing) return existing.id;
+           const placedId = await addImageToCanvas(candidate.imageUrl, `部分編集結果 ${placementIndex + 1}`, {
+@@ -3954,7 +3848,7 @@
+               persistenceStatus: candidate.persistenceStatus,
+               externalInpaintRequestCount: result.provider === 'workers_ai' ? result.requestedCandidateCount : 1,
+               clientSubmissionCount:1,
+-              imageAICompletion:result.clientRecoveryKey ? { requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey,canvasBatch:(result as unknown as {canvasProtectedBatchBinding?:CanvasProtectedBatchBinding}).canvasProtectedBatchBinding } : null,
++              imageAICompletion:result.clientRecoveryKey ? { requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey } : null,
+               requestedCandidateCount: result.requestedCandidateCount,
+               persistedCandidateCount: result.persistedCandidateCount,
+               batchId,
+@@ -3972,6 +3866,7 @@
+         });
+         assertContext();
+         if (placement.placed.length !== 4 || placement.failed.length > 0) {
++          placement.placed.forEach(({ value: objectId }) => { if (createdIds.has(objectId)) useCanvasStore.getState().deleteObject(objectId); });
+           const firstFailure = placement.failed[0]?.error;
+           throw firstFailure instanceof Error
+             ? firstFailure
+@@ -4436,7 +4331,7 @@
+           )}
+         </div>
+       )}
+-      <ProtectedImageRecoveryPanel destination="canvas" canvasProjectId={currentProjectId} canvasProjectAliases={canvasSourceProjectIdsRef.current} onResume={entry=>runCanvasImageTask(()=>recoverCanvasImageEdit(entry))}/>
++      <ProtectedImageRecoveryPanel destination="canvas" canvasProjectId={currentProjectId} canvasProjectAliases={canvasSourceProjectIdsRef.current} onResume={recoverCanvasImageEdit}/>
+       {/* Header */}
+       <header className="h-12 sm:h-14 flex items-center justify-between border-b border-white/10 bg-[#070b0b]/95 px-2 sm:px-4 z-20 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur">
+         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+@@ -5042,11 +4937,13 @@
+           isOpen={showEditModal}
+           onClose={() => {
+             imageEditEpochRef.current += 1;
+-            invalidateCanvasImagePreview();
++            setShowEditModal(false);
++            setEditingImage(null);
++            setEditingObjectId(null);
+           }}
+           imageUrl={editingImage}
+           providerNotice={cloudflareDataPlane ? `${CLOUDFLARE_PROTECTED_EDIT_NOTICE} 4候補を個別に推論します。` : undefined}
+-          onEdit={(action,params)=>runCanvasImageTask(()=>handleEditModalAction(action,params))}
++          onEdit={handleEditModalAction}
+         />
+       )}
+ 
+@@ -5056,10 +4953,12 @@
+           imageUrl={partialEditingImage}
+           providerNotice={cloudflareDataPlane ? `${CLOUDFLARE_PROTECTED_EDIT_NOTICE} 4候補を個別に推論します。` : undefined}
+           onClose={() => {
++            setShowPartialEditModal(false);
+             imageEditEpochRef.current += 1;
+-            invalidateCanvasImagePreview();
++            setPartialEditingImage(null);
++            setPartialEditingObjectId(null);
+           }}
+-          onSubmit={payload=>runCanvasImageTask(()=>handlePartialEditSubmit(payload))}
++          onSubmit={handlePartialEditSubmit}
+         />
+       )}
+ 
+--- a/src/pages/LightchainMaterialWorkbenchPage.tsx
++++ b/src/pages/LightchainMaterialWorkbenchPage.tsx
+@@ -80,9 +80,7 @@
+   listWorkspaceGeneratedImagesForActivity,
+   saveWorkspaceArtifactPersisted,
+ } from '../lib/localWorkspaceArtifacts';
+-import { findWorkspaceArtifactPersisted, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
+-import { prepareMaterialComposite, validateMaterialCompositeState, validateMaterialCompositeArtifact } from '../lib/materialProtectedComposite';
+-import { protectedImageSaveRequestId } from '../lib/protectedImageEditContract';
++import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
+ import { resolveGeneratedImageUrl, withSignedImageUrls } from '../lib/storage';
+ import { mergeGeneratedImagesByCanonicalIdentity } from '../lib/generatedImageIdentity';
+ import { buildLocalCanvasAssetReference, putLocalCanvasAsset } from '../lib/canvasLocalAssets';
+@@ -196,6 +194,7 @@
+ } from '../lib/lightchainResume';
+ import {
+   buildProviderGarmentEditMask,
++  composeProviderProtectedResult,
+ } from '../features/lightchain/providerMask';
+ import { assertCompletedImageEditResult, editImageWithPrompt } from '../lib/imageApi';
+ import { cloudflareDataPlane } from '../lib/cloudflareApi';
+@@ -517,8 +516,8 @@
+     generationMode: isLocalPreview ? 'preview' : 'provider',
+     provider: isLocalPreview ? null : jsonString(metadata.provider),
+     backendProvider: isLocalPreview ? 'browser-local-fabric-composition-v1' : jsonString(metadata.backendProvider),
+-    jobId: metadata.protectedMaterialComposite ? image.job_id : jsonString(metadata.providerJobId) ?? image.job_id,
+-    imageId: metadata.protectedMaterialComposite ? image.id : jsonString(metadata.remoteImageId) ?? jsonString(metadata.providerImageId),
++    jobId: jsonString(metadata.providerJobId) ?? image.job_id,
++    imageId: jsonString(metadata.remoteImageId) ?? jsonString(metadata.providerImageId),
+     storagePath: image.storage_path,
+     inputImageCount: jsonNumber(metadata.inputImageCount) ?? undefined,
+     maskApplied: jsonBoolean(metadata.maskApplied) ?? false,
+@@ -1705,7 +1704,6 @@
+   generatedResultsRef.current = generatedResults;
+   const [progressivePrintRun, setProgressivePrintRun] = useState<ProgressivePrintRun | null>(null);
+   const [generationError, setGenerationError] = useState<string | null>(null);
+-  const [materialRecoveryArtifactId, setMaterialRecoveryArtifactId] = useState<string | null>(null);
+   const [surfaceConformStatus, setSurfaceConformStatus] = useState<string | null>(null);
+   const [pendingSurfaceJob, setPendingSurfaceJob] = useState<PendingSurfaceJob | null>(null);
+   const [generatedResultsStale, setGeneratedResultsStale] = useState(false);
+@@ -2117,15 +2115,7 @@
+         }
+       }
+       const signedImages = await withSignedImageUrls(persistedImages).catch(() => persistedImages);
+-      const canonicalImages = await Promise.all(signedImages.map(async image => {
+-        const local = findWorkspaceArtifactPersisted(brandId, image.id, user?.id);
+-        if (!local.ok) throw local.error;
+-        if (!local.artifact?.metadata.protectedMaterialComposite) return image;
+-        const state = await validateMaterialCompositeArtifact(local.artifact);
+-        if (state.stage !== 'saved') return image;
+-        return { ...image, image_url: local.artifact.imageUrl, job_id: local.artifact.id };
+-      }));
+-      const restoredResults = canonicalImages
++      const restoredResults = signedImages
+         .map(restoredFabricProviderResult)
+         .filter((result): result is WorkbenchResult => Boolean(result));
+       if (cancelled || hydrationGeneration !== fabricHistoryHydrationGenerationRef.current) return;
+@@ -3514,82 +3504,7 @@
+ 
+   void handleLegacyPreviewGenerate;
+ 
+-  useEffect(() => {
+-    setMaterialRecoveryArtifactId(null);
+-    if (!currentBrand?.id || !user?.id || brandResolutionPending) return;
+-    const staging = listWorkspaceArtifacts(currentBrand.id, user.id).find(artifact =>
+-      artifact.id.startsWith('material-stage-') && artifact.metadata.sourceWorkspace === 'lightchain-material-workbench-provider-result'
+-      && artifact.metadata.mode === mode && artifact.scopeId === user.id);
+-    if (staging) {
+-      setMaterialRecoveryArtifactId(staging.id);
+-      setGenerationError('前回の生成結果の保存確認が残っています。保存を確認して再開してください。');
+-    }
+-  }, [currentBrand?.id, user?.id, mode, brandResolutionPending]);
+-
+-  const commitRecoveredMaterialResult = async (artifact: WorkspaceArtifact, assertCurrent: () => void) => {
+-    const state = await validateMaterialCompositeArtifact(artifact);
+-    if (state.stage !== 'saved') throw new Error('material_protected_final_save_unverified');
+-    const runId = `${isPrinting ? 'print' : 'fabric'}-provider-${state.requestId}`;
+-    let result: WorkbenchResult = { id: `${runId}-result`, brandId: artifact.brandId, runId, resultKind: 'provider',
+-      generatedAt: Date.parse(artifact.createdAt), title: isPrinting ? 'プリントイメージ AI生成' : '生地イメージ AI生成',
+-      note: artifact.prompt ?? '保存済みの生成結果', imageUrl: artifact.imageUrl,
+-      outputSize: { width: state.final!.width, height: state.final!.height }, generationMode: 'provider',
+-      provider: state.providerLineage?.provider, backendProvider: 'cloudflare-workers-ai',
+-      jobId: artifact.id, imageId: artifact.id, storagePath: String(artifact.metadata.remoteStoragePath), artifactId: artifact.id,
+-      protectedRegionComposited: true, maskApplied: true, persistenceStatus: 'completed',
+-      inputLineage: restoredMaterialInputLineage(artifact.metadata.inputLineage), parityRuntime: artifact.metadata.parityRuntime };
+-    assertCurrent();
+-    if (isPrinting) {
+-      if (!printHistoryScope) throw new Error('print_history_scope_missing');
+-      const persistenceGeneration = ++printHistoryPersistenceGenerationRef.current;
+-      const history = mergePrintResultHistory([result], generatedResultsRef.current.filter(item => item.id.startsWith('print-')));
+-      const { assetRefs } = await persistPrintResultHistory(artifact.brandId, history, { ...printHistoryScope,
+-        assertCurrent: () => { if (persistenceGeneration !== printHistoryPersistenceGenerationRef.current) throw new Error('print_history_write_superseded'); assertCurrent(); } });
+-      assertCurrent();
+-      if (!assetRefs[result.id]) throw new Error('print_result_history_persistence_unverified');
+-      result = { ...result, assetRef: assetRefs[result.id] };
+-    }
+-    assertCurrent();
+-    setGeneratedResults(previous => isPrinting ? mergePrintResultHistory([result], previous.filter(item => item.id.startsWith('print-')))
+-      : [result, ...previous.filter(item => item.id !== result.id)]);
+-    setGeneratedResultsStale(false);
+-  };
+-
+-  const handleRetryMaterialSave = async () => {
+-    if (!cloudflareDataPlane || !currentBrand?.id || !user?.id || !materialRecoveryArtifactId || isGenerating) return;
+-    const brandId = currentBrand.id; const scopeId = user.id;
+-    const authBrandFence = captureCurrentAuthBrandFence(brandId);
+-    const signature = generationInputSignatureRef.current;
+-    const requestSequence = generationSequenceRef.current;
+-    const assertCurrent = () => {
+-      assertCurrentAuthBrandFence(authBrandFence, 'material_save_only_retry');
+-      if (generationSequenceRef.current !== requestSequence || generationInputSignatureRef.current !== signature) throw new Error('material_provider_request_changed');
+-    };
+-    setIsGenerating(true);
+-    try {
+-      assertCurrent();
+-      const readback = findWorkspaceArtifactPersisted(brandId, materialRecoveryArtifactId, scopeId);
+-      if (!readback.ok) throw readback.error;
+-      if (!readback.artifact || readback.artifact.scopeId !== scopeId) throw new Error('material_protected_recovery_scope_changed');
+-      const state = await validateMaterialCompositeState(readback.artifact.metadata.protectedMaterialComposite);
+-      const recovered = await cloudflareDataPlane.recoverProtectedMaterialComposite(brandId, state.requestId, assertCurrent);
+-      assertCurrent();
+-      await commitRecoveredMaterialResult(recovered.artifact, assertCurrent);
+-      await cloudflareDataPlane.acknowledgeImageAction(recovered.acknowledgement);
+-      assertCurrent();
+-      const cleanup = deleteWorkspaceArtifactsPersisted(brandId, [materialRecoveryArtifactId], scopeId);
+-      if (!cleanup.ok) throw cleanup.error;
+-      setMaterialRecoveryArtifactId(null); setGenerationError(null);
+-      toast.success('生成結果の保存を確認しました');
+-    } catch (error) {
+-      try { assertCurrent(); } catch { return; }
+-      const message = error instanceof Error ? error.message : 'material_protected_save_retry_failed';
+-      setGenerationError(message); toast.error(message);
+-    } finally { setIsGenerating(false); }
+-  };
+-
+   const handleGenerate = async () => {
+-    if (materialRecoveryArtifactId) { await handleRetryMaterialSave(); return; }
+     if (!cloudflareDataPlane) {
+       const message = 'Cloudflare画像AIが未設定のため生成できません';
+       setGenerationError(message);
+@@ -3798,54 +3713,17 @@
+               referenceType: fabricBase?.referenceType ?? null,
+             },
+           ];
+-      const assertProviderPersistenceCurrent = () => {
+-        assertCurrentAuthBrandFence(authBrandFence, 'provider_persistence');
+-        if (!isCurrentRequest()) throw new Error('material_provider_request_changed');
+-      };
+-      assertProviderPersistenceCurrent();
+-      if (!user?.id) throw new Error('material_protected_owner_required');
+-      assertCurrentAuthBrandFence(authBrandFence, 'before_provider_persistence');
+-      const staging = await prepareMaterialComposite({
+-        brandId: generationBrand.id, scopeId: user.id,
+-        featureType: `lightchain-${isPrinting ? 'printing-image' : 'fabric-image'}`,
+-        title: isPrinting ? 'プリントイメージ AI生成' : '生地イメージ AI生成', prompt: providerPrompt,
+-        metadata: { sourceWorkspace: 'lightchain-material-workbench-provider-result', mode,
+-          generationInputSignature: requestSignature, inputLineage, parityRuntime: parityRuntimeJson,
+-          sourceResumePath: isHeavyRoute ? `/heavy/${isPrinting ? 'printing-image' : 'fabric-image'}` : `/lightchain/${isPrinting ? 'printing-image' : 'fabric-image'}`,
+-          lightchainMaterialState: { version: 1, mode,
+-            fabricBase: materialImageResumeRef(fabricBase, '生地素材'), fabricDesign: materialImageResumeRef(fabricDesign, 'モデル・デザイン'),
+-            printGarment: materialImageResumeRef(printGarment, '服素材'),
+-            printDesigns: printDesigns.map((design, index) => materialImageResumeRef(design, `プリントデザイン ${index + 1}`)).filter(Boolean),
+-            fabricPrompt, fabricImageRatio, printCoverageMode, printOutputScale },
+-          ...(printProviderInput ? { compositionPreview: { printProviderInput: printProviderInput.metadata,
+-            coverageMode: printCoverageMode, outputScale: printOutputScale, placement: printPlacementSummary } } : {}),
+-        },
+-      }, isPrinting ? printGarment!.url : fabricDesign!.url, providerGarmentMask.dataUrl, crypto.randomUUID(),
+-        printProviderInput ? { providerPrimaryDataUrl: printProviderInput.imageUrl, frame: printProviderInput.metadata.sourceFramePlacement,
+-          printingSnapshot: { compositionSha256: printProviderInput.metadata.compositionSha256, maskSha256: printProviderInput.metadata.maskSha256,
+-            originalFrameSha256: printProviderInput.metadata.originalFrameSha256 } } : undefined);
+-      assertProviderPersistenceCurrent();
+-      const materialState = await validateMaterialCompositeState(staging.metadata.protectedMaterialComposite);
+-      const materialRecoveryBinding = { version: 1 as const, stateArtifactId: staging.id, requestId: materialState.requestId,
+-        brandId: generationBrand.id, scopeId: user.id, generationInputSignature: requestSignature };
+-      setMaterialRecoveryArtifactId(staging.id);
+       assertCurrentAuthBrandFence(authBrandFence, 'before_provider');
+       const providerResult = await withTimeout(
+         isPrinting
+           ? editImageWithPrompt(
+-              printProviderInput?.imageUrl ?? materialState.original.dataUrl,
++              printProviderInput?.imageUrl ?? printGarment!.url,
+               providerPrompt,
+               generationBrand.id,
+               {
+                 referenceImageUrls: printProviderInput?.referenceImageUrls ?? printReferenceUrls,
+                 featureType: 'lightchain-printing-image',
+                 retainUntilAcknowledged: true,
+-                maskDataUrl: materialState.mask.dataUrl,
+-                idempotencyKey: materialState.requestId,
+-                generationProvider: isHeavyRoute ? 'openai' : undefined,
+-                materialRecoveryBinding,
+-                nativePrintFrameBinding: materialState.nativePrintFrame,
+-                count: 1,
+                 assertContext: () => {
+                   assertCurrentAuthBrandFence(authBrandFence,'protected_print_context');
+                   if (!isCurrentRequest()) throw new Error('protected_print_input_changed');
+@@ -3879,7 +3757,7 @@
+                   garmentCutoutReady: Boolean(printGarmentProcessed),
+                   garmentMaskCandidate: selectedPrintGarmentMaskCandidateId,
+                   garmentMaskRevision: printGarmentMaskRevision,
+-                  providerMaskReady: true,
++                  providerMaskReady: false,
+                   providerMaskOrientation: providerGarmentMask.orientation,
+                   providerMaskCoveragePercent: providerGarmentMask.coveragePercent,
+                   providerMaskSourceEngine: providerGarmentMask.sourceEngine,
+@@ -3894,18 +3772,13 @@
+               },
+             )
+           : editImageWithPrompt(
+-              materialState.original.dataUrl,
++              fabricDesign!.url,
+               providerPrompt,
+               generationBrand.id,
+               {
+                 referenceImageUrls: [fabricBase!.url],
+                 featureType: 'lightchain-fabric-image',
+                 retainUntilAcknowledged: true,
+-                maskDataUrl: materialState.mask.dataUrl,
+-                idempotencyKey: materialState.requestId,
+-                generationProvider: isHeavyRoute ? 'openai' : undefined,
+-                materialRecoveryBinding,
+-                count: 1,
+                 assertContext: () => {
+                   assertCurrentAuthBrandFence(authBrandFence,'protected_fabric_context');
+                   if (!isCurrentRequest()) throw new Error('protected_fabric_input_changed');
+@@ -3933,7 +3806,7 @@
+                 maskPlan: {
+                   modelGarmentMaskReady: true,
+                   textileReferenceMaskReady: Boolean(fabricPreviewOverlayUrl),
+-                  providerMaskReady: true,
++                  providerMaskReady: false,
+                   providerMaskOrientation: providerGarmentMask.orientation,
+                   providerMaskCoveragePercent: providerGarmentMask.coveragePercent,
+                   providerMaskSourceEngine: providerGarmentMask.sourceEngine,
+@@ -3952,22 +3825,21 @@
+       assertCurrentAuthBrandFence(authBrandFence, 'after_provider');
+       if (!isCurrentRequest()) return;
+       assertCompletedImageEditResult(providerResult, `provider_${mode}_result`);
+-      const saveRequestId = await protectedImageSaveRequestId(materialState.requestId, 0);
+-      const finalReadback = findWorkspaceArtifactPersisted(generationBrand.id, `wa-${saveRequestId}`, user!.id);
+-      if (!finalReadback.ok) throw finalReadback.error;
+-      const canonicalArtifact = finalReadback.artifact;
+-      if (!canonicalArtifact) throw new Error('material_protected_local_final_missing');
+-      const finalState = await validateMaterialCompositeArtifact(canonicalArtifact);
+-      if (finalState.stage !== 'saved' || finalState.requestId !== materialState.requestId
+-        || finalState.original.digest !== materialState.original.digest || finalState.mask.digest !== materialState.mask.digest
+-        || canonicalArtifact.metadata.remoteImageId !== providerResult.imageId
+-        || providerResult.imageId !== canonicalArtifact.id || providerResult.storagePath !== `generated-images/${canonicalArtifact.id}`) {
+-        throw new Error('material_protected_final_receipt_mismatch');
+-      }
+-      assertProviderPersistenceCurrent();
+-      assertCurrentAuthBrandFence(authBrandFence, 'after_provider_persistence');
+-      const protectedComposite = { dataUrl: canonicalArtifact.imageUrl };
+-      const outputSize = { width: finalState.final!.width, height: finalState.final!.height };
++      const protectedComposite = providerResult.provider === 'openai' || (cloudflareDataPlane && providerResult.protectedRegionComposited === true)
++        ? { dataUrl:providerResult.imageUrl }
++        : await withTimeout(
++        composeProviderProtectedResult({
++          sourceImageUrl: isPrinting ? printGarment!.url : fabricDesign!.url,
++          providerImageUrl: providerResult.imageUrl,
++          maskDataUrl: providerGarmentMask.dataUrl,
++        }),
++        30_000,
++        'AI生成結果の衣服外領域を元画像へ戻せませんでした。画像を確認して再試行してください',
++      );
++      assertCurrentAuthBrandFence(authBrandFence, 'after_protected_composite');
++      const outputImage = await loadImage(protectedComposite.dataUrl);
++      assertCurrentAuthBrandFence(authBrandFence, 'after_output_decode');
++      if (!isCurrentRequest()) return;
+       const generatedAt = providerResult.createdAt && Number.isFinite(Date.parse(providerResult.createdAt)) ? Date.parse(providerResult.createdAt) : Date.now();
+       const runId = isPrinting ? `print-provider-${providerResult.requestId ?? generatedAt}` : `fabric-provider-${providerResult.requestId ?? generatedAt}`;
+       const editProviderLabel = providerResult.provider === 'workers_ai' ? 'Cloudflare画像編集・範囲外は元画素を保持' : '画像編集';
+@@ -3982,7 +3854,10 @@
+           ? `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲 / ${editProviderLabel}`
+           : `${fabricImageRatio} / ${editProviderLabel} / 選択した生地参照を衣服領域へ反映`,
+         imageUrl: protectedComposite.dataUrl,
+-        outputSize,
++        outputSize: {
++          width: Math.max(1, outputImage.naturalWidth || outputImage.width),
++          height: Math.max(1, outputImage.naturalHeight || outputImage.height),
++        },
+         generationMode: 'provider',
+         provider: providerResult.provider ?? 'workers_ai',
+         backendProvider: providerResult.backendProvider ?? 'cloudflare-workers-ai',
+@@ -4002,14 +3877,142 @@
+         inputLineage,
+         parityRuntime: parityRuntimeJson,
+       };
++      assertCurrentAuthBrandFence(authBrandFence, 'before_provider_persistence');
++      const assertProviderPersistenceCurrent = () => {
++        assertCurrentAuthBrandFence(authBrandFence, 'provider_persistence');
++        if (!isCurrentRequest()) throw new Error('material_provider_request_changed');
++      };
++      const persistenceContext = await cloudflareDataPlane?.captureArtifactPersistenceContext({
++        assertContext: assertProviderPersistenceCurrent,
++      });
+       assertProviderPersistenceCurrent();
++      const persistedProviderArtifact = await persistProviderResultArtifact({
++        brandId: generationBrand.id,
++        scopeId: user?.id,
++        featureType: `lightchain-${isPrinting ? 'printing-image' : 'fabric-image'}-provider-result`,
++        title: result.title,
++        imageUrl: result.imageUrl,
++        prompt: providerPrompt,
++        sourceJobId: result.jobId,
++        storagePath: result.storagePath,
++        requireRemote: true,
++        // OpenAI edit results are already persisted by the provider action.
++        // Reuse that canonical object whenever the receipt exposes a storage
++        // path; re-uploading its signed/large URL makes the workspace save
++        // exceed the browser-result contract.
++        reuseCanonicalRemoteArtifact: Boolean(cloudflareDataPlane && result.storagePath),
++        metadata: {
++          sourceWorkspace: 'lightchain-material-workbench-provider-result',
++          resultKind: result.resultKind ?? 'provider',
++          toolId: isPrinting ? 'printing-image' : 'fabric-image',
++          toolTitle: result.title,
++          brief: isPrinting
++            ? `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲でプリントを配置する`
++            : fabricPrompt.trim() || '白い衣服に指定した生地の質感と柄を自然に反映する',
++          referenceNote: isPrinting
++            ? '服の外側や無関係な背景をデザインとして扱わず、プリントの輪郭・色・向き・透明度を保持する'
++            : 'モデル/デザイン画像を主画像、生地画像を質感・柄の参照として扱い、衣服の形・構造・人物を変更しない',
++          sourceLabel: result.title,
++          sourceResumePath: isHeavyRoute
++            ? `/heavy/${isPrinting ? 'printing-image' : 'fabric-image'}`
++            : `/lightchain/${isPrinting ? 'printing-image' : 'fabric-image'}`,
++          mode,
++          providerJobId: providerResult.providerJobId ?? result.jobId ?? null,
++          providerImageId: providerResult.providerImageId ?? result.imageId ?? null,
++          providerStoragePath: providerResult.providerStoragePath ?? result.storagePath ?? null,
++          provider: result.provider ?? null,
++          backendProvider: result.backendProvider ?? null,
++          imageId: result.imageId ?? null,
++          providerModel: result.providerModel ?? null,
++          inputFidelity: result.inputFidelity ?? null,
++          quality: result.quality ?? null,
++          inputImageCount: result.inputImageCount ?? null,
++          outputSize: result.outputSize ?? null,
++          generatedAt: result.generatedAt ?? null,
++          persistenceStatus: result.persistenceStatus ?? null,
++          protectedRegionComposited: result.protectedRegionComposited ?? false,
++          maskApplied: result.maskApplied ?? false,
++          maskCoveragePercent: result.maskCoveragePercent ?? null,
++          generationInputSignature: requestSignature,
++          lightchainMaterialState: {
++            version: 1,
++            mode,
++            fabricBase: materialImageResumeRef(fabricBase, '生地素材'),
++            fabricDesign: materialImageResumeRef(fabricDesign, 'モデル・デザイン'),
++            printGarment: materialImageResumeRef(printGarment, '服素材'),
++            printDesigns: printDesigns.map((design, index) => materialImageResumeRef(design, `プリントデザイン ${index + 1}`)).filter(Boolean),
++            fabricPrompt,
++            fabricImageRatio,
++            printCoverageMode,
++            printOutputScale,
++          },
++          ...(printProviderInput ? { compositionPreview: { printProviderInput: printProviderInput.metadata,
++            coverageMode: printCoverageMode, outputScale: printOutputScale, placement: printPlacementSummary } } : {}),
++          generationIntent: isPrinting
++            ? {
++                feature: 'printing-image',
++                coverageMode: printCoverageMode,
++                designCount: printReferenceUrls.length,
++              }
++            : {
++                feature: 'fabric-image',
++                imageRatio: fabricImageRatio,
++                selectedPresets: fabricPresetIds,
++              },
++          materialReferences: isPrinting
++            ? [
++                { role: 'garment', referenceType: printGarment?.referenceType ?? null, hasImage: true },
++                ...printDesigns.map((design, index) => ({
++                  role: 'print-artwork',
++                  index,
++                  referenceType: design.referenceType,
++                  hasImage: true,
++                })),
++              ]
++            : [
++                { role: 'model-or-design', referenceType: fabricDesign?.referenceType ?? null, hasImage: true },
++                { role: 'textile', referenceType: fabricBase?.referenceType ?? null, hasImage: true },
++              ],
++          layerPlan: isPrinting
++            ? {
++                primary: 'garment',
++                secondary: 'print-artwork',
++                placement: printPlacementSummary,
++              }
++            : {
++                primary: 'model-or-design',
++                secondary: 'textile',
++                materialTransfer: 'garment-only',
++              },
++          maskPlan: isPrinting
++            ? {
++                garmentCutoutReady: Boolean(printGarmentProcessed),
++                garmentMaskCandidate: selectedPrintGarmentMaskCandidateId,
++                garmentMaskRevision: printGarmentMaskRevision,
++                providerMaskReady: true,
++                providerMaskOrientation: providerGarmentMask.orientation,
++                providerMaskCoveragePercent: providerGarmentMask.coveragePercent,
++                providerMaskSourceEngine: providerGarmentMask.sourceEngine,
++              }
++            : {
++                modelGarmentMaskReady: true,
++                textileReferenceMaskReady: Boolean(fabricPreviewOverlayUrl),
++                providerMaskReady: true,
++                providerMaskOrientation: providerGarmentMask.orientation,
++                providerMaskCoveragePercent: providerGarmentMask.coveragePercent,
++                providerMaskSourceEngine: providerGarmentMask.sourceEngine,
++              },
++          inputLineage: result.inputLineage ?? [],
++          parityRuntime: parityRuntimeJson,
++        },
++      }, { persistenceContext });
++      assertCurrentAuthBrandFence(authBrandFence, 'after_provider_persistence');
+       let persistedResult: WorkbenchResult = {
+         ...result,
+-        jobId: String(canonicalArtifact.metadata.remoteJobId),
+-        imageId: canonicalArtifact.id,
+-        storagePath: String(canonicalArtifact.metadata.remoteStoragePath),
+-        artifactId: canonicalArtifact.id,
+-        persistenceStatus: 'completed',
++        jobId: persistedProviderArtifact.remote?.jobId ?? result.jobId,
++        imageId: persistedProviderArtifact.remote?.imageId ?? result.imageId,
++        storagePath: persistedProviderArtifact.remote?.storagePath ?? result.storagePath,
++        artifactId: persistedProviderArtifact.artifact.id,
+       };
+       if (isPrinting) {
+         assertCurrentAuthBrandFence(authBrandFence, 'before_print_history_persistence');
+@@ -4034,10 +4037,6 @@
+         await cloudflareDataPlane.acknowledgeImageAction(providerResult);
+         assertCurrentAuthBrandFence(authBrandFence, 'after_provider_final_ack');
+       }
+-      assertProviderPersistenceCurrent();
+-      const stagingCleanup = deleteWorkspaceArtifactsPersisted(generationBrand.id, [staging.id], user?.id);
+-      if (!stagingCleanup.ok) throw stagingCleanup.error;
+-      setMaterialRecoveryArtifactId(null);
+       setGeneratedResults((previous) => isPrinting
+         ? mergePrintResultHistory([persistedResult], previous.filter((candidate) => candidate.id.startsWith('print-')))
+         : [persistedResult, ...previous.filter((candidate) => !candidate.id.startsWith('print-'))]);
+@@ -6633,12 +6632,12 @@
+                     <button
+                       type="button"
+                       data-testid="lightchain-material-retry-printing"
+-                      onClick={() => { void (materialRecoveryArtifactId ? handleRetryMaterialSave() : handleGenerate()); }}
++                      onClick={() => { void handleGenerate(); }}
+                       disabled={isGenerating}
+                       className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-200/35 bg-rose-200/10 px-2.5 py-1.5 font-semibold text-rose-50 transition hover:bg-rose-200/20 disabled:cursor-wait disabled:opacity-50"
+                     >
+                       <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+-                      {materialRecoveryArtifactId ? '保存を再試行' : '再試行'}
++                      再試行
+                     </button>
+                   </div>
+                 )}
+@@ -6918,12 +6917,12 @@
+                     <button
+                       type="button"
+                       data-testid="lightchain-material-retry-fabric"
+-                      onClick={() => { void (materialRecoveryArtifactId ? handleRetryMaterialSave() : handleGenerate()); }}
++                      onClick={() => { void handleGenerate(); }}
+                       disabled={isGenerating}
+                       className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-200/35 bg-rose-200/10 px-2.5 py-1.5 font-semibold text-rose-50 transition hover:bg-rose-200/20 disabled:cursor-wait disabled:opacity-50"
+                     >
+                       <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+-                      {materialRecoveryArtifactId ? '保存を再試行' : '再試行'}
++                      再試行
+                     </button>
+                   </div>
+                 )}
+--- a/src/stores/canvasStore.ts
++++ b/src/stores/canvasStore.ts
+@@ -155,7 +155,6 @@
+   historyIndex: number;
+   
+   // Project actions
+-  ensureCurrentLocalProjectIdentity:(brandId:string,beforeAssign?:(id:string)=>void)=>string;
+   createProject: (name: string, brandId?: string, initialObjects?: CanvasObject[]) => string;
+   loadProject: (projectId: string) => void;
+   hydrateProject: (project: CanvasProject,replaceCurrentLocalId?:string) => void;
+@@ -195,12 +194,6 @@
+   // Derived tree
+   getDerivatives: (id: string) => CanvasObject[];
+   getAncestors: (id: string) => CanvasObject[];
+-}
+-
+-function assertLocalCanvasIdentityPersisted(id:string,brandId:string){
+-  try{const stored=JSON.parse(localStorage.getItem('heavy-chain-canvas')??'null')?.state;
+-    if(stored?.currentProjectId!==id||!Array.isArray(stored.projects)||!stored.projects.some((p:{id?:string;brandId?:string})=>p.id===id&&p.brandId===brandId))throw new Error('readback');
+-  }catch{throw new Error('canvas_local_identity_persistence_unverified');}
+ }
+ 
+ const generateId = () => Math.random().toString(36).substring(2, 15);
+@@ -278,16 +271,6 @@
+       historyIndex: 0,
+ 
+       // Project management
+-      ensureCurrentLocalProjectIdentity:(brandId,beforeAssign)=>{
+-        if(!brandId)throw new Error('canvas_local_identity_brand_required');
+-        const current=get();const existing=current.projects.find(p=>p.id===current.currentProjectId);
+-        if(current.currentProjectId&&/^[A-Za-z0-9_-]{1,128}$/.test(current.currentProjectId)){if(existing?.brandId&&existing.brandId!==brandId)throw new Error('canvas_local_identity_brand_mismatch');beforeAssign?.(current.currentProjectId);if(!existing||!existing.brandId){const now=new Date().toISOString();const project:CanvasProject=existing?{...existing,brandId}:{id:current.currentProjectId,name:current.currentProjectName,brandId,objects:[],view:{zoom:current.zoom,panX:current.panX,panY:current.panY},createdAt:now,updatedAt:now};set({projects:[project,...current.projects.filter(p=>p.id!==project.id)]});}assertLocalCanvasIdentityPersisted(current.currentProjectId,brandId);return current.currentProjectId;}
+-        const id=`local-${crypto.randomUUID()}`,now=new Date().toISOString();
+-        const project:CanvasProject={id,name:current.currentProjectName,brandId,objects:[],view:{zoom:current.zoom,panX:current.panX,panY:current.panY},createdAt:now,updatedAt:now};
+-        // Identity assignment never replaces the active draft, selection, history or view.
+-        beforeAssign?.(id);
+-        set({currentProjectId:id,projects:[project,...current.projects]});assertLocalCanvasIdentityPersisted(id,brandId);return id;
+-      },
+       createProject: (name, brandId, initialObjects = []) => {
+         const id = generateId();
+         const now = new Date().toISOString();
+@@ -322,7 +305,6 @@
+         const project = projects.find(p => p.id === projectId);
+         
+         if (project) {
+-          if(currentProjectId===projectId){const active=get();if(activeObjects.length&&active.history.length===1&&active.historyIndex===0&&active.history[0].length===0)set({history:[activeObjects],historyIndex:0});return;} // Preserve active view and rebuild only an uninitialized reload history.
+           const view = normalizeCanvasView(project.view);
+           // The persisted project index intentionally omits object payloads to
+           // stay below localStorage limits. When a routed Canvas remounts the

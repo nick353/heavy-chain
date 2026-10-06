@@ -63,3 +63,18 @@ test('already-saved candidates are read back after restart without canvas encodi
   const corrupt={...result,images:result.images.map((c,index)=>index===1?{...c,batchId:'foreign'}:c)};
   assert.equal(normalizeCanvasImageEditCandidates(corrupt).length,3);
 });
+
+test('strict provider/raw gates run before lifecycle; lifecycle failures stop all downstream writes',async()=>{
+ const requestId=crypto.randomUUID();const plan={mode:contract.PROTECTED_IMAGE_EDIT_MODE,sourceWidth:256,sourceHeight:256,sourceSha256:'a'.repeat(64),maskSha256:'b'.repeat(64),guideIndex:1,coveragePercent:20};
+ const receipt={requestId,success:true,state:'completed',jobId:`ai-${requestId}`,requestedCandidateCount:1,protectedEdit:plan,provider:'workers_ai',backendProvider:'cloudflare-workers-ai',providerModel:'@cf/black-forest-labs/flux-2-klein-4b',images:[{candidateIndex:0,imageId:`ai-${requestId}-0`,jobId:`ai-${requestId}`,storagePath:`generated-images/ai-${requestId}-0`,imageUrl:'raw'}]};
+ let hooks=0,writes=0,reads=0;const options={prepared:{body:{brandId:'brand'},plan,sourceImageUrl:'source',maskDataUrl:'mask'},receipt,assertCurrent:async()=>{},call:async()=>{reads++;throw new Error('should not read');},save:async()=>{writes++;},lifecycle:{onCandidate:async()=>{hooks++;throw new Error('retention_failed');},getPersistedComposite:async()=>assert.fail('no composite lookup'),onComposed:async()=>assert.fail('no composition'),onSavedCandidate:async()=>assert.fail('no success')}};
+ await assert.rejects(edit.finalizeProtectedCloudflareEdit({...options,receipt:{...receipt,provider:'openai',protectedRegionComposited:true}}),/receipt_plan_mismatch/);assert.equal(hooks,0);
+ await assert.rejects(edit.finalizeProtectedCloudflareEdit({...options,receipt:{...receipt,images:[{...receipt.images[0],imageId:'foreign'}]}}),/candidate_identity_mismatch/);assert.equal(hooks,0);
+ await assert.rejects(edit.finalizeProtectedCloudflareEdit(options),/retention_failed/);assert.equal(hooks,1);assert.equal(writes,0);assert.equal(reads,0);
+});
+
+test('pending save readback never falls through to compose or save',async()=>{
+ const requestId=crypto.randomUUID();const plan={mode:contract.PROTECTED_IMAGE_EDIT_MODE,sourceWidth:256,sourceHeight:256,sourceSha256:'a'.repeat(64),maskSha256:'b'.repeat(64),guideIndex:1,coveragePercent:20};
+ const receipt={requestId,success:true,state:'completed',jobId:`ai-${requestId}`,requestedCandidateCount:1,protectedEdit:plan,provider:'workers_ai',backendProvider:'cloudflare-workers-ai',providerModel:'@cf/black-forest-labs/flux-2-klein-4b',images:[{candidateIndex:0,imageId:`ai-${requestId}-0`,jobId:`ai-${requestId}`,storagePath:`generated-images/ai-${requestId}-0`,imageUrl:'raw'}]};let writes=0;
+ await assert.rejects(edit.finalizeProtectedCloudflareEdit({prepared:{body:{brandId:'brand'},plan,sourceImageUrl:'source',maskDataUrl:'mask'},receipt,assertCurrent:async()=>{},call:async()=>{throw new Error('cloudflare_api_409_workspace_save_pending');},save:async()=>{writes++;}}),/workspace_save_pending/);assert.equal(writes,0);
+});

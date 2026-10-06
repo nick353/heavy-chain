@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AlertCircle, ExternalLink, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { getSharedImage, type SharedImagePayload } from '../lib/imageApi';
-import { buildSourceContextSummaryRows } from '../lib/sourceContextSummary';
+import { buildSourceContextSummaryRows, displaySourceSummaryLabel } from '../lib/sourceContextSummary';
 
 const formatDateTime = (value: string | null | undefined) => {
   if (!value) return '未設定';
@@ -124,7 +124,7 @@ export function SharedImagePage() {
                 <dl className="mt-3 space-y-3">
                   {summaryRows.map((row) => (
                     <div key={`${row.label}-${row.value}`}>
-                      <dt className="text-xs text-white/45">{row.label}</dt>
+                      <dt className="text-xs text-white/45">{displaySourceSummaryLabel(row.label)}</dt>
                       <dd className="mt-1 text-sm leading-6 text-white/85">{row.value}</dd>
                     </div>
                   ))}

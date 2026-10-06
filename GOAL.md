@@ -1,4 +1,273 @@
-# Goal progress — 2026-09-27 r403
+# Goal progress — PAUSED for handoff 2026-10-06
+
+## Current status — user-requested pause and GitHub handoff
+
+The user requested stopping this Codex Goal and continuing in another coding environment.
+The Goal is PAUSED, not complete. No implementation, generation, save, or deployment is to
+continue from the historical active instructions below. The current handoff, remaining
+20-item / 31-feature completion criteria, and latest deployed-source boundary are in
+[HANDOFF.md](HANDOFF.md) and [the detailed memo](docs/HANDOFF_LIGHTCHAIN_PARITY_2026-10-06.md).
+The user's final target is matching the original Light Chain in UI and behavior.
+The current task-owned Canvas paste element was removed once; the original two IDs,
+geometry and view were preserved, and the current session/tab were closed. The old
+viewport-cleanup mismatch remains retained and must not be replayed or adopted.
+The sections below are historical records, including old active state and approvals.
+
+## 2026-09-30 r819 — Studio deployed input saved; viewport blocks normal generation
+
+Deployment6abc4055c997a72fa174586b RUNNING. Fresh Companion Lightauthenticated Studio detail baseline captured. Heavy newfile upload once/siteconfirmationverified, createde36af9a7-1fe6-4113-92dc-887a54deb2fd; actualimagevisible/9975credits/nogate. IndependentD1select readback exit0changes0 verifiesrevision0/oneexplicitoriginal-base/canonicalwa-78df311e-3a55-48a2-a441-c8bb14241350 source/storageidentitymatch. Promptpreflight blocked BEFOREdispatch: composeroutsideviewport andpage pan/zoom toolbar lacks handlers. Provider0. Both ownedbrowser sessions closed. Astra r819 accepted realsharedworld viewportrepair; Solmedium originalUIworker nowlive managedheavy-studio-viewport-implementation-r820/viewport/root-sol-viewport-r820 revision2 actualturn01a0ef61-eb78-7293-a0f3-b3b4f0981080. Next stableviewporttests/build/deploy, thenvisiblepan→prompt→Generate→durableidentity/reload. Localviewportserialization/fullcontrol parity,20MBUIvsworkspace.ts10MBlimit,all31/fullscreen/retry evidence remain. FullGoalactive; source/localtest acceptance is not featurecompletion.
+
+## 2026-09-30 r818 — Studio detail operational source accepted; deployment in flight
+
+Deployment follow-up: originalCLI48694 terminalexit0 success; new deployment6abc4055c997a72fa174586b freshly observed docker BUILDING on exactHeavy target. Next same deployment runtime readback then Companion live acceptance, not a second deploy. FullGoalactive.
+
+Astra-approved Studio detail hydration/generation/UI and captured-context persistence bridge now integrated. Root independently verified54/54 Studio tests and52/52 bridge/workspace/provider regressions, typecheck exit0 and production build2575modules/8.74s exit0. Main/reference uploads and new-file route, real generation adapter, unique result replacement, same-operation recovery and persistence-only retry are wired; role identity/layout/unrelated content and original authenticated scope retained. This is local acceptance, not provider or full-screen production proof. Exact Heavy deployment invoked once, original CLI48694 live/upload pending, latest deployment stillr809 RUNNING. Next resume sameCLI (no replay), then new docker deployment runtime and Companion actual input→generation→durable Canvas/Gallery/History/Jobs identity/reload. UI20MB/backend10MB discrepancy and full all-screen pixel/interaction/provider acceptance remain. Full Goalactive.
+
+## Heavy Chain asset-center parity repair and deployed readback — 2026-09-30 r787
+
+全画面差分監査で、`/asset-center` のHeavy用CSSがLight互換のツールバー先頭（`画像／動画`、`お気に入り`、検索欄）を非表示にしていたことを特定した。`src/index.css`の該当隠し指定を削除し、型チェック・2570 modulesの本番ビルドを通過。Zeaburの同一Heavy Chain service/environmentへdeployment `6abbe34b24978d70ffde1d82`を反映した。
+
+Companionのtask-owned sessionで`https://heavy-chain.zeabur.app/asset-center`をfresh readbackし、タイトル`Heavy Chain AI`、可視ロゴ`HEAVY CHAIN AI`、フィルター`画像／動画`／`お気に入り`、検索ボタン`ライブラリーを検索`、検索入力`ライブラリー検索`、`一括操作`、全8ライブラリーグループを確認した。rights／terms／attestation／monitor／brand picker／billing／publication UIは0件。検索ボタンの展開は同じ画面内のローカルUI操作で、Provider・課金・公開などの外部効果は0。session close、lease release、foreign mutation、unknown effect 0。正本は`work/heavy-asset-center-parity-readback-20260930-r1.json`。
+
+Goalはactive。残りはstrict 31行ledgerのProvider/D1/private-R2独立identity、failure→retry、全機能のreload/reuse、Light本家との全viewport pixel/semantic監査。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+### Light source baseline probe — 2026-09-30 r788
+
+同じAOS Chrome Companion経路で本家`https://jp.linkaigc.com/designProduction`をread-only probeした。タブのtitleは`Lightchain AI`だったが、認証済み画面本体の`body` semantic queryは0件で、比較に使えるviewport／semantic treeは取得できなかった。transactionはknown-no-effect、外部効果0、lease releaseは確認済み。session closeは完了したが、世代更新により端末タブのterminal cleanupだけが`session_generation_stale`で失敗し、後続cleanup開始時にはprofile自体が`profile_not_connected`だったため、再接続・別profile採用・タブ再操作は行っていない。正本は`work/light-source-parity-probe-20260930-r1.json`。
+
+このためHeavy側の31/31ローカル全機能回帰と本番asset-center readbackは確定している一方、「本家Lightとの全viewport pixel/semantic完全一致」はまだ証明できない。認証済みLight baselineがCompanionに再提供された時点で同一route matrixをcaptureし、比較器を通してから完全一致を主張する。Goalはactive。
+
+### Light baseline re-probe — 2026-09-30 r789
+
+Companionの接続・世代・task-owned cleanupがidleになったタイミングで、Lightの`/designProduction`と`/`を再確認した。`/designProduction`は`navigation_commit_timeout`（external action 0、replay不可、tab close／lease release済み）、公開`/`はtransaction verifiedだがtitle `Lightchain AI`、body query 0、screenshot 21,933 bytesのblank/anonymous shellで、比較可能なcontrolsは得られなかった。正本へr2 follow-upを追記した。Heavy側の実装をLight baseline不在のまま推測修正せず、source baselineがprovisionされるまでstrict pixel/semantic claimは保留する。Goalはactive。
+
+### Launcher parity contract recheck — 2026-09-30 r790
+
+本家Lightの現行カード契約をHeavyソース側で再検証し、`verify-lightchain-launcher-parity.test.ts`は20/20、`lightchain-parity-contract`は9/9、UI control boundariesは22/22、permission parityは12/12でPASSした。カテゴリ、カード数・順序、カード固定geometry、画像、事例タブ、Heavy-only tool count／権利UIの不在を確認した。これはHeavyの現在コードと既知のLight契約の証拠であり、匿名blank source tabのpixel完全一致を代替しない。Goalはactive。
+
+## Heavy Chain all-screen brand parity post-deploy readback — 2026-09-30 r786
+
+## Heavy Chain native accessibility parity readback and query-semantics correction — 2026-09-30 r791
+
+新規task-owned Companion tabで`/heavy`を再読込し、`page.query('*')`が0件を返した従来の「準備中」判定を、Chrome native accessibility treeのfresh readbackで再確認した。Heavyは`Heavy Chain AI`、`HEAVY CHAIN`、アバター、検索、指示入力、4つのLight型カテゴリ、Light由来の事例共有UIを含む206 nodes/271 observed nodesとして完全に描画されていた。権利・同意・規約・attestation・monitor・brand picker・請求・公開の追加UIは0件。Light本家のtask-owned匿名シェルは`Lightchain AI`、事例共有、4カテゴリ、47 nodes/68 observed nodesまで取得できたが、認証済みの完全なsource baselineではない。
+
+これにより、直近の「Heavy新規タブがワークスペース準備中で止まる」という観測は、実装の無期限bootstrap停止ではなく、SPAに対して不適切な`page.query('*')`/`body`判定を読んだものだったと訂正する。コードはこの証拠だけでは変更せず、誤修正を避けた。正本は`work/heavy-light-accessibility-parity-readback-20260930-r1.json`。readback中のProvider dispatch・外部作用・外国tab adoptionは0。Companion sessionはこの証拠保存後にtaskTerminalで閉じる。
+
+Heavy全画面の本当の完了条件はなお、認証済みLight sourceのfresh baseline、31画像行のProvider/D1/private-R2 identity、failure→retry、reload/reuse、全viewport pixel比較であり、Goalはactiveのまま維持する。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+Heavyの配信物に残っていたLight Chainの可視ブランド漏れを修正した。Heavy runtimeのロゴを`HEAVY CHAIN AI`へ揃え、document titleを`Heavy Chain AI`へ揃え、History／Jobsの表示ラベル`Lightchain状態`をHeavyでは`Heavy Chain状態`へ置換した。ソース変更は`src/components/LightchainLogo.tsx`の既存Heavyロゴ経路と`src/lib/workspaceActivity.ts`のHeavy表示境界を正本として、Zeaburの同一Heavy Chain service/environmentへdeployment `6abbdf5676abd816ba4d140c`（Docker/RUNNING）を反映した。
+
+Companionの同一task-owned sessionで`/model-base/style`、`/history`、`/jobs`、`/gallery`をfresh semantic＋visual readbackした。全画面で`HEAVY CHAIN AI`、`Heavy Chain AI`を確認し、History／Jobsでは`Heavy Chain プリントイメージ`、`Heavy Chain状態`、`Heavy Chain機能`を確認した。カスタムスタイルはLight互換の学習素材・ライブラリUIを保持し、追加rights／terms／attestation／monitor／brand picker／billing／publication UIは0件だった。Galleryはsemantic上23枚の画像をreadbackし、同時点のvisualは画像lazy hydration中のskeletonだったため、画像カードのpixel完了は既存のfresh Gallery evidenceと分離して扱う。Companion cleanupはsession close、lease release、foreign mutation、external effect、unknown effect 0。
+
+Verification: `npm run build`、workspace activity 14/14、parity contract 9/9、parity behavior ledger 6/6、production visual fixture 4/4、`git diff --check` PASS。Goalはactive。残りは厳密31行ledgerのProvider/D1/private-R2独立identity、failure→retry、全機能のreload/reuse、Gallery画像のlazy hydrationを含むfull-viewport pixel auditであり、動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain image-repair cross-surface readback and Canvas policy repair — 2026-09-29 r785
+
+画像修正をHeavy認証済みworkspaceで1回だけOpenAI Providerへ送信し、`/v1/provider-actions/edit-image`、image `ai-d80066a9-b197-405c-8704-015ed031dcf4-0`、private storage `generated-images/ai-d80066a9-b197-405c-8704-015ed031dcf4-0`を確認した。Galleryは19件のうち同じ画像修正promptを表示し、Historyはtimeline 19／保存済み12件・対象行`completed`、Jobsは完了成果物19件・対象行1 outputを表示した。いずれも同じHeavy成果物としてfresh readbackした。
+
+Canvas保存は当初2回、Heavy viewerがLight由来のeditor-only policyに阻まれた。原因を特定し、Heavy Chain Workspaceだけ`owner/admin/editor/viewer`のviewer-level Canvas create/updateを許可し、Light Chainは従来のeditor-only policyを維持する修正をCloudflare Workerへdeployした。Worker versionは`e075b21b-f6d9-4c9c-bdbb-c9942199cb6b`。修正後のCanvas save、同一document UUID `0cc90a72-7428-444b-82f2-abb15185f5cd`のreload、`imageId`／`storagePath`一致、server-confirmed readback（contentMatch=true／differencePaths=[]）を確認した。正本は`work/heavy-image-repair-live-readback-20260929-r1.json`。
+
+Heavyの追加rights／terms／attestation／monitor／brand picker UIは出ていない。Goalはactive。全画面・全機能の完全一致はまだ未達であり、31画像行の厳密acceptanceではfailure→retry証跡とProvider/D1/private-R2独立identityが残る。さらに全viewportのLightとのpixel/semantic差分監査、未実行行（printing-image、svg-convert、custom-style、ai-fitting、ai-fitting-reference等）の個別Provider証跡が必要。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain vector standard/pro provider readback — 2026-09-29 r784
+
+標準ベクター入口とプロフェッショナル版入口を、Heavy独自feature IDのまま共通Heavy生成画面へ統一した。標準版は`feature=pattern-vector`、プロ版は`feature=pattern-vector-pro`で、入口で選んだ同じPNGをセッション内handoffから復元し、両方とも追加の権利・規約・attestation・monitor・brand選択なしでReady状態へ到達した。
+
+各行のProvider生成は1回だけ。標準版・プロ版とも「生成結果 1件」「企画書を保存しました」「生成が完了しました」、Galleryの対応カード、Historyの1 output行をfresh readbackした。正本は`work/heavy-vector-provider-readback-20260929-r1.json`。deployment `6abba850b57ea4921d62d390`はRUNNING、buildとfocused受入テストはPASS。
+
+Goalはactive。残りはstrictなProvider/D1/private-R2 identity昇格、Canvas／Jobs exact identity、reload/reuse、同一request failure→retry→readbackの内部QA。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain print-design reconciliation final readback — 2026-09-29 r783
+
+既存の1回限りの素材アップロードについて、同一Companion session／tabで最後のreconciliation readbackを1回だけ試行した。画面には`production-model-matrix-verified-visible-current.png`が引き続き表示されていたが、完全一致の視覚証跡が変動し、`reconciliation_readback_changed`で署名完了には至らなかった。再アップロード・再送・Provider生成は行っていない。leaseは解放し、sessionはtaskTerminal=falseで閉じた。正本は`work/heavy-print-design-login-only-readback-20260929-r1.json`。
+
+これはログイン専用生成契約の失敗ではなく、Companionの厳密な内部QA証跡の不安定さである。Heavyのユーザー向け追加権利・規約・attestation・monitor・brand・請求・公開ゲートは引き続き0件。Goalはactive。次はCompanionの同一タブreconciliation安定化後に、同じ添付を再送せず生成・Provider receipt・Gallery／History／Jobs／Canvas／reload／reuseを確認する。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain print-design login-only surface — 2026-09-29 r782
+
+Companionで認証済みHeavy workspaceの`/editor/patternDesign`をfresh readbackし、「新規ファイル」から`/editor/patternDesign/detail`へ到達した。ガイドありの入力面には画像素材、用途（ファッション／ホーム／総柄／ワンポイント）、指示欄、`つくる`、生成履歴が表示され、rights／terms／attestation／monitor token／manual brand picker／billing／publicationのユーザー向け追加ゲートは0件だった。Heavy側のログイン後利用契約は維持されている。
+
+素材画像はCompanionで1回だけアップロードし、`production-model-matrix-verified-visible-current.png`の表示を同一タブで確認した。ただしCompanionの`upload_file_readback_failed`により外部効果が`unknown_effect`のままなので、再アップロード・再生成は行っていない。正本は`work/heavy-print-design-login-only-readback-20260929-r1.json`。Goalはactive。残りはこのCompanion reconciliation安定化後のProvider生成とGallery／History／Jobs／Canvas／再読込の同一identity readbackであり、動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain angle-change login-only live proof — 2026-09-29 r781
+
+アングル変更機能を、ログイン＋元画像だけで実Provider生成できることを実証した。Companionで`/model-library/perspective-form`から`AI生成`を1回だけ実行し、request `38928ac2-034e-4171-924d-91750dc79c2c`、image `ai-38928ac2-034e-4171-924d-91750dc79c2c-0`、Gallery `state=completed / persistence=completed`、provider receipt readbackを確認した。rights／permission／attestation／monitor／brand-picker UIは0件。正本は`work/heavy-angle-change-live-readback-20260929-r1.json`。
+
+Goalはactive。ログイン後の生成ゲートはない。残りは未実行画像行、History／Jobs／Canvasのexact identity、再読込・再利用、failure／retry証跡。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain background-change login-only live proof — 2026-09-29 r780
+
+背景変更機能を、ログイン＋元画像だけで実Provider生成できることを実証した。Companionで`/model-library/background-form`から`AI生成`を1回だけ実行し、request `27964986-c455-4baa-85fb-0cd1d111ee5f`、image `ai-27964986-c455-4baa-85fb-0cd1d111ee5f-0`、Gallery `state=completed / persistence=completed`、provider receipt readbackを確認した。rights／permission／attestation／monitor／brand-picker UIは0件。正本は`work/heavy-background-change-live-readback-20260929-r1.json`。
+
+Goalはactive。ログイン後の生成ゲートはない。残りは未実行画像行、History／Jobs／Canvasのexact identity、再読込・再利用、failure／retry証跡。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain pose-change login-only live proof — 2026-09-29 r779
+
+ポーズ変更機能を、ログイン＋元画像だけで実Provider生成できることを実証した。Companionで`/model-library/pose-form`から`AI生成`を1回だけ実行し、request `aa63a1c5-b552-48c2-82fb-6d8cf3e5d06d`、image `ai-aa63a1c5-b552-48c2-82fb-6d8cf3e5d06d-0`、Gallery `state=completed / persistence=completed`、provider receipt readbackを確認した。rights／permission／attestation／monitor／brand-picker UIは0件。正本は`work/heavy-pose-change-live-readback-20260929-r1.json`。
+
+Goalはactive。ログイン後の生成ゲートはない。残りは未実行画像行、History／Jobs／Canvasのexact identity、再読込・再利用、failure／retry証跡。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain clothing-size login-only live proof — 2026-09-29 r778
+
+服のサイズ機能を、ログイン＋元画像だけで実Provider生成できることを確認した。Companionで`/model-library/size-form`から`AI生成`を1回だけ実行し、request `6bc9c589-566e-450f-b7fc-c842b8c57644`、image `ai-6bc9c589-566e-450f-b7fc-c842b8c57644-0`、Gallery `state=completed / persistence=completed`、provider receipt readbackを確認した。初回settle中のunknownから同一request/imageのfresh readbackでcompletedへ収束し、再送はしていない。正本は`work/heavy-clothing-size-live-readback-20260929-r1.json`。rights／permission／attestation／monitor／brand-picker UIは0件。
+
+Goalはactive。ログイン後の生成ゲートはない。残りは未実行画像行、History／Jobs／Canvasのexact identity、再読込・再利用、failure／retry証跡。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain body-shape login-only live proof — 2026-09-29 r777
+
+体型機能のログイン専用Provider生成を実証した。Companionで`/model-library/body-form`から`AI生成`を1回だけ実行し、request `c5e9c241-1e49-49b7-b6ba-c48e28689b8a`、image `ai-c5e9c241-1e49-49b7-b6ba-c48e28689b8a-0`、Gallery `state=completed / persistence=completed`、provider receipt readbackを確認した。初回は保存settle中の`unknown`だったが、同一request/imageのfresh readbackでcompletedへ収束し、再生成は行っていない。正本は`work/heavy-body-shape-live-readback-20260929-r1.json`。ユーザー向け追加rights／permission／attestation／monitor／brand-picker UIは0件。
+
+Goalはactive。ログイン後の生成ゲートはない。残りは未実行画像行、History／Jobs／Canvasのexact identity、再読込・再利用、failure／retry証跡。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain model-change login-only live proof — 2026-09-29 r776
+
+モデル変更のHeavy画面を、ログイン＋元画像だけで使えることを実Provider生成で確認した。Companionで`/model-library/model-change-form`の`AI生成`から`model-matrix`を1回だけ実行し、request `16241a8d-70fd-4c28-9836-eec7f966e703`、image `ai-16241a8d-70fd-4c28-9836-eec7f966e703-0`、Gallery detailの`state=completed / persistence=completed`、provider receipt readbackを確認した。追加のrights／permission／attestation／monitor／brand-picker UIは0件。正本は`work/heavy-model-change-live-readback-20260929-r1.json`。
+
+Goalはactive。ユーザー向け画像生成フェーズはログイン専用で継続し、内部ledgerのfailure／retry、History／Jobs／Canvasのexact identityと再読込・再利用、未実行画像行の証跡を後続QAとして残す。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain model-face login-only live proof — 2026-09-29 r775
+
+モデル顔変更のHeavy導線を、ログイン＋画像入力だけで実Provider生成できる状態として追加確認した。Companionで`/model-library/head-form`の`AI生成`から`model-matrix`を1回だけdispatchし、Provider request `8ff12d79-c4ff-48e8-8554-2ffb1c572dda`、image `ai-8ff12d79-c4ff-48e8-8554-2ffb1c572dda-0`、Gallery detailの`state=completed / persistence=completed`、provider receiptのreadback、Gallery storage keyを確認した。ユーザー向けrights／permission／attestation／monitor／brand-picker UIは0件。正本は`work/heavy-model-face-live-readback-20260929-r1.json`。
+
+Goalはactive。ログイン後の画像生成フェーズを止めるゲートはない。内部ledgerの残りは同一行failure／retry証跡、History／Jobs／Canvasのexact identityと再読込・再利用、未実行画像行のprovider証跡であり、任意QAとして継続する。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain simplified login-only acceptance — 2026-09-29 r774
+
+本Goalのユーザー向け完了条件を、Heavyへログインした利用者が追加の権利・規約・attestation・monitor・brand選択なしで画像生成できることへ整理した。モデルカスタムのbrief-only生成ボタンを実処理へ接続し、frontend deployment `6abb7bb6b57ea4921d62c5e9`で稼働。Companion live runは request `09f45686-5466-48c4-87c3-358465b0df7f`／image `ai-09f45686-5466-48c4-87c3-358465b0df7f-0`、Gallery provider receipt `completed`、private persistence `completed`まで確認した。追加のrights／permission／attestation／brand-picker UIは0件。
+
+31行の厳格acceptance ledgerは内部品質確認として残すが、ログイン後の画像生成を妨げる条件にはしない。動画、請求、公開、monitor credential provisioningは引き続きnon-goal。現時点のユーザー向け画像生成フェーズは完了、Goalは後続の任意QAのためactiveを維持する。
+
+## Heavy Chain source-file resume live proof — 2026-09-29 r773
+
+API Worker `heavy-chain-api`を、フロントとは別のCloudflareデプロイ経路まで更新した。dry-run、Worker deploy、healthを確認し、Worker versionは`ba5941c5-d32e-4a85-86f5-a0ead89dc848`。Companionで既存のブラウザローカル素材`local-canvas-asset://heavy-model-source-1790670412841-dmz44kbmpht`を使った`model-matrix`を追加で1回だけ実行し、OpenAI provider request `5e1d20e0-2284-45c7-995c-92c9c27be193`、image `ai-5e1d20e0-2284-45c7-995c-92c9c27be193-0`、receipt `state=completed / persistence=completed`を確認した。
+
+Historyの同一行には`localSourceReference`と`sourceFileName`が保存され、「続きから再開」後も`素材あり`・対象ファイル名・選択済み画像が再水和された。Jobsは同じrequest/image IDを完了・素材ありで表示し、Galleryは同じprovider receiptとCanvas href、Canvasは`Heavy Chain Workspace`で同一成果物を表示した。ユーザー向けrights/terms/attestation/monitor/brand選択UIは0件。正本は`work/heavy-model-source-readback-20260929-r2.json`、台帳もr2へ更新した。
+
+109/109 focused tests、typecheck、production build、diff check、API dry-run/health、Cloudflare workerd/Auth/D1/private-R2の`test:image-runtime`はPASS。共有APIのfailure→同一request readback/no-replay契約は`work/heavy-failure-retry-readback-20260929-r1.json`に記録した。CompanionでCanvasを新規タブから開き、同一`galleryImageId`の画像表示後にページ再読み込みして同じ画像・Heavy workspaceを再確認した。Goalはactiveのまま。残りは本番で意図的に壊したProviderの誘発証跡、残り画像行の個別Provider/D1/private-R2 identity、Canvas reuseの厳密証跡。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+## Heavy Chain login-only source resume contract deployed — 2026-09-29 r772
+
+ユーザー向けHeavy生成条件をログインだけに保ったまま、モデルライブラリのブラウザローカル素材を同じジョブのHistory／Jobs再開へ引き継ぐ経路を実装した。素材本体やdata URLは保存せず、IndexedDBのopaque `local-canvas-asset://`参照とファイル名だけをmetadataへ許可し、同一ブラウザの再開時だけ実体を再水和する。Light Chainのplan／権利挙動は変更していない。
+
+Zeabur deployment `6abb73d6498d5ec175a08df7` はDocker/RUNNING、`/_health`は`status=ok`／Cloudflare API/Auth true、bundle `/assets/index.Cmzu6JSt.js`をfresh readbackした。既存の同一Provider成果物 `request=f39645c4-08e3-486f-88f8-fc671bb09d40`／`image=ai-f39645c4-08e3-486f-88f8-fc671bb09d40-0`は`state=completed / persistence=completed`で、Gallery／History／Jobs／Canvasの同一成果物を再確認した。CompanionでHistoryの「続きから再開」をクリックし、promptとsource filenameは復元、追加の権利・規約・attestation・monitor・brand選択UIは0件だった。
+
+109/109 focused tests、typecheck、production build、`git diff --check`はPASS。今回のHistoryレコードは修正前に作られたためopaque local referenceが欠け、既存成果物のブラウザローカル画像バイトまでは復元されなかった。重複Provider生成は行わず、この点は`work/heavy-model-source-readback-20260929-r1.json`に明記した。残りは新契約でのsource-file 1件の実行証跡、同一行のfailure→retry→readback、31画像行のexact identity／再読み込み・再利用。動画、請求、公開、monitor credential provisioningはnon-goal。
+
+## Heavy Chain model-library login-only generation and permission-gate removal — 2026-09-29 r771
+
+Heavyホストのモデルカスタマイズ／顔変更／モデル変更／体型／服のサイズ／ポーズ／背景／アングル画面に残っていたLight由来の`権限がありません`表示を、Heavy runtimeでは出さないよう修正した。ログイン済みHeavyでは同じ見た目の操作位置を`AI生成`へ切り替え、`/generate?feature=model-matrix`のOpenAI生成へ渡す。Lightホストでは従来のplan-lock表示を保持している。
+
+Zeabur deployment `6abb6a94ad96bf301ede45e5`はRUNNING、healthは`status=ok`／Cloudflare API/Auth true、モデル系routeはHTTP 200。Companionでcustom-formとmodel subrouteのfresh readbackを行い、permission text不在・AI生成表示を確認した。custom-formのAI生成からOpenAI model-matrixを1回だけ実行し、provider request `e7211cb4-eaeb-4fda-a6f5-fdd335fddb6e`、image `ai-e7211cb4-eaeb-4fda-a6f5-fdd335fddb6e-0`、receipt `state=completed / persistence=completed`、Gallery 3枚、History／Jobs完了、Canvas Heavy workspace導線を確認した。証跡は`work/heavy-model-library-live-readback-20260929-r1.json`。
+
+focused suite 107/107、typecheck、production build、diff check、JSON readback 3/3 PASS。Goalはactive。残りは同一行のdeterministic failure→retry→readback、31画像行の全件exact identity／再読み込み・再利用、モデルCanvasの画像ID再読込を含む直接フォーム復元。動画、請求、公開、monitor credential provisioningはnon-goal。
+
+## Heavy Chain Companion復旧・実Provider生成 readback — 2026-09-29 r770
+
+Companion停止の原因を特定し、`CODEX_CLI_PATH`の欠落先を同梱`codex-cli`実体へ向ける可逆symlinkで復旧した。Chrome拡張Companionが正常起動し、Heavy `/heavy/lab`をログイン済みworkspaceで開き、追加の権利同意・規約・attestation・monitor token・手動brand選択なしに「新規ファイル」からOpenAI `generate-image`を1回実行した。
+
+Provider request `99d07358-b1d0-4262-83b5-c0c1989b223a`、image `ai-99d07358-b1d0-4262-83b5-c0c1989b223a-0`をGalleryで確認し、receiptは`state=completed / persistence=completed`。Historyは`Heavy Chain lab / 完了 / private保存完了`、Galleryは`HEAVY CHAIN ROUTE: lab`とprovider request、Canvas再編集リンク、Canvasは`ブランド: Heavy Chain Workspace`、Jobs導線をfresh readbackした。結果画面は保存・ダウンロード・Gallery／History／Jobs／Canvasを表示し、ユーザー向け追加ゲートは0件。正本は`work/heavy-lab-live-readback-20260929-r2.json`と`work/heavy-heavy-workspace-routing-readback-20260929-r5.json`。
+
+最新Zeabur deployment `6abb670a498d5ec175a08bec`はRUNNING、health ok／Cloudflare API/Auth true、主要route 200、bundle marker fresh。workspace routing 18/18、provider coverage＋ledger 25/25、focused contract 59/59、provider/persistence/activity 47/47、brand/adapter 43/43、typecheck、build、diff check PASS。Goalはactive。残りは同一行のdeterministic failure→retry→readback、31画像行全体のexact identity／再読み込み・再利用、直接フォームの入力・結果復元。動画、請求、公開、monitor credential provisioningはnon-goal。
+
+## Heavy Chain generation-time workspace fence and post-deploy readback — 2026-09-29 r769
+
+Heavy直リンクの素材生成で、auth storeにLightのcurrent brandが残っていても、Provider呼び出し直前に必ず`ensureHeavyWorkspace()`を通すよう修正した。これで表示判定だけでなく、生成保存先・History／Jobs／GalleryのworkspaceもHeavyに固定される。ログイン後のユーザー向け条件は引き続き追加同意・手動brand選択なしで、入力素材だけを要求する。
+
+Zeabur deployment `6abb6482b57ea4921d62bfdc`はRUNNING。health ok（Cloudflare API/Auth true）、`/heavy`、`/heavy/line-to-real`、`/fitting`、`/model`、`/fabric-image`、`/printing-image`、`/marketing`、`/studio`、`/lab`、`/history`、`/jobs`、`/gallery`は全てHTTP 200、bundle `/assets/index.D4gakunb.js`に`ensureHeavyWorkspace`、Heavy Chain、FittingPageをfresh確認。workspace routing 18/18、focused contract 59/59、provider/persistence/activity 47/47、typecheck、build、diff check PASS。正本は`work/heavy-heavy-workspace-routing-readback-20260929-r4.json`。
+
+Companionは`failed to start codex app-server: No such file or directory (os error 2)`で利用不能、Browser Use fallbackなし、今回のprovider dispatchは0件。Goalはactive。残りは31画像行の認証済みProvider receipt、同一行のfailure→retry→readback、Gallery／Canvas／History／Jobs exact identity、再読み込み・再利用。動画、請求、公開、monitor credential provisioningはnon-goal。
+
+## Heavy Chain direct-host workspace routing and deployment readback — 2026-09-29 r768
+
+Heavyホストの直リンク（`/model`、`/fabric-image`、`/printing-image`、`/marketing`、`/studio`、`/lab`）でも、共有WorkbenchがLight側のpathname判定へ戻らないよう、`isHeavyWorkspaceRuntime()`をWorkbench／Material Workbenchへ追加した。`/heavy/*`別名とLightホストの既存挙動は維持し、Heavyではログイン後に`ensureHeavyWorkspace()`で個人workspaceを自動解決する。
+
+Zeabur deployment `6abb626ab57ea4921d62bf7b`はRUNNING。`/_health`はok（Cloudflare API/Auth true）、`/heavy`、`/heavy/line-to-real`、`/fitting`、`/model`、`/fabric-image`、`/printing-image`、`/marketing`、`/studio`、`/lab`、`/history`、`/jobs`、`/gallery`は全てHTTP 200。配信bundle `/assets/index.CKU2fLDP.js`に`ensureHeavyWorkspace`、Heavy identity、FittingPageをfresh確認した。workspace routing 18/18、provider coverage＋ledger 25/25、focused contract 59/59、provider/persistence/activity 47/47、typecheck、build、diff checkをPASS。正本は`work/heavy-heavy-workspace-routing-readback-20260929-r4.json`。
+
+Companionは`failed to start codex app-server: No such file or directory (os error 2)`で利用不能のため、Browser Use fallbackはしていない。今回のprovider dispatchは0件。Goalはactive。残りは31画像行の認証済みProvider receipt、同一行のfailure→retry→readback、Gallery／Canvas／History／Jobsのexact identity、再読み込み・再利用。動画、請求、公開、monitor credential provisioningはnon-goal。
+
+## Heavy Chain fitting workspace fence and deployment readback — 2026-09-29 r767
+
+共有`/fitting`ルートがHeavyホスト上でLightのcurrent brandを使う可能性を潰した。Heavyホストでは`Heavy Chain Workspace`の確認が完了するまでmodel-matrix生成を開始せず、workspaceが未選択またはLight brandの場合は`ensureHeavyWorkspace()`で自動解決する。Lightホストで既存brandがある場合の挙動は保持した。
+
+Zeabur deployment `6abb603c498d5ec175a08adb`はRUNNING。`/_health`はok（Cloudflare API/Auth true）、`/heavy`、`/heavy/line-to-real`、`/fitting`、`/history`、`/jobs`、`/gallery`はHTTP 200、配信bundleの`ensureHeavyWorkspace`、Heavy identity、FittingPageをfresh確認。workspace routing 14/14、provider coverage＋ledger 25/25、focused contract 59/59、provider/persistence/activity 47/47、typecheck、build、diff checkをPASS。正本は`work/heavy-heavy-workspace-routing-readback-20260929-r3.json`。
+
+Companionのfresh getStateは引き続きcodex app-server missingで、Browser Use fallbackなし。今回のprovider dispatchは0件。Goalはactiveで、31画像行の個別provider証跡、failure→retry→readback、再読み込み・再利用・cross-surface exact identityが残る。動画、請求、公開、monitor credential provisioningはnon-goal。
+
+## Heavy Chain login-only contract regression repair — 2026-09-29 r766
+
+現行のProvider coverage suiteに残っていた旧仕様の静的期待（Heavyの権利同意／entitlement gateを要求する4 assertions）を、現在のlogin-only契約へ修正した。Heavyのユーザー向け生成条件はログイン＋必要入力だけとし、server-side auth、owner/workspace fence、rate/usage、idempotency/no-replay、private persistence、provider fail-closedは維持する。Light側のprovider ownershipは変更していない。
+
+focused provider/route suiteは59/59、workspace routing 12/12、rights/UI removal 2/2、brand separation 4/4、acceptance ledger 3/3、provider/persistence/activity 47/47、typecheck、diff checkをPASS。正本は`work/heavy-login-only-contract-readback-20260929-r2.json`。
+
+Companionはfresh確認でも`failed to start codex app-server: No such file or directory (os error 2)`のままで、Browser Use fallbackはしていない。今回のprovider dispatchは0件。Goalはactive。残りは未証明画像行の認証済みprovider生成、同一行のfailure→retry→readback、Gallery／Canvas／History／Jobsのexact item identity、再読み込み・再利用。
+
+## Heavy Chain direct-runtime workspace routing — 2026-09-29 r765
+
+Heavyの共有画面（History / Jobs / Gallery / Canvas）がHeavyドメインまたは`/heavy/*`別名から開かれた時、Light側の現在brandを流用せず、ログイン済みの`Heavy Chain Workspace`へ自動解決するよう統一した。`ensureHeavyWorkspace`はsingle-flightのまま、認証済みbrand一覧の成功後だけ不足workspaceを作成し、ユーザーに手動brand選択を要求しない。CanvasはHeavy workspace解決前に保存・履歴hydrationを開始しない。
+
+ローカル検証はworkspace routing 12/12、rights/UI removal 2/2、brand separation 4/4、acceptance ledger 3/3、provider/persistence/activity contract 47/47、typecheck、production build、diff checkをPASS。Zeabur deployment `6abb5d65498d5ec175a08a43`はRUNNING、`/_health`は`status=ok`（Cloudflare API/Auth true）、`/heavy`、`/heavy/line-to-real`、`/history`、`/jobs`、`/gallery`はHTTP 200、配信bundleの`ensureHeavyWorkspace`／Heavy workspace markerをfresh確認した。正本は`work/heavy-heavy-workspace-routing-readback-20260929-r2.json`。
+
+Companionのfresh確認は`failed to start codex app-server: No such file or directory (os error 2)`で利用不能のため、Browser Useへfallbackせず、今回のprovider dispatchは0件。Goalはactiveのまま。残りは31画像行の個別provider証跡、failure→retry→readback、再読み込み・再利用、Gallery／Canvas／History／Jobsの同一item identity。動画、請求、公開、monitor credential provisioningはnon-goal。
+
+## Heavy Chain line-to-real provider readback — 2026-09-29 r764
+
+Heavyの`/heavy/line-to-real`でも、同一Companion tabで入力readback→reconciliation→`AI生成`を1回だけ通し、OpenAI edit-image endpoint、generated image `ai-11168d4f-328a-4af0-abf5-339388c9f35c-0`、署名付きmedia readback、結果カードを確認した。過去のupload unknown-effectは再送していない。生成後のHistory／Jobs／Gallery routeは読めたが、このrunではCanvas保存と新規item identityの厳密なcross-surface readbackをまだ主張しない。正本は`work/heavy-line-to-real-provider-readback-20260929-r1.json`で、台帳のline-to-realは`unproven`を維持する。
+
+## Heavy Chain workspace identity repair — 2026-09-29 r763
+
+HeavyルートがLight側の現在選択brandを暗黙に流用し、生成後のHistory／Jobs／Galleryが別workspaceを読む可能性を解消した。認証済みbrand一覧から`Heavy Chain Workspace`を自動解決し、存在しない場合だけ権威ある一覧取得成功後に作成する。Heavyの生成・Canvas保存・活動ページはこのresolverを通り、ユーザーにbrand選択を求めない。Light側のresolverとplan挙動は変更していない。
+
+変更は`src/stores/authStore.ts`と`src/pages/LightchainWorkbenchPage.tsx`、デプロイ対象はZeabur `heavy-chain` deployment `6abb5a39498d5ec175a089b2`（RUNNING）。`/_health`、Heavy／History／Jobs／Gallery route HTTP 200、配信bundleの`Heavy Chain Workspace`と`ensureHeavyWorkspace`をfresh HTTP確認した。focused routing 6/6、rights/UI removal 2/2、brand separation 4/4、acceptance ledger 3/3、provider/persistence/activity contract 47/47、typecheck、diff checkをPASS。Companion app-serverは起動不能のため、この修正の新規visual readbackとprovider dispatchは行っていない。正本は`work/heavy-heavy-workspace-routing-readback-20260929-r1.json`。
+
+Goalはactive。画像betaの内部品質基準（31画像行の個別provider、failure→retry、再読込・再利用・cross-surface item identity）は未完了のまま保持する。動画、請求、公開、monitor credential provisioningはnon-goal。
+
+## Heavy Chain line-generation login-only provider readback — 2026-09-29 r762
+
+Heavyの`/heavy/line-generation`を、ログイン＋通常入力素材だけで利用できる状態として本番実行した。権利同意、規約確認、attestation、monitor token、手動brand選択、請求、公開操作は画面・生成条件に出ていない。Companionのtask-owned tabで`production-model-matrix-current.png`を一度だけuploadし、unknown-effectになった入力は同一targetのreconciliationを完了してから、`AI生成`を一度だけdispatchした。
+
+Zeabur deployment `6abb5348ad96bf301ede437b`（RUNNING）へ反映後、health（Cloudflare API/Auth true）、Heavy主要route 200、配信bundleの`Heavy Chain Workspace`／`ensureHeavyWorkspace`をfresh確認した。OpenAI `/v1/provider-actions/edit-image`の実行ではgenerated image `ai-e01c9634-7c61-4200-ba1e-21a7742e4cae-0`、署名付きmedia readback、画面の`平絵生成 AI生成結果`と履歴追加toastを確認した。`/history`は保存済み集計、`/jobs`は生成APIと完了成果物集計、`/gallery`は同じ生成mediaのreadbackを確認した。証跡は`work/heavy-line-generation-provider-readback-20260929-r1.json`。
+
+この証跡ではraw provider response body、独立D1/R2 query、History/Jobsでの新規画像IDの文字列表示までは主張しない。Strict ledgerのline-generationを含む31画像行は、個別のfailure→retry→readback、正確なsource identityの再読込・再利用・再試行まで終えるまで`unproven`のまま扱う。過去の`upload_file_readback_failed`由来unknown-effect 2件は再送しない。動画、請求、公開、monitor credential provisioningはnon-goal。Goalはactive。
+
+## Heavy Chain login-only material generation through Canvas — 2026-09-29 r761
+
+ユーザー向けの画像生成条件を「ログイン＋通常の入力素材」に整理した状態で、Heavyの生地イメージを実際に1回生成し、結果の保存・再利用まで通した。Heavy専用workspaceを自動解決する`ensureHeavyWorkspace`、Heavy側のbrand表示、同一素材の再選択を可能にする`ImageSelector`、生成後のremote generated-images hydration（provider行の`lightchain-fabric-image`も復元対象）を実装・デプロイした。Lightのplan/permission経路は変更していない。
+
+Zeabur deployment `6abb4cfe498d5ec175a08744` はRUNNING。Companionのtask-owned tabでモデル素材と生地素材をそれぞれ一度だけuploadし、両方とも署名付きreadback `verified`（`fileInputAssignmentVerified=true`、`uploadReadbackVerified=true`）となった。OpenAI edit-image endpointへのdispatchは1回で、provider result `fabric-provider-990b920f-bea3-4dd5-97f2-cfb759249200-result`／generated image `ai-990b920f-bea3-4dd5-97f2-cfb759249200-0`（1024x1024）を確認した。成果物は`work/heavy-material-provider-cross-surface-readback-20260929-r1.json`。
+
+同じ結果について、Gallery、History（完了・private保存）、Jobs（完了成果物）、Canvas handoff、Canvas document save（サーバー確認済み）、Canvas再読込、Material画面再読込後のprovider結果復元を確認した。再読込・Canvas保存でprovider再実行は0。UI上は`rights/terms/attestation/monitor/billing/publication`の追加操作を要求せず、ログイン後に生成操作へ進める。
+
+今回のコード検証はHeavy rights/UI/brand/ledger＋material resume/provider persistence `26/26`、typecheck、production build、`git diff --check`をPASS。Companion app-serverの再起動ができない状態になったため、最後のCanvas再読込については既存の同一run transactionのvisual/readback証跡を採用し、Browser Useへfallbackしていない。providerのraw response bodyや同一runの独立D1/R2クエリまではこの証跡で主張しない。
+
+Goalはactive。ユーザー利用開始のlogin-only画像導線は成立したが、内部品質として残るのは31画像行の全件provider証跡、失敗→再試行→readbackのdeterministic証跡、未実証featureの直接route再開である。動画、請求、公開、monitor credential provisioningはnon-goal。過去の`upload_file_readback_failed`由来のunknown-effect 2件は再送せず、reconciliation pendingのまま保持する。
+
+## Heavy Chain login-only material surface — 2026-09-29 r760
+
+ユーザー向け画像生成条件を「ログイン＋通常の入力素材」に統一し、Heavy側の権利同意、規約確認、attestation、monitor token、手動brand選択、請求／プラン、公開操作を生成導線から外した。server-sideの認証・owner境界、rate/usage、idempotency/no-replay、private D1/R2保存、provider fail-closedは維持した。Material WorkbenchのHeavy生成開始時はLightの`refreshCurrentBrand`ではなくHeavy専用`ensureHeavyWorkspace`で個人workspaceをsingle-flight解決するよう修正し、Light側のbrand/plan挙動は変更していない。
+
+Opusで意図・境界を確定し、Astraで全Heavy生成／保存／再利用／再試行経路を監査し、LunaでMaterialの修正を実装した。focused login-only／brand separation／acceptance ledger／material resume／provider persistence suite 32/32、typecheck、production build、`git diff --check`をPASS。Zeaburの`heavy-chain`へdeployment `6abb4025b57ea4921d62b8ab`を反映し、service RUNNING、`/_health`およびHeavy主要route（`/heavy`、`/heavy/model-custom`、`/heavy/fabric-image`、`/heavy/printing-image`、`/jobs`、`/history`、`/gallery`）HTTP 200をfresh確認。配信JSにも`ensureHeavyWorkspace`とHeavy identityを確認した。
+
+Companionのfresh task tabでpost-deploy `/heavy/fabric-image`を視覚・semantic readbackし、`HEAVY CHAIN`、Material 4タブ、入力欄、`AI生成`を確認。旧Lightの終了告知bannerは表示されず、rights/terms/attestation/monitor/billing/publication UIも表示されなかった。これはログイン後に機能を使えるUI境界の証拠であり、provider生成完了の証拠ではない。
+
+現在のexact blockerは、同じCompanion tabで入力画像を一度だけ選択したところ、brokerの署名付きsuccess readbackが`upload_file_readback_failed`となり`unknown_effect`／`replay_allowed=false`になったこと。直後の同一target `companion_read_page`では画像previewと`選択済み ベース画像`を確認できたが、reconciliation inspectは成功証跡を返していないため、再upload・AI生成・同一targetの再mutationは行わない。旧tabにも同種の保留があり、二件ともcleanupやarchiveで完了扱いにしない。
+
+したがってGoalはactive。ログイン後利用開始を妨げる権利／同意ゲートは残っていない一方、全canonical画像featureのprovider receipt、failure/retry、直接route再開、remote persistence／Gallery／Canvas／History／Jobs readback、Companionの同一target reconciliationは未完了。動画、請求、公開、monitor credential provisioningは画像beta完了までnon-goal。
+
+## Heavy Chain model-matrix cross-surface activity readback — 2026-09-29 r740
+
+ログイン後追加ゲートなしの方針を維持し、canonical action `model-matrix` のOpenAI実生成を1回だけ再読込した。Providerは`gpt-image-1-mini`、生成dispatchは1、画像IDは`ai-68aaf699-33a4-4343-baaa-dc7ed2f17ed1-0`で、rights/terms/attestation UIは0、再送・重複dispatchは0。private media read、Gallery詳細、Canvasの`galleryImageId`、Historyの同一画像IDリンク、Jobsの同一画像IDリンクを確認した。
+
+Historyはhydration完了後に保存済み12件・Timeline20件・モデルマトリクス・同一プロンプトを表示し、Jobsは完了20件の中に同じモデルマトリクス成果物を表示した。先行readで一時的に見えた0件は非同期読み込み中の表示であり、同一成果物の欠落ではなかった。正本は`work/heavy-model-matrix-live-readback-20260929-r1.json`（SHA-256 `8618c89c2b291069d606967269e7cc44b5b0b0f9fcb3e0369daf819e52505d57`）。台帳にはcanonical representative evidenceを追加し、台帳のSHA-256は`5ad5cc938342f9bc8466fe7f8d35849e4583794f5305b38e6870f776024f33d0`。
+
+ローカルのlogin-only関連テスト24/24、typecheck、production build、`git diff --check`は既存PASSを維持。残りは同一行のdeterministic failure/retry/readback証跡、他のcanonical画像featureの個別production証跡であり、動画・請求・公開・monitor provisioningはnon-goal。Goalはactive。
+
+## Heavy Chain Lightchain resume contract repair and fresh deployment — 2026-09-29 r741
+
+workspace activity routingの既存49テストを横断実行した際、Lightchain再開メタデータの静的契約がHeavy lab条件式に埋もれていたため、`LightchainWorkbenchPage`の`sourceResumePath`を通常の`/lightchain/{feature}`として明示し、Heavyの`/heavy/lab`だけを後段overrideする形へ修正した。Heavyのログイン後追加ゲートなし、OpenAI固定、個人brand自動解決の挙動は変更していない。
+
+修正後は関連provider／persistence／workspace activity／routing／generation lifecycleテスト49/49、login-only統合テスト24/24、typecheck、production build、`git diff --check`をPASSした。Zeaburの同一`heavy-chain` serviceへ再デプロイし、新deployment `6abaf7e7cf055b5b04563596`（docker、`RUNNING`）を確認。`/_health`は`status=ok`／Cloudflare API/Auth true。Companion fresh readbackでも`/heavy/lab?feature=lab&source=post-deploy-route-readback-20260929-r1`のtitle `Heavy Chain | AI制作ワークスペース`、heading `ラボ`、生成履歴・ジョブ・Heavy Chain導線、新規ファイルを確認し、Resource Timing 148件、`/v1/heavy/entitlement` 0、provider dispatch 0だった。
+
+Companionはtask-owned tab 1件を閉じ、lease 1件を解放し、foreign mutation 0・unknown effect 0でcleanup完了。正本は`work/heavy-login-only-image-deploy-readback-20260929-r2.json`（SHA-256 `9304bac5d0cfec4b8f068a29ac6c1459ef172817f85d41fc6edf0f0b72770c1c`）。Goalはactive。残りは同一画像行のdeterministic failure/retry/readback証跡と、canonical画像featureの個別production証跡のみで、動画・請求・公開・monitor provisioningはnon-goal。
 
 ## Fresh authenticated workspace readback — 2026-09-28
 
@@ -92,6 +361,12 @@ production D1のread-only検索でvideo/motion/story系generation jobは0件だ�
 `work/heavy-chain-video-provider-preflight-20260927.json`へ保存し、provider receiptがないことを明示した。
 local video contract/boundary PASSだけでは本番video admission、remote media、reuse/reload/reconciliationを証明しない。
 Goalはactive。
+
+# Heavy Chain login-only boundary reconfirmed — 2026-09-29 r742
+
+画像機能のユーザー向け受入条件は、ログイン後に使えることを最優先とする。権利・規約・attestation・monitor token・請求・公開操作は生成開始の追加条件にしない。認証済みbrand解決、server-side safety、rate/usage、owner境界、idempotency/no-replay、D1/private R2保存だけを内部の実行整合性として残す。動画、請求、公開、monitor credentialは保留する。
+
+login-only関連24/24、typecheck、git diff checkをPASSし、既存の代表Provider readbackを正本として再確認した。全31行の個別provider生成や本番failure/retry証跡はユーザー向け利用開始のブロッカーではなく、必要に応じた内部品質向上項目として扱う。Goalはactive。
 
 ## Workspace persistence preflight — 2026-09-27
 
@@ -12322,3 +12597,337 @@ close済み、tab cleanup verified、external action executed=false。正本は`
 新規Companion sessionで同じGallery詳細をsemantic＋visual readbackした。`state: completed persistence: completed`を再確認し、
 lease releaseとsession cleanupは成功、foreign tab変更とexternal actionは0。pre-launch gateはH602を`DEFERRED`として残し、
 production monitor/UI pair、G618、current 10-feature visual scorecardのみが未達。monitor tokenを推測・抽出せず、Goalはactiveで継続する。
+
+# Heavy Chain marketing-detail live Provider failure — 2026-09-29
+
+ログイン後に画像生成を使えることを優先した同一ownerのCompanion sessionで、台帳の次行`marketing-detail`を`/marketing/detail`から実行した。Heavy Chain shell、ログイン済み表示、個人brand解決、入力欄は確認でき、rights/terms/attestation、billing、publication、monitor credential UIは出なかった。入力は1回、送信クリックは1回、Provider dispatchも`/v1/provider-actions/generate-image`へ1回だけ行った。
+
+同じtabをreadbackすると`予期しないエラーが発生しました。再度お試しください。`が表示され、Provider receipt/job ID、生成画像、Gallery/Canvas/History/Jobs保存、reload/reuseは得られなかった。Resource Timingでは最終fetchがduration 586ms、encodedBodySize/transferSize 0だったが、HTTP status自体は公開されないため、可視エラーと結果不存在を組み合わせて`provider_failed`と判定した。失敗後の再送はしていない。正本は`work/heavy-marketing-detail-live-readback-20260929-r1.json`（SHA-256 `583849ededff5c26164aa4c73d3155a4e1a31ac0bfd03b9adb21cd49676239d9`）。Companion session、lease、task-owned tabはterminal cleanup完了。
+
+これはログイン／権利同意の不足ではなく、認証済みUIからProvider actionへ到達した後のサーバー側失敗である。次は`provider-actions/generate-image`のserver log、request/payload contract、OpenAI binding、D1/R2 write境界をread-onlyで切り分け、原因修正後に別runで1回だけ再検証する。台帳`work/heavy-image-acceptance-ledger-20260929-r1.json`の`marketing-detail`に`progress=provider_failed`と同artifactを反映した。video、billing、publication、monitor credential provisioningは引き続きdeferred。Goalはactive。
+
+# Heavy Chain login-only OpenAI generation repaired — 2026-09-29 r732
+
+前回の`marketing-detail`失敗は認証・権利同意ではなく、Heavyのワークベンチだけが古い`workers_ai` providerを送っていたprovider選択不一致だった。ワークベンチの生成providerをHeavy専用の`HEAVY_IMAGE_PROVIDER=openai`へ固定し、OpenAI-only選択テスト、typecheck、build、lint、diff checkをPASSしたうえで、Zeaburの既存`heavy-chain`サービスへデプロイした。fresh remote asset readbackでも生成呼び出しがHeavy OpenAI constantを渡すことを確認した。
+
+修正後、認証済みCompanionのtask-owned tabで`/marketing/detail`を開き、同一ブリーフの入力1回・送信1回・Provider dispatch 1回を実行した。`/v1/provider-actions/generate-image`は完了済みResource Timing（17,669ms）となり、その後同じtabで`/v1/workspace-artifacts`とprivate generated-image media readが続いた。UIは`マーケティング詳細プレビュー`、`AI生成結果を履歴に追加しました`、Gallery／History／Jobs／Canvasリンクを表示し、画像ID`ai-f582fb98-9dc6-4a30-83fa-fec0eb18da72-0`を読み戻した。rights/terms/attestation、billing、publication、video、monitor credential UIは出ず、再送は0。正本は`work/heavy-marketing-detail-live-readback-20260929-r2.json`（SHA-256 `a99cad7d69f70d96dbeddfde3155d3a5f200db5735ca47cc915084d1a26f851d`）。
+
+Companion cleanupはtask-owned tab close、lease release、foreign mutation 0で完了。台帳の`marketing-detail`は`provider_succeeded_ui_persisted`へ進めたが、statusは全行の証明基準に合わせて`unproven`のまま維持し、Gallery/Canvas/History/Jobs横断、reload/reuse、failure/retryを残課題とした。画像生成だけを先に使える状態は復旧済みで、動画・請求・公開・monitor credentialはnon-goal。Goalはactive。
+
+# Heavy Chain marketing-detail cross-route persistence and reuse — 2026-09-29 r733
+
+前回生成した同一画像`ai-f582fb98-9dc6-4a30-83fa-fec0eb18da72-0`について、別Companion sessionでProviderを再実行せずに横断readbackを実施した。Gallery詳細は同一image ID・provider requestを表示し、Canvasリンクは`galleryImageId`付きで同一画像を渡した。Canvasでは同一IDのprivate media read、Historyでは同一ブリーフの`完了`・`1 outputs`・`候補1・private保存=完了`、Jobsでは同一ブリーフの`Heavy Chain状態: 完了`・`1 outputs`・`成果物を開く`を確認した。
+
+Gallery詳細を同一URLでreloadした後も、36枚のGallery、同一image ID、同一provider request、同一詳細表示が復元され、再度同じ`galleryImageId`付きCanvasへ遷移してprivate media readを確認した。cross-route readback中のProvider生成dispatchは0で、再生成は行っていない。正本は`work/heavy-marketing-detail-crossroute-readback-20260929-r1.json`（SHA-256 `7e4cd1376ce61f3a40f59a83586e08b6bdeaa329afbc2215757b10d4cc7e2f42`）。
+
+Companion cleanupはtask-owned tab close、lease release、foreign mutation 0で完了。台帳の`marketing-detail`は`cross_route_persisted_reload_reuse`へ進め、残りはfailure boundary／retry／readbackだけとした。動画・請求・公開・monitor credentialはnon-goal。Goalはactive。
+
+# Heavy Chain login-only acceptance simplified — 2026-09-29 r734
+
+ユーザーの最新方針に合わせ、画像betaの受入条件を「ログイン後、追加の権利・規約・attestation、brand手動選択、monitor credential、請求、公開操作なしで生成できること」へ簡素化した。全31画像行のproduction cross-route/retry証跡は完了条件から外し、marketing-detailのOpenAI実生成＋Gallery/Canvas/History/Jobs・reload・reuseを代表証拠として採用する。動画・請求・公開・monitor provisioningは引き続き変更しない。
+
+Opus 5.5（`opencode/claude-opus-5-5`, high）で新意図を再計画し、Astraは現行APIの`resolveHeavyGenerationAccess`、個人brand自動解決、認証・所有分離・rate/usage・idempotency/no-replay・provider fail-closedを維持し、strict entitlement APIは互換診断に留めると判断した。コード上のrights/terms/attestation UI撤去、OpenAI固定、Heavyブランド分離、31画像共通workflow契約は既存実装で満たされている。
+
+fresh検証は`test:heavy-rights-ui-removal` 2/2、`test:heavy-openai-provider-selection` 4/4、`verify-heavy-capability-gating` 9/9、`test:lightchain-unified-workflow-contract` 6/6、`test:heavy-brand-separation` 3/3、画像台帳 3/3、provider coverage 22/22、Heavy API 120/120、typecheck、`git diff --check`がPASS。簡素化後の正本は`work/heavy-login-only-acceptance-20260929-r1.json`（SHA-256 `1db8e062c9d1257c63698fbb0b2d4c64ee4cf7f9e76fc5eda6a59d2e73596543`）。代表Provider証拠は`work/heavy-marketing-detail-crossroute-readback-20260929-r1.json`（SHA-256 `7e4cd1376ce61f3a40f59a83586e08b6bdeaa329afbc2215757b10d4cc7e2f42`）。Goalはactive。
+# Heavy Chain login-only image path fresh cross-surface readback — 2026-09-29 r735
+
+ユーザーの優先順位を「ログイン後は、追加の権利同意・monitor credential・請求・公開操作なしで画像機能を使えること」として維持したまま、marketing-homeのfresh production readbackを更新した。認証済みHeavy Chainの同一Companion task-owned tabで、OpenAI画像モデルを1回だけ生成し、同じimage ID `ai-737cd653-e88c-413d-a5e7-2951aee38451-0` をprivate media read、Gallery、Canvas、History、Jobsへ引き渡した。Gallery詳細URLとCanvasの`galleryImageId`は同じIDを保持し、Historyでは同一プロンプトと設定、Jobsでは同一originating promptと完了済み保存画像を読み戻した。Gallery詳細をreloadしても同じ画像IDを含むrouteが維持され、reload後のmedia readを確認した。Provider submitのdispatchは1回、再送・重複生成は0、rights/terms/attestation UIは0、billing/publication/video/monitor provisioningは0。
+
+正本は`work/heavy-marketing-home-live-readback-20260929-r2.json`で、台帳`work/heavy-image-acceptance-ledger-20260929-r1.json`のmarketing-home行へ反映した。行のstatusは、same-row failure boundary/retry/readbackが未取得のため`unproven`のまま過大申告していない。既存のr734は簡素化方針の履歴として保持し、今回のr735で「代表証拠」と「31行全体の証明」を混同しないよう訂正した。ローカル契約、OpenAI固定、Heavyブランド分離、権利UI撤去、Heavy APIテスト、typecheck、diff checkは既存PASSを維持する。Goalはactive。
+
+# Heavy Chain login-only all-image capability expansion and deploy readback — 2026-09-29 r736
+
+ユーザー方針を「ログイン後は追加の権利・規約・monitor credential・請求・公開操作なしで、画像機能を使える」に固定した。`src/lib/heavyCapability.ts`のHeavy capability mapを動画を除く31画像featureと5つのlegacy entryへ拡張し、全行を`edit-image`または`model-matrix`の正規Provider actionへ明示的に変換した。未知のfeature idは引き続きdefault-denyでLightへ誤送信しない。旧Heavy entitlement/acceptance APIは互換・診断用として残すが、画像submitのユーザー向け権利ゲートには使わない。
+
+clean stagingからZeaburの既存`heavy-chain` serviceへ再デプロイし、runtime homepage HTTP 200と新しいJS asset上の`heavyCapability`、`marketing-home`、`model-custom`をfresh readbackした。Companionのtask-owned `/marketing` routeでもHeavy Chain headingを確認し、権利・課金・監視・公開・動画の文言は0件、taskTerminal cleanupはcompleted（tab close 1、lease release 1、unknown effect 0）。本番のデプロイ一覧は最新deploymentが`RUNNING`として残るため、これは反映済みruntime assetの証拠であり、Zeaburのterminal successとは分離する。正本は`work/heavy-login-only-image-capability-deploy-readback-20260929-r1.json`。
+
+検証は`verify-heavy-capability-gating` 9/9、`test:heavy-rights-ui-removal` 2/2、`test:heavy-openai-provider-selection` 4/4、typecheck、diff checkをfresh PASS。代表画像のProvider→private media→Gallery→Canvas→History→Jobs→reload/reuse証拠はr735を維持する。未完了は31行すべての個別Provider生成を意味せず、現時点では代表証拠以外の行を過大申告しないこと、failure boundary/retryの本番証跡、Zeabur deployment statusのterminal readbackである。動画・請求・公開・monitor provisioningはnon-goal、Goalはactive。
+
+# Heavy Chain login-only deployment and Heavy route separation — 2026-09-29 r737
+
+ログイン後の画像生成を追加同意なしで使える境界を維持したまま、Heavy専用の`/heavy/lab`ルートを本番へ反映した。Zeabur deployment `6abaeed7cf055b5b045634d9` は`RUNNING`、`/_health`は`status=ok`かつCloudflare API/Auth true。画像providerはOpenAI固定、認証・個人brand自動解決・rate/usage・idempotency/no-replay・provider fail-closed・D1/private R2永続化は維持し、rights/terms/attestation、monitor credential、請求、公開、動画は生成経路から要求しない。正本は`work/heavy-login-only-image-deploy-readback-20260929-r2.json`。
+
+`wear-design-lab`について既存のCompanion生成1回（OpenAI、画像ID`ai-514be455-f564-4f72-9ddf-eece1ce2a0f4-0`）を、workspace artifact、private media、Canvas保存、reload同一資産、Gallery参照として記録した。コード上のLight/Heavy route分離と共有shellはtargeted testで確認し、台帳行へ反映した。Companion app-serverが現在起動できず、live `/heavy/lab` URLのfresh readbackだけは未取得であり、providerの再送はしていない。正本は`work/heavy-wear-design-lab-live-readback-20260929-r1.json`および`work/heavy-image-acceptance-ledger-20260929-r1.json`。
+
+fresh targeted test 17/17、typecheck、diff checkはPASS。Goalはactive。次の一手はCompanion app-server復旧後に`/heavy/lab`のroute readbackを1回行い、その後は生成重複を避けたまま、必要なUI差分だけを確認する。
+
+# Heavy Chain route shell HTTP readback — 2026-09-29 r738
+
+Companionの代替操作は行わず、デプロイ済みshellのread-only HTTP readbackだけを追加した。`/`、`/heavy/lab`、`/lab`はすべてHTTP 200で、titleは`Heavy Chain | AI制作ワークスペース`。これはSPA shellとルート到達性の証拠であり、ログイン済みUIのsemantic/visual readbackやProvider生成の証拠ではない。Companion app-server復旧待ちを維持し、provider再送は0。正本は`work/heavy-login-only-image-deploy-readback-20260929-r2.json`。Goalはactive。
+
+# Heavy Chain login-only UI gate removal and live route verification — 2026-09-29 r739
+
+ユーザー方針に合わせ、Heavy画像経路のUI側`getHeavyEntitlement`呼び出しと権利・規約・attestation待ちを、Workbench、Material Workbench、Canvas、Fittingから除去した。通常のHeavy画像submitはログイン済みセッションと個人brand自動解決だけを前提にし、OpenAI固定、rate/usage、owner境界、idempotency/no-replay、provider fail-closed、D1/private R2永続化は維持する。旧entitlement APIは互換・診断用として残すが、画面の生成停止条件ではない。動画・請求・公開・monitor credentialは引き続きnon-goal。
+
+ローカルはlogin-only関連テスト21/21、typecheck、`git diff --check`、production buildをPASSした。Zeabur deployment `6abaf280cf055b5b0456351f` は`RUNNING`、`/_health`は`status=ok`／Cloudflare API/Auth true。Companionのfresh task-owned `/heavy/lab?feature=lab&source=login-only-live-readback-20260929-r3` readbackでtitle `Heavy Chain | AI制作ワークスペース`、heading `ラボ`、Heavy Chain header、生成履歴・ジョブ等の導線、新規ファイル・保存・ダウンロードを確認した。Resource Timing 145件を要約し、`/v1/heavy/entitlement`呼び出しは0、provider generation dispatchは0。signed media tokenやsecretは証跡へ保存していない。
+
+正本は`work/heavy-login-only-image-deploy-readback-20260929-r2.json`（SHA-256 `8eccda6822f27b11bd816b79404d4adb9e2902c0ca3b64e7200c543be09bd340`）、`work/heavy-wear-design-lab-live-readback-20260929-r1.json`（SHA-256 `7c1b27319870ca46e1207e29bc4e1e7a1d81319d33027078e9466a6c1f2dd405`）、台帳（SHA-256 `9cb255710e2e6d5766665d87ad648c38b0a2183c14cd2bf6d56756f60bbbdee3`）。代表Provider生成の再送は0。Goalはactive。残りは代表証拠以外の個別production生成を未証明として扱うこと、failure/retry/readbackの本番証跡、動画・請求・公開・monitor provisioningの保留。
+
+# Heavy Chain fitting clothing reference cross-surface readback — 2026-09-29 r743
+
+`fitting-clothing-reference`をOpenAI providerで1回だけ生成し、request `0905ce29-154b-4c56-a11a-f7d99d113de1`と画像ID `ai-0905ce29-154b-4c56-a11a-f7d99d113de1-0`をProvider receipt、private保存、Gallery、History、Jobs、Canvasで一致させた。GalleryからCanvasへ同一`galleryImageId`で引き渡し、生成元routeのreload後にログイン後UIを再読込した。追加の権利・規約・attestation・monitor credential・請求・公開操作は要求されず、Provider dispatchは1回、再送・重複は0。
+
+正本は`work/heavy-fitting-clothing-reference-live-readback-20260929-r1.json`（SHA-256 `494a9e575ea937ad25fa1269019bafd18049844503616131af63f94006650b74`）。台帳`work/heavy-image-acceptance-ledger-20260929-r1.json`（SHA-256 `c95c8dcd043df1c9e8f4ea11b30ec74d6e3026d971411f7eb4a44a16307c0185`）の行はcross-surface／reload／reuseまで進めたが、deterministic failure boundaryとretry/readbackが未取得のためstatusは`unproven`のまま。動画・請求・公開・monitor provisioningはnon-goal、Goalはactive。
+
+# Heavy Chain dedicated route aliases deployed — 2026-09-29 r744
+
+Heavy専用の`/heavy`、`/heavy/:toolId`、`/heavy/fabric-image`、`/heavy/printing-image`を追加し、Heavy経路の保存・再開metadataも`/heavy/...`を使うようにした。既存の`/lightchain/...`はLight互換経路として残し、画面ブランドはHeavyのまま分離した。
+
+Zeabur deployment `6abb0063cf055b5b0456364a`（RUNNING）とCompanionのfresh readbackで、Heavy launcher、AIフィッティング、生地イメージ、プリントイメージの到達性とログイン後のAI生成導線を確認した。readback中のProvider生成は0、rights/terms/attestation UIは0、cleanupは完了。正本は`work/heavy-route-separation-live-readback-20260929-r1.json`（SHA-256 `8ef6c3c939b856851a937e86a94cf1e90846c4292f8de54eebc8465a42f5fd01`）。Goalはactive。
+
+# Heavy Chain login-only final boundary verification — 2026-09-29 r745
+
+`/heavy/model-custom`をCompanionでfresh readbackし、Heavyブランド、AI生成・履歴・ジョブ導線、必要な衣服画像入力を確認した。権利・規約・attestation・monitor credential・請求・公開UIは0件。login-only関連テスト19/19、typecheck、production buildをPASS。ユーザー向け画像利用条件はログイン＋認証済みbrandのみで、残る正式Goalの未達は全31行の個別Provider証跡とfailure/retry証跡だけ。Goalはactive。
+
+# Heavy Chain login-only gate simplification — 2026-09-29 r746
+
+ログイン後に全画像機能を使えるという方針をコードにも明示的に合わせた。`GeneratePage`、Heavy Workbench、Material Workbench、Fittingのユーザー向けreadinessを、権利・規約・attestation・手動brand選択ではなく認証済みユーザーだけで判定するよう修正した。保存・Gallery/Canvas/History/Jobsのowner境界に必要なbrand IDは、Heavy APIがログイン時に決定論的な個人workspace（`personal-<sha256(user)>`、表示名`Heavy Chain`）を自動解決する内部スコープとして維持する。これにより手動のブランド作成・選択を追加条件にしない。
+
+生成クリック時にはbrand hydrationがまだ終わっていない場合だけ同じ正規refreshを一度待ち、別の認証・権利・モニター操作へ誘導しない。server-side content safety、認証・所有分離、rate/usage、idempotency/no-replay、private persistenceは安全性・整合性のため維持する。動画・請求・公開・monitor credentialは引き続きnon-goal。
+
+検証はlogin-only／Heavy capability／route separation／OpenAI固定／rights UI removal 19/19、Heavy APIの個人workspaceテストを含む対象テスト120/120、`npm run typecheck`、`npm run build`、`git diff --check`をPASS。既存の代表Provider readbackは再送していない。Goalはactiveで、残りは代表証拠以外のproduction failure/retry/readbackと、必要なら次回デプロイ後のfresh route readbackのみ。
+
+# Heavy Chain login-only gate post-deploy fresh readback — 2026-09-29 r747
+
+ログイン後に追加の権利・規約・attestation・monitor credential・請求・公開操作を要求しない画像UI変更を、既存Zeabur `heavy-chain` serviceへDocker deployment `6abb05d1cf055b5b045636f2`として反映した。対象はproject `69df815a554543d46b0f2485`、environment `69df815a5ae0a69725e92048`で、deployment statusは`RUNNING`。`/_health`はHTTP 200、Cloudflare API/Authはtrue、`/heavy`・`/heavy/model-custom`・`/heavy/fabric-image`はHTTP 200だった。
+
+Companion fresh sessionの`/heavy/model-custom`で`HEAVY CHAIN`、生成履歴、ジョブ、各モデル条件入力、衣服画像選択をsemantic＋visual readbackした。権利・規約・attestation・monitor・billing・publication・brand選択ゲートのvisible matchは0件で、衣服画像選択は通常の機能入力として残る。readback中のProvider dispatchは0、external actionはfalse、task-owned tab close／lease release／foreign mutation 0でcleanup完了。正本は`work/heavy-login-only-gate-postdeploy-readback-20260929-r1.json`。
+
+これは「ログイン後に画像UIへ進める」本番反映の証拠であり、全31画像行のProvider生成完了を意味しない。Goalはactiveのまま、次は既存代表証拠を再利用しつつ、重複生成を避けた個別機能のProvider・保存・再読込・再利用・failure/retry証跡を必要な範囲で追加する。動画・請求・公開・monitor provisioningは引き続きnon-goal。
+
+# Heavy Chain design-agent provider and result-surface readback — 2026-09-29 r748
+
+`design-agent`を認証済みCompanionの同一task-owned tabで一度だけ実行した。OpenAI Provider dispatchは1回で、request `e34e98de-6d35-43c4-aa26-50bd324d0eba`、画像ID `ai-e34e98de-6d35-43c4-aa26-50bd324d0eba-0`をworkspace artifact、private media、History、Gallery、Canvasへ同一IDで読み戻した。Historyでは`AI処理=完了 / private保存=完了`、Galleryでは同一画像詳細とCanvas href、Canvasでは同一`galleryImageId`と編集画面、Jobsでは実行ステップendpointを確認した。重複dispatch、再送、外部token保存は0。正本は`work/heavy-design-agent-live-readback-20260929-r1.json`。
+
+生成後のagent画面に結果カードが無く、保存・ダウンロード・Gallery/History/Jobs/Canvas導線が見えないUI欠落を修正した。`lightchain-agent-result`、save/download、失敗時のretryボタンを追加し、targeted UI test、Heavy login-only/capability/ledger tests、typecheck、production build、diff checkをPASS。Zeabur同一`heavy-chain`サービスのDocker deployment `6abb0a19cf055b5b04563787`は`RUNNING`、`/_health`と`/heavy/design-agent`はHTTP 200。fresh post-deploy Companion readbackで結果カード・保存・ダウンロード・4 destination導線・同一画像IDを確認した。
+
+台帳の`design-agent`は`provider_succeeded_workspace_gallery_history_canvas_jobs_postdeploy_ui_readback`へ進めたが、全行の証明基準に合わせstatusは`unproven`のまま。残りは同一行のdeterministic failure/retry/readback証跡と、必要な残り画像行の個別Provider証跡。動画、請求、公開、monitor provisioningは引き続きnon-goal。Goalはactive。
+
+# Heavy Chain fitting background reference provider and cross-surface readback — 2026-09-29 r749
+
+`fitting-background-reference`を認証済みCompanionのtask-owned tabで新規Provider生成1回だけ実行した。アップロード済み`heavy-chain-r326-model.png`は再送せず、背景説明を入力してOpenAIの`/v1/provider-actions/edit-image`を1回dispatchし、`/v1/workspace-artifacts`、private media、History、Gallery、Canvas、Jobsを同じprovider request `c287604e-41cc-43fd-8a67-556c47c84253`／画像ID`ai-c287604e-41cc-43fd-8a67-556c47c84253-0`で読み戻した。Historyは10:01の`背景参考ライブラリ / 1 outputs / Heavy Chain状態: 完了`、Galleryは同一provider requestとプロンプト、Canvasは同一`galleryImageId`、Jobsは完了成果物と`workspace-execution-steps` endpointを確認した。
+
+結果画面には`保存`、`ダウンロード`、`Gallery/History/Jobs/Canvas`導線があり、rights/terms/attestation/monitor/billing/publication/brand gateの文言は0件。dispatch 1、再送・重複0。Gallery/History/Jobs/Canvasでは再読込・再利用を確認した一方、Heavy機能フォーム自体は新規route遷移で入力と結果カードが初期化されるため、直接フォーム再開の永続復元を改善候補として残した。意図的なProvider失敗注入は行わず、同一行のfailure/retry証跡は未取得。
+
+正本は`work/heavy-fitting-background-reference-live-readback-20260929-r1.json`、台帳`work/heavy-image-acceptance-ledger-20260929-r1.json`へ反映した。行statusは全台帳基準に合わせ`unproven`のまま。Companion sessionはtaskTerminalで閉じ、動画・請求・公開・monitor provisioningはnon-goal、Goalはactive。
+
+# Heavy Chain wear design detail provider and cross-surface readback — 2026-09-29 r750
+
+`wear-design-detail`を認証済みCompanionで新規Provider生成1回だけ実行した。`heavy-chain-r326-model.png`を画面へ投入し、変更箇所`襟`と「襟元に小さな銀色の刺繍を追加…」の説明からOpenAIの`/v1/provider-actions/edit-image`を1回dispatch。10:17のHistory完了、Gallery詳細のprovider request `e2b0c5f4-c88d-4a01-a398-1db8cbf67692`／画像ID`ai-e2b0c5f4-c88d-4a01-a398-1db8cbf67692-0`、private保存、Canvasの同一`galleryImageId`、Jobsの完了成果物と`workspace-execution-steps` endpointをfresh readbackした。
+
+結果UIは保存・ダウンロード・Gallery/History/Jobs/Canvas導線を表示し、rights/terms/attestation/monitor/billing/publication/brand gate文言は0件。再送・重複dispatchは0。横断面の再読込・再利用は確認した。意図的なfailure/retryは未実行で、直接フォーム再開は入力・結果カードが初期化される。履歴プロンプトがアップロード画像を画面上は受け取ったにもかかわらず`PRIMARY INPUT: no required source image`／brief-onlyと記録するため、入力画像をedit-imageのprimary sourceとして扱う契約整合を改善候補にした。
+
+正本は`work/heavy-wear-design-detail-live-readback-20260929-r1.json`、台帳行へ反映済み。JSON、関連36テスト、diff checkはPASS。Companion cleanupはtaskTerminalで完了。動画・請求・公開・monitor provisioningはnon-goal、Goalはactive。
+
+# Heavy Chain fashion studio provider and cross-surface readback — 2026-09-29 r751
+
+`fashion-studio`を認証済みCompanionで新規Provider生成1回だけ実行した。スタジオ案の既定brief「黒のチェーン柄フーディーを、モデル、背景、小物と組み合わせてEC/SNS向けの撮影案にしてください。」をOpenAIの`/v1/provider-actions/generate-image`へ1回dispatchし、10:23のHistory完了、Gallery詳細のprovider request `51be9cea-dd32-4818-b3ea-6024e265960f`／画像ID`ai-51be9cea-dd32-4818-b3ea-6024e265960f-0`、private保存、Canvasの同一`galleryImageId`、Jobs完了成果物と`workspace-execution-steps` endpointを確認した。
+
+結果UIは保存・ダウンロード・Gallery/History/Jobs/Canvas導線を表示し、rights/terms/attestation/monitor/billing/publication/brand gate文言は0件。dispatch 1、再送・重複0。History/Gallery/Canvas/Jobsで再読込・再利用を確認した。これはbrief-only画像生成の行であり、failure/retry本番証跡とHeavyフォーム直接route再開永続化は未取得。正本は`work/heavy-fashion-studio-live-readback-20260929-r1.json`、台帳へ反映済み。関連36テスト、JSON、diff checkはPASS。Goalはactive。
+
+# Heavy Chain lab provider and cross-surface readback — 2026-09-29 r752
+
+`lab`を認証済みCompanionのtask-owned tabで`新規ファイル`から1回だけ実行した。OpenAIの`/v1/provider-actions/generate-image`を1回dispatchし、provider request `f349ff8d-2893-48a4-82a1-bd002cd93ec7`／画像ID`ai-f349ff8d-2893-48a4-82a1-bd002cd93ec7-0`をworkspace artifact、private media、10:31のHistory完了、Gallery、Canvas、Jobsへ同一IDで読み戻した。結果UIには保存・ダウンロードとGallery/History/Jobs/Canvas導線があり、rights/terms/attestation/monitor/billing/publication/brand gate文言は0件。dispatch 1、再送・重複0、Companion cleanupもsession close・lease release・foreign mutation 0で完了した。
+
+正本は`work/heavy-lab-live-readback-20260929-r1.json`、台帳のartifact rowは9件、未証明画像行は22件。全体の証明基準に合わせstatusは`unproven`のまま、残りは同一行のdeterministic failure/retry/readbackとHeavyフォーム直接route再開永続化。動画・請求・公開・monitor provisioningはnon-goal、Goalはactive。
+
+# Heavy Chain print-design-project provider and persistence readback — 2026-09-29 r753
+
+`print-design-project`をCompanionの認証済みtask-owned tabで、追加同意なしに一度だけ生成した。ガイドなしで開始→`つくる`→OpenAI `/v1/provider-actions/generate-image`を1回dispatchし、同じtabのnetwork/media readbackからrequest `539ac0c9-c17e-43d7-80bd-d7c96b78d6b8`／画像ID`ai-539ac0c9-c17e-43d7-80bd-d7c96b78d6b8-0`を確認した。生成中表示の消失、AI生成結果、保存・ダウンロード・Gallery/History/Jobs/Canvas導線をfresh semantic＋visual readbackした。
+
+保存後はCanvas `/canvas/d30faf06-9892-42c5-a9a6-0beb28a2ab28`へ遷移し、Canvasの保存で`サーバー確認済み`を確認。Historyでは`完了 / 1 outputs / Heavy Chain状態: 完了 / 候補1・private保存=完了`、Galleryは非同期反映後に`46枚の画像`、Jobsは7秒待機後に`完了した成果物 20件`をfresh readbackした。rights/terms/attestation/monitor/billing/publication/video UIは0件、dispatch 1、再送0、重複0。正本は`work/heavy-print-design-project-live-readback-20260929-r1.json`、台帳のartifact rowsは10件、未証明画像行は21件へ更新した。
+
+failure/retryは意図的に実行していない。Heavy機能フォームの直接route再開では入力・結果カードが初期化されるため、入力/result stateの永続復元は改善候補として残す。Goalはactive、動画・請求・公開・monitor provisioningはnon-goal。
+
+# Heavy Chain print-design-detail provider and persistence readback — 2026-09-29 r754
+
+`print-design-detail`をCompanionの認証済みtask-owned tabで、ガイドなし→`つくる`を一度だけ実行した。OpenAI `/v1/provider-actions/generate-image`を1回dispatchし、同じtabのnetwork/media readbackからrequest `bc9aa648-5d7b-429a-8f70-79e5c910c615`／画像ID`ai-bc9aa648-5d7b-429a-8f70-79e5c910c615-0`を確認した。生成結果UIの保存・ダウンロード・Gallery/History/Jobs/Canvas導線をfresh semantic＋visual readbackした。
+
+Canvas保存後は`サーバー確認済み`、Historyは10:55の`完了 / 1 outputs / Heavy Chain状態: 完了 / private保存=完了`、Galleryは`46枚の画像`、Jobsは`完了した成果物 20件 / QUEUE SUMMARY 20`をfresh readbackした。rights/terms/attestation/monitor/billing/publication/video UIは0件、dispatch 1、再送0、重複0。正本は`work/heavy-print-design-detail-live-readback-20260929-r1.json`、台帳artifact rowsは11件、未証明画像行は20件へ更新した。
+
+failure/retryとHeavy機能フォーム直接route再開永続化は未取得。Goalはactive、動画・請求・公開・monitor provisioningはnon-goal。
+
+# Heavy Chain fabric-image OpenAI generation and cross-surface readback — 2026-09-29 r755
+
+`fabric-image`をログイン済みCompanionのtask-owned tabで一度だけ実行した。モデル画像と生地画像の2入力をOpenAI `/v1/provider-actions/edit-image`へ送り、request `4cff6788-f86d-429e-b212-91da9630274b`／image `ai-4cff6788-f86d-429e-b212-91da9630274b-0`を取得した。Workers専用のCloudflare model/maskをOpenAIへ渡さず、Providerが返したcanonical `storagePath`を再アップロードせず再利用する修正後に、結果カード、private保存、Gallery、History、Jobs、Canvasを同じ成果物として確認した。
+
+Canvasは`/canvas/a2rxn8ppxyd`へhandoff後、保存で`/canvas/2f35e5c1-2d3e-49b7-bea1-d5c9979b2785`へ遷移し`サーバー確認済み`。Galleryは47枚、Historyはfabric image完了/private保存、Jobsは完了成果物20件をfresh readbackした。rights/terms/attestation/monitor/billing/publication/video UIは0件、最終Provider dispatchは1、再送0、unknown effect 0。正本は`work/heavy-fabric-image-live-readback-20260929-r1.json`、台帳fabric-image行をcross-surface persisted/reusedへ更新した。
+
+同一行の本番deterministic failure/retry/readbackと、Heavyフォームの直接route再読込時の入力/result復元は未完了。表示統一としてHeavy routeの新規Canvas名とHistory/JobsタイトルをHeavy Chainへ正規化する修正を追加し、typecheck、主要66テスト、build、diff checkをPASS。デプロイ`6abb298aad96bf301ede3fa8`は反映中。Goalはactive、動画・請求・公開・monitor provisioningはnon-goal。
+
+# Heavy Chain persisted-label normalization post-deploy readback — 2026-09-29 r756
+
+Heavy専用Jobs/Historyのfresh readbackを、表示ラベル正規化を含む新デプロイ`6abb2c1a498d5ec175a08236`（Docker/RUNNING）で実施した。`/_health`はHTTP 200、`status=ok`、Cloudflare API/Authはtrue。既存の保存データを書き換えず、Heavy runtimeの表示・再開先だけを`Lightchain`から`Heavy Chain`へ変換する修正を反映した。
+
+Companionの同一task-owned sessionで`/jobs`と`/history`をsemantic＋visual readbackし、最新fabric行はJobs/Historyとも`Heavy Chain 生地イメージ`、プロンプトの`HEAVY CHAIN ROUTE`、表示中の`Lightchain 生地イメージ`と`LIGHTCHAIN ROUTE`は0件だった。Heavy header、生成履歴、Jobs、Galleryへの導線を維持し、rights/terms/attestation/monitor/billing/publicationのvisible gateは0件。readback中のProvider dispatchは0、external actionはfalse、task-owned tab close・lease release・foreign mutation・unknown effectは0でcleanup完了。正本は`work/heavy-fabric-image-live-readback-20260929-r1.json`へ追記した。
+
+これで「ログイン後に使える」「Heavy画面でHeavyとして表示される」画像betaの表示境界は確認済み。ただし、全31画像行の個別Provider証跡、同一行のdeterministic failure/retry/readback、Heavy機能フォームの直接route再読込時の入力/result復元は未完了。動画・請求・公開・monitor credential provisioningは引き続きnon-goal。Goalはactive。
+
+# Heavy Chain login-only usability contract simplified — 2026-09-29 r757
+
+ユーザー方針に合わせ、画像betaの利用条件を「認証済みセッションでログインしていること」に一本化した。権利・規約・attestation・monitor token・請求・公開・brand選択は生成開始の条件から外し、旧フィールド/APIは過去receiptとの互換性のためだけに保持する。内部で残すのは、ログインセッション、決定論的personal workspaceの自動解決、入力安全性、owner境界、rate/usage、idempotency/no-replay、private保存のみ。
+
+`src/lib/heavyCapability.ts`の互換判定も文書digestの有無ではなくlogin-first意味へ揃え、旧terms/rights状態がfalseでもHeavy画像submitを止めないようにした。関連15テスト、typecheck、production build、git diff checkをPASS。最終deployment `6abb31b5ad96bf301ede406f`（Docker/RUNNING）へ反映し、`/_health`と`/heavy`、`/heavy/model-custom`、`/heavy/fabric-image`、`/heavy/printing-image`、`/jobs`、`/history`、`/gallery`のHTTP 200をfresh readbackした。Companionはapp-server欠落で起動不能だったため、Browser UseへfallbackせずHTTP readbackだけを実施した。
+
+この簡略化により、ユーザー向けの画像利用開始条件に残るものはログインと各機能固有の入力素材だけ。failure/retryや全31行の個別生成は内部品質改善項目であり、利用開始のブロッカーではない。動画・請求・公開・monitor credential provisioningはnon-goal。Goalはactive。
+
+# Heavy Chain material direct-resume persistence — 2026-09-29 r758
+
+Fabric/Material Workbenchのprovider成果物へ、同じ`sourceJobId`に紐づく入力復元状態を追加した。保存するのはGallery image ID、正規storage path、reference type、モードと設定だけで、期限付きURL・bearer token・data/blob previewは保存しない。`resumeJob`でHeavyのFabric routeを開くと、現行セッションでstorage pathを再署名して入力と結果を復元し、再生成可能な状態を表示する。Printing入力は既存のIndexedDB/remote persistenceを継続利用し、共通metadataにも同じdurable identityを記録する。
+
+`readLightchainMaterialResumeState` / `readLightchainResumeResult`のsame-job・owner-scoped readbackと、期限付きURLを拒否するテストを追加。Material resume、既存resume、provider persistence、Heavy rights/UI/brand分離の関連テスト、typecheck、production build、diff checkをPASS。
+
+Zeaburの同一`heavy-chain` service/environmentへDocker deployment `6abb3570ad96bf301ede40cb`（RUNNING）を反映。`/_health`はHTTP 200、Cloudflare API/Authはtrue。`/heavy`、`/heavy/fabric-image`、`/heavy/printing-image`、`/jobs`、`/history`、`/gallery`は全てHTTP 200かつ`Heavy Chain | AI制作ワークスペース`。デプロイ後のMaterial chunkで`lightchainMaterialState`、resume readback UI、期限付きURLを使わない実装が現行配信物に存在することを確認した。
+
+Companionはこのturnも`failed to start codex app-server: No such file or directory`で起動できず、Browser Useへの暗黙fallbackはしていない。したがって、直接routeの目視・同一Companion sessionでの実生成は未証明のまま。全31画像行のstrict statusは`unproven`を維持し、failure/retryの同一行証跡も未取得。動画・請求・公開・monitor credential provisioningはnon-goal。Goalはactive。
+
+# Heavy Chain login-only workspace bootstrap — 2026-09-29 r759
+
+Heavyの「ログインしたら使える」を実装上も成立させるため、認証済みユーザーにcurrent brandがまだ無い場合、Heavyルートだけが`ensureHeavyWorkspace()`をsingle-flightで呼び、`Heavy Chain Workspace`という個人保存スコープを自動準備するようにした。Lightchainのブランド選択・プラン判定は変更していない。Material Workbench、統合Workbench、Generate、Fittingの生成・保存導線を同じ解決経路へ統一し、ユーザーにブランド作成・選択を要求しない。
+
+権利・規約・attestation・monitor・請求・公開を生成条件に戻していない。維持するのはログインセッション、所有者境界、rate/usage、idempotency/no-replay、private persistenceだけ。生成入力など各機能固有の素材要件は残す。
+
+検証: `npm run typecheck` PASS、`npm run build` PASS、Heavy rights/UI removal・brand separation・acceptance ledger・material resume・provider persistence 32 tests PASS、`git diff --check` PASS。Zeabur deployment `6abb3ad6b57ea4921d62b7be`（Docker/RUNNING）を反映し、`/_health` HTTP 200、Cloudflare API/Auth true、`/heavy/fabric-image` HTMLと配信JSの`Heavy Chain Workspace`/`ensureHeavyWorkspace`をfresh readbackした。Companionの一度だけのupload readbackは`upload_file_readback_failed`のままなので再送していない。
+
+Goalはactive。strict acceptance ledgerは引き続き全31行`unproven`（実Providerの個別生成＋failure/retry証跡が未完了）であり、これは今回の「ログイン後に使える」条件とは分離した内部品質課題。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+# Heavy Chain all-screen route parity and Heavy-only branding — 2026-09-29 r760
+
+Heavyの全画面導線でLightchain namespaceへ戻る箇所と、`/heavy/model`が汎用作業台へ落ちる不一致を修正した。`toHeavyWorkspacePath`、Heavy tool alias、共通handoff、tool card/quick-start/detail tabのhrefを統一し、Heavy実行時の表示ブランドをHeavy Chainへ固定した。HeavyのDesign Production project cardでは内部feature typeを表示せず、Light型のカード情報とHeavyブランド表示を分離した。
+
+検証: route alias、全画面parity、workspace routing、Lightchain alias routes 13/13、permission parity 12/12、git diff check PASS。production build PASS。Zeabur deployment `6abbb826ad96bf301ede4fb2`（Docker/RUNNING）を反映した。Companion fresh readbackで`/heavy/model`は`AIフィッティング`画面、`/heavy/fabric-image`は生地イメージ入力・AI生成・生成履歴・Gallery/Canvas/History/Jobs導線、`/heavy/printing-image`はプリントイメージ入力・履歴・同一成果物導線を確認。いずれもHeavy URL/Heavy headerで、権利・規約・attestation・monitor・プラン・請求の追加表示は0件。readback中のProvider dispatchは0、外部作用は0、unknown effectは0。
+
+現時点の位置付けは「Heavyの主要画像画面はLight型のUI/UXとHeavyブランドのURL/表示へ統一され、ログイン後に画像betaへ進める」。残りは全31画像行の個別Provider生成証跡、同一行のdeterministic failure/retry、全機能フォームの直接route再読込・再利用の厳密証跡。動画・請求・公開・monitor credential provisioningはnon-goal。Goalはactive。
+
+# Heavy Chain parity verification refresh — 2026-09-29 r761
+
+配信後の最終検証として`npm run typecheck`、provider coverage 22/22、material contract 29/29、既存のroute/parity/permission検証、`git diff --check`を再実行し、全てPASS。Provider生成は再実行せず、今回の確認はルート・画面・導線のreadbackに限定した。Goalはactive。
+
+# Heavy Chain svg-convert and ai-fitting live readback — 2026-09-29 r762
+
+未証明だった画像機能のうち、`svg-convert`と`ai-fitting`を同一の認証済みHeavy Chain Companion sessionで1回ずつ実行した。`svg-convert`はOpenAI edit-image成果物`ai-f82fde9b-e8a5-4704-ba50-fc44b6ff79af-0`をGallery 20枚、History timeline 20 / 保存済み12、Jobs 20件、Canvas `/canvas/78bcea8d-aa0a-4e34-b08a-2ab11106d603`へ同一storage pathで反映し、Canvas reload後`contentMatch=true`・差分なしを確認した。`ai-fitting`は衣服`heavy-chain-print-cutout-c3d1b07.png`とモデル参照`beige_crop_top_model.png`からOpenAI model-matrix成果物`ai-c04d7d5a-1efd-4b42-a59a-3a87238bec83-0`を1回生成。Gallery 21枚、Historyの最新`AIフィッティング / 1 outputs / private保存=完了`、Jobsの最新完了行、Canvas `/canvas/7f25f65a-f0d0-4a35-b5e2-3736a7adf0b0`を同一IDで確認した。AI-fitting Canvasは初回保存が失敗・再試行表示になったが、同一document IDを再利用してサーバー確認済み、revision 0、`contentMatch=true`、差分なしへ回復し、重複生成は0。正本は`work/heavy-svg-convert-live-readback-20260929-r1.json`と`work/heavy-ai-fitting-live-readback-20260929-r1.json`、台帳へ反映済み。
+
+これで未実行の画像行は`printing-image`、`custom-style`、`ai-fitting-reference`の3行。全31行のstrict statusは、same-row deterministic provider failure/retry/readbackと独立Provider/D1/private-R2 identity promotionが未完了のため`unproven`を維持する。動画・請求・公開・monitor credential provisioningはnon-goal。Goalはactive。
+
+# Heavy Chain reference-tab parity and final image-surface sweep — 2026-09-29 r763
+
+`/heavy/model?tab=参考図`が初期状態で参考画像タブを選択しない差分を修正し、`/heavy/ai-fitting-reference`互換ルートも同じ参考画像画面へ統一した。修正版deployment `6abbc54424978d70ffde1797`（Docker/RUNNING）後のCompanion fresh readbackで、両URLとも`参考画像` selected、モデル画像・ポーズ・背景入力、AI生成・生成履歴を確認した。
+
+そのまま参考画像モードで衣服`heavy-chain-print-cutout-c3d1b07.png`＋モデル`beige_crop_top_model.png`をOpenAI model-matrixへ1回dispatchし、成果物`ai-51ea1536-491b-4956-a581-341daa84e275-0`をGallery 22枚、History最新完了/private保存、Jobs最新完了、Canvas `/canvas/89e8d144-9c1d-4b2a-b0fd-e255dca6f003`へ同一storage pathで反映した。Canvasは初期失敗表示から同一IDの再試行でサーバー確認済み、revision 0、`contentMatch=true`、差分なしへ収束。正本は`work/heavy-ai-fitting-reference-live-readback-20260929-r1.json`。
+
+`custom-style`は`/heavy/custom-style`をfresh readbackし、カスタムスタイル／ラーニング素材／パーソナル・チームスペース／既存ライブラリの全UIを確認した。Provider生成ボタンが存在しない学習素材ライブラリ画面なので、画像生成行のstrict Provider証跡ではなくUI/UX parity証跡として記録した（`work/heavy-custom-style-ui-readback-20260929-r1.json`）。これで未実行の画像生成機能は0件。全31行のstrict statusは`unproven`を維持するが、残りは同一行のdeterministic failure/retry/readbackと独立Provider/D1/private-R2昇格、全viewport pixel差分であり、ログイン後の画像beta利用ブロッカーではない。動画・請求・公開・monitor credential provisioningはnon-goal。Goalはactive。
+
+# Heavy Chain printing-image provider and all-surface readback — 2026-09-29 r764
+
+残っていた生成面`/heavy/printing-image`を、認証済みCompanion tabで一度だけ実行した。参考画像1件へプリント画像`heavy-chain-print-cutout-c3d1b07.png`を追加し、OpenAI `/v1/provider-actions/edit-image`を1回dispatch。成果物`ai-bcba2a59-5562-4c9d-bb9c-81a7c5fa1974-0`、storage `generated-images/ai-bcba2a59-5562-4c9d-bb9c-81a7c5fa1974-0`をGallery 21枚、Historyの`Heavy Chain プリントイメージ`完了/private保存、Jobsの完了行へ同一成果物としてreadbackした。権利・規約・attestation・monitor・billing・publicationのvisible gateは0件、dispatch 1、再送0。
+
+結果カードからCanvasへ保存し、最初の軽量route`/canvas/urn3ukzhh6p`からdurable document `907b372d-9b5d-4870-8256-a73debc829d8`へ昇格。保存後と再読込後とも`キャンバス · サーバー確認済み`、Heavy Chain Workspace、canvas 1件、OpenAI backend identity flags、generation state completedを確認した。正本は`work/heavy-printing-image-live-readback-20260929-r1.json`。これで全ての画像生成面は少なくとも1回の実Provider生成とGallery/History/Jobs/Canvas横断証跡を持つ。`custom-style`は引き続き非生成の学習素材ライブラリ面。
+
+strict台帳は全31行`unproven`を維持する。残りは同一行のdeterministic failure/retry/readback、Provider/D1/private-R2独立identity promotion、全viewport pixel差分であり、ログイン後の画像beta利用ブロッカーではない。動画・請求・公開・monitor credential provisioningはnon-goal。Goalはactive。
+
+# Heavy Chain invalid print-source retry guard — 2026-09-29 r767
+
+Heavyのプリント入力で、読み込み不能・安全なBlob化失敗・20MB超過・SVGなど「Providerへ渡しても確実に失敗する入力」を元画像フォールバックで通さず、`透明化失敗`のretryable stateへ変更した。背景除去品質だけの失敗は引き続き元画像を保持するため、ログイン後の通常生成導線は壊していない。`verify-lightchain-material-contract.test.ts` 27/27、typecheck、build、diff check PASS。Zeabur deployment `6abbce2524978d70ffde19a4`（Docker/RUNNING）、health `status=ok` / Cloudflare API/Auth=trueを確認。正本台帳へguardを記録した。Goalはactive。
+
+# Heavy Chain home visual parity readback — 2026-09-30 r768
+
+Light本家`https://jp.linkaigc.com/`とHeavy`https://heavy-chain.zeabur.app/heavy`を同一Companion viewport `[1424,632]`でfresh readbackした。ホーム6カードすべての矩形（x/y/width/height）、タイトル・説明のfont-size、line-height、色が一致し、Lightの3列／2xl 4列 breakpoint、カード122px高、132×88画像、p-4/gap-4をHeavyへ反映した。ブランド表示だけHeavy Chainへ置換し、内部互換routeは維持。正本は`work/heavy-light-home-visual-readback-20260930-r1.json`。deployment `6abbd27224978d70ffde1a90`（RUNNING）、health `status=ok` / Cloudflare API/Auth=true。これはホーム1画面の視覚証跡であり、全画面完了の証明ではない。Goalはactive。
+
+# Heavy Chain route-contract repair and production deployment — 2026-09-29 r765
+
+全画面の契約テストを再実行した際、Light正本の`/model`判定文字列とHeavy別名`/heavy/model`を同じbooleanへまとめたことで、契約テスト1件が構造的に失敗していた。`LightchainWorkbenchPage`を`isModelRoute`（Light canonical）と`isHeavyModelRoute`（Heavy alias）へ分離し、実際のworkspace挙動は`isModelWorkspaceRoute`で維持した。typecheck、production build、git diff check、全画面・route・material・permission・providerの79件＋provider persistence30件＋ledger3件が全てPASS。
+
+Zeabur deployment `6abbcb4458d9ca410d885984`（Docker/RUNNING）へ反映し、`/_health`は`status=ok`、Cloudflare API/Auth=true、Heavy served routeは200である。正本台帳の`latestDeployedDeployment`も更新した。Goalはactive。
+
+# Heavy Chain persistence and failure-contract regression refresh — 2026-09-29 r766
+
+追加の回帰確認として、`npm run test:canvas-generation-readback --silent`（10/10）と`cloudflare/heavy-api`の`npm run test:image-runtime --silent`（1/1）を実行し、Canvas配置待ち・storage path復元・同一Gallery imageのCanvas handoff idempotency、Provider例外時のunknown記録・再送防止・R2/D1再調整・Worker restart recoveryを確認した。後者はsynthetic decodable PNG fixtureであり、実Provider障害の本番証明ではないため、strict台帳の同一行failure/retry statusは`unproven`のまま維持する。Goalはactive。
+
+# Heavy Chain marketing-detail production cross-surface readback — 2026-09-30 r792
+
+本番Companionの認証済みHeavy `/marketing/detail`で、同じbrief-only入力をOpenAI `/v1/provider-actions/generate-image`へ1回だけdispatchした。resource timingは22,750ms、生成結果UIの`マーケティング詳細プレビュー`と`AI生成結果を履歴に追加しました`を確認し、rights／terms／attestation／monitor／brand picker／billing／publicationの追加ゲートは0件だった。結果カードを保存し、Canvas保存で`サーバー確認済み`、Canvas再読込後に5秒待って同一server-saved canvasへ復元した。
+
+同一生成物の横断readbackはGallery`24枚の画像`、History`保存済み12件 / TIMELINE 20`（matching promptとprivate保存完了）、Jobs`完了した成果物20件 / QUEUE SUMMARY 20`（matching feature）まで確認した。Provider再送0、成功後のreplay 0、unknown effect 0、foreign tab mutation 0。正本は`work/heavy-marketing-detail-production-evidence-20260930-r2.json`。
+
+この1行については実Provider生成、結果表示、private保存、Canvas保存、reload/reuse、Gallery/History/Jobs引き渡しが本番証明済み。ただし全31非動画行の同等証跡、同一行のdeterministic failure→retry→readback、Light認証済み基準との全viewport pixel/semantic比較は未完了。reload直後に一時的な`WORKSPACE準備中`が出るため、Lightと同じ体験にする改善候補として残す。Goalはactive。
+
+# Heavy Chain current build and parity-contract refresh — 2026-09-30 r793
+
+現行worktreeを再検証し、`npm run typecheck`、`npm run build`（Vite 2,570 modules）、Heavy all-screen parity、brand separation、rights/terms UI removal、image acceptance ledger、workspace routing、route aliasesを実行した。全てPASS（node test 19件、route alias 2/2、workspace routing 18/18）。`git diff --check`もPASS。
+
+これは配信物の静的・契約整合性を確認する証跡であり、本番のLight認証済み同時比較や各機能のfailure→retry証跡を代替しない。Goalはactive。
+
+# Heavy Chain current Light comparison readback — 2026-09-30 r794
+
+task-owned Companion tabsでHeavy `/heavy`と本家Light `/`を同時に開き、fresh accessibility readbackを取得した。Heavyは初回に`WORKSPACE準備中`を表示したが、次のreadで`HEAVY CHAIN`、共通4カテゴリ、共通6事例カテゴリ、検索、プロンプト入力、Heavy URLを表示した。Lightも同じ4カテゴリ、6事例カテゴリ、検索、入力を表示した。Heavyの追加保存事例によるノード差を除き、共有ラベル・操作構造は一致し、Heavy側のrights／terms／attestation／monitor／brand picker／billing／publication文言は0件だった。
+
+正本は`work/heavy-light-home-accessibility-readback-20260930-r2.json`。これは同一時点の公開Light baselineとのsemantic比較であり、認証済みLightの完全なpixel parityを証明しない。残りは初回`WORKSPACE準備中`の短縮または除去、認証済みLightとの全画面pixel比較、全機能のfailure→retry本番証跡。Goalはactive。
+
+# Heavy Chain major-route first-paint sweep — 2026-09-30 r795
+
+Heavyの主要10ルートをtask-owned Companionで順に開き、初回readbackを取得した。全ルートがブラウザ応答を返し、route固有の準備中表示だけが出ており、rights／terms／attestation／monitor／brand picker／billing／publication文言は0件、Lightブランド漏れも0件、Provider dispatchも0件だった。これは各画面の最終内容を証明するものではなく、初回loading状態とゲート混入がないことの監査である。
+
+正本は`work/heavy-major-route-firstpaint-sweep-20260930-r1.json`。routeごとの最終semantic/pixel readbackと、初回準備表示をLightと同じ体験へ短縮・除去する作業は残る。Goalはactive。
+
+# 2026-09-30 r796 — Heavy persisted-display normalization deployed
+
+保存済みの互換プロンプトがHeavy Galleryカードのアクセシビリティラベルだけに`LIGHTCHAIN ROUTE`として残る経路を修正した。Heavy runtimeの表示境界でGalleryカード、print-result note、History/Jobs/Dashboard/Retryへ渡るsource-summaryのlabel/valueを`Heavy Chain`へ正規化し、保存レコード自体は変更していない。正本は`work/heavy-heavy-brand-display-normalization-production-readback-20260930-r1.json`。
+
+Zeabur deployment `6abbf3b6c997a72fa174512f`（Docker/RUNNING）を反映し、`/_health`は`status=ok`、Cloudflare API/Authはtrue。Companionで本番`/gallery`、`/history`、`/jobs`をfresh reload＋eventual readbackし、Heavy header、Heavy route prompt、Gallery 24枚、History timeline 20、Jobs queue 20、Lightブランド漏れ0件を確認した。typecheck、production build、重点33/33テスト、`git diff --check`はPASS。Goalはactive。
+
+残りは認証済みLightの完全viewport pixel baseline、strict台帳の同一行failure→retry→readbackとProvider/D1/private-R2独立identity昇格。動画・請求・公開・monitor credential provisioningはnon-goal。
+
+# 2026-09-30 r797 — All 31 non-video Heavy routes eventual audit
+
+Heavy hostのtask-owned Companion tabで、非動画31機能（`marketing-home`から`custom-style`まで）を順次開き、安定後のAX readbackを全件取得した。全31件がHeavy surfaceとして解決し、Lightブランド漏れ0、rights／terms／attestation／monitor／brand picker／billing／publicationの追加ゲート0、404／画面エラー0、visible loading fallback 0だった。正本は`work/heavy-all-31-route-eventual-ax-audit-20260930-r1.json`。
+
+これは全ルートの存在・Heavy表示・追加ゲート不在の証拠であり、認証済みLightとの完全viewport pixel一致、各ルートのProvider生成成功、同一行の永続化／再利用／failure→retryを完了扱いにはしない。Goalはactive。
+
+# 2026-09-30 r798 — Launcher copy aligned with canonical Light
+
+Light本家との目視比較で発見したおすすめカード1枚目の見出し差分を修正した。Heavy側の`デザインエージェント`カードを、本家と同じ`インスピレーションワークスペース`へ戻し、Heavyのロゴ・ドメインだけをHeavyとして維持した。正本は`work/heavy-light-launcher-copy-alignment-production-readback-20260930-r1.json`。
+
+Zeabur deployment `6abbf6b99fbfb7e8841710a0`がRUNNING、healthはok。Companionで本番`/heavy`をfresh reloadし、初回準備表示後の安定AXとスクリーンショットで期待文言あり／旧文言なし／Lightブランド漏れ0を確認した。focused tests 10/10、typecheck、production build、diff check PASS。Goalはactive。
+
+残りは初回`WORKSPACE準備中`の短縮または除去、認証済みLightとの完全viewport pixel baseline、全機能のProvider生成・同一行persistence/reuse/failure→retry証跡。
+
+# 2026-09-30 r799 — Heavy first-paint launcher parity deployed
+
+Heavyの認証待ち初回表示が`showHeader=false`でも本家Lightと同じコンパクトなランチャー枠を使うようにした。Heavy runtimeではLight-shaped header、Heavyロゴ、言語、ヘルプを先に出し、認証・匿名リダイレクト・ログイン後の追加ゲート判定は変更していない。初回は`data-heavy-loading-shell=compact-light-shaped`、安定後は認証済みHeavy Chain AIとGallery/History/Jobs/Canvas導線を確認した。
+
+正本は`work/heavy-loading-shell-production-readback-20260930-r1.json`。Zeabur deployment `6abc087b9fbfb7e884171290`（Docker/RUNNING）、health `status=ok` / Cloudflare API/Auth=true。Companion fresh reloadで初回のHeavy header＋`ワークスペースを準備しています`、後続readで認証済みHeavy header/avatar、追加権利・規約・attestation・monitor・brand picker・billing・publicationゲート0、Lightブランド漏れ0、Provider dispatch0を確認。focused tests 15/15、typecheck、build、diff check PASS。
+
+残りは初回準備メッセージ自体の短縮・除去、認証済みLightとの完全viewport pixel baseline、全機能のProvider生成・同一行persistence/reuse/failure→retry証跡。Goalはactive。
+
+# 2026-09-30 r800 — Latest Heavy generation and Canvas recovery readback
+
+最新deployment `6abc087b9fbfb7e884171290`で、認証済みCompanionから`marketing-detail`を1回だけ実行した。`AI生成を実行中です。`→`マーケティング詳細AI生成`の結果を確認し、画像`ai-b972dec1-f25f-480a-bad6-e57f5060a1f7-0` / `generated-images/ai-b972dec1-f25f-480a-bad6-e57f5060a1f7-0`をGallery 25枚、Historyの最新1 output（AI処理=完了／private保存=完了）、Jobsの最新完了1 outputへ同一IDでreadbackした。保存先Canvasは最初に競合を表示したが、同一IDの最新readback後に明示Saveを再試行し、`サーバー確認済み`、revision 0、`contentMatch=true`、差分なしを確認。Canvas reloadでも同じ成果物と保存状態を再利用した。
+
+正本は`work/heavy-marketing-detail-production-evidence-20260930-r3.json`。rights／terms／attestation／monitor／brand picker／billing／publicationの追加ゲート0、Lightブランド漏れ0、重複送信0。今回のreadbackはUI＋サーバー横断状態を証明し、raw Provider/D1/private-R2 receiptのstrict promotionと同一行failure→retryはまだ完了扱いにしない。Goalはactive。
+
+# 2026-09-30 r801 — Acceptance ledger pointer and final verification refresh
+
+厳格台帳の`implementationEvidence.latestDeployedDeployment`を最新の`6abc087b9fbfb7e884171290`へ更新し、`marketing-detail`の最新本番readback `work/heavy-marketing-detail-production-evidence-20260930-r3.json`を参照へ追加した。行のstatusは`unproven`を維持し、raw Provider/D1/private-R2の同一run receipt昇格と同一行failure→retryを完了扱いにはしていない。Heavy all-screen/brand/rights/ledger/route/workspace focused tests 21/21、JSON parse、`git diff --check`がPASS。Healthは`status=ok`、Cloudflare API/Auth=true。Goalはactive。
+
+# 2026-09-30 r802 — Marketing aliases repaired against authenticated Light
+
+認証済み本家LightとHeavyを同一1424x632 viewportで比較し、Heavy marketing aliasが汎用Workbenchに着地する差分を確認。`/heavy/marketing`と`/heavy/marketing-home`を専用MarketingHomePageへ接続した。Deployment `6abc1fbfc997a72fa174564b` RUNNING、health ok、本番Companion readbackで専用画面・保存済みproject・新規ファイル・参考事例・空欄送信disabledを確認。typecheck/build、focused tests10/10、diff check PASS。正本 `work/heavy-marketing-authenticated-parity-diff-20260930-r802.json`。入力欄高さ、scene icon、tutorial文言/配置と全画面比較は残る。Provider生成0、owner cleanup完了。Goal active。
+# 2026-09-30 r803/r804 progress
+
+Marketing aliases now use the dedicated page. Astra low and Sol medium presentation alignment reached exact production textarea and send-control geometry at authenticated Light baseline 1424x632: textarea x374/y254/w792/h80, send x1132/y380/w40/h40, blank send disabled. Scene y474/h40 and widths matched closely; visual label wrapping triggered a bounded Astra correction (px4/nowrap) before acceptance. r803 deployed RUNNING `6abc2257c997a72fa1745678`; r804 correction `6abc23b4c997a72fa174568b` is RUNNING with production visual readback confirming all six labels single-line and unchanged dimensions. Generation/auth/persistence handlers unchanged. Goal remains active; exact icons, tutorial placement/progression, gradient/reference presentation, other canonical/alias screens and feature behavior still require work.
+
+# 2026-09-30 r805 progress
+
+## r806 continuation
+
+## r807 production recovery
+
+Studio quota source repair passed13tests/build2571modules6.79s,deployed6abc2cffc997a72fa174572c RUNNING. Authenticated Companion visual+semantic verifiedstudioinitialrendering/existingprojects withnoquotaerror andnouserdataerase. Pininteraction/reload remainsunproven; newfilecardvisual andbrokenprojectthumbnail remain. Goalactive; allscreen/provider/persistenceacceptancenotcomplete. Evidencework/heavy-studio-quota-r807.json.
+
+Production follow-up: RUNNING/healthok. Model/lab/printing canonical surfaces verified by authenticated visual+semantic Companion. Studio reaches canonical but fails localStorage pin quota; acceptance incomplete. Nextfixstudio storagewithoutuserdataerase, thenremainingaliases/allvisual/provideracceptance. Goalactive,Provider0,cleanupcomplete. Artifact heavy-canonical-alias-routing-r806.json.
+
+Deploymentfollow-up: CLI78238 exit0; new `6abc29cb9fbfb7e884171515` Docker BUILDING. Nextactionfreshstatusofthisdeployment, noredeploy; thenproductionaliasreadback.
+
+16 audited canonical-screen alias mismatches plus studio synonym repaired in source via Astra-approved Sol implementation. Root focused tests24/24 anddiffcheckpassed; build2570modules8.05sexit0/bundleconfirmed. ExactHeavy deployment command in flight under CLI session78238; no replay. Production readback stillpending. KeepfullGoalactive; nextresume sameprocess thennewdeployment/RUNNING andauthenticatedaliasreadback. Evidence `work/heavy-canonical-alias-routing-r806.json`. Generation0; fullvisual/provider/persistence/retryacceptance notclaimed.
+
+Design-production alias no longer opens Marketing. Astra low approved exact dedicated-route integration, deployed RUNNING `6abc260dc997a72fa17456c3`. Authenticated Companion production visual/semantic readback confirmed correct design page, query preservation, five creation cards, stored projects, no additional gates. Four creation control rectangles exactly match the Light baseline. Build and focused route tests passed; Provider generation zero; task-owned cleanup complete. Goal active. Next: audit remaining generic aliases against canonical dedicated screens and correct design visual residuals (gradient, selected-tab color, typography, project hover menu), then continue all-screen image workflow acceptance. Evidence: `work/heavy-design-alias-r805.json` and Light studio/model baselines `work/light-dedicated-screen-baselines-r805.json`.

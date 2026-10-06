@@ -20,6 +20,9 @@ for (const [input, expected] of cases) {
 }
 
 const recoveryCases = [
+  ['image_outcome_unknown', 'image-reconciliation'],
+  ['生成結果を確認できません。依頼 6422c795-febf-4672-982d-e0f31a21d0bf を保持しました。再操作時は同じ依頼を照合します。', 'image-reconciliation'],
+  ['生成依頼は処理中です。再推論せず、後で同じ依頼を照合してください。', 'image-reconciliation'],
   ['image_provider_quota_exhausted', 'provider-quota'],
   ['openai_image_edit_failed: insufficient_quota', 'openai-quota'],
   ['gemini_image_request_failed: free_tier quota', 'gemini-quota'],

@@ -320,6 +320,7 @@ export function PartialEditModal({ isOpen, onClose, imageUrl, onSubmit,providerN
           <div className="mt-4">
             <Textarea
               data-testid="partial-edit-prompt"
+              className="text-neutral-900 placeholder:text-neutral-500 dark:text-white dark:placeholder:text-neutral-400"
               label="部分編集プロンプト"
               placeholder="例: ベージュTシャツを深いネイビーに変更し、人物と背景はそのまま"
               value={prompt}

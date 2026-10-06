@@ -12,6 +12,7 @@ import {
   type AuthBrandSelectionState,
 } from '../lib/authBrandSelection';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { isHeavyWorkspaceBrandName } from '../lib/heavyWorkspace';
 
 interface AuthState {
   user: User | null;
@@ -35,6 +36,8 @@ interface AuthState {
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<DbUser>) => Promise<void>;
   refreshCurrentBrand: () => Promise<Brand | null>;
+  /** Resolve the private Heavy workspace without presenting a brand picker. */
+  ensureHeavyWorkspace: () => Promise<Brand | null>;
   clearAuthRecoveryRequired: () => void;
   setCurrentBrand: (brand: Brand | null) => void;
 }
@@ -73,6 +76,10 @@ const AUTH_SESSION_TIMEOUT_MS = 32_000;
 const AUTH_OPERATION_TIMEOUT_MS = 32_000;
 const AUTH_PROFILE_TIMEOUT_MS = 32_000;
 const AUTH_EMPTY_SESSION_RETRY_DELAY_MS = 250;
+// Heavy image routes may mount several shared workbenches at once. Keep the
+// first-login workspace bootstrap single-flight so a slow brand read cannot
+// create duplicate personal workspaces from concurrent effects.
+const heavyWorkspaceRequests = new Map<string, Promise<Brand | null>>();
 let authStateListenerRegistered = false;
 // getSession() emits SIGNED_IN from the browser adapter. initialize() admits
 // that same session explicitly, so suppress the notification in this narrow
@@ -81,6 +88,8 @@ let authInitializationInFlight = false;
 let activeInitializeToken = 0;
 let activeAdmitUser: ((user: User) => Promise<void>) | null = null;
 let activeInvalidateAdmission: (() => void) | null = null;
+
+const isHeavyWorkspaceBrand = (brand: Brand): boolean => isHeavyWorkspaceBrandName(brand.name);
 
 async function withAuthTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -461,6 +470,60 @@ export const useAuthStore = create<AuthState>((set, get) => {
       return null;
     }
     return refreshBrandAuthority(user.id);
+  },
+
+  ensureHeavyWorkspace: async () => {
+    const { user } = get();
+    if (!user) return null;
+    const existing = heavyWorkspaceRequests.get(user.id);
+    if (existing) return existing;
+
+    const request = (async (): Promise<Brand | null> => {
+      await get().refreshCurrentBrand();
+      const stateAfterRefresh = get();
+      const existingHeavy = stateAfterRefresh.accessibleBrands.find(isHeavyWorkspaceBrand) ?? null;
+      if (existingHeavy?.id) {
+        // Heavy and Light are separate visible products.  Never let a
+        // previously selected Light brand become Heavy's implicit workspace.
+        set({ currentBrand: existingHeavy });
+        return existingHeavy;
+      }
+      // A transient auth/API failure must never be interpreted as a usable
+      // workspace. Bootstrap only after the authoritative list read has
+      // completed successfully (empty or non-empty) and no Heavy workspace
+      // was found.
+      if (stateAfterRefresh.user?.id !== user.id
+        || !['success_empty', 'success_nonempty'].includes(stateAfterRefresh.brandState.status)) {
+        return null;
+      }
+      if (!cloudflareDataPlane) return null;
+
+      let created: Brand;
+      try {
+        created = await cloudflareDataPlane.createBrand({
+          name: 'Heavy Chain Workspace',
+          brand_colors: { primary: '#101820', secondary: '#7dd3fc' },
+          tone_description: 'Private workspace for Heavy Chain image generation',
+          target_audience: null,
+        });
+      } catch (error) {
+        logAuthError('Failed to bootstrap Heavy workspace:', error);
+        return null;
+      }
+      if (get().user?.id !== user.id) return null;
+      await get().refreshCurrentBrand();
+      const latest = get();
+      const resolvedHeavy = latest.accessibleBrands.find((brand) => brand.id === created?.id)
+        ?? latest.accessibleBrands.find(isHeavyWorkspaceBrand)
+        ?? null;
+      if (!resolvedHeavy?.id || !canSelectConfirmedBrand(latest.brandState, user.id, resolvedHeavy.id)) return null;
+      set({ currentBrand: resolvedHeavy });
+      return resolvedHeavy;
+    })().finally(() => {
+      heavyWorkspaceRequests.delete(user.id);
+    });
+    heavyWorkspaceRequests.set(user.id, request);
+    return request;
   },
 
   clearAuthRecoveryRequired: () => {

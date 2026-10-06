@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
 import { ChevronDown, Globe2, HelpCircle } from 'lucide-react';
-import { LightchainLogo } from '../LightchainLogo';
+import { HeavyChainLogo } from '../icons';
 
 export function Header() {
-  // LIGHTCHAIN public/auth fallback header; LightchainLogo is the source-shaped mark.
+  // Heavy Chain public/auth header. Functional parity does not imply Lightchain branding.
   return (
     <header className="w-full border-b border-white/10 bg-[#05090b]/90 backdrop-blur-xl">
       <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" aria-label="Lightchain AI" className="flex items-center text-white">
-          <LightchainLogo />
+        <Link to="/" aria-label="Heavy Chain" className="flex items-center text-white">
+          <HeavyChainLogo height={24} showText className="shrink-0" />
         </Link>
 
         <div className="flex items-center gap-1 text-sm text-neutral-300 sm:gap-2">

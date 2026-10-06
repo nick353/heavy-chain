@@ -481,9 +481,12 @@ const lightchainLauncherFeatureIdsByCategory: Record<LightchainCategoryId, reado
 };
 
 const lightchainLauncherTitleOverrides: Record<string, string> = {
-  'design-agent': 'インサイト意思決定ワークベンチ',
+  // Keep the launcher title identical to the canonical Light surface. Heavy
+  // owns the logo/domain only; feature copy is not rebranded unless it is a
+  // Light Chain product-name reference.
+  'design-agent': 'インスピレーションワークスペース',
   'inspiration-design': 'インスピレーション',
-  'heavychain-lab': 'Lightchain Lab',
+  'heavychain-lab': 'Heavy Chain Lab',
   'pattern-vector-pro': 'パターンをベクター画像に変換（プロフェッショナル版）',
   'print-design': 'プリントデザイン',
   'remove-background': '画像修正',

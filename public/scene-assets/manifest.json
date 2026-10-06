@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "acquiredAt": "2026-09-30T05:07:39.483Z",
+  "assets": [
+    {
+      "name": "fabric1.jpg",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/fabric1.jpg",
+      "bytes": 528263,
+      "contentType": "image/jpeg",
+      "sha256": "cfe1123acffcfcdfa06e7ea87faaddb4c91da767fc333f80f271f9e969d3fa2f"
+    },
+    {
+      "name": "fabric2.jpg",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/fabric2.jpg",
+      "bytes": 1329351,
+      "contentType": "image/jpeg",
+      "sha256": "98830425bcb43ef9ba4b1f101f71882903187088619dc4f0a218e1eb17078eb5"
+    },
+    {
+      "name": "fabric3.jpg",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/fabric3.jpg",
+      "bytes": 1024306,
+      "contentType": "image/jpeg",
+      "sha256": "aacc74d62ae4d1c21b34ade725858188a015124019d84b7ef91030013e96f2f3"
+    },
+    {
+      "name": "fabric4.jpg",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/fabric4.jpg",
+      "bytes": 985927,
+      "contentType": "image/jpeg",
+      "sha256": "60b9ad31a02847378bdf021f4b7624ef617dd2ca817e2a08d9e6021340e80015"
+    },
+    {
+      "name": "fabric5.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/fabric5.png",
+      "bytes": 3354997,
+      "contentType": "image/png",
+      "sha256": "f9c90d46b0121e50871c9f8e6d6a11dfea882e12859dba481be17623b996bcd0"
+    },
+    {
+      "name": "draft1.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/draft1.png",
+      "bytes": 3390120,
+      "contentType": "image/png",
+      "sha256": "4db532042f5b8f5b591a8481a07d8a763cc4aae48121f9fe9c1661e18ae8e90e"
+    },
+    {
+      "name": "multi1.jpg",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/multi1.jpg",
+      "bytes": 542853,
+      "contentType": "image/jpeg",
+      "sha256": "8047451cc1c1f35cba908313248b7fa9737216a9c258f6276195aa2b0524d844"
+    },
+    {
+      "name": "multi2.jpg",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/multi2.jpg",
+      "bytes": 445295,
+      "contentType": "image/jpeg",
+      "sha256": "e2574928f027ffb00281469f63ce1cddb3a65ccd1d8e91746bea1b3352eeaa8a"
+    },
+    {
+      "name": "print1.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/print1.png",
+      "bytes": 109780,
+      "contentType": "image/png",
+      "sha256": "335e22e5612ce6bdd71a5443ec5b4afa154bc159bcc87d86bc39b861ca608976"
+    },
+    {
+      "name": "print2.jpg",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/print2.jpg",
+      "bytes": 66652,
+      "contentType": "image/jpeg",
+      "sha256": "53b9df306f3e465360c10e5cfed8a335d3f347fbeca77670b4bd75418370311d"
+    },
+    {
+      "name": "fabric.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/fabric.png",
+      "bytes": 299305,
+      "contentType": "image/png",
+      "sha256": "bb65806313d548e165c347986d0fa7e268fae4a8ba3d29f127b36f9b12822d40"
+    },
+    {
+      "name": "draft.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/draft.png",
+      "bytes": 225337,
+      "contentType": "image/png",
+      "sha256": "944b695c244b968d640c78060a42b8455860c871d05ef2a5e05f8d62eca9c18f"
+    },
+    {
+      "name": "multi.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/multi.png",
+      "bytes": 239918,
+      "contentType": "image/png",
+      "sha256": "94d29f36c17a9cd64a9dc944bfa0c29a7176af69cf58635752d650eb122e240b"
+    },
+    {
+      "name": "print.png",
+      "source": "https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/design/ja/print.png",
+      "bytes": 390412,
+      "contentType": "image/png",
+      "sha256": "3f4b89bbef2977d81930990367a2beb14955ff738be2783411f63b54c8cd4f82"
+    },
+    {
+      "name": "upload-placeholder.png",
+      "source": "https://jp.linkaigc.com/marketing/upload-placeholder.png",
+      "bytes": 53248,
+      "contentType": "image/png",
+      "sha256": "fe589da76048c07edd4140254d06e5746a8b8786162d49136ee6d680ccb72426"
+    }
+  ]
+}

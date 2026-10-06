@@ -682,8 +682,8 @@ test("retired arbitrary provider proxy cannot forward user credentials", async (
     });
     input.headers.set('Idempotency-Key',crypto.randomUUID());
     const configured = await handleRequest(input,environment);
-    assert.equal(configured.status,403);
-    assert.equal((await json<{error:string}>(configured)).error,'heavy_generation_disabled');
+    assert.equal(configured.status,503);
+    assert.equal((await json<{error:string}>(configured)).error,'image_ai_not_enabled');
     assert.equal(forwarded.url, '');
     assert.equal(forwarded.authorization, null);
   } finally {

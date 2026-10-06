@@ -168,11 +168,11 @@ test('shares lifecycle, destinations, rights, and retry invariants across the ta
   }
 });
 
-test('keeps the generation-time rights gate request-local and fail-closed', () => {
+test('keeps the generation request bound to the authenticated brand context', () => {
   assert.match(workbenchSource, /data-workflow-rights-gate=\{workflowRightsGate\}/);
   assert.match(workbenchSource, /const rightsConfirmedForRequest = providerRightsConfirmed;/);
   assert.match(workbenchSource, /const providerRightsConfirmed = heavyEntitlementReady/);
-  assert.match(workbenchSource, /const heavyEntitlementReady = heavyEntitlementAction !== null[\s\S]*?requestScopedAttestationRequired === false/);
+  assert.match(workbenchSource, /const heavyEntitlementReady = !heavyOwnedFeature \|\| Boolean\(user\?\.id && currentBrand\?\.id\)/);
   assert.doesNotMatch(workbenchSource, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(workbenchSource, /rightsAlreadyConfirmed/);
   assert.doesNotMatch(workbenchSource, /rightsConfirmationOpen|pendingRightsGenerationRef|権利を確認してAI生成/);

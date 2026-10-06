@@ -48,7 +48,7 @@ test('fitting local preview preserves the duplicate-pattern cap', () => {
   );
 });
 
-test('Heavy fitting preview names its own terms gate instead of the Light plan label', () => {
+test('Heavy fitting preview keeps a neutral preparation blocker instead of rights UI copy', () => {
   assert.deepEqual(
     buildFittingPreviewBlockers({
       currentBrandLoaded: true,
@@ -60,6 +60,6 @@ test('Heavy fitting preview names its own terms gate instead of the Light plan l
       selectedAgeGroupsCount: 1,
       patternCount: 1,
     }),
-    ['Heavy利用条件'],
+    ['Heavy生成の準備'],
   );
 });

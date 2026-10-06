@@ -74,7 +74,7 @@ test('Heavy acceptance and attestation cannot bypass the preparation proof', asy
   assert.deepEqual(await attestation.json(), { success: false, error: 'heavy_preparation_required' });
 });
 
-test('Generation requires the same preparation proof even when an attestation exists', async (t) => {
+test('Generation no longer requires a preparation proof even when an old attestation exists', async (t) => {
   const setup = imageSetup();
   t.after(() => setup.db.sql.close());
   const requestId = crypto.randomUUID();
@@ -92,10 +92,10 @@ test('Generation requires the same preparation proof even when an attestation ex
   assert.equal(attestation.status, 200, await attestation.clone().text());
   setup.setAutoProvisionEntitlement(false);
   const generation = await setup.call(actionPath, 'alice', input, requestId);
-  assert.equal(generation.status, 403);
-  assert.deepEqual(await generation.json(), { success: false, error: 'heavy_preparation_required' });
-  assert.equal(setup.calls.length, 0);
-  assert.equal(setup.db.sql.prepare('SELECT COUNT(*) AS n FROM heavy_ai_requests').get()!.n, 0);
+  assert.equal(generation.status, 200, await generation.clone().text());
+  assert.equal((await generation.json() as { success: boolean }).success, true);
+  assert.equal(setup.calls.length, 1);
+  assert.equal(setup.db.sql.prepare('SELECT COUNT(*) AS n FROM heavy_ai_requests').get()!.n, 1);
 });
 
 test('Expired Heavy preparations fail closed at attestation', async (t) => {
@@ -124,27 +124,17 @@ test('Expired Heavy preparations fail closed at attestation', async (t) => {
   assert.deepEqual(await response.json(), { success: false, error: 'heavy_preparation_expired' });
 });
 
-test('Heavy entitlement is off by default and client rightsConfirmed alone cannot admit inference', async (t) => {
+test('Heavy entitlement settings no longer gate authenticated image inference', async (t) => {
   const setup = imageSetup();
   t.after(() => setup.db.sql.close());
   setup.env.HEAVY_IMAGE_ENTITLEMENT_ENABLED = 'false';
-  const disabledId = crypto.randomUUID();
-  const disabled = await setup.call(actionPath, 'alice', setup.input(), disabledId);
-  assert.equal(disabled.status, 403);
-  assert.deepEqual(await disabled.json(), { success: false, error: 'heavy_generation_disabled' });
-  assert.equal(setup.calls.length, 0);
-  assert.equal(setup.bucket.puts, 0);
-  assert.equal(setup.db.sql.prepare('SELECT COUNT(*) AS n FROM heavy_ai_requests').get()!.n, 0);
-
-  setup.env.HEAVY_IMAGE_ENTITLEMENT_ENABLED = 'true';
   setup.setAutoProvisionEntitlement(false);
-  const unprovenId = crypto.randomUUID();
-  const unproven = await setup.call(actionPath, 'alice', setup.input(), unprovenId);
-  assert.equal(unproven.status, 403);
-  assert.deepEqual(await unproven.json(), { success: false, error: 'heavy_rights_attestation_mismatch' });
-  assert.equal(setup.calls.length, 0);
-  assert.equal(setup.bucket.puts, 0);
-  assert.equal(setup.db.sql.prepare('SELECT COUNT(*) AS n FROM heavy_ai_requests').get()!.n, 0);
+  const allowedId = crypto.randomUUID();
+  const allowed = await setup.call(actionPath, 'alice', setup.input(), allowedId);
+  assert.equal(allowed.status, 200, await allowed.clone().text());
+  assert.equal((await allowed.json() as { success: boolean }).success, true);
+  assert.equal(setup.calls.length, 1);
+  assert.equal(setup.bucket.puts, 1);
 });
 
 test('Heavy resolver binds the authenticated request to the current acceptance and attestation', async (t) => {

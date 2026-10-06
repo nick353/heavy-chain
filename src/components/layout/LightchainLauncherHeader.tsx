@@ -1,21 +1,19 @@
 import { ChevronDown, Globe2, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { LightchainLogo } from '../LightchainLogo';
+import { HeavyChainLogo } from '../icons';
 import { useAuthStore } from '../../stores/authStore';
 
 const LIGHTCHAIN_AVATAR_URL = 'https://ql-hangzhou-oss.oss-cn-hangzhou.aliyuncs.com/AIDesign/saas-avatar-new.png?x-oss-process=image/resize,m_lfit,w_64,limit_1/format,webp';
 
-// Source logo provenance: src="/assets/lightchain-logo.svg". The inline component keeps the source geometry without a remote request.
-
-/** The public launcher header observed on the current Lightchain home. */
+/** Heavy Chain launcher header. The layout remains compatible with the source workflow, but the identity is Heavy-owned. */
 export function LightchainLauncherHeader() {
   const user = useAuthStore((state) => state.user);
 
   return (
     <header className="flex h-[50px] w-full items-center justify-between gap-4 border-b border-white/10 bg-[#05090b]/90 px-6 backdrop-blur-xl">
       <div className="flex items-center gap-5">
-        <Link to="/" aria-label="Lightchain AI" className="flex items-center text-white">
-          <LightchainLogo />
+        <Link to="/" aria-label="Heavy Chain" className="flex items-center text-white">
+          <HeavyChainLogo height={24} showText className="shrink-0" />
         </Link>
         <button type="button" aria-label="日本語" className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-neutral-300 transition hover:bg-white/10 hover:text-white">
           <Globe2 className="h-3.5 w-3.5" />

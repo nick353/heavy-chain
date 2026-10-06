@@ -1,5 +1,11 @@
 # Heavy Chain
 
+**2026-10-06 handoff:** The Codex Goal is paused at the user's request. Continue from
+[HANDOFF.md](HANDOFF.md) and the [remaining work and completion criteria](docs/HANDOFF_LIGHTCHAIN_PARITY_2026-10-06.md).
+The goal is to match the original Light Chain in UI and behavior. This branch is a
+WIP source checkpoint; the handoff records the exact deployed baseline and pending changes.
+The dated migration description below is historical and does not override that handoff.
+
 Cloudflare migration checkpoint (2026-09-08): the active Web/API/Auth path is Cloudflare
 Workers with D1, private R2, `consumer-auth`, and the `workers_ai` adapter. Local
 contracts and selected deployments are verified, but authenticated production generation,
@@ -26,7 +32,7 @@ Heavy Chainは、**Cloudflare Workers AIを中心とするアパレル向け画�
 
 ### ✨ デモ
 
-**🔗 公開Web（未認証画面）**: [heavy-chain-web.nichika2000823.workers.dev](https://heavy-chain-web.nichika2000823.workers.dev)
+**🔗 公開Web（未認証画面）**: [heavy-chain.zeabur.app](https://heavy-chain.zeabur.app)
 
 <!-- デプロイ後にURLを追加してください -->
 

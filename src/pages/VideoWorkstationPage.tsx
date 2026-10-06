@@ -970,7 +970,7 @@ export function VideoWorkstationPage() {
         className="mb-5"
       >
         <WorkspaceReadinessStrip
-          eyebrow="LIGHTCHAIN PARITY / VIDEO START"
+          eyebrow="HEAVY CHAIN / VIDEO START"
           title="ショット構成を決めてから、素材と書き出しへ進みます"
           description="動画は最初にストーリーボードを選び、比率・尺・CTAを確認します。素材が未選択でも構成の保存とCanvas handoffを先に進められます。"
             nextAction="構成 → 素材 → provider admission待ち / Canvas保存"

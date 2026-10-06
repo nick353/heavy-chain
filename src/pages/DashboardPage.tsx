@@ -64,7 +64,7 @@ const canvasObjectTypeLabels: Record<CanvasProject['objects'][number]['type'], s
 };
 
 const DEFAULT_BRAND_FORM = {
-  name: 'LIGHTCHAIN STUDIO',
+  name: 'HEAVY CHAIN STUDIO',
   toneDescription: 'ミニマルで洗練された、自然体のプロダクト表現。清潔感と上質さを保ちながら、日常に馴染むトーン。',
   targetAudience: 'EC・SNSで商品やブランドの魅力を伝えたいクリエイター・小規模チーム',
 };

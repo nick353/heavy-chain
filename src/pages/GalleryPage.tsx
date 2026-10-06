@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   Image,
@@ -22,10 +22,10 @@ import {
   Share2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { isHeavyWorkspaceRuntime } from '../lib/heavyWorkspace';
 import { withAuthSessionRecovery } from '../lib/auth';
 import { withSignedImageUrls } from '../lib/storage';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
-import { clearCanonicalRemoteImageUrls } from '../lib/storagePathSafety';
 import {
   deleteWorkspaceArtifact,
   deleteWorkspaceArtifactsPersisted,
@@ -33,10 +33,19 @@ import {
   listWorkspaceGeneratedImages,
   workspaceArtifactToGeneratedImage,
 } from '../lib/localWorkspaceArtifacts';
+import { getGeneratedImageSelectionKey } from '../lib/generatedImageIdentity';
 import {
-  getGeneratedImageSelectionKey,
-  mergeGeneratedImagesByCanonicalIdentity,
-} from '../lib/generatedImageIdentity';
+  canClearMissingGallerySelection,
+  createGallerySourceScope,
+  isGallerySourceRequestCurrent,
+  resolveGallerySource,
+  sameGallerySourceScope,
+  type GallerySourceLiveContext,
+  type GallerySourceRequest,
+  type GallerySourceResolution,
+  type GallerySourceScope,
+} from '../lib/gallerySourceResolution';
+import { fitContain } from '../lib/galleryImageFit';
 import {
   toGeneratedImageListRow,
   type GeneratedImageListRow,
@@ -46,7 +55,7 @@ import {
   type PrintResultFavoriteValue,
   type PrintResultKind,
 } from '../features/printing/history/printResultFavorite';
-import { buildSourceContextSummaryRows } from '../lib/sourceContextSummary';
+import { buildSourceContextSummaryRows, displaySourceSummaryLabel } from '../lib/sourceContextSummary';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { Button, SearchInput } from '../components/ui';
 import { ProtectedImageRecoveryPanel } from '../components/ProtectedImageRecoveryPanel';
@@ -61,6 +70,16 @@ type GalleryImage = GeneratedImageListRow;
 const INITIAL_VISIBLE_IMAGE_COUNT = 60;
 const VISIBLE_IMAGE_INCREMENT = 30;
 const GALLERY_REMOTE_TIMEOUT_MS = 10_000;
+
+const toHeavyDisplayCopy = (value: string | null | undefined) => {
+  if (!value || !isHeavyWorkspaceRuntime()) return value ?? undefined;
+  return value
+    .replaceAll('LIGHTCHAIN ROUTE', 'HEAVY CHAIN ROUTE')
+    .replaceAll('LIGHTCHAIN', 'HEAVY CHAIN')
+    .replaceAll('Lightchain', 'Heavy Chain')
+    .replaceAll('Light Chain', 'Heavy Chain')
+    .replaceAll('lightchain-', 'heavy-chain-');
+};
 
 const isGenerationIntent = (value: unknown): value is GenerationIntent => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -107,7 +126,7 @@ const getLocalPrintResult = (image: GalleryImage): PrintResultFavoriteValue | nu
   return {
     id: image.id,
     title: getMetadataString(image, 'title') ?? '印刷結果',
-    note: getMetadataString(image, 'printResultNote') ?? image.prompt ?? '',
+    note: toHeavyDisplayCopy(getMetadataString(image, 'printResultNote') ?? image.prompt) ?? '',
     imageUrl,
     outputSize: validOutputSize,
     generatedAt: typeof generatedAtValue === 'number'
@@ -123,33 +142,84 @@ export function GalleryPage() {
     user,
     currentBrand,
     refreshCurrentBrand,
+    ensureHeavyWorkspace,
     isInitialized: authInitialized,
     isLoading: authLoading,
   } = useAuthStore();
 
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // Local workspace images can render before the authenticated remote list
-  // settles. Keep URL-driven selection pending during that first snapshot so
-  // a remote-only canonical image key is not cleared prematurely.
-  const [hasResolvedImageSources, setHasResolvedImageSources] = useState(false);
+  const [sourceResolution, setSourceResolution] = useState<GallerySourceResolution<GalleryImage>>({
+    status: 'pending',
+    scope: null,
+    sequence: 0,
+    rows: [],
+    unavailablePreviewIds: [],
+  });
   const [isLoadingStalled, setIsLoadingStalled] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
   const [favoriteDestinationFilter, setFavoriteDestinationFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+  const [galleryContentBox, setGalleryContentBox] = useState<{
+    imageId: string;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [galleryNaturalSize, setGalleryNaturalSize] = useState<{
+    imageId: string;
+    width: number;
+    height: number;
+  } | null>(null);
+  const galleryImagePaneRef = useRef<HTMLDivElement | null>(null);
   const [providerReceipt, setProviderReceipt] = useState<Record<string, unknown> | null>(null);
   const [providerReceiptLoading, setProviderReceiptLoading] = useState(false);
   const [gridSize, setGridSize] = useState<'small' | 'large'>('large');
   const [visibleImageCount, setVisibleImageCount] = useState(INITIAL_VISIBLE_IMAGE_COUNT);
   const [brandResolutionAttempted, setBrandResolutionAttempted] = useState(false);
-  const fetchImagesSeqRef = useRef(0);
   const selectedGenerationIntent = getGenerationIntent(selectedImage);
   const selectedSourceLabel = getMetadataString(selectedImage, 'sourceLabel');
   const selectedSourceResumePath = getMetadataString(selectedImage, 'sourceResumePath');
   const selectedSourceSummaryRows = buildSourceContextSummaryRows(selectedImage?.metadata);
   const selectedProviderRequestId = getProviderRequestId(selectedImage);
+  const fittedGalleryImageSize = selectedImage
+    && galleryContentBox?.imageId === selectedImage.id
+    && galleryNaturalSize?.imageId === selectedImage.id
+    ? fitContain({
+      naturalW: galleryNaturalSize.width,
+      naturalH: galleryNaturalSize.height,
+      availW: galleryContentBox.width,
+      availH: galleryContentBox.height,
+    })
+    : null;
+
+  useLayoutEffect(() => {
+    const imageId = selectedImage?.id;
+    const pane = galleryImagePaneRef.current;
+    if (!imageId || !pane) {
+      setGalleryContentBox(null);
+      return;
+    }
+
+    const measureContentBox = () => {
+      const style = window.getComputedStyle(pane);
+      const padding = (value: string) => {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+      setGalleryContentBox({
+        imageId,
+        width: Math.max(0, pane.clientWidth - padding(style.paddingLeft) - padding(style.paddingRight)),
+        height: Math.max(0, pane.clientHeight - padding(style.paddingTop) - padding(style.paddingBottom)),
+      });
+    };
+
+    measureContentBox();
+    const observer = new ResizeObserver(measureContentBox);
+    observer.observe(pane);
+    return () => observer.disconnect();
+  }, [selectedImage?.id]);
 
   useEffect(() => {
     setProviderReceipt(null);
@@ -171,6 +241,47 @@ export function GalleryPage() {
     }
   };
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
+
+  const currentSourceScope = useMemo<GallerySourceScope | null>(
+    () => createGallerySourceScope(user?.id, currentBrand?.id, filter, sortBy),
+    [currentBrand, filter, sortBy, user?.id],
+  );
+  const fetchImagesSeqRef = useRef(0);
+  const latestSourceScopeRef = useRef<GallerySourceScope | null>(currentSourceScope);
+  const sourceResolutionRef = useRef(sourceResolution);
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+  const sourceResolutionMatchesScope = sameGallerySourceScope(sourceResolution.scope, currentSourceScope);
+  const sourceStatus = sourceResolutionMatchesScope ? sourceResolution.status : 'pending';
+  const sourceFailed = sourceStatus === 'failed';
+  const sourceResolvedEmpty = sourceStatus === 'resolved-empty'
+    && canClearMissingGallerySelection(sourceResolution, currentSourceScope);
+  const isPreviewUnavailable = (image: GalleryImage) => failedImageIds.has(image.id)
+    || (sourceResolutionMatchesScope && sourceResolution.unavailablePreviewIds.includes(image.id));
+
+  useLayoutEffect(() => {
+    if (sameGallerySourceScope(latestSourceScopeRef.current, currentSourceScope)) return;
+
+    latestSourceScopeRef.current = currentSourceScope;
+    fetchImagesSeqRef.current += 1;
+    const nextResolution: GallerySourceResolution<GalleryImage> = {
+      status: 'pending',
+      scope: currentSourceScope,
+      sequence: fetchImagesSeqRef.current,
+      rows: [],
+      unavailablePreviewIds: [],
+    };
+    sourceResolutionRef.current = nextResolution;
+    imagesRef.current = [];
+    setSourceResolution(nextResolution);
+    setImages([]);
+    setFailedImageIds(new Set());
+    // Keep the URL identity for the new scope. A successful exact-scope read
+    // may resolve it again; a failed read must not clear it.
+    setSelectedImage(null);
+    setIsLoading(Boolean(currentSourceScope));
+    setIsLoadingStalled(false);
+  }, [currentSourceScope]);
 
   const selectImage = useCallback((image: GalleryImage | null) => {
     setSelectedImage(image);
@@ -229,96 +340,87 @@ export function GalleryPage() {
   }, []);
 
   const fetchImages = useCallback(async (brandOverride = currentBrand) => {
-    if (!brandOverride) {
+    if (!brandOverride || !user?.id) {
+      fetchImagesSeqRef.current += 1;
+      imagesRef.current = [];
+      setImages([]);
+      setSelectedImage(null);
       setIsLoading(false);
       setIsLoadingStalled(false);
       return;
     }
 
     const brandId = brandOverride.id;
-    const requestSeq = ++fetchImagesSeqRef.current;
-    const isCurrentRequest = () => (
-      fetchImagesSeqRef.current === requestSeq &&
-      useAuthStore.getState().currentBrand?.id === brandId
-    );
+    const requestScope = createGallerySourceScope(user.id, brandId, filter, sortBy);
+    const authState = useAuthStore.getState();
+    if (!requestScope
+      || !sameGallerySourceScope(requestScope, latestSourceScopeRef.current)
+      || authState.user?.id !== requestScope.userId
+      || authState.currentBrand?.id !== requestScope.brandId) return;
+    const request: GallerySourceRequest = {
+      sequence: ++fetchImagesSeqRef.current,
+      scope: requestScope,
+    };
     setIsLoading(true);
-    setHasResolvedImageSources(false);
     setIsLoadingStalled(false);
     setFailedImageIds(new Set());
-    try {
-      const localImages = listWorkspaceGeneratedImages(brandId, user?.id)
-        .filter((image) => filter !== 'favorites' || image.is_favorite);
-      const localListImages = localImages.map(toGeneratedImageListRow);
-      // Render the locally persisted result set immediately. Remote rows and
-      // signed URLs are an enhancement; they must not hide a saved Canvas/
-      // provider result behind a slow authenticated request.
-      const localFallbackImages = clearCanonicalRemoteImageUrls(localListImages);
-      if (isCurrentRequest()) {
-        setImages(localFallbackImages);
-        setIsLoading(false);
-      }
-      const resolveLocalImages = async (candidates: GalleryImage[]) => {
-        try {
-          return await withTimeout(
-            withSignedImageUrls(candidates),
-            GALLERY_REMOTE_TIMEOUT_MS,
-            'gallery_local_signed_urls_timeout',
-          );
-        } catch {
-          return clearCanonicalRemoteImageUrls(candidates);
-        }
+    const liveContext = (): GallerySourceLiveContext => {
+      const authState = useAuthStore.getState();
+      return {
+        sequence: fetchImagesSeqRef.current,
+        scope: latestSourceScopeRef.current,
+        liveUserId: authState.user?.id ?? null,
+        liveBrandId: authState.currentBrand?.id ?? null,
       };
-      const signedLocalImages = await resolveLocalImages(localListImages);
-      if (isCurrentRequest()) {
-        setImages(signedLocalImages);
-      }
-      const fetchRemoteImages = async () => {
-        if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
-        return (await cloudflareDataPlane.listGeneratedImages(brandId, {
+    };
+    const previous: GallerySourceResolution<GalleryImage> = {
+      ...sourceResolutionRef.current,
+      rows: imagesRef.current,
+    };
+
+    await resolveGallerySource({
+      request,
+      previous,
+      getCurrentContext: liveContext,
+      readLocalRows: () => listWorkspaceGeneratedImages(brandId, user?.id)
+        .filter((image) => filter !== 'favorites' || image.is_favorite)
+        .map(toGeneratedImageListRow),
+      fetchRemoteRows: async () => {
+        const cloudflare = cloudflareDataPlane;
+        if (!cloudflare) throw new Error('cloudflare_api_not_configured');
+        return (await withAuthSessionRecovery(() => cloudflare.listGeneratedImages(brandId, {
           favorite: filter === 'favorites' ? true : undefined,
           order: sortBy === 'oldest' ? 'oldest' : 'newest',
           limit: 100,
           offset: 0,
-        })).map(asGeneratedImageListRow);
-      };
-
-      let remoteImages: GalleryImage[] = [];
-      const remoteRows = await withAuthSessionRecovery(fetchRemoteImages);
-      try {
-        remoteImages = await withTimeout(
-          withSignedImageUrls(remoteRows),
-          GALLERY_REMOTE_TIMEOUT_MS,
-          'gallery_signed_urls_timeout',
-        );
-      } catch {
-        if (!isCurrentRequest()) return;
-        remoteImages = clearCanonicalRemoteImageUrls(remoteRows);
-      }
-
-      const mergedImages = mergeGeneratedImagesByCanonicalIdentity(remoteImages, signedLocalImages)
-        .sort((a, b) => {
-          if (sortBy === 'oldest') {
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          }
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
-      if (!isCurrentRequest()) return;
-      setImages(mergedImages);
-      setHasResolvedImageSources(true);
-    } catch {
-      const localImages = listWorkspaceGeneratedImages(brandId, user?.id)
-        .filter((image) => filter !== 'favorites' || image.is_favorite);
-      const localListImages = localImages.map(toGeneratedImageListRow);
-      if (!isCurrentRequest()) return;
-      // The local-first snapshot above is already a complete safe fallback.
-      // Do not start a second signing round after a remote failure.
-      setImages(clearCanonicalRemoteImageUrls(localListImages));
-    } finally {
-      if (isCurrentRequest()) {
+        }))).map(asGeneratedImageListRow);
+      },
+      signRows: (rows) => withTimeout(
+        withSignedImageUrls(rows),
+        GALLERY_REMOTE_TIMEOUT_MS,
+        'gallery_signed_urls_timeout',
+      ),
+      sortRows: (rows) => rows.sort((left, right) => {
+        if (sortBy === 'oldest') {
+          return new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
+        }
+        return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+      }),
+      onState: (nextResolution) => {
+        if (!isGallerySourceRequestCurrent(request, liveContext())) return;
+        sourceResolutionRef.current = nextResolution;
+        imagesRef.current = nextResolution.rows;
+        setSourceResolution(nextResolution);
+        setImages(nextResolution.rows);
+        setFailedImageIds(new Set(nextResolution.unavailablePreviewIds));
+        // Keep the local-first behavior while the authenticated source is read.
+        setIsLoading(false);
+      },
+      onFinally: () => {
         setIsLoading(false);
         setIsLoadingStalled(false);
-      }
-    }
+      },
+    });
   }, [currentBrand, filter, sortBy, user?.id]);
 
   useEffect(() => {
@@ -331,7 +433,9 @@ export function GalleryPage() {
       }
 
       let brand = currentBrand;
-      if (!brand && user) {
+      if (isHeavyWorkspaceRuntime() && user) {
+        brand = await ensureHeavyWorkspace();
+      } else if (!brand && user) {
         setBrandResolutionAttempted(false);
         // A hard navigation can finish auth initialization before the async brand
         // hydration callback. Resolve it here before showing an empty Gallery.
@@ -359,7 +463,7 @@ export function GalleryPage() {
     return () => {
       mounted = false;
     };
-  }, [authInitialized, authLoading, currentBrand, fetchImages, refreshCurrentBrand, user]);
+  }, [authInitialized, authLoading, currentBrand, ensureHeavyWorkspace, fetchImages, refreshCurrentBrand, user]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -387,11 +491,11 @@ export function GalleryPage() {
     ));
     if (image) {
       setSelectedImage(image);
-    } else if (!isLoading && hasResolvedImageSources) {
+    } else if (!isLoading && canClearMissingGallerySelection(sourceResolution, currentSourceScope)) {
       setSelectedImage(null);
       setSearchParams({});
     }
-  }, [images, isLoading, searchParams, selectedImage, setSearchParams, hasResolvedImageSources]);
+  }, [currentSourceScope, images, isLoading, searchParams, selectedImage, setSearchParams, sourceResolution]);
 
   const handleDownload = async (image: GalleryImage, format: 'png' | 'jpeg' | 'webp' = 'png'): Promise<boolean> => {
     try {
@@ -690,16 +794,7 @@ export function GalleryPage() {
     const searchLower = searchQuery.toLowerCase();
     return destinationFiltered.filter(image => imageSearchIndex.get(image.id)?.includes(searchLower));
   }, [favoriteDestinationFilter, filter, imageSearchIndex, images, searchQuery]);
-  const galleryImages = useMemo(
-    () => filteredImages.filter((image) => !failedImageIds.has(image.id)),
-    [failedImageIds, filteredImages]
-  );
-
-  useEffect(() => {
-    if (selectedImage && failedImageIds.has(selectedImage.id)) {
-      selectImage(null);
-    }
-  }, [failedImageIds, selectImage, selectedImage]);
+  const galleryImages = filteredImages;
 
   const visibleImages = useMemo(
     () => galleryImages.slice(0, visibleImageCount),
@@ -784,7 +879,11 @@ export function GalleryPage() {
               ギャラリー
             </h1>
             <p className="text-neutral-400">
-              {isLoading ? '画像を確認中' : `${images.length}枚の画像`}
+              {sourceFailed
+                ? `画像一覧の確認に失敗しました（保存済み情報 ${images.length}件）`
+                : sourceStatus === 'pending'
+                  ? `保存済み情報 ${images.length}件を表示中`
+                  : `${images.length}枚の画像`}
             </p>
           </div>
 
@@ -860,6 +959,26 @@ export function GalleryPage() {
                 新しく生成
               </Link>
             </div>
+          </div>
+        ) : null}
+
+        {sourceFailed ? (
+          <div role="alert" className="mb-6 flex items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-5 text-neutral-200">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">画像一覧を読み込めませんでした</p>
+              <p className="mt-1 text-xs text-neutral-400">
+                {images.length > 0
+                  ? `保存済みの画像情報 ${images.length}件を表示しています。最新の一覧は未確認です。`
+                  : '画像がないとは確認できていません。保存済みの選択情報は保持されています。'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { void fetchImages(); }}
+              className="inline-flex rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10"
+            >
+              再試行
+            </button>
           </div>
         ) : null}
 
@@ -979,7 +1098,7 @@ export function GalleryPage() {
         )}
 
         {/* Gallery Grid */}
-        {isLoading ? null : galleryImages.length > 0 ? (
+        {isLoading || (sourceFailed && galleryImages.length === 0) ? null : galleryImages.length > 0 ? (
           <>
             <motion.div
               layout
@@ -1003,7 +1122,7 @@ export function GalleryPage() {
                     }`}
                     role="button"
                     tabIndex={0}
-                    aria-label={`${image.prompt || '生成画像'}の詳細を見る`}
+                    aria-label={`${toHeavyDisplayCopy(image.prompt) || '生成画像'}の詳細を見る`}
                     onClick={() => selectMode ? toggleSelectImage(image.id) : selectImage(image)}
                     onKeyDown={(event) => {
                       if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -1015,7 +1134,7 @@ export function GalleryPage() {
                       }
                     }}
                   >
-                    {getImageUrl(image) ? (
+                    {getImageUrl(image) && !isPreviewUnavailable(image) ? (
                       <img
                         src={getImageUrl(image)}
                         alt=""
@@ -1038,7 +1157,9 @@ export function GalleryPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-neutral-950/70">
-                        <span className="text-neutral-400 text-sm">プレビュー準備中</span>
+                        <span className="text-neutral-400 text-sm">
+                          {isPreviewUnavailable(image) ? 'プレビューを利用できません' : 'プレビュー準備中'}
+                        </span>
                       </div>
                     )}
 
@@ -1087,42 +1208,17 @@ export function GalleryPage() {
               </div>
             )}
           </>
-        ) : filteredImages.length > 0 ? (
+        ) : sourceFailed ? null : sourceStatus === 'pending' ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="rounded-2xl border border-white/10 bg-white/[0.04] p-12 text-center backdrop-blur-sm"
           >
-            <div className="w-24 h-24 bg-gradient-to-br from-amber-200/30 to-neutral-700/30 dark:from-amber-500/20 dark:to-neutral-800 rounded-3xl flex items-center justify-center mx-auto mb-8">
-              <Image className="w-10 h-10 text-amber-200/80 dark:text-amber-300" />
-            </div>
-            <h3 className="text-2xl font-semibold text-neutral-900 dark:text-white mb-4 font-display">
-              画像プレビューを確認中です
-            </h3>
-            <p className="text-neutral-600 dark:text-neutral-400 mb-8 max-w-md mx-auto leading-relaxed">
-              {failedImageIds.size}件の画像が読み込みに失敗しました。再読み込みするか、Jobsから状態を確認できます。
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="rounded-full shadow-glow hover:shadow-glow-lg"
-                onClick={() => { void fetchImages(); }}
-              >
-                再読み込み
-              </Button>
-              <Link to="/jobs">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="rounded-full"
-                  leftIcon={<Clock className="w-5 h-5" size={20} />}
-                >
-                  Jobsを見る
-                </Button>
-              </Link>
-            </div>
+            <Image className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-neutral-200 mb-2">保存済み画像を確認しています</h3>
+            <p className="text-sm text-neutral-400">一覧の確認が終わるまで、画像がないとは判断しません。</p>
           </motion.div>
-        ) : (
+        ) : sourceResolvedEmpty && !searchQuery.trim() ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1142,7 +1238,11 @@ export function GalleryPage() {
               <Button>画像を生成する</Button>
             </Link>
           </motion.div>
-        )}
+        ) : sourceStatus === 'resolved-rows' || sourceResolvedEmpty ? (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center text-sm text-neutral-400">
+            条件に一致する画像はありません。
+          </div>
+        ) : null}
       </div>
 
       {/* Image Detail Modal */}
@@ -1167,7 +1267,7 @@ export function GalleryPage() {
             {/* Main Content - 2カラムレイアウト */}
             <div className="flex flex-1 h-full">
               {/* Left: Image Display with Navigation */}
-              <div className="flex-1 flex items-center justify-center p-8 md:p-16 pt-16 md:pt-20 relative">
+              <div ref={galleryImagePaneRef} className="flex-1 min-h-0 min-w-0 flex items-center justify-center p-8 md:p-16 pt-16 md:pt-20 relative">
                 {/* Previous Button - 画像エリア内の左側 */}
                 <button
                   onClick={() => navigateImage('prev')}
@@ -1178,8 +1278,8 @@ export function GalleryPage() {
                 </button>
 
                 {/* Image */}
-                <div className="relative max-w-full max-h-full flex items-center justify-center">
-                  {getImageUrl(selectedImage) ? (
+                <div className="relative w-full h-full max-w-full max-h-full min-w-0 min-h-0 flex items-center justify-center">
+                  {getImageUrl(selectedImage) && !isPreviewUnavailable(selectedImage) ? (
                     <motion.img
                       key={selectedImage.id}
                       initial={{ scale: 0.95, opacity: 0 }}
@@ -1189,7 +1289,16 @@ export function GalleryPage() {
                       src={getImageUrl(selectedImage)}
                       alt=""
                       className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                      style={fittedGalleryImageSize ?? undefined}
+                      onLoad={(event) => {
+                        setGalleryNaturalSize({
+                          imageId: selectedImage.id,
+                          width: event.currentTarget.naturalWidth,
+                          height: event.currentTarget.naturalHeight,
+                        });
+                      }}
                       onError={() => {
+                        setFailedImageIds((previous) => new Set(previous).add(selectedImage.id));
                         toast.error('画像の読み込みに失敗しました');
                       }}
                     />
@@ -1239,7 +1348,7 @@ export function GalleryPage() {
                     {selectedImage.feature_type && (
                       <div className="flex items-center gap-3 text-sm text-white/80">
                         <Sparkles className="w-4 h-4 flex-shrink-0" />
-                        <span>{selectedImage.feature_type}</span>
+                        <span>{toHeavyDisplayCopy(selectedImage.feature_type)}</span>
                       </div>
                     )}
 
@@ -1286,10 +1395,10 @@ export function GalleryPage() {
                       </h4>
                       <div className="relative group">
                         <p className="text-sm text-white/80 bg-white/5 rounded-xl p-4 leading-relaxed max-h-48 overflow-y-auto">
-                          {selectedImage.prompt}
+                          {toHeavyDisplayCopy(selectedImage.prompt)}
                         </p>
                         <button
-                          onClick={() => copyPrompt(selectedImage.prompt!)}
+                          onClick={() => copyPrompt(toHeavyDisplayCopy(selectedImage.prompt) ?? '')}
                           className="absolute top-2 right-2 p-2 rounded-lg bg-white/10 hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-all"
                           title="プロンプトをコピー"
                         >
@@ -1308,7 +1417,7 @@ export function GalleryPage() {
                       <dl className="space-y-2 rounded-xl bg-white/5 p-4">
                         {selectedSourceSummaryRows.map((row) => (
                           <div key={`${row.label}-${row.value}`} className="grid grid-cols-[88px_1fr] gap-3 text-sm">
-                            <dt className="text-white/45">{row.label}:</dt>
+                            <dt className="text-white/45">{displaySourceSummaryLabel(row.label)}:</dt>
                             <dd className="min-w-0 break-words text-white/85">{row.value}</dd>
                           </div>
                         ))}

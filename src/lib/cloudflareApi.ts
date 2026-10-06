@@ -1,11 +1,40 @@
+import {createCanvasProtectedBatchLifecycle,loadCanvasProtectedBatch,canvasBatchHasAllRaw,type CanvasProtectedBatchBinding} from './canvasProtectedBatchComposite';
+import {validateNativePrintFinalFrame} from './nativePrintFinalFrame';
+import {prepareProtectedOpenAIProjection} from './prepareProtectedOpenAIProjection';
+import {finalizeProtectedOpenAIEdit} from './protectedOpenAIImageEdit';
+import {materializeMaterialPng} from './materialProtectedComposite';
+import {protectedImageDigest} from './protectedImageEditContract';
+import { createMaterialProtectedLifecycle,recoverBoundMaterialComposite,nativePrintFinalFrameFor,type NativePrintFrameBinding } from './materialProtectedComposite';
 import type { Brand, CanvasDocument, Folder, GeneratedImage, Json, User } from '../types/database';
 import type { GeneratedImageListRow } from './generatedImageQuery';
 import type { WorkspaceExecutionStep } from './workspaceExecution';
 import { auth, refreshAuthSession } from './auth';
 import { CLOUDFLARE_IMAGE_ACTIONS, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
-import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
+import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit,type ProtectedMaterialRecoveryBinding } from './cloudflareProtectedImageEdit';
 import { persistProtectedImageInput,listProtectedImageInputs,loadProtectedImageInput,deleteProtectedImageInput } from './cloudflareImageInputCache';
 import { attachHeavyGenerationPreflight, validateHeavyGenerationPreflight, type HeavyGenerationInput, type HeavyGenerationPreflight } from './heavyGenerationPreflight';
+import { WORKSPACE_UPLOAD_MAX_BYTES } from './workspaceUploadLimits';
+import type { DesignDialogueManifestReference } from './designDialogueReferences';
+
+export type CloudflareDesignAssistantRequestInput = {
+  requestId: string;
+  brandId: string;
+  /** The canonical Canvas document ID. */
+  projectId: string;
+  conversationId: string;
+  prompt: string;
+  history: { role: 'user' | 'assistant'; content: string }[];
+  references: DesignDialogueManifestReference[];
+};
+export type CloudflareDesignAssistantReceipt = {
+  requestId: string;
+  state: 'running' | 'completed' | 'failed' | 'unknown';
+  content?: string;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+  errorCode?: string;
+  provider: 'workers-ai';
+  model: '@cf/meta/llama-4-scout-17b-16e-instruct';
+};
 
 export interface CloudflareImageUsage {
   planName: string; monthlyQuota: number; remainingUnits: number;
@@ -188,6 +217,24 @@ type WorkspaceArtifactRemoteResponse = {
 };
 
 type CheckedCloudflareRequest = (path: string, init?: RequestInit) => Promise<unknown>;
+
+/** Opaque operation-scoped persistence capability. Never exposes credentials. */
+export interface ArtifactPersistenceContext {
+  assertCurrent(): Promise<void>;
+}
+
+export class ArtifactPersistenceContextError extends Error {
+  constructor(cause: unknown) {
+    super('artifact_persistence_context_changed', { cause });
+    this.name = 'ArtifactPersistenceContextError';
+  }
+}
+
+const artifactPersistenceContexts = new WeakMap<ArtifactPersistenceContext, {
+  owner: CloudflareDataPlaneClient;
+  call: CheckedCloudflareRequest;
+  assertCurrent: () => Promise<void>;
+}>();
 
 const WORKSPACE_REQUEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const WORKSPACE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
@@ -585,33 +632,79 @@ class CloudflareDataPlaneClient {
     return this.requestPublic<CloudflareSharedImagePayload>(`/v1/shared-images?token=${encodeURIComponent(token)}`);
   }
 
-  private async captureRequestContext(assertContext?:()=>void) {
-      assertContext?.();
+  private async captureRequestContext(assertContext?:()=>void | Promise<void>, contextError?: (cause: unknown) => Error) {
+      await assertContext?.();
       const { data,error } = await auth.getSession(); if (error) throw error;
       const session = data.session;
       if (!session?.user?.id || !session.access_token) throw new Error('cloudflare_session_missing');
+      const userId = session.user.id, accessToken = session.access_token;
       const assertCurrent = async () => {
-        assertContext?.();
-        const current = await auth.getSession();
-        if (current.error || current.data.session?.user?.id !== session.user.id || current.data.session?.access_token !== session.access_token) throw new Error('cloudflare_session_changed');
-        assertContext?.();
+        try {
+          await assertContext?.();
+          const current = await auth.getSession();
+          if (current.error || current.data.session?.user?.id !== userId || current.data.session?.access_token !== accessToken) throw new Error('cloudflare_session_changed');
+          await assertContext?.();
+        } catch (cause) {
+          throw contextError ? contextError(cause) : cause;
+        }
       };
       await assertCurrent();
       const call = async (path: string,init: RequestInit = {}): Promise<unknown> => {
-          await assertCurrent(); const headers = new Headers(init.headers); headers.set('authorization',`Bearer ${session.access_token}`);
-          const response = await fetch(this.origin + path,{ ...init,headers });
-          const payload = await response.json().catch(() => null) as { error?: string } | null;
-          if (!response.ok) throw new Error(`cloudflare_api_${response.status}_${payload?.error ?? 'request_failed'}`);
-          await assertCurrent(); return payload;
+          await assertCurrent(); const headers = new Headers(init.headers); headers.set('authorization',`Bearer ${accessToken}`);
+          try {
+            const response = await fetch(this.origin + path,{ ...init,headers });
+            const payload = await response.json().catch(() => null) as { error?: string } | null;
+            if (!response.ok) throw new Error(`cloudflare_api_${response.status}_${payload?.error ?? 'request_failed'}`);
+            return payload;
+          } finally {
+            await assertCurrent();
+          }
         };
-      return {userId:session.user.id,assertCurrent,call};
+      return {userId,assertCurrent,call};
   }
 
-  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent } = {}): Promise<T> {
-    options.assertContext?.();
+  async captureArtifactPersistenceContext(options: { assertContext?: () => void | Promise<void> } = {}): Promise<ArtifactPersistenceContext> {
+    const assertScope = async () => {
+      try { await options.assertContext?.(); }
+      catch (cause) { throw new ArtifactPersistenceContextError(cause); }
+    };
+    let captured: Awaited<ReturnType<CloudflareDataPlaneClient['captureRequestContext']>>;
+    try { captured = await this.captureRequestContext(assertScope, cause => cause instanceof ArtifactPersistenceContextError ? cause : new ArtifactPersistenceContextError(cause)); }
+    catch (cause) {
+      if (cause instanceof ArtifactPersistenceContextError) throw cause;
+      throw new ArtifactPersistenceContextError(cause);
+    }
+    const assertCurrent = async () => {
+      try { await captured.assertCurrent(); }
+      catch (cause) {
+        if (cause instanceof ArtifactPersistenceContextError) throw cause;
+        throw new ArtifactPersistenceContextError(cause);
+      }
+    };
+    const context = Object.freeze({ assertCurrent });
+    artifactPersistenceContexts.set(context, { owner: this, call: captured.call, assertCurrent });
+    return context;
+  }
+
+  private async artifactPersistenceRequest(context: ArtifactPersistenceContext, checkedRequest?: CheckedCloudflareRequest): Promise<CheckedCloudflareRequest> {
+    const captured = artifactPersistenceContexts.get(context);
+    if (!captured || captured.owner !== this) throw new ArtifactPersistenceContextError(new Error('artifact_persistence_context_unrecognized'));
+    await captured.assertCurrent();
+    return async (path, init) => {
+      await captured.assertCurrent();
+      try { return await (checkedRequest ?? captured.call)(path, init); }
+      finally { await captured.assertCurrent(); }
+    };
+  }
+
+  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void | Promise<void>; retainUntilAcknowledged?: boolean; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent; materialRecoveryBinding?:ProtectedMaterialRecoveryBinding; canvasProtectedBatchBinding?:CanvasProtectedBatchBinding; nativePrintFrameBinding?:NativePrintFrameBinding } = {}): Promise<T> {
+    await options.assertContext?.();
     if (CLOUDFLARE_IMAGE_ACTIONS.has(action)) {
       const {userId,assertCurrent,call} = await this.captureRequestContext(options.assertContext);
-      const protectedEdit = action === 'edit-image' && body.maskDataUrl ? await prepareProtectedCloudflareEdit(body) : null;
+      const nativePrintFinalFrame = options.nativePrintFrameBinding ? await nativePrintFinalFrameFor(options.nativePrintFrameBinding) : undefined;
+      await assertCurrent();
+      const protectedBody = nativePrintFinalFrame ? {...body,nativePrintFinalFrame} : body;
+      const protectedEdit = action === 'edit-image' && body.maskDataUrl ? await prepareProtectedCloudflareEdit(protectedBody) : null;
       // Heavy preflight, attestation, and provider admission each normalize
       // the input independently. Pin one candidate seed before the first
       // normalization so a missing caller seed cannot produce three different
@@ -620,12 +713,22 @@ class CloudflareDataPlaneClient {
         ? { ...(protectedEdit?.body ?? body), seed: crypto.getRandomValues(new Uint32Array(1))[0] % 2147483647 }
         : (protectedEdit?.body ?? body);
       const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(heavyInput, options.heavyPreparation) : heavyInput;
-      const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody)); await assertCurrent();
-      const requestId = options.idempotencyKey ?? crypto.randomUUID();
+      let prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody)); await assertCurrent();
+      if (protectedEdit && body.generationProvider === 'openai') {
+        if (!options.materialRecoveryBinding&&!options.canvasProtectedBatchBinding) throw new Error('protected_openai_durable_material_binding_required');
+        protectedEdit.nativePrintFrameBinding = options.nativePrintFrameBinding;
+        const projection = await prepareProtectedOpenAIProjection(protectedEdit,prepared);prepared=projection.body;await assertCurrent();
+        if(options.canvasProtectedBatchBinding){const binding=options.canvasProtectedBatchBinding,batch=await loadCanvasProtectedBatch(binding);if(binding.requestId!==options.idempotencyKey||binding.scopeId!==userId||binding.brandId!==String(body.brandId??body.brand_id)||binding.featureType!==body.featureType||Number(body.count)!==4)throw new Error('canvas_protected_batch_binding_invalid');
+          const native=validateNativePrintFinalFrame(prepared.nativePrintFinalFrame,protectedEdit.plan);prepared={...prepared,canvasProtectedBatchBinding:binding,nativePrintFinalFrame:validateNativePrintFinalFrame({...native,version:'canvas-protected-openai-contain-v1',original:{width:batch.original.width,height:batch.original.height,digest:batch.original.digest,digestScheme:'sha256-data-url-utf8-v1'},canvasBatch:binding},protectedEdit.plan)};}
+
+      }
+      let requestId = options.idempotencyKey;
       let heavyPreparation = options.heavyPreparation;
       if (options.heavyConsent) {
+        const consentRequestId = options.idempotencyKey ?? crypto.randomUUID();
+        requestId = consentRequestId;
         heavyPreparation = heavyPreparation ?? await this.prepareHeavyGeneration({
-          brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId, input: prepared,
+          brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId: consentRequestId, input: prepared,
         });
         if (options.heavyConsent.termsAccepted !== true || options.heavyConsent.rightsAttested !== true) {
           throw new Error('heavy_explicit_consent_required');
@@ -634,7 +737,7 @@ class CloudflareDataPlaneClient {
         if (!status?.termsAcceptanceId) {
           if (!heavyPreparation.termsDocumentVersion || !heavyPreparation.termsDocumentDigest) throw new Error('heavy_terms_document_unavailable');
           await this.recordHeavyTermsAcceptance({
-            brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId, preflight: heavyPreparation,
+            brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId: consentRequestId, preflight: heavyPreparation,
             termsAccepted: true, documentVersion: heavyPreparation.termsDocumentVersion,
             documentDigest: heavyPreparation.termsDocumentDigest, source: 'heavy-ui-v1',
           });
@@ -644,7 +747,7 @@ class CloudflareDataPlaneClient {
           throw new Error('heavy_entitlement_policy_unavailable');
         }
         await this.recordHeavyRequestAttestation({
-          brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId, preflight: heavyPreparation,
+          brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId: consentRequestId, preflight: heavyPreparation,
           providerInput: prepared, termsAccepted: true, rightsAttested: true,
           termsDocumentVersion: heavyPreparation.termsDocumentVersion, termsDocumentDigest: heavyPreparation.termsDocumentDigest,
           rightsVersion: heavyPreparation.rightsVersion, rightsDocumentVersion: heavyPreparation.rightsDocumentVersion,
@@ -653,13 +756,19 @@ class CloudflareDataPlaneClient {
       }
       const finalBody = heavyPreparation ? attachHeavyGenerationPreflight(prepared, heavyPreparation) : prepared;
       const scope = {origin:this.origin,userId,brandId:String(finalBody.brandId ?? finalBody.brand_id)};
-      const snapshot = protectedEdit ? {...protectedEdit,body:finalBody} : null;
-      return invokeDurableImageAction<T>({ origin: this.origin,userId,action,body: finalBody,idempotencyKey:requestId,assertCurrent,call,
-        retainUntilAcknowledged:!!protectedEdit,
+      const materialBinding = options.materialRecoveryBinding;
+      if (materialBinding && (!protectedEdit || materialBinding.requestId !== requestId || materialBinding.scopeId !== userId
+        || materialBinding.brandId !== scope.brandId || Number(finalBody.count ?? 1) !== 1)) throw new Error('material_protected_recovery_binding_invalid');
+      const canvasBinding=options.canvasProtectedBatchBinding;
+      if(canvasBinding&&(!protectedEdit||body.generationProvider!=='openai'||canvasBinding.requestId!==requestId))throw new Error('canvas_protected_batch_binding_invalid');
+      const snapshot = protectedEdit ? {...protectedEdit,body:finalBody,...(canvasBinding?{canvasProtectedBatchBinding:canvasBinding}:{}),...(materialBinding ? {materialRecoveryBinding:materialBinding,nativePrintFrameBinding:options.nativePrintFrameBinding} : {})} : null;
+      const lifecycle = canvasBinding && snapshot ? await createCanvasProtectedBatchLifecycle(canvasBinding,snapshot,{brandId:scope.brandId,userId},assertCurrent) : materialBinding && snapshot ? await createMaterialProtectedLifecycle(materialBinding,snapshot,{brandId:scope.brandId,userId},assertCurrent) : undefined;
+      return invokeDurableImageAction<T>({ origin: this.origin,userId,action,body: finalBody,idempotencyKey:options.heavyConsent ? requestId : options.idempotencyKey,assertCurrent,call,
+        retainUntilAcknowledged:!!protectedEdit || options.retainUntilAcknowledged === true,
         beforeSubmit:snapshot ? (id,key)=>persistProtectedImageInput(scope,snapshot,id,key) : undefined,
-        onTerminal:snapshot ? (id,key)=>deleteProtectedImageInput(scope,id,key) : undefined,
-        finalize:protectedEdit ? receipt=>finalizeProtectedCloudflareEdit({ prepared:protectedEdit,receipt,assertCurrent,call,
-          save:input=>this.saveWorkspaceArtifact(input,call) }) : undefined });
+        onTerminal:snapshot && !materialBinding && !canvasBinding ? (id,key)=>deleteProtectedImageInput(scope,id,key) : undefined,
+        finalize:protectedEdit ? receipt=>(receipt.provider === 'openai' ? finalizeProtectedOpenAIEdit : finalizeProtectedCloudflareEdit)({ prepared:snapshot!,receipt,assertCurrent,call,
+          save:input=>this.saveWorkspaceArtifact(input,call),lifecycle }) : undefined });
     }
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
@@ -677,12 +786,46 @@ class CloudflareDataPlaneClient {
     await assertCurrent(); return entries;
   }
 
+  /** Material final-save recovery reads only local pixels and workspace receipts. */
+  async recoverProtectedMaterialComposite(brandId:string,requestId:string,assertContext?:()=>void) {
+    const {userId,assertCurrent,call} = await this.captureRequestContext(assertContext);
+    const entry = await loadProtectedImageInput({origin:this.origin,userId,brandId},requestId);
+    await assertCurrent();
+    const binding = entry.prepared.materialRecoveryBinding;
+    if (!binding || binding.requestId !== requestId) throw new Error('material_protected_recovery_binding_invalid');
+    const artifact = await recoverBoundMaterialComposite(binding,entry.prepared,{brandId,userId},{assertCurrent,
+      readRemote:id=>this.readWorkspaceArtifact(id,call),save:input=>this.saveWorkspaceArtifact(input,call),
+      readSavedImage:async path=>{const media = await call('/v1/media/read?'+new URLSearchParams({bucket:'generated-images',path,expiresIn:'3600'}));
+        if (!media || typeof (media as {url?:unknown}).url !== 'string' || !(media as {url:string}).url.startsWith('https://')) throw new Error('material_protected_saved_png_read_failed');
+        return (media as {url:string}).url;}});
+    await assertCurrent();
+    return { artifact, acknowledgement: { requestId:entry.requestId,clientRecoveryKey:entry.clientRecoveryKey } };
+  }
+
+  /** Canvas completed-batch recovery never enters the generation submission path. */
+  async recoverProtectedCanvasBatchComposite(brandId:string,requestId:string,assertContext?:()=>void,expectedSourceImageUrl?:string,expectedSourceIdentity?:unknown):Promise<ImageReceipt>{
+    const {userId,assertCurrent,call}=await this.captureRequestContext(assertContext);
+    const entry=await loadProtectedImageInput({origin:this.origin,userId,brandId},requestId);await assertCurrent();
+    const binding=entry.prepared.canvasProtectedBatchBinding;if(!binding||binding.requestId!==requestId||binding.brandId!==brandId||binding.scopeId!==userId)throw new Error('canvas_protected_batch_binding_invalid');
+    const batch=await loadCanvasProtectedBatch(binding);await assertCurrent();
+    if(binding.source.kind==='object'){if(expectedSourceIdentity===undefined||await protectedImageDigest(JSON.stringify(expectedSourceIdentity))!==binding.source.identityDigest)throw new Error('canvas_protected_object_source_changed');}
+    if(expectedSourceImageUrl){const source=await materializeMaterialPng(expectedSourceImageUrl);await assertCurrent();if(source.width!==batch.original.width||source.height!==batch.original.height||await protectedImageDigest(source.dataUrl)!==batch.original.digest)throw new Error('canvas_protected_recovery_source_changed');}
+    // Only an existing completed operation may be read when raw retention was interrupted.
+    const receipt=batch.receipt&&await canvasBatchHasAllRaw(binding)?batch.receipt:await call(`/v1/image-ai/requests/${encodeURIComponent(requestId)}`) as ImageReceipt;await assertCurrent();
+    if(!receipt.success||receipt.state!=='completed')throw new Error('canvas_protected_completed_provider_receipt_required');
+    const lifecycle=await createCanvasProtectedBatchLifecycle(binding,entry.prepared,{brandId,userId},assertCurrent);
+    const result=await finalizeProtectedOpenAIEdit({prepared:entry.prepared,receipt,assertCurrent,call,save:input=>this.saveWorkspaceArtifact(input,call),lifecycle});await assertCurrent();
+    return {...result,clientRecoveryKey:entry.clientRecoveryKey};
+  }
+
   /** Explicit recovery uses the original prepared bytes/settings and UUID.
    * Only a definite absent receipt permits submission of that same UUID. */
   async resumeProtectedImageEdit(brandId:string,requestId:string,assertContext?:()=>void,expectedSourceImageUrl?:string):Promise<ImageReceipt> {
     const {userId,assertCurrent,call} = await this.captureRequestContext(assertContext);
     const scope = {origin:this.origin,userId,brandId};
     const entry = await loadProtectedImageInput(scope,requestId); await assertCurrent();
+    if (entry.prepared.canvasProtectedBatchBinding) throw new Error('canvas_protected_save_only_recovery_required');
+    if (entry.prepared.materialRecoveryBinding) throw new Error('material_protected_save_only_recovery_required');
     if (expectedSourceImageUrl) {
       const currentSource = await prepareProtectedCloudflareEdit({...entry.prepared.body,imageUrls:[expectedSourceImageUrl],maskDataUrl:entry.prepared.maskDataUrl});
       if (currentSource.plan.sourceSha256 !== entry.prepared.plan.sourceSha256) throw new Error('image_recovery_source_changed');
@@ -692,7 +835,7 @@ class CloudflareDataPlaneClient {
       assertCurrent,call,retainUntilAcknowledged:true,
       beforeSubmit:(id,key)=>persistProtectedImageInput(scope,entry.prepared,id,key),
       onTerminal:(id,key)=>deleteProtectedImageInput(scope,id,key),
-      finalize:receipt=>finalizeProtectedCloudflareEdit({prepared:entry.prepared,receipt,assertCurrent,call,save:input=>this.saveWorkspaceArtifact(input,call)})});
+      finalize:receipt=>(receipt.provider === 'openai' ? finalizeProtectedOpenAIEdit : finalizeProtectedCloudflareEdit)({prepared:entry.prepared,receipt,assertCurrent,call,save:input=>this.saveWorkspaceArtifact(input,call)})});
   }
 
   async getImageUsage(brandId: string): Promise<CloudflareImageUsage> {
@@ -821,23 +964,27 @@ class CloudflareDataPlaneClient {
     sourceJobId?: string | null;
     sourceStoragePath: string | null;
     imageAI?: { requestId: string; candidateIndex: number };
-  },checkedRequest?: CheckedCloudflareRequest): Promise<WorkspaceArtifactRemoteResponse> {
+  },checkedRequest?: CheckedCloudflareRequest, persistenceContext?: ArtifactPersistenceContext): Promise<WorkspaceArtifactRemoteResponse> {
+    const send = persistenceContext
+      ? await this.artifactPersistenceRequest(persistenceContext, checkedRequest)
+      : checkedRequest ?? this.request.bind(this);
     let imageUrl = input.imageUrl;
     if (!input.sourceStoragePath && imageUrl.startsWith('blob:')) {
       // Browser-owned blobs must be materialized here; a Worker must never try
       // to fetch blob URLs, external URLs, or embedded credentials.
-      const response = await fetch(imageUrl);
+      await persistenceContext?.assertCurrent();
+      const response = await fetch(imageUrl).finally(() => persistenceContext?.assertCurrent());
       if (!response.ok) throw new Error('workspace_blob_unavailable');
       const blob = await response.blob();
-      if (blob.size > 10 * 1024 * 1024) throw new Error('workspace_image_too_large');
+      if (blob.size > WORKSPACE_UPLOAD_MAX_BYTES) throw new Error('workspace_image_too_large');
       imageUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('workspace_blob_invalid'));
         reader.onerror = () => reject(reader.error ?? new Error('workspace_blob_invalid'));
         reader.readAsDataURL(blob);
       });
+      await persistenceContext?.assertCurrent();
     }
-    const send = checkedRequest ?? this.request.bind(this);
     if (!WORKSPACE_REQUEST_ID.test(input.requestId)) throw new Error('cloudflare_workspace_request_id_invalid');
     try {
       const result = await send('/v1/workspace-artifacts', {
@@ -846,23 +993,29 @@ class CloudflareDataPlaneClient {
       });
       return asWorkspaceArtifactRemoteResponse(result, input.requestId, input.sourceStoragePath);
     } catch (error) {
+      if (error instanceof ArtifactPersistenceContextError) throw error;
+      await persistenceContext?.assertCurrent();
       // The POST may have committed before its response was lost. Reconcile the
       // exact request ID before surfacing the error; never invent a new ID or
       // silently retry a write whose effect is unknown. A 404/pending/mismatch
       // readback keeps the original POST error so the caller can retain its
       // local record and resume explicitly with the same identity.
       try {
-        return await this.readWorkspaceArtifact(input.requestId, checkedRequest, input.sourceStoragePath);
-      } catch {
+        return await this.readWorkspaceArtifact(input.requestId, checkedRequest, input.sourceStoragePath, persistenceContext);
+      } catch (readError) {
+        if (readError instanceof ArtifactPersistenceContextError) throw readError;
+        await persistenceContext?.assertCurrent();
         throw error;
       }
     }
   }
 
   /** Read the exact workspace save receipt used to reconcile an uncertain POST. */
-  async readWorkspaceArtifact(requestId: string, checkedRequest?: CheckedCloudflareRequest, expectedSourceStoragePath?: string | null): Promise<WorkspaceArtifactRemoteResponse> {
+  async readWorkspaceArtifact(requestId: string, checkedRequest?: CheckedCloudflareRequest, expectedSourceStoragePath?: string | null, persistenceContext?: ArtifactPersistenceContext): Promise<WorkspaceArtifactRemoteResponse> {
     if (!WORKSPACE_REQUEST_ID.test(requestId)) throw new Error('cloudflare_workspace_request_id_invalid');
-    const read = checkedRequest ?? this.request.bind(this);
+    const read = persistenceContext
+      ? await this.artifactPersistenceRequest(persistenceContext, checkedRequest)
+      : checkedRequest ?? this.request.bind(this);
     const result = await read(`/v1/workspace-artifacts/${encodeURIComponent(requestId)}`, {
       method: 'GET', signal: AbortSignal.timeout(8000),
     });
@@ -953,16 +1106,39 @@ class CloudflareDataPlaneClient {
     });
   }
 
-  async updateGeneratedImageLibraryTitle(imageId: string, title: string): Promise<CloudflareGeneratedImage> {
-    return this.request<CloudflareGeneratedImage>(`/v1/generated-images/${encodeURIComponent(imageId)}`, {
+  async updateGeneratedImageLibraryTitle(imageId: string, title: string, persistenceContext?: ArtifactPersistenceContext): Promise<CloudflareGeneratedImage> {
+    const send = persistenceContext ? await this.artifactPersistenceRequest(persistenceContext) : this.request.bind(this);
+    return await send(`/v1/generated-images/${encodeURIComponent(imageId)}`, {
       method: 'PATCH',
       body: JSON.stringify({ library_title: title }),
       headers: { 'content-type': 'application/json' },
-    });
+    }) as CloudflareGeneratedImage;
   }
 
-  async deleteGeneratedImage(imageId: string): Promise<void> {
-    await this.request<unknown>(`/v1/generated-images/${encodeURIComponent(imageId)}`, { method: 'DELETE' });
+  async deleteGeneratedImage(imageId: string, persistenceContext?: ArtifactPersistenceContext): Promise<void> {
+    const send = persistenceContext ? await this.artifactPersistenceRequest(persistenceContext) : this.request.bind(this);
+    await send(`/v1/generated-images/${encodeURIComponent(imageId)}`, { method: 'DELETE' });
+  }
+
+  async sendDesignAssistantRequest(
+    input: CloudflareDesignAssistantRequestInput,
+    context?: { userId: string; assertContext: () => void | Promise<void> },
+  ): Promise<CloudflareDesignAssistantReceipt> {
+    const { userId, call } = await this.captureRequestContext(context?.assertContext);
+    if (context && context.userId !== userId) throw new Error('cloudflare_session_changed');
+    return await call('/v1/design-assistant/requests', {
+      method: 'POST', body: JSON.stringify(input), headers: { 'content-type': 'application/json' },
+    }) as CloudflareDesignAssistantReceipt;
+  }
+
+  async readDesignAssistantRequest(
+    input: Pick<CloudflareDesignAssistantRequestInput, 'requestId' | 'brandId' | 'projectId' | 'conversationId'>,
+    context?: { userId: string; assertContext: () => void | Promise<void> },
+  ): Promise<CloudflareDesignAssistantReceipt> {
+    const { userId, call } = await this.captureRequestContext(context?.assertContext);
+    if (context && context.userId !== userId) throw new Error('cloudflare_session_changed');
+    const params = new URLSearchParams({ brand_id: input.brandId, project_id: input.projectId, conversation_id: input.conversationId });
+    return await call(`/v1/design-assistant/requests/${encodeURIComponent(input.requestId)}?${params}`) as CloudflareDesignAssistantReceipt;
   }
 
   private async canvasRequest<T>(path:string,init:RequestInit,context?:{userId:string;assertContext:()=>void}):Promise<T> {
@@ -979,9 +1155,17 @@ class CloudflareDataPlaneClient {
     return this.request<CloudflareCanvasDocument[]>(`/v1/canvas-documents?brand_id=${encodeURIComponent(brandId)}`);
   }
 
-  async listCanvasDocumentsPage(brandId: string, limit = 100, offset = 0): Promise<CloudflareCanvasDocument[]> {
+  async listCanvasDocumentsPage(
+    brandId: string,
+    limit = 100,
+    offset = 0,
+    context?: { userId: string; assertContext: () => void | Promise<void> },
+  ): Promise<CloudflareCanvasDocument[]> {
     const params = new URLSearchParams({ brand_id: brandId, limit: String(limit), offset: String(offset) });
-    return this.request<CloudflareCanvasDocument[]>(`/v1/canvas-documents?${params.toString()}`);
+    const path = `/v1/canvas-documents?${params.toString()}`;
+    return context
+      ? this.canvasRequest<CloudflareCanvasDocument[]>(path, {}, context)
+      : this.request<CloudflareCanvasDocument[]>(path);
   }
 
   async createCanvasDocument(input: { id?:string;brand_id: string; title: string; snapshot: unknown },context?:{userId:string;assertContext:()=>void}): Promise<CloudflareCanvasDocument> {
