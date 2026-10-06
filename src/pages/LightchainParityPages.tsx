@@ -594,14 +594,14 @@ function LightchainPrintingWorkspace() {
           <span className="mt-1 text-xs text-neutral-400">20MB以下の画像アップロードしてください</span>
         </>}
       </label>
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-[18px] flex h-5 items-center justify-between">
         <h2 className="text-base font-normal text-white/90">プリントをアップロード</h2>
         <button type="button" disabled={locked} className="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white" onClick={() => { reset(); }}><RotateCw aria-hidden="true" className="h-3 w-3" />リセット</button>
       </div>
-      <div role="group" aria-label="プリント範囲" className="mt-3 grid h-[30px] w-[244px] grid-cols-2 rounded-full bg-[#2b3133] p-[2px]">
+      <div role="group" aria-label="プリント範囲" className="mt-[18px] grid h-[30px] w-[244px] grid-cols-2 rounded-full bg-[#2b3133] p-[2px]">
         {(['spot', 'full'] as const).map((value) => <button key={value} type="button" aria-pressed={coverage === value} disabled={locked} onClick={() => setCoverage(value)} className={`rounded-full text-sm transition ${coverage === value ? 'bg-[#4b5153] text-white' : 'text-white/70 hover:text-white'}`}>{value === 'spot' ? 'スポット' : '全体'}</button>)}
       </div>
-      <label data-testid="print-image-print-input" className="mt-4 flex h-[120px] w-[120px] shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-transparent bg-[#33393b] p-2 text-center transition hover:border-[#20d0c4]">
+      <label data-testid="print-image-print-input" className="mt-[18px] flex h-[120px] w-[120px] shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-transparent bg-[#33393b] p-2 text-center transition hover:border-[#20d0c4]">
         <input className="sr-only" disabled={locked} type="file" accept="image/*" aria-label="プリント画像をアップロード" onChange={(event) => handleFile(event, 'pattern')} />
         {printImage ? <>
           <img src={printImage.url} alt="プリント画像" data-source-slot="secondary" data-source-image-id={workspace.slots.secondary?.sourceImageId??''} data-source-storage-path={workspace.slots.secondary?.sourceStoragePath??''} className="h-full w-full object-contain" />
