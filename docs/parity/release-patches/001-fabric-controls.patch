@@ -1,5 +1,5 @@
 diff --git a/src/pages/LightchainMaterialWorkbenchPage.tsx b/src/pages/LightchainMaterialWorkbenchPage.tsx
-index 92a10b79..d6555568 100644
+index 92a10b79..4a724962 100644
 --- a/src/pages/LightchainMaterialWorkbenchPage.tsx
 +++ b/src/pages/LightchainMaterialWorkbenchPage.tsx
 @@ -1731,6 +1731,7 @@ function LightchainMaterialWorkbenchSession() {
@@ -67,11 +67,14 @@ index 92a10b79..d6555568 100644
                    >
                      <option>画像比率自動</option>
                    </select>
-@@ -6862,7 +6864,7 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6861,8 +6863,9 @@ function LightchainMaterialWorkbenchSession() {
+                     data-testid="lightchain-fabric-generate"
                      onClick={() => void handleGenerate()}
                      isLoading={isGenerating}
-                     disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
+-                    disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
 -                    className="absolute right-0 top-[25px] h-[40px] w-[288px] bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
++                    // Light has no preview gate; the local try-on preview is optional and generation falls back to the provider mask.
++                    disabled={isGenerating || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
 +                    className="h-[40px] w-[288px] bg-[#5fd0c8] text-slate-950 hover:brightness-105"
                      size="lg"
                      leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}

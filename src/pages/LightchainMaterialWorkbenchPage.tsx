@@ -6863,7 +6863,8 @@ function LightchainMaterialWorkbenchSession() {
                     data-testid="lightchain-fabric-generate"
                     onClick={() => void handleGenerate()}
                     isLoading={isGenerating}
-                    disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
+                    // Light has no preview gate; the local try-on preview is optional and generation falls back to the provider mask.
+                    disabled={isGenerating || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
                     className="h-[40px] w-[288px] bg-[#5fd0c8] text-slate-950 hover:brightness-105"
                     size="lg"
                     leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
