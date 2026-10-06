@@ -1847,6 +1847,14 @@ function LightchainMaterialWorkbenchSession() {
       : generatedResults.filter((result) => !result.id.startsWith('print-')),
     [generatedResults, isPrinting, canDisplayPrintHistory],
   );
+  // The fabric history renders oldest-first, so bring the newest result into view when it arrives.
+  const fabricResultHistoryRef = useRef<HTMLDivElement>(null);
+  const newestFabricResultId = isPrinting ? null : visibleGeneratedResults[0]?.id ?? null;
+  useEffect(() => {
+    const history = fabricResultHistoryRef.current;
+    if (!history || !newestFabricResultId) return;
+    history.scrollTop = history.scrollHeight;
+  }, [newestFabricResultId]);
   const printResultRuns = useMemo(
     () => groupPrintResultHistory(visibleGeneratedResults),
     [visibleGeneratedResults],
@@ -6974,7 +6982,7 @@ function LightchainMaterialWorkbenchSession() {
                   />
                 </div>
               ) : (
-                <div data-testid="fabric-result-history" className="h-full overflow-y-auto px-10 pb-6 pt-16">
+                <div ref={fabricResultHistoryRef} data-testid="fabric-result-history" className="h-full overflow-y-auto px-10 pb-6 pt-16">
                   {[...visibleGeneratedResults].reverse().map((result) => (
                     <WorkbenchResultCard
                       key={result.id}

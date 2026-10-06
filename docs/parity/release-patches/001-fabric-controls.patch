@@ -1,5 +1,5 @@
 diff --git a/src/pages/LightchainMaterialWorkbenchPage.tsx b/src/pages/LightchainMaterialWorkbenchPage.tsx
-index 92a10b79..722bfb8f 100644
+index 92a10b79..a909f7bb 100644
 --- a/src/pages/LightchainMaterialWorkbenchPage.tsx
 +++ b/src/pages/LightchainMaterialWorkbenchPage.tsx
 @@ -1576,8 +1576,15 @@ export function LightchainMaterialWorkbenchPage() {
@@ -28,7 +28,22 @@ index 92a10b79..722bfb8f 100644
    const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
    const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
    const [printGarmentSelectionMaskUrl, setPrintGarmentSelectionMaskUrl] = useState<string | null>(null);
-@@ -6750,9 +6758,9 @@ function LightchainMaterialWorkbenchSession() {
+@@ -1839,6 +1847,14 @@ function LightchainMaterialWorkbenchSession() {
+       : generatedResults.filter((result) => !result.id.startsWith('print-')),
+     [generatedResults, isPrinting, canDisplayPrintHistory],
+   );
++  // The fabric history renders oldest-first, so bring the newest result into view when it arrives.
++  const fabricResultHistoryRef = useRef<HTMLDivElement>(null);
++  const newestFabricResultId = isPrinting ? null : visibleGeneratedResults[0]?.id ?? null;
++  useEffect(() => {
++    const history = fabricResultHistoryRef.current;
++    if (!history || !newestFabricResultId) return;
++    history.scrollTop = history.scrollHeight;
++  }, [newestFabricResultId]);
+   const printResultRuns = useMemo(
+     () => groupPrintResultHistory(visibleGeneratedResults),
+     [visibleGeneratedResults],
+@@ -6750,9 +6766,9 @@ function LightchainMaterialWorkbenchSession() {
                  ))}
                </nav>
  
@@ -40,7 +55,7 @@ index 92a10b79..722bfb8f 100644
                    >
                      <span className="flex-1">
                        この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
-@@ -6760,7 +6768,8 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6760,7 +6776,8 @@ function LightchainMaterialWorkbenchSession() {
                          今すぐ体験
                        </Link>
                      </span>
@@ -50,7 +65,7 @@ index 92a10b79..722bfb8f 100644
  
                <div className="flex flex-col gap-4">
  
-@@ -6824,8 +6833,8 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6824,8 +6841,8 @@ function LightchainMaterialWorkbenchSession() {
                    </section>
                  )}
  
@@ -61,7 +76,7 @@ index 92a10b79..722bfb8f 100644
                    <textarea
                      id="lightchain-fabric-prompt"
                      value={fabricPrompt}
-@@ -6833,7 +6842,7 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6833,7 +6850,7 @@ function LightchainMaterialWorkbenchSession() {
                      placeholder="素材はシルクサテンで、柔らかく光沢感があります。それを上衣またはパンツに置き換えてください。"
                      maxLength={500}
                      rows={3}
@@ -70,7 +85,7 @@ index 92a10b79..722bfb8f 100644
                    />
                    <div className="mt-1 flex items-center justify-between text-xs text-white/45">
                      <span>{fabricPrompt.length} / 500</span>
-@@ -6848,12 +6857,12 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6848,12 +6865,12 @@ function LightchainMaterialWorkbenchSession() {
                    </div>
                  </section>
  
@@ -85,7 +100,7 @@ index 92a10b79..722bfb8f 100644
                    >
                      <option>画像比率自動</option>
                    </select>
-@@ -6861,8 +6870,9 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6861,8 +6878,9 @@ function LightchainMaterialWorkbenchSession() {
                      data-testid="lightchain-fabric-generate"
                      onClick={() => void handleGenerate()}
                      isLoading={isGenerating}
@@ -97,3 +112,12 @@ index 92a10b79..722bfb8f 100644
                      size="lg"
                      leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
                    >
+@@ -6964,7 +6982,7 @@ function LightchainMaterialWorkbenchSession() {
+                   />
+                 </div>
+               ) : (
+-                <div data-testid="fabric-result-history" className="h-full overflow-y-auto px-10 pb-6 pt-16">
++                <div ref={fabricResultHistoryRef} data-testid="fabric-result-history" className="h-full overflow-y-auto px-10 pb-6 pt-16">
+                   {[...visibleGeneratedResults].reverse().map((result) => (
+                     <WorkbenchResultCard
+                       key={result.id}
