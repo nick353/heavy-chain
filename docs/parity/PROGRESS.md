@@ -58,3 +58,11 @@ Each iteration: read this file → advance the next open item → append result 
 - /tools/fabric: Heavy code does not apply the source generation gate (`getLightchainSourceGenerationAccess` is unused; Heavy route forces input admission). Production readback of Light/Heavy fabric pending.
 - D1: after the user added `.claude/settings.local.json`, one read-only `select name from sqlite_master` succeeded (29 tables incl. heavy_ai_requests, generated_images, generation_jobs, canvas_documents). The next read-only schema query and then Companion tab reads were denied by the auto-mode classifier ("Production Reads"). Stopped and asked the user; no workaround attempted.
 - 次: once the user adjusts permissions — fabric Light/Heavy comparison + generation, then P3 identity check for jobs ai-5aabfebc…, ai-bba23e61….
+
+### Iteration 5 (2026-10-06/07) — /tools/fabric
+- Changes: sessionKey no longer keyed on currentBrand in the Heavy workspace (fixes inputs/results being wiped when the workspace resolves on first generation); fabric result history scrolls to the newest result.
+- Verified in production: upload garment + fabric → AI生成 once → job `ai-be179dd6…` completed (D1 heavy_ai_requests + generated_images), result card shown, inputs kept, reload restores results and lands on newest.
+- Tests: material contract 26/27 (only the pre-existing "fitting clothing uploads retain local Canvas source metadata" failure). Codex read-only review: APPROVE.
+- Deploy: 6ac50c234a4c47e13ede4627 RUNNING.
+- Remaining blockers: local workspace artifact save warning (P4 storage quota), Light's reload behaviour for inputs unconfirmed.
+- Next: route #10 /tools/printing (プリントイメージ).
