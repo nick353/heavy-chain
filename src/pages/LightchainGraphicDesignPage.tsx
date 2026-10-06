@@ -130,6 +130,7 @@ function LightchainGraphicDesignWorkspace() {
             {preview && (
               <div className="mt-2 flex h-72 w-full shrink-0 items-center justify-center overflow-hidden rounded border border-[#20d0c4] bg-[#333839]" data-testid="graphic-design-preview">
                 <img src={preview.imageUrl} alt="選択中の参考画像" className="max-h-full max-w-full object-contain" />
+                <span className="sr-only" data-testid="graphic-design-preview-name">{preview.name}</span>
               </div>
             )}
             <label className="mt-0 flex items-center justify-between rounded-b bg-[#2f3436] px-4 py-3 text-sm text-neutral-300">
