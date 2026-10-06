@@ -118,3 +118,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 変更: `ChangeColorDetailPage` (feature `change-color`, inputs colorTarget/colorArea/colorRatio), `ChangeColorProjectDashboardPage` on the shared board; App routes moved off GeneratePage; capability, overlay, entry-routing test updated to the new surface.
 - 検証: tsc; 25 related suites compared one by one with the baseline — equal except entry-routing, fixed by updating its stale GeneratePage expectation. Production 1440×900: guide chooser, panel and toolbar match Light; run `ai-f4d370ca-9ff2-43e9-84c0-61c9e599c181` completed in D1; reload restores everything.
 - 次: #18 /model.
+
+### Iteration 14 (2026-10-07, /goal) — /model AIフィッティング (#18)
+- 変更: `LightchainWorkbenchPage` header spacing, 207×40 bottom buttons, Light post-upload grid (image + 続けてアップロードする + Gallery素材を選択), file name sr-only, mask controls collapsed in `<details>`; generation reuses the already-selected Heavy workspace brand instead of `ensureHeavyWorkspace()` (that cleared currentBrand and remounted the keyed workbench, losing inputs and the in-flight result); recovery test binding updated; overlay gains the page.
+- 検証: tsc; workbench-resume / print-design-recovery / canonical-routes / model-tool-settings / dialogue suites equal to baseline (one parallel-run flake re-run singly = 0 fail). Production 1440×900: inputs persist through generation; run `ai-be628dda-c4b8-4d5d-8236-1f2de102dd54` completed in D1; /model?resumeJob=… restores garment, brief and result.
+- 残: model descriptor (gender/age) is not derived from the free-text brief.
+- 次: #19 /model-library.

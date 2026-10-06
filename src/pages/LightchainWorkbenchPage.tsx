@@ -113,6 +113,7 @@ import {
 import { resolveHeavyRouteForRow } from '../features/lightchain/heavyRouteMapping';
 import { isHeavyOwnedFeature } from '../lib/heavyCapability';
 import {
+  isHeavyWorkspaceBrandName,
   isHeavyWorkspaceRuntime,
   resolveHeavyWorkspaceToolId,
   toHeavyWorkspacePath,
@@ -3327,8 +3328,10 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       const generationBrand = currentBrand ?? await refreshCurrentBrand();
       return generationBrand;
     };
+    // An already-selected Heavy workspace is authoritative; re-resolving it clears currentBrand mid-flight,
+    // which remounts this workspace (key = brand) and drops the uploaded inputs and the in-flight result.
     const generationBrand = isHeavyRoute && heavyOwnedFeature && user?.id
-      ? await ensureHeavyWorkspace()
+      ? (currentBrand && isHeavyWorkspaceBrandName(currentBrand.name) ? currentBrand : await ensureHeavyWorkspace())
       : await resolveLightchainGenerationBrand();
     if (!generationBrand) {
       toast.error(heavyOwnedFeature
@@ -3776,8 +3779,10 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         ? 'generate-image'
         : lightchainProviderRoute;
 
+    // An already-selected Heavy workspace is authoritative; re-resolving it clears currentBrand mid-flight,
+    // which remounts this workspace (key = brand) and drops the uploaded inputs and the in-flight result.
     const generationBrand = isHeavyRoute && heavyOwnedFeature && user?.id
-      ? await ensureHeavyWorkspace()
+      ? (currentBrand && isHeavyWorkspaceBrandName(currentBrand.name) ? currentBrand : await ensureHeavyWorkspace())
       : currentBrand ?? await refreshCurrentBrand();
     if (!generationBrand) {
       setLightchainGenerationError('brand_not_available');
@@ -5073,7 +5078,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
           <section className="flex h-full min-h-0 flex-col overflow-hidden border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
             <div className="flex h-12 items-center border-b border-white/10 px-4">
               <p className="shrink-0 text-[14px] font-semibold leading-6 text-white">AIフィッティング</p>
-              <div className="ml-3 flex min-w-0 items-center gap-2">
+              <div className="ml-2 flex min-w-0 items-center gap-2">
                 <div
                   className={`inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-[#262a2b] p-1 ${activeFittingMode === 'regular' ? 'w-[140px]' : 'w-[104px]'}`}
                   role="tablist"
@@ -5135,7 +5140,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     <p className="mt-1 mb-1 text-[14px] leading-6 text-[#aab8b6]">自動でアパレル平置き画像に変換</p>
                     {materialSlotFiles.primary?.name && (
                       <p
-                        className="mt-1 truncate text-xs text-neutral-500"
+                        className="sr-only"
                         data-testid="lightchain-fitting-garment-selection"
                       >
                         {materialSlotFiles.primary.name}
@@ -5154,6 +5159,32 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     </span>
                   </button>
                 </div>
+                {garmentImageUrl ? (
+                <div className="flex h-[200px] shrink-0 gap-3 overflow-hidden rounded-2xl border border-dashed border-white/10 bg-[#262a2b] p-2" data-testid="lightchain-fitting-uploaded-grid">
+                  <div className="relative aspect-square h-full shrink-0 overflow-hidden rounded-lg">
+                    <img src={garmentImageUrl} alt="衣服画像" className="size-full object-cover" />
+                  </div>
+                  <label className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/15 bg-white/[0.04] p-3 text-center">
+                    <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
+                    <ImagePlus className="h-6 w-6 text-neutral-300" />
+                    <span className="mt-2 text-[14px] leading-[21px] text-[#e3e8e8]">続けてアップロードする</span>
+                    <span className="mt-1 text-xs leading-[17.1429px] text-[#aab8b6]">ここをクリック/ドラッグします。</span>
+                    <button
+                      type="button"
+                      data-testid="fitting-model-gallery-select"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setActiveMaterialSlot('primary');
+                        setActiveMaterialTab('platform-assets');
+                        setMaterialModalOpen(true);
+                      }}
+                      className="mt-2 text-xs text-cyan-200/80 underline-offset-2 hover:underline"
+                    >
+                      Gallery素材を選択
+                    </button>
+                  </label>
+                </div>
+                ) : (
                 <div className="flex h-[200px] shrink-0 gap-2 overflow-hidden rounded-2xl border border-dashed border-white/10 bg-[#262a2b] transition hover:border-cyan-300/40">
                   <label className="flex flex-1 cursor-pointer gap-2 p-2 group">
                     <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
@@ -5217,24 +5248,13 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     )}
                   </div>
                 </div>
-                {garmentImageUrl && (
-                  <button
-                    type="button"
-                    data-testid="fitting-model-gallery-select"
-                    onClick={() => {
-                      setActiveMaterialSlot('primary');
-                      setActiveMaterialTab('platform-assets');
-                      setMaterialModalOpen(true);
-                    }}
-                    className="mt-2 w-full rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-300/20"
-                  >
-                    Gallery素材を選択
-                  </button>
                 )}
               </div>
               {garmentImageUrl && (
+                <details className="group/mask rounded-xl border border-white/10 bg-[#181d1f]">
+                <summary className="cursor-pointer list-none px-3 py-2 text-xs text-white/60">切り抜き / マスク（詳細設定）</summary>
                 <section
-                  className="rounded-xl border border-white/10 bg-[#181d1f] p-3"
+                  className="p-3 pt-0"
                   data-testid="lightchain-fitting-mask-controls"
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -5293,6 +5313,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     </div>
                   )}
                 </section>
+                </details>
               )}
               <div className="!mt-[33px] flex h-[34px] w-full items-center justify-start gap-2" role="tablist">
                 {['説明生成', '参考画像', 'モデルのセット写真'].map((tab) => (
@@ -5557,7 +5578,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     data-testid="lightchain-fitting-batch-add"
                     disabled={!fittingBatchReady || fittingBatchBusy || !garmentImageUrl || visibleFittingBatchTasks.length >= 8}
                     onClick={() => void updateFittingBatch()}
-                    className="inline-flex items-center justify-center rounded-lg bg-[#65d3cf] px-5 py-3 text-sm font-semibold text-neutral-950 hover:bg-[#78e0dc]"
+                    className="inline-flex h-10 w-[207px] items-center justify-center rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950 hover:bg-[#78e0dc]"
                   >
                     追加
                   </button>
@@ -5566,7 +5587,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     type="button"
                     data-testid="lightchain-model-permission"
                     aria-label="衣服画像を選択してください"
-                    className="inline-flex items-center justify-center rounded-lg bg-[#0bc1b8] px-5 py-3 text-xs font-medium leading-[17.1429px] text-[#111817]"
+                    className="inline-flex h-10 w-[207px] items-center justify-center rounded-lg bg-[#0bc1b8] px-5 text-xs font-medium leading-[17.1429px] text-[#111817]"
                     onClick={() => toast('衣服画像を選択してください')}
                   >
                     衣服画像を選択してください
@@ -5576,7 +5597,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     type="button"
                     disabled={aiGenerateDisabled || lightchainGenerationRunning}
                     onClick={() => void handleLightchainPreviewGenerate()}
-                    className="inline-flex items-center justify-center rounded-lg bg-[#65d3cf] px-5 py-3 text-sm font-semibold text-neutral-950 hover:bg-[#78e0dc] disabled:bg-[#3a484b] disabled:text-neutral-500"
+                    className="inline-flex h-10 w-[207px] items-center justify-center rounded-lg bg-[#65d3cf] px-5 text-sm font-semibold text-neutral-950 hover:bg-[#78e0dc] disabled:bg-[#3a484b] disabled:text-neutral-500"
                   >
                     AI生成 <Sparkles className="ml-2 h-4 w-4" />
                   </button>
