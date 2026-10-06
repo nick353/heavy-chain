@@ -31,5 +31,6 @@ Each iteration: read this file → advance the next open item → append result 
 ### 2026-10-06 iteration 1 — /designProduction project + dialogue tabs
 - 変更: conversation projects merged into Light's single recency-ordered "マイプロジェクト" / "最近のプロジェクト" grids (`mergeDesignProjectGridItems`); card CSS no longer depends on nth-child (the extra conversation section had broken the 220×240 / 167px cover layout); covers top-aligned at natural aspect; send arrow ↑; scene labels 16px medium with lighter gradient; "すべて表示" 14px nowrap; error state no longer shows the empty-state copy.
 - 検証: tsc, vite build, design tests 21/21 + new merge test 3/3, regressions 119/119; Codex review ×2 (findings fixed). Deployed Zeabur `6ac4eee04a4c47e13ede418a` (RUNNING) from prod tree + 4 files.
-- 残: thumbnail resolve latency (~5s) → P4 speed; default cover still hotlinked from Light; production readback pending.
-- 次: production readback of /designProduction, then route ledger group 1 (designProduction/detail, header/account).
+- 本番readback: Companion 1440×900 — card grid x=141, top=520, 5 columns × 228px pitch, heading y≈487, conversation card merged first with default cover; matches Light capture of the same state.
+- 残: thumbnail resolve latency (~5s) → P4 speed; default cover still hotlinked from Light.
+- 次: build route inventory from Light navigation, then group 1 remaining (designProduction/detail, header/account menu).
