@@ -520,6 +520,7 @@ export function ImageSelector({
               <Check className="w-3 h-3" />
               選択済み
             </span>
+            {value.file?.name && <span className="sr-only" data-testid="image-selector-file-name">{value.file.name}</span>}
             <span className="px-2 py-1 bg-black/50 text-white text-xs rounded-lg">
               {REFERENCE_TYPES.find(t => t.id === value.referenceType)?.name}
             </span>
