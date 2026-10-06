@@ -91,3 +91,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 変更: `src/lib/rasterToSvg.ts` (colour quantisation, pixel-edge tracing with holes, simplification → filled SVG paths) + `SvgExportPanel` (SVGをダウンロード, 色/パス数) on ベクター化 and 平絵をベクター化 results; /tools/svg-convert routed to the vector page in svg mode (single tab, rail group 衣類生産ツール, Light copy, `svgConvertBrief`); hook feature `svg-convert`.
 - 検証: tsc; raster-to-svg 4/4; ui-control-boundaries 22/22; vector browser tests 3/3; others baseline-equal. Production: vector result converts to 7色/7パス SVG after reload; svg-convert run `ai-c900cd58…` completed and converts to 5色/5パス.
 - 次: #14 /tools/reactor.
+
+### Iteration 10 (2026-10-07) — /tools/reactor (in progress, paused: usage limit)
+- Light reactor = 画像修正: single tab, no deprecation banner, rail highlight フィッティングツール, 280px upload box, 修復内容を選択します + 手足の変形を修正 sub-tab, hint 「マスクツール」を使用して手足の部分をマスクで選択してください, 権限がありません button at (404,828); right: 画像修正 / 手足や顔の奇形をAIが修復します.
+- Heavy currently renders LightchainWorkbenchPage for /tools/reactor. Plan: frame with banner off + railGroup 1, canonical feature `image-repair` (edit-image capability exists), brush mask drawn on the source and sent as a red-overlay secondary reference (hook passes secondary as referenceImageUrls).
+- 次: implement the above, then #15–#28.
