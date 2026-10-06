@@ -1,0 +1,5 @@
+# Files shipped on top of the 2026-10-06 production input set (one path per line).
+src/pages/LightchainParityPages.tsx
+src/components/DesignArtifactThumbnail.tsx
+src/index.css
+src/lib/designProjectArtifacts.ts

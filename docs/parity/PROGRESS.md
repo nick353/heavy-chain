@@ -34,3 +34,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 本番readback: Companion 1440×900 — card grid x=141, top=520, 5 columns × 228px pitch, heading y≈487, conversation card merged first with default cover; matches Light capture of the same state.
 - 残: thumbnail resolve latency (~5s) → P4 speed; default cover still hotlinked from Light.
 - 次: build route inventory from Light navigation, then group 1 remaining (designProduction/detail, header/account menu).
+
+### 2026-10-06 iteration 2 — release tooling, Cloudflare probe, /creator
+- 変更: `docs/parity/release.sh` + `release-overlay.txt` rebuild prod 360-file tree + overlay, typecheck/build, deploy. /creator fixed (see route-ledger #7).
+- 検証: parity tests 67/70 identical before/after (3 pre-existing failures: launcher order ×2, Wear Design Lab card regex). Codex review: only finding = style panel empty after selection → recorded as unconfirmed-light. Deployed `6ac4f1bc4a4c47e13ede41e9`, Companion readback matches Light geometry (video 408–1032, keyword box bottom ≈796, button y≈831).
+- **Blocker (P3)**: `wrangler` is logged in (OAuth, account ffa9a931…, d1 write scope) but Claude Code's auto-mode classifier denied a read-only remote D1 query as "Production Reads". Needs the user to allow it (permission rule) — do not work around.
+- 次: /printing, /tools/fabric, then 素材 group.
