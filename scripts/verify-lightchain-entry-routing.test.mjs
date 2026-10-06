@@ -127,9 +127,9 @@ test('maps the Light design-arrange entry to a project dashboard before editing'
   assert.match(page, /デザインアレンジ/);
   assert.match(page, /新規ファイル/);
   assert.match(page, /参考事例/);
-  assert.match(page, /editor\/pattern\/detail\?boardProjectCode=&boardProjectType=/);
-  assert.match(page, /navigate\(`\/editor\/pattern\/detail\?boardProjectCode=/);
-  assert.match(page, /boardProjectType=custom/);
+  assert.match(page, /detailPath: '\/editor\/pattern\/detail'/);
+  assert.match(page, /navigate\(`\$\{config\.detailPath\}\?boardProjectCode=&boardProjectType=`\)/);
+  assert.match(page, /boardProjectType=custom&resumeJob=/);
 });
 
 test('keeps the Light print-design project cards on the canonical detail route', async () => {

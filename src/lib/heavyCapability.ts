@@ -35,6 +35,7 @@ export const HEAVY_CAPABILITY_ACTIONS = {
   'printing-image': 'edit-image',
   'image-repair': 'edit-image',
   'pattern-arrange': 'edit-image',
+  'pattern-print-design': 'edit-image',
   'svg-convert': 'edit-image',
   'custom-style': 'edit-image',
   'ai-fitting': 'model-matrix',

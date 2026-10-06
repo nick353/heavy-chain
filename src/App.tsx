@@ -53,6 +53,8 @@ const FashionStudioPage = lazy(() => import('./pages/FashionStudioPage').then((m
 const FashionStudioDetailPage = lazy(() => import('./pages/FashionStudioDetailPage').then((module) => ({ default: module.FashionStudioDetailPage })));
 const PatternWorkspacePage = lazy(() => import('./pages/PatternWorkspacePage').then((module) => ({ default: module.PatternWorkspacePage })));
 const PatternProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PatternProjectDashboardPage })));
+const PrintDesignProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PrintDesignProjectDashboardPage })));
+const PrintDesignDetailPage = lazy(() => import('./pages/PrintDesignDetailPage').then((module) => ({ default: module.PrintDesignDetailPage })));
 const PatternDesignDetailPage = lazy(() => import('./pages/PatternDesignDetailPage').then((module) => ({ default: module.PatternDesignDetailPage })));
 const VideoProjectDashboardPage = lazy(() => import('./pages/VideoProjectDashboardPage').then((module) => ({ default: module.VideoProjectDashboardPage })));
 const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').then((module) => ({ default: module.VideoWorkstationPage })));
@@ -1321,7 +1323,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
+                    <PrintDesignProjectDashboardPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -1335,7 +1337,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
+                    <PrintDesignDetailPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

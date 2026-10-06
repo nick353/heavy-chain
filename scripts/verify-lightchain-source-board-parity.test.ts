@@ -89,7 +89,10 @@ test('canonical Lightchain Lab detail keeps the source empty-canvas geometry', (
 test('canonical pattern-arrange board keeps the shared Light project-board geometry', () => {
   assert.match(patternBoardPage, /pattern-project-dashboard-parity/);
   assert.match(patternBoardPage, /pattern-project-dashboard-grid/);
-  assert.match(patternBoardPage, /editor\/pattern\/detail\?boardProjectCode=&boardProjectType=/);
+  assert.match(patternBoardPage, /detailPath: '\/editor\/pattern\/detail'/);
+  assert.match(patternBoardPage, /detailPath: '\/editor\/patternDesign\/detail'/);
+  // Projects are the brand's saved results for the board feature (no foreign canvas documents).
+  assert.match(patternBoardPage, /listGeneratedImages\(brandId, \{ featureType: `lightchain-\$\{config\.featureId\}`/);
   // Only persisted projects are listed; no fabricated "Untitled" filler cards that open nothing.
   assert.doesNotMatch(patternBoardPage, /SOURCE_PATTERN_PROJECT_COUNT|source-pattern-untitled-|个月前/);
   assert.match(patternBoardPage, /\{formatProjectAge\(project\.updatedAt\)\} 修正/);

@@ -25,7 +25,7 @@ type Source = { name: string; kind: string; imageUrl: string; sourceImageId?: st
 type Status = 'empty' | 'loading' | 'ready' | 'unavailable' | 'running' | 'unknown' | 'saved' | 'error';
 type LibrarySettingsKind = 'absent' | 'null' | 'invalid' | 'valid';
 type LibraryInputReadback = { source: 'local' | 'remote' | 'request' | 'none'; remoteLookup: 'not-needed' | 'matched' | 'no-match' | 'unavailable'; modernSettings:LibrarySettingsKind; legacySettings:LibrarySettingsKind; requestLookup:'not-needed'|'matched'|'identity-mismatch'|'unavailable'; requestModernSettings:LibrarySettingsKind|'not-read'; requestLegacySettings:LibrarySettingsKind|'not-read' };
-export type CanonicalWorkspaceFeature = 'lab' | 'print-design-project' | 'wear-design-lab' | 'wear-design-detail' | 'printing-image' | 'line-to-real' | 'line-generation' | 'svg-convert' | 'image-repair' | 'pattern-arrange' | 'pattern-vector' | 'pattern-vector-pro' | 'model-face' | 'model-change' | 'body-shape' | 'clothing-size' | 'pose-change' | 'background-change' | 'angle-change' | 'model-library' | 'model-custom';
+export type CanonicalWorkspaceFeature = 'lab' | 'print-design-project' | 'wear-design-lab' | 'wear-design-detail' | 'printing-image' | 'line-to-real' | 'line-generation' | 'svg-convert' | 'image-repair' | 'pattern-arrange' | 'pattern-print-design' | 'pattern-vector' | 'pattern-vector-pro' | 'model-face' | 'model-change' | 'body-shape' | 'clothing-size' | 'pose-change' | 'background-change' | 'angle-change' | 'model-library' | 'model-custom';
 export type CanonicalModelCandidate = {imageId:string;storagePath:string;jobId:string;bodyType:string;ageGroup:string;provider:string};
 type WorkspaceConfig = {modelLibraryCreation?:boolean;initialInputState?:Record<string,Json>;requiredSources?:number;title?:string;promptContext?:string;identityConflict?:boolean};
 const record = (value:unknown): value is Record<string,Json> => Boolean(value) && typeof value==='object' && !Array.isArray(value);
@@ -36,7 +36,7 @@ const readCandidates = (metadata: Record<string,Json | undefined>,currentJobId:s
 };
 const sanitizeInputState=(value:unknown):Record<string,Json>=>{
  if(!record(value))return {};const out:Record<string,Json>={};
- for(const key of ['gender','half','age','nationality','skinColor','bodyType','bodyTypes','ageGroups','coverage','layerModes','assist','sourceType','styleNote','arrangeMode','arrangeRatio','arrangePrompt']){
+ for(const key of ['gender','half','age','nationality','skinColor','bodyType','bodyTypes','ageGroups','coverage','layerModes','assist','sourceType','styleNote','arrangeMode','arrangeRatio','arrangePrompt','printMode','printRatio','printResolution','printTile','printPrompt']){
   const item=value[key];const safe=(v:unknown):v is string=>typeof v==='string'&&v.length<=256&&!/(?:https?:|data:|blob:|bearer\s)/i.test(v);
   if(typeof item==='boolean'||safe(item))out[key]=item;
   else if(Array.isArray(item)&&item.length<=16&&item.every(safe))out[key]=item;

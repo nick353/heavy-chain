@@ -107,3 +107,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: tsc; full script suite diffed against baseline, then suspects re-run singly: two stale tests updated (capability count, vector testId expression), model-tool-settings regression fixed by using dedicated input keys; remaining failures equal baseline. Production 1440×900: board + editor geometry matches Light; run `ai-31d91d84-fe90-4471-bed3-20fd5d5eb2ab` completed in D1; reload restores source, prompt, 1:1 and result.
 - 残: Light 質感 tab not observable (blank page); Light editor upload left one test project in the Light account (2107534244744445954).
 - 次: #16 /editor/patternDesign.
+
+### Iteration 12 (2026-10-07, /goal) — /editor/patternDesign プリントデザイン (#16)
+- 変更: `PatternProjectDashboardPage` → shared `LightchainProjectBoard` (config per board; projects = `listGeneratedImages(featureType lightchain-<feature>)`, newest first, one signed-URL batch; limit 100 = API max); `PrintDesignDetailPage` (feature `pattern-print-design`, inputs printMode/printRatio/printResolution/printTile/printPrompt); App routes switched from LightchainWorkbenchPage; capability + overlay updated.
+- 検証: tsc; related suites equal to baseline (capability, catalog-route, launcher, runtime, entry-routing, board-parity, all-screen, comparator, model-settings). Production 1440×900: board + editor match Light; run `ai-7669333b-a37a-4612-9e27-fc4ba133ff54` completed in D1; reload restores print, style map, result. #15 board now shows its saved project.
+- 残: project saved on first generation rather than first upload; adjustments not persisted.
+- 次: #17 /editor/changeColor.

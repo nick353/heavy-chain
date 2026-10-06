@@ -35,7 +35,7 @@ export function patternArrangeBrief({ mode, prompt, ratio, hasReference }: { mod
   return lines.filter(Boolean).join('\n');
 }
 
-function RatioIcon({ ratio }: { ratio: string }) {
+export function RatioIcon({ ratio }: { ratio: string }) {
   if (ratio === '自動') return <span className="flex h-5 w-5 items-center justify-center rounded-[3px] border border-current text-[10px] font-semibold leading-none">A</span>;
   const [w, h] = ratio.split(':').map(Number);
   const scale = 18 / Math.max(w, h);
@@ -265,7 +265,7 @@ function PatternDesignDetailWorkspace() {
   );
 }
 
-function ZoomControl({ zoom, onChange, onReset }: { zoom: number; onChange: (value: number) => void; onReset: () => void }) {
+export function ZoomControl({ zoom, onChange, onReset }: { zoom: number; onChange: (value: number) => void; onReset: () => void }) {
   const [open, setOpen] = useState(false);
   const steps = useMemo(() => [0.5, 0.75, 1, 1.5, 2], []);
   return (
