@@ -17,7 +17,7 @@ type DesignArtifactThumbnailProps = {
   onOpen: () => void;
 };
 
-export const DESIGN_PROJECT_DEFAULT_COVER = 'https://jp.linkaigc.com/static/project_default_cover.png';
+export const DESIGN_PROJECT_DEFAULT_COVER = '/lightchain-assets/static/project_default_cover.png';
 const placeholderImage = DESIGN_PROJECT_DEFAULT_COVER;
 
 export function DesignArtifactThumbnail({ artifact, userId, brandId, href, onOpen }: DesignArtifactThumbnailProps) {

@@ -15,7 +15,20 @@ export type DesignConversationProject = Readonly<{
   updatedAt: string;
   revision: number;
   href: string;
+  /** First image placed on the project canvas (private storage path), used for the card thumbnail. */
+  coverPath?: string;
 }>;
+const coverImagePath = (row: CloudflareCanvasDocument) => {
+  const objects = (row.snapshot as { objects?: unknown[] }).objects ?? [];
+  for (const object of objects) {
+    if (object && typeof object === 'object' && (object as Record<string, unknown>).type === 'image') {
+      const src = (object as Record<string, unknown>).src;
+      if (typeof src === 'string' && /^generated-images\/[A-Za-z0-9_-]+$/.test(src)) return src;
+    }
+  }
+  return undefined;
+};
+const withCover = (row: CloudflareCanvasDocument) => { const coverPath = coverImagePath(row); return coverPath ? { coverPath } : {}; };
 const identifier = (value: unknown): value is string => typeof value === 'string' && value.length > 0
   && value.length <= 512 && value.trim() === value && !/[\u0000-\u001f\u007f]/u.test(value)
   && !/^[a-z][a-z\d+.-]*:/i.test(value);
@@ -38,6 +51,7 @@ export async function listDesignConversationProjects(options: {
   drafts: Pick<EntryDraftStore, 'list'>;
   client?: DesignProjectListClient | null;
   assertContext: () => void;
+  detailPath?: string;
 }): Promise<DesignConversationProject[]> {
   const { scope, drafts, assertContext } = options;
   assertContext();
@@ -60,7 +74,7 @@ export async function listDesignConversationProjects(options: {
       || !identifier(draft.projectId) || !identifier(draft.conversationId)) return [];
     return [{ projectId: document.id, conversationId: draft.conversationId, title: document.title,
       createdAt: document.created_at, updatedAt: document.updated_at, revision: document.revision,
-      href: designEntryDetailHref(document.id, draft.conversationId) }];
+      href: designEntryDetailHref(document.id, draft.conversationId, options.detailPath), ...withCover(document) }];
   }).sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
     || left.projectId.localeCompare(right.projectId) || left.conversationId.localeCompare(right.conversationId));
 }

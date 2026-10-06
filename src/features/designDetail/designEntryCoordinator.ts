@@ -11,6 +11,25 @@ export type DesignEntryClient = {
 export const designEntryClient: DesignEntryClient = { createDocument: createCanvasDocument, getDocument: getCanvasDocument };
 export const DESIGN_ENTRY_SESSION_DB = 'heavy-design-dialogue-sessions-v1';
 export const DESIGN_ENTRY_DRAFT_DB = 'heavy-design-entry-drafts-v1';
+export const MARKETING_ENTRY_DRAFT_DB = 'heavy-marketing-entry-drafts-v1';
+
+/** Light runs the same assistant + canvas detail under two workspaces; each keeps its own project list. */
+export type DialogueWorkspaceId = 'design' | 'marketing';
+export type DialogueWorkspace = Readonly<{
+  id: DialogueWorkspaceId;
+  label: string;
+  homeHref: string;
+  detailPath: string;
+  draftDb: string;
+  selectionId: string;
+  featureType: string;
+}>;
+export const DIALOGUE_WORKSPACES: Readonly<Record<DialogueWorkspaceId, DialogueWorkspace>> = {
+  design: { id: 'design', label: 'デザインワークスペース', homeHref: '/designProduction', detailPath: '/designProduction/detail',
+    draftDb: DESIGN_ENTRY_DRAFT_DB, selectionId: 'design-detail-dialogue', featureType: 'design-dialogue' },
+  marketing: { id: 'marketing', label: 'マーケティングワークスペース', homeHref: '/marketing', detailPath: '/marketing/detail',
+    draftDb: MARKETING_ENTRY_DRAFT_DB, selectionId: 'marketing-dialogue', featureType: 'marketing-dialogue' },
+};
 
 export function validateOwnedDesignDocument(document: CanvasDocumentRecord, scope: DesignScope, projectId: string) {
   if (!document || document.id !== projectId || document.ownerId !== scope.userId || document.brandId !== scope.brandId
@@ -21,8 +40,8 @@ export function validateOwnedDesignDocument(document: CanvasDocumentRecord, scop
   return document;
 }
 
-export const designEntryDetailHref = (projectId: string, conversationId: string) =>
-  `/designProduction/detail?${new URLSearchParams({ projectId, conversationId })}`;
+export const designEntryDetailHref = (projectId: string, conversationId: string, detailPath = DIALOGUE_WORKSPACES.design.detailPath) =>
+  `${detailPath}?${new URLSearchParams({ projectId, conversationId })}`;
 
 export const createDesignEntryCoordinator = (options: {
   scope: DesignScope;
@@ -30,11 +49,13 @@ export const createDesignEntryCoordinator = (options: {
   client?: DesignEntryClient;
   sessions?: DesignSessionStore;
   drafts?: EntryDraftStore;
+  workspace?: DialogueWorkspace;
 }) => {
+  const workspace = options.workspace ?? DIALOGUE_WORKSPACES.design;
   const scope = { ...options.scope };
   const client = options.client ?? designEntryClient;
   const sessions = options.sessions ?? createSessionStore({ idb: window.indexedDB, dbName: DESIGN_ENTRY_SESSION_DB });
-  const drafts = options.drafts ?? createEntryDraftStore({ idb: window.indexedDB, dbName: DESIGN_ENTRY_DRAFT_DB });
+  const drafts = options.drafts ?? createEntryDraftStore({ idb: window.indexedDB, dbName: workspace.draftDb });
   let active = true;
   let flight: Promise<string> | undefined;
   const assertContext = () => { if (!active) throw new Error('design_entry_scope_stale'); options.assertScope(); };
@@ -63,7 +84,7 @@ export const createDesignEntryCoordinator = (options: {
     }
     const session = await sessions.getSession(scope, draft.conversationId); assertContext();
     if (!session || session.projectId !== document.id) throw new Error('design_entry_session_mismatch');
-    return designEntryDetailHref(document.id, session.conversationId);
+    return designEntryDetailHref(document.id, session.conversationId, workspace.detailPath);
   };
   return {
     prepare(prompt: string, references: readonly DesignDialogueManifestReference[]) {

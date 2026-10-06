@@ -34,3 +34,10 @@ public/lightchain-assets/upload-example-bg-new.png
 public/lightchain-assets/upload-example-view.png
 src/lib/modelToolSettings.ts
 src/pages/LightchainCustomStylePage.tsx
+src/features/designDetail/DesignEntryDetailPage.tsx
+src/features/designDetail/designEntryCoordinator.ts
+src/features/designDetail/designProjectList.ts
+src/features/designDetail/useDialogueReferences.ts
+public/lightchain-assets/marketing/upload-placeholder.png
+public/lightchain-assets/static/project_default_cover.png
+public/lightchain-assets/static/searchEmpty.png

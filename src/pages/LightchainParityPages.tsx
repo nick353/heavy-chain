@@ -6,11 +6,14 @@ import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate'
 import { CanonicalImageWorkspaceControls } from '../components/CanonicalImageWorkspaceControls';
 import { createEntryDraftStore } from '../features/designDetail/entryDraftStore';
 import { listDesignConversationProjects, type DesignProjectListClient, type DesignConversationProject } from '../features/designDetail/designProjectList';
-import { DESIGN_ENTRY_DRAFT_DB } from '../features/designDetail/designEntryCoordinator';
+import { DIALOGUE_WORKSPACES, type DialogueWorkspaceId } from '../features/designDetail/designEntryCoordinator';
+import { useDialogueReferences } from '../features/designDetail/useDialogueReferences';
+import { getCanvasDocument, updateCanvasDocument } from '../lib/canvasDocumentPersistence';
 import { createDesignEntryCoordinator, type DesignEntryClient } from '../features/designDetail/designEntryCoordinator';
 import { DesignCreationCard } from '../components/design/DesignCreationCard';
 import {
   ArrowRight,
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -35,6 +38,7 @@ import {
   Trash2,
   Upload,
   WandSparkles,
+  X,
 } from 'lucide-react';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
@@ -898,290 +902,294 @@ const generatedImageToWorkspaceArtifact = (image: ReturnType<typeof asGeneratedI
   };
 };
 
-const sortWorkspaceArtifacts = (artifacts: Iterable<WorkspaceArtifact>) => (
-  [...artifacts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-);
-
-const mergeWorkspaceArtifact = (current: WorkspaceArtifact[], next: WorkspaceArtifact) => {
-  const byId = new Map(current.map((artifact) => [artifact.id, artifact]));
-  byId.set(next.id, next);
-  return sortWorkspaceArtifacts(byId.values());
-};
-
 const marketingSceneCards = [
   {
     label: 'EC',
     icon: ShoppingBag,
-    widthClass: 'lg:w-[78.40px]',
     prompt: 'ECサイト向けに、商品の特徴が伝わる販促ビジュアルを作成してください。',
-    image: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateMarketingCover.png?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: 'SNS',
     icon: MessageCircle,
-    widthClass: 'lg:w-[88.36px]',
     prompt: 'SNS向けに、ブランドの雰囲気が伝わる縦長の投稿ビジュアルを作成してください。',
-    image: 'https://static-cn.linkaigc.com/workbenches/2026-02/d81b55aa18721b86c37b96a36223a936.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: 'ブランド',
     icon: Palette,
-    widthClass: 'lg:w-[116.09px]',
     prompt: 'ブランドの世界観を表現するキャンペーンビジュアルを作成してください。',
-    image: 'https://static-cn.linkaigc.com/saas/2026-06/a25e632441de5b1198f4e20ae7040568.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: '店舗・オフライン',
     icon: Store,
-    widthClass: 'lg:w-[172.09px]',
     prompt: '店舗や展示会で使える、商品が見やすい販促パネルを作成してください。',
-    image: 'https://static-cn.linkaigc.com/saas/2026-06/3266745d3f905fc8c770cd0894438279.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: 'ライブ配信',
     icon: Radio,
-    widthClass: 'lg:w-[130.09px]',
     prompt: 'ライブ配信の商品紹介で使える、視認性の高い告知ビジュアルを作成してください。',
-    image: 'https://static-cn.linkaigc.com/saas/2026-06/6051a3df009110d3de23c3af3173e418.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
   {
     label: 'プロモーション',
     icon: Megaphone,
-    widthClass: 'lg:w-[158.09px]',
     prompt: '新商品のプロモーション用に、印象的なキャンペーンビジュアルを作成してください。',
-    image: 'https://static-cn.linkaigc.com/saas/2026-06/1b69b85c8eba09e87fbae86a8f98b3b5.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
   },
 ] as const;
 
 const MARKETING_TUTORIAL_STORAGE_KEY = 'heavy-chain-lightchain-marketing-tutorial-dismissed-v1';
 
+const MARKETING_TUTORIAL_STEPS = [
+  { target: 'input', text: 'ここで参考画像のアップロードや、アイデア（プロンプト）の入力ができます。' },
+  { target: 'send', text: '入力が終わったら、ここから送信してデザインを始めます。' },
+  { target: 'scenes', text: 'おすすめのシーンを選ぶと、用途に合わせて提案します。' },
+  { target: 'projects', text: '作成したプロジェクトはマイプロジェクトから再開できます。' },
+] as const;
+const marketingProjectStorageKey = (kind: 'pins' | 'hidden', userId: string, brandId: string) => (
+  `heavy-marketing-${kind}:${encodeURIComponent(JSON.stringify([userId, brandId]))}`
+);
+const readStoredIds = (key: string) => {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(key) ?? '[]');
+    return new Set<string>(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []);
+  } catch { return new Set<string>(); }
+};
+const writeStoredIds = (key: string, ids: Set<string>) => {
+  try { window.localStorage.setItem(key, JSON.stringify([...ids])); } catch { /* convenience only */ }
+};
+
 /**
- * Light Chain's marketing landing surface. Keep this route small and source-shaped:
- * the full compatibility workbench is still available at /marketing/detail, while
- * /marketing must open on the same prompt, scene, project, and example sections as
- * the official site instead of showing a Heavy-only loading/workbench shell.
+ * Light Chain's marketing landing surface: the prompt starts a real marketing
+ * project (canvas document + assistant conversation) and マイプロジェクト lists
+ * only those projects, never every generated image of the brand.
  */
 export function LightchainMarketingHomePage() {
-  const [prompt, setPrompt] = useState('');
-  const [projects, setProjects] = useState<WorkspaceArtifact[]>([]);
-  const [tutorialVisible, setTutorialVisible] = useState(false);
-  const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
-  const [pinnedProjectIds, setPinnedProjectIds] = useState<Set<string>>(new Set());
-  const [pinsHydrated, setPinsHydrated] = useState(false);
-  const [remainingUnits, setRemainingUnits] = useState<number | null>(null);
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
+  const userId = user?.id ?? '';
+  const brandId = currentBrand?.id ?? '';
+  const [prompt, setPrompt] = useState('');
+  const [scene, setScene] = useState<string | null>(null);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [remainingUnits, setRemainingUnits] = useState<number | null>(null);
+  const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ projectId: string; value: string } | null>(null);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [covers, setCovers] = useState<Record<string, string>>({});
+  const uploadRef = useRef<HTMLInputElement | null>(null);
+  const projectsView = useDesignConversationProjects(undefined, 'marketing');
+  const references = useDialogueReferences({ userId, brandId, selectionId: 'marketing-home' });
 
   useEffect(() => {
-    try {
-      setTutorialVisible(window.localStorage.getItem(MARKETING_TUTORIAL_STORAGE_KEY) !== '1');
-    } catch {
-      setTutorialVisible(true);
-    }
-    let cancelled = false;
-    if (!currentBrand?.id) {
-      setProjects([]);
-      return () => { cancelled = true; };
-    }
-    const loadProjects = async () => {
-      const localProjects = listWorkspaceArtifacts(currentBrand.id, user?.id);
-      let remoteProjects: WorkspaceArtifact[] = [];
-      if (cloudflareDataPlane) {
-        try {
-          const remoteRows = await cloudflareDataPlane.listGeneratedImages(currentBrand.id, {
-            limit: 100,
-            offset: 0,
-            order: 'newest',
-          });
-          const listRows = remoteRows.map(asGeneratedImageListRow);
-          const signedRows = await withSignedImageUrls(listRows).catch(() => listRows);
-          remoteProjects = signedRows.map(generatedImageToWorkspaceArtifact);
-        } catch {
-          // Local artifacts remain a safe fallback when remote readback is unavailable.
-        }
-      }
-      if (cancelled) return;
-      const byId = new Map<string, WorkspaceArtifact>();
-      [...remoteProjects, ...localProjects].forEach((project) => {
-        if (!byId.has(project.id)) byId.set(project.id, project);
-      });
-      setProjects(sortWorkspaceArtifacts(byId.values()).slice(0, 12));
-    };
-    void loadProjects();
-    return () => { cancelled = true; };
-  }, [currentBrand?.id, user?.id]);
-
+    try { setTutorialStep(window.localStorage.getItem(MARKETING_TUTORIAL_STORAGE_KEY) === '1' ? 0 : 1); } catch { setTutorialStep(1); }
+  }, []);
   useEffect(() => {
-    const brandId = currentBrand?.id;
-    if (!brandId) {
-      setPinsHydrated(false);
-      setPinnedProjectIds(new Set());
-      return;
-    }
-    setPinsHydrated(false);
-    try {
-      const saved = window.localStorage.getItem(`heavy-marketing-pins:${brandId}`);
-      const parsed = saved ? JSON.parse(saved) : [];
-      setPinnedProjectIds(new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []));
-    } catch {
-      setPinnedProjectIds(new Set());
-    }
-    setPinsHydrated(true);
-  }, [currentBrand?.id]);
-
-  useEffect(() => {
-    const brandId = currentBrand?.id;
-    if (!brandId || !pinsHydrated) return;
-    window.localStorage.setItem(`heavy-marketing-pins:${brandId}`, JSON.stringify([...pinnedProjectIds]));
-  }, [currentBrand?.id, pinnedProjectIds, pinsHydrated]);
-
+    if (!userId || !brandId) { setPinnedIds(new Set()); setHiddenIds(new Set()); return; }
+    setPinnedIds(readStoredIds(marketingProjectStorageKey('pins', userId, brandId)));
+    setHiddenIds(readStoredIds(marketingProjectStorageKey('hidden', userId, brandId)));
+  }, [brandId, userId]);
   useEffect(() => {
     let cancelled = false;
-    const brandId = currentBrand?.id;
-    if (!brandId || !cloudflareDataPlane) {
-      setRemainingUnits(null);
-      return () => { cancelled = true; };
-    }
+    if (!brandId || !cloudflareDataPlane) { setRemainingUnits(null); return () => { cancelled = true; }; }
     void cloudflareDataPlane.getImageUsage(brandId).then((summary) => {
-      if (cancelled) return;
-      setRemainingUnits(Number.isSafeInteger(summary.remainingUnits) && summary.remainingUnits >= 0 ? summary.remainingUnits : null);
-    }).catch(() => {
-      if (!cancelled) setRemainingUnits(null);
-    });
+      if (!cancelled) setRemainingUnits(Number.isSafeInteger(summary.remainingUnits) && summary.remainingUnits >= 0 ? summary.remainingUnits : null);
+    }).catch(() => { if (!cancelled) setRemainingUnits(null); });
     return () => { cancelled = true; };
-  }, [currentBrand?.id]);
+  }, [brandId]);
 
-  const generationHref = (nextPrompt: string) => buildGenerationIntentHref({
-    feature: 'campaign-image',
-    prompt: nextPrompt,
-    sourceWorkspace: 'marketing',
-    workflowVersion: 'marketing-brief-local-v1',
-    sourceLabel: workspaceSourceConfig.marketing.label,
-    sourceResumePath: workspaceSourceConfig.marketing.resumePath,
-    sourceMode: 'local-workflow-intake',
-  });
+  const projects = useMemo(() => projectsView.entries
+    .filter((entry) => !hiddenIds.has(entry.projectId))
+    .sort((left, right) => Number(pinnedIds.has(right.projectId)) - Number(pinnedIds.has(left.projectId))),
+  [hiddenIds, pinnedIds, projectsView.entries]);
+  const coverKey = JSON.stringify(projects.map((entry) => entry.coverPath ?? ''));
+  useEffect(() => {
+    let cancelled = false;
+    const paths = (JSON.parse(coverKey) as string[]).filter(Boolean);
+    if (!paths.length) return () => { cancelled = true; };
+    void withSignedImageUrls(paths.map((path) => ({ storage_path: path, image_url: '' }))).then((rows) => {
+      if (cancelled) return;
+      const next: Record<string, string> = {};
+      rows.forEach((row, index) => { if (typeof row.image_url === 'string' && row.image_url) next[paths[index]] = row.image_url; });
+      setCovers(next);
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [coverKey]);
 
   const dismissTutorial = () => {
-    setTutorialVisible(false);
+    setTutorialStep(0);
+    try { window.localStorage.setItem(MARKETING_TUTORIAL_STORAGE_KEY, '1'); } catch { /* convenience only */ }
+  };
+  const nextTutorial = () => { if (tutorialStep >= MARKETING_TUTORIAL_STEPS.length) dismissTutorial(); else setTutorialStep((step) => step + 1); };
+  const tutorial = tutorialStep > 0 ? MARKETING_TUTORIAL_STEPS[tutorialStep - 1] : null;
+
+  const addFiles = (files: File[]) => {
+    const images = files.filter((file) => /^image\/(png|jpe?g|webp|avif)$/.test(file.type) && file.size <= 20 * 1024 * 1024);
+    if (images.length !== files.length) setError('jpg、jpeg、png、webp（最大20MBまで）の画像を選択してください');
+    if (images.length) void references.addFiles(images);
+  };
+  const send = async () => {
+    const text = prompt.trim();
+    if (!text || sending || !userId || !brandId) return;
+    setError(null);
+    let manifest;
+    try { manifest = references.manifest(); }
+    catch { setError('参考画像の保存が終わるまでお待ちください'); return; }
+    setSending(true);
+    const coordinator = createDesignEntryCoordinator({ scope: { userId, brandId }, workspace: DIALOGUE_WORKSPACES.marketing,
+      assertScope: () => { const live = useAuthStore.getState(); if (live.user?.id !== userId || live.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); } });
     try {
-      window.localStorage.setItem(MARKETING_TUTORIAL_STORAGE_KEY, '1');
-    } catch {
-      // Tutorial visibility is a convenience only; keep the page usable if storage is unavailable.
+      const href = await coordinator.prepare(scene ? `シーン：${scene}。${text}` : text, manifest);
+      references.clear();
+      navigate(href);
+    } catch (cause) {
+      const code = cause instanceof Error && /^[a-z0-9_:-]{1,96}$/i.test(cause.message) ? cause.message : 'design_entry_readback_failed';
+      setError(`プロジェクトを作成できませんでした（${code}）`);
+    } finally {
+      coordinator.dispose();
+      setSending(false);
     }
   };
-
-  const saveMarketingArtifactToLibrary = async (artifact: WorkspaceArtifact) => {
-    if (!currentBrand?.id) return toast.error('ブランドが選択されていないため、ライブラリーへ保存できません');
-    const result = await saveWorkspaceArtifactBestEffort({
-      ...artifact,
-      id: undefined,
-      brandId: currentBrand.id,
-      scopeId: user?.id,
-      metadata: { ...artifact.metadata, librarySource: 'marketing-project-card-menu', libraryGroup: 'マイライブラリー', copiedFromArtifactId: artifact.id },
+  const togglePin = (projectId: string) => {
+    setPinnedIds((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) next.delete(projectId); else next.add(projectId);
+      writeStoredIds(marketingProjectStorageKey('pins', userId, brandId), next);
+      return next;
     });
-    if (!result.localPersisted) return toast.error('ライブラリー保存の確認に失敗しました');
-    if (cloudflareDataPlane && !result.remote) {
-      toast.error('リモート保存の確認に失敗しました。再送せず、同じ保存依頼を照合してください');
-      return;
+    setOpenProjectMenuId(null);
+  };
+  const hideProject = (entry: DesignConversationProject) => {
+    if (!window.confirm(`「${entry.title}」を削除しますか？`)) return;
+    setHiddenIds((current) => {
+      const next = new Set(current).add(entry.projectId);
+      writeStoredIds(marketingProjectStorageKey('hidden', userId, brandId), next);
+      return next;
+    });
+    setOpenProjectMenuId(null);
+  };
+  const renameProject = async () => {
+    const target = renaming;
+    setRenaming(null);
+    const title = target?.value.replace(/[\u0000-\u001f\u007f]/gu, ' ').trim().slice(0, 160);
+    if (!target || !title || !cloudflareDataPlane) return;
+    const context = { userId, assertContext: () => { const live = useAuthStore.getState(); if (live.user?.id !== userId || live.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); } };
+    try {
+      const fresh = await getCanvasDocument(target.projectId, brandId, context);
+      if (fresh.title !== title) await updateCanvasDocument({ documentId: target.projectId, brandId, title, expectedRevision: fresh.revision, snapshot: fresh.snapshot }, context);
+      projectsView.retry();
+    } catch {
+      toast.error('名前を変更できませんでした');
     }
-    setProjects((current) => mergeWorkspaceArtifact(current, result.artifact).slice(0, 12));
-    toast.success('アセットライブラリーに保存しました');
   };
 
-  const deleteMarketingArtifact = async (artifact: WorkspaceArtifact) => {
-    if (!currentBrand?.id || !window.confirm(`「${artifact.title}」を削除しますか？`)) return;
-    const remoteImageId = typeof artifact.metadata.remoteImageId === 'string' ? artifact.metadata.remoteImageId : null;
-    if (cloudflareDataPlane && remoteImageId && !artifact.id.startsWith('local-')) {
-      try {
-        await cloudflareDataPlane.deleteGeneratedImage(remoteImageId);
-      } catch {
-        toast.error('削除に失敗しました');
-        return;
-      }
-    }
-    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, [artifact.id], user?.id);
-    if (!result.ok) return toast.error('成果物を削除できませんでした');
-    setProjects((current) => current.filter((project) => project.id !== artifact.id));
-    setOpenProjectMenuId(null);
-    toast.success('プロジェクトを削除しました');
-  };
+  const tourRing = (target: string) => tutorial?.target === target ? 'relative z-20 ring-2 ring-[#0bcabc] ring-offset-4 ring-offset-[#171b1c]' : '';
+  const tutorialBubble = tutorial && <div role="alertdialog" aria-label={tutorial.text} data-testid="lightchain-marketing-tutorial" className="pointer-events-auto flex items-center gap-0 text-left text-sm text-neutral-100">
+    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#0bcabc] shadow-[0_0_0_5px_rgba(11,202,188,0.25)]" />
+    <span className="h-px w-[38px] bg-[#0bcabc]" />
+    <span className="flex h-6 items-center gap-3 whitespace-nowrap rounded-full border border-white/15 bg-[#1f2426] px-[22px] leading-6">
+      <span>{tutorial.text}{tutorialStep}/{MARKETING_TUTORIAL_STEPS.length}</span>
+      <button type="button" onClick={nextTutorial} data-testid="lightchain-marketing-tutorial-next" className="text-[#0bcabc] underline underline-offset-2">{tutorialStep >= MARKETING_TUTORIAL_STEPS.length ? '完了' : '次へ'}</button>
+      <button type="button" onClick={dismissTutorial} data-testid="lightchain-marketing-tutorial-skip" className="text-[#0bcabc] underline underline-offset-2">スキップ</button>
+    </span>
+  </div>;
 
   return (
-    <ParityShell className="relative overflow-hidden bg-[#171b1c] text-white" workflowFeature="marketing-home">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(56,189,148,0.42),rgba(59,130,246,0.38),rgba(30,41,59,0.1))]" />
-      {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</div>}
-      <main data-testid="lightchain-marketing-home" className="relative z-10 mx-auto max-w-[1365px] px-5 pb-10 pt-16 sm:px-8 lg:px-0">
-        <section className="text-center">
-          <h1 className="text-4xl font-semibold tracking-[-0.04em]">マーケティングワークスペースへようこそ</h1>
-          <p className="mt-3 text-sm text-neutral-400">今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！</p>
-          <div className="relative mx-auto mt-8 max-w-[980px] rounded-2xl border border-[#0bcabc] bg-[#1a1f22] p-2 shadow-[0_0_28px_rgba(101,211,207,0.14)] lg:max-w-[958px]">
-            <div className="grid min-h-[206px] grid-cols-[96px_minmax(0,1fr)] items-start gap-4 rounded-2xl bg-[#1d2326] px-4 py-3 text-left lg:grid-cols-[100px_minmax(0,1fr)]">
-              <button type="button" aria-label="参考画像を追加" onClick={() => navigate('/marketing/detail')} className="mt-2 flex h-24 w-20 rotate-[-8deg] items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#243039,#101719)] text-neutral-300 transition hover:text-white">
-                <img src="https://jp.linkaigc.com/marketing/upload-placeholder.png" alt="" className="h-full w-full object-cover" />
-              </button>
-              <textarea
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value.slice(0, 4000))}
-                maxLength={4000}
-                aria-label="マーケティングのリクエスト"
-                placeholder="商品画像をアップロードして、デザインのリクエストを教えてください"
-                className="h-full min-h-[150px] w-full resize-none border-0 bg-transparent p-5 pr-24 text-left text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400 lg:mt-[15px] lg:h-[80px] lg:min-h-[80px]"
-              />
-            </div>
-            <div className="absolute bottom-5 right-5 flex items-center gap-4 text-xs text-neutral-500 lg:bottom-[21px] lg:right-[18px]">
-              <span>{prompt.length} / 4000</span>
-              <button type="button" aria-label="送信" disabled={!prompt.trim()} onClick={() => navigate(generationHref(prompt.trim()))} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#65d3cf] disabled:cursor-not-allowed disabled:opacity-40"><ArrowRight className="h-5 w-5 -rotate-45" /></button>
-            </div>
-            {tutorialVisible && (
-              <div className="absolute left-1/2 top-1/2 z-20 flex w-[min(660px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 items-center gap-3 rounded-full border border-[#65d3cf]/50 bg-[#202829]/95 px-4 py-2 text-left text-xs font-semibold text-neutral-200 shadow-xl" data-testid="lightchain-marketing-tutorial">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#65d3cf] ring-4 ring-[#65d3cf]/30" />
-                <span className="min-w-0 flex-1">ここで参考画像のアップロードや、アイデア（プロンプト）の入力ができます。 1 / 4</span>
-                <button type="button" onClick={dismissTutorial} className="shrink-0 text-[#65d3cf] underline">次へ</button>
-                <button type="button" aria-label="スキップ" onClick={dismissTutorial} className="shrink-0 text-lg leading-none text-[#65d3cf]">スキップ</button>
-              </div>
-            )}
+    <ParityShell className="relative h-full overflow-y-auto overflow-x-hidden bg-[#171b1c] pr-1 text-white" workflowFeature="marketing-home">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[170px] bg-[radial-gradient(ellipse_40%_100%_at_6%_0%,rgba(72,186,160,0.34),transparent_70%),radial-gradient(ellipse_45%_90%_at_96%_0%,rgba(74,84,214,0.42),transparent_70%),radial-gradient(ellipse_30%_70%_at_62%_0%,rgba(120,70,160,0.16),transparent_70%)]" />
+      {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-[#202527] p-2.5 text-base leading-4 text-neutral-300"><Sparkles className="h-4 w-4" />{remainingUnits.toLocaleString()}</div>}
+      <div data-testid="lightchain-marketing-home" className="relative z-[2] mx-auto flex w-[1392px] max-w-full flex-col items-center gap-y-6 pt-[70px]">
+        <div className="flex w-full flex-col items-center gap-6">
+          <div className="flex flex-col items-center gap-3">
+            <h1 className="w-full text-center text-[34px] font-medium leading-10">マーケティングワークスペースへようこそ</h1>
+            <p className="w-full text-center text-base leading-6 text-neutral-400">今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！</p>
           </div>
-        </section>
-
-        <section className="mt-8" aria-label="おすすめのシーン">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="mr-1 text-sm text-neutral-300">おすすめのシーン 👉</span>
-            {marketingSceneCards.map((scene) => (
-              <button key={scene.label} type="button" onClick={() => setPrompt(scene.prompt)} className={`inline-flex h-[40px] shrink-0 items-center gap-2 rounded-xl bg-[#262c30] px-4 py-0 text-sm font-semibold text-neutral-200 transition hover:bg-[#343c41] ${scene.widthClass}`}>
-                <scene.icon className="h-4 w-4 shrink-0 text-neutral-300" />
-                <span className="whitespace-nowrap">{scene.label}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-9" data-testid="lightchain-marketing-projects">
-          <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2></div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={() => navigate('/marketing/detail')} className="group relative h-60 w-[220px] overflow-hidden rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-left transition hover:border-cyan-200/60">
-              <div className="flex h-full flex-col items-center justify-center rounded-xl bg-[#20272a] text-neutral-200 transition-colors group-hover:bg-[#252d30]">
-                <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#6fd7cf_0%,#3d6475_42%,#9964ac_100%)] shadow-[inset_8px_8px_18px_rgba(255,255,255,0.28),inset_-10px_-10px_20px_rgba(20,25,35,0.3)]"><div className="absolute inset-3 flex items-center justify-center rounded-lg border border-white/20 bg-black/10 text-[8px] font-bold tracking-[0.12em] text-white/90 shadow-inner">PROJECT</div><span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-neutral-900 shadow-md"><Plus className="h-4 w-4" /></span></div>
-                <p className="mt-3 font-medium">新規ファイル</p>
-              </div>
-            </button>
-            {projects.map((project) => (
-              <article key={project.id} className="group relative h-60 w-[220px] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left transition hover:border-white/40">
-                <button type="button" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(project.id)}`)} className="absolute inset-0 flex h-full w-full flex-col text-left">
-                  <div className="flex flex-1 items-center justify-center bg-[#20272a]">{project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="" className="h-12 w-12 object-contain" loading="lazy" />}</div>
-                  <div className="shrink-0 px-3 py-3"><p className="truncate font-medium">{pinnedProjectIds.has(project.id) ? '📌 ' : ''}{project.title}</p><p className="mt-2 truncate text-xs text-neutral-500">{formatArtifactDate(project.createdAt)}</p></div>
+          <div className={`relative w-[960px] max-w-full rounded-[32px] ${tourRing('input')}`} data-tour="marketing-input">
+            <input ref={uploadRef} type="file" accept=".png,.jpg,.jpeg,.avif,.webp" multiple className="hidden" aria-label="参考画像を選択" onChange={(event) => { addFiles(Array.from(event.target.files ?? [])); event.target.value = ''; }} />
+            <div className="flex min-h-[216px] w-full flex-col overflow-hidden rounded-[32px] border-2 border-white/10 bg-[#25292c]">
+              <div className="flex min-h-0 w-full flex-1 items-center px-2">
+                <button type="button" aria-label="参考画像を追加" onClick={() => uploadRef.current?.click()} className="group relative flex h-[120px] w-[120px] shrink-0 items-center justify-center">
+                  {references.references.length ? <span className="flex -space-x-8">{references.references.slice(0, 3).map((reference, index) => <span key={reference.id} className="relative block h-24 w-20 overflow-hidden rounded-xl border border-white/20 bg-[#1b2023] shadow-lg" style={{ transform: `rotate(${(index - 1) * 6}deg)` }}>
+                    {references.previews[reference.id] && <img src={references.previews[reference.id]} alt={reference.name} className="h-full w-full object-cover" />}
+                    {reference.status !== 'ready' && <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-[10px]">{reference.status === 'failure' ? '失敗' : '保存中'}</span>}
+                  </span>)}</span>
+                    : <span className="block h-24 w-20 -rotate-6 overflow-hidden rounded-xl opacity-70 transition duration-300 group-hover:rotate-0 group-hover:opacity-100"><img src="/lightchain-assets/marketing/upload-placeholder.png" alt="" className="h-full w-full object-cover" draggable={false} /></span>}
                 </button>
-                <div className="absolute right-2 top-2 z-20"><button type="button" aria-label={`${project.title}のメニュー`} aria-expanded={openProjectMenuId === project.id} className="rounded-lg bg-black/45 p-2 text-neutral-200 opacity-0 transition group-hover:opacity-100 hover:bg-black/70 focus:opacity-100" onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === project.id ? null : project.id); }}><MoreVertical className="h-4 w-4" /></button>{openProjectMenuId === project.id && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl"><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setPinnedProjectIds((current) => { const next = new Set(current); if (next.has(project.id)) next.delete(project.id); else next.add(project.id); return next; }); setOpenProjectMenuId(null); }}>ピン留め</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { void saveMarketingArtifactToLibrary(project); setOpenProjectMenuId(null); }}>アセットライブラリに保存</button><button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => void deleteMarketingArtifact(project)}>削除</button></div>}</div>
-              </article>
-            ))}
+                <div className="flex h-full min-w-0 flex-1 flex-col gap-2 overflow-hidden px-3.5 py-5">
+                  <textarea value={prompt} onChange={(event) => setPrompt(event.target.value.slice(0, 4000))} maxLength={4000} aria-label="マーケティングのリクエスト"
+                    onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }}
+                    placeholder="商品画像をアップロードして、デザインのリクエストを教えてください"
+                    className="min-h-20 max-h-50 w-full flex-1 resize-none border-0 bg-transparent p-0 text-base leading-6 text-white caret-[#0bcabc] outline-none placeholder:text-neutral-500" />
+                </div>
+              </div>
+              <div className="flex h-[72px] w-full shrink-0 items-center gap-3 p-4">
+                {scene && <span className="flex h-10 items-center gap-2 rounded-xl bg-[#0bcabc]/10 px-4 text-base text-neutral-100" data-testid="marketing-selected-scene">{scene}<button type="button" aria-label={`${scene}を解除`} onClick={() => setScene(null)}><X className="h-4 w-4" /></button></span>}
+                {references.references.length > 0 && <span className="text-xs text-neutral-500" role="status">{references.references.map((reference) => reference.name).join('、')}</span>}
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
+                  <span className="whitespace-nowrap text-base leading-4 text-neutral-500">{prompt.length} / 4000</span>
+                  <button type="button" aria-label="送信" data-tour="marketing-send" disabled={!prompt.trim() || sending || !references.ready} onClick={() => void send()}
+                    className={`flex h-10 min-w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[linear-gradient(45deg,#61fff4,#ccb2ff)] disabled:bg-white/10 disabled:text-neutral-500 ${tourRing('send')}`}><ArrowUp className="h-6 w-6" /></button>
+                </div>
+              </div>
+            </div>
+            {(error || references.error) && <p role="alert" className="mt-2 text-sm text-red-300">{error ?? references.error}</p>}
+            {tutorial?.target === 'input' && <div className="absolute left-[169px] top-[64px] z-30">{tutorialBubble}</div>}
+            {tutorial?.target === 'send' && <div className="absolute right-[64px] top-[180px] z-30">{tutorialBubble}</div>}
           </div>
-          {projects.length === 0 && <p className="mt-4 text-sm text-neutral-500">保存済みのプロジェクトはここに表示されます。</p>}
+        </div>
+        <div className="relative flex w-full flex-col items-center gap-4 overflow-hidden" aria-label="おすすめのシーン">
+          <div className={`flex w-full items-center justify-center gap-4 rounded-xl ${tourRing('scenes')}`} data-tour="marketing-scenes">
+            <span className="whitespace-nowrap text-base font-medium text-neutral-500">おすすめのシーン 👉</span>
+            <div className="flex items-center gap-2">
+              {marketingSceneCards.map((sceneCard) => (
+                <button key={sceneCard.label} type="button" aria-pressed={scene === sceneCard.label} onClick={() => setScene((current) => current === sceneCard.label ? null : sceneCard.label)}
+                  className={`group flex h-10 w-fit items-center gap-1 overflow-hidden rounded-xl px-4 transition-all duration-300 ${scene === sceneCard.label ? 'bg-[#0bcabc]/15' : 'bg-[#25292c] hover:bg-[#30363a]'}`}>
+                  <span className="h-5 w-5 shrink-0 overflow-hidden transition-all duration-300 group-hover:w-[0.1px]"><sceneCard.icon className="h-5 w-5 text-neutral-300" /></span>
+                  <span className="whitespace-nowrap text-base font-medium leading-5 text-white">{sceneCard.label}</span>
+                  <span className="h-[0.1px] w-[0.1px] shrink-0 overflow-hidden transition-all duration-300 group-hover:h-5 group-hover:w-5"><ArrowRight className="h-5 w-5 -rotate-45 text-neutral-300 transition-transform duration-300 group-hover:rotate-0" /></span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {tutorial?.target === 'scenes' && <div className="z-30">{tutorialBubble}</div>}
+        </div>
+        <div className="w-full rounded-2xl p-4" data-testid="lightchain-marketing-projects">
+          <h2 className="mb-4 text-xl font-normal leading-7">マイプロジェクト</h2>
+          {tutorial?.target === 'projects' && <div className="relative z-30 mb-3">{tutorialBubble}</div>}
+          <DesignConversationProjectStatus view={projectsView} />
+          <div className={`flex flex-wrap gap-2 rounded-2xl ${tourRing('projects')}`}>
+            <button type="button" onClick={() => navigate('/marketing/detail')} className="group relative h-60 w-[220px] overflow-hidden rounded-2xl bg-[#202527] text-white transition hover:bg-[#283033]" data-testid="marketing-new-file">
+              <span className="flex h-full flex-col items-center justify-center">
+                <span className="relative h-20 w-20 overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#6fd7cf_0%,#3d6475_42%,#9964ac_100%)] shadow-[inset_8px_8px_18px_rgba(255,255,255,0.28),inset_-10px_-10px_20px_rgba(20,25,35,0.3)]"><span className="absolute inset-3 flex items-center justify-center rounded-lg border border-white/20 bg-black/10 text-[8px] font-bold tracking-[0.12em] text-white/90 shadow-inner">PROJECT</span><span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-neutral-900 shadow-md"><Plus className="h-4 w-4" /></span></span>
+                <span className="mt-3 text-base">新規ファイル</span>
+              </span>
+            </button>
+            {projects.map((entry) => {
+              const cover = entry.coverPath ? covers[entry.coverPath] : undefined;
+              return <article key={entry.projectId} className="group relative h-60 w-[220px] overflow-hidden rounded-2xl bg-[#202527] text-left hover:bg-[#283033]" data-testid="marketing-project-card" data-project-id={entry.projectId}>
+                <Link to={entry.href} aria-label={`${entry.title}を開く`} className="absolute inset-0 flex flex-col">
+                  <span className="flex h-[176px] items-center justify-center overflow-hidden bg-white/[0.04]">{cover ? <img src={cover} alt="" className="h-full w-full object-cover" loading="lazy" /> : <img src="/lightchain-assets/static/project_default_cover.png" alt="" className="h-12 w-12 object-contain" loading="lazy" />}</span>
+                  <span className="block px-3 py-2"><span className="block truncate text-base">{pinnedIds.has(entry.projectId) ? '📌 ' : ''}{entry.title}</span><span className="mt-1 block truncate text-xs text-neutral-500">{formatArtifactDate(entry.updatedAt)}</span></span>
+                </Link>
+                {renaming?.projectId === entry.projectId && <input autoFocus aria-label="プロジェクト名" value={renaming.value} maxLength={160} onChange={(event) => setRenaming({ projectId: entry.projectId, value: event.target.value })}
+                  onBlur={() => void renameProject()} onKeyDown={(event) => { if (event.key === 'Enter') void renameProject(); if (event.key === 'Escape') setRenaming(null); }}
+                  className="absolute bottom-8 left-2 right-2 z-20 rounded border border-[#0bcabc] bg-[#171b1c] px-2 py-1 text-sm outline-none" />}
+                <div className="absolute right-2 top-2 z-20"><button type="button" aria-label={`${entry.title}のメニュー`} aria-expanded={openProjectMenuId === entry.projectId} className="rounded-lg bg-black/45 p-2 text-neutral-200 opacity-0 transition hover:bg-black/70 focus:opacity-100 group-hover:opacity-100" onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === entry.projectId ? null : entry.projectId); }}><MoreVertical className="h-4 w-4" /></button>
+                  {openProjectMenuId === entry.projectId && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
+                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => togglePin(entry.projectId)}>{pinnedIds.has(entry.projectId) ? 'ピン留めを解除' : 'ピン留め'}</button>
+                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setRenaming({ projectId: entry.projectId, value: entry.title }); setOpenProjectMenuId(null); }}>名前を変更</button>
+                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => hideProject(entry)}>削除</button>
+                  </div>}
+                </div>
+              </article>;
+            })}
+          </div>
+        </div>
+        <section className="w-full rounded-2xl p-4" data-testid="lightchain-marketing-reference-cases">
+          <h2 className="mb-4 text-xl font-normal leading-7">参考事例</h2>
+          <div className="flex min-h-24 flex-col items-center justify-center text-sm text-neutral-500"><img src="/lightchain-assets/static/searchEmpty.png" alt="search empty" className="h-12 w-12 object-contain opacity-70" /><span className="mt-2">データなし</span></div>
         </section>
-
-        <section className="mt-12" data-testid="lightchain-marketing-reference-cases">
-          <h2 className="text-lg font-semibold">参考事例</h2>
-          <div className="mt-4 flex min-h-24 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-neutral-500"><img src="https://jp.linkaigc.com/static/searchEmpty.png" alt="search empty" className="h-12 w-12 object-contain opacity-70" /><span className="mt-2">データなし</span></div>
-        </section>
-      </main>
+      </div>
     </ParityShell>
   );
 }
@@ -1195,12 +1203,13 @@ type DesignConversationProjectsView = {
 };
 
 /** Loads verified conversation projects for the current scope; the page merges them into Light's single project grid. */
-export function useDesignConversationProjects(client?: DesignProjectListClient): DesignConversationProjectsView {
+export function useDesignConversationProjects(client?: DesignProjectListClient, workspaceId: DialogueWorkspaceId = 'design'): DesignConversationProjectsView {
+  const workspace = DIALOGUE_WORKSPACES[workspaceId];
   const { user, currentBrand } = useAuthStore();
   const userId = user?.id ?? '';
   const brandId = currentBrand?.id ?? '';
   const scopeKey = JSON.stringify([userId, brandId]);
-  const stores = useMemo(() => createEntryDraftStore({ idb: window.indexedDB, dbName: DESIGN_ENTRY_DRAFT_DB }), []);
+  const stores = useMemo(() => createEntryDraftStore({ idb: window.indexedDB, dbName: workspace.draftDb }), [workspace.draftDb]);
   const [retryCount, setRetry] = useState(0);
   const [state, setState] = useState<{ scopeKey: string; status: 'loading' | 'ready' | 'error'; entries: DesignConversationProject[]; error?: string }>({ scopeKey: '', status: 'loading', entries: [] });
   const epochRef = useRef(0);
@@ -1212,7 +1221,7 @@ export function useDesignConversationProjects(client?: DesignProjectListClient):
     };
     setState((current) => ({ scopeKey, status: 'loading', entries: current.scopeKey === scopeKey ? current.entries : [] }));
     if (userId && brandId) {
-      void listDesignConversationProjects({ scope: { userId, brandId }, drafts: stores, client, assertContext })
+      void listDesignConversationProjects({ scope: { userId, brandId }, drafts: stores, client, assertContext, detailPath: workspace.detailPath })
         .then((entries) => { assertContext(); setState({ scopeKey, status: 'ready', entries }); })
         .catch((error: unknown) => {
           try {
@@ -1223,7 +1232,7 @@ export function useDesignConversationProjects(client?: DesignProjectListClient):
         });
     } else setState({ scopeKey, status: 'ready', entries: [] });
     return () => { if (epochRef.current === epoch) epochRef.current += 1; };
-  }, [brandId, client, retryCount, scopeKey, stores, userId]);
+  }, [brandId, client, retryCount, scopeKey, stores, userId, workspace.detailPath]);
   const visible = state.scopeKey === scopeKey ? state : { status: 'loading' as const, entries: [] };
   const retry = useCallback(() => setRetry((value) => value + 1), []);
   return { status: visible.status, entries: visible.entries, error: state.scopeKey === scopeKey ? state.error : undefined, retry };

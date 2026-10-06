@@ -175,7 +175,7 @@ test('StrictMode initial entry sends once, renders actual response and all 16 or
     assert.ok(state.events[ackIndex - 1].startsWith('GET:'));
     const doc = Object.values(state.documents)[0] as any;
     assert.equal(doc.snapshot.objects[0].width / doc.snapshot.objects[0].height, 2 / 3);
-    assert.equal(await f.page.getByTestId('design-full-editor').getAttribute('href'), '/canvas/' + doc.id);
+    await f.page.getByRole('button', { name: 'レイヤー設定' }).click(); assert.equal(await f.page.getByTestId('design-full-editor').getAttribute('href'), '/canvas/' + doc.id); await f.page.getByRole('button', { name: 'AIアシスタント' }).click();
     assert.equal(await f.page.evaluate(() => (window as any).__globalCanvasNow()), await f.page.evaluate(() => (window as any).__globalCanvasBefore));
   } finally { await f.close(); }
 });
@@ -201,7 +201,7 @@ test('consumption releases identical entry to fresh project/conversation IDs', a
 
 test('selected output followup uses canonical verified image IDs, retains previous result, editable prompt and duplicate click sends once', async () => {
   const f = await fixture(); try {
-    await complete(f.page); await f.page.getByTestId('design-layer-select').click();
+    await complete(f.page); await f.page.getByTestId('design-canvas-layer').first().click();
     await f.page.getByTestId('design-followup-prompt').fill('色を青に変更');
     await f.page.getByTestId('design-followup-send').evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
     await f.page.waitForFunction(() => (window as any).__server.acks === 2);
@@ -305,7 +305,11 @@ test('lost CAS response acknowledges only the exact verified readback and keeps 
 test('missing URL and foreign remote owner show recovery without draft text, references or another dispatch', async () => {
   const f = await fixture(); try {
     await complete(f.page);
+    // A bare URL is Light's new file: an empty assistant, never a previous draft.
     await f.page.evaluate(() => (window as any).__mount('/designProduction/detail'));
+    await f.page.getByTestId('design-assistant-welcome').waitFor();
+    assert.equal(await f.page.getByTestId('design-entry-prompt').count(), 0); assert.equal(await f.page.getByTestId('design-entry-reference').count(), 0);
+    await f.page.evaluate(() => (window as any).__mount('/designProduction/detail?projectId=only-project'));
     await f.page.getByTestId('design-entry-recovery').waitFor();
     assert.equal(await f.page.getByTestId('design-entry-prompt').count(), 0); assert.equal(await f.page.getByTestId('design-entry-reference').count(), 0);
     await f.page.evaluate(() => { const state = (window as any).__server; Object.values(state.documents).forEach((document: any) => { document.ownerId = 'foreign-owner'; }); sessionStorage.setItem('design-detail-fixture-server', JSON.stringify(state)); (window as any).__mount(); });

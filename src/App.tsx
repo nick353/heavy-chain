@@ -830,7 +830,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
+                    <DesignEntryDetailPage workspace="marketing" />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
