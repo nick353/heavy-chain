@@ -1576,8 +1576,15 @@ export function LightchainMaterialWorkbenchPage() {
   const { user, currentBrand } = useAuthStore();
   const location = useLocation();
   // A new Cloudflare identity never inherits the previous user's in-memory
-  // inputs, unconfirmed rights, or async generation callbacks.
-  const sessionKey = JSON.stringify([cloudflareDataPlane?.origin ?? 'local-material-session', user?.id, currentBrand?.id, location.pathname.includes('printing')]);
+  // inputs, unconfirmed rights, or async generation callbacks. Heavy resolves
+  // its single private workspace during the first generation; that brand
+  // resolution is not a new session and must not discard inputs or results.
+  const sessionKey = JSON.stringify([
+    cloudflareDataPlane?.origin ?? 'local-material-session',
+    user?.id,
+    isHeavyWorkspaceRuntime() ? 'heavy-workspace' : currentBrand?.id,
+    location.pathname.includes('printing'),
+  ]);
   return <LightchainMaterialWorkbenchSession key={sessionKey} />;
 }
 

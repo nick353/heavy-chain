@@ -182,7 +182,7 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /data-testid="lightchain-fabric-input"/);
   assert.match(page, /data-testid="fabric-result-history"/);
   assert.match(page, /value=\{fabricPrompt\}[\s\S]*?onChange=\{\(event\) => setFabricPrompt\(event\.target\.value\)\}/);
-  assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
+  assert.match(page, /disabled=\{isGenerating \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
   assert.match(page, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyAccessReady/);
   assert.match(page, /const heavyAccessReady = !heavyOwnedFeature \|\| heavyLoginOnlyReady/);
   assert.match(page, /const heavyLoginOnlyReady = heavyOwnedFeature && Boolean\(user\?\.id\)/);

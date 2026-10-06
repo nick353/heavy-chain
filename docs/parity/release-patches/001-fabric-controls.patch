@@ -1,8 +1,26 @@
 diff --git a/src/pages/LightchainMaterialWorkbenchPage.tsx b/src/pages/LightchainMaterialWorkbenchPage.tsx
-index 92a10b79..4a724962 100644
+index 92a10b79..722bfb8f 100644
 --- a/src/pages/LightchainMaterialWorkbenchPage.tsx
 +++ b/src/pages/LightchainMaterialWorkbenchPage.tsx
-@@ -1731,6 +1731,7 @@ function LightchainMaterialWorkbenchSession() {
+@@ -1576,8 +1576,15 @@ export function LightchainMaterialWorkbenchPage() {
+   const { user, currentBrand } = useAuthStore();
+   const location = useLocation();
+   // A new Cloudflare identity never inherits the previous user's in-memory
+-  // inputs, unconfirmed rights, or async generation callbacks.
+-  const sessionKey = JSON.stringify([cloudflareDataPlane?.origin ?? 'local-material-session', user?.id, currentBrand?.id, location.pathname.includes('printing')]);
++  // inputs, unconfirmed rights, or async generation callbacks. Heavy resolves
++  // its single private workspace during the first generation; that brand
++  // resolution is not a new session and must not discard inputs or results.
++  const sessionKey = JSON.stringify([
++    cloudflareDataPlane?.origin ?? 'local-material-session',
++    user?.id,
++    isHeavyWorkspaceRuntime() ? 'heavy-workspace' : currentBrand?.id,
++    location.pathname.includes('printing'),
++  ]);
+   return <LightchainMaterialWorkbenchSession key={sessionKey} />;
+ }
+ 
+@@ -1731,6 +1738,7 @@ function LightchainMaterialWorkbenchSession() {
    const [fabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
    const [fabricPrompt, setFabricPrompt] = useState('');
    const [fabricImageRatio, setFabricImageRatio] = useState('画像比率自動');
@@ -10,7 +28,7 @@ index 92a10b79..4a724962 100644
    const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
    const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
    const [printGarmentSelectionMaskUrl, setPrintGarmentSelectionMaskUrl] = useState<string | null>(null);
-@@ -6750,9 +6751,9 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6750,9 +6758,9 @@ function LightchainMaterialWorkbenchSession() {
                  ))}
                </nav>
  
@@ -22,7 +40,7 @@ index 92a10b79..4a724962 100644
                    >
                      <span className="flex-1">
                        この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
-@@ -6760,7 +6761,8 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6760,7 +6768,8 @@ function LightchainMaterialWorkbenchSession() {
                          今すぐ体験
                        </Link>
                      </span>
@@ -32,7 +50,7 @@ index 92a10b79..4a724962 100644
  
                <div className="flex flex-col gap-4">
  
-@@ -6824,8 +6826,8 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6824,8 +6833,8 @@ function LightchainMaterialWorkbenchSession() {
                    </section>
                  )}
  
@@ -43,7 +61,7 @@ index 92a10b79..4a724962 100644
                    <textarea
                      id="lightchain-fabric-prompt"
                      value={fabricPrompt}
-@@ -6833,7 +6835,7 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6833,7 +6842,7 @@ function LightchainMaterialWorkbenchSession() {
                      placeholder="素材はシルクサテンで、柔らかく光沢感があります。それを上衣またはパンツに置き換えてください。"
                      maxLength={500}
                      rows={3}
@@ -52,7 +70,7 @@ index 92a10b79..4a724962 100644
                    />
                    <div className="mt-1 flex items-center justify-between text-xs text-white/45">
                      <span>{fabricPrompt.length} / 500</span>
-@@ -6848,12 +6850,12 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6848,12 +6857,12 @@ function LightchainMaterialWorkbenchSession() {
                    </div>
                  </section>
  
@@ -67,7 +85,7 @@ index 92a10b79..4a724962 100644
                    >
                      <option>画像比率自動</option>
                    </select>
-@@ -6861,8 +6863,9 @@ function LightchainMaterialWorkbenchSession() {
+@@ -6861,8 +6870,9 @@ function LightchainMaterialWorkbenchSession() {
                      data-testid="lightchain-fabric-generate"
                      onClick={() => void handleGenerate()}
                      isLoading={isGenerating}
