@@ -614,7 +614,7 @@ function LightchainPrintingWorkspace() {
       {heavyBrand.failed && <p role="alert" className="mt-3 text-sm text-rose-200">ワークスペースを準備できません。ページを再読み込みしてください。</p>}
       {message && <p className="mt-3 text-sm text-white/70" role="status">{message}</p>}
       {workspace.error && <p role="alert" className="mt-3 text-sm text-rose-200">{workspace.error}</p>}
-      {workspace.pendingId && <button type="button" disabled={workspace.status==='running'} onClick={()=>void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
+      {workspace.pendingId && workspace.status !== 'running' && <button type="button" onClick={()=>void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
       <div className="mt-auto flex justify-end pt-6">
         <button type="submit" data-testid="print-image-generate" className="inline-flex h-10 w-[288px] items-center justify-center gap-1 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60" disabled={locked||!workspace.slots.primary||!workspace.slots.secondary} onClick={() => void handleGenerate()}>AI生成<Sparkles aria-hidden="true" className="h-4 w-4" /></button>
       </div>
@@ -705,7 +705,7 @@ export function LightchainVectorSpecialPage() {
         </div>
       </>}
       {workspace.error && <p role="alert" className="mt-3 text-sm text-rose-200">{workspace.error}</p>}
-      {workspace.pendingId && <button type="button" disabled={workspace.status==='running'} onClick={()=>void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
+      {workspace.pendingId && workspace.status !== 'running' && <button type="button" onClick={()=>void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
       <div className="mt-auto flex flex-col items-end gap-3 pt-4">
         {isProfessionalFlow && <span className="pr-4 text-base text-white/70">使用回数 {usage}/30</span>}
         <button type="button" data-testid={isProfessionalFlow ? 'heavy-pattern-vector-pro-generate' : 'heavy-pattern-vector-generate'} className="inline-flex h-10 w-[288px] items-center justify-center gap-1.5 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60" disabled={locked||!referenceImage} onClick={()=>void generate()}>

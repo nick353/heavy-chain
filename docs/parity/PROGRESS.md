@@ -80,3 +80,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: tsc; related suites equal to baseline (provider-adapter 1, launcher-parity 1, provider-coverage 2 pre-existing failures); printing suites green. Production: both tools generate (`ai-101aadd2…`, `ai-959749a0…`), reload restores everything, geometry matches Light.
 - Light note: direct loads of Light tool URLs often render blank for ~20s; enter via /designProduction or wait before reading.
 - 次: #12 /tools/pattern-to-vector, /tools/vector-special.
+
+### Iteration 8 (2026-10-07) — /tools/pattern-to-vector, /tools/vector-special
+- 変更: frame tabs/rail configurable (`LIGHTCHAIN_VECTOR_TOOL_TABS`, railGroup 2); vector page on the frame with Light's pileUp/carveUp cards, 使用回数, coin-1 button; `vectorBrief` asks for a flat colour-region redraw of the pattern only; 同じ依頼を照合 shown only after an interrupted run (printing/line/vector).
+- 検証: tsc; vector browser tests 3/3; ui-control-boundaries 22/22 and entry-routing 29/30 (pre-existing) after updating two class-string tests to the shared frame. Production: geometry matches Light; both tabs generate.
+- 残 (P2): real SVG output for vector tools; Light card/rail images are still hotlinked from Light's OSS.
+- 次: #13 /tools/svg-convert, then #14 /tools/reactor.

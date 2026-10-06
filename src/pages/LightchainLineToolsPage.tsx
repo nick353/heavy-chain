@@ -155,7 +155,7 @@ function LightchainLineToolWorkspace({ mode }: { mode: LineToolMode }) {
 
       {heavyBrand.failed && <p role="alert" className="mt-3 text-sm text-rose-200">ワークスペースを準備できません。ページを再読み込みしてください。</p>}
       {workspace.error && <p role="alert" className="mt-3 text-sm text-rose-200">{workspace.error}</p>}
-      {workspace.pendingId && <button type="button" disabled={workspace.status === 'running'} onClick={() => void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
+      {workspace.pendingId && workspace.status !== 'running' && <button type="button" onClick={() => void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
       <div className="mt-auto flex justify-end pt-4">
         <button type="button" data-testid="line-tool-generate" disabled={locked || !source} onClick={generate} className="inline-flex h-10 w-[288px] items-center justify-center gap-1 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60">
           {workspace.status === 'running' ? '生成中…' : 'AI生成'}<Sparkles aria-hidden="true" className="h-4 w-4" />
