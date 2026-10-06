@@ -34,6 +34,7 @@ export const HEAVY_CAPABILITY_ACTIONS = {
   'pattern-vector-pro': 'edit-image',
   'printing-image': 'edit-image',
   'image-repair': 'edit-image',
+  'pattern-arrange': 'edit-image',
   'svg-convert': 'edit-image',
   'custom-style': 'edit-image',
   'ai-fitting': 'model-matrix',

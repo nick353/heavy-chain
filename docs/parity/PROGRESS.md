@@ -101,3 +101,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 変更: `src/pages/LightchainImageRepairPage.tsx`; frame gains railGroup 1, `showNotice`, `LIGHTCHAIN_IMAGE_REPAIR_TABS`; hook feature `image-repair`; App route.
 - 検証: tsc; related suites baseline-equal; production geometry = Light; job `ai-62130895…` completed in D1; reload restores input + result.
 - 次: #15–#17 editors.
+
+### Iteration 11 (2026-10-07, /goal) — /editor/pattern デザインアレンジ (#15)
+- 変更: `PatternProjectDashboardPage` (no fabricated filler cards, Light new-file card, Light pager, thumbnail fallback); `PatternDesignDetailPage` rebuilt as the Light editor on the canonical workspace (feature `pattern-arrange`, edit-image capability; inputs `arrangeMode` / `arrangeRatio` / `arrangePrompt` persisted so the prompt restores verbatim); overlay gains heavyCapability + both pages.
+- 検証: tsc; full script suite diffed against baseline, then suspects re-run singly: two stale tests updated (capability count, vector testId expression), model-tool-settings regression fixed by using dedicated input keys; remaining failures equal baseline. Production 1440×900: board + editor geometry matches Light; run `ai-31d91d84-fe90-4471-bed3-20fd5d5eb2ab` completed in D1; reload restores source, prompt, 1:1 and result.
+- 残: Light 質感 tab not observable (blank page); Light editor upload left one test project in the Light account (2107534244744445954).
+- 次: #16 /editor/patternDesign.

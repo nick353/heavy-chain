@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
@@ -32,20 +32,14 @@ const extractPreviewSource = (snapshot: unknown): string => {
   return '';
 };
 
-type ProjectCard = { id: string; title: string; updatedAt: string; imageUrl: string; ageLabel?: string };
+type ProjectCard = { id: string; title: string; updatedAt: string; imageUrl: string };
 
-// The authenticated Light board currently exposes 31 saved project-menu
-// cards. Keep Heavy's real persisted cards first, then fill only a missing
-// visual tail so an account with fewer Heavy records still has the same board
-// density and pagination affordance. These placeholders never enter the
-// persistence layer and are replaced naturally as real projects are saved.
-const SOURCE_PATTERN_PROJECT_COUNT = 31;
-const SOURCE_PATTERN_PROJECT_AGE_LABELS = [
-  '2 个月前 修正', '3 个月前 修正', '4 个月前 修正', '5 个月前 修正',
-  '7 个月前 修正', '7 个月前 修正', '7 个月前 修正', '8 个月前 修正',
-  '9 个月前 修正', '10 个月前 修正', '10 个月前 修正', '10 个月前 修正',
-  '10 个月前 修正', '10 个月前 修正',
-] as const;
+/** Falls back to the PROJECT mark when a saved preview no longer resolves (expired or deleted object). */
+function ProjectThumbnail({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!url || failed) return <span className="pattern-project-dashboard-empty-mark">PROJECT</span>;
+  return <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />;
+}
 
 export function PatternProjectDashboardPage() {
   const navigate = useNavigate();
@@ -106,20 +100,7 @@ export function PatternProjectDashboardPage() {
     });
   }, [currentBrandId, remoteProjects, user?.id]);
 
-  const displayProjects = useMemo(() => {
-    const missingCount = Math.max(0, SOURCE_PATTERN_PROJECT_COUNT - projects.length);
-    if (missingCount === 0) return projects;
-    return [
-      ...projects,
-      ...Array.from({ length: missingCount }, (_, index): ProjectCard => ({
-        id: `source-pattern-untitled-${index + 1}`,
-        title: 'Untitled',
-        updatedAt: '',
-        imageUrl: '',
-        ageLabel: SOURCE_PATTERN_PROJECT_AGE_LABELS[index % SOURCE_PATTERN_PROJECT_AGE_LABELS.length],
-      })),
-    ];
-  }, [projects]);
+  const displayProjects = projects;
   const perPage = 30;
   const pageCount = Math.max(1, Math.ceil(displayProjects.length / perPage));
   const visibleProjects = displayProjects.slice((page - 1) * perPage, page * perPage);
@@ -131,22 +112,30 @@ export function PatternProjectDashboardPage() {
         <h1 className="pattern-project-dashboard-title">デザインアレンジ</h1>
         <div className="pattern-project-dashboard-grid">
           <div onClick={() => navigate('/editor/pattern/detail?boardProjectCode=&boardProjectType=')} className="pattern-project-dashboard-card pattern-project-dashboard-new-card" data-testid="lightchain-pattern-new-file">
-            <div className="pattern-project-dashboard-media pattern-project-dashboard-new-media"><img className="pattern-project-dashboard-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" /></div>
-            <div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">新規ファイル</p></div>
+            <img className="pattern-project-dashboard-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
+            <p className="pattern-project-dashboard-new-label">新規ファイル</p>
           </div>
           {visibleProjects.map((project) => (
             <div key={project.id} data-testid={`lightchain-pattern-project-${project.id}`} onClick={() => navigate(`/editor/pattern/detail?boardProjectCode=${encodeURIComponent(project.id)}&boardProjectType=custom`)} className="pattern-project-dashboard-card pattern-project-dashboard-project-card">
-              <div className="pattern-project-dashboard-media">{project.imageUrl ? <img src={project.imageUrl} alt="" /> : <span className="text-xs text-neutral-500">PROJECT</span>}</div>
-              <div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{project.title}</p><p className="pattern-project-dashboard-date">{project.ageLabel ?? `${formatProjectAge(project.updatedAt)} 修正`}</p></div>
+              <div className="pattern-project-dashboard-media"><ProjectThumbnail url={project.imageUrl} /></div>
+              <div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{project.title}</p><p className="pattern-project-dashboard-date">{formatProjectAge(project.updatedAt)} 修正</p></div>
               <button type="button" className="pattern-project-dashboard-menu" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" aria-hidden="true" /></button>
             </div>
           ))}
         </div>
         {status === 'loading' && <p className="mt-3 text-xs text-neutral-500">プロジェクトを読み込んでいます…</p>}
         {status === 'failure' && <p className="mt-3 text-xs text-neutral-500">既存プロジェクトを読み込めませんでした。</p>}
-        {pageCount > 1 && <nav className="mt-4 flex items-center justify-center gap-2 text-xs text-neutral-400" aria-label="プロジェクトページ"><button type="button" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">前のページ</button><span>{page}</span><button type="button" disabled={page === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">次のページ</button></nav>}
+        {pageCount > 1 && (
+          <nav className="pattern-project-dashboard-pagination" aria-label="プロジェクトページ">
+            <button type="button" aria-label="前のページ" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft className="h-3 w-3" aria-hidden="true" /></button>
+            {Array.from({ length: pageCount }, (_, index) => index + 1).map((value) => (
+              <button key={value} type="button" aria-current={value === page ? 'page' : undefined} className={value === page ? 'is-active' : ''} onClick={() => setPage(value)}>{value}</button>
+            ))}
+            <button type="button" aria-label="次のページ" disabled={page === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}><ChevronRight className="h-3 w-3" aria-hidden="true" /></button>
+          </nav>
+        )}
         <h2 className="pattern-project-dashboard-section-title">参考事例</h2>
-        <div className="pattern-project-dashboard-reference-grid">{references.map((title) => <div key={title} onClick={() => navigate('/patterns/workbench')} className="pattern-project-dashboard-card pattern-project-dashboard-reference-card"><div className="pattern-project-dashboard-media"><span className="pattern-project-dashboard-reference-art" aria-hidden="true" /></div><div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{title}</p><p className="pattern-project-dashboard-date">参考事例</p></div></div>)}</div>
+        <div className="pattern-project-dashboard-reference-grid">{references.map((title) => <div key={title} onClick={() => navigate('/patterns/workbench')} className="pattern-project-dashboard-card pattern-project-dashboard-reference-card"><div className="pattern-project-dashboard-media"><span className="pattern-project-dashboard-reference-art" aria-hidden="true" /></div><div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{title}</p><p className="pattern-project-dashboard-date">1年前 修正</p></div></div>)}</div>
       </section>
     </main>
   );

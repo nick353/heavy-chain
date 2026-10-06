@@ -71,7 +71,7 @@ test('Heavy parity removes legacy Light-only locks from every reused image surfa
   ]);
   assert.match(parityPages, /const heavyRuntime = isHeavyWorkspaceRuntime\(\);/);
   assert.match(parityPages, /data-testid="heavy-creator-generate"/);
-  assert.match(parityPages, /data-testid="heavy-pattern-vector-generate"/);
+  assert.match(parityPages, /data-testid=\{isProfessionalFlow \? 'heavy-pattern-vector-pro-generate' : 'heavy-pattern-vector-generate'\}/);
   assert.match(modelLibrary, /isHeavyWorkspaceRuntime\(\) \? 'ログイン済みワークスペースから生成できます。'/);
   assert.match(workbench, /disabled=\{!isHeavyRoute\} onClick=\{\(\) => \{ if \(isHeavyRoute\) void handleLightchainPreviewGenerate\(\); \}\}/);
   assert.match(materialWorkbench, /const heavyLoginOnlyReady = heavyOwnedFeature && Boolean\(user\?\.id\);/);

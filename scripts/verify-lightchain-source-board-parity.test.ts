@@ -90,10 +90,11 @@ test('canonical pattern-arrange board keeps the shared Light project-board geome
   assert.match(patternBoardPage, /pattern-project-dashboard-parity/);
   assert.match(patternBoardPage, /pattern-project-dashboard-grid/);
   assert.match(patternBoardPage, /editor\/pattern\/detail\?boardProjectCode=&boardProjectType=/);
-  assert.match(patternBoardPage, /SOURCE_PATTERN_PROJECT_COUNT = 31/);
-  assert.match(patternBoardPage, /displayProjects = useMemo/);
-  assert.match(patternBoardPage, /source-pattern-untitled-/);
-  assert.match(patternBoardPage, /ageLabel \?\? `\$\{formatProjectAge\(project\.updatedAt\)\} 修正`/);
+  // Only persisted projects are listed; no fabricated "Untitled" filler cards that open nothing.
+  assert.doesNotMatch(patternBoardPage, /SOURCE_PATTERN_PROJECT_COUNT|source-pattern-untitled-|个月前/);
+  assert.match(patternBoardPage, /\{formatProjectAge\(project\.updatedAt\)\} 修正/);
+  assert.match(patternBoardPage, /pattern-project-dashboard-pagination/);
+  assert.match(patternBoardPage, /onError=\{\(\) => setFailed\(true\)\}/);
   assert.match(patternBoardPage, /参考事例/);
   assert.doesNotMatch(patternBoardPage, /権利確認|権利を確認してAI生成|type="checkbox"/);
 });
