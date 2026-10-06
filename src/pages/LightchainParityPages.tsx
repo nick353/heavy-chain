@@ -730,7 +730,7 @@ export function LightchainVectorSpecialPage() {
     <div className="flex h-full flex-col" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status}>
       {workspace.result ? (
         <div data-testid="vector-result" className="flex h-full flex-col items-center justify-center gap-3 px-10 pb-6 pt-16">
-          {vectorResultUrl && <img src={vectorResultUrl} alt={toolTitle} className="min-h-0 max-w-full flex-1 rounded-lg object-contain" />}
+          {vectorResultUrl && <img src={vectorResultUrl} alt={toolTitle} className={`min-h-0 max-w-full flex-1 rounded-lg object-contain ${isSvgConvert ? 'bg-white' : ''}`} />}
           {vectorResultUrl && <SvgExportPanel imageUrl={vectorResultUrl} fileName={isSvgConvert ? 'flat-drawing-vector' : 'pattern-vector'} colors={isSvgConvert ? 6 : 8} />}
           <p className="text-xs text-neutral-300">保存された結果はラスター画像です。</p>
         </div>

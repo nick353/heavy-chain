@@ -86,3 +86,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: tsc; vector browser tests 3/3; ui-control-boundaries 22/22 and entry-routing 29/30 (pre-existing) after updating two class-string tests to the shared frame. Production: geometry matches Light; both tabs generate.
 - 残 (P2): real SVG output for vector tools; Light card/rail images are still hotlinked from Light's OSS.
 - 次: #13 /tools/svg-convert, then #14 /tools/reactor.
+
+### Iteration 9 (2026-10-07) — /tools/svg-convert + real SVG output (P2)
+- 変更: `src/lib/rasterToSvg.ts` (colour quantisation, pixel-edge tracing with holes, simplification → filled SVG paths) + `SvgExportPanel` (SVGをダウンロード, 色/パス数) on ベクター化 and 平絵をベクター化 results; /tools/svg-convert routed to the vector page in svg mode (single tab, rail group 衣類生産ツール, Light copy, `svgConvertBrief`); hook feature `svg-convert`.
+- 検証: tsc; raster-to-svg 4/4; ui-control-boundaries 22/22; vector browser tests 3/3; others baseline-equal. Production: vector result converts to 7色/7パス SVG after reload; svg-convert run `ai-c900cd58…` completed and converts to 5色/5パス.
+- 次: #14 /tools/reactor.
