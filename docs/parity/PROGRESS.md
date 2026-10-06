@@ -113,3 +113,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: tsc; related suites equal to baseline (capability, catalog-route, launcher, runtime, entry-routing, board-parity, all-screen, comparator, model-settings). Production 1440×900: board + editor match Light; run `ai-7669333b-a37a-4612-9e27-fc4ba133ff54` completed in D1; reload restores print, style map, result. #15 board now shows its saved project.
 - 残: project saved on first generation rather than first upload; adjustments not persisted.
 - 次: #17 /editor/changeColor.
+
+### Iteration 13 (2026-10-07, /goal) — /editor/changeColor 色変更 (#17)
+- 変更: `ChangeColorDetailPage` (feature `change-color`, inputs colorTarget/colorArea/colorRatio), `ChangeColorProjectDashboardPage` on the shared board; App routes moved off GeneratePage; capability, overlay, entry-routing test updated to the new surface.
+- 検証: tsc; 25 related suites compared one by one with the baseline — equal except entry-routing, fixed by updating its stale GeneratePage expectation. Production 1440×900: guide chooser, panel and toolbar match Light; run `ai-f4d370ca-9ff2-43e9-84c0-61c9e599c181` completed in D1; reload restores everything.
+- 次: #18 /model.

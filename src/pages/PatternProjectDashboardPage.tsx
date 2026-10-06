@@ -129,6 +129,18 @@ const PRINT_DESIGN_BOARD: ProjectBoardConfig = {
   testId: 'lightchain-print-design-overview',
 };
 
+const CHANGE_COLOR_BOARD: ProjectBoardConfig = {
+  title: '色変更',
+  detailPath: '/editor/changeColor/detail',
+  featureId: 'change-color',
+  references: ['フェアアイルセーターの色変更', 'コートの部分的な色変更'],
+  testId: 'lightchain-change-color-overview',
+};
+
+export function ChangeColorProjectDashboardPage() {
+  return <LightchainProjectBoard config={CHANGE_COLOR_BOARD} />;
+}
+
 export function PatternProjectDashboardPage() {
   return <LightchainProjectBoard config={PATTERN_ARRANGE_BOARD} />;
 }

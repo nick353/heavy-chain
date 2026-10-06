@@ -74,12 +74,16 @@ test('maps the canonical printing entry to the Light visual parity page', async 
 });
 
 test('keeps the official color-change detail route on the color-change surface', async () => {
-  const [app, generate] = await Promise.all([
+  const [app, detail] = await Promise.all([
     readFile(appPath, 'utf8'),
-    readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/ChangeColorDetailPage.tsx', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /path="\/editor\/changeColor\/detail"[\s\S]*?<GeneratePage \/>/);
-  assert.match(generate, /window\.location\.pathname\.startsWith\('\/editor\/changeColor'\)/);
+  assert.match(app, /path="\/editor\/changeColor"[\s\S]*?<ChangeColorProjectDashboardPage \/>/);
+  assert.match(app, /path="\/editor\/changeColor\/detail"[\s\S]*?<ChangeColorDetailPage \/>/);
+  // Light 色変更 editor: guide chooser, required colour + area, ratio, canonical change-color workspace.
+  for (const marker of ['ガイドを表示しない', '色の置き換え', '色変更エリア', '生成画像の比率', "useCanonicalImageWorkspace('change-color'"]) {
+    assert.ok(detail.includes(marker), `missing colour-change marker: ${marker}`);
+  }
 });
 
 test('keeps the official mobile login route on the shared authentication surface', async () => {

@@ -17,3 +17,4 @@ src/lib/heavyCapability.ts
 src/pages/PatternProjectDashboardPage.tsx
 src/pages/PatternDesignDetailPage.tsx
 src/pages/PrintDesignDetailPage.tsx
+src/pages/ChangeColorDetailPage.tsx

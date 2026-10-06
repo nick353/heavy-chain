@@ -31,7 +31,7 @@ test('Heavy capability map is explicit and default-deny', () => {
     'fitting-background-reference', 'wear-design-lab', 'wear-design-detail',
     'fashion-studio', 'design-agent', 'lab', 'print-design-project',
     'print-design-detail', 'fabric-image', 'line-generation', 'line-to-real',
-    'pattern-vector', 'pattern-vector-pro', 'printing-image', 'image-repair', 'pattern-arrange', 'pattern-print-design',
+    'pattern-vector', 'pattern-vector-pro', 'printing-image', 'image-repair', 'pattern-arrange', 'pattern-print-design', 'change-color',
     'svg-convert', 'custom-style', 'ai-fitting', 'ai-fitting-reference',
     'model-library', 'model-face', 'model-change', 'body-shape',
     'clothing-size', 'pose-change', 'background-change', 'angle-change',

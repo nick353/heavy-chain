@@ -55,6 +55,8 @@ const PatternWorkspacePage = lazy(() => import('./pages/PatternWorkspacePage').t
 const PatternProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PatternProjectDashboardPage })));
 const PrintDesignProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PrintDesignProjectDashboardPage })));
 const PrintDesignDetailPage = lazy(() => import('./pages/PrintDesignDetailPage').then((module) => ({ default: module.PrintDesignDetailPage })));
+const ChangeColorProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.ChangeColorProjectDashboardPage })));
+const ChangeColorDetailPage = lazy(() => import('./pages/ChangeColorDetailPage').then((module) => ({ default: module.ChangeColorDetailPage })));
 const PatternDesignDetailPage = lazy(() => import('./pages/PatternDesignDetailPage').then((module) => ({ default: module.PatternDesignDetailPage })));
 const VideoProjectDashboardPage = lazy(() => import('./pages/VideoProjectDashboardPage').then((module) => ({ default: module.VideoProjectDashboardPage })));
 const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').then((module) => ({ default: module.VideoWorkstationPage })));
@@ -1351,7 +1353,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <GeneratePage />
+                    <ChangeColorProjectDashboardPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -1365,7 +1367,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <GeneratePage />
+                    <ChangeColorDetailPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
