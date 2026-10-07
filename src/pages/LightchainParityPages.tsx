@@ -47,6 +47,7 @@ import { formatProjectAge, ProjectThumbnail, useFeatureProjects } from './Patter
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
+import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
 import { LIGHTCHAIN_SVG_CONVERT_TABS, LIGHTCHAIN_VECTOR_TOOL_TABS, LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
 import { SvgExportPanel } from '../components/lightchain/SvgExportPanel';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
@@ -572,13 +573,7 @@ function LightchainPrintingWorkspace() {
     <button type="button" className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={canvasHandoffDisabled} onClick={()=>void handlePrintingCanvasHandoff()}>Canvasで再編集</button>
     {canvasHandoffMessage&&<p className="text-sm text-neutral-400" role="status">{canvasHandoffMessage}</p>}
   </div>:null}
-            {historyOpen && (
-              <section className="rounded-xl border border-white/10 bg-[#171b1d] p-5" aria-label="生成履歴">
-                <h2 className="font-semibold">生成履歴</h2>
-                <p className="mt-3 text-sm text-neutral-400">生成履歴はここに表示されます。</p>
-                <button type="button" className="mt-3 text-sm font-semibold text-neutral-200 underline" onClick={() => navigate('/history')}>履歴を開く</button>
-              </section>
-            )}
+            {historyOpen && <LightchainHistoryPanel locked={locked} onClose={() => setHistoryOpen(false)} />}
           </aside>
         </div>
       </ParityShell>

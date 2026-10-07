@@ -75,6 +75,7 @@ import {
   buildLightchainParityRuntime,
   serializeLightchainParityRuntime,
 } from '../features/lightchain/parityRuntime';
+import { LIBRARY_HISTORY_HREF } from '../lib/lightchainLibraryHandoff';
 import {
   getLightchainUnifiedFeatureWorkflowContract,
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
@@ -2074,7 +2075,7 @@ function FittingWorkspace() {
                 <Sparkles className="h-4 w-4" />
                 画像を入れる
               </button>
-              <Link to="/gallery" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
+              <Link to={LIBRARY_HISTORY_HREF} className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
                 <Images className="h-4 w-4" />
                 過去の画像を見る
               </Link>
@@ -2445,15 +2446,6 @@ function FittingWorkspace() {
                   </button>
                 </div>
               </div>
-              <nav
-                className="mt-3 grid grid-cols-3 gap-2"
-                aria-label="AIフィッティング生成結果の保存先"
-                data-testid="fitting-result-destinations"
-              >
-                <Link to="/gallery" data-testid="fitting-result-gallery-link" className="rounded-lg border border-neutral-200 px-3 py-2 text-center text-xs font-semibold text-neutral-600 transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:text-neutral-300 dark:hover:border-primary-500 dark:hover:text-primary-200">Gallery</Link>
-                <Link to="/history" data-testid="fitting-result-history-link" className="rounded-lg border border-neutral-200 px-3 py-2 text-center text-xs font-semibold text-neutral-600 transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:text-neutral-300 dark:hover:border-primary-500 dark:hover:text-primary-200">History</Link>
-                <Link to="/jobs" data-testid="fitting-result-jobs-link" className="rounded-lg border border-neutral-200 px-3 py-2 text-center text-xs font-semibold text-neutral-600 transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:text-neutral-300 dark:hover:border-primary-500 dark:hover:text-primary-200">Jobs</Link>
-              </nav>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {resultMatrix.map((item, index) => (
                   <figure key={item.storagePath || item.imageUrl || `${item.bodyType}-${item.ageGroup}-${index}`} className="overflow-hidden rounded-2xl border border-white/60 bg-white/60 dark:border-white/10 dark:bg-surface-900/50">

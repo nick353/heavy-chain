@@ -36,9 +36,10 @@ test('first complete apparel flows use the unified workspace shell', () => {
   assert.match(app, /path="\/editor\/changeColor"/);
   assert.match(app, /path="\/editor\/pattern"/);
   assert.match(app, /path="\/editor\/patternDesign"/);
-  assert.match(app, /path="\/gallery"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<GalleryPage \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
-  assert.match(app, /path="\/history"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<HistoryPage \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
-  assert.match(app, /path="\/jobs"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<JobsPage \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
+  for (const path of ['gallery', 'history', 'jobs']) {
+    // Light has no Gallery/History/Jobs screens; Heavy's old URLs land on the library's 生成履歴.
+    assert.match(app, new RegExp(`<Route path="/${path}" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />`));
+  }
   const catalog = fs.readFileSync('src/lib/lightchainParityCatalog.ts', 'utf8');
   const navigation = fs.readFileSync('src/components/layout/navigation.ts', 'utf8');
   assert.match(catalog, /duplicateRoute/);

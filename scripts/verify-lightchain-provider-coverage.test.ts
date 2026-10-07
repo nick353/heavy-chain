@@ -374,31 +374,20 @@ test('generic Lightchain provider generation rejects rapid duplicate submits', (
   assert.match(handler, /lightchainGenerationRequestRef\.current = null;\s*setLightchainGenerationRunning\(false\)/);
 });
 
-test('feature result cards expose connected Gallery, History, and Jobs destinations', () => {
+test('result surfaces keep Canvas handoff and open the 生成履歴 panel instead of Gallery/History/Jobs screens', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  const resultCardStart = workbench.indexOf('data-testid="lightchain-result-destinations"');
-  const resultCard = workbench.slice(Math.max(0, resultCardStart - 1800), resultCardStart + 2200);
-
-  assert.ok(resultCardStart >= 0, 'feature result destination nav must remain visible in the result card');
-  assert.match(resultCard, /data-testid="lightchain-result-save-to-canvas"/);
-  assert.match(resultCard, /to="\/gallery"/);
-  assert.match(resultCard, /data-testid="lightchain-result-gallery-link"/);
-  assert.match(resultCard, /to="\/history"/);
-  assert.match(resultCard, /data-testid="lightchain-result-history-link"/);
-  assert.match(resultCard, /to="\/jobs"/);
-  assert.match(resultCard, /data-testid="lightchain-result-jobs-link"/);
-});
-
-test('special Lightchain result surfaces keep the shared workspace destinations', () => {
-  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
   const specialDestinationUses = workbench.match(/<LightchainResultDestinations \/>/g) ?? [];
 
-  assert.ok(specialDestinationUses.length >= 9, 'modal and special result surfaces must expose shared destinations');
-  assert.match(workbench, /data-testid="lightchain-special-result-destinations"/);
-  assert.match(workbench, /data-testid="lightchain-special-result-gallery-link"/);
-  assert.match(workbench, /data-testid="lightchain-special-result-history-link"/);
-  assert.match(workbench, /data-testid="lightchain-special-result-jobs-link"/);
+  assert.ok(specialDestinationUses.length >= 9, 'modal and special result surfaces must keep their Canvas handoff');
+  assert.match(workbench, /data-testid="lightchain-result-save-to-canvas"/);
   assert.match(workbench, /data-testid="lightchain-special-result-canvas-link"/);
+  assert.match(material, /data-testid=\{`result-save-to-canvas-\$\{result\.id\}`\}/);
+  for (const source of [workbench, material]) {
+    assert.doesNotMatch(source, /to="\/(gallery|history|jobs)"/);
+    assert.doesNotMatch(source, /navigate\('\/(gallery|history|jobs)'\)/);
+    assert.match(source, /<LightchainHistoryPanel /);
+  }
 });
 
 test('all non-video result and model-library surfaces expose stable save and continuation markers', () => {
@@ -434,11 +423,3 @@ test('all non-video result and model-library surfaces expose stable save and con
   }
 });
 
-test('material result cards expose connected Gallery, History, and Jobs destinations', () => {
-  const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
-  assert.match(material, /data-testid=\{`material-result-destinations-\$\{result\.id\}`\}/);
-  assert.match(material, /data-testid=\{`material-result-gallery-link-\$\{result\.id\}`\}/);
-  assert.match(material, /data-testid=\{`material-result-history-link-\$\{result\.id\}`\}/);
-  assert.match(material, /data-testid=\{`material-result-jobs-link-\$\{result\.id\}`\}/);
-  assert.match(material, /data-testid=\{`result-save-to-canvas-\$\{result\.id\}`\}/);
-});

@@ -1,5 +1,6 @@
 import { Children, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { LightchainHistoryPanel } from './LightchainHistoryPanel';
 
 /**
  * Light's デザインツール frame (生地イメージ / プリントイメージ / 線画の実写化 / 平絵生成), measured at 1440×900:
@@ -90,6 +91,7 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
 }) {
   const navigate = useNavigate();
   const [bannerVisible, setBannerVisible] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [controls, result] = Children.toArray(children);
   return (
     <div data-testid={testId} className="relative h-[calc(100vh-50px)] min-h-0 overflow-hidden bg-[#0b1113] px-4 py-4 pl-28 text-white" {...workspaceAttributes}>
@@ -127,13 +129,13 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
         <aside className="relative min-w-0 overflow-hidden rounded-none bg-[#232728] shadow-2xl shadow-black/20">
           <button
             type="button"
-            onClick={() => navigate('/history')}
-            disabled={navigationLocked}
+            onClick={() => setHistoryOpen(true)}
             className="absolute right-4 top-4 z-10 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-white/15 bg-[#171b1c]/80 px-2.5 text-sm font-medium text-white/80 shadow-xs backdrop-blur-sm transition hover:bg-white/[0.08]"
           >
             生成履歴
           </button>
           {result}
+          {historyOpen && <LightchainHistoryPanel locked={navigationLocked} onClose={() => setHistoryOpen(false)} />}
         </aside>
       </div>
     </div>

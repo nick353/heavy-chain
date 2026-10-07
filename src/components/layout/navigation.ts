@@ -1,9 +1,7 @@
 import type { ComponentType } from 'react';
-import { BriefcaseBusiness, FlaskConical, LayoutGrid, Palette, Shirt, UserRound } from 'lucide-react';
+import { FlaskConical, LayoutGrid, Palette, Shirt, UserRound } from 'lucide-react';
 import {
-  IconClock,
   IconHome,
-  IconImage,
   IconPen,
   IconSettings,
   IconShoppingBag,
@@ -30,10 +28,7 @@ export const workspaceNavItems: WorkspaceNavItem[] = [
   { icon: Palette, label: '柄・グラフィック', mobileLabel: '柄', path: '/patterns/workbench', group: 'main' },
   { icon: FlaskConical, label: 'ラボ', mobileLabel: 'ラボ', path: '/lab', group: 'main' },
   { icon: LayoutGrid, label: '素材作業台', mobileLabel: '素材', path: '/tools/fabric', group: 'main' },
-  { icon: IconClock, label: '履歴', mobileLabel: '履歴', path: '/history', group: 'main', showInMobileNav: true },
-  { icon: BriefcaseBusiness, label: 'ジョブ', mobileLabel: 'ジョブ', path: '/jobs', group: 'main' },
   { icon: IconPen, label: 'キャンバス', mobileLabel: 'キャンバス', path: '/canvas', group: 'main' },
-  { icon: IconImage, label: 'ギャラリー', mobileLabel: 'ギャラリー', path: '/gallery', group: 'main' },
   { icon: IconSettings, label: 'ブランド設定', mobileLabel: '設定', path: '/brand/settings', group: 'settings' },
 ];
 

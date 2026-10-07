@@ -1,6 +1,9 @@
 import type { LightchainFeature } from './lightchainParityCatalog';
 import { getLightchainUnifiedRouteAliases } from './lightchainUnifiedFeatureCatalog.ts';
 
+/** The library's 生成履歴 group. Heavy's old /history, /jobs and /gallery screens redirect here, as Light has none of them. */
+export const LIBRARY_HISTORY_HREF = `/asset-center?group=${encodeURIComponent('生成履歴')}`;
+
 /**
  * Builds the canonical library-origin URL for any non-video Lightchain
  * feature. The artifact id is deliberately kept in the query so the target
