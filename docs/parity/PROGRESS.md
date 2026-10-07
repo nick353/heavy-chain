@@ -191,3 +191,8 @@ Each iteration: read this file → advance the next open item → append result 
 ### Iteration 26 (2026-10-07, /goal) — #28 /gallery (Heavy side)
 - 検証: production /gallery shows the 76 real saved images; favourite on ai-be119a6a…-0 stored (D1 is_favorite=1) and restored after reload under お気に入り. No code change needed.
 - 残: Light session logged out ("別のデバイスでログイン中") — #6, #3, #4, #2 and the Light-404 check for #28 wait for the user to sign in to jp.linkaigc.com again.
+
+### Iteration 27 (2026-10-07, /goal) — #6 /board Heavy-side fixes (Light pending)
+- 変更: `LightchainBoardPage` no longer fills the list with the source account's sample documents; artifact thumbnails resolve through `readWorkspaceArtifactImage`; dates formatted `YYYY.M.D HH:mm`. Tests updated (board-persistence-contract, entry-routing: sample data must be absent) = baseline.
+- 検証: production /board shows the user's 18 saved documents with images and formatted dates (screenshot).
+- 残: /board/edit is a placeholder; Light comparison for #6/#3/#4/#2 waits for the Light sign-in.

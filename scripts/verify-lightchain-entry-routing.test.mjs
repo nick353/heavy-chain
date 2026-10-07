@@ -222,8 +222,8 @@ test('maps the Light design-document menu to the canonical board routes', async 
   assert.match(board, /data-testid="lightchain-board-page"/);
   assert.match(board, /data-testid="lightchain-board-edit-page"/);
   assert.match(board, /LIGHTCHAIN_BOARD_STORAGE_KEY/);
-  assert.match(board, /fillSourceBoardDocuments/);
-  assert.match(board, /2025\.8\.21 18:00/);
+  assert.doesNotMatch(board, /fillSourceBoardDocuments/);
+  assert.doesNotMatch(board, /2025\.8\.21 18:00/); // the source account's sample dates are not copied
   assert.doesNotMatch(board, /type="checkbox"|権利確認/);
 });
 

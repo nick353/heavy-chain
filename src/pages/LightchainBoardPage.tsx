@@ -3,6 +3,7 @@ import { Download, FileText, MoreHorizontal, Plus } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { listWorkspaceArtifacts, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
+import { readWorkspaceArtifactImage } from '../lib/workspaceArtifactImageReadback';
 
 export type LightchainBoardDocument = {
   id: string;
@@ -20,40 +21,12 @@ const previewImages = [
   '/assets/lightchain-cards/marketing-v1.png',
 ];
 
-const seededDocuments: LightchainBoardDocument[] = [
-  '2025.11.28 18:23',
-  '2025.11.24 18:59',
-  '2025.11.20 17:38',
-  '2025.10.28 23:16',
-  '2025.10.28 14:08',
-  '2025.10.10 21:37',
-  '2025.9.19 16:56',
-  '2025.9.8 15:00',
-  '2025.9.3 16:05',
-  '2025.8.21 18:00',
-].map((createdAt, index) => ({
-  id: `lightchain-board-seed-${index + 1}`,
-  title: '名称未設定ドキュメント',
-  createdAt,
-  imageUrl: previewImages[index % previewImages.length],
-}));
-
-/**
- * Keep the board's empty-state collection source-shaped even when the current
- * Heavy account has fewer persisted documents than the Light source. Persisted
- * documents stay first (they are real user state); only the missing tail is
- * filled with the same deterministic source records used by the reference.
- */
-export const fillSourceBoardDocuments = (
-  documents: LightchainBoardDocument[],
-): LightchainBoardDocument[] => {
-  const seen = new Set(documents.map((document) => document.id));
-  const missingCount = Math.max(0, seededDocuments.length - documents.length);
-  if (missingCount === 0) return documents;
-  return [
-    ...documents,
-    ...seededDocuments.filter((document) => !seen.has(document.id)).slice(0, missingCount),
-  ];
+/** Light shows document dates as `2025.11.28 18:23`. */
+export const formatBoardDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 const readStoredDocuments = (): LightchainBoardDocument[] => {
@@ -77,7 +50,7 @@ const artifactToDocument = (artifact: WorkspaceArtifact, index: number): Lightch
   id: `artifact-${artifact.id}`,
   title: artifact.title || '名称未設定ドキュメント',
   createdAt: artifact.createdAt,
-  imageUrl: artifact.imageUrl || previewImages[index % previewImages.length],
+  imageUrl: /^(?:https?:|data:image\/|blob:|\/)/.test(artifact.imageUrl) ? artifact.imageUrl : previewImages[index % previewImages.length],
 });
 
 export const readLightchainBoardDocuments = (
@@ -105,7 +78,19 @@ export function LightchainBoardPage() {
 
   useEffect(() => {
     const stored = readLightchainBoardDocuments(currentBrand?.id, user?.id);
-    setDocuments(fillSourceBoardDocuments(stored));
+    // Only the signed-in user's own documents (the source account's sample list is not copied).
+    setDocuments(stored);
+    const brandId = currentBrand?.id;
+    const userId = user?.id;
+    if (!brandId || !userId) return;
+    let active = true;
+    const artifacts = listWorkspaceArtifacts(brandId, userId);
+    void Promise.allSettled(artifacts.map((artifact) => readWorkspaceArtifactImage(artifact, { brandId, userId }))).then((results) => {
+      if (!active) return;
+      const urls = new Map(artifacts.map((artifact, index) => [`artifact-${artifact.id}`, results[index].status === 'fulfilled' ? (results[index] as PromiseFulfilledResult<{ imageUrl: string }>).value.imageUrl : '']));
+      setDocuments((current) => current.map((document) => urls.get(document.id) ? { ...document, imageUrl: urls.get(document.id)! } : document));
+    });
+    return () => { active = false; };
   }, [currentBrand?.id, user?.id, location.key]);
 
   const visibleDocuments = useMemo(() => documents.slice(0, 18), [documents]);
@@ -155,7 +140,7 @@ export function LightchainBoardPage() {
                 <div className="mt-3 flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-xs text-neutral-200">{document.title}</p>
-                    <p className="mt-1 text-xs text-neutral-500">{document.createdAt}</p>
+                    <p className="mt-1 text-xs text-neutral-500">{formatBoardDate(document.createdAt)}</p>
                   </div>
                   <button
                     type="button"
@@ -195,7 +180,7 @@ export function LightchainBoardEditPage() {
     const nextDocument: LightchainBoardDocument = {
       id: documentId || `lightchain-board-${crypto.randomUUID()}`,
       title: title.trim() || '名称未設定ドキュメント',
-      createdAt: new Intl.DateTimeFormat('ja-JP', { dateStyle: 'short', timeStyle: 'short' }).format(new Date()),
+      createdAt: new Date().toISOString(),
       imageUrl: previewImages[0],
     };
     window.localStorage.setItem(LIGHTCHAIN_BOARD_STORAGE_KEY, JSON.stringify([nextDocument, ...existing]));

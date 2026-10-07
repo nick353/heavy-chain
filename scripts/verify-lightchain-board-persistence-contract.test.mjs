@@ -6,9 +6,9 @@ const source = await readFile(new URL('../src/pages/LightchainBoardPage.tsx', im
 
 test('design-document Board keeps its own source-shaped persistence namespace', () => {
   assert.match(source, /LIGHTCHAIN_BOARD_STORAGE_KEY = 'heavy-chain:lightchain-board-documents:v1'/);
-  assert.match(source, /fillSourceBoardDocuments/);
-  assert.match(source, /lightchain-board-seed-\$\{index \+ 1\}/);
-  assert.match(source, /Math\.max\(0, seededDocuments\.length - documents\.length\)/);
+  // Only the user's own documents; the source account's sample list is not copied.
+  assert.doesNotMatch(source, /fillSourceBoardDocuments|lightchain-board-seed-|seededDocuments/);
+  assert.match(source, /formatBoardDate/);
 });
 
 test('Board readback merges persisted artifacts without replacing real user documents', () => {
