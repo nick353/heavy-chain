@@ -142,3 +142,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: tsc; marketing-home (rewritten for the new behaviour), design-detail-dialogue (2 cases updated for the new layout/new-file rule), design-project-list, dialogue-wiring, canonical aliases, canonical routes (suspect cases re-run singly: 10/10 both) — no new failures vs baseline (dialogue-wiring and canonical-routes flake in both trees under load). Production: Light /marketing, /marketing/detail (project + new file) measured; Heavy run project 3557a8a9…, job ai-ce0299f2… completed, reload restores; project card shows the generated cover.
 - 残: see ledger #21 gaps.
 - 次: #22 /flow/integration.
+
+### Iteration 18 (2026-10-07, /goal) — /flow/integration ファッションスタジオ (#22)
+- 変更: `FashionStudioPage` filters canvas documents to Fashion Studio projects. `FashionStudioDetailPage` new-file screen rebuilt to Light (guidance, four functions with NEW badge, dashed drop zone, dots); function choice seeds a Heavy-written sample instruction and is stored per project; instruction draft persisted per project; form title follows the function; project icon self-hosted.
+- 検証: tsc; 10 fashion/board suites equal to baseline. Light observed: board, project detail (React Flow nodes), new file, sample load. Production: project 176a4d3e…, job ai-95b6af64… completed, reload restores input/instruction/result, board shows only studio projects.
+- 次: #23 /flow/laboratory.

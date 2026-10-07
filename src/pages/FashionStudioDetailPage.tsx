@@ -11,7 +11,6 @@ import {
   Search,
   Sparkles,
   Undo2,
-  Upload,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -31,7 +30,24 @@ import { editImageWithPrompt, assertCompletedImageEditResult } from '../lib/imag
 import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
 import { createStudioViewportInteraction, STUDIO_DEFAULT_VIEWPORT, STUDIO_INTERACTIVE_SELECTOR, studioWorldTransform, type StudioViewportState } from '../lib/studioViewport';
 
-const FASHION_STUDIO_PROJECT_ICON = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/%E4%B8%87%E8%83%BD%E7%A9%BF%E6%90%AD%E8%9E%8D%E5%90%88icon.png?x-oss-process=image/resize,m_lfit,w_48,limit_1/format,webp';
+const FASHION_STUDIO_PROJECT_ICON = '/lightchain-assets/icons/fashion-studio.png';
+
+/** Light's four Fashion Studio entry functions. Heavy seeds its own sample instruction for each. */
+type StudioFunctionId = 'text' | 'region' | 'underwear' | '3d';
+const STUDIO_FUNCTIONS: readonly { id: StudioFunctionId; label: string; width: number; badge?: string; sample: string }[] = [
+  { id: 'text', label: 'テキストで生成', width: 164, sample: '高級ファッション誌の誌面のような雰囲気で、自然光の入るスタジオに座ったモデルがこの服を着ている写真にしてください。' },
+  { id: 'region', label: '範囲指定で生成', width: 164, sample: '服の形と柄はそのままに、指定した部分だけを生成し直してください。周囲の質感と光を合わせてください。' },
+  { id: 'underwear', label: '下着のフィッティング', width: 206, badge: 'NEW', sample: 'この下着をモデルに自然に着用させ、柔らかい光のベッドルームで撮影した写真にしてください。' },
+  { id: '3d', label: '3D画像に変換', width: 155, sample: 'この服を立体感のある3Dレンダリング画像に変換してください。正面からの視点、柔らかなスタジオライト。' },
+];
+const STUDIO_PENDING_FUNCTION_KEY = 'heavy-fashion-studio-pending-function';
+const studioFunctionKey = (projectId: string) => `heavy-fashion-studio-function:${projectId}`;
+const readStudioFunction = (projectId: string): StudioFunctionId => {
+  try {
+    const value = projectId ? window.localStorage.getItem(studioFunctionKey(projectId)) : null;
+    return STUDIO_FUNCTIONS.some((item) => item.id === value) ? value as StudioFunctionId : 'text';
+  } catch { return 'text'; }
+};
 
 function DetailRoleImage({ candidates, scopeKey, role, alt, className, assertContext, onReady }: {
   candidates: readonly string[]; scopeKey: string; role: string; alt: string; className: string; assertContext: () => void; onReady?: (url: string) => void;
@@ -199,8 +215,36 @@ export function FashionStudioDetailPage() {
   const detail = visible?.status === 'success' ? visible.detail : emptyFashionStudioDetail();
   const committedInputsRef = useRef(detail);
   committedInputsRef.current = detail;
-  const prompt = promptDraft.scopeKey === scopeKey ? promptDraft.value : detail.prompt;
-  const setPrompt = (value: string) => setPromptDraft({ scopeKey, value });
+  const promptDraftKey = projectCode ? `heavy-fashion-studio-draft:${projectCode}` : '';
+  const storedDraft = (() => { try { return promptDraftKey ? window.localStorage.getItem(promptDraftKey) ?? '' : ''; } catch { return ''; } })();
+  // The instruction survives reloads per project until a generation records it on the canvas.
+  const prompt = promptDraft.scopeKey === scopeKey ? promptDraft.value : (storedDraft || detail.prompt);
+  const setPrompt = (value: string) => {
+    setPromptDraft({ scopeKey, value });
+    try { if (promptDraftKey) window.localStorage.setItem(promptDraftKey, value); } catch { /* storage unavailable */ }
+  };
+  const [studioFunction, setStudioFunctionState] = useState<StudioFunctionId>(() => readStudioFunction(projectCode));
+  const [studioFunctionChosen, setStudioFunctionChosen] = useState(false);
+  const setStudioFunction = (id: StudioFunctionId) => { setStudioFunctionState(id); setStudioFunctionChosen(true); };
+  const studioFunctionLabel = STUDIO_FUNCTIONS.find((item) => item.id === studioFunction)?.label ?? 'テキストで生成';
+  // A function chosen on the new-file screen belongs to the project created by the first upload.
+  useEffect(() => {
+    if (!projectCode) return;
+    let pending: string | null = null;
+    try { pending = window.sessionStorage.getItem(STUDIO_PENDING_FUNCTION_KEY); } catch { /* storage unavailable */ }
+    const chosen = STUDIO_FUNCTIONS.find((item) => item.id === pending);
+    if (chosen) {
+      try {
+        window.sessionStorage.removeItem(STUDIO_PENDING_FUNCTION_KEY);
+        window.localStorage.setItem(studioFunctionKey(projectCode), chosen.id);
+      } catch { /* storage unavailable */ }
+      setStudioFunction(chosen.id);
+      setPromptDraft((current) => current.value ? current : { scopeKey, value: chosen.sample });
+      try { if (!window.localStorage.getItem(`heavy-fashion-studio-draft:${projectCode}`)) window.localStorage.setItem(`heavy-fashion-studio-draft:${projectCode}`, chosen.sample); } catch { /* storage unavailable */ }
+      return;
+    }
+    setStudioFunction(readStudioFunction(projectCode));
+  }, [projectCode, scopeKey]);
   useEffect(() => {
     if (!scopeKey || !cloudflareDataPlane) return;
     const requested = JSON.parse(scopeKey) as FashionStudioDetailScope;
@@ -388,7 +432,7 @@ export function FashionStudioDetailPage() {
 
         <section className="fashion-studio-source-generation-panel" data-studio-composer data-testid="lightchain-fashion-studio-generation-panel">
           <div className="fashion-studio-source-generation-inner">
-            <div className="flex items-center justify-between"><div className="text-[30px] text-neutral-400">テキストで生成</div><div className="flex items-center gap-3 text-[30px] text-neutral-300"><ImageIcon className="h-8 w-8" />画像検索</div></div>
+            <div className="flex items-center justify-between"><div className="text-[30px] text-neutral-400" data-testid="fashion-studio-function-title">{studioFunctionLabel}</div><div className="flex items-center gap-3 text-[30px] text-neutral-300"><ImageIcon className="h-8 w-8" />画像検索</div></div>
             <div className="flex items-center rounded-[32px] bg-gradient-to-r from-[#00a1ff66] to-[#c861ff66] px-5 py-2.5 text-[30px] text-white"><Sparkles className="mr-2.5 h-[30px] w-[30px]" />指令と参考画像を使ってワンクリック生成</div>
             <div className="flex items-center justify-between rounded-[32px] border border-white/10 bg-[#353a3b] p-5 text-[30px]"><div className="flex items-center gap-5"><DetailRoleImage candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} onReady={url => setLoadedMain({ identity: mainIdentity, url })} alt="メイン画像" className="size-[100px] rounded-[20px] object-contain" /><span>メイン画像</span></div><button type="button" aria-label="メイン画像を差し替え" disabled={busy || recoveryRequired || !scope || visible?.status !== 'success'} onClick={() => mainInputRef.current?.click()}><ImagePlus className="h-8 w-8" /></button></div>
             <div className="text-[30px] text-neutral-400">参考画像</div>
@@ -422,10 +466,25 @@ export function FashionStudioDetailPage() {
     );
   }
 
+  const chooseFunction = (id: StudioFunctionId) => {
+    try { window.sessionStorage.setItem(STUDIO_PENDING_FUNCTION_KEY, id); } catch { /* storage unavailable */ }
+    setStudioFunction(id);
+  };
+  const pendingFunction = STUDIO_FUNCTIONS.find((item) => item.id === studioFunction && studioFunctionChosen);
   return (
-    <main className="dark min-h-[calc(100vh-50px)] bg-[#101010] text-white" data-testid="lightchain-fashion-studio-detail" data-lightchain-parity-shell="fashion-studio-detail">
-      <aside className="absolute left-4 top-[74px] z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#202426]"><div className="flex h-10 items-center gap-2 border-b border-white/10 px-2 text-sm text-neutral-400"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#52c9c3] text-[11px] font-bold text-neutral-950">✦</span><span>ファッションスタジオ</span></div><Link to="/flow/integration" aria-label="ファッションスタジオへ戻る" className="flex h-11 items-center gap-3 px-3 text-sm text-neutral-400 transition hover:bg-white/5 hover:text-white"><ChevronLeft className="h-5 w-5" /><span>Untitled</span></Link></aside>
-      <label className="absolute left-1/2 top-[190.93px] flex h-[496.14px] w-[781.59px] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-xl bg-[#25292b] text-center transition hover:bg-[#2a2e30]" data-testid="fashion-studio-detail-upload" onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void uploadFile(event.dataTransfer.files?.[0], 'main'); }}><Upload className="h-8 w-8 text-white" /><p className="relative top-[8px] mt-5 text-sm leading-[21px] text-neutral-300">ここをクリックまたはドラッグして画像を追加</p><p className="relative top-[8px] mt-1 text-xs leading-[17.14px] text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</p><input className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" disabled={busy || recoveryRequired || !scope} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void uploadFile(file, 'main'); }} />{activeUpload?.preview && busy && <img src={activeUpload.preview} alt="アップロード準備中" className="h-32 w-32 object-contain" />}</label>
+    <main className="dark relative h-[calc(100vh-50px)] min-h-[620px] overflow-hidden bg-[#171b1c] text-white" data-testid="lightchain-fashion-studio-detail" data-lightchain-parity-shell="fashion-studio-detail">
+      {inputControls}
+      <div className="fashion-studio-source-dots pointer-events-none absolute inset-0" />
+      <aside className="absolute left-4 top-6 z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#262a2b]"><div className="flex h-10 items-center gap-1.5 border-b border-white/10 px-2 text-sm text-neutral-400"><img src={FASHION_STUDIO_PROJECT_ICON} alt="" className="size-5 object-contain" /><span>ファッションスタジオ</span></div><Link to="/flow/integration" aria-label="ファッションスタジオへ戻る" className="flex h-11 items-center gap-3 px-3 text-sm text-neutral-300 transition hover:bg-white/5 hover:text-white"><ChevronLeft className="h-5 w-5" /><span>Untitled</span></Link></aside>
+      <p className="absolute left-1/2 top-[178px] -translate-x-1/2 whitespace-nowrap text-base text-neutral-300">下から機能を選んでサンプルを見るか、「画像を追加」をクリックしてください。</p>
+      <div className="absolute left-1/2 top-[233px] flex -translate-x-1/2 gap-4" data-testid="fashion-studio-functions">
+        {STUDIO_FUNCTIONS.map((item) => <button key={item.id} type="button" aria-pressed={pendingFunction?.id === item.id} disabled={busy || recoveryRequired || !scope} onClick={() => chooseFunction(item.id)}
+          className={`relative flex h-12 items-center justify-center gap-2 rounded-xl border text-base text-neutral-100 transition hover:bg-[#2f3436] disabled:opacity-50 ${pendingFunction?.id === item.id ? 'border-[#0bcabc] bg-[#0bcabc]/10' : 'border-white/10 bg-[#25292b]'}`} style={{ width: item.width }}>
+          <Sparkles className="h-5 w-5 text-neutral-200" />{item.label}
+          {item.badge && <span className="absolute -right-2 -top-2.5 rounded-full bg-[linear-gradient(90deg,#8fe9ff,#d9c2ff)] px-2 text-xs leading-5 text-neutral-900">{item.badge}</span>}
+        </button>)}
+      </div>
+      <label className="absolute left-1/2 top-[313px] flex h-[360px] w-[624px] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-[#25292b] text-center transition hover:bg-[#2a2e30]" data-testid="fashion-studio-detail-upload" onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void uploadFile(event.dataTransfer.files?.[0], 'main'); }}><ImagePlus className="h-8 w-8 text-white" /><p className="mt-4 text-sm leading-[21px] text-neutral-300">{pendingFunction ? `「${pendingFunction.label}」で使う画像をクリックまたはドラッグして追加` : 'ここをクリックまたはドラッグして画像を追加'}</p><p className="mt-1 text-xs leading-[17.14px] text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</p><input className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" aria-label="画像を追加" disabled={busy || recoveryRequired || !scope} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void uploadFile(file, 'main'); }} />{activeUpload?.preview && busy && <img src={activeUpload.preview} alt="アップロード準備中" className="h-32 w-32 object-contain" />}</label>
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2" aria-label="タスク">{activityContent}</div>
     </main>
   );

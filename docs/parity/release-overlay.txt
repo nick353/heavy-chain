@@ -41,3 +41,8 @@ src/features/designDetail/useDialogueReferences.ts
 public/lightchain-assets/marketing/upload-placeholder.png
 public/lightchain-assets/static/project_default_cover.png
 public/lightchain-assets/static/searchEmpty.png
+src/pages/FashionStudioDetailPage.tsx
+src/pages/FashionStudioPage.tsx
+public/lightchain-assets/icons/fashion-studio.png
+src/pages/LightchainLabDetailPage.tsx
+public/lightchain-assets/icons/laboratory.png

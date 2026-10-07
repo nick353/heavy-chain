@@ -270,6 +270,16 @@ const buildStudioPreviewSvg = ({
   `);
 };
 
+const isFashionStudioDocument = (document: CanvasDocumentLike) => {
+  const objects = (document.snapshot as { objects?: unknown } | null)?.objects;
+  return Array.isArray(objects) && objects.some((object) => {
+    const metadata = object && typeof object === 'object' ? (object as { metadata?: unknown }).metadata : null;
+    const feature = metadata && typeof metadata === 'object' ? (metadata as { feature?: unknown }).feature : null;
+    return typeof feature === 'string' && feature.startsWith('fashion-studio-');
+  });
+};
+type CanvasDocumentLike = { snapshot: unknown };
+
 export function FashionStudioPage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
@@ -419,7 +429,8 @@ export function FashionStudioPage() {
     void loadCanvasDocuments()
       .then((documents) => {
         if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
-        const projectCards = documents.map((document) => {
+        // Light's board lists only Fashion Studio projects; other canvas documents (marketing, analysis, Canvas) stay out.
+        const projectCards = documents.filter(isFashionStudioDocument).map((document) => {
           const thumbnailCandidates = extractFashionStudioThumbnailCandidates(document.snapshot);
           return {
             id: document.id,
