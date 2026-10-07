@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop, Maximize, MessageCircleMore,
   MessageSquarePlus, Minus, MousePointer2, Palette, PanelRightClose, PanelRightOpen, Plus, Redo2, RefreshCw, Shapes, Sparkles,
-  Type, Undo2, Upload, X, Boxes, ArrowUp,
+  Type, Undo2, Upload, X, Boxes, ArrowUp, FileText,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
@@ -377,17 +377,21 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       <button type="button" aria-label="アセット" onClick={() => uploadRef.current?.click()} className="flex h-[47px] w-[47px] items-center justify-center rounded-lg text-neutral-200 hover:bg-white/10"><Boxes className="h-6 w-6" /></button>
     </nav>}
 
-    {hasContent && <div role="toolbar" aria-label="キャンバスツール" className="absolute bottom-[22px] z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-[#1b2023]/95 p-[3px]" style={{ left: 'calc(50% - 385px)' }} data-testid="design-canvas-toolbar">
+    {hasContent && <div role="toolbar" aria-label="キャンバスツール" className="absolute bottom-[18px] z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-[#1b2023]/95 p-[3px]" style={{ left: 'calc(50% - 400px)' }} data-testid="design-canvas-toolbar">
       <button type="button" aria-label="選択" aria-pressed={!move} onClick={() => setMove(false)} className={`${toolbarButton} ${!move ? 'bg-white/10 text-white' : ''}`}><MousePointer2 className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="ドラッグ" aria-pressed={move} onClick={() => setMove(true)} className={`${toolbarButton} ${move ? 'bg-white/10 text-white' : ''}`}><Hand className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="取り消し" disabled={!viewHistory.back.length} onClick={() => setViewHistory((current) => { const previous = current.back[current.back.length - 1]; if (!previous) return current; setView(previous); return { back: current.back.slice(0, -1), forward: [...current.forward, view] }; })} className={toolbarButton}><Undo2 className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="やり直し" disabled={!viewHistory.forward.length} onClick={() => setViewHistory((current) => { const next = current.forward[current.forward.length - 1]; if (!next) return current; setView(next); return { back: [...current.back, view], forward: current.forward.slice(0, -1) }; })} className={toolbarButton}><Redo2 className="h-[18px] w-[18px]" /></button>
-      <span className="mx-1 h-5 w-px bg-white/15" />
+      <span className="mx-[2px] h-5 w-px bg-white/15" />
       <Link to={`/canvas/${encodeURIComponent(projectId)}?tool=shape`} aria-label="図形" className={toolbarButton}><Shapes className="h-[18px] w-[18px]" /></Link>
       <Link to={`/canvas/${encodeURIComponent(projectId)}?tool=frame`} aria-label="パネル" className={toolbarButton}><LayoutPanelTop className="h-[18px] w-[18px]" /></Link>
       <Link to={`/canvas/${encodeURIComponent(projectId)}?tool=text`} aria-label="テキスト" className={toolbarButton}><Type className="h-[18px] w-[18px]" /></Link>
       <button type="button" aria-label="画像/動画を挿入する" onClick={() => uploadRef.current?.click()} className={toolbarButton}><ImagePlus className="h-[18px] w-[18px]" /></button>
-      <span className="ml-[96px]" />
+      <span className="mx-[2px] h-5 w-px bg-white/15" />
+      {/* Light ends the tool group with 企画提案書; Heavy opens its own design documents (/board/edit). */}
+      <Link to="/board/edit" aria-label="企画提案書" className={toolbarButton}><FileText className="h-[18px] w-[18px]" /></Link>
+      <span className="ml-[64px]" />
+      <span className="flex items-center">
       <button type="button" aria-label="縮小" onClick={() => pushView(zoomStudioViewport(view, view.zoom / 1.25, { x: 500, y: 400 }))} className="flex h-7 w-7 items-center justify-center rounded text-neutral-300 hover:text-white"><Minus className="h-4 w-4" /></button>
       <label className="relative flex h-8 w-20 items-center justify-between rounded-lg border border-white/10 bg-[#141819] px-2 text-sm text-neutral-200">
         <span data-testid="design-zoom">{Math.round(view.zoom * 100)}%</span><ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
@@ -397,8 +401,9 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         </select>
       </label>
       <button type="button" aria-label="拡大" onClick={() => pushView(zoomStudioViewport(view, view.zoom * 1.25, { x: 500, y: 400 }))} className="flex h-7 w-7 items-center justify-center rounded text-neutral-300 hover:text-white"><Plus className="h-4 w-4" /></button>
-      <button type="button" aria-label="全体を表示" onClick={() => { const next = fitView(); if (next) pushView(next); }} className="ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white"><Maximize className="h-[18px] w-[18px]" /></button>
-      <button type="button" aria-label="ダウンロード" onClick={() => void downloadSelected()} className="flex h-10 w-10 items-center justify-center rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white"><Download className="h-[18px] w-[18px]" /></button>
+      </span>
+      <button type="button" aria-label="全体を表示" onClick={() => { const next = fitView(); if (next) pushView(next); }} className="ml-2 flex h-10 w-10 items-center justify-center rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white"><Maximize className="h-[18px] w-[18px]" /></button>
+      <button type="button" aria-label="ダウンロード" onClick={() => void downloadSelected()} className="ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white"><Download className="h-[18px] w-[18px]" /></button>
     </div>}
 
     {!panelOpen && <button type="button" aria-label="パネルを開く" onClick={() => setPanelOpen(true)} className="absolute right-3 top-4 z-30 flex h-[37px] items-center gap-2 rounded-xl border border-white/10 bg-[#1b2023] px-3 text-sm text-neutral-200"><PanelRightOpen className="h-4 w-4" />AIアシスタント</button>}
@@ -407,7 +412,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       data-project-id={visible?.draft?.projectId} data-conversation-id={visible?.draft?.conversationId}>
       <div className="flex h-[67px] shrink-0 items-center gap-1 border-b border-white/10 px-[17px]">
         {([['assistant', 'AIアシスタント', MessageCircleMore], ['layers', 'レイヤー設定', Layers]] as const).map(([id, label, Icon]) => <button key={id} type="button" aria-pressed={panelTab === id} onClick={() => setPanelTab(id)}
-          className={`flex h-8 items-center gap-1.5 rounded-full px-4 text-sm ${panelTab === id ? 'border border-[#0bcabc]/70 bg-[#0bcabc]/10 text-white' : 'text-neutral-400 hover:text-white'}`}><Icon className="h-4 w-4" />{label}</button>)}
+          className={`flex h-8 items-center gap-1 rounded-full px-3 text-sm font-medium ${panelTab === id ? 'border border-[#0bcabc]/70 bg-[#0bcabc]/10 text-white' : 'text-neutral-400 hover:text-white'}`}><Icon className="h-4 w-4" />{label}</button>)}
         <button type="button" aria-label="パネルを閉じる" onClick={() => setPanelOpen(false)} className="ml-auto text-neutral-400 hover:text-white"><PanelRightClose className="h-4 w-4" /></button>
       </div>
       {panelTab === 'assistant' ? <>
@@ -452,14 +457,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           {visible?.error && <div role="alert" data-testid="design-entry-recovery" className="my-4 rounded-lg bg-white/5 p-4 text-sm"><p>保存・作成状態を確認できませんでした。入力と以前の画像は保持されています。</p>
             <button type="button" disabled={visible.busy} className="mt-3 text-[#0bcabc]" onClick={() => setRetry((value) => value + 1)}>保存状態を再確認</button></div>}
         </div>
-        <form className="mx-[11px] mb-4 shrink-0 rounded-2xl border border-white/10 bg-[#20262a] px-[15px] pb-3 pt-4" onSubmit={(event) => { event.preventDefault(); submit(); }}>
+        <form className="mx-[11px] mb-4 shrink-0 rounded-2xl border border-white/10 bg-[#20262a] px-[15px] pb-4 pt-4" onSubmit={(event) => { event.preventDefault(); submit(); }}>
           {selectedOutput && <div className="mb-2 flex items-center justify-between text-xs text-[#0bcabc]"><span>選択した画像を参考に編集</span><button type="button" onClick={() => setSelected(null)} aria-label="選択を解除">×</button></div>}
           {referenceTray}
           {(entryError || references.error) && <p role="alert" className="mb-2 text-xs text-red-300">{entryError ?? references.error}</p>}
           <textarea data-testid="design-followup-prompt" aria-label="デザインの指示" value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={4000}
             onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }}
             placeholder="商品画像をアップロードして、デザインのリクエストを教えてください" rows={1} className="block max-h-40 min-h-8 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-neutral-500" />
-          <div className="mt-6 flex items-center justify-between">
+          <div className="mt-7 flex items-center justify-between">
             <button type="button" aria-label="画像を追加" onClick={() => uploadRef.current?.click()} className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-300 hover:bg-white/10"><ImagePlus className="h-5 w-5" /></button>
             <button type="submit" aria-label="送信" data-testid="design-followup-send" disabled={!prompt.trim() || Boolean(visible?.busy) || entrySending || !references.ready || (!isNewFile && !visible?.dialogue)}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#61fff4] disabled:bg-white/10 disabled:text-neutral-500"><ArrowUp className="h-5 w-5" /></button>
