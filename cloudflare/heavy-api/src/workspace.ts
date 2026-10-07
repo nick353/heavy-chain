@@ -3,11 +3,11 @@ import { requireBrandRole } from './core.ts';
 import { principal } from './domain.ts';
 import { canonical,isRecord,raster } from './image-ai-contracts.ts';
 import { PROTECTED_IMAGE_EDIT_MODE,protectedImageSaveRequestId } from '../../../src/lib/protectedImageEditContract.ts';
+import { WORKSPACE_UPLOAD_MAX_BYTES } from '../../../src/lib/workspaceUploadLimits.ts';
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const REQUEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_METADATA_BYTES = 128 * 1024;
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 type Row = { id: string; user_id: string; brand_id: string; job_id?: string; storage_path?: string; input_params?: string; status?: string; feature_type?: string; created_at?: string };
 type Params = { title: string; prompt: string | null; metadata: Record<string,unknown>; canvasProjectId: string | null;
   sourceJobId: string | null; contentType: string; checksum: string; imageAI?: Record<string,unknown>;
@@ -95,7 +95,7 @@ async function commitWorkspaceImage(env: Env,job: Row,params: Params): Promise<v
   const path = `generated-images/${job.id}`;
   const imageMetadata = JSON.stringify({ ...params.metadata,title:params.title,localWorkspaceArtifact:true,
     remoteWorkspaceArtifact:true,sourceJobId:params.sourceJobId,storageProvider:'cloudflare_r2',
-    ...(params.imageAI ? { contentSha256:params.checksum,contentBytes:params.contentBytes } : {}) });
+    contentSha256:params.checksum,...(params.imageAI ? { contentBytes:params.contentBytes } : {}) });
   await env.DB.batch([
     env.DB.prepare(`INSERT OR IGNORE INTO generated_images
       (id,job_id,brand_id,user_id,storage_path,prompt,feature_type,model_used,generation_params,metadata,created_at,parent_image_id,version)
@@ -164,7 +164,7 @@ export async function readWorkspaceArtifact(request: Request,env: Env,requestId:
 /** Save a browser result without contacting Supabase or fetching arbitrary URLs. */
 export async function saveWorkspaceArtifact(request: Request, env: Env): Promise<Response> {
   if (!/^Bearer\s+\S+$/i.test(request.headers.get('authorization') ?? '')) return fail('unauthorized', 401);
-  const maxBytes = Math.min(MAX_IMAGE_BYTES, Number(env.MAX_MEDIA_BYTES) > 0 ? Number(env.MAX_MEDIA_BYTES) : MAX_IMAGE_BYTES);
+  const maxBytes = Math.min(WORKSPACE_UPLOAD_MAX_BYTES, Number(env.MAX_MEDIA_BYTES) > 0 ? Number(env.MAX_MEDIA_BYTES) : WORKSPACE_UPLOAD_MAX_BYTES);
   const input = await readInput(request, Math.ceil(maxBytes / 3) * 4 + MAX_METADATA_BYTES + 64 * 1024);
   if (!input) return fail('invalid_or_oversized_workspace_artifact', 400);
   const { brandId, featureType, title, imageUrl, requestId } = input;

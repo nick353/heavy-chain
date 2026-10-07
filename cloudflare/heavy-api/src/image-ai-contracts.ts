@@ -11,6 +11,7 @@ export type Candidate = { prompt: string; descriptor: Json; seed: number };
 export type ImageInput = { action: ImageAction; brandId: string; prompt: string; featureType: string;
   width: number; height: number; references: Raster[]; candidates: Candidate[]; metadata: Json;
   parentImageId: string | null; generation: number };
+export type ImageProviderContext = { provider: 'workers_ai' | 'openai'; model: string };
 export class ImageInputError extends Error {
   status: number;
   constructor(code: string, status = 400) { super(code); this.status = status; }
@@ -96,6 +97,76 @@ export function canonical(value: unknown): string {
   return JSON.stringify(value);
 }
 
+export type AuthorizedSourceAsset = {
+  id: string;
+  revision: number | string;
+  contentDigest: string;
+};
+
+export type NormalizedImageProvider = {
+  provider: string;
+  backendProvider: string;
+  model: string;
+};
+
+/**
+ * Build the server-owned identity of what the provider will consume. Caller
+ * URLs, legal checkbox noise and object-key order are excluded; generated
+ * prompts, settings, workflow metadata, authorized source identities and the
+ * exact decoded reference bytes are retained.
+ */
+export async function normalizedImageRequestDigest(
+  action: ImageAction,
+  body: Json,
+  input: ImageInput,
+  provider: NormalizedImageProvider,
+  authorizedSourceAssets: AuthorizedSourceAsset[],
+): Promise<{ digest: string; normalized: Json }> {
+  const references = await Promise.all(input.references.map(async (reference, index) => ({
+    index,
+    contentType: reference.contentType,
+    width: reference.width,
+    height: reference.height,
+    contentDigest: await sha256(reference.bytes),
+  })));
+  const normalizedSourceAssets = [...authorizedSourceAssets]
+    .sort((left, right) => canonical(left).localeCompare(canonical(right)));
+  const normalized: Json = {
+    schema: 'heavy-image-input.v2',
+    action,
+    provider,
+    prompts: input.candidates.map(candidate => ({
+      prompt: candidate.prompt,
+      descriptor: candidate.descriptor,
+      seed: candidate.seed,
+    })),
+    settings: {
+      width: input.width,
+      height: input.height,
+      parentImageId: input.parentImageId,
+      generation: input.generation,
+      candidateCount: input.candidates.length,
+    },
+    workflow: {
+      featureType: input.featureType,
+      metadata: input.metadata,
+      workflow: compact(body.workflow ?? null),
+      workflowVersion: body.workflowVersion ?? null,
+      sourceReadback: compact(body.sourceReadback ?? null),
+      generationIntent: compact(body.generationIntent ?? null),
+    },
+    authorizedSourceAssets: normalizedSourceAssets,
+    references,
+    // Keep these as first-class binding inputs as well as retaining the
+    // per-reference/per-source records above.  The entitlement attestation
+    // must cover the exact bytes that the provider receives and every
+    // server-resolved source revision, not only a caller request id.
+    contentDigests: references.map(reference => reference.contentDigest),
+    sourceContentDigests: normalizedSourceAssets.map(asset => asset.contentDigest),
+  };
+  return { digest: await sha256(canonical(normalized)), normalized };
+}
+
 function compact(value: unknown, depth = 0): unknown {
   if (depth > 10) throw new ImageInputError('image_metadata_too_deep');
   if (typeof value === 'string') {
@@ -119,12 +190,23 @@ function choices(value: unknown, allowed: Record<string, unknown>, fallback: str
   return value as string[];
 }
 
-export function parseImageInput(action: ImageAction, body: Json): ImageInput {
+const DEFAULT_IMAGE_PROVIDER_CONTEXT: ImageProviderContext = { provider: 'workers_ai', model: IMAGE_MODEL };
+
+export function parseImageInput(
+  action: ImageAction,
+  body: Json,
+  providerContext: ImageProviderContext = DEFAULT_IMAGE_PROVIDER_CONTEXT,
+): ImageInput {
   const brandId = body.brandId ?? body.brand_id;
   if (typeof brandId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(brandId)) throw new ImageInputError('invalid_brand_id');
-  if (!isRecord(body.legalSafety) || body.legalSafety.rightsConfirmed !== true) throw new ImageInputError('rights_confirmation_required', 403);
-  try { requireLegalSafetyApproval(body.legalSafety,[body.prompt,body.productDescription,body.negativePrompt,body.textOverlay,body.generationIntent]); }
-  catch { throw new ImageInputError('legal_safety_prompt_blocked',403); }
+  // Login and brand membership are the Heavy generation boundary. The old
+  // browser rightsConfirmed declaration is optional and never proof. Keep
+  // the server-side content safety assessment so protected-brand/person-
+  // likeness prompts still fail closed.
+  try {
+    const safety = validateLegalSafetyInput([body.prompt,body.productDescription,body.negativePrompt,body.textOverlay,body.generationIntent]);
+    if (safety.blocked) throw new Error(`legal_safety_prompt_blocked:${safety.reasons.join(',')}`);
+  } catch { throw new ImageInputError('legal_safety_prompt_blocked',403); }
   if (body.maskDataUrl || body.maskApplied === true || body.outputBackground === 'transparent') throw new ImageInputError('image_mask_or_transparency_not_supported', 422);
   // A caller asking for a different provider/model must not be silently routed.
   for (const value of [body.generationModel, body.providerModel]) {
@@ -134,6 +216,9 @@ export function parseImageInput(action: ImageAction, body: Json): ImageInput {
   }
   if (body.generationProvider && !['workers_ai', 'openai'].includes(String(body.generationProvider))) {
     throw new ImageInputError('image_provider_not_supported', 422);
+  }
+  if (body.generationProvider && body.generationProvider !== providerContext.provider) {
+    throw new ImageInputError('image_provider_not_enabled', 422);
   }
   const prompt = requiredText(action === 'model-matrix'
     ? (typeof body.productDescription === 'string' && body.productDescription.trim() ? body.productDescription
@@ -146,7 +231,11 @@ export function parseImageInput(action: ImageAction, body: Json): ImageInput {
   if (![width,height].every(v => typeof v === 'number' && Number.isSafeInteger(v) && v >= 256 && v <= 1920 && v % 8 === 0)) throw new ImageInputError('invalid_image_dimensions');
   const inputURLs = action === 'edit-image' ? body.imageUrls ?? [body.imageUrl]
     : action === 'model-matrix' ? [body.imageUrl, body.modelReferenceImageUrl].filter(Boolean) : body.imageUrls ?? [];
-  if (!Array.isArray(inputURLs) || inputURLs.length > 4 || (action === 'edit-image' && !inputURLs.length)) throw new ImageInputError('image_reference_count_not_supported', 422);
+  const maxReferenceCount = action === 'model-matrix' ? 2
+    : providerContext.provider === 'openai' && OPENAI_IMAGE_MODELS.has(providerContext.model) ? 16 : 4;
+  if (!Array.isArray(inputURLs) || inputURLs.length > maxReferenceCount || (action === 'edit-image' && !inputURLs.length)) {
+    throw new ImageInputError('image_reference_count_not_supported', 422);
+  }
   if (action === 'model-matrix' && body.modelReferenceImageUrl && !body.imageUrl) throw new ImageInputError('fitting_garment_reference_required');
   const references = inputURLs.map(v => decodeImage(v));
   const protectedEdit = body.protectedEdit;
@@ -163,7 +252,11 @@ export function parseImageInput(action: ImageAction, body: Json): ImageInput {
   }
   const featureType = typeof body.featureType === 'string' ? requiredText(body.featureType, 256) : action;
   const metadata = compact(Object.fromEntries(['protectedEdit','sourceReadback','generationIntent','materialReference','materialReferences','layerPlan','maskPlan','compositionPreview','lightchainCompat','campaignMeta','textOverlay','style','negativePrompt','referenceTransforms','parentObjectId','skinTone','hairStyle','modelCandidateLabel',
-    'modelReferenceImageUrl','modelReferenceFileName','modelReferenceSourceImageId','modelReferenceSourceStoragePath'].filter(k => body[k] !== undefined).map(k => [k, body[k]]))) as Json;
+    'modelReferenceImageUrl','modelReferenceFileName','modelReferenceSourceImageId','modelReferenceSourceStoragePath',
+    // Heavy model-library uploads are browser-local IndexedDB assets. Persist
+    // only their opaque local reference and display names so same-browser
+    // History/Jobs resume can rehydrate the bytes; never persist image data.
+    'localSourceReference','localModelReference','sourceFileName'].filter(k => body[k] !== undefined).map(k => [k, body[k]]))) as Json;
   if (new TextEncoder().encode(JSON.stringify(metadata)).length > 128 * 1024) throw new ImageInputError('image_metadata_too_large');
   const suffix = [typeof body.negativePrompt === 'string' && body.negativePrompt ? `Avoid: ${body.negativePrompt}` : '',
     typeof body.style === 'string' && body.style ? `Style: ${body.style}` : '',
@@ -215,4 +308,4 @@ export function imageEstimate(input: Pick<ImageInput, 'width' | 'height' | 'refe
   const outputTiles = tiles(input.width,input.height);
   return { microUSD: inputTiles * 59 + outputTiles * 287, neurons: inputTiles * 5.37 + outputTiles * 26.05 };
 }
-import { requireLegalSafetyApproval } from './legalSafety.ts';
+import { validateLegalSafetyInput } from './legalSafety.ts';
