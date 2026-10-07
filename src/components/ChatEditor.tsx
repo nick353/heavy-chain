@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Plus } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { editImageWithPrompt, generateImage, planChatEdit } from '../lib/imageApi';
+import { HEAVY_IMAGE_PROVIDER } from '../lib/heavyImageProvider';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
   validateLegalSafetyInput,
@@ -16,27 +17,72 @@ interface Message {
   timestamp: Date;
 }
 
+export interface ChatEditorRequestInput {
+  prompt: string;
+  imageUrl: string | null;
+}
+
+export interface ChatEditorHeavyReadiness {
+  ready: boolean;
+  reason: string | null;
+  /** The parent-owned request key for this exact prompt/image pair. */
+  inputKey: string | null;
+}
+
+const HEAVY_READINESS_UNAVAILABLE_COPY = '生成を準備できません';
+const HEAVY_INPUT_BINDING_REQUIRED_COPY = '現在の入力を生成に紐づけて確認できません';
+
+/**
+ * Login plus the active brand is the Heavy generation preflight. A parent may
+ * optionally provide an input key for stale-input detection, but absence of
+ * that optional diagnostic key must not block a normal authenticated edit.
+ */
+export const buildChatEditorInputKey = ({ prompt, imageUrl }: ChatEditorRequestInput): string => (
+  JSON.stringify({ imageUrl: imageUrl ?? null, prompt: prompt.trim() })
+);
+
+export function resolveChatEditorHeavyReadiness(
+  readiness: ChatEditorHeavyReadiness | null | undefined,
+  input: ChatEditorRequestInput,
+): { ready: false; reason: string } | { ready: true; inputKey: string } {
+  if (!readiness) return { ready: false, reason: HEAVY_READINESS_UNAVAILABLE_COPY };
+  if (readiness.ready !== true) {
+    return { ready: false, reason: readiness.reason?.trim() || HEAVY_READINESS_UNAVAILABLE_COPY };
+  }
+  const inputKey = buildChatEditorInputKey(input);
+  if (readiness.inputKey && readiness.inputKey !== inputKey) {
+    return { ready: false, reason: HEAVY_INPUT_BINDING_REQUIRED_COPY };
+  }
+  return { ready: true, inputKey };
+}
+
 interface ChatEditorProps {
   initialImage?: string;
   selectedImageUrl?: string;
   onImageGenerated?: (imageUrl: string) => void;
   onEditResult?: (imageUrl: string) => void;
+  heavyReadiness?: ChatEditorHeavyReadiness | null;
 }
 
 export function ChatEditor({ 
   initialImage, 
   selectedImageUrl,
   onImageGenerated, 
-  onEditResult 
+  onEditResult,
+  heavyReadiness,
 }: ChatEditorProps) {
   const { currentBrand } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentImage, setCurrentImage] = useState(initialImage || selectedImageUrl);
-  const rightsConfirmed = false;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
+  const currentImageRef = useRef(currentImage);
+  const inputRevisionRef = useRef(0);
+  const heavyReadinessRef = useRef(heavyReadiness);
+  currentImageRef.current = currentImage;
+  heavyReadinessRef.current = heavyReadiness;
 
   useEffect(() => {
     if (hasInitializedRef.current) return;
@@ -94,20 +140,25 @@ export function ChatEditor({
 
     setMessages(prev => [...prev, userMessage]);
     const userInput = input;
+    const inputRevisionAtSubmit = inputRevisionRef.current;
     setInput('');
     setIsLoading(true);
 
     try {
+      const requestInput: ChatEditorRequestInput = {
+        prompt: userInput,
+        imageUrl: currentImage ?? null,
+      };
+      const requestReadiness = resolveChatEditorHeavyReadiness(heavyReadinessRef.current, requestInput);
+      if (!requestReadiness.ready) throw new Error(requestReadiness.reason);
+
       let result;
-      if (!rightsConfirmed) {
-        throw new Error('権限がありません');
-      }
       const legalSafetyAssessment = validateLegalSafetyInput([userInput]);
       if (legalSafetyAssessment.blocked) {
         throw new Error(BRAND_LIKENESS_BLOCK_COPY);
       }
 
-      // Claude decides edit-vs-generate and writes the image instruction.
+      // Claude decides edit-vs-generate and writes the image instruction (falls back to the raw message when unavailable).
       const history = messages.slice(-12).map(message => ({ role: message.role, content: message.content }));
       const plan = await planChatEdit(userInput, currentBrand.id, { hasCurrentImage: !!currentImage, history });
       if (plan.planned && validateLegalSafetyInput([plan.instruction]).blocked) {
@@ -117,19 +168,27 @@ export function ChatEditor({
 
       if (editing && currentImage) {
         // Edit existing image
-        result = await editImageWithPrompt(currentImage, plan.instruction, currentBrand.id, { rightsConfirmed });
+        result = await editImageWithPrompt(currentImage, plan.instruction, currentBrand.id, { rightsConfirmed: requestReadiness.ready });
       } else {
         // Generate new image
         result = await generateImage(plan.instruction, currentBrand.id, {
-          generationProvider: 'workers_ai',
-          generationModel: 'flux-2-klein-4b',
+          generationProvider: HEAVY_IMAGE_PROVIDER,
           featureType: 'chat-edit',
           width: 1024,
           height: 1024,
           count: 1,
           negativePrompt: 'no test text, no verification labels, no watermark, no random logo, no misspelled text, no broken typography, no distorted garment',
-          rightsConfirmed,
+          rightsConfirmed: requestReadiness.ready,
         });
+      }
+
+      if (inputRevisionRef.current !== inputRevisionAtSubmit ||
+          (currentImageRef.current ?? null) !== requestInput.imageUrl) {
+        throw new Error(HEAVY_INPUT_BINDING_REQUIRED_COPY);
+      }
+      const latestReadiness = resolveChatEditorHeavyReadiness(heavyReadinessRef.current, requestInput);
+      if (!latestReadiness.ready || latestReadiness.inputKey !== requestReadiness.inputKey) {
+        throw new Error(HEAVY_INPUT_BINDING_REQUIRED_COPY);
       }
 
       if (result.success && result.imageUrl) {
@@ -168,7 +227,7 @@ export function ChatEditor({
       };
 
       setMessages(prev => [...prev, errorMessage]);
-      toast.error('処理に失敗しました');
+      toast.error(error.message || '処理に失敗しました');
     } finally {
       setIsLoading(false);
     }
@@ -192,10 +251,25 @@ export function ChatEditor({
     'シンプルな商品写真',
     'ストリートスタイル',
   ];
+  const chatReadiness = resolveChatEditorHeavyReadiness(heavyReadiness, {
+    prompt: input,
+    imageUrl: currentImage ?? null,
+  });
 
   return (
     <div className="flex flex-col h-full">
       {/* Current image indicator */}
+      <div
+        data-testid="chat-edit-context"
+        className="flex items-center justify-between gap-3 border-b border-neutral-100 bg-white px-4 py-2 text-xs text-neutral-500"
+      >
+        <span>
+          編集対象: <strong className="font-semibold text-neutral-700">{currentImage ? '選択中の画像' : '新しい画像'}</strong>
+        </span>
+        <span>
+          操作: <strong className="font-semibold text-neutral-700">{currentImage ? '画像を編集' : '画像を生成'}</strong>
+        </span>
+      </div>
       {currentImage && (
         <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
           <div className="flex items-center gap-3">
@@ -307,12 +381,19 @@ export function ChatEditor({
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-neutral-100">
-        {!rightsConfirmed && <p role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs font-semibold text-amber-900">権限がありません</p>}
+        {!chatReadiness.ready && (
+          <p role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs font-semibold text-amber-900">
+            {chatReadiness.reason}
+          </p>
+        )}
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              inputRevisionRef.current += 1;
+              setInput(e.target.value);
+            }}
             placeholder={currentImage ? "編集内容を入力..." : "生成したい画像を説明..."}
             className="flex-1 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             disabled={isLoading}

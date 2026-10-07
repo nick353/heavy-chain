@@ -499,6 +499,34 @@ export function persistPrintInputState(
   });
 }
 
+/** Change coverage on the committed snapshot without replacing any of its assets or layers. */
+export function updatePrintInputCoverage(
+  brandId: string,
+  coverageMode: PrintInputEditorState['coverageMode'],
+  options: Pick<PrintInputPersistenceOptions, 'assertContext'> & { scope: PrintInputScope },
+): Promise<void> {
+  const scopeKey = printInputScopeKey(brandId, options.scope);
+  const queued = (persistQueue.get(scopeKey) || Promise.resolve()).catch(() => undefined).then(() => {
+    if (!isBrowser() || !brandId || !options.scope) throw new Error('print_input_storage_unavailable');
+    if (coverageMode !== 'spot' && coverageMode !== 'full') throw new Error('print_input_coverage_invalid');
+    options.assertContext?.();
+    const key = storageKey(scopeKey), raw = window.localStorage.getItem(key);
+    const { editorState } = readMetadata(scopeKey, true);
+    if (!raw || !editorState) throw new Error('print_input_editor_state_unavailable');
+    options.assertContext?.();
+    if (window.localStorage.getItem(key) !== raw) throw new Error('print_input_snapshot_changed');
+    if (editorState.coverageMode === coverageMode) return;
+    const snapshot = JSON.parse(raw);
+    const serialized = JSON.stringify({ ...snapshot, editorState: { ...snapshot.editorState, coverageMode } });
+    window.localStorage.setItem(key, serialized);
+    if (window.localStorage.getItem(key) !== serialized) throw new Error('print_input_metadata_readback_failed');
+  });
+  persistQueue.set(scopeKey, queued);
+  return queued.finally(() => {
+    if (persistQueue.get(scopeKey) === queued) persistQueue.delete(scopeKey);
+  });
+}
+
 export async function restorePrintInputState(brandId: string, options: Pick<PrintInputPersistenceOptions, 'scope' | 'assertContext'> = {}): Promise<RestoredPrintInputState> {
   options.assertContext?.();
   const scopeKey = printInputScopeKey(brandId, options.scope);
@@ -600,3 +628,131 @@ export async function restorePrintInputState(brandId: string, options: Pick<Prin
 export const releaseRestoredPrintInput = (image: RestoredPrintInputImage | null) => {
   image?.release?.();
 };
+
+type DraftSafetyOptions = { scope: PrintInputScope; assertContext: () => void };
+type DraftSafetyAsset = { reference: string; copyReference: string; bytes: number; type: string; sha256: string };
+type DraftSafetyCopy = {
+  version: 1; scopeKey: string; id: string; capturedAt: string;
+  rawMetadata: string; metadataSha256: string; assets: DraftSafetyAsset[];
+};
+const safetyPointer = (scopeKey: string) => `${storageKey(scopeKey)}:safety-copy`;
+const safetyReference = (key: string) => `${REFERENCE_PREFIX}${encodeURIComponent(key)}`;
+const digest = async (bytes: ArrayBuffer) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
+  .map(value => value.toString(16).padStart(2, '0')).join('');
+const textDigest = (value: string) => digest(new TextEncoder().encode(value).buffer);
+
+/** Share the ordinary save queue. A safety copy never becomes the active draft. */
+function queueSafety<T>(scopeKey: string, operation: () => Promise<T>): Promise<T> {
+  const result = (persistQueue.get(scopeKey) || Promise.resolve()).catch(() => undefined).then(operation);
+  const tail = result.then(() => undefined, () => undefined);
+  persistQueue.set(scopeKey, tail);
+  return result.finally(() => { if (persistQueue.get(scopeKey) === tail) persistQueue.delete(scopeKey); });
+}
+
+async function readSafetyCopy(scopeKey: string): Promise<DraftSafetyCopy> {
+  const id = window.localStorage.getItem(safetyPointer(scopeKey));
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('print_draft_safety_copy_missing');
+  const blob = await getAsset(safetyReference(`${scopeKey}:safety:${id}:metadata`));
+  if (!blob || blob.size > 200_000) throw new Error('print_draft_safety_copy_invalid');
+  const copy: DraftSafetyCopy = JSON.parse(await blob.text());
+  if (copy.version !== 1 || copy.scopeKey !== scopeKey || copy.id !== id
+    || typeof copy.rawMetadata !== 'string' || !Array.isArray(copy.assets)
+    || await textDigest(copy.rawMetadata) !== copy.metadataSha256) throw new Error('print_draft_safety_copy_invalid');
+  const snapshot = JSON.parse(copy.rawMetadata);
+  if (snapshot.version !== 2 || snapshot.scopeKey !== scopeKey || !Array.isArray(snapshot.images)) throw new Error('print_draft_safety_copy_invalid');
+  if (snapshot.editorState) validatePrintInputEditorState(snapshot.editorState, snapshot.images.filter((image: PersistedInputImage) => image.kind === 'design').length);
+  const refs = [...new Set<string>([...snapshot.images.flatMap(imageAssetReferences), ...editorAssetReferences(snapshot.editorState)])];
+  if (refs.length !== copy.assets.length || new Set(copy.assets.map(asset => asset.reference)).size !== refs.length
+    || copy.assets.some((asset, index) => !refs.includes(asset.reference)
+      || !isAssetReference(asset.reference) || !assetKey(asset.reference).startsWith(`${scopeKey}:revision:`)
+      || asset.copyReference !== safetyReference(`${scopeKey}:safety:${id}:asset:${index}`)
+      || !Number.isSafeInteger(asset.bytes) || asset.bytes <= 0 || asset.bytes > 20 * 1024 * 1024)
+    || copy.assets.reduce((sum, asset) => sum + asset.bytes, 0) > 96 * 1024 * 1024) throw new Error('print_draft_safety_copy_invalid');
+  return copy;
+}
+
+async function readSafetyAssets(copy: DraftSafetyCopy): Promise<StoredInputAsset[]> {
+  const result: StoredInputAsset[] = [];
+  for (const asset of copy.assets) {
+    const blob = await getAsset(asset.copyReference);
+    if (!blob || blob.size !== asset.bytes || blob.type !== asset.type
+      || await digest(await blob.arrayBuffer()) !== asset.sha256) throw new Error('print_draft_safety_bytes_invalid');
+    result.push({ key: assetKey(asset.reference), blob, createdAt: copy.capturedAt });
+  }
+  return result;
+}
+
+/** An independent byte-verified copy survives subsequent revision cleanup. */
+export function createPrintDraftSafetyCopy(brandId: string, options: DraftSafetyOptions): Promise<void> {
+  const scopeKey = printInputScopeKey(brandId, options.scope);
+  return queueSafety(scopeKey, async () => {
+    options.assertContext();
+    if (window.localStorage.getItem(safetyPointer(scopeKey))) {
+      const existing = await readSafetyCopy(scopeKey); await readSafetyAssets(existing); options.assertContext(); return;
+    }
+    const rawMetadata = window.localStorage.getItem(storageKey(scopeKey));
+    const snapshot = readMetadata(scopeKey, true);
+    if (!rawMetadata || !snapshot.images.length || new TextEncoder().encode(rawMetadata).byteLength > 100_000) throw new Error('print_draft_safety_snapshot_unavailable');
+    const id = crypto.randomUUID(), capturedAt = new Date().toISOString();
+    const copy: DraftSafetyCopy = { version: 1, scopeKey, id, capturedAt, rawMetadata, metadataSha256: await textDigest(rawMetadata), assets: [] };
+    const writes: StoredInputAsset[] = [];
+    const refs = [...new Set([...snapshot.images.flatMap(imageAssetReferences), ...editorAssetReferences(snapshot.editorState)])];
+    for (const [index, reference] of refs.entries()) {
+      const blob = await getAsset(reference);
+      if (!blob || !blob.size || blob.size > 20 * 1024 * 1024) throw new Error('print_draft_safety_asset_unavailable');
+      const key = `${scopeKey}:safety:${id}:asset:${index}`;
+      copy.assets.push({ reference, copyReference: safetyReference(key), bytes: blob.size, type: blob.type, sha256: await digest(await blob.arrayBuffer()) });
+      writes.push({ key, blob, createdAt: capturedAt });
+    }
+    if (copy.assets.reduce((sum, asset) => sum + asset.bytes, 0) > 96 * 1024 * 1024) throw new Error('print_draft_safety_asset_limit');
+    writes.push({ key: `${scopeKey}:safety:${id}:metadata`, blob: new Blob([JSON.stringify(copy)], { type: 'application/json' }), createdAt: capturedAt });
+    let committed = false;
+    try {
+      options.assertContext(); await putAssets(writes); options.assertContext();
+      if (window.localStorage.getItem(storageKey(scopeKey)) !== rawMetadata) throw new Error('print_input_snapshot_changed');
+      if (window.localStorage.getItem(safetyPointer(scopeKey))) throw new Error('print_draft_safety_copy_changed');
+      window.localStorage.setItem(safetyPointer(scopeKey), id); committed = true;
+      if (window.localStorage.getItem(safetyPointer(scopeKey)) !== id) throw new Error('print_input_metadata_readback_failed');
+    } catch (error) {
+      if (!committed) await deleteAssets(writes.map(asset => asset.key)).catch(() => undefined);
+      throw error;
+    }
+  });
+}
+
+/** Inert diagnostic output includes all metadata and byte digests, never image bytes. */
+export function inspectPrintDraftSafetyCopy(brandId: string, options: DraftSafetyOptions) {
+  const scopeKey = printInputScopeKey(brandId, options.scope);
+  return queueSafety(scopeKey, async () => {
+    options.assertContext();
+    const copy = await readSafetyCopy(scopeKey); await readSafetyAssets(copy);
+    const raw = window.localStorage.getItem(storageKey(scopeKey));
+    const current = readMetadata(scopeKey, true);
+    const currentAssets = [];
+    for (const reference of new Set([...current.images.flatMap(imageAssetReferences), ...editorAssetReferences(current.editorState)])) {
+      const blob = await getAsset(reference);
+      if (!blob) throw new Error('print_input_asset_missing');
+      currentAssets.push({ reference, bytes: blob.size, type: blob.type, sha256: await digest(await blob.arrayBuffer()) });
+    }
+    const metadataSha256 = raw ? await textDigest(raw) : null;
+    options.assertContext();
+    if (window.localStorage.getItem(storageKey(scopeKey)) !== raw) throw new Error('print_input_snapshot_changed');
+    return { schema: 'heavy.print-draft.safety-readback.v1', copy, current: { rawMetadata: raw, metadataSha256, assets: currentAssets } };
+  });
+}
+
+/** Explicit restore publishes the original exact metadata only after all original bytes read back. */
+export function restorePrintDraftSafetyCopy(brandId: string, options: DraftSafetyOptions): Promise<void> {
+  const scopeKey = printInputScopeKey(brandId, options.scope);
+  return queueSafety(scopeKey, async () => {
+    options.assertContext(); const copy = await readSafetyCopy(scopeKey), assets = await readSafetyAssets(copy);
+    const raw = window.localStorage.getItem(storageKey(scopeKey));
+    const current = readMetadata(scopeKey, true);
+    options.assertContext(); await putAssets(assets); options.assertContext();
+    if (window.localStorage.getItem(storageKey(scopeKey)) !== raw) throw new Error('print_input_snapshot_changed');
+    window.localStorage.setItem(storageKey(scopeKey), copy.rawMetadata);
+    if (window.localStorage.getItem(storageKey(scopeKey)) !== copy.rawMetadata) throw new Error('print_input_metadata_readback_failed');
+    const keep = new Set(assets.map(asset => asset.key));
+    await deleteAssets([...current.images.flatMap(imageAssetReferences), ...editorAssetReferences(current.editorState)].map(assetKey).filter(key => !keep.has(key)));
+  });
+}

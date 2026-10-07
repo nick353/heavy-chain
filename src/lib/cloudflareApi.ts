@@ -1,11 +1,34 @@
 import type { Brand, CanvasDocument, Folder, GeneratedImage, Json, User } from '../types/database';
 import type { GeneratedImageListRow } from './generatedImageQuery';
 import type { WorkspaceExecutionStep } from './workspaceExecution';
-import { auth } from './auth';
+import { auth, refreshAuthSession } from './auth';
 import { CLOUDFLARE_IMAGE_ACTIONS, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
 import { COMPOSITE_PROVIDER_ACTIONS, runCompositeProviderAction } from './providerActionAdapters';
 import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
 import { persistProtectedImageInput,listProtectedImageInputs,loadProtectedImageInput,deleteProtectedImageInput } from './cloudflareImageInputCache';
+import { attachHeavyGenerationPreflight, validateHeavyGenerationPreflight, type HeavyGenerationInput, type HeavyGenerationPreflight } from './heavyGenerationPreflight';
+import { WORKSPACE_UPLOAD_MAX_BYTES } from './workspaceUploadLimits';
+import type { DesignDialogueManifestReference } from './designDialogueReferences';
+
+export type CloudflareDesignAssistantRequestInput = {
+  requestId: string;
+  brandId: string;
+  /** The canonical Canvas document ID. */
+  projectId: string;
+  conversationId: string;
+  prompt: string;
+  history: { role: 'user' | 'assistant'; content: string }[];
+  references: DesignDialogueManifestReference[];
+};
+export type CloudflareDesignAssistantReceipt = {
+  requestId: string;
+  state: 'running' | 'completed' | 'failed' | 'unknown';
+  content?: string;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+  errorCode?: string;
+  provider: 'workers-ai';
+  model: '@cf/meta/llama-4-scout-17b-16e-instruct';
+};
 
 export interface CloudflareImageUsage {
   planName: string; monthlyQuota: number; remainingUnits: number;
@@ -14,6 +37,53 @@ export interface CloudflareImageUsage {
   averageInferenceMs: number | null; periodStart: string; periodEnd: string; imageAIEnabled: boolean;
   billing: 'estimate_not_invoice'; accountFreeAllocationRemaining: null; accountWideBudgetGuaranteed: false;
 }
+
+/** Read-only Heavy server entitlement status. A status read never authorizes a request by itself. */
+export interface CloudflareHeavyEntitlement {
+  allowed: boolean;
+  reason: string | null;
+  termsVersion: string | null;
+  termsDocumentVersion?: string | null;
+  termsDocumentDigest?: string | null;
+  rightsVersion: string | null;
+  rightsDocumentVersion?: string | null;
+  rightsDocumentDigest?: string | null;
+  termsAcceptanceId: string | null;
+  rightsAttestationId: string | null;
+  requestBinding: string | null;
+  requestScopedAttestationRequired: boolean;
+}
+
+export type CloudflareHeavyGenerationPreparation = HeavyGenerationPreflight;
+
+export type CloudflareHeavyAcceptanceReceipt = {
+  success: true;
+  acceptanceId: string;
+  acceptedAt: string;
+  termsVersion: string | null;
+  documentVersion: string | null;
+  documentDigest: string | null;
+};
+
+export type CloudflareHeavyAttestationReceipt = {
+  success: true;
+  requestId: string;
+  inputDigest: string;
+  termsAcceptanceId: string;
+  rightsAttestationId: string | null;
+  termsVersion: string | null;
+  documentVersion: string | null;
+  documentDigest: string | null;
+  rightsVersion: string | null;
+  rightsDocumentVersion: string | null;
+  rightsDocumentDigest: string | null;
+  requestScopedAttestationRequired: false;
+};
+
+export type HeavyGenerationConsent = {
+  termsAccepted: boolean;
+  rightsAttested: boolean;
+};
 
 export interface CloudflareAdminStats {
   totalUsers: number; activeUsers: number; totalImages: number;
@@ -128,6 +198,86 @@ type CloudflareMediaAllocation = {
   declaredSizeBytes: number;
 };
 
+type WorkspaceArtifactRemote = {
+  jobId: string;
+  imageId: string;
+  storagePath: string;
+};
+
+type WorkspaceArtifactRemoteResponse = {
+  success: boolean;
+  remote: WorkspaceArtifactRemote;
+  metadata?: Record<string, unknown>;
+};
+
+type CheckedCloudflareRequest = (path: string, init?: RequestInit) => Promise<unknown>;
+
+/** Opaque operation-scoped persistence capability. Never exposes credentials. */
+export interface ArtifactPersistenceContext {
+  assertCurrent(): Promise<void>;
+}
+
+export class ArtifactPersistenceContextError extends Error {
+  constructor(cause: unknown) {
+    super('artifact_persistence_context_changed', { cause });
+    this.name = 'ArtifactPersistenceContextError';
+  }
+}
+
+const artifactPersistenceContexts = new WeakMap<ArtifactPersistenceContext, {
+  owner: CloudflareDataPlaneClient;
+  call: CheckedCloudflareRequest;
+  assertCurrent: () => Promise<void>;
+}>();
+
+const WORKSPACE_REQUEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const WORKSPACE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+const WORKSPACE_STORAGE_PATH = /^generated-images\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  !!value && typeof value === 'object' && !Array.isArray(value)
+);
+
+/**
+ * Validate a workspace response before allowing it to satisfy a save.
+ *
+ * A readback is keyed by the exact request ID and authenticated on the server,
+ * but the response still needs an identity check at this boundary. Otherwise a
+ * malformed or misrouted response could be treated as proof for a different
+ * artifact and a caller could retry an already committed write.
+ */
+const asWorkspaceArtifactRemoteResponse = (
+  value: unknown,
+  requestId: string,
+  expectedSourceStoragePath?: string | null,
+): WorkspaceArtifactRemoteResponse => {
+  if (!isRecord(value) || value.success !== true || !isRecord(value.remote)) {
+    throw new Error('cloudflare_workspace_save_readback_invalid');
+  }
+  const { jobId, imageId, storagePath } = value.remote;
+  if (typeof jobId !== 'string' || !WORKSPACE_ID.test(jobId) ||
+      typeof imageId !== 'string' || !WORKSPACE_ID.test(imageId) ||
+      typeof storagePath !== 'string' || !WORKSPACE_STORAGE_PATH.test(storagePath)) {
+    throw new Error('cloudflare_workspace_save_readback_identity_invalid');
+  }
+  if (expectedSourceStoragePath !== undefined && expectedSourceStoragePath !== null) {
+    if (storagePath !== expectedSourceStoragePath) throw new Error('cloudflare_workspace_save_readback_source_mismatch');
+  } else {
+    const expectedId = `wa-${requestId.toLowerCase()}`;
+    if (jobId !== expectedId || imageId !== expectedId || storagePath !== `generated-images/${expectedId}`) {
+      throw new Error('cloudflare_workspace_save_readback_request_mismatch');
+    }
+  }
+  if (value.metadata !== undefined && !isRecord(value.metadata)) {
+    throw new Error('cloudflare_workspace_save_readback_metadata_invalid');
+  }
+  return {
+    success: true,
+    remote: { jobId, imageId, storagePath },
+    ...(value.metadata === undefined ? {} : { metadata: value.metadata }),
+  };
+};
+
 const MEDIA_OBJECT_PATH = /^media\/v1\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** Convert the full Worker result to the list shape shared by Gallery/Dashboard. */
@@ -164,11 +314,19 @@ try {
 }
 
 const getBearerToken = async (): Promise<string> => {
-  const { data, error } = await auth.getSession();
-  if (error) throw error;
-  const token = data.session?.access_token;
-  if (!token) throw new Error('cloudflare_session_missing');
-  return token;
+  const read = await auth.getSession();
+  if (read.error) throw read.error;
+  const token = read.data.session?.access_token;
+  if (token) return token;
+
+  // A protected page may already be admitted from the host-only cookie while
+  // this request observes an empty/expired in-memory auth cache. Refresh that
+  // same browser session once before failing closed; never turn a transient
+  // read gap into a per-screen login prompt or invent a new credential flow.
+  const recovered = await refreshAuthSession();
+  const recoveredToken = recovered?.access_token;
+  if (recoveredToken) return recoveredToken;
+  throw new Error('cloudflare_session_missing');
 };
 
 const asUser = (profile: CloudflareProfile): User => ({
@@ -468,30 +626,73 @@ class CloudflareDataPlaneClient {
     return this.requestPublic<CloudflareSharedImagePayload>(`/v1/shared-images?token=${encodeURIComponent(token)}`);
   }
 
-  private async captureRequestContext(assertContext?:()=>void) {
-      assertContext?.();
+  private async captureRequestContext(assertContext?:()=>void | Promise<void>, contextError?: (cause: unknown) => Error) {
+      await assertContext?.();
       const { data,error } = await auth.getSession(); if (error) throw error;
       const session = data.session;
       if (!session?.user?.id || !session.access_token) throw new Error('cloudflare_session_missing');
+      const userId = session.user.id, accessToken = session.access_token;
       const assertCurrent = async () => {
-        assertContext?.();
-        const current = await auth.getSession();
-        if (current.error || current.data.session?.user?.id !== session.user.id || current.data.session?.access_token !== session.access_token) throw new Error('cloudflare_session_changed');
-        assertContext?.();
+        try {
+          await assertContext?.();
+          const current = await auth.getSession();
+          if (current.error || current.data.session?.user?.id !== userId || current.data.session?.access_token !== accessToken) throw new Error('cloudflare_session_changed');
+          await assertContext?.();
+        } catch (cause) {
+          throw contextError ? contextError(cause) : cause;
+        }
       };
       await assertCurrent();
       const call = async (path: string,init: RequestInit = {}): Promise<unknown> => {
-          await assertCurrent(); const headers = new Headers(init.headers); headers.set('authorization',`Bearer ${session.access_token}`);
-          const response = await fetch(this.origin + path,{ ...init,headers });
-          const payload = await response.json().catch(() => null) as { error?: string } | null;
-          if (!response.ok) throw new Error(`cloudflare_api_${response.status}_${payload?.error ?? 'request_failed'}`);
-          await assertCurrent(); return payload;
+          await assertCurrent(); const headers = new Headers(init.headers); headers.set('authorization',`Bearer ${accessToken}`);
+          try {
+            const response = await fetch(this.origin + path,{ ...init,headers });
+            const payload = await response.json().catch(() => null) as { error?: string } | null;
+            if (!response.ok) throw new Error(`cloudflare_api_${response.status}_${payload?.error ?? 'request_failed'}`);
+            return payload;
+          } finally {
+            await assertCurrent();
+          }
         };
-      return {userId:session.user.id,assertCurrent,call};
+      return {userId,assertCurrent,call};
   }
 
-  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void } = {}): Promise<T> {
-    options.assertContext?.();
+  async captureArtifactPersistenceContext(options: { assertContext?: () => void | Promise<void> } = {}): Promise<ArtifactPersistenceContext> {
+    const assertScope = async () => {
+      try { await options.assertContext?.(); }
+      catch (cause) { throw new ArtifactPersistenceContextError(cause); }
+    };
+    let captured: Awaited<ReturnType<CloudflareDataPlaneClient['captureRequestContext']>>;
+    try { captured = await this.captureRequestContext(assertScope, cause => cause instanceof ArtifactPersistenceContextError ? cause : new ArtifactPersistenceContextError(cause)); }
+    catch (cause) {
+      if (cause instanceof ArtifactPersistenceContextError) throw cause;
+      throw new ArtifactPersistenceContextError(cause);
+    }
+    const assertCurrent = async () => {
+      try { await captured.assertCurrent(); }
+      catch (cause) {
+        if (cause instanceof ArtifactPersistenceContextError) throw cause;
+        throw new ArtifactPersistenceContextError(cause);
+      }
+    };
+    const context = Object.freeze({ assertCurrent });
+    artifactPersistenceContexts.set(context, { owner: this, call: captured.call, assertCurrent });
+    return context;
+  }
+
+  private async artifactPersistenceRequest(context: ArtifactPersistenceContext, checkedRequest?: CheckedCloudflareRequest): Promise<CheckedCloudflareRequest> {
+    const captured = artifactPersistenceContexts.get(context);
+    if (!captured || captured.owner !== this) throw new ArtifactPersistenceContextError(new Error('artifact_persistence_context_unrecognized'));
+    await captured.assertCurrent();
+    return async (path, init) => {
+      await captured.assertCurrent();
+      try { return await (checkedRequest ?? captured.call)(path, init); }
+      finally { await captured.assertCurrent(); }
+    };
+  }
+
+  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void | Promise<void>; retainUntilAcknowledged?: boolean; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent } = {}): Promise<T> {
+    await options.assertContext?.();
     if (COMPOSITE_PROVIDER_ACTIONS.has(action)) {
       // Multi-image features: Claude plans prompts, existing durable image actions render them.
       const nested = { assertContext: options.assertContext };
@@ -513,11 +714,52 @@ class CloudflareDataPlaneClient {
     if (CLOUDFLARE_IMAGE_ACTIONS.has(action)) {
       const {userId,assertCurrent,call} = await this.captureRequestContext(options.assertContext);
       const protectedEdit = action === 'edit-image' && body.maskDataUrl ? await prepareProtectedCloudflareEdit(body) : null;
-      const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,protectedEdit?.body ?? body)); await assertCurrent();
-      const scope = {origin:this.origin,userId,brandId:String(prepared.brandId ?? prepared.brand_id)};
-      const snapshot = protectedEdit ? {...protectedEdit,body:prepared} : null;
-      return invokeDurableImageAction<T>({ origin: this.origin,userId,action,body: prepared,...options,assertCurrent,call,
-        retainUntilAcknowledged:!!protectedEdit,
+      // Heavy preflight, attestation, and provider admission each normalize
+      // the input independently. Pin one candidate seed before the first
+      // normalization so a missing caller seed cannot produce three different
+      // server digests for one explicit request.
+      const heavyInput = options.heavyConsent && (protectedEdit?.body ?? body).seed === undefined
+        ? { ...(protectedEdit?.body ?? body), seed: crypto.getRandomValues(new Uint32Array(1))[0] % 2147483647 }
+        : (protectedEdit?.body ?? body);
+      const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(heavyInput, options.heavyPreparation) : heavyInput;
+      const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody)); await assertCurrent();
+      let requestId = options.idempotencyKey;
+      let heavyPreparation = options.heavyPreparation;
+      if (options.heavyConsent) {
+        const consentRequestId = options.idempotencyKey ?? crypto.randomUUID();
+        requestId = consentRequestId;
+        heavyPreparation = heavyPreparation ?? await this.prepareHeavyGeneration({
+          brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId: consentRequestId, input: prepared,
+        });
+        if (options.heavyConsent.termsAccepted !== true || options.heavyConsent.rightsAttested !== true) {
+          throw new Error('heavy_explicit_consent_required');
+        }
+        const status = await this.getHeavyEntitlement(String(prepared.brandId ?? prepared.brand_id), action).catch(() => null);
+        if (!status?.termsAcceptanceId) {
+          if (!heavyPreparation.termsDocumentVersion || !heavyPreparation.termsDocumentDigest) throw new Error('heavy_terms_document_unavailable');
+          await this.recordHeavyTermsAcceptance({
+            brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId: consentRequestId, preflight: heavyPreparation,
+            termsAccepted: true, documentVersion: heavyPreparation.termsDocumentVersion,
+            documentDigest: heavyPreparation.termsDocumentDigest, source: 'heavy-ui-v1',
+          });
+        }
+        if (!heavyPreparation.termsDocumentVersion || !heavyPreparation.termsDocumentDigest ||
+            !heavyPreparation.rightsVersion || !heavyPreparation.rightsDocumentVersion || !heavyPreparation.rightsDocumentDigest) {
+          throw new Error('heavy_entitlement_policy_unavailable');
+        }
+        await this.recordHeavyRequestAttestation({
+          brandId: String(prepared.brandId ?? prepared.brand_id), action, requestId: consentRequestId, preflight: heavyPreparation,
+          providerInput: prepared, termsAccepted: true, rightsAttested: true,
+          termsDocumentVersion: heavyPreparation.termsDocumentVersion, termsDocumentDigest: heavyPreparation.termsDocumentDigest,
+          rightsVersion: heavyPreparation.rightsVersion, rightsDocumentVersion: heavyPreparation.rightsDocumentVersion,
+          rightsDocumentDigest: heavyPreparation.rightsDocumentDigest,
+        });
+      }
+      const finalBody = heavyPreparation ? attachHeavyGenerationPreflight(prepared, heavyPreparation) : prepared;
+      const scope = {origin:this.origin,userId,brandId:String(finalBody.brandId ?? finalBody.brand_id)};
+      const snapshot = protectedEdit ? {...protectedEdit,body:finalBody} : null;
+      return invokeDurableImageAction<T>({ origin: this.origin,userId,action,body: finalBody,idempotencyKey:options.heavyConsent ? requestId : options.idempotencyKey,assertCurrent,call,
+        retainUntilAcknowledged:!!protectedEdit || options.retainUntilAcknowledged === true,
         beforeSubmit:snapshot ? (id,key)=>persistProtectedImageInput(scope,snapshot,id,key) : undefined,
         onTerminal:snapshot ? (id,key)=>deleteProtectedImageInput(scope,id,key) : undefined,
         finalize:protectedEdit ? receipt=>finalizeProtectedCloudflareEdit({ prepared:protectedEdit,receipt,assertCurrent,call,
@@ -525,9 +767,10 @@ class CloudflareDataPlaneClient {
     }
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
+    const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(body, options.heavyPreparation) : body;
     return this.request<T>(`/v1/provider-actions/${encodeURIComponent(action)}`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify(proofBody),
       headers,
     });
   }
@@ -558,6 +801,91 @@ class CloudflareDataPlaneClient {
 
   async getImageUsage(brandId: string): Promise<CloudflareImageUsage> {
     return this.request(`/v1/image-ai/usage?brand_id=${encodeURIComponent(brandId)}`);
+  }
+
+  async getHeavyEntitlement(brandId: string, action = 'generate-image'): Promise<CloudflareHeavyEntitlement> {
+    return this.request(`/v1/heavy/entitlement?brand_id=${encodeURIComponent(brandId)}&action=${encodeURIComponent(action)}`);
+  }
+
+  /** Prepare one exact Heavy input; this does not accept terms or attest rights. */
+  async prepareHeavyGeneration(input: {
+    brandId: string;
+    action: string;
+    requestId: string;
+    input: HeavyGenerationInput;
+  }): Promise<CloudflareHeavyGenerationPreparation> {
+    const response = await this.request<CloudflareHeavyGenerationPreparation & { success: true }>('/v1/heavy/entitlement/prepare', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Idempotency-Key': input.requestId },
+      body: JSON.stringify({ brandId: input.brandId, action: input.action, requestId: input.requestId, input: input.input }),
+    });
+    return validateHeavyGenerationPreflight(response);
+  }
+
+  /** Record explicit Heavy terms acceptance; this never auto-checks the box. */
+  async recordHeavyTermsAcceptance(input: {
+    brandId: string;
+    action: string;
+    requestId: string;
+    preflight: HeavyGenerationPreflight;
+    termsAccepted: boolean;
+    documentVersion: string;
+    documentDigest: string;
+    source?: string;
+  }): Promise<CloudflareHeavyAcceptanceReceipt> {
+    const proof = validateHeavyGenerationPreflight(input.preflight);
+    return this.request<CloudflareHeavyAcceptanceReceipt>('/v1/heavy/entitlement/acceptance', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Idempotency-Key': input.requestId },
+      body: JSON.stringify({
+        brandId: input.brandId,
+        action: input.action,
+        requestId: input.requestId,
+        preparationId: proof.preparationId,
+        inputDigest: proof.inputDigest,
+        termsAccepted: input.termsAccepted,
+        documentVersion: input.documentVersion,
+        documentDigest: input.documentDigest,
+        source: input.source,
+      }),
+    });
+  }
+
+  /** Record explicit, request-scoped rights attestation without inferring consent. */
+  async recordHeavyRequestAttestation(input: {
+    brandId: string;
+    action: string;
+    requestId: string;
+    preflight: HeavyGenerationPreflight;
+    providerInput: HeavyGenerationInput;
+    termsAccepted: boolean;
+    rightsAttested: boolean;
+    termsDocumentVersion: string;
+    termsDocumentDigest: string;
+    rightsVersion: string;
+    rightsDocumentVersion: string;
+    rightsDocumentDigest: string;
+  }): Promise<CloudflareHeavyAttestationReceipt> {
+    const proof = validateHeavyGenerationPreflight(input.preflight);
+    return this.request<CloudflareHeavyAttestationReceipt>('/v1/heavy/entitlement/attestation', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Idempotency-Key': input.requestId },
+      body: JSON.stringify({
+        brandId: input.brandId,
+        action: input.action,
+        requestId: input.requestId,
+        preparationId: proof.preparationId,
+        inputDigest: proof.inputDigest,
+        termsAccepted: input.termsAccepted,
+        rightsAttested: input.rightsAttested,
+        termsDocumentVersion: input.termsDocumentVersion,
+        termsDocumentDigest: input.termsDocumentDigest,
+        rightsVersion: input.rightsVersion,
+        rightsDocumentVersion: input.rightsDocumentVersion,
+        rightsDocumentDigest: input.rightsDocumentDigest,
+        input: input.providerInput,
+      }),
+    });
   }
 
   async listWorkspaceExecutionSteps(brandId: string, jobIds: string[]): Promise<WorkspaceExecutionStep[]> {
@@ -597,27 +925,62 @@ class CloudflareDataPlaneClient {
     sourceJobId?: string | null;
     sourceStoragePath: string | null;
     imageAI?: { requestId: string; candidateIndex: number };
-  },checkedRequest?: (path: string,init?: RequestInit)=>Promise<unknown>): Promise<{ success: boolean; remote: { jobId: string; imageId: string; storagePath: string }; metadata?: Record<string,unknown> }> {
+  },checkedRequest?: CheckedCloudflareRequest, persistenceContext?: ArtifactPersistenceContext): Promise<WorkspaceArtifactRemoteResponse> {
+    const send = persistenceContext
+      ? await this.artifactPersistenceRequest(persistenceContext, checkedRequest)
+      : checkedRequest ?? this.request.bind(this);
     let imageUrl = input.imageUrl;
     if (!input.sourceStoragePath && imageUrl.startsWith('blob:')) {
       // Browser-owned blobs must be materialized here; a Worker must never try
       // to fetch blob URLs, external URLs, or embedded credentials.
-      const response = await fetch(imageUrl);
+      await persistenceContext?.assertCurrent();
+      const response = await fetch(imageUrl).finally(() => persistenceContext?.assertCurrent());
       if (!response.ok) throw new Error('workspace_blob_unavailable');
       const blob = await response.blob();
-      if (blob.size > 10 * 1024 * 1024) throw new Error('workspace_image_too_large');
+      if (blob.size > WORKSPACE_UPLOAD_MAX_BYTES) throw new Error('workspace_image_too_large');
       imageUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('workspace_blob_invalid'));
         reader.onerror = () => reject(reader.error ?? new Error('workspace_blob_invalid'));
         reader.readAsDataURL(blob);
       });
+      await persistenceContext?.assertCurrent();
     }
-    const send = checkedRequest ?? this.request.bind(this);
-    return await send('/v1/workspace-artifacts', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...input, imageUrl }), signal: AbortSignal.timeout(8000),
-    }) as { success: boolean; remote: { jobId: string; imageId: string; storagePath: string }; metadata?: Record<string,unknown> };
+    if (!WORKSPACE_REQUEST_ID.test(input.requestId)) throw new Error('cloudflare_workspace_request_id_invalid');
+    try {
+      const result = await send('/v1/workspace-artifacts', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...input, imageUrl }), signal: AbortSignal.timeout(8000),
+      });
+      return asWorkspaceArtifactRemoteResponse(result, input.requestId, input.sourceStoragePath);
+    } catch (error) {
+      if (error instanceof ArtifactPersistenceContextError) throw error;
+      await persistenceContext?.assertCurrent();
+      // The POST may have committed before its response was lost. Reconcile the
+      // exact request ID before surfacing the error; never invent a new ID or
+      // silently retry a write whose effect is unknown. A 404/pending/mismatch
+      // readback keeps the original POST error so the caller can retain its
+      // local record and resume explicitly with the same identity.
+      try {
+        return await this.readWorkspaceArtifact(input.requestId, checkedRequest, input.sourceStoragePath, persistenceContext);
+      } catch (readError) {
+        if (readError instanceof ArtifactPersistenceContextError) throw readError;
+        await persistenceContext?.assertCurrent();
+        throw error;
+      }
+    }
+  }
+
+  /** Read the exact workspace save receipt used to reconcile an uncertain POST. */
+  async readWorkspaceArtifact(requestId: string, checkedRequest?: CheckedCloudflareRequest, expectedSourceStoragePath?: string | null, persistenceContext?: ArtifactPersistenceContext): Promise<WorkspaceArtifactRemoteResponse> {
+    if (!WORKSPACE_REQUEST_ID.test(requestId)) throw new Error('cloudflare_workspace_request_id_invalid');
+    const read = persistenceContext
+      ? await this.artifactPersistenceRequest(persistenceContext, checkedRequest)
+      : checkedRequest ?? this.request.bind(this);
+    const result = await read(`/v1/workspace-artifacts/${encodeURIComponent(requestId)}`, {
+      method: 'GET', signal: AbortSignal.timeout(8000),
+    });
+    return asWorkspaceArtifactRemoteResponse(result, requestId, expectedSourceStoragePath);
   }
 
   async listGenerationJobs(brandId: string, options: { limit?: number; offset?: number } = {}): Promise<CloudflareGenerationJob[]> {
@@ -704,16 +1067,39 @@ class CloudflareDataPlaneClient {
     });
   }
 
-  async updateGeneratedImageLibraryTitle(imageId: string, title: string): Promise<CloudflareGeneratedImage> {
-    return this.request<CloudflareGeneratedImage>(`/v1/generated-images/${encodeURIComponent(imageId)}`, {
+  async updateGeneratedImageLibraryTitle(imageId: string, title: string, persistenceContext?: ArtifactPersistenceContext): Promise<CloudflareGeneratedImage> {
+    const send = persistenceContext ? await this.artifactPersistenceRequest(persistenceContext) : this.request.bind(this);
+    return await send(`/v1/generated-images/${encodeURIComponent(imageId)}`, {
       method: 'PATCH',
       body: JSON.stringify({ library_title: title }),
       headers: { 'content-type': 'application/json' },
-    });
+    }) as CloudflareGeneratedImage;
   }
 
-  async deleteGeneratedImage(imageId: string): Promise<void> {
-    await this.request<unknown>(`/v1/generated-images/${encodeURIComponent(imageId)}`, { method: 'DELETE' });
+  async deleteGeneratedImage(imageId: string, persistenceContext?: ArtifactPersistenceContext): Promise<void> {
+    const send = persistenceContext ? await this.artifactPersistenceRequest(persistenceContext) : this.request.bind(this);
+    await send(`/v1/generated-images/${encodeURIComponent(imageId)}`, { method: 'DELETE' });
+  }
+
+  async sendDesignAssistantRequest(
+    input: CloudflareDesignAssistantRequestInput,
+    context?: { userId: string; assertContext: () => void | Promise<void> },
+  ): Promise<CloudflareDesignAssistantReceipt> {
+    const { userId, call } = await this.captureRequestContext(context?.assertContext);
+    if (context && context.userId !== userId) throw new Error('cloudflare_session_changed');
+    return await call('/v1/design-assistant/requests', {
+      method: 'POST', body: JSON.stringify(input), headers: { 'content-type': 'application/json' },
+    }) as CloudflareDesignAssistantReceipt;
+  }
+
+  async readDesignAssistantRequest(
+    input: Pick<CloudflareDesignAssistantRequestInput, 'requestId' | 'brandId' | 'projectId' | 'conversationId'>,
+    context?: { userId: string; assertContext: () => void | Promise<void> },
+  ): Promise<CloudflareDesignAssistantReceipt> {
+    const { userId, call } = await this.captureRequestContext(context?.assertContext);
+    if (context && context.userId !== userId) throw new Error('cloudflare_session_changed');
+    const params = new URLSearchParams({ brand_id: input.brandId, project_id: input.projectId, conversation_id: input.conversationId });
+    return await call(`/v1/design-assistant/requests/${encodeURIComponent(input.requestId)}?${params}`) as CloudflareDesignAssistantReceipt;
   }
 
   private async canvasRequest<T>(path:string,init:RequestInit,context?:{userId:string;assertContext:()=>void}):Promise<T> {
@@ -728,6 +1114,19 @@ class CloudflareDataPlaneClient {
 
   async listCanvasDocuments(brandId: string): Promise<CloudflareCanvasDocument[]> {
     return this.request<CloudflareCanvasDocument[]>(`/v1/canvas-documents?brand_id=${encodeURIComponent(brandId)}`);
+  }
+
+  async listCanvasDocumentsPage(
+    brandId: string,
+    limit = 100,
+    offset = 0,
+    context?: { userId: string; assertContext: () => void | Promise<void> },
+  ): Promise<CloudflareCanvasDocument[]> {
+    const params = new URLSearchParams({ brand_id: brandId, limit: String(limit), offset: String(offset) });
+    const path = `/v1/canvas-documents?${params.toString()}`;
+    return context
+      ? this.canvasRequest<CloudflareCanvasDocument[]>(path, {}, context)
+      : this.request<CloudflareCanvasDocument[]>(path);
   }
 
   async createCanvasDocument(input: { id?:string;brand_id: string; title: string; snapshot: unknown },context?:{userId:string;assertContext:()=>void}): Promise<CloudflareCanvasDocument> {
@@ -753,6 +1152,10 @@ class CloudflareDataPlaneClient {
       }),
       headers: { 'content-type': 'application/json' },
     },context);
+  }
+
+  async deleteCanvasDocument(documentId: string): Promise<void> {
+    await this.request<void>(`/v1/canvas-documents/${encodeURIComponent(documentId)}`, { method: 'DELETE' });
   }
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {

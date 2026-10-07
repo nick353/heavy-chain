@@ -62,8 +62,7 @@ const readMaterialReference = (
     && value.extractedLayerReady === true
     && value.nextStepReady === true;
   const sourceOnly = options.allowSourceOnly === true
-    && Boolean(sourceStoragePath)
-    && !sourceImageUrl
+    && (Boolean(sourceStoragePath) || /^(?:data:image\/|\/assets\/)/i.test(sourceImageUrl))
     && !hasCutoutEvidence;
   const canRestoreCutout = hasCutoutEvidence;
   const hasDurableSourceIdentity = Boolean(sourceImageUrl)

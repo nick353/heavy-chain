@@ -192,17 +192,20 @@ export function GallerySelector({
       // The bundled garment is valid for the reference-image picker. A
       // garment must never appear in the print-design picker, so that mode
       // remains an honest empty state until a platform artwork asset exists.
-      setImages(
-        assetPurpose === PRINT_DESIGN_ASSET_PURPOSE
-          ? []
-          : PLATFORM_GALLERY_ASSETS.filter((asset) => {
-              if (!platformAssetRole) return true;
-              const role = asset.metadata && typeof asset.metadata === 'object' && !Array.isArray(asset.metadata)
-                ? asset.metadata.assetRole
-                : null;
-              return role === platformAssetRole;
-            }),
-      );
+      const platformImages = assetPurpose === PRINT_DESIGN_ASSET_PURPOSE
+        ? []
+        : PLATFORM_GALLERY_ASSETS.filter((asset) => {
+            if (!platformAssetRole) return true;
+            const role = asset.metadata && typeof asset.metadata === 'object' && !Array.isArray(asset.metadata)
+              ? asset.metadata.assetRole
+              : null;
+            return role === platformAssetRole;
+          });
+      setImages(platformImages);
+      // A same-origin platform asset can already be complete before the
+      // browser attaches the <img> load handler. Treat its resolved URL as
+      // ready immediately; onError still removes it from the selectable set.
+      setLoadedImageIds(new Set(platformImages.filter((image) => getGalleryPendingImageUrl(image)).map((image) => image.id)));
       setFolders([]);
       setFolderMemberships([]);
       setLoadedBrandId(currentBrand.id);
@@ -239,6 +242,10 @@ export function GallerySelector({
       if (requestRevision !== fetchRequestRevisionRef.current) return;
       const folderNavigation = createGalleryFolderNavigation(nextFolders);
       setImages(signedImages);
+      // Signed Gallery URLs are already resolved by this point. Some cached
+      // or lazy-loaded images do not emit a second load event after React
+      // mounts, so seed the ready set from the URL and let onError fail closed.
+      setLoadedImageIds(new Set(signedImages.filter((image) => getGalleryPendingImageUrl(image)).map((image) => image.id)));
       setFolders(nextFolders);
       setFolderMemberships(nextMemberships);
       setLoadedBrandId(currentBrand.id);
@@ -625,6 +632,16 @@ export function GallerySelector({
                         isImageLoaded ? 'opacity-100' : 'opacity-0'
                       }`}
                       loading="lazy"
+                      ref={(element) => {
+                        // A signed image can already be complete when React
+                        // attaches the handler (for example after reopening
+                        // the modal or restoring a cached Gallery tile). In
+                        // that case the browser may not emit a second load
+                        // event, leaving an otherwise visible asset disabled.
+                        if (element?.complete && element.naturalWidth > 0) {
+                          handleImageLoad(image.id);
+                        }
+                      }}
                       onLoad={() => handleImageLoad(image.id)}
                       onError={() => handleImageError(image.id)}
                     />

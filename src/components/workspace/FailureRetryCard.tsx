@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ArrowRight } from 'lucide-react';
 import type { WorkspaceJob } from '../../lib/workspaceActivity';
+import { displaySourceSummaryLabel } from '../../lib/sourceContextSummary';
 
 interface FailureRetryCardProps {
   failedJobs: WorkspaceJob[];
@@ -38,7 +39,7 @@ export function FailureRetryCard({ failedJobs, className = '' }: FailureRetryCar
             <dl className="mt-3 space-y-1 rounded-lg bg-teal-50/70 p-3 dark:bg-teal-950/25">
               {lightchainRows.map((row) => (
                 <div key={`${row.label}-${row.value}`} className="grid grid-cols-[96px_1fr] gap-2 text-xs">
-                  <dt className="text-teal-700 dark:text-teal-300">{row.label}:</dt>
+                  <dt className="text-teal-700 dark:text-teal-300">{displaySourceSummaryLabel(row.label)}:</dt>
                   <dd className="min-w-0 break-words font-medium text-neutral-800 dark:text-neutral-100">{row.value}</dd>
                 </div>
               ))}

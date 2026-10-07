@@ -16,7 +16,10 @@ ENV VITE_CLOUDFLARE_API_ENABLED=true \
     PUBLIC_URL=https://heavy-chain.zeabur.app
 
 # Public Vite configuration is embedded once in the image; no build is done at startup.
-RUN npm run build \
+# Self-hosted reference assets arrive as one tar (see docs/parity/release.sh).
+RUN if [ -f public/lightchain-assets-bundle.tar ]; then tar -xf public/lightchain-assets-bundle.tar -C public && rm public/lightchain-assets-bundle.tar; fi \
+    && npm run build \
+    && test -s dist/lightchain-assets/fitting-models/Male/1.webp \
     && test -s dist/assets/silueta.onnx \
     && echo heavy-chain-model-asset-ready:$(wc -c < dist/assets/silueta.onnx)
 

@@ -1,4 +1,5 @@
 import type { LightchainFeature } from './lightchainParityCatalog';
+import { getLightchainUnifiedRouteAliases } from './lightchainUnifiedFeatureCatalog.ts';
 
 /**
  * Builds the canonical library-origin URL for any non-video Lightchain
@@ -10,14 +11,17 @@ export function buildLightchainLibraryFeatureHref(
   feature: Pick<LightchainFeature, 'id' | 'route'>,
   artifactId: string,
 ): string {
-  const pathname = feature.id === 'ai-fitting' || feature.id === 'ai-fitting-reference'
-    ? '/model'
-    : feature.id === 'fabric-image'
-      ? '/tools/fabric'
-      : feature.id === 'printing-image'
-        ? '/tools/printing'
-        : feature.route;
-  const params = new URLSearchParams({ libraryArtifactId: artifactId });
+  const canonicalRoute = getLightchainUnifiedRouteAliases(feature.id)[0]
+    ?? (feature.id === 'ai-fitting' || feature.id === 'ai-fitting-reference'
+      ? '/model'
+      : feature.id === 'fabric-image'
+        ? '/tools/fabric'
+        : feature.id === 'printing-image'
+          ? '/tools/printing'
+          : feature.route);
+  const [pathname, query = ''] = canonicalRoute.split('?');
+  const params = new URLSearchParams(query);
+  params.set('libraryArtifactId', artifactId);
   if (feature.id === 'fabric-image') params.set('librarySlot', 'fabric-design');
   if (feature.id === 'printing-image') params.set('librarySlot', 'printing-design');
   return `${pathname}?${params.toString()}`;

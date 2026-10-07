@@ -28,6 +28,11 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import {
+  HEAVY_UNIMPLEMENTED_MESSAGE,
+  isHeavyOwnedFeature,
+  resolveHeavyCapability,
+} from '../lib/heavyCapability';
 import { Button, Textarea, Input } from '../components/ui';
 import { FEATURES, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
@@ -37,6 +42,7 @@ import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { getErrorMessage, getFailureRecoveryGuidance } from '../lib/errorMessages';
 import {
   deleteWorkspaceArtifactsPersisted,
+  getWorkspaceArtifactCanonicalStoragePath,
   saveWorkspaceArtifactPersisted,
   type WorkspaceArtifactInput,
 } from '../lib/localWorkspaceArtifacts';
@@ -46,7 +52,13 @@ import {
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
 import { generateImage } from '../lib/imageApi';
-import { CLOUDFLARE_IMAGE_MODEL, CLOUDFLARE_IMAGE_NOTICE } from '../lib/cloudflareImageAI';
+import {
+  HEAVY_IMAGE_PROVIDER,
+  resolveHeavyImageProviderConfiguration,
+} from '../lib/heavyImageProvider';
+import { clearHeavyGenerationReferenceHandoff, readHeavyGenerationReferenceHandoff } from '../lib/heavyGenerationHandoff';
+import { toHeavyWorkspacePath } from '../lib/heavyWorkspace';
+import { CLOUDFLARE_IMAGE_MODEL } from '../lib/cloudflareImageAI';
 import {
   buildGenerationIntentHref,
   hydrateGenerationIntentSource,
@@ -54,6 +66,7 @@ import {
   type GenerationIntent,
 } from '../lib/workspaceHandoff';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
+import { deriveGenerationFlowStage, getGenerationPrimaryActionLabel } from '../lib/generationFlow';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   getLightchainUnifiedFeatureWorkflowContract,
@@ -76,6 +89,14 @@ import {
 } from '../lib/lightchainParityCatalog';
 import { normalizeModelMatrixSemanticVerification, type ModelMatrixSemanticVerification } from '../lib/modelMatrixVerification';
 import { resolveGeneratedImageUrl } from '../lib/storage';
+import { getLocalCanvasAsset, isLocalCanvasAssetReference } from '../lib/canvasLocalAssets';
+import {
+  hydrateGenerationSourceReferences,
+  isGenerationReferenceHydrationScopeCurrent,
+  type GenerationReferenceHydrationScope,
+  type HydratedGenerationSourceReference,
+} from '../lib/generationReferenceHydration';
+import type { GenerationSourceReference } from '../lib/generationSourceReferences.ts';
 import {
   createTrustedPatternsResultProvenance,
   isTrustedPatternsResultProvenance,
@@ -108,6 +129,19 @@ const aspectRatios = [
 ];
 
 const MAX_MODEL_MATRIX_PATTERNS = 3;
+
+const readLocalModelInputMetadata = (params: URLSearchParams) => {
+  const sourceReference = params.get('localSourceReference');
+  const modelReference = params.get('localModelReference');
+  const sourceFileName = params.get('sourceFileName');
+  const modelReferenceFileName = params.get('modelReferenceFileName');
+  return {
+    ...(isLocalCanvasAssetReference(sourceReference) ? { localSourceReference: sourceReference } : {}),
+    ...(isLocalCanvasAssetReference(modelReference) ? { localModelReference: modelReference } : {}),
+    ...(sourceFileName?.trim() ? { sourceFileName: sourceFileName.trim() } : {}),
+    ...(modelReferenceFileName?.trim() ? { modelReferenceFileName: modelReferenceFileName.trim() } : {}),
+  };
+};
 
 const backgroundOptions = [
   { id: 'white', name: '白背景', prompt: 'white background, studio lighting' },
@@ -372,6 +406,15 @@ const initialGenerateMaterialReference: MaterialReferenceState = {
   note: '生成前に素材、切り抜き、レイヤー配置を決める',
 };
 
+const blobToDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => typeof reader.result === 'string'
+    ? resolve(reader.result)
+    : reject(new Error('model_source_data_url_invalid'));
+  reader.onerror = () => reject(reader.error || new Error('model_source_data_url_read_failed'));
+  reader.readAsDataURL(blob);
+});
+
 const generateWorkbenchByFeature: Record<string, {
   title: string;
   description: string;
@@ -560,6 +603,98 @@ const FEATURE_CONFIG: Record<string, {
   },
 };
 
+// Heavy has a larger, route-owned catalog than the legacy shared selector.
+// Keep those ids on the same generation surface instead of falling back to
+// the design-production launcher when a parity page hands off a feature.
+const HEAVY_DIRECT_FEATURE_LABELS: Record<string, string> = {
+  'marketing-home': 'マーケティング画像',
+  'marketing-detail': 'マーケティング詳細画像',
+  'fitting-clothing-reference': '衣服リファレンス着用',
+  'fitting-background-reference': '背景リファレンス着用',
+  'wear-design-lab': '着用デザインラボ',
+  'wear-design-detail': '着用デザイン詳細',
+  'fashion-studio': 'ファッションスタジオ',
+  'design-agent': 'デザインエージェント',
+  lab: 'デザインラボ',
+  'print-design-project': 'プリントデザイン',
+  'print-design-detail': 'プリントデザイン詳細',
+  'fabric-image': '生地画像',
+  'line-generation': '線画生成',
+  'line-to-real': '線画から実写',
+  'pattern-vector': 'パターンをベクター画像に変換',
+  'pattern-vector-pro': 'パターンをベクター画像に変換（プロ）',
+  'printing-image': 'プリント画像生成',
+  'image-repair': '画像修復',
+  'svg-convert': 'SVG変換',
+  'custom-style': 'カスタムスタイル',
+  'ai-fitting': 'AIフィッティング',
+  'ai-fitting-reference': 'AIフィッティング（リファレンス）',
+  'model-library': 'モデルライブラリ',
+  'model-face': '顔変更',
+  'model-change': 'モデル変更',
+  'body-shape': '体型変更',
+  'clothing-size': '服のサイズ変更',
+  'pose-change': 'ポーズ変更',
+  'background-change': '背景変更',
+  'angle-change': 'アングル変更',
+  'model-custom': 'モデルカスタマイズ',
+};
+
+const HEAVY_DIRECT_FEATURES_REQUIRING_IMAGE = new Set([
+  'fitting-clothing-reference',
+  'fitting-background-reference',
+  'wear-design-lab',
+  'wear-design-detail',
+  'print-design-project',
+  'print-design-detail',
+  'fabric-image',
+  'line-generation',
+  'line-to-real',
+  'pattern-vector',
+  'pattern-vector-pro',
+  'printing-image',
+  'image-repair',
+  'svg-convert',
+  'ai-fitting',
+  'ai-fitting-reference',
+  'model-face',
+  'model-change',
+  'body-shape',
+  'clothing-size',
+  'pose-change',
+  'background-change',
+  'angle-change',
+  'model-custom',
+]);
+
+const createHeavyDirectFeature = (featureId: string): Feature | null => {
+  if (!isHeavyOwnedFeature(featureId) || FEATURES.some((item) => item.id === featureId)) return null;
+  const capability = resolveHeavyCapability(featureId);
+  if (!capability.supported) return null;
+  const name = HEAVY_DIRECT_FEATURE_LABELS[featureId] ?? featureId;
+  const requiresImage = HEAVY_DIRECT_FEATURES_REQUIRING_IMAGE.has(featureId);
+  return {
+    id: featureId,
+    name,
+    description: `Heavy Chainの${name}ワークフロー`,
+    icon: Wand2,
+    category: 'design',
+    apiEndpoint: capability.action,
+    requiresImage,
+  };
+};
+
+const getFeatureConfig = (feature: Feature | null | undefined) => {
+  if (!feature) return null;
+  return FEATURE_CONFIG[feature.id] ?? (isHeavyOwnedFeature(feature.id) ? {
+    requiresImage: Boolean(feature.requiresImage),
+    allowedReferenceTypes: ['base', 'style'] as ReferenceType[],
+    defaultReferenceType: 'base' as ReferenceType,
+    referenceLabel: feature.requiresImage ? '参照画像' : '参考画像（任意）',
+    referenceHint: feature.requiresImage ? 'この画像を基準にHeavy Chainで生成します' : '生成の参考に使用されます',
+  } : null);
+};
+
 interface GeneratedResult {
   id: string;
   imageUrl: string;
@@ -615,20 +750,26 @@ const isPrintEligibleDesignGachaResult = (image: GeneratedResult) => (
 );
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
-const generationProvider = import.meta.env.VITE_GENERATION_PROVIDER === 'openai' ? 'openai' as const : 'workers_ai' as const;
-const hostedImageGenerationMode = generationProvider === 'workers_ai' || generationProvider === 'openai';
+const heavyImageProviderConfiguration = resolveHeavyImageProviderConfiguration(
+  import.meta.env.VITE_HEAVY_GENERATION_PROVIDER ?? HEAVY_IMAGE_PROVIDER,
+);
 const noImageGenerationMode = false;
 
-const generationModelOptions = generationProvider === 'openai' ? [{
+const OPENAI_GENERATION_MODEL_OPTIONS = [{
   id: import.meta.env.VITE_DEFAULT_GENERATION_MODEL || 'gpt-image-1-mini', provider: 'openai' as const,
   label: 'OpenAI候補', title: 'OpenAI画像モデル', cost: '実行後に利用量表示（請求額ではありません）', description: 'サーバー側キー・画像API',
-}] as const : [{
+}] as const;
+const WORKERS_AI_GENERATION_MODEL_OPTIONS = [{
   id: CLOUDFLARE_IMAGE_MODEL, provider: 'workers_ai' as const, label: 'Cloudflare候補', title: 'FLUX.2 Klein 4B',
   cost: '実行後に利用量表示（請求額ではありません）', description: '品質検証中・参照512px',
 }] as const;
 
+const getGenerationModelOptions = (provider: 'openai' | 'workers_ai') => (
+  provider === 'openai' ? OPENAI_GENERATION_MODEL_OPTIONS : WORKERS_AI_GENERATION_MODEL_OPTIONS
+);
+
 const getInitialGenerationModel = () => {
-  return generationModelOptions[0].id;
+  return OPENAI_GENERATION_MODEL_OPTIONS[0].id;
 };
 
 const debugLog = (message: string, details?: Record<string, unknown>) => {
@@ -642,11 +783,11 @@ const debugLog = (message: string, details?: Record<string, unknown>) => {
 
 async function invokeProviderAction(
   action: string,
-  options: { body: Record<string, unknown> },
+  options: { body: Record<string, unknown>; heavyConsent?: { termsAccepted: boolean; rightsAttested: boolean } },
 ): Promise<{ data: any; error: any }> {
   try {
     if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
-    return { data: await cloudflareDataPlane.invokeProviderAction(action, options.body), error: null };
+    return { data: await cloudflareDataPlane.invokeProviderAction(action, options.body, { heavyConsent: options.heavyConsent }), error: null };
   } catch (error) {
     return { data: null, error };
   }
@@ -662,7 +803,8 @@ const featureQueryAliases: Record<string, string> = {
 const findFeatureFromQuery = (featureParam: string) => {
   const normalizedFeatureId = featureQueryAliases[featureParam] ?? featureParam;
   return FEATURES.find((item) => item.id === normalizedFeatureId)
-    ?? FEATURES.find((item) => item.apiEndpoint === featureParam);
+    ?? FEATURES.find((item) => item.apiEndpoint === featureParam)
+    ?? createHeavyDirectFeature(normalizedFeatureId);
 };
 
 const getInitialFeatureFromLocation = () => {
@@ -672,7 +814,7 @@ const getInitialFeatureFromLocation = () => {
   // Lightchain's direct color-change route is an actual feature entry point,
   // not a launcher. Keep the route stable while hydrating the same colorize
   // workflow that is used by the shared generation surface.
-  const routeFeature = window.location.pathname === '/editor/changeColor' ? 'colorize' : null;
+  const routeFeature = window.location.pathname.startsWith('/editor/changeColor') ? 'colorize' : null;
   const featureParam = workflow?.primaryFeature ?? params.get('feature') ?? routeFeature;
   return featureParam ? findFeatureFromQuery(featureParam) ?? null : null;
 };
@@ -962,7 +1104,7 @@ function ImageModal({
 export function GeneratePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, currentBrand } = useAuthStore();
+  const { user, currentBrand, refreshCurrentBrand, ensureHeavyWorkspace } = useAuthStore();
   const { setFlowState } = useUnifiedWorkspaceFlow();
   const { addToHistory } = usePromptHistory();
   const initialFeatureRef = useRef<Feature | null>(getInitialFeatureFromLocation());
@@ -992,15 +1134,25 @@ export function GeneratePage() {
   const [overlayStrokeColor, setOverlayStrokeColor] = useState('#000000');
   const [overlayStrokeWidth, setOverlayStrokeWidth] = useState(2);
   const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(getInitialGenerationModel);
-  const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
-  // The current Light Chain source exposes permission state, not an upload
-  // rights checkbox. Keep provider admission fail-closed until a source
-  // permission readback explicitly admits this generation surface.
-  const rightsConfirmed = false;
   const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
   
   // Reference image state
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
+  const [referenceHydration, setReferenceHydration] = useState<
+    | { status: 'idle' }
+    | { status: 'pending'; scope: GenerationReferenceHydrationScope }
+    | { status: 'resolved'; scope: GenerationReferenceHydrationScope; references: HydratedGenerationSourceReference[] }
+    | { status: 'failed'; scope: GenerationReferenceHydrationScope; message: string }
+  >({ status: 'idle' });
+  const referenceHydrationRequestGenerationRef = useRef(0);
+  const currentReferenceHydrationScopeRef = useRef<GenerationReferenceHydrationScope>({
+    userId: null,
+    brandId: null,
+    featureId: null,
+    navigationKey: '',
+    requestGeneration: 0,
+  });
+  const [modelReferenceImageUrl, setModelReferenceImageUrl] = useState<string>('');
   const [backgroundReferenceImage, setBackgroundReferenceImage] = useState<SelectedImage | null>(null);
   const [patternReferenceImage, setPatternReferenceImage] = useState<SelectedImage | null>(null);
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialGenerateMaterialReference);
@@ -1046,6 +1198,57 @@ export function GeneratePage() {
   const locationFeature = featureParam ? findFeatureFromQuery(featureParam) : null;
   const selectedFeature = locationFeature ?? (featureParam ? null : selectedFeatureState);
   const currentPath = typeof window === 'undefined' ? '' : window.location.pathname;
+  // Heavy ownership is explicit. Every other known catalog feature stays on
+  // the Light surface, while owned-but-unsupported Heavy features remain
+  // closed by resolveHeavyCapability below.
+  const heavySurface = isHeavyOwnedFeature(selectedFeature?.id);
+  const heavyCapability = heavySurface
+    ? resolveHeavyCapability(selectedFeature?.id)
+    : { featureId: selectedFeature?.id ?? null, action: 'heavy-unimplemented' as const, supported: false };
+  // GeneratePage is a shared shell. Only features explicitly owned by Heavy
+  // use the Heavy OpenAI contract; all other catalog features keep their
+  // existing Light provider selection.
+  const lightGenerationProvider = import.meta.env.VITE_GENERATION_PROVIDER === 'openai' ? 'openai' as const : 'workers_ai' as const;
+  const generationProvider = heavySurface ? HEAVY_IMAGE_PROVIDER : lightGenerationProvider;
+  // Heavy owns its provider contract independently from the Lightchain build
+  // default. A Lightchain `VITE_GENERATION_PROVIDER=workers_ai` must never
+  // block Heavy's explicit OpenAI path before the request reaches the API.
+  const generationProviderConfigurationError = heavySurface
+    ? heavyImageProviderConfiguration.configurationError
+    : null;
+  const hostedImageGenerationMode = generationProvider === 'workers_ai' || generationProvider === HEAVY_IMAGE_PROVIDER;
+  const generationModelOptions = getGenerationModelOptions(generationProvider);
+  const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
+  useEffect(() => {
+    if (!generationModelOptions.some((option) => option.id === selectedGenerationModel)) {
+      setSelectedGenerationModel(generationModelOptions[0].id);
+    }
+  }, [generationModelOptions, selectedGenerationModel]);
+  // Heavy is login-first. The API keeps a private, deterministic personal
+  // workspace behind the session so a user never has to create/select a brand
+  // before using an image tool. The old terms/rights/request-attestation state
+  // is retained only for compatibility readbacks and never disables a submit.
+  const heavyEntitlementReady = noImageGenerationMode
+    || !heavySurface
+    || (heavyCapability.supported && Boolean(user?.id) && Boolean(currentBrand?.id))
+    // Heavy remains login-only while the private workspace is being hydrated.
+    // Keep the brand-aware expression for compatibility metadata, but admit the
+    // authenticated user before the React brand readback commits.
+    || (heavyCapability.supported && Boolean(user?.id) && !Boolean(currentBrand?.id));
+  const heavyAccessReady = noImageGenerationMode
+    || !heavySurface
+    || (heavyCapability.supported && Boolean(user?.id));
+  // This field is a legacy legal-safety payload flag. It no longer represents
+  // a consent checkbox or a request-scoped entitlement proof.
+  const providerRightsConfirmed = heavyEntitlementReady;
+  // There is intentionally no client entitlement/consent fetch here. Login is
+  // the only user-facing Heavy prerequisite; the server resolves the private
+  // personal workspace and rechecks ownership on the provider request.
+  useEffect(() => {
+    if (user?.id && !currentBrand) {
+      void (heavySurface ? ensureHeavyWorkspace() : refreshCurrentBrand());
+    }
+  }, [currentBrand, ensureHeavyWorkspace, heavySurface, refreshCurrentBrand, user?.id]);
   const [variationStrength, setVariationStrength] = useState(50);
   
   // Upscale options
@@ -1057,7 +1260,7 @@ export function GeneratePage() {
   const [hairStyle, setHairStyle] = useState<'short' | 'medium' | 'long'>('medium');
   const [modelCandidateLabel, setModelCandidateLabel] = useState<string>('');
 
-  const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
+  const featureConfig = getFeatureConfig(selectedFeature);
   const selectedGenerateWorkbench = selectedFeature
     ? generateWorkbenchByFeature[selectedFeature.id] ?? null
     : null;
@@ -1073,6 +1276,27 @@ export function GeneratePage() {
   const renderedFeatureId = routeFeatureParam
     ? findFeatureFromQuery(routeFeatureParam)?.id
     : selectedFeature?.id;
+  const referenceHydrationNavigationKey = searchParams.toString();
+  const liveReferenceHydrationScope: GenerationReferenceHydrationScope = {
+    userId: user?.id ?? null,
+    brandId: currentBrand?.id ?? null,
+    featureId: renderedFeatureId ?? null,
+    navigationKey: referenceHydrationNavigationKey,
+    requestGeneration: referenceHydrationRequestGenerationRef.current,
+  };
+  currentReferenceHydrationScopeRef.current = liveReferenceHydrationScope;
+  const sourceReferenceManifestValues = searchParams.getAll('sourceReferences');
+  const hasDurableSourceReferenceIdentity = sourceReferenceManifestValues.length > 0
+    || searchParams.has('sourceImageId')
+    || searchParams.has('sourceStoragePath');
+  const hasCurrentHydratedSourceReferences = referenceHydration.status === 'resolved'
+    && isGenerationReferenceHydrationScopeCurrent(
+      referenceHydration.scope,
+      currentReferenceHydrationScopeRef.current,
+    );
+  const hydratedSourceReferences = hasCurrentHydratedSourceReferences && referenceHydration.status === 'resolved'
+    ? referenceHydration.references
+    : [];
   currentGenerationContextRef.current = {
     featureId: renderedFeatureId,
     sourceReadback,
@@ -1194,6 +1418,96 @@ export function GeneratePage() {
     }
   }, [searchParams]);
 
+  // Heavy parity entrances can collect the reference image before routing to
+  // this shared generation surface. Rehydrate that exact image once so the
+  // route transition does not silently turn a ready submission into an
+  // "image input required" state.
+  useEffect(() => {
+    if (!heavySurface) return;
+    const heavyVectorFeatureId = renderedFeatureId === 'pattern-vector-pro'
+      ? 'pattern-vector-pro'
+      : renderedFeatureId === 'pattern-vector'
+        ? 'pattern-vector'
+        : null;
+    if (!heavyVectorFeatureId) return;
+    const handoff = readHeavyGenerationReferenceHandoff(heavyVectorFeatureId);
+    if (!handoff) return;
+    setReferenceImage({
+      url: handoff.dataUrl,
+      referenceType: 'base',
+      fromGallery: false,
+    });
+    setMaterialReference((current) => ({
+      ...current,
+      imageUrl: handoff.dataUrl,
+      fileName: handoff.fileName,
+      note: heavyVectorFeatureId === 'pattern-vector-pro'
+        ? 'ベクター化プロ入口から参照画像を引き継ぎました'
+        : 'ベクター化入口から参照画像を引き継ぎました',
+    }));
+    clearHeavyGenerationReferenceHandoff();
+  }, [heavySurface, renderedFeatureId]);
+
+  // Model-library source forms persist selected files in the same local
+  // canvas-asset store used by Canvas. Rehydrate them into data URLs before a
+  // model-matrix submit so the provider receives the actual image bytes,
+  // rather than only the filename that appeared on the source parity surface.
+  useEffect(() => {
+    const sourceReference = searchParams.get('localSourceReference');
+    const modelReference = searchParams.get('localModelReference');
+    const sourceFileName = searchParams.get('sourceFileName') || 'モデル入力画像';
+    const modelFileName = searchParams.get('modelReferenceFileName') || 'モデル参照画像';
+    if (!sourceReference && !modelReference) {
+      setModelReferenceImageUrl('');
+      return;
+    }
+
+    let cancelled = false;
+    const resolveLocalReference = async (reference: string | null) => {
+      if (!reference || !isLocalCanvasAssetReference(reference)) return '';
+      const blob = await getLocalCanvasAsset(reference);
+      if (!blob) throw new Error('model_source_asset_missing');
+      return blobToDataUrl(blob);
+    };
+
+    const hydrateLocalModelInputs = async () => {
+      try {
+        const [sourceImageUrl, modelImageUrl] = await Promise.all([
+          resolveLocalReference(sourceReference),
+          resolveLocalReference(modelReference),
+        ]);
+        if (cancelled) return;
+        if (sourceImageUrl) {
+          setReferenceImage({
+            url: sourceImageUrl,
+            referenceType: 'base',
+            fromGallery: false,
+          });
+          setMaterialReference((current) => ({
+            ...current,
+            imageUrl: sourceImageUrl,
+            fileName: sourceFileName,
+            materialKind: '商品画像',
+            note: modelImageUrl
+              ? `モデルライブラリから元画像とモデル参照を引き継ぎました: ${modelFileName}`
+              : 'モデルライブラリから元画像を引き継ぎました',
+          }));
+        }
+        setModelReferenceImageUrl(modelImageUrl);
+      } catch (error) {
+        if (!cancelled) {
+          setGenerationError(error instanceof Error ? error.message : 'model_source_asset_read_failed');
+          setModelReferenceImageUrl('');
+        }
+      }
+    };
+
+    void hydrateLocalModelInputs();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
+
   useEffect(() => {
     if (renderedFeatureId !== 'model-matrix' || !sourceReadback?.sourceStoragePath) return;
     let cancelled = false;
@@ -1231,6 +1545,107 @@ export function GeneratePage() {
       cancelled = true;
     };
   }, [renderedFeatureId, sourceReadback?.sourceFileName, sourceReadback?.sourceImageId, sourceReadback?.sourceStoragePath]);
+
+  useEffect(() => {
+    if (renderedFeatureId !== 'design-gacha' || !hasDurableSourceReferenceIdentity) {
+      setReferenceHydration({ status: 'idle' });
+      return;
+    }
+    const hydrationSourceReadback = hydrateGenerationIntentSource(new URLSearchParams(referenceHydrationNavigationKey));
+
+    const requestGeneration = ++referenceHydrationRequestGenerationRef.current;
+    const scope: GenerationReferenceHydrationScope = {
+      userId: user?.id ?? null,
+      brandId: currentBrand?.id ?? null,
+      featureId: renderedFeatureId,
+      navigationKey: referenceHydrationNavigationKey,
+      requestGeneration,
+    };
+    currentReferenceHydrationScopeRef.current = scope;
+    let cancelled = false;
+    const isCurrent = () => !cancelled
+      && isGenerationReferenceHydrationScopeCurrent(scope, currentReferenceHydrationScopeRef.current);
+
+    setReferenceHydration({ status: 'pending', scope });
+    setGenerationError('');
+
+    // Never start an authenticated image read until both identity fields are
+    // present. A later auth/brand render reruns this effect with a new scope.
+    if (!scope.userId || !scope.brandId) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (!hydrationSourceReadback) {
+      const message = '引き継いだ参照画像の情報を検証できません。元の画面からもう一度開いてください。';
+      setReferenceHydration({ status: 'failed', scope, message });
+      setGenerationError(message);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const legacyReference: GenerationSourceReference | undefined = hydrationSourceReadback.sourceImageId || hydrationSourceReadback.sourceStoragePath
+      ? {
+          ...(hydrationSourceReadback.sourceImageId ? { sourceImageId: hydrationSourceReadback.sourceImageId } : {}),
+          ...(hydrationSourceReadback.sourceStoragePath ? { sourceStoragePath: hydrationSourceReadback.sourceStoragePath } : {}),
+          ...(hydrationSourceReadback.sourceFileName ? { sourceFileName: hydrationSourceReadback.sourceFileName } : {}),
+        }
+      : undefined;
+
+    const hydrate = async () => {
+      const result = await hydrateGenerationSourceReferences({
+        manifestValues: sourceReferenceManifestValues,
+        legacyReference,
+        scope,
+        getCurrentScope: () => currentReferenceHydrationScopeRef.current,
+        resolveImageUrl: resolveGeneratedImageUrl,
+      });
+      if (!isCurrent() || result.status === 'stale') return;
+      if (result.status === 'failed') {
+        const message = result.failedIndex !== undefined
+          ? `引き継いだ参照画像 ${result.failedIndex + 1} 枚目を復元できません。参照を確認してからもう一度お試しください。`
+          : '引き継いだ参照画像の情報を検証できません。元の画面からもう一度開いてください。';
+        setReferenceHydration({ status: 'failed', scope, message });
+        setGenerationError(message);
+        return;
+      }
+
+      const firstReference = result.references[0];
+      if (firstReference) {
+        const selectedSource: SelectedImage = {
+          url: firstReference.imageUrl,
+          referenceType: 'base',
+          fromGallery: true,
+          ...(firstReference.sourceImageId ? { galleryImageId: firstReference.sourceImageId } : {}),
+          storagePath: firstReference.canonicalPath,
+        };
+        setReferenceImage(selectedSource);
+        setMaterialReference((current) => ({
+          ...current,
+          imageUrl: firstReference.imageUrl,
+          fileName: firstReference.sourceFileName || current.fileName || '引き継いだ素材',
+          sourceImageId: firstReference.sourceImageId ?? null,
+          sourceStoragePath: firstReference.canonicalPath,
+          note: current.note || 'ワークスペースから引き継いだ参照素材',
+        }));
+      }
+      setReferenceHydration({ status: 'resolved', scope, references: result.references });
+      setGenerationError('');
+    };
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    currentBrand?.id,
+    hasDurableSourceReferenceIdentity,
+    referenceHydrationNavigationKey,
+    renderedFeatureId,
+    user?.id,
+  ]);
 
   const resetSharedInputs = () => {
     setPrompt('');
@@ -1332,7 +1747,7 @@ export function GeneratePage() {
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
     setShowSuccessCard(false);
-    navigate(window.location.pathname === '/editor/changeColor' ? '/editor/changeColor' : '/designProduction', { replace: true });
+    navigate(window.location.pathname.startsWith('/editor/changeColor') ? '/editor/changeColor' : '/designProduction', { replace: true });
   };
 
   // 画像を圧縮する関数
@@ -1366,31 +1781,6 @@ export function GeneratePage() {
       img.onerror = () => resolve(dataUrl); // エラー時は元の画像を返す
       img.src = dataUrl;
     });
-  };
-
-  const designGachaVariationToResult = async (
-    variation: any,
-    index: number,
-    jobId?: string | null,
-  ): Promise<GeneratedResult> => {
-    let imageUrl = variation.imageUrl || '';
-    if (!imageUrl && variation.storagePath) {
-      imageUrl = await resolveGeneratedImageUrl(variation.storagePath);
-    }
-    if (!imageUrl) {
-      const details = [variation.imageId, variation.storagePath].filter(Boolean).join(':');
-      throw new Error(`design_gacha_image_url_missing:${details}`);
-    }
-    return {
-      id: variation.imageId || variation.storagePath || `${jobId || 'design-gacha'}-${index}`,
-      imageUrl,
-      prompt: variation.prompt || prompt || '',
-      label: variation.directionName || `デザイン案 ${index + 1}`,
-      jobId: jobId || undefined,
-      imageId: variation.imageId || undefined,
-      storagePath: variation.storagePath || undefined,
-      artifactKind: 'image',
-    };
   };
 
   const buildGenerateMaterialContext = useCallback((imageUrlOverride?: string | null, referenceTypeOverride?: string) => {
@@ -1455,10 +1845,57 @@ export function GeneratePage() {
         return;
       }
 
-      if (!currentBrand) {
-        toast.error('ブランドを選択してください');
+      const generationBrand = currentBrand ?? (user?.id
+        ? (heavySurface ? await ensureHeavyWorkspace() : await refreshCurrentBrand())
+        : null);
+      if (!generationBrand) {
+        toast.error(heavySurface
+          ? '利用環境を準備できませんでした。もう一度お試しください。'
+          : 'ブランドを選択してください');
         return;
       }
+
+      if (heavySurface && generationProviderConfigurationError) {
+        toast.error('Heavy画像生成はOpenAI設定が必要です。Workers AIへは自動切替しません。');
+        return;
+      }
+
+      const submitCapability = heavySurface ? resolveHeavyCapability(selectedFeature?.id) : null;
+      if (heavySurface && !submitCapability?.supported) {
+        toast.error(HEAVY_UNIMPLEMENTED_MESSAGE);
+        return;
+      }
+      if (heavySurface && !user?.id) {
+        toast.error(user?.id
+          ? '利用環境を準備できませんでした。もう一度お試しください。'
+          : 'ログインしてください');
+        return;
+      }
+
+      if (selectedFeature?.id === 'design-gacha' && hasDurableSourceReferenceIdentity) {
+        const hydrationReady = referenceHydration.status === 'resolved'
+          && isGenerationReferenceHydrationScopeCurrent(
+            referenceHydration.scope,
+            currentReferenceHydrationScopeRef.current,
+          )
+          && referenceHydration.scope.userId === (user?.id ?? null)
+          && referenceHydration.scope.brandId === generationBrand.id;
+        if (!hydrationReady) {
+          const message = referenceHydration.status === 'failed'
+            ? referenceHydration.message
+            : '引き継いだ参照画像を復元しています。完了してからもう一度お試しください。';
+          setGenerationError(message);
+          toast.error(message);
+          return;
+        }
+      }
+
+      // Deliberately omit Heavy consent/attestation. The server authorizes
+      // the request from the authenticated session and brand membership.
+      const heavyConsent = undefined;
+      const localModelInputMetadata = selectedFeature?.id === 'model-matrix'
+        ? readLocalModelInputMetadata(searchParams)
+        : {};
 
       if (overlayEnabled && !overlayText.trim()) {
         toast.error('画像内テキストを入力してください');
@@ -1473,11 +1910,6 @@ export function GeneratePage() {
 
       if (selectedFeature?.id === 'model-matrix' && selectedBodyTypes.length * selectedAgeGroups.length > MAX_MODEL_MATRIX_PATTERNS) {
         toast.error(`一度に生成できる着用画像は${MAX_MODEL_MATRIX_PATTERNS}パターンまでです。体型または年代を減らしてください。`);
-        return;
-      }
-
-      if (!noImageGenerationMode && !rightsConfirmed) {
-        toast.error('権限がありません');
         return;
       }
 
@@ -1588,7 +2020,19 @@ export function GeneratePage() {
           attemptedArtifactIds.push(artifactId);
           const persisted = saveWorkspaceArtifactPersisted({ ...input, id: artifactId, scopeId: user?.id });
           if (!persisted.ok) {
-            const cleanup = deleteWorkspaceArtifactsPersisted(currentBrand.id, attemptedArtifactIds, user?.id);
+            // Heavy provider results already have a durable, owner-scoped
+            // Storage path and receipt. A browser-local history write is a
+            // convenience layer; do not turn a successful provider commit
+            // into a generic generation error when that optional layer is
+            // unavailable (for example, a full/private browser storage).
+            if (getWorkspaceArtifactCanonicalStoragePath(input.metadata ?? {})) {
+              debugLog('Local artifact history persistence deferred after durable provider receipt', {
+                artifactId,
+                errorCode: persisted.error.message,
+              });
+              continue;
+            }
+            const cleanup = deleteWorkspaceArtifactsPersisted(generationBrand.id, attemptedArtifactIds, user?.id);
             const cleanupMessage = cleanup.ok
               ? ''
               : ` local cleanupも確認できませんでした: ${cleanup.error.message}`;
@@ -1617,15 +2061,15 @@ export function GeneratePage() {
       } : undefined;
 
       const baseBody = {
-        brandId: currentBrand.id,
+        brandId: generationBrand.id,
         referenceImage: processedImageUrl,
         referenceType: effectiveReferenceType,
         generationProvider: selectedGenerationModelOption.provider,
-        generationModel: selectedGenerationModel,
+        generationModel: selectedGenerationModelOption.id,
         textOverlay,
         lightchainCompat: lightchainCompat ?? undefined,
         legalSafety: {
-          rightsConfirmed,
+          rightsConfirmed: providerRightsConfirmed,
         },
       };
       const { generateMaterialMetadata, materialPromptLines } = buildGenerateMaterialContext(
@@ -1736,10 +2180,12 @@ export function GeneratePage() {
           const providerResults: GeneratedResult[] = [];
 
           for (let index = 0; index < generationTotal; index += 1) {
-            const result = await generateImage(generationPrompt, currentBrand.id, {
+            const result = await generateImage(generationPrompt, generationBrand.id, {
+              providerAction: heavySurface && submitCapability?.action === 'edit-image' ? 'edit-image' : 'generate-image',
               generationProvider: selectedGenerationModelOption.provider,
-              generationModel: selectedGenerationModel,
+              generationModel: selectedGenerationModelOption.id,
               featureType: planningFeature.id,
+              imageUrls: processedImageUrl ? [processedImageUrl] : undefined,
               negativePrompt: productionNegativePrompt,
               width: ratio.width,
               height: ratio.height,
@@ -1750,9 +2196,10 @@ export function GeneratePage() {
                 subheadline: campaignSubheadline,
                 cta: campaignCTA,
               },
-              rightsConfirmed,
+              rightsConfirmed: providerRightsConfirmed,
               ...buildRemoteGenerationContext(planningFeature, generationPrompt, selectedRatio),
               ...generateMaterialMetadata,
+              heavyConsent,
             });
             if (!result.success) {
               throw new Error(result.error || 'image_generation_failed');
@@ -1788,7 +2235,7 @@ export function GeneratePage() {
           replaceGeneratedImages(providerResults);
           saveLocalArtifactsWithReadback(providerResults.map((image, index) => ({
             id: image.id ? `local-generated-${image.id}` : undefined,
-            brandId: currentBrand.id,
+            brandId: generationBrand.id,
             featureType: planningFeature.id,
             title: image.label || planningFeature.name,
             imageUrl: image.imageUrl,
@@ -1840,7 +2287,7 @@ export function GeneratePage() {
 
         saveLocalArtifactsWithReadback(planningResults.map((image, index) => ({
             id: `no-image-${image.id}`,
-            brandId: currentBrand.id,
+            brandId: generationBrand.id,
             featureType: planningFeature.id,
             title: image.label || planningFeature.name,
             imageUrl: image.imageUrl,
@@ -1899,7 +2346,8 @@ export function GeneratePage() {
               imageUrl: processedImageUrl, 
               newBackground: bgPrompt,
               backgroundReferenceImage: backgroundReferenceImage?.url,
-            }
+            },
+            heavyConsent,
           }));
           if (data?.resultUrl) {
             replaceGeneratedImages([{
@@ -1921,7 +2369,8 @@ export function GeneratePage() {
               pattern: selectedPattern,
               patternReferenceImage: patternReferenceImage?.url,
               count: generateCount,
-            }
+            },
+            heavyConsent,
           }));
           if (data?.variations) {
             replaceGeneratedImages(data.variations.map((v: any) => ({
@@ -1942,7 +2391,8 @@ export function GeneratePage() {
               scale: upscaleScale,
               denoiseLevel,
               sharpness,
-            }
+            },
+            heavyConsent,
           }));
           if (data?.resultUrl) {
             replaceGeneratedImages([{
@@ -1964,7 +2414,8 @@ export function GeneratePage() {
               strength: variationStrength / 100,
               prompt: prompt || undefined,
               featureType: 'variations',
-            }
+            },
+            heavyConsent,
           }));
           if (data?.variations) {
             replaceGeneratedImages(data.variations.map((v: any, i: number) => ({
@@ -1982,23 +2433,35 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
-          debugLog('Invoking scene-coordinate', { hasImage: !!processedImageUrl });
-          ({ data, error } = await invokeProviderAction('generate-variations', {
+          const scenePrompt = [
+            prompt || productDescription || 'product scene composition',
+            `Create scene-coordinate variations for: ${selectedScenes.map(s => sceneOptions.find(sc => sc.id === s)?.prompt || s).join('; ')}`,
+            ...materialPromptLines,
+          ].filter(Boolean).join(', ');
+          debugLog('Invoking scene-coordinate through the canonical Heavy edit pipeline', { hasImage: !!processedImageUrl });
+          ({ data, error } = await invokeProviderAction('edit-image', {
             body: { 
               ...baseBody,
               ...generateMaterialMetadata,
-              imageUrl: processedImageUrl,
-              scenes: selectedScenes.map(s => sceneOptions.find(sc => sc.id === s)?.prompt),
+              ...buildRemoteGenerationContext(selectedFeature, scenePrompt, selectedRatio),
+              prompt: scenePrompt,
+              imageUrls: processedImageUrl ? [processedImageUrl] : [],
+              width: aspectRatios.find(r => r.id === selectedRatio)?.width,
+              height: aspectRatios.find(r => r.id === selectedRatio)?.height,
               count: selectedScenes.length,
               featureType: 'scene-coordinate',
-            }
+            },
+            heavyConsent,
           }));
-          if (data?.variations) {
-            replaceGeneratedImages(data.variations.map((v: any, i: number) => ({
-              id: v.storagePath || Date.now().toString() + i,
-              imageUrl: v.imageUrl,
-              prompt: selectedScenes[i],
-              label: sceneOptions.find(s => s.id === selectedScenes[i])?.name || `シーン ${i + 1}`
+          if (data?.images) {
+            replaceGeneratedImages(data.images.map((image: any, i: number) => ({
+              ...image,
+              id: image.imageId || image.id || image.storagePath,
+              jobId: image.jobId || data.jobId,
+              imageId: image.imageId || data.imageId,
+              storagePath: image.storagePath || data.storagePath,
+              prompt: scenePrompt,
+              label: sceneOptions.find(s => s.id === selectedScenes[i])?.name || `シーン ${i + 1}`,
             })));
           }
           break;
@@ -2009,34 +2472,66 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
-          debugLog('Invoking design-gacha', {
-            hasImage: !!processedImageUrl,
+          const designGachaPrompt = [
+            prompt || 'fashion design variation',
+            fixedElements.length ? `Fixed elements: ${fixedElements.join(', ')}` : '',
+            randomizedElements.length ? `Randomized elements: ${randomizedElements.join(', ')}` : '',
+            ...materialPromptLines,
+          ].filter(Boolean).join(', ');
+          const designGachaImageUrls = hasDurableSourceReferenceIdentity
+            ? hydratedSourceReferences.map((reference) => reference.imageUrl)
+            : processedImageUrl ? [processedImageUrl] : [];
+          if (hasDurableSourceReferenceIdentity && designGachaImageUrls.length === 0) {
+            throw new Error('generation_reference_hydration_incomplete');
+          }
+          if (hasDurableSourceReferenceIdentity
+            && (referenceHydration.status !== 'resolved'
+              || !isGenerationReferenceHydrationScopeCurrent(
+                referenceHydration.scope,
+                currentReferenceHydrationScopeRef.current,
+              )
+              || referenceHydration.scope.userId !== (user?.id ?? null)
+              || referenceHydration.scope.brandId !== generationBrand.id)) {
+            throw new Error('generation_reference_scope_changed');
+          }
+          debugLog('Invoking design-gacha through the canonical Heavy generate pipeline', {
+            hasImage: designGachaImageUrls.length > 0,
+            referenceCount: designGachaImageUrls.length,
             fixedElementCount: fixedElements.length,
             randomizedElementCount: randomizedElements.length,
           });
-          ({ data, error } = await invokeProviderAction('design-gacha', {
-            body: { 
-              ...baseBody,
-              ...generateMaterialMetadata,
-              brief: prompt,
-              imageUrl: processedImageUrl, // 画像参照用
-              directions: generateCount,
-              fixedElements,
-              randomizedElements,
-              sourceReadback: sourceReadback ?? undefined,
-              patternContext: patternContext ?? undefined,
-            }
-          }));
-          if (data?.variations) {
-            const materializedDesignGachaResults = await Promise.all(
-              data.variations.map((variation: any, index: number) =>
-                designGachaVariationToResult(
-                  variation,
-                  index,
-                  data.jobId,
-                )
-              )
-            );
+          data = await generateImage(designGachaPrompt, generationBrand.id, {
+            providerAction: 'generate-image',
+            generationProvider: selectedGenerationModelOption.provider,
+            generationModel: selectedGenerationModelOption.id,
+            featureType: selectedFeature?.id,
+            imageUrls: designGachaImageUrls,
+            width: aspectRatios.find(r => r.id === selectedRatio)?.width,
+            height: aspectRatios.find(r => r.id === selectedRatio)?.height,
+            count: generateCount,
+            textOverlay,
+            ...buildRemoteGenerationContext(selectedFeature, designGachaPrompt, selectedRatio),
+            ...generateMaterialMetadata,
+            ...(patternContext ? { patternContext } : {}),
+            rightsConfirmed: providerRightsConfirmed,
+            heavyConsent,
+          });
+          if (!data?.success) {
+            error = new Error(data?.error || 'image_generation_failed');
+          }
+          const designGachaImages = Array.isArray(data?.images)
+            ? data.images
+            : data?.imageUrl ? [data] : [];
+          if (designGachaImages.length > 0) {
+            const materializedDesignGachaResults = designGachaImages.map((image: any, index: number) => ({
+              ...image,
+              id: image.imageId || image.id || image.storagePath,
+              jobId: image.jobId || data.jobId,
+              imageId: image.imageId || data.imageId,
+              storagePath: image.storagePath || data.storagePath,
+              prompt: designGachaPrompt,
+              label: `デザイン案 ${index + 1}`,
+            }));
             replaceGeneratedImages(materializedDesignGachaResults);
           }
           break;
@@ -2060,24 +2555,33 @@ export function GeneratePage() {
             background: selectedBackground,
             hasReferenceImage: !!referenceImage,
           });
+          const productShotsPrompt = [
+            productDescription || 'ecommerce product photography',
+            `Generate product-shot variations for: ${shotsToGenerate.join(', ')}`,
+            `Background: ${selectedBackground}`,
+            ...materialPromptLines,
+          ].filter(Boolean).join(', ');
           const requestBody = { 
             ...baseBody,
             ...generateMaterialMetadata,
-            productDescription,
-            imageUrl: processedImageUrl,
-            shots: shotsToGenerate,
-            background: selectedBackground,
+            ...buildRemoteGenerationContext(selectedFeature, productShotsPrompt, selectedRatio),
+            prompt: productShotsPrompt,
+            imageUrls: processedImageUrl ? [processedImageUrl] : [],
+            width: aspectRatios.find(r => r.id === selectedRatio)?.width,
+            height: aspectRatios.find(r => r.id === selectedRatio)?.height,
+            count: shotsToGenerate.length,
           };
           
           debugLog('Invoking product-shots function');
           try {
             // タイムアウト処理付きのAPI呼び出し
             const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('リクエストがタイムアウトしました（60秒）')), 60000)
+              setTimeout(() => reject(new Error('リクエストがタイムアウトしました（120秒）')), 120000)
             );
             
-            const invokePromise = invokeProviderAction('product-shots', {
-              body: requestBody
+            const invokePromise = invokeProviderAction('generate-image', {
+              body: requestBody,
+              heavyConsent,
             });
             
             const result = await Promise.race([invokePromise, timeoutPromise]) as any;
@@ -2086,7 +2590,7 @@ export function GeneratePage() {
             debugLog('Product-shots invoke completed', {
               hasData: !!data,
               hasError: !!error,
-              shotCount: data?.shots?.length || 0,
+              shotCount: data?.images?.length || 0,
             });
           } catch (invokeError: any) {
             debugLog('Product-shots invoke failed', {
@@ -2099,12 +2603,15 @@ export function GeneratePage() {
             debugLog('Product-shots returned an error');
             throw error;
           }
-          if (data?.shots && data.shots.length > 0) {
-            const images = data.shots.map((s: any) => ({
-              id: s.storagePath,
-              imageUrl: s.imageUrl,
-              prompt: productDescription || data.productDescription,
-              label: s.shotName
+          if (data?.images && data.images.length > 0) {
+            const images = data.images.map((image: any, index: number) => ({
+              ...image,
+              id: image.imageId || image.id || image.storagePath,
+              jobId: image.jobId || data.jobId,
+              imageId: image.imageId || data.imageId,
+              storagePath: image.storagePath || data.storagePath,
+              prompt: productShotsPrompt,
+              label: shotsToGenerate[index] || `商品カット ${index + 1}`,
             }));
             debugLog('Product-shots images received', { imageCount: images.length });
             replaceGeneratedImages(images);
@@ -2129,21 +2636,47 @@ export function GeneratePage() {
               ...generateMaterialMetadata,
               productDescription,
               imageUrl: processedImageUrl, // 画像参照用
+              modelReferenceImageUrl: modelReferenceImageUrl || undefined,
+              modelReferenceFileName: searchParams.get('modelReferenceFileName') || undefined,
+              ...localModelInputMetadata,
               bodyTypes: selectedBodyTypes,
               ageGroups: selectedAgeGroups,
               skinTone,
               hairStyle,
               sourceReadback: sourceReadback ?? undefined,
               modelCandidateLabel: modelCandidateLabel || undefined,
-            }
+            },
+            heavyConsent,
           }));
-          if (data?.matrix) {
+          // The durable Heavy receipt exposes the model-matrix candidates as
+          // `matrix`, while older/current-compatible provider envelopes may
+          // expose the same persisted candidates as `images`.  Both are the
+          // exact same receipt; treating only `matrix` as materialized made a
+          // successfully completed backend request fall through to the
+          // generic client error path when the envelope was normalized by an
+          // intermediary.  Prefer the feature-specific field and keep the
+          // images field as a bounded compatibility fallback.
+          const matrixCandidates = Array.isArray(data?.matrix)
+            ? data.matrix
+            : Array.isArray(data?.images)
+              ? data.images
+              : [];
+          if (matrixCandidates.length > 0) {
             const topLevelSemanticVerification =
               data.semanticVerification ?? data.verifier ?? data.verification;
             const topLevelReferenceSummary = data.referenceSummary ?? data.productDescription ?? productDescription;
-            replaceGeneratedImages(data.matrix.map((m: any) => ({
-              id: m.storagePath,
+            replaceGeneratedImages(matrixCandidates.map((m: any, index: number) => ({
+              id: m.storagePath || m.imageId || m.id || `model-matrix-${data.requestId || Date.now()}-${index}`,
               imageUrl: m.imageUrl,
+              jobId: m.jobId ?? data.jobId,
+              imageId: m.imageId ?? m.id ?? data.imageId,
+              storagePath: m.storagePath ?? data.storagePath,
+              provider: m.provider ?? data.provider,
+              backendProvider: m.backendProvider ?? data.backendProvider,
+              providerModel: m.providerModel ?? data.providerModel ?? m.modelUsed ?? m.model_used,
+              persistenceStatus: m.persistenceStatus ?? data.persistenceStatus,
+              inputFidelity: m.inputFidelity ?? data.inputFidelity,
+              quality: m.quality ?? data.quality,
               prompt: productDescription,
               label: `${m.bodyTypeName} × ${m.ageGroupName}`,
               semanticVerification: m.semanticVerification ?? m.verifier ?? m.verification ?? topLevelSemanticVerification,
@@ -2170,7 +2703,8 @@ export function GeneratePage() {
               subheadline,
               languages: selectedLanguages,
               aspectRatio: selectedRatio
-            }
+            },
+            heavyConsent,
           }));
           if (data?.banners) {
             replaceGeneratedImages(data.banners.map((b: any) => ({
@@ -2191,7 +2725,7 @@ export function GeneratePage() {
           ({ data, error } = await invokeProviderAction('optimize-prompt', {
             body: { 
               prompt, 
-              brandId: currentBrand.id,
+              brandId: generationBrand.id,
               style: selectedStyle,
               referenceImageUrl: referenceImage?.url,
             }
@@ -2239,7 +2773,7 @@ export function GeneratePage() {
               height: ratio.height,
               count: generateCount,
               legalSafety: {
-                rightsConfirmed,
+                rightsConfirmed: providerRightsConfirmed,
               },
               campaignMeta: {
                 title: campaignTitle,
@@ -2250,7 +2784,8 @@ export function GeneratePage() {
                 brandColor: campaignBrandColor,
                 textPosition: campaignTextPosition,
               },
-            }
+            },
+            heavyConsent,
           }));
           if (data?.images) {
             prependGeneratedImages(data.images.map((image: any) => ({
@@ -2292,9 +2827,10 @@ export function GeneratePage() {
               height: ratio.height,
               count: generateCount,
               legalSafety: {
-                rightsConfirmed,
+                rightsConfirmed: providerRightsConfirmed,
               },
-            }
+            },
+            heavyConsent,
           }));
           if (data?.images) {
             prependGeneratedImages(data.images.map((image: any) => ({
@@ -2351,7 +2887,7 @@ export function GeneratePage() {
 
             return {
               id: image.id ? `local-generated-${image.id}` : undefined,
-              brandId: currentBrand.id,
+              brandId: generationBrand.id,
               featureType: selectedFeature.id,
               title: image.label || selectedFeature.name,
               imageUrl: image.imageUrl,
@@ -2381,7 +2917,7 @@ export function GeneratePage() {
         } else if (selectedFeature && newGeneratedImages.length > 0) {
           saveLocalArtifactsWithReadback(newGeneratedImages.map((image, index) => ({
             id: image.id ? `local-generated-${image.id}` : undefined,
-            brandId: currentBrand.id,
+            brandId: generationBrand.id,
             featureType: selectedFeature.id,
             title: image.label || selectedFeature.name,
             imageUrl: image.imageUrl,
@@ -2395,6 +2931,7 @@ export function GeneratePage() {
               jobId: image.jobId ?? null,
               imageId: image.imageId ?? null,
               storagePath: image.storagePath ?? null,
+              ...localModelInputMetadata,
               ...getGeneratedResultReceiptMetadata(image),
               ...(lightchainCompat ? { lightchainCompat } : {}),
             },
@@ -2506,7 +3043,7 @@ export function GeneratePage() {
   };
 
   const handleSendGeneratedImageToCanvas = (image: GeneratedResult, index: number) => {
-    const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
+    const featureConfig = getFeatureConfig(selectedFeature);
     const effectiveReferenceType = referenceImage?.referenceType ?? featureConfig?.defaultReferenceType ?? 'base';
     const { generateMaterialMetadata } = buildGenerateMaterialContext(
       materialReference.imageUrl,
@@ -2570,7 +3107,7 @@ export function GeneratePage() {
 
   const handleUseDesignGachaResultInPrinting = (image: GeneratedResult) => {
     if (!prepareDesignGachaResultForPrinting(image)) return;
-    navigate('/lightchain/printing-image?handoff=patterns');
+    navigate(toHeavyWorkspacePath('/lightchain/printing-image?handoff=patterns'));
   };
 
   // Render generation count selector
@@ -2738,7 +3275,7 @@ export function GeneratePage() {
   const renderFeatureForm = () => {
     if (!selectedFeature) return null;
 
-    const config = FEATURE_CONFIG[selectedFeature.id];
+    const config = getFeatureConfig(selectedFeature);
 
     switch (selectedFeature.id) {
       // === IMAGE REQUIRED FEATURES ===
@@ -3720,10 +4257,11 @@ export function GeneratePage() {
     if (!selectedFeature) return true;
     if (isGenerating) return true;
     if (featureConfig?.requiresImage && !referenceImage) return true;
-    if (!noImageGenerationMode && !rightsConfirmed) return true;
+    if (heavySurface && !noImageGenerationMode && !heavyAccessReady) return true;
     switch (selectedFeature.id) {
       case 'design-gacha':
-        return !prompt.trim() && !referenceImage;
+        return (!prompt.trim() && !referenceImage)
+          || (hasDurableSourceReferenceIdentity && !hasCurrentHydratedSourceReferences);
       case 'campaign-image':
         return !prompt.trim() && !campaignTitle.trim();
       case 'multilingual-banner':
@@ -3741,15 +4279,12 @@ export function GeneratePage() {
         return false;
     }
   })();
-  const generationFlowStage = isGenerating
-    ? 'generating'
-    : generationError
-      ? 'failed'
-      : generatedImages.length > 0 || Boolean(optimizedPromptResult)
-        ? 'complete'
-        : isGenerateDisabled
-          ? 'blocked'
-          : 'ready';
+  const generationFlowStage = deriveGenerationFlowStage({
+    isGenerating,
+    hasError: Boolean(generationError),
+    hasResult: generatedImages.length > 0 || Boolean(optimizedPromptResult),
+    isDisabled: isGenerateDisabled,
+  });
   const generationFlowCopy = {
     ready: {
       label: '準備完了',
@@ -3774,7 +4309,7 @@ export function GeneratePage() {
   }[generationFlowStage];
   const unifiedFlowState = deriveUnifiedWorkspaceFlowState({
     inputReady: generationFlowStage === 'ready' || generationFlowStage === 'generating' || generationFlowStage === 'complete',
-    rightsReady: noImageGenerationMode || rightsConfirmed,
+    rightsReady: noImageGenerationMode || heavyAccessReady,
     generating: isGenerating,
     completed: generatedImages.length > 0 || Boolean(optimizedPromptResult),
     failed: Boolean(generationError),
@@ -3784,13 +4319,11 @@ export function GeneratePage() {
     setFlowState(unifiedFlowState);
   }, [setFlowState, unifiedFlowState]);
 
-  const primaryActionLabel = isGenerating
-    ? '生成中...'
-    : generationFlowStage === 'failed'
-      ? '再試行'
-      : selectedFeature?.id === 'optimize-prompt'
-        ? '最適化'
-        : noImageGenerationMode ? '企画書を保存' : '生成する';
+  const primaryActionLabel = getGenerationPrimaryActionLabel({
+    stage: generationFlowStage,
+    isPromptOptimization: selectedFeature?.id === 'optimize-prompt',
+    noImageGenerationMode,
+  });
 
   const handleGenerateMaterialChange = (nextState: MaterialReferenceState) => {
     setMaterialReference(nextState);
@@ -3854,7 +4387,7 @@ export function GeneratePage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-                  LIGHTCHAIN
+                  HEAVY CHAIN
                 </p>
                 <h2 className="mt-2 text-3xl font-semibold tracking-normal text-white sm:text-4xl">生成ワークスペース</h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
@@ -3923,7 +4456,7 @@ export function GeneratePage() {
                 <CreditCard className="h-4 w-4" />
                 利用量管理
               </div>
-              <p className="mt-1 text-neutral-500 dark:text-neutral-400">Lightchain usage</p>
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">Heavy Chain usage</p>
             </div>
             <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
               <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
@@ -4279,8 +4812,6 @@ export function GeneratePage() {
             )}
 
             {renderFeatureForm()}
-            {cloudflareDataPlane && generationProvider === 'workers_ai' && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">{CLOUDFLARE_IMAGE_NOTICE}</p>}
-
             {!isGenerating && !generationError && (
               <div className={`mt-5 rounded-2xl border p-4 shadow-soft ${
                 generationFlowStage === 'blocked'
@@ -4353,12 +4884,6 @@ export function GeneratePage() {
               </details>
             )}
 
-            {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && !rightsConfirmed && (
-              <div role="status" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100">
-                権限がありません
-              </div>
-            )}
-
             {selectedFeature.id !== 'chat-edit' && (
               <Button
                 onClick={handleGenerate}
@@ -4397,7 +4922,7 @@ export function GeneratePage() {
                   <CreditCard className="h-4 w-4" />
                   利用量管理
                 </div>
-                <p className="mt-1 text-neutral-500 dark:text-neutral-400">Lightchain usage</p>
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">Heavy Chain usage</p>
               </div>
               <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
                 <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
@@ -4417,6 +4942,13 @@ export function GeneratePage() {
                     {sourceReadback.sourceLabel} / {sourceReadback.workflowVersion}
                   </p>
                 </div>
+              )}
+              {hasDurableSourceReferenceIdentity
+                && renderedFeatureId === 'design-gacha'
+                && referenceHydration.status === 'pending' && (
+                  <p role="status" className="rounded-xl border border-neutral-200 bg-white/70 p-3 text-xs text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300">
+                    引き継いだ参照画像を順番どおりに復元しています。
+                  </p>
               )}
               {lightchainCompat && (
                 <div className="rounded-xl border border-teal-200 bg-teal-50/80 p-3 dark:border-teal-800 dark:bg-teal-950/30">

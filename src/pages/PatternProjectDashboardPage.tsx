@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
-import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
-import { listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
+import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
+import { useBoardDraftCards } from '../features/boardDraftProjects';
 
-const formatProjectAge = (value: string) => {
+export const formatProjectAge = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '今日';
   const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
@@ -15,101 +16,152 @@ const formatProjectAge = (value: string) => {
   return `${Math.floor(days / 365)}年前`;
 };
 
-const extractPreviewSource = (snapshot: unknown): string => {
-  if (!snapshot || typeof snapshot !== 'object') return '';
-  const value = snapshot as Record<string, unknown>;
-  const candidates = [value.previewUrl, value.imageUrl, value.thumbnailUrl, value.coverUrl];
-  const direct = candidates.find((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0);
-  if (direct) return direct.trim();
-  const objects = Array.isArray(value.objects) ? value.objects : [];
-  for (const object of objects) {
-    if (!object || typeof object !== 'object') continue;
-    const item = object as Record<string, unknown>;
-    const src = [item.src, item.imageUrl, item.url].find((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0);
-    if (src) return src.trim();
-  }
-  return '';
-};
+export type ProjectCard = { id: string; title: string; updatedAt: string; imageUrl: string; jobId: string };
 
-type ProjectCard = { id: string; title: string; updatedAt: string; imageUrl: string };
+/** Falls back to the PROJECT mark when a saved preview no longer resolves (expired or deleted object). */
+export function ProjectThumbnail({ url, fallback }: { url: string; fallback?: ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (!url || failed) return <>{fallback ?? <span className="pattern-project-dashboard-empty-mark">PROJECT</span>}</>;
+  return <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />;
+}
 
-export function PatternProjectDashboardPage() {
-  const navigate = useNavigate();
+/** The signed-in user's saved results for one canonical feature, one card per job (newest first). */
+export function useFeatureProjects(featureId: string) {
   const { user, currentBrand } = useAuthStore();
-  const currentBrandId = currentBrand?.id;
-  const [remoteProjects, setRemoteProjects] = useState<ProjectCard[]>([]);
+  const brandId = currentBrand?.id;
+  const [projects, setProjects] = useState<ProjectCard[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'failure'>('idle');
-  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    const brandId = currentBrand?.id;
-    if (!brandId || !cloudflareDataPlane) {
-      setRemoteProjects([]);
-      setStatus('idle');
-      return;
-    }
+    const dataPlane = cloudflareDataPlane;
+    if (!brandId || !dataPlane || !user?.id) { setProjects([]); setStatus('idle'); return; }
     let active = true;
     setStatus('loading');
-    void cloudflareDataPlane.listCanvasDocuments(brandId)
-      .then(async (documents) => {
-        const projects = await Promise.all(documents.slice(0, 60).map(async (document) => {
-          const source = extractPreviewSource(document.snapshot);
-          const resolved = source ? await resolveGeneratedImageUrlWithStatus(source) : null;
-          return { id: document.id, title: document.title || 'Untitled', updatedAt: document.updated_at, imageUrl: resolved?.ok ? resolved.url : '' };
-        }));
+    void dataPlane.listGeneratedImages(brandId, { featureType: `lightchain-${featureId}`, order: 'newest', limit: 100 })
+      .then(async (images) => {
+        const own = images.filter((image) => image.user_id === user.id && image.job_id && image.storage_path);
+        const byJob = new Map<string, typeof own[number]>();
+        for (const image of own) if (!byJob.has(image.job_id!)) byJob.set(image.job_id!, image);
+        const unique = [...byJob.values()];
+        // One signing round-trip for the whole board instead of one request per card.
+        const signed = await withSignedImageUrls(unique.map((image) => ({ storage_path: image.storage_path, image_url: '' })));
         if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
-        setRemoteProjects(projects);
+        setProjects(unique.map((image, index) => {
+          const metadata = image.metadata && typeof image.metadata === 'object' && !Array.isArray(image.metadata) ? image.metadata as Record<string, unknown> : {};
+          const title = typeof metadata.projectTitle === 'string' && metadata.projectTitle.trim() ? metadata.projectTitle : 'Untitled';
+          return { id: image.id, jobId: image.job_id!, title, updatedAt: image.created_at, imageUrl: signed[index]?.image_url ?? '' };
+        }));
         setStatus('success');
       })
-      .catch(() => {
-        if (!active) return;
-        setRemoteProjects([]);
-        setStatus('failure');
-      });
+      .catch(() => { if (active) { setProjects([]); setStatus('failure'); } });
     return () => { active = false; };
-  }, [currentBrand?.id]);
+  }, [brandId, user?.id, featureId]);
 
-  const projects = useMemo(() => {
-    const local = currentBrandId
-      ? listWorkspaceArtifacts(currentBrandId, user?.id)
-        .filter((artifact) => artifact.featureType.includes('pattern') || artifact.featureType.includes('printing'))
-        .map((artifact) => ({ id: artifact.id, title: artifact.title || 'Untitled', updatedAt: artifact.createdAt, imageUrl: artifact.imageUrl }))
-      : [];
-    const seen = new Set<string>();
-    return [...remoteProjects, ...local].filter((project) => {
-      if (seen.has(project.id)) return false;
-      seen.add(project.id);
-      return true;
-    });
-  }, [currentBrandId, remoteProjects, user?.id]);
+  return { projects, status };
+}
 
-  const perPage = 30;
-  const pageCount = Math.max(1, Math.ceil(projects.length / perPage));
-  const visibleProjects = projects.slice((page - 1) * perPage, page * perPage);
-  const references = ['花型工艺呈现', 'レトロなイラスト', 'プランナーコミック', '夏のフルーツポスター'];
+export type ProjectBoardConfig = {
+  /** Board heading, e.g. デザインアレンジ / プリントデザイン. */
+  title: string;
+  /** Detail editor route; new projects open it with empty board params. */
+  detailPath: string;
+  /** Canonical workspace feature whose saved provider results are this board's projects. */
+  featureId: string;
+  references: readonly string[];
+  testId: string;
+};
+
+const PAGE_SIZE = 30;
+
+/**
+ * Light project board (/editor/pattern, /editor/patternDesign), measured at 1440×900: 220×240 cards on a 236px
+ * pitch, new-file card first, 32px hover menu, right-aligned `< 1 2 … >` pager, 参考事例 row. Projects are the
+ * signed-in brand's saved results for the board's feature, so every card reopens its exact saved job.
+ */
+export function LightchainProjectBoard({ config }: { config: ProjectBoardConfig }) {
+  const navigate = useNavigate();
+  const { projects, status } = useFeatureProjects(config.featureId);
+  // Uploaded-but-not-generated projects (saved on first upload, like the source board).
+  const drafts = useBoardDraftCards(config.featureId, config.detailPath);
+  const [page, setPage] = useState(1);
+
+  const pageCount = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
+  const visibleProjects = useMemo(() => projects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [projects, page]);
+  const openProject = (project: ProjectCard) => navigate(`${config.detailPath}?boardProjectCode=${encodeURIComponent(project.id)}&boardProjectType=custom&resumeJob=${encodeURIComponent(project.jobId)}`);
 
   return (
-    <main className="dark min-h-screen bg-[#101010] px-4 py-5 text-white sm:px-6" data-testid="lightchain-pattern-overview">
-      <section className="w-full">
-        <h1 className="text-base font-semibold">デザインアレンジ</h1>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
-          <button type="button" onClick={() => navigate('/editor/pattern/detail?boardProjectCode=&boardProjectType=')} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60" data-testid="lightchain-pattern-new-file">
-            <div className="flex h-40 items-center justify-center bg-[radial-gradient(circle_at_28%_24%,#e7ffe8,#5d646b_52%,#181f22)]"><span className="relative text-xs font-bold">PROJECT<span className="absolute -bottom-2 -right-8 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-200 text-xl text-neutral-700">+</span></span></div>
-            <div className="px-4 py-4"><p className="text-sm font-semibold text-neutral-200">新規ファイル</p></div>
-          </button>
+    <main className="dark pattern-project-dashboard-parity min-h-screen bg-[#171b1c] text-white" data-testid={config.testId}>
+      <section className="pattern-project-dashboard-content">
+        <h1 className="pattern-project-dashboard-title">{config.title}</h1>
+        <div className="pattern-project-dashboard-grid">
+          <div onClick={() => navigate(`${config.detailPath}?boardProjectCode=&boardProjectType=`)} className="pattern-project-dashboard-card pattern-project-dashboard-new-card" data-testid="lightchain-pattern-new-file">
+            <img className="pattern-project-dashboard-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
+            <p className="pattern-project-dashboard-new-label">新規ファイル</p>
+          </div>
+          {page === 1 && drafts.map((draft) => (
+            <div key={draft.id} data-testid={`lightchain-pattern-draft-${draft.id}`} onClick={() => navigate(draft.href)} className="pattern-project-dashboard-card pattern-project-dashboard-project-card">
+              <div className="pattern-project-dashboard-media"><ProjectThumbnail url={draft.imageUrl} /></div>
+              <div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{draft.title}</p><p className="pattern-project-dashboard-date">{formatProjectAge(draft.updatedAt)} 修正</p></div>
+              <button type="button" aria-label="プロジェクトメニュー" className="pattern-project-dashboard-menu" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" aria-hidden="true" /></button>
+            </div>
+          ))}
           {visibleProjects.map((project) => (
-            <button key={project.id} type="button" data-testid={`lightchain-pattern-project-${project.id}`} onClick={() => navigate(`/editor/pattern/detail?boardProjectCode=${encodeURIComponent(project.id)}&boardProjectType=custom`)} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
-              <div className="flex h-40 items-center justify-center bg-[#171c1f]">{project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">PROJECT</span>}</div>
-              <div className="px-4 py-4"><p className="truncate text-sm font-semibold text-neutral-200">{project.title}</p><p className="mt-2 text-xs text-neutral-500">{formatProjectAge(project.updatedAt)} 修正</p></div>
-            </button>
+            <div key={project.id} data-testid={`lightchain-pattern-project-${project.id}`} onClick={() => openProject(project)} className="pattern-project-dashboard-card pattern-project-dashboard-project-card">
+              <div className="pattern-project-dashboard-media"><ProjectThumbnail url={project.imageUrl} /></div>
+              <div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{project.title}</p><p className="pattern-project-dashboard-date">{formatProjectAge(project.updatedAt)} 修正</p></div>
+              <button type="button" aria-label="プロジェクトメニュー" className="pattern-project-dashboard-menu" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" aria-hidden="true" /></button>
+            </div>
           ))}
         </div>
-        {status === 'loading' && <p className="mt-3 text-xs text-neutral-500">プロジェクトを読み込んでいます…</p>}
         {status === 'failure' && <p className="mt-3 text-xs text-neutral-500">既存プロジェクトを読み込めませんでした。</p>}
-        {pageCount > 1 && <nav className="mt-4 flex items-center justify-center gap-2 text-xs text-neutral-400" aria-label="プロジェクトページ"><button type="button" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">前のページ</button><span>{page}</span><button type="button" disabled={page === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">次のページ</button></nav>}
-        <h2 className="mt-7 text-base font-semibold">参考事例</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{references.map((title) => <button key={title} type="button" onClick={() => navigate('/patterns/workbench')} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"><div className="h-40 bg-[linear-gradient(135deg,#dbeafe,#f8fafc_52%,#65d3cf_53%)]" /><div className="px-4 py-4"><p className="line-clamp-2 text-sm font-semibold text-neutral-200">{title}</p><p className="mt-2 text-xs text-neutral-500">参考事例</p></div></button>)}</div>
+        {pageCount > 1 && (
+          <nav className="pattern-project-dashboard-pagination" aria-label="プロジェクトページ">
+            <button type="button" aria-label="前のページ" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft className="h-3 w-3" aria-hidden="true" /></button>
+            {Array.from({ length: pageCount }, (_, index) => index + 1).map((value) => (
+              <button key={value} type="button" aria-current={value === page ? 'page' : undefined} className={value === page ? 'is-active' : ''} onClick={() => setPage(value)}>{value}</button>
+            ))}
+            <button type="button" aria-label="次のページ" disabled={page === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}><ChevronRight className="h-3 w-3" aria-hidden="true" /></button>
+          </nav>
+        )}
+        <h2 className="pattern-project-dashboard-section-title">参考事例</h2>
+        <div className="pattern-project-dashboard-reference-grid">{config.references.map((title) => <div key={title} onClick={() => navigate(`${config.detailPath}?boardProjectCode=&boardProjectType=`)} className="pattern-project-dashboard-card pattern-project-dashboard-reference-card"><div className="pattern-project-dashboard-media"><span className="pattern-project-dashboard-reference-art" aria-hidden="true" /></div><div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{title}</p><p className="pattern-project-dashboard-date">1年前 修正</p></div></div>)}</div>
       </section>
     </main>
   );
+}
+
+const PATTERN_ARRANGE_BOARD: ProjectBoardConfig = {
+  title: 'デザインアレンジ',
+  detailPath: '/editor/pattern/detail',
+  featureId: 'pattern-arrange',
+  references: ['花型工艺呈现', 'レトロなイラスト', 'プランナーコミック', '夏のフルーツポスター'],
+  testId: 'lightchain-pattern-overview',
+};
+
+const PRINT_DESIGN_BOARD: ProjectBoardConfig = {
+  title: 'プリントデザイン',
+  detailPath: '/editor/patternDesign/detail',
+  featureId: 'pattern-print-design',
+  references: ['ファッションアプリケーション', 'ホームテキスタイル用途'],
+  testId: 'lightchain-print-design-overview',
+};
+
+const CHANGE_COLOR_BOARD: ProjectBoardConfig = {
+  title: '色変更',
+  detailPath: '/editor/changeColor/detail',
+  featureId: 'change-color',
+  references: ['フェアアイルセーターの色変更', 'コートの部分的な色変更'],
+  testId: 'lightchain-change-color-overview',
+};
+
+export function ChangeColorProjectDashboardPage() {
+  return <LightchainProjectBoard config={CHANGE_COLOR_BOARD} />;
+}
+
+export function PatternProjectDashboardPage() {
+  return <LightchainProjectBoard config={PATTERN_ARRANGE_BOARD} />;
+}
+
+export function PrintDesignProjectDashboardPage() {
+  return <LightchainProjectBoard config={PRINT_DESIGN_BOARD} />;
 }

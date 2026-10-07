@@ -620,7 +620,7 @@ export function PatternWorkspacePage() {
         className="mb-5"
       >
         <WorkspaceReadinessStrip
-          eyebrow="LIGHTCHAIN PARITY / GRAPHICS START"
+          eyebrow="HEAVY CHAIN / GRAPHICS START"
           title="柄、用途、ベクター化の順に制作条件を組み立てます"
           description="グラフィック、総柄、ベクター化を最初に選び、服モックやロゴを必要な時だけ追加します。制作条件は生成とCanvasへ同じ形で渡されます。"
           nextAction="柄 → 用途 → ベクター / Canvas"

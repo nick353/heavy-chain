@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { 
-  Upload, 
+  Upload, ImagePlus, 
   X, 
   Check, 
   FolderOpen,
@@ -147,10 +147,18 @@ export function ImageSelector({
     }
   };
 
+  const openFilePicker = () => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    // Clear immediately before opening the native picker so cancelling keeps
+    // the current selection intact while reselecting the same file still
+    // emits a change event.
+    input.value = '';
+    input.click();
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    // Allow selecting the same file again after a failed or replaced upload.
-    e.target.value = '';
     void processFiles(files);
   };
 
@@ -312,7 +320,7 @@ export function ImageSelector({
               <div className="flex flex-col items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={openFilePicker}
                   aria-label="画像ファイルをアップロード"
                   title="画像ファイルをアップロード"
                   className="p-2 bg-neutral-100 dark:bg-neutral-700 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600"
@@ -398,7 +406,7 @@ export function ImageSelector({
           {/* Upload area */}
           {lightchainSourceAppearance ? (
             <div
-              onClick={() => fileInputRef.current?.click()}
+              onClick={openFilePicker}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -408,7 +416,7 @@ export function ImageSelector({
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
-                  fileInputRef.current?.click();
+                  openFilePicker();
                 }
               }}
               className={`relative flex h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 text-center transition-all ${
@@ -417,7 +425,7 @@ export function ImageSelector({
                   : 'border-transparent bg-[#3a3f40] hover:border-primary-400'
               }`}
             >
-              <Upload className="mb-3 h-6 w-6 text-white/75" aria-hidden="true" />
+              <ImagePlus className="mb-3 h-6 w-6 text-white/75" aria-hidden="true" />
               <p className="text-sm text-white/85">{sourceDropLabel}</p>
               <p className="mt-1 text-xs text-white/55">{sourceDropHint}</p>
               <button
@@ -444,7 +452,7 @@ export function ImageSelector({
               <div className="flex justify-center gap-3 mb-3">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={openFilePicker}
                   aria-label="画像ファイルをアップロード"
                   className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
@@ -512,6 +520,7 @@ export function ImageSelector({
               <Check className="w-3 h-3" />
               選択済み
             </span>
+            {value.file?.name && <span className="sr-only" data-testid="image-selector-file-name">{value.file.name}</span>}
             <span className="px-2 py-1 bg-black/50 text-white text-xs rounded-lg">
               {REFERENCE_TYPES.find(t => t.id === value.referenceType)?.name}
             </span>

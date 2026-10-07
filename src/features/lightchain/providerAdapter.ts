@@ -1,3 +1,5 @@
+import { isHeavyWorkspaceRuntime } from '../../lib/heavyWorkspace.ts';
+
 export type LightchainProviderRoute = 'edit-image' | 'model-matrix' | 'generate-image' | 'unsupported';
 
 const MODEL_MATRIX_TOOL_IDS = new Set([
@@ -88,9 +90,10 @@ export function buildLightchainProviderPrompt(input: PromptInput) {
       ? 'This is an explicit brief-only workflow. Build the requested result from the workflow brief and settings; optional references are context only. Do not claim that source pixels, identity, silhouette, or framing were preserved when no authoritative source image was supplied. Do not invent text, logos, trademarks, protected identities, or unrelated objects.'
       : isModelMatrixRoute
     ? 'This is a model-matrix operation, not a garment-mask edit. Use any primary and secondary references only for the model attribute named in the workflow summary. Preserve every unrequested garment, construction detail, pose, framing, lighting, and background detail. Do not silently convert the request into a generic new-person or garment redesign.'
-    : 'Use the first uploaded reference as the authoritative full-frame source image and the later references only as material/artwork references. This is a masked in-place edit, not a new subject generation: keep the exact same person, face, hair, body proportions, camera framing, pose, garment silhouette, and background. Only pixels inside the transparent editable garment mask may change; treat every opaque mask pixel as locked and reproduce it from the first image. Never crop, reframe, relight, replace, or redraw the person. Preserve identity, silhouette, construction, colors, proportions, seams, hardware, texture direction, and lighting whenever they are not explicitly changed.';
+      : 'Use the first uploaded reference as the authoritative full-frame source image and the later references only as material/artwork references. This is a masked in-place edit, not a new subject generation: keep the exact same person, face, hair, body proportions, camera framing, pose, garment silhouette, and background. Only pixels inside the transparent editable garment mask may change; treat every opaque mask pixel as locked and reproduce it from the first image. Never crop, reframe, relight, replace, or redraw the person. Preserve identity, silhouette, construction, colors, proportions, seams, hardware, texture direction, and lighting whenever they are not explicitly changed.';
+  const routeLabel = isHeavyWorkspaceRuntime() ? 'HEAVY CHAIN ROUTE' : 'LIGHTCHAIN ROUTE';
   const shared = [
-    `LIGHTCHAIN ROUTE: ${input.toolId} (${truncate(input.toolTitle, 120)})`,
+    `${routeLabel}: ${input.toolId} (${truncate(input.toolTitle, 120)})`,
     `PRIMARY INPUT: ${primary}`,
     `SECONDARY INPUT: ${secondary}`,
     `WORKFLOW SUMMARY: ${summary}`,

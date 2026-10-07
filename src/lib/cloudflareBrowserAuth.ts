@@ -2,6 +2,7 @@ import type { BrowserAuthEvent as AuthChangeEvent, BrowserAuthSession as Session
 
 type Listener = (event: AuthChangeEvent, session: Session | null) => void | Promise<void>;
 type AuthPayload = { user: { id: string; email: string; name: string; emailVerified: boolean; createdAt: string }; session: { token: string; expiresAt: string } };
+const AUTH_REQUEST_TIMEOUT_MS = 30_000;
 
 /** Transitional UI shapes only. All requests use the same-origin Cloudflare proxy. */
 export function createCloudflareBrowserAuth(
@@ -20,7 +21,7 @@ export function createCloudflareBrowserAuth(
     const response = await fetchImpl(`${origin}/api/auth${path}`, {
       method: body === undefined ? 'GET' : 'POST', credentials: 'include', cache: 'no-store',
       headers: body === undefined ? undefined : { 'content-type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(10000),
+      body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(AUTH_REQUEST_TIMEOUT_MS),
     });
     const data = await response.json();
     if (!response.ok) throw Object.assign(new Error(typeof data?.message === 'string' ? data.message : '認証サービスに接続できませんでした。'), { code: data?.code || data?.error, status: response.status });
@@ -99,6 +100,17 @@ export function createCloudflareBrowserAuth(
     async resetPasswordForEmail(email: string, options?: { redirectTo?: string }) {
       try { await request('/request-password-reset', { email, redirectTo: options?.redirectTo || `${origin}/reset-password` }); return { data: {}, error: null }; }
       catch (error) { return { data: null, error: error as Error }; }
+    },
+    async requestPasswordResetOtp(email: string) {
+      try { await request('/email-otp/request-password-reset', { email }); return { error: null }; }
+      catch (error) { return { error: error as Error }; }
+    },
+    async completePasswordResetWithOtp(email: string, otp: string, password: string) {
+      try {
+        await request('/email-otp/reset-password', { email, otp, password });
+        invalidate(); cached = null; notify('SIGNED_OUT', null); changed();
+        return { error: null };
+      } catch (error) { return { error: error as Error }; }
     },
     async completePasswordReset(token: string, password: string) {
       await request('/reset-password', { token, newPassword: password }); invalidate(); cached = null; notify('SIGNED_OUT', null); changed();

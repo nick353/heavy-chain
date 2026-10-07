@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ChevronDown, Clipboard, Clock3, ExternalLink, Image, Loader2, Sparkles, XCircle } from 'lucide-react';
 import type { TimelineItem } from '../../lib/workspaceActivity';
+import { displaySourceSummaryLabel } from '../../lib/sourceContextSummary';
 
 interface ActivityTimelineProps {
   items: TimelineItem[];
@@ -124,7 +125,7 @@ export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる�
                         <dl className="mt-3 space-y-2">
                           {item.sourceSummaryRows.map((row) => (
                             <div key={`${item.id}-${row.label}-${row.value}`} className="grid gap-1 text-sm sm:grid-cols-[112px_1fr] sm:gap-3">
-                              <dt className="text-neutral-500 dark:text-neutral-400">{row.label}:</dt>
+                              <dt className="text-neutral-500 dark:text-neutral-400">{displaySourceSummaryLabel(row.label)}:</dt>
                               <dd className="min-w-0 break-words text-neutral-800 dark:text-neutral-100">{row.value}</dd>
                             </div>
                           ))}

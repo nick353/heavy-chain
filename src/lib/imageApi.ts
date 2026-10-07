@@ -1,5 +1,7 @@
-import { cloudflareDataPlane } from './cloudflareApi';
+import { normalizeCloudflareGeneratedImageStoragePath, normalizeGeneratedImageStoragePath } from './storagePathSafety';
+import { cloudflareDataPlane, type HeavyGenerationConsent } from './cloudflareApi';
 import type { Json } from '../types/database';
+import type { HeavyGenerationPreflight } from './heavyGenerationPreflight';
 export { assertCompletedImageEditResult, assertCompletedModelMatrixResult } from './providerResultReadback';
 
 export interface TextOverlayPayload {
@@ -146,7 +148,7 @@ export interface SharedImagePayload {
 async function invokeImageAction<T>(
   action: string,
   body: Record<string, unknown>,
-  options: { idempotencyKey?: string; assertContext?: ()=>void } = {},
+  options: { idempotencyKey?: string; assertContext?: ()=>void | Promise<void>; retainUntilAcknowledged?: boolean; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent } = {},
 ): Promise<T> {
   if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
   return cloudflareDataPlane.invokeProviderAction<T>(action, body, options);
@@ -261,6 +263,7 @@ export async function generateImage(
   prompt: string,
   brandId: string,
   options?: {
+    providerAction?: 'generate-image' | 'edit-image';
     generationProvider?: 'gemini' | 'gemini_image' | 'openai' | 'openai_image' | 'mock' | 'mock_image' | 'workers_ai';
     imageUrls?: string[];
     generationModel?: string;
@@ -281,16 +284,33 @@ export async function generateImage(
     maskPlan?: unknown;
     compositionPreview?: unknown;
     rightsConfirmed?: boolean;
+    idempotencyKey?: string;
+    assertContext?: () => void | Promise<void>;
+    retainUntilAcknowledged?: boolean;
+    heavyPreparation?: HeavyGenerationPreflight;
+    heavyConsent?: HeavyGenerationConsent;
   }
 ): Promise<ImageEditResult> {
   try {
-    const result = await invokeImageAction<ImageEditResult>('generate-image', {
+    const {
+      idempotencyKey,
+      assertContext,
+      retainUntilAcknowledged,
+      ...bodyOptions
+    } = options ?? {};
+    const result = await invokeImageAction<ImageEditResult>(options?.providerAction ?? 'generate-image', {
       prompt,
       brandId,
-      ...options,
+      ...bodyOptions,
       legalSafety: {
         rightsConfirmed: options?.rightsConfirmed === true,
       },
+    }, {
+      heavyPreparation: options?.heavyPreparation,
+      heavyConsent: options?.heavyConsent,
+      ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
+      ...(assertContext === undefined ? {} : { assertContext }),
+      ...(retainUntilAcknowledged === undefined ? {} : { retainUntilAcknowledged }),
     });
     return {
       ...result,
@@ -385,7 +405,8 @@ export async function editImageWithPrompt(
     generation?: number;
     count?: number;
     featureType?: string;
-    assertContext?: ()=>void;
+    assertContext?: ()=>void | Promise<void>;
+    retainUntilAcknowledged?: boolean;
     maskApplied?: boolean;
     maskCoveragePercent?: number;
     maskWidth?: number;
@@ -401,10 +422,11 @@ export async function editImageWithPrompt(
     layerPlan?: unknown;
     maskPlan?: unknown;
     compositionPreview?: unknown;
+    heavyPreparation?: HeavyGenerationPreflight;
   },
 ): Promise<ImageEditResult> {
   try {
-    options?.assertContext?.();
+    await options?.assertContext?.();
     if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
     const inputImageUrls = [imageUrl, ...(options?.referenceImageUrls ?? [])];
     if (!inputImageUrls.length) throw new Error('image_edit_input_missing');
@@ -425,7 +447,7 @@ export async function editImageWithPrompt(
       return dataUrl;
     }));
     const imageInput = inputImages[0];
-    options?.assertContext?.();
+    await options?.assertContext?.();
     const result = await invokeImageAction<ImageEditResult>('edit-image', {
       imageUrl: imageInput,
       imageUrls: inputImages,
@@ -455,8 +477,10 @@ export async function editImageWithPrompt(
     }, {
       idempotencyKey: options?.idempotencyKey,
       assertContext: options?.assertContext,
+      retainUntilAcknowledged: options?.retainUntilAcknowledged,
+      heavyPreparation: options?.heavyPreparation,
     });
-    options?.assertContext?.();
+    await options?.assertContext?.();
     return {
       ...result,
       imageUrl: result.imageUrl ?? result.images?.[0]?.imageUrl,
@@ -595,6 +619,14 @@ export async function generateProductShots(
 
 export interface ModelMatrixResult {
   success: boolean;
+  provider?: string;
+  requestId?: string;
+  state?: 'running' | 'completed' | 'failed' | 'unknown';
+  clientRecoveryKey?: string;
+  requestedCandidateCount?: number;
+  persistedCandidateCount?: number;
+  images?: Array<{imageUrl: string; imageId?: string | null; id?: string | null; storagePath?: string | null; jobId?: string | null;
+    candidateIndex?: number; persistenceStatus?: string; bodyType?: string; ageGroup?: string; provider?: string}>;
   backendProvider?: string;
   jobId?: string | null;
   persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'failed';
@@ -603,6 +635,7 @@ export interface ModelMatrixResult {
   matrix?: Array<{
     bodyType: string;
     bodyTypeName: string;
+    candidateIndex?: number;
     ageGroup: string;
     ageGroupName: string;
     imageUrl: string;
@@ -612,8 +645,33 @@ export interface ModelMatrixResult {
     provider?: string;
     modelUsed?: string | null;
     providerTaskId?: string | null;
+    jobId?: string;
   }>;
   error?: string;
+}
+
+/** Normalize the server's matrix or compatible ordered-images envelope. */
+export function normalizeCompletedModelMatrixResult(result: ModelMatrixResult, options: {bodyTypes?: string[];ageGroups?: string[]} = {}): ModelMatrixResult {
+  if (!result.success) return result;
+  const pairs = (options.bodyTypes ?? ['regular']).flatMap(bodyType=>(options.ageGroups ?? ['20s']).map(ageGroup=>({bodyType,ageGroup})));
+  const raw=result.matrix??result.images;
+  const matrix = raw?.map((image,index)=>{
+    if (raw.length!==pairs.length || (image.candidateIndex!==undefined && image.candidateIndex!==index)) throw new Error('model_matrix_candidate_order_invalid');
+    if((image.bodyType!==undefined&&image.bodyType!==pairs[index].bodyType)||(image.ageGroup!==undefined&&image.ageGroup!==pairs[index].ageGroup))throw new Error('model_matrix_candidate_context_invalid');
+    return {bodyType:image.bodyType ?? pairs[index].bodyType,bodyTypeName:image.bodyType ?? pairs[index].bodyType,
+      ageGroup:image.ageGroup ?? pairs[index].ageGroup,ageGroupName:image.ageGroup ?? pairs[index].ageGroup,imageUrl:image.imageUrl,
+      imageId:image.imageId ?? ('id' in image?image.id as string:undefined),storagePath:image.storagePath ?? undefined,
+      persistenceStatus:image.persistenceStatus as 'completed',provider:image.provider ?? result.provider,jobId:image.jobId ?? result.jobId ?? undefined};
+  });
+  if (!result.jobId || !matrix?.length || result.persistenceStatus!=='completed'
+    || (result.requestedCandidateCount!==undefined && result.requestedCandidateCount!==matrix.length)
+    || (result.persistedCandidateCount!==undefined && result.persistedCandidateCount!==matrix.length)
+    || new Set(matrix.map(item=>item.imageId)).size!==matrix.length
+    || matrix.some(item=>!item.imageId || !item.storagePath || !(normalizeCloudflareGeneratedImageStoragePath(item.storagePath)??normalizeGeneratedImageStoragePath(item.storagePath))
+      || (normalizeCloudflareGeneratedImageStoragePath(item.storagePath)!==null && item.storagePath!==`generated-images/${item.imageId}`)
+      || !(item.provider??result.provider) || !item.imageUrl || item.persistenceStatus!=='completed' || !item.bodyType || !item.ageGroup
+      || (item.jobId!==undefined && item.jobId!==result.jobId))) throw new Error('model_matrix_candidate_identity_incomplete');
+  return {...result,matrix:matrix.map(item=>({...item,provider:item.provider??result.provider,jobId:result.jobId!}))};
 }
 
 /**
@@ -641,15 +699,24 @@ export async function generateModelMatrix(
     lightchainCompat?: LightchainCompatPayload;
     textOverlay?: TextOverlayPayload;
     rightsConfirmed?: boolean;
+    featureType?: string;
+    generationProvider?: 'openai' | 'workers_ai';
+    idempotencyKey?: string;
+    assertContext?: () => void | Promise<void>;
+    retainUntilAcknowledged?: boolean;
   }
 ): Promise<ModelMatrixResult> {
   try {
-    return await invokeImageAction<ModelMatrixResult>('model-matrix', {
+    const {idempotencyKey,assertContext,retainUntilAcknowledged,...bodyOptions} = options ?? {};
+    await assertContext?.();
+    const result = await invokeImageAction<ModelMatrixResult>('model-matrix', {
       productDescription,
       brandId,
-      ...options,
+      ...bodyOptions,
       legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
-    });
+    }, {idempotencyKey,assertContext,retainUntilAcknowledged});
+    await assertContext?.();
+    return normalizeCompletedModelMatrixResult(result,options);
   } catch (error: any) {
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }

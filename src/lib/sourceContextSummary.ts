@@ -5,6 +5,11 @@ export interface SourceContextSummaryRow {
   value: string;
 }
 
+/** Keep persisted Light Chain compatibility labels readable without leaking the source brand in Heavy UI. */
+export const displaySourceSummaryLabel = (label: string): string => (
+  label.replace(/^Lightchain\b/, 'Heavy Chain').replace(/^Light Chain\b/, 'Heavy Chain')
+);
+
 type JsonRecord = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is JsonRecord => {
