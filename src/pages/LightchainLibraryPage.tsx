@@ -14,6 +14,7 @@ import {
 import { assertAuthBrandFence, captureAuthBrandFence } from '../lib/authBrandSelection';
 import { readWorkspaceArtifactImage } from '../lib/workspaceArtifactImageReadback';
 import { withSignedImageUrls } from '../lib/storage';
+import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import type { GeneratedImageListRow } from '../lib/generatedImageQuery';
 import {
@@ -790,7 +791,7 @@ export function LightchainLibraryPage() {
                 <article key={card.kind === 'local' ? card.artifact.id : card.asset.id} className={`asset-center-card group relative overflow-hidden rounded-lg border bg-[#151a1c] ${selectedAssetId === (card.kind === 'local' ? card.artifact.id : card.asset.id) || selectedIds.has(getCardId(card)) ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>
                   {selectMode && <button type="button" className="w-full border-b border-white/10 px-3 py-2 text-left text-xs text-neutral-300" onClick={() => toggleSelected(getCardId(card))} aria-pressed={selectedIds.has(getCardId(card))}>{selectedIds.has(getCardId(card)) ? '✓ 選択中' : '選択'}</button>}
                   <button type="button" className="asset-center-card-media flex w-full items-center justify-center bg-[linear-gradient(45deg,#1d2324_25%,transparent_25%,transparent_75%,#1d2324_75%),linear-gradient(45deg,#1d2324_25%,transparent_25%,transparent_75%,#1d2324_75%)] bg-[length:16px_16px] bg-[position:0_0,8px_8px]" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)} aria-label={`${cardTitle(card)}を選択`}>
-                    {cardImageUrl(card) ? <img src={cardImageUrl(card)} alt="" className="h-full w-full object-contain" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}
+                    {cardImageUrl(card) ? <img src={thumbnailImageUrl(cardImageUrl(card))} alt="" className="h-full w-full object-contain" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}
                   </button>
                   <div className="asset-center-card-actions absolute left-0 top-0 z-10 flex w-full items-center justify-center gap-4 p-2 opacity-0 transition-opacity">
                     <button type="button" aria-label="プレビュー" className="asset-center-card-action" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)}><Eye className="h-4 w-4" /></button>

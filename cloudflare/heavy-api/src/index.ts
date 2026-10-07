@@ -28,6 +28,8 @@ export interface Env {
   AUTH_SERVICE?: { fetch(request: Request): Promise<Response> };
   DB: D1Database;
   PRIVATE_MEDIA: R2Bucket;
+  /** Cloudflare Images binding; builds grid thumbnails of generated images. Optional: without it the original is served. */
+  IMAGES?: ImagesBinding;
   /** Optional test seam. Production requires the bound consumer-auth verifier. */
   MEDIA_TOKEN_VERIFIER?: TokenVerifier;
   AUTH_ISSUER?: string;

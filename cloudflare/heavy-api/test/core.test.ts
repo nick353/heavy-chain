@@ -420,8 +420,8 @@ class CoreR2 {
     } as R2ObjectBody;
   }
 
-  async delete(key: string): Promise<void> {
-    this.objects.delete(key);
+  async delete(keys: string | string[]): Promise<void> {
+    for (const key of Array.isArray(keys) ? keys : [keys]) this.objects.delete(key);
   }
 
   has(key: string): boolean {
@@ -790,6 +790,63 @@ test("generated image content is private R2 and owner-scoped", async () => {
   assert.equal(deleted.status, 204);
   assert.equal(r2.has("generated-images/image-content"), false);
   assert.equal((await handleRequest(request("GET", "/v1/generated-images/image-content/content", "alice"), environment)).status, 404);
+});
+
+test("media read thumbnail variant builds a stored WebP preview of the same owned image", async () => {
+  const db = new CoreDb();
+  seed(db, "alice");
+  const r2 = new CoreR2();
+  let transforms = 0;
+  const images = {
+    input: (_stream: ReadableStream) => ({
+      transform: (options: { width: number }) => ({
+        output: async (output: { format: string }) => {
+          transforms += 1;
+          assert.equal(options.width, 384);
+          assert.equal(output.format, "image/webp");
+          return { response: () => new Response(new Uint8Array([82, 73, 70, 70])) };
+        },
+      }),
+    }),
+  };
+  const environment = { ...env(db, r2), IMAGES: images as unknown as ImagesBinding };
+  await handleRequest(request("POST", "/v1/generated-images", "alice", {
+    id: "image-thumb", brand_id: "brand-1", storage_path: "alice/image-thumb.png",
+  }), environment);
+  await handleRequest(new Request("https://heavy.test/v1/generated-images/image-thumb/content", {
+    method: "PUT",
+    headers: { authorization: "Bearer alice", "content-type": "image/png" },
+    body: new Uint8Array([137, 80, 78, 71]).buffer as ArrayBuffer,
+  }), environment);
+  const gateway = await json<{ url: string }>(await handleRequest(new Request(
+    "https://heavy.test/v1/media/read?bucket=generated-images&path=generated-images/image-thumb&expiresIn=300",
+    { headers: { authorization: "Bearer alice" } },
+  ), environment));
+  const thumbUrl = new URL(gateway.url);
+  thumbUrl.searchParams.set("variant", "thumb");
+  const first = await handleRequest(new Request(thumbUrl), environment);
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get("content-type"), "image/webp");
+  assert.deepEqual(new Uint8Array(await first.arrayBuffer()), new Uint8Array([82, 73, 70, 70]));
+  assert.equal(r2.has("generated-thumbnails/image-thumb.webp"), true);
+  const second = await handleRequest(new Request(thumbUrl), environment);
+  assert.equal(second.status, 200);
+  assert.equal(transforms, 1);
+  // Without the binding the original is served instead of failing the grid.
+  const fallback = await handleRequest(new Request(thumbUrl), { ...env(db, new CoreR2()), PRIVATE_MEDIA: r2 as unknown as R2Bucket });
+  assert.equal(fallback.status, 200);
+  // Replacing the content drops the stale preview; deleting the image removes both objects.
+  await handleRequest(new Request("https://heavy.test/v1/generated-images/image-thumb/content", {
+    method: "PUT",
+    headers: { authorization: "Bearer alice", "content-type": "image/png" },
+    body: new Uint8Array([137, 80, 78, 71, 13]).buffer as ArrayBuffer,
+  }), environment);
+  assert.equal(r2.has("generated-thumbnails/image-thumb.webp"), false);
+  await handleRequest(new Request(thumbUrl), environment);
+  assert.equal(transforms, 2);
+  assert.equal((await handleRequest(request("DELETE", "/v1/generated-images/image-thumb", "alice"), environment)).status, 204);
+  assert.equal(r2.has("generated-images/image-thumb"), false);
+  assert.equal(r2.has("generated-thumbnails/image-thumb.webp"), false);
 });
 
 test("canvas updates use an atomic revision and editor access", async () => {

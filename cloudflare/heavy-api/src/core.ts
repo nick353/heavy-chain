@@ -1213,7 +1213,7 @@ async function deleteGeneratedImage(request: Request, env: CoreEnv, imageID: str
   // the object first so an R2 failure leaves the row retryable instead of
   // silently orphaning data that the UI still presents as deletable.
   try {
-    await env.PRIVATE_MEDIA.delete(generatedImageObjectKey(imageID));
+    await env.PRIVATE_MEDIA.delete([generatedImageObjectKey(imageID), generatedThumbnailObjectKey(imageID)]);
   } catch {
     return errorResponse("media_storage_unavailable", 502);
   }
@@ -1229,6 +1229,65 @@ function generatedImageMaxBytes(env: CoreEnv): number {
 
 function generatedImageObjectKey(imageID: string): string {
   return `generated-images/${imageID}`;
+}
+
+function generatedThumbnailObjectKey(imageID: string): string {
+  return `generated-thumbnails/${imageID}.webp`;
+}
+
+const GENERATED_THUMBNAIL_WIDTH = 384;
+
+/**
+ * Serves a 384px-wide WebP of an owned generated image. The first request builds it with the Images binding and keeps
+ * it in R2 next to the original; later requests read the stored copy. Without the binding, or if the transform fails,
+ * the original is returned so a grid still shows the image.
+ */
+async function readGeneratedThumbnailForOwner(env: CoreEnv, imageID: string, userID: string): Promise<Response> {
+  const row = await env.DB.prepare(
+    `SELECT id FROM generated_images WHERE id = ? AND user_id = ? LIMIT 1`,
+  ).bind(imageID, userID).first<{ id: string }>();
+  if (!row) return errorResponse("not_found", 404);
+  const thumbnailKey = generatedThumbnailObjectKey(imageID);
+  try {
+    const stored = await env.PRIVATE_MEDIA.get(thumbnailKey);
+    if (stored) return new Response(stored.body, { status: 200, headers: thumbnailHeaders(stored.httpEtag) });
+  } catch {
+    return errorResponse("media_storage_unavailable", 502);
+  }
+  if (!env.IMAGES) return readGeneratedImageForOwner(env, imageID, userID);
+  let original: R2ObjectBody | null;
+  try {
+    original = await env.PRIVATE_MEDIA.get(generatedImageObjectKey(imageID));
+  } catch {
+    return errorResponse("media_storage_unavailable", 502);
+  }
+  if (!original) return errorResponse("not_found", 404);
+  let bytes: ArrayBuffer;
+  try {
+    const transformed = await env.IMAGES.input(original.body)
+      .transform({ width: GENERATED_THUMBNAIL_WIDTH, fit: "scale-down" })
+      .output({ format: "image/webp", quality: 80 });
+    bytes = await transformed.response().arrayBuffer();
+  } catch {
+    return readGeneratedImageForOwner(env, imageID, userID);
+  }
+  try {
+    await env.PRIVATE_MEDIA.put(thumbnailKey, bytes, { httpMetadata: { contentType: "image/webp" } });
+  } catch {
+    // Serving the preview matters more than caching it; the next request builds it again.
+  }
+  return new Response(bytes, { status: 200, headers: thumbnailHeaders(null) });
+}
+
+function thumbnailHeaders(etag: string | null): Headers {
+  const headers = new Headers();
+  headers.set("content-type", "image/webp");
+  // The capability URL is per user and short-lived; a private cache lets the same grid repaint without refetching.
+  headers.set("cache-control", "private, max-age=3600");
+  headers.set("content-disposition", "inline");
+  headers.set("x-content-type-options", "nosniff");
+  if (etag) headers.set("etag", etag);
+  return headers;
 }
 
 function base64UrlEncode(value: ArrayBuffer | Uint8Array): string {
@@ -1376,6 +1435,8 @@ export async function handleMediaReadGateway(request: Request, env: CoreEnv): Pr
   if (capability) {
     const token = await verifyMediaReadToken(capability, env);
     if (!token) return errorResponse("invalid_media_token", 401);
+    // A grid only needs a small preview of the same authorised object; the variant never widens access.
+    if (url.searchParams.get("variant") === "thumb") return readGeneratedThumbnailForOwner(env, token.image_id, token.user_id);
     return readGeneratedImageForOwner(env, token.image_id, token.user_id);
   }
 
@@ -1441,6 +1502,8 @@ async function uploadGeneratedImageContent(request: Request, env: CoreEnv, image
     await env.PRIVATE_MEDIA.put(generatedImageObjectKey(imageID), body, {
       httpMetadata: { contentType: rawContentType },
     });
+    // The stored grid thumbnail was made from the previous bytes.
+    await env.PRIVATE_MEDIA.delete(generatedThumbnailObjectKey(imageID));
   } catch {
     return errorResponse("media_storage_unavailable", 502);
   }

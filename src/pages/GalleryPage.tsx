@@ -25,6 +25,7 @@ import { useAuthStore } from '../stores/authStore';
 import { isHeavyWorkspaceRuntime } from '../lib/heavyWorkspace';
 import { withAuthSessionRecovery } from '../lib/auth';
 import { withSignedImageUrls } from '../lib/storage';
+import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import {
   deleteWorkspaceArtifact,
@@ -1136,7 +1137,7 @@ export function GalleryPage() {
                   >
                     {getImageUrl(image) && !isPreviewUnavailable(image) ? (
                       <img
-                        src={getImageUrl(image)}
+                        src={thumbnailImageUrl(getImageUrl(image))}
                         alt=""
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
