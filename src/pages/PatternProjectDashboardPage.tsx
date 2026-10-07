@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 
-const formatProjectAge = (value: string) => {
+export const formatProjectAge = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '今日';
   const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
@@ -15,13 +15,48 @@ const formatProjectAge = (value: string) => {
   return `${Math.floor(days / 365)}年前`;
 };
 
-type ProjectCard = { id: string; title: string; updatedAt: string; imageUrl: string; jobId: string };
+export type ProjectCard = { id: string; title: string; updatedAt: string; imageUrl: string; jobId: string };
 
 /** Falls back to the PROJECT mark when a saved preview no longer resolves (expired or deleted object). */
-function ProjectThumbnail({ url }: { url: string }) {
+export function ProjectThumbnail({ url, fallback }: { url: string; fallback?: ReactNode }) {
   const [failed, setFailed] = useState(false);
-  if (!url || failed) return <span className="pattern-project-dashboard-empty-mark">PROJECT</span>;
+  if (!url || failed) return <>{fallback ?? <span className="pattern-project-dashboard-empty-mark">PROJECT</span>}</>;
   return <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />;
+}
+
+/** The signed-in user's saved results for one canonical feature, one card per job (newest first). */
+export function useFeatureProjects(featureId: string) {
+  const { user, currentBrand } = useAuthStore();
+  const brandId = currentBrand?.id;
+  const [projects, setProjects] = useState<ProjectCard[]>([]);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'failure'>('idle');
+
+  useEffect(() => {
+    const dataPlane = cloudflareDataPlane;
+    if (!brandId || !dataPlane || !user?.id) { setProjects([]); setStatus('idle'); return; }
+    let active = true;
+    setStatus('loading');
+    void dataPlane.listGeneratedImages(brandId, { featureType: `lightchain-${featureId}`, order: 'newest', limit: 100 })
+      .then(async (images) => {
+        const own = images.filter((image) => image.user_id === user.id && image.job_id && image.storage_path);
+        const byJob = new Map<string, typeof own[number]>();
+        for (const image of own) if (!byJob.has(image.job_id!)) byJob.set(image.job_id!, image);
+        const unique = [...byJob.values()];
+        // One signing round-trip for the whole board instead of one request per card.
+        const signed = await withSignedImageUrls(unique.map((image) => ({ storage_path: image.storage_path, image_url: '' })));
+        if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
+        setProjects(unique.map((image, index) => {
+          const metadata = image.metadata && typeof image.metadata === 'object' && !Array.isArray(image.metadata) ? image.metadata as Record<string, unknown> : {};
+          const title = typeof metadata.projectTitle === 'string' && metadata.projectTitle.trim() ? metadata.projectTitle : 'Untitled';
+          return { id: image.id, jobId: image.job_id!, title, updatedAt: image.created_at, imageUrl: signed[index]?.image_url ?? '' };
+        }));
+        setStatus('success');
+      })
+      .catch(() => { if (active) { setProjects([]); setStatus('failure'); } });
+    return () => { active = false; };
+  }, [brandId, user?.id, featureId]);
+
+  return { projects, status };
 }
 
 export type ProjectBoardConfig = {
@@ -44,36 +79,8 @@ const PAGE_SIZE = 30;
  */
 export function LightchainProjectBoard({ config }: { config: ProjectBoardConfig }) {
   const navigate = useNavigate();
-  const { user, currentBrand } = useAuthStore();
-  const brandId = currentBrand?.id;
-  const [projects, setProjects] = useState<ProjectCard[]>([]);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'failure'>('idle');
+  const { projects, status } = useFeatureProjects(config.featureId);
   const [page, setPage] = useState(1);
-
-  useEffect(() => {
-    const dataPlane = cloudflareDataPlane;
-    if (!brandId || !dataPlane || !user?.id) { setProjects([]); setStatus('idle'); return; }
-    let active = true;
-    setStatus('loading');
-    void dataPlane.listGeneratedImages(brandId, { featureType: `lightchain-${config.featureId}`, order: 'newest', limit: 100 })
-      .then(async (images) => {
-        const own = images.filter((image) => image.user_id === user.id && image.job_id && image.storage_path);
-        const byJob = new Map<string, typeof own[number]>();
-        for (const image of own) if (!byJob.has(image.job_id!)) byJob.set(image.job_id!, image);
-        const unique = [...byJob.values()];
-        // One signing round-trip for the whole board instead of one request per card.
-        const signed = await withSignedImageUrls(unique.map((image) => ({ storage_path: image.storage_path, image_url: '' })));
-        if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
-        setProjects(unique.map((image, index) => {
-          const metadata = image.metadata && typeof image.metadata === 'object' && !Array.isArray(image.metadata) ? image.metadata as Record<string, unknown> : {};
-          const title = typeof metadata.projectTitle === 'string' && metadata.projectTitle.trim() ? metadata.projectTitle : 'Untitled';
-          return { id: image.id, jobId: image.job_id!, title, updatedAt: image.created_at, imageUrl: signed[index]?.image_url ?? '' };
-        }));
-        setStatus('success');
-      })
-      .catch(() => { if (active) { setProjects([]); setStatus('failure'); } });
-    return () => { active = false; };
-  }, [brandId, user?.id, config.featureId]);
 
   const pageCount = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
   const visibleProjects = useMemo(() => projects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [projects, page]);

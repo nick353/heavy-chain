@@ -43,6 +43,7 @@ import {
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../components/DesignArtifactThumbnail';
+import { formatProjectAge, ProjectThumbnail, useFeatureProjects } from './PatternProjectDashboardPage';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
@@ -2192,31 +2193,10 @@ export function LightchainAssetCenterPage() {
   return <ParityShell><div className="mx-auto flex max-w-[1480px] gap-6 px-5 py-8 sm:px-8 lg:px-10"><aside className={`${darkPanel} hidden w-64 shrink-0 p-3 lg:block`}><div className="px-3 py-3 text-xs font-semibold tracking-[0.2em] text-neutral-400">LIBRARY</div>{libraryGroups.map((group) => <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAsset(null); }} className={`flex w-full items-center rounded-xl px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}><FolderOpen className="mr-2 h-4 w-4" />{group}</button>)}</aside><main className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">HEAVY CHAIN / LIBRARY</p><h1 className="mt-3 text-3xl font-semibold">{activeGroup}</h1><p className="mt-2 text-sm text-neutral-500">生成済みの成果物は、次のCanvas作業へ同じ系譜で引き継げます。</p></div><div className="flex gap-2"><button type="button" className={`${mutedButton} opacity-60`} disabled title="素材の登録は各ワークベンチから行います"><Upload className="mr-2 inline h-4 w-4" />アップロード</button><button type="button" className={`${mutedButton} opacity-60`} disabled title="グループ管理はβ版で準備中"><Plus className="mr-2 inline h-4 w-4" />新規グループ作成</button></div></div><div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4"><div className="flex gap-2"><button type="button" className={`rounded-lg px-3 py-2 text-sm ${filter === '画像／動画' ? 'bg-white text-neutral-950' : 'text-neutral-400'}`} onClick={() => setFilter('画像／動画')}>画像／動画</button><button type="button" className={`rounded-lg px-3 py-2 text-sm ${filter === 'お気に入り' ? 'bg-white text-neutral-950' : 'text-neutral-400'}`} onClick={() => setFilter('お気に入り')}>お気に入り</button></div><label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-400"><Search className="h-4 w-4" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="w-40 bg-transparent outline-none" placeholder="検索" aria-label="ライブラリー検索" /></label></div><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><span className="text-sm text-neutral-400">選択済み ： {selectedIds.size} / {assets.length}</span>{selectMode ? <div className="flex flex-wrap gap-2"><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={handleBulkCopy}>キャンバスをコピー</button><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={() => void handleBulkDownload()}>ダウンロード</button><button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={handleBulkDelete}><Trash2 className="mr-2 inline h-4 w-4" />削除</button><button type="button" className={mutedButton} onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}>一括操作を閉じる</button></div> : <button type="button" className={mutedButton} onClick={() => setSelectMode(true)}>一括操作</button>}</div>{selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(assets.filter((asset) => asset.persisted).map((asset) => asset.id)))}>全選択</button>}{assets.length === 0 ? <div className="mt-10 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center"><Grid2X2 className="h-8 w-8 text-neutral-600" /><h2 className="mt-4 font-semibold">まだ素材がありません</h2><p className="mt-2 text-sm text-neutral-500">このグループに保存された生成結果はありません。</p></div> : <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{assets.map((asset) => <article key={asset.id} className={`overflow-hidden rounded-2xl border bg-[#151a1c] ${selectedAsset?.id === asset.id ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>{selectMode && <button type="button" className="w-full border-b border-white/10 px-3 py-2 text-left text-xs text-neutral-300 disabled:opacity-40" disabled={!asset.persisted} onClick={() => toggleSelectedAsset(asset.id)} aria-pressed={selectedIds.has(asset.id)}>{selectedIds.has(asset.id) ? "✓ 選択中" : "選択"}</button>}<button type="button" className="flex h-44 w-full items-center justify-center bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.22),transparent_24%),linear-gradient(135deg,#263438,#111719)]" onClick={() => asset.persisted && setSelectedAsset(persistedArtifacts.find((candidate) => candidate.id === asset.id) ?? null)} aria-label={`${asset.title}を選択`}>{asset.imageUrl ? <img src={asset.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}</button><div className="p-4"><p className="truncate text-sm font-medium">{asset.title}</p><p className="mt-1 truncate text-xs text-neutral-500">{asset.featureType}</p><div className="mt-3 flex gap-2"><button type="button" className="flex-1 rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-400 hover:text-white disabled:opacity-40" disabled={!asset.persisted} onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(asset.id)}`)}>ボードにコピー</button><button type="button" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-400 hover:text-white disabled:opacity-40" disabled={!asset.persisted} onClick={() => setSelectedAsset(persistedArtifacts.find((candidate) => candidate.id === asset.id) ?? null)}>詳細</button></div></div></article>)}</div>}{selectedAsset && <aside className="mt-6 rounded-2xl border border-cyan-200/20 bg-cyan-200/[0.05] p-5" aria-live="polite"><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.2em] text-cyan-200">SELECTED ASSET</p><h2 className="mt-2 font-semibold">{selectedAsset.title}</h2></div><button type="button" className="text-sm text-neutral-400 hover:text-white" onClick={() => setSelectedAsset(null)}>閉じる</button></div><p className="mt-3 text-sm text-neutral-400">{selectedAsset.prompt || '保存済み成果物'}</p><button type="button" className="mt-4 rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(selectedAsset.id)}`)}>Canvasへ送る</button></aside>}</main></div></ParityShell>;
 }
 
-const orientedDesignProjectImages = [
-  null,
-  'https://static-jp.linkaigc.com/saas/2026-03/19509c24192de2a2412746e144948051.jpg?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
-  'https://static-jp.linkaigc.com/cutout/2026/08/07/1786111982399-56819482-c9b2-4f9f.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
-  null,
-  'https://static-jp.linkaigc.com/saas/2026-08/eb450cb0c32120c34ea2d6bfbea2e2e2.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
-  'https://static-jp.linkaigc.com/saas/2026-07/67656e58adbc399c1b34140aa15f10bc.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
-  'https://static-jp.linkaigc.com/saas/2026-03/e061b3a2928e55dd4ea659bf9ca0b71c.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
-  null,
-  null,
-  'https://static-jp.linkaigc.com/saas/2025-11/d7f1c73a093d95c637d06c393831f2d5.webp?x-oss-process=image/resize,m_lfit,w_640,limit_1/format,webp',
-  null,
-  null,
-  null,
-] as const;
-
-const orientedDesignProjectDates = [
-  '1ヶ月前 修正', '1ヶ月前 修正', '1ヶ月前 修正', '1ヶ月前 修正',
-  '2ヶ月前 修正', '2ヶ月前 修正', '6ヶ月前 修正', '8ヶ月前 修正',
-  '8ヶ月前 修正', '10ヶ月前 修正', '10ヶ月前 修正', '1年前 修正', '1年前 修正',
-] as const;
-
+// Self-hosted copies of Light's two reference-case covers (デザイン要素融合 / ディテール変更).
 const orientedDesignReferenceImages = [
-  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/6a1d37284e65c215fe6fcd1994972a78.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/7a1e111e3f302abe404e6c0b347563ca.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  '/lightchain-assets/oriented-design/reference-1.webp',
+  '/lightchain-assets/oriented-design/reference-2.webp',
 ] as const;
 
 function orientedDesignLabHref(
@@ -2235,9 +2215,18 @@ export function LightchainOrientedDesignPage() {
   const explicitFeature=new URLSearchParams(location.search).get('workspaceFeature');
   const libraryArtifactId = new URLSearchParams(location.search).get('libraryArtifactId');
   const workspace=useCanonicalImageWorkspace('wear-design-lab',{identityConflict:explicitFeature!==null&&explicitFeature!=='wear-design-lab'});
+  const { projects } = useFeatureProjects('wear-design-lab');
   const navigateToDetail = (index?: { key: 'project' | 'reference'; value: number }) => {
     if (explicitFeature !== null && explicitFeature !== 'wear-design-lab') return;
     navigate(orientedDesignLabHref(location, '/flow/orientedDesign/detail', index));
+  };
+  // A saved project reopens its own job: the previous job's candidate and card indexes do not carry over.
+  const openProject = (savedJobId: string) => {
+    if (explicitFeature !== null && explicitFeature !== 'wear-design-lab') return;
+    const params = new URLSearchParams(location.search);
+    for (const key of ['candidate', 'project', 'reference']) params.delete(key);
+    params.set('resumeJob', savedJobId);
+    navigate(orientedDesignLabHref({ search: `?${params.toString()}`, hash: location.hash }, '/flow/orientedDesign/detail'));
   };
   const canContinueLibrary = Boolean(
     libraryArtifactId &&
@@ -2287,16 +2276,16 @@ export function LightchainOrientedDesignPage() {
                 <h6>新規ファイル</h6>
               </div>
             </div>
-            {orientedDesignProjectImages.map((image, index) => (
-              <div key={`${orientedDesignProjectDates[index]}-${index}`} className="oriented-design-project-card" onClick={() => navigateToDetail({ key: 'project', value: index + 1 })}>
+            {projects.map((project) => (
+              <div key={project.id} className="oriented-design-project-card" data-testid={`oriented-design-project-${project.id}`} onClick={() => openProject(project.jobId)}>
                 <div className="oriented-design-project-media">
-                  {image ? <img src={image} alt="coverImg" loading="lazy" /> : <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="coverImg" className="oriented-design-project-default-cover" loading="lazy" />}
+                  <ProjectThumbnail url={project.imageUrl} fallback={<img src={DESIGN_PROJECT_DEFAULT_COVER} alt="coverImg" className="oriented-design-project-default-cover" />} />
                 </div>
                 <div className="oriented-design-project-meta">
-                  <div className="oriented-design-project-name">Untitled</div>
-                  <div className="oriented-design-project-date">{orientedDesignProjectDates[index]}</div>
+                  <div className="oriented-design-project-name">{project.title}</div>
+                  <div className="oriented-design-project-date">{formatProjectAge(project.updatedAt)} 修正</div>
                 </div>
-                <button type="button" className="oriented-design-project-menu" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" /></button>
+                <button type="button" aria-label="プロジェクトメニュー" className="oriented-design-project-menu" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" /></button>
               </div>
             ))}
           </div>
@@ -2335,7 +2324,7 @@ export function LightchainOrientedDesignDetailPage() {
       <div className="pointer-events-none absolute inset-0 opacity-70" style={{ backgroundImage: 'radial-gradient(#464b50 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
       <aside className="absolute left-4 top-[74px] z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#202426] shadow-xl">
         <div className="flex h-10 items-center gap-2 border-b border-white/10 px-2 text-sm text-neutral-400">
-          <img src="https://jp.linkaigc.com/static/project_default_cover.png" alt="PROJECT" className="h-6 w-6 rounded-md object-cover" />
+          <img src={DESIGN_PROJECT_DEFAULT_COVER} alt="PROJECT" className="h-6 w-6 rounded-md object-cover" />
           <span>ウェアデザインラボ</span>
         </div>
         <button type="button" onClick={() => navigate(explicitFeature === null || explicitFeature === 'wear-design-detail' ? '/flow/orientedDesign' : orientedDesignLabHref(location, '/flow/orientedDesign'))} className="flex h-11 w-full items-center gap-3 px-3 text-left text-sm text-neutral-400 transition hover:bg-white/5 hover:text-white">

@@ -79,9 +79,13 @@ test('canonical Lightchain Lab board keeps the source project cards and detail h
 
 test('canonical Lightchain Lab detail keeps the source empty-canvas geometry', () => {
   assert.match(appSource, /path="\/flow\/laboratory\/detail"[\s\S]*?<LightchainLabDetailPage \/>/);
-  assert.match(labDetailPage, /top-\[187\.43px\]/);
-  assert.match(labDetailPage, /h-\[496\.14px\]/);
-  assert.match(labDetailPage, /w-\[min\(781\.59px,calc\(100vw-40px\)\)\]/);
+  // Measured on Light at 1440x900 (2026-10-07): dashed drop zone x336 y208 768 wide, text centred at y469.
+  assert.match(labDetailPage, /dark relative min-h/);
+  assert.match(labDetailPage, /top-\[158px\]/);
+  assert.match(labDetailPage, /h-\[554px\]/);
+  assert.match(labDetailPage, /w-\[min\(768px,calc\(100vw-40px\)\)\]/);
+  assert.match(labDetailPage, /border-dashed/);
+  assert.doesNotMatch(labDetailPage, /aliyuncs\.com|linkaigc\.com/);
   assert.match(labDetailPage, /LIGHTCHAIN_LAB_PROJECT_ICON/);
   assert.doesNotMatch(labDetailPage, /type="checkbox"/);
 });
@@ -92,7 +96,8 @@ test('canonical pattern-arrange board keeps the shared Light project-board geome
   assert.match(patternBoardPage, /detailPath: '\/editor\/pattern\/detail'/);
   assert.match(patternBoardPage, /detailPath: '\/editor\/patternDesign\/detail'/);
   // Projects are the brand's saved results for the board feature (no foreign canvas documents).
-  assert.match(patternBoardPage, /listGeneratedImages\(brandId, \{ featureType: `lightchain-\$\{config\.featureId\}`/);
+  assert.match(patternBoardPage, /listGeneratedImages\(brandId, \{ featureType: `lightchain-\$\{featureId\}`/);
+  assert.match(patternBoardPage, /useFeatureProjects\(config\.featureId\)/);
   // Only persisted projects are listed; no fabricated "Untitled" filler cards that open nothing.
   assert.doesNotMatch(patternBoardPage, /SOURCE_PATTERN_PROJECT_COUNT|source-pattern-untitled-|个月前/);
   assert.match(patternBoardPage, /\{formatProjectAge\(project\.updatedAt\)\} 修正/);

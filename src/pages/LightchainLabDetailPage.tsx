@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { CanonicalImageWorkspaceControls } from '../components/CanonicalImageWorkspaceControls';
 
-const LIGHTCHAIN_LAB_PROJECT_ICON = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/laboratory-icon.png?x-oss-process=image/resize,m_lfit,w_48,limit_1/format,webp';
+const LIGHTCHAIN_LAB_PROJECT_ICON = '/lightchain-assets/icons/laboratory.png';
 
 /**
  * Light Chain's laboratory detail route is intentionally a minimal empty
@@ -16,7 +16,7 @@ export function LightchainLabDetailPage() {
 
   return (
     <main
-      className="dark min-h-[calc(100vh-50px)] overflow-hidden bg-[#181a1d] text-white"
+      className="dark relative min-h-[calc(100vh-50px)] overflow-hidden bg-[#181a1d] text-white"
       data-testid="lightchain-lab-detail"
       data-lightchain-parity-shell="lab-detail"
       data-resume-job={workspace.result?.jobId ?? ''}
@@ -44,7 +44,7 @@ export function LightchainLabDetailPage() {
         </Link>
       </aside>
       <label
-        className="absolute left-1/2 top-[187.43px] flex h-[496.14px] w-[min(781.59px,calc(100vw-40px))] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-xl bg-[#25292b] text-center transition hover:bg-[#2a2e30]"
+        className="absolute left-1/2 top-[158px] flex h-[554px] w-[min(768px,calc(100vw-40px))] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-[#25292b] text-center transition hover:bg-[#2a2e30]"
         data-testid="lightchain-lab-detail-upload"
       >
         {imageUrl ? (
@@ -56,6 +56,7 @@ export function LightchainLabDetailPage() {
             <p className="relative top-[8px] mt-1 text-xs leading-[17.14px] text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</p>
           </>
         )}
+        {workspace.slots.primary && <span className="sr-only" role="status">{workspace.slots.primary.name}</span>}
         <input disabled={workspace.status==='loading'||workspace.status==='running'||Boolean(workspace.pendingId)} className="sr-only" type="file" aria-label="主素材画像" accept=".png,.jpg,.jpeg,.avif,.webp" onChange={event=>{const file=event.target.files?.[0];if(file)void workspace.upload('primary',file);event.target.value='';}} />
       </label>
       <CanonicalImageWorkspaceControls workspace={workspace} />

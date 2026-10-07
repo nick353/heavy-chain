@@ -147,3 +147,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 変更: `FashionStudioPage` filters canvas documents to Fashion Studio projects. `FashionStudioDetailPage` new-file screen rebuilt to Light (guidance, four functions with NEW badge, dashed drop zone, dots); function choice seeds a Heavy-written sample instruction and is stored per project; instruction draft persisted per project; form title follows the function; project icon self-hosted.
 - 検証: tsc; 10 fashion/board suites equal to baseline. Light observed: board, project detail (React Flow nodes), new file, sample load. Production: project 176a4d3e…, job ai-95b6af64… completed, reload restores input/instruction/result, board shows only studio projects.
 - 次: #23 /flow/laboratory.
+
+### Iteration 19 (2026-10-07, /goal) — /flow/laboratory ラボ (#23)
+- 変更: `LightchainLabDetailPage` drop zone moved to Light's measured geometry (768×554 dashed, `relative` root so the page no longer scrolls), self-hosted laboratory icon, sr-only file name status. `useCanonicalImageWorkspace` keeps a per-page draft (uploads by local asset reference, brief, reference note, settings) in localStorage and restores it on a fresh page in its own effect (not inside the initializer, so library/resume/pending paths are untouched); プリントイメージ keeps its own draft store; the draft is removed when a job is saved.
+- 発見: putting the restore inside the initializer broke 66 harness cases that evaluate that effect in isolation (missing bindings + storage-effect assertions) — moved to a separate effect.
+- 検証: tsc; canonical-library-input-restore 0 fail, model-library-workspace-restore 0 fail, model-tool-settings/input-parity 0 fail, canonical-image-workspace-routes = baseline apart from the Lab geometry expectation (updated to 768×554), source-board-parity = baseline. Production: see ledger #23 (job ai-b55722a0… completed, reloads restore before and after generation).
+- 次: #24 /flow/orientedDesign.

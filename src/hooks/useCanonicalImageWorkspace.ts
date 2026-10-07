@@ -77,6 +77,10 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
   const stateRef = useRef(state); stateRef.current = state;
   const pendingKey = `heavy:canonical-image-workspace:v1:${user?.id ?? ''}:${currentBrand?.id ?? ''}:${toolId}:${jobId ?? 'fresh'}`;
   const pending = useRef<Pending | null>(null);
+  // Un-generated inputs (uploads kept in the local asset store, request text, settings) survive a reload per tool page.
+  const draftKey = `heavy:canonical-draft:v1:${user?.id ?? ''}:${currentBrand?.id ?? ''}:${toolId}:${location.pathname}`;
+  const draftReady = useRef<string | null>(null);
+  const draftEnabled = toolId !== 'printing-image'; // プリントイメージ keeps its own reviewed draft store.
   const restoredArtifact=useRef<{scope:string;artifact:WorkspaceArtifact}|null>(null);
   const releaseAll = () => { Object.values(releases.current).forEach(value => value?.release()); releases.current = {}; };
   const rememberPending = (value: Pending | null) => {
@@ -282,6 +286,56 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
     return () => { cancelled = true;if(restoredArtifact.current?.scope===scope)restoredArtifact.current=null; };
   }, [scope, jobId, pendingKey, brandState.status,config.identityConflict]);
 
+  useEffect(() => {
+    // Runs after the initializer above (same dependencies): restore a fresh page's un-generated draft.
+    draftReady.current = null;
+    if (!draftEnabled || jobId || libraryArtifactId || pending.current || configRef.current.identityConflict || !authSnapshot()) return;
+    const token = sequence.current;
+    let cancelled = false;
+    const current = () => !cancelled && mounted.current && scopeRef.current === scope && sequence.current === token;
+    void (async () => {
+      let draft: Record<string, unknown> | null = null;
+      try { const parsed = JSON.parse(localStorage.getItem(draftKey) ?? 'null'); draft = record(parsed) ? parsed : null; } catch { draft = null; }
+      const slots: Record<SlotKey, Source | null> = { primary: null, secondary: null };
+      const savedSlots = draft && record(draft.slots) ? draft.slots : {};
+      for (const key of ['primary', 'secondary'] as const) {
+        const saved = savedSlots[key];
+        if (!record(saved) || !isLocalCanvasAssetReference(saved.localAssetRef)) continue;
+        try {
+          const resolved = await resolveLocalCanvasAsset(saved.localAssetRef as string);
+          if (!resolved) continue;
+          if (!current()) { resolved.release(); return; }
+          releases.current[key]?.release(); releases.current[key] = resolved;
+          slots[key] = { name: typeof saved.name === 'string' ? saved.name.slice(0, 256) : '素材', kind: key, imageUrl: resolved.source,
+            localAssetRef: saved.localAssetRef as string, persistenceStatus: 'persistent',
+            ...(record(saved.sourceMetadata) ? { sourceMetadata: saved.sourceMetadata as unknown as CanvasSourceMetadata } : {}) };
+        } catch { /* The local copy is gone; the slot stays empty rather than inventing an input. */ }
+      }
+      if (!current()) return;
+      if (draft) {
+        const brief = typeof draft.brief === 'string' ? draft.brief.slice(0, 4000) : '';
+        const referenceNote = typeof draft.referenceNote === 'string' ? draft.referenceNote.slice(0, 4000) : '';
+        const restoredInput = record(draft.inputState) ? workspaceInputState(toolId, draft.inputState) : null;
+        const usableInput = restoredInput && Object.keys(restoredInput).length > 0 && (!isModelToolFeature(toolId) || readModelToolSettings(toolId, restoredInput));
+        const hasInputs = Boolean(slots.primary || slots.secondary || brief || referenceNote);
+        setState(s => ({ ...s, brief, referenceNote, slots, inputState: usableInput ? restoredInput! : s.inputState,
+          inputsAvailable: hasInputs || s.inputsAvailable, status: slots.primary || slots.secondary ? 'ready' : s.status }));
+      }
+      draftReady.current = scope;
+    })();
+    return () => { cancelled = true; };
+  }, [scope, jobId, pendingKey, brandState.status, config.identityConflict, draftKey, draftEnabled]);
+
+  useEffect(() => {
+    if (jobId) { if (state.status === 'saved') { try { localStorage.removeItem(draftKey); } catch { /* storage unavailable */ } } return; }
+    if (!draftEnabled || draftReady.current !== scope || state.status === 'loading' || state.status === 'running') return;
+    const slotDraft = (source: Source | null) => source?.localAssetRef ? { name: source.name, localAssetRef: source.localAssetRef,
+      ...(source.sourceMetadata ? { sourceMetadata: source.sourceMetadata } : {}) } : null;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ brief: state.brief, referenceNote: state.referenceNote, inputState: state.inputState,
+        slots: { primary: slotDraft(state.slots.primary), secondary: slotDraft(state.slots.secondary) } }));
+    } catch { /* A full or blocked storage only loses the draft convenience. */ }
+  }, [draftEnabled, draftKey, jobId, scope, state.brief, state.inputState, state.referenceNote, state.slots, state.status]);
   const upload = async (key: SlotKey, file: File, isCurrent?: () => boolean, restoredIdentity?: Pick<Source,'sourceImageId'|'sourceStoragePath'>) => {
     if (isCurrent && !isCurrent()) return;
     if (busy.current || stateRef.current.pendingId || stateRef.current.status==='loading') return;

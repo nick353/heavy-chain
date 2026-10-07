@@ -130,7 +130,9 @@ test('actual App heavy/wear-design-detail boundary restores editable exact input
  const f=await fixture('/heavy/wear-design-detail?resumeJob=exact-job&keep=yes#context');try{await saved(f.page);assert.equal(new URL(f.page.url()).pathname,'/flow/orientedDesign/detail');assert.equal(await f.page.getByLabel('依頼',{exact:true}).inputValue(),'Exact original brief');assert.equal((await server(f.page)).calls.length,0);}finally{await f.close();}
  for(const path of ['/flow/laboratory/detail','/flow/orientedDesign/detail'])await t.test(path,async()=>{const fresh=await fixture(path);try{
   await fresh.page.getByLabel('主素材画像').waitFor({state:'attached'});assert.equal(await fresh.page.getByTestId('canonical-image-workspace-controls').count(),0);
-  const box=await fresh.page.locator('label[data-testid$="-upload"]').boundingBox();assert(box);assert.equal(Math.round(box.height),496);assert.equal(Math.round(box.width),782);
+  const box=await fresh.page.locator('label[data-testid$="-upload"]').boundingBox();assert(box);
+  // Light 1440x900 readback: Lab drop zone 768x554 (2026-10-07), Wear Design Lab 782x496.
+  assert.equal(Math.round(box.height),path.includes('laboratory')?554:496);assert.equal(Math.round(box.width),path.includes('laboratory')?768:782);
   assert.equal(await fresh.page.locator('main[data-resume-state]').getAttribute('data-resume-job'),'');assert.equal((await server(fresh.page)).calls.length,0);
  }finally{await fresh.close();}});
 });

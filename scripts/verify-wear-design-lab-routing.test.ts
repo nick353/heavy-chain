@@ -50,6 +50,7 @@ for (const statement of parsed.statements) {
   mocks[source] = `${clause.name ? "export default {error(){throw new Error('wear_routing_service_forbidden');}};" : ''}${names.map(name => `export const ${name}=()=>{throw new Error('wear_routing_unused_service:${name}');};`).join('')}`;
 }
 mocks['../hooks/useCanonicalImageWorkspace'] = `export function useCanonicalImageWorkspace(toolId,options){const f=globalThis.__wearRouting;f.workspaceCalls.push({toolId,identityConflict:options?.identityConflict===true});return {toolId,status:options?.identityConflict?'failed':'ready',pendingId:null,jobId:f.jobId,result:f.jobId?{jobId:f.jobId,imageUrl:'fixture-image'}:null,slots:f.primary?{primary:f.primary}:{},error:options?.identityConflict?'workspace_identity_conflict':null,originalInputsAvailable:true,inputsAvailable:true,continueHref:f.continueHref,generate(){f.effects.generation++;throw new Error('generation_forbidden');},upload(){f.effects.upload++;throw new Error('upload_forbidden');},setInputState(){f.effects.inputWrites++;throw new Error('input_write_forbidden');}};}`;
+mocks['./PatternProjectDashboardPage'] = `export const useFeatureProjects=(featureId)=>{globalThis.__wearRouting.projectFeature=featureId;return {projects:Array.from({length:5},(_,i)=>({id:'saved-'+(i+1),jobId:'saved-job-'+(i+1),title:'Untitled',updatedAt:'2026-10-01',imageUrl:''})),status:'success'};};export const ProjectThumbnail=()=>null;export const formatProjectAge=()=>'今日';`;
 mocks['../components/CanonicalImageWorkspaceControls'] = `import React from 'react';export const CanonicalImageWorkspaceControls=({workspace})=>React.createElement('section',{'data-testid':'workspace-boundary','data-feature':workspace.toolId,'data-conflict':String(workspace.error!==null)});`;
 mocks['../features/lightchain/unifiedFeatureWorkflowContract'] = `export const UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION='fixture-catalog';export const getLightchainUnifiedFeatureWorkflowContract=()=>null;`;
 const vite = await createServer({configFile:false,envFile:false,appType:'custom',logLevel:'silent',server:{middlewareMode:true},optimizeDeps:{noDiscovery:true,include:[]},plugins:[{
@@ -88,8 +89,13 @@ for(const kind of ['new','project','reference'] as const)test(`actual ${kind} ca
   const f=await fixture(`${home}?resumeJob=wa-proof&candidate=3&other=a%2Fb&project=12&reference=2&tag=x&tag=y#keep-context`);
   try{
     assert.equal(f.service.workspaceCalls.at(-1)?.toolId,'wear-design-lab');await f.click(f.card(kind,kind==='project'?4:1));
-    let l=f.location();assert.equal(l.pathname,detail);assert.equal(l.params.get('workspaceFeature'),'wear-design-lab');assert.equal(l.params.get('resumeJob'),'wa-proof');assert.equal(l.params.get('candidate'),'3');assert.equal(l.params.get('other'),'a/b');assert.deepEqual(l.params.getAll('tag'),['x','y']);assert.equal(l.hash,'#keep-context');
-    assert.equal(l.params.get('project'),kind==='project'?'5':'12');assert.equal(l.params.get('reference'),'2');assert.equal(f.service.workspaceCalls.at(-1)?.toolId,'wear-design-lab');assert.equal(f.service.workspaceCalls.at(-1)?.identityConflict,false);
+    let l=f.location();assert.equal(l.pathname,detail);assert.equal(l.params.get('workspaceFeature'),'wear-design-lab');assert.equal(l.params.get('other'),'a/b');assert.deepEqual(l.params.getAll('tag'),['x','y']);assert.equal(l.hash,'#keep-context');
+    if(kind==='project'){
+      // A saved project card opens exactly its own job; the previous candidate/indexes are dropped.
+      assert.equal((f.service as any).projectFeature,'wear-design-lab');assert.equal(l.params.get('resumeJob'),'saved-job-5');assert.equal(l.params.get('candidate'),null);assert.equal(l.params.get('project'),null);assert.equal(l.params.get('reference'),null);
+    }else{
+      assert.equal(l.params.get('resumeJob'),'wa-proof');assert.equal(l.params.get('candidate'),'3');assert.equal(l.params.get('project'),'12');assert.equal(l.params.get('reference'),'2');
+    }assert.equal(f.service.workspaceCalls.at(-1)?.toolId,'wear-design-lab');assert.equal(f.service.workspaceCalls.at(-1)?.identityConflict,false);
     const retained=l.params.toString();await f.click(f.back());l=f.location();assert.equal(l.pathname,home);assert.equal(l.params.toString(),retained);assert.equal(l.hash,'#keep-context');assert.equal(f.service.workspaceCalls.at(-1)?.toolId,'wear-design-lab');
   }finally{await f.unmount();}
 });
