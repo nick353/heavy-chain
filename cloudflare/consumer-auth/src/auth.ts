@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth';
-import { bearer, jwt } from 'better-auth/plugins';
+import { bearer, emailOTP, jwt } from 'better-auth/plugins';
 import { bindVerificationLink } from './email-verification.ts';
 import { NativeOAuthError, persistNativeGrant, type NativeGrant } from './native-oauth.ts';
 import { recordBrowserConsent } from './provider-validation.ts';
@@ -9,6 +9,11 @@ import { sendEmail } from './email.ts';
 
 // Request-local only: Better Auth may swallow delivery callback exceptions.
 export const mailFailure = Symbol('mailFailure');
+
+// Keep the browser session across direct route loads, tab changes, and normal
+// browser restarts. The session token itself remains HttpOnly; only the
+// cookie lifetime is made explicit here.
+const BROWSER_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export interface Env extends MailBudgetEnv {
   [mailFailure]?: { error?: Error };
@@ -62,7 +67,29 @@ async function sendLink(env: Env, to: string, url: string, purpose: 'verify' | '
   }
 }
 
-export function createAuth(env: Env, origin = env.AUTH_BASE_URL, nativeGrant?: NativeGrant, reauthenticationSubject?: string) {
+async function sendPasswordResetOTP(env: Env, to: string, otp: string) {
+  try {
+    if (!emailReady(env)) throw new Error('email_not_configured');
+    await reserveMailAttempt(env);
+    await sendEmail(env, {
+      from: env.EMAIL_FROM!, to,
+      subject: `${env.APP_ID === 'mypro' ? 'MyPro' : 'Heavy Chain'} — パスワード再設定の認証コード`,
+      text: `パスワード再設定用の認証コードです。\n\n${otp}\n\n有効期限は5分です。心当たりがない場合は、このメールを破棄してください。`,
+    });
+  } catch (error) {
+    const failure = error instanceof Error ? error : new Error('email_unavailable');
+    if (env[mailFailure]) env[mailFailure].error = failure;
+    throw failure;
+  }
+}
+
+export function createAuth(
+  env: Env,
+  origin = env.AUTH_BASE_URL,
+  nativeGrant?: NativeGrant,
+  reauthenticationSubject?: string,
+  options?: { minPasswordLength?: number },
+) {
   if (!env.AUTH_SECRET || env.AUTH_SECRET.length < 32 || !allowedOrigins(env).includes(origin)) {
     throw new Error('auth_configuration_invalid');
   }
@@ -101,14 +128,23 @@ export function createAuth(env: Env, origin = env.AUTH_BASE_URL, nativeGrant?: N
       database: { generateId: 'uuid' },
       useSecureCookies: true,
       cookiePrefix: env.APP_ID === 'mypro' ? 'mypro-auth' : 'consumer-auth',
-      defaultCookieAttributes: { httpOnly: true, secure: true, sameSite: 'lax' },
+      // One authenticated browser session must cover every SPA route and a
+      // direct navigation.  Make the root scope explicit instead of relying
+      // on the Better Auth default so the cookie cannot become route-scoped.
+      defaultCookieAttributes: {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: BROWSER_SESSION_MAX_AGE_SECONDS,
+      },
       ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },
     },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
       autoSignIn: false,
-      minPasswordLength: 12,
+      minPasswordLength: options?.minPasswordLength ?? 12,
       maxPasswordLength: 128,
       resetPasswordTokenExpiresIn: 1800,
       revokeSessionsOnPasswordReset: true,
@@ -168,6 +204,16 @@ export function createAuth(env: Env, origin = env.AUTH_BASE_URL, nativeGrant?: N
         issuer: env.AUTH_BASE_URL, audience: 'consumer-apps', expirationTime: '5m',
         definePayload: ({ user, session }) => ({ sid: session.id, email_verified: user.emailVerified }),
       },
-    })],
+    }), ...(env.APP_ID === 'mypro' ? [] : [emailOTP({
+      otpLength: 6,
+      expiresIn: 300,
+      allowedAttempts: 3,
+      storeOTP: 'hashed',
+      rateLimit: { window: 60, max: 3 },
+      sendVerificationOTP: async ({ email, otp, type }) => {
+        if (type !== 'forget-password') throw new Error('email_otp_type_not_available');
+        await sendPasswordResetOTP(env, email, otp);
+      },
+    })])],
   });
 }

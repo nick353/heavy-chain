@@ -48,6 +48,7 @@ test('every send path is bounded; verified login and recovery consumption remain
   await s.verify();
   assert.equal((await s.login()).status, 200);
   assert.equal((await s.request('/api/auth/request-password-reset', { email: 'alice@example.test' })).status, 429);
+  assert.equal((await s.request('/api/auth/email-otp/request-password-reset', { email: 'alice@example.test' })).status, 429);
   assert.equal(s.mail.length, 2);
 });
 

@@ -28,7 +28,8 @@ test('registration requires verification; native token, ES256 JWKS and immediate
   const signedIn = await s.login(); assert.equal(signedIn.status, 200);
   const token = signedIn.headers.get('set-auth-token'); assert.ok(token);
   const cookies = signedIn.headers.get('set-cookie')!;
-  assert.match(cookies, /HttpOnly/i); assert.match(cookies, /Secure/i); assert.match(cookies, /SameSite=Lax/i);
+  assert.match(cookies, /HttpOnly/i); assert.match(cookies, /Secure/i); assert.match(cookies, /SameSite=Lax/i); assert.match(cookies, /Path=\//i);
+  assert.match(cookies, /Max-Age=2592000/i, 'browser sessions persist for the configured 30-day session window');
   const identity = await s.request('/v1/identity', undefined, token);
   assert.equal(identity.status, 200);
   const principal = await identity.json() as { subject: string; emailVerified: boolean };
@@ -50,11 +51,73 @@ test('password recovery is single-use and revokes all earlier sessions', async t
   assert.equal((await s.request('/api/auth/request-password-reset', { email: 'alice@example.test', redirectTo: 'https://web.test/reset-password' })).status, 200);
   const resetToken = new URL(s.link()).pathname.split('/').at(-1)!;
   const newPassword = 'another-local-test-password-9876';
+  assert.equal((await s.request('/api/auth/reset-password', { token: resetToken, newPassword: 'L1ght!' })).status, 400,
+    'the existing email-link reset keeps its 12-character minimum');
   assert.equal((await s.request('/api/auth/reset-password', { token: resetToken, newPassword })).status, 200);
   assert.equal((await s.request('/v1/identity', undefined, oldToken)).status, 401);
   assert.equal((await s.request('/api/auth/reset-password', { token: resetToken, newPassword })).status, 400);
   assert.equal((await s.login()).status, 401);
   assert.equal((await s.login('alice@example.test', newPassword)).status, 200);
+});
+
+test('Heavy password reset OTP is hashed, purpose-limited, bounded and revokes earlier sessions', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  assert.equal((await s.register()).status, 200);
+
+  const mailBeforeUnknownAccount = s.mail.length;
+  const unknownAccount = await s.request('/api/auth/email-otp/request-password-reset',
+    { email: 'nobody@example.test' }, undefined, { 'cf-connecting-ip': '192.0.2.2' });
+  assert.equal(unknownAccount.status, 200);
+  assert.equal(s.mail.length, mailBeforeUnknownAccount);
+  assert.equal(s.db.sql.prepare("SELECT count(*) AS n FROM verification WHERE identifier LIKE '%forget-password%' AND identifier LIKE '%nobody@example.test%'").get()!.n, 0);
+
+  await s.verify();
+  const oldToken = (await s.login()).headers.get('set-auth-token')!;
+  const sendCode = await s.request('/api/auth/email-otp/request-password-reset', { email: 'alice@example.test' });
+  assert.equal(sendCode.status, 200);
+  const message = s.mail.at(-1)!;
+  assert.equal(message.to, 'alice@example.test');
+  assert.match(message.subject, /パスワード再設定の認証コード/);
+  const code = message.text.match(/認証コードです。\n\n([0-9]{6})\n\n/)?.[1];
+  assert.ok(code);
+  const stored = s.db.sql.prepare("SELECT value FROM verification WHERE identifier LIKE '%forget-password%' AND identifier LIKE '%alice@example.test%'").get() as { value: string };
+  assert.ok(stored);
+  assert.equal(stored.value.includes(code), false, 'the OTP must not be stored in plaintext');
+
+  const wrongCode = String((Number(code) + 1) % 1_000_000).padStart(6, '0');
+  assert.equal((await s.request('/api/auth/email-otp/reset-password', {
+    email: 'alice@example.test', otp: wrongCode, password: 'NextPass-2026!!12',
+  })).status, 400);
+  assert.equal((await s.request('/api/auth/email-otp/reset-password', {
+    email: 'alice@example.test', otp: code, password: 'x'.repeat(21),
+  })).status, 400);
+  assert.equal((await s.request('/api/auth/email-otp/reset-password', {
+    email: 'alice@example.test', otp: code, password: 'short',
+  })).status, 400);
+
+  const newPassword = 'L1ght!';
+  assert.equal(newPassword.length >= 6 && newPassword.length <= 20, true);
+  assert.equal((await s.request('/api/auth/email-otp/reset-password', {
+    email: 'alice@example.test', otp: code, password: newPassword,
+  })).status, 200);
+  assert.equal((await s.request('/v1/identity', undefined, oldToken)).status, 401);
+  assert.equal(s.db.sql.prepare("SELECT count(*) AS n FROM verification WHERE identifier LIKE '%forget-password%' AND identifier LIKE '%alice@example.test%'").get()!.n, 0,
+    'the verified OTP must be consumed');
+  assert.equal((await s.login()).status, 401);
+  assert.equal((await s.login('alice@example.test', newPassword)).status, 200);
+
+  assert.equal((await s.request('/api/auth/email-otp/send-verification-otp', {
+    email: 'alice@example.test', type: 'sign-in',
+  })).status, 404, 'other email OTP flows stay unavailable');
+});
+
+test('MyPro does not expose the Heavy-only password reset OTP endpoints', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  s.env.APP_ID = 'mypro';
+  assert.equal((await s.request('/api/auth/email-otp/request-password-reset', { email: 'alice@example.test' })).status, 404);
+  assert.equal((await s.request('/api/auth/email-otp/reset-password', {
+    email: 'alice@example.test', otp: '123456', password: 'NextPass-2026!!12',
+  })).status, 404);
 });
 
 test('mail fixtures keep Heavy and MyPro sender, recipient and subject isolated', async t => {
