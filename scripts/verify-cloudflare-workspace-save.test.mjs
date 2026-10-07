@@ -143,19 +143,21 @@ test('R2 image signing and Gallery readback use the gateway and never fall back 
   const { resolveGeneratedImageUrl, withSignedImageUrls } = await vite.ssrLoadModule('/src/lib/storage.ts');
   const path = 'generated-images/wa-image-1';
   assert.equal(await resolveGeneratedImageUrl(path), 'https://heavy-api.example.test/read?token=short-lived');
+  // A URL signed earlier in this session is reused until shortly before it expires.
   const rows = await withSignedImageUrls([{ storage_path: path, image_url: null }]);
   assert.equal(rows[0].image_url, 'https://heavy-api.example.test/read?token=short-lived');
+  assert.equal(reads, 1);
   fail = true;
-  const failed = await withSignedImageUrls([{ storage_path: path, image_url: 'https://old.invalid/?token=stale' }]);
+  const failed = await withSignedImageUrls([{ storage_path: 'generated-images/wa-image-2', image_url: 'https://old.invalid/?token=stale' }]);
   assert.equal(failed[0].image_url, null);
-  assert.equal(reads, 3);
+  assert.equal(reads, 2);
   await assert.rejects(resolveGeneratedImageUrl('generated-images/../private'));
-  assert.equal(reads, 3);
+  assert.equal(reads, 2);
   fail = false;
   const batch = Array.from({ length: 12 }, (_, i) => ({ storage_path: 'generated-images/wa-batch-' + i, image_url: null }));
   const mixed = await withSignedImageUrls([...batch, batch[0], { storage_path: 'generated-images/wa-missing', image_url: 'https://old.invalid/stale' }]);
-  assert.equal(reads, 16); // deduplicated twelve valid paths plus one missing path
-  assert.equal(peak, 4);
+  assert.equal(reads, 15); // deduplicated twelve valid paths plus one missing path
+  assert.equal(peak, 8);
   assert(mixed.slice(0, 13).every(row => row.image_url === 'https://heavy-api.example.test/read?token=short-lived'));
   assert.equal(mixed[13].image_url, null);
 });

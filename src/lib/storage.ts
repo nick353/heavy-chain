@@ -37,7 +37,36 @@ export type {
 } from './storagePathSafety';
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
-const SIGNED_URL_BATCH_CONCURRENCY = 4;
+const SIGNED_URL_BATCH_CONCURRENCY = 8;
+// Reuse a signed read URL until shortly before it expires, so a reload or a
+// second page does not re-sign every thumbnail before showing it.
+const SIGNED_URL_REUSE_MARGIN_MS = 5 * 60 * 1000;
+const SIGNED_URL_CACHE_PREFIX = 'heavy:signed-media:v1:';
+const signedUrlMemory = new Map<string, Map<string, { url: string; reuseUntil: number }>>();
+
+const signedUrlCacheFor = (userId: string) => {
+  let cache = signedUrlMemory.get(userId);
+  if (cache) return cache;
+  cache = new Map();
+  try {
+    const stored = JSON.parse(globalThis.sessionStorage?.getItem(SIGNED_URL_CACHE_PREFIX + userId) || '{}');
+    for (const [path, entry] of Object.entries(stored as Record<string, { url?: unknown; reuseUntil?: unknown }>)) {
+      if (typeof entry?.url === 'string' && typeof entry.reuseUntil === 'number') cache.set(path, { url: entry.url, reuseUntil: entry.reuseUntil });
+    }
+  } catch { /* An unreadable cache only costs a fresh signature. */ }
+  signedUrlMemory.set(userId, cache);
+  return cache;
+};
+
+const persistSignedUrlCache = (userId: string, cache: Map<string, { url: string; reuseUntil: number }>) => {
+  const now = Date.now();
+  const live: Record<string, { url: string; reuseUntil: number }> = {};
+  for (const [path, entry] of cache) {
+    if (entry.reuseUntil > now) live[path] = entry;
+    else cache.delete(path);
+  }
+  try { globalThis.sessionStorage?.setItem(SIGNED_URL_CACHE_PREFIX + userId, JSON.stringify(live)); } catch { /* memory cache still applies */ }
+};
 
 const mediaRuntimeConfig = readMediaRuntimeConfig(import.meta.env);
 const mediaGateway = createMediaGatewayClient({
@@ -55,8 +84,19 @@ const mediaGateway = createMediaGatewayClient({
 /** Resolve private images only through the authenticated Cloudflare gateway. */
 const createSignedMediaUrl = async (path: string): Promise<string | null> => {
   if (mediaRuntimeConfig.configError || !mediaRuntimeConfig.providerOrder.includes('cloudflare_r2')) return null;
+  // Signed URLs carry the owner's identity, so the cache is per signed-in user.
+  let userId: string | null = null;
+  try { userId = (await auth.getSession()).data.session?.user?.id ?? null; } catch { userId = null; }
+  const cache = userId ? signedUrlCacheFor(userId) : null;
+  const cached = cache?.get(path);
+  if (cached && cached.reuseUntil > Date.now()) return cached.url;
   const result = await mediaGateway.createSignedReadUrl({ bucket: 'generated-images', objectPath: path, expiresInSeconds: SIGNED_URL_TTL_SECONDS });
-  return result.ok ? result.url : null;
+  if (!result.ok) return null;
+  if (cache && userId) {
+    cache.set(path, { url: result.url, reuseUntil: Date.now() + SIGNED_URL_TTL_SECONDS * 1000 - SIGNED_URL_REUSE_MARGIN_MS });
+    persistSignedUrlCache(userId, cache);
+  }
+  return result.url;
 };
 
 export type GeneratedImageUrlResolutionFailureCode =

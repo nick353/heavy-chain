@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ChevronRight, Copy, Download, Eye, FolderOpen, Grid2X2, Image as ImageIcon, MoreVertical, Plus, Trash2, Upload, X } from 'lucide-react';
+import { Box, ChevronDown, Copy, Download, Eye, FolderOpen, FolderPlus, Grid2X2, History, Image as ImageIcon, LayoutList, MoreVertical, Palette, PanelsTopLeft, Plus, Search, SwatchBook, Trash2, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -23,16 +23,33 @@ import { buildLightchainLibraryFeatureHref } from '../lib/lightchainLibraryHando
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { copyLibraryCanvasReference } from '../lib/libraryCanvasClipboard';
 
-const DEFAULT_LIBRARY_GROUPS = [
-  'マイライブラリー',
-  '履歴アップロード',
-  '生成履歴',
-  'ウェアデザインラボ生成結果',
-  '2026AW',
-  '新規格',
-  'ノイズバリュー用ホリゾンカラー',
-  'ライブラリー',
+// Fixed views of the library. Light also lists the signed-in user's own asset
+// groups below these; Heavy lists the brand's folders from /v1/folders instead
+// of copying another account's group names.
+const SYSTEM_LIBRARY_GROUPS = ['履歴アップロード', '生成履歴', 'ウェアデザインラボ生成結果'] as const;
+const WEAR_DESIGN_LAB_FEATURE_TYPE = 'lightchain-wear-design-lab';
+const LIBRARY_GROUP_NAME_LIMIT = 50;
+export const LIBRARY_ASSET_TYPES = [
+  { id: 'general', label: '汎用' },
+  { id: 'media', label: '画像 / 動画' },
+  { id: 'fabric', label: '生地' },
+  { id: 'color', label: '色' },
+  { id: 'canvas', label: 'キャンバスプロジェクト' },
 ] as const;
+export type LibraryAssetType = typeof LIBRARY_ASSET_TYPES[number]['id'];
+type LibraryFolder = { id: string; name: string; type: LibraryAssetType };
+const folderTypesKey = (brandId: string) => `heavy:library-folder-types:v1:${brandId}`;
+const readFolderTypes = (brandId: string): Record<string, LibraryAssetType> => {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(folderTypesKey(brandId)) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch { return {}; }
+};
+
+/** Which library view a saved artifact belongs to. */
+export const artifactLibraryView = (metadata: Record<string, unknown>) => (
+  metadata.librarySource === 'upload' ? '履歴アップロード' : '生成履歴'
+);
 
 const darkPanel = 'rounded-2xl border border-white/10 bg-[#151a1c]';
 const mutedButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-300 transition hover:border-cyan-200/50 hover:bg-white/[0.08] hover:text-white';
@@ -65,9 +82,6 @@ type LibraryFeatureDestination =
 const cardTitle = (card: LibraryCard) => card.kind === 'local' ? card.artifact.title : card.asset.title;
 const cardPrompt = (card: LibraryCard) => card.kind === 'local' ? card.artifact.prompt : card.asset.prompt;
 const cardIdentity = (card: LibraryCard) => card.kind === 'local' ? card.artifact.id : card.asset.remoteImageId;
-const cardIsFavorite = (card: LibraryCard) => card.kind === 'local'
-  ? card.artifact.metadata.favorite === true || card.artifact.metadata.isFavorite === true
-  : card.asset.isFavorite;
 
 const isVideoGeneratedImage = (image: GeneratedImageListRow) => (
   /video|動画/i.test(image.feature_type || '')
@@ -95,10 +109,6 @@ const remoteAssetFromImage = (image: GeneratedImageListRow): RemoteLibraryAsset 
   };
 };
 
-const groupStorageKey = (brandId: string, userId?: string) => (
-  `heavy-chain-lightchain-library-groups:v1:${brandId}:${userId || 'anonymous'}`
-);
-
 const readFileAsDataUrl = (file: File): Promise<string> => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => typeof reader.result === 'string'
@@ -107,6 +117,15 @@ const readFileAsDataUrl = (file: File): Promise<string> => new Promise((resolve,
   reader.onerror = () => reject(reader.error ?? new Error('library_upload_read_failed'));
   reader.readAsDataURL(file);
 });
+
+function LibraryTypeIcon({ type }: { type: LibraryAssetType }) {
+  const className = type === 'general' ? 'h-4 w-4 text-neutral-200' : 'h-4 w-4 text-emerald-400';
+  if (type === 'general') return <FolderOpen className={className} aria-hidden="true" />;
+  if (type === 'fabric') return <SwatchBook className={className} aria-hidden="true" />;
+  if (type === 'color') return <Palette className={className} aria-hidden="true" />;
+  if (type === 'canvas') return <PanelsTopLeft className={className} aria-hidden="true" />;
+  return <ImageIcon className={className} aria-hidden="true" />;
+}
 
 export function LightchainLibraryPage() {
   const { currentBrand, user } = useAuthStore();
@@ -176,10 +195,14 @@ export function LightchainLibraryPage() {
   const [remoteAssetsScope, setRemoteAssetsScope] = useState<string | null>(null);
   const [remoteLoadError, setRemoteLoadError] = useState(false);
   const [remoteReload, setRemoteReload] = useState(0);
-  const [customGroups, setCustomGroups] = useState<string[]>([]);
-  const [groupsHydrated, setGroupsHydrated] = useState(false);
+  const [folders, setFolders] = useState<LibraryFolder[]>([]);
+  const customGroups = useMemo(() => folders.map((folder) => folder.id), [folders]);
   const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupType, setNewGroupType] = useState<LibraryAssetType | ''>('');
+  const [newGroupTypeOpen, setNewGroupTypeOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const pendingFolderId = useRef<string | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -191,16 +214,12 @@ export function LightchainLibraryPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedFeatureId, setSelectedFeatureId] = useState('ai-fitting');
-  const [assetFilter, setAssetFilter] = useState<'all' | 'favorite'>('all');
   const [librarySearchOpen, setLibrarySearchOpen] = useState(false);
   const [librarySearch, setLibrarySearch] = useState('');
   const [pendingDelete, setPendingDelete] = useState<{ card?: LibraryCard; localIds?: string[]; label: string } | null>(null);
 
-  const groupsKey = currentBrand?.id ? groupStorageKey(currentBrand.id, user?.id) : null;
-  const allGroups = useMemo(
-    () => [...DEFAULT_LIBRARY_GROUPS, ...customGroups.filter((group) => !DEFAULT_LIBRARY_GROUPS.includes(group as typeof DEFAULT_LIBRARY_GROUPS[number]))],
-    [customGroups],
-  );
+  const activeFolder = folders.find((folder) => folder.id === activeGroup) ?? null;
+  const activeGroupLabel = activeFolder?.name ?? activeGroup;
 
   useEffect(() => {
     if (!currentBrand?.id || !user?.id) {
@@ -265,26 +284,17 @@ export function LightchainLibraryPage() {
   }, [libraryScope]);
 
   useEffect(() => {
-    setGroupsHydrated(false);
-    if (!groupsKey) {
-      setCustomGroups([]);
-      setGroupsHydrated(true);
-      return;
-    }
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(groupsKey) || '[]');
-      setCustomGroups(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string' && value.trim().length > 0) : []);
-    } catch {
-      setCustomGroups([]);
-    } finally {
-      setGroupsHydrated(true);
-    }
-  }, [groupsKey]);
-
-  useEffect(() => {
-    if (!groupsKey || !groupsHydrated) return;
-    window.localStorage.setItem(groupsKey, JSON.stringify(customGroups));
-  }, [customGroups, groupsHydrated, groupsKey]);
+    setFolders([]);
+    const brandId = currentBrand?.id;
+    if (!brandId || !cloudflareDataPlane) return;
+    let cancelled = false;
+    void cloudflareDataPlane.listFolders(brandId).then((rows) => {
+      if (cancelled) return;
+      const types = readFolderTypes(brandId);
+      setFolders(rows.map((row) => ({ id: row.id, name: row.name, type: types[row.id] ?? 'media' })));
+    }).catch(() => { if (!cancelled) toast.error('アセットグループを読み込めませんでした'); });
+    return () => { cancelled = true; };
+  }, [currentBrand?.id]);
 
   const importedRemoteImageIds = useMemo(
     () => new Set(
@@ -318,11 +328,16 @@ export function LightchainLibraryPage() {
   const visibleArtifacts = useMemo(() => {
     const normalizedSearch = librarySearch.trim().toLowerCase();
     return libraryCards.filter((card) => {
-      const matchesFavorite = assetFilter === 'all' || cardIsFavorite(card);
+      const metadata = card.kind === 'local' ? card.artifact.metadata : {};
+      const inView = activeGroup === 'ウェアデザインラボ生成結果'
+        ? (card.kind === 'remote' ? card.asset.featureType : card.artifact.featureType) === WEAR_DESIGN_LAB_FEATURE_TYPE
+        : customGroups.includes(activeGroup)
+          ? metadata.libraryGroup === activeGroup
+          : (card.kind === 'remote' ? '生成履歴' : artifactLibraryView(metadata)) === activeGroup;
       const matchesSearch = !normalizedSearch || `${cardTitle(card)} ${cardPrompt(card) || ''}`.toLowerCase().includes(normalizedSearch);
-      return matchesFavorite && matchesSearch;
+      return inView && matchesSearch;
     });
-  }, [assetFilter, libraryCards, librarySearch]);
+  }, [activeGroup, customGroups, libraryCards, librarySearch]);
 
   const handleImportRemote = async (
     asset: RemoteLibraryAsset,
@@ -431,7 +446,7 @@ export function LightchainLibraryPage() {
         prompt: null,
         metadata: {
           librarySource: 'upload',
-          libraryGroup: customGroups.includes(activeGroup) ? activeGroup : 'マイライブラリー',
+          libraryGroup: customGroups.includes(activeGroup) ? activeGroup : '履歴アップロード',
           originalFileName: file.name,
           mimeType: file.type,
         },
@@ -446,7 +461,7 @@ export function LightchainLibraryPage() {
         return;
       }
       setArtifacts((current) => [result.artifact, ...current.filter((artifact) => artifact.id !== result.artifact.id)]);
-      setActiveGroup(customGroups.includes(activeGroup) ? activeGroup : 'マイライブラリー');
+      setActiveGroup(customGroups.includes(activeGroup) ? activeGroup : '履歴アップロード');
       setSelectedAssetId(result.artifact.id);
       toast.success('素材をライブラリーに保存しました');
     } catch (error) {
@@ -457,20 +472,47 @@ export function LightchainLibraryPage() {
     }
   };
 
-  const handleCreateGroup = () => {
-    const group = newGroupName.trim();
-    if (!group) return;
-    if (allGroups.includes(group)) {
-      setActiveGroup(group);
+  const handleCreateGroup = async () => {
+    const name = newGroupName.trim();
+    const brandId = currentBrand?.id;
+    if (!name || !newGroupType || !brandId || !cloudflareDataPlane || creatingGroup) return;
+    // One id per dialog submission: a retry after an unknown result re-sends the
+    // same id, and the server answers 409 instead of creating a second group.
+    const id = pendingFolderId.current ?? crypto.randomUUID();
+    pendingFolderId.current = id;
+    setCreatingGroup(true);
+    try {
+      let created: { id: string; name: string } | undefined;
+      try {
+        created = await cloudflareDataPlane.createFolder({ id, brand_id: brandId, name });
+      } catch {
+        created = (await cloudflareDataPlane.listFolders(brandId)).find((folder) => folder.id === id);
+        if (!created) throw new Error('library_group_create_failed');
+      }
+      const types = { ...readFolderTypes(brandId), [created.id]: newGroupType };
+      try { window.localStorage.setItem(folderTypesKey(brandId), JSON.stringify(types)); } catch { /* icon only */ }
+      setFolders((current) => [...current.filter((folder) => folder.id !== created.id), { id: created.id, name: created.name, type: newGroupType }]);
+      pendingFolderId.current = null;
+      setActiveGroup(created.id);
+      setSelectedAssetId(null);
+      setSelectedIds(new Set());
       setNewGroupName('');
+      setNewGroupType('');
       setNewGroupOpen(false);
-      return;
+      toast.success(`「${created.name}」を作成しました`);
+    } catch {
+      toast.error('アセットグループを作成できませんでした');
+    } finally {
+      setCreatingGroup(false);
     }
-    setCustomGroups((current) => [...current, group]);
-    setActiveGroup(group);
-    setNewGroupName('');
+  };
+
+  const closeNewGroup = () => {
+    pendingFolderId.current = null;
     setNewGroupOpen(false);
-    toast.success(`「${group}」を作成しました`);
+    setNewGroupTypeOpen(false);
+    setNewGroupName('');
+    setNewGroupType('');
   };
 
   const getCardId = (card: LibraryCard) => card.kind === 'local' ? card.artifact.id : card.asset.id;
@@ -659,23 +701,24 @@ export function LightchainLibraryPage() {
   return (
     <div className="asset-center-parity min-h-[calc(100vh-70px)] bg-[#222627] text-white">
       <div className="flex min-h-[calc(100vh-70px)] w-full gap-0">
-        <aside className="asset-center-sidebar hidden w-[312px] shrink-0 border-r border-white/10 bg-[#262b2c] p-4 lg:block">
-          <div className="asset-center-sidebar-header flex items-center justify-between px-0 py-2 text-lg font-semibold text-neutral-100">
+        <aside className="asset-center-sidebar hidden w-[312px] shrink-0 border-r border-white/10 bg-[#262b2c] lg:block">
+          <div className="asset-center-sidebar-header flex items-center justify-between px-4 pb-2 pt-4 text-lg font-semibold text-neutral-100">
             <span>ライブラリー</span>
-            <button type="button" aria-label="ライブラリーを検索" aria-expanded={librarySearchOpen} className="rounded-full p-2 text-neutral-200 hover:bg-white/10" onClick={() => setLibrarySearchOpen((current) => !current)}>⌕</button>
+            <button type="button" aria-label="ライブラリーを検索" aria-expanded={librarySearchOpen} className="rounded p-0.5 text-neutral-200 hover:bg-white/10" onClick={() => setLibrarySearchOpen((current) => !current)}><Search className="h-5 w-5" /></button>
           </div>
-          <div className="asset-center-library-root flex items-center justify-between">
-            <button type="button" className="flex items-center gap-1 text-sm text-neutral-100" onClick={() => { setActiveGroup('マイライブラリー'); setSelectedAssetId(null); setSelectedIds(new Set()); }}>
-              <FolderOpen className="h-5 w-5 rounded-full bg-emerald-400 p-1 text-emerald-950" />
+          <div className="asset-center-library-root flex items-center justify-between border-b border-white/10 px-4 pb-4 pt-6">
+            <button type="button" role="combobox" aria-expanded={false} className="flex items-center gap-2 text-sm text-neutral-100">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-b from-emerald-300 to-emerald-500"><Box className="h-3.5 w-3.5 text-emerald-950" /></span>
               <span>マイライブラリー</span>
-              <ChevronRight className="h-3.5 w-3.5 rotate-90 text-neutral-400" />
+              <ChevronDown className="h-3.5 w-3.5 text-neutral-400" />
             </button>
-            <button type="button" aria-label="アップロード" className="rounded-full p-2 text-neutral-200 hover:bg-white/10" onClick={() => uploadInputRef.current?.click()} disabled={uploading}><Plus className="h-4 w-4" /></button>
+            <button type="button" aria-label="アセットグループを新規作成" className="rounded p-0.5 text-neutral-200 hover:bg-white/10" onClick={() => setNewGroupOpen(true)}><FolderPlus className="h-5 w-5" /></button>
           </div>
-          <div className="asset-center-library-groups">
-          {allGroups.slice(1).map((group) => (
-            <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`asset-center-library-group flex w-full items-center rounded-lg px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'}`}>
-              <FolderOpen className="mr-2 h-4 w-4" />{group}
+          <div className="asset-center-library-groups flex flex-col gap-4 px-4 pt-4">
+          {[...SYSTEM_LIBRARY_GROUPS.map((group) => ({ id: group, name: group, type: null as LibraryAssetType | null })), ...folders].map((group) => (
+            <button key={group.id} type="button" aria-current={activeGroup === group.id ? 'page' : undefined} onClick={() => { setActiveGroup(group.id); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`asset-center-library-group flex h-8 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition ${activeGroup === group.id ? 'border-l-2 border-[#5ec4bd] bg-white/[0.12] text-white' : 'text-neutral-200 hover:bg-white/[0.06] hover:text-white'}`}>
+              {group.type ? <LibraryTypeIcon type={group.type} /> : group.id === 'ウェアデザインラボ生成結果' ? <LibraryTypeIcon type="media" /> : <History className="h-4 w-4" />}
+              <span className="truncate">{group.name}</span>
             </button>
           ))}
           </div>
@@ -684,13 +727,13 @@ export function LightchainLibraryPage() {
         <main className="asset-center-main relative min-w-0 flex-1 px-4 py-4 sm:px-4">
           <nav aria-label="パンくずナビゲーション" className="asset-center-breadcrumb mb-5 flex items-center gap-2 text-xs text-neutral-500">
             <span>マイライブラリー</span>
-            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="text-neutral-300">{activeGroup}</span>
+            <span aria-hidden="true">/</span>
+            <span className="text-neutral-200">{activeGroupLabel}</span>
           </nav>
           <div className="flex flex-wrap items-center justify-between gap-4 lg:hidden">
             <div>
               <p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">HEAVY CHAIN / LIBRARY</p>
-              <h1 className="mt-3 text-3xl font-semibold">{activeGroup}</h1>
+              <h1 className="mt-3 text-3xl font-semibold">{activeGroupLabel}</h1>
               <p className="mt-2 text-sm text-neutral-500">生成済みの成果物とアップロード素材を、次のCanvas作業へ同じ系譜で引き継げます。</p>
             </div>
             <div className="flex gap-2">
@@ -705,15 +748,13 @@ export function LightchainLibraryPage() {
           </div>
 
           <div className="asset-center-toolbar flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <button type="button" className={`rounded-lg px-3 py-2 text-sm ${assetFilter === 'all' ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:text-white'}`} aria-pressed={assetFilter === 'all'} onClick={() => setAssetFilter('all')}>画像／動画</button>
-              <button type="button" className={`rounded-lg px-3 py-2 text-sm ${assetFilter === 'favorite' ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:text-white'}`} aria-pressed={assetFilter === 'favorite'} onClick={() => setAssetFilter('favorite')}>お気に入り</button>
-              {librarySearchOpen && <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-400">
+            {librarySearchOpen && <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-400">
                 <span className="sr-only">ライブラリー検索</span>
                 <input value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} className="w-44 bg-transparent text-white outline-none placeholder:text-neutral-500" placeholder="ライブラリー検索" aria-label="ライブラリー検索" />
-              </label>}
-            </div>
-            <span className="asset-center-selection-count text-sm text-neutral-400">選択済み ： {selectedIds.size} / {visibleArtifacts.length}</span>
+              </label>
+            </div>}
+            {selectMode && <span className="asset-center-selection-count text-sm text-neutral-400">選択済み ： {selectedIds.size} / {visibleArtifacts.length}</span>}
             {selectMode ? (
               <div className="flex flex-wrap gap-2">
                 <button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0 || uploading} onClick={() => void handleBulkCopy()}>キャンバスをコピー</button>
@@ -722,7 +763,10 @@ export function LightchainLibraryPage() {
                 <button type="button" className={mutedButton} onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}>一括操作を閉じる</button>
               </div>
           ) : (
-              <button type="button" className="asset-center-bulk-button" onClick={() => setSelectMode(true)}>一括操作</button>
+              <div className="flex items-center gap-2">
+                {activeFolder && <button type="button" className="asset-center-bulk-button" onClick={() => uploadInputRef.current?.click()} disabled={uploading}><Upload className="h-4 w-4" />{uploading ? 'アップロード中…' : 'アップロード'}</button>}
+                <button type="button" className="asset-center-bulk-button" disabled={visibleArtifacts.length === 0} onClick={() => setSelectMode(true)}><LayoutList className="h-4 w-4" />一括操作</button>
+              </div>
             )}
           </div>
           {remoteLoadError && libraryScope && (
@@ -733,7 +777,7 @@ export function LightchainLibraryPage() {
           )}
           {selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(visibleArtifacts.map(getCardId)))}>全選択</button>}
 
-          {visibleArtifacts.length === 0 ? (
+          {visibleArtifacts.length === 0 ? (!activeFolder ? <div className="mt-5 min-h-80" data-testid="library-empty-view" /> :
             <div className="mt-10 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center">
               <Grid2X2 className="h-8 w-8 text-neutral-600" />
               <h2 className="mt-4 font-semibold">まだ素材がありません</h2>
@@ -861,11 +905,28 @@ export function LightchainLibraryPage() {
       </div>
 
       {newGroupOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5" role="dialog" aria-modal="true" aria-label="新規グループ作成">
-          <div className={`${darkPanel} w-full max-w-md p-6`}>
-            <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">新規グループ作成</h2><button type="button" onClick={() => setNewGroupOpen(false)} aria-label="閉じる"><X className="h-5 w-5 text-neutral-400" /></button></div>
-            <label className="mt-5 block text-sm text-neutral-300">グループ名<input autoFocus value={newGroupName} onChange={(event) => setNewGroupName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') handleCreateGroup(); }} className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-white outline-none focus:border-cyan-200/60" placeholder="例：2026AWサンプル" /></label>
-            <div className="mt-5 flex justify-end gap-2"><button type="button" className={mutedButton} onClick={() => setNewGroupOpen(false)}>キャンセル</button><button type="button" className="rounded-xl bg-cyan-200 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={!newGroupName.trim()} onClick={handleCreateGroup}>作成</button></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="アセットグループを新規作成" data-testid="library-group-create-dialog">
+          <div className="w-[358px] max-w-full rounded-lg border border-white/10 bg-[#262b2c] p-6 shadow-2xl">
+            <h2 className="text-base font-semibold text-white">アセットグループを新規作成</h2>
+            <div className="relative mt-8">
+              <button type="button" role="combobox" aria-expanded={newGroupTypeOpen} aria-label="アセットタイプ" className={`flex h-12 w-full items-center justify-between rounded-lg border px-3 text-sm ${newGroupTypeOpen ? 'border-[#5ec4bd]' : 'border-white/20'} ${newGroupType ? 'text-white' : 'text-neutral-400'}`} onClick={() => setNewGroupTypeOpen((open) => !open)}>
+                <span className="flex items-center gap-2">{newGroupType && <LibraryTypeIcon type={newGroupType} />}{LIBRARY_ASSET_TYPES.find((type) => type.id === newGroupType)?.label ?? 'アセットタイプ'}</span>
+                <ChevronDown className={`h-4 w-4 transition ${newGroupTypeOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {newGroupTypeOpen && <div role="listbox" className="absolute left-0 top-full z-10 mt-1 w-full rounded-lg border border-white/10 bg-[#262b2c] p-1 shadow-2xl">
+                {LIBRARY_ASSET_TYPES.map((type) => (
+                  <button key={type.id} type="button" role="option" aria-selected={newGroupType === type.id} className={`flex h-8 w-full items-center gap-2 rounded px-3 text-left text-sm text-neutral-100 hover:bg-white/10 ${newGroupType === type.id ? 'bg-white/10' : ''}`} onClick={() => { setNewGroupType(type.id); setNewGroupTypeOpen(false); }}>
+                    <LibraryTypeIcon type={type.id} />{type.label}
+                  </button>
+                ))}
+              </div>}
+            </div>
+            <input value={newGroupName} maxLength={LIBRARY_GROUP_NAME_LIMIT} onChange={(event) => setNewGroupName(event.target.value.slice(0, LIBRARY_GROUP_NAME_LIMIT))} onKeyDown={(event) => { if (event.key === 'Enter') void handleCreateGroup(); }} className="mt-6 h-12 w-full rounded-lg border border-white/20 bg-transparent px-3 text-sm text-white outline-none placeholder:text-neutral-400 focus:border-[#5ec4bd]" placeholder="グループ名" aria-label="グループ名" />
+            <p className="mt-1 text-right text-xs text-neutral-400">{newGroupName.length}/{LIBRARY_GROUP_NAME_LIMIT}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="h-8 rounded-md border border-white/20 px-4 text-sm text-white hover:bg-white/10" onClick={closeNewGroup}>キャンセル</button>
+              <button type="button" className="h-8 rounded-md bg-[#5ec4bd] px-4 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={!newGroupName.trim() || !newGroupType || creatingGroup} onClick={() => void handleCreateGroup()}>確認</button>
+            </div>
           </div>
         </div>
       )}

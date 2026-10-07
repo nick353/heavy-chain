@@ -58,3 +58,5 @@ public/lightchain-assets/agent/archive-header-fashion-design.png
 public/lightchain-assets/agent/archive-header-pattern-design.png
 public/lightchain-assets/agent/reference-inspiration.webp
 public/lightchain-assets/agent/reference-graphic.webp
+src/pages/LightchainLibraryPage.tsx
+src/lib/storage.ts

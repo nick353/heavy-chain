@@ -59,7 +59,10 @@ test('Lightchain library exposes working upload and group controls', () => {
   assert.match(libraryPage, /featureType: 'lightchain-library-upload'/);
   assert.match(libraryPage, /librarySource: 'upload'/);
   assert.match(libraryPage, /新規グループ作成/);
-  assert.match(libraryPage, /localStorage\.setItem\(groupsKey/);
+  // Asset groups are brand folders on the server (one id per submission), not browser-only names.
+  assert.match(libraryPage, /cloudflareDataPlane\.createFolder\(\{ id, brand_id: brandId, name \}\)/);
+  assert.match(libraryPage, /cloudflareDataPlane\.listFolders\(brandId\)/);
+  assert.doesNotMatch(libraryPage, /2026AW|ノイズバリュー用ホリゾンカラー|新規格/);
   assert.doesNotMatch(libraryPage, /title="素材の登録は各ワークベンチから行います"/);
   assert.doesNotMatch(libraryPage, /disabled title="グループ管理はβ版で準備中"/);
   assert.match(fittingPage, /libraryArtifactId/);

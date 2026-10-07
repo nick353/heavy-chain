@@ -2342,7 +2342,7 @@ export function LightchainOrientedDesignDetailPage() {
             <p className="mt-1 max-w-[286px] text-sm leading-[17.14px] text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</p>
           </>
         )}
-        {workspace.slots.primary && <span className="sr-only" role="status">{workspace.slots.primary.name}</span>}
+        {workspace.slots.primary && <span className="sr-only" role="status">{`主素材画像: ${workspace.slots.primary.name}`}</span>}
         <input disabled={workspace.status==='loading'||workspace.status==='running'||Boolean(workspace.pendingId)} className="sr-only" type="file" aria-label="主素材画像" accept=".png,.jpg,.jpeg,.avif,.webp" onChange={event=>{const file=event.target.files?.[0];if(file)void workspace.upload('primary',file);event.target.value='';}} />
       </label>
       <CanonicalImageWorkspaceControls workspace={workspace} />

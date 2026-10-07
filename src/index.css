@@ -94,15 +94,15 @@
 .asset-center-parity { min-height: calc(100vh - 50px); height: calc(100vh - 50px); overflow: hidden; background: #171b1c; font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
 @media (min-width: 1024px) {
   .asset-center-parity > div { height: 100%; min-height: 0; }
-  .asset-center-parity .asset-center-sidebar { height: 100%; min-height: 0; padding: 16px; background: #262a2b; overflow: hidden; }
-  .asset-center-parity .asset-center-sidebar-header { height: 44px; padding: 0; }
-  .asset-center-parity .asset-center-sidebar-header > button { width: 32px; height: 32px; padding: 6px; }
-  .asset-center-parity .asset-center-library-root { height: 24px; margin-top: 20px; }
-  .asset-center-parity .asset-center-library-root > button:first-child { height: 24px; }
-  .asset-center-parity .asset-center-library-root > button:last-child { width: 32px; height: 32px; padding: 6px; }
-  .asset-center-parity .asset-center-library-groups { margin-top: 33px; display: flex; flex-direction: column; gap: 16px; }
+  .asset-center-parity .asset-center-sidebar { height: 100%; min-height: 0; padding: 0; background: #262a2b; overflow: hidden; }
+  .asset-center-parity .asset-center-sidebar-header > button { width: 20px; height: 20px; padding: 0; }
+  .asset-center-parity .asset-center-sidebar-header { height: 20px; margin-top: 24px; padding: 0 16px; font-size: 18px; line-height: 20px; }
+  .asset-center-parity .asset-center-library-root { height: auto; margin-top: 38px; padding: 0 16px 16px; }
+  .asset-center-parity .asset-center-library-root > button:first-child { height: 24px; font-size: 16px; }
+  .asset-center-parity .asset-center-library-root > button:last-child { width: 20px; height: 20px; padding: 0; }
+  .asset-center-parity .asset-center-library-groups { margin-top: 0; padding: 17px 16px 0; display: flex; flex-direction: column; gap: 16px; }
   .asset-center-parity .asset-center-library-group { height: 32px; padding: 0 10px; border-radius: 8px; font-size: 16px; line-height: 24px; }
-  .asset-center-parity .asset-center-library-group.bg-white { background: #4b5152; color: #fff; }
+  .asset-center-parity .asset-center-library-group[aria-current="page"] { background: #4b5152; color: #fff; }
   .asset-center-parity .asset-center-main { padding: 0; }
   .asset-center-parity .asset-center-breadcrumb { height: 40px; margin: 0; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
   .asset-center-parity .asset-center-toolbar { height: 57px; margin: 0; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.1); background: #262a2b; justify-content: flex-start; }
@@ -110,7 +110,8 @@
      this toolbar. Keep favorite/search state in the data layer, but do not
      add Heavy-only filter controls to the canonical surface. */
   .asset-center-parity .asset-center-selection-count { display: none; }
-  .asset-center-parity .asset-center-bulk-button { display: inline-flex; height: 32px; width: 104px; align-items: center; justify-content: center; border-radius: 8px; background: #626b6f; color: #fff; font-size: 12px; font-weight: 500; line-height: 17.1429px; }
+  .asset-center-parity .asset-center-bulk-button:disabled { opacity: .5; }
+  .asset-center-parity .asset-center-bulk-button { display: inline-flex; height: 32px; width: 104px; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; background: #626b6f; color: #fff; font-size: 12px; font-weight: 500; line-height: 17.1429px; }
   .asset-center-parity .asset-center-grid { margin-top: 0; margin-left: 16px; width: calc(100% - 30px); padding: 16px 0; align-content: start; }
   .asset-center-parity .asset-center-card { display: flex; flex-direction: column; height: auto; min-height: 0; gap: 8px; padding-bottom: 16px; border-color: rgba(255,255,255,.1); border-radius: 8px; }
   .asset-center-parity .asset-center-card-media { position: relative; height: auto; aspect-ratio: 0.79024; flex: none; }
