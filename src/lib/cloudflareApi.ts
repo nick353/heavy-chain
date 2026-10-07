@@ -447,6 +447,24 @@ class CloudflareDataPlaneClient {
     return `media/v1/${allocation.id}`;
   }
 
+  /** Store a workspace input image privately so resume works without this browser's local copy. */
+  async uploadWorkspaceSourceImage(file: Blob, purpose: string): Promise<string> {
+    const contentType = file.type.trim().toLowerCase();
+    if (!contentType.startsWith('image/')) throw new Error('cloudflare_source_content_type_invalid');
+    if (file.size <= 0) throw new Error('cloudflare_source_empty');
+    const allocation = await this.request<CloudflareMediaAllocation>('/v1/media', {
+      method: 'POST',
+      body: JSON.stringify({ clientRequestId: `workspace-source:${purpose}:${crypto.randomUUID()}`, contentType, declaredSizeBytes: file.size }),
+      headers: { 'content-type': 'application/json' },
+    });
+    await this.request<{ id: string; state: string }>(`/v1/media/${encodeURIComponent(allocation.id)}/content`, {
+      method: 'PUT',
+      body: file,
+      headers: { 'content-type': contentType },
+    });
+    return `media/v1/${allocation.id}`;
+  }
+
   /** Fetch a private R2 media object with the current bearer and expose it to an image element. */
   async readMediaObjectUrl(objectPath: string): Promise<string> {
     if (!MEDIA_OBJECT_PATH.test(objectPath)) throw new Error('cloudflare_media_path_invalid');

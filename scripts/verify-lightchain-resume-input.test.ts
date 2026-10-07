@@ -177,3 +177,14 @@ test('resume input restores AI fitting reference picks from durable refs only', 
     { key: 'background', name: 'bg.jpg', imageUrl: localRef },
   ]);
 });
+
+test('a private media copy keeps a source slot resumable and survives serialization', () => {
+  const mediaPath = 'media/v1/0b1f7a2e-3c4d-4e5f-8a9b-0c1d2e3f4a5b';
+  const serialized = serializeLightchainResumeSlots({ primary: { name: 'tee.png', kind: 'primary', imageUrl: 'blob:https://example.test/x', sourceMediaPath: mediaPath }, secondary: null });
+  assert.equal(serialized[0].sourceMediaPath, mediaPath);
+  assert.equal(serialized[0].persistenceStatus, 'persistent');
+  const input = readLightchainResumeInput([artifact({ metadata: { materialSlots: serialized, brief: 'b' } })], 'job-1');
+  assert.equal(input?.slots[0].sourceMediaPath, mediaPath);
+  const rejected = serializeLightchainResumeSlots({ primary: { name: 'x.png', kind: 'primary', imageUrl: 'blob:https://example.test/x', sourceMediaPath: 'https://evil.test/x' }, secondary: null });
+  assert.equal(rejected[0].sourceMediaPath, undefined);
+});

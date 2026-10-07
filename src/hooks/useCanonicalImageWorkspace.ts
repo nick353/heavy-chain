@@ -20,14 +20,14 @@ import { normalizeGenerationSourceReferences } from '../lib/generationSourceRefe
 import { isModelLibraryFeature, readModelLibrarySettings, readLegacyModelLibrarySettings, modelLibrarySettingsPrompt, modelLibraryBodyPreview, MODEL_LIBRARY_BODY_CATALOG_SHA256 } from '../lib/modelLibrarySettings';
 
 type SlotKey = 'primary' | 'secondary';
-type Source = { name: string; kind: string; imageUrl: string; sourceImageId?: string | null; sourceStoragePath?: string | null;
+type Source = { name: string; kind: string; imageUrl: string; sourceImageId?: string | null; sourceStoragePath?: string | null; sourceMediaPath?: string | null;
   sourceMetadata?: CanvasSourceMetadata; persistenceStatus?: 'persistent' | 'session-only' | 'unknown'; localAssetRef?: string };
 type Status = 'empty' | 'loading' | 'ready' | 'unavailable' | 'running' | 'unknown' | 'saved' | 'error';
 type LibrarySettingsKind = 'absent' | 'null' | 'invalid' | 'valid';
 type LibraryInputReadback = { source: 'local' | 'remote' | 'request' | 'none'; remoteLookup: 'not-needed' | 'matched' | 'no-match' | 'unavailable'; modernSettings:LibrarySettingsKind; legacySettings:LibrarySettingsKind; requestLookup:'not-needed'|'matched'|'identity-mismatch'|'unavailable'; requestModernSettings:LibrarySettingsKind|'not-read'; requestLegacySettings:LibrarySettingsKind|'not-read' };
 export type CanonicalWorkspaceFeature = 'lab' | 'print-design-project' | 'wear-design-lab' | 'wear-design-detail' | 'printing-image' | 'line-to-real' | 'line-generation' | 'svg-convert' | 'image-repair' | 'pattern-arrange' | 'pattern-print-design' | 'change-color' | 'pattern-vector' | 'pattern-vector-pro' | 'model-face' | 'model-change' | 'body-shape' | 'clothing-size' | 'pose-change' | 'background-change' | 'angle-change' | 'model-library' | 'model-custom';
 export type CanonicalModelCandidate = {imageId:string;storagePath:string;jobId:string;bodyType:string;ageGroup:string;provider:string};
-type WorkspaceConfig = {modelLibraryCreation?:boolean;initialInputState?:Record<string,Json>;requiredSources?:number;title?:string;promptContext?:string;identityConflict?:boolean};
+type WorkspaceConfig = {prepareSourceImage?:(url:string)=>Promise<string>;modelLibraryCreation?:boolean;initialInputState?:Record<string,Json>;requiredSources?:number;title?:string;promptContext?:string;identityConflict?:boolean};
 const record = (value:unknown): value is Record<string,Json> => Boolean(value) && typeof value==='object' && !Array.isArray(value);
 const readCandidates = (metadata: Record<string,Json | undefined>,currentJobId:string): CanonicalModelCandidate[] => {
  const raw=metadata.modelCandidates;if(!Array.isArray(raw))return [];
@@ -242,8 +242,16 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
             if(!current())return;assertAuthBrandFence(fence,authSnapshot(),'canonical_request_input_unavailable');requestLookup='unavailable';
           }
         }
-        const resolve = async (url: string, path?: string | null) => {
+        const resolve = async (url: string, path?: string | null, mediaPath?: string | null) => {
           assertAuthBrandFence(fence, authSnapshot(), 'canonical_resume_resolve');
+          if (mediaPath && cloudflareDataPlane) {
+            // The browser-local asset may be gone (other browser, cleared storage); the private media copy is durable.
+            const local = !path && isLocalCanvasAssetReference(url) ? await resolveLocalCanvasAsset(url).catch(() => null) : null;
+            if (local) { acquired.push(local); return { url: local.source, resolution: local }; }
+            if (!path) { const objectUrl = await cloudflareDataPlane.readMediaObjectUrl(mediaPath);
+              const value: LocalCanvasAssetResolution = { source: objectUrl, release: () => URL.revokeObjectURL(objectUrl) };
+              acquired.push(value); return { url: objectUrl, resolution: value }; }
+          }
           if (path) { const [image] = await withSignedImageUrls([{storage_path: path, image_url: ''}]);
             if (!image?.image_url) throw new Error('image_source_unavailable'); return { url: image.image_url, resolution: null }; }
           if (isLocalCanvasAssetReference(url)) { const value = await resolveLocalCanvasAsset(url);
@@ -271,7 +279,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
         let missingInputs = missingSettings || !inputs || Boolean(inputs.unavailableSources) || exactArtifact?.metadata.originalInputsAvailable===false
           || ((configRef.current.modelLibraryCreation===true&&isModelLibraryFeature(toolId)) ? !librarySettings : Boolean(configRef.current.initialInputState)&&!record(exactArtifact?.metadata.inputState));
         for (const slot of inputs?.slots ?? []) {
-          try { const resolved = await resolve(slot.imageUrl, slot.sourceStoragePath);
+          try { const resolved = await resolve(slot.imageUrl, slot.sourceStoragePath, slot.sourceMediaPath);
             if (!current()) return;
             slots[slot.key] = {...slot, imageUrl: resolved.url, ...(isLocalCanvasAssetReference(slot.imageUrl) ? {localAssetRef:slot.imageUrl} : {})};
             if (resolved.resolution) nextReleases[slot.key] = resolved.resolution;
@@ -437,6 +445,24 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
     if(action!=='reconcile'&&librarySettings?.inputMode==='custom'&&!snapshot.slots.secondary){setState(s=>({...s,error:'顔の参考図を選択してください。'}));return;}
     const newAction=(configRef.current.modelLibraryCreation===true&&isModelLibraryFeature(toolId))?action==='generate'?'generate-image':'edit-image':backendAction;
     const creationOutputSize=configRef.current.modelLibraryCreation===true&&isModelLibraryFeature(toolId)&&action==='generate'&&librarySettings?.inputMode==='custom'?{width:1024,height:1536}:undefined;
+    if (action !== 'reconcile' && cloudflareDataPlane) {
+      // Keep a private server copy of each uploaded input so a resume in another
+      // browser can show it. A failed copy never blocks the generation. busy is
+      // held during the copy so a second click cannot start another request.
+      busy.current = true;
+      try { for (const key of ['primary','secondary'] as const) {
+        const slot = snapshot.slots[key];
+        if (!slot || slot.sourceStoragePath || slot.sourceMediaPath || !slot.imageUrl) continue;
+        try {
+          const blob = await (await fetch(slot.imageUrl)).blob();
+          if (!blob.type.startsWith('image/') || blob.size > 20 * 1024 * 1024) continue;
+          const mediaPath = await cloudflareDataPlane.uploadWorkspaceSourceImage(blob, toolId);
+          if (!mounted.current || captured !== scopeRef.current) return;
+          snapshot.slots = {...snapshot.slots, [key]: {...slot, sourceMediaPath: mediaPath}};
+          setState(s => s.slots[key] === slot ? {...s, slots: {...s.slots, [key]: {...slot, sourceMediaPath: mediaPath}}} : s);
+        } catch { /* local copy still works in this browser */ }
+      } } finally { busy.current = false; }
+    }
     const request = action === 'reconcile' ? pending.current : {requestId:crypto.randomUUID(),originJob:jobId,brief:snapshot.brief,
       referenceNote:snapshot.referenceNote,backendAction:newAction,...(creationOutputSize?{requestedOutputSize:creationOutputSize}:{}),inputState:workspaceInputState(toolId,snapshot.inputState),materialSlots:serializeLightchainResumeSlots(snapshot.slots)};
     if (!request) return;
@@ -493,6 +519,12 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
           let references = ordered.slice(1).map(value=>value.imageUrl);
           if (action === 'edit-result') { const [signed] = await withSignedImageUrls([{storage_path:snapshot.result!.storagePath!,image_url:''}]);
             if (!signed?.image_url) throw new Error('image_source_unavailable'); target = signed.image_url; references = ordered.map(value=>value.imageUrl); }
+          else if (configRef.current.prepareSourceImage) {
+            // Page-specific preprocessing of what is sent; the stored input stays the original upload.
+            const prepare = configRef.current.prepareSourceImage;
+            const safe = async (url: string) => { try { return await prepare(url); } catch { return url; } };
+            target = await safe(target); references = await Promise.all(references.map(safe));
+          }
           // Signing is definite local preprocessing. Retain the ID only once
           // that succeeds, immediately before entering the provider adapter.
           // Adapter throws may have external effects and remain uncertain.
