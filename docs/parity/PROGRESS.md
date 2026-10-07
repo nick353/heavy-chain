@@ -214,3 +214,10 @@ Each iteration: read this file → advance the next open item → append result 
 - 変更: `storage.ts` shares one in-flight signing request per user+path.
 - 検証: tsc; storage suites = baseline (canonical-image-workspace-routes differed by one name under load; that test passes 3/3 alone in both trees). Production index.Bt3xwS83.js fresh tab: each path signed exactly once (~70 calls). P4 hotlinks re-checked: src+index.html 0, production entry bundles 0.
 - 残: the remaining wait is the full-size original download (1.4–2.0 s per image); smaller thumbnails need a resize endpoint in the Worker, which must not be deployed (undeployed WIP there).
+
+### Iteration 31 (2026-10-07, /goal) — #4 language and help menus verified
+- 観察 (Light, signed in, 1440×900): language menu 160×122 right-aligned under 日本語 (简体中文 / 日本語✓ / English, 32px rows, 14px text); help menu 200×102 left-aligned under ヘルプセンター (通知 with a red unread dot, よくあるご質問（FAQ）); 通知 opens a full-screen blurred panel (title, 4 tabs すべて表示/システムからのお知らせ/ログを更新します/システム通知, 720px entries with a 104px category/date column); FAQ opens the same kind of panel with 3 rounded sections of accordion rows. Light's "text-base" is 14px.
+- 変更: new `components/layout/LightchainHeaderMenus.tsx` (menus, panels, Heavy's own update notes and FAQ answers, per-user seen state for the unread dot); `Layout` wires the triggers (aria-expanded, close on outside click / Escape / navigation). Added to the release overlay.
+- 検証: tsc; 10 suites reading Layout = baseline. Production index.Be6z794o.js: language menu box and rows identical to Light; help menu identical (200×102, rows 40); 通知 panel h3 696,56, tabs 407,101 625×40 (Light 406,101 628×40), entries 360,190 720 wide; FAQ h3 528.7,56 382.7×40 (Light 528.8,56 382.3×40), sections 80/1280×387, rows 81; Escape closes; unread dot gone after opening 通知 and still gone after reload.
+- 判断: Heavy is Japanese only, so 简体中文/English are listed but disabled rather than switching to an untranslated UI.
+- 残: #2 hover/selected states; #3 (needs the user's consent for a Light conversation); P2 remainder; P4 thumbnail size (needs the Worker deploy).

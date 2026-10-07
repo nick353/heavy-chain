@@ -62,6 +62,7 @@ src/pages/LightchainLibraryPage.tsx
 src/lib/storage.ts
 src/components/GenerateLightchainEntry.tsx
 src/components/layout/Layout.tsx
+src/components/layout/LightchainHeaderMenus.tsx
 src/components/layout/LightchainLauncherHeader.tsx
 src/lib/modelLibrarySettings.ts
 src/pages/LabPage.tsx

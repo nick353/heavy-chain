@@ -14,6 +14,7 @@ import {
 import { HeavyChainLogo } from '../icons';
 import { ChevronDown, ChevronLeft, FileText, FolderOpen, Globe2, HelpCircle, History, LogOut, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
 import { isHeavyWorkspaceRuntime } from '../../lib/heavyWorkspace';
+import { FaqPanel, HelpMenu, LanguageMenu, NotificationsPanel, useHeavyNotificationsSeen } from './LightchainHeaderMenus';
 
 // Heavy Chain owns the visible identity; parity route identifiers remain internal compatibility details.
 
@@ -37,6 +38,25 @@ export function Layout() {
     const next = !watermarkOn;
     setWatermarkOn(next);
     try { if (watermarkKey) localStorage.setItem(watermarkKey, next ? '1' : '0'); } catch { /* storage unavailable */ }
+  };
+  // Header dropdowns (language / help) and the full-screen panels the help menu opens.
+  const [headerMenu, setHeaderMenu] = useState<'language' | 'help' | null>(null);
+  const [helpPanel, setHelpPanel] = useState<'notifications' | 'faq' | null>(null);
+  const notifications = useHeavyNotificationsSeen(user?.id);
+  useEffect(() => {
+    if (!headerMenu) return;
+    const close = (event: PointerEvent) => {
+      if (!(event.target as Element | null)?.closest?.('[data-light-header-menu]')) setHeaderMenu(null);
+    };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setHeaderMenu(null); };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('pointerdown', close); window.removeEventListener('keydown', onKey); };
+  }, [headerMenu]);
+  const openHelpPanel = (panel: 'notifications' | 'faq') => {
+    setHeaderMenu(null);
+    if (panel === 'notifications') notifications.markSeen();
+    setHelpPanel(panel);
   };
   useEffect(() => {
     if (!isLightAccountMenuOpen) return;
@@ -144,6 +164,7 @@ export function Layout() {
   useEffect(() => {
     setIsLightAccountMenuOpen(false);
     setIsLightAccountDetailOpen(false);
+    setHeaderMenu(null);
   }, [location.pathname, location.search]);
 
   return (
@@ -170,15 +191,21 @@ export function Layout() {
                   </Link>
                 )}
                 {isLightchainRoute && (
-                  <button
-                    type="button"
-                    className="hidden h-8 w-[100px] items-center justify-center gap-1 rounded-full px-0 py-1.5 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
-                    aria-label="日本語"
-                  >
-                    <Globe2 className="h-4 w-4" />
-                    日本語
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="relative hidden sm:block" data-light-header-menu>
+                    <button
+                      type="button"
+                      className={`inline-flex h-8 w-[100px] items-center justify-center gap-1 rounded-full px-0 py-1.5 text-sm transition hover:bg-white/10 hover:text-white ${headerMenu === 'language' ? 'bg-white/10 text-white' : 'text-neutral-300'}`}
+                      aria-label="日本語"
+                      aria-haspopup="menu"
+                      aria-expanded={headerMenu === 'language'}
+                      onClick={() => setHeaderMenu((open) => (open === 'language' ? null : 'language'))}
+                    >
+                      <Globe2 className="h-4 w-4" />
+                      日本語
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                    {headerMenu === 'language' && <LanguageMenu onClose={() => setHeaderMenu(null)} />}
+                  </div>
                 )}
                 {/* Pages such as the design-document editor put their breadcrumb here (Light shows it next to the language menu). */}
                 {isLightchainRoute && <div id="lightchain-header-context" className="contents" />}
@@ -204,14 +231,20 @@ export function Layout() {
                   </Link>
                 )}
                 {isLightchainRoute ? (
-                  <button
-                    type="button"
-                    className="hidden h-8 w-[132px] items-center justify-center gap-2 rounded-full px-0 py-1.5 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
-                    aria-label="ヘルプセンター"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                    ヘルプセンター
-                  </button>
+                  <div className="relative hidden sm:block" data-light-header-menu>
+                    <button
+                      type="button"
+                      className={`relative inline-flex h-8 w-[132px] items-center justify-center gap-2 rounded-full px-0 py-1.5 text-sm transition hover:bg-white/10 hover:text-white ${headerMenu === 'help' ? 'bg-white/10 text-white' : 'text-neutral-300'}`}
+                      aria-label="ヘルプセンター"
+                      aria-haspopup="menu"
+                      aria-expanded={headerMenu === 'help'}
+                      onClick={() => setHeaderMenu((open) => (open === 'help' ? null : 'help'))}
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                      ヘルプセンター
+                    </button>
+                    {headerMenu === 'help' && <HelpMenu unread={notifications.unread} onOpen={openHelpPanel} />}
+                  </div>
                 ) : null}
                 {isLightchainRoute && <div id="lightchain-header-actions" className="contents" />}
                 {isLightchainRoute ? null : (
@@ -306,6 +339,8 @@ export function Layout() {
               </div>
             )}
           </header>
+          {helpPanel === 'notifications' && <NotificationsPanel onClose={() => setHelpPanel(null)} />}
+          {helpPanel === 'faq' && <FaqPanel onClose={() => setHelpPanel(null)} />}
 
           <main id="main-content" className={`${isLightchainPrintRoute ? 'min-h-[calc(100vh-48px)] bg-[#070b0d]' : isLightchainRoute ? 'min-h-0 flex-1 overflow-y-auto scrollbar-hide bg-[#171b1c]' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
             {isVideoWorkstationRoute || isLightchainRoute ? (
