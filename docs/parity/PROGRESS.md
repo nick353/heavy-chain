@@ -208,3 +208,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: tsc; dashboard-canvas-projects (new case), entry-routing, source-board-parity, wear-design-lab-routing = baseline. Production index.RaZQr86G.js: opening draft wa-0c93f263… wrote D1 canvas_documents `bd-wa-0c93f263…` with printAdjustSource "100,100,100,90,1" (the saved 90° + flip).
 - 未確認: the restore on a second device was not exercised (this session has one signed-in browser profile); covered by code review only.
 - 残: Light signed out again (別のデバイスでログイン中) — #4 language/help, #2, #3 wait for the user's sign-in; #3 also needs the user's consent to start a Light conversation.
+
+### Iteration 30 (2026-10-07, /goal) — P4 thumbnail delay: one signature per image
+- 測定 (production /gallery, fresh tab, Resource Timing): before, every image path was signed twice concurrently (e.g. ai-32c0b07f… 340 ms and 638 ms; ~140 `/v1/media/read` signing calls for ~70 images, 0.3–1.1 s each). The signed-URL cache from iteration 23 only helps once a URL has arrived.
+- 変更: `storage.ts` shares one in-flight signing request per user+path.
+- 検証: tsc; storage suites = baseline (canonical-image-workspace-routes differed by one name under load; that test passes 3/3 alone in both trees). Production index.Bt3xwS83.js fresh tab: each path signed exactly once (~70 calls). P4 hotlinks re-checked: src+index.html 0, production entry bundles 0.
+- 残: the remaining wait is the full-size original download (1.4–2.0 s per image); smaller thumbnails need a resize endpoint in the Worker, which must not be deployed (undeployed WIP there).

@@ -43,6 +43,7 @@ const SIGNED_URL_BATCH_CONCURRENCY = 8;
 const SIGNED_URL_REUSE_MARGIN_MS = 5 * 60 * 1000;
 const SIGNED_URL_CACHE_PREFIX = 'heavy:signed-media:v1:';
 const signedUrlMemory = new Map<string, Map<string, { url: string; reuseUntil: number }>>();
+const signedUrlInFlight = new Map<string, Promise<string | null>>();
 
 const signedUrlCacheFor = (userId: string) => {
   let cache = signedUrlMemory.get(userId);
@@ -90,13 +91,21 @@ const createSignedMediaUrl = async (path: string): Promise<string | null> => {
   const cache = userId ? signedUrlCacheFor(userId) : null;
   const cached = cache?.get(path);
   if (cached && cached.reuseUntil > Date.now()) return cached.url;
-  const result = await mediaGateway.createSignedReadUrl({ bucket: 'generated-images', objectPath: path, expiresInSeconds: SIGNED_URL_TTL_SECONDS });
-  if (!result.ok) return null;
-  if (cache && userId) {
-    cache.set(path, { url: result.url, reuseUntil: Date.now() + SIGNED_URL_TTL_SECONDS * 1000 - SIGNED_URL_REUSE_MARGIN_MS });
-    persistSignedUrlCache(userId, cache);
-  }
-  return result.url;
+  // Two parts of a page asking for the same image at once share one signature request.
+  const flightKey = `${userId ?? ''}\u0000${path}`;
+  const inFlight = signedUrlInFlight.get(flightKey);
+  if (inFlight) return inFlight;
+  const request = (async () => {
+    const result = await mediaGateway.createSignedReadUrl({ bucket: 'generated-images', objectPath: path, expiresInSeconds: SIGNED_URL_TTL_SECONDS });
+    if (!result.ok) return null;
+    if (cache && userId) {
+      cache.set(path, { url: result.url, reuseUntil: Date.now() + SIGNED_URL_TTL_SECONDS * 1000 - SIGNED_URL_REUSE_MARGIN_MS });
+      persistSignedUrlCache(userId, cache);
+    }
+    return result.url;
+  })().finally(() => signedUrlInFlight.delete(flightKey));
+  signedUrlInFlight.set(flightKey, request);
+  return request;
 };
 
 export type GeneratedImageUrlResolutionFailureCode =
