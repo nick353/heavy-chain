@@ -194,12 +194,12 @@ const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspac
 // must follow the server's OpenAI-authoritative binding instead of inheriting
 // the legacy Light `VITE_GENERATION_PROVIDER=workers_ai` default.
 const HEAVY_WORKBENCH_GENERATION_PROVIDER = HEAVY_IMAGE_PROVIDER;
-const LIGHTCHAIN_FITTING_EXAMPLE_VIDEO_URL = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/persistence/font-end/model-custom-demo.mp4';
-const LIGHTCHAIN_FITTING_RECENT_UPLOAD_URL = 'https://static-jp.linkaigc.com/saas/2026-08/7c9021b93516cd2edfe4e2f7059bf20f.jpeg';
+const LIGHTCHAIN_FITTING_EXAMPLE_VIDEO_URL = '/lightchain-assets/mirror/lightchain-qlxy-prod/model-custom-demo-8000e862.mp4';
+const LIGHTCHAIN_FITTING_RECENT_UPLOAD_URL = '/lightchain-assets/mirror/static-jp/7c9021b93516cd2edfe4e2f7059bf20f-1fbd909f.jpeg';
 // Keep the source-contract name for the current Light image fixture; the UI uses
 // the same recent-upload asset for the example card and fitting reference preview.
 const LIGHTCHAIN_FITTING_EXAMPLE_IMAGE_URL = LIGHTCHAIN_FITTING_RECENT_UPLOAD_URL;
-const LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL = 'https://jp.linkaigc.com/static/default.png';
+const LIGHTCHAIN_FITTING_EMPTY_TASK_IMAGE_URL = '/lightchain-assets/mirror/jp/default-c772d81b.png';
 const FITTING_REFERENCE_SLOT_CONFIG: Array<{
   key: FittingReferenceSlotKey;
   label: string;
@@ -211,31 +211,28 @@ const FITTING_REFERENCE_SLOT_CONFIG: Array<{
     key: 'model',
     label: 'モデル画像',
     required: true,
-    demoImageUrl: 'https://jp.linkaigc.com/static/upload-example-model-new.png',
+    demoImageUrl: '/lightchain-assets/mirror/jp/upload-example-model-new-5f67f759.png',
     trackTarget: 'ModelVirtualFittingModel',
   },
   {
     key: 'pose',
     label: 'ポーズ',
     required: false,
-    demoImageUrl: 'https://jp.linkaigc.com/static/upload-example-pose-new.png',
+    demoImageUrl: '/lightchain-assets/mirror/jp/upload-example-pose-new-6d800626.png',
     trackTarget: 'ModelVirtualFittingPosture',
   },
   {
     key: 'background',
     label: '背景',
     required: false,
-    demoImageUrl: 'https://jp.linkaigc.com/static/model-new-bg.png',
+    demoImageUrl: '/lightchain-assets/mirror/jp/model-new-bg-8111ba99.png',
     trackTarget: 'ModelVirtualFittingBackground',
   },
 ];
-const buildFittingImageUrls = (baseUrl: string, names: string[], extension: string, width = 3840) => (
-  names.map((name) => `${baseUrl}/${name}.${extension}?x-oss-process=image/resize,m_lfit,w_${width},limit_1/format,webp`)
+// Self-hosted copies (1200px webp) of the source model reference sets.
+const buildFittingImageUrls = (baseUrl: string, names: string[], _extension: string) => (
+  names.map((name) => `${baseUrl}/${name}.webp`)
 );
-const FITTING_IMAGE_WIDTHS = [32, 48, 64, 96, 128, 256, 384, 640, 750, 828, 1080, 1200, 1920, 2048, 3840] as const;
-const fittingImageSrcSet = (imageUrl: string) => FITTING_IMAGE_WIDTHS
-  .map((width) => `${imageUrl.replace(/w_\d+/, `w_${width}`)} ${width}w`)
-  .join(', ');
 const fittingVariantNames = (name: string) => [name, `${name}.1`, `${name}.2`, `${name}.3`];
 const FITTING_MODEL_SETS: Array<{
   id: string;
@@ -249,7 +246,7 @@ const FITTING_MODEL_SETS: Array<{
       id: `group-${modelNumber + 25}`,
       category: 'men' as const,
       images: buildFittingImageUrls(
-        'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Male',
+        '/lightchain-assets/fitting-models/Male',
         fittingVariantNames(String(modelNumber)),
         extension,
       ),
@@ -261,7 +258,7 @@ const FITTING_MODEL_SETS: Array<{
       id: `group-${modelNumber}`,
       category: 'women' as const,
       images: buildFittingImageUrls(
-        'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/saas/4_7_reference/Missy',
+        '/lightchain-assets/fitting-models/Missy',
         fittingVariantNames(String(modelNumber)),
         modelNumber <= 2 ? 'png' : 'webp',
       ),
@@ -276,7 +273,7 @@ const FITTING_MODEL_SETS: Array<{
       id: `group-${modelNumber + 31}`,
       category: 'women' as const,
       images: buildFittingImageUrls(
-        'https://static-cn.linkaigc.com/saas/4_8_reference/Missy',
+        '/lightchain-assets/fitting-models/Missy48',
         names,
         'webp',
       ),
@@ -291,7 +288,7 @@ const FITTING_MODEL_SETS: Array<{
       id: `group-${modelNumber + 43}`,
       category: 'children' as const,
       images: buildFittingImageUrls(
-        'https://static-cn.linkaigc.com/saas/4_8_reference/Child',
+        '/lightchain-assets/fitting-models/Child',
         names,
         'webp',
       ),
@@ -1414,9 +1411,9 @@ const maskCandidateLayer: Record<MaskCandidate, string> = {
 };
 
 const lightWearDesignDetailImages = [
-  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/37cb1e7e309c3e3edf4870678b8625e0.png?x-oss-process=image/resize,m_lfit,w_1920,limit_1/format,webp',
-  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/cae9b142c24f1137fd4a66111ef7e583.png?x-oss-process=image/resize,m_lfit,w_1920,limit_1/format,webp',
-  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/6a1d37284e65c215fe6fcd1994972a78.webp?x-oss-process=image/resize,m_lfit,w_1920,limit_1/format,webp',
+  '/lightchain-assets/mirror/lightchain-qlxy-test/37cb1e7e309c3e3edf4870678b8625e0-e2383695.webp',
+  '/lightchain-assets/mirror/lightchain-qlxy-test/cae9b142c24f1137fd4a66111ef7e583-cdf58a79.webp',
+  '/lightchain-assets/mirror/lightchain-qlxy-test/6a1d37284e65c215fe6fcd1994972a78-5902ed6b.webp',
 ] as const;
 
 export function LightchainWorkbenchPage({ fittingBatchExecution }: { fittingBatchExecution?: FittingBatchExecution } = {}) {
@@ -5315,7 +5312,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                             <div className="flex min-w-0 flex-1 gap-0.5">
                               {modelSet.images.map((imageUrl, imageIndex) => (
                                 <span key={imageUrl} className="flex-1 min-w-0 overflow-hidden rounded bg-black/20">
-                                  <img src={imageUrl} srcSet={fittingImageSrcSet(imageUrl)} sizes="90px" alt={`Model group-${modelSet.id.replace('group-', '')}-${imageIndex + 1}`} loading="lazy" width="90" height="160" className="inline-block h-full w-full object-contain" />
+                                  <img src={imageUrl} alt={`Model group-${modelSet.id.replace('group-', '')}-${imageIndex + 1}`} loading="lazy" width="90" height="160" className="inline-block h-full w-full object-contain" />
                                 </span>
                               ))}
                             </div>
@@ -7710,11 +7707,11 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       {isFeatureDetail && (
         <aside className={`fixed left-4 top-[66px] z-20 hidden w-20 flex-col gap-3 lg:flex ${isLightParityTallDetail ? 'h-[746px]' : ''}`} aria-label="ツールバー">
           {[
-            ['ツールバー', 'https://jp.linkaigc.com/routeIcons/ic_工具.svg', '/designProduction?category=recommended', 'recommended'],
-            ['デザインツール', `https://jp.linkaigc.com/routeIcons/服装设计工具-${location.pathname === '/tools/fabric' ? '选中' : '未选'}.svg`, '/tools/fabric', 'planning'],
-            ['フィッティングツール', `https://jp.linkaigc.com/routeIcons/模特试衣工具-${location.pathname === '/model' ? '选中' : '未选'}.svg`, '/model', 'fitting'],
-            ['グラフィックデザインツール', `https://jp.linkaigc.com/routeIcons/图案创作工具-${activeSourceCategory === 'graphics' ? '选中' : '未选'}.svg`, '/tools/pattern-to-vector', 'graphics'],
-            ['衣類生産ツール', 'https://jp.linkaigc.com/routeIcons/生产工具-未选.svg', '/tools/fabric', 'planning'],
+            ['ツールバー', '/lightchain-assets/route-icons/toolbar.svg', '/designProduction?category=recommended', 'recommended'],
+            ['デザインツール', `/lightchain-assets/route-icons/design-${location.pathname === '/tools/fabric' ? 'on' : 'off'}.svg`, '/tools/fabric', 'planning'],
+            ['フィッティングツール', `/lightchain-assets/route-icons/fitting-${location.pathname === '/model' ? 'on' : 'off'}.svg`, '/model', 'fitting'],
+            ['グラフィックデザインツール', `/lightchain-assets/route-icons/graphic-${activeSourceCategory === 'graphics' ? 'on' : 'off'}.svg`, '/tools/pattern-to-vector', 'graphics'],
+            ['衣類生産ツール', '/lightchain-assets/route-icons/production-off.svg', '/tools/fabric', 'planning'],
           ].map(([label, iconUrl, to, category]) => {
             return <Link key={label} to={to} aria-current={category === activeSourceCategory ? 'page' : undefined} className={`flex min-h-20 flex-col items-center justify-center rounded-xl border border-white/10 bg-[#252a2d] px-1 text-center text-[10px] leading-4 ${category === activeSourceCategory ? 'text-cyan-300' : 'text-neutral-400'}`}><img src={iconUrl} alt="" className="mb-1 h-7 w-7 object-contain" /><span>{label}</span></Link>;
           })}

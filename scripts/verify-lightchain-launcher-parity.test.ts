@@ -154,6 +154,7 @@ test('launcher mirrors the observed Lightchain home card routes by category', ()
 
 test('launcher uses the canonical Lightchain artwork for planning cards', () => {
   const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /aliyuncs\.com|linkaigc\.com/);
   for (const asset of [
     'aiDesignCover.png',
     'orientedDesignCover.png',
@@ -163,7 +164,7 @@ test('launcher uses the canonical Lightchain artwork for planning cards', () => 
     'LineArtVectorConvertCover.png',
     'fashionModelCover.png',
   ]) {
-    assert.match(source, new RegExp(`home5_0_1/${asset}`));
+    assert.match(source, new RegExp(`/lightchain-assets/mirror/lightchain-qlxy-prod/${asset.replace('.png', '')}-[0-9a-f]+\\.webp`));
   }
 });
 
@@ -178,9 +179,9 @@ test('launcher uses the canonical Lightchain artwork for fitting and graphics ca
     'OneClickModifyPrintingCover.png',
     'FlowerShapedDesignCover.png',
   ]) {
-    assert.match(source, new RegExp(`home5_0_1/${asset}`));
+    assert.match(source, new RegExp(`/lightchain-assets/mirror/lightchain-qlxy-prod/${asset.replace('.png', '')}-[0-9a-f]+\\.webp`));
   }
-  assert.match(source, /'remove-background': 'https:\/\/lightchain-qlxy-prod\.oss-cn-hangzhou\.aliyuncs\.com\/light-chain-platform\/home5_0_1\/FixDeformitiesCover\.png/);
+  assert.match(source, /'remove-background': '\/lightchain-assets\/mirror\/lightchain-qlxy-prod\/FixDeformitiesCover-[0-9a-f]+\.webp'/);
 });
 
 test('homepage case tabs use the current Lightchain labels', () => {

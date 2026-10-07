@@ -147,10 +147,10 @@ const initialMaterialReference: MaterialReferenceState = {
 const VIDEO_GUIDE_DISMISSED_STORAGE_KEY = 'heavy-chain-video-guide-dismissed';
 const VIDEO_SOURCE_EDITOR_VERSION = 'video-source-editor-parity-v1';
 const VIDEO_PERSISTED_DATA_URL_LIMIT = 1_500_000;
-const LIGHTCHAIN_VIDEO_MAIN_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/c914c5010e17ca8f3bdbdb93ae2088fc.jpeg?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
-const LIGHTCHAIN_VIDEO_REFERENCE_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-06/73e4af273bd3f306c8ed549efd3a7cb5.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
-const LIGHTCHAIN_VIDEO_SOURCE_RESULT = 'https://static-jp.linkaigc.com/saas/2026-02/c44b4aecfba3ddee5a37d94925b4f40d.mp4?x-oss-process=video/snapshot,t_1000,m_fast,ar_auto';
-const LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE = 'https://static-jp.linkaigc.com/saas/2026-02/dbe43f25eadaf147c9ffefc1d609c4eb.webp';
+const LIGHTCHAIN_VIDEO_MAIN_IMAGE = '/lightchain-assets/mirror/static-jp/c914c5010e17ca8f3bdbdb93ae2088fc-ea2376f8.webp';
+const LIGHTCHAIN_VIDEO_REFERENCE_IMAGE = '/lightchain-assets/mirror/static-jp/73e4af273bd3f306c8ed549efd3a7cb5-25a93659.webp';
+const LIGHTCHAIN_VIDEO_SOURCE_RESULT = '/lightchain-assets/mirror/static-jp/c44b4aecfba3ddee5a37d94925b4f40d-b039d6f5.jpg';
+const LIGHTCHAIN_VIDEO_SOURCE_NODE_IMAGE = '/lightchain-assets/mirror/static-jp/dbe43f25eadaf147c9ffefc1d609c4eb-6bd7b8aa.webp';
 
 function LightchainVideoImage({
   src,

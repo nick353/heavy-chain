@@ -42,7 +42,7 @@ export function modelLibraryBodyPreview(value: unknown): string | null {
   const within = rows.filter(row => requested.every((number, index) => (row[index + 2] as number) <= number));
   const score = (row: typeof rows[number]) => requested.reduce((sum, number, index) => sum + Math.abs((row[index + 2] as number) - number) / number, 0);
   const match = (within.length ? within : rows).reduce((best, row) => score(row) < score(best) ? row : best);
-  return `https://static-cn.linkaigc.com/saas/3d_model_img/v2/${match[5]}.webp`;
+  return `/lightchain-assets/model-body/${match[5]}.webp`;
 }
 
 const validLabels = (raw: Record<string, unknown>) => ['男性', '女性'].includes(String(raw.gender)) && typeof raw.half === 'boolean'

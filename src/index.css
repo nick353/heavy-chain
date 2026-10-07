@@ -128,7 +128,7 @@
 }
 
 /* Match the canonical Wear Design Lab project board. */
-.oriented-design-parity { min-height: 100vh; overflow: hidden; background-color: #202526 !important; background-image: url('https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/common/Frame%201000001557%20%281%29.webp') !important; background-size: 100% 100%; background-repeat: no-repeat; font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
+.oriented-design-parity { min-height: 100vh; overflow: hidden; background-color: #202526 !important; background-image: url('/lightchain-assets/mirror/lightchain-qlxy-prod/Frame_1000001557_1_-e22a4fc9.webp') !important; background-size: 100% 100%; background-repeat: no-repeat; font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
 .oriented-design-content { height: 100%; overflow-y: auto; padding: 16px 20px 16px 16px; background: transparent; }
 .oriented-design-title { height: 18px; margin: 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 18px; }
 .oriented-design-card-grid, .oriented-design-reference-grid { display: flex; width: 100%; flex-wrap: wrap; gap: 16px; }

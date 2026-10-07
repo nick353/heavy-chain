@@ -249,13 +249,15 @@ test('keeps model customization on the Light source surface without a Heavy-only
   assert.doesNotMatch(`${page}\n${surface}`, /type="checkbox"|権利を確認してAI生成|権利確認ゲート/);
 });
 
-test('keeps the Creator and fabric parity surfaces on the current Light media sources', async () => {
+test('keeps the Creator and fabric parity surfaces on self-hosted copies of the Light media', async () => {
   const [parityPages, materialWorkbench] = await Promise.all([
     readFile(parityPagesPath, 'utf8'),
     readFile(materialWorkbenchPath, 'utf8'),
   ]);
-  assert.match(parityPages, /light-chain-platform\/tools\/ja\/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1\.mp4/);
-  assert.match(materialWorkbench, /light-chain-platform\/tools\/ja\/%E9%9D%A2%E6%96%99%E4%B8%8A%E8%BA%AB\.mp4/);
+  // P4: the Light videos (服装设计 / 面料上身) are served from Heavy, never hotlinked.
+  assert.match(parityPages, /\/lightchain-assets\/mirror\/lightchain-qlxy-prod\/garment-design\.mp4/);
+  assert.match(materialWorkbench, /\/lightchain-assets\/mirror\/lightchain-qlxy-prod\/fabric-on-body\.mp4/);
+  assert.doesNotMatch(`${parityPages}${materialWorkbench}`, /aliyuncs\.com|linkaigc\.com/);
   assert.doesNotMatch(parityPages, /light-chain-platform\/tools\/ja\/%E6%9C%8D%E8%A3%85%E8%A8%AD%E8%A8%88\.mp4/);
 });
 
@@ -343,11 +345,11 @@ test('uses a saved artifact feature type when resolving its reuse route', async 
 test('uses the current Lightchain launcher artwork and gallery fixtures', async () => {
   const source = await readFile(entryPath, 'utf8');
   assert.match(source, /const launcherFeatureImages: Partial<Record<string, string>>/);
-  assert.match(source, /'design-workspace': 'https:\/\/lightchain-qlxy-prod\.oss-cn-hangzhou\.aliyuncs\.com\/light-chain-platform\/home5_0_1\/designProduction\.png/);
-  assert.match(source, /'virtual-fitting': 'https:\/\/lightchain-qlxy-prod\.oss-cn-hangzhou\.aliyuncs\.com\/light-chain-platform\/home5_0_1\/VirtualFittingCover\.png/);
-  assert.match(source, /'fashion-studio': 'https:\/\/lightchain-qlxy-prod\.oss-cn-hangzhou\.aliyuncs\.com\/light-chain-platform\/home5_0_1\/integrationCover\.png/);
+  assert.match(source, /'design-workspace': '\/lightchain-assets\/mirror\/lightchain-qlxy-prod\/designProduction-[0-9a-f]+\.webp'/);
+  assert.match(source, /'virtual-fitting': '\/lightchain-assets\/mirror\/lightchain-qlxy-prod\/VirtualFittingCover-[0-9a-f]+\.webp'/);
+  assert.match(source, /'fashion-studio': '\/lightchain-assets\/mirror\/lightchain-qlxy-prod\/integrationCover-[0-9a-f]+\.webp'/);
   assert.match(source, /const canonicalRecommendedGalleryImages = \[/);
-  assert.match(source, /https:\/\/static-cn\.linkaigc\.com\/workbenches\/2026-02\/d81b55aa18721b86c37b96a36223a936\.jpeg/);
+  assert.match(source, /\/lightchain-assets\/mirror\/static-cn\/d81b55aa18721b86c37b96a36223a936-[0-9a-f]+\.webp/);
   assert.match(source, /launcherFeatureImages\[feature\.id\] \?\?/);
   assert.doesNotMatch(source, /const buildLauncherFeatureImage = \(feature: LightchainFeature\) => launcherCategoryImages\[feature\.category\];/);
 });

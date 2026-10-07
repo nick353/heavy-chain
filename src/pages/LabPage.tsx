@@ -111,7 +111,7 @@ const initialMaterialReference: MaterialReferenceState = {
   note: '比較したい素材や生成候補を置いて、採用判断の対象を明確にします。',
 };
 
-const LIGHTCHAIN_LAB_REFERENCE_IMAGE = 'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/ce57f13946995e1512e61ac50228a3ac.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp';
+const LIGHTCHAIN_LAB_REFERENCE_IMAGE = '/lightchain-assets/mirror/lightchain-qlxy-test/ce57f13946995e1512e61ac50228a3ac-5fa6706a.webp';
 
 const labReadinessItems = [
   { label: '仮説', detail: '何を比較するかを先に決める' },

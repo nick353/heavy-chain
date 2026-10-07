@@ -9,14 +9,14 @@ import { Link, useNavigate } from 'react-router-dom';
 const RAIL_ROOT = {
   label: 'ツールバー',
   to: '/designProduction?category=recommended',
-  iconUrl: 'https://jp.linkaigc.com/routeIcons/ic_%E5%B7%A5%E5%85%B7.svg',
+  iconUrl: '/lightchain-assets/mirror/jp/ic__-994908ae.svg',
 } as const;
 
 const RAIL_ITEMS: ReadonlyArray<{ label: string; to: string; iconUrl: string }> = [
-  { label: 'デザインツール', to: '/tools/fabric', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1%E5%B7%A5%E5%85%B7-%E9%80%89%E4%B8%AD.svg' },
-  { label: 'フィッティングツール', to: '/model', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%A8%A1%E7%89%B9%E8%AF%95%E8%A1%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
-  { label: 'グラフィックデザインツール', to: '/tools/pattern-to-vector', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E5%9B%BE%E6%A1%88%E5%88%9B%E4%BD%9C%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
-  { label: '衣類生産ツール', to: '/tools/fabric', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E7%94%9F%E4%BA%A7%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
+  { label: 'デザインツール', to: '/tools/fabric', iconUrl: '/lightchain-assets/mirror/jp/_-_-e1becb33.svg' },
+  { label: 'フィッティングツール', to: '/model', iconUrl: '/lightchain-assets/mirror/jp/_-_-65d95665.svg' },
+  { label: 'グラフィックデザインツール', to: '/tools/pattern-to-vector', iconUrl: '/lightchain-assets/mirror/jp/_-_-bf0c0d15.svg' },
+  { label: '衣類生産ツール', to: '/tools/fabric', iconUrl: '/lightchain-assets/mirror/jp/_-_-971e9caa.svg' },
 ];
 
 export const LIGHTCHAIN_DESIGN_TOOL_TABS = [

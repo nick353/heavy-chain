@@ -48,7 +48,7 @@ function canonicalContinueHref(toolId, location) {
   return evaluate(continuation.initializer.getText(hookAst), bindings);
 }
 const homes = [
-  { name: 'Wear', ast: wearAst, component: 'LightchainOrientedDesignPage', toolId: 'wear-design-lab', path: '/flow/orientedDesign', testId: 'lightchain-wear-library-continue', newClass: 'oriented-design-new-card', constants: ['orientedDesignProjectImages', 'orientedDesignProjectDates', 'orientedDesignReferenceImages'] },
+  { name: 'Wear', ast: wearAst, component: 'LightchainOrientedDesignPage', toolId: 'wear-design-lab', path: '/flow/orientedDesign', testId: 'lightchain-wear-library-continue', newClass: 'oriented-design-new-card', constants: ['orientedDesignReferenceImages'] },
   { name: 'Lab', ast: labAst, component: 'LightchainLabBoardParity', toolId: 'lab', path: '/flow/laboratory', testId: 'lightchain-lab-library-continue', newClass: 'lightchain-lab-source-new-card cursor-pointer', constants: ['LIGHTCHAIN_LAB_REFERENCE_IMAGE'] },
 ];
 function elements(tree) {
@@ -68,6 +68,9 @@ function render(home, { search = '?libraryArtifactId=original-id&librarySlot=pri
     React, ParityShell: 'parity-shell', MoreVertical: 'more-vertical',
     useLocation: () => location, useNavigate: () => href => calls.push(href),
     useCanonicalImageWorkspace: (...args) => { hookCalls.push(args); return workspace; },
+    // The Wear board lists the user's saved projects; none are needed for the continuation control.
+    useFeatureProjects: () => ({ projects: [], status: 'success' }),
+    ProjectThumbnail: 'project-thumbnail', formatProjectAge: () => '今日',
   };
   const nodes = descendants(home.ast);
   for (const name of home.constants) {

@@ -24,5 +24,9 @@ grep -vE '^(#|$)' docs/parity/release-overlay.txt | while read -r f; do mkdir -p
 for p in docs/parity/release-patches/*.patch(N); do (cd "$OUT/tree" && patch -p1 -s -F0 -N < "$REPO/$p"); done
 cp Dockerfile .dockerignore "$OUT/tree/"
 (cd "$OUT/tree" && ln -s "$REPO/node_modules" node_modules && npx tsc -b && npx vite build >/dev/null && rm -rf node_modules dist)
+# Zeabur's upload prepare step times out on large file counts (~550 ok, ~900 fails), so the self-hosted
+# reference assets travel as one tar that the Docker build unpacks before `npm run build`.
+(cd "$OUT/tree/public" && COPYFILE_DISABLE=1 tar --no-xattrs -cf lightchain-assets-bundle.tar lightchain-assets/mirror lightchain-assets/fitting-models lightchain-assets/model-body lightchain-assets/route-icons lightchain-assets/video-templates && rm -rf lightchain-assets/mirror lightchain-assets/fitting-models lightchain-assets/model-body lightchain-assets/route-icons lightchain-assets/video-templates)
+echo "files to upload: $(find "$OUT/tree" -type f | wc -l)"
 [[ "${1:-}" == "--deploy" ]] && (cd "$OUT/tree" && zeabur deploy --service-id 6a318803302ffbcd03a92935 --json -i=false)
 echo "release tree ready: $OUT/tree"

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { HeavyChainLogo } from '../icons';
 import { useAuthStore } from '../../stores/authStore';
 
-const LIGHTCHAIN_AVATAR_URL = 'https://ql-hangzhou-oss.oss-cn-hangzhou.aliyuncs.com/AIDesign/saas-avatar-new.png?x-oss-process=image/resize,m_lfit,w_64,limit_1/format,webp';
+const LIGHTCHAIN_AVATAR_URL = '/lightchain-assets/mirror/ql-hangzhou-oss/saas-avatar-new-35182e5e.webp';
 
 /** Heavy Chain launcher header. The layout remains compatible with the source workflow, but the identity is Heavy-owned. */
 export function LightchainLauncherHeader() {

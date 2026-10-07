@@ -1,0 +1,73 @@
+diff --git a/src/pages/LightchainMaterialWorkbenchPage.tsx b/src/pages/LightchainMaterialWorkbenchPage.tsx
+index a909f7bb..e63667a6 100644
+--- a/src/pages/LightchainMaterialWorkbenchPage.tsx
++++ b/src/pages/LightchainMaterialWorkbenchPage.tsx
+@@ -218,20 +218,20 @@ const lightchainMaterialSourceRailItems: ReadonlyArray<{
+   },
+   {
+     label: '企画デザインツール',
+-    iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%A8%88%E5%B7%A5%E5%85%B7-%E9%81%B8%E4%B8%AD.svg',
++    iconUrl: '/lightchain-assets/route-icons/design-on.svg',
+     active: true,
+   },
+   {
+     label: 'AIフィッティング',
+-    iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%A8%A1%E7%89%B9%E8%A9%A6%E8%A1%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg',
++    iconUrl: '/lightchain-assets/route-icons/fitting-off.svg',
+   },
+   {
+     label: 'グラフィックツール',
+-    iconUrl: 'https://jp.linkaigc.com/routeIcons/%E5%9B%B3%E6%A1%88%E5%89%B5%E4%BD%9C%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg',
++    iconUrl: '/lightchain-assets/route-icons/graphic-off.svg',
+   },
+   {
+     label: 'グラフィックツール（詳細）',
+-    iconUrl: 'https://jp.linkaigc.com/routeIcons/%E7%94%9F%E7%94%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg',
++    iconUrl: '/lightchain-assets/route-icons/production-off.svg',
+   },
+ ]);
+ 
+@@ -247,14 +247,14 @@ void lightchainMaterialSourceRailItems;
+ const LIGHTCHAIN_MATERIAL_SOURCE_ROOT = {
+   label: 'ツールバー',
+   to: '/designProduction?category=recommended',
+-  iconUrl: 'https://jp.linkaigc.com/routeIcons/ic_%E5%B7%A5%E5%85%B7.svg',
++  iconUrl: '/lightchain-assets/mirror/jp/ic__-994908ae.svg',
+ } as const;
+ 
+ const LIGHTCHAIN_MATERIAL_SOURCE_RAIL: ReadonlyArray<{ label: string; to: string; iconUrl: string }> = [
+-  { label: 'デザインツール', to: '/tools/fabric', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%AE%A1%E5%B7%A5%E5%85%B7-%E9%80%89%E4%B8%AD.svg' },
+-  { label: 'フィッティングツール', to: '/model', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%A8%A1%E7%89%B9%E8%AF%95%E8%A1%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
+-  { label: 'グラフィックデザインツール', to: '/tools/pattern-to-vector', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E5%9B%BE%E6%A1%88%E5%88%9B%E4%BD%9C%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
+-  { label: '衣類生産ツール', to: '/tools/fabric', iconUrl: 'https://jp.linkaigc.com/routeIcons/%E7%94%9F%E4%BA%A7%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%80%89.svg' },
++  { label: 'デザインツール', to: '/tools/fabric', iconUrl: '/lightchain-assets/mirror/jp/_-_-e1becb33.svg' },
++  { label: 'フィッティングツール', to: '/model', iconUrl: '/lightchain-assets/mirror/jp/_-_-65d95665.svg' },
++  { label: 'グラフィックデザインツール', to: '/tools/pattern-to-vector', iconUrl: '/lightchain-assets/mirror/jp/_-_-bf0c0d15.svg' },
++  { label: '衣類生産ツール', to: '/tools/fabric', iconUrl: '/lightchain-assets/mirror/jp/_-_-971e9caa.svg' },
+ ];
+ 
+ function SourceMaterialRail({ active }: { active: 'design' | 'graphics' }) {
+@@ -296,7 +296,7 @@ function LightchainMaterialSourceRail({ active }: { active: 'design' | 'graphics
+ void LightchainMaterialSourceRail;
+ 
+ const LIGHTCHAIN_FABRIC_EMPTY_PREVIEW_VIDEO =
+-  'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E9%9D%A2%E6%96%99%E4%B8%8A%E8%BA%AB.mp4';
++  '/lightchain-assets/mirror/lightchain-qlxy-prod/fabric-on-body.mp4';
+ 
+ const PRINT_COVERAGE_OPTIONS: Array<{ value: PrintCoverageMode; label: string }> = [
+   { value: 'spot', label: 'スポット' },
+@@ -5474,10 +5474,10 @@ function LightchainMaterialWorkbenchSession() {
+             <span className="text-[10px] font-semibold text-white/65">ツールバー</span>
+             <div className="my-1 h-px w-10 bg-white/10" />
+             {([
+-              ['デザインツール', '/tools/fabric', true, 'https://jp.linkaigc.com/routeIcons/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%A8%88%E5%B7%A5%E5%85%B7-%E9%80%89%E4%B8%AD.svg'],
+-              ['フィッティング\nツール', '/model', false, 'https://jp.linkaigc.com/routeIcons/%E6%A8%A1%E7%89%B9%E8%AF%95%E8%A1%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg'],
+-              ['グラフィックデザイン\nツール', '/tools/printing', false, 'https://jp.linkaigc.com/routeIcons/%E5%9B%BE%E6%A1%88%E5%88%9B%E4%BD%9C%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg'],
+-              ['衣類生産\nツール', '/tools/fabric', false, 'https://jp.linkaigc.com/routeIcons/%E7%94%9F%E4%BA%A7%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg'],
++              ['デザインツール', '/tools/fabric', true, '/lightchain-assets/route-icons/design-on.svg'],
++              ['フィッティング\nツール', '/model', false, '/lightchain-assets/route-icons/fitting-off.svg'],
++              ['グラフィックデザイン\nツール', '/tools/printing', false, '/lightchain-assets/route-icons/graphic-off.svg'],
++              ['衣類生産\nツール', '/tools/fabric', false, '/lightchain-assets/route-icons/production-off.svg'],
+             ] as const).map(([label, route, active]) => (
+               <Link
+                 key={label}

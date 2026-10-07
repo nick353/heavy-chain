@@ -27,7 +27,7 @@ export function Layout() {
   const lightchainAvatarUrl = profile?.avatar_url
     || (typeof user?.user_metadata?.avatar_url === 'string' ? user.user_metadata.avatar_url : null)
     || (typeof user?.user_metadata?.picture === 'string' ? user.user_metadata.picture : null)
-    || 'https://ql-hangzhou-oss.oss-cn-hangzhou.aliyuncs.com/AIDesign/saas-avatar-new.png?x-oss-process=image/resize,m_lfit,w_64,limit_1/format,webp';
+    || '/lightchain-assets/mirror/ql-hangzhou-oss/saas-avatar-new-35182e5e.webp';
   
   // Determine if we should show sidebar (only for authenticated users on dashboard pages)
   // Exclude public pages and auth pages

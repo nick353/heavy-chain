@@ -21,12 +21,11 @@ test('video dashboard keeps the Light empty-project card contrast', () => {
   );
 });
 
-test('video dashboard retains the source fixture URLs and no visible rights checkbox', () => {
+test('video dashboard keeps the source template covers (self-hosted) and no visible rights checkbox', () => {
+  // The Light account's own Untitled projects are not copied; recent projects are the user's saved videos.
+  for (const marker of ['548083b211dccf02c2b0335279d15216', 'b9e909c9d8444f93918a34724c255adb', '509cc48a248ff6fbcc0492b57f6aac68', '1e4238ea72d473c5d39be73e58e3ea05']) assert.doesNotMatch(pageSource, new RegExp(marker, 'u'));
+  assert.doesNotMatch(pageSource, /aliyuncs\.com|linkaigc\.com/u);
   for (const marker of [
-    '548083b211dccf02c2b0335279d15216',
-    'b9e909c9d8444f93918a34724c255adb',
-    '509cc48a248ff6fbcc0492b57f6aac68',
-    '1e4238ea72d473c5d39be73e58e3ea05',
     'be85465f39e4bf553c55e59f521b047a',
     'b2bc805754975f48fe8aac9e9cd6d001',
     'ed31223882b364815833e87870dcfc0c',

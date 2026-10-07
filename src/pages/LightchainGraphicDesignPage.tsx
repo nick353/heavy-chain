@@ -16,7 +16,7 @@ export const GRAPHIC_STRENGTH_LEVELS = ['弱', 'やや弱', '中', 'やや強', 
 type StrengthIndex = 0 | 1 | 2 | 3 | 4;
 const DEFAULT_STRENGTH: StrengthIndex = 2;
 const MAX_REFERENCES = 2;
-const GRAPHIC_VIDEO = 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E5%8D%B0%E6%9F%93%E4%B8%8A%E8%BA%AB.mp4';
+const GRAPHIC_VIDEO = '/lightchain-assets/mirror/lightchain-qlxy-prod/print-on-body.mp4';
 
 const readStrengths = (value: unknown): [StrengthIndex, StrengthIndex] => {
   const list = Array.isArray(value) ? value : [];

@@ -296,56 +296,56 @@ const isHomepageVisibleFeature = (_feature: LightchainFeature): boolean => true;
 
 /** Heavy-owned artwork for the shared Lightchain-shaped launcher chrome. */
 const launcherCategoryImages: Record<LightchainCategoryId, string> = {
-  recommended: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  planning: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  fitting: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  graphics: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  recommended: '/lightchain-assets/mirror/lightchain-qlxy-prod/AIAgentCover-76724916.webp',
+  planning: '/lightchain-assets/mirror/lightchain-qlxy-prod/designProduction-e8834c25.webp',
+  fitting: '/lightchain-assets/mirror/lightchain-qlxy-prod/VirtualFittingCover-c04b6319.webp',
+  graphics: '/lightchain-assets/mirror/lightchain-qlxy-prod/designProduction-e8834c25.webp',
 };
 
 const launcherFeatureImages: Partial<Record<string, string>> = {
-  'design-agent': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'design-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'marketing-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateMarketingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'fashion-studio': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/integrationCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'video-workstation': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateShortVideoCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'virtual-fitting': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'image-repair': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FixDeformitiesCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'remove-background': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FixDeformitiesCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'wear-design-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/orientedDesignCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'model-library': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FittingModelLibraryCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'heavychain-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/laboratoryCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'inspiration-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/aiDesignCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'fabric-simulation': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FabricBodyCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'lineart-to-real': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/LineArtToRealCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'change-color': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/OneClickChangeColorCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'flat-vector': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/LineArtVectorConvertCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'custom-style': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/fashionModelCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'graphic-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GeneratePrintingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'pattern-vector-pro': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/SVGConvertCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'design-arrange': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/OneClickModifyPrintingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'print-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FlowerShapedDesignCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'design-agent': '/lightchain-assets/mirror/lightchain-qlxy-prod/AIAgentCover-76724916.webp',
+  'design-workspace': '/lightchain-assets/mirror/lightchain-qlxy-prod/designProduction-e8834c25.webp',
+  'marketing-workspace': '/lightchain-assets/mirror/lightchain-qlxy-prod/GenerateMarketingCover-cb27f243.webp',
+  'fashion-studio': '/lightchain-assets/mirror/lightchain-qlxy-prod/integrationCover-ffc3ea17.webp',
+  'video-workstation': '/lightchain-assets/mirror/lightchain-qlxy-prod/GenerateShortVideoCover-1f4ae742.webp',
+  'virtual-fitting': '/lightchain-assets/mirror/lightchain-qlxy-prod/VirtualFittingCover-c04b6319.webp',
+  'image-repair': '/lightchain-assets/mirror/lightchain-qlxy-prod/FixDeformitiesCover-ffca3315.webp',
+  'remove-background': '/lightchain-assets/mirror/lightchain-qlxy-prod/FixDeformitiesCover-ffca3315.webp',
+  'wear-design-lab': '/lightchain-assets/mirror/lightchain-qlxy-prod/orientedDesignCover-ac28f2a8.webp',
+  'model-library': '/lightchain-assets/mirror/lightchain-qlxy-prod/FittingModelLibraryCover-f8b1e86f.webp',
+  'heavychain-lab': '/lightchain-assets/mirror/lightchain-qlxy-prod/laboratoryCover-f42878b4.webp',
+  'inspiration-design': '/lightchain-assets/mirror/lightchain-qlxy-prod/aiDesignCover-ecc22aa6.webp',
+  'fabric-simulation': '/lightchain-assets/mirror/lightchain-qlxy-prod/FabricBodyCover-e2a3f86b.webp',
+  'lineart-to-real': '/lightchain-assets/mirror/lightchain-qlxy-prod/LineArtToRealCover-107ca36f.webp',
+  'change-color': '/lightchain-assets/mirror/lightchain-qlxy-prod/OneClickChangeColorCover-a89f5f43.webp',
+  'flat-vector': '/lightchain-assets/mirror/lightchain-qlxy-prod/LineArtVectorConvertCover-72bb99a0.webp',
+  'custom-style': '/lightchain-assets/mirror/lightchain-qlxy-prod/fashionModelCover-17cf7a74.webp',
+  'graphic-design': '/lightchain-assets/mirror/lightchain-qlxy-prod/GeneratePrintingCover-855aabe1.webp',
+  'pattern-vector-pro': '/lightchain-assets/mirror/lightchain-qlxy-prod/SVGConvertCover-4b9559be.webp',
+  'design-arrange': '/lightchain-assets/mirror/lightchain-qlxy-prod/OneClickModifyPrintingCover-c7f33e3f.webp',
+  'print-design': '/lightchain-assets/mirror/lightchain-qlxy-prod/FlowerShapedDesignCover-b505779c.webp',
 };
 
 const canonicalRecommendedGalleryImages = [
-  'https://static-cn.linkaigc.com/workbenches/2026-02/d81b55aa18721b86c37b96a36223a936.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/a25e632441de5b1198f4e20ae7040568.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/3266745d3f905fc8c770cd0894438279.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/6051a3df009110d3de23c3af3173e418.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/1b69b85c8eba09e87fbae86a8f98b3b5.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/workbenches/2026-03/8a0819ffd465485fca3826a8daa55e52.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/3012bf485d2fcf846ea006975040b91d.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/19fa690cf8a20c07f5e289464d676f59.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/5d67da9df9be3f548f1cc425a1f84280.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/b8ec2a7a0c4568e30b842f7f6b116474.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/a15e92993792273cb5a65d4387f84692.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/8e27567f4e2e95a129348ccbaabec8d7.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/workbenches/2026-03/dfec176704c22897d7d90cec933e117f.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/886d82e0b698aae745d4ba2ead9b92c5.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/d2c7f4a20364316cbf0549b3a81e5cae.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/1483b69c2c945b0ef7c366374430edc8.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/workbenches/2026-03/02e6be67a4d3e7a7cded82c1e82eccb4.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/a38a76f61065a395382e94a9cd9b8bd4.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/b9db6ef4425f19e9ed865fd88e6e6115.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  '/lightchain-assets/mirror/static-cn/d81b55aa18721b86c37b96a36223a936-715ef430.webp',
+  '/lightchain-assets/mirror/static-cn/a25e632441de5b1198f4e20ae7040568-5310d227.webp',
+  '/lightchain-assets/mirror/static-cn/3266745d3f905fc8c770cd0894438279-e1192cdc.webp',
+  '/lightchain-assets/mirror/static-cn/6051a3df009110d3de23c3af3173e418-b4252d95.webp',
+  '/lightchain-assets/mirror/static-cn/1b69b85c8eba09e87fbae86a8f98b3b5-277c40f0.webp',
+  '/lightchain-assets/mirror/static-cn/8a0819ffd465485fca3826a8daa55e52-8c5a913f.webp',
+  '/lightchain-assets/mirror/static-cn/3012bf485d2fcf846ea006975040b91d-0a1c9be0.webp',
+  '/lightchain-assets/mirror/static-cn/19fa690cf8a20c07f5e289464d676f59-826a5905.webp',
+  '/lightchain-assets/mirror/static-cn/5d67da9df9be3f548f1cc425a1f84280-f4765512.webp',
+  '/lightchain-assets/mirror/static-cn/b8ec2a7a0c4568e30b842f7f6b116474-7cb0ba85.webp',
+  '/lightchain-assets/mirror/static-cn/a15e92993792273cb5a65d4387f84692-63b7caf9.webp',
+  '/lightchain-assets/mirror/static-cn/8e27567f4e2e95a129348ccbaabec8d7-479d0a17.webp',
+  '/lightchain-assets/mirror/static-cn/dfec176704c22897d7d90cec933e117f-d3144a9d.webp',
+  '/lightchain-assets/mirror/static-cn/886d82e0b698aae745d4ba2ead9b92c5-ef73b6e1.webp',
+  '/lightchain-assets/mirror/static-cn/d2c7f4a20364316cbf0549b3a81e5cae-ad805d7d.webp',
+  '/lightchain-assets/mirror/static-cn/1483b69c2c945b0ef7c366374430edc8-575aa39a.webp',
+  '/lightchain-assets/mirror/static-cn/02e6be67a4d3e7a7cded82c1e82eccb4-133e48df.webp',
+  '/lightchain-assets/mirror/static-cn/a38a76f61065a395382e94a9cd9b8bd4-a85d72e7.webp',
+  '/lightchain-assets/mirror/static-cn/b9db6ef4425f19e9ed865fd88e6e6115-95dfd073.webp',
 ];
 
 const buildGalleryExampleImage = (featureId: string) => {
@@ -573,7 +573,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   </div>
                   <div className="flex min-h-[88px] min-w-0 flex-1 flex-col gap-1">
                     <div className="relative flex min-h-8 items-center overflow-hidden">
-                      <img src="https://jp.linkaigc.com/static/title_bg.png" alt="" aria-hidden="true" className="pointer-events-none absolute top-1/2 left-0 max-h-11 w-[148px] -translate-y-1/2 object-contain object-left" />
+                      <img src="/lightchain-assets/mirror/jp/title_bg-58b86113.png" alt="" aria-hidden="true" className="pointer-events-none absolute top-1/2 left-0 max-h-11 w-[148px] -translate-y-1/2 object-contain object-left" />
                       <h3
                         style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
                         className="relative z-[1] min-w-0 line-clamp-2 text-[14px] font-medium leading-6 text-white"

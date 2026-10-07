@@ -139,7 +139,7 @@ test('Lightchain header uses the Lightchain avatar identity and account menu', a
   assert.match(source, /aria-label="avatar"/);
   assert.match(source, /alt="avatar"/);
   assert.match(source, /lightchainAvatarUrl/);
-  assert.match(source, /saas-avatar-new\.png/);
+  assert.match(source, /\/lightchain-assets\/mirror\/ql-hangzhou-oss\/saas-avatar-new-[0-9a-f]+\.webp/);
   assert.match(source, /onClick=\{\(\) => void handleLightchainSignOut\(\)\}/);
   assert.match(source, /\{!isLightchainRoute && \([\s\S]*aria-label="アカウント"/);
 });
