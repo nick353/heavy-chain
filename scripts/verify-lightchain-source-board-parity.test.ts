@@ -110,7 +110,7 @@ test('canonical pattern-arrange board keeps the shared Light project-board geome
 test('canonical design-document board keeps the source six-column card rail', () => {
   assert.match(appSource, /path="\/board"[\s\S]*?<LightchainBoardPage \/>/);
   assert.match(designDocumentBoardPage, /data-testid="lightchain-board-page"/);
-  assert.match(designDocumentBoardPage, /grid grid-cols-6 gap-x-6 gap-y-6/);
+  assert.match(designDocumentBoardPage, /grid grid-cols-6 gap-x-6 gap-y-4/);
   assert.match(designDocumentBoardPage, /data-testid="lightchain-board-document-card"/);
   assert.match(designDocumentBoardPage, /MoreHorizontal/);
   assert.doesNotMatch(designDocumentBoardPage, /type="checkbox"/);

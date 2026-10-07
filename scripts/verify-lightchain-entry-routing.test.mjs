@@ -218,10 +218,10 @@ test('maps the Light design-document menu to the canonical board routes', async 
   ]);
   assert.match(app, /path="\/board\/edit"[\s\S]*?<LightchainBoardEditPage \/>/);
   assert.match(app, /path="\/board"[\s\S]*?<LightchainBoardPage \/>/);
-  assert.match(layout, /<Link to="\/board"[^>]*>デザインドキュメント<\/Link>/);
+  assert.match(layout, /<Link to="\/board"[^>]*>[\s\S]{0,120}<span>デザインドキュメント<\/span><\/Link>/);
   assert.match(board, /data-testid="lightchain-board-page"/);
   assert.match(board, /data-testid="lightchain-board-edit-page"/);
-  assert.match(board, /LIGHTCHAIN_BOARD_STORAGE_KEY/);
+  assert.match(board, /listCanvasDocumentsPage/);
   assert.doesNotMatch(board, /fillSourceBoardDocuments/);
   assert.doesNotMatch(board, /2025\.8\.21 18:00/); // the source account's sample dates are not copied
   assert.doesNotMatch(board, /type="checkbox"|権利確認/);

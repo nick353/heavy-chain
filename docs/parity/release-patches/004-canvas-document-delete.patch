@@ -1,0 +1,15 @@
+diff --git a/src/lib/cloudflareApi.ts b/src/lib/cloudflareApi.ts
+index b0cce70c..14bbf3cd 100644
+--- a/src/lib/cloudflareApi.ts
++++ b/src/lib/cloudflareApi.ts
+@@ -1193,6 +1193,10 @@ class CloudflareDataPlaneClient {
+     },context);
+   }
+ 
++  async deleteCanvasDocument(documentId: string): Promise<void> {
++    await this.request<void>(`/v1/canvas-documents/${encodeURIComponent(documentId)}`, { method: 'DELETE' });
++  }
++
+   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+     const response = await this.fetchRaw(path, init);
+     if (response.status === 204) return undefined as T;

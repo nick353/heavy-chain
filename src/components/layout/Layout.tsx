@@ -12,7 +12,7 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
-import { ChevronDown, Globe2, HelpCircle, History, User, UserCircle } from 'lucide-react';
+import { ChevronDown, ChevronLeft, FileText, FolderOpen, Globe2, HelpCircle, History, LogOut, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
 import { isHeavyWorkspaceRuntime } from '../../lib/heavyWorkspace';
 
 // Heavy Chain owns the visible identity; parity route identifiers remain internal compatibility details.
@@ -24,6 +24,29 @@ export function Layout() {
   const [scrolled, setScrolled] = useState(false);
   const [isLightAccountMenuOpen, setIsLightAccountMenuOpen] = useState(false);
   const [isLightAccountDetailOpen, setIsLightAccountDetailOpen] = useState(false);
+  const currentBrand = useAuthStore((state) => state.currentBrand);
+  const lightchainUserName = (typeof user?.user_metadata?.full_name === 'string' && user.user_metadata.full_name.trim())
+    || user?.email?.split('@')[0] || 'ユーザー';
+  // Light's 透かし toggle is a per-user display preference; Heavy keeps it per user in this browser.
+  const watermarkKey = user?.id ? `heavy:watermark-display:v1:${user.id}` : null;
+  const [watermarkOn, setWatermarkOn] = useState(false);
+  useEffect(() => {
+    try { setWatermarkOn(Boolean(watermarkKey && localStorage.getItem(watermarkKey) === '1')); } catch { setWatermarkOn(false); }
+  }, [watermarkKey]);
+  const toggleWatermark = () => {
+    const next = !watermarkOn;
+    setWatermarkOn(next);
+    try { if (watermarkKey) localStorage.setItem(watermarkKey, next ? '1' : '0'); } catch { /* storage unavailable */ }
+  };
+  useEffect(() => {
+    if (!isLightAccountMenuOpen) return;
+    const close = (event: PointerEvent) => {
+      if (!(event.target as Element | null)?.closest?.('[data-light-account-menu]')) { setIsLightAccountMenuOpen(false); setIsLightAccountDetailOpen(false); }
+    };
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [isLightAccountMenuOpen]);
+  const lightMenuItem = 'flex h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-neutral-200 transition hover:bg-white/10 hover:text-white';
   const lightchainAvatarUrl = profile?.avatar_url
     || (typeof user?.user_metadata?.avatar_url === 'string' ? user.user_metadata.avatar_url : null)
     || (typeof user?.user_metadata?.picture === 'string' ? user.user_metadata.picture : null)
@@ -157,6 +180,8 @@ export function Layout() {
                     <ChevronDown className="h-3.5 w-3.5" />
                   </button>
                 )}
+                {/* Pages such as the design-document editor put their breadcrumb here (Light shows it next to the language menu). */}
+                {isLightchainRoute && <div id="lightchain-header-context" className="contents" />}
                 {!isLightchainRoute && (
                   <div className="hidden items-center gap-2 text-sm text-neutral-300 md:flex">
                     {lightchainCategories.map((category) => (
@@ -187,18 +212,22 @@ export function Layout() {
                     <HelpCircle className="h-4 w-4" />
                     ヘルプセンター
                   </button>
-                ) : (
+                ) : null}
+                {isLightchainRoute && <div id="lightchain-header-actions" className="contents" />}
+                {isLightchainRoute ? null : (
                   <Link to="/jobs" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
                     <HelpCircle className="h-4 w-4" />
                     ジョブ
                   </Link>
                 )}
                 {isLightchainRoute ? (
-                  <div className="flex h-8 w-[61px] items-center justify-end border-l border-white/10 pl-4">
-                    <div className="relative">
+                  // Light: a 16px rule (8px after help, 16px before the avatar), then the 32px avatar with a 4px right margin.
+                  <div className="flex h-8 w-[61px] items-center">
+                    <div className="ml-2 mr-4 h-4 w-px bg-white/10" aria-hidden="true" />
+                    <div className="relative" data-light-account-menu>
                       <button
                         type="button"
-                        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#62666a]/90 text-[#202426] transition hover:bg-[#74797d]"
+                        className="mr-1 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#62666a]/90 text-[#202426] transition hover:bg-[#74797d]"
                         aria-label="avatar"
                         aria-expanded={isLightAccountMenuOpen}
                         onClick={() => setIsLightAccountMenuOpen((open) => !open)}
@@ -210,28 +239,46 @@ export function Layout() {
                         )}
                       </button>
                       {isLightAccountMenuOpen && (
-                        <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-2xl border border-neutral-200 bg-white py-2 text-sm text-neutral-800 shadow-2xl">
+                        // Light: a 240px dark menu under the avatar — account card, then groups split by rules.
+                        <div role="menu" className="absolute right-0 top-[42px] z-50 w-60 rounded-xl border border-white/10 bg-[#2b2f31] px-3 py-[9px] text-sm text-neutral-200 shadow-2xl">
                           {isLightAccountDetailOpen ? (
                             <>
-                              <button type="button" onClick={() => setIsLightAccountDetailOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left font-semibold transition hover:bg-neutral-100">
-                                <span aria-hidden="true">‹</span> アカウント
+                              <button type="button" onClick={() => setIsLightAccountDetailOpen(false)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 text-left font-semibold transition hover:bg-white/10">
+                                <ChevronLeft className="h-4 w-4" aria-hidden="true" /> マイアカウント
                               </button>
-                              <div className="border-t border-neutral-200 px-4 py-3">
-                                <p className="font-semibold">マイアカウント</p>
-                                <p className="mt-3 font-medium">{typeof user?.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : 'ユーザー'}</p>
-                                <p className="mt-1 text-xs text-neutral-500">{user?.email ?? ''}</p>
-                                <Link to="/change-password" className="mt-4 block text-xs text-neutral-600 underline transition hover:text-neutral-900">パスワードを変更する</Link>
+                              <div className="my-3 h-px bg-white/10" />
+                              <div className="px-3 pb-2">
+                                <p className="font-medium text-white">{lightchainUserName}</p>
+                                <p className="mt-1 break-all text-xs text-neutral-400">{user?.email ?? ''}</p>
+                                <Link to="/change-password" className="mt-4 block text-xs text-neutral-300 underline transition hover:text-white">パスワードを変更する</Link>
                               </div>
                             </>
                           ) : (
                             <>
-                              <button type="button" onClick={() => setIsLightAccountDetailOpen(true)} className="block w-full px-4 py-3 text-left transition hover:bg-neutral-100">マイアカウント</button>
-                              <Link to="/board" className="block px-4 py-3 transition hover:bg-neutral-100">デザインドキュメント</Link>
-                              <Link to="/asset-center" className="block px-4 py-3 transition hover:bg-neutral-100">ライブラリー</Link>
-                              <Link to="/brand/settings" className="block px-4 py-3 transition hover:bg-neutral-100">チーム管理</Link>
-                              <div className="my-1 border-t border-neutral-200" />
-                              <button type="button" className="block w-full px-4 py-3 text-left text-neutral-500 transition hover:bg-neutral-100">透かし（ウォーターマーク）表示</button>
-                              <button type="button" onClick={() => void handleLightchainSignOut()} className="block w-full px-4 py-3 text-left text-neutral-500 transition hover:bg-neutral-100">ログアウト</button>
+                              <div className="flex h-[72px] items-center gap-2">
+                                <img src={lightchainAvatarUrl} alt="avatar" className="size-12 shrink-0 rounded-full object-cover" />
+                                <div className="min-w-0 px-2">
+                                  <p className="truncate text-base leading-6 text-white">{lightchainUserName}</p>
+                                  <p className="mt-1 truncate text-xs leading-4 text-neutral-400">{currentBrand?.name ?? ''}</p>
+                                </div>
+                              </div>
+                              <div className="my-3 h-px bg-white/10" />
+                              <button type="button" role="menuitem" onClick={() => setIsLightAccountDetailOpen(true)} className={lightMenuItem}><UserRound className="h-5 w-5" aria-hidden="true" />マイアカウント</button>
+                              <div className="my-3 h-px bg-white/10" />
+                              <div className="flex flex-col gap-1">
+                                <Link to="/board" role="menuitem" onClick={() => setIsLightAccountMenuOpen(false)} className={lightMenuItem}><FileText className="h-5 w-5" aria-hidden="true" /><span>デザインドキュメント</span></Link>
+                                <Link to="/asset-center" role="menuitem" onClick={() => setIsLightAccountMenuOpen(false)} className={lightMenuItem}><FolderOpen className="h-5 w-5" aria-hidden="true" /><span>ライブラリー</span></Link>
+                              </div>
+                              <div className="my-3 h-px bg-white/10" />
+                              <Link to="/brand/settings" role="menuitem" onClick={() => setIsLightAccountMenuOpen(false)} className={lightMenuItem}><Users className="h-5 w-5" aria-hidden="true" /><span>チーム管理</span></Link>
+                              <div className="my-3 h-px bg-white/10" />
+                              <button type="button" role="menuitemcheckbox" aria-checked={watermarkOn} onClick={toggleWatermark} className={`${lightMenuItem} h-16`}>
+                                <Stamp className="h-5 w-5 shrink-0" aria-hidden="true" />
+                                <span className="flex-1 text-left">透かし（ウォーターマーク）表示</span>
+                                <span aria-hidden="true" className={`relative h-4 w-7 shrink-0 rounded-full transition ${watermarkOn ? 'bg-[#5fcfc4]' : 'bg-white/25'}`}><span className={`absolute top-0.5 size-3 rounded-full bg-white transition ${watermarkOn ? 'left-3.5' : 'left-0.5'}`} /></span>
+                              </button>
+                              <div className="my-3 h-px bg-white/10" />
+                              <button type="button" role="menuitem" onClick={() => void handleLightchainSignOut()} className={lightMenuItem}><LogOut className="h-5 w-5" aria-hidden="true" />ログアウト</button>
                             </>
                           )}
                         </div>
