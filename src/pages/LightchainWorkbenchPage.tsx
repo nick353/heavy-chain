@@ -4940,7 +4940,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     return (
       <main
         {...resumeReadbackAttributes}
-        className="dark relative h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white"
+        className="dark relative h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-clip bg-[#171b1c] text-white"
         style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
         data-flow-state={unifiedFlowState}
         data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
@@ -4962,10 +4962,11 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         data-lightchain-brand-error={brandState.error ?? ''}
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
-        {/* The fitting layout fills the viewport, so the running/error notice floats over it instead of pushing the panels down (which scrolled the page sideways). */}
+        {/* The fitting layout fills the viewport, so the running/error notice floats over it instead of pushing the panels down. The containers clip rather than hide overflow: the
+            header row is wider than the 432px input panel, and an overflow-hidden box can still be scrolled sideways by focus. */}
         <div className="pointer-events-none absolute right-4 top-14 z-40 w-[360px] [&>*]:pointer-events-auto [&>*]:mt-0">{renderLightchainProviderGate()}</div>
-        <div className="relative grid h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden lg:grid-cols-[432px_minmax(0,1fr)]">
-          <section className="flex h-full min-h-0 flex-col overflow-hidden border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
+        <div className="relative grid h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-clip lg:grid-cols-[432px_minmax(0,1fr)]">
+          <section className="flex h-full min-h-0 flex-col overflow-clip border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
             <div className="flex h-12 items-center border-b border-white/10 px-4">
               <p className="shrink-0 text-[14px] font-semibold leading-6 text-white">AIフィッティング</p>
               <div className="ml-2 flex min-w-0 items-center gap-2">
@@ -5016,7 +5017,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                 </div>
               </div>
             </div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-2">
+            <div className="flex min-h-0 flex-1 flex-col overflow-clip px-4 py-2">
               <div className="flex flex-col gap-2 shrink-0">
                 <div className="flex items-center justify-between gap-3">
                   <div>
