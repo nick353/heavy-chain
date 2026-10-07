@@ -99,15 +99,14 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
   {
     id: 'video-workstation',
     title: '動画ワークステーション',
-    lightchainName: 'StoryboardImage / StoryboardVideo / GenerateShortVideo',
-    description: '動画構成を storyboard にまとめます。',
+    lightchainName: 'GenerateShortVideoV2 / StoryboardVideoV2 / CustomizedStoryboardVideo / ReplicationVideo / StoryboardImage / EditingVideo',
+    description: '各種マーケティング動画を素早く生成し、服装展示、販促、着せ替え、実写動態へつなげます。',
     route: '/flow/GenerateShortVideo',
     category: 'recommended',
     status: 'local-proof',
     capability: '尺、比率、ショット構成、CTA、保存',
     evidence: 'video-storyboard-local-v1',
     tags: ['動画', 'Storyboard', 'CTA'],
-    betaIncluded: false,
   },
   {
     id: 'model-library',
@@ -482,9 +481,12 @@ const lightchainLauncherFeatureIdsByCategory: Record<LightchainCategoryId, reado
 };
 
 const lightchainLauncherTitleOverrides: Record<string, string> = {
-  'design-agent': '企画ワークスペース',
+  // Keep the launcher title identical to the canonical Light surface. Heavy
+  // owns the logo/domain only; feature copy is not rebranded unless it is a
+  // Light Chain product-name reference.
+  'design-agent': 'インスピレーションワークスペース',
   'inspiration-design': 'インスピレーション',
-  'heavychain-lab': 'Lightchain Lab',
+  'heavychain-lab': 'Heavy Chain Lab',
   'pattern-vector-pro': 'パターンをベクター画像に変換（プロフェッショナル版）',
   'print-design': 'プリントデザイン',
   'remove-background': '画像修正',
@@ -601,13 +603,13 @@ export const lightchainParityGoals: LightchainParityGoal[] = [
     matrixId: 'M04',
     title: 'モデル企画ライブラリ',
     lightBehavior: 'same-name model planning library',
-    heavyCurrentBehavior: 'Heavy equivalent lives under /generate?feature=model-matrix and the route naming is still indirect',
+    heavyCurrentBehavior: 'Heavy now exposes the canonical /model-library/model-custom-form entry and keeps model-matrix as an internal provider adapter',
     heavyTarget: 'make routing and naming direct',
     priority: 'P0',
     rationale: 'core generation continuity depends on a direct route into model planning',
     owningSurface: 'GeneratePage / lightchainParityCatalog',
-    acceptanceEvidence: 'the model planning entry resolves directly to the intended generate route and reads clearly in the UI',
-    status: 'in_progress',
+    acceptanceEvidence: 'verify-model-library-direct-route.test.mjs proves the canonical entry, launcher mapping, fitting handoff, and rejection of the stale /models alias',
+    status: 'done',
   },
   {
     matrixId: 'M05',

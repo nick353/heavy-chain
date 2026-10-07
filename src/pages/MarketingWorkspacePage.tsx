@@ -28,6 +28,7 @@ import {
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
+import { toHeavyWorkspacePath } from '../lib/heavyWorkspace';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import {
   getLightchainUnifiedFeatureWorkflowContract,
@@ -157,7 +158,7 @@ const buildMarketingProjectHref = (artifact: WorkspaceArtifact) => {
     sourceResumePath: workspaceSourceConfig.marketing.resumePath,
     sourceMode: 'local-workflow-intake',
   });
-  return `/lightchain/marketing-detail?${params.toString()}`;
+  return toHeavyWorkspacePath(`/lightchain/marketing-detail?${params.toString()}`);
 };
 
 export function MarketingWorkspacePage() {

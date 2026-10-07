@@ -1,210 +1,249 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Layers, ArrowLeft, Mail, Check } from 'lucide-react';
-import { Button, Input } from '../components/ui';
-import { useAuthStore } from '../stores/authStore';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { auth } from '../lib/auth';
 import { getAuthErrorMessage } from '../lib/authErrorMessage';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+
+const MIN_PASSWORD_LENGTH = 6;
+const MAX_PASSWORD_LENGTH = 20;
+const OTP_LENGTH = 6;
+const fieldClassName = 'h-10 w-full rounded-[8px] border border-[#3b4248] bg-transparent px-4 text-[14px] text-[#f0f2f3] placeholder:text-[#7d858b] outline-none transition focus:border-[#14b8a6] disabled:opacity-60';
 
 export function ForgotPasswordPage() {
-  const { user, signOut, isLoading: isAuthLoading } = useAuthStore();
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSent, setIsSent] = useState(false);
+  const navigate = useNavigate();
+  const [account, setAccount] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [sendingCode, setSendingCode] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [error, setError] = useState('');
+  const [completed, setCompleted] = useState(false);
 
-  const validate = () => {
-    if (!email) {
-      setError('メールアドレスを入力してください');
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('有効なメールアドレスを入力してください');
-      return false;
-    }
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+    const timer = window.setTimeout(() => setCooldown(value => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
+
+  const normalizedAccount = () => account.trim().toLowerCase();
+  const validAccount = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  const sendVerificationCode = async () => {
+    const email = normalizedAccount();
     setError('');
-    return true;
-  };
+    if (!email) { setError('アカウントを入力してください。'); return; }
+    if (!validAccount(email)) { setError('有効なアカウントを入力してください。'); return; }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validate()) return;
-    
-    setIsLoading(true);
+    setSendingCode(true);
     try {
-      const { error } = await auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) throw error;
-
-      setIsSent(true);
-      toast.success('リセットメールを送信しました');
-    } catch (error: any) {
-      toast.error(getAuthErrorMessage(error, 'メールの送信に失敗しました'));
+      const result = await auth.requestPasswordResetOtp(email);
+      if (result.error) throw result.error;
+      setAccount(email);
+      setCodeSent(true);
+      setCooldown(60);
+      toast.success('登録済みの場合、認証コードをメールで送信しました。');
+    } catch (cause) {
+      const message = getAuthErrorMessage(cause, '認証コードを取得できませんでした。');
+      setError(message);
+      toast.error(message);
     } finally {
-      setIsLoading(false);
+      setSendingCode(false);
     }
   };
 
-  const handleSignOut = async () => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    const email = normalizedAccount();
+    if (!validAccount(email)) { setError('有効なアカウントを入力してください。'); return; }
+    if (!new RegExp(`^[0-9]{${OTP_LENGTH}}$`).test(verificationCode)) {
+      setError('6桁の認証コードを入力してください。'); return;
+    }
+    if (password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) {
+      setError(`新しいパスワードは${MIN_PASSWORD_LENGTH}〜${MAX_PASSWORD_LENGTH}文字で入力してください。`); return;
+    }
+    if (password !== confirmation) { setError('パスワードが一致しません。'); return; }
+
+    setSubmitting(true);
     try {
-      await signOut();
-      toast.success('ログアウトしました');
-    } catch (error: any) {
-      toast.error(error.message || 'ログアウトに失敗しました');
+      const result = await auth.completePasswordResetWithOtp(email, verificationCode, password);
+      if (result.error) throw result.error;
+      setPassword('');
+      setConfirmation('');
+      setVerificationCode('');
+      setCompleted(true);
+      toast.success('パスワードをリセットしました。');
+    } catch (cause) {
+      const message = getAuthErrorMessage(cause, 'パスワードをリセットできませんでした。');
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
     }
   };
-
-  if (isSent) {
-    return (
-      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-surface-50 dark:bg-surface-950">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary-200/20 blur-[120px] animate-float" />
-          <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-accent-200/20 blur-[120px] animate-pulse-slow" />
-        </div>
-
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="w-full max-w-md relative z-10"
-        >
-          <div className="text-center mb-8">
-            <Link to="/" className="inline-flex items-center gap-3 group">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform duration-500">
-                <Layers className="w-7 h-7 text-white" />
-              </div>
-              <span className="font-display text-2xl font-semibold text-neutral-900 dark:text-white tracking-wide">
-                Heavy Chain
-              </span>
-            </Link>
-          </div>
-
-          {user && (
-            <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-primary-500/20 bg-primary-500/10 px-4 py-3 text-sm text-primary-900 dark:text-primary-100">
-              <div className="min-w-0">
-                <p className="font-semibold">現在ログイン中です</p>
-                <p className="truncate text-primary-800/80 dark:text-primary-200/80">{user.email}</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                disabled={isAuthLoading}
-                className="shrink-0 rounded-full border border-primary-500/25 px-4 py-2 font-semibold text-primary-900 transition hover:bg-primary-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:text-primary-50"
-              >
-                ログアウト
-              </button>
-            </div>
-          )}
-
-          <div className="glass-panel rounded-2xl p-8 md:p-10 backdrop-blur-xl border-white/40 dark:border-white/10 text-center">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-slow">
-              <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
-            </div>
-            
-            <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white mb-3">
-              メールを送信しました
-            </h1>
-            <p className="text-neutral-600 dark:text-neutral-400 mb-8 leading-relaxed">
-              <span className="font-medium text-neutral-900 dark:text-white">{email}</span> 宛てに
-              パスワードリセットのリンクを送信しました。
-              メールをご確認ください。
-            </p>
-
-            <div className="bg-neutral-50/50 dark:bg-neutral-900/50 rounded-xl p-4 text-sm text-neutral-600 dark:text-neutral-400 mb-8 border border-neutral-100 dark:border-neutral-800">
-              メールが届かない場合は、迷惑メールフォルダをご確認ください。
-            </div>
-
-            <Link to="/login">
-              <Button variant="secondary" className="w-full shadow-sm hover:shadow-md transition-all">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                ログインに戻る
-              </Button>
-            </Link>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-surface-50 dark:bg-surface-950">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary-200/20 blur-[120px] animate-float" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-accent-200/20 blur-[120px] animate-pulse-slow" />
-      </div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-md relative z-10"
+    <main className="relative flex min-h-screen items-center justify-center bg-[#22262b] px-6 py-16 text-[#e7eaec]">
+      <Link
+        to="/login"
+        className="absolute right-6 top-5 text-[14px] text-[#d8dcde] transition hover:text-white sm:right-8 sm:top-6"
       >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-3 group">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform duration-500">
-              <Layers className="w-7 h-7 text-white" />
-            </div>
-            <span className="font-display text-2xl font-semibold text-neutral-900 dark:text-white tracking-wide">
-                Heavy Chain
-            </span>
-          </Link>
-        </div>
+        ログイン画面に戻る
+      </Link>
 
-        {/* Card */}
-        <div className="glass-panel rounded-2xl p-8 md:p-10 backdrop-blur-xl border-white/40 dark:border-white/10">
-          <div className="w-14 h-14 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <Mail className="w-7 h-7 text-primary-600 dark:text-primary-400" />
-          </div>
-          
-          <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white text-center mb-2">
-            パスワードをリセット
-          </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 text-center mb-8 text-sm leading-relaxed">
-            登録したメールアドレスを入力してください。
-            パスワードリセットのリンクをお送りします。
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-              type="email"
-              label="メールアドレス"
-              placeholder="your@email.com"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              error={error}
-              disabled={isLoading}
-              className="bg-white/50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
-            />
-
-            <Button
-              type="submit"
-              isLoading={isLoading}
-              className="w-full shadow-glow hover:shadow-glow-lg transition-all duration-300"
-              size="lg"
+      <section className="w-full max-w-[352px]">
+        {completed ? (
+          <div className="space-y-6 text-center" role="status" aria-live="polite">
+            <h1 className="text-[20px] font-medium">パスワードをリセットしました</h1>
+            <p className="text-[14px] leading-6 text-[#aeb5ba]">新しいパスワードでログインしてください。</p>
+            <button
+              type="button"
+              onClick={() => navigate('/login', { replace: true })}
+              className="h-12 w-full rounded-lg bg-[#0da69d] text-[15px] font-medium text-white transition hover:bg-[#0bb7ab] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#55ded4]"
             >
-              リセットリンクを送信
-            </Button>
-          </form>
-        </div>
+              ログイン画面に戻る
+            </button>
+          </div>
+        ) : (
+          <>
+            <h1 className="mb-10 text-center text-[20px] font-medium tracking-wide">パスワードのリセット</h1>
+            <form onSubmit={handleSubmit} className="space-y-7" noValidate>
+              <div>
+                <label htmlFor="reset-account" className="mb-2 block text-[14px] text-[#c6cbce]">
+                  アカウント<span className="ml-0.5 text-[#f06b77]">*</span>
+                </label>
+                <div className="flex h-10 overflow-hidden rounded-[8px] border border-[#3b4248] focus-within:border-[#14b8a6]">
+                  <input
+                    id="reset-account"
+                    name="account"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="アカウントを入力"
+                    value={account}
+                    onChange={event => { setAccount(event.target.value); setCodeSent(false); }}
+                    disabled={sendingCode || submitting}
+                    aria-required="true"
+                    className="h-full min-w-0 flex-1 bg-transparent px-4 text-[14px] text-[#f0f2f3] placeholder:text-[#7d858b] outline-none disabled:opacity-60"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void sendVerificationCode()}
+                    disabled={sendingCode || submitting || cooldown > 0}
+                    className="shrink-0 border-l border-[#3b4248] px-4 text-[14px] font-medium text-[#22c8bb] transition hover:text-[#73e6dc] disabled:cursor-not-allowed disabled:text-[#79817f]"
+                  >
+                    {sendingCode ? '送信中…' : cooldown > 0 ? `${cooldown}秒後に再取得` : codeSent ? '再取得' : '認証コード取得'}
+                  </button>
+                </div>
+              </div>
 
-        {/* Back link */}
-        <p className="text-center mt-8">
-          <Link 
-            to="/login" 
-            className="text-neutral-600 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 inline-flex items-center gap-2 transition-colors font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            ログインに戻る
-          </Link>
-        </p>
-      </motion.div>
-    </div>
+              <div>
+                <label htmlFor="reset-code" className="mb-2 block text-[14px] text-[#c6cbce]">
+                  認証コード<span className="ml-0.5 text-[#f06b77]">*</span>
+                </label>
+                <input
+                  id="reset-code"
+                  name="verificationCode"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={OTP_LENGTH}
+                  placeholder="認証コードを入力"
+                  value={verificationCode}
+                  onChange={event => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH))}
+                  disabled={submitting}
+                  aria-required="true"
+                  className={fieldClassName}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="reset-new-password" className="mb-2 block text-[14px] text-[#c6cbce]">
+                  新しいパスワード<span className="ml-0.5 text-[#f06b77]">*</span>
+                </label>
+                <p className="mb-2 text-[13px] leading-5 text-[#9da5aa]">
+                  6〜20文字で入力してください。
+                </p>
+                <div className="relative">
+                  <input
+                    id="reset-new-password"
+                    name="newPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    minLength={MIN_PASSWORD_LENGTH}
+                    maxLength={MAX_PASSWORD_LENGTH}
+                    placeholder="パスワードを入力する"
+                    value={password}
+                    onChange={event => setPassword(event.target.value)}
+                    disabled={submitting}
+                    aria-required="true"
+                    className={`${fieldClassName} pr-12`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(value => !value)}
+                    aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
+                    className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-[#8c959b] hover:text-white"
+                  >
+                    {showPassword ? <Eye size={17} aria-hidden="true" /> : <EyeOff size={17} aria-hidden="true" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="reset-confirm-password" className="mb-2 block text-[14px] text-[#c6cbce]">
+                  パスワードを確認<span className="ml-0.5 text-[#f06b77]">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="reset-confirm-password"
+                    name="passwordConfirmation"
+                    type={showConfirmation ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    minLength={MIN_PASSWORD_LENGTH}
+                    maxLength={MAX_PASSWORD_LENGTH}
+                    placeholder="パスワードを再度入力してください"
+                    value={confirmation}
+                    onChange={event => setConfirmation(event.target.value)}
+                    disabled={submitting}
+                    aria-required="true"
+                    className={`${fieldClassName} pr-12`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmation(value => !value)}
+                    aria-label={showConfirmation ? '確認用パスワードを隠す' : '確認用パスワードを表示'}
+                    className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-[#8c959b] hover:text-white"
+                  >
+                    {showConfirmation ? <Eye size={17} aria-hidden="true" /> : <EyeOff size={17} aria-hidden="true" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && <p role="alert" className="text-[13px] leading-5 text-[#ff8993]">{error}</p>}
+              {codeSent && !error && (
+                <p role="status" aria-live="polite" className="text-[13px] leading-5 text-[#83d5ce]">
+                  登録済みの場合、認証コードをメールで送信しました。
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting || sendingCode}
+                className="h-10 w-full rounded-lg bg-[#0da69d] text-[15px] font-medium text-white transition hover:bg-[#0bb7ab] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#55ded4] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? 'リセット中…' : 'パスワードのリセット'}
+              </button>
+            </form>
+          </>
+        )}
+      </section>
+    </main>
   );
 }

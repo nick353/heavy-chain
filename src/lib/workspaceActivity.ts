@@ -12,8 +12,9 @@ import {
 import { withSignedImageUrls } from './storage';
 import type { GeneratedImageListRow } from './generatedImageQuery';
 import { asGeneratedImageListRow, cloudflareDataPlane } from './cloudflareApi';
-import { buildSourceContextSummaryRows, type SourceContextSummaryRow } from './sourceContextSummary';
+import { buildSourceContextSummaryRows, displaySourceSummaryLabel, type SourceContextSummaryRow } from './sourceContextSummary';
 import { getFailureRecoveryGuidance, type FailureRecoveryKind } from './errorMessages';
+import { isHeavyWorkspaceRuntime } from './heavyWorkspace';
 import type { GenerationIntent } from './workspaceHandoff';
 import type { Database, Json } from '../types/database';
 import type { WorkspaceExecutionStep as LightchainTaskStep } from './workspaceExecution';
@@ -103,10 +104,38 @@ export interface WorkspaceActivity {
   timelineItems: TimelineItem[];
 }
 
+export interface WorkspaceActivityOptions {
+  /** History and Jobs retain older rows already returned by the scoped reads. */
+  includeAllLoadedJobs?: boolean;
+}
+
 const logWorkspaceActivityFetchError = (message: string, error: unknown) => {
   if (import.meta.env.DEV) {
     console.warn(message, error);
   }
+};
+
+/**
+ * Heavy is deployed from the same codebase as the Lightchain-compatible
+ * routes. Persisted activity may therefore still contain the old brand name
+ * or `/lightchain/*` resume path. Normalize only at the Heavy display/runtime
+ * boundary; the stored payload remains unchanged for compatibility.
+ */
+const isHeavyChainRuntime = isHeavyWorkspaceRuntime;
+
+const toHeavyChainPath = (path: string | undefined) => (
+  path && isHeavyChainRuntime() && path.startsWith('/lightchain/')
+    ? path.replace(/^\/lightchain(?=\/)/, '/heavy')
+    : path
+);
+
+const toHeavyChainDisplayCopy = (value: string | null | undefined) => {
+  if (!value || !isHeavyChainRuntime()) return value ?? undefined;
+  return value
+    .replaceAll('LIGHTCHAIN ROUTE', 'HEAVY CHAIN ROUTE')
+    .replaceAll('LIGHTCHAIN', 'HEAVY CHAIN')
+    .replaceAll('Lightchain', 'Heavy Chain')
+    .replaceAll('Light Chain', 'Heavy Chain');
 };
 
 export const emptyWorkspaceActivity: WorkspaceActivity = {
@@ -152,8 +181,19 @@ const featureLabels: Record<string, string> = {
   'design-gacha': 'デザインガチャ',
 };
 
-const getFeatureLabel = (featureType: string | null | undefined) => {
+const getFeatureLabel = (featureType: string | null | undefined, metadata?: Json | null) => {
   if (!featureType) return '生成ジョブ';
+  const sourceResumePath = getMetadataString(metadata, 'sourceResumePath');
+  const heavyChainSource = isHeavyChainRuntime() || sourceResumePath?.startsWith('/heavy/');
+  if (featureType === 'lightchain-fabric-image' || featureType === 'lightchain-fabric-image-provider-result') {
+    return heavyChainSource ? 'Heavy Chain 生地イメージ' : 'Lightchain 生地イメージ';
+  }
+  if (featureType === 'lightchain-printing-image' || featureType === 'lightchain-printing-image-provider-result') {
+    return heavyChainSource ? 'Heavy Chain プリントイメージ' : 'Lightchain プリントイメージ';
+  }
+  if (heavyChainSource && featureType.startsWith('lightchain-')) {
+    return `Heavy Chain ${featureType.slice('lightchain-'.length).replaceAll('-', ' ')}`;
+  }
   return featureLabels[featureType] ?? featureType.replaceAll('-', ' ');
 };
 
@@ -240,10 +280,29 @@ const getJobRecoveryGuidance = (job: GenerationJob) => {
   };
 };
 
+const isLocalCanvasAssetReference = (value: string | undefined): value is string => (
+  typeof value === 'string' && value.startsWith('local-canvas-asset://') && value.length <= 512
+);
+
+const appendLocalModelInputParams = (params: URLSearchParams, metadata: Json | null | undefined) => {
+  const localSourceReference = getMetadataString(metadata, 'localSourceReference');
+  const localModelReference = getMetadataString(metadata, 'localModelReference');
+  const sourceFileName = getMetadataString(metadata, 'sourceFileName');
+  const modelReferenceFileName = getMetadataString(metadata, 'modelReferenceFileName');
+  if (isLocalCanvasAssetReference(localSourceReference)) params.set('localSourceReference', localSourceReference);
+  if (isLocalCanvasAssetReference(localModelReference)) params.set('localModelReference', localModelReference);
+  if (sourceFileName && sourceFileName.length <= 512) params.set('sourceFileName', sourceFileName);
+  if (modelReferenceFileName && modelReferenceFileName.length <= 512) params.set('modelReferenceFileName', modelReferenceFileName);
+};
+
 const buildResumeHref = (job: GenerationJob) => {
   const metadata = getWorkspaceActivityMetadata(job.input_params);
   const generationHref = getGenerationHref(metadata);
-  if (generationHref) return generationHref;
+  const hasLocalModelInput = job.feature_type === 'model-matrix' && (
+    isLocalCanvasAssetReference(getMetadataString(metadata, 'localSourceReference'))
+    || isLocalCanvasAssetReference(getMetadataString(metadata, 'localModelReference'))
+  );
+  if (generationHref && !hasLocalModelInput) return generationHref;
   if (!job.feature_type) return '/designProduction';
 
   const sourceResumePath = getMetadataString(metadata, 'sourceResumePath');
@@ -270,6 +329,7 @@ const buildResumeHref = (job: GenerationJob) => {
     const referenceNote = getMetadataString(metadata, 'referenceNote');
     if (brief) params.set('brief', brief);
     if (referenceNote) params.set('referenceNote', referenceNote);
+    if (isHeavyChainRuntime()) return `/heavy/${encodeURIComponent(lightchainFeatureId)}?${params.toString()}`;
     return `/lightchain/${encodeURIComponent(lightchainFeatureId)}?${params.toString()}`;
   }
 
@@ -277,6 +337,7 @@ const buildResumeHref = (job: GenerationJob) => {
   const prompt = getJobPrompt(job);
   params.set('feature', job.feature_type);
   if (prompt) params.set('prompt', prompt);
+  if (job.feature_type === 'model-matrix') appendLocalModelInputParams(params, metadata);
   return `/generate?${params.toString()}`;
 };
 
@@ -295,19 +356,19 @@ const mapJob = (
   const resumeHref = buildResumeHref(job);
   return {
     id: job.id,
-    title: getFeatureLabel(job.feature_type),
+    title: getFeatureLabel(job.feature_type, job.input_params),
     featureType: job.feature_type,
     status: job.status,
-    prompt: getJobPrompt(job),
+    prompt: toHeavyChainDisplayCopy(getJobPrompt(job)) ?? null,
     errorMessage: job.error_message,
     createdAt: job.created_at,
     completedAt: job.completed_at,
     outputCount,
     outputHref: getOutputHref(primaryOutput),
     resumeHref,
-    generationHref: getGenerationHref(job.input_params),
-    sourceLabel: getMetadataString(job.input_params, 'sourceLabel'),
-    sourceResumePath: getMetadataString(job.input_params, 'sourceResumePath'),
+    generationHref: toHeavyChainPath(getGenerationHref(job.input_params)),
+    sourceLabel: toHeavyChainDisplayCopy(getMetadataString(job.input_params, 'sourceLabel')),
+    sourceResumePath: toHeavyChainPath(getMetadataString(job.input_params, 'sourceResumePath')),
     productLane: getProductLane(job.feature_type),
     hasMaterialReference: hasMaterialReference(job.input_params),
     recoveryAction: getRecoveryAction(job),
@@ -428,7 +489,14 @@ const buildSourceSummaryRows = (
   status?: WorkspaceJobStatus | 'output',
   durableLightchainTaskSteps: LightchainTaskStep[] = [],
 ) => {
-  const rows = buildSourceContextSummaryRows(getWorkspaceActivityMetadata(metadata));
+  // Persisted compatibility metadata can still contain Light Chain wording.
+  // Normalize both labels and values at the Heavy display boundary so every
+  // consumer (History, Jobs, dashboard queue cards, and retry surfaces) keeps
+  // the Heavy brand without mutating the stored source record.
+  const rows = buildSourceContextSummaryRows(getWorkspaceActivityMetadata(metadata)).map((row) => ({
+    label: displaySourceSummaryLabel(toHeavyChainDisplayCopy(row.label) ?? row.label),
+    value: toHeavyChainDisplayCopy(row.value) ?? row.value,
+  }));
   const durableStepValue = buildDurableLightchainStepValue(durableLightchainTaskSteps);
   const hasCompat = hasLightchainCompat(metadata);
   return [
@@ -438,7 +506,9 @@ const buildSourceSummaryRows = (
       : hasCompat
         ? [{ label: '実行記録', value: '工程別の実行記録は未取得です' }]
         : []),
-    ...(status && hasCompat ? [{ label: 'Lightchain状態', value: lightchainStatusLabel[status] }] : []),
+    ...(status && hasCompat
+      ? [{ label: isHeavyChainRuntime() ? 'Heavy Chain状態' : 'Lightchain状態', value: lightchainStatusLabel[status] }]
+      : []),
   ];
 };
 
@@ -453,12 +523,12 @@ const mapOutput = (image: GeneratedImageListRow, lightchainTaskSteps: Lightchain
   imageUrl: image.image_url,
   storagePath: image.storage_path,
   metadata: image.metadata,
-  prompt: image.prompt,
+  prompt: toHeavyChainDisplayCopy(image.prompt) ?? null,
   featureType: image.feature_type,
   createdAt: image.created_at,
-  generationHref: getGenerationHref(image.metadata),
-  sourceLabel: getMetadataString(image.metadata, 'sourceLabel'),
-  sourceResumePath: getMetadataString(image.metadata, 'sourceResumePath'),
+  generationHref: toHeavyChainPath(getGenerationHref(image.metadata)),
+  sourceLabel: toHeavyChainDisplayCopy(getMetadataString(image.metadata, 'sourceLabel')),
+  sourceResumePath: toHeavyChainPath(getMetadataString(image.metadata, 'sourceResumePath')),
   sourceSummaryRows: buildSourceSummaryRows(image.metadata, 'output', lightchainTaskSteps),
 });
 
@@ -599,7 +669,7 @@ const buildRemoteWorkspaceJobs = (
   });
 };
 
-const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): TimelineItem[] => {
+const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[], includeAllLoadedJobs = false): TimelineItem[] => {
   const jobItems: TimelineItem[] = jobs.map((job) => ({
     id: `job-${job.id}`,
     title: job.title,
@@ -620,9 +690,9 @@ const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): Time
     .filter((output) => !output.jobId || output.storagePath.startsWith('local/'))
     .map((output) => ({
       id: `output-${output.id}`,
-      title: getFeatureLabel(output.featureType),
+      title: getFeatureLabel(output.featureType, output.metadata),
       description: output.storagePath.startsWith('local/') ? 'ローカル成果物を保存済み' : 'ギャラリーに保存済み',
-      prompt: output.prompt,
+      prompt: toHeavyChainDisplayCopy(output.prompt) ?? null,
       status: 'output',
       href: `/gallery?image=${encodeURIComponent(getGeneratedImageSelectionKey({
         id: output.id,
@@ -640,7 +710,7 @@ const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): Time
 
   return [...jobItems, ...outputItems]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 20);
+    .slice(0, includeAllLoadedJobs ? undefined : 20);
 };
 
 const fetchCreditSummary = async (brandId: string): Promise<CreditSummary> => {
@@ -741,8 +811,9 @@ const throwWorkspaceActivityFetchError = (failedSources: string[]) => {
   throw new Error(`Failed to fetch workspace activity: ${failedSources.join(', ')}`);
 };
 
-async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string): Promise<WorkspaceActivity> {
+async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string, options: WorkspaceActivityOptions = {}): Promise<WorkspaceActivity> {
   if (!brandId) return emptyWorkspaceActivity;
+  const includeAllLoadedJobs = options.includeAllLoadedJobs === true;
 
   const [creditResult, jobsResult, outputsResult] = await Promise.allSettled([
     // Keep auth recovery at the individual request boundary. Promise.allSettled
@@ -799,9 +870,10 @@ async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string):
     lightchainStepsByJob[job.id] ?? [],
     firstOutputByJob[job.id],
   ));
-  const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, 20);
-  const failedJobs = mappedJobs.filter((job) => job.status === 'failed').slice(0, 20);
-  const completedJobs = mappedJobs.filter((job) => job.status === 'completed').slice(0, 20);
+  const jobLimit = includeAllLoadedJobs ? undefined : 20;
+  const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, jobLimit);
+  const failedJobs = mappedJobs.filter((job) => job.status === 'failed').slice(0, jobLimit);
+  const completedJobs = mappedJobs.filter((job) => job.status === 'completed').slice(0, jobLimit);
   const recentOutputs = outputs.map((output) => {
     const remoteImageId = getMetadataString(output.metadata, 'remoteImageId');
     const outputSteps = mergeLightchainTaskSteps(
@@ -818,10 +890,10 @@ async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string):
     failedJobs,
     completedJobs,
     recentOutputs,
-    timelineItems: buildTimelineItems(mappedJobs, recentOutputs),
+    timelineItems: buildTimelineItems(mappedJobs, recentOutputs, includeAllLoadedJobs),
   };
 }
 
-export async function fetchWorkspaceActivity(brandId: string, scopeId?: string): Promise<WorkspaceActivity> {
-  return withAuthSessionRecovery(() => fetchWorkspaceActivityRequest(brandId, scopeId));
+export async function fetchWorkspaceActivity(brandId: string, scopeId?: string, options: WorkspaceActivityOptions = {}): Promise<WorkspaceActivity> {
+  return withAuthSessionRecovery(() => fetchWorkspaceActivityRequest(brandId, scopeId, options));
 }

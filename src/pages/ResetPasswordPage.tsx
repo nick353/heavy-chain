@@ -37,7 +37,7 @@ export function ResetPasswordPage() {
           <Link to="/login" className="text-primary-600 underline">新しいパスワードでログイン</Link>
         </div> : missingToken ? <div role="alert" className="space-y-4">
           <p>再設定リンクがありません。メールからリンクを開くか、新しくリクエストしてください。</p>
-          <Link to="/forgot-password" className="text-primary-600 underline">再設定メールをリクエスト</Link>
+          <Link to="/forget-password" className="text-primary-600 underline">再設定メールをリクエスト</Link>
         </div> : <form onSubmit={submit} className="space-y-5">
           <p className="text-sm text-neutral-600 dark:text-neutral-300">{minimum}〜128文字で設定してください。変更後はもう一度ログインが必要です。</p>
           <Input label="新しいパスワード" type="password" autoComplete="new-password" minLength={minimum} maxLength={128} required value={password} onChange={event => setPassword(event.target.value)} />

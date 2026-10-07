@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   Search,
@@ -23,6 +23,7 @@ import {
 } from '../lib/localWorkspaceArtifacts';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
+import { isHeavyWorkspaceRuntime } from '../lib/heavyWorkspace';
 
 const galleryTabs = [
   { id: 'recommended', label: 'おすすめの事例' },
@@ -250,6 +251,9 @@ const galleryCasesByTab = {
   production: [],
 } as const;
 
+// Kept exported for old fixture imports; Heavy Chain no longer renders the Lightchain wordmark.
+export const LEGACY_LIGHTCHAIN_WORDMARK_PATH = 'M-0.000390589 34.176V0.576023H9.50361V25.152H23.7116V34.176H-0.000390589ZM27.0934 34.176V0.576023H36.9814V34.176H27.0934ZM67.6852 34.176H61.4452V30.48H61.0132C60.0052 33.264 57.9412 34.752 53.2852 34.752C42.7732 34.752 40.8052 29.808 40.8052 19.584V15.168C40.8052 4.94402 41.9572 2.47955e-05 54.2452 2.47955e-05C66.5332 2.47955e-05 67.6852 4.51202 67.6852 12.048V12.768H58.0852V11.328C58.0852 9.36002 57.3172 8.16002 54.2452 8.16002C51.1732 8.16002 50.4052 9.36002 50.4052 11.328V23.424C50.4052 25.392 51.1732 26.592 54.2452 26.592C57.3172 26.592 58.0852 25.392 58.0852 23.424V21.408H53.1412V15.6H67.6852V34.176ZM88.554 34.176V21.12H81.738V34.176H72.234V0.576023H81.738V13.92H88.554V0.576023H98.058V34.176H88.554ZM109.371 34.176V8.92802H101.019V0.576023H127.227V8.92802H118.875V34.176H109.371ZM142.362 34.752C130.41 34.752 129.258 29.808 129.258 19.584V15.168C129.258 4.94402 130.41 2.47955e-05 142.362 2.47955e-05C154.314 2.47955e-05 155.466 4.60802 155.466 12.768V14.928H145.866V11.328C145.866 9.36002 145.098 8.16002 142.362 8.16002C139.626 8.16002 138.858 9.36002 138.858 11.328V23.424C138.858 25.392 139.626 26.592 142.362 26.592C145.098 26.592 145.866 25.392 145.866 23.424V19.632H155.466V21.984C155.466 30.144 154.314 34.752 142.362 34.752ZM175.648 34.176V21.12H168.832V34.176H159.328V0.576023H168.832V13.92H175.648V0.576023H185.152V34.176H175.648ZM187.777 34.176L194.977 0.576023H209.281L216.481 34.176H205.537L205.057 30.72H199.201L198.721 34.176H187.777ZM199.393 23.52H204.865L202.465 11.04H201.793L199.393 23.52ZM219.14 34.176V0.576023H229.028V34.176H219.14ZM233.812 34.176V0.576023H245.236L250.852 17.52V34.176H248.164L242.116 15.936V34.176H233.812ZM276.183 34.176L283.383 0.576023H297.687L304.887 34.176H293.943L293.463 30.72H287.607L287.127 34.176H276.183ZM287.799 23.52H293.271L290.871 11.04H290.199L287.799 23.52ZM307.546 34.176V0.576023H317.434V34.176H307.546Z';
+
 type GalleryCase = {
   id: string;
   title: string;
@@ -285,63 +289,63 @@ void resolveArtifactFeatureId;
 
 const isBetaFeature = (feature: LightchainFeature | undefined): feature is LightchainFeature => Boolean(feature && feature.betaIncluded !== false);
 
-// The home mirrors Lightchain's complete recommended card inventory. Video remains
-// visibly discoverable here while its canonical project dashboard stays separate
-// from the guarded detail/provider workspace.
+// The home mirrors Lightchain's complete recommended card inventory. Video is
+// visibly discoverable here while provider execution remains fail-closed until
+// the canonical production receipt/readback is available.
 const isHomepageVisibleFeature = (_feature: LightchainFeature): boolean => true;
 
 /** Heavy-owned artwork for the shared Lightchain-shaped launcher chrome. */
 const launcherCategoryImages: Record<LightchainCategoryId, string> = {
-  recommended: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  planning: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  fitting: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  graphics: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  recommended: '/lightchain-assets/mirror/lightchain-qlxy-prod/AIAgentCover-76724916.webp',
+  planning: '/lightchain-assets/mirror/lightchain-qlxy-prod/designProduction-e8834c25.webp',
+  fitting: '/lightchain-assets/mirror/lightchain-qlxy-prod/VirtualFittingCover-c04b6319.webp',
+  graphics: '/lightchain-assets/mirror/lightchain-qlxy-prod/designProduction-e8834c25.webp',
 };
 
 const launcherFeatureImages: Partial<Record<string, string>> = {
-  'design-agent': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'design-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'marketing-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateMarketingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'fashion-studio': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/integrationCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'video-workstation': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateShortVideoCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'virtual-fitting': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'image-repair': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'remove-background': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'wear-design-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'model-library': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'heavychain-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'inspiration-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'fabric-simulation': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'lineart-to-real': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'change-color': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'flat-vector': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'custom-style': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'graphic-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'pattern-vector-pro': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'design-arrange': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
-  'print-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+  'design-agent': '/lightchain-assets/mirror/lightchain-qlxy-prod/AIAgentCover-76724916.webp',
+  'design-workspace': '/lightchain-assets/mirror/lightchain-qlxy-prod/designProduction-e8834c25.webp',
+  'marketing-workspace': '/lightchain-assets/mirror/lightchain-qlxy-prod/GenerateMarketingCover-cb27f243.webp',
+  'fashion-studio': '/lightchain-assets/mirror/lightchain-qlxy-prod/integrationCover-ffc3ea17.webp',
+  'video-workstation': '/lightchain-assets/mirror/lightchain-qlxy-prod/GenerateShortVideoCover-1f4ae742.webp',
+  'virtual-fitting': '/lightchain-assets/mirror/lightchain-qlxy-prod/VirtualFittingCover-c04b6319.webp',
+  'image-repair': '/lightchain-assets/mirror/lightchain-qlxy-prod/FixDeformitiesCover-ffca3315.webp',
+  'remove-background': '/lightchain-assets/mirror/lightchain-qlxy-prod/FixDeformitiesCover-ffca3315.webp',
+  'wear-design-lab': '/lightchain-assets/mirror/lightchain-qlxy-prod/orientedDesignCover-ac28f2a8.webp',
+  'model-library': '/lightchain-assets/mirror/lightchain-qlxy-prod/FittingModelLibraryCover-f8b1e86f.webp',
+  'heavychain-lab': '/lightchain-assets/mirror/lightchain-qlxy-prod/laboratoryCover-f42878b4.webp',
+  'inspiration-design': '/lightchain-assets/mirror/lightchain-qlxy-prod/aiDesignCover-ecc22aa6.webp',
+  'fabric-simulation': '/lightchain-assets/mirror/lightchain-qlxy-prod/FabricBodyCover-e2a3f86b.webp',
+  'lineart-to-real': '/lightchain-assets/mirror/lightchain-qlxy-prod/LineArtToRealCover-107ca36f.webp',
+  'change-color': '/lightchain-assets/mirror/lightchain-qlxy-prod/OneClickChangeColorCover-a89f5f43.webp',
+  'flat-vector': '/lightchain-assets/mirror/lightchain-qlxy-prod/LineArtVectorConvertCover-72bb99a0.webp',
+  'custom-style': '/lightchain-assets/mirror/lightchain-qlxy-prod/fashionModelCover-17cf7a74.webp',
+  'graphic-design': '/lightchain-assets/mirror/lightchain-qlxy-prod/GeneratePrintingCover-855aabe1.webp',
+  'pattern-vector-pro': '/lightchain-assets/mirror/lightchain-qlxy-prod/SVGConvertCover-4b9559be.webp',
+  'design-arrange': '/lightchain-assets/mirror/lightchain-qlxy-prod/OneClickModifyPrintingCover-c7f33e3f.webp',
+  'print-design': '/lightchain-assets/mirror/lightchain-qlxy-prod/FlowerShapedDesignCover-b505779c.webp',
 };
 
 const canonicalRecommendedGalleryImages = [
-  'https://static-cn.linkaigc.com/workbenches/2026-02/d81b55aa18721b86c37b96a36223a936.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/a25e632441de5b1198f4e20ae7040568.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/3266745d3f905fc8c770cd0894438279.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/6051a3df009110d3de23c3af3173e418.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/1b69b85c8eba09e87fbae86a8f98b3b5.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/workbenches/2026-03/8a0819ffd465485fca3826a8daa55e52.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/3012bf485d2fcf846ea006975040b91d.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/19fa690cf8a20c07f5e289464d676f59.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/5d67da9df9be3f548f1cc425a1f84280.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/b8ec2a7a0c4568e30b842f7f6b116474.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/a15e92993792273cb5a65d4387f84692.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/8e27567f4e2e95a129348ccbaabec8d7.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/workbenches/2026-03/dfec176704c22897d7d90cec933e117f.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/886d82e0b698aae745d4ba2ead9b92c5.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/d2c7f4a20364316cbf0549b3a81e5cae.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/1483b69c2c945b0ef7c366374430edc8.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/workbenches/2026-03/02e6be67a4d3e7a7cded82c1e82eccb4.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/a38a76f61065a395382e94a9cd9b8bd4.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
-  'https://static-cn.linkaigc.com/saas/2026-06/b9db6ef4425f19e9ed865fd88e6e6115.jpeg?x-oss-process=image/resize,m_lfit,w_1200,limit_1/format,webp',
+  '/lightchain-assets/mirror/static-cn/d81b55aa18721b86c37b96a36223a936-715ef430.webp',
+  '/lightchain-assets/mirror/static-cn/a25e632441de5b1198f4e20ae7040568-5310d227.webp',
+  '/lightchain-assets/mirror/static-cn/3266745d3f905fc8c770cd0894438279-e1192cdc.webp',
+  '/lightchain-assets/mirror/static-cn/6051a3df009110d3de23c3af3173e418-b4252d95.webp',
+  '/lightchain-assets/mirror/static-cn/1b69b85c8eba09e87fbae86a8f98b3b5-277c40f0.webp',
+  '/lightchain-assets/mirror/static-cn/8a0819ffd465485fca3826a8daa55e52-8c5a913f.webp',
+  '/lightchain-assets/mirror/static-cn/3012bf485d2fcf846ea006975040b91d-0a1c9be0.webp',
+  '/lightchain-assets/mirror/static-cn/19fa690cf8a20c07f5e289464d676f59-826a5905.webp',
+  '/lightchain-assets/mirror/static-cn/5d67da9df9be3f548f1cc425a1f84280-f4765512.webp',
+  '/lightchain-assets/mirror/static-cn/b8ec2a7a0c4568e30b842f7f6b116474-7cb0ba85.webp',
+  '/lightchain-assets/mirror/static-cn/a15e92993792273cb5a65d4387f84692-63b7caf9.webp',
+  '/lightchain-assets/mirror/static-cn/8e27567f4e2e95a129348ccbaabec8d7-479d0a17.webp',
+  '/lightchain-assets/mirror/static-cn/dfec176704c22897d7d90cec933e117f-d3144a9d.webp',
+  '/lightchain-assets/mirror/static-cn/886d82e0b698aae745d4ba2ead9b92c5-ef73b6e1.webp',
+  '/lightchain-assets/mirror/static-cn/d2c7f4a20364316cbf0549b3a81e5cae-ad805d7d.webp',
+  '/lightchain-assets/mirror/static-cn/1483b69c2c945b0ef7c366374430edc8-575aa39a.webp',
+  '/lightchain-assets/mirror/static-cn/02e6be67a4d3e7a7cded82c1e82eccb4-133e48df.webp',
+  '/lightchain-assets/mirror/static-cn/a38a76f61065a395382e94a9cd9b8bd4-a85d72e7.webp',
+  '/lightchain-assets/mirror/static-cn/b9db6ef4425f19e9ed865fd88e6e6115-95dfd073.webp',
 ];
 
 const buildGalleryExampleImage = (featureId: string) => {
@@ -388,6 +392,7 @@ interface GenerateLightchainEntryProps {
 }
 
 export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLightchainEntryProps) {
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
@@ -401,6 +406,16 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   const user = useAuthStore((state) => state.user);
   const [savedArtifacts, setSavedArtifacts] = useState<WorkspaceArtifact[]>([]);
   const categoryParam = searchParams.get('category');
+  // The Heavy deployment must keep Heavy route aliases even when the public
+  // launcher is opened at `/`. Checking the host as well as the legacy path
+  // prevents a Heavy-domain click from leaking back to `/lightchain/*` URLs.
+  const isHeavyRoute = isHeavyWorkspaceRuntime()
+    || location.pathname === '/heavy'
+    || location.pathname.startsWith('/heavy/');
+  const buildLauncherFeatureHref = (feature: LightchainFeature) => {
+    const href = buildLightchainFeatureHref(feature);
+    return isHeavyRoute ? href.replace(/^\/lightchain(?=\/|$)/, '/heavy') : href;
+  };
 
   useEffect(() => {
     if (categoryParam && lightchainCategories.some((category) => category.id === categoryParam)) {
@@ -438,7 +453,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
     [activeCategory],
   );
   const commandFeature = findFeatureFromPrompt(command);
-  const commandHref = buildLightchainFeatureHref(commandFeature);
+  const commandHref = buildLauncherFeatureHref(commandFeature);
   const galleryItems = useMemo<GalleryCase[]>(() => {
     const templates = galleryCasesByTab[galleryTab];
     const exampleItems = templates.map((template, index) => ({
@@ -463,7 +478,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
           id: `saved-${artifact.id}`,
           artifactId: artifact.id,
           title: artifact.title || matchingTemplate?.title || '保存済み成果物',
-          description: artifact.prompt?.trim() || matchingTemplate?.description || '保存済みのLightchain成果物です。',
+          description: artifact.prompt?.trim() || matchingTemplate?.description || '保存済みのHeavy Chain成果物です。',
           step: '保存済み成果物 → 再利用',
           featureId,
           imageUrl: artifact.imageUrl,
@@ -489,11 +504,14 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
 
   return (
     <div className="min-h-[calc(100vh-50px)] bg-[#171b1c] text-white">
-      <section className="relative overflow-hidden px-10 pb-4 pt-14">
+      <section className="relative px-10 pt-12">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_6%,rgba(24,78,83,0.12),transparent_40%)]" />
         <div className="relative mx-auto max-w-none">
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <h1 className="text-3xl font-[Montserrat] font-bold tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">LIGHTCHAIN AI</h1>
+          <div className="flex h-14 items-end gap-4">
+            <h1 className="sr-only">HEAVY CHAIN</h1>
+            <svg aria-label="Heavy Chain AI" role="img" viewBox="0 0 318 35" fill="none" className="h-12 w-[318px] shrink-0 text-white">
+              <text x="0" y="28" fill="currentColor" fontFamily="Arial, Helvetica, sans-serif" fontSize="31" fontWeight="600" textLength="318" lengthAdjust="spacingAndGlyphs">HEAVY CHAIN AI</text>
+            </svg>
             <p className="text-sm font-medium text-neutral-300 sm:text-base">アパレル特化のAIデザインワークスペース</p>
           </div>
 
@@ -514,7 +532,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             />
           </form>
 
-          <div role="tablist" aria-label="Light Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.07] p-1">
+          <div role="tablist" aria-label="Heavy Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.07] p-1">
             {lightchainCategories.map((category) => {
               const active = category.id === activeCategory;
               return (
@@ -538,34 +556,34 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             })}
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4" data-testid="lightchain-tool-grid">
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" data-testid="lightchain-tool-grid">
             {visibleFeatures.map((feature, index) => {
               const hiddenOnMobile = compactOnMobile && index > 5;
               const badge = getLightchainLauncherBadge(feature);
               return (
                 <Link
                   key={feature.id}
-                  to={buildLightchainFeatureHref(feature)}
+                  to={buildLauncherFeatureHref(feature)}
                   data-testid="lightchain-tool-card"
-                  className={`${hiddenOnMobile ? 'hidden md:flex' : ''} relative flex w-full cursor-pointer gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#262a2b] p-3 transition hover:border-cyan-300/50 xl:gap-4 xl:p-4`}
+                  className={`${hiddenOnMobile ? 'hidden md:flex' : ''} relative flex w-full cursor-pointer gap-4 overflow-hidden rounded-2xl border border-white/10 bg-[#262a2b] p-4 transition hover:border-cyan-300/50`}
                 >
                   {badge && <span className={`absolute right-0 top-0 z-10 rounded-bl-xl px-3 py-1 text-[10px] font-medium leading-3 text-white ${badge === 'Beta' ? 'bg-gradient-to-r from-fuchsia-500 to-rose-500' : 'bg-[#687070]'}`}>{badge}</span>}
-                  <div className="relative h-[80px] w-[112px] shrink-0 overflow-hidden rounded-[5px] bg-white xl:h-[88px] xl:w-[132px]">
+                  <div className="relative h-[88px] w-[132px] shrink-0 overflow-hidden rounded-[5px] bg-white">
                     <img src={buildLauncherFeatureImage(feature)} alt="" className="h-full w-full object-cover" loading="lazy" />
                   </div>
-                  <div className="flex min-h-[80px] min-w-0 flex-1 flex-col gap-1 xl:min-h-[88px]">
-                    <div className="relative flex min-h-7 items-center overflow-hidden xl:min-h-8">
-                      <span aria-hidden="true" className="pointer-events-none absolute left-0 top-1/2 h-11 w-[148px] -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_left,rgba(99,203,199,0.28),transparent_70%)] opacity-80" />
+                  <div className="flex min-h-[88px] min-w-0 flex-1 flex-col gap-1">
+                    <div className="relative flex min-h-8 items-center overflow-hidden">
+                      <img src="/lightchain-assets/mirror/jp/title_bg-58b86113.png" alt="" aria-hidden="true" className="pointer-events-none absolute top-1/2 left-0 max-h-11 w-[148px] -translate-y-1/2 object-contain object-left" />
                       <h3
                         style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
-                        className="relative z-[1] min-w-0 line-clamp-2 bg-gradient-to-r from-white to-cyan-100 bg-clip-text text-sm font-medium leading-6 text-transparent xl:text-base"
+                        className="relative z-[1] min-w-0 line-clamp-2 text-[14px] font-medium leading-6 text-white"
                       >
                         {getLightchainLauncherTitle(feature)}
                       </h3>
                     </div>
                     <p
                       style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
-                      className="line-clamp-3 text-xs leading-4 text-neutral-300"
+                      className="line-clamp-3 text-[12px] leading-4 text-[#aab8b6]"
                     >
                       {getLightchainLauncherDescription(feature)}
                     </p>
@@ -577,7 +595,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
         </div>
       </section>
 
-      <section className="border-t border-white/10 px-5 pb-8 pt-10 sm:px-8 lg:px-10">
+      <section className="border-t-0 px-5 pb-8 pt-[58px] sm:px-8 lg:px-10">
         <div className="mx-auto max-w-none">
           <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">事例共有</h2>
           <div className="mt-[23px] flex flex-wrap items-center gap-4">
@@ -661,7 +679,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/15 bg-[#111416] p-6 shadow-2xl sm:p-8">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <span className="text-xs font-semibold text-cyan-200">Light Chain 事例</span>
+                <span className="text-xs font-semibold text-cyan-200">Heavy Chain 事例</span>
                 <h2 className="mt-2 text-xl font-semibold leading-8 text-white">{selectedCase.title}</h2>
               </div>
               <button type="button" onClick={() => setSelectedCase(null)} aria-label="閉じる" className="rounded-full p-2 text-neutral-400 hover:bg-white/10 hover:text-white">
@@ -674,7 +692,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
               <p className="mt-2 text-sm leading-6 text-white">{selectedCase.step}</p>
             </div>
             <Link
-              to={buildLightchainFeatureHref(lightchainFeatureCatalog.find((feature) => feature.id === selectedCase.featureId) ?? lightchainFeatureCatalog[0])}
+              to={buildLauncherFeatureHref(lightchainFeatureCatalog.find((feature) => feature.id === selectedCase.featureId) ?? lightchainFeatureCatalog[0])}
               onClick={() => setSelectedCase(null)}
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
             >

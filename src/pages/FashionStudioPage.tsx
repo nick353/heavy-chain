@@ -17,8 +17,16 @@ import {
   restoreWorkspaceHandoffHistory,
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
-import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { cloudflareDataPlane, type CloudflareCanvasDocument } from '../lib/cloudflareApi';
 import { buildFashionStudioProjectHref, mergeFashionStudioProjectCards } from '../lib/fashionStudioProjects';
+import { buildPageItems } from '../lib/studioPagination';
+import { changePin, readPins, writePins, type FashionStudioPinState } from '../lib/fashionStudioPins';
+import {
+  createFashionStudioThumbnailController,
+  extractFashionStudioThumbnailCandidates,
+  fashionStudioThumbnailScopeKey,
+  type FashionStudioThumbnailState,
+} from '../lib/fashionStudioThumbnails';
 import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import {
@@ -141,16 +149,39 @@ const formatProjectAge = (value: string) => {
   return `${months}ヶ月前 修正`;
 };
 
-const extractCanvasPreviewSource = (snapshot: unknown) => {
-  if (!snapshot || typeof snapshot !== 'object' || !Array.isArray((snapshot as { objects?: unknown }).objects)) return '';
-  const image = (snapshot as { objects: unknown[] }).objects.find((item) => (
-    item && typeof item === 'object' && (item as { type?: unknown }).type === 'image'
-  ));
-  const src = image && typeof (image as { src?: unknown }).src === 'string'
-    ? (image as { src: string }).src
-    : '';
-  return src;
-};
+function FashionStudioThumbnail({ brandId, projectId, candidates, onLoaded }: {
+  brandId: string | null;
+  projectId: string;
+  candidates: readonly string[];
+  onLoaded: (url: string) => void;
+}) {
+  const scopeKey = fashionStudioThumbnailScopeKey(brandId, projectId, candidates);
+  const [thumbnail, setThumbnail] = useState<FashionStudioThumbnailState | null>(null);
+  const controllerRef = useRef<ReturnType<typeof createFashionStudioThumbnailController> | null>(null);
+  useEffect(() => {
+    const [brand, project, sources] = JSON.parse(scopeKey) as [string | null, string, string[]];
+    const controller = createFashionStudioThumbnailController(resolveGeneratedImageUrlWithStatus, setThumbnail);
+    controllerRef.current = controller;
+    controller.reset(brand, project, sources);
+    return () => {
+      controller.dispose();
+      if (controllerRef.current === controller) controllerRef.current = null;
+    };
+  }, [scopeKey]);
+  if (!thumbnail || thumbnail.scopeKey !== scopeKey || !thumbnail.url) {
+    return <span className="text-xs text-neutral-500">PROJECT</span>;
+  }
+  return <img
+    key={`${thumbnail.scopeKey}:${thumbnail.attempt}`}
+    src={thumbnail.url}
+    alt=""
+    className="h-full w-full object-cover"
+    onLoad={() => {
+      if (controllerRef.current?.onLoad(thumbnail)) onLoaded(thumbnail.url!);
+    }}
+    onError={() => controllerRef.current?.onError(thumbnail)}
+  />;
+}
 
 const escapeSvgText = (value: string) => {
   return value
@@ -239,6 +270,16 @@ const buildStudioPreviewSvg = ({
   `);
 };
 
+const isFashionStudioDocument = (document: CanvasDocumentLike) => {
+  const objects = (document.snapshot as { objects?: unknown } | null)?.objects;
+  return Array.isArray(objects) && objects.some((object) => {
+    const metadata = object && typeof object === 'object' ? (object as { metadata?: unknown }).metadata : null;
+    const feature = metadata && typeof metadata === 'object' ? (metadata as { feature?: unknown }).feature : null;
+    return typeof feature === 'string' && feature.startsWith('fashion-studio-');
+  });
+};
+type CanvasDocumentLike = { snapshot: unknown };
+
 export function FashionStudioPage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
@@ -258,12 +299,18 @@ export function FashionStudioPage() {
   const [referenceImage, setReferenceImage] = useState('');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialStudioMaterial);
   const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
-  const [remoteProjects, setRemoteProjects] = useState<Array<{ id: string; title: string; updatedAt: string; imageUrl: string }>>([]);
+  const [remoteProjectScope, setRemoteProjectScope] = useState<{
+    brandId: string | null;
+    projects: Array<{ id: string; title: string; updatedAt: string; imageUrl: string; thumbnailCandidates: string[] }>;
+  }>({ brandId: null, projects: [] });
+  const remoteProjects = remoteProjectScope.brandId === currentBrand?.id ? remoteProjectScope.projects : [];
   const [remoteProjectsStatus, setRemoteProjectsStatus] = useState<'idle' | 'loading' | 'success' | 'failure'>('idle');
+  const [remainingUnits, setRemainingUnits] = useState<number | null>(null);
   const [projectPage, setProjectPage] = useState(1);
   const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
-  const [pinnedProjectIds, setPinnedProjectIds] = useState<Set<string>>(new Set());
-  const pinsHydrated = useRef(false);
+  const [pinState, setPinState] = useState<FashionStudioPinState>({ brandId: null, ids: new Set(), readStatus: 'pending' });
+  const pinStateRef = useRef(pinState);
+  const pinnedProjectIds = pinState.brandId === currentBrand?.id ? pinState.ids : new Set<string>();
   const nextHistoryId = useRef(1);
   const selectedStudioSetup = useMemo<StudioSetup>(() => ({
     model: modelOptions.find((option) => option.id === selectedModelId) ?? modelOptions[0],
@@ -289,28 +336,25 @@ export function FashionStudioPage() {
   });
 
   useEffect(() => {
-    const brandId = currentBrand?.id;
-    if (!brandId) {
-      pinsHydrated.current = false;
-      setPinnedProjectIds(new Set());
-      return;
-    }
-    pinsHydrated.current = false;
-    try {
-      const saved = window.localStorage.getItem(`heavy-fashion-studio-pins:${brandId}`);
-      const parsed = saved ? JSON.parse(saved) : [];
-      setPinnedProjectIds(new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []));
-    } catch {
-      setPinnedProjectIds(new Set());
-    }
-    pinsHydrated.current = true;
+    const hydrated = readPins(currentBrand?.id ?? null);
+    pinStateRef.current = hydrated;
+    setPinState(hydrated);
   }, [currentBrand?.id]);
 
-  useEffect(() => {
-    const brandId = currentBrand?.id;
-    if (!brandId || !pinsHydrated.current) return;
-    window.localStorage.setItem(`heavy-fashion-studio-pins:${brandId}`, JSON.stringify([...pinnedProjectIds]));
-  }, [currentBrand?.id, pinnedProjectIds]);
+  const toggleProjectPin = (projectId: string) => {
+    const current = pinStateRef.current;
+    const change = changePin(
+      current,
+      currentBrand?.id ?? null,
+      useAuthStore.getState().currentBrand?.id ?? null,
+      projectId,
+      !current.ids.has(projectId),
+    );
+    if (!change.changed) return;
+    pinStateRef.current = change.state;
+    setPinState(change.state);
+    if (change.shouldPersist) writePins(change.state);
+  };
   const findLocalStudioArtifact = (projectId: string) => currentBrand?.id
     ? listWorkspaceArtifacts(currentBrand.id, user?.id).find((artifact) => artifact.id === projectId || (artifact.featureType === 'fashion-studio' && artifact.canvasProjectId === projectId))
     : undefined;
@@ -330,7 +374,11 @@ export function FashionStudioPage() {
       metadata: { ...(source?.metadata ?? {}), librarySource: 'fashion-studio-card-menu', libraryGroup: 'マイライブラリー', copiedFromArtifactId: source?.id ?? project.id },
     });
     if (!result.localPersisted) return toast.error('ライブラリー保存の確認に失敗しました');
-    toast.success(result.remote ? 'アセットライブラリーに保存しました' : 'ローカルライブラリーに保存しました');
+    if (cloudflareDataPlane && !result.remote) {
+      toast.error('リモート保存の確認に失敗しました。再送せず、同じ保存依頼を照合してください');
+      return;
+    }
+    toast.success('アセットライブラリーに保存しました');
   };
   const deleteStudioProject = (project: { id: string; title: string }) => {
     if (!currentBrand?.id || !window.confirm(`「${project.title}」を削除しますか？`)) return;
@@ -358,35 +406,72 @@ export function FashionStudioPage() {
     let active = true;
     const brandId = currentBrand?.id;
     if (!brandId || !cloudflareDataPlane) {
-      setRemoteProjects([]);
+      setRemoteProjectScope({ brandId: brandId ?? null, projects: [] });
       setRemoteProjectsStatus('idle');
       return () => { active = false; };
     }
+    const dataPlane = cloudflareDataPlane;
 
     setRemoteProjectsStatus('loading');
-    void cloudflareDataPlane.listCanvasDocuments(brandId)
-      .then(async (documents) => {
+    const loadCanvasDocuments = async () => {
+      const documents: CloudflareCanvasDocument[] = [];
+      const pageSize = 100;
+      const maxDocuments = 1000;
+      const firstPage = await dataPlane.listCanvasDocuments(brandId);
+      documents.push(...firstPage);
+      for (let offset = pageSize; firstPage.length === pageSize && offset < maxDocuments; offset += pageSize) {
+        const page = await dataPlane.listCanvasDocumentsPage(brandId, pageSize, offset);
+        documents.push(...page);
+        if (page.length < pageSize) break;
+      }
+      return documents;
+    };
+    void loadCanvasDocuments()
+      .then((documents) => {
         if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
-        const projectCards = await Promise.all(documents.slice(0, 40).map(async (document) => {
-          const source = extractCanvasPreviewSource(document.snapshot);
-          const resolved = source ? await resolveGeneratedImageUrlWithStatus(source) : null;
+        // Light's board lists only Fashion Studio projects; other canvas documents (marketing, analysis, Canvas) stay out.
+        const projectCards = documents.filter(isFashionStudioDocument).map((document) => {
+          const thumbnailCandidates = extractFashionStudioThumbnailCandidates(document.snapshot);
           return {
             id: document.id,
             title: document.title || 'Untitled',
             updatedAt: document.updated_at,
-            imageUrl: resolved?.ok ? resolved.url : '',
+            imageUrl: '',
+            thumbnailCandidates,
           };
-        }));
+        });
         if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
-        setRemoteProjects(projectCards);
+        setRemoteProjectScope({ brandId, projects: projectCards });
         setRemoteProjectsStatus('success');
       })
       .catch(() => {
         if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
-        setRemoteProjects([]);
+        setRemoteProjectScope({ brandId, projects: [] });
         setRemoteProjectsStatus('failure');
       });
 
+    return () => { active = false; };
+  }, [currentBrand?.id]);
+
+  // The source Fashion Studio board keeps the live credit badge in the board
+  // chrome. Read the same usage endpoint as the other Lightchain boards and
+  // fail closed when the usage readback is unavailable; the board remains
+  // usable without inventing a quota value.
+  useEffect(() => {
+    let active = true;
+    const brandId = currentBrand?.id;
+    if (!brandId || !cloudflareDataPlane) {
+      setRemainingUnits(null);
+      return () => { active = false; };
+    }
+    void cloudflareDataPlane.getImageUsage(brandId)
+      .then((summary) => {
+        if (!active) return;
+        setRemainingUnits(Number.isSafeInteger(summary.remainingUnits) && summary.remainingUnits >= 0 ? summary.remainingUnits : null);
+      })
+      .catch(() => {
+        if (active) setRemainingUnits(null);
+      });
     return () => { active = false; };
   }, [currentBrand?.id]);
 
@@ -592,7 +677,6 @@ export function FashionStudioPage() {
     const projectArtifacts = currentBrand?.id
       ? listWorkspaceArtifacts(currentBrand.id, user?.id)
         .filter((artifact) => artifact.featureType === 'fashion-studio')
-        .slice(0, 40)
       : [];
     const localProjectCards = projectArtifacts.map((artifact) => ({
       id: artifact.id,
@@ -604,7 +688,9 @@ export function FashionStudioPage() {
     const allProjectCards = mergeFashionStudioProjectCards(remoteProjects, localProjectCards);
     const projectsPerPage = 30;
     const projectPageCount = Math.max(1, Math.ceil(allProjectCards.length / projectsPerPage));
-    const visibleProjectCards = allProjectCards.slice((projectPage - 1) * projectsPerPage, projectPage * projectsPerPage);
+    const currentProjectPage = Math.min(projectPage, projectPageCount);
+    const visibleProjectCards = allProjectCards.slice((currentProjectPage - 1) * projectsPerPage, currentProjectPage * projectsPerPage);
+    const pageItems = buildPageItems(currentProjectPage, projectPageCount);
     const referenceExamples = [
       'スタジオ撮影を屋外風の写真に変える',
       'スマート画像検索＋コーデ調整',
@@ -615,7 +701,7 @@ export function FashionStudioPage() {
 
     return (
       <main
-        className="dark min-h-screen bg-[#101010] px-4 py-5 text-white sm:px-6"
+        className="fashion-studio-overview-parity relative dark min-h-screen bg-[#101010] px-4 py-5 text-white sm:px-6"
         data-testid="lightchain-fashion-studio-overview"
         data-lightchain-parity-shell="fashion-studio-overview"
         data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
@@ -623,42 +709,55 @@ export function FashionStudioPage() {
         data-workflow-input-roles={fashionStudioWorkflowContract?.inputRoles.join(',') ?? ''}
         data-workflow-result-destinations={fashionStudioWorkflowContract?.resultDestinations.join(',') ?? ''}
       >
+        {remainingUnits !== null && (
+          <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white">
+            <Sparkles className="h-3.5 w-3.5" />
+            {remainingUnits.toLocaleString()}
+          </div>
+        )}
         <section className="w-full">
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-base font-semibold text-white">ファッションスタジオ</h1>
           </div>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
-            <button
-              type="button"
+            <div
               onClick={() => navigate('/flow/integration/detail?boardProjectCode=&boardProjectType=')}
               data-testid="lightchain-fashion-studio-new-file"
-              className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
+              className="studio-new-file-card group h-60 w-55 cursor-pointer rounded-2xl text-white transition hover:ring-1 hover:ring-cyan-300/60"
             >
-              <div className="flex h-40 items-center justify-center bg-[radial-gradient(circle_at_28%_24%,#e7ffe8,#5d646b_52%,#181f22)]">
-                <div className="relative flex h-16 w-20 items-center justify-center text-xs font-bold text-white">
-                  PROJECT
-                  <span className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-200 text-xl font-bold text-neutral-700">+</span>
-                </div>
-              </div>
-              <div className="px-4 py-4">
-                <p className="text-sm font-semibold text-neutral-200">新規ファイル</p>
-              </div>
-            </button>
+              <img className="studio-new-file-icon" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
+              <p className="studio-new-file-label">新規ファイル</p>
+            </div>
             {visibleProjectCards.map((project) => (
-              <article key={project.id} className="relative overflow-visible rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
-                <button
-                  type="button"
-                  onClick={() => navigate(buildFashionStudioProjectHref(project))}
-                  className="block w-full overflow-hidden rounded-xl text-left"
-                >
-                  <div className="flex h-40 items-center justify-center bg-[#171c1f]">
-                    {project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">PROJECT</span>}
+              <div
+                key={project.id}
+                onClick={() => navigate(buildFashionStudioProjectHref(project))}
+                className={`group relative h-60 w-55 cursor-pointer ${openProjectMenuId === project.id ? 'overflow-visible' : 'overflow-hidden'} rounded-2xl bg-[#171c1f] text-left text-white transition hover:ring-1 hover:ring-cyan-300/60`}
+              >
+                <div className="flex h-40 items-center justify-center overflow-hidden rounded-t-2xl bg-[#171c1f]">
+                  <FashionStudioThumbnail
+                    brandId={currentBrand?.id ?? null}
+                    projectId={project.id}
+                    candidates={project.source === 'remote'
+                      ? remoteProjects.find((remote) => remote.id === project.id)?.thumbnailCandidates ?? []
+                      : project.imageUrl ? [project.imageUrl] : []}
+                    onLoaded={(url) => {
+                      if (project.source !== 'remote') return;
+                      const brandId = currentBrand?.id;
+                      if (!brandId || useAuthStore.getState().currentBrand?.id !== brandId) return;
+                      setRemoteProjectScope((current) => current.brandId !== brandId ? current : {
+                        ...current,
+                        projects: current.projects.map((remote) => remote.id === project.id ? { ...remote, imageUrl: url } : remote),
+                      });
+                    }}
+                  />
+                </div>
+                <div className="absolute bottom-0 w-full rounded-b-2xl bg-[#262a2b] px-3 py-3 text-sm text-neutral-300 group-hover:bg-[#303536]">
+                  <div className="rounded-sm cursor-pointer hover:bg-white/10">
+                    <p className="studio-project-title h-7.5 min-w-20 max-w-full overflow-hidden text-ellipsis whitespace-nowrap p-1 text-base font-normal text-neutral-200">{pinnedProjectIds.has(project.id) ? '📌 ' : ''}{project.title}</p>
+                    <p className="studio-project-date mt-1 px-1 text-xs text-neutral-400">{formatProjectAge(project.updatedAt)}</p>
                   </div>
-                  <div className="px-4 py-4 pr-12">
-                    <p className="truncate text-sm font-semibold text-neutral-200">{pinnedProjectIds.has(project.id) ? '📌 ' : ''}{project.title}</p>
-                    <p className="mt-2 text-xs text-neutral-500">{formatProjectAge(project.updatedAt)}</p>
-                  </div>
-                </button>
+                </div>
                 <div className="absolute right-3 top-3 z-20">
                   <button
                     type="button"
@@ -670,21 +769,35 @@ export function FashionStudioPage() {
                     <MoreVertical className="h-4 w-4" />
                   </button>
                   {openProjectMenuId === project.id && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
-                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setPinnedProjectIds((current) => { const next = new Set(current); if (next.has(project.id)) next.delete(project.id); else next.add(project.id); return next; }); setOpenProjectMenuId(null); }}>ピン留め</button>
+                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { toggleProjectPin(project.id); setOpenProjectMenuId(null); }}>ピン留め</button>
                     <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { void saveStudioProjectToLibrary(project); setOpenProjectMenuId(null); }}>アセットライブラリに保存</button>
                     <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => deleteStudioProject(project)}>削除</button>
                   </div>}
                 </div>
-              </article>
+              </div>
             ))}
           </div>
           {remoteProjectsStatus === 'loading' && <p className="mt-3 text-xs text-neutral-500">プロジェクトを読み込んでいます…</p>}
           {remoteProjectsStatus === 'failure' && <p className="mt-3 text-xs text-neutral-500">既存プロジェクトを読み込めませんでした。新規ファイルから開始できます。</p>}
           {projectPageCount > 1 && (
             <nav className="mt-4 flex items-center justify-center gap-2 text-xs text-neutral-400" aria-label="プロジェクトページ">
-              <button type="button" disabled={projectPage === 1} onClick={() => setProjectPage((page) => Math.max(1, page - 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">前のページ</button>
-              <span>{projectPage} / {projectPageCount}</span>
-              <button type="button" disabled={projectPage === projectPageCount} onClick={() => setProjectPage((page) => Math.min(projectPageCount, page + 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">次のページ</button>
+              <button type="button" disabled={currentProjectPage === 1} onClick={() => setProjectPage(Math.max(1, currentProjectPage - 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">前のページ</button>
+              {pageItems.map((item, index) => item === 'ellipsis' ? (
+                <span key={`ellipsis-${index}`} aria-hidden="true" className="px-1">…</span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  aria-label={`${item}ページ`}
+                  aria-current={currentProjectPage === item ? 'page' : undefined}
+                  disabled={currentProjectPage === item}
+                  onClick={() => setProjectPage(item)}
+                  className="min-w-8 rounded border border-white/10 px-2 py-1.5 disabled:border-cyan-300/40 disabled:text-white"
+                >
+                  {item}
+                </button>
+              ))}
+              <button type="button" disabled={currentProjectPage === projectPageCount} onClick={() => setProjectPage(Math.min(projectPageCount, currentProjectPage + 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">次のページ</button>
             </nav>
           )}
 
@@ -729,7 +842,7 @@ export function FashionStudioPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-              LIGHTCHAIN / STUDIO
+              HEAVY CHAIN / STUDIO
             </p>
             <h1 className="mt-2 font-display text-3xl font-semibold text-white">
               ファッションスタジオ
@@ -772,7 +885,7 @@ export function FashionStudioPage() {
         className="mb-5"
       >
         <WorkspaceReadinessStrip
-          eyebrow="LIGHTCHAIN PARITY / STUDIO START"
+          eyebrow="HEAVY CHAIN / STUDIO START"
           title="まず素材、モデル、撮影セットを順番に決めます"
           description="最初から全項目を埋める必要はありません。商品素材を置き、モデルと背景を選んだら生成指示かCanvasへ進めます。"
           nextAction="素材 → セット → 生成 / Canvas"

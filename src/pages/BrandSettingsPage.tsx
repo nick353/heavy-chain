@@ -290,7 +290,7 @@ export function BrandSettingsPage() {
         <div className="glass-panel w-full rounded-2xl p-8 text-center">
           <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white">ブランドを設定してください</h1>
           <p className="mt-3 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-            ブランドを作成すると、Lightchainの生成・保存・履歴をあなたの作業領域に紐づけられます。
+            ブランドを作成すると、Heavy Chainの生成・保存・履歴をあなたの作業領域に紐づけられます。
           </p>
           <Button className="mt-6" onClick={() => navigate('/dashboard')}>
             ブランド作成へ進む

@@ -39,7 +39,12 @@ const featureMatchesLocation = (feature: LightchainFeature, pathname: string, se
   const params = new URLSearchParams(search);
   const featureParam = params.get('feature') || params.get('lcFeature');
   if (featureParam === feature.id) return true;
-  if (getLightchainUnifiedRouteAliases(feature.id).includes(pathname)) return true;
+  if (getLightchainUnifiedRouteAliases(feature.id).some((alias) => {
+    const [aliasPath, aliasSearch = ''] = alias.split('?');
+    if (aliasPath !== pathname) return false;
+    const requiredParams = new URLSearchParams(aliasSearch);
+    return [...requiredParams.entries()].every(([key, value]) => params.get(key) === value);
+  })) return true;
   return pathname === routeBase(feature.route);
 };
 

@@ -2,6 +2,7 @@ import { buildLocalCanvasAssetReference,deleteLocalCanvasAsset,getLocalCanvasAss
 import { canonicalCloudflareImageBody,durableImageRecoveryKey } from './cloudflareImageAI';
 import { PROTECTED_IMAGE_EDIT_MODE,protectedImageDigest } from './protectedImageEditContract';
 import type { prepareProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
+import { readPendingIdentity,listPendingIdentities } from './cloudflareImagePendingStore';
 
 type Prepared = Awaited<ReturnType<typeof prepareProtectedCloudflareEdit>>;
 export type ImageInputScope = { origin:string; userId:string; brandId:string };
@@ -32,7 +33,12 @@ async function validate(scope:ImageInputScope,entry:PendingProtectedImageEdit,re
       JSON.stringify(prepared.body.protectedEdit) !== JSON.stringify(prepared.plan)) throw new Error('image_input_snapshot_invalid');
   if (await protectedImageDigest(prepared.sourceImageUrl) !== prepared.plan.sourceSha256 || await protectedImageDigest(prepared.maskDataUrl) !== prepared.plan.maskSha256 ||
       await durableImageRecoveryKey(scope.origin,scope.userId,'edit-image',prepared.body) !== entry.clientRecoveryKey) throw new Error('image_input_checksum_mismatch');
-  if (requirePending && localStorage.getItem(entry.clientRecoveryKey) !== entry.requestId) throw new Error('image_input_no_longer_pending');
+  if (requirePending) {
+    const pending = await readPendingIdentity(entry.clientRecoveryKey);
+    if (pending.state === 'unavailable') throw new Error('image_pending_identity_unavailable', { cause: pending.cause });
+    if (pending.state === 'conflict') throw new Error('image_pending_identity_conflict');
+    if (pending.state !== 'present' || pending.requestId !== entry.requestId) throw new Error('image_input_no_longer_pending');
+  }
 }
 
 /** A single JSON Blob transaction reuses the Canvas asset store. Images never
@@ -65,11 +71,9 @@ export async function loadProtectedImageInput(scope:ImageInputScope,requestId:st
   const entry = await parse(blob); await validate(scope,entry); return entry;
 }
 export async function listProtectedImageInputs(scope:ImageInputScope):Promise<PendingProtectedImageSummary[]> {
-  const ids = new Set<string>();
-  for (let index=0;index<localStorage.length;index++) {
-    const key = localStorage.key(index); if (!key?.startsWith(prefix(scope))) continue;
-    const id = localStorage.getItem(key); if (id && uuid.test(id)) ids.add(id);
-  }
+  const pending = await listPendingIdentities(prefix(scope));
+  if (pending.state !== 'complete') throw new Error(`image_pending_listing_${pending.state}`, { cause: pending.cause });
+  const ids = new Set(pending.identities.map(item=>item.requestId));
   const entries:PendingProtectedImageSummary[] = [];
   for (const id of ids) {
     try {
@@ -89,9 +93,13 @@ export async function listProtectedImageInputs(scope:ImageInputScope):Promise<Pe
 }
 export async function deleteProtectedImageInput(scope:ImageInputScope,requestId:string,clientRecoveryKey:string):Promise<void> {
   if (!clientRecoveryKey.startsWith(prefix(scope))) throw new Error('image_input_scope_mismatch');
+  const pending = await readPendingIdentity(clientRecoveryKey);
+  if (pending.state === 'unavailable') throw new Error('image_pending_identity_unavailable', { cause: pending.cause });
+  if (pending.state === 'conflict') throw new Error('image_pending_identity_conflict');
+  if (pending.state !== 'present' || pending.requestId !== requestId) throw new Error('image_input_no_longer_pending');
   const ref = buildLocalCanvasAssetReference(await revision(scope,requestId));
   const blob = await getLocalCanvasAsset(ref); if (!blob) return;
-  const entry = await parse(blob); await validate(scope,entry,false);
+  const entry = await parse(blob); await validate(scope,entry);
   if (entry.requestId !== requestId || entry.clientRecoveryKey !== clientRecoveryKey) throw new Error('image_input_request_collision');
   await deleteLocalCanvasAsset(ref); changed();
 }

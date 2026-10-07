@@ -1,5 +1,6 @@
+import { isLocalCanvasAssetReference } from './canvasLocalAssets';
 import type { GeneratedImage, Json } from '../types/database';
-import { cloudflareDataPlane } from './cloudflareApi';
+import { cloudflareDataPlane, ArtifactPersistenceContextError, type ArtifactPersistenceContext } from './cloudflareApi';
 import { normalizeGeneratedImageStoragePath, normalizeCloudflareGeneratedImageStoragePath } from './storagePathSafety';
 import { shouldClearWorkspaceArtifactImageUrl } from './generatedImageIdentity';
 import { buildWorkspaceArtifactLineage } from './workspaceArtifactLineage';
@@ -159,7 +160,7 @@ export const normalizeWorkspaceArtifactForPersistence = (
 export const canPersistWorkspaceArtifactLocally = (
   imageUrl: string,
   metadata: Record<string, Json | undefined>,
-) => /^(?:data:|blob:|local:|\/|\.\.?\/)/i.test(imageUrl.trim()) || hasCanonicalStoragePath(metadata);
+) => isLocalCanvasAssetReference(imageUrl.trim()) || /^(?:data:|blob:|local:|\/|\.\.?\/)/i.test(imageUrl.trim()) || hasCanonicalStoragePath(metadata);
 
 const isBrowser = () => {
   if (typeof window === 'undefined') return false;
@@ -440,7 +441,7 @@ export const saveWorkspaceArtifactPersisted = (
   }
 };
 
-export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceArtifact => {
+const prepareWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceArtifact => {
   const artifact: WorkspaceArtifact = {
     ...input,
     id: input.id ?? generateArtifactId(),
@@ -456,6 +457,11 @@ export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceA
     canonicalStoragePath: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata),
     metadata: artifact.metadata,
   });
+  return artifact;
+};
+
+export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceArtifact => {
+  const artifact = prepareWorkspaceArtifact(input);
 
   if (!isBrowser()) return artifact;
 
@@ -481,16 +487,59 @@ export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceA
   return artifact;
 };
 
+/** Context-bearing writes await the guard on every storage attempt. */
+const persistArtifactsWithContext = async (
+  storageKey: string,
+  artifacts: WorkspaceArtifact[],
+  operation: 'save' | 'delete',
+  context: ArtifactPersistenceContext,
+): Promise<{ ok: true } | { ok: false; error: unknown }> => {
+  let nextArtifacts = artifacts;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await context.assertCurrent();
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(nextArtifacts));
+      await context.assertCurrent();
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof ArtifactPersistenceContextError) throw error;
+      await context.assertCurrent();
+      lastError = error;
+      if (!isQuotaExceededError(error) || nextArtifacts.length <= 1) break;
+      nextArtifacts = nextArtifacts.slice(0, Math.max(1, Math.floor(nextArtifacts.length * 0.8)));
+    }
+  }
+  console.warn(`Failed to persist local workspace artifact during ${operation}.`, { errorCode: getPersistenceErrorCode(operation, lastError) });
+  return { ok: false, error: lastError };
+};
+
+const saveWorkspaceArtifactWithContext = async (input: WorkspaceArtifactInput, context: ArtifactPersistenceContext): Promise<WorkspaceArtifact> => {
+  const artifact = prepareWorkspaceArtifact(input);
+  await context.assertCurrent();
+  if (!isBrowser() || !canPersistWorkspaceArtifactLocally(artifact.imageUrl, artifact.metadata)) return artifact;
+  const current = listWorkspaceArtifacts(artifact.brandId, artifact.scopeId);
+  await context.assertCurrent();
+  const nextArtifacts = [artifact, ...current.filter(item => item.id !== artifact.id)]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, MAX_ARTIFACTS_PER_BRAND);
+  await persistArtifactsWithContext(getStorageKey(artifact.brandId, artifact.scopeId), nextArtifacts.map(normalizeWorkspaceArtifactForPersistence), 'save', context);
+  await context.assertCurrent();
+  return artifact;
+};
+
 export const saveWorkspaceArtifactBestEffort = async (
   input: WorkspaceArtifactInput,
-  options: { reuseCanonicalRemoteArtifact?: boolean } = {},
+  options: { reuseCanonicalRemoteArtifact?: boolean; persistenceContext?: ArtifactPersistenceContext } = {},
 ): Promise<WorkspaceArtifactBestEffortResult> => {
+  const persistenceContext = options.persistenceContext;
+  await persistenceContext?.assertCurrent();
   // Keep the Cloudflare save identity in the local failure record so a manual
   // retry resumes the same remote save even after a lost response.
   const previousRequestId = input.metadata?.cloudflareWorkspaceRequestId;
   const requestId = typeof previousRequestId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(previousRequestId)
     ? previousRequestId : crypto.randomUUID();
-  const stableInput = { ...input, id: input.id ?? generateArtifactId(), metadata: { ...input.metadata, cloudflareWorkspaceRequestId: requestId } };
+  const stableInput = { ...input, id: input.id ?? (persistenceContext ? `local-${requestId}` : generateArtifactId()), metadata: { ...input.metadata, cloudflareWorkspaceRequestId: requestId } };
   let remote: WorkspaceArtifactBestEffortResult['remote'];
   let remoteError: unknown;
   const cleanupError: unknown = undefined;
@@ -507,11 +556,13 @@ export const saveWorkspaceArtifactBestEffort = async (
         title: input.title, imageUrl: input.imageUrl, prompt: input.prompt ?? null,
         metadata, canvasProjectId: input.canvasProjectId ?? null, sourceJobId: input.sourceJobId ?? null,
         sourceStoragePath: options.reuseCanonicalRemoteArtifact === false || !source || /^local(?:\/|$)/i.test(source) ? null : source,
-      });
+      }, undefined, persistenceContext);
       if (!result.success || !result.remote) throw new Error('cloudflare_workspace_save_failed');
       remote = result.remote;
       remoteSaveStage = 'completed';
   } catch (error) {
+    if (error instanceof ArtifactPersistenceContextError) throw error;
+    await persistenceContext?.assertCurrent();
     remoteError = error;
     if (error instanceof Error && error.message.includes('timed out')) remoteSaveStage = 'timeout';
     console.warn('Remote workspace artifact save failed; falling back to localStorage.', {
@@ -522,7 +573,8 @@ export const saveWorkspaceArtifactBestEffort = async (
     });
   }
 
-  const artifact = saveWorkspaceArtifact({
+  await persistenceContext?.assertCurrent();
+  const localInput = {
     ...stableInput,
     metadata: {
       ...stableInput.metadata,
@@ -534,8 +586,13 @@ export const saveWorkspaceArtifactBestEffort = async (
       remoteCleanupStatus: cleanupError ? 'failed' : remoteCleanupStatus,
     },
     sourceJobId: remote?.jobId ?? input.sourceJobId,
-  });
+  };
+  const artifact = persistenceContext
+    ? await saveWorkspaceArtifactWithContext(localInput, persistenceContext)
+    : saveWorkspaceArtifact(localInput);
+  await persistenceContext?.assertCurrent();
   const localReadback = findWorkspaceArtifactPersisted(artifact.brandId, artifact.id, artifact.scopeId);
+  await persistenceContext?.assertCurrent();
   const localPersisted = localReadback.ok && Boolean(localReadback.artifact);
   const localError = localReadback.ok
     ? (localPersisted
@@ -604,6 +661,27 @@ export const deleteWorkspaceArtifact = (
   artifactId: string,
   scopeId?: string,
 ): WorkspaceArtifactDeleteResult => deleteWorkspaceArtifactsPersisted(brandId, [artifactId], scopeId);
+
+export const deleteWorkspaceArtifactWithContext = async (
+  brandId: string,
+  artifactId: string,
+  scopeId: string | undefined,
+  context: ArtifactPersistenceContext,
+): Promise<WorkspaceArtifactDeleteResult> => {
+  await context.assertCurrent();
+  const current = readWorkspaceArtifacts(brandId, scopeId);
+  await context.assertCurrent();
+  if (!current.ok) return current;
+  const storageKey = getStorageKey(brandId, scopeId);
+  const persisted = await persistArtifactsWithContext(storageKey, current.artifacts.filter(item => item.id !== artifactId), 'delete', context);
+  if (!persisted.ok) return { ok: false, error: toPersistenceError('delete', persisted.error) };
+  await context.assertCurrent();
+  let remains: boolean;
+  try { remains = parseArtifacts(window.localStorage.getItem(storageKey)).some(item => item.id === artifactId); }
+  catch (error) { return { ok: false, error: toPersistenceError('delete', error) }; }
+  finally { await context.assertCurrent(); }
+  return remains ? { ok: false, error: new WorkspaceArtifactPersistenceError('LOCAL_WORKSPACE_DELETE_READBACK_FAILED', 'delete', 'Local workspace artifact delete could not be verified.') } : { ok: true };
+};
 
 export const workspaceArtifactToGeneratedImage = (artifact: WorkspaceArtifact): GeneratedImage => ({
   id: artifact.id,

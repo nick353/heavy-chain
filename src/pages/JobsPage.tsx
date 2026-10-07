@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, GalleryHorizontalEnd, Loader2, PlayCircle, RotateCcw, XCircle } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { isHeavyWorkspaceRuntime } from '../lib/heavyWorkspace';
 import { emptyWorkspaceActivity, fetchWorkspaceActivity, type WorkspaceActivity, type WorkspaceJob } from '../lib/workspaceActivity';
+import { displaySourceSummaryLabel } from '../lib/sourceContextSummary';
 
 const statusLabel = {
   pending: '待機中',
@@ -78,7 +80,7 @@ function JobRow({ job }: { job: WorkspaceJob }) {
             <dl className="mt-3 space-y-1 rounded-xl bg-teal-50/70 p-3 dark:bg-teal-950/25">
               {lightchainRows.map((row) => (
                 <div key={`${job.id}-${row.label}-${row.value}`} className="grid gap-1 text-xs sm:grid-cols-[108px_1fr] sm:gap-2">
-                  <dt className="text-teal-700 dark:text-teal-300">{row.label}:</dt>
+                  <dt className="text-teal-700 dark:text-teal-300">{displaySourceSummaryLabel(row.label)}:</dt>
                   <dd className="min-w-0 break-words font-medium text-neutral-800 dark:text-neutral-100">{row.value}</dd>
                 </div>
               ))}
@@ -102,6 +104,7 @@ export function JobsPage() {
     user,
     currentBrand,
     refreshCurrentBrand,
+    ensureHeavyWorkspace,
     isInitialized: authInitialized,
     isLoading: authLoading,
   } = useAuthStore();
@@ -119,7 +122,9 @@ export function JobsPage() {
     }
 
     let brand = currentBrand;
-    if (!brand && user) {
+    if (isHeavyWorkspaceRuntime() && user) {
+      brand = await ensureHeavyWorkspace();
+    } else if (!brand && user) {
       setBrandResolutionAttempted(false);
       // A hard navigation can finish auth initialization before the async brand
       // hydration callback. Resolve it here as a bounded read-only fallback.
@@ -144,7 +149,7 @@ export function JobsPage() {
     setIsLoading(true);
     setActivityError(null);
     try {
-      const nextActivity = await fetchWorkspaceActivity(brandId, user?.id);
+      const nextActivity = await fetchWorkspaceActivity(brandId, user?.id, { includeAllLoadedJobs: true });
       if (useAuthStore.getState().currentBrand?.id !== brandId) return;
       setActivity(nextActivity);
     } catch (error) {
@@ -156,7 +161,7 @@ export function JobsPage() {
         setIsLoading(false);
       }
     }
-  }, [authInitialized, authLoading, currentBrand, refreshCurrentBrand, user]);
+  }, [authInitialized, authLoading, currentBrand, ensureHeavyWorkspace, refreshCurrentBrand, user]);
 
   useEffect(() => {
     void loadActivity();

@@ -12,7 +12,6 @@ import {
   IconFolder
 } from '../components/icons';
 import { useCanvasStore, type CanvasProject } from '../stores/canvasStore';
-import { auth } from '../lib/auth';
 import { withSignedImageUrls } from '../lib/storage';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import { Button, Modal, Input, Textarea } from '../components/ui';
@@ -65,7 +64,7 @@ const canvasObjectTypeLabels: Record<CanvasProject['objects'][number]['type'], s
 };
 
 const DEFAULT_BRAND_FORM = {
-  name: 'LIGHTCHAIN STUDIO',
+  name: 'HEAVY CHAIN STUDIO',
   toneDescription: 'ミニマルで洗練された、自然体のプロダクト表現。清潔感と上質さを保ちながら、日常に馴染むトーン。',
   targetAudience: 'EC・SNSで商品やブランドの魅力を伝えたいクリエイター・小規模チーム',
 };
@@ -268,10 +267,11 @@ export function DashboardPage() {
 
     setIsCreatingBrand(true);
     try {
-      const { data: { session } } = await auth.getSession();
-
-      if (!session) {
-        toast.error('ログインが必要です');
+      // ProtectedRoute already admitted the cookie-backed user. Keep this
+      // action tied to that same store identity instead of treating one empty
+      // auth-cache read as a new login requirement during a slow refresh.
+      if (!user) {
+        toast.error('ログイン状態を確認できません。再読み込みしてください。');
         return;
       }
 
@@ -291,7 +291,7 @@ export function DashboardPage() {
         ? state.accessibleBrands.find((brand) => brand.id === createdBrand.id) || null
         : null;
       if (
-        state.user?.id !== session.user.id
+        state.user?.id !== user.id
         || state.brandState.status !== 'success_nonempty'
         || !confirmedCreatedBrand
       ) {

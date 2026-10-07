@@ -409,7 +409,7 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
               </>
             ) : lightchainSourceReadback ? (
               <>
-                <p>Lightchain出典: {lightchainSourceReadback.sourceLabel}</p>
+                <p>Heavy Chain出典: {lightchainSourceReadback.sourceLabel}</p>
                 <p>ワークスペース: {lightchainSourceReadback.sourceWorkspace}</p>
                 <p>Workflow: {lightchainSourceReadback.workflowVersion}</p>
                 <p>再開先: {lightchainSourceReadback.sourceResumePath}</p>

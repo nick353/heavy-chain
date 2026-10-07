@@ -2,6 +2,7 @@
 // Premium, luxurious SVG icons for the apparel AI platform
 
 import React from 'react';
+import { HeavyChainBrandLogo } from '../LightchainLogo';
 
 interface IconProps {
   className?: string;
@@ -474,117 +475,5 @@ export const IconLayers: React.FC<IconProps> = ({ className = '', size = 24 }) =
   </svg>
 );
 
-// Heavy Chain Logo - Full Logo with Chain Links
-interface LogoProps {
-  className?: string;
-  height?: number;
-  showText?: boolean;
-}
-
-export const HeavyChainLogo: React.FC<LogoProps> = ({ className = '', height = 56, showText = true }) => {
-  const aspectRatio = showText ? 4 : 1.5;
-  const width = height * aspectRatio;
-  
-  return (
-    <svg width={width} height={height} viewBox={showText ? "0 0 400 100" : "0 0 150 100"} fill="none" className={className}>
-      <defs>
-        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#d4af37" />
-          <stop offset="50%" stopColor="#f4d03f" />
-          <stop offset="100%" stopColor="#c9a227" />
-        </linearGradient>
-        <linearGradient id="darkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#1a1a2e" />
-          <stop offset="100%" stopColor="#2d2d44" />
-        </linearGradient>
-        <linearGradient id="goldGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#f4d03f" />
-          <stop offset="50%" stopColor="#d4af37" />
-          <stop offset="100%" stopColor="#a67c00" />
-        </linearGradient>
-      </defs>
-      
-      {/* Left Chain Link - Dark with gold inner border */}
-      <g transform="translate(10, 10)">
-        {/* Outer dark shape */}
-        <path 
-          d="M25 0 L65 0 Q80 0 80 15 L80 25 L60 45 L60 55 Q60 70 45 70 L15 70 Q0 70 0 55 L0 15 Q0 0 15 0 Z" 
-          fill="url(#darkGradient)"
-          stroke="#c9a227"
-          strokeWidth="2"
-        />
-        {/* Inner gold border */}
-        <path 
-          d="M25 8 L60 8 Q70 8 70 18 L70 22 L52 40 L52 52 Q52 62 42 62 L18 62 Q8 62 8 52 L8 18 Q8 8 18 8 Z" 
-          fill="none"
-          stroke="#c9a227"
-          strokeWidth="1.5"
-          opacity="0.6"
-        />
-      </g>
-      
-      {/* Right Chain Link - Gold */}
-      <g transform="translate(55, 20)">
-        {/* Outer gold shape */}
-        <path 
-          d="M35 0 L65 0 Q80 0 80 15 L80 55 Q80 70 65 70 L25 70 Q10 70 10 55 L10 45 L30 25 L30 15 Q30 0 45 0 Z" 
-          fill="url(#goldGradient2)"
-          stroke="#a67c00"
-          strokeWidth="1"
-        />
-        {/* Inner dark border */}
-        <path 
-          d="M38 8 L62 8 Q72 8 72 18 L72 52 Q72 62 62 62 L28 62 Q18 62 18 52 L18 42 L38 22 L38 18 Q38 8 48 8 Z" 
-          fill="url(#darkGradient)"
-          stroke="#c9a227"
-          strokeWidth="1"
-        />
-        {/* Innermost gold line */}
-        <path 
-          d="M42 16 L58 16 Q64 16 64 22 L64 48 Q64 54 58 54 L32 54 Q26 54 26 48 L26 40 L44 22 L44 22 Q44 16 50 16 Z" 
-          fill="none"
-          stroke="#c9a227"
-          strokeWidth="1"
-          opacity="0.5"
-        />
-      </g>
-
-      {/* Connection point / AI circuit element */}
-      <circle cx="85" cy="55" r="3" fill="#c9a227" />
-      <path d="M85 55 L95 45" stroke="#c9a227" strokeWidth="1.5" />
-      <circle cx="95" cy="45" r="2" fill="#1a1a2e" stroke="#c9a227" strokeWidth="1" />
-
-      {showText && (
-        <>
-          {/* HEAVY CHAIN Text */}
-          <text 
-            x="155" 
-            y="58" 
-            fontFamily="system-ui, -apple-system, sans-serif" 
-            fontSize="32" 
-            fontWeight="600" 
-            letterSpacing="3"
-            fill="#1a1a2e"
-          >
-            HEAVY CHAIN
-          </text>
-          
-          {/* AI APPAREL PLATFORM Tagline */}
-          <text 
-            x="155" 
-            y="82" 
-            fontFamily="system-ui, -apple-system, sans-serif" 
-            fontSize="12" 
-            fontWeight="500" 
-            letterSpacing="4"
-            fill="#1a1a2e"
-            opacity="0.7"
-          >
-            AI APPAREL PLATFORM
-          </text>
-        </>
-      )}
-    </svg>
-  );
-};
-
+// Text-only Heavy branding with the source Light Chain geometry.
+export const HeavyChainLogo = HeavyChainBrandLogo;
