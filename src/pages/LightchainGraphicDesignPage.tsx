@@ -31,6 +31,7 @@ export function graphicDesignBrief(referenceCount: number, strengths: readonly S
   return [
     'AIグラフィックデザイン: 参考画像から、アパレル向けのオリジナル柄・プリントグラフィックを作成してください。',
     '出力はプリント用のグラフィック単体（無地の白背景）とし、衣服・人物・モックアップは描かないでください。',
+    '参考画像の背景が黒や暗い色でも背景は白い無地にし、光彩・発光・にじみ・周辺を暗くする効果（ビネット）は加えないでください。',
     ...Array.from({ length: referenceCount }, (_, index) => `参考画像${index + 1}の参照強度: ${GRAPHIC_STRENGTH_LEVELS[strengths[index] ?? DEFAULT_STRENGTH]}`),
     assist ? 'アシスト: 参考画像のデザイン要素（モチーフ・配色・構図）を解析して反映してください。' : '',
   ].filter(Boolean).join('\n');
