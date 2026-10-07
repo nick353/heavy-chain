@@ -186,6 +186,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
               const canonicalInput = record(rawMetadata.canonicalInput) ? rawMetadata.canonicalInput : null;
               const metadata: Record<string,Json> = {...rawMetadata,
                 ...(canonicalInput&&rawMetadata.inputState===undefined&&record(canonicalInput.inputState)?{inputState:canonicalInput.inputState}:{}),
+                ...(canonicalInput&&rawMetadata.toolId===undefined&&canonicalInput.toolId===toolId?{toolId}:{}),
                 ...(canonicalInput&&rawMetadata.brief===undefined&&typeof canonicalInput.brief==='string'?{brief:canonicalInput.brief}:{}),
                 ...(canonicalInput&&rawMetadata.referenceNote===undefined&&typeof canonicalInput.referenceNote==='string'?{referenceNote:canonicalInput.referenceNote}:{}),
                 ...(rawMetadata.materialSlots===undefined&&Array.isArray(rawMetadata.materialReferences)?{materialSlots:rawMetadata.materialReferences}:{})};
@@ -492,7 +493,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
         const options = {rightsConfirmed,idempotencyKey:request.requestId,assertContext:assertCurrent,retainUntilAcknowledged:true,
           featureType:`lightchain-${toolId}`,lightchainCompat:{lightchainFeatureId:toolId,lightchainFeatureTitle:toolId,lightchainTaskCodes:[toolId]},
           ...(configRef.current.providerModel?{providerModel:configRef.current.providerModel}:{}),
-          materialReferences:dispatchSlots,canonicalInput:{inputState:isModelToolFeature(toolId)?workspaceInputState(toolId,request.inputState):request.inputState??{},brief:request.brief,referenceNote:request.referenceNote}};
+          materialReferences:dispatchSlots,canonicalInput:{toolId,inputState:isModelToolFeature(toolId)?workspaceInputState(toolId,request.inputState):request.inputState??{},brief:request.brief,referenceNote:request.referenceNote}};
         if((configRef.current.modelLibraryCreation===true&&isModelLibraryFeature(toolId))&&action==='generate'){
           const source=librarySettings?.inputMode==='custom'?snapshot.slots.secondary:snapshot.slots.primary;
           const preview=librarySettings?.inputMode==='custom'?modelLibraryBodyPreview(librarySettings):null;
