@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock3, ImagePlus, Plus, Sparkles, WandSparkles } from 'lucide-react';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
+import { whitenDarkBackground } from '../lib/whitenDarkBackground';
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
@@ -44,6 +45,7 @@ export function LightchainGraphicDesignPage() {
 
 function LightchainGraphicDesignWorkspace() {
   const workspace = useCanonicalImageWorkspace('print-design-project', {
+    prepareSourceImage: whitenDarkBackground,
     requiredSources: 1,
     title: 'AIグラフィックデザイン',
     initialInputState: { referenceStrengths: [DEFAULT_STRENGTH, DEFAULT_STRENGTH], assist: false },

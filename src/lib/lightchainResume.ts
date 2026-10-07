@@ -11,9 +11,14 @@ export type LightchainResumeSlot = {
   imageUrl: string;
   sourceImageId?: string | null;
   sourceStoragePath?: string | null;
+  /** Private media copy (media/v1/<uuid>) used when the browser-local asset is gone. */
+  sourceMediaPath?: string | null;
   sourceMetadata?: CanvasSourceMetadata;
   persistenceStatus?: 'persistent' | 'session-only' | 'unknown';
 };
+
+const MEDIA_SOURCE_PATH = /^media\/v1\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const readResumeMediaPath = (value: unknown): string | null => typeof value === 'string' && MEDIA_SOURCE_PATH.test(value) ? value : null;
 
 export type LightchainPrintDesignState = { version: 1; mode: 'guide' | 'no-guide'; style: string; prompt: string };
 
@@ -104,15 +109,15 @@ const readSourceMetadata = (value: unknown): CanvasSourceMetadata | undefined =>
 /** New durable inputs contain identities, never inline bytes or bearer URLs. */
 export const serializeLightchainResumeSlots = (slots: Record<string, {
   name: string; kind: string; imageUrl: string; sourceImageId?: string | null; sourceStoragePath?: string | null;
-  sourceMetadata?: CanvasSourceMetadata; persistenceStatus?: 'persistent' | 'session-only' | 'unknown'; localAssetRef?: string;
+  sourceMediaPath?: string | null; sourceMetadata?: CanvasSourceMetadata; persistenceStatus?: 'persistent' | 'session-only' | 'unknown'; localAssetRef?: string;
 } | null>) => Object.entries(slots).flatMap(([key,slot]) => {
   if (!slot) return [];
   const sourceStoragePath = normalizeResumeStoragePath(slot.sourceStoragePath);
   const localAssetRef = isLocalCanvasAssetReference(slot.localAssetRef) ? slot.localAssetRef :
     isLocalCanvasAssetReference(slot.imageUrl) ? slot.imageUrl : '';
   return [{ key, fileName: slot.name, materialKind: slot.kind, imageUrl: sourceStoragePath ? '' : localAssetRef,
-    sourceImageId: slot.sourceImageId ?? null, sourceStoragePath, sourceMetadata: (readSourceMetadata(slot.sourceMetadata) ?? null) as unknown as Json,
-    persistenceStatus: sourceStoragePath || localAssetRef ? 'persistent' as const : 'session-only' as const, hasImage: true }];
+    sourceImageId: slot.sourceImageId ?? null, sourceStoragePath, ...(readResumeMediaPath(slot.sourceMediaPath) ? {sourceMediaPath: slot.sourceMediaPath} : {}), sourceMetadata: (readSourceMetadata(slot.sourceMetadata) ?? null) as unknown as Json,
+    persistenceStatus: sourceStoragePath || localAssetRef || readResumeMediaPath(slot.sourceMediaPath) ? 'persistent' as const : 'session-only' as const, hasImage: true }];
 });
 
 const CANONICAL_STORAGE_PATH_KEYS = new Set([
@@ -151,13 +156,15 @@ const readSlot = (value: unknown): LightchainResumeSlot | null => {
   const sourceStoragePath = normalizeResumeStoragePath(value.sourceStoragePath);
   const sourceImageId = typeof value.sourceImageId === 'string' ? value.sourceImageId : null;
   const imageUrl = isLocalCanvasAssetReference(value.localAssetRef) ? value.localAssetRef : value.imageUrl;
-  if (!key || (!sourceStoragePath && !isResumableImageUrl(imageUrl))) return null;
+  const sourceMediaPath = readResumeMediaPath(value.sourceMediaPath);
+  if (!key || (!sourceStoragePath && !sourceMediaPath && !isResumableImageUrl(imageUrl))) return null;
   return {
     key,
     name: name || key,
     kind: kind || '素材',
-    imageUrl: sourceStoragePath ? '' : String(imageUrl).trim(),
+    imageUrl: sourceStoragePath || !isResumableImageUrl(imageUrl) ? '' : String(imageUrl).trim(),
     ...(sourceStoragePath || sourceImageId ? {sourceStoragePath,sourceImageId} : {}),
+    ...(sourceMediaPath ? {sourceMediaPath} : {}),
     ...(readSourceMetadata(value.sourceMetadata) ? {sourceMetadata:readSourceMetadata(value.sourceMetadata)} : {}),
     ...(['persistent','session-only','unknown'].includes(String(value.persistenceStatus)) ? {persistenceStatus:value.persistenceStatus as LightchainResumeSlot['persistenceStatus']} : {}),
   };
