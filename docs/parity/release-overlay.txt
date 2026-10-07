@@ -1174,3 +1174,4 @@ public/lightchain-assets/video-templates/ed31223882b364815833e87870dcfc0c.jpg
 src/features/boardDraftProjects.ts
 src/pages/LightchainBoardPage.tsx
 src/features/board/boardDocuments.ts
+src/lib/dashboardCanvasProjects.ts

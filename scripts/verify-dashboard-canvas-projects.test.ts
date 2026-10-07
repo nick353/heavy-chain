@@ -41,6 +41,15 @@ test('remote documents are discoverable and deduplicated ahead of local index en
   assert.equal(merged.find((project) => project.id === 'local-only')?.source, 'local');
 });
 
+test('design documents and agent tasks are not listed as Canvas projects', () => {
+  const merged = mergeDashboardCanvasProjects([], [
+    document('canvas-1', 'キャンバス'),
+    { ...document('board-1', 'デザインドキュメント'), snapshot: { objects: [], boardDocument: { kind: 'heavy-board-document', version: 1, pages: [] } } },
+    { ...document('agent-1', '企画'), snapshot: { objects: [], agentTask: { kind: 'heavy-agent-task' } } },
+  ]);
+  assert.deepEqual(merged.map((project) => project.id), ['canvas-1']);
+});
+
 test('project links use the exact remote document ID', () => {
   assert.equal(
     buildDashboardCanvasProjectHref('74cdb392-6a85-48e2-af5c-6d06f1ff875d'),

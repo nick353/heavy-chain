@@ -22,6 +22,17 @@ export const toDashboardRemoteProject = (document: CanvasDocument): DashboardCan
   source: 'remote',
 });
 
+/**
+ * Design documents (/board) and planning-agent tasks (/agent) are canvas documents too, but they open in their own
+ * pages; listing them as Canvas projects would open them in the wrong editor.
+ */
+export const isCanvasProjectDocument = (document: CanvasDocument) => {
+  const snapshot = document.snapshot as unknown;
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return true;
+  const record = snapshot as Record<string, unknown>;
+  return !('boardDocument' in record) && !('agentTask' in record) && !('boardDraftInputs' in record);
+};
+
 export const mergeDashboardCanvasProjects = (
   localProjects: CanvasProject[],
   remoteDocuments: CanvasDocument[],
@@ -30,7 +41,7 @@ export const mergeDashboardCanvasProjects = (
   const merged: DashboardCanvasProject[] = [];
 
   for (const project of [
-    ...remoteDocuments.map(toDashboardRemoteProject),
+    ...remoteDocuments.filter(isCanvasProjectDocument).map(toDashboardRemoteProject),
     ...localProjects.map((item) => ({ ...item, source: 'local' as const })),
   ]) {
     if (!project.id || seen.has(project.id)) continue;
