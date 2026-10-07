@@ -180,7 +180,15 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
               && Boolean(normalizeCloudflareGeneratedImageStoragePath(image.storage_path) ?? normalizeGeneratedImageStoragePath(image.storage_path)));
             remoteLookup=remote?'matched':'no-match';
             if (remote) {
-              const metadata = remote.metadata && typeof remote.metadata==='object' && !Array.isArray(remote.metadata) ? remote.metadata : {};
+              const rawMetadata: Record<string,Json> = record(remote.metadata) ? remote.metadata : {};
+              // Server copy of the inputs: canonicalInput (settings/brief) and
+              // materialReferences (same shape as materialSlots).
+              const canonicalInput = record(rawMetadata.canonicalInput) ? rawMetadata.canonicalInput : null;
+              const metadata: Record<string,Json> = {...rawMetadata,
+                ...(canonicalInput&&rawMetadata.inputState===undefined&&record(canonicalInput.inputState)?{inputState:canonicalInput.inputState}:{}),
+                ...(canonicalInput&&rawMetadata.brief===undefined&&typeof canonicalInput.brief==='string'?{brief:canonicalInput.brief}:{}),
+                ...(canonicalInput&&rawMetadata.referenceNote===undefined&&typeof canonicalInput.referenceNote==='string'?{referenceNote:canonicalInput.referenceNote}:{}),
+                ...(rawMetadata.materialSlots===undefined&&Array.isArray(rawMetadata.materialReferences)?{materialSlots:rawMetadata.materialReferences}:{})};
               const artifact: WorkspaceArtifact = {id:remote.id,brandId:fence.brandId,scopeId:fence.userId,featureType:`lightchain-${toolId}-provider-result`,
                 title:'保存された画像',imageUrl:'',prompt:null,createdAt:remote.created_at,sourceJobId:jobId,metadata};
               exactArtifact=artifact;
@@ -457,7 +465,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
         const rightsConfirmed = isHeavyOwnedFeature(toolId) && Boolean(fence.userId && fence.brandId);
         const options = {rightsConfirmed,idempotencyKey:request.requestId,assertContext:assertCurrent,retainUntilAcknowledged:true,
           featureType:`lightchain-${toolId}`,lightchainCompat:{lightchainFeatureId:toolId,lightchainFeatureTitle:toolId,lightchainTaskCodes:[toolId]},
-          materialReferences:dispatchSlots};
+          materialReferences:dispatchSlots,canonicalInput:{inputState:isModelToolFeature(toolId)?workspaceInputState(toolId,request.inputState):request.inputState??{},brief:request.brief,referenceNote:request.referenceNote}};
         if((configRef.current.modelLibraryCreation===true&&isModelLibraryFeature(toolId))&&action==='generate'){
           const source=librarySettings?.inputMode==='custom'?snapshot.slots.secondary:snapshot.slots.primary;
           const preview=librarySettings?.inputMode==='custom'?modelLibraryBodyPreview(librarySettings):null;
