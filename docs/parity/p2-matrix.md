@@ -28,8 +28,8 @@ Legend: ✅ evidenced · ◻ not yet evidenced for this row · — not applicabl
 | image-repair | /tools/reactor (14) | ai-62130895 | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | svg-convert | /tools/svg-convert (13) | ai-c900cd58 (+ real SVG export) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | custom-style | /model-base/style (20) | — non-generation (style_presets row + design_assistant_requests 57c092c1) | ✅ | ✅ | ✅ | — | ✅ | ◻ | — |
-| ai-fitting | /model (18) | — generic ai-be628dda `model-matrix` | ✅ | ◻ | ◻ | ◻ | ◻ | ◻ | ◻ |
-| ai-fitting-reference | /model/:mode (18) | — | ✅ | ◻ | ◻ | ◻ | ◻ | ◻ | ◻ |
+| ai-fitting | /model (18) | ai-f90badcb `model-matrix` (garment + 説明生成 text) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
+| ai-fitting-reference | /model?tab=参考図 (18) | ai-1368e577 `model-matrix` (garment + 参考画像 model, inputImageCount 2) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | model-library | /model-library (19) | ai-f035b13b | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | model-face | (19) head | ai-c56447bb | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | model-change | (19) | ai-80210c48 | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
@@ -41,7 +41,7 @@ Legend: ✅ evidenced · ◻ not yet evidenced for this row · — not applicabl
 | model-custom | /model-library/model-custom-form (19) | ai-f035b13b (tagged `lightchain-model-library`) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 
 ## Open work, in order
-1. Per-row runs still missing (2 rows): ai-fitting, ai-fitting-reference (model-matrix route).
+1. Per-row runs: done for all 31 rows (a, b, c, e).
 2. (d) four surfaces per run: check each job id appears in /gallery, /history, /jobs (and Canvas where Light has one).
 3. (f) one confirmed failure + recovery per row type (never replaying an unknown-effect operation).
 4. (g) full-size quality review per feature rubric.

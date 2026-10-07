@@ -273,3 +273,11 @@ Each iteration: read this file → advance the next open item → append result 
 - Tests: fitting lifecycle 7/3, persistence 8/0, preview 4/0, resilience 4/0, all-screen 6/1, provider coverage 21/2 — failures equal to baseline; tsc clean.
 - Notes: materialKind for the garment is still recorded as "Tシャツ" for a blouse; pre-generation garment drafts are not shared across tabs.
 - 次: ai-fitting / ai-fitting-reference (model-matrix), then (d)(f)(g) per row and P4 thumbnail speed.
+
+### Iteration 40 (2026-10-07, /goal) — AI fitting rows, grid thumbnails (P4)
+- 変更 (PR nick353/heavy-chain#12): ai-fitting / ai-fitting-reference (model-matrix) send the 参考画像 tab's model pick as modelReferenceImageUrl when no secondary material is attached, record it in materialReferences (fitting-model) and save it as fittingReferenceSlots.
+- 検証 (production 1440×900): /model?tab=参考図 garment + library model → ai-1368e577 completed (model-matrix, inputImageCount 2, fitting-model reference); reload restores garment, モデル画像選択済み and result. /model garment + 説明生成 text → ai-f90badcb completed; reload restores garment, the 25-character description and result. All 31 P2 rows now have their own run (a, b, c, e).
+- 変更 (PR nick353/heavy-chain#13, API Worker version 9204b464): `/v1/media/read?token=…&variant=thumb` returns a 384px WebP built once with the Images binding and stored at `generated-thumbnails/<id>.webp` (dropped on content replace, deleted with the image; falls back to the original). Gallery and library grids request it. Also untracked a `cloudflare/heavy-api/node_modules` symlink that #11 committed by mistake.
+- 検証: Worker tests 158/158 (new thumbnail test); gallery image-fit 7/7; production /gallery cards load `…&variant=thumb`; one image 1,777,901 B PNG → 13,392 B WebP 384×384 (0.13 s); gallery cards render.
+- P4 hotlinks re-checked on production after these deploys: index + 162 JS chunks, 0 matches for linkaigc / aliyuncs.
+- 残: P2 (d) Gallery/Canvas/History/Jobs per job, (f) confirmed failure + recovery per row type, (g) full-size quality review; garment materialKind recorded as "Tシャツ" for a blouse; garment drafts not shared across tabs.
