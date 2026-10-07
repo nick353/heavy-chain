@@ -251,3 +251,9 @@ Each iteration: read this file → advance the next open item → append result 
 - heavy-chain-api: the deployed code (version 9349c854, 2026-10-01) was reconstructed from this branch by removing undeployed WIP from 5 files (openai-image, image-ai, workspace, image-ai-contracts, domain) until `wrangler deploy --dry-run` matched the deployed bundle; PR #2–#4 Claude text actions added; AI_IMAGE_PROVIDER kept openai; 0012–0015 migrations (already applied in D1) added to main. Worker tests 157/157. PR #7 merged; deployed version 8dd51168. CORS 204 for heavychain.app and zeabur; /model-base/style list loads.
 - Not done: consumer-auth deploy (WEB_ORIGINS heavychain.app) awaits the user; live call of Claude actions not exercised.
 - 今後: parity releases go to main by PR (main auto-deploys). The branch's Worker WIP (protected projections, native print frames, canvas batches) stays on this branch only.
+
+### Iteration 37 (2026-10-07, /goal) — #3 /designProduction/detail verified
+- Heavy: one send from 対話から開始 (restored draft: 襟型変更, multi1/multi2) → project df577fc9, conversation 9a10fe43. D1: design_assistant_requests 6d2e5850 completed (workers-ai llama-4-scout), heavy_ai_requests 3eb91d4a edit-image completed, generated_images ai-3eb91d4a…-0 feature_type design-dialogue.
+- 差分 → 修正 (PR nick353/heavy-chain#8, merged 3b258bb1): toolbar +企画提案書 (opens /board/edit), dividers 13px, zoom group gapless, toolbar left calc(50%-400px) / bottom 18px, tabs px-3 gap-1 font-medium, input pb-4 / mt-7.
+- 検証: verify-design-detail-dialogue 16/16, verify-design-dialogue-wiring 11/11 (baseline: 1 pre-existing failure). Production readback after reload matches Light within 2px except send x (+5px). Reload restores prompt, 2 references, assistant reply, generated preview and canvas layer.
+- 次: P2 missing per-row runs.
