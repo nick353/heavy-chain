@@ -69,3 +69,14 @@ test('Gallery lightbox wires measured bounds and natural dimensions into fitCont
   assert.match(galleryPage, /key=\{selectedImage\.id\}/);
   assert.match(galleryPage, /onError=\{\(\) => \{[\s\S]*?setFailedImageIds/);
 });
+
+test('gallery grid cards ask the media gateway for the thumbnail variant only', async () => {
+  const { thumbnailImageUrl } = await import('../src/lib/mediaThumbnail.ts');
+  const signed = 'https://heavy-chain-api.example.workers.dev/v1/media/read?token=abc.def';
+  assert.equal(thumbnailImageUrl(signed), `${signed}&variant=thumb`);
+  for (const other of ['data:image/png;base64,AAAA', 'blob:https://heavy.test/1', '/lightchain-assets/a.webp', 'https://example.com/v1/media/read?bucket=x']) {
+    assert.equal(thumbnailImageUrl(other), other);
+  }
+  assert.equal(thumbnailImageUrl(null), undefined);
+  assert.match(galleryPage, /src=\{thumbnailImageUrl\(getImageUrl\(image\)\)\}/);
+});
