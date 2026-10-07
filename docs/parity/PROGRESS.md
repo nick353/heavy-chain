@@ -281,3 +281,9 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: Worker tests 158/158 (new thumbnail test); gallery image-fit 7/7; production /gallery cards load `…&variant=thumb`; one image 1,777,901 B PNG → 13,392 B WebP 384×384 (0.13 s); gallery cards render.
 - P4 hotlinks re-checked on production after these deploys: index + 162 JS chunks, 0 matches for linkaigc / aliyuncs.
 - 残: P2 (d) Gallery/Canvas/History/Jobs per job, (f) confirmed failure + recovery per row type, (g) full-size quality review; garment materialKind recorded as "Tシャツ" for a blouse; garment drafts not shared across tabs.
+
+### Iteration 41 (2026-10-07, /goal) — P2 (d) surfaces, (f) input failure
+- Route ledger re-read: #1–#26 and #28 are `verified`, #27 is the out-of-scope row. The route part of the goal is complete.
+- (d): production /jobs shows 50 completed jobs; the task names on the page cover every generating P2 row (ai-fitting, ai-fitting-reference, fitting clothing/background reference, wear-design-detail/lab, marketing dialogue ×2, design dialogue, design agent, lab, fashion studio, the 8 model-library rows, change-color, pattern-print-design (= print detail), pattern-arrange, image-repair, svg-convert, pattern-vector(+pro), line-to-real, line-generation, printing-image, fabric-image, print-design-project). /history renders the same 50-job timeline; /gallery shows the newest results. Matrix column d set for all generating rows (custom-style has no generation).
+- (f) input failure: a corrupt PNG uploaded on /model is dropped (衣服の画像 0/4, AI生成 disabled, no request); a valid image in a new tab restores 1/4 and enables AI生成. The rejected file shows no message. That tab's upload stays unreconciled on purpose (no re-upload).
+- 残: (f) provider-side failure and recovery; (g) full-size quality review; a message for rejected uploads.
