@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Plus } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import { editImageWithPrompt, generateImage } from '../lib/imageApi';
+import { editImageWithPrompt, generateImage, planChatEdit } from '../lib/imageApi';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
   validateLegalSafetyInput,
@@ -107,12 +107,20 @@ export function ChatEditor({
         throw new Error(BRAND_LIKENESS_BLOCK_COPY);
       }
 
-      if (currentImage) {
+      // Claude decides edit-vs-generate and writes the image instruction.
+      const history = messages.slice(-12).map(message => ({ role: message.role, content: message.content }));
+      const plan = await planChatEdit(userInput, currentBrand.id, { hasCurrentImage: !!currentImage, history });
+      if (plan.planned && validateLegalSafetyInput([plan.instruction]).blocked) {
+        throw new Error(BRAND_LIKENESS_BLOCK_COPY);
+      }
+      const editing = plan.mode === 'edit' && !!currentImage;
+
+      if (editing && currentImage) {
         // Edit existing image
-        result = await editImageWithPrompt(currentImage, userInput, currentBrand.id, { rightsConfirmed });
+        result = await editImageWithPrompt(currentImage, plan.instruction, currentBrand.id, { rightsConfirmed });
       } else {
         // Generate new image
-        result = await generateImage(userInput, currentBrand.id, {
+        result = await generateImage(plan.instruction, currentBrand.id, {
           generationProvider: 'workers_ai',
           generationModel: 'flux-2-klein-4b',
           featureType: 'chat-edit',
@@ -132,9 +140,9 @@ export function ChatEditor({
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: currentImage 
+          content: (plan.reply ? `${plan.reply}\n\n` : '') + (editing
             ? '✨ 画像を編集しました！\n\n続けて編集する場合は指示してください。「キャンバスに追加」ボタンで追加できます。'
-            : '✨ 画像を生成しました！\n\n編集したい場合は指示してください。',
+            : '✨ 画像を生成しました！\n\n編集したい場合は指示してください。'),
           imageUrl: result.imageUrl,
           timestamp: new Date(),
         };

@@ -108,3 +108,18 @@ The first image candidate was API `46758029-c7c9-4943-acbc-f5c42eeeeab3`, deploy
 No new migration, web/MyPro/Auth deployment, real inference, secret change, administrator grant or paid upgrade occurred in the Canvas-save stage. Applied `0011` was not edited. Fresh remote migration listing has none pending; D1 users/brands/Canvas/images/jobs/requests/candidates/daily are all zero, `rows_written=0`, database size372736. At09:01:34Z unauthenticated profile GET and Canvas GET/POST/PATCH return401 with exact allowed CORS/no-store; `/v1/health` returns200 at09:02:54Z. The initial read-only count used an incorrect table name and the initial health path was mistyped; the corrected reads are the evidence. Startup5ms is not authenticated CPU/load measurement. This proves placement and a closed unauthenticated boundary, **not** authenticated use or model quality. Rollback can select the preceding API `bfe054b8-9cf8-4855-b0ab-6e9fdc22759e`; do not remove the existing additive tables/data.
 
 Next independent implementation is precise print placement/multi-design input fidelity using the existing placement renderer, followed by representative masked-image quality acceptance. Preserve the now-tested stable Canvas ID/revision recovery, source/mask cache, compositor, deterministic final saves and acknowledgement path. Full Goal still includes image quality, broader/authenticated UI, workload/CPU/account billing, MyPro gym/provider/erasure recovery, matching auth/client cutover, real registrations/production/device E2E, zero-Supabase traffic and narrowly targeted retirement.
+
+## Claude text actions (`optimize-prompt`, `chat-plan`)
+
+Both actions call the Anthropic Messages API directly with `fetch` (`src/claude-text.ts`) and return JSON synchronously. They never touch Workers AI / OpenAI Images, the `heavy_ai_*` quota tables, or R2.
+
+- `optimize-prompt` returns the legacy shape the generate page reads: `optimized_prompt`, `negative_prompt`, `style_tags`, `suggested_settings`.
+- `chat-plan` decides whether a chat message edits the current image or generates a new one and returns `{ mode, instruction, reply }`. The chat editor then calls the existing `edit-image` / `generate-image` actions with `instruction`. If Claude is unavailable the editor falls back to the raw message.
+- Both must be listed in `AI_IMAGE_ALLOWED_ACTIONS` and require the caller to be an editor of `brandId`.
+- The key is a Worker secret only — never put it in `wrangler*.jsonc` or a `VITE_*` variable:
+
+```bash
+npx wrangler secret put ANTHROPIC_API_KEY --config wrangler.production.jsonc
+```
+
+Without the secret both actions return `503 {"error":"claude_api_key_missing"}`. Optional vars: `ANTHROPIC_TEXT_MODEL` (default `claude-opus-5-5`), `ANTHROPIC_BASE_URL`.

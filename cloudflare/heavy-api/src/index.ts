@@ -58,6 +58,10 @@ export interface Env {
   OPENAI_IMAGE_BASE_URL?: string;
   OPENAI_IMAGE_MODEL?: string;
   OPENAI_IMAGE_EDIT_MODEL?: string;
+  /** Server-only Anthropic credentials (wrangler secret). Never expose through VITE_*. */
+  ANTHROPIC_API_KEY?: string;
+  ANTHROPIC_TEXT_MODEL?: string;
+  ANTHROPIC_BASE_URL?: string;
 }
 
 interface MediaAsset {

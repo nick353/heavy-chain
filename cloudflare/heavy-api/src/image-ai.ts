@@ -3,6 +3,7 @@ import { principal } from './domain.ts';
 import { requireBrandRole, handleMediaReadGateway } from './core.ts';
 import { IMAGE_MODEL, IMAGE_ACTIONS, ImageInputError, boundedImageJSON, canonical, decodeImage, imageEstimate,
   isRecord, modelMultipart, parseImageInput, sha256, type ImageAction, type ImageInput, type Json } from './image-ai-contracts.ts';
+import { CLAUDE_TEXT_ACTIONS, ClaudeTextError, claudeConfigured, runClaudeTextAction, type ClaudeTextAction } from './claude-text.ts';
 import { OPENAI_IMAGE_BACKEND, OPENAI_IMAGE_PROVIDER, openAIExpectedDimensions, resolveOpenAIModel, runOpenAIImage } from './openai-image.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -199,8 +200,28 @@ async function runModel(env: Env, action: ImageAction, input: ImageInput, index:
   finally { if (timer) clearTimeout(timer); }
 }
 
+/** Claude text actions: synchronous JSON, no quota rows, no media writes. */
+async function handleClaudeTextAction(request: Request, env: Env, action: ClaudeTextAction): Promise<Response> {
+  try {
+    const user = await principal(request,env); if (user instanceof Response) return user;
+    const raw = await boundedImageJSON(request);
+    const brandId = typeof raw.brandId === 'string' ? raw.brandId : '';
+    if (!brandId) return fail('brand_id_required',400);
+    const owner = await requireBrandRole(request,env,brandId,'editor'); if (owner instanceof Response) return owner;
+    if (owner !== user) return fail('unauthorized',401);
+    if (!(env.AI_IMAGE_ALLOWED_ACTIONS ?? '').split(',').map(v => v.trim()).includes(action)) return fail('claude_text_not_enabled',503);
+    if (!claudeConfigured(env)) return fail('claude_api_key_missing',503);
+    return reply(await runClaudeTextAction(env,action,raw));
+  } catch (error) {
+    if (error instanceof ClaudeTextError) return fail(error.code,error.status);
+    if (error instanceof ImageInputError) return fail(error.message,error.status);
+    return fail('claude_text_failed',500);
+  }
+}
+
 export async function handleImageAIAction(request: Request, env: Env, action: string): Promise<Response> {
   if (!IMAGE_ACTIONS.has(action)) return fail('image_action_not_implemented',503);
+  if (CLAUDE_TEXT_ACTIONS.has(action)) return handleClaudeTextAction(request,env,action as ClaudeTextAction);
   let row: Row | null = null;
   try {
     const user = await principal(request,env); if (user instanceof Response) return user;

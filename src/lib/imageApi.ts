@@ -494,6 +494,32 @@ export async function optimizePrompt(
   }
 }
 
+export type ChatEditPlan = { mode: 'generate' | 'edit'; instruction: string; reply?: string; planned: boolean };
+
+/**
+ * Ask Claude whether a chat message edits the current image or starts a new one,
+ * and turn it into an image-model instruction. Falls back to the raw message
+ * (edit when an image exists) if Claude is unavailable, so chat keeps working.
+ */
+export async function planChatEdit(
+  message: string,
+  brandId: string,
+  options: { hasCurrentImage: boolean; history?: Array<{ role: 'user' | 'assistant'; content: string }> },
+): Promise<ChatEditPlan> {
+  const fallback: ChatEditPlan = { mode: options.hasCurrentImage ? 'edit' : 'generate', instruction: message, planned: false };
+  try {
+    const plan = await invokeImageAction<{ success?: boolean; mode?: string; instruction?: string; reply?: string }>('chat-plan', {
+      message, brandId, hasCurrentImage: options.hasCurrentImage, history: options.history ?? [],
+    });
+    if (!plan?.success || (plan.mode !== 'edit' && plan.mode !== 'generate') || !plan.instruction?.trim()) return fallback;
+    const mode = plan.mode === 'edit' && options.hasCurrentImage ? 'edit' : 'generate';
+    return { mode, instruction: plan.instruction.trim(), reply: plan.reply, planned: true };
+  } catch (error) {
+    console.warn('Chat plan unavailable, using the raw message:', error);
+    return fallback;
+  }
+}
+
 /**
  * Design Gacha - Generate multiple design directions
  */
