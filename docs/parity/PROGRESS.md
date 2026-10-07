@@ -187,3 +187,7 @@ Each iteration: read this file → advance the next open item → append result 
 - 発見: the first version required the browser copy to be confirmed and never moved to the project URL (browser store full); the server copy is now authoritative.
 - 検証: tsc; 33 related suites — differences vs baseline only from load (workbench-resume, canonical routes: same failing names when run alone, 24 = 24). Production: see ledger #16 (D1 row, reload restores print + rotation/flip, board draft card).
 - 次: remaining P2 items; Light routes #6/#28/#3/#4/#2 once Light is signed in again.
+
+### Iteration 26 (2026-10-07, /goal) — #28 /gallery (Heavy side)
+- 検証: production /gallery shows the 76 real saved images; favourite on ai-be119a6a…-0 stored (D1 is_favorite=1) and restored after reload under お気に入り. No code change needed.
+- 残: Light session logged out ("別のデバイスでログイン中") — #6, #3, #4, #2 and the Light-404 check for #28 wait for the user to sign in to jp.linkaigc.com again.
