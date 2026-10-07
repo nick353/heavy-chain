@@ -244,6 +244,14 @@ test('fitting entry rows describe a fitting composition and name each reference 
   }
 });
 
+test('AI fitting model-matrix rows send and persist the 参考画像 tab model pick', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(workbench, /fittingModelMatrixReference = effectiveProviderRoute === 'model-matrix' && \(selectedTool\.id === 'ai-fitting' \|\| selectedTool\.id === 'ai-fitting-reference'\)/);
+  assert.match(workbench, /modelReferenceImageUrl: materialSlotFiles\.secondary\?\.imageUrl\s*\?\? fittingModelMatrixReference\?\.imageUrl/);
+  assert.match(workbench, /fittingModelMatrixReference \? \[\{ slotKey: 'fitting-model'/);
+  assert.match(workbench, /\.\.\.\(fittingPersistedReferences \? \{ fittingReferenceSlots/);
+});
+
 test('keeps every non-video generation route on a feature-specific prompt branch', () => {
   const videoRows = new Set(['video-workstation', 'video-detail']);
   const nonVideoRows = GOAL_CANDIDATE_ROW_IDS.filter((rowId) => !videoRows.has(rowId));

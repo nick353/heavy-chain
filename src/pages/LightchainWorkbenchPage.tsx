@@ -3704,6 +3704,12 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       const fittingEditReferences = effectiveProviderRoute === 'edit-image' && (selectedTool.id === 'fitting-clothing-reference' || selectedTool.id === 'fitting-background-reference')
         ? (['model', 'pose', 'background'] as const).flatMap((key) => fittingReferenceSlots[key] ? [{ key, file: fittingReferenceSlots[key]! }] : [])
         : [];
+      // The AI fitting rows run as a model-matrix job, which takes one model reference: the 参考画像 tab's model pick,
+      // unless a secondary material is already attached.
+      const fittingModelMatrixReference = effectiveProviderRoute === 'model-matrix' && (selectedTool.id === 'ai-fitting' || selectedTool.id === 'ai-fitting-reference') && !materialSlotFiles.secondary
+        ? fittingReferenceSlots.model ?? null
+        : null;
+      const fittingPersistedReferences = fittingEditReferences.length > 0 || fittingModelMatrixReference !== null;
       const providerPrompt = buildLightchainProviderPrompt({
         toolId: selectedTool.id,
         toolTitle: generationTitle,
@@ -3728,6 +3734,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             hasImage: Boolean(file),
           })),
         ...fittingEditReferences.map((entry) => ({ slotKey: `fitting-${entry.key}`, fileName: entry.file.name, materialKind: FITTING_REFERENCE_ROLE[entry.key], hasImage: true })),
+        ...(fittingModelMatrixReference ? [{ slotKey: 'fitting-model', fileName: fittingModelMatrixReference.name, materialKind: FITTING_REFERENCE_ROLE.model, hasImage: true }] : []),
       ];
       const lightchainCompat = {
         lightchainFeatureId: selectedTool.id,
@@ -3756,11 +3763,12 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
           ageGroups: [ageGroup],
           gender,
           imageUrl: providerRequestImageUrl,
-          modelReferenceImageUrl: materialSlotFiles.secondary?.imageUrl,
+          modelReferenceImageUrl: materialSlotFiles.secondary?.imageUrl
+            ?? fittingModelMatrixReference?.imageUrl,
           rightsConfirmed: rightsConfirmedForRequest,
           lightchainCompat,
           materialReferences,
-          layerPlan: { source: providerSourceImageUrl ? 'uploaded-primary' : 'brief-only', secondaryReference: Boolean(materialSlotFiles.secondary) },
+          layerPlan: { source: providerSourceImageUrl ? 'uploaded-primary' : 'brief-only', secondaryReference: Boolean(materialSlotFiles.secondary), ...(fittingModelMatrixReference ? { fittingReferences: ['model'] } : {}) },
           compositionPreview: { summary: generationSummary, route: selectedTool.lightchainRoute, parityRuntime, ...(printDesignWorkflow ? {printDesignState,printDesignInput:{version:1,materialSlots:serializeLightchainResumeSlots(materialSlotFiles),brief:printDesignPrompt,referenceNote}} : {}) },
         });
         assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_after_provider');
@@ -3859,7 +3867,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
           providerTaskId,
           materialReferences,
           materialSlots: serializeLightchainResumeSlots(materialSlotFiles),
-          ...(fittingEditReferences.length ? { fittingReferenceSlots: serializeFittingReferenceSlots(fittingReferenceSlots) } : {}),
+          ...(fittingPersistedReferences ? { fittingReferenceSlots: serializeFittingReferenceSlots(fittingReferenceSlots) } : {}),
           lightchainCompat,
           parityRuntime: serializeLightchainParityRuntime(parityRuntime),
           modelFormState: currentModelPanel ? modelFormState : null,
