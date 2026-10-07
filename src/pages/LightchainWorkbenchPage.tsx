@@ -11,7 +11,6 @@ import {
   ClipboardList,
   Film,
   FolderOpen,
-  FolderPlus,
   Grid2X2,
   Hand,
   Layers3,
@@ -22,8 +21,6 @@ import {
   MessageSquareText,
   MoreVertical,
   MousePointer2,
-  PanelLeft,
-  PanelLeftClose,
   Palette,
   Pencil,
   Redo2,
@@ -39,6 +36,8 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import { AgentProfileDialog, AgentSidebar, useAgentProjects } from '../features/agent/AgentSidebar';
+import { AGENT_SCENES, createAgentTask, readAgentProfile, type AgentScene } from '../features/agent/agentTasks';
 import toast from 'react-hot-toast';
 import { addFittingBatchTask, removeFittingBatchTask, readFittingBatch, fittingBatchScopeKey, type FittingBatchTask } from '../lib/fittingBatch';
 import { fittingBatchStorage, freezeFittingBatchImage } from '../lib/fittingBatchStorage';
@@ -1534,12 +1533,13 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
   // Light Chain opens the Agent workspace with the project sidebar expanded.
   // Keep Heavy on the same initial state; users can still collapse it with the
   // same control without changing the underlying task input flow.
-  const [agentSidebarOpen, setAgentSidebarOpen] = useState(true);
-  const [agentProjectCreateOpen, setAgentProjectCreateOpen] = useState(false);
-  const [agentProjectName, setAgentProjectName] = useState('');
-  const [agentCreatedProjects, setAgentCreatedProjects] = useState<string[]>([]);
   const [agentQuickStartOpen, setAgentQuickStartOpen] = useState(true);
   const [agentTaskType, setAgentTaskType] = useState<'商品企画' | 'テーマ企画'>('商品企画');
+  const [agentProfileOpen, setAgentProfileOpen] = useState(false);
+  const [agentProject, setAgentProject] = useState<string | null>(null);
+  const [agentProjectMenuOpen, setAgentProjectMenuOpen] = useState(false);
+  const [agentStarting, setAgentStarting] = useState(false);
+  const agentProjects = useAgentProjects();
   const [agentTaskTypeOpen, setAgentTaskTypeOpen] = useState(false);
   const [agentTaskTypeDrafts, setAgentTaskTypeDrafts] = useState<Record<string, string>>({});
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
@@ -1833,176 +1833,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       )}
     </Modal>
   ) : null;
-
-  const openAgentProjectCreate = () => {
-    setAgentProjectName('');
-    setAgentProjectCreateOpen(false);
-
-    if (typeof document === 'undefined') return;
-    const existingModal = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="lightchain-agent-project-create-modal"]'))
-      .find((element) => element.getAttribute('aria-hidden') !== 'true' && !element.classList.contains('hidden'));
-    if (existingModal) {
-      existingModal.querySelector<HTMLInputElement>('input')?.focus();
-      return;
-    }
-
-    const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4';
-    overlay.setAttribute('role', 'presentation');
-    overlay.setAttribute('data-testid', 'lightchain-agent-project-create-modal');
-
-    const dialog = document.createElement('div');
-    dialog.className = 'box-border flex h-[246px] w-[min(480px,calc(100vw-48px))] flex-col gap-6 rounded-2xl border border-white/10 bg-[#2c3133] p-6 text-white shadow-2xl';
-    dialog.setAttribute('role', 'dialog');
-    dialog.setAttribute('aria-modal', 'true');
-    dialog.setAttribute('aria-labelledby', 'lightchain-agent-project-create-title');
-
-    const header = document.createElement('div');
-    header.className = '-mb-1 flex items-start justify-between gap-4';
-    const headingGroup = document.createElement('div');
-    headingGroup.className = 'min-w-0';
-    const heading = document.createElement('h2');
-    heading.id = 'lightchain-agent-project-create-title';
-    heading.className = 'text-xl font-semibold leading-7';
-    heading.textContent = 'プロジェクトを作成';
-    const helper = document.createElement('p');
-    helper.className = 'mt-1 text-sm leading-5 text-neutral-300';
-    helper.textContent = 'プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください';
-    headingGroup.append(heading, helper);
-
-    const closeButton = document.createElement('button');
-    closeButton.type = 'button';
-    closeButton.className = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-neutral-300 hover:bg-white/10';
-    closeButton.setAttribute('aria-label', '閉じる');
-    const closeIcon = document.createElement('span');
-    closeIcon.className = 'text-[28px] font-light leading-none';
-    closeIcon.textContent = '×';
-    closeButton.append(closeIcon);
-    header.append(headingGroup, closeButton);
-
-    const field = document.createElement('div');
-    field.className = 'relative';
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'プロジェクト名を入力';
-    input.setAttribute('aria-label', 'プロジェクト名です');
-    input.maxLength = 40;
-    input.className = 'h-10 w-full rounded-lg border border-cyan-200/40 bg-[#252a2c] py-0 pl-3 pr-16 text-base font-normal leading-5 text-white outline-none placeholder:text-neutral-400 focus:border-cyan-300 focus:shadow-[0_0_0_2px_rgba(32,208,196,0.24)] focus-visible:outline-none';
-    const counter = document.createElement('span');
-    counter.className = 'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-base text-neutral-400';
-    counter.textContent = '0 / 40';
-    field.append(input, counter);
-
-    const footer = document.createElement('div');
-    footer.className = 'flex justify-end gap-2';
-    const cancelButton = document.createElement('button');
-    cancelButton.type = 'button';
-    cancelButton.className = 'h-10 w-[118px] rounded-lg bg-[#687174] px-0 text-base font-medium text-white shadow-xs transition hover:bg-[#788285]';
-    cancelButton.textContent = 'キャンセル';
-    const createButton = document.createElement('button');
-    createButton.type = 'button';
-    createButton.className = 'h-10 w-[76px] rounded-lg bg-cyan-300 px-0 text-base font-medium text-neutral-950 shadow-xs transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-[#687174] disabled:text-neutral-400';
-    createButton.textContent = '作成';
-    createButton.disabled = true;
-    footer.append(cancelButton, createButton);
-    dialog.append(header, field, footer);
-    overlay.append(dialog);
-
-    const closeImperativeModal = () => {
-      overlay.remove();
-      closeAgentProjectCreate();
-    };
-    const syncInput = () => {
-      input.value = input.value.slice(0, 40);
-      counter.textContent = `${input.value.length} / 40`;
-      createButton.disabled = !input.value.trim();
-    };
-    input.addEventListener('input', syncInput);
-    closeButton.addEventListener('click', closeImperativeModal);
-    cancelButton.addEventListener('click', closeImperativeModal);
-    overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) closeImperativeModal();
-    });
-    createButton.addEventListener('click', () => {
-      const name = input.value.trim().slice(0, 40);
-      if (!name) return;
-      setAgentCreatedProjects((current) => [name, ...current.filter((projectName) => projectName !== name)]);
-      setWorkspaceText('');
-      setLightchainResult(null);
-      closeImperativeModal();
-      toast.success('プロジェクトを作成しました');
-    });
-    document.body.append(overlay);
-    input.focus();
-  };
-
-  const closeAgentProjectCreate = () => {
-    setAgentProjectCreateOpen(false);
-    setAgentProjectName('');
-  };
-
-  const handleAgentProjectCreate = () => {
-    const name = agentProjectName.trim().slice(0, 40);
-    if (!name) return;
-
-    setAgentCreatedProjects((current) => [name, ...current.filter((projectName) => projectName !== name)]);
-    setWorkspaceText('');
-    setLightchainResult(null);
-    closeAgentProjectCreate();
-    toast.success('プロジェクトを作成しました');
-  };
-
-  const agentProjectCreateModal = (
-    <div
-      className={agentProjectCreateOpen ? 'fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4' : 'hidden'}
-      aria-hidden={!agentProjectCreateOpen}
-      role={agentProjectCreateOpen ? 'presentation' : undefined}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) closeAgentProjectCreate();
-      }}
-    >
-      <div
-        role={agentProjectCreateOpen ? 'dialog' : undefined}
-        aria-modal="true"
-        aria-labelledby="lightchain-agent-project-create-title"
-        className="box-border flex h-[246px] w-[min(480px,calc(100vw-48px))] flex-col gap-6 rounded-2xl border border-white/10 bg-[#2c3133] p-6 text-white shadow-2xl"
-        data-testid="lightchain-agent-project-create-modal"
-      >
-        <div className="-mb-1 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h2 id="lightchain-agent-project-create-title" className="text-xl font-semibold leading-7">プロジェクトを作成</h2>
-            <p className="mt-1 text-sm leading-5 text-neutral-300">
-              プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください
-            </p>
-          </div>
-          <button type="button" onClick={closeAgentProjectCreate} aria-label="閉じる" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-neutral-300 hover:bg-white/10">
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
-        <div className="relative">
-          <input
-            type="text"
-            value={agentProjectName}
-            onChange={(event) => setAgentProjectName(event.target.value.slice(0, 40))}
-            placeholder="プロジェクト名を入力"
-            aria-label="プロジェクト名です"
-            maxLength={40}
-            autoFocus
-            className="h-10 w-full rounded-lg border border-cyan-200/40 bg-[#252a2c] py-0 pl-3 pr-16 text-base font-normal leading-5 text-white outline-none placeholder:text-neutral-400 focus:border-cyan-300 focus:shadow-[0_0_0_2px_rgba(32,208,196,0.24)] focus-visible:outline-none"
-          />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-base text-neutral-400">{agentProjectName.length} / 40</span>
-        </div>
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={closeAgentProjectCreate} className="h-10 w-[118px] rounded-lg bg-[#687174] px-0 text-base font-medium text-white shadow-xs transition hover:bg-[#788285]">
-            キャンセル
-          </button>
-          <button type="button" onClick={handleAgentProjectCreate} disabled={!agentProjectName.trim()} className="h-10 w-[76px] rounded-lg bg-cyan-300 px-0 text-base font-medium text-neutral-950 shadow-xs transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-[#687174] disabled:text-neutral-400">
-            作成
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   const fittingReferenceImageModal = (
     <Modal
@@ -4112,7 +3942,25 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     toast.success('履歴にプレビューを追加しました');
   };
 
+  /** /agent: a send starts a real planning task (server-saved) and opens it; the task page runs its steps. */
+  const startAgentTask = async () => {
+    const request = workspaceText.trim();
+    if (!request) { toast.error('目標を入力してください'); return; }
+    if (!currentBrand?.id || !user?.id || agentStarting) return;
+    const scene = (AGENT_SCENES as readonly string[]).includes(activeWorkspaceTab) ? activeWorkspaceTab as AgentScene : '商品企画';
+    const subtype = scene === '商品企画' ? (agentTaskType === '商品企画' ? '新商品企画' : 'テーマ企画') : scene;
+    setAgentStarting(true);
+    try {
+      const created = await createAgentTask({ brandId: currentBrand.id, scene, subtype, prompt: request, profile: readAgentProfile(user.id, currentBrand.id), project: agentProject });
+      setWorkspaceText('');
+      navigate(`/agent/${created.id}`);
+    } catch {
+      toast.error('タスクを作成できませんでした。もう一度お試しください。');
+    } finally { setAgentStarting(false); }
+  };
+
   const handleWorkspaceStyleGenerate = async () => {
+    if (workspaceStyle?.kind === 'agent') { await startAgentTask(); return; }
     const request = workspaceText.trim() || workspaceStyle?.prompt || selectedTool.promptTemplate;
     const workspaceSummary = selectedTool.id === 'fashion-studio'
       ? `${workspaceStyle?.tabs?.includes(activeWorkspaceTab) ? activeWorkspaceTab : workspaceStyle?.tabs?.[0] ?? 'スタジオ案'} / 生成済みプレビュー / ${request}`
@@ -6037,33 +5885,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       '右側の矢印で生成を開始できます。',
       '生成後は履歴から保存・ダウンロードできます。',
     ];
-    const agentRecentTasks = [
-      ['クリエイティブ企画2026080825', 'テーマ企画', '26-08-08'],
-      ['ZIMMERMANN風 2026年 Womenデザイン企画', 'テーマ企画', '26-07-29'],
-      ['クリエイティブ企画2026071123', 'AIグラフィックデザイン', '26-07-11'],
-      ['クリエイティブ企画2026042922', 'AIグラフィックデザイン', '26-04-29'],
-      ['Kariyushi風 2026年 デザイン企画', 'テーマ企画', '26-01-20'],
-      ['Kariyushi Wear風 2026年 {{type}}デザイン企画', 'テーマ企画', '26-01-20'],
-      ['Tropical Wear風 2026年 {{type}}デザイン企画', 'テーマ企画', '26-01-20'],
-      ['Kariyushi Wear風 2026年 デザイン企画', 'テーマ企画', '26-01-19'],
-      ['Kariyushi風 2026年 {{type}}デザイン企画', 'テーマ企画', '26-01-19'],
-      ['Kariyushi Wear風 2026年 デザイン企画', 'テーマ企画', '26-01-19'],
-      ['Okinawa風 2026年 デザイン企画', 'テーマ企画', '26-01-19'],
-      ['Okinawa Ryukyu風 2026年 {{type}}デザイン企画', 'テーマ企画', '26-01-19'],
-      ['クリエイティブ企画2025120313', 'テーマ企画', '25-12-03'],
-      ['{{brand}}風 2026年 {{type}}デザイン企画', 'テーマ企画', '25-12-03'],
-      ['Kariyushi風 2026年 Womenデザイン企画', 'テーマ企画', '25-11-15'],
-      ['MAJUN OKINAWA風 2026年 Menデザイン企画', 'テーマ企画', '25-11-15'],
-      ['Okinawa風 2024年 Womenデザイン企画', 'テーマ企画', '25-11-15'],
-      ['クリエイティブ企画2025111008', 'テーマ企画', '25-11-10'],
-      ['YOKANG風 2024年 Womenデザイン企画', 'テーマ企画', '25-10-20'],
-      ['YOKANG風 2028年 {{type}}デザイン企画', 'テーマ企画', '25-10-20'],
-      ['ANA風 2026年 Womenデザイン企画', 'テーマ企画', '25-10-20'],
-      ['YOKANG風 2024年 Womenデザイン企画', 'テーマ企画', '25-10-20'],
-      ['ANA風 2026年 デザイン企画', 'テーマ企画', '25-10-08'],
-      ['クリエイティブ企画2025100802', 'テーマ企画', '25-10-08'],
-      ['ZIMMERMANN風 2026年 Womenデザイン企画', 'テーマ企画', '25-10-08'],
-    ] as const;
     const agentQuickStartExamplesByTab: Record<string, readonly string[]> = {
       商品企画: [
       '新商品企画｜北米市場向けに、2027年春のレディースウェアの商品企画を作成してください。ターゲットは、都市部で働く28〜40歳の女性です。対象アイテムは、ジャンプスーツ、ワンピース、長袖トップス。シンプルできちんと感がありながら、リラックスして着られる通勤スタイルを目指します。現地の気候、ファッショントレンド、着用シーン、販売ポテンシャルを踏まえ、テーマ、カラーパレット、推奨素材、主要なデザイン要素、主力アイテム、シリーズ全体のコーディネートを提案してください。',
@@ -6089,10 +5910,10 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     const visibleAgentQuickStartExamples = agentQuickStartExamplesByTab[currentWorkspaceTab]
       ?? agentQuickStartExamplesByTab['商品企画'];
     const agentHeroImageByTab: Record<string, string> = {
-      商品企画: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-product-planning.png',
-      顧客提案: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-client-proposal-dark.png',
-      インスピレーション: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-fashion-design.png',
-      AIグラフィックデザイン: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/assets/figma-confirmed/archive-header-pattern-design.png',
+      商品企画: '/lightchain-assets/agent/archive-header-product-planning.png',
+      顧客提案: '/lightchain-assets/agent/archive-header-client-proposal-dark.png',
+      インスピレーション: '/lightchain-assets/agent/archive-header-fashion-design.png',
+      AIグラフィックデザイン: '/lightchain-assets/agent/archive-header-pattern-design.png',
     };
     const agentHeroFallbackByTab: Record<string, string> = {
       商品企画: '/assets/lightchain-cards/design-v1.png',
@@ -6104,12 +5925,12 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       インスピレーション: {
         title: 'クリエイティブ企画20260210181',
         prompt: 'フレンチレトロをテーマに、夏のレディースウェアをデザインしてください。',
-        image: 'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-02/fa8afe9ba7ffd1c8343a082bcf287e55.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+        image: '/lightchain-assets/agent/reference-inspiration.webp',
       },
       AIグラフィックデザイン: {
         title: 'クリエイティブ企画20260210176',
         prompt: '熱帯植物と飛ぶ鳥をモチーフに、レトロな幾何学テイストのリピートプリントをデザインしてください。',
-        image: 'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-02/283c652275fd550a2aaf3c1769e59348.webp?x-oss-process=image/resize,m_lfit,w_3840,limit_1/format,webp',
+        image: '/lightchain-assets/agent/reference-graphic.webp',
       },
     };
     const agentReferenceCase = agentReferenceCases[currentWorkspaceTab] ?? null;
@@ -6137,67 +5958,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         data-lightchain-brand-error={brandState.error ?? ''}
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
-        {workspaceStyle.kind === 'agent' && agentSidebarOpen && (
-          <aside
-            aria-label="ワークベンチ入口"
-            className="relative z-20 hidden h-full w-[352px] shrink-0 p-3 md:block"
-          >
-            <div className="absolute inset-3 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#262a2b] p-4 text-neutral-100 shadow-xl">
-              <div className="flex h-8 w-full items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2 text-base font-medium text-neutral-200">
-                  <button type="button" aria-label="ホームに戻る" onClick={() => navigate('/designProduction')} className="shrink-0">
-                    <span aria-hidden="true">‹</span>
-                  </button>
-                  <span className="truncate">インサイト意思決定ワークベンチ</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button type="button" aria-label="検索" className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
-                  <button type="button" aria-label="サイドバーを閉じる" onClick={() => setAgentSidebarOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><PanelLeftClose className="h-4 w-4" /></button>
-                </div>
-              </div>
-              <nav aria-label="ワークベンチ入口" className="mt-4 grid gap-2">
-              <button type="button" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
-                <MessageSquareText className="h-4 w-4" />
-                新規タスク
-              </button>
-              <button type="button" onClick={() => setWorkspaceTutorialDismissed(false)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
-                <ClipboardList className="h-4 w-4" />
-                業務プリファレンスプロファイル
-              </button>
-              </nav>
-              <div className="mt-2 h-px w-full bg-white/10" />
-              <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="mt-[16.65625px] flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
-                <button type="button" aria-label="最近" className="flex h-6 w-12 items-center gap-1">最近 <span aria-hidden="true">⌄</span></button>
-                <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" onMouseDown={openAgentProjectCreate} onPointerDown={openAgentProjectCreate} onClick={openAgentProjectCreate} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
-              </div>
-              <div className="mt-4 space-y-0">
-                {agentCreatedProjects.map((title) => (
-                  <button key={`created-${title}`} type="button" onClick={() => setWorkspaceText(title)} className="flex min-h-[58px] w-full items-start gap-2 py-2 pl-7 pr-0 text-left text-base font-normal leading-5 text-neutral-300 hover:bg-white/10">
-                    <span className="min-w-0 flex-1 truncate">{title}<span className="mt-1 block text-xs leading-4 text-neutral-500"><span className="mr-1 inline-block rounded border border-white/10 px-1 text-[10px] leading-4">プロジェクト</span>たった今</span></span>
-                  </button>
-                ))}
-                {agentRecentTasks.map(([title, kind, date]) => (
-                  <button key={`${title}-${date}`} type="button" onClick={() => setWorkspaceText(title)} className="flex min-h-[58px] w-full items-start gap-2 py-2 pl-7 pr-0 text-left text-base font-normal leading-5 text-neutral-300 hover:bg-white/10">
-                    <span className="min-w-0 flex-1 truncate">{title}<span className="mt-1 block text-xs leading-4 text-neutral-500"><span className="mr-1 inline-block rounded border border-white/10 px-1 text-[10px] leading-4">{kind}</span>{date}</span></span>
-                  </button>
-                ))}
-              </div>
-              </div>
-              <button type="button" className="-mx-4 -mb-4 flex h-[52px] w-[calc(100%+32px)] flex-none items-center gap-2 border-t border-white/10 bg-transparent px-6 text-sm leading-5 text-neutral-300">残りクレジット <span aria-hidden="true">✦</span> 375731</button>
-            </div>
-          </aside>
-        )}
-        {workspaceStyle.kind === 'agent' && !agentSidebarOpen && (
-          <aside
-            aria-label="企画ワークスペースサイドバー"
-            className="relative z-20 flex h-full w-[64px] shrink-0 flex-col items-center gap-3 overflow-hidden border-r border-white/10 bg-[#262a2b] py-3 text-neutral-100"
-          >
-            <button type="button" aria-label="サイドバーを開く" onClick={() => setAgentSidebarOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><PanelLeft className="h-4 w-4" /></button>
-            <button type="button" aria-label="新規タスク" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><MessageSquareText className="h-4 w-4" /></button>
-            <button type="button" aria-label="業務プリファレンスプロファイル" onClick={() => setWorkspaceTutorialDismissed(false)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><ClipboardList className="h-4 w-4" /></button>
-            <button type="button" aria-label="最近" onClick={() => setAgentSidebarOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
-          </aside>
+        {workspaceStyle.kind === 'agent' && (
+          <AgentSidebar title="インスピレーションワークスペース" onNewTask={() => { setWorkspaceText(''); setLightchainResult(null); }} />
         )}
         <section className={`${workspaceStyle.kind === 'agent' ? 'relative h-full min-w-0 flex-1 overflow-auto bg-[#171b1c] px-0' : 'relative min-h-[calc(100vh-70px)] overflow-hidden px-4 py-14 sm:px-8'}`}>
           {workspaceStyle.kind !== 'agent' && <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_52%_20%,rgba(101,211,207,0.22),transparent_38%),linear-gradient(90deg,rgba(15,23,42,0.15),rgba(34,197,94,0.1),rgba(59,130,246,0.12))]" />}
@@ -6452,12 +6214,23 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
               </div>
               {workspaceStyle.kind === 'agent' && (
                 <div className="flex h-12 w-full flex-none items-start gap-2 px-3 py-2">
-                  <button type="button" aria-label="業務プリファレンスプロファイル" className="flex h-8 w-[240px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => setWorkspaceTutorialDismissed(false)}>
+                  <button type="button" aria-label="業務プリファレンスプロファイル" className="flex h-8 w-[240px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => setAgentProfileOpen(true)}>
                     <ClipboardList className="h-4 w-4" /> 業務プリファレンスプロファイル <span aria-hidden="true">›</span>
                   </button>
-                  <button type="button" aria-label="プロジェクトを選択" className="flex h-8 w-[172px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => navigate('/designProduction')}>
-                    <FolderOpen className="h-4 w-4" /> プロジェクトを選択 <span aria-hidden="true">›</span>
-                  </button>
+                  <div className="relative">
+                    <button type="button" aria-label="プロジェクトを選択" aria-haspopup="listbox" aria-expanded={agentProjectMenuOpen} className="flex h-8 w-[172px] min-w-0 flex-none items-center gap-2 rounded-lg px-2 text-left text-xs font-normal leading-4 text-[#aab8b6] hover:bg-white/10" onClick={() => setAgentProjectMenuOpen((open) => !open)}>
+                      <FolderOpen className="h-4 w-4 flex-none" /> <span className="truncate">{agentProject ?? 'プロジェクトを選択'}</span> <span aria-hidden="true">›</span>
+                    </button>
+                    {agentProjectMenuOpen && (
+                      <div role="listbox" aria-label="プロジェクト" className="absolute left-0 top-9 z-30 w-[220px] rounded-xl border border-white/10 bg-[#262a2b] p-1 text-sm text-neutral-200 shadow-xl">
+                        <button type="button" role="option" aria-selected={agentProject === null} onClick={() => { setAgentProject(null); setAgentProjectMenuOpen(false); }} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-white/10">プロジェクトなし</button>
+                        {agentProjects.map((project) => (
+                          <button key={project} type="button" role="option" aria-selected={agentProject === project} onClick={() => { setAgentProject(project); setAgentProjectMenuOpen(false); }} className="block w-full truncate rounded-lg px-3 py-2 text-left hover:bg-white/10">{project}</button>
+                        ))}
+                        {agentProjects.length === 0 && <p className="px-3 py-2 text-xs text-neutral-500">サイドバーの「新規ファイル」でプロジェクトを作成できます。</p>}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {workspaceStyle.kind === 'marketing' && !workspaceTutorialDismissed && (
@@ -6617,6 +6390,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             )}
           </section>}
         </section>
+        {workspaceStyle.kind === 'agent' && <AgentProfileDialog open={agentProfileOpen} onClose={() => setAgentProfileOpen(false)} />}
       </main>
     );
   }
@@ -6927,7 +6701,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
           </aside>
         </section>
         {lightchainResultModal}
-        {agentProjectCreateModal}
       </main>
     );
   }

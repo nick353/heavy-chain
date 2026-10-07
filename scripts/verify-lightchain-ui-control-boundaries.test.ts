@@ -7,6 +7,7 @@ const materialSourcePath = new URL('../src/pages/LightchainMaterialWorkbenchPage
 const canvasSourcePath = new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url);
 const layoutSourcePath = new URL('../src/components/layout/Layout.tsx', import.meta.url);
 const appSourcePath = new URL('../src/App.tsx', import.meta.url);
+const agentSidebarSourcePath = new URL('../src/features/agent/AgentSidebar.tsx', import.meta.url);
 const publicHeaderSourcePath = new URL('../src/components/layout/Header.tsx', import.meta.url);
 const launcherHeaderSourcePath = new URL('../src/components/layout/LightchainLauncherHeader.tsx', import.meta.url);
 const landingSourcePath = new URL('../src/pages/LandingPage.tsx', import.meta.url);
@@ -244,11 +245,12 @@ test('Lightchain detail workbench marks the selected source category as active',
 test('Agent parity starts with the expanded project sidebar and exposes Lightchain attachment controls', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 
-  assert.match(source, /const \[agentSidebarOpen, setAgentSidebarOpen\] = useState\(true\)/);
-  assert.match(source, /aria-label="ホームに戻る"/);
-  assert.match(source, /<span className="truncate">インサイト意思決定ワークベンチ<\/span>/);
-  assert.match(source, /<PanelLeftClose className="h-4 w-4" \/>/);
-  assert.match(source, /<FolderPlus className="h-4 w-4" \/>/);
+  const sidebar = await readFile(agentSidebarSourcePath, 'utf8');
+  assert.match(source, /<AgentSidebar title="インスピレーションワークスペース"/);
+  assert.match(sidebar, /const \[open, setOpen\] = useState\(true\)/);
+  assert.match(sidebar, /aria-label="ホームに戻る"/);
+  assert.match(sidebar, /<PanelLeftClose className="h-4 w-4" \/>/);
+  assert.match(sidebar, /<FolderPlus className="h-4 w-4" \/>/);
   assert.match(source, /aria-label="添付を追加"/);
   assert.match(source, /data-testid=\{workspaceStyle\.kind === 'agent' \? 'lightchain-agent-quick-start' : undefined\}/);
   assert.match(source, /aria-label="アップロードするファイルを選択"/);
@@ -268,26 +270,23 @@ test('Agent provider results stay visible with save, download, and retry control
 });
 
 test('Agent new-file opens the Lightchain project creation flow', async () => {
-  const source = await readFile(workbenchSourcePath, 'utf8');
+  const source = await readFile(agentSidebarSourcePath, 'utf8');
 
-  assert.match(source, /const \[agentProjectCreateOpen, setAgentProjectCreateOpen\] = useState\(false\)/);
-  assert.match(source, /onClick=\{openAgentProjectCreate\}/);
-  assert.match(source, /onMouseDown=\{openAgentProjectCreate\}/);
-  assert.match(source, /onPointerDown=\{openAgentProjectCreate\}/);
-  assert.match(source, /aria-label="新規ファイル" aria-haspopup="dialog"/);
-  assert.doesNotMatch(source, /aria-label="新規ファイル"[^>]*aria-expanded/);
+  assert.match(source, /aria-label="新規ファイル" aria-haspopup="dialog" onClick=\{\(\) => setProjectOpen\(true\)\}/);
   assert.match(source, /id="lightchain-agent-project-create-title"[^>]*>プロジェクトを作成</);
   assert.match(source, /プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください/);
   assert.match(source, /placeholder="プロジェクト名を入力"/);
   assert.match(source, /aria-label="プロジェクト名です"/);
-  assert.match(source, /\{agentProjectName\.length\} \/ 40/);
-  assert.match(source, /disabled=\{!agentProjectName\.trim\(\)\}/);
+  assert.match(source, /\{name\.length\} \/ 40/);
+  assert.match(source, /disabled=\{!name\.trim\(\)\}/);
   assert.match(source, /role="dialog"/);
   assert.match(source, /aria-modal="true"/);
   assert.match(source, /aria-label="閉じる"/);
   assert.match(source, /キャンセル/);
-  assert.match(source, />\s*作成\s*</);
+  assert.match(source, />作成</);
   assert.match(source, /data-testid="lightchain-agent-project-create-modal"/);
+  // Created projects are kept per user/brand and can be chosen for the next task.
+  assert.match(source, /addAgentProject\(user\.id, currentBrand\.id, trimmed\)/);
 });
 
 test('Agent category copy matches the Lightchain production controls', async () => {
@@ -300,14 +299,18 @@ test('Agent category copy matches the Lightchain production controls', async () 
   assert.match(source, /AIグラフィックデザイン:\s*\{\s*helper: ''/s);
 });
 
-test('Agent recent-task rail keeps the current Lightchain source inventory', async () => {
+test('Agent recent tasks are the signed-in user\'s saved planning tasks, not Light inventory', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
-  const block = source.match(/const agentRecentTasks = \[([\s\S]+?)\n\s{4}\] as const;/)?.[1] ?? '';
-  const rows = block.match(/^\s+\['[^']+', '[^']+', '[^']+'\],?$/gm) ?? [];
+  const sidebar = await readFile(agentSidebarSourcePath, 'utf8');
 
-  assert.equal(rows.length, 25);
-  assert.match(block, /\['クリエイティブ企画2025120313', 'テーマ企画', '25-12-03'\]/);
-  assert.match(block, /\['ZIMMERMANN風 2026年 Womenデザイン企画', 'テーマ企画', '25-10-08'\]/);
+  assert.doesNotMatch(source, /const agentRecentTasks = \[/);
+  assert.doesNotMatch(source, /ZIMMERMANN風|375731/);
+  assert.match(sidebar, /listAgentTasks\(brandId\)/);
+  assert.match(sidebar, /navigate\(`\/agent\/\$\{task\.id\}`\)/);
+  assert.match(sidebar, /getImageUsage\(brandId\)/);
+  // A send creates a saved task and opens it.
+  assert.match(source, /createAgentTask\(\{ brandId: currentBrand\.id, scene, subtype, prompt: request/);
+  assert.match(source, /navigate\(`\/agent\/\$\{created\.id\}`\)/);
 });
 
 test('parity runtime captures feature-specific settings in the comparison key', async () => {

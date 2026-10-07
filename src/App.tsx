@@ -63,6 +63,7 @@ const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').t
 const LightchainSourceNotFoundPage = lazy(() => import('./pages/LightchainSourceNotFoundPage').then((module) => ({ default: module.LightchainSourceNotFoundPage })));
 const LabPage = lazy(() => import('./pages/LabPage').then((module) => ({ default: module.LabPage })));
 const LightchainLabDetailPage = lazy(() => import('./pages/LightchainLabDetailPage').then((module) => ({ default: module.LightchainLabDetailPage })));
+const HeavyAgentTaskPage = lazy(() => import('./pages/HeavyAgentTaskPage'));
 const LightchainCustomStylePage = lazy(() => import('./pages/LightchainCustomStylePage').then((module) => ({ default: module.LightchainCustomStylePage })));
 const LightchainWorkbenchPage = lazy(() => import('./pages/LightchainWorkbenchPage').then((module) => ({ default: module.LightchainWorkbenchPage })));
 const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
@@ -1465,6 +1466,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <ErrorBoundary>
                 {lazyPage(<LightchainLabDetailPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agent/:taskId"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<HeavyAgentTaskPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }

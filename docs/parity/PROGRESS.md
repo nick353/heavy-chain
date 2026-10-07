@@ -158,3 +158,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 変更: `useFeatureProjects` extracted from the pattern board (exported with `ProjectThumbnail`/`formatProjectAge`); the Wear Design Lab board lists real wear-design-lab jobs instead of Light-user cards; a saved card opens its own job (drops the previous candidate/indexes, keeps other params). Detail empty state rebuilt to Light's measured geometry; icon and reference covers self-hosted.
 - 検証: tsc; wear-design-lab-routing (mock for the new service, project-card case asserts the exact saved job) 0 fail = baseline; canonical routes boundary case 3/3 (geometry 768×534); source-board / entry-routing = baseline. Production: see ledger #24.
 - 次: #25 /agent.
+
+### Iteration 21 (2026-10-07, /goal) — /agent 企画エージェント (#25)
+- 変更: new `features/agent/agentTasks.ts` (task model in canvas snapshots, prompts, parsers, profile/project storage) and `AgentSidebar` (real tasks, search, projects, profile dialog, credits); new `HeavyAgentTaskPage` at /agent/:taskId runs theme → choice → plan → visual, storing each request id on the task before sending and only reading back steps in flight; workbench /agent send creates the task, profile/project controls work, fabricated Light task list/credits/project modal removed, hero/reference images self-hosted.
+- 検証: tsc; new verify-heavy-agent-tasks 6/6; ui-control-boundaries updated (sidebar/project/recent-task tests now assert the real behaviour) 0 fail = baseline; launcher/all-screen/catalog/unified-shell/capability/provider/source-access/marketing-detail/fashion-hydration = baseline. Production: see ledger #25.
+- 次: #26 /canvas/:id.

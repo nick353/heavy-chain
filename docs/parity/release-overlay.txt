@@ -49,3 +49,12 @@ public/lightchain-assets/icons/laboratory.png
 public/lightchain-assets/oriented-design/reference-1.webp
 public/lightchain-assets/oriented-design/reference-2.webp
 public/lightchain-assets/icons/oriented-design.png
+src/features/agent/agentTasks.ts
+src/features/agent/AgentSidebar.tsx
+src/pages/HeavyAgentTaskPage.tsx
+public/lightchain-assets/agent/archive-header-product-planning.png
+public/lightchain-assets/agent/archive-header-client-proposal-dark.png
+public/lightchain-assets/agent/archive-header-fashion-design.png
+public/lightchain-assets/agent/archive-header-pattern-design.png
+public/lightchain-assets/agent/reference-inspiration.webp
+public/lightchain-assets/agent/reference-graphic.webp
