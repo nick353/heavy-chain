@@ -46,6 +46,8 @@ export function LightchainGraphicDesignPage() {
 function LightchainGraphicDesignWorkspace() {
   const workspace = useCanonicalImageWorkspace('print-design-project', {
     prepareSourceImage: whitenDarkBackground,
+    // gpt-image-1-mini turns these references into dark neon art despite the prompt.
+    providerModel: 'gpt-image-1.5',
     requiredSources: 1,
     title: 'AIグラフィックデザイン',
     initialInputState: { referenceStrengths: [DEFAULT_STRENGTH, DEFAULT_STRENGTH], assist: false },
