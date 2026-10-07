@@ -135,6 +135,7 @@ type WorkbenchStep = 'asset' | 'mask' | 'extracted' | 'next';
 type MaterialTab = 'upload-history' | 'generation-history' | 'my-library' | 'team-library' | 'platform-assets';
 type MaterialSlotKey = 'primary' | 'secondary';
 type FittingReferenceSlotKey = 'model' | 'pose' | 'background';
+const FITTING_REFERENCE_ROLE: Record<FittingReferenceSlotKey, string> = { model: 'model appearance reference', pose: 'pose reference', background: 'background scene reference' };
 type FittingModelCategory = 'all' | 'men' | 'women' | 'children';
 type MaterialSlotFile = {
   name: string;
@@ -1471,7 +1472,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('home');
   const [selectedToolId, setSelectedToolId] = useState('marketing-home');
   const [query, setQuery] = useState('');
-  const [brief, setBrief] = useState('黒のチェーン柄フーディーを、ECとSNSで使える高級ストリート系ビジュアルに展開したい。');
+  // Light opens every workbench with an empty request; an example brief here was sent as USER BRIEF by routes without a brief field (e.g. /model/clothing).
+  const [brief, setBrief] = useState('');
   // Light Chain opens the fitting prompt empty. Example copy belongs to the
   // user-selected preset/intent route, not the bare /model entry state.
   const [referenceNote, setReferenceNote] = useState('');
@@ -2258,8 +2260,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       ? '参考画像をアップロードしてください'
       : selectedTool.id === 'image-repair'
         ? '修復したい画像をアップロードしてください'
-        : selectedTool.id === 'fitting-background-reference'
-          ? '背景画像をアップロード'
         : workbenchLabels.uploadLabel;
   const secondaryUploadLabel =
     selectedTool.id === 'printing-image'
@@ -3363,7 +3363,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       const slotConfig = materialSlots.find((materialSlot) => materialSlot.key === slot);
       const applied = await applyMaterialToSlot(slot, {
         name: file.name,
-        kind: slot === 'secondary' || selectedTool.id === 'fitting-background-reference'
+        // The fitting rows' primary upload is the garment (衣服の画像); the background comes from the 参考画像 tab.
+        kind: slot === 'secondary'
           ? slotConfig?.label ?? '追加素材'
           : garmentCategory,
         imageUrl,
@@ -3414,12 +3415,10 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       fileName: source.name,
       sourceImageId: source.sourceImageId ?? null,
       sourceStoragePath: source.sourceStoragePath ?? null,
-      materialKind: selectedTool.id === 'fitting-background-reference'
-        ? '背景参照'
-        : source.kind,
+      materialKind: source.kind,
       maskMode: cutMode,
-      activeLayer: selectedTool.id === 'fitting-background-reference' ? '背景' : activeLayer,
-      placement: selectedTool.id === 'fitting-background-reference' ? '背景全面' : printPlacement,
+      activeLayer,
+      placement: printPlacement,
       scale: printScale,
       note: [
         referenceNote,
@@ -3667,6 +3666,10 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     if (selectedTool.id === 'image-repair') setImageRepairGenerating(true);
     try {
       const parityRuntime = buildCurrentParityRuntime();
+      // The fitting entry rows that run as an edit send the 参考画像 tab's model / pose / background picks as extra references.
+      const fittingEditReferences = effectiveProviderRoute === 'edit-image' && (selectedTool.id === 'fitting-clothing-reference' || selectedTool.id === 'fitting-background-reference')
+        ? (['model', 'pose', 'background'] as const).flatMap((key) => fittingReferenceSlots[key] ? [{ key, file: fittingReferenceSlots[key]! }] : [])
+        : [];
       const providerPrompt = buildLightchainProviderPrompt({
         toolId: selectedTool.id,
         toolTitle: generationTitle,
@@ -3677,15 +3680,21 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         referenceNote,
         briefOnly: briefOnlyProviderRequest || effectiveProviderRoute === 'generate-image'
           || (effectiveProviderRoute === 'model-matrix' && !providerSourceImageUrl && !modelSourceRequired),
+        referenceRoles: effectiveProviderRoute === 'edit-image'
+          ? [...(materialSlotFiles.secondary ? ['secondary material'] : []), ...fittingEditReferences.map((entry) => FITTING_REFERENCE_ROLE[entry.key])]
+          : undefined,
       });
-      const materialReferences = Object.entries(materialSlotFiles)
-        .filter(([, file]) => Boolean(file))
-        .map(([slotKey, file]) => ({
-          slotKey,
-          fileName: file?.name ?? null,
-          materialKind: file?.kind ?? null,
-          hasImage: Boolean(file),
-        }));
+      const materialReferences = [
+        ...Object.entries(materialSlotFiles)
+          .filter(([, file]) => Boolean(file))
+          .map(([slotKey, file]) => ({
+            slotKey,
+            fileName: file?.name ?? null,
+            materialKind: file?.kind ?? null,
+            hasImage: Boolean(file),
+          })),
+        ...fittingEditReferences.map((entry) => ({ slotKey: `fitting-${entry.key}`, fileName: entry.file.name, materialKind: FITTING_REFERENCE_ROLE[entry.key], hasImage: true })),
+      ];
       const lightchainCompat = {
         lightchainFeatureId: selectedTool.id,
         lightchainFeatureTitle: selectedTool.title,
@@ -3734,11 +3743,11 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         if (!providerSourceImageUrl) throw new Error(`provider_input_missing:${selectedTool.id}`);
         assertCurrentAuthBrandFence(authBrandFence, 'edit_image_before_provider');
         const editResult = await editImageWithPrompt(providerSourceImageUrl, providerPrompt, generationBrandId, {
-          referenceImageUrls: materialSlotFiles.secondary?.imageUrl ? [materialSlotFiles.secondary.imageUrl] : [],
+          referenceImageUrls: [...(materialSlotFiles.secondary?.imageUrl ? [materialSlotFiles.secondary.imageUrl] : []), ...fittingEditReferences.map((entry) => entry.file.imageUrl)],
           rightsConfirmed: rightsConfirmedForRequest,
           lightchainCompat,
           materialReferences,
-          layerPlan: { source: 'uploaded-primary', secondaryReference: Boolean(materialSlotFiles.secondary) },
+          layerPlan: { source: 'uploaded-primary', secondaryReference: Boolean(materialSlotFiles.secondary), fittingReferences: fittingEditReferences.map((entry) => entry.key) },
           compositionPreview: { summary: generationSummary, route: selectedTool.lightchainRoute, parityRuntime, ...(printDesignWorkflow ? {printDesignState,printDesignInput:{version:1,materialSlots:serializeLightchainResumeSlots(materialSlotFiles),brief:printDesignPrompt,referenceNote}} : {}) },
           ...(printDesignWorkflow ? {retainUntilAcknowledged:true,assertContext:assertPrintDesignCurrent,featureType:`lightchain-${selectedTool.id}`} : {}),
         });
@@ -4896,7 +4905,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     return (
       <main
         {...resumeReadbackAttributes}
-        className="dark h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white"
+        className="dark relative h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white"
         style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
         data-flow-state={unifiedFlowState}
         data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
@@ -4918,7 +4927,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         data-lightchain-brand-error={brandState.error ?? ''}
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
-        {renderLightchainProviderGate()}
+        {/* The fitting layout fills the viewport, so the running/error notice floats over it instead of pushing the panels down (which scrolled the page sideways). */}
+        <div className="pointer-events-none absolute right-4 top-14 z-40 w-[360px] [&>*]:pointer-events-auto [&>*]:mt-0">{renderLightchainProviderGate()}</div>
         <div className="relative grid h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden lg:grid-cols-[432px_minmax(0,1fr)]">
           <section className="flex h-full min-h-0 flex-col overflow-hidden border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
             <div className="flex h-12 items-center border-b border-white/10 px-4">

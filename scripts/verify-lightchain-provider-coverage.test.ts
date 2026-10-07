@@ -211,8 +211,8 @@ test('keeps non-model catalog prompts feature-specific instead of using the gene
   const expected = new Map([
     ['marketing-home', /marketing composition/],
     ['marketing-detail', /exhibition, store, or brand visual/],
-    ['fitting-clothing-reference', /clean clothing reference for AI fitting/],
-    ['fitting-background-reference', /clean background reference for AI fitting/],
+    ['fitting-clothing-reference', /model wears the garment from source\.png/],
+    ['fitting-background-reference', /placed in the scene of the background reference/],
     ['design-agent', /design-planning visual/],
     ['lab', /Lightchain Lab transformation/],
   ]);
@@ -226,6 +226,21 @@ test('keeps non-model catalog prompts feature-specific instead of using the gene
     });
     assert.match(prompt, marker, rowId);
     assert.doesNotMatch(prompt, /Create the requested .* using the supplied references/u, rowId);
+  }
+});
+
+test('fitting entry rows describe a fitting composition and name each reference image role', () => {
+  for (const rowId of ['fitting-clothing-reference', 'fitting-background-reference']) {
+    const prompt = buildLightchainProviderPrompt({
+      toolId: rowId,
+      toolTitle: rowId,
+      summary: `${rowId} settings`,
+      primaryName: 'garment.png',
+      referenceRoles: ['model appearance reference', 'background scene reference'],
+    });
+    assert.match(prompt, /AI fitting composition, not an in-place edit/, rowId);
+    assert.match(prompt, /REFERENCE IMAGES: image 2 = model appearance reference, image 3 = background scene reference/, rowId);
+    assert.doesNotMatch(prompt, /masked in-place edit/, rowId);
   }
 });
 
