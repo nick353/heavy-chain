@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
+import { useBoardDraftCards } from '../features/boardDraftProjects';
 
 export const formatProjectAge = (value: string) => {
   const date = new Date(value);
@@ -80,6 +81,8 @@ const PAGE_SIZE = 30;
 export function LightchainProjectBoard({ config }: { config: ProjectBoardConfig }) {
   const navigate = useNavigate();
   const { projects, status } = useFeatureProjects(config.featureId);
+  // Uploaded-but-not-generated projects (saved on first upload, like the source board).
+  const drafts = useBoardDraftCards(config.featureId, config.detailPath);
   const [page, setPage] = useState(1);
 
   const pageCount = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
@@ -95,6 +98,13 @@ export function LightchainProjectBoard({ config }: { config: ProjectBoardConfig 
             <img className="pattern-project-dashboard-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
             <p className="pattern-project-dashboard-new-label">新規ファイル</p>
           </div>
+          {page === 1 && drafts.map((draft) => (
+            <div key={draft.id} data-testid={`lightchain-pattern-draft-${draft.id}`} onClick={() => navigate(draft.href)} className="pattern-project-dashboard-card pattern-project-dashboard-project-card">
+              <div className="pattern-project-dashboard-media"><ProjectThumbnail url={draft.imageUrl} /></div>
+              <div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{draft.title}</p><p className="pattern-project-dashboard-date">{formatProjectAge(draft.updatedAt)} 修正</p></div>
+              <button type="button" aria-label="プロジェクトメニュー" className="pattern-project-dashboard-menu" onClick={(event) => event.stopPropagation()}><MoreVertical className="h-4 w-4" aria-hidden="true" /></button>
+            </div>
+          ))}
           {visibleProjects.map((project) => (
             <div key={project.id} data-testid={`lightchain-pattern-project-${project.id}`} onClick={() => openProject(project)} className="pattern-project-dashboard-card pattern-project-dashboard-project-card">
               <div className="pattern-project-dashboard-media"><ProjectThumbnail url={project.imageUrl} /></div>

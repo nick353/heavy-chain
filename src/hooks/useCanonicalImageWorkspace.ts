@@ -36,8 +36,10 @@ const readCandidates = (metadata: Record<string,Json | undefined>,currentJobId:s
 };
 const sanitizeInputState=(value:unknown):Record<string,Json>=>{
  if(!record(value))return {};const out:Record<string,Json>={};
- for(const key of ['gender','half','age','nationality','skinColor','bodyType','bodyTypes','ageGroups','coverage','layerModes','assist','sourceType','styleNote','arrangeMode','arrangeRatio','arrangePrompt','printMode','printRatio','printResolution','printTile','printPrompt','colorTarget','colorArea','colorRatio']){
-  const item=value[key];const safe=(v:unknown):v is string=>typeof v==='string'&&v.length<=256&&!/(?:https?:|data:|blob:|bearer\s)/i.test(v);
+ for(const key of ['gender','half','age','nationality','skinColor','bodyType','bodyTypes','ageGroups','coverage','layerModes','assist','sourceType','styleNote','arrangeMode','arrangeRatio','arrangePrompt','printMode','printRatio','printResolution','printTile','printPrompt','printAdjustSource','printAdjustResult','colorTarget','colorArea','colorRatio']){
+  // Prompts follow their form limits (プリントデザイン 1000 chars); other settings stay short.
+  const limit=/Prompt$/.test(key)?1000:256;
+  const item=value[key];const safe=(v:unknown):v is string=>typeof v==='string'&&v.length<=limit&&!/(?:https?:|data:|blob:|bearer\s)/i.test(v);
   if(typeof item==='boolean'||safe(item))out[key]=item;
   else if(Array.isArray(item)&&item.length<=16&&item.every(safe))out[key]=item;
  }
@@ -78,7 +80,9 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
   const pendingKey = `heavy:canonical-image-workspace:v1:${user?.id ?? ''}:${currentBrand?.id ?? ''}:${toolId}:${jobId ?? 'fresh'}`;
   const pending = useRef<Pending | null>(null);
   // Un-generated inputs (uploads kept in the local asset store, request text, settings) survive a reload per tool page.
-  const draftKey = `heavy:canonical-draft:v1:${user?.id ?? ''}:${currentBrand?.id ?? ''}:${toolId}:${location.pathname}`;
+  // One draft per board project (`boardProjectCode`); a new file keeps the plain per-page draft.
+  const boardProjectCode = new URLSearchParams(location.search).get('boardProjectCode') ?? '';
+  const draftKey = `heavy:canonical-draft:v1:${user?.id ?? ''}:${currentBrand?.id ?? ''}:${toolId}:${location.pathname}${boardProjectCode ? `:${boardProjectCode}` : ''}`;
   const draftReady = useRef<string | null>(null);
   const draftEnabled = toolId !== 'printing-image'; // プリントイメージ keeps its own reviewed draft store.
   const restoredArtifact=useRef<{scope:string;artifact:WorkspaceArtifact}|null>(null);

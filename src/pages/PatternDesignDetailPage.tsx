@@ -5,6 +5,7 @@ import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace'
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
+import { useBoardDraftProject } from '../features/boardDraftProjects';
 
 /**
  * Light `/editor/pattern/detail` = "デザインアレンジ" editor, measured at 1440×900 on 2026-10-07:
@@ -50,6 +51,7 @@ export function PatternDesignDetailPage() {
 function PatternDesignDetailWorkspace() {
   const navigate = useNavigate();
   const workspace = useCanonicalImageWorkspace('pattern-arrange', { requiredSources: 1, title: 'デザインアレンジ', initialInputState: { arrangeMode: 'design', arrangeRatio: '自動', arrangePrompt: '' } });
+  useBoardDraftProject('pattern-arrange', workspace);
   const heavyBrand = useHeavyWorkspaceBrandGate();
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [tool, setTool] = useState<'select' | 'drag'>('select');

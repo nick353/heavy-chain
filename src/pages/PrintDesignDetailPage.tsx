@@ -1,10 +1,11 @@
-import { useEffect, useState, type ChangeEvent, type CSSProperties, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Crop, Download, Expand, Hand, ImagePlus, Info, MousePointer2, Redo2, SlidersHorizontal, Sparkles, Undo2 } from 'lucide-react';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
+import { useBoardDraftProject } from '../features/boardDraftProjects';
 import { ZoomControl } from './PatternDesignDetailPage';
 
 /**
@@ -48,10 +49,22 @@ type Adjust = { brightness: number; contrast: number; saturate: number; rotate: 
 const NO_ADJUST: Adjust = { brightness: 100, contrast: 100, saturate: 100, rotate: 0, flip: false };
 const filterOf = (adjust: Adjust) => `brightness(${adjust.brightness}%) contrast(${adjust.contrast}%) saturate(${adjust.saturate}%)`;
 const transformOf = (adjust: Adjust) => `rotate(${adjust.rotate}deg) scaleX(${adjust.flip ? -1 : 1})`;
+/** 色調整 / 画像調整 are kept as `brightness,contrast,saturate,rotate,flip` so they survive a reload. */
+export const encodeAdjust = (adjust: Adjust) => [adjust.brightness, adjust.contrast, adjust.saturate, adjust.rotate, adjust.flip ? 1 : 0].join(',');
+export const decodeAdjust = (value: unknown): Adjust => {
+  if (typeof value !== 'string') return NO_ADJUST;
+  const [brightness, contrast, saturate, rotate, flip] = value.split(',').map(Number);
+  const pct = (n: number) => Number.isFinite(n) ? Math.min(150, Math.max(50, n)) : 100;
+  return { brightness: pct(brightness), contrast: pct(contrast), saturate: pct(saturate),
+    rotate: [0, 90, 180, 270].includes(rotate) ? rotate : 0, flip: flip === 1 };
+};
+const adjustStorageKey = (userId: string, brandId: string, jobId: string) => `heavy:print-adjust:v1:${userId}:${brandId}:${jobId}`;
 
 function PrintDesignWorkspace() {
   const navigate = useNavigate();
   const workspace = useCanonicalImageWorkspace('pattern-print-design', { requiredSources: 1, title: 'プリントデザイン', initialInputState: { printMode: 'compose', printRatio: '自動', printResolution: '1K', printTile: '1.0', printPrompt: '' } });
+  useBoardDraftProject('pattern-print-design', workspace);
+  const { user, currentBrand } = useAuthStore();
   const heavyBrand = useHeavyWorkspaceBrandGate();
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [tool, setTool] = useState<'select' | 'drag'>('select');
@@ -62,7 +75,27 @@ function PrintDesignWorkspace() {
   const [dragOrigin, setDragOrigin] = useState<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const [tileOpen, setTileOpen] = useState(false);
   const [panel, setPanel] = useState<'color' | 'image' | null>(null);
-  const [adjust, setAdjust] = useState<Record<'source' | 'result', Adjust>>({ source: NO_ADJUST, result: NO_ADJUST });
+  const [adjust, setAdjustState] = useState<Record<'source' | 'result', Adjust>>({ source: NO_ADJUST, result: NO_ADJUST });
+  // Restore: a saved project keeps later adjustments per job; an unsaved one keeps them in its draft input.
+  const adjustKey = workspace.jobId && user?.id && currentBrand?.id ? adjustStorageKey(user.id, currentBrand.id, workspace.jobId) : null;
+  const restoredAdjust = useRef<string | null>(null);
+  useEffect(() => {
+    if (workspace.status === 'loading') return;
+    const token = `${adjustKey ?? 'draft'}:${workspace.status}`;
+    if (restoredAdjust.current === token) return;
+    restoredAdjust.current = token;
+    let stored: Record<string, unknown> | null = null;
+    try { stored = adjustKey ? JSON.parse(localStorage.getItem(adjustKey) ?? 'null') : null; } catch { stored = null; }
+    setAdjustState({ source: decodeAdjust(stored?.source ?? workspace.inputState.printAdjustSource), result: decodeAdjust(stored?.result ?? workspace.inputState.printAdjustResult) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adjustKey, workspace.status]);
+  const setAdjust = (next: (value: Record<'source' | 'result', Adjust>) => Record<'source' | 'result', Adjust>) => {
+    const updated = next(adjust);
+    setAdjustState(updated);
+    const encoded = { source: encodeAdjust(updated.source), result: encodeAdjust(updated.result) };
+    if (adjustKey) { try { localStorage.setItem(adjustKey, JSON.stringify(encoded)); } catch { /* storage unavailable */ } }
+    else workspace.setInputState({ ...workspace.inputState, printAdjustSource: encoded.source, printAdjustResult: encoded.result });
+  };
   const locked = heavyBrand.pending || workspace.status === 'running' || workspace.status === 'loading' || Boolean(workspace.pendingId);
   const source = workspace.slots.primary;
   const styleMap = workspace.slots.secondary;
@@ -87,7 +120,7 @@ function PrintDesignWorkspace() {
   }, [workspace.result]);
   useEffect(() => { if (resultUrl) { setShowResult(true); setSelected('result'); } }, [resultUrl]);
 
-  const update = (patch: Record<string, string>) => workspace.setInputState({ printMode: mode, printRatio: ratio, printResolution: resolution, printTile: tile.toFixed(1), printPrompt: prompt, ...patch });
+  const update = (patch: Record<string, string>) => workspace.setInputState({ ...workspace.inputState, printMode: mode, printRatio: ratio, printResolution: resolution, printTile: tile.toFixed(1), printPrompt: prompt, ...patch });
   const pick = (slot: 'primary' | 'secondary') => (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
