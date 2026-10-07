@@ -262,3 +262,14 @@ Each iteration: read this file → advance the next open item → append result 
 - /marketing/detail (project 3557a8a9, conversation 75dd6d48): follow-up 「背景を夕方の海辺に変えて、SNS広告向けの明るい雰囲気にしてください」 sent once → design_assistant 6dcfb676 completed, heavy_ai_requests c7037b09 edit-image completed (generated_images feature_type marketing-dialogue).
 - Reload restores both turns (prompt, reply, image task 完了, previews ai-ce0299f2-0 and ai-c7037b09-0) and the new canvas layer デザイン 3; no new job on reload.
 - 次: wear-design-detail, print-design-detail, ai-fitting, ai-fitting-reference, fitting clothing/background reference.
+
+### Iteration 39 (2026-10-07, /goal) — P2 fitting reference rows, wear/print detail rows, fitting layout shift
+- 変更 (PR nick353/heavy-chain#9, #10 earlier): fitting clothing/background reference send the 参考画像 tab's model/pose/background picks as extra references with a fitting-composition prompt, and save/restore those picks (`fittingReferenceSlots`).
+- 変更 (PR nick353/heavy-chain#11, merged): the fitting input column slid ~57px left during generation. Cause: the header row (title + mode tabs + task tabs ≈ 489px) is wider than the 432px panel and overflow-hidden boxes can still be scrolled by focus. The four fitting containers now use overflow-clip. Readback after the deploy (chunk LightchainWorkbenchPage.BPU8Ktvy.js): garment image stays at x=25 during generation.
+- 検証 (production 1440×900):
+  - /model/background-reference: garment multi2.jpg + library model + uploaded background → ai-cade89c9 completed, inputImageCount 3, materialReferences primary / fitting-model / fitting-background. Reload with resumeJob restores garment, モデル画像選択済み, 背景選択済み and the result.
+  - /model/clothing: garment + library model → ai-3ba338d8 completed, inputImageCount 2. Reload restores garment, model pick and result.
+  - wear-design-detail ai-99ff43af (completed, feature wear-design-detail): fresh tab with resumeJob restores the uploaded material, request text and saved result. print-design-detail = route #8 run ai-7669333b (Iteration earlier).
+- Tests: fitting lifecycle 7/3, persistence 8/0, preview 4/0, resilience 4/0, all-screen 6/1, provider coverage 21/2 — failures equal to baseline; tsc clean.
+- Notes: materialKind for the garment is still recorded as "Tシャツ" for a blouse; pre-generation garment drafts are not shared across tabs.
+- 次: ai-fitting / ai-fitting-reference (model-matrix), then (d)(f)(g) per row and P4 thumbnail speed.

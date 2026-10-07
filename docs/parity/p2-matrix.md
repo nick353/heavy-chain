@@ -10,15 +10,15 @@ Legend: ✅ evidenced · ◻ not yet evidenced for this row · — not applicabl
 |---|---|---|---|---|---|---|---|---|---|
 | marketing-home | /marketing (21) | ai-ce0299f2 `marketing-dialogue` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | marketing-detail | /marketing/detail (21) | ai-c7037b09 `marketing-dialogue` (follow-up turn 2 in project 3557a8a9) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
-| fitting-clothing-reference | /model (18) | — generic ai-be628dda only | ✅ | ◻ | ◻ | ◻ | ◻ | ◻ | ◻ |
-| fitting-background-reference | /model (18) | — | ✅ | ◻ | ◻ | ◻ | ◻ | ◻ | ◻ |
+| fitting-clothing-reference | /model/clothing (18) | ai-3ba338d8 `edit-image` (garment + 参考画像 model, inputImageCount 2) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
+| fitting-background-reference | /model/background-reference (18) | ai-cade89c9 `edit-image` (garment + model + background, inputImageCount 3) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | wear-design-lab | /flow/orientedDesign (24) | ai-32c0b07f `lightchain-wear-design-lab` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
-| wear-design-detail | (24) detail | — | ✅ | ◻ | ◻ | ◻ | ◻ | ◻ | ◻ |
+| wear-design-detail | /flow/orientedDesign/detail (24) | ai-99ff43af `lightchain-wear-design-detail` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | fashion-studio | /flow/integration (22) | ai-95b6af64 `fashion-studio-detail-generated-result` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | design-agent | /agent (25) | ai-be119a6a `lightchain-design-agent` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | lab | /flow/laboratory (23) | ai-b55722a0 `lightchain-lab` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | print-design-project | /printing (8) | ai-5aabfebc `lightchain-print-design-project` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
-| print-design-detail | (8) detail | — | ✅ | ◻ | ◻ | ◻ | ◻ | ◻ | ◻ |
+| print-design-detail | /editor/patternDesign/detail (8) | ai-7669333b `lightchain-pattern-print-design` (route #8 run) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | fabric-image | /tools/fabric (9) | ai-be179dd6 `lightchain-fabric-image` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | line-generation | /tools/line (11) | ai-101aadd2 | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | line-to-real | /tools/line-draft-to-tile (11) | ai-959749a0 | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
@@ -41,7 +41,7 @@ Legend: ✅ evidenced · ◻ not yet evidenced for this row · — not applicabl
 | model-custom | /model-library/model-custom-form (19) | ai-f035b13b (tagged `lightchain-model-library`) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 
 ## Open work, in order
-1. Per-row runs still missing (6 rows): wear-design-detail, print-design-detail, ai-fitting, ai-fitting-reference, fitting-clothing-reference, fitting-background-reference.
+1. Per-row runs still missing (2 rows): ai-fitting, ai-fitting-reference (model-matrix route).
 2. (d) four surfaces per run: check each job id appears in /gallery, /history, /jobs (and Canvas where Light has one).
 3. (f) one confirmed failure + recovery per row type (never replaying an unknown-effect operation).
 4. (g) full-size quality review per feature rubric.
