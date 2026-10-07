@@ -199,3 +199,26 @@ test('new slot persistence stores canonical/local references and sanitized metad
   const rejected = readLightchainResumeInput([artifact({metadata:{materialSlots:[{key:'primary',fileName:'bad',imageUrl:'/v1/media/read?token=BEARER'}]}})],'job-1');
   assert.equal(rejected?.slots.length,0); assert.equal(rejected?.unavailableSources,true);
 });
+
+test('resume input restores AI fitting reference picks from durable refs only', () => {
+  const localRef = buildLocalCanvasAssetReference(`sha256:${'a'.repeat(64)}`);
+  const result = readLightchainResumeInput([
+    artifact({
+      featureType: 'lightchain-fitting-background-reference',
+      metadata: {
+        materialSlots: [{ key: 'primary', fileName: 'garment.png', materialKind: 'シャツ', imageUrl: localRef }],
+        fittingReferenceSlots: [
+          { key: 'model', name: 'group-26-1', imageUrl: '/lightchain-assets/models/group-26-1.webp' },
+          { key: 'background', name: 'bg.jpg', imageUrl: localRef },
+          { key: 'pose', name: 'pose.png', imageUrl: 'blob:https://example.test/pose' },
+          { key: 'face', name: 'x', imageUrl: '/x.png' },
+          { key: 'model', name: 'signed', imageUrl: 'https://cdn.example.test/a.png?token=1' },
+        ],
+      },
+    }),
+  ], 'job-1');
+  assert.deepEqual(result?.fittingReferences, [
+    { key: 'model', name: 'group-26-1', imageUrl: '/lightchain-assets/models/group-26-1.webp' },
+    { key: 'background', name: 'bg.jpg', imageUrl: localRef },
+  ]);
+});
