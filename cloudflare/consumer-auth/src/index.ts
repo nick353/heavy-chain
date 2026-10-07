@@ -11,11 +11,14 @@ export type { Env } from './auth.ts';
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: {
   'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
 } });
-const emailEndpoints = new Set(['/sign-up/email', '/request-password-reset', '/send-verification-email']);
+const emailEndpoints = new Set(['/sign-up/email', '/request-password-reset', '/send-verification-email', '/email-otp/request-password-reset']);
+const heavyEmailOTPEndpoints = new Set(['/email-otp/request-password-reset', '/email-otp/reset-password']);
+const HEAVY_OTP_RESET_MIN_PASSWORD_LENGTH = 6;
 const MAX_AUTH_BODY_BYTES = 16 * 1024;
 // Existing cookies must not prevent fresh consent, recovery or local logout.
 const publicAuthPaths = new Set(['/sign-in/email', '/sign-up/email', '/sign-in/social', '/sign-in/native',
   '/reauthenticate/native', '/sign-out', '/request-password-reset', '/reset-password', '/send-verification-email',
+  '/email-otp/request-password-reset', '/email-otp/reset-password',
   '/verify-email', '/callback/google', '/callback/apple', '/jwks']);
 // MyPro uses app sessions/JWTs, not public provider tokens. These library routes
 // would expose grants and bypass the once-daily refresh/CAS implementation.
@@ -52,8 +55,14 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   if (env.APP_ID === 'mypro' && request.method === 'GET' && ['/reset-password', '/login'].includes(url.pathname)) {
     return recoveryPage(url.pathname === '/login');
   }
+  const authPath = url.pathname.startsWith('/api/auth/') ? url.pathname.slice('/api/auth'.length) : '';
+  if (authPath.includes('email-otp')
+    && (env.APP_ID === 'mypro' || !heavyEmailOTPEndpoints.has(authPath))) return json({ error: 'not_found' }, 404);
   try {
-    const auth = createAuth(env, url.origin);
+    const auth = createAuth(env, url.origin, undefined, undefined,
+      request.method === 'POST' && authPath === '/email-otp/reset-password'
+        ? { minPasswordLength: HEAVY_OTP_RESET_MIN_PASSWORD_LENGTH }
+        : undefined);
     if (env.APP_ID === 'mypro' && request.method === 'GET' && url.pathname === '/api/auth/verify-email') {
       return await verifyMyProEmail(request, env, allowedOrigins(env));
     }
@@ -81,7 +90,14 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     }
     const bounded = await boundedRequest(request);
     if (!bounded) return json({ error: 'body_too_large' }, 413);
-    const authPath = url.pathname.slice('/api/auth'.length);
+    if (authPath === '/email-otp/reset-password') {
+      const payload: unknown = await bounded.clone().json().catch(() => null);
+      const body = payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? payload as Record<string, unknown> : null;
+      if (typeof body?.password === 'string' && body.password.length > 20) {
+        return json({ code: 'PASSWORD_TOO_LONG', message: 'パスワードは20文字以内で入力してください。' }, 400);
+      }
+    }
     if (env.APP_ID === 'mypro' && !publicAuthPaths.has(authPath) && !authPath.startsWith('/reset-password/')) {
       // This is intentionally outside Better Auth hooks: bearer-to-cookie hook
       // ordering cannot bypass it, and private handler effects happen only after.
