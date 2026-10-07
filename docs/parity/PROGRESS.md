@@ -228,3 +228,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証: tsc; 12 suites reading the page = baseline. Production index.Dy0utQXj.js: card boxes and hover/tooltip identical to Light; after a real reload the tab, 2 reference chips, 32-character prompt and デザインミックス were restored.
 - 事故: at 22:43 JST a merge to GitHub `main` (8c3c2d6f, PR #2 "Claude text actions") auto-deployed to the same Zeabur service and replaced production with an old main-based build (title "Lightchain AI", none of the parity work). The queued parity release then replaced it again (index.Dy0utQXj.js). PR #2's feature is therefore not in production; the main auto-deploy will overwrite production again on the next push. Needs the user's decision (fold PR #2 into the release overlay and/or stop main auto-deploy).
 - 残: #3 (needs consent for a Light conversation); P2 remainder; P4 thumbnail size (Worker deploy).
+
+### Iteration 33 (2026-10-07, /goal) — P2 matrix
+- 確認: route ledger = every row verified except #3 (needs consent for a Light conversation) and #27 (non-goal). D1: the 27 ledger job ids are all `completed` with one stored image each.
+- 追加: `docs/parity/p2-matrix.md` maps the 31 strict rows to routes, D1 jobs and the 7 common conditions. Gaps: 7 rows without a row-specific run (marketing/wear-design/print-design detail, ai-fitting, ai-fitting-reference, fitting clothing/background reference); conditions (d) four surfaces, (f) failure/recovery, (g) full-size quality not yet evidenced for any row; (c) R2 object check needs R2 read access.
+- 次: the 7 missing per-row runs, then (d) per job.
