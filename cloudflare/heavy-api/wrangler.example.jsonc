@@ -24,7 +24,7 @@
     "FRONTEND_ORIGINS": "https://replace-with-frontend.example",
     "AI_IMAGE_PROVIDER": "workers_ai",
     "AI_IMAGE_ENABLED": "false",
-    "AI_IMAGE_ALLOWED_ACTIONS": "generate-image,edit-image,model-matrix",
+    "AI_IMAGE_ALLOWED_ACTIONS": "generate-image,edit-image,model-matrix,optimize-prompt,chat-plan",
     "AI_IMAGE_TIMEOUT_MS": "45000",
     "AI_MONTHLY_IMAGE_UNITS": "25",
     "AI_DAILY_IMAGE_UNITS": "100",
