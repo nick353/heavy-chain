@@ -163,3 +163,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 変更: new `features/agent/agentTasks.ts` (task model in canvas snapshots, prompts, parsers, profile/project storage) and `AgentSidebar` (real tasks, search, projects, profile dialog, credits); new `HeavyAgentTaskPage` at /agent/:taskId runs theme → choice → plan → visual, storing each request id on the task before sending and only reading back steps in flight; workbench /agent send creates the task, profile/project controls work, fabricated Light task list/credits/project modal removed, hero/reference images self-hosted.
 - 検証: tsc; new verify-heavy-agent-tasks 6/6; ui-control-boundaries updated (sidebar/project/recent-task tests now assert the real behaviour) 0 fail = baseline; launcher/all-screen/catalog/unified-shell/capability/provider/source-access/marketing-detail/fashion-hydration = baseline. Production: see ledger #25.
 - 次: #26 /canvas/:id.
+
+### Iteration 22 (2026-10-07, /goal) — /canvas/:id (#26)
+- 変更: `CanvasEditorPage` derived actions (context menu and edit modal) go through `runDerivedEdits` → `editImageWithPrompt` (real jobs) and keep the durable storage path; zero-size container measurements are ignored. Production canvas differs from the repo file, so the change ships as `docs/parity/release-patches/002-canvas-derived-edits.patch` (dry-run applied to the production file).
+- 検証: tsc; canvas-generation-readback (updated for the helper; 1 fail = baseline), canvas-partial-image-editing / color-edit-contract / image-api-only / chat-editor / brand-readback / protected-batch = baseline. Production: see ledger #26.
+- 次: #5 /asset-center.
