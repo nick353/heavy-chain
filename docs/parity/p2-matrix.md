@@ -9,7 +9,7 @@ Legend: ✅ evidenced · ◻ not yet evidenced for this row · — not applicabl
 | feature | route (#) | job (D1 completed, 1 image) | a | b | c | d | e | f | g |
 |---|---|---|---|---|---|---|---|---|---|
 | marketing-home | /marketing (21) | ai-ce0299f2 `marketing-dialogue` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
-| marketing-detail | /marketing detail (21) | — no detail-specific run | ✅ | ◻ | ◻ | ◻ | ◻ | ◻ | ◻ |
+| marketing-detail | /marketing/detail (21) | ai-c7037b09 `marketing-dialogue` (follow-up turn 2 in project 3557a8a9) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 | fitting-clothing-reference | /model (18) | — generic ai-be628dda only | ✅ | ◻ | ◻ | ◻ | ◻ | ◻ | ◻ |
 | fitting-background-reference | /model (18) | — | ✅ | ◻ | ◻ | ◻ | ◻ | ◻ | ◻ |
 | wear-design-lab | /flow/orientedDesign (24) | ai-32c0b07f `lightchain-wear-design-lab` | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
@@ -41,7 +41,7 @@ Legend: ✅ evidenced · ◻ not yet evidenced for this row · — not applicabl
 | model-custom | /model-library/model-custom-form (19) | ai-f035b13b (tagged `lightchain-model-library`) | ✅ | ✅ | ✅ | ◻ | ✅ | ◻ | ◻ |
 
 ## Open work, in order
-1. Per-row runs still missing (7 rows): marketing-detail, wear-design-detail, print-design-detail, ai-fitting, ai-fitting-reference, fitting-clothing-reference, fitting-background-reference.
+1. Per-row runs still missing (6 rows): wear-design-detail, print-design-detail, ai-fitting, ai-fitting-reference, fitting-clothing-reference, fitting-background-reference.
 2. (d) four surfaces per run: check each job id appears in /gallery, /history, /jobs (and Canvas where Light has one).
 3. (f) one confirmed failure + recovery per row type (never replaying an unknown-effect operation).
 4. (g) full-size quality review per feature rubric.

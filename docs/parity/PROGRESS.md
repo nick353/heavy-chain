@@ -257,3 +257,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 差分 → 修正 (PR nick353/heavy-chain#8, merged 3b258bb1): toolbar +企画提案書 (opens /board/edit), dividers 13px, zoom group gapless, toolbar left calc(50%-400px) / bottom 18px, tabs px-3 gap-1 font-medium, input pb-4 / mt-7.
 - 検証: verify-design-detail-dialogue 16/16, verify-design-dialogue-wiring 11/11 (baseline: 1 pre-existing failure). Production readback after reload matches Light within 2px except send x (+5px). Reload restores prompt, 2 references, assistant reply, generated preview and canvas layer.
 - 次: P2 missing per-row runs.
+
+### Iteration 38 (2026-10-07, /goal) — P2 marketing-detail run
+- /marketing/detail (project 3557a8a9, conversation 75dd6d48): follow-up 「背景を夕方の海辺に変えて、SNS広告向けの明るい雰囲気にしてください」 sent once → design_assistant 6dcfb676 completed, heavy_ai_requests c7037b09 edit-image completed (generated_images feature_type marketing-dialogue).
+- Reload restores both turns (prompt, reply, image task 完了, previews ai-ce0299f2-0 and ai-c7037b09-0) and the new canvas layer デザイン 3; no new job on reload.
+- 次: wear-design-detail, print-design-detail, ai-fitting, ai-fitting-reference, fitting clothing/background reference.
