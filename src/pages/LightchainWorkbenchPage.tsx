@@ -1471,7 +1471,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('home');
   const [selectedToolId, setSelectedToolId] = useState('marketing-home');
   const [query, setQuery] = useState('');
-  const [brief, setBrief] = useState('黒のチェーン柄フーディーを、ECとSNSで使える高級ストリート系ビジュアルに展開したい。');
+  // Light opens every workbench with an empty request; an example brief here was sent as USER BRIEF by routes without a brief field (e.g. /model/clothing).
+  const [brief, setBrief] = useState('');
   // Light Chain opens the fitting prompt empty. Example copy belongs to the
   // user-selected preset/intent route, not the bare /model entry state.
   const [referenceNote, setReferenceNote] = useState('');
@@ -4896,7 +4897,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     return (
       <main
         {...resumeReadbackAttributes}
-        className="dark h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white"
+        className="dark relative h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white"
         style={{ fontFamily: '-apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif' }}
         data-flow-state={unifiedFlowState}
         data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
@@ -4918,7 +4919,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         data-lightchain-brand-error={brandState.error ?? ''}
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
-        {renderLightchainProviderGate()}
+        {/* The fitting layout fills the viewport, so the running/error notice floats over it instead of pushing the panels down (which scrolled the page sideways). */}
+        <div className="pointer-events-none absolute right-4 top-14 z-40 w-[360px] [&>*]:pointer-events-auto [&>*]:mt-0">{renderLightchainProviderGate()}</div>
         <div className="relative grid h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-hidden lg:grid-cols-[432px_minmax(0,1fr)]">
           <section className="flex h-full min-h-0 flex-col overflow-hidden border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
             <div className="flex h-12 items-center border-b border-white/10 px-4">
