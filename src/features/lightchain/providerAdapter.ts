@@ -67,7 +67,12 @@ type PromptInput = {
   brief?: string | null;
   referenceNote?: string | null;
   briefOnly?: boolean;
+  /** Roles of the reference images sent after the primary image, in order (e.g. ['model', 'background']). */
+  referenceRoles?: string[];
 };
+
+/** Fitting entry rows that run as an edit of the garment image: the output is a model wearing that garment. */
+const FITTING_EDIT_TOOL_IDS = new Set(['fitting-clothing-reference', 'fitting-background-reference']);
 
 const truncate = (value: string | null | undefined, maxLength: number) => (
   String(value || '').trim().slice(0, maxLength)
@@ -84,7 +89,11 @@ export function buildLightchainProviderPrompt(input: PromptInput) {
     ? 'optional references only'
     : truncate(input.secondaryName, 160) || 'the second reference image';
   const isModelMatrixRoute = MODEL_MATRIX_TOOL_IDS.has(input.toolId);
-  const inputGuardrail = input.briefOnly && isModelMatrixRoute
+  const isFittingEditRoute = FITTING_EDIT_TOOL_IDS.has(input.toolId) && !input.briefOnly;
+  const referenceRoles = (input.referenceRoles ?? []).map((role) => truncate(role, 40)).filter(Boolean).slice(0, 8);
+  const inputGuardrail = isFittingEditRoute
+    ? 'This is an AI fitting composition, not an in-place edit of the first image. Image 1 is the garment (product) reference: dress the model in exactly this garment and keep its silhouette, construction, print, colors, and proportions faithful. Use the other images only for the role listed for them (model appearance, pose, or background scene). Never copy clothing from a model or pose reference, and do not introduce a second garment.'
+    : input.briefOnly && isModelMatrixRoute
     ? 'This is an explicit brief-only model-matrix workflow. Build the requested model result from the workflow brief and settings; optional references are context only. Do not claim that source pixels, identity, silhouette, or framing were preserved when no authoritative source image was supplied. This is a model-matrix operation, not a garment-mask edit. Use any optional references only for the model attribute named in the workflow summary. Do not silently convert the request into a generic garment redesign. Do not invent text, logos, trademarks, protected identities, or unrelated objects.'
     : input.briefOnly
       ? 'This is an explicit brief-only workflow. Build the requested result from the workflow brief and settings; optional references are context only. Do not claim that source pixels, identity, silhouette, or framing were preserved when no authoritative source image was supplied. Do not invent text, logos, trademarks, protected identities, or unrelated objects.'
@@ -99,6 +108,7 @@ export function buildLightchainProviderPrompt(input: PromptInput) {
     `WORKFLOW SUMMARY: ${summary}`,
     brief ? `USER BRIEF: ${brief}` : null,
     referenceNote ? `REFERENCE NOTE: ${referenceNote}` : null,
+    referenceRoles.length ? `REFERENCE IMAGES: ${referenceRoles.map((role, index) => `image ${index + 2} = ${role}`).join(', ')}` : null,
     inputGuardrail,
     'Do not invent text, logos, trademarks, protected identities, or unrelated objects. Return a clean production-ready image with no UI, labels, borders, or watermark.',
   ].filter(Boolean).join('\n');
@@ -127,9 +137,9 @@ export function buildLightchainProviderPrompt(input: PromptInput) {
       case 'marketing-detail':
         return `Create the requested exhibition, store, or brand visual from ${primary}. Apply only the selected layers and use-case preset in the workflow summary; keep the product, framing, and brand treatment coherent and production-ready.`;
       case 'fitting-clothing-reference':
-        return `Prepare ${primary} as a clean clothing reference for AI fitting. Preserve the garment shape, construction, colors, and distinctive details; do not remove required information or introduce a second garment.`;
+        return `Create a natural model-wearing result in which a model wears the garment from ${primary}. Keep the garment's silhouette, construction, print, colors, and proportions faithful; follow the model and pose references when supplied, and the reference note for the scene.`;
       case 'fitting-background-reference':
-        return `Prepare ${primary} as a clean background reference for AI fitting. Preserve scene geometry, perspective, lighting cues, and spatial relationships; do not invent a model or garment.`;
+        return `Create a natural model-wearing result in which a model wears the garment from ${primary}, placed in the scene of the background reference. Match the background's perspective, lighting, and spatial relationships so the model sits naturally in it; follow the model and pose references when supplied. Keep the garment faithful and do not invent a second garment.`;
       case 'ai-fitting':
       case 'ai-fitting-reference':
         return `Create a natural model-wearing result from the garment in ${primary}. Keep the garment's silhouette, construction, print, and proportions faithful. Use the supplied model, pose, and background references only as requested, and do not introduce a second garment or unrelated subject.`;
