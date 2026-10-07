@@ -1277,6 +1277,20 @@ export function DesignConversationProjectList({ recent = false, client }: { rece
 
 export function LightchainDesignProductionPage() {
   const [activeTab, setActiveTab] = useState('プロジェクトから開始');
+  // The chosen start tab survives a reload (per user, in this browser).
+  const tabUserId = useAuthStore((state) => state.user?.id ?? null);
+  const tabStorageKey = tabUserId ? `heavy:design-production-tab:v1:${tabUserId}` : null;
+  useEffect(() => {
+    if (!tabStorageKey) return;
+    try {
+      const saved = localStorage.getItem(tabStorageKey);
+      if (saved === '対話から開始' || saved === 'プロジェクトから開始') setActiveTab(saved);
+    } catch { /* storage unavailable */ }
+  }, [tabStorageKey]);
+  const selectStartTab = (tab: string) => {
+    setActiveTab(tab);
+    try { if (tabStorageKey) localStorage.setItem(tabStorageKey, tab); } catch { /* storage unavailable */ }
+  };
   const [dialoguePrompt, setDialoguePrompt] = useState('');
   const [activeScene, setActiveScene] = useState('');
   const [activeAssetSlot, setActiveAssetSlot] = useState<0 | 1>(0);
@@ -1598,7 +1612,7 @@ export function LightchainDesignProductionPage() {
   };
   if (activeTab === '対話から開始') {
     return <LightchainDialogueParityPanel
-      onProjectStart={() => setActiveTab('プロジェクトから開始')}
+      onProjectStart={() => selectStartTab('プロジェクトから開始')}
       remainingUnits={remainingUnits}
       recentProjectScopeKey={designScopeKey}
       recentProjectEntries={displayDesignEntries}
@@ -1613,7 +1627,7 @@ export function LightchainDesignProductionPage() {
       <div aria-hidden="true" className="design-production-hero-glow pointer-events-none absolute inset-x-0 top-0" />
       {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</div>}
       <div data-testid="design-production-page" className="relative z-10 mx-auto max-w-[1157px] px-6 py-7 lg:px-0"><div className="text-center"><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1><p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p></div>
-        <div role="tablist" data-design-tablist="" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">{['プロジェクトから開始', '対話から開始'].map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`h-10 ${tab === 'プロジェクトから開始' ? 'w-[210px]' : 'w-[146px]'} rounded-xl px-0 py-1 text-lg font-medium transition ${activeTab === tab ? 'shadow-sm' : 'text-neutral-400 hover:text-white'}`}>{tab}</button>)}</div>
+        <div role="tablist" data-design-tablist="" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">{['プロジェクトから開始', '対話から開始'].map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => selectStartTab(tab)} className={`h-10 ${tab === 'プロジェクトから開始' ? 'w-[210px]' : 'w-[146px]'} rounded-xl px-0 py-1 text-lg font-medium transition ${activeTab === tab ? 'shadow-sm' : 'text-neutral-400 hover:text-white'}`}>{tab}</button>)}</div>
         {activeTab === '対話から開始' ? (
           <div role="tabpanel" aria-label="対話から開始">
             <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8">
@@ -1710,6 +1724,26 @@ export function LightchainDialogueParityPanel({
   const localPreviewUrlsRef = useRef(new Map<string, string>());
   const prompt = promptState.scopeIdentity === scopeIdentity ? promptState.value : '';
   const selectedScene = selectedSceneState.scopeIdentity === scopeIdentity ? selectedSceneState.value : null;
+  // The unsent prompt and chosen scene survive a reload (the reference images are already kept by the reference controller).
+  const dialogueDraftKey = scopeIdentity ? `heavy:design-dialogue-draft:v1:${scopeIdentity}` : null;
+  const [dialogueDraftRestoredFor, setDialogueDraftRestoredFor] = useState('');
+  useEffect(() => {
+    if (!dialogueDraftKey || dialogueDraftRestoredFor === scopeIdentity) return;
+    setDialogueDraftRestoredFor(scopeIdentity);
+    try {
+      const raw = localStorage.getItem(dialogueDraftKey);
+      const draft = raw ? JSON.parse(raw) as { prompt?: unknown; scene?: unknown } : null;
+      if (typeof draft?.prompt === 'string') setPromptState({ scopeIdentity, value: draft.prompt.slice(0, 4000) });
+      if (typeof draft?.scene === 'string' && dialogueScenes.some(([title]) => title === draft.scene)) setSelectedSceneState({ scopeIdentity, value: draft.scene });
+    } catch { /* storage unavailable or unreadable draft */ }
+  }, [dialogueDraftKey, dialogueDraftRestoredFor, scopeIdentity]);
+  useEffect(() => {
+    if (!dialogueDraftKey || dialogueDraftRestoredFor !== scopeIdentity) return;
+    try {
+      if (prompt || selectedScene) localStorage.setItem(dialogueDraftKey, JSON.stringify({ prompt, scene: selectedScene }));
+      else localStorage.removeItem(dialogueDraftKey);
+    } catch { /* storage unavailable */ }
+  }, [dialogueDraftKey, dialogueDraftRestoredFor, scopeIdentity, prompt, selectedScene]);
   const visibleReferenceSnapshot = referenceState.scopeIdentity === scopeIdentity
     ? referenceState.value
     : EMPTY_DESIGN_DIALOGUE_REFERENCES;
@@ -1978,6 +2012,8 @@ export function LightchainDialogueParityPanel({
       const href = await coordinator.prepare(prompt, manifest);
       const liveAuth = useAuthStore.getState();
       if (scopeGenerationRef.current !== generation || liveAuth.user?.id !== userId || liveAuth.currentBrand?.id !== currentBrandId) return;
+      // The prompt now lives in the created project; do not offer it again as an unsent draft.
+      try { if (dialogueDraftKey) localStorage.removeItem(dialogueDraftKey); } catch { /* storage unavailable */ }
       navigate(href);
     } catch (error) {
       if (scopeGenerationRef.current === generation) {
@@ -2047,10 +2083,16 @@ export function LightchainDialogueParityPanel({
           <p className="mt-[45px] text-sm text-neutral-400">下からデザインシーンを選択してお試しください <span aria-hidden="true">↘</span></p>
           <div className="mt-3 grid w-[960px] grid-cols-4 gap-2" aria-label="デザインシーン" data-testid="design-dialogue-scenes">
             {dialogueScenes.map(([title, scenePrompt]) => (
-              <button key={title} data-testid={`design-dialogue-scene-${title}`} type="button" aria-label={`使ってみる ${title}`} aria-pressed={selectedScene === title} onClick={() => selectScene(title, scenePrompt)} className={`group relative h-[120px] w-[234px] overflow-hidden rounded-2xl border text-left transition hover:border-white/40 ${selectedScene === title ? 'border-white ring-1 ring-white' : 'border-white/10'}`}>
-                <img data-design-dialogue-scene-cover="" src={dialogueSceneCoverByTitle[title]} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover transition-all duration-200 group-hover:blur-[8px]" loading="lazy" />
-                <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
-                <span className="absolute inset-x-3 bottom-2 flex items-end justify-between gap-2 text-left"><span><span className="block text-[10px] leading-4 text-white/80 opacity-0 transition-opacity group-hover:opacity-100">使ってみる</span><span className="block truncate text-base font-medium leading-5 text-white">{title}</span></span><ArrowRight aria-hidden="true" className="mb-0.5 h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></span>
+              // Light: the cover blurs 8px under a 50% black layer with a centred 使ってみる →, and the bottom title fades out; no lasting selected style (only the keyboard focus ring).
+              <button key={title} data-testid={`design-dialogue-scene-${title}`} type="button" aria-label={`使ってみる ${title}`} aria-pressed={selectedScene === title} onClick={() => selectScene(title, scenePrompt)} className="group relative h-[120px] w-[234px] overflow-visible rounded-xl text-left text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-[#5fcfc4]/50">
+                <div className="absolute inset-0 overflow-hidden rounded-xl border border-white/10">
+                  <div className="absolute inset-0"><img data-design-dialogue-scene-cover="" src={dialogueSceneCoverByTitle[title]} alt="" aria-hidden="true" className="h-full w-full object-cover transition-all duration-200 group-hover:blur-[8px]" loading="lazy" /></div>
+                  <div aria-hidden="true" className="absolute inset-0 bg-black/50 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+                  <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100"><span data-design-dialogue-scene-try="" className="whitespace-nowrap text-sm font-medium leading-[21px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]">使ってみる</span><ArrowRight aria-hidden="true" className="h-5 w-5 text-white" /></div>
+                </div>
+                <div className="absolute inset-x-0 bottom-0 rounded-b-xl bg-gradient-to-b from-transparent to-black px-4 py-3 opacity-100 transition-opacity duration-200 group-hover:opacity-0"><p className="truncate text-left text-sm font-medium leading-[21px] text-white">{title}</p></div>
+                {/* Light's tooltip: the scene title 8px under the card while it is hovered or focused. */}
+                <span role="tooltip" className="pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-[60] w-max max-w-[320px] -translate-x-1/2 rounded-md border border-white/10 bg-[#2b2f31] px-3 py-1.5 text-xs font-normal leading-[17.14px] text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">{title}</span>
               </button>
             ))}
           </div>

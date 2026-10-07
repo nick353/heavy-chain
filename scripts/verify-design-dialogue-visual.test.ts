@@ -256,7 +256,7 @@ test('actual dialogue component and stylesheet preserve measured desktop layout 
       assert.equal(await cover.getAttribute('src'), sceneCovers[title as keyof typeof sceneCovers]);
       await assertRect(cover, { x: 231 + index * 242, y: 566, width: 232, height: 118 }, `${title} scene cover`);
       assert.equal(await card.getAttribute('type'), 'button');
-      assert.equal(await card.locator('text=使ってみる').evaluate((element) => getComputedStyle(element).opacity), '0');
+      assert.equal(await card.locator('[data-design-dialogue-scene-try]').evaluate((element) => getComputedStyle(element.parentElement!).opacity), '0');
     }
     for (let index = 0; index < nativeScenePrompts.length; index += 1) {
       await sceneCards.nth(index).click();
@@ -267,7 +267,7 @@ test('actual dialogue component and stylesheet preserve measured desktop layout 
     await page.waitForFunction(() => {
       const card = document.querySelector('[data-testid="design-dialogue-scenes"] > button')!;
       return getComputedStyle(card.querySelector('img')!).filter.includes('blur(8px)')
-        && getComputedStyle(card.querySelector('span span span')!).opacity === '1';
+        && getComputedStyle(card.querySelector('[data-design-dialogue-scene-try]')!.parentElement!).opacity === '1';
     }, undefined, { timeout: 5_000 });
     assert.equal(await sceneCards.nth(0).getAttribute('aria-pressed'), 'false');
     await sceneCards.nth(0).click();
