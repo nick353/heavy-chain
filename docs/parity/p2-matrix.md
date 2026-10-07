@@ -17,16 +17,16 @@ Legend: ✅ evidenced · △ evidenced with a quality issue (see Quality review)
 | fashion-studio | /flow/integration (22) | ai-95b6af64 `fashion-studio-detail-generated-result` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | design-agent | /agent (25) | ai-be119a6a `lightchain-design-agent` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | lab | /flow/laboratory (23) | ai-b55722a0 `lightchain-lab` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| print-design-project | /printing (8) | ai-5aabfebc `lightchain-print-design-project` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | △ |
+| print-design-project | /printing (8) | ai-5aabfebc `lightchain-print-design-project` (+ ai-bba23e61, ai-ed699633, ai-1ac6dced) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | △ |
 | print-design-detail | /editor/patternDesign/detail (8) | ai-7669333b `lightchain-pattern-print-design` (route #8 run) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | fabric-image | /tools/fabric (9) | ai-be179dd6 `lightchain-fabric-image` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | line-generation | /tools/line (11) | ai-101aadd2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | line-to-real | /tools/line-draft-to-tile (11) | ai-959749a0 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | pattern-vector | /tools/pattern-to-vector (12) | ai-f41f75aa | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| pattern-vector-pro | /tools/vector-special (12) | ai-b6dad42d | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | △ |
+| pattern-vector-pro | /tools/vector-special (12) | ai-b6dad42d (+ ai-6395b84a) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | printing-image | /tools/printing (10) | ai-dfa6dbf0 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | image-repair | /tools/reactor (14) | ai-62130895 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| svg-convert | /tools/svg-convert (13) | ai-c900cd58 (+ real SVG export) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | △ |
+| svg-convert | /tools/svg-convert (13) | ai-c900cd58 (+ real SVG export; ai-78733149) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | custom-style | /model-base/style (20) | — non-generation (style_presets row + design_assistant_requests 57c092c1) | ✅ | ✅ | ✅ | — | ✅ | ◻ | — |
 | ai-fitting | /model (18) | ai-f90badcb `model-matrix` (garment + 説明生成 text) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ai-fitting-reference | /model?tab=参考図 (18) | ai-1368e577 `model-matrix` (garment + 参考画像 model, inputImageCount 2) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -34,10 +34,10 @@ Legend: ✅ evidenced · △ evidenced with a quality issue (see Quality review)
 | model-face | (19) head | ai-c56447bb | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | model-change | (19) | ai-80210c48 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | body-shape | (19) body | ai-3e40c8e0 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| clothing-size | (19) size | ai-9b9b85cc | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | △ |
+| clothing-size | (19) size | ai-9b9b85cc (+ ai-91ab68c8, ai-95b8504c) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | pose-change | (19) pose | ai-6e11e91b | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | background-change | (19) background | ai-ba4a5fba | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| angle-change | (19) angle | ai-cb7af975 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | △ |
+| angle-change | (19) angle | ai-cb7af975 (+ ai-5af143da) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | model-custom | /model-library/model-custom-form (19) | ai-f035b13b (tagged `lightchain-model-library`) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ## Open work, in order
@@ -49,4 +49,5 @@ Legend: ✅ evidenced · △ evidenced with a quality issue (see Quality review)
    - lab: first run drew a polo-player-like mark; after PR #14 the re-run (ai-fa8de647) is a simple abstract navy mark → ✅.
    - △ pattern-vector / pattern-vector-pro / svg-convert: the test input had a black background; outputs kept a dark glowing background (and pro drew a T-shirt). Re-run of pattern-vector with a white-background copy (ai-85578203): clean flat colours on white, but the open red arch became a closed ring. After PR #14, the original black-background input (ai-a790ff1d) gives a white background, no glow, and the arch stays open → pattern-vector ✅; pro / svg-convert use the same brief change but were not re-run.
    - △ angle-change: back view has an invented "ANGL." neck label. △ clothing-size: requested bottoms L→XXL; the jeans look unchanged. △ print-design-project ai-5aabfebc: drawn on a hoodie mockup (the later run asks for graphic only).
+   - 2026-10-07 21:00–21:18, after PR #15/#16/#17 (one-line prompt additions): pattern-vector-pro ai-6395b84a — white background, no glow or T-shirt, arch open → ✅. svg-convert first re-run ai-1a6d83c8 drew a jacket and dropped the outer ring; after #15 ai-78733149 is the motif only, outer ring kept, white → ✅. angle-change back view ai-5af143da: plain back, no label → ✅. clothing-size bottoms L→XXL: ai-91ab68c8 visibly looser jeans but added a chest pocket; after #17 ai-95b8504c looser jeans, no pocket → ✅. print-design-project: the mockup issue is gone (ai-bba23e61 and later are graphic-only), but with a black-background reference the output keeps a grey background with glow (ai-ed699633 after #15, ai-1ac6dced after #16; the prompt with pure-white #FFFFFF is confirmed in generated_images.prompt) → still △ (gpt-image-1-mini ignores the background rule for this free-design route).
 5. (c) private-R2 object existence for each `storage_path` (needs R2 read access).

@@ -304,3 +304,13 @@ Each iteration: read this file → advance the next open item → append result 
 - The account owner added OpenAI credit. Same /tools/pattern-to-vector tab, original black-background input: ai-a790ff1d completed (20:21 UTC) — white background, no glow, the open arch kept open. This is also the (f) recovery after the 429 failures (no replay: each earlier request stayed failed).
 - /flow/laboratory/detail: the un-generated upload restored from the draft in a new tab (the first tab's upload confirmation was ambiguous and left unreconciled, not re-uploaded); 依頼 「この白いTシャツを、胸に小さな紺色のワンポイント刺繍がある商品写真にしてください。」 → ai-fa8de647 completed: a simple abstract navy mark, no brand-like logo.
 - p2-matrix: (f) evidenced for every generating row type (input failure on fitting, provider failure + recovery on edit-image); lab and pattern-vector quality ✅. Remaining △ (pro / svg-convert not re-run, angle-change label, clothing-size bottoms, print-design-project mockup) are recorded quality notes.
+
+### Iteration 45 (2026-10-07, /goal) — remaining quality △ rows
+- 変更 (PR nick353/heavy-chain#15): svg-convert does not add a garment to a graphic-only source and keeps every source element; graphic design white background without glow; clothing-size states the selected garment type and asks for a visible size change; angle-change forbids invented labels/tags/logos on unseen faces. (#16): graphic design background as pure white #FFFFFF, not inherited from the reference. (#17): clothing-size keeps other garments unchanged, no new pockets/logos/text/seams. Each confirmed in the served chunk before testing.
+- 検証 (production 1440×900, each D1 heavy_ai_requests completed with one generated_images row, full-size image reviewed):
+  - pattern-vector-pro ai-6395b84a ✅ (input restored in a new tab after an ambiguous upload confirmation; not re-uploaded).
+  - svg-convert ai-1a6d83c8 (before #15: jacket) → ai-78733149 ✅.
+  - angle-change 背面 ai-5af143da ✅. clothing-size bottoms L→XXL ai-91ab68c8 (pocket added) → ai-95b8504c ✅.
+  - print-design-project ai-ed699633 / ai-1ac6dced: graphic only (mockup fixed) but grey background with glow from the black reference → still △.
+- Tests: graphic-design-page 3/3, model-tool-settings-roundtrip 55/55 (= baseline), provider coverage same 2 baseline failures; tsc clean.
+- 残: print-design-project background glow with dark references (prompt confirmed sent; model-side). Consumer-auth deploy awaits the user.
