@@ -85,6 +85,8 @@ export function inspectStaticAsset(relativePath, bytes, declaredContentType = nu
 function staticReferenceFromMatch(match) {
   const value = match[2];
   if (!value.startsWith('/') || value.startsWith('//')) return null;
+  // Template literals such as `/x-${n}.png` are dynamic; they are not guessed here.
+  if (value.includes('${')) return null;
   const withoutQuery = value.split(/[?#]/, 1)[0];
   const extension = path.extname(withoutQuery).toLowerCase();
   return STATIC_REFERENCE_EXTENSIONS.has(extension) ? withoutQuery : null;
