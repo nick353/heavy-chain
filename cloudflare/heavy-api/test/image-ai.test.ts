@@ -1,11 +1,45 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
 import { IMAGE_MODEL, decodeImage, parseImageInput, imageEstimate } from '../src/image-ai-contracts.ts';
-import { imageSetup, pngFixture } from './image-ai-fixture.ts';
+import { imageSetup, pngFixture, TEST_HEAVY_DOCUMENT_DIGEST, TEST_HEAVY_DOCUMENT_VERSION, TEST_HEAVY_RIGHTS_VERSION } from './image-ai-fixture.ts';
 import { PROTECTED_IMAGE_EDIT_MODE,protectedImageDigest,protectedImageSaveRequestId } from '../../../src/lib/protectedImageEditContract.ts';
 type Json=Record<string,any>;
 const url='/v1/provider-actions/';
 const json=async(response: Response) => { const result=await response.json() as Json; assert.equal(response.status,200,JSON.stringify(result)); return result; };
+const jpegHeaderFixture=(index=0) => new Uint8Array([255,216,255,192,0,8,8,0,8,0,8+index,3,255,217]);
+const fiveOrderedReferences=() => [
+  ...[0,1,2,3].map(index => ({ bytes:jpegHeaderFixture(index), contentType:'image/jpeg', width:8+index, height:8 })),
+  { bytes:pngFixture(8,8,[180,30,20]), contentType:'image/png', width:8, height:8 },
+];
+const referenceDataUrl=(reference: { bytes:Uint8Array; contentType:string }) =>
+  `data:${reference.contentType};base64,${Buffer.from(reference.bytes).toString('base64')}`;
+
+test('ordinary workspace sources resolve server checksum for new and legacy uploads without trusting client metadata', async t => {
+  const s=imageSetup(); t.after(()=>s.db.sql.close()); s.setAutoProvisionEntitlement(false);
+  const sourceData='data:image/png;base64,'+Buffer.from(s.output).toString('base64');
+  const saved=await json(await s.call('/v1/workspace-artifacts','alice',{
+    requestId:crypto.randomUUID(),brandId:'brand',featureType:'design-gacha',title:'reference',imageUrl:sourceData,
+    metadata:{contentSha256:'f'.repeat(64)},
+  }));
+  const imageId=saved.remote.imageId;
+  const metadata=JSON.parse(String(s.db.sql.prepare('SELECT metadata FROM generated_images WHERE id=?').get(imageId)!.metadata));
+  assert.notEqual(metadata.contentSha256,'f'.repeat(64));
+  assert.equal(metadata.contentSha256,s.bucket.rows.get(saved.remote.storagePath)!.customMetadata.sha256);
+  // Simulate the actual old ordinary-upload row, whose checksum lived only in R2.
+  s.db.sql.prepare('UPDATE generated_images SET metadata=? WHERE id=?').run('{}',imageId);
+  const input={...s.input(),count:1,imageUrls:[sourceData],sourceReadback:{sourceImageId:imageId}};
+  const id=crypto.randomUUID();
+  const result=await json(await s.call(url+'generate-image','alice',input,id));
+  assert.equal(result.state,'completed'); assert.equal(s.calls.length,1);
+  await json(await s.call('/v1/image-ai/requests/'+id,'alice'));
+  assert.equal(s.calls.length,1);
+  const foreign={...input,sourceReadback:{sourceImageId:imageId}};
+  assert.equal((await s.call(url+'generate-image','bob',foreign,crypto.randomUUID())).status,409);
+  assert.equal(s.calls.length,1);
+  s.bucket.rows.get(saved.remote.storagePath)!.customMetadata.sha256='invalid';
+  assert.equal((await s.call(url+'generate-image','alice',input,crypto.randomUUID())).status,409);
+  assert.equal(s.calls.length,1);
+});
 
 async function protectedFixture(s: ReturnType<typeof imageSetup>,count=1) {
   const data='data:image/png;base64,'+Buffer.from(s.output).toString('base64');
@@ -164,6 +198,36 @@ test('real SQLite/R2 contract: generation result, quota, private content, Galler
   assert.equal(usage.providerBilling,null); assert.equal(usage.accountFreeAllocationRemaining,null);
 });
 
+test('provider omission defaults to OpenAI, and a missing key fails before admission or provider calls',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close()); delete s.env.AI_IMAGE_PROVIDER;
+  const providerImage=pngFixture(1024,1024,[40,120,80]); const originalFetch=globalThis.fetch; let providerCalls=0;
+  globalThis.fetch=async(input: RequestInfo|URL, init?: RequestInit) => {
+    providerCalls++; assert.equal(String(input),'https://api.openai.com/v1/images/generations');
+    assert.equal(init?.headers && new Headers(init.headers).get('authorization'),'Bearer server-only-test-key');
+    return Response.json({data:[{b64_json:Buffer.from(providerImage).toString('base64'),mime_type:'image/png'}]},
+      {headers:{'x-request-id':'req-openai-default-fixture'}});
+  };
+  try {
+    const missing=await s.call(url+'generate-image','alice',s.input(),crypto.randomUUID());
+    assert.equal(missing.status,503); assert.deepEqual(await missing.json(),{success:false,error:'openai_image_api_key_missing'});
+    assert.equal(providerCalls,0); assert.equal(s.calls.length,0);
+    assert.equal(s.db.sql.prepare('SELECT COUNT(*) AS n FROM heavy_ai_requests').get()!.n,0);
+    s.env.OPENAI_API_KEY='server-only-test-key';
+    const result=await json(await s.call(url+'generate-image','alice',{...s.input(),generationModel:'gpt-image-1-mini'},crypto.randomUUID()));
+    assert.equal(result.provider,'openai'); assert.equal(result.backendProvider,'openai-images-api');
+    assert.equal(result.images[0].providerTaskId,'req-openai-default-fixture'); assert.equal(providerCalls,1); assert.equal(s.calls.length,0);
+  } finally { globalThis.fetch=originalFetch; }
+});
+
+test('explicit Workers AI remains available, while a mismatched provider is rejected',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  const worker=await json(await s.call(url+'generate-image','alice',{...s.input(),generationProvider:'workers_ai'},crypto.randomUUID()));
+  assert.equal(worker.provider,'workers_ai'); assert.equal(worker.backendProvider,'cloudflare-workers-ai'); assert.equal(s.calls.length,1);
+  delete s.env.AI_IMAGE_PROVIDER;
+  const mismatch=await s.call(url+'generate-image','alice',{...s.input(),generationProvider:'workers_ai'},crypto.randomUUID());
+  assert.equal(mismatch.status,422); assert.deepEqual(await mismatch.json(),{success:false,error:'image_provider_not_enabled'}); assert.equal(s.calls.length,1);
+});
+
 test('OpenAI provider uses the same authenticated admission, R2 persistence, receipt and Gallery provenance',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close());
   s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_MODEL='gpt-image-1-mini';
@@ -188,6 +252,124 @@ test('OpenAI provider uses the same authenticated admission, R2 persistence, rec
   } finally { globalThis.fetch=originalFetch; }
 });
 
+test('configured OpenAI accepts five ordered references and forwards exact multipart files',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_EDIT_MODEL='gpt-image-1-mini';
+  const references=fiveOrderedReferences(); const originalFetch=globalThis.fetch; let providerCalls=0;
+  globalThis.fetch=async(_input: RequestInfo|URL, init?: RequestInit) => {
+    providerCalls++;
+    assert.equal(new Headers(init?.headers).get('authorization'),'Bearer server-only-test-key');
+    const form=init?.body as FormData;
+    const files=form.getAll('image[]'); assert.equal(files.length,5);
+    for(const [index,value] of files.entries()) {
+      assert(value instanceof File);
+      const jpeg=index<4; assert.equal(value.name,`reference-${index+1}.${jpeg?'jpg':'png'}`);
+      assert.equal(value.type,jpeg?'image/jpeg':'image/png');
+      assert.deepEqual(new Uint8Array(await value.arrayBuffer()),references[index].bytes);
+    }
+    return Response.json({data:[{b64_json:Buffer.from(pngFixture(1024,1024,[40,120,80])).toString('base64'),mime_type:'image/png'}]},
+      {headers:{'x-request-id':'req-openai-five-reference-fixture'}});
+  };
+  try {
+    const result=await json(await s.call(url+'edit-image','alice',{
+      ...s.input(), imageUrls:references.map(referenceDataUrl), generationProvider:'openai', generationModel:'gpt-image-1-mini',
+    },crypto.randomUUID()));
+    assert.equal(result.success,true); assert.equal(result.provider,'openai'); assert.equal(providerCalls,1);
+    assert.equal(s.calls.length,0); assert.equal(s.db.sql.prepare('SELECT count(*) n FROM heavy_ai_requests').get()!.n,1);
+  } finally { globalThis.fetch=originalFetch; }
+});
+
+test('configured OpenAI rejects seventeen references before preparation, admission, or provider fetch',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_EDIT_MODEL='gpt-image-1-mini';
+  const reference=referenceDataUrl(fiveOrderedReferences()[0]); let providerCalls=0; const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>{ providerCalls++; throw new Error('provider_fetch_must_not_run'); };
+  try {
+    const response=await s.call(url+'edit-image','alice',{
+      ...s.input(), imageUrls:Array(17).fill(reference), generationProvider:'openai', generationModel:'gpt-image-1-mini',
+    },crypto.randomUUID());
+    assert.equal(response.status,422); assert.deepEqual(await response.json(),{success:false,error:'image_reference_count_not_supported'});
+    assert.equal(providerCalls,0); assert.equal(s.db.sql.prepare('SELECT count(*) n FROM heavy_ai_requests').get()!.n,0);
+    assert.equal(s.db.sql.prepare('SELECT count(*) n FROM heavy_generation_preparations').get()!.n,0);
+  } finally { globalThis.fetch=originalFetch; }
+});
+
+test('Workers AI stays capped at four and caller provider spoofing cannot bypass its configured provider',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close()); s.env.AI_IMAGE_PROVIDER='workers_ai';
+  const reference=referenceDataUrl(fiveOrderedReferences()[0]);
+  const tooMany=await s.call(url+'edit-image','alice',{...s.input(),imageUrls:Array(5).fill(reference)},crypto.randomUUID());
+  assert.equal(tooMany.status,422); assert.deepEqual(await tooMany.json(),{success:false,error:'image_reference_count_not_supported'});
+  const spoof=await s.call(url+'edit-image','alice',{
+    ...s.input(),imageUrls:[reference],generationProvider:'openai',generationModel:'gpt-image-1-mini',
+  },crypto.randomUUID());
+  assert.equal(spoof.status,422); assert.deepEqual(await spoof.json(),{success:false,error:'image_provider_not_enabled'});
+  const unknown=await s.call(url+'generate-image','alice',{...s.input(),generationProvider:'mock'},crypto.randomUUID());
+  assert.equal(unknown.status,422); assert.deepEqual(await unknown.json(),{success:false,error:'image_provider_not_supported'});
+  assert.equal(s.calls.length,0); assert.equal(s.db.sql.prepare('SELECT count(*) n FROM heavy_ai_requests').get()!.n,0);
+});
+
+test('five-reference preparation, attestation digest binding, and final admission use the same trusted OpenAI context',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close()); s.setAutoProvisionEntitlement(false);
+  s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_EDIT_MODEL='gpt-image-1-mini';
+  const references=fiveOrderedReferences(); const requestId=crypto.randomUUID();
+  const input={...s.input(),imageUrls:references.map(referenceDataUrl),generationProvider:'openai',generationModel:'gpt-image-1-mini',seed:172903};
+  const prepared=await json(await s.call('/v1/heavy/entitlement/prepare','alice',{
+    brandId:'brand',action:'edit-image',requestId,input,
+  }));
+  const attested=await json(await s.call('/v1/heavy/entitlement/attestation','alice',{
+    brandId:'brand',action:'edit-image',requestId,preparationId:prepared.preparationId,inputDigest:prepared.inputDigest,
+    termsAccepted:true,rightsAttested:true,rightsVersion:TEST_HEAVY_RIGHTS_VERSION,
+    termsDocumentVersion:TEST_HEAVY_DOCUMENT_VERSION,termsDocumentDigest:TEST_HEAVY_DOCUMENT_DIGEST,
+    rightsDocumentVersion:TEST_HEAVY_DOCUMENT_VERSION,rightsDocumentDigest:TEST_HEAVY_DOCUMENT_DIGEST,input,
+  }));
+  assert.equal(attested.success,true); assert.equal(attested.inputDigest,prepared.inputDigest);
+
+  const mismatch=await s.call(url+'edit-image','alice',{
+    ...input,preparationId:prepared.preparationId,inputDigest:'f'.repeat(64),
+  },requestId);
+  assert.equal(mismatch.status,409); assert.deepEqual(await mismatch.json(),{success:false,error:'heavy_input_digest_mismatch'});
+  assert.equal(s.db.sql.prepare('SELECT count(*) n FROM heavy_ai_requests').get()!.n,0);
+
+  const originalFetch=globalThis.fetch; let providerCalls=0;
+  globalThis.fetch=async(_input:RequestInfo|URL,init?:RequestInit)=>{
+    providerCalls++; assert.equal((init?.body as FormData).getAll('image[]').length,5);
+    return Response.json({data:[{b64_json:Buffer.from(pngFixture(1024,1024,[40,120,80])).toString('base64'),mime_type:'image/png'}]},
+      {headers:{'x-request-id':'req-openai-prepared-five-reference-fixture'}});
+  };
+  try {
+    const admitted=await json(await s.call(url+'edit-image','alice',{
+      ...input,preparationId:prepared.preparationId,inputDigest:prepared.inputDigest,
+    },requestId));
+    assert.equal(admitted.success,true); assert.equal(providerCalls,1);
+    assert.equal(s.db.sql.prepare('SELECT count(*) n FROM heavy_ai_requests').get()!.n,1);
+  } finally { globalThis.fetch=originalFetch; }
+});
+
+test('completed Heavy receipts remain readable after the short-lived preparation expires',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_API_KEY='server-only-test-key'; s.env.OPENAI_IMAGE_MODEL='gpt-image-1-mini';
+  const providerImage=pngFixture(1024,1024,[40,120,80]); const originalFetch=globalThis.fetch;
+  globalThis.fetch=async() => Response.json({data:[{b64_json:Buffer.from(providerImage).toString('base64'),mime_type:'image/png'}]}, {headers:{'x-request-id':'req-openai-expiry-fixture'}});
+  try {
+    const id=crypto.randomUUID();
+    const result=await json(await s.call(url+'generate-image','alice',{...s.input(),generationProvider:'openai',generationModel:'gpt-image-1-mini'},id));
+    assert.equal(result.success,true);
+    const originalNow=Date.now;
+    Date.now=()=>originalNow()+10*60*1000;
+    try {
+      const receipt=await s.call(`/v1/image-ai/requests/${id}`,'alice');
+      assert.equal(receipt.status,200,await receipt.clone().text());
+      const body=await receipt.json() as Json;
+      assert.equal(body.success,true); assert.equal(body.persistenceStatus,'completed'); assert.equal(body.requestId,id);
+    } finally { Date.now=originalNow; }
+  } finally { globalThis.fetch=originalFetch; }
+});
+
+const fittingFramingInstruction='Frame the entire person from the top of the head through both feet, with visible margin above the head and below the feet. Keep both feet and all limbs inside the image; do not crop at the torso, thighs, knees or ankles. Use wider camera framing as needed, including when a supplied person reference is cropped.';
+const fittingGarmentInstruction='Dress the person in EXACTLY the garment in image 0. Preserve its color, print, fabric, pockets, fastenings, proportions and logos; do not substitute a similar item.';
+const fittingGarmentAdditionProhibition='Do not add garment features, decorations or logos absent from image 0.';
+const fittingPersonInstruction='Image 1 is the person reference: preserve their face, hairstyle, pose direction and identity while applying the selected fit and adult age context.';
+
 test('image editing passes each ordered reference as binary multipart, preserves lineage and never exposes URLs/secrets',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close()); const first=pngFixture(128,64); const second=pngFixture(64,128,[180,30,20]);
   const references=[first,second].map(bytes=>'data:image/png;base64,'+Buffer.from(bytes).toString('base64'));
@@ -202,28 +384,12 @@ test('image editing passes each ordered reference as binary multipart, preserves
   assert.doesNotMatch(stored,/private.invalid|do-not-store|data:image|Bearer/); assert.match(stored,/generated-images\/original/);
 });
 
-test('fitting yields all selected adult/body combinations and durable reconstructible metadata',async t=>{
-  const s=imageSetup(); t.after(()=>s.db.sql.close());
-  const ref='data:image/png;base64,'+Buffer.from(s.output).toString('base64');
-  const result=await json(await s.call(url+'model-matrix','alice',{...s.input(),productDescription:'blue cotton shirt',imageUrl:ref,modelReferenceImageUrl:ref,
-    bodyTypes:['regular'],ageGroups:['20s','30s','40s'],gender:'male',skinTone:'medium',hairStyle:'short',
-    modelReferenceSourceImageId:'person-source',modelReferenceSourceStoragePath:'generated-images/person-source'},crypto.randomUUID()));
-  assert.equal(result.success,true); assert.deepEqual(result.matrix.map((v:Json)=>v.ageGroup),['20s','30s','40s']);
-  assert.equal(result.matrix[0].bodyTypeName,'レギュラー');
-  assert.match(String(s.calls[0].form.get('prompt')),/EXACTLY the garment in image 0/); assert.match(String(s.calls[0].form.get('prompt')),/Image 1 is the person reference/);
-  for(const row of s.db.sql.prepare('SELECT metadata FROM generated_images').all()) {
-    const metadata=JSON.parse(row.metadata as string); assert.equal(metadata.feature,'model-matrix'); assert.equal(metadata.backendProvider,'cloudflare-workers-ai');
-    assert.equal(metadata.bodyTypes[0],'regular'); assert.equal(metadata.persistenceStatus,'completed');
-    assert.equal(metadata.modelReferenceSourceStoragePath,'generated-images/person-source'); assert.equal(metadata.modelReferenceImageUrl,'[provided]');
-  }
-});
-
 test('rights, current role, unsupported masks/models and oversized/extra references stop before inference',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close());
   assert.equal((await s.call(url+'generate-image','',s.input(),crypto.randomUUID())).status,401);
   assert.equal((await s.call(url+'generate-image','viewer',s.input(),crypto.randomUUID())).status,403);
   assert.equal((await s.call(url+'generate-image','other',s.input(),crypto.randomUUID())).status,403);
-  for(const change of [{legalSafety:{rightsConfirmed:false}},{maskApplied:true},{outputBackground:'transparent'},
+  for(const change of [{maskApplied:true},{outputBackground:'transparent'},
     {generationModel:'gpt-image-1'},{generationProvider:'mock'},{prompt:'copy the Nike logo'}]) {
     const response=await s.call(url+'generate-image','alice',{...s.input(),...change},crypto.randomUUID()); assert([403,422].includes(response.status));
   }
@@ -233,6 +399,25 @@ test('rights, current role, unsupported masks/models and oversized/extra referen
   assert.throws(()=>decodeImage('data:image/png;base64,'+Buffer.from(pngFixture(520,256)).toString('base64')),/512px/);
   assert.throws(()=>decodeImage(Buffer.from(s.output.subarray(0,33)).toString('base64'),false),/invalid_image_bytes/);
   assert.equal(s.calls.length,0); assert.equal(s.db.sql.prepare('SELECT count(*) AS n FROM heavy_ai_requests').get()!.n,0);
+});
+
+test('authenticated Heavy generation does not require a rights declaration or entitlement row', async t => {
+  const s=imageSetup(); t.after(() => s.db.sql.close());
+  const input = { ...s.input() } as Record<string, unknown>;
+  delete input.legalSafety;
+  s.setAutoProvisionEntitlement(false);
+  s.env.HEAVY_IMAGE_ENTITLEMENT_ENABLED = 'false';
+  const response = await s.call(url + 'generate-image', 'alice', input, crypto.randomUUID());
+  assert.equal(response.status, 200, await response.clone().text());
+  const result = await response.json() as Json;
+  assert.equal(result.success, true);
+  assert.equal(result.persistenceStatus, 'completed');
+  assert.equal(s.calls.length, 1);
+  assert.equal(s.bucket.puts, 1);
+  const stored = s.db.sql.prepare('SELECT terms_acceptance_id,rights_attestation_id,request_binding FROM heavy_ai_requests LIMIT 1').get() as Record<string, unknown>;
+  assert.equal(stored.terms_acceptance_id, null);
+  assert.equal(stored.rights_attestation_id, null);
+  assert.equal(stored.request_binding, null);
 });
 
 test('concurrent identical submissions share one atomic admission and one inference',async t=>{
@@ -342,3 +527,159 @@ test('invalid model pixels do not become a successful result or a zero-cost invo
   assert.equal(result.usage.unknownEstimateCount,1); assert.equal(result.usage.estimatedMicroUSD,null); assert.equal(s.bucket.puts,0);
   const parsed=parseImageInput('generate-image',s.input()); assert.deepEqual(imageEstimate(parsed),{microUSD:287,neurons:26.05});
 });
+
+const openAIObservationSetup = (t: TestContext, timeout = '180000') => {
+  const s = imageSetup(); const originalFetch = globalThis.fetch;
+  s.setAutoProvisionEntitlement(false);
+  s.env.AI_IMAGE_PROVIDER = 'openai'; s.env.OPENAI_IMAGE_API_KEY = 'local-observation-key';
+  s.env.OPENAI_IMAGE_MODEL = 'gpt-image-1-mini'; s.env.AI_IMAGE_TIMEOUT_MS = timeout;
+  t.after(() => { globalThis.fetch = originalFetch; s.db.sql.close(); });
+  return s;
+};
+const openAIObservationResponse = () => Response.json({data:[{b64_json:Buffer.from(pngFixture(1024,1024)).toString('base64')}]},
+  {headers:{'x-request-id':'req-local-observation'}});
+
+test('OpenAI observes a connected edit beyond 90s and persists once with GET and same-ID recovery', async t => {
+  const s = openAIObservationSetup(t);
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-10-01T00:00:00Z')});
+  let entered!: () => void; const arrived = new Promise<void>(resolve => { entered = resolve; });
+  let calls = 0; let endpoint = '';
+  globalThis.fetch = async (input) => {
+    calls++; endpoint = String(input); entered();
+    return new Promise(resolve => setTimeout(() => resolve(openAIObservationResponse()),120000));
+  };
+  const id = crypto.randomUUID(); const input = {...s.input(),imageUrls:[referenceDataUrl(fiveOrderedReferences()[0])]};
+  const pending = s.call(url+'edit-image','alice',input,id); await arrived;
+  t.mock.timers.tick(90001);
+  assert.equal((await json(await s.call('/v1/image-ai/requests/'+id))).state,'running');
+  assert.equal((await json(await s.call(url+'edit-image','alice',input,id))).state,'running');
+  assert.equal(calls,1); assert.equal(s.bucket.puts,0);
+  t.mock.timers.tick(29999);
+  const result = await json(await pending); assert.equal(result.success,true); assert.equal(result.persistenceStatus,'completed');
+  assert.equal(endpoint,'https://api.openai.com/v1/images/edits'); assert.equal(calls,1); assert.equal(s.bucket.puts,1);
+  assert.equal(s.db.sql.prepare('SELECT latency_ms FROM heavy_ai_candidates WHERE request_id=?').get(id)!.latency_ms,120000);
+  assert.equal(s.db.sql.prepare('SELECT count(*) n FROM generated_images').get()!.n,1);
+  await json(await s.call('/v1/image-ai/requests/'+id)); await json(await s.call(url+'edit-image','alice',input,id));
+  assert.equal(calls,1); assert.equal(s.bucket.puts,1);
+});
+
+test('OpenAI serial candidates retain their own observation window and the same-owner admission fence past 210s', async t => {
+  const s = openAIObservationSetup(t);
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-10-01T00:00:00Z')});
+  const release: Array<() => void> = []; const entered: Array<() => void> = [];
+  const arrivals = [0,1].map(index => new Promise<void>(resolve => { entered[index] = resolve; }));
+  let calls = 0;
+  globalThis.fetch = async () => { const index = calls++; return new Promise(resolve => {
+    release[index] = () => resolve(openAIObservationResponse()); entered[index]();
+  }); };
+  const id = crypto.randomUUID(); const input = {...s.input(),count:2};
+  const pending = s.call(url+'generate-image','alice',input,id); await arrivals[0];
+  t.mock.timers.tick(120000); release[0](); await arrivals[1];
+  t.mock.timers.tick(90001);
+  const receipt = await json(await s.call('/v1/image-ai/requests/'+id));
+  assert.equal(receipt.state,'running'); assert.equal(receipt.persistedCandidateCount,1);
+  assert.equal((await s.call(url+'generate-image','alice',s.input(),crypto.randomUUID())).status,429);
+  assert.equal((await json(await s.call(url+'generate-image','alice',input,id))).state,'running');
+  assert.equal(calls,2);
+  t.mock.timers.tick(89998); release[1]();
+  const result = await json(await pending); assert.equal(result.success,true); assert.equal(result.persistedCandidateCount,2);
+  assert.equal(calls,2); assert.equal(s.bucket.puts,2);
+});
+
+test('OpenAI 180s timeout is sanitized, stops the batch and never adopts a late provider result or rewrites terminal unknown', async t => {
+  const s = openAIObservationSetup(t);
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-10-01T00:00:00Z')});
+  let release!: () => void; let entered!: () => void;
+  const arrived = new Promise<void>(resolve => { entered = resolve; }); let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Promise(resolve => { release = () => resolve(openAIObservationResponse()); entered(); }); };
+  const id = crypto.randomUUID(); const input = {...s.input(),count:3};
+  const pending = s.call(url+'generate-image','alice',input,id); await arrived;
+  t.mock.timers.tick(179999); assert.equal((await json(await s.call('/v1/image-ai/requests/'+id))).state,'running');
+  t.mock.timers.tick(1); const result = await json(await pending);
+  assert.equal(result.state,'unknown'); assert.equal(result.error,'image_provider_timeout');
+  assert.equal(result.usage.attemptedImages,1); assert.equal(result.usage.unknownEstimateCount,1);
+  const snapshot = () => ({
+    request:s.db.sql.prepare('SELECT * FROM heavy_ai_requests WHERE request_id=?').get(id),
+    candidates:s.db.sql.prepare('SELECT * FROM heavy_ai_candidates WHERE request_id=? ORDER BY candidate_index').all(id),
+    job:s.db.sql.prepare('SELECT * FROM generation_jobs WHERE id=?').get('ai-'+id),
+  });
+  const before = snapshot(); release(); t.mock.timers.tick(500000);
+  await json(await s.call('/v1/image-ai/requests/'+id)); await json(await s.call(url+'generate-image','alice',input,id));
+  assert.deepEqual(snapshot(),before); assert.equal(calls,1); assert.equal(s.bucket.puts,0);
+});
+
+test('stale GET expires an abandoned OpenAI observation without letting a late connected result overwrite unknown or reach R2', async t => {
+  const s = openAIObservationSetup(t); const now = Date.parse('2026-10-01T00:00:00Z');
+  t.mock.timers.enable({apis:['Date','setTimeout'],now});
+  let release!: () => void; let entered!: () => void; let calls = 0;
+  const arrived = new Promise<void>(resolve => { entered = resolve; });
+  globalThis.fetch = async () => { calls++; return new Promise(resolve => { release = () => resolve(openAIObservationResponse()); entered(); }); };
+  const id = crypto.randomUUID(); const input = {...s.input(),count:2};
+  const pending = s.call(url+'generate-image','alice',input,id); await arrived;
+  // Advance only the wall clock to model a suspended/delayed timer callback.
+  t.mock.timers.setTime(now+210001);
+  const stale = await json(await s.call('/v1/image-ai/requests/'+id));
+  assert.equal(stale.state,'unknown'); assert.equal(stale.error,'image_outcome_unknown');
+  const snapshot = () => ({request:s.db.sql.prepare('SELECT * FROM heavy_ai_requests WHERE request_id=?').get(id),
+    candidates:s.db.sql.prepare('SELECT * FROM heavy_ai_candidates WHERE request_id=? ORDER BY candidate_index').all(id)});
+  const before = snapshot(); t.mock.timers.setTime(now+220000); release();
+  const late = await json(await pending); assert.equal(late.state,'unknown'); assert.equal(late.error,'image_outcome_unknown');
+  assert.deepEqual(snapshot(),before); assert.equal(calls,1); assert.equal(s.bucket.puts,0);
+  assert.equal(s.db.sql.prepare('SELECT count(*) n FROM generated_images').get()!.n,0);
+});
+
+test('provider-specific timeout bounds preserve Workers AI defaults and 90s support', async t => {
+  const cases: Array<[string,string | undefined,number]> = [
+    ['workers_ai',undefined,45000], ['workers_ai','90000',90000], ['workers_ai','180000',90000], ['workers_ai','180001',45000], ['openai','180001',45000],
+  ];
+  for (const [provider,configured,timeout] of cases) await t.test(`${provider}:${configured ?? 'default'}`, async t => {
+    const s = openAIObservationSetup(t,configured); s.env.AI_IMAGE_PROVIDER = provider; s.env.AI_IMAGE_TIMEOUT_MS = configured;
+    t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-10-01T00:00:00Z')});
+    let entered!: () => void; const arrived = new Promise<void>(resolve => { entered = resolve; }); let calls = 0;
+    const pendingProvider = async () => { calls++; entered(); return new Promise<never>(() => {}); };
+    globalThis.fetch = pendingProvider; s.setHook(pendingProvider);
+    const id = crypto.randomUUID(); const pending = s.call(url+'generate-image','alice',s.input(),id); await arrived;
+    t.mock.timers.tick(timeout-1); assert.equal((await json(await s.call('/v1/image-ai/requests/'+id))).state,'running');
+    t.mock.timers.tick(1); const result = await json(await pending);
+    assert.equal(result.state,'unknown'); assert.equal(result.error,provider === 'openai' ? 'image_provider_timeout' : 'image_outcome_unknown');
+    assert.equal(calls,1); assert.equal(s.bucket.puts,0);
+  });
+});
+
+test('OpenAI error receipts keep unusable output uncertain, fail explicit rejections and preserve safe diagnostics without reinference', async t => {
+  const secret = 'local-observation-key private-prompt';
+  const headers = {'x-request-id':'req-local-error'};
+  const cases: Array<[() => Promise<Response>,string,string,Json]> = [
+    [async () => { throw new Error(secret); },'unknown','image_provider_transport_uncertain',{category:'transport_uncertainty'}],
+    [async () => Response.json({error:{type:'invalid_request_error',message:secret,code:secret}},{status:503,headers}),
+      'unknown','image_provider_transport_uncertain',{category:'transport_uncertainty',status:503,providerRequestId:'req-local-error'}],
+    [async () => Response.json({error:{type:'invalid_request_error',message:secret,code:'content_policy_violation'}},{status:400,headers}),
+      'failed','image_provider_request_rejected',{category:'request_rejected',status:400,providerCode:'content_policy_violation',providerRequestId:'req-local-error'}],
+    [async () => Response.json({data:[]},{headers}),'unknown','image_provider_invalid_output',{category:'unusable_response',status:200,providerRequestId:'req-local-error'}],
+    [async () => Response.json({data:[{b64_json:Buffer.from(pngFixture(8,8)).toString('base64')}]},{headers}),
+      'unknown','image_provider_invalid_output',{category:'unusable_response',status:200,providerRequestId:'req-local-error'}],
+  ];
+  for (const [respond,state,error,diagnostics] of cases) await t.test(error+':'+state, async t => {
+    const s = openAIObservationSetup(t); let calls = 0;
+    globalThis.fetch = async () => { calls++; return respond(); };
+    const id = crypto.randomUUID(); const input = {...s.input(),count:2};
+    const result = await json(await s.call(url+'generate-image','alice',input,id));
+    assert.equal(result.success,false); assert.equal(result.state,state); assert.equal(result.error,error);
+    assert.equal(result.usage.attemptedImages,1); assert(!JSON.stringify(result).includes(secret));
+    await json(await s.call('/v1/image-ai/requests/'+id)); await json(await s.call(url+'generate-image','alice',input,id));
+    assert.equal(calls,1); assert.equal(s.bucket.puts,0); assert.equal(s.db.sql.prepare('SELECT count(*) n FROM generated_images').get()!.n,0);
+    const stored = s.db.sql.prepare('SELECT error_code,descriptor FROM heavy_ai_candidates WHERE request_id=? ORDER BY candidate_index').all(id);
+    assert(!JSON.stringify(stored).includes(secret));
+    assert.deepEqual(JSON.parse(stored[0].descriptor as string).providerError,diagnostics);
+  });
+});
+
+async function nativeFixture(s: ReturnType<typeof imageSetup>) {
+  const f=await protectedFixture(s);const data='data:image/png;base64,'+Buffer.from(pngFixture(128,256)).toString('base64');
+  const native={version:'native-print-contain-v1',original:{width:128,height:256,digest:await protectedImageDigest(data),digestScheme:'sha256-data-url-utf8-v1'},
+    stage:{width:256,height:256,primaryDigest:f.plan.sourceSha256,maskDigest:f.plan.maskSha256},frame:{x:64,y:0,width:128,height:256},
+    printingSnapshotDigest:await protectedImageDigest(JSON.stringify([f.plan.sourceSha256,f.plan.maskSha256,'a'.repeat(64)])),candidateGeometry:{version:'stage-frame-v1',width:256,height:256}};
+  const input={...f.input,featureType:'lightchain-printing-image',width:256,height:256,nativePrintFinalFrame:native};
+  const final=async()=>({...await f.finalInput(),featureType:input.featureType,imageUrl:data,metadata:{nativePrintFinalFrame:native}});
+  return {...f,input,native,final};
+}

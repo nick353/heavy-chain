@@ -60,7 +60,7 @@ class DomainDb {
       user.updated_at = String(values[values.length - 2]);
       return 1;
     }
-    if (normalized.includes("insert into brands")) {
+    if (normalized.includes("into brands")) {
       const [id, ownerId, name, logoUrl, colors, tone, audience, createdAt, updatedAt] = values;
       this.brands.set(String(id), {
         id: String(id), owner_id: String(ownerId), name: String(name), logo_url: logoUrl as string | null,
@@ -127,6 +127,25 @@ test("profile and brand access require a mapped identity", async () => {
   assert.equal((await json<Array<{ id: string }>>(brands))[0].id, "brand-1");
   const unmapped = await handleRequest(request("GET", "/v1/brands", "bob"), env(db));
   assert.equal(unmapped.status, 403);
+});
+
+test("an authenticated user without a brand receives one deterministic personal scope", async () => {
+  const db = new DomainDb();
+  seed(db, "alice");
+
+  const first = await handleRequest(request("GET", "/v1/brands", "alice"), env(db));
+  assert.equal(first.status, 200);
+  const firstRows = await json<Array<{ id: string; owner_id: string; name: string; role: string }>>(first);
+  assert.equal(firstRows.length, 1);
+  assert.match(firstRows[0].id, /^personal-[0-9a-f]{64}$/);
+  assert.equal(firstRows[0].owner_id, "alice");
+  assert.equal(firstRows[0].name, "Heavy Chain");
+  assert.equal(firstRows[0].role, "owner");
+
+  const second = await handleRequest(request("GET", "/v1/brands", "alice"), env(db));
+  const secondRows = await json<Array<{ id: string }>>(second);
+  assert.deepEqual(secondRows.map((row) => row.id), firstRows.map((row) => row.id));
+  assert.equal(db.brands.size, 1);
 });
 
 test("brand creation is scoped to the mapped owner", async () => {

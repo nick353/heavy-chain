@@ -191,7 +191,7 @@ test("health is public and reports the isolated service", async () => {
   const { env } = makeEnv();
   const response = await handleRequest(request("GET", "/v1/health"), env);
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { status: "ok", service: "heavy-api", media: "private-r2" });
+  assert.deepEqual(await response.json(), { status: "ok", service: "heavy-api", media: "private-r2", heavyEntitlementEnabled: false });
 });
 
 test("browser CORS is exact-origin and supports authenticated preflight", async () => {

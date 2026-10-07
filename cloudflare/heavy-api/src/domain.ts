@@ -169,7 +169,7 @@ async function updateProfile(request: Request, env: DomainEnv): Promise<Response
 async function listBrands(request: Request, env: DomainEnv): Promise<Response> {
   const id = await principal(request, env);
   if (id instanceof Response) return id;
-  const result = await env.DB.prepare(
+  const list = () => env.DB.prepare(
     `SELECT b.id, b.owner_id, b.name, b.logo_url, b.brand_colors_json,
       b.tone_description, b.target_audience,
       CASE WHEN b.owner_id = ? THEN 'owner' ELSE bm.role END AS role,
@@ -179,6 +179,38 @@ async function listBrands(request: Request, env: DomainEnv): Promise<Response> {
      WHERE b.owner_id = ? OR bm.user_id = ?
      ORDER BY b.created_at DESC`,
   ).bind(id, id, id, id).all<BrandRow>();
+
+  let result = await list();
+  if ((result.results ?? []).length === 0) {
+    // The product surface is login-first, but the durable workspace schema is
+    // intentionally brand-scoped (brand_id is NOT NULL everywhere). Create a
+    // deterministic, user-owned personal scope instead of weakening those
+    // ownership predicates or introducing a shared/NULL tenant. Repeating the
+    // request is idempotent because the ID is derived from the authenticated
+    // principal; INSERT OR IGNORE also absorbs concurrent hydration requests.
+    const digest = Array.from(new Uint8Array(await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(id),
+    )), (value) => value.toString(16).padStart(2, '0')).join('');
+    const personalBrandId = `personal-${digest}`;
+    const now = new Date().toISOString();
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO brands
+        (id, owner_id, name, logo_url, brand_colors_json, tone_description, target_audience, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      personalBrandId,
+      id,
+      'Heavy Chain',
+      null,
+      '{}',
+      null,
+      null,
+      now,
+      now,
+    ).run();
+    result = await list();
+  }
   return jsonResponse((result.results ?? []).map(brandPayload));
 }
 
