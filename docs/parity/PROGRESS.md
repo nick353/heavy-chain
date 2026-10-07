@@ -299,3 +299,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 検証 blocked: the verification run on /tools/pattern-to-vector (black-background test input) failed three times with OpenAI HTTP 429 (ai-a6cc0864, ai-c9b0b5aa, ai-803eb67a). Not caused by the prompt: the error descriptor is status 429 (rate limit / quota). Stopped retrying.
 - (f) provider-side failure observed for real: known failed state in D1, message 「画像の生成に失敗しました。保存済みの結果は保持されています。」, input kept, retry possible. Recovery to completed needs the OpenAI quota restored.
 - 残: after the quota is back — one pattern-vector run with the black input and one lab run to confirm PR #14; then (f) recovery is complete.
+
+### Iteration 44 (2026-10-07, /goal) — recovery and PR #14 confirmed
+- The account owner added OpenAI credit. Same /tools/pattern-to-vector tab, original black-background input: ai-a790ff1d completed (20:21 UTC) — white background, no glow, the open arch kept open. This is also the (f) recovery after the 429 failures (no replay: each earlier request stayed failed).
+- /flow/laboratory/detail: the un-generated upload restored from the draft in a new tab (the first tab's upload confirmation was ambiguous and left unreconciled, not re-uploaded); 依頼 「この白いTシャツを、胸に小さな紺色のワンポイント刺繍がある商品写真にしてください。」 → ai-fa8de647 completed: a simple abstract navy mark, no brand-like logo.
+- p2-matrix: (f) evidenced for every generating row type (input failure on fitting, provider failure + recovery on edit-image); lab and pattern-vector quality ✅. Remaining △ (pro / svg-convert not re-run, angle-change label, clothing-size bottoms, print-design-project mockup) are recorded quality notes.
