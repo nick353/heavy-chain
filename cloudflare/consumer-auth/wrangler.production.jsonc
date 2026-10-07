@@ -15,7 +15,7 @@
     "EMAIL_TOTAL_ATTEMPT_LIMIT": "20",
     "EMAIL_FROM": "heavy@notify.nisen.uk",
     "AUTH_BASE_URL": "https://consumer-auth.nichika2000823.workers.dev",
-    "WEB_ORIGINS": "https://heavy-chain-web.nichika2000823.workers.dev,https://heavy-chain.zeabur.app"
+    "WEB_ORIGINS": "https://heavy-chain-web.nichika2000823.workers.dev,https://heavychain.app,https://heavy-chain.zeabur.app"
   },
   "observability": { "enabled": false },
   "triggers": { "crons": ["17 * * * *"] }
