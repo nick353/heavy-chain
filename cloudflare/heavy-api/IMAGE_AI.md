@@ -123,3 +123,20 @@ npx wrangler secret put ANTHROPIC_API_KEY --config wrangler.production.jsonc
 ```
 
 Without the secret both actions return `503 {"error":"claude_api_key_missing"}`. Optional vars: `ANTHROPIC_TEXT_MODEL` (default `claude-opus-5-5`), `ANTHROPIC_BASE_URL`.
+
+### `image-plan` and the restored multi-image features
+
+`image-plan` (Claude, text only) returns one image-model prompt per requested output for a `task`: `banner`, `design-gacha`, `product-shots`, `variations`, `scene`, `colorize`, `background`. An optional `imageDataUrl` (the browser's 512px reference) is sent to Claude as an image block. Keys and order follow the caller's `items`.
+
+The browser (`src/lib/providerActionAdapters.ts`) composes the previously unimplemented actions from it, keeping the legacy response shapes:
+
+| Action | How it runs |
+|---|---|
+| `multilingual-banner` | `image-plan` (translation + layout) → one `generate-image`/`edit-image` per language with `textOverlay` |
+| `design-gacha`, `product-shots`, `colorize`, `generate-variations` (scenes) | `image-plan` → one durable image request per item, sequentially |
+| `generate-variations` (no scenes) | `image-plan` → one `edit-image` with `count` candidates |
+| `remove-background` | transparent: in-browser rembg cutout; new background: one `edit-image` |
+| `upscale` | in-browser resampling + unsharp mask (not generative super-resolution) |
+| bulk download | in-browser ZIP of the visible results |
+
+If Claude is unavailable the adapters fall back to template prompts, so the features still run (banners are then not translated).
