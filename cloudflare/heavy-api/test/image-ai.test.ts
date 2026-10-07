@@ -405,6 +405,15 @@ test('image editing passes each ordered reference as binary multipart, preserves
   assert.doesNotMatch(stored,/private.invalid|do-not-store|data:image|Bearer/); assert.match(stored,/generated-images\/original/);
 });
 
+test('canonical workspace inputs (settings/brief) are persisted as text metadata for resume',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close()); const ref='data:image/png;base64,'+Buffer.from(pngFixture(64,64)).toString('base64');
+  const result=await json(await s.call(url+'edit-image','alice',{...s.input(),imageUrls:[ref],
+    canonicalInput:{inputState:{colorTarget:'navy',colorArea:'body'},brief:'make it navy',referenceNote:''}},crypto.randomUUID()));
+  assert.equal(result.success,true);
+  const stored=s.db.sql.prepare('SELECT input_metadata FROM heavy_ai_requests').get()!.input_metadata as string;
+  assert.match(stored,/"canonicalInput"/); assert.match(stored,/colorTarget/); assert.match(stored,/make it navy/);
+});
+
 test('fitting yields all selected adult/body combinations and durable reconstructible metadata',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close());
   const ref='data:image/png;base64,'+Buffer.from(s.output).toString('base64');

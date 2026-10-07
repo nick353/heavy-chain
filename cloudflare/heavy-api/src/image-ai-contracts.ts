@@ -281,7 +281,10 @@ export function parseImageInput(
     // Heavy model-library uploads are browser-local IndexedDB assets. Persist
     // only their opaque local reference and display names so same-browser
     // History/Jobs resume can rehydrate the bytes; never persist image data.
-    'localSourceReference','localModelReference','sourceFileName'].filter(k => body[k] !== undefined).map(k => [k, body[k]]))) as Json;
+    'localSourceReference','localModelReference','sourceFileName',
+    // Canonical workspace input settings/brief (text only) so a resume still
+    // restores them after the browser's local artifact list rotates.
+    'canonicalInput'].filter(k => body[k] !== undefined).map(k => [k, body[k]]))) as Json;
   if(canvasBatch&&!nativePrintFinalFrame)throw new ImageInputError('canvas_batch_native_binding_required',422);
   if(canvasBatch)metadata.canvasProtectedBatchBinding=canvasBatch;
   if (nativePrintFinalFrame) metadata.nativePrintFinalFrame = nativePrintFinalFrame;
