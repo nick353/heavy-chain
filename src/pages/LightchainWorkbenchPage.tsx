@@ -136,6 +136,14 @@ type MaterialTab = 'upload-history' | 'generation-history' | 'my-library' | 'tea
 type MaterialSlotKey = 'primary' | 'secondary';
 type FittingReferenceSlotKey = 'model' | 'pose' | 'background';
 const FITTING_REFERENCE_ROLE: Record<FittingReferenceSlotKey, string> = { model: 'model appearance reference', pose: 'pose reference', background: 'background scene reference' };
+/** Durable form of the 参考画像 tab picks: library images keep their app path, uploads their local asset ref; blob-only uploads are skipped. */
+const serializeFittingReferenceSlots = (slots: Record<FittingReferenceSlotKey, MaterialSlotFile | null>) => (Object.entries(slots) as [FittingReferenceSlotKey, MaterialSlotFile | null][])
+  .flatMap(([key, slot]) => {
+    if (!slot) return [];
+    const imageUrl = slot.localAssetRef && isLocalCanvasAssetReference(slot.localAssetRef) ? slot.localAssetRef
+      : /^\/(?!\/)[^?#]*$/.test(slot.imageUrl) ? slot.imageUrl : '';
+    return imageUrl ? [{ key, name: slot.name, imageUrl }] : [];
+  });
 type FittingModelCategory = 'all' | 'men' | 'women' | 'children';
 type MaterialSlotFile = {
   name: string;
@@ -1917,6 +1925,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             data-track-url={item.imageUrl}
             onClick={() => {
               if (fittingReferenceLibrarySlot) handleSelectFittingReferenceLibraryImage(fittingReferenceLibrarySlot, item.imageUrl, item.name);
+              setFittingReferenceLibrarySlot(null);
             }}
             className="group relative flex min-h-48 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-[#181d1f] p-2 transition hover:border-cyan-300/70"
           >
@@ -2713,6 +2722,19 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         },
       };
     });
+    // Keep the upload in the local asset store (like the garment upload) so the generated result can restore it after a reload.
+    void (async () => {
+      try {
+        const sourceMetadata = sanitizeCanvasSourceMetadata(await buildLocalUploadSourceMetadata(file, await readImageDimensions(imageUrl))) as CanvasSourceMetadata;
+        await putLocalCanvasAsset(sourceMetadata.sourceRevision.revision, file);
+        const localAssetRef = buildLocalCanvasAssetReference(sourceMetadata.sourceRevision.revision);
+        setFittingReferenceSlots((current) => current[slot]?.imageUrl === imageUrl
+          ? { ...current, [slot]: { ...current[slot]!, localAssetRef, persistenceStatus: 'persistent' } }
+          : current);
+      } catch (error) {
+        console.warn('Fitting reference upload stays session-only', error);
+      }
+    })();
   }
 
   function handleSelectFittingReferenceLibraryImage(slot: FittingReferenceSlotKey, imageUrl: string, name: string) {
@@ -2950,6 +2972,18 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
           setWearDesignDetailStarted(true); setPrintDesignDetailStarted(true);
         }
         if (resumed?.referenceNote !== undefined) setReferenceNote(resumed.referenceNote);
+        if (resumed?.fittingReferences?.length) {
+          const nextReferences: Record<FittingReferenceSlotKey, MaterialSlotFile | null> = { model: null, pose: null, background: null };
+          for (const reference of resumed.fittingReferences) {
+            try {
+              const resolved = await resolveImage(reference.imageUrl);
+              if (!isCurrent()) return;
+              nextReferences[reference.key] = { name: reference.name, kind: reference.key, imageUrl: resolved.imageUrl, persistenceStatus: 'persistent',
+                ...(isLocalCanvasAssetReference(reference.imageUrl) ? { localAssetRef: reference.imageUrl } : {}) };
+            } catch { /* a missing local asset leaves that reference empty */ }
+          }
+          setFittingReferenceSlots(nextReferences);
+        }
         if (resumed?.modelFormState) setModelFormState({...defaultModelFormState,...resumed.modelFormState});
         if (resumed?.printDesignState) {
           setPrintDesignMode(resumed.printDesignState.mode); setPrintDesignStyle(resumed.printDesignState.style);
@@ -3825,6 +3859,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
           providerTaskId,
           materialReferences,
           materialSlots: serializeLightchainResumeSlots(materialSlotFiles),
+          ...(fittingEditReferences.length ? { fittingReferenceSlots: serializeFittingReferenceSlots(fittingReferenceSlots) } : {}),
           lightchainCompat,
           parityRuntime: serializeLightchainParityRuntime(parityRuntime),
           modelFormState: currentModelPanel ? modelFormState : null,
