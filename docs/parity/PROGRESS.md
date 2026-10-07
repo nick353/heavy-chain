@@ -244,3 +244,10 @@ Each iteration: read this file → advance the next open item → append result 
 - 変更: branch `parity/main-integration` from origin/main (002b191b) = release tree from `release.sh` (production input set + overlay + patches; WIP files excluded; assets committed untarred) + PR #2–#4 frontend changes re-applied (ChatEditor planChatEdit, cloudflareApi composite actions, imageApi, GeneratePage). Worker code = main.
 - 検証: tsc -b, vite build (title Heavy Chain), verify-provider-action-adapters 10/10, verify-image-api-input-normalization 1/1.
 - 次: user confirms the merge of PR #5 (merging auto-deploys production); then re-check #4/#2/#6 on production and continue #3 Heavy side and P2 runs. Future parity releases should go to main through PRs.
+
+### Iteration 36 (2026-10-07, /goal) — main is the release line; heavychain.app and API updated
+- PR nick353/heavy-chain#5 merged (3e92ad7e): Zeabur auto-deploy from main now serves the parity release + PR #2–#4 (bundle index.DwTO_n5K.js; draft/notification keys present, chat-plan/image-plan present, "Lightchain AI" 0).
+- heavychain.app (heavy-chain-web) deployed from main (version af39fc40): title Heavy Chain, silueta.onnx 44 MB served from R2, /_health 200. Build check fixed for template-literal asset paths (PR #6).
+- heavy-chain-api: the deployed code (version 9349c854, 2026-10-01) was reconstructed from this branch by removing undeployed WIP from 5 files (openai-image, image-ai, workspace, image-ai-contracts, domain) until `wrangler deploy --dry-run` matched the deployed bundle; PR #2–#4 Claude text actions added; AI_IMAGE_PROVIDER kept openai; 0012–0015 migrations (already applied in D1) added to main. Worker tests 157/157. PR #7 merged; deployed version 8dd51168. CORS 204 for heavychain.app and zeabur; /model-base/style list loads.
+- Not done: consumer-auth deploy (WEB_ORIGINS heavychain.app) awaits the user; live call of Claude actions not exercised.
+- 今後: parity releases go to main by PR (main auto-deploys). The branch's Worker WIP (protected projections, native print frames, canvas batches) stays on this branch only.
