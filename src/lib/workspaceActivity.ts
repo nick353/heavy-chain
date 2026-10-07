@@ -5,10 +5,7 @@ import {
   listWorkspaceGeneratedImagesForActivity,
   listWorkspaceArtifactsForActivity,
 } from './localWorkspaceArtifacts';
-import {
-  getGeneratedImageSelectionKey,
-  mergeGeneratedImagesByCanonicalIdentity,
-} from './generatedImageIdentity';
+import { mergeGeneratedImagesByCanonicalIdentity } from './generatedImageIdentity';
 import { withSignedImageUrls } from './storage';
 import type { GeneratedImageListRow } from './generatedImageQuery';
 import { asGeneratedImageListRow, cloudflareDataPlane } from './cloudflareApi';
@@ -18,6 +15,7 @@ import { isHeavyWorkspaceRuntime } from './heavyWorkspace';
 import type { GenerationIntent } from './workspaceHandoff';
 import type { Database, Json } from '../types/database';
 import type { WorkspaceExecutionStep as LightchainTaskStep } from './workspaceExecution';
+import { LIBRARY_HISTORY_HREF } from './lightchainLibraryHandoff';
 
 type GenerationJob = Database['public']['Tables']['generation_jobs']['Row'];
 
@@ -46,7 +44,7 @@ export interface WorkspaceJob {
   createdAt: string;
   completedAt: string | null;
   outputCount: number;
-  /** Opens the first verified output for this job, preserving Gallery identity. */
+  /** Opens the library's 生成履歴, where this job's outputs are listed. */
   outputHref: string;
   resumeHref: string;
   generationHref?: string;
@@ -264,7 +262,7 @@ const hasMaterialReference = (inputParams: Json | null | undefined) => {
 };
 
 const getRecoveryAction = (job: GenerationJob) => {
-  if (job.status !== 'failed') return job.status === 'completed' ? 'Galleryで開く' : '進行状況を見る';
+  if (job.status !== 'failed') return job.status === 'completed' ? '生成履歴で開く' : '進行状況を見る';
   return getFailureRecoveryGuidance(`${job.error_message ?? ''} ${getJobPrompt(job) ?? ''}`).nextAction;
 };
 
@@ -273,10 +271,10 @@ const getJobRecoveryGuidance = (job: GenerationJob) => {
   return {
     kind: 'unknown' as const,
     title: job.status === 'completed' ? '成果物を確認' : '進行状況を確認',
-    userMessage: job.status === 'completed' ? '生成は完了しています。Galleryから成果物を開けます。' : '生成キューで現在の進行状況を確認できます。',
-    nextAction: job.status === 'completed' ? 'Galleryで開く' : '進行状況を見る',
+    userMessage: job.status === 'completed' ? '生成は完了しています。生成履歴から成果物を開けます。' : '生成キューで現在の進行状況を確認できます。',
+    nextAction: job.status === 'completed' ? '生成履歴で開く' : '進行状況を見る',
     retryLabel: job.status === 'completed' ? '成果物を開く' : '進行状況を見る',
-    retryHrefFallback: job.status === 'completed' ? '/gallery' : '/jobs',
+    retryHrefFallback: LIBRARY_HISTORY_HREF,
   };
 };
 
@@ -342,7 +340,7 @@ const buildResumeHref = (job: GenerationJob) => {
 };
 
 const getRetryHref = (job: GenerationJob, resumeHref: string) => {
-  if (job.status !== 'failed') return job.status === 'completed' ? '/gallery' : '/jobs';
+  if (job.status !== 'failed') return LIBRARY_HISTORY_HREF;
   return resumeHref;
 };
 
@@ -350,7 +348,6 @@ const mapJob = (
   job: GenerationJob,
   outputCount: number,
   lightchainTaskSteps: LightchainTaskStep[] = [],
-  primaryOutput?: GeneratedImageListRow,
 ): WorkspaceJob => {
   const recoveryGuidance = getJobRecoveryGuidance(job);
   const resumeHref = buildResumeHref(job);
@@ -364,7 +361,7 @@ const mapJob = (
     createdAt: job.created_at,
     completedAt: job.completed_at,
     outputCount,
-    outputHref: getOutputHref(primaryOutput),
+    outputHref: LIBRARY_HISTORY_HREF,
     resumeHref,
     generationHref: toHeavyChainPath(getGenerationHref(job.input_params)),
     sourceLabel: toHeavyChainDisplayCopy(getMetadataString(job.input_params, 'sourceLabel')),
@@ -510,11 +507,6 @@ const buildSourceSummaryRows = (
       ? [{ label: isHeavyChainRuntime() ? 'Heavy Chain状態' : 'Lightchain状態', value: lightchainStatusLabel[status] }]
       : []),
   ];
-};
-
-const getOutputHref = (image: GeneratedImageListRow | null | undefined) => {
-  if (!image) return '/gallery';
-  return `/gallery?image=${encodeURIComponent(getGeneratedImageSelectionKey(image))}`;
 };
 
 const mapOutput = (image: GeneratedImageListRow, lightchainTaskSteps: LightchainTaskStep[] = []): RecentOutput => ({
@@ -691,14 +683,10 @@ const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[], inclu
     .map((output) => ({
       id: `output-${output.id}`,
       title: getFeatureLabel(output.featureType, output.metadata),
-      description: output.storagePath.startsWith('local/') ? 'ローカル成果物を保存済み' : 'ギャラリーに保存済み',
+      description: output.storagePath.startsWith('local/') ? 'ローカル成果物を保存済み' : '生成履歴に保存済み',
       prompt: toHeavyChainDisplayCopy(output.prompt) ?? null,
       status: 'output',
-      href: `/gallery?image=${encodeURIComponent(getGeneratedImageSelectionKey({
-        id: output.id,
-        storage_path: output.storagePath,
-        metadata: output.metadata,
-      }))}`,
+      href: LIBRARY_HISTORY_HREF,
       generationHref: output.generationHref,
       sourceLabel: output.sourceLabel,
       sourceResumePath: output.sourceResumePath,
@@ -860,15 +848,10 @@ async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string, 
   const lightchainStepsByJob = groupLightchainStepsByJob(lightchainTaskSteps);
   const lightchainStepsByImage = groupLightchainStepsByImage(lightchainTaskSteps);
   const outputCounts = buildOutputCounts(outputs);
-  const firstOutputByJob = outputs.reduce<Record<string, GeneratedImageListRow>>((byJob, output) => {
-    if (output.job_id && !byJob[output.job_id]) byJob[output.job_id] = output;
-    return byJob;
-  }, {});
   const mappedJobs = [...jobs, ...localJobs, ...remoteJobs].map((job) => mapJob(
     job,
     outputCounts[job.id] ?? 0,
     lightchainStepsByJob[job.id] ?? [],
-    firstOutputByJob[job.id],
   ));
   const jobLimit = includeAllLoadedJobs ? undefined : 20;
   const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, jobLimit);

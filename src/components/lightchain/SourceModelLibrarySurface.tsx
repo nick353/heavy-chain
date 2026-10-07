@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Boxes,
   ChevronDown,
@@ -19,6 +19,7 @@ import {captureAuthBrandFence,assertAuthBrandFence} from '../../lib/authBrandSel
 import { GallerySelector } from '../GallerySelector';
 import { MODEL_BODY_MEASUREMENTS, MODEL_BODY_PROFILES, validModelBodyMeasurement, type ModelBodyMeasurement } from '../../lib/modelToolSettings';
 import { MODEL_LIBRARY_LABEL_OPTIONS, MODEL_LIBRARY_SIMILARITIES, defaultModelLibrarySettings, readModelLibrarySettings, chooseModelLibraryMode, changeModelLibraryGender, changeModelLibraryHeight, modelLibraryBodyProfile, modelLibraryBodyPreview, type ModelLibraryMode } from '../../lib/modelLibrarySettings';
+import { LightchainHistoryPanel } from './LightchainHistoryPanel';
 
 type SourceModelField = 'age' | 'nationality' | 'skinColor' | 'bodyType';
 
@@ -110,7 +111,6 @@ function SourceModelCombobox({ field, label, value, options, disabled, open, onT
  * Heavy-only workflow cards belong to the later handoff surfaces, not here.
  */
 export function SourceModelLibrarySurface() {
-  const navigate = useNavigate();
   const location=useLocation(),{user,currentBrand,brandState}=useAuthStore();
   const params=new URLSearchParams(location.search),jobId=params.get('resumeJob'),origin=params.get('workspaceFeature');
   const explicit=origin==='model-custom'||origin==='model-library'?origin:null;
@@ -135,6 +135,7 @@ export function SourceModelLibrarySurface() {
   const activeTab=settings?.inputMode==='label'?'ラベル':settings?.inputMode==='custom'?'カスタム':null;
   const [openField,setOpenField]=useState<SourceModelField|'height'|null>(null);
   const [referenceLibraryOpen,setReferenceLibraryOpen]=useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [bodyDrafts,setBodyDrafts]=useState<Partial<Record<ModelBodyMeasurement,string>>>({});
   const bodyProfile=modelLibraryBodyProfile(String(settings?.customGender),String(settings?.height));
   const bodyPreview=modelLibraryBodyPreview(settings);
@@ -314,11 +315,12 @@ export function SourceModelLibrarySurface() {
 
       <main className="relative min-w-0 flex-1 bg-[#171b1c]">
         <CanonicalImageWorkspaceControls workspace={workspace} />
+        {historyOpen && <LightchainHistoryPanel locked={locked} onClose={() => setHistoryOpen(false)} />}
         {workspace.candidates.length>1&&<div className="absolute bottom-4 left-4 flex gap-2" aria-label="モデル候補">{workspace.candidates.map((candidate,index)=><button type="button" disabled={locked} aria-pressed={workspace.selectedCandidateId===candidate.imageId} key={candidate.imageId} onClick={()=>void workspace.selectCandidate(candidate.imageId)}>候補 {index+1} ({candidate.bodyType}/{candidate.ageGroup})</button>)}</div>}
         <button
           type="button"
           data-testid="lightchain-source-model-history"
-          onClick={() => navigate('/history')}
+          onClick={() => setHistoryOpen(true)}
           className="absolute right-4 top-4 z-10 inline-flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] px-3 py-2 text-[12px] font-medium leading-[17.1429px] text-white transition hover:border-white/25 hover:bg-white/[0.04]"
         >
           <RefreshCw className="h-5 w-5" aria-hidden="true" />

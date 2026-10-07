@@ -132,7 +132,11 @@ export function LightchainLibraryPage() {
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  const [activeGroup, setActiveGroup] = useState<string>('履歴アップロード');
+  // /history, /gallery and /jobs redirect here with ?group=生成履歴 so old links land on the generated results.
+  const [activeGroup, setActiveGroup] = useState<string>(() => {
+    const group = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('group');
+    return group && (SYSTEM_LIBRARY_GROUPS as readonly string[]).includes(group) ? group : '履歴アップロード';
+  });
   const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
   const [remoteAssets, setRemoteAssets] = useState<RemoteLibraryAsset[]>([]);
   const libraryScope = currentBrand?.id && user?.id ? JSON.stringify([currentBrand.id,user.id]) : null;

@@ -1,5 +1,6 @@
 import { lazy as reactLazy, Suspense, useEffect, useState, type ComponentType } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
+import { LIBRARY_HISTORY_HREF } from './lib/lightchainLibraryHandoff';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -67,9 +68,8 @@ const HeavyAgentTaskPage = lazy(() => import('./pages/HeavyAgentTaskPage'));
 const LightchainCustomStylePage = lazy(() => import('./pages/LightchainCustomStylePage').then((module) => ({ default: module.LightchainCustomStylePage })));
 const LightchainWorkbenchPage = lazy(() => import('./pages/LightchainWorkbenchPage').then((module) => ({ default: module.LightchainWorkbenchPage })));
 const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
-const HistoryPage = lazy(() => import('./pages/HistoryPage').then((module) => ({ default: module.HistoryPage })));
-const JobsPage = lazy(() => import('./pages/JobsPage').then((module) => ({ default: module.JobsPage })));
-const GalleryPage = lazy(() => import('./pages/GalleryPage').then((module) => ({ default: module.GalleryPage })));
+// /history, /jobs and /gallery are Heavy-only screens. They redirect to the library's 生成履歴 like Light;
+// HistoryPage, JobsPage and GalleryPage are kept in src/pages so the routes can be restored.
 const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
 const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
 const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
@@ -1068,34 +1068,10 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/history"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <HistoryPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/jobs"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <JobsPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        {/* Light has no /history screen: its results live in the library's 生成履歴. HistoryPage stays importable for a restore. */}
+        <Route path="/history" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />
+        {/* Light has no /jobs screen: its results live in the library's 生成履歴. JobsPage stays importable for a restore. */}
+        <Route path="/jobs" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />
         <Route
           path="/lightchain/fabric-image"
           element={
@@ -1592,20 +1568,8 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/gallery"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <GalleryPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        {/* Light has no /gallery screen: its results live in the library's 生成履歴. GalleryPage stays importable for a restore. */}
+        <Route path="/gallery" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />
         <Route
           path="/brand/settings"
           element={

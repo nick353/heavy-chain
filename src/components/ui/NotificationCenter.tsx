@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, Check, Sparkles, AlertCircle, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
+import { LIBRARY_HISTORY_HREF } from '../../lib/lightchainLibraryHandoff';
 
 export interface Notification {
   id: string;
@@ -240,10 +241,10 @@ export function useNotifications() {
       id: '1',
       type: 'generation_complete',
       title: '画像生成が完了しました',
-      message: '4枚のデザインガチャ画像が生成されました。ギャラリーで確認できます。',
+      message: '4枚のデザインガチャ画像が生成されました。生成履歴で確認できます。',
       timestamp: new Date(Date.now() - 5 * 60 * 1000),
       read: false,
-      link: '/gallery',
+      link: LIBRARY_HISTORY_HREF,
     },
     {
       id: '2',

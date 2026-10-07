@@ -6,6 +6,7 @@ import { CanonicalImageWorkspaceControls } from '../CanonicalImageWorkspaceContr
 import { GallerySelector } from '../GallerySelector';
 
 import { MODEL_ASPECT_OPTIONS, MODEL_RESOLUTION_OPTIONS, MODEL_TOOL_FIELDS, MODEL_BODY_PROFILES, MODEL_BODY_MEASUREMENTS, defaultModelToolSettings, readModelToolSettings, readLegacyModelToolSettings, chooseModelCustomBody, changeModelBodyGender, validModelBodyMeasurement, isModelDescriptionFeature, type ModelToolFeature, type ModelBodyMeasurement } from '../../lib/modelToolSettings';
+import { LightchainHistoryPanel } from './LightchainHistoryPanel';
 
 // Example media are self-hosted copies of the source's per-form examples.
 const SOURCE_MODEL_TOOL_VIDEO = '/lightchain-assets/model-library-custom-demo.mp4';
@@ -278,6 +279,7 @@ export function SourceModelToolSurface() {
   const chooseMode = (mode: 'reference' | 'custom') => { if (!locked && displayedSettings) workspace.setInputState({ ...displayedSettings, inputMode: mode, customDescription: typeof displayedSettings.customDescription === 'string' ? displayedSettings.customDescription : '' }); };
   const [openSetting, setOpenSetting] = useState<string | null>(null);
   const [referenceLibraryOpen, setReferenceLibraryOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [bodyDrafts, setBodyDrafts] = useState<Partial<Record<ModelBodyMeasurement, string>>>({});
   useEffect(() => { setOpenSetting(null); }, [feature, locked]);
   useEffect(() => { setBodyDrafts({}); setOpenSetting(null); }, [feature, displayedSettings?.gender, settings?.customBody, locked]);
@@ -438,10 +440,11 @@ export function SourceModelToolSurface() {
 
       <main className="relative min-w-0 flex-1 bg-[#171b1c]">
         <CanonicalImageWorkspaceControls workspace={workspace} />
+        {historyOpen && <LightchainHistoryPanel locked={locked} onClose={() => setHistoryOpen(false)} />}
         {workspace.candidates.length>1&&<div className="absolute bottom-4 left-4 flex gap-2" aria-label="モデル候補">{workspace.candidates.map((candidate,index)=><button type="button" disabled={locked} aria-pressed={workspace.selectedCandidateId===candidate.imageId} key={candidate.imageId} onClick={()=>void workspace.selectCandidate(candidate.imageId)}>候補 {index+1} ({candidate.bodyType}/{candidate.ageGroup})</button>)}</div>}
         <button
           type="button"
-          onClick={() => navigate('/history')}
+          onClick={() => setHistoryOpen(true)}
           className="absolute right-4 top-4 z-10 inline-flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] px-3 py-2 text-[12px] font-medium leading-[17.1429px] text-white transition hover:border-white/25 hover:bg-white/[0.04]"
         >
           <RefreshCw className="h-5 w-5" aria-hidden="true" />

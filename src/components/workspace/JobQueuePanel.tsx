@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Clock3, Loader2 } from 'lucide-react';
 import type { WorkspaceJob } from '../../lib/workspaceActivity';
+import { LIBRARY_HISTORY_HREF } from '../../lib/lightchainLibraryHandoff';
 
 interface JobQueuePanelProps {
   activeJobs: WorkspaceJob[];
@@ -32,7 +33,7 @@ export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }
           <p className="text-xs font-semibold uppercase text-primary-600 dark:text-primary-300">Job Queue</p>
           <h2 className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">進行中のジョブ</h2>
         </div>
-        <Link to="/jobs" className="rounded-lg bg-white/70 px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:text-primary-700 dark:bg-white/10 dark:text-neutral-200">
+        <Link to={LIBRARY_HISTORY_HREF} className="rounded-lg bg-white/70 px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:text-primary-700 dark:bg-white/10 dark:text-neutral-200">
           全て見る
         </Link>
       </div>
@@ -50,7 +51,7 @@ export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }
           const lightchainTask = getLightchainTaskRow(job);
           const lightchainSteps = getLightchainStepsRow(job);
           return (
-            <Link key={job.id} to="/jobs" className="flex items-center gap-3 rounded-xl bg-white/55 p-3 transition hover:bg-white dark:bg-surface-900/40 dark:hover:bg-surface-900/70">
+            <Link key={job.id} to={job.resumeHref} className="flex items-center gap-3 rounded-xl bg-white/55 p-3 transition hover:bg-white dark:bg-surface-900/40 dark:hover:bg-surface-900/70">
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${processing ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/25 dark:text-blue-200' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/25 dark:text-amber-200'}`}>
                 <Icon className={`h-5 w-5 ${processing ? 'animate-spin' : ''}`} />
               </span>
