@@ -2,7 +2,7 @@ export const IMAGE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b';
 import { PROTECTED_IMAGE_EDIT_MODE } from '../../../src/lib/protectedImageEditContract.ts';
 // Actions served by handleImageAIAction. Text actions (Claude) are dispatched
 // before any image parsing and never reach the image pipeline.
-export const IMAGE_ACTIONS = new Set(['generate-image', 'edit-image', 'model-matrix', 'optimize-prompt', 'chat-plan']);
+export const IMAGE_ACTIONS = new Set(['generate-image', 'edit-image', 'model-matrix', 'optimize-prompt', 'chat-plan', 'image-plan']);
 export type ImageAction = 'generate-image' | 'edit-image' | 'model-matrix';
 const OPENAI_IMAGE_MODELS = new Set(['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini', 'chatgpt-image-latest']);
 export type Json = Record<string, unknown>;

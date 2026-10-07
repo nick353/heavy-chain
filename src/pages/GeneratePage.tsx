@@ -2486,23 +2486,22 @@ export function GeneratePage() {
       }
       return;
     }
-    const imageIds = generatedImages.map(img => img.id).filter(Boolean);
-    if (imageIds.length === 0) {
-      toast.error('ダウンロード可能な画像IDがありません');
+    const images = generatedImages
+      .filter(image => image.imageUrl)
+      .map((image, index) => ({ url: image.imageUrl, name: image.label || `heavy-chain-${index + 1}` }));
+    if (images.length === 0) {
+      toast.error('ダウンロード可能な画像がありません');
       return;
     }
     try {
-      const { data, error } = await invokeProviderAction('bulk-download', {
-        body: { brandId: currentBrand.id, imageIds }
-      });
-      if (error || !data?.downloadUrl) {
-        throw new Error(error?.message || '一括ダウンロードに失敗しました');
-      }
-      window.open(data.downloadUrl, '_blank');
-      toast.success(`${imageIds.length}件をまとめてダウンロードします`);
+      // Packaged in the browser: no server-side ZIP endpoint is needed.
+      const { downloadImagesAsZip } = await import('../lib/clientImageOps');
+      const { included, failed } = await downloadImagesAsZip(images, `heavy-chain-${new Date().toISOString().slice(0, 10)}.zip`);
+      if (failed) toast.error(`${failed}件の画像を取得できませんでした`);
+      toast.success(`${included}件をZIPにまとめてダウンロードしました`);
     } catch (e: any) {
       debugLog('Bulk download failed', { hasMessage: !!e?.message });
-      toast.error(e.message || '一括ダウンロードに失敗しました');
+      toast.error(e?.message === 'bulk_download_no_images' ? '画像を取得できませんでした' : '一括ダウンロードに失敗しました');
     }
   };
 

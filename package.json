@@ -38,6 +38,7 @@
     "test:generate-result-readback": "node --experimental-strip-types --test scripts/verify-generate-result-readback.test.ts",
     "test:provider-persistence-readback": "node --experimental-strip-types --test scripts/verify-provider-persistence-readback.test.ts",
     "test:fitting-history-readback": "node --experimental-strip-types --test scripts/verify-fitting-history-readback.test.ts",
+    "test:provider-action-adapters": "node --experimental-strip-types --test scripts/verify-provider-action-adapters.test.ts",
     "test:image-api-input-normalization": "node --experimental-strip-types --test scripts/verify-image-api-input-normalization.test.ts",
     "test:generated-image-identity": "node --experimental-strip-types --test scripts/verify-generated-image-identity.test.ts",
     "test:gallery-download-boundary": "node --experimental-strip-types --test scripts/verify-gallery-download-boundary.test.ts",

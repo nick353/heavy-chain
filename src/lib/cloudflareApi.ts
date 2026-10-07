@@ -3,6 +3,7 @@ import type { GeneratedImageListRow } from './generatedImageQuery';
 import type { WorkspaceExecutionStep } from './workspaceExecution';
 import { auth } from './auth';
 import { CLOUDFLARE_IMAGE_ACTIONS, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
+import { COMPOSITE_PROVIDER_ACTIONS, runCompositeProviderAction } from './providerActionAdapters';
 import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
 import { persistProtectedImageInput,listProtectedImageInputs,loadProtectedImageInput,deleteProtectedImageInput } from './cloudflareImageInputCache';
 
@@ -491,6 +492,24 @@ class CloudflareDataPlaneClient {
 
   async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void } = {}): Promise<T> {
     options.assertContext?.();
+    if (COMPOSITE_PROVIDER_ACTIONS.has(action)) {
+      // Multi-image features: Claude plans prompts, existing durable image actions render them.
+      const nested = { assertContext: options.assertContext };
+      return await runCompositeProviderAction(action, body, {
+        image: (imageAction, imageBody) => this.invokeProviderAction(imageAction, imageBody, nested),
+        plan: planBody => this.invokeProviderAction('image-plan', planBody, nested),
+        toDataUrl: async imageUrl => {
+          const prepared = await prepareCloudflareImageInput('edit-image', { imageUrl });
+          return Array.isArray(prepared.imageUrls) && typeof prepared.imageUrls[0] === 'string' ? prepared.imageUrls[0] : null;
+        },
+        cutout: async imageUrl => {
+          const { buildHighPrecisionMaterialCutoutDataUrl } = await import('./workspaceMaterialReferences');
+          return (await buildHighPrecisionMaterialCutoutDataUrl({ imageUrl, modelName: 'isnet-general-use', preserveSourceFrame: true,
+            maxDataUrlBytes: 12 * 1024 * 1024 })).dataUrl;
+        },
+        upscale: async (imageUrl, upscaleOptions) => (await import('./clientImageOps')).upscaleImage(imageUrl, upscaleOptions),
+      }) as T;
+    }
     if (CLOUDFLARE_IMAGE_ACTIONS.has(action)) {
       const {userId,assertCurrent,call} = await this.captureRequestContext(options.assertContext);
       const protectedEdit = action === 'edit-image' && body.maskDataUrl ? await prepareProtectedCloudflareEdit(body) : null;

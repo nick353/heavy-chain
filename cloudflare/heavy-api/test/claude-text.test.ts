@@ -142,3 +142,50 @@ test('provider endpoint keeps Claude actions behind auth, brand role, and the al
   });
   assert.equal(called, 0);
 });
+
+test('image-plan keeps the requested keys and order and attaches the reference image', async () => {
+  const { planImages } = await import('../src/claude-text.ts');
+  const box: { body?: Json } = {};
+  const pixel = 'data:image/png;base64,iVBORw0KGgo=';
+  const result = await planImages(env(), { task: 'colorize', items: ['red', 'navy'], imageDataUrl: pixel, pattern: 'stripe' },
+    async (_url, init) => { box.body = JSON.parse(String(init?.body));
+      return claudeReply({ items: [
+        { key: 'RED', label: '赤', prompt: 'Recolor the shirt red', headline: '', subheadline: '' },
+        { key: 'x', label: 'ネイビー', prompt: 'Recolor the shirt navy', headline: '', subheadline: '' },
+        { key: 'extra', label: '余分', prompt: 'ignored', headline: '', subheadline: '' },
+      ] }); });
+  assert.deepEqual(result.items.map(item => [item.key, item.label]), [['red', '赤'], ['navy', 'ネイビー']]);
+  const content = box.body?.messages[0].content as Json[];
+  assert.deepEqual(content[0], { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0KGgo=' } });
+  assert.match(content[1].text, /Task: colorize/);
+  assert.match(content[1].text, /Pattern: stripe/);
+  assert.match(content[1].text, /\["red","navy"\]/);
+});
+
+test('image-plan validates the task and plans a single instruction for variations', async () => {
+  const { planImages } = await import('../src/claude-text.ts');
+  await assert.rejects(planImages(env(), { task: 'nope' }, async () => claudeReply({ items: [] })),
+    (error: unknown) => error instanceof ClaudeTextError && error.code === 'invalid_plan_task' && error.status === 400);
+  await assert.rejects(planImages(env(), { task: 'banner', items: ['en'] }, async () => claudeReply({ items: [] })),
+    (error: unknown) => error instanceof ClaudeTextError && error.code === 'plan_empty');
+  const box: { body?: Json } = {};
+  const one = await planImages(env(), { task: 'variations', count: 4, brief: 'more casual' },
+    async (_url, init) => { box.body = JSON.parse(String(init?.body));
+      return claudeReply({ items: [{ key: '1', label: 'v', prompt: 'casual styling', headline: '', subheadline: '' },
+        { key: '2', label: 'v', prompt: 'second', headline: '', subheadline: '' }] }); });
+  assert.equal(one.items.length, 1);
+  assert.match(box.body?.messages[0].content, /Number of items: 1/);
+  await assert.rejects(planImages(env(), { task: 'product-shots', imageDataUrl: 'data:image/png;base64,' + 'A'.repeat(7_000_004) }, async () => claudeReply({ items: [] })),
+    (error: unknown) => error instanceof ClaudeTextError && error.code === 'plan_image_too_large');
+});
+
+test('provider endpoint serves image-plan behind the same gates', async (t) => {
+  const s = textSetup({ AI_IMAGE_ALLOWED_ACTIONS: 'generate-image,edit-image,model-matrix,optimize-prompt,chat-plan,image-plan' }); t.after(() => s.db.sql.close());
+  await withFetch(async () => claudeReply({ items: [{ key: 'en', label: '英語', prompt: 'banner', headline: 'Spring', subheadline: '' }] }), async () => {
+    const response = await s.call('/v1/provider-actions/image-plan', 'alice', { brandId: 'brand', task: 'banner', items: ['en'], headline: '春' });
+    assert.equal(response.status, 200);
+    const body = await response.json() as Json;
+    assert.equal(body.items[0].headline, 'Spring');
+  });
+  assert.equal(s.calls.length, 0);
+});
