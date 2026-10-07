@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-03",
   "ai": { "binding": "AI" },
+  "images": { "binding": "IMAGES" },
   "services": [{ "binding": "AUTH_SERVICE", "service": "consumer-auth" }],
   "d1_databases": [
     {
