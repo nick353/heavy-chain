@@ -131,8 +131,8 @@ test('actual App heavy/wear-design-detail boundary restores editable exact input
  for(const path of ['/flow/laboratory/detail','/flow/orientedDesign/detail'])await t.test(path,async()=>{const fresh=await fixture(path);try{
   await fresh.page.getByLabel('主素材画像').waitFor({state:'attached'});assert.equal(await fresh.page.getByTestId('canonical-image-workspace-controls').count(),0);
   const box=await fresh.page.locator('label[data-testid$="-upload"]').boundingBox();assert(box);
-  // Light 1440x900 readback: Lab drop zone 768x554 (2026-10-07), Wear Design Lab 782x496.
-  assert.equal(Math.round(box.height),path.includes('laboratory')?554:496);assert.equal(Math.round(box.width),path.includes('laboratory')?768:782);
+  // Light 1440x900 readback (2026-10-07): Lab drop zone 768x554, Wear Design Lab 768x534.
+  assert.equal(Math.round(box.height),path.includes('laboratory')?554:534);assert.equal(Math.round(box.width),768);
   assert.equal(await fresh.page.locator('main[data-resume-state]').getAttribute('data-resume-job'),'');assert.equal((await server(fresh.page)).calls.length,0);
  }finally{await fresh.close();}});
 });

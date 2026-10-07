@@ -153,3 +153,8 @@ Each iteration: read this file → advance the next open item → append result 
 - 発見: putting the restore inside the initializer broke 66 harness cases that evaluate that effect in isolation (missing bindings + storage-effect assertions) — moved to a separate effect.
 - 検証: tsc; canonical-library-input-restore 0 fail, model-library-workspace-restore 0 fail, model-tool-settings/input-parity 0 fail, canonical-image-workspace-routes = baseline apart from the Lab geometry expectation (updated to 768×554), source-board-parity = baseline. Production: see ledger #23 (job ai-b55722a0… completed, reloads restore before and after generation).
 - 次: #24 /flow/orientedDesign.
+
+### Iteration 20 (2026-10-07, /goal) — /flow/orientedDesign ウェアデザインラボ (#24)
+- 変更: `useFeatureProjects` extracted from the pattern board (exported with `ProjectThumbnail`/`formatProjectAge`); the Wear Design Lab board lists real wear-design-lab jobs instead of Light-user cards; a saved card opens its own job (drops the previous candidate/indexes, keeps other params). Detail empty state rebuilt to Light's measured geometry; icon and reference covers self-hosted.
+- 検証: tsc; wear-design-lab-routing (mock for the new service, project-card case asserts the exact saved job) 0 fail = baseline; canonical routes boundary case 3/3 (geometry 768×534); source-board / entry-routing = baseline. Production: see ledger #24.
+- 次: #25 /agent.

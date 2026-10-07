@@ -48,3 +48,4 @@ src/pages/LightchainLabDetailPage.tsx
 public/lightchain-assets/icons/laboratory.png
 public/lightchain-assets/oriented-design/reference-1.webp
 public/lightchain-assets/oriented-design/reference-2.webp
+public/lightchain-assets/icons/oriented-design.png
