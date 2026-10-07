@@ -256,7 +256,10 @@ export function parseImageInput(
     // Heavy model-library uploads are browser-local IndexedDB assets. Persist
     // only their opaque local reference and display names so same-browser
     // History/Jobs resume can rehydrate the bytes; never persist image data.
-    'localSourceReference','localModelReference','sourceFileName'].filter(k => body[k] !== undefined).map(k => [k, body[k]]))) as Json;
+    'localSourceReference','localModelReference','sourceFileName',
+    // Canonical workspace input settings/brief (text only) so a resume still
+    // restores them after the browser's local artifact list rotates.
+    'canonicalInput'].filter(k => body[k] !== undefined).map(k => [k, body[k]]))) as Json;
   if (new TextEncoder().encode(JSON.stringify(metadata)).length > 128 * 1024) throw new ImageInputError('image_metadata_too_large');
   const suffix = [typeof body.negativePrompt === 'string' && body.negativePrompt ? `Avoid: ${body.negativePrompt}` : '',
     typeof body.style === 'string' && body.style ? `Style: ${body.style}` : '',

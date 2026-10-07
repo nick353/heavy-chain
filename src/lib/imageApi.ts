@@ -280,6 +280,7 @@ export async function generateImage(
     sourceReadback?: unknown;
     generationIntent?: unknown;
     materialReferences?: unknown;
+    canonicalInput?: unknown;
     layerPlan?: unknown;
     maskPlan?: unknown;
     compositionPreview?: unknown;
@@ -419,6 +420,7 @@ export async function editImageWithPrompt(
     referenceImageUrls?: string[];
     generationIntent?: unknown;
     materialReferences?: unknown;
+    canonicalInput?: unknown;
     layerPlan?: unknown;
     maskPlan?: unknown;
     compositionPreview?: unknown;
@@ -470,6 +472,7 @@ export async function editImageWithPrompt(
       lightchainCompat: options?.lightchainCompat,
       generationIntent: options?.generationIntent,
       materialReferences: options?.materialReferences,
+      canonicalInput: options?.canonicalInput,
       layerPlan: options?.layerPlan,
       maskPlan: options?.maskPlan,
       compositionPreview: options?.compositionPreview,
@@ -693,6 +696,7 @@ export async function generateModelMatrix(
     sourceReadback?: unknown;
     materialReference?: unknown;
     materialReferences?: unknown;
+    canonicalInput?: unknown;
     layerPlan?: unknown;
     maskPlan?: unknown;
     compositionPreview?: unknown;
