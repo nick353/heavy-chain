@@ -128,7 +128,7 @@ export function modelToolSettingsPrompt(feature: ModelToolFeature, value: unknow
     ...(feature === 'body-shape' ? [`カスタムボディ: ${settings.customBody ? 'オン' : 'オフ'}`, ...(settings.customBody ? [`身長: ${settings.height}`, ...MODEL_BODY_MEASUREMENTS.map(({ key, label }) => `${label}: ${settings[key]}cm`)] : [])] : []),
     ...(feature === 'angle-change' && typeof settings.backView === 'boolean' ? [`背面: ${settings.backView ? 'オン' : 'オフ'}`] : []),
     ...(feature === 'angle-change' ? ['元画像に写っていない面（背面・側面など）は、元の衣服の色と素材のまま描き、文字・ラベル・タグ・ロゴを新しく加えないでください。'] : []),
-    ...(feature === 'clothing-size' ? [`${settings.clothingType === '全身' ? 'トップスとボトムス' : settings.clothingType}のサイズを${settings.originalSize}から${settings.targetSize}へ、見て分かるほどはっきり変えてください（大きくする場合は身幅・裾幅・丈・ゆとりを広げ、小さくする場合は細く短くします）。デザイン・色・体型・ポーズは変えないでください。`] : []),
+    ...(feature === 'clothing-size' ? [`${settings.clothingType === '全身' ? 'トップスとボトムス' : settings.clothingType}のサイズを${settings.originalSize}から${settings.targetSize}へ、見て分かるほどはっきり変えてください（大きくする場合は身幅・裾幅・丈・ゆとりを広げ、小さくする場合は細く短くします）。デザイン・色・体型・ポーズは変えないでください。指定した服装タイプ以外の服は元画像のまま変えず、どの服にもポケット・ロゴ・文字・縫い目などのディテールを新しく加えないでください。`] : []),
     `画像比率の指定: ${settings.aspectRatio}`, `解像度の指定: ${settings.resolution}`,
   ].join('\n');
 }
