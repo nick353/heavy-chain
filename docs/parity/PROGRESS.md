@@ -293,3 +293,9 @@ Each iteration: read this file → advance the next open item → append result 
 - (f): repeating the corrupt-PNG upload with the toast as the confirmation shows 「画像の寸法を読み込めませんでした。」 while 衣服の画像 stays (0/4) — the message exists; my first check was too late.
 - (g): every row's own result downloaded at full size (1024 px; model-library rows 1024×1536) through the media gateway and reviewed. 23 rows OK; 7 marked △ in p2-matrix.md (lab trademark-like mark; vector rows keep the test input's black background with glow; angle-change invented label; clothing-size bottoms unchanged; print-design-project on a mockup). pattern-vector re-run with a white-background input (ai-85578203, completed): clean flat colours on white, arch drawn closed.
 - 残: provider-side failure + recovery (D1 holds no failed request to reconcile; not induced); prompt work for the △ rows.
+
+### Iteration 43 (2026-10-07, /goal) — quality prompts, provider failure
+- 変更 (PR nick353/heavy-chain#14, merged, live in LightchainParityPages.CDIOGVC0.js): vector briefs replace a black/dark source background with white, no glow/halo/blur/vignette, keep open curves open; lab / wear-design-lab / wear-design-detail requests forbid brand-like marks.
+- 検証 blocked: the verification run on /tools/pattern-to-vector (black-background test input) failed three times with OpenAI HTTP 429 (ai-a6cc0864, ai-c9b0b5aa, ai-803eb67a). Not caused by the prompt: the error descriptor is status 429 (rate limit / quota). Stopped retrying.
+- (f) provider-side failure observed for real: known failed state in D1, message 「画像の生成に失敗しました。保存済みの結果は保持されています。」, input kept, retry possible. Recovery to completed needs the OpenAI quota restored.
+- 残: after the quota is back — one pattern-vector run with the black input and one lab run to confirm PR #14; then (f) recovery is complete.
