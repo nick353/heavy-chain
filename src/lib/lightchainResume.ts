@@ -25,7 +25,16 @@ export type LightchainResumeInput = {
   referenceNote?: string;
   unavailableSources?: boolean;
   printDesignState?: LightchainPrintDesignState;
+  /** AI fitting 参考画像 tab picks (model / pose / background). */
+  fittingReferences?: { key: 'model' | 'pose' | 'background'; name: string; imageUrl: string }[];
 };
+
+const readFittingReferences = (value: unknown) => (Array.isArray(value) ? value : []).flatMap((entry) => {
+  if (!isRecord(entry) || !['model', 'pose', 'background'].includes(String(entry.key))) return [];
+  const imageUrl = typeof entry.imageUrl === 'string' ? entry.imageUrl.trim() : '';
+  if (!isLocalCanvasAssetReference(imageUrl) && !/^\/(?!\/)[^?#]*$/.test(imageUrl)) return [];
+  return [{ key: entry.key as 'model' | 'pose' | 'background', name: typeof entry.name === 'string' ? entry.name.slice(0, 200) : String(entry.key), imageUrl }];
+});
 
 export type LightchainResumeScope = { brandId: string; scopeId: string; toolId: string };
 
@@ -316,6 +325,7 @@ export const readLightchainResumeInput = (
         : candidate.metadata.printDesignState)).find(Boolean) ?? null;
     const brief = typeof state.brief === 'string' ? state.brief : typeof artifact.metadata.brief === 'string' ? artifact.metadata.brief : undefined;
     const referenceNote = typeof state.referenceNote === 'string' ? state.referenceNote : typeof artifact.metadata.referenceNote === 'string' ? artifact.metadata.referenceNote : undefined;
+    const fittingReferences = readFittingReferences(state.fittingReferenceSlots ?? artifact.metadata.fittingReferenceSlots);
     if (slots.length === 0 && !modelFormState && brief === undefined && referenceNote === undefined && rawSlots.length === 0) continue;
     return {
       artifactId: artifact.id,
@@ -323,6 +333,7 @@ export const readLightchainResumeInput = (
       modelFormState,
       ...(printDesignState ? {printDesignState} : {}),
       ...(brief !== undefined ? {brief} : {}), ...(referenceNote !== undefined ? {referenceNote} : {}),
+      ...(fittingReferences.length ? {fittingReferences} : {}),
       ...(rawSlots.length !== slots.length ? {unavailableSources:true} : {}),
     };
   }

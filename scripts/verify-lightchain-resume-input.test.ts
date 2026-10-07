@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { readLightchainResumeInput, readLightchainResumeResult } from '../src/lib/lightchainResume.ts';
+import { buildLocalCanvasAssetReference } from '../src/lib/canvasLocalAssets.ts';
 
 const artifact = (overrides: Record<string, unknown> = {}) => ({
   id: 'artifact-1',
@@ -152,4 +153,27 @@ test('resume hydration is declared after the tool reset effect', async () => {
 
   assert.ok(resetIndex >= 0, 'tool reset effect must clear material slots');
   assert.ok(restoredIndex > resetIndex, 'resume hydration must run after tool reset so restored slots are not cleared');
+});
+
+test('resume input restores AI fitting reference picks from durable refs only', () => {
+  const localRef = buildLocalCanvasAssetReference(`sha256:${'a'.repeat(64)}`);
+  const result = readLightchainResumeInput([
+    artifact({
+      featureType: 'lightchain-fitting-background-reference',
+      metadata: {
+        materialSlots: [{ key: 'primary', fileName: 'garment.png', materialKind: 'シャツ', imageUrl: localRef }],
+        fittingReferenceSlots: [
+          { key: 'model', name: 'group-26-1', imageUrl: '/lightchain-assets/models/group-26-1.webp' },
+          { key: 'background', name: 'bg.jpg', imageUrl: localRef },
+          { key: 'pose', name: 'pose.png', imageUrl: 'blob:https://example.test/pose' },
+          { key: 'face', name: 'x', imageUrl: '/x.png' },
+          { key: 'model', name: 'signed', imageUrl: 'https://cdn.example.test/a.png?token=1' },
+        ],
+      },
+    }),
+  ], 'job-1');
+  assert.deepEqual(result?.fittingReferences, [
+    { key: 'model', name: 'group-26-1', imageUrl: '/lightchain-assets/models/group-26-1.webp' },
+    { key: 'background', name: 'bg.jpg', imageUrl: localRef },
+  ]);
 });
