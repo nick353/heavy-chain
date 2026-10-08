@@ -22,7 +22,7 @@ import {
   type DesignEntryClient, type DialogueWorkspaceId, validateOwnedDesignDocument,
 } from './designEntryCoordinator';
 import { useDialogueReferences } from './useDialogueReferences';
-import { DESIGN_ATTACH_ARTIFACT_PARAM, DESIGN_ATTACH_GALLERY_PARAM, resolveDesignAttachment } from './canvasHandoff';
+import { DESIGN_ATTACH_ARTIFACT_PARAM, DESIGN_ATTACH_GALLERY_PARAM, designAttachmentName, resolveDesignAttachment } from './canvasHandoff';
 import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
@@ -180,13 +180,20 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   }, [activeDialogueClient, brandId, brandReady, client, conversationId, identity, isDocumentOnly, isNewFile, navigate, projectId, retry, stores, userId, workspace.detailPath]);
   // Images handed over from 「キャンバスで編集」 become the first send's references.
   const addReferenceFiles = references.addFiles;
+  const pendingReferences = useRef(references.references);
+  pendingReferences.current = references.references;
   const attachedFrom = useRef('');
   useEffect(() => {
     const key = JSON.stringify([userId, brandId, attachImageId, attachArtifactId]);
     if (!brandReady || (!attachImageId && !attachArtifactId) || attachedFrom.current === key) return;
     attachedFrom.current = key;
+    const name = designAttachmentName({ galleryImageId: attachImageId, artifactId: attachArtifactId });
     void resolveDesignAttachment({ brandId, userId, galleryImageId: attachImageId, artifactId: attachArtifactId })
-      .then((file) => addReferenceFiles([file]))
+      .then((file) => {
+        // Reopening the same link while that image is still waiting to be sent must not attach it twice.
+        if (pendingReferences.current.some((reference) => reference.name.replace(/\.[a-z]+$/i, '') === name)) return;
+        return addReferenceFiles([file]);
+      })
       .catch(() => setEntryError('引き継いだ画像を読み込めませんでした。画像を追加し直してください'))
       .finally(() => {
         const next = new URLSearchParams(location.search);

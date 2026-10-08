@@ -21,11 +21,15 @@ async function fileFromSource(source: string, name: string): Promise<File> {
   }
 }
 
+/** File name (without extension) that identifies one handed-off image, so reopening the same link does not attach it twice. */
+export const designAttachmentName = (options: { galleryImageId?: string | null; artifactId?: string | null }) =>
+  `library-${(options.galleryImageId ?? options.artifactId ?? 'image').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120)}`;
+
 /** Reads the handed-off image bytes so they can be saved as a dialogue reference. */
 export async function resolveDesignAttachment(options: { brandId: string; userId: string; galleryImageId?: string | null; artifactId?: string | null }): Promise<File> {
   if (options.galleryImageId) {
     if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(options.galleryImageId)) throw new Error('design_attach_image_invalid');
-    return fileFromSource(`generated-images/${options.galleryImageId}`, 'library-image');
+    return fileFromSource(`generated-images/${options.galleryImageId}`, designAttachmentName(options));
   }
   const artifactId = options.artifactId?.startsWith('id:') ? options.artifactId.slice(3) : options.artifactId;
   if (!artifactId) throw new Error('design_attach_missing');
@@ -36,7 +40,7 @@ export async function resolveDesignAttachment(options: { brandId: string; userId
   const sources = [canonical, artifact.imageUrl].filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index);
   let lastError: unknown = new Error('design_attach_source_unavailable');
   for (const source of sources) {
-    try { return await fileFromSource(source, 'library-image'); } catch (error) { lastError = error; }
+    try { return await fileFromSource(source, designAttachmentName(options)); } catch (error) { lastError = error; }
   }
   throw lastError;
 }
