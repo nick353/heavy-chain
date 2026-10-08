@@ -1,0 +1,53 @@
+# Deploys heavychain.app (Cloudflare Worker heavy-chain-web) from main.
+# Zeabur deploys heavy-chain.zeabur.app on its own; without this job heavychain.app stays on the last manual deploy.
+# Needs repository secrets CLOUDFLARE_API_TOKEN (Workers Scripts:Edit, Workers R2 Storage:Edit) and CLOUDFLARE_ACCOUNT_ID.
+name: Deploy heavychain.app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-heavy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Skip without Cloudflare credentials
+        if: env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == ''
+        run: echo "::warning::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set; heavychain.app was not deployed."
+      - uses: actions/checkout@v4
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+      - uses: actions/setup-node@v4
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        run: |
+          npm ci
+          npm ci --prefix cloudflare/heavy-api
+      - name: Test, build, upload large assets, deploy
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        run: |
+          node --test cloudflare/heavy-web/test/web.test.mjs
+          node cloudflare/heavy-web/build.mjs
+          node cloudflare/heavy-web/upload-assets.mjs
+          cloudflare/heavy-api/node_modules/.bin/wrangler deploy --config cloudflare/heavy-web/.build/wrangler.json
+      - name: Readback
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        run: |
+          built=$(ls cloudflare/heavy-web/.build/site/assets | grep -E '^index\..*\.js$')
+          for i in $(seq 1 12); do
+            served=$(curl -s https://heavychain.app/ | grep -oE 'index\.[^"]*\.js' | head -1)
+            [ "$served" = "$built" ] && { echo "heavychain.app serves $served"; exit 0; }
+            sleep 10
+          done
+          echo "::error::heavychain.app serves $served, expected $built"; exit 1
