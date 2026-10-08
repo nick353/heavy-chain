@@ -331,8 +331,11 @@ function PageLoading() {
   return <WorkspaceLoadingFallback />;
 }
 
+// Pages share the single Suspense boundary around <Routes>. Router navigations are transitions, so an
+// already shown boundary keeps the current screen while the next page's chunk loads (as Light does);
+// a per-route boundary would mount fresh and flash the full-screen loader on every navigation.
 function lazyPage(page: React.ReactNode) {
-  return <Suspense fallback={<PageLoading />}>{page}</Suspense>;
+  return page;
 }
 
 function HeavyCanonicalRouteBoundary({ toolId: explicitToolId }: { toolId?: string }) {
@@ -578,6 +581,7 @@ function AppRoutes() {
   }, [authServiceUnavailable, initialize]);
 
   return (
+    <Suspense fallback={<PageLoading />}>
     <Routes>
       {/* Public routes */}
       {/* Heavy Chain keeps its authenticated launcher at the root; feature routes below remain protected. */}
@@ -1609,6 +1613,7 @@ function AppRoutes() {
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 
