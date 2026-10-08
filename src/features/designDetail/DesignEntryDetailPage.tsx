@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop, Maximize, MessageCircleMore,
-  MessageSquarePlus, Minus, MousePointer2, Palette, PanelRightClose, PanelRightOpen, Plus, Redo2, RefreshCw, Shapes, Sparkles,
-  Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2,
+  ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop, MessageCircleMore,
+  MessageSquarePlus, MousePointer2, Palette, PanelRightClose, PanelRightOpen, Redo2, RefreshCw, Shapes, Sparkles,
+  Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2, ZoomIn, ZoomOut, BookOpen, Keyboard,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
@@ -73,9 +73,21 @@ const ASSISTANT_PRESETS: Record<DialogueWorkspaceId, readonly string[]> = {
   ],
 };
 
+const CANVAS_GUIDE: readonly (readonly [string, string])[] = [
+  ['1', '画像をアップロードするか、キャンバスの画像を選びます'], ['2', '右のAIアシスタントに要望を書いて送信します'],
+  ['3', '生成された画像がキャンバスに並びます。選んで続けて修正できます'], ['4', '図形・パネル・テキストで資料に仕上げます'],
+];
+const CANVAS_SHORTCUTS: readonly (readonly [string, string])[] = [
+  ['クリック', '選択'], ['ドラッグ', '移動'], ['Delete', '削除'], ['ダブルクリック', 'テキスト編集'],
+  ['ホイール', 'キャンバス移動'], ['Ctrl + ホイール', '拡大・縮小'],
+];
 // Light's scenes for a project that already has a canvas.
 const CANVAS_SCENES = ['生地パターン適用', '線画から実写化', 'デザインミックス', 'プリント修正'] as const;
 
+/** A document "has a canvas" when it holds objects and no chat has started on it yet. */
+const hasContentNow = (dialogue: DesignDialogueState) => dialogue.document.snapshot.objects.length > 0 && dialogue.attempts.length === 0;
+
+const INSPIRATION_PLACEHOLDER = '/lightchain-assets/mirror/lightchain-qlxy-prod/persistence/font-end/design-empty-placeholder.png';
 const IMAGE_ACCEPT = '.png,.jpg,.jpeg,.avif,.webp';
 const FIT_PADDING = 80;
 
@@ -98,6 +110,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const attachImageId = params.get(DESIGN_ATTACH_GALLERY_PARAM);
   const attachArtifactId = params.get(DESIGN_ATTACH_ARTIFACT_PARAM);
   const openImageId = params.get(DESIGN_OPEN_IMAGE_PARAM);
+  // Light's インスピレーション card opens this detail with an upload-first start screen.
+  const inspiration = isNewFile && params.get('projectSubType') === 'clothingDesign';
   const identity = JSON.stringify([userId, brandId, projectId, conversationId]);
   const brandReady = Boolean(userId && brandId && (!isHeavyWorkspaceRuntime() || isHeavyWorkspaceBrandName(currentBrand?.name)));
   const generation = useRef(0);
@@ -111,6 +125,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const [fitted, setFitted] = useState('');
   const [panelTab, setPanelTab] = useState<'assistant' | 'layers'>('assistant');
   const [panelOpen, setPanelOpen] = useState(true);
+  const [helpOpen, setHelpOpen] = useState<'guide' | 'shortcuts' | null>(null);
   const [presetPage, setPresetPage] = useState(0);
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [titleError, setTitleError] = useState(false);
@@ -266,6 +281,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     ? [selectedCanvasReference, ...manifest.filter((reference) => reference.imageId !== selectedCanvasReference.imageId)] : manifest)
     .map((reference, order) => ({ ...reference, order }));
   // A project opened from a single image starts with that image selected, so the first request edits it.
+  // Like Light, a project that already has a canvas (and no chat yet) or the inspiration start opens with the assistant collapsed.
+  const panelDefaultKey = `${identity}:${inspiration ? 'inspiration' : visible?.dialogue ? (hasContentNow(visible.dialogue) ? 'canvas' : 'empty') : 'loading'}`;
+  const appliedPanelDefault = useRef('');
+  useEffect(() => {
+    if (panelDefaultKey.endsWith(':loading') || appliedPanelDefault.current === panelDefaultKey) return;
+    appliedPanelDefault.current = panelDefaultKey;
+    setPanelOpen(!(panelDefaultKey.endsWith(':inspiration') || panelDefaultKey.endsWith(':canvas')));
+  }, [panelDefaultKey]);
   const singleImageId = isDocumentOnly && imageObjects.length === 1 ? String(imageObjects[0].id) : '';
   useEffect(() => { if (singleImageId) setSelected((current) => current ?? singleImageId); }, [singleImageId]);
   const projectTitle = visible?.dialogue?.document.title ?? 'Untitled';
@@ -394,7 +417,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const addFiles = (files: File[]) => {
     const images = files.filter((file) => /^image\/(png|jpe?g|webp|avif)$/.test(file.type) && file.size <= 20 * 1024 * 1024);
     if (images.length !== files.length) setEntryError('jpg、jpeg、png、webp（最大20MBまで）の画像を選択してください');
-    if (images.length) void references.addFiles(images);
+    if (images.length) { setPanelOpen(true); setPanelTab('assistant'); void references.addFiles(images); }
   };
   const onUpload = (event: ChangeEvent<HTMLInputElement>) => { addFiles(Array.from(event.target.files ?? [])); event.target.value = ''; };
   const onDrop = (event: DragEvent<HTMLElement>) => { event.preventDefault(); setDragOver(false); addFiles(Array.from(event.dataTransfer.files ?? [])); };
@@ -509,7 +532,17 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       </div>
     </section>
 
-    {!hasContent && <label data-testid="design-entry-dropzone" className={`absolute flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed transition ${dragOver ? 'border-[#0bcabc] bg-[#0bcabc]/5' : 'border-white/20 bg-white/[0.015] hover:border-white/35'}`}
+    {!hasContent && inspiration && <label data-testid="design-inspiration-start" className={`absolute top-0 flex cursor-pointer flex-col items-center pt-6 text-center ${dragOver ? 'opacity-80' : ''}`}
+      style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2)`, transform: 'translateX(-50%)', width: 'min(960px, calc(100% - 120px))' }}>
+      <input type="file" accept={IMAGE_ACCEPT} multiple className="sr-only" onChange={onUpload} aria-label="画像をアップロード" />
+      <h1 className="text-[44px] font-semibold leading-tight text-white">Hello！デザインはここから始まります</h1>
+      <p className="mt-3 text-lg text-neutral-300">まずは下のボタンから線画画像／デザイン／グラフィック／生地画像をアップロードしてください</p>
+      <img src={INSPIRATION_PLACEHOLDER} alt="" className="mt-4 w-full max-w-[798px] object-cover" draggable={false} />
+      <p className="mt-2 text-base text-neutral-200">画像をクリックまたはドラッグ＆ドロップでアップロードするか、AIに直接相談してください</p>
+      <p className="mt-2 text-sm text-neutral-500">jpg、jpeg、png、webp形式の画像に対応しています。最大20MBまでアップロードできます</p>
+    </label>}
+
+    {!hasContent && !inspiration && <label data-testid="design-entry-dropzone" className={`absolute flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed transition ${dragOver ? 'border-[#0bcabc] bg-[#0bcabc]/5' : 'border-white/20 bg-white/[0.015] hover:border-white/35'}`}
       style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2 - 384px)`, top: 'calc(50% - 249px)', width: 768, height: 498 }}>
       <input type="file" accept={IMAGE_ACCEPT} multiple className="sr-only" onChange={onUpload} aria-label="画像をアップロード" />
       <Upload className="h-9 w-9 text-neutral-200" strokeWidth={1.75} />
@@ -543,7 +576,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       <button type="button" aria-label="アセット" onClick={() => uploadRef.current?.click()} className="flex h-[47px] w-[47px] items-center justify-center rounded-lg text-neutral-200 hover:bg-white/10"><Boxes className="h-6 w-6" /></button>
     </nav>}
 
-    {hasContent && <div role="toolbar" aria-label="キャンバスツール" className="absolute bottom-[18px] z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-[#1b2023]/95 p-[3px]" style={{ left: 'calc(50% - 400px)' }} data-testid="design-canvas-toolbar">
+    {hasContent && <div role="toolbar" aria-label="キャンバスツール" className="absolute bottom-[18px] z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-[#1b2023]/95 p-[3px]" style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2)`, transform: 'translateX(-50%)' }} data-testid="design-canvas-toolbar">
       <button type="button" aria-label="選択" aria-pressed={!move} onClick={() => setMove(false)} className={`${toolbarButton} ${!move ? 'bg-white/10 text-white' : ''}`}><MousePointer2 className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="ドラッグ" aria-pressed={move} onClick={() => setMove(true)} className={`${toolbarButton} ${move ? 'bg-white/10 text-white' : ''}`}><Hand className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="取り消し" disabled={!viewHistory.back.length} onClick={() => setViewHistory((current) => { const previous = current.back[current.back.length - 1]; if (!previous) return current; setView(previous); return { back: current.back.slice(0, -1), forward: [...current.forward, view] }; })} className={toolbarButton}><Undo2 className="h-[18px] w-[18px]" /></button>
@@ -563,23 +596,39 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       <span className="mx-[2px] h-5 w-px bg-white/15" />
       {/* Light ends the tool group with 企画提案書; Heavy opens its own design documents (/board/edit). */}
       <Link to="/board/edit" aria-label="企画提案書" className={toolbarButton}><FileText className="h-[18px] w-[18px]" /></Link>
-      <span className="ml-[64px]" />
-      <span className="flex items-center">
-      <button type="button" aria-label="縮小" onClick={() => pushView(zoomStudioViewport(view, view.zoom / 1.25, { x: 500, y: 400 }))} className="flex h-7 w-7 items-center justify-center rounded text-neutral-300 hover:text-white"><Minus className="h-4 w-4" /></button>
-      <label className="relative flex h-8 w-20 items-center justify-between rounded-lg border border-white/10 bg-[#141819] px-2 text-sm text-neutral-200">
-        <span data-testid="design-zoom">{Math.round(view.zoom * 100)}%</span><ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
-        <select aria-label="ズーム" value={Math.round(view.zoom * 100)} onChange={(event) => pushView(zoomStudioViewport(view, Number(event.target.value) / 100, { x: 500, y: 400 }))}
-          className="absolute inset-0 cursor-pointer opacity-0">
-          {[...new Set([10, 20, 25, 50, 75, 100, 150, 200, Math.round(view.zoom * 100)])].sort((a, b) => a - b).map((value) => <option key={value} value={value}>{value}%</option>)}
-        </select>
-      </label>
-      <button type="button" aria-label="拡大" onClick={() => pushView(zoomStudioViewport(view, view.zoom * 1.25, { x: 500, y: 400 }))} className="flex h-7 w-7 items-center justify-center rounded text-neutral-300 hover:text-white"><Plus className="h-4 w-4" /></button>
-      </span>
-      <button type="button" aria-label="全体を表示" onClick={() => { const next = fitView(); if (next) pushView(next); }} className="ml-2 flex h-10 w-10 items-center justify-center rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white"><Maximize className="h-[18px] w-[18px]" /></button>
-      <button type="button" aria-label="ダウンロード" onClick={() => void downloadSelected()} className="ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-neutral-300 hover:bg-white/10 hover:text-white"><Download className="h-[18px] w-[18px]" /></button>
+      <span className="mx-[2px] h-5 w-px bg-white/15" />
+      <button type="button" aria-label="ダウンロード" onClick={() => void downloadSelected()} className={toolbarButton}><Download className="h-[18px] w-[18px]" /></button>
     </div>}
 
-    {!panelOpen && <button type="button" aria-label="パネルを開く" onClick={() => setPanelOpen(true)} className="absolute right-3 top-4 z-30 flex h-[37px] items-center gap-2 rounded-xl border border-white/10 bg-[#1b2023] px-3 text-sm text-neutral-200"><PanelRightOpen className="h-4 w-4" />AIアシスタント</button>}
+    {/* Light keeps zoom and its two round help buttons as a separate group at the bottom right of the canvas. */}
+    {hasContent && <div className="absolute bottom-[18px] z-20 flex items-center gap-2" style={{ right: panelOpen ? 452 : 24 }} data-testid="design-zoom-group">
+      <span className="flex h-12 items-center gap-1 rounded-full border border-white/10 bg-[#1b2023]/95 px-2">
+        <button type="button" aria-label="縮小" onClick={() => pushView(zoomStudioViewport(view, view.zoom / 1.25, { x: 500, y: 400 }))} className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-300 hover:text-white"><ZoomOut className="h-[18px] w-[18px]" /></button>
+        <label className="relative flex h-8 w-20 items-center justify-between rounded-lg px-2 text-base text-neutral-200">
+          <span data-testid="design-zoom">{Math.round(view.zoom * 100)}%</span><ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
+          <select aria-label="ズーム" value={Math.round(view.zoom * 100)} onChange={(event) => {
+            if (event.target.value === 'fit') { const next = fitView(); if (next) pushView(next); return; }
+            pushView(zoomStudioViewport(view, Number(event.target.value) / 100, { x: 500, y: 400 }));
+          }} className="absolute inset-0 cursor-pointer opacity-0">
+            {[...new Set([10, 20, 25, 50, 75, 100, 150, 200, Math.round(view.zoom * 100)])].sort((a, b) => a - b).map((value) => <option key={value} value={value}>{value}%</option>)}
+            <option value="fit">全体を表示</option>
+          </select>
+        </label>
+        <button type="button" aria-label="拡大" onClick={() => pushView(zoomStudioViewport(view, view.zoom * 1.25, { x: 500, y: 400 }))} className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-300 hover:text-white"><ZoomIn className="h-[18px] w-[18px]" /></button>
+      </span>
+      {([['guide', '使い方ガイド', BookOpen, CANVAS_GUIDE], ['shortcuts', 'ショートカット', Keyboard, CANVAS_SHORTCUTS]] as const).map(([id, label, Icon, rows]) => <span key={id} className="relative">
+        <button type="button" aria-label={label} aria-expanded={helpOpen === id} onClick={() => setHelpOpen((open) => open === id ? null : id)}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#1b2023]/95 text-neutral-300 hover:text-white"><Icon className="h-[18px] w-[18px]" /></button>
+        {helpOpen === id && <div role="dialog" aria-label={label} data-testid={`design-${id}`} className="absolute bottom-[52px] right-0 w-72 rounded-xl border border-white/10 bg-[#1b2023] p-4 text-sm text-neutral-200 shadow-2xl">
+          <p className="mb-3 font-medium">{label}</p>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-neutral-300">
+            {rows.map(([term, detail]) => <div key={term} className="contents"><dt className="text-neutral-400">{term}</dt><dd>{detail}</dd></div>)}
+          </dl>
+        </div>}
+      </span>)}
+    </div>}
+
+    {!panelOpen && <button type="button" aria-label="パネルを開く" title="AIアシスタント" onClick={() => setPanelOpen(true)} className="absolute right-3 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-[#1b2023] text-neutral-200 shadow-lg hover:text-white"><PanelRightOpen className="h-5 w-5" /></button>}
 
     {panelOpen && <aside className="absolute bottom-3 right-3 top-4 z-30 flex w-[423px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#171c1f]" aria-label="デザインアシスタント" data-testid="design-assistant-panel"
       data-project-id={visible?.draft?.projectId} data-conversation-id={visible?.draft?.conversationId}>
@@ -595,7 +644,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-[11px] pb-4" data-testid={visible?.draft ? 'design-entry-draft' : undefined} data-project-id={visible?.draft?.projectId} data-conversation-id={visible?.draft?.conversationId}>
           {(isNewFile || (!visible?.dialogue?.attempts.length && !visible?.draft)) && !visible?.busy && <div data-testid="design-assistant-welcome">
-            {hasContent && workspaceId === 'design' ? <>
+            {(hasContent || inspiration) && workspaceId === 'design' ? <>
               {/* Light greets a project that already has a canvas with editing scenes instead of the new-file presets. */}
               <h1 className="mt-[52px] text-[26px] font-medium leading-[34px]">今日は何をデザインしますか？</h1>
               <p className="mt-4 text-sm leading-5 text-neutral-400">下からデザイン要望を入力するか、画像をアップロード／キャンバスから選択して修正・デザインできます</p>

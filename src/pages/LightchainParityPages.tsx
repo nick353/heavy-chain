@@ -1690,7 +1690,7 @@ export function LightchainDesignProductionPage() {
           <div role="tabpanel" aria-label="プロジェクトから開始">
             <section className="mt-6 grid gap-2 grid-cols-2 sm:grid-cols-5" aria-label="新規ファイル">
               <DesignNewFileCard />
-              <CreationCard icon={<Shirt />} title="インスピレーション" actionLabel="デザインプロジェクトを新規作成" onClick={() => navigate('/creator')} />
+              <CreationCard icon={<Shirt />} title="インスピレーション" actionLabel="デザインプロジェクトを新規作成" onClick={() => navigate('/designProduction/detail?projectSubType=clothingDesign')} />
               <CreationCard icon={<Palette />} title="ブリン卜修正" actionLabel="プリントプロジェクトを新規作成" onClick={() => navigate('/printing')} />
               <CreationCard icon={<Layers />} title="生地イメージ" actionLabel="生地プロジェクトを新規作成" onClick={() => navigate('/tools/fabric')} />
               <CreationCard icon={<FileText />} title="企画提案書" actionLabel="企画提案書を新規作成" onClick={() => navigate('/agent')} />
