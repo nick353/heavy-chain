@@ -40,6 +40,33 @@ const lazyWithChunkRecovery = (loader: () => Promise<{ default: ComponentType<an
 
 const lazy = lazyWithChunkRecovery;
 
+// Main workspace screens: their chunks are fetched once the app is idle after sign-in, so a first visit
+// opens without waiting for the network (Light switches screens instantly).
+const idlePrefetchLoaders: Array<() => Promise<unknown>> = [];
+const prefetchedLazy = (loader: () => Promise<{ default: ComponentType<any> }>) => {
+  idlePrefetchLoaders.push(loader);
+  return lazy(loader);
+};
+
+function useIdlePrefetch(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let cancelled = false;
+    const run = async () => {
+      for (const load of idlePrefetchLoaders) {
+        if (cancelled) return;
+        await load().catch(() => undefined);
+      }
+    };
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    const handle = idle ? idle(() => void run()) : window.setTimeout(() => void run(), 2000);
+    return () => {
+      cancelled = true;
+      if (!idle) window.clearTimeout(handle);
+    };
+  }, [enabled]);
+}
+
 const LandingPage = lazy(() => import('./pages/LandingPage').then((module) => ({ default: module.LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })));
 const SignupPage = lazy(() => import('./pages/SignupPage').then((module) => ({ default: module.SignupPage })));
@@ -63,25 +90,25 @@ const VideoProjectDashboardPage = lazy(() => import('./pages/VideoProjectDashboa
 const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').then((module) => ({ default: module.VideoWorkstationPage })));
 const LightchainSourceNotFoundPage = lazy(() => import('./pages/LightchainSourceNotFoundPage').then((module) => ({ default: module.LightchainSourceNotFoundPage })));
 const LabPage = lazy(() => import('./pages/LabPage').then((module) => ({ default: module.LabPage })));
-const LightchainLabDetailPage = lazy(() => import('./pages/LightchainLabDetailPage').then((module) => ({ default: module.LightchainLabDetailPage })));
+const LightchainLabDetailPage = prefetchedLazy(() => import('./pages/LightchainLabDetailPage').then((module) => ({ default: module.LightchainLabDetailPage })));
 const HeavyAgentTaskPage = lazy(() => import('./pages/HeavyAgentTaskPage'));
 const LightchainCustomStylePage = lazy(() => import('./pages/LightchainCustomStylePage').then((module) => ({ default: module.LightchainCustomStylePage })));
-const LightchainWorkbenchPage = lazy(() => import('./pages/LightchainWorkbenchPage').then((module) => ({ default: module.LightchainWorkbenchPage })));
-const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
+const LightchainWorkbenchPage = prefetchedLazy(() => import('./pages/LightchainWorkbenchPage').then((module) => ({ default: module.LightchainWorkbenchPage })));
+const ModelLibraryPage = prefetchedLazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
 // /history, /jobs and /gallery are Heavy-only screens. They redirect to the library's 生成履歴 like Light;
 // HistoryPage, JobsPage and GalleryPage are kept in src/pages so the routes can be restored.
-const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
-const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
-const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
+const CanvasEditorPage = prefetchedLazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
+const LightchainMaterialWorkbenchPage = prefetchedLazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
+const LightchainCreatorPage = prefetchedLazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
 const LightchainPrintingPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainPrintingPage })));
-const LightchainGraphicDesignPage = lazy(() => import('./pages/LightchainGraphicDesignPage').then((module) => ({ default: module.LightchainGraphicDesignPage })));
-const LightchainLineToolsPage = lazy(() => import('./pages/LightchainLineToolsPage').then((module) => ({ default: module.LightchainLineToolsPage })));
-const LightchainImageRepairPage = lazy(() => import('./pages/LightchainImageRepairPage').then((module) => ({ default: module.LightchainImageRepairPage })));
+const LightchainGraphicDesignPage = prefetchedLazy(() => import('./pages/LightchainGraphicDesignPage').then((module) => ({ default: module.LightchainGraphicDesignPage })));
+const LightchainLineToolsPage = prefetchedLazy(() => import('./pages/LightchainLineToolsPage').then((module) => ({ default: module.LightchainLineToolsPage })));
+const LightchainImageRepairPage = prefetchedLazy(() => import('./pages/LightchainImageRepairPage').then((module) => ({ default: module.LightchainImageRepairPage })));
 const LightchainVectorSpecialPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainVectorSpecialPage })));
-const DesignEntryDetailPage = lazy(() => import('./features/designDetail/DesignEntryDetailPage'));
+const DesignEntryDetailPage = prefetchedLazy(() => import('./features/designDetail/DesignEntryDetailPage'));
 const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
 const LightchainMarketingHomePage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainMarketingHomePage })));
-const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainLibraryPage').then((module) => ({ default: module.LightchainLibraryPage })));
+const LightchainAssetCenterPage = prefetchedLazy(() => import('./pages/LightchainLibraryPage').then((module) => ({ default: module.LightchainLibraryPage })));
 const LightchainBoardPage = lazy(() => import('./pages/LightchainBoardPage').then((module) => ({ default: module.LightchainBoardPage })));
 const LightchainBoardEditPage = lazy(() => import('./pages/LightchainBoardPage').then((module) => ({ default: module.LightchainBoardEditPage })));
 const LightchainOrientedDesignPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignPage })));
@@ -107,6 +134,7 @@ const queryClient = new QueryClient({
 // again.  The previous 10s window made a slow-but-valid session look logged
 // out on every direct route load.
 const WORKSPACE_LOADING_STALL_TIMEOUT_MS = 30_000;
+const WORKSPACE_LOADING_COPY_DELAY_MS = 2_000;
 // Retry a transient auth failure against the existing host-only cookie. This
 // keeps the source-like workspace continuous without prompting for credentials
 // again, while the delay avoids a request storm during an outage.
@@ -241,6 +269,12 @@ function WorkspaceLoadingFallback({
   // auth is still hydrating, so the frame must not depend on a resolved user.
   const renderHeader = showHeader || heavyRuntime;
   const [loadingStalled, setLoadingStalled] = useState(false);
+  // Light shows no loading copy; a short load stays a plain dark screen and the message appears only if it drags on.
+  const [copyVisible, setCopyVisible] = useState(false);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setCopyVisible(true), WORKSPACE_LOADING_COPY_DELAY_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   useEffect(() => {
     if (authRecovery || authServiceUnavailable) return undefined;
@@ -272,7 +306,7 @@ function WorkspaceLoadingFallback({
         )}
 
         <main className={`flex flex-1 items-center justify-center py-12 ${heavyRuntime ? 'px-6' : ''}`}>
-          <div className="w-full max-w-xl text-center">
+          <div className={`w-full max-w-xl text-center transition-opacity duration-300 ${copyVisible || authRecovery || authServiceUnavailable ? 'opacity-100' : 'opacity-0'}`} aria-hidden={copyVisible || authRecovery || authServiceUnavailable ? undefined : true}>
             <div className="mb-5 flex items-center justify-center gap-3">
             <div className="spinner" />
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">{authRecovery || authServiceUnavailable ? 'HEAVY CHAIN AI' : copy.eyebrow}</p>
@@ -548,7 +582,8 @@ function StaticInfoPage({
 }
 
 function AppRoutes() {
-  const { initialize, isInitialized, authServiceUnavailable } = useAuthStore();
+  const { initialize, isInitialized, authServiceUnavailable, user } = useAuthStore();
+  useIdlePrefetch(isInitialized && Boolean(user));
 
   useEffect(() => {
     let mounted = true;
