@@ -80,8 +80,9 @@ test('canvas keeps provider safety fail-closed without rendering a Light-missing
   assert.doesNotMatch(page, /UPLOAD_RIGHTS_CONFIRMATION_LABEL/);
   assert.doesNotMatch(page, /GENERATION_LEGAL_COPY/);
   assert.doesNotMatch(page, /type="checkbox"/);
-  assert.match(page, /const rightsConfirmed = false/);
-  assert.match(page, /legalSafety: \{ rightsConfirmed \}/);
-  assert.match(page, /if \(!rightsConfirmed\)/);
-  assert.match(page, /権限がありません/);
+  assert.match(page, /const rightsConfirmed = heavyGenerationReady/);
+  assert.match(page, /legalSafety:\s*\{\s*rightsConfirmed,?\s*\}/);
+  // Generation stays locked until login, brand and Heavy workspace are ready.
+  assert.match(page, /ready: heavyGenerationReady/);
+  assert.match(page, /ログインとブランド設定が確認できれば画像編集を開始できます/);
 });

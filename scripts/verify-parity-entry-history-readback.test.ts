@@ -8,18 +8,19 @@ test('Lightchain parity entry pages read persisted local history without seed re
   assert.match(source, /function PersistedHistoryPanel/);
   assert.match(source, /listWorkspaceArtifacts\(currentBrand\.id, user\?\.id\)/g);
   assert.match(source, /designHistoryFeatureTypes/);
-  assert.match(source, /listGeneratedImages\(currentBrand\.id/);
-  assert.match(source, /const listRows = remoteRows\.map\(asGeneratedImageListRow\)/);
-  assert.match(source, /withSignedImageUrls\(listRows\)/);
+  assert.match(source, /cloudflareDataPlane\.listGeneratedImages\(brandId, \{/);
+  assert.match(source, /return remoteRows\.map\(asGeneratedImageListRow\)/);
+  assert.match(source, /signRemoteArtifacts: \(rows\) => withSignedImageUrls\(\[\.\.\.rows\]\)/);
   assert.match(source, /generatedImageToWorkspaceArtifact/);
   assert.match(source, /remoteImageId: image\.id/);
-  assert.match(source, /mergeWorkspaceArtifact\(current, result\.artifact\)/);
+  // Saved results are re-read from the server list rather than merged into local state.
   assert.match(source, /deleteGeneratedImage\(remoteImageId/);
   assert.doesNotMatch(source, /setPersistedDesignArtifacts\(listWorkspaceArtifacts\(currentBrand\.id, user\?\.id\)/);
   assert.match(source, /fittingHistoryFeatureTypes/);
   assert.match(source, /data-testid="creator-persisted-history"/);
   assert.match(source, /data-testid="model-persisted-history"/);
-  assert.match(source, /data-testid="oriented-design-persisted-history"/);
+  // Wear Design Lab lists saved projects as cards (useFeatureProjects) instead of a history panel.
+  assert.match(source, /useFeatureProjects\('wear-design-lab'\)/);
   assert.match(source, /data-testid="design-production-persisted-projects"/);
   assert.match(source, /sourceArtifactId=\$\{encodeURIComponent\(artifact\.id\)\}/);
   assert.match(source, /resumeJob=\$\{encodeURIComponent\(artifact\.sourceJobId \?\? artifact\.id\)\}/);

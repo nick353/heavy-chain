@@ -16,7 +16,7 @@ test('owner brand resolution uses the current Cloudflare protected list contract
 
 test('brand resolution is visible, state-specific, and locks provider generation while unresolved', () => {
   assert.match(workbench, /data-testid="lightchain-brand-resolution-gate"/);
-  assert.match(workbench, /const specialProviderGenerationLocked = !lightchainProviderSupported[\s\S]*workspaceStyle\?\.kind === 'agent' && !providerRightsConfirmed/);
+  assert.match(workbench, /const specialProviderGenerationLocked = !lightchainProviderSupported\s*\|\| interactiveBrandPending/);
   assert.match(workbench, /brandState\.status === 'pending'/);
   assert.match(workbench, /brandState\.status === 'success_empty'/);
   assert.match(workbench, /利用できるブランドがありません/);

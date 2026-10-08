@@ -15,7 +15,7 @@ test('Lab workspace hands off to its admitted Lightchain provider route', async 
   assert.doesNotMatch(labPage, /feature:\s*'campaign-image'/);
   assert.doesNotMatch(labPage, /campaign-image/);
   assert.match(handoff, /export const buildLightchainToolHref/);
-  assert.match(handoff, /return `\/lightchain\/\$\{encodeURIComponent\(toolId\)\}\?/);
+  assert.match(handoff, /return toHeavyWorkspacePath\(`\/lightchain\/\$\{encodeURIComponent\(toolId\)\}\?/);
   assert.match(workbench, /hydrateGenerationIntentSource\(searchParams\)/);
   assert.match(workbench, /setWorkspaceText\(briefParam\)/);
 });

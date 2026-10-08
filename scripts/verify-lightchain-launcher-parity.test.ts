@@ -70,7 +70,7 @@ test('launcher preserves the current Lightchain card order with Heavy display na
 
   assert.deepEqual(titlesByCategory, {
     recommended: [
-      'インサイト意思決定ワークベンチ',
+      'インスピレーションワークスペース',
       'デザインワークスペース',
       'マーケティングワークスペース',
       'ファッションスタジオ',
@@ -81,7 +81,7 @@ test('launcher preserves the current Lightchain card order with Heavy display na
       'デザインワークスペース',
       'インスピレーション',
       'ウェアデザインラボ',
-      'インサイト意思決定ワークベンチ',
+      'インスピレーションワークスペース',
       '生地プリントの試着シミュレーション',
       '線画から実写へ変換',
       '色変更',

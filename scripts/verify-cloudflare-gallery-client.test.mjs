@@ -69,10 +69,10 @@ test('migrated Gallery and reuse readers cannot execute old data calls', () => {
     'pages/LightchainLibraryPage.tsx', 'pages/LightchainWorkbenchPage.tsx']) {
     const source = readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /\bsupabase\s*(?:\.|\n)|\bfrom\(['"]generated_images['"]\)/, path);
-    assert.match(source, /cloudflareDataPlane\.listGeneratedImages/);
+    assert.match(source, /(?:cloudflareDataPlane|cloudflare)\.listGeneratedImages/, path);
   }
   const dashboard = readFileSync(new URL('../src/pages/DashboardPage.tsx', import.meta.url), 'utf8');
-  assert.match(dashboard, /state\.user\?\.id !== session\.user\.id/);
+  assert.match(dashboard, /state\.user\?\.id !== user\.id/);
   assert.match(dashboard, /setCurrentBrand\(confirmedCreatedBrand\)/);
   assert.match(dashboard, /再作成は不要です/);
 });
@@ -81,7 +81,7 @@ test('Gallery cards expose a keyboard and semantic detail affordance', () => {
   const gallery = readFileSync(new URL('../src/pages/GalleryPage.tsx', import.meta.url), 'utf8');
   assert.match(gallery, /role="button"/);
   assert.match(gallery, /tabIndex=\{0\}/);
-  assert.match(gallery, /aria-label=\{`\$\{image\.prompt \|\| '生成画像'\}の詳細を見る`\}/);
+  assert.match(gallery, /aria-label=\{`\$\{toHeavyDisplayCopy\(image\.prompt\) \|\| '生成画像'\}の詳細を見る`\}/);
   assert.match(gallery, /event\.key !== 'Enter' && event\.key !== ' '/);
 });
 

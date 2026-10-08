@@ -23,7 +23,7 @@ test('legacy Heavy dashboard remains available only behind the explicit workspac
 });
 
 test('dashboard receives the Lightchain header and frame', () => {
-  assert.match(layout, /const isLightchainRoute = location\.pathname === '\/dashboard'/);
+  assert.match(layout, /const isLightchainRoute = isHeavyWorkspacePage\s*\|\| location\.pathname === '\/dashboard'/);
 });
 
 console.log('dashboard Lightchain home tests: 3/3 passed');

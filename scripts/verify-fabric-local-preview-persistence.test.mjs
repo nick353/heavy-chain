@@ -28,7 +28,7 @@ test('fabric local previews persist with explicit preview provenance and restore
 });
 
 test('local preview restoration keeps provider artifacts distinct', () => {
-  assert.match(page, /if \(!isLocalPreview && metadata\.providerResultArtifact !== true\) return null/);
+  assert.match(page, /if \(!isLocalPreview && image\.feature_type === FABRIC_PROVIDER_RESULT_FEATURE_TYPE && metadata\.providerResultArtifact !== true\) return null/);
   assert.match(page, /isLocalPreview \? 'preview' : 'provider'/);
   assert.match(page, /isLocalPreview \? 'browser-local-fabric-composition-v1' : jsonString\(metadata\.backendProvider\)/);
 });

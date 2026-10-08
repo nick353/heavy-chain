@@ -10,8 +10,9 @@ test('email login admits the returned session before protected-route navigation'
   assert.match(authStore, /signInWithEmail: \(email: string, password: string\) => Promise<User>/);
   assert.match(authStore, /if \(!data\.session\?\.user\) throw new Error\('auth_session_missing_after_sign_in'\)/);
   assert.match(authStore, /user: data\.session\.user/);
-  assert.match(loginPage, /await signInWithEmail\(email, password\);[\s\S]*navigate\('\/designProduction'/);
-  assert.match(authStore, /AUTH_OPERATION_TIMEOUT_MS\s*=\s*12_000/);
+  // Login returns to the protected route that sent the user there (Light keeps the redirect target).
+  assert.match(loginPage, /await signInWithEmail\(accountId\.trim\(\), password\);[\s\S]*navigate\(resolveAuthReturnPath\(location\.search, window\.location\.origin\), \{ replace: true \}\)/);
+  assert.match(authStore, /AUTH_OPERATION_TIMEOUT_MS\s*=\s*32_000/);
   assert.match(authStore, /'auth_sign_in_timeout'/);
 });
 

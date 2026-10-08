@@ -22,7 +22,7 @@ test('GeneratePage fails closed for incomplete backend persistence', async () =>
 test('GeneratePage requires local artifact readback before history or success promotion', async () => {
   const source = await readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8');
   assert.match(source, /saveWorkspaceArtifactPersisted/);
-  assert.match(source, /deleteWorkspaceArtifactsPersisted\(currentBrand\.id, attemptedArtifactIds, user\?\.id\)/);
+  assert.match(source, /deleteWorkspaceArtifactsPersisted\(generationBrand\.id, attemptedArtifactIds, user\?\.id\)/);
   assert.match(source, /workspace_artifact_persistence_unverified/);
 
   const persistenceGate = source.indexOf('const saveLocalArtifactsWithReadback');

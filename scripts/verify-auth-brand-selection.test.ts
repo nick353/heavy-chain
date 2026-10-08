@@ -110,7 +110,7 @@ test('Fitting model-matrix generation fences provider and result commits', async
   assert.ok(runStart >= 0 && runEnd > runStart);
   const runSource = source.slice(runStart, runEnd);
 
-  const capture = runSource.indexOf('const authBrandFence = captureCurrentAuthBrandFence()');
+  const capture = runSource.indexOf('const authBrandFence = captureCurrentAuthBrandFence(');
   const beforeProvider = runSource.indexOf("assertCurrentAuthBrandFence(authBrandFence, 'before_provider')");
   const provider = runSource.indexOf('generateModelMatrix(');
   const afterProvider = runSource.indexOf("assertCurrentAuthBrandFence(authBrandFence, 'after_provider')");

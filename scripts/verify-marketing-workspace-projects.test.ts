@@ -37,6 +37,6 @@ test('marketing-detail restores persisted project name and brief from the card r
   const source = await readFile(workbenchSourcePath, 'utf8');
 
   assert.match(source, /searchParams\.get\('projectName'\)/);
-  assert.match(source, /setMarketingProjectName\(projectNameParam\.slice\(0, 80\)\)/);
-  assert.match(source, /if \(toolId === 'marketing-detail'\) setMarketingDetailPrompt\(briefParam\)/);
+  assert.match(source, /setMarketingProjectName\(projectNameParam\.slice\(0, ?80\)\)/);
+  assert.match(source, /if \(selectedTool\.id === 'marketing-detail'\) setMarketingDetailPrompt\(briefParam\)/);
 });

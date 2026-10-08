@@ -53,7 +53,9 @@ test('production mode rejects loopback targets and local coverage cannot be redu
   assert.match(combinedOutput(reduced), /full_31_feature_desktop_mobile_coverage_cannot_be_reduced/);
 });
 
-test('requested output directories are never reused', () => {
+// The verifier reads a local source readback under work/ (gitignored) before it checks the output directory.
+const sourceReadbackMissing = !fs.existsSync(new URL('../work/lightchain-source-readback-20260920-r4.json', import.meta.url));
+test('requested output directories are never reused', { skip: sourceReadbackMissing && 'local evidence not present' }, () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'heavy-chain-verifier-contract-'));
   const existing = path.join(parent, 'existing-output');
   fs.mkdirSync(existing);
