@@ -303,6 +303,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const [dragged, setDragged] = useState<{ ids: string[]; dx: number; dy: number } | null>(null);
   const objectDrag = useRef<{ ids: string[]; pointerId: number; x: number; y: number; moved: boolean } | null>(null);
   const editable = Boolean(projectId && visible?.dialogue && !visible.busy);
+  /** Without a chat, re-reads only the document and keeps the canvas on screen; a full reload would briefly show the upload screen. */
+  const reloadDocumentInPlace = async () => {
+    const assertContext = () => { const auth = useAuthStore.getState(); if (auth.user?.id !== userId || auth.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); };
+    try {
+      const document = validateOwnedDesignDocument(await client.getDocument(projectId, brandId, { userId, assertContext }), { userId, brandId }, projectId);
+      setState((previous) => previous.identity === identity && previous.dialogue ? { ...previous, dialogue: { ...previous.dialogue, document } } : previous);
+    } catch { setRetry((value) => value + 1); }
+  };
   /** Applies an object change locally, then saves it to the Canvas document (fresh revision) and reloads it. Recorded for undo unless `record` is false. */
   const mutateObjects = async (change: (objects: Record<string, unknown>[]) => Record<string, unknown>[], record = true) => {
     const current = visible?.dialogue?.document;
@@ -319,7 +327,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         snapshot: { ...fresh.snapshot, objects: change(fresh.snapshot.objects) } }, context);
     } catch { setEntryError('キャンバスの変更を保存できませんでした'); }
     if (controller.current) await controller.current.refresh().catch(() => setRetry((value) => value + 1));
-    else setRetry((value) => value + 1);
+    else await reloadDocumentInPlace();
   };
   const nextZ = () => canvasObjects.reduce((max, object) => Math.max(max, Number(object.zIndex) || 0), 0) + 1;
   const addObject = (tool: DesignShapeKind | 'frame' | 'text') => {
@@ -512,7 +520,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       await activeDialogueClient.updateDocument({ documentId: projectId, brandId, title, expectedRevision: fresh.revision, snapshot: fresh.snapshot }, context);
     } catch { setTitleError(true); }
     if (controller.current) await controller.current.refresh().catch(() => setTitleError(true));
-    else setRetry((value) => value + 1);
+    else await reloadDocumentInPlace();
   };
   const downloadSelected = async () => {
     const object = selectedObject ?? imageObjects[imageObjects.length - 1];
