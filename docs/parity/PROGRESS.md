@@ -382,3 +382,9 @@ Each iteration: read this file → advance the next open item → append result 
   - heavy-chain-alerts backs up every D1 table to R2 daily at 03:00 JST. Manual run: backups/d1/2026-10-08, 27 tables, 715 rows, 2.66 MB, plus manifest.
 - 検証: Worker tests 163/163, new frontend and backup tests pass, CI green. Production settings page lists 4 OpenAI image models and 3 Claude models, with defaults GPT Image 2 / GPT Image 1 mini and Claude Sonnet 5.5.
 - I committed #47 with a broken type block once (the local `tsc -p .` checks nothing; use `tsc -p tsconfig.app.json`). CI caught it and nothing was merged until it passed.
+
+### Iteration 54 (2026-10-08) — Heavy Chain logo, favicons, share image
+- nick353/heavy-chain#49: a new Heavy Chain mark (two interlocked chain links, teal and white) replaces the Light-shaped icon in the header, and comes with the "HEAVY CHAIN" wordmark.
+- Added favicon.svg, favicon.ico (16/32/48), apple-touch-icon.png, icon-192/512.png and site.webmanifest. og-image.png (1200×630) is a new design. og:url and canonical are https://heavychain.app/, and og:image carries `?v=20261008` to bust caches.
+- 検証: CI green. Production returns 200 for og-image, favicons, the touch icon and the manifest. og meta reads heavychain.app URLs. The header on heavychain.app/tools/printing shows the new mark.
+- LINE and other apps cache share previews, so they may keep showing the old image for a while.
