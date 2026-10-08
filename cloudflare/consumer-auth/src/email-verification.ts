@@ -1,5 +1,6 @@
 import { signJWT, verifyJWT } from 'better-auth/crypto';
 import type { Env } from './auth.ts';
+import { verificationResultPage } from './recovery-page.ts';
 
 const PURPOSE = 'mypro-email-verification';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -18,7 +19,8 @@ export async function bindVerificationLink(env: Env, user: { id: string; email: 
 // and one atomic ID+email UPDATE instead; no password/session crypto is replaced.
 export async function verifyMyProEmail(request: Request, env: Env, origins: string[]): Promise<Response> {
   const headers = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' };
-  const invalid = () => Response.json({ error: 'invalid_verification' }, { status: 400, headers });
+  // People open these links in a mail app's browser, so answer with a MyPro page rather than JSON.
+  const invalid = () => verificationResultPage(false);
   const url = new URL(request.url);
   const token = url.searchParams.get('token');
   if (!token || token.length > 4096) return invalid();
@@ -38,5 +40,5 @@ export async function verifyMyProEmail(request: Request, env: Env, origins: stri
     RETURNING id`).bind(new Date().toISOString(), claims.sub, claims.email).first<{ id: string }>();
   if (!updated) return invalid();
   return callback ? new Response(null, { status: 302, headers: { ...headers, location: callback.href } })
-    : Response.json({ status: true }, { headers });
+    : verificationResultPage(true);
 }

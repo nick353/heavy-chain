@@ -1,8 +1,11 @@
 export type MailMessage = {
   from: string;
+  /** Display name shown as the sender, e.g. "MyPro". */
+  fromName?: string;
   to: string;
   subject: string;
   text: string;
+  html?: string;
 };
 
 type EmailEnv = {
@@ -20,9 +23,10 @@ export async function sendEmail(env: EmailEnv, message: MailMessage): Promise<{ 
   if (typeof env.EMAIL?.send !== 'function') throw new Error('email_not_configured');
   const receipt = await env.EMAIL.send({
     to: message.to,
-    from: message.from,
+    from: message.fromName ? { name: message.fromName, email: message.from } : message.from,
     subject: message.subject,
     text: message.text,
+    ...(message.html ? { html: message.html } : {}),
   });
   const messageId = acceptedMessageId(receipt);
   if (!messageId) throw new Error('email_acceptance_unconfirmed');

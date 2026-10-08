@@ -12,8 +12,8 @@
   }],
   "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["mypro@notify.nisen.uk"] }],
   "vars": {
-    "EMAIL_DAILY_ATTEMPT_LIMIT": "5",
-    "EMAIL_TOTAL_ATTEMPT_LIMIT": "20",
+    "EMAIL_DAILY_ATTEMPT_LIMIT": "50",
+    "EMAIL_TOTAL_ATTEMPT_LIMIT": "5000",
     "APP_ID": "mypro",
     "EMAIL_FROM": "mypro@notify.nisen.uk",
     "AUTH_BASE_URL": "https://mypro-auth.nichika2000823.workers.dev",

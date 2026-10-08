@@ -38,12 +38,14 @@ export class TestD1 {
 export function setup() {
   const db = new TestD1();
   const mail: Array<{ from: string; to: string; subject: string; text: string }> = [];
+  const sent: EmailMessageBuilder[] = [];
   const email: SendEmail = { send: async builder => {
     const fields = builder as EmailMessageBuilder;
     const recipient = Array.isArray(fields.to) ? fields.to[0] : fields.to;
     const from = typeof fields.from === 'string' ? fields.from : fields.from.email;
     const to = typeof recipient === 'string' ? recipient : recipient?.email;
     if (!to) throw new Error('fixture_recipient_missing');
+    sent.push(fields);
     mail.push({ from, to, subject: fields.subject, text: fields.text ?? '' });
     return { messageId: crypto.randomUUID() };
   } };
@@ -63,5 +65,5 @@ export function setup() {
   const register = (email = 'alice@example.test') => request('/api/auth/sign-up/email', { email, password, name: 'Alice', callbackURL: 'https://web.test/login' });
   const login = (email = 'alice@example.test', pass = password) => request('/api/auth/sign-in/email', { email, password: pass });
   const verify = () => handleRequest(new Request(link()), env);
-  return { db, mail, email, env, request, register, login, verify, link, password };
+  return { db, mail, sent, email, env, request, register, login, verify, link, password };
 }

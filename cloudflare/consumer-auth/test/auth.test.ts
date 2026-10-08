@@ -133,10 +133,10 @@ test('mail fixtures keep Heavy and MyPro sender, recipient and subject isolated'
   });
   assert.deepEqual(mypro.mail[0], {
     from: 'mypro@notify.nisen.uk', to: 'mypro@example.test',
-    subject: 'MyPro — メールアドレスの確認', text: mypro.mail[0]!.text,
+    subject: '【MyPro】メールアドレスの確認', text: mypro.mail[0]!.text,
   });
   assert.notEqual(heavy.mail[0]!.from, mypro.mail[0]!.from);
-  assert.match(mypro.mail[0]!.text, /メールアドレスを確認してください。/);
+  assert.match(mypro.mail[0]!.text, /メールアドレスの確認を完了してください。/);
 });
 
 test('unconfigured email, hostile origins, callbacks, unbounded input and missing secrets fail closed', async t => {
@@ -184,4 +184,23 @@ test('native OAuth audiences are explicit; Apple origin is limited to its config
   assert.equal((await s.request('/v1/identity', undefined, 'forged')).status, 401);
   delete s.env.APPLE_CLIENT_SECRET;
   assert.equal((await s.request('/api/auth/callback/apple', {}, undefined, appleHeaders)).status, 403);
+});
+
+test('MyPro account emails come from "MyPro" with a branded body, and the link pages are MyPro pages', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  s.env.APP_ID = 'mypro'; s.env.EMAIL_FROM = 'mypro@notify.nisen.uk';
+  assert.equal((await s.register('new@example.test')).status, 200);
+  const mail = s.sent.at(-1)!;
+  assert.deepEqual(mail.from, { name: 'MyPro', email: 'mypro@notify.nisen.uk' });
+  assert.equal(mail.subject, '【MyPro】メールアドレスの確認');
+  assert.match(mail.text!, /MyPro にご登録いただきありがとうございます/);
+  assert.match(mail.html!, /<a href="https:\/\/auth\.test\/api\/auth\/verify-email\?token=[^"]+"[^>]*>メールアドレスを確認する<\/a>/);
+  assert.equal((await s.login('new@example.test')).status, 403, 'unverified accounts cannot sign in');
+  // A tampered link shows the MyPro help page, not JSON.
+  const bad = await handleRequest(new Request(s.link().replace(/token=[^&]+/, 'token=forged')), s.env);
+  assert.equal(bad.status, 400);
+  assert.match(bad.headers.get('content-type')!, /text\/html/);
+  assert.match(await bad.text(), /新しい確認メールが届きます/);
+  assert.equal((await s.verify()).status, 302);
+  assert.equal((await s.login('new@example.test')).status, 200);
 });

@@ -45,3 +45,21 @@ ${verification ? '<h1>メールアドレスの確認</h1><p>メールの確認�
     "content-security-policy": `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
   } });
 }
+
+/** Result of opening a MyPro email confirmation link in a browser (no script, no tokens on the page). */
+export function verificationResultPage(ok: boolean): Response {
+  const body = ok
+    ? '<h1>メールアドレスを確認しました</h1><p>ありがとうございます。MyPro アプリに戻ってログインしてください。</p>'
+    : '<h1>このリンクは使えません</h1><p>確認リンクの有効期限（1時間）が切れているか、すでに使われています。MyPro アプリからもう一度ログインすると、新しい確認メールが届きます。</p>';
+  const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>MyPro アカウント</title>
+<style>html{color-scheme:light}body{margin:0;background:#f3f6f5;color:#172b26;font:16px/1.65 system-ui,sans-serif}
+main{max-width:440px;margin:8vh auto;padding:32px;background:white;border-radius:20px}h1{font-size:24px;line-height:1.35}
+small{color:#116b50;font-weight:700}@media(max-width:520px){main{margin:20px;padding:24px}}</style>
+</head><body><main><small>MyPro</small>${body}</main></body></html>`;
+  return new Response(html, { status: ok ? 200 : 400, headers: {
+    'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer',
+    'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY',
+    'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  } });
+}

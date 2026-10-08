@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { MYPRO_SENDER_NAME, myproLinkMail } from './mypro-mail.ts';
 import { bearer, emailOTP, jwt } from 'better-auth/plugins';
 import { bindVerificationLink } from './email-verification.ts';
 import { NativeOAuthError, persistNativeGrant, type NativeGrant } from './native-oauth.ts';
@@ -54,11 +55,13 @@ async function sendLink(env: Env, to: string, url: string, purpose: 'verify' | '
   if (!emailReady(env)) throw new Error('email_not_configured');
   await reserveMailAttempt(env);
   // Never log credentials or links. Await provider acceptance; it is not proof of delivery.
-  const receipt = await sendEmail(env, {
-    from: env.EMAIL_FROM!, to,
-    subject: `${env.APP_ID === 'mypro' ? 'MyPro' : 'Heavy Chain'} — ${purpose === 'verify' ? 'メールアドレスの確認' : 'パスワードの再設定'}`,
-    text: `${purpose === 'verify' ? 'メールアドレスを確認してください。' : 'パスワードを再設定してください。'}\n\n${url}\n\n心当たりがない場合は、このメールを破棄してください。`,
-  });
+  const receipt = await sendEmail(env, env.APP_ID === 'mypro'
+    ? { from: env.EMAIL_FROM!, fromName: MYPRO_SENDER_NAME, to, ...myproLinkMail(purpose, url) }
+    : {
+      from: env.EMAIL_FROM!, to,
+      subject: `Heavy Chain — ${purpose === 'verify' ? 'メールアドレスの確認' : 'パスワードの再設定'}`,
+      text: `${purpose === 'verify' ? 'メールアドレスを確認してください。' : 'パスワードを再設定してください。'}\n\n${url}\n\n心当たりがない場合は、このメールを破棄してください。`,
+    });
   if (!receipt.messageId) throw new Error('email_acceptance_unconfirmed');
   } catch (error) {
     const failure = error instanceof Error ? error : new Error('email_unavailable');
