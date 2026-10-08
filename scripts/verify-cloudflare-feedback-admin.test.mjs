@@ -65,6 +65,7 @@ test('the feedback tab is mounted once for every screen and sends the voice memo
   const form = readFileSync(new URL('../src/components/ui/FeedbackForm.tsx', import.meta.url), 'utf8');
   assert.match(app, /<AppRoutes \/>\s*\{\/\*[^*]*\*\/\}\s*<FeedbackButton \/>/);
   assert.doesNotMatch(layout, /FeedbackButton/);
+  assert.match(layout, /\{profile\?\.is_admin === true && <Link to="\/admin\?tab=feedback"/);
   assert.match(form, /fixed left-0 top-1\/2/);
   assert.match(form, /audio_data_url: voice\.audio \? await readDataUrl\(voice\.audio\.blob\) : null/);
   assert.match(form, /recognition\.lang = 'ja-JP'/);

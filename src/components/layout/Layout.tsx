@@ -11,7 +11,7 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
-import { ChevronDown, ChevronLeft, FileText, FolderOpen, Globe2, HelpCircle, LogOut, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
+import { ChevronDown, ChevronLeft, FileText, FolderOpen, Globe2, HelpCircle, LogOut, ShieldCheck, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
 import { isHeavyWorkspaceRuntime } from '../../lib/heavyWorkspace';
 import { readWatermarkPreference, setWatermarkUser, writeWatermarkPreference } from '../../lib/watermarkPreference';
 import { setAIModelUser } from '../../lib/aiModelPreference';
@@ -294,6 +294,8 @@ export function Layout() {
                               </div>
                               <div className="my-3 h-px bg-white/10" />
                               <Link to="/brand/settings" role="menuitem" onClick={() => setIsLightAccountMenuOpen(false)} className={lightMenuItem}><Users className="h-5 w-5" aria-hidden="true" /><span>チーム管理</span></Link>
+                              {/* Only platform admins (server-granted) see the way into the admin dashboard. */}
+                              {profile?.is_admin === true && <Link to="/admin?tab=feedback" role="menuitem" data-testid="account-menu-admin" onClick={() => setIsLightAccountMenuOpen(false)} className={lightMenuItem}><ShieldCheck className="h-5 w-5" aria-hidden="true" /><span>管理画面（フィードバック）</span></Link>}
                               <div className="my-3 h-px bg-white/10" />
                               <button type="button" role="menuitemcheckbox" aria-checked={watermarkOn} onClick={toggleWatermark} className={`${lightMenuItem} h-16`}>
                                 <Stamp className="h-5 w-5 shrink-0" aria-hidden="true" />
