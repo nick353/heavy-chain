@@ -74,7 +74,6 @@ const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then((mod
 const SharedImagePage = lazy(() => import('./pages/SharedImagePage').then((module) => ({ default: module.SharedImagePage })));
 const GeneratePage = lazy(() => import('./pages/GeneratePage').then((module) => ({ default: module.GeneratePage })));
 const GenerateLightchainEntry = lazy(() => import('./components/GenerateLightchainEntry').then((module) => ({ default: module.GenerateLightchainEntry })));
-const WorkflowBoardPage = lazy(() => import('./pages/WorkflowBoardPage').then((module) => ({ default: module.WorkflowBoardPage })));
 const FashionStudioPage = lazy(() => import('./pages/FashionStudioPage').then((module) => ({ default: module.FashionStudioPage })));
 const FashionStudioDetailPage = lazy(() => import('./pages/FashionStudioDetailPage').then((module) => ({ default: module.FashionStudioDetailPage })));
 const PatternProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PatternProjectDashboardPage })));
@@ -378,6 +377,20 @@ function lazyPage(page: React.ReactNode) {
 function LegacyRouteRedirect({ to }: { to: string }) {
   const location = useLocation();
   return <Navigate to={mergeLegacyLocation(to, location.search, location.hash)} replace />;
+}
+
+/** The old local workflow boards map to the Light feature that does the same job. */
+const LEGACY_WORKFLOW_TARGETS: Readonly<Record<string, string>> = {
+  'design-exploration': '/creator',
+  'ec-product-set': '/model',
+  'sns-campaign': '/flow/GenerateShortVideo',
+};
+
+function LegacyWorkflowRedirect() {
+  const { workflowId } = useParams();
+  const location = useLocation();
+  const target = (workflowId && LEGACY_WORKFLOW_TARGETS[workflowId]) || '/dashboard';
+  return <Navigate to={mergeLegacyLocation(target, location.search, location.hash)} replace />;
 }
 
 function LegacyToolRedirect() {
@@ -810,20 +823,7 @@ function AppRoutes() {
         />
         {/* Signed-in password change uses the same email-code reset as the login screen. */}
         <Route path="/change-password" element={<ProtectedRoute>{lazyPage(<ForgotPasswordPage />)}</ProtectedRoute>} />
-        <Route
-          path="/workflows/:workflowId"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <WorkflowBoardPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/workflows/:workflowId" element={<LegacyWorkflowRedirect />} />
         <Route path="/fitting" element={<LegacyRouteRedirect to="/model" />} />
         <Route
           path="/marketing"
