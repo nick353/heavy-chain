@@ -41,7 +41,7 @@ function fixture({pathname = '/tools/printing', rows, list} = {}) {
   const useAuthStore = () => auth; useAuthStore.getState = () => auth;
   const b = {
     React: {createElement: (type, props, ...children) => ({type, props: {...props, children}})},
-    useCanonicalImageWorkspace: () => workspace, useAuthStore, useNavigate: () => value => calls.navigation.push(value),
+    useCanonicalImageWorkspace: () => workspace, useHeavyWorkspaceBrandGate: () => ({ pending: false, failed: false }), useAuthStore, useNavigate: () => value => calls.navigation.push(value),
     useLocation: () => ({search: '?resumeJob=saved-print-job', pathname}), window: {location: {pathname, origin: 'https://fixture.test'}},
     useState: initial => {const i = stateIndex++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];},
     useRef: initial => {const i = refIndex++; return refs[i] ??= {current: initial};},

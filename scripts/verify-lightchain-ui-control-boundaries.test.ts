@@ -7,12 +7,15 @@ const materialSourcePath = new URL('../src/pages/LightchainMaterialWorkbenchPage
 const canvasSourcePath = new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url);
 const layoutSourcePath = new URL('../src/components/layout/Layout.tsx', import.meta.url);
 const appSourcePath = new URL('../src/App.tsx', import.meta.url);
+const agentSidebarSourcePath = new URL('../src/features/agent/AgentSidebar.tsx', import.meta.url);
 const publicHeaderSourcePath = new URL('../src/components/layout/Header.tsx', import.meta.url);
+const launcherHeaderSourcePath = new URL('../src/components/layout/LightchainLauncherHeader.tsx', import.meta.url);
 const landingSourcePath = new URL('../src/pages/LandingPage.tsx', import.meta.url);
 const loginSourcePath = new URL('../src/pages/LoginPage.tsx', import.meta.url);
+const forgotPasswordSourcePath = new URL('../src/pages/ForgotPasswordPage.tsx', import.meta.url);
 const parityPagesSourcePath = new URL('../src/pages/LightchainParityPages.tsx', import.meta.url);
 
-test('public and auth recovery shells use the Lightchain identity without extra Heavy chrome', async () => {
+test('public and auth recovery shells use the Heavy Chain identity without Lightchain branding', async () => {
   const [app, header, login] = await Promise.all([
     readFile(appSourcePath, 'utf8'),
     readFile(publicHeaderSourcePath, 'utf8'),
@@ -20,38 +23,92 @@ test('public and auth recovery shells use the Lightchain identity without extra 
   ]);
   const fallback = app.slice(app.indexOf('function WorkspaceLoadingFallback'), app.indexOf('function PageLoading'));
 
-  assert.match(header, /aria-label="Lightchain AI"/);
-  assert.match(header, /LIGHTCHAIN/);
+  assert.match(header, /aria-label="Heavy Chain"/);
+  assert.match(header, /HeavyChainLogo/);
   assert.match(header, /aria-label="日本語"/);
   assert.match(header, /aria-label="ヘルプセンター"/);
-  assert.doesNotMatch(header, /HeavyChainLogo|HEAVY CHAIN|darkMode/);
+  assert.doesNotMatch(header, /LightchainLogo|Lightchain AI|LIGHTCHAIN/);
 
-  assert.match(fallback, /LIGHTCHAIN/);
+  assert.match(fallback, /HEAVY CHAIN/);
   assert.match(fallback, /ログイン状態を確認しています/);
   assert.doesNotMatch(fallback, /ログイン画面へ|読み込み後にこの導線|grid gap-3 sm:grid-cols-3/);
 
-  assert.match(login, /LIGHTCHAIN AI \/ LOGIN/);
+  assert.match(login, /<p className="mb-5[^>]*>HELLO<\/p>/);
+  assert.match(login, /アパレル生成AIシステムHeavy Chain/);
+  assert.match(login, /Heavy Chainは、アパレル業界におけるさまざまな業務で活用できるAI技術/);
+  assert.match(login, /アカウントIDを下に入力してログインをお願いします。/);
   assert.match(login, /placeholder="アカウントを入力"/);
   assert.match(login, /placeholder="パスワードを入力する"/);
-  assert.doesNotMatch(login, /HEAVY CHAIN|Heavy Chain/);
+  assert.doesNotMatch(login, /handleGoogleLogin|handleAppleLogin|>Google<|>Apple<|\/signup|LIGHTCHAIN AI \/ LOGIN/);
+  assert.doesNotMatch(login, /Lightchain|Light chain|LIGHTCHAIN/);
 });
 
-test('the root keeps the Lightchain launcher URL for authenticated users', async () => {
+test('anonymous login controls preserve the observed Lightchain input geometry without a rights checkbox', async () => {
+  const login = await readFile(loginSourcePath, 'utf8');
+
+  // Fresh Companion readback measured the Lightchain desktop fields at 352x48
+  // with 76px top-to-top spacing, and its submit control at 352x48. The source
+  // input radius/padding are 8px/24px; keep these values explicit in Heavy.
+  assert.match(login, /<form onSubmit=\{handleSubmit\} className="flex flex-col gap-7">/);
+  assert.match(login, /w-full lg:ml-16 lg:w-\[352px\] lg:translate-x-\[3px\]/);
+  assert.match(login, /className="h-12 w-full rounded-\[8px\][^"]*px-6 text-sm/);
+  assert.match(login, /className="h-full w-full rounded-\[8px\][^"]*px-6 text-sm/);
+  assert.match(login, /<button type="submit"[^>]*className="h-12 w-full rounded-lg/);
+  assert.doesNotMatch(login, /type="checkbox"|権利確認|rights.?checkbox/iu);
+});
+
+test('password recovery follows the Lightchain account, code and confirmation flow without rights controls', async () => {
+  const forgot = await readFile(forgotPasswordSourcePath, 'utf8');
+
+  assert.match(forgot, /パスワードのリセット/);
+  assert.match(forgot, /アカウント<span/);
+  assert.match(forgot, /認証コード取得/);
+  assert.match(forgot, /inputMode="numeric"/);
+  assert.match(forgot, /name="newPassword"/);
+  assert.match(forgot, /name="passwordConfirmation"/);
+  assert.match(forgot, /auth\.requestPasswordResetOtp\(email\)/);
+  assert.match(forgot, /auth\.completePasswordResetWithOtp\(email, verificationCode, password\)/);
+  assert.match(forgot, /MIN_PASSWORD_LENGTH = 6/);
+  assert.match(forgot, /MAX_PASSWORD_LENGTH = 20/);
+  assert.match(forgot, /6〜20文字で入力してください/);
+  assert.doesNotMatch(forgot, /12〜20文字|最低12文字/);
+  assert.doesNotMatch(forgot, /resetPasswordForEmail|リセットリンクを送信/);
+  assert.doesNotMatch(forgot, /type="checkbox"|権利確認|rights.?checkbox/iu);
+});
+
+test('the root keeps the Heavy Chain launcher URL for authenticated users', async () => {
   const [source, landing] = await Promise.all([
     readFile(appSourcePath, 'utf8'),
     readFile(landingSourcePath, 'utf8'),
   ]);
 
   assert.match(source, /path="\/"[\s\S]*?element=\{lazyPage\(<LandingPage \/>\)\}/);
-  assert.match(source, /Lightchain keeps its authenticated launcher at the root/);
+  assert.match(source, /Heavy Chain keeps its authenticated launcher at the root/);
   assert.match(source, /path="\/login"[\s\S]*?<PublicRoute>[\s\S]*?lazyPage\(<LoginPage \/>\)/);
-  assert.match(landing, /document\.title = 'Lightchain AI'/);
+  assert.match(landing, /document\.title = 'Heavy Chain \| AI制作ワークスペース'/);
+});
+
+test('the launcher only renders the account avatar after session admission', async () => {
+  const source = await readFile(launcherHeaderSourcePath, 'utf8');
+
+  assert.match(source, /useAuthStore/);
+  assert.match(source, /const user = useAuthStore\(\(state\) => state\.user\)/);
+  assert.match(source, /\{user \? \(/);
+  assert.match(source, /aria-label="avatar"/);
 });
 
 test('Lightchain routes do not expose the Heavy global keyboard shortcut affordance', async () => {
   const source = await readFile(layoutSourcePath, 'utf8');
 
   assert.match(source, /showSidebar && !isLightchainRoute && <KeyboardShortcuts shortcuts=\{defaultShortcuts\} \/>/);
+});
+
+test('Lightchain route content renders directly without a hidden-tab fade-in gap', async () => {
+  const source = await readFile(layoutSourcePath, 'utf8');
+
+  assert.match(source, /\{isVideoWorkstationRoute \|\| isLightchainRoute \? \(/);
+  assert.match(source, /The Light Chain shell does not fade route content in/);
+  assert.match(source, /initial=\{\{ opacity: 0 \}\}/);
 });
 
 test('Lightchain header exposes the current language and help button controls', async () => {
@@ -62,42 +119,61 @@ test('Lightchain header exposes the current language and help button controls', 
   assert.match(source, /aria-label="ヘルプセンター"/);
 });
 
+test('Heavy Chain headers use the Heavy-owned logo instead of the Lightchain asset', async () => {
+  const [layout, launcher] = await Promise.all([
+    readFile(layoutSourcePath, 'utf8'),
+    readFile(new URL('../src/components/layout/LightchainLauncherHeader.tsx', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(layout, /HeavyChainLogo/);
+  assert.match(launcher, /HeavyChainLogo/);
+  assert.doesNotMatch(layout, /LightchainLogo|lightchain-logo\.svg/);
+  assert.doesNotMatch(launcher, /LightchainLogo|lightchain-logo\.svg/);
+  assert.doesNotMatch(layout, /<Link2/);
+  assert.doesNotMatch(launcher, /<Link2/);
+});
+
 test('Lightchain header uses the Lightchain avatar identity and account menu', async () => {
   const source = await readFile(layoutSourcePath, 'utf8');
 
   assert.match(source, /aria-label="avatar"/);
   assert.match(source, /alt="avatar"/);
   assert.match(source, /lightchainAvatarUrl/);
-  assert.match(source, /saas-avatar-new\.png/);
+  assert.match(source, /\/lightchain-assets\/mirror\/ql-hangzhou-oss\/saas-avatar-new-[0-9a-f]+\.webp/);
   assert.match(source, /onClick=\{\(\) => void handleLightchainSignOut\(\)\}/);
   assert.match(source, /\{!isLightchainRoute && \([\s\S]*aria-label="アカウント"/);
 });
 
-test('Lightchain routes use the current Lightchain browser title', async () => {
+test('Heavy Chain routes use the current Heavy browser title', async () => {
   const [source, canvas] = await Promise.all([
     readFile(layoutSourcePath, 'utf8'),
     readFile(canvasSourcePath, 'utf8'),
   ]);
 
-  assert.match(source, /document\.title = isLightchainRoute \? 'Lightchain AI' : 'Heavy Chain \| AI制作ワークスペース'/);
+  assert.match(source, /document\.title = isLightchainRoute \? 'Heavy Chain AI' : 'Heavy Chain \| AI制作ワークスペース'/);
   assert.match(source, /'\/canvas\/new'/);
   assert.match(source, /'\/workflows\/design-exploration'/);
   assert.match(source, /'\/workflows\/ec-product-set'/);
   assert.match(source, /'\/workflows\/sns-campaign'/);
-  assert.match(canvas, /document\.title = 'Lightchain AI'/);
+  assert.match(canvas, /document\.title = 'Heavy Chain \| Canvas'/);
 });
 
 test('vector-special keeps the Light geometry contract for the professional parity surface', async () => {
   const source = await readFile(parityPagesSourcePath, 'utf8');
+  const frame = await readFile(new URL('../src/components/lightchain/LightchainDesignToolFrame.tsx', import.meta.url), 'utf8');
   const vectorBlock = source.slice(source.indexOf('export function LightchainVectorSpecialPage()'), source.indexOf('const modelTabs ='));
 
-  assert.match(vectorBlock, /lg:grid-cols-\[596px_minmax\(0,1fr\)\]/);
-  assert.match(vectorBlock, /grid-cols-\[278px_278px\]/);
-  assert.match(vectorBlock, /px-\[3px\] py-\[1\.5px\]/);
-  assert.match(vectorBlock, /h-\[31px\].*whitespace-nowrap/s);
-  assert.match(vectorBlock, /grid-cols-\[160px_160px\] gap-4/);
-  assert.match(vectorBlock, /h-\[32px\] w-\[102px\]/);
-  assert.match(vectorBlock, /border-cyan-200\/30/);
+  // Shared Light デザインツール frame: 596px tool panel, 3px/1.5px tab strip, nowrap 31px tabs, 生成履歴 button.
+  assert.match(frame, /lg:grid-cols-\[minmax\(0,596px\)_minmax\(360px,1fr\)\]/);
+  assert.match(frame, /px-\[3px\] py-\[1\.5px\]/);
+  assert.match(frame, /min-h-\[31px\] overflow-hidden whitespace-nowrap/);
+  assert.match(frame, /inline-flex h-8 items-center/);
+  assert.match(frame, /パターンをベクター画像に変換（プロフェッショナル版）/);
+  // Vector surface: two 160×165 layer cards and the 288px run button pinned at the panel bottom.
+  assert.match(vectorBlock, /LightchainDesignToolFrame active=\{isSvgConvert \? 'svg-convert' : isProfessionalFlow/);
+  assert.match(vectorBlock, /tabs=\{isSvgConvert \? LIGHTCHAIN_SVG_CONVERT_TABS : LIGHTCHAIN_VECTOR_TOOL_TABS\} railGroup=\{isSvgConvert \? 3 : 2\}/);
+  assert.match(vectorBlock, /h-\[165px\] w-\[160px\]/);
+  assert.match(vectorBlock, /h-10 w-\[288px\]/);
   assert.doesNotMatch(vectorBlock, /lg:grid-cols-\[564px_minmax\(0,1fr\)\]/);
 });
 
@@ -113,6 +189,14 @@ test('fitting and line-to-real settings are stateful and persisted into the work
   assert.doesNotMatch(source, /role="switch"[\s\S]{0,180}aria-pressed=\{autoConvertGarment\}/);
   assert.match(source, /role="combobox"[\s\S]{0,100}aria-label=\{fittingAspectRatio\}/);
   assert.match(source, /role="combobox"[\s\S]{0,100}aria-label=\{fittingResolution\}/);
+  assert.match(source, /relative mx-0 flex min-h-0 flex-1 flex-col overflow-hidden/);
+  assert.match(source, /className="flex min-h-0 flex-1 flex-col px-0 py-3"/);
+  assert.match(source, /className="relative flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl/);
+  assert.match(source, /className="relative flex min-h-0 flex-1 px-4 pt-4 pb-0"/);
+  assert.match(source, /className="h-full min-h-0 flex-1 resize-none/);
+  assert.match(source, /style=\{\{ minHeight: '120px' \}\}/);
+  assert.match(source, /className="z-2 flex w-full shrink-0 items-center justify-end gap-2 p-2"/);
+  assert.match(source, /className="h-4 w-px shrink-0 bg-white\/10"/);
   assert.match(source, /autoConvertGarment: isFittingDetail \? autoConvertGarment : null/);
   assert.match(source, /lineToRealImageType/);
   assert.match(source, /data-testid=\{`lightchain-line-to-real-output-type-\$\{option\}`\}/);
@@ -161,12 +245,48 @@ test('Lightchain detail workbench marks the selected source category as active',
 test('Agent parity starts with the expanded project sidebar and exposes Lightchain attachment controls', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 
-  assert.match(source, /const \[agentSidebarOpen, setAgentSidebarOpen\] = useState\(true\)/);
+  const sidebar = await readFile(agentSidebarSourcePath, 'utf8');
+  assert.match(source, /<AgentSidebar title="インスピレーションワークスペース"/);
+  assert.match(sidebar, /const \[open, setOpen\] = useState\(true\)/);
+  assert.match(sidebar, /aria-label="ホームに戻る"/);
+  assert.match(sidebar, /<PanelLeftClose className="h-4 w-4" \/>/);
+  assert.match(sidebar, /<FolderPlus className="h-4 w-4" \/>/);
   assert.match(source, /aria-label="添付を追加"/);
   assert.match(source, /data-testid=\{workspaceStyle\.kind === 'agent' \? 'lightchain-agent-quick-start' : undefined\}/);
   assert.match(source, /aria-label="アップロードするファイルを選択"/);
   assert.match(source, /aria-label="アップロードする画像を選択"/);
   assert.match(source, /aria-label=\{workspaceStyle\.kind === 'agent' \? '送信' : 'AI生成'\}/);
+});
+
+test('Agent provider results stay visible with save, download, and retry controls', async () => {
+  const source = await readFile(workbenchSourcePath, 'utf8');
+
+  assert.match(source, /data-testid="lightchain-agent-result"/);
+  assert.match(source, /data-testid="lightchain-agent-result-save"/);
+  assert.match(source, /data-testid="lightchain-agent-result-download"/);
+  assert.match(source, /data-testid="lightchain-agent-generation-error"/);
+  assert.match(source, /data-testid="lightchain-agent-retry"/);
+  assert.match(source, /onClick=\{handleWorkspaceStyleGenerate\}/);
+});
+
+test('Agent new-file opens the Lightchain project creation flow', async () => {
+  const source = await readFile(agentSidebarSourcePath, 'utf8');
+
+  assert.match(source, /aria-label="新規ファイル" aria-haspopup="dialog" onClick=\{\(\) => setProjectOpen\(true\)\}/);
+  assert.match(source, /id="lightchain-agent-project-create-title"[^>]*>プロジェクトを作成</);
+  assert.match(source, /プロジェクトは過去タスクの整理に使います。名称は40文字以内で入力してください/);
+  assert.match(source, /placeholder="プロジェクト名を入力"/);
+  assert.match(source, /aria-label="プロジェクト名です"/);
+  assert.match(source, /\{name\.length\} \/ 40/);
+  assert.match(source, /disabled=\{!name\.trim\(\)\}/);
+  assert.match(source, /role="dialog"/);
+  assert.match(source, /aria-modal="true"/);
+  assert.match(source, /aria-label="閉じる"/);
+  assert.match(source, /キャンセル/);
+  assert.match(source, />作成</);
+  assert.match(source, /data-testid="lightchain-agent-project-create-modal"/);
+  // Created projects are kept per user/brand and can be chosen for the next task.
+  assert.match(source, /addAgentProject\(user\.id, currentBrand\.id, trimmed\)/);
 });
 
 test('Agent category copy matches the Lightchain production controls', async () => {
@@ -177,6 +297,20 @@ test('Agent category copy matches the Lightchain production controls', async () 
   assert.match(source, /生成したい柄のスタイル、要素、使用シーンを入力してください…/);
   assert.match(source, /インスピレーション:\s*\{\s*helper: ''/s);
   assert.match(source, /AIグラフィックデザイン:\s*\{\s*helper: ''/s);
+});
+
+test('Agent recent tasks are the signed-in user\'s saved planning tasks, not Light inventory', async () => {
+  const source = await readFile(workbenchSourcePath, 'utf8');
+  const sidebar = await readFile(agentSidebarSourcePath, 'utf8');
+
+  assert.doesNotMatch(source, /const agentRecentTasks = \[/);
+  assert.doesNotMatch(source, /ZIMMERMANN風|375731/);
+  assert.match(sidebar, /listAgentTasks\(brandId\)/);
+  assert.match(sidebar, /navigate\(`\/agent\/\$\{task\.id\}`\)/);
+  assert.match(sidebar, /getImageUsage\(brandId\)/);
+  // A send creates a saved task and opens it.
+  assert.match(source, /createAgentTask\(\{ brandId: currentBrand\.id, scene, subtype, prompt: request/);
+  assert.match(source, /navigate\(`\/agent\/\$\{created\.id\}`\)/);
 });
 
 test('parity runtime captures feature-specific settings in the comparison key', async () => {

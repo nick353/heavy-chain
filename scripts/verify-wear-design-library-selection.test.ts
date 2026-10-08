@@ -13,7 +13,9 @@ assert.ok(wearStart, 'wear design start handler should remain explicit');
 assert.doesNotMatch(wearStart[0], /handleLightchainPreviewGenerate/);
 assert.match(source, /const handleWearDesignGenerate = \(\) => \{/);
 assert.match(source, /onClick=\{handleWearDesignGenerate\}/);
-assert.match(source, /item\.id === 'platform-garment-blank-white-tshirt'/);
-assert.match(source, /rightsAlreadyConfirmed: platformAssetRightsConfirmed/);
+assert.match(source, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyEntitlementReady/);
+assert.match(source, /const heavyEntitlementReady = !heavyOwnedFeature \|\| Boolean\(user\?\.id && currentBrand\?\.id\)/);
+assert.doesNotMatch(source, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
+assert.doesNotMatch(source, /rightsAlreadyConfirmed|platformAssetRightsConfirmed/);
 
 console.log('wear design library selection tests: 7/7 passed');

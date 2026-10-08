@@ -45,8 +45,8 @@ test('Lightchain library exposes working upload and group controls', () => {
   assert.match(libraryPage, /saveWorkspaceArtifactBestEffort/);
   assert.match(libraryPage, /cloudflareDataPlane\.listGeneratedImages\(brandId, \{ limit: 100, offset: 0 \}\)/);
   assert.match(libraryPage, /withSignedImageUrls/);
-  assert.match(libraryPage, /const canonicalStoragePath = getWorkspaceArtifactCanonicalStoragePath\(artifact\.metadata\)/);
-  assert.match(libraryPage, /signedArtifacts\[index\]\?\.image_url \|\| \(canonicalStoragePath \? '' : artifact\.imageUrl\)/);
+  assert.match(libraryPage, /readWorkspaceArtifactImage\(artifact,scope\)/);
+  assert.match(libraryPage, /localPreviews\.urls\[card\.artifact\.id\]/);
   assert.match(libraryPage, /ライブラリーに登録/);
   assert.match(libraryPage, /AIフィッティングへ/);
   assert.match(libraryPage, /生地イメージへ/);
@@ -59,11 +59,14 @@ test('Lightchain library exposes working upload and group controls', () => {
   assert.match(libraryPage, /featureType: 'lightchain-library-upload'/);
   assert.match(libraryPage, /librarySource: 'upload'/);
   assert.match(libraryPage, /新規グループ作成/);
-  assert.match(libraryPage, /localStorage\.setItem\(groupsKey/);
+  // Asset groups are brand folders on the server (one id per submission), not browser-only names.
+  assert.match(libraryPage, /cloudflareDataPlane\.createFolder\(\{ id, brand_id: brandId, name \}\)/);
+  assert.match(libraryPage, /cloudflareDataPlane\.listFolders\(brandId\)/);
+  assert.doesNotMatch(libraryPage, /2026AW|ノイズバリュー用ホリゾンカラー|新規格/);
   assert.doesNotMatch(libraryPage, /title="素材の登録は各ワークベンチから行います"/);
   assert.doesNotMatch(libraryPage, /disabled title="グループ管理はβ版で準備中"/);
   assert.match(fittingPage, /libraryArtifactId/);
-  assert.match(fittingPage, /getWorkspaceArtifactCanonicalStoragePath/);
+  assert.match(fittingPage, /readWorkspaceArtifactImage/);
 });
 
 test('Lightchain library starts on the canonical history-upload group and uses the compact card action icon', () => {
@@ -81,7 +84,7 @@ test('Library selected-asset detail exposes the Light production actions', () =>
   assert.match(libraryPage, />名前を編集<\/button>/);
   assert.match(libraryPage, /data-testid="library-selected-asset-id"/);
   assert.match(libraryPage, /cardIdentity/);
-  assert.match(libraryPage, /deleteGeneratedImage\(card\.asset\.remoteImageId\)/);
+  assert.match(libraryPage, /deleteGeneratedImage\(card\.asset\.remoteImageId, persistenceContext\)/);
   assert.match(libraryPage, /downloadValidatedImage\(imageUrl/);
 });
 
@@ -90,7 +93,7 @@ test('Library handoff restores a canonical asset into the fabric or print workbe
 
   assert.match(materialWorkbench, /librarySlot/);
   assert.match(materialWorkbench, /listWorkspaceArtifacts\(currentBrand\.id, user\?\.id\)/);
-  assert.match(materialWorkbench, /resolveGeneratedImageUrl\(sourceStoragePath\)/);
+  assert.match(materialWorkbench, /readWorkspaceArtifactImage/);
   assert.match(materialWorkbench, /libraryHandoff\.slot === 'printing-design'/);
   assert.match(materialWorkbench, /addDesigns\(\[selectedImage\]\)/);
   assert.match(materialWorkbench, /selectPrintGarment\(selectedImage\)/);

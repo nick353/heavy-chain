@@ -44,9 +44,12 @@ test('Canvas derived actions await placement and report partial batches', async 
   const actionEnd = source.indexOf('\n  // Keep compatibility with FloatingToolbar actions', actionStart);
   assert.ok(actionStart >= 0 && actionEnd > actionStart);
   const actions = source.slice(actionStart, actionEnd);
-  assert.match(actions, /const placed = await addImageToCanvasSafely\(data\.resultUrl, '背景削除'/);
-  assert.match(actions, /const placed = await addImageToCanvasSafely\(data\.resultUrl, '高解像度'/);
-  assert.match(actions, /const placement = await placeDerivedImages\(data\.variations\.map/);
+  assert.match(actions, /const placed = await addImageToCanvasSafely\(data\.resultUrl!?, '背景削除'/);
+  assert.match(actions, /const placed = await addImageToCanvasSafely\(data\.resultUrl!?, '高解像度'/);
+  assert.match(actions, /const placement = await placeDerivedImages\(data\.variations!?\.map/);
+  // The derivations are real edit-image jobs (the service implements generate/edit only).
+  assert.match(source, /const runDerivedEdits = async/);
+  assert.doesNotMatch(actions, /invokeProviderAction\('(remove-background|colorize|upscale|generate-variations)'/);
   assert.match(actions, /placement\.succeeded === 0/);
   assert.match(actions, /placement\.succeeded < placement\.total/);
 
@@ -55,7 +58,7 @@ test('Canvas derived actions await placement and report partial batches', async 
   assert.ok(modalStart >= 0 && modalEnd > modalStart);
   const modal = source.slice(modalStart, modalEnd);
   assert.match(modal, /const placed = await addImageToCanvasSafely\(result\.imageUrl, '編集結果'/);
-  assert.match(modal, /const placed = await addImageToCanvasSafely\(data\.resultUrl, '背景削除'/);
+  assert.match(modal, /const placed = await addImageToCanvasSafely\(data\.resultUrl!?, '背景削除'/);
   assert.match(modal, /const placement = await placeDerivedImages\(\(data\?\.variations \?\? \[\]\)\.map/);
   assert.match(modal, /canvas_derived_result_placement_failed/);
 });

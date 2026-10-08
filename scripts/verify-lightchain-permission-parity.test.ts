@@ -22,10 +22,11 @@ test('Lightchain parity does not add a Heavy-only rights checkbox', async () => 
   ]);
   const source = [parityPages, materialWorkbench, workbench, modelLibrary].join('\n');
 
-  assert.match(source, /PermissionLockedButton/);
+  assert.match(source, /ParityPermissionGate/);
   assert.match(source, /testId="creator-permission"/);
   assert.match(source, /providerRightsConfirmed/);
   assert.match(source, /data-testid="lightchain-fabric-design-input"/);
+  assert.doesNotMatch(source, /権利確認済みのサンプル素材/);
   assert.doesNotMatch(source, /lightchain-material-rights-confirmation|lightchain-rights-confirmation|権利を確認してAI生成/);
   assert.doesNotMatch(modelLibrary, /生成直前に権利確認を行います/);
   assert.match(modelLibrary, /data-testid="model-library-permission-surface"/);
@@ -57,11 +58,11 @@ test('Creator mirrors the Lightchain full and compact category sets', async () =
   assert.ok(source.includes("{ label: 'ワンピース/セットアップ', items: ['つなぎ'] }"));
 });
 
-test('Wear Design Lab resumes through current persisted projects instead of a seeded project id', async () => {
+test('Wear Design Lab mirrors the current project cards without a seeded project id', async () => {
   const source = await readFile(parityPagesSourcePath, 'utf8');
 
-  assert.match(source, /既存プロジェクトを続ける/);
-  assert.match(source, /index === 1 \? '\/designProduction'/);
+  assert.match(source, /orientedDesignProjectImages/);
+  assert.match(source, /`\/flow\/orientedDesign\/detail\?project=\$\{index \+ 1\}`/);
   assert.doesNotMatch(source, /boardProjectCode=2088009465900642306/);
 });
 
@@ -72,12 +73,13 @@ test('AI fitting exposes Gallery selection and the source permission surface bef
   assert.doesNotMatch(source, /Lightchainの「権限がありません」はプラン規制として維持/);
   assert.match(source, /Gallery素材を選択/);
   assert.match(source, /data-testid="fitting-model-gallery-select"/);
-  assert.match(source, /getLightchainSourceGenerationAccess\('model-matrix'\)/);
-  assert.match(source, /権限がありません/);
+  assert.match(source, /const heavyGenerationReady = Boolean\(currentBrand\?\.id && user\?\.id\)/);
+  assert.match(source, /生成を準備できません/);
+  assert.doesNotMatch(source, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|type="checkbox"/);
 });
 
-test('Heavy parity surfaces do not render the Light-missing rights checkbox or badge', async () => {
+test('Heavy parity surfaces keep Heavy consent separate from the Light-missing rights badge', async () => {
   const sources = await Promise.all([
     readFile(generateSourcePath, 'utf8'),
     readFile(canvasSourcePath, 'utf8'),
@@ -89,6 +91,16 @@ test('Heavy parity surfaces do not render the Light-missing rights checkbox or b
 
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|GENERATION_LEGAL_COPY/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
-  assert.match(source, /const rightsConfirmed = false/);
-  assert.match(source, /権限がありません/);
+  const generate = sources[0];
+  assert.match(generate, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?Boolean\(user\?\.id\) && Boolean\(currentBrand\?\.id\)/);
+  assert.match(generate, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.doesNotMatch(generate, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
+  assert.match(generate, /const heavyConsent = undefined/);
+  assert.doesNotMatch(generate, /data-testid="heavy-terms-acceptance"|data-testid="heavy-rights-attestation"|data-testid="heavy-terms-copy"/);
+  assert.doesNotMatch(generate, /Heavy利用条件|権利表明|規約同意/);
+  assert.doesNotMatch(generate, /権限がありません/);
+  assert.doesNotMatch(generate, /isLightchainGenerationSurface|sourceGenerationAccess|getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
+  assert.doesNotMatch(generate, /const rightsConfirmed = true/);
+  assert.doesNotMatch(generate, /sourceModelGenerationDenied/);
+  assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
 });

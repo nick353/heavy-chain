@@ -168,13 +168,13 @@ test('shares lifecycle, destinations, rights, and retry invariants across the ta
   }
 });
 
-test('keeps the generation-time rights gate request-local and fail-closed', () => {
+test('keeps the generation request bound to the authenticated brand context', () => {
   assert.match(workbenchSource, /data-workflow-rights-gate=\{workflowRightsGate\}/);
-  assert.match(
-    workbenchSource,
-    /const rightsConfirmedForRequest = providerRightsConfirmed \|\| options\?\.rightsAlreadyConfirmed === true;/,
-  );
-  assert.match(workbenchSource, /const \[providerRightsConfirmed, setProviderRightsConfirmed\] = useState\(true\)/);
+  assert.match(workbenchSource, /const rightsConfirmedForRequest = providerRightsConfirmed;/);
+  assert.match(workbenchSource, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.match(workbenchSource, /const heavyEntitlementReady = !heavyOwnedFeature \|\| Boolean\(user\?\.id && currentBrand\?\.id\)/);
+  assert.doesNotMatch(workbenchSource, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
+  assert.doesNotMatch(workbenchSource, /rightsAlreadyConfirmed/);
   assert.doesNotMatch(workbenchSource, /rightsConfirmationOpen|pendingRightsGenerationRef|権利を確認してAI生成/);
 });
 
@@ -204,7 +204,7 @@ test('excludes video rows from the unified catalog and provider contract', () =>
   assert.equal(LIGHTCHAIN_UNIFIED_FEATURE_WORKFLOW_CONTRACT['video-workstation' as never], undefined);
   assert.equal(getLightchainProviderRoute('video-workstation'), 'unsupported');
   assert.equal(getLightchainProviderRoute('video-detail'), 'unsupported');
-  assert.match(workbenchSource, /const visibleTools = tools\.filter\(\(tool\) => !tool\.id\.startsWith\('video-'\)\);/);
+  assert.match(workbenchSource, /const visibleTools = tools\.filter\(\(tool\) => tool\.id !== 'video-detail'\);/);
 });
 
 test('keeps the current ledger at 31 records, 31 non-video rows, eight layers, and zero verified production', async () => {
@@ -260,10 +260,13 @@ test('keeps deep-route and library-handoff contexts distinct while retaining lib
 
   const referenceFeature = lightchainUnifiedFeatureCatalog.find((feature) => feature.id === 'ai-fitting-reference');
   assert.ok(referenceFeature);
-  assert.equal(
+  const referenceHandoff = new URL(
     buildLightchainLibraryFeatureHref(referenceFeature, artifactId),
-    `/model?libraryArtifactId=${artifactId}`,
+    'https://heavy-chain.local',
   );
+  assert.equal(referenceHandoff.pathname, '/model');
+  assert.equal(referenceHandoff.searchParams.get('tab'), '参考図');
+  assert.equal(referenceHandoff.searchParams.get('libraryArtifactId'), artifactId);
   assert.equal(resolveHeavyRouteForRow('ai-fitting-reference', '/fitting'), '/model?tab=参考図');
   assert.notEqual('/model?tab=参考図', '/fitting');
 
@@ -271,14 +274,18 @@ test('keeps deep-route and library-handoff contexts distinct while retaining lib
   const backgroundFeature = lightchainUnifiedFeatureCatalog.find((feature) => feature.id === 'fitting-background-reference');
   assert.ok(clothingFeature);
   assert.ok(backgroundFeature);
-  assert.equal(
+  const clothingHandoff = new URL(
     buildLightchainLibraryFeatureHref(clothingFeature, artifactId),
-    `/lightchain/fitting-clothing-reference?libraryArtifactId=${artifactId}`,
+    'https://heavy-chain.local',
   );
-  assert.equal(
+  const backgroundHandoff = new URL(
     buildLightchainLibraryFeatureHref(backgroundFeature, artifactId),
-    `/lightchain/fitting-background-reference?libraryArtifactId=${artifactId}`,
+    'https://heavy-chain.local',
   );
+  assert.equal(clothingHandoff.pathname, '/model/clothing');
+  assert.equal(clothingHandoff.searchParams.get('libraryArtifactId'), artifactId);
+  assert.equal(backgroundHandoff.pathname, '/model/background-reference');
+  assert.equal(backgroundHandoff.searchParams.get('libraryArtifactId'), artifactId);
   assert.match(workbenchSource, /const libraryArtifactId = searchParams\.get\('libraryArtifactId'\);/);
   assert.match(workbenchSource, /candidate\.id === libraryArtifactId/);
   assert.match(workbenchSource, /setMaterialSlotFiles\(\{ primary: nextItem, secondary: null \}\)/);

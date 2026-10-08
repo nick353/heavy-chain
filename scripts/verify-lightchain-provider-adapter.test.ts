@@ -243,11 +243,12 @@ test('keeps flat textile swatches usable when garment cutout is not applicable',
   assert.doesNotMatch(materialPage, /throw new Error\('生地画像の背景を分離できませんでした/);
 });
 
-test('keeps preview fallback optional while provider generation fails closed without a mask', () => {
+test('keeps preview fallback optional while provider generation remains available without a segmentation mask', () => {
   const materialPage = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
   assert.match(materialPage, /Fabric local try-on preview unavailable; keeping the uploaded model visible/);
-  assert.match(materialPage, /modelGarmentMaskResult: null, previewUrl: fabricDesign\.url/);
-  assert.match(materialPage, /provider_garment_mask_required/);
+  assert.match(materialPage, /buildFabricProviderFallbackGarmentMask/);
+  assert.match(materialPage, /modelGarmentMaskResult: fallbackMask, previewUrl: fabricDesign\.url/);
+  assert.match(materialPage, /fabricModelGarmentMaskResult \?\? await buildFabricProviderFallbackGarmentMask/);
   assert.match(materialPage, /buildProviderGarmentEditMask/);
   assert.match(materialPage, /buildWhiteBackgroundGarmentCutoutDataUrl/);
   assert.match(materialPage, /buildPortraitGarmentPriorCutoutDataUrl/);
@@ -255,10 +256,11 @@ test('keeps preview fallback optional while provider generation fails closed wit
   assert.match(materialPage, /isPrintGarmentClothModelConfigured/);
   assert.match(materialPage, /deterministicError/);
   assert.match(materialPage, /semanticError/);
-  assert.match(materialPage, /maskApplied: true/);
-  assert.match(materialPage, /providerModel: CLOUDFLARE_IMAGE_MODEL/);
-  assert.doesNotMatch(materialPage, /gpt-image-1|openaiImage|supabase\.functions/);
-  assert.match(materialPage, /composeProviderProtectedResult/);
+  assert.match(materialPage, /providerMaskReady: false/);
+  assert.match(materialPage, /providerResult\.provider === 'openai'/);
+  assert.match(materialPage, /providerModel: providerResult\.providerModel \?\? null/);
+  assert.match(materialPage, /reuseCanonicalRemoteArtifact: Boolean\(cloudflareDataPlane && result\.storagePath\)/);
+  assert.doesNotMatch(materialPage, /providerModel: CLOUDFLARE_IMAGE_MODEL/);
   assert.match(materialPage, /protectedRegionComposited: true/);
   assert.match(materialPage, /setFabricPreviewState\('done'\)/);
 });
