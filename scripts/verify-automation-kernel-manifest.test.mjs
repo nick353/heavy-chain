@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -23,7 +23,9 @@ const expectedResultFields = new Set([
 
 const resolveAuthority = (value) => (isAbsolute(value) ? value : resolve(repoRoot, value));
 
-test('manifest binds the active Heavy Chain repository and current entrypoints', () => {
+// The manifest is bound to the original checkout's absolute path; other checkouts (worktrees, CI) skip this test.
+const manifestRootForCheckout = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')).root : null;
+test('manifest binds the active Heavy Chain repository and current entrypoints', { skip: manifestRootForCheckout !== repoRoot && 'manifest is bound to another checkout' }, () => {
   assert.equal(manifest.schema, 'automation_kernel_manifest.v1');
   assert.equal(manifest.id, 'heavy-chain');
   assert.equal(manifest.kind, 'product_workflow');

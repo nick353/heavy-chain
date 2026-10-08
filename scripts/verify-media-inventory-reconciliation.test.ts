@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
@@ -7,8 +8,10 @@ import {
 } from '../src/lib/mediaInventoryReconciliation.ts';
 
 const inventoryPath = `${process.cwd()}/../../../New project/work/supabase-cloudflare-media-inventory-20260824.json`;
+// Reads local evidence under work/ (gitignored); skipped in checkouts that do not have it.
+const localEvidenceMissing = !existsSync(inventoryPath);
 
-test('current Heavy inventory produces a read-only pending checksum plan', async () => {
+test('current Heavy inventory produces a read-only pending checksum plan', { skip: localEvidenceMissing && 'local evidence not present' }, async () => {
   const inventory = JSON.parse(await readFile(inventoryPath, 'utf8')) as unknown;
   const plan = buildMediaInventoryReconciliationPlan(inventory);
 

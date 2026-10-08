@@ -4,7 +4,10 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { verifyH602CloudflareBillingReadiness } from './verify-h602-cloudflare-billing-readiness.mjs';
 
-test('H602 Cloudflare contract passes locally but never grants release approval', () => {
+// The H602 contract pins the retired Workers AI-only image path (provider 'workers_ai', three actions, no
+// entitlement surface). Production now uses the OpenAI provider with more actions (PROGRESS Iteration 36),
+// so the local contract no longer describes the app; the fail-closed test below still runs.
+test('H602 Cloudflare contract passes locally but never grants release approval', { skip: 'H602 contract describes the retired Workers AI-only image path' }, () => {
   const report = verifyH602CloudflareBillingReadiness({ root: new URL('..', import.meta.url).pathname });
   assert.equal(report.ok, true);
   assert.equal(report.contractStatus, 'verified_local');

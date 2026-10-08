@@ -1,8 +1,11 @@
+import { existsSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildIntegratedBetaReadinessReport } from './audit-heavy-integrated-beta-readiness.mjs';
+// Reads local evidence under work/ (gitignored); skipped in checkouts that do not have it.
+const localEvidenceMissing = !existsSync(new URL('../work/lightchain-parity-behavior-ledger-current.json', import.meta.url));
 
-test('current integrated beta audit preserves the 31 non-video and eight-layer boundary', () => {
+test('current integrated beta audit preserves the 31 non-video and eight-layer boundary', { skip: localEvidenceMissing && 'local evidence not present' }, () => {
   const report = buildIntegratedBetaReadinessReport();
 
   assert.equal(report.status, 'implemented_local');
@@ -21,7 +24,7 @@ test('current integrated beta audit preserves the 31 non-video and eight-layer b
   assert.deepEqual(report.errors, []);
 });
 
-test('priority rows keep local workflow proof separate from production parity', () => {
+test('priority rows keep local workflow proof separate from production parity', { skip: localEvidenceMissing && 'local evidence not present' }, () => {
   const report = buildIntegratedBetaReadinessReport();
 
   for (const rowId of ['fabric-image', 'printing-image', 'ai-fitting']) {
