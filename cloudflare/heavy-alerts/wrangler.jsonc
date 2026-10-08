@@ -1,0 +1,22 @@
+{
+  // Emails nichika2000823@gmail.com when image AI requests keep failing or get stuck (checked every 15 minutes).
+  // Read-only on the production D1 database; sends through heavychain.app Email Routing.
+  "name": "heavy-chain-alerts",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-03",
+  "triggers": { "crons": ["*/15 * * * *"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "heavy-chain-production-db",
+      "database_id": "f2a6ef3b-14d0-4527-94eb-59ed22a469d9"
+    }
+  ],
+  "send_email": [
+    { "name": "ALERT_EMAIL", "destination_address": "nichika2000823@gmail.com" }
+  ],
+  "vars": {
+    "ALERT_FROM": "alerts@heavychain.app",
+    "ALERT_TO": "nichika2000823@gmail.com"
+  }
+}
