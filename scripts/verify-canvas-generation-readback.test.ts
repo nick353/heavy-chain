@@ -113,14 +113,9 @@ test('Canvas save comparison treats empty relationship nulls as omitted fields',
   assert.match(persistence, /derivedFrom: typeof object\.derivedFrom === 'string' \? object\.derivedFrom : undefined/);
 });
 
-test('Gallery detail hands off a remote generated image to Canvas by scoped identity', async () => {
-  const [gallery, canvas] = await Promise.all([
-    readFile(new URL('../src/pages/GalleryPage.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8'),
-  ]);
+test('Canvas imports a remote generated image by scoped galleryImageId', async () => {
+  const canvas = await readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
 
-  assert.match(gallery, /Canvasで再編集/);
-  assert.match(gallery, /galleryImageId=\$\{encodeURIComponent\(selectedImage\.id\)\}/);
   assert.match(canvas, /const galleryImageId = searchParams\.get\('galleryImageId'\)/);
   assert.match(canvas, /listGeneratedImages\(currentBrand\.id, \{ limit: 100, order: 'newest' \}\)/);
   assert.match(canvas, /candidate\.id === galleryImageId/);

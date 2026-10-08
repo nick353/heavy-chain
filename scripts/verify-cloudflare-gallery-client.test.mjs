@@ -65,7 +65,7 @@ test('Gallery mutations address the canonical API image and never retry a failed
 });
 
 test('migrated Gallery and reuse readers cannot execute old data calls', () => {
-  for (const path of ['pages/GalleryPage.tsx', 'pages/DashboardPage.tsx', 'components/GallerySelector.tsx',
+  for (const path of ['pages/DashboardPage.tsx', 'components/GallerySelector.tsx',
     'pages/LightchainLibraryPage.tsx', 'pages/LightchainWorkbenchPage.tsx']) {
     const source = readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /\bsupabase\s*(?:\.|\n)|\bfrom\(['"]generated_images['"]\)/, path);
@@ -77,27 +77,9 @@ test('migrated Gallery and reuse readers cannot execute old data calls', () => {
   assert.match(dashboard, /再作成は不要です/);
 });
 
-test('Gallery cards expose a keyboard and semantic detail affordance', () => {
-  const gallery = readFileSync(new URL('../src/pages/GalleryPage.tsx', import.meta.url), 'utf8');
-  assert.match(gallery, /role="button"/);
-  assert.match(gallery, /tabIndex=\{0\}/);
-  assert.match(gallery, /aria-label=\{`\$\{toHeavyDisplayCopy\(image\.prompt\) \|\| '生成画像'\}の詳細を見る`\}/);
-  assert.match(gallery, /event\.key !== 'Enter' && event\.key !== ' '/);
-});
-
-test('Gallery detail can read the canonical provider receipt from persisted metadata', () => {
-  const gallery = readFileSync(new URL('../src/pages/GalleryPage.tsx', import.meta.url), 'utf8');
-  assert.match(gallery, /getMetadataString\(image, 'providerRequestId'\)/);
-  assert.match(gallery, /readImageAIRequest\(selectedProviderRequestId\)/);
-  assert.match(gallery, /provider receiptを読む/);
-  assert.match(gallery, /persistenceStatus/);
-});
-
-test('Fitting and Gallery wire feature/job and order into server-side pagination', () => {
+test('Fitting wires feature/job and order into server-side pagination', () => {
   const fitting = readFileSync(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(fitting, /\bfrom\(['"]generated_images['"]\)/);
   assert.match(fitting, /featureType: 'model-matrix', jobId: resumeJob, limit: 1, offset: 0/);
   assert.match(fitting, /featureType: 'model-matrix', limit: 100, offset: 0/);
-  const gallery = readFileSync(new URL('../src/pages/GalleryPage.tsx', import.meta.url), 'utf8');
-  assert.match(gallery, /order: sortBy === 'oldest' \? 'oldest' : 'newest'/);
 });

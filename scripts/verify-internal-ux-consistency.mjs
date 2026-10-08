@@ -19,7 +19,6 @@ const feedback = read('src/components/ui/FeedbackForm.tsx');
 const admin = read('src/pages/AdminDashboard.tsx');
 const nav = read('src/components/layout/navigation.ts');
 const materialWorkbench = read('src/components/workspace/MaterialWorkbench.tsx');
-const gallery = read('src/pages/GalleryPage.tsx');
 const onboarding = read('src/components/Onboarding.tsx');
 const packageJson = read('package.json');
 const cloudflareApi = read('src/lib/cloudflareApi.ts');
@@ -33,7 +32,6 @@ const userFacingBundle = [
   ['AdminDashboard.tsx', admin],
   ['navigation.ts', nav],
   ['MaterialWorkbench.tsx', materialWorkbench],
-  ['GalleryPage.tsx', gallery],
   ['Onboarding.tsx', onboarding],
 ];
 

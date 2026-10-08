@@ -123,18 +123,6 @@ test('Gallery signing uses bounded per-path Cloudflare workers with no retired b
   assert.doesNotMatch(source, /supabase\.storage|createSignedUrls/);
 });
 
-test('local workspace paths stay local while canonical remote paths are re-signed in Gallery', async () => {
-  const [storage, gallery] = await Promise.all([
-    read('src/lib/storage.ts'),
-    read('src/pages/GalleryPage.tsx'),
-  ]);
-  assert.match(storage, /classifyGeneratedImageReference/);
-  assert.match(storage, /clearCanonicalRemoteImageUrls/);
-  assert.match(gallery, /signRows: \(rows\) => withTimeout\(\s*withSignedImageUrls\(rows\)/);
-  // GalleryPage (kept only for a possible restore; /gallery redirects to the library) now lists remote rows only.
-  assert.match(gallery, /'gallery_signed_urls_timeout'/);
-});
-
 test('gallery selection carries storagePath into SelectedImage and print handoff import', async () => {
   const selector = await read('src/components/ImageSelector.tsx');
   const workbench = await read('src/pages/LightchainMaterialWorkbenchPage.tsx');
