@@ -3,13 +3,16 @@ import { principal } from './domain.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
-const MAX_REQUEST_BYTES = 7 * 1024 * 1024;
+const MAX_REQUEST_BYTES = 13 * 1024 * 1024;
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 4 * 1024 * 1024;
+const AUDIO_TYPES: Record<string, string> = { 'audio/webm': 'webm', 'audio/mp4': 'm4a', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/wav': 'wav' };
 type Json = Record<string, unknown>;
 interface Feedback extends Json {
   id: string; user_id: string; payload_hash: string; brand_id: string | null;
   screenshot_path: string | null; screenshot_sha256: string | null; screenshot_bytes: number | null;
   screenshot_capture_status: string; submission_state: 'pending' | 'accepted';
+  audio_path: string | null; audio_sha256: string | null; audio_bytes: number | null; audio_type: string | null;
   viewport: string; revision: number;
 }
 
@@ -59,6 +62,27 @@ function png(value: unknown): Uint8Array | null | Response {
       String.fromCharCode(...bytes.slice(12, 16)) !== 'IHDR') return error('invalid_screenshot');
     return bytes;
   } catch { return error('invalid_screenshot'); }
+}
+/** Voice memo recorded in the browser (MediaRecorder): base64 data URL of a known audio container, checked by its magic bytes. */
+function audio(value: unknown): { bytes: Uint8Array; type: string } | null | Response {
+  if (value === null || value === undefined) return null;
+  const match = typeof value === 'string' ? /^data:(audio\/[a-z0-9.+-]+)(?:;[a-z0-9=.+-]+)*;base64,/i.exec(value) : null;
+  const type = match?.[1].toLowerCase();
+  if (!match || !type || !AUDIO_TYPES[type]) return error('audio_type_unsupported');
+  const encoded = (value as string).slice(match[0].length);
+  if (encoded.length > Math.ceil(MAX_AUDIO_BYTES / 3) * 4) return error('audio_too_large', 413);
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) return error('invalid_audio');
+  try {
+    const bytes = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+    const ascii = (from: number, to: number) => String.fromCharCode(...bytes.slice(from, to));
+    const valid = bytes.length >= 16 && bytes.length <= MAX_AUDIO_BYTES && (
+      type === 'audio/webm' ? bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3
+      : type === 'audio/mp4' ? ascii(4, 8) === 'ftyp'
+      : type === 'audio/ogg' ? ascii(0, 4) === 'OggS'
+      : type === 'audio/wav' ? ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WAVE'
+      : ascii(0, 3) === 'ID3' || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0));
+    return valid ? { bytes, type } : error('invalid_audio');
+  } catch { return error('invalid_audio'); }
 }
 function page(value: unknown, env: Env): { page_url: string; pathname: string } | Response {
   if (!text(value, 2000)) return error('invalid_page_url');
@@ -110,12 +134,16 @@ async function submit(request: Request, env: Env): Promise<Response> {
   }
   const bytes = png(input.screenshot_data_url); if (bytes instanceof Response) return bytes;
   const screenshotHash = bytes ? await sha256(bytes) : null;
+  const voice = audio(input.audio_data_url); if (voice instanceof Response) return voice;
+  const audioHash = voice ? await sha256(voice.bytes) : null;
   const captureStatus = bytes ? 'captured' : input.screenshot_capture_status === 'captured'
     ? 'screenshot_capture_failed' : String(input.screenshot_capture_status);
   // Ignore caller-supplied user/email/status/roles/path: only verified D1 identity
   // and server-selected object keys are authoritative.
   const payload = { brandId, type: input.type, message: input.message.trim(), ...location,
-    viewport, user_agent: input.user_agent ?? null, screenshotHash, captureStatus };
+    viewport, user_agent: input.user_agent ?? null, screenshotHash, captureStatus,
+    // Older receipts hashed no audio field; keep their hashes unchanged.
+    ...(voice ? { audioHash, audioType: voice.type } : {}) };
   const hash = await sha256(new TextEncoder().encode(JSON.stringify(payload)));
   const find = () => env.DB.prepare('SELECT * FROM feedback_submissions WHERE user_id = ? AND request_id = ?')
     .bind(userId, input.request_id).first<Feedback>();
@@ -126,13 +154,15 @@ async function submit(request: Request, env: Env): Promise<Response> {
     try {
       await env.DB.prepare(`INSERT INTO feedback_submissions
         (id,user_id,request_id,payload_hash,brand_id,type,message,email,page_url,pathname,viewport,user_agent,
-         screenshot_path,screenshot_sha256,screenshot_bytes,screenshot_capture_status,submission_state,created_at,updated_at)
-        SELECT ?,id,?,?,?,?,?,email,?,?,?,?,?,?,?,?,?,?,? FROM users WHERE id = ?
+         screenshot_path,screenshot_sha256,screenshot_bytes,screenshot_capture_status,submission_state,created_at,updated_at,
+         audio_path,audio_sha256,audio_bytes,audio_type)
+        SELECT ?,id,?,?,?,?,?,email,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM users WHERE id = ?
           AND (SELECT count(*) FROM feedback_submissions WHERE user_id = ? AND created_at >= ?) < 20
         ON CONFLICT(user_id,request_id) DO NOTHING`)
         .bind(id, input.request_id, hash, brandId, input.type, payload.message, location.page_url, location.pathname,
           JSON.stringify(viewport), payload.user_agent, bytes ? `feedback/v1/${id}.png` : null,
-          screenshotHash, bytes?.byteLength ?? null, captureStatus, bytes ? 'pending' : 'accepted', now, now,
+          screenshotHash, bytes?.byteLength ?? null, captureStatus, bytes || voice ? 'pending' : 'accepted', now, now,
+          voice ? `feedback/v1/${id}.${AUDIO_TYPES[voice.type]}` : null, audioHash, voice?.bytes.byteLength ?? null, voice?.type ?? null,
           userId, userId, since).run();
     } catch {
       // A commit response can be lost. Never create another row/key to repair it.
@@ -143,22 +173,29 @@ async function submit(request: Request, env: Env): Promise<Response> {
   }
   if (row.payload_hash !== hash) return error('feedback_request_conflict', 409);
   if (row.submission_state === 'accepted') return receipt(row);
-  if (!bytes || !row.screenshot_path) return error('feedback_attachment_pending', 503);
-  const matches = (object: R2Object | null) => object?.size === bytes.byteLength &&
-    object.customMetadata?.sha256 === screenshotHash && object.customMetadata?.feedbackId === row!.id;
+  const attachments = [
+    ...(bytes ? [{ path: row.screenshot_path, bytes, hash: screenshotHash!, type: 'image/png' }] : []),
+    ...(voice ? [{ path: row.audio_path, bytes: voice.bytes, hash: audioHash!, type: voice.type }] : []),
+  ];
+  if (!attachments.length || attachments.some(item => !item.path)) return error('feedback_attachment_pending', 503);
   try {
-    let object = await env.PRIVATE_MEDIA.head(row.screenshot_path);
-    if (!object) {
-      try {
-        await env.PRIVATE_MEDIA.put(row.screenshot_path, bytes, {
-          onlyIf: { etagDoesNotMatch: '*' },
-          httpMetadata: { contentType: 'image/png', cacheControl: 'private, no-store' },
-          customMetadata: { sha256: screenshotHash!, feedbackId: row.id },
-        });
-      } catch { /* Resolve the exact key below, including a lost put response. */ }
-      object = await env.PRIVATE_MEDIA.head(row.screenshot_path);
+    for (const item of attachments) {
+      const path = item.path!;
+      const matches = (object: R2Object | null) => object?.size === item.bytes.byteLength &&
+        object.customMetadata?.sha256 === item.hash && object.customMetadata?.feedbackId === row!.id;
+      let object = await env.PRIVATE_MEDIA.head(path);
+      if (!object) {
+        try {
+          await env.PRIVATE_MEDIA.put(path, item.bytes, {
+            onlyIf: { etagDoesNotMatch: '*' },
+            httpMetadata: { contentType: item.type, cacheControl: 'private, no-store' },
+            customMetadata: { sha256: item.hash, feedbackId: row.id },
+          });
+        } catch { /* Resolve the exact key below, including a lost put response. */ }
+        object = await env.PRIVATE_MEDIA.head(path);
+      }
+      if (!matches(object)) return error(object ? 'feedback_attachment_conflict' : 'feedback_attachment_pending', object ? 409 : 503);
     }
-    if (!matches(object)) return error(object ? 'feedback_attachment_conflict' : 'feedback_attachment_pending', object ? 409 : 503);
     await env.DB.prepare(`UPDATE feedback_submissions SET submission_state = 'accepted', updated_at = ?
       WHERE id = ? AND user_id = ? AND payload_hash = ? AND submission_state = 'pending'`)
       .bind(new Date().toISOString(), row.id, userId, hash).run();
@@ -173,6 +210,7 @@ function pagination(url: URL): { limit: number; offset: number } | Response {
 }
 function feedbackPayload(row: Feedback): Json {
   const { payload_hash: _hash, request_id: _request, screenshot_sha256: _sha, screenshot_bytes: _bytes,
+    audio_sha256: _audioSha, audio_bytes: _audioBytes,
     user_email, user_name, brand_name, ...publicRow } = row;
   return { ...publicRow, viewport: JSON.parse(row.viewport), user: { email: user_email ?? row.email, name: user_name ?? null },
     brand: row.brand_id ? { name: brand_name ?? null } : null };
@@ -207,11 +245,19 @@ async function adminRoute(request: Request, env: Env, url: URL): Promise<Respons
       ORDER BY f.created_at DESC,f.id DESC LIMIT ? OFFSET ?`).bind(params.limit, params.offset).all<Feedback>();
     return json(result.results.map(feedbackPayload));
   }
-  const match = url.pathname.match(/^\/v1\/admin\/feedback\/([^/]+)(\/screenshot)?$/);
+  const match = url.pathname.match(/^\/v1\/admin\/feedback\/([^/]+)(\/screenshot|\/audio)?$/);
   if (match && UUID.test(match[1])) {
     const row = await env.DB.prepare('SELECT * FROM feedback_submissions WHERE id = ?').bind(match[1]).first<Feedback>();
     if (!row) return error('not_found', 404);
-    if (match[2] && request.method === 'GET') {
+    if (match[2] === '/audio' && request.method === 'GET') {
+      if (row.submission_state !== 'accepted' || !row.audio_path || !row.audio_type || row.audio_path !== `feedback/v1/${row.id}.${AUDIO_TYPES[row.audio_type]}`) return error('not_found', 404);
+      const object = await env.PRIVATE_MEDIA.get(row.audio_path);
+      if (!object || object.customMetadata?.sha256 !== row.audio_sha256 || object.customMetadata?.feedbackId !== row.id || object.size !== row.audio_bytes) return error('not_found', 404);
+      if (!await env.DB.prepare('SELECT user_id FROM platform_admins WHERE user_id = ?').bind(admin).first()) return error('admin_required', 403);
+      return new Response(object.body, { headers: { 'content-type': row.audio_type,
+        'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline' } });
+    }
+    if (match[2] === '/screenshot' && request.method === 'GET') {
       if (row.submission_state !== 'accepted' || row.screenshot_path !== `feedback/v1/${row.id}.png`) return error('not_found', 404);
       const object = await env.PRIVATE_MEDIA.get(row.screenshot_path);
       if (!object || object.customMetadata?.sha256 !== row.screenshot_sha256 || object.customMetadata?.feedbackId !== row.id || object.size !== row.screenshot_bytes) return error('not_found', 404);

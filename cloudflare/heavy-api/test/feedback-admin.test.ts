@@ -121,8 +121,9 @@ test('feedback: bounded/invalid payloads do not reach D1 or R2', async t => {
   for (const changes of [{ message: '' }, { message: 'x'.repeat(4001) }, { type: 'bad' }, { request_id: '../path' },
     { page_url: 'https://attacker.test/' }, { page_url: 'javascript:alert(1)' },
     { screenshot_data_url: 'data:image/svg+xml;base64,PHN2Zy8+' }, { screenshot_data_url: 'data:image/png;base64,aW1hZ2U=' },
-    { viewport: { width: -1 } }]) assert.equal((await s.submit({ ...body(), ...changes })).status, 400);
-  const large = await s.submit({ ...body(), message: 'あ'.repeat(3 * 1024 * 1024) }); assert.equal(large.status, 413);
+    { viewport: { width: -1 } }, { audio_data_url: 'data:audio/x-evil;base64,AAAA' }, { audio_data_url: 'data:audio/webm;base64,aW1hZ2VpbWFnZWltYWdlaW1hZ2U=' }])
+    assert.equal((await s.submit({ ...body(), ...changes })).status, 400);
+  const large = await s.submit({ ...body(), message: 'あ'.repeat(5 * 1024 * 1024) }); assert.equal(large.status, 413);
   assert.equal(s.bucket.puts, 0); assert.equal(s.db.sql.prepare('SELECT count(*) AS n FROM feedback_submissions').get()!.n, 0);
 });
 
@@ -203,4 +204,37 @@ test('admin: announcements publish once/read authenticated, no role grants; stat
   assert.equal(stats.inferenceAttempts,0); assert.equal(stats.estimatedImageCostUSD,null); assert.equal(stats.edgeRunCount,null);
   assert.equal((await s.call('/v1/admin/users/alice', 'admin', 'PATCH', { is_admin: true })).status, 404);
   assert.equal(s.db.sql.prepare('SELECT count(*) AS n FROM platform_admins').get()!.n, 1);
+});
+
+const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from('voice memo test bytes')]);
+test('feedback: a voice memo is stored privately with the screenshot and only platform admins can play it', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  const input = { ...body(), audio_data_url: `data:audio/webm;codecs=opus;base64,${webm.toString('base64')}` };
+  const response = await s.submit(input); assert.equal(response.status, 200, await response.clone().text());
+  const { feedback } = await response.json() as Receipt;
+  assert.equal(s.bucket.puts, 2);
+  const row = s.db.sql.prepare('SELECT audio_path, audio_type, audio_bytes, submission_state FROM feedback_submissions').get() as Record<string, unknown>;
+  assert.deepEqual({ ...row }, { audio_path: `feedback/v1/${feedback.id}.webm`, audio_type: 'audio/webm', audio_bytes: webm.length, submission_state: 'accepted' });
+  // Same request replays the receipt without new objects; a different recording conflicts.
+  assert.equal((await s.submit(input)).status, 200); assert.equal(s.bucket.puts, 2);
+  const other = Buffer.concat([webm, Buffer.from('x')]);
+  assert.equal((await s.submit({ ...input, audio_data_url: `data:audio/webm;base64,${other.toString('base64')}` })).status, 409);
+  const items = await (await s.call('/v1/admin/feedback', 'admin')).json() as Array<Record<string, unknown>>;
+  assert.equal(items[0].audio_type, 'audio/webm'); assert.equal(items[0].audio_sha256, undefined);
+  const path = `/v1/admin/feedback/${feedback.id}/audio`;
+  assert.equal((await s.call(path, 'alice')).status, 403);
+  const played = await s.call(path, 'admin'); assert.equal(played.status, 200);
+  assert.equal(played.headers.get('content-type'), 'audio/webm'); assert.equal(played.headers.get('cache-control'), 'private, no-store');
+  assert.deepEqual(Buffer.from(await played.arrayBuffer()), webm);
+});
+
+test('feedback: a voice memo without a screenshot is accepted; audio is 404 for feedback without one', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  const input = { ...body(), screenshot_data_url: null, screenshot_capture_status: 'screenshot_capture_failed',
+    audio_data_url: `data:audio/mp4;base64,${Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypM4A voice memo')]).toString('base64')}` };
+  const { feedback } = await (await s.submit(input)).json() as Receipt;
+  assert.equal(s.bucket.puts, 1);
+  assert.equal((await s.call(`/v1/admin/feedback/${feedback.id}/audio`, 'admin')).status, 200);
+  const plain = await (await s.submit({ ...body(), request_id: crypto.randomUUID() })).json() as Receipt;
+  assert.equal((await s.call(`/v1/admin/feedback/${plain.feedback.id}/audio`, 'admin')).status, 404);
 });

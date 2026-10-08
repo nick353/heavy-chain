@@ -1,4 +1,5 @@
 import { lazy as reactLazy, Suspense, useEffect, useState, type ComponentType } from 'react';
+import { FeedbackButton } from './components/ui/FeedbackForm';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { LIBRARY_HISTORY_HREF, libraryImageHref } from './lib/lightchainLibraryHandoff';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -1435,6 +1436,8 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AppRoutes />
+          {/* Feedback tab on the left edge of every screen (signed-in users). */}
+          <FeedbackButton />
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

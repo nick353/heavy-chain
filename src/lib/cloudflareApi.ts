@@ -108,6 +108,7 @@ export interface CloudflareFeedback {
   message: string; email: string; page_url: string; pathname: string;
   viewport: { width?: number; height?: number; devicePixelRatio?: number }; user_agent: string | null;
   screenshot_path: string | null;
+  audio_path?: string | null; audio_type?: string | null;
   screenshot_capture_status: 'captured' | 'screenshot_capture_failed' | 'screenshot_upload_failed';
   submission_state: 'pending' | 'accepted';
   status: 'new' | 'in_progress' | 'done'; admin_note: string | null; revision: number;
@@ -381,6 +382,11 @@ class CloudflareDataPlaneClient {
   async readFeedbackScreenshot(id: string): Promise<Blob> {
     const response = await this.fetchRaw(`/v1/admin/feedback/${encodeURIComponent(id)}/screenshot`);
     if (response.headers.get('content-type') !== 'image/png') throw new Error('cloudflare_invalid_screenshot');
+    return response.blob();
+  }
+  async readFeedbackAudio(id: string): Promise<Blob> {
+    const response = await this.fetchRaw(`/v1/admin/feedback/${encodeURIComponent(id)}/audio`);
+    if (!response.headers.get('content-type')?.startsWith('audio/')) throw new Error('cloudflare_invalid_audio');
     return response.blob();
   }
   async listAnnouncements(): Promise<CloudflareAnnouncement[]> { return this.request('/v1/announcements'); }

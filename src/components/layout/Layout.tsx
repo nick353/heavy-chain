@@ -4,7 +4,6 @@ import { Header } from './Header';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FeedbackButton } from '../ui/FeedbackForm';
 import { SkipLink, KeyboardShortcuts, defaultShortcuts } from '../ui';
 import { lightchainCategories } from '../../lib/lightchainParityCatalog';
 import {
@@ -355,7 +354,6 @@ export function Layout() {
               </AnimatePresence>
             )}
           </main>
-          {!isLightchainRoute && <FeedbackButton />}
         </div>
       ) : hidePendingProtectedChrome ? (
         <main id="main-content" className="min-h-screen bg-[#05090b]" tabIndex={-1}>

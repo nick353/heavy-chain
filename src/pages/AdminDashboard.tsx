@@ -13,6 +13,7 @@ import {
   Activity,
   Clock,
   Camera,
+  Mic,
   ExternalLink,
   MessageSquare
 } from 'lucide-react';
@@ -109,6 +110,8 @@ export function AdminDashboard() {
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackSubmission | null>(null);
   const [feedbackScreenshotUrl, setFeedbackScreenshotUrl] = useState<string | null>(null);
   const [feedbackScreenshotError, setFeedbackScreenshotError] = useState(false);
+  const [feedbackAudioUrl, setFeedbackAudioUrl] = useState<string | null>(null);
+  const [feedbackAudioError, setFeedbackAudioError] = useState(false);
   const [feedbackNoteDraft, setFeedbackNoteDraft] = useState('');
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
@@ -132,6 +135,18 @@ export function AdminDashboard() {
     }).catch(() => { if (active) { setFeedbackScreenshotError(true); toast.error('添付画像を確認できませんでした'); } });
     return () => { active = false; if (blobURL) URL.revokeObjectURL(blobURL); };
   }, [selectedFeedback?.id, selectedFeedback?.screenshot_path, selectedFeedback?.submission_state]);
+
+  useEffect(() => {
+    setFeedbackAudioUrl(null);
+    setFeedbackAudioError(false);
+    if (!selectedFeedback?.audio_path || selectedFeedback.submission_state !== 'accepted' || !cloudflareDataPlane) return;
+    let active = true; let audioURL: string | null = null;
+    cloudflareDataPlane.readFeedbackAudio(selectedFeedback.id).then(blob => {
+      if (!active) return;
+      audioURL = URL.createObjectURL(blob); setFeedbackAudioUrl(audioURL);
+    }).catch(() => { if (active) setFeedbackAudioError(true); });
+    return () => { active = false; if (audioURL) URL.revokeObjectURL(audioURL); };
+  }, [selectedFeedback?.id, selectedFeedback?.audio_path, selectedFeedback?.submission_state]);
 
   useEffect(() => {
     if (
@@ -539,6 +554,7 @@ export function AdminDashboard() {
                                 {FEEDBACK_TYPE_LABELS[item.type]}
                               </span>
                               {item.screenshot_path && <Camera className="h-4 w-4 text-neutral-400" />}
+                              {item.audio_path && <Mic className="h-4 w-4 text-neutral-400" aria-label="音声メモあり" />}
                             </div>
                             <p className="mt-2 truncate text-sm text-neutral-700 dark:text-neutral-200">
                               {item.message}
@@ -721,6 +737,17 @@ export function AdminDashboard() {
                 </div>
               )}
             </div>
+
+            {selectedFeedback.audio_path && (
+              <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-700" data-testid="admin-feedback-audio">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">音声メモ</p>
+                {feedbackAudioUrl ? <audio src={feedbackAudioUrl} controls className="w-full" />
+                  : <p className="text-sm text-neutral-500 dark:text-neutral-300">
+                    {selectedFeedback.submission_state === 'pending' ? '音声の保存は未完了です'
+                      : feedbackAudioError ? '音声を取得できませんでした。開き直して再確認してください' : '音声を読み込み中です'}
+                  </p>}
+              </div>
+            )}
 
             <div>
               <label className="mb-2 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
