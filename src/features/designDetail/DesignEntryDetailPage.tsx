@@ -24,7 +24,8 @@ import {
 import { useDialogueReferences } from './useDialogueReferences';
 import { DESIGN_ATTACH_ARTIFACT_PARAM, DESIGN_ATTACH_GALLERY_PARAM, designAttachmentName, resolveDesignAttachment } from './canvasHandoff';
 import { canvasImageReference, openImageProject } from './imageProject';
-import { BEGINNER_GUIDE_TABS, CANVAS_SHORTCUT_GROUPS, moveCanvasLayer, type CanvasLayerMove } from './designCanvasShortcuts';
+import { BEGINNER_GUIDE_TABS, CANVAS_SHORTCUT_GROUPS, applyCanvasPatch, cloneCanvasObjects, diffCanvasObjects, expandGroupSelection, groupObjects, moveCanvasLayer, objectsInRect,
+  throughSelect, ungroupObjects, type CanvasLayerMove, type CanvasPatch } from './designCanvasShortcuts';
 import { DESIGN_SHAPES, DesignCanvasShape, createDesignCanvasObject, type DesignCanvasObject, type DesignShapeKind } from './designCanvasObjects';
 import { DESIGN_OPEN_IMAGE_PARAM } from '../../lib/legacyCanvasRoute';
 import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
@@ -112,16 +113,21 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const [retry, setRetry] = useState(0);
   const [state, setState] = useState<ViewState>({ identity: '' });
   const [prompt, setPrompt] = useState('');
-  const [selected, setSelected] = useState<string | null>(null);
+  // Several objects can be selected (marquee, Shift + click, Ctrl + A, groups); `selected` is the single selection used for edits and layer moves.
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selected = selectedIds.length === 1 ? selectedIds[0] : null;
+  const setSelected = (id: string | null) => setSelectedIds(id ? [id] : []);
+  const [history, setHistory] = useState<{ undo: CanvasPatch[]; redo: CanvasPatch[] }>({ undo: [], redo: [] });
+  const [marquee, setMarquee] = useState<{ pointerId: number; x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const suppressClick = useRef(false);
   const [move, setMove] = useState(false);
   const [view, setView] = useState<StudioViewport>({ zoom: 0.2, panX: 20, panY: 20 });
-  const [viewHistory, setViewHistory] = useState<{ back: StudioViewport[]; forward: StudioViewport[] }>({ back: [], forward: [] });
   const [fitted, setFitted] = useState('');
   const [panelTab, setPanelTab] = useState<'assistant' | 'layers'>('assistant');
   const [panelOpen, setPanelOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState<'guide' | 'shortcuts' | null>(null);
   const [guideTab, setGuideTab] = useState<string>(BEGINNER_GUIDE_TABS[0]);
-  const copiedObject = useRef<Record<string, unknown> | null>(null);
+  const copiedObjects = useRef<Record<string, unknown>[]>([]);
   const spacePan = useRef(false);
   const [presetPage, setPresetPage] = useState(0);
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
@@ -162,7 +168,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     const assertView = () => { assertContext(); if (generation.current !== epoch) throw new Error('design_entry_view_stale'); };
     controller.current = null;
     sending.current = false;
-    setSelected(null); setPrompt(''); setTitleDraft(null); setState({ identity, busy: brandReady && !isNewFile });
+    setSelected(null); setHistory({ undo: [], redo: [] }); setPrompt(''); setTitleDraft(null); setState({ identity, busy: brandReady && !isNewFile });
     if (brandReady && isDocumentOnly) {
       void (async () => {
         // Resume this document's latest chat when one exists here; otherwise show the document alone.
@@ -287,18 +293,20 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     setPanelOpen(!(panelDefaultKey.endsWith(':inspiration') || panelDefaultKey.endsWith(':canvas')));
   }, [panelDefaultKey]);
   const singleImageId = isDocumentOnly && imageObjects.length === 1 ? String(imageObjects[0].id) : '';
-  useEffect(() => { if (singleImageId) setSelected((current) => current ?? singleImageId); }, [singleImageId]);
+  useEffect(() => { if (singleImageId) setSelectedIds((current) => current.length ? current : [singleImageId]); }, [singleImageId]);
   const projectTitle = visible?.dialogue?.document.title ?? 'Untitled';
   const hasContent = canvasObjects.length > 0;
   const [shapeMenu, setShapeMenu] = useState(false);
   const [editingText, setEditingText] = useState<{ id: string; text: string } | null>(null);
-  const [dragged, setDragged] = useState<{ id: string; dx: number; dy: number } | null>(null);
-  const objectDrag = useRef<{ id: string; pointerId: number; x: number; y: number; moved: boolean } | null>(null);
+  const [dragged, setDragged] = useState<{ ids: string[]; dx: number; dy: number } | null>(null);
+  const objectDrag = useRef<{ ids: string[]; pointerId: number; x: number; y: number; moved: boolean } | null>(null);
   const editable = Boolean(projectId && visible?.dialogue && !visible.busy);
-  /** Applies an object change locally, then saves it to the Canvas document (fresh revision) and reloads it. */
-  const mutateObjects = async (change: (objects: Record<string, unknown>[]) => Record<string, unknown>[]) => {
+  /** Applies an object change locally, then saves it to the Canvas document (fresh revision) and reloads it. Recorded for undo unless `record` is false. */
+  const mutateObjects = async (change: (objects: Record<string, unknown>[]) => Record<string, unknown>[], record = true) => {
     const current = visible?.dialogue?.document;
     if (!current || !editable) return;
+    const patch = record ? diffCanvasObjects(current.snapshot.objects, change(current.snapshot.objects)) : null;
+    if (patch) setHistory((previous) => ({ undo: [...previous.undo.slice(-49), patch], redo: [] }));
     setState((previous) => previous.dialogue ? { ...previous, dialogue: { ...previous.dialogue,
       document: { ...previous.dialogue.document, snapshot: { ...previous.dialogue.document.snapshot, objects: change(previous.dialogue.document.snapshot.objects) } } } } : previous);
     const assertContext = () => { const auth = useAuthStore.getState(); if (auth.user?.id !== userId || auth.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); };
@@ -331,10 +339,38 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     void mutateObjects((objects) => objects.map((object) => object.id === id ? { ...object, text: text.trim() ? text : 'テキスト' } : object));
   };
   const deleteSelected = () => {
-    if (!selected || !editable) return;
-    const id = selected;
+    if (!selectedIds.length || !editable) return;
+    const ids = selectedIds;
     setSelected(null);
-    void mutateObjects((objects) => objects.filter((object) => object.id !== id));
+    void mutateObjects((objects) => objects.filter((object) => !ids.includes(String(object.id))));
+  };
+  const undoRedo = (direction: 'undo' | 'redo') => {
+    const entry = history[direction][history[direction].length - 1];
+    if (!entry || !editable) return;
+    setHistory((previous) => direction === 'undo' ? { undo: previous.undo.slice(0, -1), redo: [...previous.redo, entry] } : { undo: [...previous.undo, entry], redo: previous.redo.slice(0, -1) });
+    setSelectedIds((current) => current.filter((id) => (direction === 'undo' ? entry.before : entry.after)[id] !== null));
+    void mutateObjects((objects) => applyCanvasPatch(objects, direction === 'undo' ? entry.before : entry.after), false);
+  };
+  /** 画像としてコピー: puts the selected image on the system clipboard as PNG. */
+  const copySelectedAsImage = () => {
+    if (!selectedIds.length) return;
+    const image = canvasObjects.find((object) => selectedIds.includes(String(object.id)) && object.type === 'image');
+    const url = image && typeof image.src === 'string' ? urls[image.src] : undefined;
+    if (!url) { setEntryError('画像としてコピーできるのは画像だけです'); return; }
+    const png = (async () => {
+      const blob = await (await fetch(url)).blob();
+      if (blob.type === 'image/png') return blob;
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
+      canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
+      return await new Promise<Blob>((resolve, reject) => canvas.toBlob((result) => result ? resolve(result) : reject(new Error('design_copy_png_failed')), 'image/png'));
+    })();
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]).catch(() => setEntryError('画像をクリップボードにコピーできませんでした'));
+  };
+  /** Screen point (relative to the canvas) to canvas coordinates. */
+  const toWorld = (clientX: number, clientY: number) => {
+    const area = canvasRef.current?.getBoundingClientRect();
+    return { x: (clientX - (area?.left ?? 0) - view.panX) / view.zoom, y: (clientY - (area?.top ?? 0) - view.panY) / view.zoom };
   };
   useEffect(() => {
     // Light's canvas shortcuts (see the キーボード panel).
@@ -344,26 +380,35 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       const key = event.key.toLowerCase();
       const area = canvasRef.current?.getBoundingClientRect();
       const center = { x: area ? (area.width - (panelOpen ? 435 : 0)) / 2 : 500, y: area ? area.height / 2 : 400 };
-      const selectedItem = selected ? canvasObjects.find((object) => object.id === selected) : undefined;
-      const paste = (source: Record<string, unknown>) => {
-        const id = `${String(source.type)}-${crypto.randomUUID()}`;
-        const clone = { ...structuredClone(source), id, x: (Number(source.x) || 0) + 40, y: (Number(source.y) || 0) + 40, zIndex: nextZ() };
-        setSelected(id);
-        void mutateObjects((objects) => [...objects, clone]);
+      const selectedItems = canvasObjects.filter((object) => selectedIds.includes(String(object.id)));
+      const paste = (sources: Record<string, unknown>[]) => {
+        const clones = cloneCanvasObjects(sources, nextZ(), () => crypto.randomUUID());
+        setSelectedIds(clones.map((clone) => String(clone.id)));
+        void mutateObjects((objects) => [...objects, ...clones]);
       };
       if (event.key === ' ' && !mod) { if (!spacePan.current) { spacePan.current = true; setMove(true); } event.preventDefault(); return; }
       if (event.key === 'Escape') { setSelected(null); setShapeMenu(false); setHelpOpen(null); return; }
-      if ((event.key === 'Delete' || event.key === 'Backspace') && selected) { event.preventDefault(); deleteSelected(); return; }
+      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedIds.length) { event.preventDefault(); deleteSelected(); return; }
       if (mod) {
         if (key === '=' || key === '+') { event.preventDefault(); pushView(zoomStudioViewport(view, view.zoom * 1.25, center)); return; }
         if (key === '-') { event.preventDefault(); pushView(zoomStudioViewport(view, view.zoom / 1.25, center)); return; }
         if (key === '1') { event.preventDefault(); const next = fitView(); if (next) pushView(next); return; }
         if (key === '0') { event.preventDefault(); pushView(zoomStudioViewport(view, 1, center)); return; }
+        if (key === 'a') { event.preventDefault(); setSelectedIds(canvasObjects.map((object) => String(object.id))); return; }
+        if (key === 'c' && event.shiftKey) { event.preventDefault(); copySelectedAsImage(); return; }
         if (!editable) return;
-        if (key === 'c' && !event.shiftKey && selectedItem) { event.preventDefault(); copiedObject.current = structuredClone(selectedItem); return; }
-        if (key === 'x' && selectedItem) { event.preventDefault(); copiedObject.current = structuredClone(selectedItem); deleteSelected(); return; }
-        if (key === 'v' && copiedObject.current) { event.preventDefault(); paste(copiedObject.current); return; }
-        if (key === 'd' && selectedItem) { event.preventDefault(); paste(selectedItem); return; }
+        if (key === 'z' || key === 'y') { event.preventDefault(); undoRedo(key === 'y' || event.shiftKey ? 'redo' : 'undo'); return; }
+        if (key === 'c' && selectedItems.length) { event.preventDefault(); copiedObjects.current = structuredClone(selectedItems); return; }
+        if (key === 'x' && selectedItems.length) { event.preventDefault(); copiedObjects.current = structuredClone(selectedItems); deleteSelected(); return; }
+        if (key === 'v' && copiedObjects.current.length) { event.preventDefault(); paste(copiedObjects.current); return; }
+        if (key === 'd' && selectedItems.length) { event.preventDefault(); paste(selectedItems); return; }
+        if (key === 'g') {
+          event.preventDefault();
+          const ids = selectedIds;
+          if (event.shiftKey) { if (selectedItems.some((object) => typeof object.groupId === 'string')) void mutateObjects((objects) => ungroupObjects(objects, ids)); }
+          else if (ids.length > 1) { const groupId = `group-${crypto.randomUUID()}`; void mutateObjects((objects) => groupObjects(objects, ids, groupId)); }
+          return;
+        }
         if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && selected) {
           event.preventDefault();
           const move: CanvasLayerMove = event.key === 'ArrowUp' ? (event.shiftKey ? 'front' : 'up') : (event.shiftKey ? 'back' : 'down');
@@ -384,10 +429,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKeyUp); };
   });
 
-  const pushView = (next: StudioViewport) => {
-    setViewHistory((current) => ({ back: [...current.back.slice(-19), view], forward: [] }));
-    setView(next);
-  };
+  const pushView = (next: StudioViewport) => setView(next);
   const fitView = () => {
     const area = canvasRef.current?.getBoundingClientRect();
     if (!area || !canvasObjects.length) return null;
@@ -500,18 +542,36 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_62%_8%,rgba(64,140,150,0.16),transparent_42%),radial-gradient(ellipse_at_30%_70%,rgba(110,60,40,0.10),transparent_38%)]" />
     <input ref={uploadRef} type="file" accept={IMAGE_ACCEPT} multiple className="hidden" onChange={onUpload} data-testid="design-entry-upload-input" />
 
-    <section ref={canvasRef} aria-label="デザインCanvas" className="absolute inset-0" data-testid="design-own-canvas"
+    <section ref={canvasRef} aria-label="デザインCanvas" className="absolute inset-0 select-none" data-testid="design-own-canvas"
       style={{ cursor: move ? 'grab' : 'default' }}
       onPointerDown={(event) => {
-        if (event.button !== 1 && !(move && event.button === 0)) return;
         if ((event.target as HTMLElement).closest('button, a, input, textarea')) return;
+        if (event.button === 0 && !move) {
+          // 複数選択: drag a marquee on empty canvas; a plain click on empty canvas clears the selection.
+          if (!event.shiftKey) setSelected(null);
+          const point = toWorld(event.clientX, event.clientY);
+          setMarquee({ pointerId: event.pointerId, x1: point.x, y1: point.y, x2: point.x, y2: point.y });
+          event.currentTarget.setPointerCapture(event.pointerId);
+          return;
+        }
+        if (event.button !== 1 && !(move && event.button === 0)) return;
         drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY }; event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault();
       }} onPointerMove={(event) => {
+        if (marquee?.pointerId === event.pointerId) { const point = toWorld(event.clientX, event.clientY); setMarquee({ ...marquee, x2: point.x, y2: point.y }); return; }
         const previous = drag.current; if (!previous || previous.id !== event.pointerId) return;
         setView((current) => panStudioViewport(current, event.clientX - previous.x, event.clientY - previous.y));
         drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
-      }} onPointerUp={(event) => { if (drag.current?.id === event.pointerId) { drag.current = null; event.currentTarget.releasePointerCapture(event.pointerId); } }}
-      onPointerCancel={() => { drag.current = null; }}
+      }} onPointerUp={(event) => {
+        if (marquee?.pointerId === event.pointerId) {
+          setMarquee(null); event.currentTarget.releasePointerCapture(event.pointerId);
+          if (Math.hypot(marquee.x2 - marquee.x1, marquee.y2 - marquee.y1) * view.zoom < 4) return;
+          const hits = expandGroupSelection(canvasObjects, objectsInRect(canvasObjects, marquee));
+          setSelectedIds((current) => event.shiftKey ? [...new Set([...current, ...hits])] : hits);
+          return;
+        }
+        if (drag.current?.id === event.pointerId) { drag.current = null; event.currentTarget.releasePointerCapture(event.pointerId); }
+      }}
+      onPointerCancel={() => { drag.current = null; setMarquee(null); }}
       onWheel={(event) => {
         if ((event.target as HTMLElement).closest('aside, textarea')) return;
         const rect = event.currentTarget.getBoundingClientRect();
@@ -521,14 +581,17 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       <div className="absolute origin-top-left" data-testid="design-canvas-world" style={{ transform: `translate(${view.panX}px, ${view.panY}px) scale(${view.zoom})` }}>
         {canvasObjects.map((object) => {
           const id = String(object.id);
-          const offset = dragged?.id === id ? dragged : null;
+          const offset = dragged?.ids.includes(id) ? dragged : null;
+          const isSelected = selectedIds.includes(id);
           const isImage = object.type === 'image';
           return <button key={id} type="button" data-testid="design-canvas-layer" data-object-id={id} data-object-type={object.type} aria-label={String(object.label ?? (isImage ? 'デザイン画像' : '図形'))}
-            aria-pressed={id === selected}
+            aria-pressed={isSelected} data-group-id={typeof object.groupId === 'string' ? object.groupId : undefined}
             onPointerDown={(event) => {
               if (move || event.button !== 0 || object.locked === true || !editable) return;
               event.stopPropagation();
-              objectDrag.current = { id, pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+              // Dragging a selected object moves the whole selection; otherwise its group.
+              const ids = isSelected ? selectedIds : expandGroupSelection(canvasObjects, [id]);
+              objectDrag.current = { ids, pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
               event.currentTarget.setPointerCapture(event.pointerId);
             }}
             onPointerMove={(event) => {
@@ -537,22 +600,31 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
               const dx = (event.clientX - active.x) / view.zoom; const dy = (event.clientY - active.y) / view.zoom;
               if (!active.moved && Math.hypot(dx * view.zoom, dy * view.zoom) < 4) return;
               active.moved = true;
-              setDragged({ id, dx, dy });
+              setDragged({ ids: active.ids, dx, dy });
             }}
             onPointerUp={(event) => {
               const active = objectDrag.current;
               if (!active || active.pointerId !== event.pointerId) return;
               objectDrag.current = null;
               event.currentTarget.releasePointerCapture(event.pointerId);
-              if (!active.moved || !dragged || dragged.id !== id) return;
-              const { dx, dy } = dragged;
+              if (!active.moved || !dragged) return;
+              const { ids, dx, dy } = dragged;
               setDragged(null);
-              setSelected(id);
-              void mutateObjects((objects) => objects.map((item) => item.id === id ? { ...item, x: (Number(item.x) || 0) + dx, y: (Number(item.y) || 0) + dy } : item));
+              suppressClick.current = true;
+              setSelectedIds(ids);
+              void mutateObjects((objects) => objects.map((item) => ids.includes(String(item.id)) && item.locked !== true ? { ...item, x: (Number(item.x) || 0) + dx, y: (Number(item.y) || 0) + dy } : item));
             }}
-            onClick={() => { if (!move && !dragged) setSelected(id === selected ? null : id); }}
+            onClick={(event) => {
+              if (suppressClick.current) { suppressClick.current = false; return; }
+              if (move) return;
+              // 透過選択: Ctrl + click picks the object underneath, cycling through the stack at that point.
+              if (event.ctrlKey || event.metaKey) { const next = throughSelect(canvasObjects, toWorld(event.clientX, event.clientY), selected); setSelected(next); return; }
+              const group = expandGroupSelection(canvasObjects, [id]);
+              if (event.shiftKey) { setSelectedIds((current) => isSelected ? current.filter((item) => !group.includes(item)) : [...new Set([...current, ...group])]); return; }
+              setSelectedIds(isSelected && selectedIds.length === group.length ? [] : group);
+            }}
             onDoubleClick={() => { if (object.type === 'text' && editable) setEditingText({ id, text: String(object.text ?? '') }); }}
-            className={`absolute text-left ${isImage ? 'overflow-hidden bg-white/5' : ''} ${id === selected ? 'outline outline-[6px] outline-[#0bcabc]' : ''} ${editable && !move ? 'cursor-move' : ''}`}
+            className={`absolute text-left ${isImage ? 'overflow-hidden bg-white/5' : ''} ${isSelected ? 'outline outline-[6px] outline-[#0bcabc]' : ''} ${editable && !move ? 'cursor-move' : ''}`}
             style={{ left: (Number(object.x) || 0) + (offset?.dx ?? 0), top: (Number(object.y) || 0) + (offset?.dy ?? 0), width: Number(object.width) || 440, height: Number(object.height) || 440,
               transform: `rotate(${Number(object.rotation) || 0}deg) scale(${Number(object.scaleX) || 1}, ${Number(object.scaleY) || 1})`, opacity: typeof object.opacity === 'number' ? object.opacity : 1, zIndex: Number(object.zIndex) || 0 }}>
             {isImage ? (typeof object.src === 'string' && urls[object.src] ? <img src={urls[object.src]} alt={String(object.label ?? 'デザイン画像')} className="h-full w-full object-contain" draggable={false} /> : <span className="text-sm text-neutral-400">画像を読み込んでいます</span>)
@@ -560,11 +632,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
                 onChange={(event) => setEditingText({ id, text: event.target.value })} onBlur={commitText}
                 onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); commitText(); } }}
                 onPointerDown={(event) => event.stopPropagation()}
-                className="h-full w-full resize-none bg-transparent leading-tight text-white outline-none" style={{ fontSize: Number(object.fontSize) || 80, color: typeof object.fill === 'string' ? object.fill : '#ffffff' }} />
+                className="h-full w-full select-text resize-none bg-transparent leading-tight text-white outline-none" style={{ fontSize: Number(object.fontSize) || 80, color: typeof object.fill === 'string' ? object.fill : '#ffffff' }} />
               : <DesignCanvasShape object={object} />}
           </button>;
         })}
       </div>
+      {marquee && <div aria-hidden="true" data-testid="design-marquee" className="pointer-events-none absolute border border-[#0bcabc] bg-[#0bcabc]/10"
+        style={{ left: Math.min(marquee.x1, marquee.x2) * view.zoom + view.panX, top: Math.min(marquee.y1, marquee.y2) * view.zoom + view.panY,
+          width: Math.abs(marquee.x2 - marquee.x1) * view.zoom, height: Math.abs(marquee.y2 - marquee.y1) * view.zoom }} />}
     </section>
 
     {!hasContent && inspiration && <label data-testid="design-inspiration-start" className={`absolute top-0 flex cursor-pointer flex-col items-center pt-6 text-center ${dragOver ? 'opacity-80' : ''}`}
@@ -614,8 +689,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     {hasContent && <div role="toolbar" aria-label="キャンバスツール" className="absolute bottom-[18px] z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-[#1b2023]/95 p-[3px]" style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2)`, transform: 'translateX(-50%)' }} data-testid="design-canvas-toolbar">
       <button type="button" aria-label="選択" aria-pressed={!move} onClick={() => setMove(false)} className={`${toolbarButton} ${!move ? 'bg-white/10 text-white' : ''}`}><MousePointer2 className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="ドラッグ" aria-pressed={move} onClick={() => setMove(true)} className={`${toolbarButton} ${move ? 'bg-white/10 text-white' : ''}`}><Hand className="h-[18px] w-[18px]" /></button>
-      <button type="button" aria-label="取り消し" disabled={!viewHistory.back.length} onClick={() => setViewHistory((current) => { const previous = current.back[current.back.length - 1]; if (!previous) return current; setView(previous); return { back: current.back.slice(0, -1), forward: [...current.forward, view] }; })} className={toolbarButton}><Undo2 className="h-[18px] w-[18px]" /></button>
-      <button type="button" aria-label="やり直し" disabled={!viewHistory.forward.length} onClick={() => setViewHistory((current) => { const next = current.forward[current.forward.length - 1]; if (!next) return current; setView(next); return { back: [...current.back, view], forward: current.forward.slice(0, -1) }; })} className={toolbarButton}><Redo2 className="h-[18px] w-[18px]" /></button>
+      <button type="button" aria-label="取り消し" data-testid="design-undo" disabled={!editable || !history.undo.length} onClick={() => undoRedo('undo')} className={toolbarButton}><Undo2 className="h-[18px] w-[18px]" /></button>
+      <button type="button" aria-label="やり直し" data-testid="design-redo" disabled={!editable || !history.redo.length} onClick={() => undoRedo('redo')} className={toolbarButton}><Redo2 className="h-[18px] w-[18px]" /></button>
       <span className="mx-[2px] h-5 w-px bg-white/15" />
       <span className="relative">
         <button type="button" aria-label="図形" aria-expanded={shapeMenu} disabled={!editable} onClick={() => setShapeMenu((open) => !open)} className={`${toolbarButton} ${shapeMenu ? 'bg-white/10 text-white' : ''}`}><Shapes className="h-[18px] w-[18px]" /></button>
@@ -762,12 +837,12 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         </form>
       </> : <div className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="design-layer-panel">
         {!canvasObjects.length && <p className="text-sm text-neutral-500">レイヤーはまだありません</p>}
-        <ol>{[...canvasObjects].reverse().map((object) => <li key={String(object.id)} className="group relative"><button type="button" data-testid="design-layer-select" aria-pressed={selected === object.id}
-          onClick={() => setSelected(String(object.id))} className={`mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${selected === object.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+        <ol>{[...canvasObjects].reverse().map((object) => <li key={String(object.id)} className="group relative"><button type="button" data-testid="design-layer-select" aria-pressed={selectedIds.includes(String(object.id))}
+          onClick={() => setSelected(String(object.id))} className={`mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${selectedIds.includes(String(object.id)) ? 'bg-white/10' : 'hover:bg-white/5'}`}>
           <span className="h-10 w-10 shrink-0 overflow-hidden rounded bg-white/5">{typeof object.src === 'string' && urls[object.src] && <img src={urls[object.src]} alt="" className="h-full w-full object-cover" />}</span>
           <span className="truncate">{object.type === 'text' && typeof object.text === 'string' ? object.text : String(object.label ?? 'デザイン画像')}</span></button>
           {editable && <button type="button" data-testid="design-layer-delete" aria-label={`${String(object.label ?? 'レイヤー')}を削除`}
-            onClick={() => { const id = String(object.id); if (selected === id) setSelected(null); void mutateObjects((objects) => objects.filter((item) => item.id !== id)); }}
+            onClick={() => { const id = String(object.id); setSelectedIds((current) => current.filter((item) => item !== id)); void mutateObjects((objects) => objects.filter((item) => item.id !== id)); }}
             className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-neutral-400 opacity-0 transition hover:bg-white/10 hover:text-red-300 focus:opacity-100 group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>}
         </li>)}</ol>
       </div>}
