@@ -23,8 +23,8 @@ test('first complete apparel flows use the unified workspace shell', () => {
   assert.ok(app.includes('<Route path="/lightchain/:toolId" element={<LegacyToolRedirect />} />'));
   assert.ok(app.includes('<Route path="/heavy/:toolId" element={<LegacyToolRedirect />} />'));
   assert.match(app, /path="\/tools\/fabric"[\s\S]*?<LightchainMaterialWorkbenchPage \/>/);
-  // /generate stays a real screen: generate buttons across the workspace hand their prompt to it.
-  assert.match(app, /path="\/generate"[\s\S]*?<GeneratePage \/>/);
+  // The old generation screen redirects; each feature generates inside its Light-shaped page.
+  assert.ok(app.includes('<Route path="/generate" element={<LegacyGenerateRedirect />} />'));
   assert.match(app, /path="\/change-password"[\s\S]*?<ForgotPasswordPage \/>/);
   assert.match(app, /path="\/tools\/printing"[\s\S]*?<LightchainPrintingPage \/>/);
   assert.match(app, /path="\/model-library\/model-custom-form"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<ModelLibraryPage \/>/);

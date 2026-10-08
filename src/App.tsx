@@ -72,7 +72,6 @@ const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ def
 const SignupPage = lazy(() => import('./pages/SignupPage').then((module) => ({ default: module.SignupPage })));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then((module) => ({ default: module.AuthCallbackPage })));
 const SharedImagePage = lazy(() => import('./pages/SharedImagePage').then((module) => ({ default: module.SharedImagePage })));
-const GeneratePage = lazy(() => import('./pages/GeneratePage').then((module) => ({ default: module.GeneratePage })));
 const GenerateLightchainEntry = lazy(() => import('./components/GenerateLightchainEntry').then((module) => ({ default: module.GenerateLightchainEntry })));
 const FashionStudioPage = lazy(() => import('./pages/FashionStudioPage').then((module) => ({ default: module.FashionStudioPage })));
 const FashionStudioDetailPage = lazy(() => import('./pages/FashionStudioDetailPage').then((module) => ({ default: module.FashionStudioDetailPage })));
@@ -391,6 +390,20 @@ function LegacyWorkflowRedirect() {
   const location = useLocation();
   const target = (workflowId && LEGACY_WORKFLOW_TARGETS[workflowId]) || '/dashboard';
   return <Navigate to={mergeLegacyLocation(target, location.search, location.hash)} replace />;
+}
+
+const LEGACY_GENERATE_TARGETS: Readonly<Record<string, string>> = {
+  'design-gacha': '/creator',
+  'model-matrix': '/model',
+  'campaign-image': '/marketing',
+  'product-shots': '/marketing',
+};
+
+function LegacyGenerateRedirect() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const target = LEGACY_GENERATE_TARGETS[params.get('feature') ?? ''] ?? '/designProduction';
+  return <Navigate to={{ pathname: target, search: '', hash: location.hash }} replace />;
 }
 
 function LegacyToolRedirect() {
@@ -805,22 +818,8 @@ function AppRoutes() {
           }
         />
         <Route path="/workspace" element={<LegacyRouteRedirect to="/dashboard" />} />
-        {/* /generate is the shared generation screen: the design workspace, studio, model library and
-            marketing "generate" buttons send their prompt and references here. */}
-        <Route
-          path="/generate"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <GeneratePage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        {/* The old generation screen: each feature now generates inside its Light-shaped page. */}
+        <Route path="/generate" element={<LegacyGenerateRedirect />} />
         {/* Signed-in password change uses the same email-code reset as the login screen. */}
         <Route path="/change-password" element={<ProtectedRoute>{lazyPage(<ForgotPasswordPage />)}</ProtectedRoute>} />
         <Route path="/workflows/:workflowId" element={<LegacyWorkflowRedirect />} />

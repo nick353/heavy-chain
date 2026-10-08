@@ -45,6 +45,7 @@ import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspac
 import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../components/DesignArtifactThumbnail';
 import { formatProjectAge, ProjectThumbnail, useFeatureProjects } from './PatternProjectDashboardPage';
 import { downloadValidatedImage } from '../lib/imageDownload';
+import { generateImage } from '../lib/imageApi';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
@@ -52,7 +53,7 @@ import { PrintApplyEditor } from '../components/lightchain/PrintApplyEditor';
 import { LIGHTCHAIN_SVG_CONVERT_TABS, LIGHTCHAIN_VECTOR_TOOL_TABS, LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
 import { SvgExportPanel } from '../components/lightchain/SvgExportPanel';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
-import { withSignedImageUrls } from '../lib/storage';
+import { resolveGeneratedImageUrlWithStatus, withSignedImageUrls } from '../lib/storage';
 import type { Json } from '../types/database';
 import { useAuthStore } from '../stores/authStore';
 import { captureAuthBrandFence, assertAuthBrandFence } from '../lib/authBrandSelection';
@@ -338,17 +339,47 @@ export function LightchainCreatorPage() {
   const heavyRuntime = isHeavyWorkspaceRuntime();
   const metadataName = user?.user_metadata?.full_name;
   const displayName = profile?.name?.trim() || (typeof metadataName === 'string' ? metadataName.trim() : '') || user?.email?.split('@')[0] || 'ユーザー';
-  const heavyGenerationHref = (() => {
-    const params = new URLSearchParams({
-      feature: 'design-gacha',
-      prompt: [
-        'インスピレーションデザイン',
-        selectedCategory ? `カテゴリ: ${selectedCategory}` : 'カテゴリ: 未選択',
-        keywords.trim() ? `キーワード: ${keywords.trim()}` : 'キーワード: なし',
-      ].join('\n'),
-    });
-    return `/generate?${params.toString()}`;
-  })();
+  // Like Light, インスピレーション generates on this page and shows the designs in the centre panel.
+  const [creatorRun, setCreatorRun] = useState<{ status: 'idle' | 'running' | 'done' | 'error'; images: { id: string; url: string; imageId: string | null }[]; message?: string }>({ status: 'idle', images: [] });
+  const creatorRunRef = useRef(0);
+  const runCreatorGeneration = async () => {
+    const brandId = currentBrand?.id;
+    if (!selectedCategory || !brandId || creatorRun.status === 'running') return;
+    const run = ++creatorRunRef.current;
+    setCreatorRun({ status: 'running', images: [] });
+    const prompt = [
+      'アパレルのデザイン案を1点作成してください。商品として成立する、着用イメージが伝わる平置きまたはトルソー写真にしてください。',
+      `カテゴリ: ${selectedCategory}`,
+      keywords.trim() ? `キーワード: ${keywords.trim()}` : '',
+    ].filter(Boolean).join('\n');
+    try {
+      const result = await generateImage(prompt, brandId, {
+        providerAction: 'generate-image',
+        featureType: 'design-gacha',
+        count: 1,
+        rightsConfirmed: true,
+        idempotencyKey: crypto.randomUUID(),
+      });
+      if (!result?.success) throw new Error(result?.error || 'image_generation_failed');
+      const outputs = (Array.isArray(result.images) && result.images.length ? result.images : [result]) as { imageUrl?: string; storagePath?: string; imageId?: string | null }[];
+      const images = await Promise.all(outputs.map(async (output, index) => {
+        let url = output.imageUrl ?? '';
+        if (!url && output.storagePath) {
+          const resolved = await resolveGeneratedImageUrlWithStatus(output.storagePath);
+          if (resolved.ok) url = resolved.url;
+        }
+        return { id: output.imageId ?? output.storagePath ?? `design-${index}`, url, imageId: output.imageId ?? null };
+      }));
+      if (creatorRunRef.current !== run) return;
+      const ready = images.filter((image) => image.url);
+      if (!ready.length) throw new Error('image_unavailable');
+      setCreatorRun({ status: 'done', images: ready });
+    } catch (error) {
+      if (creatorRunRef.current !== run) return;
+      const message = error instanceof Error ? error.message : 'image_generation_failed';
+      setCreatorRun({ status: 'error', images: [], message });
+    }
+  };
 
   useEffect(() => {
     const video = document.querySelector<HTMLVideoElement>('video[aria-label="インスピレーション動画"]');
@@ -385,10 +416,10 @@ export function LightchainCreatorPage() {
         </aside>
 
 
-        <main className="relative min-h-0 rounded-xl bg-[#151a1c] px-2 py-4 lg:px-8"><button type="button" className="absolute right-2 top-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-200" onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button><section className="flex min-h-full flex-col items-center justify-center pt-8"><h5 className="text-xl font-semibold text-cyan-300">インスピレーション</h5><p className="mt-2 text-sm text-neutral-400">AIで素早くデザイン開発、効率向上・コスト削減</p><div className="mt-[1px] h-[340px] w-full max-w-[624px] overflow-hidden rounded-lg bg-[#0d1113]"><video src="/lightchain-assets/mirror/lightchain-qlxy-prod/garment-design.mp4" className="size-full" autoPlay controls playsInline aria-label="インスピレーション動画" /></div></section></main>
+        <main className="relative min-h-0 rounded-xl bg-[#151a1c] px-2 py-4 lg:px-8"><button type="button" className="absolute right-2 top-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-200" onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button>{creatorRun.status === 'idle' ? <section className="flex min-h-full flex-col items-center justify-center pt-8"><h5 className="text-xl font-semibold text-cyan-300">インスピレーション</h5><p className="mt-2 text-sm text-neutral-400">AIで素早くデザイン開発、効率向上・コスト削減</p><div className="mt-[1px] h-[340px] w-full max-w-[624px] overflow-hidden rounded-lg bg-[#0d1113]"><video src="/lightchain-assets/mirror/lightchain-qlxy-prod/garment-design.mp4" className="size-full" autoPlay controls playsInline aria-label="インスピレーション動画" /></div></section> : <section className="flex min-h-full flex-col items-center justify-center pt-12" data-testid="creator-results">{creatorRun.status === 'running' && <div className="flex flex-col items-center gap-3 text-sm text-neutral-300"><RotateCw className="h-8 w-8 animate-spin text-cyan-300" aria-hidden="true" /><p>デザインを生成しています…</p><p className="text-xs text-neutral-500">30秒ほどかかることがあります</p></div>}{creatorRun.status === 'error' && <div className="flex flex-col items-center gap-3 text-center text-sm text-neutral-300"><p>生成できませんでした（{creatorRun.message}）</p><button type="button" className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950" onClick={() => { void runCreatorGeneration(); }}>もう一度生成</button></div>}{creatorRun.status === 'done' && <div className="grid w-full max-w-[720px] gap-4">{creatorRun.images.map((image, index) => <figure key={image.id} className="overflow-hidden rounded-xl border border-white/10 bg-[#0d1113]" data-testid="creator-result"><img src={image.url} alt={`デザイン案 ${index + 1}`} className="max-h-[560px] w-full object-contain" /><figcaption className="flex flex-wrap items-center justify-end gap-2 border-t border-white/10 px-3 py-2"><button type="button" className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-200 hover:bg-white/10" onClick={() => { void downloadValidatedImage(image.url, `inspiration-${index + 1}.png`).catch(() => toast.error('ダウンロードできませんでした')); }}>ダウンロード</button>{image.imageId && <button type="button" className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-neutral-200 hover:bg-white/10" onClick={() => navigate(`/canvas/new?galleryImageId=${encodeURIComponent(image.imageId ?? '')}`)}>キャンバスで編集</button>}<button type="button" className="rounded-lg bg-cyan-300 px-3 py-1.5 text-xs font-semibold text-neutral-950" onClick={() => { void runCreatorGeneration(); }}>もう一度生成</button></figcaption></figure>)}<p className="text-center text-xs text-neutral-500">生成した画像はライブラリーの「生成履歴」にも保存されます。</p></div>}</section>}</main>
         <aside className="flex min-h-0 flex-col gap-4">{heavyRuntime
           ? <section className="flex min-h-[264px] flex-col rounded-xl bg-[#262a2b] p-4" data-testid="creator-style-panel"><div className="flex items-center gap-2"><h6 aria-label="スタイルを選択してください オプション" className="text-base font-medium leading-4">スタイルを選択してください</h6><span data-creator-option-badge="" className="rounded bg-white/10 px-1.5 py-0.5 text-xs leading-4 text-neutral-400">オプション</span></div>{!selectedCategory && <div className="flex flex-1 items-center justify-center"><span className="rounded-full bg-white/[0.08] px-5 py-3 text-sm text-neutral-300"><Sparkles className="mr-2 inline h-4 w-4" />デザインを先に選択してください。</span></div>}</section>
-          : <section className="min-h-[264px] rounded-xl bg-[#262a2b] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><h6 className="mt-4 text-xs font-semibold leading-[1.4286] text-neutral-300">このモジュールは購入後に使用可能。</h6><p className="mt-2 text-xs text-neutral-400">ご担当の営業担当者にご連絡ください</p></div></div></section>}<section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#262a2b] p-4"><div className="flex items-center gap-2"><h6 aria-label="キーワードを追加 オプション" className="text-base font-medium leading-4">キーワードを追加</h6><span data-creator-option-badge="" className="rounded bg-white/10 px-1.5 py-0.5 text-xs leading-4 text-neutral-400">オプション</span></div><div className="relative mt-4 flex h-[401px] min-h-0 flex-col gap-1 rounded-lg border border-white/10 pb-1"><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="min-h-0 flex-1 resize-none rounded-md border border-white/10 bg-[#262a2b] px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder={creatorKeywordPlaceholder} maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="flex h-6 w-full items-center justify-between bg-transparent px-2 text-xs text-neutral-400"><span>文字数 <span className="text-cyan-300">{keywords.length}</span>/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div></div>{heavyRuntime ? <button type="button" data-testid="heavy-creator-generate" onClick={() => navigate(heavyGenerationHref)} disabled={!selectedCategory} className="mt-8 inline-flex h-10 w-full items-center justify-center rounded-lg bg-cyan-300 px-4 py-0 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50">AI生成</button> : <ParityPermissionGate testId="creator-permission" marginClass="mt-8" />}</section></aside>
+          : <section className="min-h-[264px] rounded-xl bg-[#262a2b] p-4"><div className="flex h-full items-center justify-center text-center"><div><WandSparkles className="mx-auto h-12 w-12 text-cyan-300/70" /><h6 className="mt-4 text-xs font-semibold leading-[1.4286] text-neutral-300">このモジュールは購入後に使用可能。</h6><p className="mt-2 text-xs text-neutral-400">ご担当の営業担当者にご連絡ください</p></div></div></section>}<section className="flex min-h-0 flex-1 flex-col rounded-xl bg-[#262a2b] p-4"><div className="flex items-center gap-2"><h6 aria-label="キーワードを追加 オプション" className="text-base font-medium leading-4">キーワードを追加</h6><span data-creator-option-badge="" className="rounded bg-white/10 px-1.5 py-0.5 text-xs leading-4 text-neutral-400">オプション</span></div><div className="relative mt-4 flex h-[401px] min-h-0 flex-col gap-1 rounded-lg border border-white/10 pb-1"><textarea value={keywords} onChange={(event) => setKeywords(event.target.value)} className="min-h-0 flex-1 resize-none rounded-md border border-white/10 bg-[#262a2b] px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-500 focus:border-cyan-300" placeholder={creatorKeywordPlaceholder} maxLength={1000} aria-label="生成画像について細かい指定がある場合は、こちらでキーワードを入力できます" /><div className="flex h-6 w-full items-center justify-between bg-transparent px-2 text-xs text-neutral-400"><span>文字数 <span className="text-cyan-300">{keywords.length}</span>/1000</span><button type="button" className="rounded border border-white/10 px-3 py-1" onClick={() => setKeywords('')} disabled={!keywords}>全削除</button><button type="button" className="rounded bg-cyan-300 px-3 py-1 font-semibold text-neutral-950" onClick={() => setDictionaryOpen(true)}>キーワード辞典</button></div></div>{heavyRuntime ? <button type="button" data-testid="heavy-creator-generate" onClick={() => { void runCreatorGeneration(); }} disabled={!selectedCategory || creatorRun.status === 'running'} className="mt-8 inline-flex h-10 w-full items-center justify-center rounded-lg bg-cyan-300 px-4 py-0 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50">{creatorRun.status === 'running' ? '生成中…' : 'AI生成'}</button> : <ParityPermissionGate testId="creator-permission" marginClass="mt-8" />}</section></aside>
       </div>
 
       {historyOpen && <section className="fixed inset-x-4 bottom-4 top-[67px] z-20 overflow-auto rounded-xl border border-white/10 bg-[#262a2b] p-5 shadow-2xl" data-testid="creator-persisted-history"><h2 className="font-semibold">生成履歴</h2><PersistedHistoryPanel artifacts={historyArtifacts} emptyMessage="保存確認できたデザイン成果物はまだありません。provider生成後に保存すると、ここから再利用できます。" reuseLabel="Canvasへ再利用" onReuse={(artifact) => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)} /></section>}
