@@ -122,6 +122,8 @@ test('multi-select, groups, through-select, paste and undo work like Light\'s ca
   const page = fs.readFileSync('src/features/designDetail/DesignEntryDetailPage.tsx', 'utf8');
   assert.match(page, /useEffect\(\(\) => \{ setSelectedIds\(\[\]\); setHistory\(\{ undo: \[\], redo: \[\] \}\); \}, \[identity\]\);/);
   assert.equal(page.match(/setHistory\(\{ undo: \[\], redo: \[\] \}\)/g)?.length, 1);
+  // Saving an edit without a chat re-reads only the document (no full reload that flashes the upload screen).
+  assert.equal(page.match(/else await reloadDocumentInPlace\(\);/g)?.length, 2);
   // macOS turns Ctrl + click into a context-menu click with no click event, so 透過選択 runs on pointerdown.
   assert.match(page, /onPointerDown=\{\(event\) => \{\s*\/\/ 透過選択[\s\S]{0,400}throughSelect\(/);
 });
