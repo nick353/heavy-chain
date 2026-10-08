@@ -14,6 +14,7 @@ import {
 import { Button, Input, Textarea, Modal } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { AIModelSettings } from '../components/settings/AIModelSettings';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
@@ -319,7 +320,7 @@ export function BrandSettingsPage() {
             ブランド設定
           </h1>
           <p className="mt-1 text-neutral-400">
-            ブランド情報とチームメンバーを管理
+            ブランド情報、AIモデル、チームメンバーを管理
           </p>
         </div>
       </motion.div>
@@ -452,6 +453,8 @@ export function BrandSettingsPage() {
             </Button>
           </div>
         </motion.div>
+
+        <AIModelSettings />
 
         {/* Team Members */}
         <motion.div 

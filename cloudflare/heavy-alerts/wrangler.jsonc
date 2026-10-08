@@ -4,13 +4,17 @@
   "name": "heavy-chain-alerts",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-03",
-  "triggers": { "crons": ["*/15 * * * *"] },
+  // */15: failure alerts. 0 18 * * * (03:00 JST): daily D1 backup to R2 (backups/d1/<date>/).
+  "triggers": { "crons": ["*/15 * * * *", "0 18 * * *"] },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "heavy-chain-production-db",
       "database_id": "f2a6ef3b-14d0-4527-94eb-59ed22a469d9"
     }
+  ],
+  "r2_buckets": [
+    { "binding": "BACKUPS", "bucket_name": "heavy-chain-private-media" }
   ],
   "send_email": [
     { "name": "ALERT_EMAIL", "destination_address": "nichika2000823@gmail.com" }

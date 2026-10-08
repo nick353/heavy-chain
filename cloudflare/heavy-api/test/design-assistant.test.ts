@@ -349,3 +349,28 @@ test('shared client sends exact authenticated contract and awaits fences before/
     await vite.close();
   }
 });
+
+test('with an Anthropic key the design consultation answers with Claude (image blocks, chosen model) and records provider anthropic', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  (s.env as unknown as Record<string, string>).ANTHROPIC_API_KEY = 'server-key';
+  const sent: Record<string, any>[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    sent.push(JSON.parse(String(init?.body)));
+    return Response.json({ stop_reason: 'end_turn', content: [{ type: 'text', text: '綿のジャージーが合います。' }], usage: { input_tokens: 30, output_tokens: 9 } });
+  }) as typeof fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+  const body = { ...input(), textModel: 'claude-haiku-4-5-20251001' };
+  body.references = [{ order: 0, kind: 'upload', imageId: 'image-a', storagePath: 'generated-images/image-a', name: 'upload' }];
+  const response = await s.call('POST', body as ReturnType<typeof input>); assert.equal(response.status, 200, await response.clone().text());
+  const result = await response.json() as Record<string, unknown>;
+  assert.equal(result.provider, 'anthropic'); assert.equal(result.model, 'claude-haiku-4-5-20251001');
+  assert.equal(result.content, '綿のジャージーが合います。');
+  assert.deepEqual(result.usage, { prompt_tokens: 30, completion_tokens: 9, total_tokens: 39 });
+  assert.equal(s.calls.length, 0, 'Workers AI is not called');
+  assert.equal(sent.length, 1); assert.equal(sent[0].model, 'claude-haiku-4-5-20251001');
+  const blocks = sent[0].messages.at(-1).content as Record<string, any>[];
+  assert(blocks.some(block => block.type === 'image' && block.source.type === 'base64' && block.source.media_type === 'image/png'));
+  const row = s.row(body.requestId) as Record<string, unknown>;
+  assert.equal(row.provider, 'anthropic'); assert.equal(row.state, 'completed');
+});

@@ -15,6 +15,7 @@ import { HeavyChainLogo } from '../icons';
 import { ChevronDown, ChevronLeft, FileText, FolderOpen, Globe2, HelpCircle, LogOut, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
 import { isHeavyWorkspaceRuntime } from '../../lib/heavyWorkspace';
 import { readWatermarkPreference, setWatermarkUser, writeWatermarkPreference } from '../../lib/watermarkPreference';
+import { setAIModelUser } from '../../lib/aiModelPreference';
 import { FaqPanel, HelpMenu, LanguageMenu, NotificationsPanel, useHeavyNotificationsSeen } from './LightchainHeaderMenus';
 
 // Heavy Chain owns the visible identity; parity route identifiers remain internal compatibility details.
@@ -33,6 +34,7 @@ export function Layout() {
   const [watermarkOn, setWatermarkOn] = useState(false);
   useEffect(() => {
     setWatermarkUser(user?.id);
+    setAIModelUser(user?.id);
     setWatermarkOn(readWatermarkPreference(user?.id));
   }, [user?.id]);
   const toggleWatermark = () => {

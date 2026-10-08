@@ -50,6 +50,20 @@ export const OPENAI_IMAGE_EDIT_MODELS = new Set([
   'chatgpt-image-latest',
 ]);
 
+/** OpenAI image models offered in the settings screen (labels shown to users). */
+export const OPENAI_IMAGE_MODEL_LABELS: Record<string, string> = {
+  'gpt-image-2': 'GPT Image 2（新規生成のみ・最高品質）',
+  'gpt-image-1.5': 'GPT Image 1.5（高品質）',
+  'gpt-image-1': 'GPT Image 1（標準）',
+  'gpt-image-1-mini': 'GPT Image 1 mini（高速・低コスト）',
+};
+
+/** The model actually sent to OpenAI: the chosen one when the endpoint supports it, otherwise the server default. */
+export function openAIModelForEndpoint(env: Env, edit: boolean, chosen?: string | null): string {
+  if (chosen && (edit ? OPENAI_IMAGE_EDIT_MODELS : OPENAI_IMAGE_MODELS).has(chosen)) return chosen;
+  return resolveOpenAIModel(env, edit ? 'edit-image' : 'generate-image', edit ? (env.OPENAI_IMAGE_EDIT_MODEL || env.OPENAI_IMAGE_MODEL) : env.OPENAI_IMAGE_MODEL);
+}
+
 export type OpenAIImageOutput = {
   image: string;
   provider: typeof OPENAI_IMAGE_PROVIDER;
@@ -155,6 +169,7 @@ export async function runOpenAIImage(
   input: ImageInput,
   candidateIndex: number,
   fetchImpl: typeof fetch = fetch,
+  chosenModel?: string | null,
 ): Promise<OpenAIImageOutput> {
   const key = apiKey(env);
   if (!key) throw new Error('openai_image_api_key_missing');
@@ -166,7 +181,8 @@ export async function runOpenAIImage(
   // model-matrix request from being sent as an image edit with no image.
   const edit = action === 'edit-image' || input.references.length > 0;
   const modelAction: ImageAction = edit ? 'edit-image' : 'generate-image';
-  const model = resolveOpenAIModel(env, modelAction, edit ? (env.OPENAI_IMAGE_EDIT_MODEL || env.OPENAI_IMAGE_MODEL) : env.OPENAI_IMAGE_MODEL);
+  void modelAction;
+  const model = openAIModelForEndpoint(env, edit, chosenModel);
   let response: Response;
   if (!edit) {
     response = await observeResponse(fetchImpl, `${baseURL(env)}/images/generations`, {

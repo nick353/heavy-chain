@@ -24,7 +24,7 @@ test('Claude call sends the key server-side with structured output and fallbacks
   assert.equal(request.headers.get('anthropic-version'), '2023-06-01');
   assert.equal(request.headers.get('anthropic-beta'), 'server-side-fallback-2026-07-01');
   const body = await request.json() as Json;
-  assert.equal(body.model, 'claude-opus-5-5');
+  assert.equal(body.model, 'claude-sonnet-5-5');
   assert.equal(body.fallbacks, 'default');
   assert.deepEqual(body.output_config, { effort: 'low', format: { type: 'json_schema', schema: { type: 'object' } } });
   assert.deepEqual(body.messages, [{ role: 'user', content: 'hello' }]);
