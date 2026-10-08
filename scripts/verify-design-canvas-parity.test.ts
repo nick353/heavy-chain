@@ -4,7 +4,8 @@ import test from 'node:test';
 import { designEntryHref } from '../src/lib/designProjectArtifacts.ts';
 import { canvasImageReference, imageProjectId, openImageProject } from '../src/features/designDetail/imageProject.ts';
 import { createDesignCanvasObject, DESIGN_SHAPES } from '../src/features/designDetail/designCanvasShapes.ts';
-import { BEGINNER_GUIDE_TABS, CANVAS_SHORTCUT_GROUPS, moveCanvasLayer } from '../src/features/designDetail/designCanvasShortcuts.ts';
+import { BEGINNER_GUIDE_TABS, CANVAS_SHORTCUT_GROUPS, applyCanvasPatch, cloneCanvasObjects, diffCanvasObjects, expandGroupSelection, groupObjects, moveCanvasLayer, objectsInRect,
+  throughSelect, ungroupObjects } from '../src/features/designDetail/designCanvasShortcuts.ts';
 
 const artifact = (metadata: Record<string, unknown>) => ({ id: 'a-1', title: 't', featureType: 'text-to-image', createdAt: '2026-10-01T00:00:00Z', metadata }) as never;
 
@@ -86,4 +87,35 @@ test('Light guide tabs, shortcut groups and layer ordering', () => {
   const detail = fs.readFileSync('src/features/designDetail/DesignEntryDetailPage.tsx', 'utf8');
   assert.match(detail, /\{ t: 'text', r: 'rect', o: 'circle', l: 'line' \}/);
   assert.ok(fs.existsSync('public/lightchain-assets/mirror/jp/static/none_list.png'));
+});
+
+test('multi-select, groups, through-select, paste and undo work like Light\'s canvas shortcuts', () => {
+  const objects = [
+    { id: 'a', type: 'shape', x: 0, y: 0, width: 100, height: 100, zIndex: 1 },
+    { id: 'b', type: 'shape', x: 50, y: 50, width: 100, height: 100, zIndex: 2 },
+    { id: 'c', type: 'shape', x: 500, y: 500, width: 100, height: 100, zIndex: 3 },
+  ];
+  assert.deepEqual(objectsInRect(objects, { x1: 120, y1: 120, x2: -10, y2: -10 }), ['a', 'b']);
+  assert.equal(throughSelect(objects, { x: 75, y: 75 }, null), 'a');
+  assert.equal(throughSelect(objects, { x: 75, y: 75 }, 'a'), 'b');
+  assert.equal(throughSelect(objects, { x: 10, y: 10 }, null), 'a');
+  assert.equal(throughSelect(objects, { x: 300, y: 300 }, null), null);
+  const grouped = groupObjects(objects, ['a', 'c'], 'g1');
+  assert.deepEqual(expandGroupSelection(grouped, ['c']), ['a', 'c']);
+  assert.deepEqual(expandGroupSelection(ungroupObjects(grouped, ['a', 'c']), ['c']), ['c']);
+  assert.ok(!('groupId' in ungroupObjects(grouped, ['a'])[0]));
+  let n = 0;
+  const clones = cloneCanvasObjects([grouped[2], grouped[0]], 10, () => `n${++n}`);
+  assert.deepEqual(clones.map((clone) => [clone.x, clone.zIndex]), [[40, 10], [540, 11]]);
+  assert.equal(clones[0].groupId, clones[1].groupId);
+  assert.notEqual(clones[0].groupId, 'g1');
+  assert.ok(clones.every((clone) => !['a', 'c'].includes(String(clone.id))));
+  const moved = objects.map((object) => object.id === 'a' ? { ...object, x: 9 } : object).filter((object) => object.id !== 'c');
+  const patch = diffCanvasObjects(objects, moved)!;
+  assert.deepEqual(Object.keys(patch.before).sort(), ['a', 'c']);
+  assert.equal(diffCanvasObjects(objects, objects), null);
+  // Undo restores only the patched ids and keeps an object added meanwhile (e.g. an AI result).
+  const undone = applyCanvasPatch([...moved, { id: 'ai', type: 'image', zIndex: 4 }], patch.before);
+  assert.deepEqual(undone.map((object) => [object.id, object.x]), [['a', 0], ['b', 50], ['ai', undefined], ['c', 500]]);
+  assert.deepEqual(applyCanvasPatch(undone, patch.after).map((object) => object.id), ['a', 'b', 'ai']);
 });
