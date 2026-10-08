@@ -125,6 +125,7 @@ import {
   generateModelMatrix,
 } from '../lib/imageApi';
 import { HEAVY_IMAGE_PROVIDER } from '../lib/heavyImageProvider';
+import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
 import { buildLocalCanvasAssetReference, isLocalCanvasAssetReference, putLocalCanvasAsset, resolveLocalCanvasAsset, type LocalCanvasAssetResolution } from '../lib/canvasLocalAssets';
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
@@ -1123,19 +1124,12 @@ function getOverlayPosition(placement: string, scale: number) {
 }
 
 /**
- * Keep every completed Lightchain result on the same durable-workspace path.
- * Special Lightchain-shaped pages use their own result cards, so this small
- * shared action group prevents those pages from dropping Gallery/History/Jobs
- * continuity while preserving their visual frame.
+ * Special Lightchain-shaped pages use their own result cards; this keeps their Canvas handoff. Results are found
+ * again through the tool's 生成履歴 panel or the library, as in Light (no Gallery/History/Jobs screens).
  */
 function LightchainResultDestinations() {
-  const linkClass = 'rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-semibold text-neutral-300 transition hover:border-cyan-300/50 hover:text-white';
-
   return (
-    <nav className="mt-3 grid grid-cols-4 gap-2" aria-label="生成結果の移動先" data-testid="lightchain-special-result-destinations">
-      <Link to="/gallery" data-testid="lightchain-special-result-gallery-link" className={linkClass}>Gallery</Link>
-      <Link to="/history" data-testid="lightchain-special-result-history-link" className={linkClass}>History</Link>
-      <Link to="/jobs" data-testid="lightchain-special-result-jobs-link" className={linkClass}>Jobs</Link>
+    <nav className="mt-3 grid grid-cols-1 gap-2" aria-label="生成結果の移動先" data-testid="lightchain-special-result-destinations">
       <Link to="/canvas/new" data-testid="lightchain-special-result-canvas-link" className="rounded-lg bg-cyan-300 px-2 py-2 text-center text-[11px] font-semibold text-neutral-950 transition hover:bg-cyan-200">Canvas</Link>
     </nav>
   );
@@ -1433,6 +1427,7 @@ export function LightchainWorkbenchPage({ fittingBatchExecution }: { fittingBatc
 
 function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchExecution?: FittingBatchExecution } = {}) {
   const navigate = useNavigate();
+  const [featureHistoryOpen, setFeatureHistoryOpen] = useState(false);
   const location = useLocation();
   const { toolId } = useParams<{ toolId?: string }>();
   // Direct Heavy host routes (for example /model or /fitting) do not carry
@@ -9256,13 +9251,15 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             </aside>
             {isFeatureDetail && (
             <aside className={`relative min-h-[560px] lg:sticky lg:self-start ${isLightParityTallDetail ? 'h-full lg:top-4' : 'lg:top-24'}`}>
-                <Link
-                  to="/history"
+                <button
+                  type="button"
+                  onClick={() => setFeatureHistoryOpen(true)}
                   className={`absolute right-0 z-10 rounded-full border border-white/15 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-white ${isLightParityTallDetail ? 'top-4' : 'top-0'}`}
                   data-testid="lightchain-feature-history-link"
                 >
                   生成履歴
-                </Link>
+                </button>
+                {featureHistoryOpen && <LightchainHistoryPanel onClose={() => setFeatureHistoryOpen(false)} />}
                 <section className={`flex min-h-[560px] items-center justify-center ${isLightParityTallDetail ? 'h-full rounded-[28px] bg-[#232728]' : ''}`}>
                   {['line-generation', 'line-to-real'].includes(selectedTool.id) && !lightchainResult ? (
                     <div className="translate-x-[4px] translate-y-[13px] text-center">
@@ -9319,33 +9316,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                                 >
                                   ダウンロード
                                 </button>
-                                <nav
-                                  className="grid grid-cols-3 gap-2 pt-1"
-                                  aria-label="生成結果の保存先"
-                                  data-testid="lightchain-result-destinations"
-                                >
-                                  <Link
-                                    to="/gallery"
-                                    data-testid="lightchain-result-gallery-link"
-                                    className="rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-semibold text-neutral-300 transition hover:border-cyan-300/50 hover:text-white"
-                                  >
-                                    Gallery
-                                  </Link>
-                                  <Link
-                                    to="/history"
-                                    data-testid="lightchain-result-history-link"
-                                    className="rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-semibold text-neutral-300 transition hover:border-cyan-300/50 hover:text-white"
-                                  >
-                                    History
-                                  </Link>
-                                  <Link
-                                    to="/jobs"
-                                    data-testid="lightchain-result-jobs-link"
-                                    className="rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-semibold text-neutral-300 transition hover:border-cyan-300/50 hover:text-white"
-                                  >
-                                    Jobs
-                                  </Link>
-                                </nav>
                               </div>
 	                          </div>
 	                        </div>

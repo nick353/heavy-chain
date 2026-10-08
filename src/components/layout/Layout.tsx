@@ -12,7 +12,7 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
-import { ChevronDown, ChevronLeft, FileText, FolderOpen, Globe2, HelpCircle, History, LogOut, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
+import { ChevronDown, ChevronLeft, FileText, FolderOpen, Globe2, HelpCircle, LogOut, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
 import { isHeavyWorkspaceRuntime } from '../../lib/heavyWorkspace';
 import { FaqPanel, HelpMenu, LanguageMenu, NotificationsPanel, useHeavyNotificationsSeen } from './LightchainHeaderMenus';
 
@@ -224,12 +224,6 @@ export function Layout() {
                 )}
               </div>
               <div className={`flex items-center text-neutral-300 ${isLightchainRoute ? 'gap-4' : 'gap-2'}`}>
-                {!isLightchainRoute && (
-                  <Link to="/history" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
-                    <History className="h-4 w-4" />
-                    生成履歴
-                  </Link>
-                )}
                 {isLightchainRoute ? (
                   <div className="relative hidden sm:block" data-light-header-menu>
                     <button
@@ -247,12 +241,6 @@ export function Layout() {
                   </div>
                 ) : null}
                 {isLightchainRoute && <div id="lightchain-header-actions" className="contents" />}
-                {isLightchainRoute ? null : (
-                  <Link to="/jobs" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
-                    <HelpCircle className="h-4 w-4" />
-                    ジョブ
-                  </Link>
-                )}
                 {isLightchainRoute ? (
                   // Light: a 16px rule (8px after help, 16px before the avatar), then the 32px avatar with a 4px right margin.
                   <div className="flex h-8 w-[61px] items-center">

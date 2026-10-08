@@ -7,7 +7,7 @@ import { build } from 'esbuild';
 const source = fileURLToPath(new URL('../src/lib/workspaceActivity.ts', import.meta.url));
 const originalJobId = 'ai-09f45686-5466-48c4-87c3-358465b0df7f';
 const originalImageId = `${originalJobId}-0`;
-const originalGalleryHref = `/gallery?image=${encodeURIComponent(`storage:generated-images/${originalImageId}`)}`;
+const libraryHistoryHref = `/asset-center?group=${encodeURIComponent('生成履歴')}`;
 const brandId = 'activity-fixture-brand';
 const userId = 'activity-fixture-user';
 
@@ -91,7 +91,7 @@ test('older image-backed model-custom remains reachable after the first20 jobs',
   const restored = history.completedJobs.find(item => item.id === originalJobId);
   assert.ok(restored);
   assert.equal(restored.outputCount, 1);
-  assert.equal(restored.outputHref, originalGalleryHref);
+  assert.equal(restored.outputHref, libraryHistoryHref);
   assert.equal(history.timelineItems.at(-1).id, `job-${originalJobId}`);
   assert.equal(history.timelineItems.at(-1).href, restored.outputHref);
   assert.deepEqual(fixture.images[0].metadata, { providerRequestId: originalJobId.slice(3) });
@@ -104,7 +104,7 @@ test('an older explicit job and its saved image keep one canonical history entry
   const activity = await load({ includeAllLoadedJobs: true });
   assert.equal(activity.completedJobs.length, 26);
   assert.equal(activity.timelineItems.filter(item => item.id === `job-${originalJobId}`).length, 1);
-  assert.equal(activity.completedJobs.find(item => item.id === originalJobId).outputHref, originalGalleryHref);
+  assert.equal(activity.completedJobs.find(item => item.id === originalJobId).outputHref, libraryHistoryHref);
   assert.ok(activity.timelineItems.every((item, index, list) => !index || list[index - 1].createdAt >= item.createdAt));
 });
 

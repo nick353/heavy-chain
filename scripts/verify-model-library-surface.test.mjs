@@ -19,6 +19,7 @@ await build({ entryPoints: [path.join(root, 'src/components/lightchain/SourceMod
     authBrandSelection: 'export const captureAuthBrandFence=()=>null;export const assertAuthBrandFence=()=>{};',
     CanonicalImageWorkspaceControls: 'export const CanonicalImageWorkspaceControls=()=>null;',
     GallerySelector: 'export const GallerySelector=()=>null;',
+    LightchainHistoryPanel: 'export const LightchainHistoryPanel=()=>null;',
   };
   builder.onResolve({ filter: /react-router-dom/ }, () => ({ path: 'router', namespace: 'fixture' }));
   builder.onLoad({ filter: /^router$/, namespace: 'fixture' }, () => ({ contents: 'export const useNavigate=()=>()=>{};export const useLocation=()=>({pathname:"/model-library/model-custom-form",search:"?workspaceFeature=model-custom"});export const Link="a";', loader: 'js' }));

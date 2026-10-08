@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Clock3, ImagePlus, Plus, Sparkles, WandSparkles } from 'lucide-react';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { whitenDarkBackground } from '../lib/whitenDarkBackground';
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
+import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
 
 /**
  * Light `/printing` = "AIグラフィックデザイン" (GeneratePrinting / ModifyPrinting).
@@ -52,7 +52,6 @@ function LightchainGraphicDesignWorkspace() {
     title: 'AIグラフィックデザイン',
     initialInputState: { referenceStrengths: [DEFAULT_STRENGTH, DEFAULT_STRENGTH], assist: false },
   });
-  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [selected, setSelected] = useState<0 | 1>(0);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -154,7 +153,7 @@ function LightchainGraphicDesignWorkspace() {
 
       <div className="flex min-w-[596px] flex-1 p-4">
       <main className="relative flex min-w-0 flex-1 rounded-lg bg-[#262a2b] p-4" aria-label="AIグラフィックデザイン">
-        <button type="button" disabled={locked} onClick={() => setHistoryOpen((open) => !open)} className="absolute right-4 top-4 z-10 flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] pl-2.5 pr-4 text-sm font-medium text-white">
+        <button type="button" onClick={() => setHistoryOpen(true)} className="absolute right-4 top-4 z-10 flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] pl-2.5 pr-4 text-sm font-medium text-white">
           <Clock3 aria-hidden="true" className="h-5 w-5" />生成履歴
         </button>
         <div className="flex size-full flex-col items-center justify-center px-10">
@@ -171,12 +170,7 @@ function LightchainGraphicDesignWorkspace() {
           {heavyBrand.failed && <p role="alert" className="mt-4 text-sm text-rose-300">ワークスペースを準備できません。ページを再読み込みしてください。</p>}
           {workspace.error && <p role="alert" className="mt-4 text-sm text-rose-300">{workspace.error}</p>}
         </div>
-        {historyOpen && (
-          <section className="absolute right-4 top-14 z-20 w-72 rounded-lg border border-white/10 bg-[#171b1c] p-4 text-sm" aria-label="生成履歴">
-            <p className="text-neutral-400">生成履歴は履歴画面で確認できます。</p>
-            <button type="button" disabled={locked} className="mt-3 text-[#20d0c4] underline" onClick={() => navigate('/history')}>履歴を開く</button>
-          </section>
-        )}
+        {historyOpen && <LightchainHistoryPanel locked={locked} onClose={() => setHistoryOpen(false)} />}
       </main>
       </div>
 

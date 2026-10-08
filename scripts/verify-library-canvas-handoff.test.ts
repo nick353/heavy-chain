@@ -70,7 +70,7 @@ test('Lightchain library exposes working upload and group controls', () => {
 });
 
 test('Lightchain library starts on the canonical history-upload group and uses the compact card action icon', () => {
-  assert.match(libraryPage, /useState<string>\('履歴アップロード'\)/);
+  assert.match(libraryPage, /includes\(group\) \? group : '履歴アップロード'/);
   assert.match(libraryPage, /aria-label="詳細"[\s\S]*<MoreVertical/);
 });
 

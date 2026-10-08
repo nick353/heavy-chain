@@ -90,10 +90,9 @@ test('Activity timeline and Dashboard use the same canonical Gallery selection k
   const dashboard = await read('../src/pages/DashboardPage.tsx');
   const jobs = await read('../src/pages/JobsPage.tsx');
   const queue = await read('../src/components/workspace/JobQueuePanel.tsx');
-  assert.match(activity, /getGeneratedImageSelectionKey\(\{[\s\S]*storage_path: output\.storagePath/);
-  assert.match(activity, /const getOutputHref =/);
-  assert.match(activity, /outputHref: getOutputHref\(primaryOutput\)/);
-  assert.match(activity, /const firstOutputByJob = outputs\.reduce/);
+  // Saved outputs open the library's 生成履歴 (Light has no Gallery screen).
+  assert.match(activity, /outputHref: LIBRARY_HISTORY_HREF/);
+  assert.match(activity, /href: LIBRARY_HISTORY_HREF/);
   assert.match(jobs, /job\.status === 'completed'[\s\S]*job\.outputHref/);
   assert.match(queue, /to=\{job\.outputHref\}/);
   assert.match(dashboard, /getGeneratedImageSelectionKey\(image\)/);

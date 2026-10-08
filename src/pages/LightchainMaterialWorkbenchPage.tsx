@@ -86,6 +86,8 @@ import { protectedImageSaveRequestId } from '../lib/protectedImageEditContract';
 import { resolveGeneratedImageUrl, withSignedImageUrls } from '../lib/storage';
 import { mergeGeneratedImagesByCanonicalIdentity } from '../lib/generatedImageIdentity';
 import { buildLocalCanvasAssetReference, putLocalCanvasAsset } from '../lib/canvasLocalAssets';
+import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
+import { LIBRARY_HISTORY_HREF } from '../lib/lightchainLibraryHandoff';
 import {
   buildLocalUploadSourceMetadata,
   sanitizeCanvasSourceMetadata,
@@ -684,33 +686,6 @@ function WorkbenchResultCard({
             </button>
           )}
         </div>
-        <nav
-          className="grid grid-cols-3 gap-2 pt-1"
-          aria-label={`${result.title}の保存先`}
-          data-testid={`material-result-destinations-${result.id}`}
-        >
-          <Link
-            to="/gallery"
-            data-testid={`material-result-gallery-link-${result.id}`}
-            className="rounded-lg border border-white/10 px-2 py-1.5 text-center text-[11px] font-semibold text-white/65 transition hover:border-cyan-300/40 hover:text-cyan-100"
-          >
-            Gallery
-          </Link>
-          <Link
-            to="/history"
-            data-testid={`material-result-history-link-${result.id}`}
-            className="rounded-lg border border-white/10 px-2 py-1.5 text-center text-[11px] font-semibold text-white/65 transition hover:border-cyan-300/40 hover:text-cyan-100"
-          >
-            History
-          </Link>
-          <Link
-            to="/jobs"
-            data-testid={`material-result-jobs-link-${result.id}`}
-            className="rounded-lg border border-white/10 px-2 py-1.5 text-center text-[11px] font-semibold text-white/65 transition hover:border-cyan-300/40 hover:text-cyan-100"
-          >
-            Jobs
-          </Link>
-        </nav>
       </div>
     </div>
   );
@@ -1591,6 +1566,7 @@ export function LightchainMaterialWorkbenchPage() {
 function LightchainMaterialWorkbenchSession() {
   const { setFlowState } = useUnifiedWorkspaceFlow();
   const navigate = useNavigate();
+  const [materialHistoryOpen, setMaterialHistoryOpen] = useState(false);
   const location = useLocation();
   // Material workbench routes can be opened directly on the Heavy host
   // (/fabric-image and /printing-image), without the /heavy/ path prefix.
@@ -5531,7 +5507,7 @@ function LightchainMaterialWorkbenchSession() {
             ))}
           </div>
           <Link
-            to="/history"
+            to={LIBRARY_HISTORY_HREF}
             className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-cyan-200 transition hover:text-cyan-100"
           >
             生成履歴を確認
@@ -6951,7 +6927,7 @@ function LightchainMaterialWorkbenchSession() {
             <aside className="relative min-w-0 overflow-hidden rounded-none bg-[#232728] shadow-2xl shadow-black/20">
               <button
                 type="button"
-                onClick={() => navigate('/history')}
+                onClick={() => setMaterialHistoryOpen(true)}
                 className="absolute right-4 top-4 z-10 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-white/15 bg-[#171b1c]/80 px-2.5 text-sm font-medium text-white/80 shadow-xs backdrop-blur-sm transition hover:bg-white/[0.08]"
               >
                 生成履歴
@@ -6993,6 +6969,7 @@ function LightchainMaterialWorkbenchSession() {
                   ))}
                 </div>
               )}
+              {materialHistoryOpen && <LightchainHistoryPanel onClose={() => setMaterialHistoryOpen(false)} />}
             </aside>
             </div>
           </div>
