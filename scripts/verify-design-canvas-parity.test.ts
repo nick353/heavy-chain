@@ -59,3 +59,15 @@ test('shapes, panels and text are created in the canvas like Light', () => {
   assert.match(detail, /今日は何をデザインしますか？/);
   assert.match(detail, /data-testid="design-layer-delete"/);
 });
+
+test('inspiration card, zoom group and collapsed assistant follow Light', () => {
+  const detail = fs.readFileSync('src/features/designDetail/DesignEntryDetailPage.tsx', 'utf8');
+  assert.match(detail, /params\.get\('projectSubType'\) === 'clothingDesign'/);
+  assert.match(detail, /Hello！デザインはここから始まります/);
+  assert.match(detail, /data-testid="design-zoom-group"/);
+  assert.match(detail, /aria-label=\{label\}[\s\S]*?使い方ガイド|使い方ガイド[\s\S]*?ショートカット/);
+  assert.match(detail, /setPanelOpen\(!\(panelDefaultKey\.endsWith\(':inspiration'\) \|\| panelDefaultKey\.endsWith\(':canvas'\)\)\)/);
+  assert.ok(fs.existsSync('public/lightchain-assets/mirror/lightchain-qlxy-prod/persistence/font-end/design-empty-placeholder.png'));
+  const pages = fs.readFileSync('src/pages/LightchainParityPages.tsx', 'utf8');
+  assert.match(pages, /title="インスピレーション"[^\n]*navigate\('\/designProduction\/detail\?projectSubType=clothingDesign'\)/);
+});
