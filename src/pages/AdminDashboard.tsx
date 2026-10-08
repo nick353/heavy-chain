@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Users, 
   Image, 
@@ -76,6 +76,7 @@ const getSafeFeedbackUrl = (value: string) => {
 };
 
 export function AdminDashboard() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
   const initialTab = (
@@ -265,22 +266,26 @@ export function AdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="dark min-h-screen flex items-center justify-center bg-neutral-900">
         <div className="spinner" />
       </div>
     );
   }
 
-  if (loadError) return <div className="p-12 text-center text-neutral-900 dark:text-white" role="alert">
+  if (loadError) return <div className="dark"><div className="min-h-screen bg-neutral-900 p-12 text-center text-white" role="alert">
     <p>{loadError}</p><Button onClick={loadDashboard} className="mt-4">再読み込み</Button>
-  </div>;
+  </div></div>;
 
+  // The app is dark everywhere; this page's dark: styles only apply under a .dark ancestor.
   return (
+    <div className="dark">
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
       {/* Header */}
       <header className="glass-nav px-6 py-4 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
+            <button type="button" data-testid="admin-back" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/designProduction'))}
+              className="mb-1 text-xs text-neutral-400 transition hover:text-white">← アプリに戻る</button>
             <h1 className="text-2xl font-bold text-neutral-800 dark:text-white">管理者ダッシュボード</h1>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">Heavy Chain システム管理</p>
           </div>
@@ -585,7 +590,7 @@ export function AdminDashboard() {
                             {new Date(item.created_at).toLocaleString('ja-JP')}
                           </td>
                           <td className="px-6 py-4">
-                            <Button size="sm" variant="secondary" onClick={() => openFeedbackDetail(item)}>
+                            <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => openFeedbackDetail(item)}>
                               開く
                             </Button>
                           </td>
@@ -852,6 +857,7 @@ export function AdminDashboard() {
           </div>
         </div>
       </Modal>
+    </div>
     </div>
   );
 }
