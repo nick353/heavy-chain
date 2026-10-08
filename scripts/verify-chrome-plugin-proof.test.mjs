@@ -76,7 +76,7 @@ test('release doctor keeps the retired verifier as the selected proof consumer',
   assert.match(source, /historical-only/);
 
   const selectedBranch = source.match(
-    /const releaseProofCheck = releaseChromePluginEvidenceValid\s*\?\s*\{([\s\S]*?)\}\s*:\s*\{/,
+    /const releaseProofCheck = releaseChromePluginEvidenceValid\s*\?\s*\{([\s\S]*?)\n\s*\}\s*\n\s*:/,
   )?.[1];
   assert.ok(selectedBranch, 'selected Chrome Plugin proof branch must be present');
   assert.doesNotMatch(selectedBranch, /fresh|取り直|収集|Browser Use|verify:browser-use/i);

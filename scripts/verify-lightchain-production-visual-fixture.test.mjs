@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { deflateSync } from 'node:zlib';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import { comparePngFiles } from './verify-lightchain-production-visual-fixture.mjs';
 
@@ -48,7 +49,8 @@ async function fixtureDirectory() {
 
 function runCli(args) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ['./verify-lightchain-production-visual-fixture.mjs', ...args], {
+    const cli = fileURLToPath(new URL('./verify-lightchain-production-visual-fixture.mjs', import.meta.url));
+    const child = spawn(process.execPath, [cli, ...args], {
       cwd: new URL('.', import.meta.url),
       stdio: ['ignore', 'pipe', 'pipe'],
     });

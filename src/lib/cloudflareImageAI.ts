@@ -1,7 +1,7 @@
 // Cloudflare's actual image contract. No provider key or arbitrary server-side
 // URL fetching; original local images are retained while bounded PNG copies go
 // to the model. Resizing is recorded, never reported as original-resolution input.
-import { readPendingIdentity, rememberPendingIdentity, forgetPendingIdentity } from './cloudflareImagePendingStore';
+import { readPendingIdentity, rememberPendingIdentity, forgetPendingIdentity } from './cloudflareImagePendingStore.ts';
 export const CLOUDFLARE_IMAGE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b';
 export const CLOUDFLARE_IMAGE_ACTIONS = new Set(['generate-image','edit-image','model-matrix']);
 export const CLOUDFLARE_IMAGE_NOTICE = 'Cloudflare FLUX.2 Klein 4B（品質検証中）。参照は最大4枚・長辺512pxで送信し、元画像は保持します。範囲編集は参照ガイド＋元画素の合成で対応し、新しい透過出力は未対応です。';

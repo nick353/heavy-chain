@@ -4,7 +4,7 @@ import { createServer } from 'vite';
 
 const originalWindow = globalThis.window;
 const originalFetch = globalThis.fetch;
-globalThis.window = { location: { origin: 'https://heavy-web.example.test' }, localStorage: { getItem: () => null } };
+globalThis.window = { location: { origin: 'https://heavy-web.example.test', hostname: 'heavy-web.example.test', pathname: '/' }, localStorage: { getItem: () => null } };
 const vite = await createServer({ configFile: false, envFile: false, appType: 'custom', logLevel: 'silent',
   esbuild: { jsx: 'automatic' }, server: { middlewareMode: true }, define: {
     'import.meta.env.DEV': 'false',

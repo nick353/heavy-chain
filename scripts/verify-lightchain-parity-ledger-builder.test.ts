@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
@@ -8,8 +9,10 @@ import test from 'node:test';
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const builder = path.join(repoRoot, 'scripts/build-lightchain-parity-behavior-ledger.ts');
 const sourceReadback = 'work/heavy-companion-lightchain-readback-20260825-r95.md';
+// Reads local evidence under work/ (gitignored); skipped in checkouts that do not have it.
+const localEvidenceMissing = !existsSync(new URL(`../${sourceReadback}`, import.meta.url));
 
-test('requires an explicit existing current source readback', async () => {
+test('requires an explicit existing current source readback', { skip: localEvidenceMissing && 'local evidence not present' }, async () => {
   const missingSource = spawnSync(
     process.execPath,
     ['--experimental-strip-types', builder, 'work/parity-builder-missing-source.json'],

@@ -11,6 +11,8 @@ import {
 } from '../src/features/lightchain/parityBehaviorLedger.ts';
 
 const artifactPath = new URL('../work/lightchain-parity-behavior-ledger-current.json', import.meta.url);
+// Reads local evidence under work/ (gitignored); skipped in checkouts that do not have it.
+const localEvidenceMissing = !existsSync(artifactPath);
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
 test('requires exactly the 31 non-video rows and all eight parity layers', () => {
@@ -44,7 +46,7 @@ test('rejects video rows, missing layers, and incomplete unresolved notes', () =
   assert.throws(() => validateParityBehaviorLedger([unresolvedWithoutNote, ...ledger.slice(1)]), /parity_behavior_note_required/);
 });
 
-test('accepts the current generated artifact without promoting historical production layers', async () => {
+test('accepts the current generated artifact without promoting historical production layers', { skip: localEvidenceMissing && 'local evidence not present' }, async () => {
   const artifact = JSON.parse(await readFile(artifactPath, 'utf8')) as { records: unknown };
   const records = validateParityBehaviorLedger(artifact.records as never);
   assert.equal(records.length, 31);
@@ -58,7 +60,7 @@ test('accepts the current generated artifact without promoting historical produc
   );
 });
 
-test('keeps the current fresh source readback attached to the ledger artifact', async () => {
+test('keeps the current fresh source readback attached to the ledger artifact', { skip: localEvidenceMissing && 'local evidence not present' }, async () => {
   const artifact = JSON.parse(await readFile(artifactPath, 'utf8')) as {
     evidenceBoundary?: { sourceReadback?: string };
   };
@@ -68,7 +70,7 @@ test('keeps the current fresh source readback attached to the ledger artifact', 
   );
 });
 
-test('requires every verified layer to point at an existing local evidence artifact', async () => {
+test('requires every verified layer to point at an existing local evidence artifact', { skip: localEvidenceMissing && 'local evidence not present' }, async () => {
   const artifact = JSON.parse(await readFile(artifactPath, 'utf8')) as {
     records: Array<{ layers: Record<string, { status: string; evidence: string[] }> }>;
   };
@@ -85,7 +87,7 @@ test('requires every verified layer to point at an existing local evidence artif
   }
 });
 
-test('keeps the current local input evidence separate from unresolved production layers', async () => {
+test('keeps the current local input evidence separate from unresolved production layers', { skip: localEvidenceMissing && 'local evidence not present' }, async () => {
   const artifact = JSON.parse(await readFile(artifactPath, 'utf8')) as {
     records: Array<{ layers: Record<string, { status: string; evidence: string[] }> }>;
   };

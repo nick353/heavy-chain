@@ -13,6 +13,8 @@ import {
 } from '../src/features/lightchain/videoParityBehaviorLedger.ts';
 
 const artifactPath = new URL('../work/lightchain-video-parity-behavior-ledger-current.json', import.meta.url);
+// Reads local evidence under work/ (gitignored); skipped in checkouts that do not have it.
+const localEvidenceMissing = !existsSync(artifactPath);
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
 test('covers exactly the two canonical video rows and all parity layers', () => {
@@ -39,7 +41,7 @@ test('rejects non-video rows and incomplete layer sets', () => {
   );
 });
 
-test('accepts the current video artifact without promoting provider completion', async () => {
+test('accepts the current video artifact without promoting provider completion', { skip: localEvidenceMissing && 'local evidence not present' }, async () => {
   const artifact = JSON.parse(await readFile(artifactPath, 'utf8')) as {
     records: unknown;
     evidenceBoundary?: { sourceReadback?: string };
@@ -62,7 +64,7 @@ test('accepts the current video artifact without promoting provider completion',
   }
 });
 
-test('requires every verified video layer to point at an existing evidence artifact', async () => {
+test('requires every verified video layer to point at an existing evidence artifact', { skip: localEvidenceMissing && 'local evidence not present' }, async () => {
   const artifact = JSON.parse(await readFile(artifactPath, 'utf8')) as {
     records: Array<{ layers: Record<string, { status: string; evidence: string[] }> }>;
   };
