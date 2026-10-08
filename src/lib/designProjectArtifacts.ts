@@ -1,4 +1,5 @@
 import { getGeneratedImageIdentityKeys } from './generatedImageIdentity.ts';
+import { designImageProjectHref } from './legacyCanvasRoute.ts';
 import type { WorkspaceArtifact } from './localWorkspaceArtifacts';
 import type { Json } from '../types/database';
 
@@ -152,14 +153,12 @@ export const paginate = <T>(
   };
 };
 
+/** Light's project cards open the project canvas: a saved image opens as its own Canvas project. */
 export const designEntryHref = (entry: DesignProjectEntry): string | null => {
-  if (entry.origin === 'local') {
-    return `/canvas/new?sourceArtifactId=${encodeURIComponent(entry.artifact.id)}`;
-  }
-  const remoteImageId = readString(entry.artifact.metadata, 'remoteImageId');
-  return remoteImageId
-    ? `/canvas/new?galleryImageId=${encodeURIComponent(remoteImageId)}`
-    : null;
+  const imageId = readString(entry.artifact.metadata, 'remoteImageId')
+    ?? (entry.origin === 'local' ? readString(entry.artifact.metadata, 'imageId') : null);
+  if (imageId && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(imageId)) return designImageProjectHref(imageId);
+  return entry.origin === 'local' ? `/canvas/new?sourceArtifactId=${encodeURIComponent(entry.artifact.id)}` : null;
 };
 
 export const createDesignArtifactScopeKey = (
