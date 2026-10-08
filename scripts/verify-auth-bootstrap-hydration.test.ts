@@ -8,16 +8,17 @@ const initializeEnd = source.indexOf('\n  },\n\n  signInWithEmail:', initializeS
 assert.ok(initializeStart >= 0 && initializeEnd > initializeStart);
 const initialize = source.slice(initializeStart, initializeEnd);
 
-test('bootstrap readiness waits for deferred profile and then brand hydration', () => {
+test('bootstrap readiness unlocks the shell after session admission', () => {
   const admission = initialize.indexOf('const admission = new Promise<void>');
   const profile = initialize.indexOf('ensureUserProfile(user)');
   const brand = initialize.indexOf('await refreshBrandAuthority(user.id)');
-  const readiness = initialize.indexOf('await observedAdmission');
-  const publish = initialize.indexOf('set({ isLoading: false, isInitialized: true });');
+  const sessionAdmission = initialize.indexOf('void admitUser(session.user)');
+  const sessionPublish = initialize.indexOf('set({ isLoading: false, isInitialized: true, authRecoveryRequired: false');
 
   assert.ok(admission >= 0);
   assert.ok(admission < profile && profile < brand);
-  assert.ok(brand < readiness && readiness < publish);
+  assert.ok(sessionAdmission >= 0 && sessionAdmission < sessionPublish);
+  assert.doesNotMatch(initialize, /await observedAdmission/);
 });
 
 test('handled profile and brand outcomes terminate bootstrap admission', () => {
@@ -31,7 +32,7 @@ test('overlapping admissions and sign-out invalidate stale authority before read
   assert.match(initialize, /const sequence = \+\+admissionSequence/);
   assert.match(initialize, /sequence !== admissionSequence/);
   assert.match(initialize, /brandState\.requestGeneration !== admissionGeneration/);
-  assert.match(initialize, /while \(latestAdmission !== observedAdmission\)/);
+  assert.match(initialize, /void admitUser\(session\.user\)/);
   assert.match(source, /let activeAdmitUser: \(\(user: User\) => Promise<void>\) \| null = null/);
   assert.match(source, /initializeToken === activeInitializeToken/);
   assert.ok(initialize.indexOf('activeInvalidateAdmission?.();') < initialize.indexOf("clearBrandAuthority(null);"));

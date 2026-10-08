@@ -4,13 +4,13 @@ import { readFile } from 'node:fs/promises';
 
 const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
 
-test('ProtectedRoute only shows recovery actions for an explicit auth recovery state', () => {
+test('ProtectedRoute preserves the source login redirect after explicit auth recovery', () => {
   assert.match(
     appSource,
-    /if \(!isInitialized \|\| isLoading \|\| authRecoveryRequired\) \{\s*return <WorkspaceLoadingFallback authRecovery=\{authRecoveryRequired\} showHeader=\{false\} \/>;\s*\}/,
+    /const returnTo = `\$\{location\.pathname\}\$\{location\.search\}\$\{location\.hash\}`;[\s\S]*?if \(authRecoveryRequired && !user\) \{[\s\S]*?Navigate to=\{`\/login\?redirect=\$\{encodeURIComponent\(returnTo\)\}`\}/,
   );
   assert.doesNotMatch(
     appSource,
-    /if \(!isInitialized \|\| isLoading \|\| authRecoveryRequired\) \{\s*return <WorkspaceLoadingFallback authRecovery showHeader=\{false\} \/>;\s*\}/,
+    /if \(!isInitialized \|\| isLoading \|\| authRecoveryRequired\) \{\s*return <Navigate/,
   );
 });

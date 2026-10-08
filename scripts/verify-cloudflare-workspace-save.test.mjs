@@ -25,7 +25,8 @@ const input = () => ({ brandId: 'brand-1', featureType: 'ai-fitting', title: 'Sa
   imageUrl: 'data:image/png;base64,aW1hZ2U=', prompt: 'shirt', scopeId: 'alice', metadata: { source: 'canvas' } });
 function success(request) {
   const id = `wa-${request.requestId}`;
-  return Response.json({ success: true, remote: { jobId: id, imageId: id, storagePath: `generated-images/${id}` } });
+  const storagePath = request.sourceStoragePath ?? `generated-images/${id}`;
+  return Response.json({ success: true, remote: { jobId: id, imageId: id, storagePath } });
 }
 
 test('enabled workspace save goes to Cloudflare and local record retains canonical R2 identity', async () => {
@@ -47,7 +48,12 @@ test('enabled workspace save goes to Cloudflare and local record retains canonic
 test('uncertain save is locally retained and retry uses the same ID without Supabase fallback', async () => {
   storage(); const calls = [];
   globalThis.fetch = async (url, init) => {
-    assert.equal(url, 'https://heavy-api.example.test/v1/workspace-artifacts');
+    const target = new URL(url);
+    if (init.method === 'GET') {
+      assert.match(target.pathname, /^\/v1\/workspace-artifacts\/[0-9a-f-]{36}$/);
+      return Response.json({ success: false, error: 'workspace_artifact_not_found' }, { status: 404 });
+    }
+    assert.equal(target.pathname, '/v1/workspace-artifacts');
     const request = JSON.parse(init.body); calls.push(request);
     if (calls.length === 1) throw new TypeError('Network response lost');
     return success(request);
@@ -60,6 +66,50 @@ test('uncertain save is locally retained and retry uses the same ID without Supa
   assert(second.remote); assert.equal(second.localPersisted, true);
   assert.equal(calls[0].requestId, calls[1].requestId);
   assert.deepEqual(calls[0].metadata, calls[1].metadata);
+});
+
+test('lost POST response reconciles the exact request ID and avoids a second write', async () => {
+  storage(); const posts = []; const reads = [];
+  const requestId = crypto.randomUUID();
+  globalThis.fetch = async (url, init) => {
+    const target = new URL(url);
+    if (init.method === 'GET') {
+      reads.push(target.pathname);
+      assert.equal(target.pathname, `/v1/workspace-artifacts/${requestId}`);
+      return success({ requestId });
+    }
+    assert.equal(target.pathname, '/v1/workspace-artifacts');
+    posts.push(JSON.parse(init.body));
+    throw new TypeError('Network response lost after commit');
+  };
+  const result = await saveWorkspaceArtifactBestEffort({ ...input(), metadata: { source: 'canvas', cloudflareWorkspaceRequestId: requestId } });
+  assert(result.remote);
+  assert.equal(posts.length, 1);
+  assert.deepEqual(reads, [`/v1/workspace-artifacts/${requestId}`]);
+  assert.equal(result.remote.imageId, `wa-${requestId}`);
+  const persisted = findWorkspaceArtifact('brand-1', result.artifact.id, 'alice');
+  assert.equal(persisted.metadata.remoteSaveStatus, 'succeeded');
+  assert.equal(persisted.metadata.remoteStoragePath, `generated-images/wa-${requestId}`);
+});
+
+test('mismatched reconciliation identity remains fail-closed and does not satisfy the save', async () => {
+  storage(); let posts = 0; let reads = 0;
+  globalThis.fetch = async (url, init) => {
+    const target = new URL(url);
+    if (init.method === 'GET') {
+      reads++;
+      return Response.json({ success: true, remote: {
+        jobId: 'wa-foreign', imageId: 'wa-foreign', storagePath: 'generated-images/wa-foreign',
+      } });
+    }
+    posts++;
+    throw new TypeError('Network response lost');
+  };
+  const result = await saveWorkspaceArtifactBestEffort(input());
+  assert.equal(posts, 1);
+  assert.equal(reads, 1);
+  assert.equal(result.remote, undefined);
+  assert(result.remoteError);
 });
 
 test('canonical reuse sends only its source path and does not download an arbitrary remote URL', async () => {
@@ -93,19 +143,21 @@ test('R2 image signing and Gallery readback use the gateway and never fall back 
   const { resolveGeneratedImageUrl, withSignedImageUrls } = await vite.ssrLoadModule('/src/lib/storage.ts');
   const path = 'generated-images/wa-image-1';
   assert.equal(await resolveGeneratedImageUrl(path), 'https://heavy-api.example.test/read?token=short-lived');
+  // A URL signed earlier in this session is reused until shortly before it expires.
   const rows = await withSignedImageUrls([{ storage_path: path, image_url: null }]);
   assert.equal(rows[0].image_url, 'https://heavy-api.example.test/read?token=short-lived');
+  assert.equal(reads, 1);
   fail = true;
-  const failed = await withSignedImageUrls([{ storage_path: path, image_url: 'https://old.invalid/?token=stale' }]);
+  const failed = await withSignedImageUrls([{ storage_path: 'generated-images/wa-image-2', image_url: 'https://old.invalid/?token=stale' }]);
   assert.equal(failed[0].image_url, null);
-  assert.equal(reads, 3);
+  assert.equal(reads, 2);
   await assert.rejects(resolveGeneratedImageUrl('generated-images/../private'));
-  assert.equal(reads, 3);
+  assert.equal(reads, 2);
   fail = false;
   const batch = Array.from({ length: 12 }, (_, i) => ({ storage_path: 'generated-images/wa-batch-' + i, image_url: null }));
   const mixed = await withSignedImageUrls([...batch, batch[0], { storage_path: 'generated-images/wa-missing', image_url: 'https://old.invalid/stale' }]);
-  assert.equal(reads, 16); // deduplicated twelve valid paths plus one missing path
-  assert.equal(peak, 4);
+  assert.equal(reads, 15); // deduplicated twelve valid paths plus one missing path
+  assert.equal(peak, 8);
   assert(mixed.slice(0, 13).every(row => row.image_url === 'https://heavy-api.example.test/read?token=short-lived'));
   assert.equal(mixed[13].image_url, null);
 });

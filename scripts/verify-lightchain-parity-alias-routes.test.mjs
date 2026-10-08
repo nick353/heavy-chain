@@ -21,6 +21,9 @@ test('keeps permission and purchase boundaries visible in the parity screens', (
   // intentionally removed. The source permission surface is separate from
   // rights-attestation UI, which Light Chain does not render.
   assert.doesNotMatch(parityPagesSource, /PermissionLockedButton/);
+  assert.match(parityPagesSource, /aria-label="この機能は未実装です"/);
+  assert.match(parityPagesSource, />この機能は未実装です<\/button>/);
+  assert.doesNotMatch(parityPagesSource, /権限がありません/);
   assert.match(permissionComponentSource, /権限がありません/);
   assert.match(parityPagesSource, /AIフィッティングを開く/);
   assert.match(parityPagesSource, /生成履歴/);
@@ -42,7 +45,7 @@ test('keeps the model-library alias on the shared workflow contract', () => {
   assert.match(modelLibrarySource, /data-workflow-result-destinations=\{modelLibraryWorkflowContract\?\.resultDestinations\.join\(','\) \?\? ''\}/);
   assert.match(modelLibrarySource, /data-workflow-rights-gate=\{modelLibraryWorkflowContract\?\.rightsGate \?\? ''\}/);
   assert.match(modelLibrarySource, /data-testid="model-library-permission-surface"/);
-  assert.match(modelLibrarySource, /権限がありません/);
+  assert.match(modelLibrarySource, /生成を準備できません/);
   assert.doesNotMatch(modelLibrarySource, /生成直前に権利確認を行います/);
   assert.match(modelLibrarySource, /getLightchainUnifiedFeatureWorkflowContract\('model-library'\)/);
   assert.match(modelLibrarySource, /buildGenerationIntentHref/);
@@ -53,5 +56,7 @@ test('uses Light Chain /model as the canonical AI fitting entrypoint', () => {
   assert.ok(fittingEntries.length >= 1, 'missing AI fitting catalog entries');
   assert.ok(fittingEntries.every((href) => href.startsWith('/model')), `non-canonical AI fitting hrefs: ${fittingEntries.join(', ')}`);
   assert.match(parityPagesSource, /navigate\(`\/model\?/);
-  assert.match(workbenchSource, /to="\/model#fitting-history"|navigate\('\/model#fitting-history'\)/);
+  assert.match(workbenchSource, /selectedToolActionHref = isFittingDetail \? '\/model#fitting-material-workbench'/);
+  assert.match(workbenchSource, /'\/model\/model-reference': 'ai-fitting-reference'/);
+  assert.match(workbenchSource, /'\/model\/pose-reference': 'ai-fitting-reference'/);
 });

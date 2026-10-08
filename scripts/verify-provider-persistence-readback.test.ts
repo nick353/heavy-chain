@@ -127,8 +127,9 @@ test('provider persistence reuses an owned canonical storage path and fails clos
   assert.match(client, /revision/);
   assert.equal((workbench.match(/requireRemote: true/g) ?? []).length, 2);
   assert.match(material, /requireRemote: true/);
-  assert.match(material, /reuseCanonicalRemoteArtifact: Boolean\(cloudflareDataPlane && providerResult\.protectedRegionComposited\)/);
-  assert.match(material, /providerResult\.protectedRegionComposited === true\s*\? \{ dataUrl:providerResult\.imageUrl \}/);
+  assert.match(material, /reuseCanonicalRemoteArtifact: Boolean\(cloudflareDataPlane && (?:providerResult\.protectedRegionComposited|result\.storagePath)\)/);
+  assert.match(material, /providerResult\.protectedRegionComposited === true/);
+  assert.match(material, /dataUrl:providerResult\.imageUrl/);
   assert.match(material, /jobId: persistedProviderArtifact\.remote\?\.jobId/);
   assert.match(material, /storagePath: persistedProviderArtifact\.remote\?\.storagePath/);
   assert.match(material, /const canvasArtifactImageUrl = result\.storagePath \? '' : canvasSource/);

@@ -3,10 +3,14 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const source = await readFile(new URL('../src/pages/LightchainParityPages.tsx', import.meta.url), 'utf8');
+const cardSource = await readFile(new URL('../src/components/design/DesignCreationCard.tsx', import.meta.url), 'utf8');
 
 test('design production saved cards expose Light-compatible menu and pin persistence', () => {
   assert.match(source, /export function LightchainDesignProductionPage/);
-  assert.match(source, /heavy-design-production-pins:\$\{brandId\}/);
+  assert.match(source, /heavy-design-production-pins:v2:\$\{encodeURIComponent\(JSON\.stringify\(\[userId, brandId\]\)\)\}/);
+  assert.match(source, /getItem\(designProjectPinsStorageKey\(designUserId, designBrandId\)\)/);
+  assert.match(source, /setItem\(designProjectPinsStorageKey\(designUserId, designBrandId\)/);
+  assert.doesNotMatch(source, /heavy-design-production-pins:\$\{brandId\}/);
   assert.match(source, /aria-label=\{`\$\{artifact\.title\}のメニュー`\}/);
   assert.match(source, /role="menuitem"/);
   assert.match(source, /ピン留め/);
@@ -14,10 +18,14 @@ test('design production saved cards expose Light-compatible menu and pin persist
   assert.match(source, /deleteWorkspaceArtifactsPersisted/);
   assert.match(source, /アセットライブラリーに保存しました/);
   assert.match(source, /window\.confirm/);
-  assert.match(source, /projectsPerPage = 6/);
+  assert.match(source, /toDesignEntries\(localArtifacts, remoteArtifacts\)/);
+  assert.match(source, /paginate\(projectGridItems, projectPage, DESIGN_PROJECT_PAGE_SIZE\)/);
+  assert.match(source, /designEntryHref\(entry\)/);
+  assert.doesNotMatch(source, /source-design-production-untitled-/);
   assert.match(source, /data-testid="design-production-pagination"/);
   assert.match(source, /aria-label="前のページ"/);
   assert.match(source, /aria-label="次のページ"/);
+  assert.match(source, /type="button"[\s\S]*aria-current=\{index \+ 1 === page\.page \? 'page' : undefined\}/);
 });
 
 test('design production creation cards match the current Light source contract', () => {
@@ -26,5 +34,28 @@ test('design production creation cards match the current Light source contract',
   assert.match(source, /title="ブリン卜修正" actionLabel="プリントプロジェクトを新規作成"/);
   assert.match(source, /title="生地イメージ" actionLabel="生地プロジェクトを新規作成"/);
   assert.match(source, /title="企画提案書" actionLabel="企画提案書を新規作成"/);
+  assert.match(source, /grid-cols-2 sm:grid-cols-5" aria-label="新規ファイル"/);
+  assert.match(source, /className="mt-6 grid gap-2 grid-cols-2 sm:grid-cols-5"/);
+  assert.match(source, /max-w-\[1157px\] px-6 py-7 lg:px-0/);
+  assert.match(source, /border-dashed border-white\/10 bg-white\/5 p-5 text-center/);
+  assert.match(source, /aria-label="残りクレジット"/);
+  const newFileCard = source.match(/export function DesignNewFileCard\(\)[\s\S]*?\n\}/)?.[0] ?? '';
+  assert.notEqual(newFileCard, '');
+  assert.match(newFileCard, /<Plus className="h-6 w-6" \/>/);
+  assert.match(newFileCard, /data-creation-card-label="">新規ファイル<\/span>/);
+  const creationCardWrapper = source.match(/(export function CreationCard\([\s\S]*?\n\})\n\nconst libraryGroups/)?.[1] ?? '';
+  assert.match(source, /import \{ DesignCreationCard \} from '\.\.\/components\/design\/DesignCreationCard'/);
+  assert.match(creationCardWrapper, /return <DesignCreationCard icon=\{icon\} title=\{title\} actionLabel=\{actionLabel\} onClick=\{onClick\} \/>/);
+  const creationCard = cardSource;
+  assert.match(creationCard, /relative flex min-h-\[160px\] w-full flex-col/);
+  assert.match(creationCard, /absolute bottom-4 left-1\/2 [^"]*translate-y-4[^"]*opacity-0/);
+  assert.match(creationCard, /group-hover:translate-y-0[^\"]*group-hover:opacity-100/);
+  assert.match(creationCard, /bg-\[#0bc1b8\]/);
+  assert.match(creationCard, /デザインプロジェクトを新規作成: 'w-\[228px\]'/);
+  assert.match(creationCard, /生地プロジェクトを新規作成: 'w-\[204px\]'/);
+  assert.match(creationCard, /企画提案書を新規作成: 'w-\[168px\]'/);
+  assert.match(creationCard, /\{actionLabel\}/);
+  assert.doesNotMatch(creationCard, /type="submit"/);
+  assert.doesNotMatch(source, /absolute inset-0 z-10 rounded-2xl border border-transparent bg-transparent text-transparent/);
   assert.doesNotMatch(source, /onClick=\{\(\) => navigate\('\/canvas\/new'\)\}.*title="新規ファイル"/s);
 });
