@@ -1,4 +1,5 @@
 // Browser-only image utilities: upscaling and ZIP packaging. No server calls.
+import { watermarkImageBlobIfOn } from './imageDownload.ts';
 
 const MAX_UPSCALE_EDGE = 4096;
 
@@ -123,7 +124,7 @@ export async function downloadImagesAsZip(images: Array<{ url: string; name: str
     try {
       const response = await fetch(image.url, { credentials: 'omit' });
       if (!response.ok) throw new Error(String(response.status));
-      const blob = await response.blob();
+      const blob = await watermarkImageBlobIfOn(await response.blob());
       const extension = EXTENSIONS[blob.type] ?? 'png';
       files.push({ name: `${image.name}.${extension}`, data: new Uint8Array(await blob.arrayBuffer()) });
     } catch { failed++; }

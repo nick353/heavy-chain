@@ -14,6 +14,7 @@ import {
 import { HeavyChainLogo } from '../icons';
 import { ChevronDown, ChevronLeft, FileText, FolderOpen, Globe2, HelpCircle, LogOut, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
 import { isHeavyWorkspaceRuntime } from '../../lib/heavyWorkspace';
+import { readWatermarkPreference, setWatermarkUser, writeWatermarkPreference } from '../../lib/watermarkPreference';
 import { FaqPanel, HelpMenu, LanguageMenu, NotificationsPanel, useHeavyNotificationsSeen } from './LightchainHeaderMenus';
 
 // Heavy Chain owns the visible identity; parity route identifiers remain internal compatibility details.
@@ -28,16 +29,16 @@ export function Layout() {
   const currentBrand = useAuthStore((state) => state.currentBrand);
   const lightchainUserName = (typeof user?.user_metadata?.full_name === 'string' && user.user_metadata.full_name.trim())
     || user?.email?.split('@')[0] || 'ユーザー';
-  // Light's 透かし toggle is a per-user display preference; Heavy keeps it per user in this browser.
-  const watermarkKey = user?.id ? `heavy:watermark-display:v1:${user.id}` : null;
+  // Light's 透かし toggle is a per-user preference; while it is on, downloaded images are stamped (watermarkPreference).
   const [watermarkOn, setWatermarkOn] = useState(false);
   useEffect(() => {
-    try { setWatermarkOn(Boolean(watermarkKey && localStorage.getItem(watermarkKey) === '1')); } catch { setWatermarkOn(false); }
-  }, [watermarkKey]);
+    setWatermarkUser(user?.id);
+    setWatermarkOn(readWatermarkPreference(user?.id));
+  }, [user?.id]);
   const toggleWatermark = () => {
     const next = !watermarkOn;
     setWatermarkOn(next);
-    try { if (watermarkKey) localStorage.setItem(watermarkKey, next ? '1' : '0'); } catch { /* storage unavailable */ }
+    writeWatermarkPreference(user?.id, next);
   };
   // Header dropdowns (language / help) and the full-screen panels the help menu opens.
   const [headerMenu, setHeaderMenu] = useState<'language' | 'help' | null>(null);

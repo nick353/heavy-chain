@@ -6,6 +6,7 @@ import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate'
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { ZoomControl } from './PatternDesignDetailPage';
+import { watermarkImageBlobIfOn } from '../lib/imageDownload';
 
 /**
  * Light `/editor/changeColor/detail` = "色変更", measured at 1440×900 on 2026-10-07: first visit shows the
@@ -126,9 +127,9 @@ function ChangeColorWorkspace() {
       if (!context) throw new Error('canvas');
       context.filter = `brightness(${tone.brightness}%) contrast(${tone.contrast}%) saturate(${tone.saturate}%)`;
       context.drawImage(bitmap, 0, 0);
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) throw new Error('blob');
-      const href = URL.createObjectURL(blob);
+      const rendered = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!rendered) throw new Error('blob');
+      const href = URL.createObjectURL(await watermarkImageBlobIfOn(rendered));
       const anchor = document.createElement('a');
       anchor.href = href;
       anchor.download = name;

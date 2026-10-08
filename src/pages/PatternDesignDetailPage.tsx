@@ -6,6 +6,7 @@ import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate'
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { useBoardDraftProject } from '../features/boardDraftProjects';
+import { watermarkImageBlobIfOn } from '../lib/imageDownload';
 
 /**
  * Light `/editor/pattern/detail` = "デザインアレンジ" editor, measured at 1440×900 on 2026-10-07:
@@ -106,7 +107,7 @@ function PatternDesignDetailWorkspace() {
 
   const download = (url: string | null | undefined, name: string) => {
     if (!url) return;
-    void fetch(url).then((response) => response.blob()).then((blob) => {
+    void fetch(url).then((response) => response.blob()).then((blob) => watermarkImageBlobIfOn(blob)).then((blob) => {
       const href = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = href;
