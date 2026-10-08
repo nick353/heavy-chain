@@ -48,6 +48,7 @@ import { downloadValidatedImage } from '../lib/imageDownload';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
+import { PrintApplyEditor } from '../components/lightchain/PrintApplyEditor';
 import { LIGHTCHAIN_SVG_CONVERT_TABS, LIGHTCHAIN_VECTOR_TOOL_TABS, LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
 import { SvgExportPanel } from '../components/lightchain/SvgExportPanel';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
@@ -416,6 +417,8 @@ export function LightchainPrintingPage() {
   return <LightchainPrintingWorkspace key={JSON.stringify([currentBrand?.id, user?.id])} />;
 }
 
+const PRINT_APPLIED_FILE_NAME='プリント適用済み.png';
+
 function LightchainPrintingWorkspace() {
   const workspace=useCanonicalImageWorkspace('printing-image',{requiredSources:2,title:'プリントイメージ',initialInputState:{coverage:'spot'}});
   const referenceImage=workspace.slots.primary?{url:workspace.slots.primary.imageUrl,referenceType:'base' as const,
@@ -474,7 +477,17 @@ function LightchainPrintingWorkspace() {
   const handleCanonicalFiles=(event:ChangeEvent<HTMLInputElement>)=>{const [base,pattern]=Array.from(event.target.files??[]).slice(0,2);if(base||pattern){beginDraftEdit();setMessage('');}if(base)void workspace.upload('primary',base);if(pattern)void workspace.upload('secondary',pattern);};
   const reset=()=>{if(locked)return;beginDraftEdit();workspace.clearSource('primary');workspace.clearSource('secondary');setMessage('');
     if(!workspace.jobId&&user?.id&&currentBrand?.id&&persistenceScope)void persistPrintInputState(currentBrand.id,null,[],{garment:null,designs:[]},{scope:persistenceScope}).catch(()=>undefined);};
-  const handleGenerate=()=>workspace.generate({brief:workspace.brief||printImageBrief(coverage==='full'?'full':'spot')});
+  // Light's 「適用」: the print is placed on the garment in PrintApplyEditor and the composite becomes the reference image.
+  const [applyOpen,setApplyOpen]=useState(false);
+  const applyGarmentRef=useRef<string|null>(null);
+  const printApplied=workspace.slots.primary?.name===PRINT_APPLIED_FILE_NAME;
+  const openApplyEditor=()=>{if(locked||!referenceImage||!printImage)return;if(!printApplied)applyGarmentRef.current=referenceImage.url;setApplyOpen(true);};
+  const confirmApply=(composite:Blob)=>{setApplyOpen(false);beginDraftEdit();void workspace.upload('primary',new File([composite],PRINT_APPLIED_FILE_NAME,{type:'image/png'}));setMessage('');};
+  const handleGenerate=()=>{
+    // Light ignores AI生成 in spot mode until the print has been applied to the garment.
+    if(coverage!=='full'&&!printApplied){toast.error('プリントを「適用」して位置を決めてから生成してください');return;}
+    return workspace.generate({brief:workspace.brief||printImageBrief(coverage==='full'?'full':'spot')});
+  };
   const [printingResultUrl,setPrintingResultUrl]=useState<string|null>(null);
   useEffect(()=>{const result=workspace.result;let cancelled=false;
     if(!result){setPrintingResultUrl(null);return;}
@@ -602,11 +615,12 @@ function LightchainPrintingWorkspace() {
       <div role="group" aria-label="プリント範囲" className="mt-[18px] grid h-[30px] w-[244px] grid-cols-2 rounded-full bg-[#2b3133] p-[2px]">
         {(['spot', 'full'] as const).map((value) => <button key={value} type="button" aria-pressed={coverage === value} disabled={locked} onClick={() => setCoverage(value)} className={`rounded-full text-sm transition ${coverage === value ? 'bg-[#4b5153] text-white' : 'text-white/70 hover:text-white'}`}>{value === 'spot' ? 'スポット' : '全体'}</button>)}
       </div>
-      <label data-testid="print-image-print-input" className="mt-[18px] flex h-[120px] w-[120px] shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-transparent bg-[#33393b] p-2 text-center transition hover:border-[#20d0c4]">
+      <label data-testid="print-image-print-input" className="relative mt-[18px] flex h-[120px] w-[120px] shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-transparent bg-[#33393b] p-2 text-center transition hover:border-[#20d0c4]">
         <input className="sr-only" disabled={locked} type="file" accept="image/*" aria-label="プリント画像をアップロード" onChange={(event) => handleFile(event, 'pattern')} />
         {printImage ? <>
           <img src={printImage.url} alt="プリント画像" data-source-slot="secondary" data-source-image-id={workspace.slots.secondary?.sourceImageId??''} data-source-storage-path={workspace.slots.secondary?.sourceStoragePath??''} className="h-full w-full object-contain" />
           <span className="sr-only" data-testid="print-image-file-name">{workspace.slots.secondary?.name}</span>
+          {referenceImage && <button type="button" data-testid="print-image-apply" disabled={locked} onClick={(event)=>{event.preventDefault();event.stopPropagation();openApplyEditor();}} className="absolute bottom-1.5 left-1/2 h-6 -translate-x-1/2 rounded border border-white/80 bg-black/40 px-2 text-xs text-white">{printApplied?'再調整':'適用'}</button>}
         </> : <>
           <span className="text-sm leading-[21px] text-neutral-200">画像をアップロード</span>
           <span className="mt-1 text-xs leading-[17px] text-neutral-400">20MB以下の画像アップロードしてください</span>
@@ -642,6 +656,7 @@ function LightchainPrintingWorkspace() {
   return (
     <ParityShell workflowFeature="printing-image" className="lightchain-printing-parity bg-[#0b1113] text-white">
       <LightchainDesignToolFrame active="printing" testId="print-image-page" navigationLocked={locked}>{printingControls}{printingResult}</LightchainDesignToolFrame>
+      {applyOpen && referenceImage && printImage && <PrintApplyEditor garmentUrl={printApplied&&applyGarmentRef.current?applyGarmentRef.current:referenceImage.url} printUrl={printImage.url} onCancel={()=>setApplyOpen(false)} onConfirm={confirmApply} />}
     </ParityShell>
   );
 }
