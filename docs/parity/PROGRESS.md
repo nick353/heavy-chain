@@ -388,3 +388,13 @@ Each iteration: read this file → advance the next open item → append result 
 - Added favicon.svg, favicon.ico (16/32/48), apple-touch-icon.png, icon-192/512.png and site.webmanifest. og-image.png (1200×630) is a new design. og:url and canonical are https://heavychain.app/, and og:image carries `?v=20261008` to bust caches.
 - 検証: CI green. Production returns 200 for og-image, favicons, the touch icon and the manifest. og meta reads heavychain.app URLs. The header on heavychain.app/tools/printing shows the new mark.
 - LINE and other apps cache share previews, so they may keep showing the old image for a while.
+
+### Iteration 55 (2026-10-08/09) — design canvas matches Light, all canvas shortcuts work
+- 変更 (each merged after the CI check passed; heavychain.app auto-deployed):
+  - nick353/heavy-chain#58 removed unused legacy pages. #59 Canvas links open the Light-style design detail. #60 a handed-off Canvas image is attached only once.
+  - #61–#63 the design canvas works like Light's project canvas: shapes and text, new shapes sized to the view, a delete button on each layer.
+  - #64 inspiration start screen, zoom group and collapsed assistant as in Light. #65 Light's 初心者ガイド and キーボード shortcut panel.
+  - #66 every shortcut in that panel works: marquee / Shift+click multi-select, Ctrl+A, Ctrl+G / Ctrl+Shift+G groups, object undo/redo (Ctrl+Z / Ctrl+Shift+Z and the toolbar), Ctrl+click 透過選択, Ctrl+Shift+C copy as PNG. Undo restores only the changed objects, so AI results added meanwhile survive.
+  - #67 selection and undo history survive the reload after a save. #68 Ctrl+click 透過選択 on macOS (Ctrl+click is a context-menu click there, so it is handled on pointerdown). #69 projects without a chat re-read only the document after a save; the upload screen no longer flashes.
+- 検証 (production, Companion, test project imgp-dc9d322c…): undo/redo, Ctrl+A, group/ungroup, group click, marquee and copy as image (clipboard became the 1024×1024 PNG) on production; Shift+click, multi-object drag and Ctrl/⌘+click in a local Playwright harness that mounts DesignEntryDetailPage with fake clients (Companion cannot hold Shift or Ctrl). The user confirmed Ctrl+click and the flicker fix on production. Test shapes removed afterwards.
+- 残: none for the canvas.
