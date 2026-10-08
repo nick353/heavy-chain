@@ -30,9 +30,9 @@ export const HEAVY_PRODUCT_ROUTE_BY_FEATURE_ID: Readonly<Record<ProductCatalogOb
   'image-variations': '/generate?feature=generate-variations',
   'partial-fix': '/generate?feature=chat-edit',
   'canvas-editing': '/canvas/new',
-  'case-series-design': '/workflows/design-exploration',
-  'case-ec-fusion': '/workflows/ec-product-set',
-  'case-sns-video': '/workflows/sns-campaign',
+  'case-series-design': '/creator',
+  'case-ec-fusion': '/model',
+  'case-sns-video': '/flow/GenerateShortVideo',
 });
 
 /**
