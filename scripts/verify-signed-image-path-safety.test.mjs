@@ -96,7 +96,7 @@ test('durable workspace artifacts redact remote query URLs without deleting lega
   const source = await read('src/lib/localWorkspaceArtifacts.ts');
   assert.match(source, /normalizeWorkspaceArtifactForPersistence/);
   assert.match(source, /isEphemeralRemoteImageUrl/);
-  assert.match(source, /imageUrl: isEphemeralRemoteImageUrl\(artifact\.imageUrl\) && getWorkspaceArtifactCanonicalStoragePath\(artifact\.metadata\)/);
+  assert.match(source, /imageUrl: \(?isEphemeralRemoteImageUrl\(artifact\.imageUrl\) && getWorkspaceArtifactCanonicalStoragePath\(artifact\.metadata\)/);
   assert.match(source, /getWorkspaceArtifactCanonicalStoragePath/);
   assert.match(source, /artifact\.imageUrl\.trim\(\) \|\| hasCanonicalStoragePath\(metadata\)/);
   assert.match(source, /nextArtifacts\.map\(normalizeWorkspaceArtifactForPersistence\)/);
