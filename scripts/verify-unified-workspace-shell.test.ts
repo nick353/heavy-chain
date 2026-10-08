@@ -36,10 +36,12 @@ test('first complete apparel flows use the unified workspace shell', () => {
   assert.match(app, /path="\/editor\/changeColor"/);
   assert.match(app, /path="\/editor\/pattern"/);
   assert.match(app, /path="\/editor\/patternDesign"/);
-  for (const path of ['gallery', 'history', 'jobs']) {
+  for (const path of ['history', 'jobs']) {
     // Light has no Gallery/History/Jobs screens; Heavy's old URLs land on the library's 生成履歴.
     assert.match(app, new RegExp(`<Route path="/${path}" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />`));
   }
+  // /gallery keeps an ?image= id (verify-library-image-deeplink).
+  assert.match(app, /<Route path="\/gallery" element=\{<GalleryRedirect \/>\} \/>/);
   const catalog = fs.readFileSync('src/lib/lightchainParityCatalog.ts', 'utf8');
   const navigation = fs.readFileSync('src/components/layout/navigation.ts', 'utf8');
   assert.match(catalog, /duplicateRoute/);

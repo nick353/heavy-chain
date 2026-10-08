@@ -1,6 +1,6 @@
 import { lazy as reactLazy, Suspense, useEffect, useState, type ComponentType } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
-import { LIBRARY_HISTORY_HREF } from './lib/lightchainLibraryHandoff';
+import { LIBRARY_HISTORY_HREF, libraryImageHref } from './lib/lightchainLibraryHandoff';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -95,6 +95,12 @@ const HeavyAgentTaskPage = lazy(() => import('./pages/HeavyAgentTaskPage'));
 const LightchainCustomStylePage = lazy(() => import('./pages/LightchainCustomStylePage').then((module) => ({ default: module.LightchainCustomStylePage })));
 const LightchainWorkbenchPage = prefetchedLazy(() => import('./pages/LightchainWorkbenchPage').then((module) => ({ default: module.LightchainWorkbenchPage })));
 const ModelLibraryPage = prefetchedLazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
+/** Old /gallery?image=<id> links open that result in the library instead of dropping the id. */
+function GalleryRedirect() {
+  const image = new URLSearchParams(useLocation().search).get('image');
+  return <Navigate to={image ? libraryImageHref(image) : LIBRARY_HISTORY_HREF} replace />;
+}
+
 // /history, /jobs and /gallery are Heavy-only screens. They redirect to the library's 生成履歴 like Light;
 // HistoryPage, JobsPage and GalleryPage are kept in src/pages so the routes can be restored.
 const CanvasEditorPage = prefetchedLazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
@@ -1608,7 +1614,7 @@ function AppRoutes() {
           }
         />
         {/* Light has no /gallery screen: its results live in the library's 生成履歴. GalleryPage stays importable for a restore. */}
-        <Route path="/gallery" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />
+        <Route path="/gallery" element={<GalleryRedirect />} />
         <Route
           path="/brand/settings"
           element={

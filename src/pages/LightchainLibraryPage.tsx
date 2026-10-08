@@ -330,6 +330,19 @@ export function LightchainLibraryPage() {
   // surface until Light exposes the same contract.
   const showExtendedLibraryHandoffs = false;
 
+  // ?image=<id> (libraryImageHref, or an old /gallery?image= link) opens that result once it is loaded.
+  const deepLinkImageRef = useRef<string | null>(typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('image'));
+  useEffect(() => {
+    const wanted = deepLinkImageRef.current;
+    if (!wanted) return;
+    const card = libraryCards.find((item) => item.kind === 'local'
+      ? item.artifact.id === wanted || item.artifact.metadata.remoteImageId === wanted || item.artifact.metadata.imageId === wanted
+      : item.asset.id === wanted || item.asset.remoteImageId === wanted);
+    if (!card) return;
+    deepLinkImageRef.current = null;
+    setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id);
+  }, [libraryCards]);
+
   const visibleArtifacts = useMemo(() => {
     const normalizedSearch = librarySearch.trim().toLowerCase();
     return libraryCards.filter((card) => {
