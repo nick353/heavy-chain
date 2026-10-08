@@ -334,8 +334,6 @@ test('History and Jobs keep Lightchain storage labels but render Heavy identity'
   const summary = fs.readFileSync('src/lib/sourceContextSummary.ts', 'utf8');
   const activity = fs.readFileSync('src/lib/workspaceActivity.ts', 'utf8');
   const displaySurfaces = [
-    fs.readFileSync('src/pages/JobsPage.tsx', 'utf8'),
-    fs.readFileSync('src/pages/GalleryPage.tsx', 'utf8'),
     fs.readFileSync('src/components/workspace/ActivityTimeline.tsx', 'utf8'),
     fs.readFileSync('src/components/workspace/FailureRetryCard.tsx', 'utf8'),
   ];

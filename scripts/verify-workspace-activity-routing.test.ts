@@ -88,12 +88,10 @@ test('generic provider jobs resume through their persisted Lightchain feature id
 test('Activity timeline and Dashboard use the same canonical Gallery selection key', async () => {
   const activity = await read('../src/lib/workspaceActivity.ts');
   const dashboard = await read('../src/pages/DashboardPage.tsx');
-  const jobs = await read('../src/pages/JobsPage.tsx');
   const queue = await read('../src/components/workspace/JobQueuePanel.tsx');
   // Saved outputs open the library's 生成履歴 (Light has no Gallery screen).
   assert.match(activity, /outputHref: LIBRARY_HISTORY_HREF/);
   assert.match(activity, /href: LIBRARY_HISTORY_HREF/);
-  assert.match(jobs, /job\.status === 'completed'[\s\S]*job\.outputHref/);
   assert.match(queue, /to=\{job\.outputHref\}/);
   assert.match(dashboard, /getGeneratedImageSelectionKey\(image\)/);
   assert.match(dashboard, /encodeURIComponent\(getGeneratedImageSelectionKey\(image\)\)/);

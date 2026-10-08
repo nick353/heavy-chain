@@ -101,8 +101,7 @@ function GalleryRedirect() {
   return <Navigate to={image ? libraryImageHref(image) : LIBRARY_HISTORY_HREF} replace />;
 }
 
-// /history, /jobs and /gallery are Heavy-only screens. They redirect to the library's 生成履歴 like Light;
-// HistoryPage, JobsPage and GalleryPage are kept in src/pages so the routes can be restored.
+// /history, /jobs and /gallery were Heavy-only screens; they redirect to the library's 生成履歴 like Light.
 const CanvasEditorPage = prefetchedLazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
 const LightchainMaterialWorkbenchPage = prefetchedLazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
 const LightchainCreatorPage = prefetchedLazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
@@ -1113,9 +1112,9 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        {/* Light has no /history screen: its results live in the library's 生成履歴. HistoryPage stays importable for a restore. */}
+        {/* Light has no /history screen: its results live in the library's 生成履歴. */}
         <Route path="/history" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />
-        {/* Light has no /jobs screen: its results live in the library's 生成履歴. JobsPage stays importable for a restore. */}
+        {/* Light has no /jobs screen: its results live in the library's 生成履歴. */}
         <Route path="/jobs" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />
         <Route
           path="/lightchain/fabric-image"
@@ -1613,7 +1612,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        {/* Light has no /gallery screen: its results live in the library's 生成履歴. GalleryPage stays importable for a restore. */}
+        {/* Light has no /gallery screen: its results live in the library's 生成履歴. */}
         <Route path="/gallery" element={<GalleryRedirect />} />
         <Route
           path="/brand/settings"

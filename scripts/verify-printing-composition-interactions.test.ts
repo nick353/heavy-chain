@@ -30,7 +30,6 @@ import {
 
 const source = fs.readFileSync('src/components/workspace/PrintingCompositionStage.tsx', 'utf8');
 const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
-const galleryPage = fs.readFileSync('src/pages/GalleryPage.tsx', 'utf8');
 const materialReferences = fs.readFileSync('src/lib/workspaceMaterialReferences.ts', 'utf8');
 const imageSelector = fs.readFileSync('src/components/ImageSelector.tsx', 'utf8');
 const gallerySelector = fs.readFileSync('src/components/GallerySelector.tsx', 'utf8');
@@ -833,30 +832,12 @@ test('favorite action is limited to ready result cards, not pending surfaces', (
   assert.doesNotMatch(pendingMarkup, /onFavorite|お気に入りに追加/);
 });
 
-test('named local favorite destinations are browsable in Gallery', () => {
-  assert.match(galleryPage, /const \[favoriteDestinationFilter, setFavoriteDestinationFilter\] = useState<string \| null>\(null\)/);
-  assert.match(galleryPage, /favoriteDestinationLabels/);
-  assert.match(galleryPage, /printResultDestinationLabel/);
-  assert.match(galleryPage, /aria-label="お気に入りグループ"/);
-  assert.match(galleryPage, /getMetadataString\(image, 'printResultDestinationLabel'\) === favoriteDestinationFilter/);
-  assert.match(galleryPage, /favoriteDestinationLabels\.map\(\(destination\) =>/);
-  assert.doesNotMatch(galleryPage, /\['all', \.\.\.favoriteDestinationLabels\]/);
-  assert.match(galleryPage, /!favoriteDestinationLabels\.includes\(favoriteDestinationFilter\)[\s\S]*setFavoriteDestinationFilter\(null\)/);
-});
-
 test('stale or cross-brand results cannot be favorited into the current brand', () => {
   assert.match(page, /const \[favoriteTargetBrandId, setFavoriteTargetBrandId\] = useState<string \| null>\(null\)/);
   assert.match(page, /brandId: currentBrand\.id/);
   assert.match(page, /if \(!currentBrand\?\.id \|\| result\.brandId !== currentBrand\.id\)/);
   assert.match(page, /favoriteTargetBrandId !== currentBrand\.id/);
   assert.match(page, /素材またはブランド変更前の結果は保存できません/);
-});
-
-test('Gallery favorite mutation is limited to printing results and closes filtered removals', () => {
-  assert.match(galleryPage, /if \(image\.feature_type !== 'printing-result'\)/);
-  assert.match(galleryPage, /このローカル成果物は、現在の保存形式ではお気に入りを変更できません/);
-  assert.match(galleryPage, /if \(filter === 'favorites' && !newValue\) \{\s*selectImage\(null\);\s*\} else \{\s*setSelectedImage\(updatedImage\);/);
-  assert.match(galleryPage, /const selectImage = useCallback\(\(image: GalleryImage \| null\) => \{[\s\S]*?setSearchParams\(image \? \{ image: getGeneratedImageSelectionKey\(image\) \} : \{\}\);/);
 });
 
 test('design mask editor commits by stable layer identity instead of a stale array index', () => {

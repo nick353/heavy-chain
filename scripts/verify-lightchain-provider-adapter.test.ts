@@ -199,7 +199,6 @@ test('binds the live material routes to provider generation and durable result a
   const generatePage = readFileSync(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8');
   const localArtifacts = readFileSync(new URL('../src/lib/localWorkspaceArtifacts.ts', import.meta.url), 'utf8');
   const materialPage = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
-  const galleryPage = readFileSync(new URL('../src/pages/GalleryPage.tsx', import.meta.url), 'utf8');
   const imageDownload = readFileSync(new URL('../src/lib/imageDownload.ts', import.meta.url), 'utf8');
   assert.match(workbench, /data-testid="lightchain-result-download"/);
   assert.match(workbench, /data-testid="marketing-detail-result-download"/);
@@ -217,7 +216,6 @@ test('binds the live material routes to provider generation and durable result a
   assert.match(generatePage, /downloadValidatedImage/);
   assert.doesNotMatch(generatePage, /const response = await fetch\(imageUrl\)/);
   assert.match(generatePage, /downloadResults\.filter\(Boolean\)\.length/);
-  assert.match(galleryPage, /downloadResults\.filter\(Boolean\)\.length/);
   assert.match(workbench, /sourceJobId: lightchainResult\?\.jobId \?\? undefined/);
   assert.match(workbench, /!artifact\.remote && !artifact\.localPersisted/);
   assert.match(marketingPage, /!result\.remote && !result\.localPersisted/);
@@ -231,8 +229,6 @@ test('binds the live material routes to provider generation and durable result a
   assert.match(materialPage, /resultKind: 'provider'/);
   assert.match(materialPage, /saveWorkspaceArtifactPersisted/);
   assert.match(materialPage, /data-testid=\{`result-save-to-canvas-\$\{result\.id\}`\}/);
-  assert.match(galleryPage, /gallery_image_url_unavailable/);
-  assert.match(galleryPage, /downloadValidatedImage\(/);
   assert.match(imageDownload, /errorPrefix\}_not_image/);
 });
 
