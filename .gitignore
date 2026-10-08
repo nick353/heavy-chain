@@ -67,3 +67,6 @@ public/models/*
 # Supabase
 supabase/.branches
 supabase/.temp
+# Demo videos shown in the tool empty states; the app references them, so they must ship with every build.
+!public/lightchain-assets/model-library-custom-demo.mp4
+!public/lightchain-assets/mirror/lightchain-qlxy-prod/*.mp4
