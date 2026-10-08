@@ -1,5 +1,6 @@
 # Deploys the Cloudflare Workers behind heavychain.app when their code changes on main:
-# heavy-chain-api (cloudflare/heavy-api) after its tests pass, and heavy-chain-alerts (cloudflare/heavy-alerts).
+# heavy-chain-api (cloudflare/heavy-api) and consumer-auth (cloudflare/consumer-auth) after their tests pass,
+# and heavy-chain-alerts (cloudflare/heavy-alerts).
 # Secrets set with `wrangler secret put` are kept across deploys. D1 migrations are not run here.
 name: Deploy Workers
 
@@ -11,6 +12,9 @@ on:
       - 'cloudflare/heavy-api/wrangler.production.jsonc'
       - 'cloudflare/heavy-api/package*.json'
       - 'cloudflare/heavy-alerts/**'
+      - 'cloudflare/consumer-auth/src/**'
+      - 'cloudflare/consumer-auth/wrangler.production.jsonc'
+      - 'cloudflare/consumer-auth/package*.json'
   workflow_dispatch:
 
 concurrency:
@@ -33,20 +37,29 @@ jobs:
           cache: npm
           cache-dependency-path: cloudflare/heavy-api/package-lock.json
       - name: Install
-        run: npm ci --prefix cloudflare/heavy-api
+        run: |
+          npm ci --prefix cloudflare/heavy-api
+          npm ci --prefix cloudflare/consumer-auth
       - name: Which Workers changed
         id: changed
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "api=true" >> "$GITHUB_OUTPUT"; echo "alerts=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then { echo "api=true"; echo "alerts=true"; echo "auth=true"; } >> "$GITHUB_OUTPUT"; exit 0; fi
           files=$(git diff --name-only HEAD~1 HEAD)
           echo "$files" | grep -qE '^cloudflare/heavy-api/(src/|wrangler\.production\.jsonc|package)' && echo "api=true" >> "$GITHUB_OUTPUT" || echo "api=false" >> "$GITHUB_OUTPUT"
           echo "$files" | grep -q '^cloudflare/heavy-alerts/' && echo "alerts=true" >> "$GITHUB_OUTPUT" || echo "alerts=false" >> "$GITHUB_OUTPUT"
+          echo "$files" | grep -qE '^cloudflare/consumer-auth/(src/|wrangler\.production\.jsonc|package)' && echo "auth=true" >> "$GITHUB_OUTPUT" || echo "auth=false" >> "$GITHUB_OUTPUT"
       - name: Test and deploy heavy-chain-api
         if: steps.changed.outputs.api == 'true'
         working-directory: cloudflare/heavy-api
         run: |
           npm test
           npx wrangler deploy --config wrangler.production.jsonc --message "main ${GITHUB_SHA::8}"
+      - name: Test and deploy consumer-auth
+        if: steps.changed.outputs.auth == 'true'
+        working-directory: cloudflare/consumer-auth
+        run: |
+          npm test
+          ../heavy-api/node_modules/.bin/wrangler deploy --config wrangler.production.jsonc --message "main ${GITHUB_SHA::8}"
       - name: Deploy heavy-chain-alerts
         if: steps.changed.outputs.alerts == 'true'
         working-directory: cloudflare/heavy-alerts

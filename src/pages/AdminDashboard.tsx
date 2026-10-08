@@ -52,6 +52,7 @@ const FEEDBACK_TYPE_LABELS: Record<FeedbackType, string> = {
 };
 
 const SAFE_FEEDBACK_URL_ORIGINS = new Set([
+  'https://heavychain.app',
   'https://heavy-chain.com',
   'https://heavy-chain.zeabur.app',
   'https://heavy-chain-web.nichika2000823.workers.dev',
@@ -62,7 +63,7 @@ const SAFE_FEEDBACK_URL_ORIGINS = new Set([
 const getSafeFeedbackUrl = (value: string) => {
   try {
     const url = value.startsWith('/')
-      ? new URL(value, 'https://heavy-chain.zeabur.app')
+      ? new URL(value, 'https://heavychain.app')
       : new URL(value);
     if (!['http:', 'https:'].includes(url.protocol) || !SAFE_FEEDBACK_URL_ORIGINS.has(url.origin)) {
       return null;
