@@ -136,10 +136,11 @@ test('Jobs keeps proven local provider artifacts when remote activity reads fail
 test('Lightchain workbench accepts a resumeJob readback without a legacy source handoff', async () => {
   const source = await read('../src/pages/LightchainWorkbenchPage.tsx');
   assert.match(source, /const resumeJob = searchParams\.get\('resumeJob'\)/);
-  assert.match(source, /if \(!briefParam && !resumeJob\) \{[\s\S]{0,180}cancelled = true/);
-  assert.match(source, /const artifacts = listWorkspaceArtifacts\(currentBrand\.id, user\?\.id\)/);
-  assert.match(source, /readLightchainResumeInput\(artifacts, resumeJob\)/);
-  assert.match(source, /readLightchainResumeResult\(artifacts, resumeJob\)/);
+  // Without resumeJob the effect only applies brief/project hand-off fields and stops.
+  assert.match(source, /if \(!resumeJob\) \{[\s\S]{0,700}return \(\) => \{ cancelled = true; \};/);
+  assert.match(source, /const artifacts = listWorkspaceArtifacts\(currentBrand\.id,\s*user\.id\)/);
+  assert.match(source, /readLightchainResumeInput\(artifacts,\s*resumeJob,\s*artifactScope\)/);
+  assert.match(source, /readLightchainResumeResult\(artifacts,\s*resumeJob,\s*artifactScope\)/);
   assert.match(source, /data-testid="lightchain-resume-input-unavailable"/);
   assert.match(source, /sourceResumePath: `\/lightchain\/\$\{selectedTool\.id\}`/);
 });

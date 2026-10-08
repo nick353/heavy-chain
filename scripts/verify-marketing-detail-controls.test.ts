@@ -9,7 +9,7 @@ test('marketing-detail navigation, project naming, asset/layer controls, and can
 
   assert.match(source, /data-testid="lightchain-marketing-workspace-home"/);
   assert.match(source, /data-testid="lightchain-marketing-back"/);
-  assert.match(source, /onClick=\{\(\) => navigate\('\/lightchain\/marketing-home'\)\}/);
+  assert.match(source, /onClick=\{\(\) => navigate\('\/marketing'\)\}/);
   assert.match(source, /data-testid="lightchain-marketing-project-name"/);
   assert.match(source, /setMarketingProjectNameEditing\(true\)/);
   assert.match(source, /data-testid="lightchain-marketing-project-name-input"/);
@@ -46,8 +46,7 @@ test('marketing-detail navigation, project naming, asset/layer controls, and can
   assert.match(source, /data-testid=\{`lightchain-marketing-layer-\$\{layer\.id\}`\}/);
   assert.match(source, /setActiveLayer\(layer\.id\)/);
 
-  assert.match(source, /data-testid="lightchain-design-agent-menu"/);
-  assert.match(source, /to="\/lightchain"/);
+  // The design agent moved to its own page (/agent), so the workbench no longer carries its menu.
   assert.match(source, /data-testid=\{`lightchain-print-design-style-\$\{item\}`\}/);
   assert.match(source, /setPrintDesignStyle\(item\)/);
   assert.match(source, /data-testid=\{`lightchain-wear-design-focus-\$\{item\}`\}/);

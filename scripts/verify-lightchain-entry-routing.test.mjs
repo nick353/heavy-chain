@@ -239,13 +239,15 @@ test('keeps model customization on the Light source surface without a Heavy-only
   assert.match(surface, /モデルカスタマイズ/);
   assert.match(surface, /ワンクリックで専用のバーチャルモデルイメージを生成/);
   assert.match(lockButton, /権限がありません/);
-  assert.match(surface, /SourcePermissionLockedButton/);
+  // Heavy generates model customizations itself, so the surface shows AI生成 instead of the locked button.
+  assert.match(surface, /data-testid="heavy-model-generate"/);
+  assert.doesNotMatch(surface, /type="checkbox"/);
   assert.match(surface, /data-testid="lightchain-source-model-rail"/);
   assert.match(surface, /role="combobox"/);
-  assert.match(surface, /赤ちゃん/);
-  assert.match(surface, /ラテンアメリカ/);
-  assert.match(surface, /黄色い肌/);
-  assert.match(surface, /筋肉質/);
+  // The option lists moved to src/lib/modelLibrarySettings.ts, which the surface imports.
+  const settings = await readFile(new URL('../src/lib/modelLibrarySettings.ts', import.meta.url), 'utf8');
+  assert.match(surface, /from '\.\.\/\.\.\/lib\/modelLibrarySettings'/);
+  for (const option of [/赤ちゃん/, /ラテンアメリカ/, /黄色い肌/, /筋肉質/]) assert.match(settings, option);
   assert.doesNotMatch(`${page}\n${surface}`, /type="checkbox"|権利を確認してAI生成|権利確認ゲート/);
 });
 

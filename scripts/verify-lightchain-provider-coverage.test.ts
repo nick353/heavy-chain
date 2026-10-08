@@ -308,16 +308,15 @@ test('keeps direct provider promotion behind durable result and Canvas lineage g
   assert.match(fitting, /fitting-history-\$\{item\.id\}/);
   assert.match(fitting, /data-testid=\{`fitting-result-download-\$\{item\.bodyType\}-\$\{item\.ageGroup\}-\$\{index\}`\}/);
   assert.match(fitting, /data-testid=\{`fitting-history-download-\$\{item\.id\}`\}/);
-  assert.match(fitting, /data-testid="fitting-result-destinations"/);
-  assert.match(fitting, /data-testid="fitting-result-gallery-link"/);
-  assert.match(fitting, /data-testid="fitting-result-history-link"/);
-  assert.match(fitting, /data-testid="fitting-result-jobs-link"/);
+  // Light has no Gallery/History/Jobs screens; fitting results keep Canvas reuse and the library link.
+  assert.doesNotMatch(fitting, /data-testid="fitting-result-(?:gallery|history|jobs)-link"/);
   assert.match(fitting, /data-testid="fitting-result-save-to-canvas"/);
   assert.match(fitting, /Canvasへ再利用/);
   assert.match(workbench, /data-testid="lightchain-fitting-history-link"/);
   assert.match(workbench, /data-testid="lightchain-fitting-history-panel"/);
   assert.match(workbench, /setFittingHistoryOpen/);
-  assert.match(workbench, /to="\/history"/);
+  assert.doesNotMatch(workbench, /to="\/(?:history|gallery|jobs)"/);
+  assert.match(workbench, /<LightchainHistoryPanel /);
   assert.match(workbench, /data-testid="lightchain-feature-history-link"/);
   for (const marker of [
     'lightchain-print-design-project-result-download',
@@ -381,12 +380,13 @@ test('provider retries retain the last completed workbench result until inputs c
 test('generic Lightchain provider generation rejects rapid duplicate submits', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const handlerStart = workbench.indexOf('const handleLightchainPreviewGenerate = async');
-  const handler = workbench.slice(handlerStart, handlerStart + 18_000);
+  const handler = workbench.slice(handlerStart, handlerStart + 40_000);
 
   assert.ok(handlerStart >= 0, 'generic provider handler must remain discoverable');
   assert.match(workbench, /const lightchainGenerationRequestRef = useRef<number \| null>\(null\)/);
   assert.match(handler, /if \(lightchainGenerationRequestRef\.current !== null \|\| lightchainGenerationRunning\) return;/);
-  assert.match(handler, /const requestId = \+\+lightchainGenerationSequenceRef\.current;\s*lightchainGenerationRequestRef\.current = requestId;/);
+  // The request is claimed synchronously (no await in between), so a second click sees it.
+  assert.match(handler, /const requestId = \+\+lightchainGenerationSequenceRef\.current;(?:(?!await)[\s\S]){0,800}lightchainGenerationRequestRef\.current = requestId;/);
   assert.match(handler, /lightchainGenerationRequestRef\.current = null;\s*setLightchainGenerationRunning\(false\)/);
 });
 

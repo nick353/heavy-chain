@@ -83,7 +83,7 @@ test('Cloudflare edit rejects unsupported mask and transparent-output modes befo
   assert.match(image, /if \(body\.maskDataUrl \|\| body\.maskApplied === true \|\| body\.outputBackground === 'transparent'\)/);
   assert.match(image, /Cloudflare画像AIでまだ対応していません/);
   assert.match(image, /const path = `\/v1\/image-ai\/requests\/\$\{id\}`/);
-  assert.match(image, /remember\(key,id\)/);
+  assert.match(image, /rememberPendingIdentity\(key,id,options\.assertCurrent\)/);
 });
 
 test('partial edit submit makes one four-candidate batch and refuses incomplete persistence', async () => {

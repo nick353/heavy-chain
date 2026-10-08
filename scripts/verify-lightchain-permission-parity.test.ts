@@ -61,8 +61,10 @@ test('Creator mirrors the Lightchain full and compact category sets', async () =
 test('Wear Design Lab mirrors the current project cards without a seeded project id', async () => {
   const source = await readFile(parityPagesSourcePath, 'utf8');
 
-  assert.match(source, /orientedDesignProjectImages/);
-  assert.match(source, /`\/flow\/orientedDesign\/detail\?project=\$\{index \+ 1\}`/);
+  // Project cards come from saved projects; the detail link carries project=<n> and keeps the lab workspace.
+  assert.match(source, /function orientedDesignLabHref\(/);
+  assert.match(source, /index\?: \{ key: 'project' \| 'reference'; value: number \}/);
+  assert.match(source, /navigate\(orientedDesignLabHref\(location, '\/flow\/orientedDesign\/detail', index\)\)/);
   assert.doesNotMatch(source, /boardProjectCode=2088009465900642306/);
 });
 

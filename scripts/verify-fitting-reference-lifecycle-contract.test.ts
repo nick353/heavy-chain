@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
@@ -96,7 +97,8 @@ test('keeps the three canonical deep-route contexts distinct from the fitting fa
   assert.match(workbenchSource, /lightchainRoute: '\/model\?tab=参考図'/);
   assert.match(workbenchSource, /lightchainRoute: '\/model\/clothing'/);
   assert.match(workbenchSource, /lightchainRoute: '\/model\/background-reference'/);
-  assert.match(workbenchSource, /const isModelReferenceRoute = isModelRoute && searchParams\.get\('tab'\) === '参考図'/);
+  assert.match(workbenchSource, /const isModelReferenceQuery = searchParams\.get\('tab'\) === '参考図'/);
+  assert.match(workbenchSource, /const isModelReferenceRoute = isModelWorkspaceRoute && isModelReferenceQuery/);
   assert.match(workbenchSource, /'\/model\/clothing': 'fitting-clothing-reference'/);
   assert.match(workbenchSource, /'\/model\/background-reference': 'fitting-background-reference'/);
 });
@@ -171,7 +173,7 @@ test('shares lifecycle, destinations, rights, and retry invariants across the ta
 test('keeps the generation request bound to the authenticated brand context', () => {
   assert.match(workbenchSource, /data-workflow-rights-gate=\{workflowRightsGate\}/);
   assert.match(workbenchSource, /const rightsConfirmedForRequest = providerRightsConfirmed;/);
-  assert.match(workbenchSource, /const providerRightsConfirmed = heavyEntitlementReady/);
+  assert.match(workbenchSource, /const providerRightsConfirmed = !heavyOwnedFeature \|\| heavyAccessReady/);
   assert.match(workbenchSource, /const heavyEntitlementReady = !heavyOwnedFeature \|\| Boolean\(user\?\.id && currentBrand\?\.id\)/);
   assert.doesNotMatch(workbenchSource, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
   assert.doesNotMatch(workbenchSource, /rightsAlreadyConfirmed/);
@@ -180,7 +182,7 @@ test('keeps the generation request bound to the authenticated brand context', ()
 
 test('retains completed results, input lineage, and duplicate-submit protection on retry', () => {
   const handlerStart = workbenchSource.indexOf('const handleLightchainPreviewGenerate = async');
-  const handler = workbenchSource.slice(handlerStart, handlerStart + 20_000);
+  const handler = workbenchSource.slice(handlerStart, handlerStart + 40_000);
   const requestStart = handler.indexOf('const requestId = ++lightchainGenerationSequenceRef.current;');
 
   assert.ok(handlerStart >= 0, 'shared provider generation handler must remain discoverable');
@@ -207,7 +209,7 @@ test('excludes video rows from the unified catalog and provider contract', () =>
   assert.match(workbenchSource, /const visibleTools = tools\.filter\(\(tool\) => tool\.id !== 'video-detail'\);/);
 });
 
-test('keeps the current ledger at 31 records, 31 non-video rows, eight layers, and zero verified production', async () => {
+test('keeps the current ledger at 31 records, 31 non-video rows, eight layers, and zero verified production', { skip: !existsSync(new URL('../work/lightchain-parity-behavior-ledger-current.json', import.meta.url)) && 'local evidence not present' }, async () => {
   const artifact = JSON.parse(await readFile(
     new URL('../work/lightchain-parity-behavior-ledger-current.json', import.meta.url),
     'utf8',

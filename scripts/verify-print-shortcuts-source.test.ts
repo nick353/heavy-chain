@@ -33,8 +33,7 @@ test('Patterns result cards expose a guarded print handoff and the printing page
   assert.match(generateSource, /const prependGeneratedImages = \(images: GeneratedResult\[\]\) => \{[\s\S]*?stampGeneratedImagesForCurrentContext\(images\.map\(/);
   assert.match(generateSource, /const commitGeneratedImagesAfterReadback = \(\) => \{[\s\S]*?setGeneratedImages\(prev => \[\.\.\.committedImages, \.\.\.prev\]\)/);
   assert.match(generateSource, /replaceGeneratedImages\(providerResults\)/);
-  assert.match(generateSource, /const materializedDesignGachaResults = await Promise\.all/);
-  assert.match(generateSource, /replaceGeneratedImages\(materializedDesignGachaResults\)/);
+  // Design gacha now runs through the hosted image provider (replaceGeneratedImages(providerResults)), which returns stored images; the client-side materialization step was removed with the server-side provider.
   assert.match(generateSource, /prependGeneratedImages\(data\.images\.map/);
   assert.match(generateSource, /Boolean\(image\.jobId\)/);
   assert.match(generateSource, /Boolean\(image\.imageId \|\| image\.storagePath\)/);
@@ -43,7 +42,7 @@ test('Patterns result cards expose a guarded print handoff and the printing page
   assert.equal((generateSource.match(/data-testid="design-gacha-use-in-print"/g) || []).length, 1);
   assert.match(generateSource, /relative z-30 border-t border-cyan-200\/20/);
   assert.match(generateSource, /type="button"\s*onClick=\{\(event\) => \{\s*event\.stopPropagation\(\);\s*handleUseDesignGachaResultInPrinting\(image\)/);
-  assert.match(generateSource, /if \(!prepareDesignGachaResultForPrinting\(image\)\) return;\s*navigate\('\/lightchain\/printing-image\?handoff=patterns'\)/);
+  assert.match(generateSource, /if \(!prepareDesignGachaResultForPrinting\(image\)\) return;\s*navigate\(toHeavyWorkspacePath\('\/lightchain\/printing-image\?handoff=patterns'\)\)/);
   assert.match(generateSource, /pointer-events-none absolute inset-0 z-10/);
   assert.match(generateSource, /pointer-events-auto absolute bottom-0/);
   assert.doesNotMatch(generateSource, /to="\/lightchain\/printing-image\?handoff=patterns"/);

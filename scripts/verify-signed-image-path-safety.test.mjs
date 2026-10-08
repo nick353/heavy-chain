@@ -130,10 +130,9 @@ test('local workspace paths stay local while canonical remote paths are re-signe
   ]);
   assert.match(storage, /classifyGeneratedImageReference/);
   assert.match(storage, /clearCanonicalRemoteImageUrls/);
-  assert.match(gallery, /withSignedImageUrls\(candidates\)/);
-  assert.match(gallery, /resolveLocalImages\(localListImages\)/);
-  assert.match(gallery, /clearCanonicalRemoteImageUrls/);
-  assert.match(gallery, /gallery_local_signed_urls_timeout/);
+  assert.match(gallery, /signRows: \(rows\) => withTimeout\(\s*withSignedImageUrls\(rows\)/);
+  // GalleryPage (kept only for a possible restore; /gallery redirects to the library) now lists remote rows only.
+  assert.match(gallery, /'gallery_signed_urls_timeout'/);
 });
 
 test('gallery selection carries storagePath into SelectedImage and print handoff import', async () => {

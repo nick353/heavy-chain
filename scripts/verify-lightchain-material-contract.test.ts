@@ -152,10 +152,11 @@ test('Lightchain fitting clothing uploads retain local Canvas source metadata', 
   const lightchainWorkbench = fs.readFileSync('src/pages/LightchainWorkbenchPage.tsx', 'utf8');
   assert.match(lightchainWorkbench, /buildLocalUploadSourceMetadata/);
   assert.match(lightchainWorkbench, /sanitizeCanvasSourceMetadata/);
-  assert.match(lightchainWorkbench, /if \(isFittingDetail && selectedTool\.id === 'fitting-clothing-reference' && slot === 'primary'\)/);
+  // Every material upload (not only the fitting clothing slot) keeps its local Canvas source metadata.
+  assert.match(lightchainWorkbench, /sourceMetadata = sanitizeCanvasSourceMetadata\(await buildLocalUploadSourceMetadata\(\s*file,/);
   assert.match(lightchainWorkbench, /putLocalCanvasAsset\(sourceMetadata\.sourceRevision\.revision, file\)/);
   assert.match(lightchainWorkbench, /persistenceStatus = 'session-only'/);
-  assert.match(lightchainWorkbench, /sourceMetadata: materialSlotFiles\[slot\.key\]\?\.sourceMetadata/);
+  assert.match(lightchainWorkbench, /materialSlotFiles\.primary\?\.sourceMetadata/);
   assert.match(lightchainWorkbench, /sourceIdentity: fittingMaterialSource\.sourceIdentity/);
   assert.match(lightchainWorkbench, /sourceRevision: fittingMaterialSource\.sourceRevision/);
   assert.match(lightchainWorkbench, /sourceReadback: fittingMaterialSource\.sourceReadback/);

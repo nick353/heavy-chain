@@ -91,7 +91,8 @@ test('actual page passes the composed primary, original reference, footprint and
   assert.match(page, /generationInputSignature: requestSignature/);
   assert.match(page, /const allPrintReferenceUrls = printDesigns\.map\(\(design\) => design\.url\)/);
   assert.match(page, /if \(nextImages\.length > 6\)/);
-  assert.match(page, /reuseCanonicalRemoteArtifact: Boolean\(cloudflareDataPlane && providerResult\.protectedRegionComposited\)/);
+  // Provider results are reused from their canonical storage path instead of being uploaded again.
+  assert.match(page, /reuseCanonicalRemoteArtifact: Boolean\(cloudflareDataPlane && result\.storagePath\)/);
   const renderer = fs.readFileSync('src/lib/workspaceMaterialReferences.ts', 'utf8');
   assert.match(renderer, /renderPrintRequestComposition[\s\S]*?await renderPrintRequestArtworkCanvas\(snapshot\)/);
 });
