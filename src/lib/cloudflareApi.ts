@@ -5,9 +5,6 @@ import { auth, refreshAuthSession } from './auth';
 import { CLOUDFLARE_IMAGE_ACTIONS, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
 import { COMPOSITE_PROVIDER_ACTIONS, runCompositeProviderAction } from './providerActionAdapters';
 import { readAIModelPreference, withAIModelPreference } from './aiModelPreference';
-
-  text: { provider: string; models: Array<{ id: string; label: string }>; default: string | null };
-};
 import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
 import { persistProtectedImageInput,listProtectedImageInputs,loadProtectedImageInput,deleteProtectedImageInput } from './cloudflareImageInputCache';
 import { attachHeavyGenerationPreflight, validateHeavyGenerationPreflight, type HeavyGenerationInput, type HeavyGenerationPreflight } from './heavyGenerationPreflight';
@@ -17,6 +14,8 @@ import type { DesignDialogueManifestReference } from './designDialogueReferences
 export type CloudflareAIModels = {
   success: true;
   image: { provider: string; models: Array<{ id: string; label: string; generate: boolean; edit: boolean }>; defaults: { generate: string; edit: string } };
+  text: { provider: string; models: Array<{ id: string; label: string }>; default: string | null };
+};
 
 export type CloudflareDesignAssistantRequestInput = {
   requestId: string;
