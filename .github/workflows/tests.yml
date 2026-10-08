@@ -1,0 +1,28 @@
+# Type check and run every scripts/*.test.* file on pull requests and pushes to main.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx tsc --noEmit -p tsconfig.app.json
+      - name: Run tests
+        run: |
+          failed=0
+          for f in scripts/*.test.ts scripts/*.test.mjs scripts/*.test.js; do
+            [ -f "$f" ] || continue
+            node --experimental-strip-types --test "$f" > "/tmp/$(basename "$f").log" 2>&1 || { echo "::error::$f failed"; tail -40 "/tmp/$(basename "$f").log"; failed=1; }
+          done
+          exit $failed
