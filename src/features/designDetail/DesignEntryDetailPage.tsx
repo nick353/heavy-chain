@@ -589,6 +589,13 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           return <button key={id} type="button" data-testid="design-canvas-layer" data-object-id={id} data-object-type={object.type} aria-label={String(object.label ?? (isImage ? 'デザイン画像' : '図形'))}
             aria-pressed={isSelected} data-group-id={typeof object.groupId === 'string' ? object.groupId : undefined}
             onPointerDown={(event) => {
+              // 透過選択: Ctrl/⌘ + click picks the object underneath, cycling through the stack at that point.
+              // Handled on pointerdown because macOS turns Ctrl + click into a context-menu click without a click event.
+              if (!move && event.button === 0 && (event.ctrlKey || event.metaKey)) {
+                event.stopPropagation();
+                setSelected(throughSelect(canvasObjects, toWorld(event.clientX, event.clientY), selected));
+                return;
+              }
               if (move || event.button !== 0 || object.locked === true || !editable) return;
               event.stopPropagation();
               // Dragging a selected object moves the whole selection; otherwise its group.
@@ -618,13 +625,12 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
             }}
             onClick={(event) => {
               if (suppressClick.current) { suppressClick.current = false; return; }
-              if (move) return;
-              // 透過選択: Ctrl + click picks the object underneath, cycling through the stack at that point.
-              if (event.ctrlKey || event.metaKey) { const next = throughSelect(canvasObjects, toWorld(event.clientX, event.clientY), selected); setSelected(next); return; }
+              if (move || event.ctrlKey || event.metaKey) return;
               const group = expandGroupSelection(canvasObjects, [id]);
               if (event.shiftKey) { setSelectedIds((current) => isSelected ? current.filter((item) => !group.includes(item)) : [...new Set([...current, ...group])]); return; }
               setSelectedIds(isSelected && selectedIds.length === group.length ? [] : group);
             }}
+            onContextMenu={(event) => { if (event.ctrlKey) event.preventDefault(); }}
             onDoubleClick={() => { if (object.type === 'text' && editable) setEditingText({ id, text: String(object.text ?? '') }); }}
             className={`absolute text-left ${isImage ? 'overflow-hidden bg-white/5' : ''} ${isSelected ? 'outline outline-[6px] outline-[#0bcabc]' : ''} ${editable && !move ? 'cursor-move' : ''}`}
             style={{ left: (Number(object.x) || 0) + (offset?.dx ?? 0), top: (Number(object.y) || 0) + (offset?.dy ?? 0), width: Number(object.width) || 440, height: Number(object.height) || 440,
