@@ -1,0 +1,209 @@
+diff --git a/src/pages/CanvasEditorPage.tsx b/src/pages/CanvasEditorPage.tsx
+index bf56ed1e..2d14f4b3 100644
+--- a/src/pages/CanvasEditorPage.tsx
++++ b/src/pages/CanvasEditorPage.tsx
+@@ -1827,6 +1827,8 @@ export function CanvasEditorPage() {
+     const observer = new ResizeObserver((entries) => {
+       for (const entry of entries) {
+         const { width, height } = entry.contentRect;
++        // A hidden/collapsing container reports 0×0; a zero-sized Konva stage crashes its draw (drawImage of a 0px canvas).
++        if (width < 1 || height < 1) continue;
+         setCanvasSize({ width, height });
+       }
+     });
+@@ -1841,6 +1843,7 @@ export function CanvasEditorPage() {
+     const updateSize = () => {
+       if (containerRef.current) {
+         const rect = containerRef.current.getBoundingClientRect();
++        if (rect.width < 1 || rect.height < 1) return;
+         setCanvasSize({
+           width: rect.width,
+           height: rect.height,
+@@ -2712,6 +2715,30 @@ export function CanvasEditorPage() {
+     }
+   }, []);
+ 
++  /**
++   * The image service runs generate/edit only: 背景削除・カラバリ・アップスケール・バリエーション are real edit-image jobs on
++   * the source image (transparent output is not supported, so 背景削除 yields a plain white background).
++   */
++  const runDerivedEdits = async (source: string, kind: 'removeBackground' | 'colorize' | 'upscale' | 'variations', options: { brandId: string; rightsConfirmed: boolean; metadata: Record<string, unknown>; colors?: string[]; prompt?: string }) => {
++    const keep = 'Keep the subject, garment shape, pose, framing and every other detail exactly the same.';
++    const edit = async (prompt: string, featureType: string) => {
++      const result = await editImageWithPrompt(source, prompt, options.brandId, { rightsConfirmed: options.rightsConfirmed, featureType, idempotencyKey: crypto.randomUUID(), ...options.metadata });
++      assertCompletedImageEditResult(result, `canvas_${featureType}_result`);
++      // Keep the durable storage path (a signed URL expires); the canvas loader resolves it on every load.
++      const durable = result.storagePath ?? result.images?.[0]?.storagePath ?? result.imageUrl;
++      if (!durable) throw new Error('派生結果が返りませんでした');
++      return durable;
++    };
++    if (kind === 'removeBackground') return { resultUrl: await edit(`Remove the background behind the subject and replace it with a plain pure white studio background. ${keep}`, 'canvas-remove-background') };
++    if (kind === 'upscale') return { resultUrl: await edit(`Re-render this exact image at the highest resolution with sharper fine details and fabric texture. Do not change composition, colors, subject or background. ${keep}`, 'canvas-upscale') };
++    const requests = kind === 'colorize'
++      ? (options.colors?.length ? options.colors : ['レッド', 'ネイビー', 'グリーン', 'イエロー']).slice(0, 4).map((color) => ({ label: color, prompt: `Change the color of the main garment to ${color}. ${keep}` }))
++      : ['a different print or pattern', 'different trims and details', 'a different neckline and sleeve design', 'a different fabric texture']
++        .map((direction, index) => ({ label: `バリエーション ${index + 1}`, prompt: `Create a design variation of the main garment with ${direction}${options.prompt ? ` (${options.prompt})` : ''}. Keep the model, pose, framing and background the same.` }));
++    const settled = await Promise.allSettled(requests.map((request) => edit(request.prompt, kind === 'colorize' ? 'canvas-colorize' : 'canvas-variations')));
++    return { variations: settled.flatMap((entry, index) => entry.status === 'fulfilled' ? [{ imageUrl: entry.value, colorName: requests[index].label }] : []) };
++  };
++
+   const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string, storagePath?: string, imageElement?: HTMLImageElement | null) => {
+     try {
+       const usableImageElement = isUsableLoadedImage(imageElement) ? imageElement : null;
+@@ -3128,24 +3155,23 @@ export function CanvasEditorPage() {
+       imageSrc,
+     });
+ 
++    const derive = (kind: 'removeBackground' | 'colorize' | 'upscale' | 'variations') =>
++      runDerivedEdits(imageSrc, kind, { brandId: currentBrand.id, rightsConfirmed, metadata: lightchainEditMetadata });
+     switch (action) {
+       case 'removeBackground':
+       case 'remove-bg':
+         toast.loading('背景削除を実行中...', { id: 'remove-bg' });
+         try {
+-          const { data, error } = await invokeProviderAction('remove-background', {
+-            body: { imageUrl: imageSrc, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
+-          });
+-          if (error) throw error;
++          const data = await derive('removeBackground');
+           assertDerivedImageResult(data, 'removeBackground');
+-          const placed = await addImageToCanvasSafely(data.resultUrl, '背景削除', {
++          const placed = await addImageToCanvasSafely(data.resultUrl!, '背景削除', {
+             feature: 'remove-background',
+             parentId: objectId,
+             generation: (obj.metadata?.generation || 0) + 1,
+-            ...buildDerivedLightchainMetadata(obj, 'remove-background'),
++            ...buildDerivedLightchainMetadata(obj, 'remove-background', { parameters: { background: 'white' } }),
+           }, objectId);
+           if (!placed) throw new Error('canvas_derived_result_placement_failed');
+-          toast.success('背景を削除しました', { id: 'remove-bg' });
++          toast.success('背景を白に置き換えました', { id: 'remove-bg' });
+         } catch (err: any) {
+           toast.error(await edgeFunctionErrorMessage(err) || '背景削除に失敗しました', { id: 'remove-bg' });
+         }
+@@ -3155,12 +3181,9 @@ export function CanvasEditorPage() {
+       case 'colorize':
+         toast.loading('カラバリを生成中...', { id: 'colorize' });
+         try {
+-          const { data, error } = await invokeProviderAction('colorize', {
+-            body: { imageUrl: imageSrc, brandId: currentBrand.id, colors: ['red', 'blue', 'green', 'yellow'], legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
+-          });
+-          if (error) throw error;
++          const data = await derive('colorize');
+           assertDerivedImageResult(data, 'colorize');
+-          const placement = await placeDerivedImages(data.variations.map((v: any) => {
++          const placement = await placeDerivedImages(data.variations!.map((v: any) => {
+             const parameters = { color: v.colorName };
+             return {
+               imageUrl: v.imageUrl,
+@@ -3176,8 +3199,8 @@ export function CanvasEditorPage() {
+             };
+           }));
+           if (placement.succeeded === 0) throw new Error('canvas_derived_result_placement_failed');
+-          if (placement.succeeded < placement.total) {
+-            toast.error(`${placement.total - placement.succeeded}件のカラバリをCanvasへ配置できませんでした`, { id: 'colorize' });
++          if (placement.succeeded < placement.total || placement.total < 4) {
++            toast.error(`${4 - placement.succeeded}件のカラバリを作成または配置できませんでした`, { id: 'colorize' });
+           } else {
+             toast.success('カラバリを生成しました', { id: 'colorize' });
+           }
+@@ -3189,16 +3212,13 @@ export function CanvasEditorPage() {
+       case 'upscale':
+         toast.loading('アップスケール中...', { id: 'upscale' });
+         try {
+-          const { data, error } = await invokeProviderAction('upscale', {
+-            body: { imageUrl: imageSrc, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
+-          });
+-          if (error) throw error;
++          const data = await derive('upscale');
+           assertDerivedImageResult(data, 'upscale');
+-          const placed = await addImageToCanvasSafely(data.resultUrl, '高解像度', {
++          const placed = await addImageToCanvasSafely(data.resultUrl!, '高解像度', {
+             feature: 'upscale',
+             parentId: objectId,
+             generation: (obj.metadata?.generation || 0) + 1,
+-            ...buildDerivedLightchainMetadata(obj, 'upscale', { parameters: { scale: 2 } }),
++            ...buildDerivedLightchainMetadata(obj, 'upscale', { parameters: { mode: 'detail' } }),
+           }, objectId);
+           if (!placed) throw new Error('canvas_derived_result_placement_failed');
+           toast.success('アップスケールしました', { id: 'upscale' });
+@@ -3212,12 +3232,9 @@ export function CanvasEditorPage() {
+       case 'derive':
+         toast.loading('バリエーションを生成中...', { id: 'variations' });
+         try {
+-          const { data, error } = await invokeProviderAction('generate-variations', {
+-            body: { imageUrl: imageSrc, brandId: currentBrand.id, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
+-          });
+-          if (error) throw error;
++          const data = await derive('variations');
+           assertDerivedImageResult(data, 'variations');
+-          const placement = await placeDerivedImages(data.variations.map((v: any, i: number) => ({
++          const placement = await placeDerivedImages(data.variations!.map((v: any, i: number) => ({
+             imageUrl: v.imageUrl,
+             label: `バリエーション ${i + 1}`,
+             parentId: objectId,
+@@ -3229,8 +3246,8 @@ export function CanvasEditorPage() {
+             },
+           })));
+           if (placement.succeeded === 0) throw new Error('canvas_derived_result_placement_failed');
+-          if (placement.succeeded < placement.total) {
+-            toast.error(`${placement.total - placement.succeeded}件のバリエーションをCanvasへ配置できませんでした`, { id: 'variations' });
++          if (placement.succeeded < placement.total || placement.total < 4) {
++            toast.error(`${4 - placement.succeeded}件のバリエーションを作成または配置できませんでした`, { id: 'variations' });
+           } else {
+             toast.success('バリエーションを生成しました', { id: 'variations' });
+           }
+@@ -4003,12 +4020,9 @@ export function CanvasEditorPage() {
+       }
+ 
+       if (action === 'remove-bg') {
+-        const { data, error } = await invokeProviderAction('remove-background', {
+-          body: { imageUrl: editSource, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
+-        });
+-        if (error) throw error;
++        const data = await runDerivedEdits(editSource, 'removeBackground', { brandId: currentBrand.id, rightsConfirmed, metadata: lightchainEditMetadata });
+         assertDerivedImageResult(data, 'removeBackground');
+-        const placed = await addImageToCanvasSafely(data.resultUrl, '背景削除', {
++        const placed = await addImageToCanvasSafely(data.resultUrl!, '背景削除', {
+           ...baseMetadata,
+           feature: 'remove-background',
+           ...buildDerivedLightchainMetadata(sourceObject, 'remove-background'),
+@@ -4023,10 +4037,7 @@ export function CanvasEditorPage() {
+           return false;
+         }
+         const colors = params.prompt?.split(/[、,\\s]+/).map((item) => item.trim()).filter(Boolean);
+-        const { data, error } = await invokeProviderAction('colorize', {
+-          body: { imageUrl: editSource, brandId: currentBrand.id, colors: colors?.length ? colors : undefined, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
+-        });
+-        if (error) throw error;
++        const data = await runDerivedEdits(editSource, 'colorize', { brandId: currentBrand.id, rightsConfirmed, metadata: lightchainEditMetadata, colors });
+         assertDerivedImageResult(data, 'colorize');
+         const placement = await placeDerivedImages((data?.variations ?? []).map((variation: any) => {
+           const parameters = { color: variation.colorName || variation.color };
+@@ -4050,12 +4061,9 @@ export function CanvasEditorPage() {
+       }
+ 
+       if (action === 'upscale') {
+-        const { data, error } = await invokeProviderAction('upscale', {
+-          body: { imageUrl: editSource, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
+-        });
+-        if (error) throw error;
++        const data = await runDerivedEdits(editSource, 'upscale', { brandId: currentBrand.id, rightsConfirmed, metadata: lightchainEditMetadata });
+         assertDerivedImageResult(data, 'upscale');
+-        const placed = await addImageToCanvasSafely(data.resultUrl, '高解像度', {
++        const placed = await addImageToCanvasSafely(data.resultUrl!, '高解像度', {
+           ...baseMetadata,
+           feature: 'upscale',
+           ...buildDerivedLightchainMetadata(sourceObject, 'upscale', { parameters: { scale: 2 } }),
+@@ -4069,10 +4077,7 @@ export function CanvasEditorPage() {
+           toast.error(BRAND_LIKENESS_BLOCK_COPY);
+           return false;
+         }
+-        const { data, error } = await invokeProviderAction('generate-variations', {
+-          body: { imageUrl: editSource, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
+-        });
+-        if (error) throw error;
++        const data = await runDerivedEdits(editSource, 'variations', { brandId: currentBrand.id, rightsConfirmed, metadata: lightchainEditMetadata, prompt: params.prompt || undefined });
+         assertDerivedImageResult(data, 'variations');
+         const placement = await placeDerivedImages((data?.variations ?? []).map((variation: any, index: number) => ({
+           imageUrl: variation.imageUrl,
