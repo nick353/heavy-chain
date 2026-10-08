@@ -372,3 +372,13 @@ Each iteration: read this file → advance the next open item → append result 
 - API drift check: the running heavy-chain-api version 903ee6cf was deployed from #18, and main has no heavy-api changes since then, so deployed = main.
 - nick353/heavy-chain#44 workflow `Deploy Workers`: on main pushes that touch their code, heavy-chain-api is tested (159/159) and deployed, and heavy-chain-alerts is deployed. The manual run deployed API 07786e01 and alerts 988a43eb. CORS preflight from heavychain.app returned 204, and the heavychain.app 生成履歴 panel loads after the deploy.
 - Light #8 (strength labels on Light /printing) is closed at the user's request: Light accepts files only through a native file chooser, and the comparison is not required.
+
+### Iteration 53 (2026-10-08) — AI model settings, Claude for all text AI, daily D1 backups
+- nick353/heavy-chain#46: the admin feedback allow-list includes heavychain.app, PUBLIC_APP_ORIGIN is heavychain.app, and consumer-auth deploys from main (tests 78/78; the deployed version matched main #20). A manual `Deploy Workers` run deployed all three Workers; heavychain.app stays signed in.
+- #47:
+  - ブランド設定 › AIモデル: choose the image model and the Claude text model. Only registered models are listed (`GET /v1/ai/models`). The choice is sent with every request, and the OpenAI call now uses it; before this, the model in a request was ignored. Edits fall back to the default edit model when the chosen model cannot edit.
+  - Claude default: Sonnet 5.5.
+  - The design consultation chat uses Claude (vision) instead of Workers AI Llama. Migration 0016 was applied to production before deploy; design_assistant_requests kept 10/10 rows.
+  - heavy-chain-alerts backs up every D1 table to R2 daily at 03:00 JST. Manual run: backups/d1/2026-10-08, 27 tables, 715 rows, 2.66 MB, plus manifest.
+- 検証: Worker tests 163/163, new frontend and backup tests pass, CI green. Production settings page lists 4 OpenAI image models and 3 Claude models, with defaults GPT Image 2 / GPT Image 1 mini and Claude Sonnet 5.5.
+- I committed #47 with a broken type block once (the local `tsc -p .` checks nothing; use `tsc -p tsconfig.app.json`). CI caught it and nothing was merged until it passed.
