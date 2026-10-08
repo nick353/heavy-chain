@@ -297,7 +297,9 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     const area = canvasRef.current?.getBoundingClientRect();
     const cx = ((area ? (area.width - (panelOpen ? 435 : 0)) / 2 : 400) - view.panX) / view.zoom;
     const cy = ((area ? area.height / 2 : 300) - view.panY) / view.zoom;
-    const object = createDesignCanvasObject(tool, cx, cy, nextZ());
+    // About a quarter of the visible canvas, so a new object is clearly visible but smaller than the view.
+    const visibleShort = area ? Math.min(area.width - (panelOpen ? 435 : 0), area.height) : 600;
+    const object = createDesignCanvasObject(tool, cx, cy, nextZ(), undefined, (visibleShort * 0.28) / view.zoom);
     setSelected(object.id);
     if (tool === 'text') setEditingText({ id: object.id, text: String(object.text) });
     void mutateObjects((objects) => [...objects, object]);
@@ -655,7 +657,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         <ol>{[...canvasObjects].reverse().map((object) => <li key={String(object.id)}><button type="button" data-testid="design-layer-select" aria-pressed={selected === object.id}
           onClick={() => setSelected(String(object.id))} className={`mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${selected === object.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
           <span className="h-10 w-10 shrink-0 overflow-hidden rounded bg-white/5">{typeof object.src === 'string' && urls[object.src] && <img src={urls[object.src]} alt="" className="h-full w-full object-cover" />}</span>
-          {String(object.label ?? 'デザイン画像')}</button></li>)}</ol>
+          <span className="truncate">{object.type === 'text' && typeof object.text === 'string' ? object.text : String(object.label ?? 'デザイン画像')}</span></button></li>)}</ol>
       </div>}
     </aside>}
   </main>;

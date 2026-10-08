@@ -11,14 +11,16 @@ const base = (id: string, x: number, y: number, width: number, height: number, z
   id, x, y, width, height, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, locked: false, visible: true, zIndex,
 });
 
-/** Creates a new object centred on (cx, cy) in canvas coordinates. */
+/** Creates a new object centred on (cx, cy) in canvas coordinates; `unit` is the shape size (callers scale it to the view). */
 export function createDesignCanvasObject(tool: DesignShapeKind | 'frame' | 'text', cx: number, cy: number, zIndex: number,
-  newId: () => string = () => crypto.randomUUID()): DesignCanvasObject {
+  newId: () => string = () => crypto.randomUUID(), unit = 600): DesignCanvasObject {
   const id = `${tool}-${newId()}`;
-  if (tool === 'text') return { ...base(id, cx - 300, cy - 60, 600, 120, zIndex), type: 'text', text: 'テキストを入力', fontSize: 80, fill: '#ffffff', label: 'テキスト' };
-  if (tool === 'frame') return { ...base(id, cx - 540, cy - 720, 1080, 1440, zIndex), type: 'frame', fill: '#ffffff', stroke: '#d4d4d4', strokeWidth: 2, label: 'パネル' };
+  const u = Math.max(20, unit);
+  if (tool === 'text') return { ...base(id, cx - u / 2, cy - u / 10, u, u / 5, zIndex), type: 'text', text: 'テキストを入力', fontSize: Math.round(u / 7.5), fill: '#ffffff', label: 'テキスト' };
+  if (tool === 'frame') return { ...base(id, cx - u * 0.45, cy - u * 0.6, u * 0.9, u * 1.2, zIndex), type: 'frame', fill: '#ffffff', stroke: '#d4d4d4', strokeWidth: 2, label: 'パネル' };
   const line = tool === 'line' || tool === 'arrow';
   const label = DESIGN_SHAPES.find((shape) => shape.kind === tool)?.label ?? '図形';
-  return { ...base(id, cx - 300, cy - (line ? 20 : 300), 600, line ? 40 : 600, zIndex), type: 'shape', shapeType: tool,
-    fill: line ? 'transparent' : '#5fcfc4', stroke: line ? '#5fcfc4' : 'transparent', strokeWidth: line ? 12 : 0, label };
+  const thickness = Math.max(2, Math.round(u / 50));
+  return { ...base(id, cx - u / 2, cy - (line ? thickness * 2 : u / 2), u, line ? thickness * 4 : u, zIndex), type: 'shape', shapeType: tool,
+    fill: line ? 'transparent' : '#5fcfc4', stroke: line ? '#5fcfc4' : 'transparent', strokeWidth: line ? thickness : 0, label };
 }
