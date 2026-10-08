@@ -66,7 +66,7 @@ addCheck('feedback_collects_screenshot_and_comment_only', (
   feedback.includes('画面スクショ')
   && feedback.includes('コメント')
   && feedback.includes("const type: FeedbackType = 'other'")
-  && feedback.includes('placeholder="気づいたことをそのまま書いてください"')
+  && feedback.includes('placeholder="気づいたことをそのまま書いてください')
   && feedback.includes('setIsOpen(true)')
   && !feedback.includes('困ったこと')
   && !feedback.includes('どこを押すかわからない')
