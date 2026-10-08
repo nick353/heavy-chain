@@ -508,7 +508,7 @@ export function AdminDashboard() {
                     社内betaフィードバック
                   </h2>
                   <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                    右下ボタンから送られたコメントと画面スクショを確認します。
+                    画面左端の「フィードバック」から送られたコメント・画面スクショ・音声メモを確認します。
                   </p>
                 </div>
                 <Button variant="secondary" size="sm" onClick={fetchFeedbackItems}>

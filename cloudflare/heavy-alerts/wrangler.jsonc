@@ -1,5 +1,5 @@
 {
-  // Emails nichika2000823@gmail.com when image AI requests keep failing or get stuck (checked every 15 minutes).
+  // Emails nichika2000823@gmail.com when image AI requests keep failing or get stuck, and lists new feedback (checked every 15 minutes).
   // Read-only on the production D1 database; sends through heavychain.app Email Routing.
   "name": "heavy-chain-alerts",
   "main": "src/index.ts",

@@ -1,5 +1,5 @@
 import { EmailMessage } from 'cloudflare:email';
-import { alertBody, mimeMessage, shouldAlert, windowBounds, type AlertCounts } from './alerts';
+import { alertBody, feedbackBody, feedbackWindow, mimeMessage, shouldAlert, windowBounds, type AlertCounts, type FeedbackRow } from './alerts';
 import { backupDatabase } from './backup';
 
 export const BACKUP_CRON = '0 18 * * *'; // 03:00 JST
@@ -32,6 +32,15 @@ const readCounts = async (db: D1Database, now: Date): Promise<AlertCounts> => {
   };
 };
 
+const ADMIN_FEEDBACK_URL = 'https://heavychain.app/admin?tab=feedback';
+/** Read-only: feedback created in the last aligned window. */
+const readFeedback = async (db: D1Database, now: Date): Promise<FeedbackRow[]> => {
+  const w = feedbackWindow(now);
+  const result = await db.prepare(`SELECT created_at, email, pathname, message, screenshot_path, audio_path FROM feedback_submissions
+    WHERE created_at >= ? AND created_at < ? ORDER BY created_at LIMIT 50`).bind(w.start, w.end).all<FeedbackRow>();
+  return result.results;
+};
+
 const send = async (env: Env, subject: string, text: string, now: Date) => {
   await env.ALERT_EMAIL.send(new EmailMessage(env.ALERT_FROM, env.ALERT_TO, mimeMessage(env.ALERT_FROM, env.ALERT_TO, subject, text, now)));
 };
@@ -47,6 +56,11 @@ export default {
           `毎日のデータベースのバックアップ（${now.toISOString()}）が失敗しました。\n\n${String(error).slice(0, 500)}`, now);
       }
       return;
+    }
+    const feedback = await readFeedback(env.DB, now);
+    if (feedback.length) {
+      const mail = feedbackBody(feedback, ADMIN_FEEDBACK_URL);
+      await send(env, mail.subject, mail.text, now);
     }
     const counts = await readCounts(env.DB, now);
     if (!shouldAlert(counts)) return;

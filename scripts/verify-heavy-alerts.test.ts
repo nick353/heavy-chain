@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { alertBody, mimeMessage, shouldAlert, windowBounds } from '../cloudflare/heavy-alerts/src/alerts.ts';
+import { alertBody, feedbackBody, feedbackWindow, mimeMessage, shouldAlert, windowBounds } from '../cloudflare/heavy-alerts/src/alerts.ts';
 
 const base = { failedLastHour: 0, failedLastWindow: 0, newlyStuck: 0, recentErrors: [] };
 
@@ -30,4 +30,19 @@ test('builds a Japanese subject and a UTF-8 MIME message', () => {
   assert.match(mime, /^From: Heavy Chain Alerts <alerts@heavychain\.app>\r\nTo: nichika2000823@gmail\.com\r\nSubject: =\?UTF-8\?B\?/);
   const body = mime.split('\r\n\r\n')[1].replace(/\r\n/g, '');
   assert.equal(new TextDecoder().decode(Uint8Array.from(atob(body), (c) => c.charCodeAt(0))), text);
+});
+
+test('new feedback is mailed once per aligned 15-minute window with page, attachments and comment', () => {
+  assert.deepEqual(feedbackWindow(new Date('2026-10-08T06:07:30.000Z')), { start: '2026-10-08T05:45:00.000Z', end: '2026-10-08T06:00:00.000Z' });
+  assert.deepEqual(feedbackWindow(new Date('2026-10-08T06:00:00.000Z')), { start: '2026-10-08T05:45:00.000Z', end: '2026-10-08T06:00:00.000Z' });
+  const mail = feedbackBody([
+    { created_at: '2026-10-08T05:50:00.000Z', email: 'a@example.test', pathname: '/tools/printing', message: '生成ボタンが反応しません\n2回目も同じ', screenshot_path: 'feedback/v1/x.png', audio_path: 'feedback/v1/x.webm' },
+    { created_at: '2026-10-08T05:55:00.000Z', email: 'b@example.test', pathname: '/canvas', message: 'あ'.repeat(700), screenshot_path: null, audio_path: null },
+  ], 'https://heavychain.app/admin?tab=feedback');
+  assert.equal(mail.subject, '[Heavy Chain] フィードバックが2件届きました');
+  assert.match(mail.text, /■ 1\. 2026-10-08 14:50（日本時間）  a@example\.test/);
+  assert.match(mail.text, /添付: スクショ・音声メモ/);
+  assert.match(mail.text, /  2回目も同じ/);
+  assert.match(mail.text, /添付: なし/);
+  assert.match(mail.text, /…（続きは管理画面で）/);
 });
