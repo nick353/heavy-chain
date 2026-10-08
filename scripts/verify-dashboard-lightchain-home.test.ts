@@ -17,9 +17,10 @@ test('authenticated dashboard uses the current Lightchain homepage entry', () =>
   assert.doesNotMatch(dashboardRoute, /<DashboardPage \/>/);
 });
 
-test('legacy Heavy dashboard remains available only behind the explicit workspace route', () => {
+test('the legacy Heavy dashboard route redirects to the Light home', () => {
   const workspaceRoute = routeSource('/workspace', '/generate');
-  assert.match(workspaceRoute, /<DashboardPage \/>/);
+  assert.match(workspaceRoute, /<LegacyRouteRedirect to="\/dashboard" \/>/);
+  assert.doesNotMatch(workspaceRoute, /<DashboardPage \/>/);
 });
 
 test('dashboard receives the Lightchain header and frame', () => {

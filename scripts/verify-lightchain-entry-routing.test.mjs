@@ -196,14 +196,10 @@ test('keeps the video project dashboard and detail route aligned with Lightchain
   assert.match(detail, /video_provider_not_admitted/);
 });
 
-test('exposes the Lightchain launcher at the canonical /lightchain route', async () => {
+test('the old /lightchain launcher URL redirects to the home screen', async () => {
   const app = await readFile(appPath, 'utf8');
-  const routeStart = app.indexOf('path="/lightchain"');
-  const routeEnd = app.indexOf('path="/lightchain/:toolId"', routeStart);
-  assert.ok(routeStart >= 0 && routeEnd > routeStart, 'legacy route boundary is required');
-  const route = app.slice(routeStart, routeEnd);
-  assert.match(route, /<LightchainUnifiedWorkspaceShell>[\s\S]*?<GenerateLightchainEntry \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
-  assert.doesNotMatch(route, /LightchainSourceNotFoundPage/);
+  assert.ok(app.includes('<Route path="/lightchain" element={<LegacyRouteRedirect to="/dashboard" />} />'));
+  assert.match(app, /path="\/dashboard"[\s\S]*?<GenerateLightchainEntry \/>/);
   assert.match(
     await readFile(new URL('../src/pages/LoginPage.tsx', import.meta.url), 'utf8'),
     /navigate\(resolveAuthReturnPath\(location\.search, window\.location\.origin\)/,
