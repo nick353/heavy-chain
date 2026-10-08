@@ -7,6 +7,7 @@ import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { useBoardDraftProject } from '../features/boardDraftProjects';
 import { ZoomControl } from './PatternDesignDetailPage';
+import { watermarkImageBlobIfOn } from '../lib/imageDownload';
 
 /**
  * Light `/editor/patternDesign/detail` = "プリントデザイン", measured at 1440×900 on 2026-10-07: empty project →
@@ -159,9 +160,9 @@ function PrintDesignWorkspace() {
       context.rotate((value.rotate * Math.PI) / 180);
       context.scale(value.flip ? -1 : 1, 1);
       context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) throw new Error('blob');
-      const href = URL.createObjectURL(blob);
+      const rendered = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!rendered) throw new Error('blob');
+      const href = URL.createObjectURL(await watermarkImageBlobIfOn(rendered));
       const anchor = document.createElement('a');
       anchor.href = href;
       anchor.download = kind === 'result' ? 'プリントデザイン.png' : source?.name ?? 'プリント柄.png';

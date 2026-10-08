@@ -1,3 +1,5 @@
+import { drawWatermark, isDownloadWatermarkOn } from './watermarkPreference.ts';
+
 export type ImageDownloadFormat = 'png' | 'jpeg' | 'webp' | 'avif';
 
 const IMAGE_DOWNLOAD_MIME_TYPES: Record<ImageDownloadFormat, string> = {
@@ -45,6 +47,7 @@ const renderImageSourceToBlob = async (
   height: number,
   format: ImageDownloadFormat,
   errorPrefix: string,
+  watermark = false,
 ): Promise<Blob> => {
   const mimeType = IMAGE_DOWNLOAD_MIME_TYPES[format];
   const canvas = document.createElement('canvas');
@@ -58,6 +61,7 @@ const renderImageSourceToBlob = async (
     context.fillRect(0, 0, canvas.width, canvas.height);
   }
   context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  if (watermark) drawWatermark(context, canvas.width, canvas.height);
 
   // Chromium can leave the asynchronous canvas encoding callback pending
   // indefinitely for large remote images in extension-backed sessions.
@@ -82,6 +86,7 @@ const rasterizeWithImageElement = async (
   source: Blob,
   format: ImageDownloadFormat,
   errorPrefix: string,
+  watermark = false,
 ): Promise<Blob> => {
   if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
     throw new Error(`${errorPrefix}_format_conversion_unavailable`);
@@ -100,6 +105,7 @@ const rasterizeWithImageElement = async (
       image.naturalHeight || image.height,
       format,
       errorPrefix,
+      watermark,
     );
   } finally {
     URL.revokeObjectURL(objectUrl);
@@ -110,15 +116,17 @@ const convertImageBlob = async (
   source: Blob,
   format: ImageDownloadFormat,
   errorPrefix: string,
+  watermark = false,
 ): Promise<Blob> => {
   const mimeType = IMAGE_DOWNLOAD_MIME_TYPES[format];
-  if (source.type.toLowerCase() === mimeType) return source;
+  // A watermarked download is always redrawn, even when the format already matches.
+  if (!watermark && source.type.toLowerCase() === mimeType) return source;
 
   if (typeof createImageBitmap === 'function') {
     try {
       const bitmap = await createImageBitmap(source);
       try {
-        return await renderImageSourceToBlob(bitmap, bitmap.width, bitmap.height, format, errorPrefix);
+        return await renderImageSourceToBlob(bitmap, bitmap.width, bitmap.height, format, errorPrefix, watermark);
       } finally {
         bitmap.close();
       }
@@ -128,7 +136,7 @@ const convertImageBlob = async (
     }
   }
 
-  return await rasterizeWithImageElement(source, format, errorPrefix);
+  return await rasterizeWithImageElement(source, format, errorPrefix, watermark);
 };
 
 export const downloadValidatedImage = async (
@@ -138,7 +146,7 @@ export const downloadValidatedImage = async (
   format: ImageDownloadFormat = getImageDownloadFormat(filename),
 ): Promise<void> => {
   const sourceBlob = await fetchValidatedImageBlob(imageUrl, errorPrefix);
-  const blob = await convertImageBlob(sourceBlob, format, errorPrefix);
+  const blob = await convertImageBlob(sourceBlob, format, errorPrefix, isDownloadWatermarkOn());
   const objectUrl = window.URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = objectUrl;
@@ -153,4 +161,14 @@ export const downloadValidatedImage = async (
     // especially in extension-backed browser sessions.
     window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
   }
+};
+
+/**
+ * For downloads that build their own Blob (editors, ZIPs): stamps the watermark when the account menu switch is on.
+ * SVG stays as vector data; other images keep JPEG as JPEG and become PNG otherwise.
+ */
+export const watermarkImageBlobIfOn = async (blob: Blob, errorPrefix = 'image_download'): Promise<Blob> => {
+  const type = blob.type.toLowerCase();
+  if (!isDownloadWatermarkOn() || !type.startsWith('image/') || type === 'image/svg+xml') return blob;
+  return await convertImageBlob(blob, type === 'image/jpeg' ? 'jpeg' : 'png', errorPrefix, true);
 };

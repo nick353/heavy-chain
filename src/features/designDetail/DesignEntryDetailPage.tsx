@@ -22,6 +22,7 @@ import {
   type DesignEntryClient, type DialogueWorkspaceId,
 } from './designEntryCoordinator';
 import { useDialogueReferences } from './useDialogueReferences';
+import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 export const createDesignDialogueClient = (featureType: string): DesignDialogueClient => ({
@@ -289,7 +290,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     const url = object && typeof object.src === 'string' ? urls[object.src] : undefined;
     if (!url) return;
     const response = await fetch(url);
-    const blob = await response.blob();
+    const blob = await watermarkImageBlobIfOn(await response.blob());
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `${String(object?.label ?? 'design')}.png`;

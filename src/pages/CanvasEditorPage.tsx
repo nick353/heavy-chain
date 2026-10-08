@@ -40,7 +40,7 @@ import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { resolveGeneratedImageUrl, resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { getWorkspaceArtifactCanonicalStoragePath, listWorkspaceArtifacts, listWorkspaceArtifactsForActivity } from '../lib/localWorkspaceArtifacts';
-import { downloadValidatedImage } from '../lib/imageDownload';
+import { downloadValidatedImage, watermarkImageBlobIfOn } from '../lib/imageDownload';
 import {
   isLocalCanvasAssetReference,
   putLocalCanvasAsset,
@@ -3308,7 +3308,7 @@ export function CanvasEditorPage() {
       // which can leave a .png file containing the app HTML instead of the
       // rendered canvas.
       const dataResponse = await fetch(dataUrl);
-      const imageBlob = await dataResponse.blob();
+      const imageBlob = await watermarkImageBlobIfOn(await dataResponse.blob());
       if (imageBlob.size <= 0 || !imageBlob.type.toLowerCase().startsWith('image/')) {
         throw new Error('Canvas export did not produce an image blob');
       }
