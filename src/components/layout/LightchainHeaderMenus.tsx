@@ -43,7 +43,7 @@ export function HelpMenu({ unread, onOpen }: { unread: boolean; onOpen: (panel: 
 type NoticeCategory = 'system' | 'changelog' | 'notice';
 const categoryLabel: Record<NoticeCategory, string> = { system: 'システムからのお知らせ', changelog: 'ログを更新します', notice: 'システム通知' };
 
-/** Heavy's own update notes, newest first. Each date is the day the change reached https://heavy-chain.zeabur.app. */
+/** Heavy's own update notes, newest first. Each date is the day the change reached production (https://heavychain.app). */
 export const heavyNotifications: { id: string; category: NoticeCategory; date: string; title: string; body: string[] }[] = [
   {
     id: '2026-10-07-header-help',

@@ -40,6 +40,6 @@
     "AI_DAILY_IMAGE_UNITS": "10000",
     "AI_DAILY_ESTIMATED_NEURONS": "1000000",
     "PUBLIC_SHARE_ENABLED": "false",
-    "PUBLIC_APP_ORIGIN": "https://heavy-chain-web.nichika2000823.workers.dev"
+    "PUBLIC_APP_ORIGIN": "https://heavychain.app"
   }
 }
