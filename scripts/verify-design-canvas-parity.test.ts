@@ -57,4 +57,5 @@ test('shapes, panels and text are created in the canvas like Light', () => {
   assert.match(detail, /onClick=\{\(\) => addObject\('text'\)\}/);
   assert.doesNotMatch(detail, /\/canvas\/\$\{encodeURIComponent\(projectId\)\}/);
   assert.match(detail, /今日は何をデザインしますか？/);
+  assert.match(detail, /data-testid="design-layer-delete"/);
 });
