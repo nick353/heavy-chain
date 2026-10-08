@@ -8,6 +8,9 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DIST_ROOT = resolve(process.env.DIST_DIR || join(dirname(fileURLToPath(import.meta.url)), '..', 'dist'));
 const AUTH_DEFAULT = 'https://consumer-auth.nichika2000823.workers.dev';
 const BODY_LIMIT = 16 * 1024;
+// heavychain.app is the production origin; Zeabur only forwards visitors there (same path and query).
+// A temporary (302) redirect keeps this reversible: set CANONICAL_ORIGIN= (empty) to serve the app here again.
+const CANONICAL_DEFAULT = 'https://heavychain.app';
 const REQUEST_TIMEOUT_MS = 15_000;
 const SCENE_ASSET_NAMES = new Set(['fabric1.jpg', 'fabric2.jpg', 'fabric3.jpg', 'fabric4.jpg', 'fabric5.png', 'draft1.png', 'multi1.jpg', 'multi2.jpg', 'print1.png', 'print2.jpg', 'fabric.png', 'draft.png', 'multi.png', 'print.png', 'upload-placeholder.png']);
 const DESIGN_CARD_ASSET_NAMES = new Set(['clothing2.png', 'clothing1.png', 'print2.png', 'print1.png', 'fabric2.png', 'fabric1.png', 'techpack2.png', 'techpack1.png']);
@@ -22,6 +25,25 @@ function authBaseUrl() {
   } catch {
     return null;
   }
+}
+
+export function canonicalOrigin() {
+  const raw = Object.hasOwn(process.env, 'CANONICAL_ORIGIN') ? process.env.CANONICAL_ORIGIN : CANONICAL_DEFAULT;
+  if (!raw || raw.trim() === '') return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' && url.pathname === '/' && !url.search && !url.hash ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Where a page request on Zeabur should go, or null to serve it here (health checks, auth proxy, other methods). */
+export function canonicalRedirect(method, url, origin = canonicalOrigin()) {
+  if (!origin || (method !== 'GET' && method !== 'HEAD')) return null;
+  if (url.pathname === '/_health' || url.pathname.startsWith('/api/')) return null;
+  if (new URL(origin).host === url.host) return null;
+  return `${origin}${url.pathname}${url.search}`;
 }
 
 function json(res, status, code, message, extra = {}) {
@@ -150,8 +172,17 @@ const server = createServer(async (req, res) => {
     return req.method === 'HEAD' ? res.end() : res.end(body);
   }
   if (url.pathname.startsWith('/api/auth/')) return proxyAuth(req, res, url);
+  const redirect = canonicalRedirect(req.method, url);
+  if (redirect) {
+    res.writeHead(302, { Location: redirect, 'Cache-Control': 'no-store' });
+    return res.end();
+  }
   return serveStatic(req, res, url);
 });
 
+if (process.argv[1] && resolve(process.argv[1]) !== fileURLToPath(import.meta.url)) {
+  // Imported by a test: do not open a port.
+} else {
 server.on('clientError', (_error, socket) => socket.end('HTTP/1.1 400 Bad Request\r\n\r\n'));
 server.listen(PORT, HOST, () => console.log(`heavy-chain-zeabur-server listening on ${HOST}:${server.address().port}`));
+}
