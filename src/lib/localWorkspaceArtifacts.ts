@@ -142,6 +142,17 @@ const hasCanonicalStoragePath = (metadata: Record<string, Json | undefined>) => 
 const isEphemeralRemoteImageUrl = (imageUrl: string) => /^(?:https?:|\/\/)/i.test(imageUrl.trim());
 
 /**
+ * A full-size result kept as a data: URL is several MB; browser storage holds about 5 MB per site, so writing it
+ * failed with a quota error (seen after every 生地イメージ generation). Once the result has a server copy the inline
+ * pixels are redundant: readback signs the storage path, exactly as for a remote URL.
+ */
+export const MAX_INLINE_DATA_URL_CHARS = 256 * 1024;
+const isLargeInlineImage = (imageUrl: string) => imageUrl.length > MAX_INLINE_DATA_URL_CHARS && /^data:/i.test(imageUrl.trimStart());
+/** The result's own server object; a source/input path (sourceStoragePath, nested lineage) is not a copy of these pixels. */
+const hasOwnResultStoragePath = (metadata: Record<string, Json | undefined>) => (['remoteStoragePath', 'storagePath'] as const)
+  .some((key) => typeof metadata[key] === 'string' && Boolean(normalizeWorkspaceStoragePath(metadata[key])));
+
+/**
  * Keep bearer/query URLs ephemeral. The returned value is the durable local
  * representation; the input artifact remains usable in memory by callers.
  */
@@ -151,7 +162,8 @@ export const normalizeWorkspaceArtifactForPersistence = (
   ...artifact,
   // URL-only legacy entries are intentionally preserved for readback. New
   // remote entries must carry a validated canonical path before persistence.
-  imageUrl: isEphemeralRemoteImageUrl(artifact.imageUrl) && getWorkspaceArtifactCanonicalStoragePath(artifact.metadata)
+  imageUrl: (isEphemeralRemoteImageUrl(artifact.imageUrl) && getWorkspaceArtifactCanonicalStoragePath(artifact.metadata))
+    || (isLargeInlineImage(artifact.imageUrl) && hasOwnResultStoragePath(artifact.metadata))
     ? ''
     : artifact.imageUrl,
 });
