@@ -156,6 +156,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     }).catch(() => { if (!cancelled) setRemainingUnits(null); });
     return () => { cancelled = true; };
   }, [brandId, state.dialogue?.outputs.length]);
+  // Selection and undo history belong to the project; saving an edit reloads the document (retry) and must keep them.
+  useEffect(() => { setSelectedIds([]); setHistory({ undo: [], redo: [] }); }, [identity]);
   useEffect(() => {
     const epoch = ++generation.current;
     const scope = { userId, brandId };
@@ -168,7 +170,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     const assertView = () => { assertContext(); if (generation.current !== epoch) throw new Error('design_entry_view_stale'); };
     controller.current = null;
     sending.current = false;
-    setSelected(null); setHistory({ undo: [], redo: [] }); setPrompt(''); setTitleDraft(null); setState({ identity, busy: brandReady && !isNewFile });
+    setPrompt(''); setTitleDraft(null); setState({ identity, busy: brandReady && !isNewFile });
     if (brandReady && isDocumentOnly) {
       void (async () => {
         // Resume this document's latest chat when one exists here; otherwise show the document alone.

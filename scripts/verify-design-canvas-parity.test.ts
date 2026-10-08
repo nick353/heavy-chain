@@ -118,4 +118,8 @@ test('multi-select, groups, through-select, paste and undo work like Light\'s ca
   const undone = applyCanvasPatch([...moved, { id: 'ai', type: 'image', zIndex: 4 }], patch.before);
   assert.deepEqual(undone.map((object) => [object.id, object.x]), [['a', 0], ['b', 50], ['ai', undefined], ['c', 500]]);
   assert.deepEqual(applyCanvasPatch(undone, patch.after).map((object) => object.id), ['a', 'b', 'ai']);
+  // Saving an edit reloads the document; selection and undo history reset only when the project changes.
+  const page = fs.readFileSync('src/features/designDetail/DesignEntryDetailPage.tsx', 'utf8');
+  assert.match(page, /useEffect\(\(\) => \{ setSelectedIds\(\[\]\); setHistory\(\{ undo: \[\], redo: \[\] \}\); \}, \[identity\]\);/);
+  assert.equal(page.match(/setHistory\(\{ undo: \[\], redo: \[\] \}\)/g)?.length, 1);
 });
