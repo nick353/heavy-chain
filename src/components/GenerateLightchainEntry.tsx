@@ -568,7 +568,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   className={`${hiddenOnMobile ? 'hidden md:flex' : ''} relative flex w-full cursor-pointer gap-4 overflow-hidden rounded-2xl border border-white/10 bg-[#262a2b] p-4 transition hover:border-cyan-300/50`}
                 >
                   {badge && <span className={`absolute right-0 top-0 z-10 rounded-bl-xl px-3 py-1 text-[10px] font-medium leading-3 text-white ${badge === 'Beta' ? 'bg-gradient-to-r from-fuchsia-500 to-rose-500' : 'bg-[#687070]'}`}>{badge}</span>}
-                  <div className="relative h-[88px] w-[132px] shrink-0 overflow-hidden rounded-[5px] bg-white">
+                  <div className="relative h-[88px] w-[132px] shrink-0 overflow-hidden rounded-[5px] bg-white/[0.06]">
                     <img src={buildLauncherFeatureImage(feature)} alt="" className="h-full w-full object-cover" loading="lazy" />
                   </div>
                   <div className="flex min-h-[88px] min-w-0 flex-1 flex-col gap-1">

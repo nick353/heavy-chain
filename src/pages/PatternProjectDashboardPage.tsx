@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
+import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 import { useBoardDraftCards } from '../features/boardDraftProjects';
 
 export const formatProjectAge = (value: string) => {
@@ -21,8 +22,11 @@ export type ProjectCard = { id: string; title: string; updatedAt: string; imageU
 /** Falls back to the PROJECT mark when a saved preview no longer resolves (expired or deleted object). */
 export function ProjectThumbnail({ url, fallback }: { url: string; fallback?: ReactNode }) {
   const [failed, setFailed] = useState(false);
+  const [fullSize, setFullSize] = useState(false);
   if (!url || failed) return <>{fallback ?? <span className="pattern-project-dashboard-empty-mark">PROJECT</span>}</>;
-  return <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />;
+  const thumb = thumbnailImageUrl(url) ?? url;
+  const src = fullSize ? url : thumb;
+  return <img src={src} alt="" loading="lazy" decoding="async" onError={() => { if (src !== url) setFullSize(true); else setFailed(true); }} />;
 }
 
 /** The signed-in user's saved results for one canonical feature, one card per job (newest first). */

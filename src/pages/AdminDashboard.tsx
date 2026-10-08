@@ -618,7 +618,7 @@ export function AdminDashboard() {
               コンテンツ通報機能は未接続です
             </h3>
             <p className="text-neutral-500 dark:text-neutral-400">
-              旧画面にも通報一覧の実データ接続はありません。問い合わせはフィードバックタブで確認できます。
+              画像の通報を受け付ける仕組みはまだありません。社内からの報告は「フィードバック」タブで確認できます。
             </p>
           </motion.div>
         )}

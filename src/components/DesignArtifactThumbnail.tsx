@@ -8,6 +8,7 @@ import {
 import { getWorkspaceArtifactCanonicalStoragePath, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
+import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 
 type DesignArtifactThumbnailProps = {
   artifact: WorkspaceArtifact;
@@ -61,6 +62,9 @@ export function DesignArtifactThumbnail({ artifact, userId, brandId, href, onOpe
   }, [artifact.id, artifact.imageUrl, brandId, canonicalStoragePath, currentBrandId, currentUserId]);
 
   const imageUrl = visiblePreview?.status === 'ready' ? visiblePreview.url : null;
+  // Cards load the gateway's small preview first; the full image is the fallback if that variant fails.
+  const [fullSizeUrl, setFullSizeUrl] = useState<string | null>(null);
+  const cardImageUrl = imageUrl && fullSizeUrl !== imageUrl ? thumbnailImageUrl(imageUrl) ?? imageUrl : imageUrl;
   const canRetry = visiblePreview?.status === 'failed';
 
   return (
@@ -77,12 +81,15 @@ export function DesignArtifactThumbnail({ artifact, userId, brandId, href, onOpe
         {imageUrl ? (
           <img
             key={`${scopeKey}:${visiblePreview?.requestToken ?? 0}`}
-            src={imageUrl}
+            src={cardImageUrl ?? imageUrl}
             alt=""
             data-design-card-cover=""
             className="h-full w-full object-cover"
             loading="lazy"
-            onError={() => controllerRef.current?.onImageError(visiblePreview?.requestToken ?? -1)}
+            onError={() => {
+              if (cardImageUrl !== imageUrl) setFullSizeUrl(imageUrl);
+              else controllerRef.current?.onImageError(visiblePreview?.requestToken ?? -1);
+            }}
           />
         ) : visiblePreview?.status === 'loading' ? (
           <span className="sr-only">プレビューを読み込み中</span>

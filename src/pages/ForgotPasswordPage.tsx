@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { auth } from '../lib/auth';
 import { getAuthErrorMessage } from '../lib/authErrorMessage';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../stores/authStore';
 
 const MIN_PASSWORD_LENGTH = 6;
 const MAX_PASSWORD_LENGTH = 20;
@@ -12,7 +13,8 @@ const fieldClassName = 'h-10 w-full rounded-[8px] border border-[#3b4248] bg-tra
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const [account, setAccount] = useState('');
+  const signedInEmail = useAuthStore((state) => state.user?.email ?? '');
+  const [account, setAccount] = useState(signedInEmail);
   const [verificationCode, setVerificationCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');

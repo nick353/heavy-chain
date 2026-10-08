@@ -795,7 +795,7 @@ export function LightchainLibraryPage() {
           )}
           {selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(visibleArtifacts.map(getCardId)))}>全選択</button>}
 
-          {visibleArtifacts.length === 0 ? (!activeFolder ? <div className="mt-5 min-h-80" data-testid="library-empty-view" /> :
+          {visibleArtifacts.length === 0 ? (!activeFolder ? <div className="mt-5 flex min-h-80 items-center justify-center text-sm text-neutral-500" data-testid="library-empty-view">まだ画像がありません。生成した画像やアップロードした画像がここに表示されます。</div> :
             <div className="mt-10 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center">
               <Grid2X2 className="h-8 w-8 text-neutral-600" />
               <h2 className="mt-4 font-semibold">まだ素材がありません</h2>

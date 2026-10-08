@@ -494,10 +494,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!isInitialized || isLoading || authRecoveryRequired || (user && profile === null && !profileWaitExpired)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
+      <div className="min-h-screen flex items-center justify-center bg-surface-950">
         <div className="text-center">
           <div className="spinner mb-4" />
-          <p className="text-neutral-500 dark:text-neutral-400">
+          <p className="text-neutral-400">
             {authRecoveryRequired ? 'ログイン状態を確認できませんでした。再読み込みしてください。' : '読み込み中...'}
           </p>
         </div>
@@ -511,13 +511,13 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (profile === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
+      <div className="min-h-screen flex items-center justify-center bg-surface-950">
         <div className="text-center">
-          <p className="text-neutral-700 dark:text-neutral-200">プロフィールを確認できませんでした。</p>
+          <p className="text-neutral-200">プロフィールを確認できませんでした。</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="mt-4 rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+            className="mt-4 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-neutral-200"
           >
             再読み込み
           </button>
@@ -1391,7 +1391,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <BrandSettingsPage />
+                    <div className="dark"><BrandSettingsPage /></div>
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
