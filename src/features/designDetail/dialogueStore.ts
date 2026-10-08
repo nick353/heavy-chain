@@ -89,7 +89,7 @@ export function createDialogueStore(options: { idb: IDBFactory; dbName?: string;
       return access(scope, input.projectId, input.conversationId, 'readwrite', (value) => {
         const attempt = value.attempts.find((item) => item.input.requestId === input.requestId);
         if (!attempt || JSON.stringify(attempt.input) !== JSON.stringify(input) || receipt.requestId !== input.requestId
-          || receipt.provider !== 'workers-ai' || receipt.model !== '@cf/meta/llama-4-scout-17b-16e-instruct'
+          || (receipt.provider !== 'anthropic' && receipt.provider !== 'workers-ai') || typeof receipt.model !== 'string' || !receipt.model
           || !['running', 'completed', 'failed', 'unknown'].includes(receipt.state)
           || (receipt.state === 'completed' && (typeof receipt.content !== 'string' || !receipt.content.trim()))) throw new Error('design_assistant_receipt_unverified');
         if (attempt.assistant.state === 'completed' || attempt.assistant.state === 'failed') {

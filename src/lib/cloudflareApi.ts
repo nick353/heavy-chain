@@ -4,11 +4,19 @@ import type { WorkspaceExecutionStep } from './workspaceExecution';
 import { auth, refreshAuthSession } from './auth';
 import { CLOUDFLARE_IMAGE_ACTIONS, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
 import { COMPOSITE_PROVIDER_ACTIONS, runCompositeProviderAction } from './providerActionAdapters';
+import { readAIModelPreference, withAIModelPreference } from './aiModelPreference';
+
+  text: { provider: string; models: Array<{ id: string; label: string }>; default: string | null };
+};
 import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
 import { persistProtectedImageInput,listProtectedImageInputs,loadProtectedImageInput,deleteProtectedImageInput } from './cloudflareImageInputCache';
 import { attachHeavyGenerationPreflight, validateHeavyGenerationPreflight, type HeavyGenerationInput, type HeavyGenerationPreflight } from './heavyGenerationPreflight';
 import { WORKSPACE_UPLOAD_MAX_BYTES } from './workspaceUploadLimits';
 import type { DesignDialogueManifestReference } from './designDialogueReferences';
+
+export type CloudflareAIModels = {
+  success: true;
+  image: { provider: string; models: Array<{ id: string; label: string; generate: boolean; edit: boolean }>; defaults: { generate: string; edit: string } };
 
 export type CloudflareDesignAssistantRequestInput = {
   requestId: string;
@@ -26,8 +34,9 @@ export type CloudflareDesignAssistantReceipt = {
   content?: string;
   usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   errorCode?: string;
-  provider: 'workers-ai';
-  model: '@cf/meta/llama-4-scout-17b-16e-instruct';
+  /** Claude (anthropic) answers in production; Workers AI Llama is the API's fallback. */
+  provider: 'anthropic' | 'workers-ai';
+  model: string;
 };
 
 export interface CloudflareImageUsage {
@@ -709,7 +718,9 @@ class CloudflareDataPlaneClient {
     };
   }
 
-  async invokeProviderAction<T>(action: string, body: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void | Promise<void>; retainUntilAcknowledged?: boolean; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent } = {}): Promise<T> {
+  async invokeProviderAction<T>(action: string, requestBody: Record<string, unknown>, options: { idempotencyKey?: string; assertContext?: ()=>void | Promise<void>; retainUntilAcknowledged?: boolean; heavyPreparation?: HeavyGenerationPreflight; heavyConsent?: HeavyGenerationConsent } = {}): Promise<T> {
+    // The settings-screen model choice travels with every image and Claude text request.
+    const body = withAIModelPreference(action, requestBody);
     await options.assertContext?.();
     if (COMPOSITE_PROVIDER_ACTIONS.has(action)) {
       // Multi-image features: Claude plans prompts, existing durable image actions render them.
@@ -815,6 +826,11 @@ class CloudflareDataPlaneClient {
       beforeSubmit:(id,key)=>persistProtectedImageInput(scope,entry.prepared,id,key),
       onTerminal:(id,key)=>deleteProtectedImageInput(scope,id,key),
       finalize:receipt=>finalizeProtectedCloudflareEdit({prepared:entry.prepared,receipt,assertCurrent,call,save:input=>this.saveWorkspaceArtifact(input,call)})});
+  }
+
+  /** Image and text models whose provider key is registered on the API. */
+  async getAIModels(): Promise<CloudflareAIModels> {
+    return this.request('/v1/ai/models');
   }
 
   async getImageUsage(brandId: string): Promise<CloudflareImageUsage> {
@@ -1105,8 +1121,9 @@ class CloudflareDataPlaneClient {
   ): Promise<CloudflareDesignAssistantReceipt> {
     const { userId, call } = await this.captureRequestContext(context?.assertContext);
     if (context && context.userId !== userId) throw new Error('cloudflare_session_changed');
+    const textModel = readAIModelPreference().textModel;
     return await call('/v1/design-assistant/requests', {
-      method: 'POST', body: JSON.stringify(input), headers: { 'content-type': 'application/json' },
+      method: 'POST', body: JSON.stringify(textModel ? { ...input, textModel } : input), headers: { 'content-type': 'application/json' },
     }) as CloudflareDesignAssistantReceipt;
   }
 

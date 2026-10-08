@@ -1,8 +1,12 @@
 import { EmailMessage } from 'cloudflare:email';
 import { alertBody, mimeMessage, shouldAlert, windowBounds, type AlertCounts } from './alerts';
+import { backupDatabase } from './backup';
+
+export const BACKUP_CRON = '0 18 * * *'; // 03:00 JST
 
 interface Env {
   DB: D1Database;
+  BACKUPS: R2Bucket;
   ALERT_EMAIL: SendEmail;
   ALERT_FROM: string;
   ALERT_TO: string;
@@ -33,21 +37,31 @@ const send = async (env: Env, subject: string, text: string, now: Date) => {
 };
 
 export default {
-  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+  async scheduled(event: ScheduledController, env: Env): Promise<void> {
     const now = new Date();
+    if (event.cron === BACKUP_CRON) {
+      try {
+        await backupDatabase(env.DB, env.BACKUPS, now);
+      } catch (error) {
+        await send(env, '[Heavy Chain] データベースのバックアップに失敗しました',
+          `毎日のデータベースのバックアップ（${now.toISOString()}）が失敗しました。\n\n${String(error).slice(0, 500)}`, now);
+      }
+      return;
+    }
     const counts = await readCounts(env.DB, now);
     if (!shouldAlert(counts)) return;
     const { subject, text } = alertBody(counts, now);
     await send(env, subject, text, now);
   },
-  // POST /test with the secret token sends one test email with the current counts; nothing else is exposed.
+  // With the secret token: POST /test sends one test email, POST /backup runs the daily backup now. Nothing else is exposed.
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (request.method !== 'POST' || url.pathname !== '/test' || !env.ALERT_TEST_TOKEN
+    if (request.method !== 'POST' || !['/test', '/backup'].includes(url.pathname) || !env.ALERT_TEST_TOKEN
       || request.headers.get('authorization') !== `Bearer ${env.ALERT_TEST_TOKEN}`) {
       return new Response('Not found', { status: 404 });
     }
     const now = new Date();
+    if (url.pathname === '/backup') return Response.json({ backup: await backupDatabase(env.DB, env.BACKUPS, now) });
     const counts = await readCounts(env.DB, now);
     const { text } = alertBody(counts, now);
     await send(env, '[Heavy Chain] 失敗通知のテスト', `これは失敗通知のテストメールです。\n\n${text}`, now);

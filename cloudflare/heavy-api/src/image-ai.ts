@@ -5,7 +5,8 @@ import { IMAGE_MODEL, IMAGE_ACTIONS, ImageInputError, boundedImageJSON, decodeIm
   isRecord, modelMultipart, normalizedImageRequestDigest, parseImageInput, sha256, type AuthorizedSourceAsset,
   type ImageAction, type ImageInput, type Json } from './image-ai-contracts.ts';
 import { CLAUDE_TEXT_ACTIONS, ClaudeTextError, claudeConfigured, runClaudeTextAction, type ClaudeTextAction } from './claude-text.ts';
-import { MAX_OPENAI_IMAGE_TIMEOUT_MS, OpenAIImageError, OPENAI_IMAGE_BACKEND, OPENAI_IMAGE_PROVIDER, openAIExpectedDimensions, resolveOpenAIModel, runOpenAIImage } from './openai-image.ts';
+import { MAX_OPENAI_IMAGE_TIMEOUT_MS, OpenAIImageError, OPENAI_IMAGE_BACKEND, OPENAI_IMAGE_EDIT_MODELS, OPENAI_IMAGE_MODEL_LABELS, OPENAI_IMAGE_MODELS, OPENAI_IMAGE_PROVIDER, openAIExpectedDimensions, openAIModelForEndpoint, resolveOpenAIModel, runOpenAIImage } from './openai-image.ts';
+import { CLAUDE_TEXT_MODELS, defaultClaudeModel } from './claude-text.ts';
 import { prepareHeavyGeneration, recordHeavyRequestAttestation, recordHeavyTermsAcceptance, resolveHeavyEntitlement, resolveHeavyEntitlementStatus, resolveHeavyGenerationAccess,
   type HeavyEntitlementReason } from './heavy-entitlement.ts';
 
@@ -62,8 +63,12 @@ const providerConfig = (env: Env, action: ImageAction, body: Json): ProviderConf
   if (requested && requested !== provider) throw new ImageInputError('image_provider_not_enabled', 422);
   if (provider === OPENAI_IMAGE_PROVIDER) {
     try {
-      return { provider, backendProvider: OPENAI_IMAGE_BACKEND,
-        model: resolveOpenAIModel(env, effectiveAction, body.generationModel ?? body.providerModel) };
+      // An explicit generationModel must be supported; the settings-screen choice (preferredImageModel) falls back to the default.
+      const explicit = body.generationModel ?? body.providerModel;
+      const preferred = typeof body.preferredImageModel === 'string' ? body.preferredImageModel.trim() : '';
+      const model = explicit ? resolveOpenAIModel(env, effectiveAction, explicit)
+        : openAIModelForEndpoint(env, effectiveAction === 'edit-image', preferred || null);
+      return { provider, backendProvider: OPENAI_IMAGE_BACKEND, model };
     } catch (error) {
       if (error instanceof Error && error.message === 'openai_image_model_not_supported') {
         throw new ImageInputError('image_model_not_supported', 422);
@@ -363,7 +368,7 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
 async function runModel(env: Env, action: ImageAction, input: ImageInput, index: number, provider: ProviderConfig): Promise<unknown> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const inference = provider.provider === 'openai'
-    ? runOpenAIImage(env, action, input, index)
+    ? runOpenAIImage(env, action, input, index, fetch, provider.model)
     : env.AI!.run(IMAGE_MODEL,{ multipart: modelMultipart(input,input.candidates[index]) });
   // A timeout is UNKNOWN, never a safe retry. Workers AI binding has no abort
   // or provider job lookup in this contract. Losing the observer is not cancel.
@@ -698,6 +703,24 @@ export async function imageUsage(env: Env, brandId: string): Promise<Json> {
     dailyWorkerAdmissionLimit: quota.daily, dailyWorkerEstimatedNeuronLimit: quota.dailyNeuronCenti / 100, accountWideBudgetGuaranteed: false };
 }
 
+/** Models whose provider key is registered on this Worker; the settings screen lists only these. */
+export function availableAIModels(env: Env): Json {
+  const provider = configuredProvider(env);
+  const openAIReady = provider === 'openai' && Boolean(env.OPENAI_IMAGE_API_KEY?.trim() || env.OPENAI_API_KEY?.trim());
+  const imageModels = provider === 'workers_ai'
+    ? (env.AI ? [{ id: IMAGE_MODEL, label: 'FLUX.2 klein（Cloudflare）', generate: true, edit: true }] : [])
+    : openAIReady ? Object.entries(OPENAI_IMAGE_MODEL_LABELS).map(([id, label]) => ({
+      id, label, generate: OPENAI_IMAGE_MODELS.has(id), edit: OPENAI_IMAGE_EDIT_MODELS.has(id) })) : [];
+  const textReady = Boolean(env.ANTHROPIC_API_KEY?.trim());
+  return {
+    success: true,
+    image: { provider, models: imageModels,
+      defaults: provider === 'workers_ai' ? { generate: IMAGE_MODEL, edit: IMAGE_MODEL }
+        : { generate: openAIModelForEndpoint(env, false), edit: openAIModelForEndpoint(env, true) } },
+    text: { provider: 'anthropic', models: textReady ? CLAUDE_TEXT_MODELS : [], default: textReady ? defaultClaudeModel(env) : null },
+  };
+}
+
 export async function handleImageAIRead(request: Request, env: Env): Promise<Response | null> {
   const url = new URL(request.url); const match = url.pathname.match(/^\/v1\/image-ai\/requests\/([^/]+)$/);
   if (match && request.method === 'GET') {
@@ -705,6 +728,10 @@ export async function handleImageAIRead(request: Request, env: Env): Promise<Res
     if (!UUID.test(match[1])) return fail('image_request_not_found',404);
     const row = await read(env,match[1].toLowerCase());
     return row?.user_id === user ? receipt(request,env,row) : fail('image_request_not_found',404);
+  }
+  if (url.pathname === '/v1/ai/models' && request.method === 'GET') {
+    const user = await principal(request,env); if (user instanceof Response) return user;
+    return reply(availableAIModels(env));
   }
   if (url.pathname === '/v1/image-ai/usage' && request.method === 'GET') {
     const brand = url.searchParams.get('brand_id'); if (!brand) return fail('invalid_brand_id',400);

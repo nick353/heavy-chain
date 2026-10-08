@@ -7,7 +7,15 @@ export const CLAUDE_TEXT_ACTIONS = new Set(['optimize-prompt', 'chat-plan', 'ima
 export type ClaudeTextAction = 'optimize-prompt' | 'chat-plan' | 'image-plan';
 
 const DEFAULT_BASE_URL = 'https://api.anthropic.com';
-const DEFAULT_MODEL = 'claude-opus-5-5';
+const DEFAULT_MODEL = 'claude-sonnet-5-5';
+
+/** Claude models offered in the settings screen. Only these can be requested per call. */
+export const CLAUDE_TEXT_MODELS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5（最高品質）' },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5（標準）' },
+  { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5（高速・低コスト）' },
+];
+const CLAUDE_TEXT_MODEL_IDS = new Set(CLAUDE_TEXT_MODELS.map(model => model.id));
 const ANTHROPIC_VERSION = '2023-06-01';
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -25,9 +33,16 @@ export class ClaudeTextError extends Error {
 
 export const claudeConfigured = (env: Env) => !!env.ANTHROPIC_API_KEY?.trim();
 
-function claudeModel(env: Env): string {
+/** The server default (ANTHROPIC_TEXT_MODEL or Sonnet 5.5). */
+export function defaultClaudeModel(env: Env): string {
   const value = env.ANTHROPIC_TEXT_MODEL?.trim();
   return value && /^claude-[a-z0-9-]+$/.test(value) ? value : DEFAULT_MODEL;
+}
+
+/** A model chosen in the settings screen when it is on the list; otherwise the server default. */
+export function claudeModel(env: Env, requested?: unknown): string {
+  const value = typeof requested === 'string' ? requested.trim() : '';
+  return value && CLAUDE_TEXT_MODEL_IDS.has(value) ? value : defaultClaudeModel(env);
 }
 
 function claudeBaseURL(env: Env): string {
@@ -37,7 +52,7 @@ function claudeBaseURL(env: Env): string {
 /** One Messages API call constrained to a JSON schema; returns the parsed object. */
 export async function callClaudeJSON<T>(
   env: Env,
-  options: { system: string; user: string | Array<Record<string, unknown>>; schema: JsonSchema; maxTokens?: number },
+  options: { system: string; user: string | Array<Record<string, unknown>>; schema: JsonSchema; maxTokens?: number; model?: unknown },
   fetchImpl: Fetch = fetch,
 ): Promise<T> {
   const key = env.ANTHROPIC_API_KEY?.trim();
@@ -53,7 +68,7 @@ export async function callClaudeJSON<T>(
         'anthropic-beta': FALLBACK_BETA,
       },
       body: JSON.stringify({
-        model: claudeModel(env),
+        model: claudeModel(env, options.model),
         max_tokens: options.maxTokens ?? 8000,
         system: options.system,
         messages: [{ role: 'user', content: options.user }],
@@ -78,6 +93,48 @@ export async function callClaudeJSON<T>(
   if (!text) throw new ClaudeTextError('claude_empty_response', 502);
   try { return JSON.parse(text) as T; }
   catch { throw new ClaudeTextError('claude_invalid_json', 502); }
+}
+
+export type ClaudeMessage = { role: 'user' | 'assistant'; content: string | Array<Record<string, unknown>> };
+
+/** Free-text Messages API call (e.g. the design consultation chat). Roles are normalised to start with user and alternate. */
+export async function callClaudeMessages(
+  env: Env,
+  options: { system: string; messages: ClaudeMessage[]; maxTokens?: number; model?: unknown; timeoutMs?: number },
+  fetchImpl: Fetch = fetch,
+): Promise<{ text: string; usage: Record<string, number> | null; model: string }> {
+  const key = env.ANTHROPIC_API_KEY?.trim();
+  if (!key) throw new ClaudeTextError('claude_api_key_missing', 503);
+  const messages: ClaudeMessage[] = [];
+  for (const message of options.messages) {
+    if (!messages.length && message.role !== 'user') continue;
+    const last = messages[messages.length - 1];
+    if (last && last.role === message.role) {
+      const asBlocks = (c: ClaudeMessage['content']) => typeof c === 'string' ? [{ type: 'text', text: c }] : c;
+      last.content = [...asBlocks(last.content), ...asBlocks(message.content)];
+    } else messages.push({ ...message });
+  }
+  const model = claudeModel(env, options.model);
+  let response: Response;
+  try {
+    response = await fetchImpl(`${claudeBaseURL(env)}/v1/messages`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': ANTHROPIC_VERSION },
+      body: JSON.stringify({ model, max_tokens: options.maxTokens ?? 1536, system: options.system, messages }),
+      signal: AbortSignal.timeout(options.timeoutMs ?? REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    throw new ClaudeTextError('claude_request_failed', 502);
+  }
+  if (!response.ok) throw new ClaudeTextError(`claude_upstream_${response.status}`, response.status === 429 || response.status === 529 ? 429 : 502);
+  const data = await response.json() as { stop_reason?: string; content?: Array<{ type: string; text?: string }>; usage?: { input_tokens?: number; output_tokens?: number } };
+  if (data.stop_reason === 'refusal') throw new ClaudeTextError('claude_request_refused', 422);
+  const text = (data.content ?? []).filter(block => block.type === 'text' && block.text).map(block => block.text).join('');
+  if (!text.trim()) throw new ClaudeTextError('claude_empty_response', 502);
+  const input = data.usage?.input_tokens, output = data.usage?.output_tokens;
+  const usage = Number.isSafeInteger(input) && Number.isSafeInteger(output)
+    ? { prompt_tokens: input as number, completion_tokens: output as number, total_tokens: (input as number) + (output as number) } : null;
+  return { text, usage, model };
 }
 
 const requiredText = (value: unknown, code: string): string => {
@@ -124,6 +181,7 @@ export async function optimizePrompt(env: Env, body: Record<string, unknown>, fe
     system: OPTIMIZE_SYSTEM,
     user: `Target style: ${style}\nTarget platform: ${platform}\n\n<request>\n${prompt}\n</request>`,
     schema: OPTIMIZE_SCHEMA,
+    model: body.textModel,
   }, fetchImpl);
   return { success: true, original: prompt, ...result };
 }
@@ -166,6 +224,7 @@ export async function planChatEdit(env: Env, body: Record<string, unknown>, fetc
     system: CHAT_PLAN_SYSTEM,
     user: `Current image exists: ${hasCurrentImage ? 'yes' : 'no'}\n<history>\n${history}\n</history>\n<latest>\n${message}\n</latest>`,
     schema: CHAT_PLAN_SCHEMA,
+    model: body.textModel,
   }, fetchImpl);
   // Never send an edit without an image to edit.
   const mode = plan.mode === 'edit' && hasCurrentImage ? 'edit' : 'generate';
@@ -255,6 +314,7 @@ export async function planImages(env: Env, body: Record<string, unknown>, fetchI
     system: IMAGE_PLAN_SYSTEM,
     user: image ? [image, { type: 'text', text: `The image above is the user's garment/reference.\n${details}` }] : details,
     schema: IMAGE_PLAN_SCHEMA,
+    model: body.textModel,
   }, fetchImpl);
   const planned = (Array.isArray(result.items) ? result.items : []).filter(item => item && typeof item.prompt === 'string' && item.prompt.trim()).slice(0, count);
   if (!planned.length) throw new ClaudeTextError('plan_empty', 502);
