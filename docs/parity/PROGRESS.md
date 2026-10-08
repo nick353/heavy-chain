@@ -367,3 +367,8 @@ Each iteration: read this file → advance the next open item → append result 
 - #40 Zeabur → heavychain.app: page requests get a 302 with the same path and query; `/_health` and `/api/*` are untouched; set `CANONICAL_ORIGIN` to an empty value to undo. Production: `heavy-chain.zeabur.app/tools/printing?x=1` → 302 `https://heavychain.app/tools/printing?x=1`; `/_health` 200.
 - #41 removed GalleryPage / HistoryPage / JobsPage and gallerySourceResolution (approved by the user), with their tests. My merge loop treated a failed check as finished and merged #41 while CI was red (an npm script still pointed at a deleted test); #42 fixed it within minutes. main Tests and the heavychain.app deploy are green on cb0191e. Merges now go ahead only when the check reports `pass`.
 - Not done (not allowed for me): delete / 全削除 in the 生成履歴 panel (permanent deletion); Light #8 needs a file picked in Light's native chooser.
+
+### Iteration 52 (2026-10-08) — Workers deploy from main; Light #8 closed
+- API drift check: the running heavy-chain-api version 903ee6cf was deployed from #18, and main has no heavy-api changes since then, so deployed = main.
+- nick353/heavy-chain#44 workflow `Deploy Workers`: on main pushes that touch their code, heavy-chain-api is tested (159/159) and deployed, and heavy-chain-alerts is deployed. The manual run deployed API 07786e01 and alerts 988a43eb. CORS preflight from heavychain.app returned 204, and the heavychain.app 生成履歴 panel loads after the deploy.
+- Light #8 (strength labels on Light /printing) is closed at the user's request: Light accepts files only through a native file chooser, and the comparison is not required.
