@@ -8,8 +8,6 @@ const read = (relativePath: string) => fs.readFile(new URL(relativePath, root), 
 const listReaders = [
   'src/pages/LightchainLibraryPage.tsx',
   'src/pages/LightchainWorkbenchPage.tsx',
-  'src/pages/FittingPage.tsx',
-  'src/pages/DashboardPage.tsx',
   'src/lib/workspaceActivity.ts',
 ];
 const gallerySelectorReader = 'src/components/GallerySelector.tsx';

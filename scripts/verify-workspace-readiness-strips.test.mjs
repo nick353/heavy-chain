@@ -6,7 +6,6 @@ const pagePaths = [
   '../src/pages/FashionStudioPage.tsx',
   '../src/pages/VideoWorkstationPage.tsx',
   '../src/pages/LabPage.tsx',
-  '../src/pages/PatternWorkspacePage.tsx',
 ];
 
 test('Lightchain parity workspaces expose the same staged readiness entry', async () => {

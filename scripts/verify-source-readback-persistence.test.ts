@@ -65,17 +65,14 @@ test('Changed Canvas bytes produce a revision mismatch and size drift fails clos
 });
 
 test('Canvas and generation pages carry source metadata into the Cloudflare request boundary', async () => {
-  const [canvasPage, generatePage, imageAI, imageContracts] = await Promise.all([
+  const [canvasPage, imageAI, imageContracts] = await Promise.all([
     readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/lib/cloudflareImageAI.ts', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/heavy-api/src/image-ai-contracts.ts', import.meta.url), 'utf8'),
   ]);
 
   assert.match(canvasPage, /const sourceReadback = image\.sourceReadback/);
   assert.match(canvasPage, /\.\.\.\(sourceReadback \? \{ sourceReadback \} : \{\}\)/);
-  assert.match(generatePage, /sourceReadback,/);
-  assert.match(generatePage, /generationIntent/);
   assert.match(imageAI, /canonicalCloudflareImageBody/);
   assert.match(imageAI, /sourceReadback/);
   assert.match(imageContracts, /sourceReadback/);
@@ -84,24 +81,12 @@ test('Canvas and generation pages carry source metadata into the Cloudflare requ
   assert.doesNotMatch(imageContracts, /supabase|\/functions\/v1/i);
 });
 
-test('Fitting-to-generation handoff preserves canonical Cloudflare media identity', async () => {
-  const [handoff, fitting, generate] = await Promise.all([
-    readFile(new URL('../src/lib/workspaceHandoff.ts', import.meta.url), 'utf8'),
-    readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8'),
-  ]);
+test('generation handoff preserves canonical Cloudflare media identity', async () => {
+  const handoff = await readFile(new URL('../src/lib/workspaceHandoff.ts', import.meta.url), 'utf8');
 
   assert.match(handoff, /sourceImageId\?: string/);
   assert.match(handoff, /sourceStoragePath\?: string/);
   assert.match(handoff, /params\.set\('sourceImageId', sourceImageId\)/);
   assert.match(handoff, /params\.set\('sourceStoragePath', sourceStoragePath\)/);
   assert.match(handoff, /params\.get\('sourceStoragePath'\)/);
-  assert.match(fitting, /const fittingGenerationHref = useMemo\(\(\) => buildGenerationIntentHref/);
-  assert.match(fitting, /sourceImageId: materialReference\.sourceImageId/);
-  assert.match(fitting, /sourceStoragePath: materialReference\.sourceStoragePath/);
-  assert.match(fitting, /to=\{fittingGenerationHref\}/);
-  assert.doesNotMatch(fitting, /storage:\$\{storagePath\}/);
-  assert.match(generate, /resolveGeneratedImageUrl\(sourceReadback\.sourceStoragePath/);
-  assert.match(generate, /galleryImageId: sourceReadback\.sourceImageId/);
-  assert.match(generate, /sourceStoragePath: sourceReadback\.sourceStoragePath/);
 });

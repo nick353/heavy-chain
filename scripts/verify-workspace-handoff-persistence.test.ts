@@ -22,7 +22,6 @@ test('Workspace-to-Canvas callers surface persistence failures without navigatin
     '../src/pages/LabPage.tsx',
     '../src/pages/FashionStudioPage.tsx',
     '../src/pages/VideoWorkstationPage.tsx',
-    '../src/pages/PatternWorkspacePage.tsx',
     '../src/pages/ModelLibraryPage.tsx',
   ];
   const sources = await Promise.all(pagePaths.map((path) => readFile(new URL(path, import.meta.url), 'utf8')));

@@ -107,13 +107,7 @@ test('general Heavy workbenches can use an existing Gallery asset before upload'
 });
 
 test('AI fitting restricts the bundled platform picker to garment inputs', () => {
-  const fitting = fs.readFileSync('src/pages/FittingPage.tsx', 'utf8');
   const materialWorkbench = fs.readFileSync('src/components/workspace/MaterialWorkbench.tsx', 'utf8');
-  assert.match(fitting, /<MaterialWorkbench[\s\S]*?platformAssetRole="garment"/);
-  assert.match(fitting, /title="Gallery素材を選択"[\s\S]*?platformAssetRole="garment"/);
-  assert.doesNotMatch(fitting, /data-testid="heavy-native-fallback-banner"/);
-  assert.doesNotMatch(fitting, /Heavy Chainの自前生成ロジック/);
-  assert.doesNotMatch(fitting, /Lightchainの「権限がありません」/);
   assert.match(materialWorkbench, /platformAssetRole\?: 'garment' \| 'textile' \| 'artwork'/);
   assert.match(materialWorkbench, /platformAssetRole=\{platformAssetRole\}/);
 });
@@ -275,16 +269,13 @@ test('current /model route uses the provider-capable AI fitting workbench', () =
 
 test('Heavy generation entrypoints expose Heavy branding while retaining Lightchain compatibility routes', () => {
   const layout = fs.readFileSync('src/components/layout/Layout.tsx', 'utf8');
-  const generate = fs.readFileSync('src/pages/GeneratePage.tsx', 'utf8');
   const parityPages = fs.readFileSync('src/pages/LightchainParityPages.tsx', 'utf8');
   const unifiedCatalog = fs.readFileSync('src/lib/lightchainUnifiedFeatureCatalog.ts', 'utf8');
   const parityCatalog = fs.readFileSync('src/lib/lightchainParityCatalog.ts', 'utf8');
   const gallery = fs.readFileSync('src/components/GallerySelector.tsx', 'utf8');
   const printingComposer = fs.readFileSync('src/components/lightchain/PrintingImageComposer.tsx', 'utf8');
-
   assert.match(layout, /concat\(\['\/generate', '\/editor\/changeColor'\]\)/);
-  assert.doesNotMatch(generate, /HEAVY CHAIN \/ ENTRY/);
-  assert.match(generate, /Heavy Chain usage/);
+
   assert.doesNotMatch(parityPages, /Heavy Chainで続ける/);
   assert.doesNotMatch(parityPages, /Heavy Chainでは/);
   assert.doesNotMatch(unifiedCatalog, /title: 'Heavy Chain Lab'/);
@@ -296,7 +287,6 @@ test('Heavy generation entrypoints expose Heavy branding while retaining Lightch
 test('Lightchain parity pages use Heavy identity without changing their source geometry', () => {
   const parityPages = [
     'src/pages/FashionStudioPage.tsx',
-    'src/pages/PatternWorkspacePage.tsx',
     'src/pages/ModelLibraryPage.tsx',
     'src/pages/LabPage.tsx',
   ].map((path) => fs.readFileSync(path, 'utf8')).join('\n');

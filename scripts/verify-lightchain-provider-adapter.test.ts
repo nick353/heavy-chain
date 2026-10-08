@@ -195,8 +195,6 @@ test('keeps the multi-image contract and Cloudflare provider provenance across c
 
 test('binds the live material routes to provider generation and durable result actions', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
-  const marketingPage = readFileSync(new URL('../src/pages/MarketingWorkspacePage.tsx', import.meta.url), 'utf8');
-  const generatePage = readFileSync(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8');
   const localArtifacts = readFileSync(new URL('../src/lib/localWorkspaceArtifacts.ts', import.meta.url), 'utf8');
   const materialPage = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
   const imageDownload = readFileSync(new URL('../src/lib/imageDownload.ts', import.meta.url), 'utf8');
@@ -213,15 +211,8 @@ test('binds the live material routes to provider generation and durable result a
   const canvasPage = readFileSync(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
   assert.match(canvasPage, /downloadValidatedImage/);
   assert.doesNotMatch(canvasPage, /const response = await fetch\(imageSrc\)/);
-  assert.match(generatePage, /downloadValidatedImage/);
-  assert.doesNotMatch(generatePage, /const response = await fetch\(imageUrl\)/);
-  assert.match(generatePage, /downloadResults\.filter\(Boolean\)\.length/);
   assert.match(workbench, /sourceJobId: lightchainResult\?\.jobId \?\? undefined/);
   assert.match(workbench, /!artifact\.remote && !artifact\.localPersisted/);
-  assert.match(marketingPage, /!result\.remote && !result\.localPersisted/);
-  assert.match(generatePage, /saveWorkspaceArtifactPersisted/);
-  assert.match(generatePage, /!persisted\.ok/);
-  assert.match(generatePage, /workspace_artifact_persistence_unverified/);
   assert.match(localArtifacts, /findWorkspaceArtifactPersisted\(artifact\.brandId, artifact\.id/);
   assert.match(localArtifacts, /localPersisted/);
   assert.match(materialPage, /editImageWithPrompt/);

@@ -58,10 +58,7 @@ test('first complete apparel flows use the unified workspace shell', () => {
   assert.match(catalog, /duplicateRoute/);
   assert.match(catalog, /params\.set\('lcFeature', feature\.id\)/);
   assert.doesNotMatch(navigation, /path: '\/video'/);
-  const fitting = fs.readFileSync('src/pages/FittingPage.tsx', 'utf8');
   const material = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
-  const generate = fs.readFileSync('src/pages/GeneratePage.tsx', 'utf8');
-  const pattern = fs.readFileSync('src/pages/PatternWorkspacePage.tsx', 'utf8');
   const parityPages = fs.readFileSync('src/pages/LightchainParityPages.tsx', 'utf8');
   const workbench = fs.readFileSync('src/pages/LightchainWorkbenchPage.tsx', 'utf8');
   assert.match(workbench, /data-testid="lightchain-source-toolbar"/);
@@ -79,34 +76,11 @@ test('first complete apparel flows use the unified workspace shell', () => {
   assert.match(material, /label: 'グラフィックツール'/);
   assert.doesNotMatch(material, /<LightchainMaterialSourceRail/);
   const auxiliaryPages = [
-    'src/pages/MarketingWorkspacePage.tsx',
     'src/pages/FashionStudioPage.tsx',
     'src/pages/ModelLibraryPage.tsx',
-    'src/pages/PatternWorkspacePage.tsx',
     'src/pages/LabPage.tsx',
   ].map((path) => fs.readFileSync(path, 'utf8'));
-  assert.match(fitting, /data-flow-state={fittingFlowState}/);
-  assert.match(fitting, /data-lightchain-parity-shell="ai-fitting"/);
-  assert.match(fitting, /UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION/);
-  assert.match(fitting, /data-workflow-feature="ai-fitting"/);
-  assert.match(fitting, /data-workflow-result-destinations=/);
-  assert.match(fitting, /data-workflow-rights-gate=/);
   assert.match(material, /data-flow-state={materialFlowState}/);
-  assert.match(generate, /useUnifiedWorkspaceFlow/);
-  assert.match(generate, /deriveUnifiedWorkspaceFlowState/);
-  assert.match(generate, /setFlowState\(unifiedFlowState\)/);
-  assert.match(generate, /data-testid="heavy-generate-workspace"/);
-  assert.match(generate, /data-lightchain-parity-shell="generate"/);
-  assert.match(generate, /data-flow-state-label=\{unifiedWorkspaceFlowLabels\[unifiedFlowState\]\}/);
-  assert.match(generate, /UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION/);
-  assert.match(generate, /feature\.route === currentPath/);
-  assert.match(generate, /data-workflow-feature=\{generateWorkflowContract\?\.rowId \?\? ''\}/);
-  assert.match(generate, /data-workflow-result-destinations=\{generateWorkflowContract\?\.resultDestinations\.join\(','\) \?\? ''\}/);
-  assert.match(generate, /data-workflow-rights-gate=\{generateWorkflowContract\?\.rightsGate \?\? ''\}/);
-  assert.match(pattern, /getLightchainUnifiedFeatureWorkflowContract/);
-  assert.match(pattern, /data-lightchain-parity-shell="pattern-workspace"/);
-  assert.match(pattern, /data-workflow-result-destinations=\{patternWorkflowContract\?\.resultDestinations\.join\(','\) \?\? ''\}/);
-  assert.match(pattern, /print-design-detail/);
   assert.match(parityPages, /getLightchainUnifiedFeatureWorkflowContract/);
   assert.match(parityPages, /workflowFeature="design-agent"/);
   assert.match(parityPages, /workflowFeature="ai-fitting"/);

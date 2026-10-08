@@ -6,7 +6,6 @@ const workspacePages = [
   '../src/pages/FashionStudioPage.tsx',
   '../src/pages/ModelLibraryPage.tsx',
   '../src/pages/VideoWorkstationPage.tsx',
-  '../src/pages/PatternWorkspacePage.tsx',
   '../src/pages/LabPage.tsx',
 ] as const;
 

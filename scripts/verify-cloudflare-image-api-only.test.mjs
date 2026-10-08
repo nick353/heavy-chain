@@ -59,7 +59,7 @@ test('missing Cloudflare config fails without legacy or image-input network acce
   }
   assert.equal(requests, 0);
   await assert.rejects(canvas.getCanvasDocument('doc', 'brand'), /cloudflare_api_not_configured/);
-  for (const file of ['src/lib/imageApi.ts', 'src/lib/canvasDocumentPersistence.ts', 'src/pages/CanvasEditorPage.tsx', 'src/pages/GeneratePage.tsx']) {
+  for (const file of ['src/lib/imageApi.ts', 'src/lib/canvasDocumentPersistence.ts', 'src/pages/CanvasEditorPage.tsx']) {
     const source = readFileSync(new URL('../' + file, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /supabase|VITE_SUPABASE|functions\/v1/);
   }

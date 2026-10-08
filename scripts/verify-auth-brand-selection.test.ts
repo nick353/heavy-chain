@@ -100,41 +100,6 @@ test('only a confirmed current-user brand can cross the access fence', () => {
   );
 });
 
-test('Fitting model-matrix generation fences provider and result commits', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /type AuthBrandFenceSnapshot/);
-  assert.match(source, /const state = useAuthStore\.getState\(\);[\s\S]*captureAuthBrandFence\(state\.brandState, state\.user\?\.id \?\? null, state\.currentBrand\?\.id \?\? null\)/);
-
-  const runStart = source.indexOf('const runGeneration = async');
-  const runEnd = source.indexOf('const handleGenerate = async', runStart);
-  assert.ok(runStart >= 0 && runEnd > runStart);
-  const runSource = source.slice(runStart, runEnd);
-
-  const capture = runSource.indexOf('const authBrandFence = captureCurrentAuthBrandFence(');
-  const beforeProvider = runSource.indexOf("assertCurrentAuthBrandFence(authBrandFence, 'before_provider')");
-  const provider = runSource.indexOf('generateModelMatrix(');
-  const afterProvider = runSource.indexOf("assertCurrentAuthBrandFence(authBrandFence, 'after_provider')");
-  const setGeneratingFalse = runSource.indexOf('setIsGenerating(false)', afterProvider);
-  const resultValidation = runSource.indexOf('assertCompletedModelMatrixResult(response', afterProvider);
-  const beforePersistence = runSource.indexOf("assertCurrentAuthBrandFence(authBrandFence, 'before_persistence')");
-  const persistence = runSource.indexOf('saveWorkspaceArtifactPersisted({');
-  const beforeUiCommit = runSource.indexOf("assertCurrentAuthBrandFence(authBrandFence, 'before_ui_commit')");
-  const resultCommit = runSource.indexOf('setResultMatrix(matrix)');
-
-  assert.ok(capture >= 0);
-  assert.ok(capture < beforeProvider && beforeProvider < provider);
-  assert.ok(provider < afterProvider);
-  assert.ok(afterProvider < setGeneratingFalse);
-  assert.ok(afterProvider < resultValidation);
-  assert.ok(beforePersistence < persistence);
-  assert.ok(beforeUiCommit < resultCommit);
-  assert.equal(runSource.slice(0, beforeUiCommit).includes('setResultMatrix(matrix)'), false);
-  assert.match(runSource, /const generationBrandId = authBrandFence\.brandId/);
-  assert.match(runSource, /generateModelMatrix\(request\.productDescription, generationBrandId,/);
-  assert.match(runSource, /brandId: generationBrandId/);
-  assert.doesNotMatch(runSource, /generateModelMatrix\(request\.productDescription, currentBrand\.id,/);
-});
-
 test('LightchainWorkbench provider paths bind provider and persistence to the captured brand fence', async () => {
   const source = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const printingStart = source.indexOf('const handlePrintingImageGenerate = async');
@@ -157,15 +122,13 @@ test('LightchainWorkbench provider paths bind provider and persistence to the ca
 });
 
 test('UI entrypoints use authStore authority instead of direct brand reads', async () => {
-  const [dashboard, switcher, workbench] = await Promise.all([
-    readFile(new URL('../src/pages/DashboardPage.tsx', import.meta.url), 'utf8'),
+  const [switcher, workbench] = await Promise.all([
     readFile(new URL('../src/components/BrandSwitcher.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8'),
   ]);
-  for (const source of [dashboard, switcher, workbench]) {
+  for (const source of [switcher, workbench]) {
     assert.doesNotMatch(source, /fetchAccessibleBrandsForCurrentUser/);
   }
-  assert.match(dashboard, /refreshCurrentBrand\(\)/);
   assert.match(switcher, /refreshCurrentBrand\(\)/);
   assert.match(workbench, /useAuthStore\.getState\(\)\.refreshCurrentBrand\(\)/);
 });
@@ -183,13 +146,6 @@ test('sign-out revokes brand authority before awaiting the auth provider', async
   assert.ok(signOutStart >= 0 && signOutEnd > signOutStart);
   const signOutSource = source.slice(signOutStart, signOutEnd);
   assert.ok(signOutSource.indexOf('clearBrandAuthority(null)') < signOutSource.indexOf('auth.signOut()'));
-});
-
-test('brand creation confirms and selects the created ID from the refreshed allowlist', async () => {
-  const source = await readFile(new URL('../src/pages/DashboardPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /const createdBrand = await cloudflareDataPlane\.createBrand\(/);
-  assert.match(source, /state\.accessibleBrands\.find\(\(brand\) => brand\.id === createdBrand\.id\)/);
-  assert.match(source, /setCurrentBrand\(confirmedCreatedBrand\)/);
 });
 
 test('brand refresh preserves only a previously confirmed selection', async () => {

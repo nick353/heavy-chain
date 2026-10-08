@@ -215,21 +215,7 @@ test('fitting draft restores a small durable cutout when its source and extracti
   assert.equal(result?.materialReference.extractedImageUrl, 'data:image/png;base64,cutout');
 });
 
-test('Fitting exposes explicit resume readback states', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /sourceImageId: imageId/);
-  assert.match(source, /sourceStoragePath: storagePath \?\? null/);
-  assert.match(source, /data-testid="fitting-resume-input-restored"/);
-  assert.match(source, /data-testid="fitting-resume-input-unavailable"/);
-  assert.match(source, /remote URLは再利用せず/);
-});
 
-test('Fitting save confirmation does not overwrite a cutout persistence failure', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /fittingDraftPersistenceErrorRef/);
-  assert.match(source, /!fittingDraftPersistenceErrorRef\.current/);
-  assert.match(source, /fittingDraftPersistenceErrorRef\.current = true/);
-});
 
 test('Fitting persistence identity ignores Gallery re-sign URL changes but detects new source/cutout', () => {
   const firstRead = getFittingMaterialIdentity({
@@ -258,11 +244,3 @@ test('Fitting persistence identity ignores Gallery re-sign URL changes but detec
   assert.notEqual(firstRead, localUpload);
 });
 
-test('Fitting source-change and cutout-change reset handling is explicit', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-  assert.match(source, /getFittingMaterialIdentity\(materialReference\)/);
-  assert.match(source, /const cutoutChanged =/);
-  assert.match(source, /if \(sourceChanged \|\| cutoutChanged\) resetFittingDraftPersistenceState\(\);/);
-  assert.match(source, /onChange=\{handleMaterialReferenceChange\}/);
-  assert.doesNotMatch(source, /\}, \[\s*currentBrand\?\.id,\s*materialReference\.imageUrl/);
-});
