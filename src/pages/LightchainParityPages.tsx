@@ -43,6 +43,7 @@ import {
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../components/DesignArtifactThumbnail';
+import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 import { formatProjectAge, ProjectThumbnail, useFeatureProjects } from './PatternProjectDashboardPage';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { generateImage } from '../lib/imageApi';
@@ -1214,7 +1215,7 @@ export function LightchainMarketingHomePage() {
               const cover = entry.coverPath ? covers[entry.coverPath] : undefined;
               return <article key={entry.projectId} className="group relative h-60 w-[220px] overflow-hidden rounded-2xl bg-[#202527] text-left hover:bg-[#283033]" data-testid="marketing-project-card" data-project-id={entry.projectId}>
                 <Link to={entry.href} aria-label={`${entry.title}を開く`} className="absolute inset-0 flex flex-col">
-                  <span className="flex h-[176px] items-center justify-center overflow-hidden bg-white/[0.04]">{cover ? <img src={cover} alt="" className="h-full w-full object-cover" loading="lazy" /> : <img src="/lightchain-assets/static/project_default_cover.png" alt="" className="h-12 w-12 object-contain" loading="lazy" />}</span>
+                  <span className="flex h-[176px] items-center justify-center overflow-hidden bg-white/[0.04]">{cover ? <img src={thumbnailImageUrl(cover) ?? cover} alt="" className="h-full w-full object-cover" loading="lazy" onError={(event) => { if (event.currentTarget.src !== cover) event.currentTarget.src = cover; }} /> : <img src="/lightchain-assets/static/project_default_cover.png" alt="" className="h-12 w-12 object-contain" loading="lazy" />}</span>
                   <span className="block px-3 py-2"><span className="block truncate text-base">{pinnedIds.has(entry.projectId) ? '📌 ' : ''}{entry.title}</span><span className="mt-1 block truncate text-xs text-neutral-500">{formatArtifactDate(entry.updatedAt)}</span></span>
                 </Link>
                 {renaming?.projectId === entry.projectId && <input autoFocus aria-label="プロジェクト名" value={renaming.value} maxLength={160} onChange={(event) => setRenaming({ projectId: entry.projectId, value: event.target.value })}

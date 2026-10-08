@@ -5445,7 +5445,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                   aria-label={fittingAspectRatio}
                   aria-expanded={fittingControlOpen === 'aspect'}
                   onClick={() => setFittingControlOpen((current) => current === 'aspect' ? null : 'aspect')}
-                  className="flex h-10 w-full items-center justify-between rounded-lg bg-[#24292c] px-3 text-sm font-semibold text-neutral-200"
+                  className="flex h-10 w-full items-center justify-between rounded-lg bg-[#24292c] gap-1 whitespace-nowrap px-2 text-sm font-semibold text-neutral-200"
                 >
                   <span role="img" aria-label="" className="flex h-[18px] w-[18px] shrink-0 items-center justify-center"><ImageIcon aria-hidden="true" className="h-[18px] w-[18px]" /></span>
                   {fittingAspectRatio}
@@ -6154,7 +6154,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                       <button
                         type="button"
                         aria-expanded={agentTaskTypeOpen}
-                        className="absolute left-1 top-1 z-20 flex h-6 w-[100px] items-center gap-0.5 rounded-md bg-[#244440] pr-1 pl-2 text-base font-normal leading-5 text-[#7ee1d4]"
+                        className="absolute left-1 top-1 z-20 flex h-6 min-w-[100px] items-center gap-0.5 whitespace-nowrap rounded-md bg-[#244440] pr-1 pl-2 text-base font-normal leading-5 text-[#7ee1d4]"
                         onClick={() => setAgentTaskTypeOpen((open) => !open)}
                       >
                         {agentTaskTypeLabel} <ChevronDown aria-hidden="true" className="h-3 w-3" />
@@ -8330,7 +8330,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     </div>
                     <div className="shrink-0 grid gap-2 border-t border-white/10 bg-[#141717] p-2 sm:grid-cols-[1fr_1fr_2fr]">
                       {['スマート', '1K'].map((control) => (
-                        <span key={control} className="rounded-lg bg-[#252b2e] px-3 py-3 text-sm font-semibold text-neutral-200">
+                        <span key={control} className="whitespace-nowrap rounded-lg bg-[#252b2e] px-3 py-3 text-sm font-semibold text-neutral-200">
                           {control}
                         </span>
                       ))}
