@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const source = fs.readFileSync(new URL('./verify-unified-desktop-layout.mjs', import.meta.url), 'utf8');
 
-test('current catalogs resolve to the approved 31-feature, 75-target, 300-cell plan', () => {
+test('current catalogs resolve to the approved 31-feature, 72-target, 288-cell plan', () => {
   const featureSource = fs.readFileSync(new URL('../src/features/lightchain/parityContract.ts', import.meta.url), 'utf8');
   const featureBlock = featureSource.match(/GOAL_CANDIDATE_ROW_IDS\s*=\s*Object\.freeze\(\[([\s\S]+?)\]\s*as const\)/);
   assert.ok(featureBlock);
@@ -25,15 +25,15 @@ test('current catalogs resolve to the approved 31-feature, 75-target, 300-cell p
   }
   assert.equal(featureIds.length, 31);
   assert.equal(new Set(featureIds).size, 31);
-  assert.equal(targets.size, 75);
-  assert.equal(targets.size * 4, 300);
+  assert.equal(targets.size, 72);
+  assert.equal(targets.size * 4, 288);
 });
 
 test('unified desktop verifier keeps the approved fixed plan and budgets', () => {
   assert.match(source, /EXPECTED_FEATURE_COUNT\s*=\s*31/);
-  assert.match(source, /EXPECTED_TARGET_COUNT\s*=\s*75/);
+  assert.match(source, /EXPECTED_TARGET_COUNT\s*=\s*72/);
   assert.match(source, /EXPECTED_VIEWPORT_COUNT\s*=\s*4/);
-  assert.match(source, /EXPECTED_CHECK_COUNT\s*=\s*300/);
+  assert.match(source, /EXPECTED_CHECK_COUNT\s*=\s*288/);
   assert.match(source, /COMPATIBILITY_CHECK_COUNT\s*=\s*4/);
   assert.match(source, /TOTAL_CHECK_COUNT\s*=\s*248/);
   assert.match(source, /GLOBAL_BUDGET_MS\s*=\s*parseBudget\(process\.env\.UNIFIED_LAYOUT_GLOBAL_BUDGET_MS,\s*300_000\)/);
