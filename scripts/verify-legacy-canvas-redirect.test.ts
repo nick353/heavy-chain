@@ -25,3 +25,11 @@ test('App routes /canvas links to the detail and keeps the full editor under /ed
   assert.doesNotMatch(editor, /navigate\(`\/canvas\/\$\{\w+(?:\.id)?\}`/);
   assert.match(editor, /\/designProduction\/detail\?projectId=/);
 });
+
+test('reopening the same handoff link does not attach the image twice', () => {
+  const detail = fs.readFileSync('src/features/designDetail/DesignEntryDetailPage.tsx', 'utf8');
+  assert.match(detail, /designAttachmentName\(\{ galleryImageId: attachImageId, artifactId: attachArtifactId \}\)/);
+  assert.match(detail, /pendingReferences\.current\.some\(/);
+  const handoff = fs.readFileSync('src/features/designDetail/canvasHandoff.ts', 'utf8');
+  assert.match(handoff, /fileFromSource\(`generated-images\/\$\{options\.galleryImageId\}`, designAttachmentName\(options\)\)/);
+});
