@@ -23,6 +23,9 @@ import {
 } from './designEntryCoordinator';
 import { useDialogueReferences } from './useDialogueReferences';
 import { DESIGN_ATTACH_ARTIFACT_PARAM, DESIGN_ATTACH_GALLERY_PARAM, designAttachmentName, resolveDesignAttachment } from './canvasHandoff';
+import { canvasImageReference, openImageProject } from './imageProject';
+import { DESIGN_SHAPES, DesignCanvasShape, createDesignCanvasObject, type DesignCanvasObject, type DesignShapeKind } from './designCanvasObjects';
+import { DESIGN_OPEN_IMAGE_PARAM } from '../../lib/legacyCanvasRoute';
 import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
@@ -70,6 +73,9 @@ const ASSISTANT_PRESETS: Record<DialogueWorkspaceId, readonly string[]> = {
   ],
 };
 
+// Light's scenes for a project that already has a canvas.
+const CANVAS_SCENES = ['生地パターン適用', '線画から実写化', 'デザインミックス', 'プリント修正'] as const;
+
 const IMAGE_ACCEPT = '.png,.jpg,.jpeg,.avif,.webp';
 const FIT_PADDING = 80;
 
@@ -91,6 +97,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const isDocumentOnly = Boolean(projectId) && !conversationId;
   const attachImageId = params.get(DESIGN_ATTACH_GALLERY_PARAM);
   const attachArtifactId = params.get(DESIGN_ATTACH_ARTIFACT_PARAM);
+  const openImageId = params.get(DESIGN_OPEN_IMAGE_PARAM);
   const identity = JSON.stringify([userId, brandId, projectId, conversationId]);
   const brandReady = Boolean(userId && brandId && (!isHeavyWorkspaceRuntime() || isHeavyWorkspaceBrandName(currentBrand?.name)));
   const generation = useRef(0);
@@ -178,6 +185,17 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     });
     return () => { if (generation.current === epoch) generation.current++; };
   }, [activeDialogueClient, brandId, brandReady, client, conversationId, identity, isDocumentOnly, isNewFile, navigate, projectId, retry, stores, userId, workspace.detailPath]);
+  // A saved image opens as its own Canvas project with the image placed on it, like Light's project cards.
+  const openedImage = useRef('');
+  useEffect(() => {
+    const key = JSON.stringify([userId, brandId, openImageId]);
+    if (!brandReady || !openImageId || openedImage.current === key) return;
+    openedImage.current = key;
+    const assertContext = () => { const auth = useAuthStore.getState(); if (auth.user?.id !== userId || auth.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); };
+    void openImageProject({ scope: { userId, brandId }, imageId: openImageId, assertContext, client, measure: designCanvasClient.measureImage })
+      .then((document) => navigate(`${workspace.detailPath}?${new URLSearchParams({ projectId: document.id })}`, { replace: true }))
+      .catch(() => setEntryError('画像のプロジェクトを開けませんでした。もう一度お試しください'));
+  }, [brandId, brandReady, client, navigate, openImageId, userId, workspace.detailPath]);
   // Images handed over from 「キャンバスで編集」 become the first send's references.
   const addReferenceFiles = references.addFiles;
   const pendingReferences = useRef(references.references);
@@ -236,10 +254,75 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   }
   const imageObjects = useMemo(() => visible?.dialogue?.document.snapshot.objects.filter((object) => object.type === 'image' && object.visible !== false) ?? [],
     [visible?.dialogue?.document]);
-  const selectedObject = imageObjects.find((object) => object.id === selected);
+  // Every visible object (images, shapes, panels, text) in paint order.
+  const canvasObjects = useMemo(() => [...(visible?.dialogue?.document.snapshot.objects ?? [])]
+    .filter((object) => object.visible !== false && typeof object.id === 'string')
+    .sort((left, right) => (Number(left.zIndex) || 0) - (Number(right.zIndex) || 0)) as DesignCanvasObject[], [visible?.dialogue?.document]);
+  const selectedObject = canvasObjects.find((object) => object.id === selected);
   const selectedOutput = selectedObject && visible?.dialogue?.outputs.some((output) => (selectedObject.metadata as Record<string, unknown> | undefined)?.imageId === output.imageId);
+  // Any saved image on the canvas (e.g. an opened library image) can be selected and sent as the edit reference.
+  const selectedCanvasReference = !selectedOutput ? canvasImageReference(selectedObject as Record<string, unknown> | undefined) : null;
+  const withSelectedReference = (manifest: DesignDialogueManifestReference[]) => (selectedCanvasReference
+    ? [selectedCanvasReference, ...manifest.filter((reference) => reference.imageId !== selectedCanvasReference.imageId)] : manifest)
+    .map((reference, order) => ({ ...reference, order }));
+  // A project opened from a single image starts with that image selected, so the first request edits it.
+  const singleImageId = isDocumentOnly && imageObjects.length === 1 ? String(imageObjects[0].id) : '';
+  useEffect(() => { if (singleImageId) setSelected((current) => current ?? singleImageId); }, [singleImageId]);
   const projectTitle = visible?.dialogue?.document.title ?? 'Untitled';
-  const hasContent = imageObjects.length > 0;
+  const hasContent = canvasObjects.length > 0;
+  const [shapeMenu, setShapeMenu] = useState(false);
+  const [editingText, setEditingText] = useState<{ id: string; text: string } | null>(null);
+  const [dragged, setDragged] = useState<{ id: string; dx: number; dy: number } | null>(null);
+  const objectDrag = useRef<{ id: string; pointerId: number; x: number; y: number; moved: boolean } | null>(null);
+  const editable = Boolean(projectId && visible?.dialogue && !visible.busy);
+  /** Applies an object change locally, then saves it to the Canvas document (fresh revision) and reloads it. */
+  const mutateObjects = async (change: (objects: Record<string, unknown>[]) => Record<string, unknown>[]) => {
+    const current = visible?.dialogue?.document;
+    if (!current || !editable) return;
+    setState((previous) => previous.dialogue ? { ...previous, dialogue: { ...previous.dialogue,
+      document: { ...previous.dialogue.document, snapshot: { ...previous.dialogue.document.snapshot, objects: change(previous.dialogue.document.snapshot.objects) } } } } : previous);
+    const assertContext = () => { const auth = useAuthStore.getState(); if (auth.user?.id !== userId || auth.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); };
+    const context = { userId, assertContext };
+    try {
+      const fresh = await activeDialogueClient.getDocument(projectId, brandId, context);
+      await activeDialogueClient.updateDocument({ documentId: projectId, brandId, title: fresh.title, expectedRevision: fresh.revision,
+        snapshot: { ...fresh.snapshot, objects: change(fresh.snapshot.objects) } }, context);
+    } catch { setEntryError('キャンバスの変更を保存できませんでした'); }
+    if (controller.current) await controller.current.refresh().catch(() => setRetry((value) => value + 1));
+    else setRetry((value) => value + 1);
+  };
+  const nextZ = () => canvasObjects.reduce((max, object) => Math.max(max, Number(object.zIndex) || 0), 0) + 1;
+  const addObject = (tool: DesignShapeKind | 'frame' | 'text') => {
+    setShapeMenu(false);
+    const area = canvasRef.current?.getBoundingClientRect();
+    const cx = ((area ? (area.width - (panelOpen ? 435 : 0)) / 2 : 400) - view.panX) / view.zoom;
+    const cy = ((area ? area.height / 2 : 300) - view.panY) / view.zoom;
+    const object = createDesignCanvasObject(tool, cx, cy, nextZ());
+    setSelected(object.id);
+    if (tool === 'text') setEditingText({ id: object.id, text: String(object.text) });
+    void mutateObjects((objects) => [...objects, object]);
+  };
+  const commitText = () => {
+    if (!editingText) return;
+    const { id, text } = editingText;
+    setEditingText(null);
+    void mutateObjects((objects) => objects.map((object) => object.id === id ? { ...object, text: text.trim() ? text : 'テキスト' } : object));
+  };
+  const deleteSelected = () => {
+    if (!selected || !editable) return;
+    const id = selected;
+    setSelected(null);
+    void mutateObjects((objects) => objects.filter((object) => object.id !== id));
+  };
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.key !== 'Delete' && event.key !== 'Backspace') || editingText) return;
+      if ((event.target as HTMLElement | null)?.closest('input, textarea, [contenteditable="true"]')) return;
+      if (selected) { event.preventDefault(); deleteSelected(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const pushView = (next: StudioViewport) => {
     setViewHistory((current) => ({ back: [...current.back.slice(-19), view], forward: [] }));
@@ -247,8 +330,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   };
   const fitView = () => {
     const area = canvasRef.current?.getBoundingClientRect();
-    if (!area || !imageObjects.length) return null;
-    const bounds = imageObjects.reduce<{ left: number; top: number; right: number; bottom: number }>((box, object) => {
+    if (!area || !canvasObjects.length) return null;
+    const bounds = canvasObjects.reduce<{ left: number; top: number; right: number; bottom: number }>((box, object) => {
       const x = Number(object.x) || 0; const y = Number(object.y) || 0;
       const w = (Number(object.width) || 440) * (Number(object.scaleX) || 1); const h = (Number(object.height) || 440) * (Number(object.scaleY) || 1);
       return { left: Math.min(box.left, x), top: Math.min(box.top, y), right: Math.max(box.right, x + w), bottom: Math.max(box.bottom, y + h) };
@@ -282,7 +365,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     const coordinator = createDesignEntryCoordinator({ scope: { userId, brandId }, workspace, client,
       assertScope: () => { const auth = useAuthStore.getState(); if (auth.user?.id !== userId || auth.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); } });
     try {
-      const href = await coordinator.prepare(text.trim(), manifest, isDocumentOnly ? projectId : undefined);
+      const href = await coordinator.prepare(text.trim(), withSelectedReference(manifest), isDocumentOnly ? projectId : undefined);
       references.clear();
       navigate(href, { replace: true });
     } catch (error) {
@@ -301,7 +384,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     try { manifest = references.manifest(); }
     catch { setEntryError('参考画像の保存が終わるまでお待ちください'); return; }
     void act(async (active) => {
-      await active.send(text, selectedOutput ? manifest : [...(visible?.draft?.references ?? []), ...manifest].map((reference, order) => ({ ...reference, order })),
+      await active.send(text, selectedOutput ? manifest : withSelectedReference([...(visible?.draft?.references ?? []), ...manifest]),
         selectedOutput ? selected! : undefined);
       if (generation.current && controller.current === active) { setPrompt(''); references.clear(); }
     });
@@ -376,13 +459,51 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           : panStudioViewport(current, -event.deltaX, -event.deltaY));
       }}>
       <div className="absolute origin-top-left" data-testid="design-canvas-world" style={{ transform: `translate(${view.panX}px, ${view.panY}px) scale(${view.zoom})` }}>
-        {imageObjects.map((object) => <button key={String(object.id)} type="button" data-testid="design-canvas-layer" data-object-id={String(object.id)} aria-label={String(object.label ?? 'デザイン画像')}
-          aria-pressed={object.id === selected} onClick={() => { if (!move) setSelected(object.id === selected ? null : String(object.id)); }}
-          className={`absolute overflow-hidden bg-white/5 ${object.id === selected ? 'outline outline-[6px] outline-[#0bcabc]' : ''}`}
-          style={{ left: Number(object.x) || 0, top: Number(object.y) || 0, width: Number(object.width) || 440, height: Number(object.height) || 440,
-            transform: `rotate(${Number(object.rotation) || 0}deg) scale(${Number(object.scaleX) || 1}, ${Number(object.scaleY) || 1})`, opacity: typeof object.opacity === 'number' ? object.opacity : 1, zIndex: Number(object.zIndex) || 0 }}>
-          {typeof object.src === 'string' && urls[object.src] ? <img src={urls[object.src]} alt={String(object.label ?? 'デザイン画像')} className="h-full w-full object-contain" draggable={false} /> : <span className="text-sm text-neutral-400">画像を読み込んでいます</span>}
-        </button>)}
+        {canvasObjects.map((object) => {
+          const id = String(object.id);
+          const offset = dragged?.id === id ? dragged : null;
+          const isImage = object.type === 'image';
+          return <button key={id} type="button" data-testid="design-canvas-layer" data-object-id={id} data-object-type={object.type} aria-label={String(object.label ?? (isImage ? 'デザイン画像' : '図形'))}
+            aria-pressed={id === selected}
+            onPointerDown={(event) => {
+              if (move || event.button !== 0 || object.locked === true || !editable) return;
+              event.stopPropagation();
+              objectDrag.current = { id, pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={(event) => {
+              const active = objectDrag.current;
+              if (!active || active.pointerId !== event.pointerId) return;
+              const dx = (event.clientX - active.x) / view.zoom; const dy = (event.clientY - active.y) / view.zoom;
+              if (!active.moved && Math.hypot(dx * view.zoom, dy * view.zoom) < 4) return;
+              active.moved = true;
+              setDragged({ id, dx, dy });
+            }}
+            onPointerUp={(event) => {
+              const active = objectDrag.current;
+              if (!active || active.pointerId !== event.pointerId) return;
+              objectDrag.current = null;
+              event.currentTarget.releasePointerCapture(event.pointerId);
+              if (!active.moved || !dragged || dragged.id !== id) return;
+              const { dx, dy } = dragged;
+              setDragged(null);
+              setSelected(id);
+              void mutateObjects((objects) => objects.map((item) => item.id === id ? { ...item, x: (Number(item.x) || 0) + dx, y: (Number(item.y) || 0) + dy } : item));
+            }}
+            onClick={() => { if (!move && !dragged) setSelected(id === selected ? null : id); }}
+            onDoubleClick={() => { if (object.type === 'text' && editable) setEditingText({ id, text: String(object.text ?? '') }); }}
+            className={`absolute text-left ${isImage ? 'overflow-hidden bg-white/5' : ''} ${id === selected ? 'outline outline-[6px] outline-[#0bcabc]' : ''} ${editable && !move ? 'cursor-move' : ''}`}
+            style={{ left: (Number(object.x) || 0) + (offset?.dx ?? 0), top: (Number(object.y) || 0) + (offset?.dy ?? 0), width: Number(object.width) || 440, height: Number(object.height) || 440,
+              transform: `rotate(${Number(object.rotation) || 0}deg) scale(${Number(object.scaleX) || 1}, ${Number(object.scaleY) || 1})`, opacity: typeof object.opacity === 'number' ? object.opacity : 1, zIndex: Number(object.zIndex) || 0 }}>
+            {isImage ? (typeof object.src === 'string' && urls[object.src] ? <img src={urls[object.src]} alt={String(object.label ?? 'デザイン画像')} className="h-full w-full object-contain" draggable={false} /> : <span className="text-sm text-neutral-400">画像を読み込んでいます</span>)
+              : editingText?.id === id ? <textarea autoFocus value={editingText.text} aria-label="テキストを編集" data-testid="design-text-editor"
+                onChange={(event) => setEditingText({ id, text: event.target.value })} onBlur={commitText}
+                onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); commitText(); } }}
+                onPointerDown={(event) => event.stopPropagation()}
+                className="h-full w-full resize-none bg-transparent leading-tight text-white outline-none" style={{ fontSize: Number(object.fontSize) || 80, color: typeof object.fill === 'string' ? object.fill : '#ffffff' }} />
+              : <DesignCanvasShape object={object} />}
+          </button>;
+        })}
       </div>
     </section>
 
@@ -426,9 +547,16 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       <button type="button" aria-label="取り消し" disabled={!viewHistory.back.length} onClick={() => setViewHistory((current) => { const previous = current.back[current.back.length - 1]; if (!previous) return current; setView(previous); return { back: current.back.slice(0, -1), forward: [...current.forward, view] }; })} className={toolbarButton}><Undo2 className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="やり直し" disabled={!viewHistory.forward.length} onClick={() => setViewHistory((current) => { const next = current.forward[current.forward.length - 1]; if (!next) return current; setView(next); return { back: [...current.back, view], forward: current.forward.slice(0, -1) }; })} className={toolbarButton}><Redo2 className="h-[18px] w-[18px]" /></button>
       <span className="mx-[2px] h-5 w-px bg-white/15" />
-      <Link to={`/canvas/${encodeURIComponent(projectId)}/edit?tool=shape`} aria-label="図形" className={toolbarButton}><Shapes className="h-[18px] w-[18px]" /></Link>
-      <Link to={`/canvas/${encodeURIComponent(projectId)}/edit?tool=frame`} aria-label="パネル" className={toolbarButton}><LayoutPanelTop className="h-[18px] w-[18px]" /></Link>
-      <Link to={`/canvas/${encodeURIComponent(projectId)}/edit?tool=text`} aria-label="テキスト" className={toolbarButton}><Type className="h-[18px] w-[18px]" /></Link>
+      <span className="relative">
+        <button type="button" aria-label="図形" aria-expanded={shapeMenu} disabled={!editable} onClick={() => setShapeMenu((open) => !open)} className={`${toolbarButton} ${shapeMenu ? 'bg-white/10 text-white' : ''}`}><Shapes className="h-[18px] w-[18px]" /></button>
+        {shapeMenu && <div role="menu" aria-label="図形" data-testid="design-shape-menu" className="absolute bottom-[48px] left-1/2 flex -translate-x-1/2 gap-1 rounded-xl border border-white/10 bg-[#1b2023] p-2 shadow-2xl">
+          {DESIGN_SHAPES.map((shape) => <button key={shape.kind} type="button" role="menuitem" onClick={() => addObject(shape.kind)}
+            className="flex w-[60px] flex-col items-center gap-1 rounded-lg py-2 text-xs text-neutral-200 hover:bg-white/10">
+            <span className="h-6 w-6"><DesignCanvasShape object={{ ...createDesignCanvasObject(shape.kind, 0, 0, 0, () => 'menu'), width: 24, height: shape.kind === 'line' || shape.kind === 'arrow' ? 24 : 24, fill: 'transparent', stroke: '#d4d4d4', strokeWidth: 2 }} /></span>{shape.label}</button>)}
+        </div>}
+      </span>
+      <button type="button" aria-label="パネル" disabled={!editable} onClick={() => addObject('frame')} className={toolbarButton}><LayoutPanelTop className="h-[18px] w-[18px]" /></button>
+      <button type="button" aria-label="テキスト" disabled={!editable} onClick={() => addObject('text')} className={toolbarButton}><Type className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="画像/動画を挿入する" onClick={() => uploadRef.current?.click()} className={toolbarButton}><ImagePlus className="h-[18px] w-[18px]" /></button>
       <span className="mx-[2px] h-5 w-px bg-white/15" />
       {/* Light ends the tool group with 企画提案書; Heavy opens its own design documents (/board/edit). */}
@@ -465,12 +593,21 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-[11px] pb-4" data-testid={visible?.draft ? 'design-entry-draft' : undefined} data-project-id={visible?.draft?.projectId} data-conversation-id={visible?.draft?.conversationId}>
           {(isNewFile || (!visible?.dialogue?.attempts.length && !visible?.draft)) && !visible?.busy && <div data-testid="design-assistant-welcome">
+            {hasContent && workspaceId === 'design' ? <>
+              {/* Light greets a project that already has a canvas with editing scenes instead of the new-file presets. */}
+              <h1 className="mt-[52px] text-[26px] font-medium leading-[34px]">今日は何をデザインしますか？</h1>
+              <p className="mt-4 text-sm leading-5 text-neutral-400">下からデザイン要望を入力するか、画像をアップロード／キャンバスから選択して修正・デザインできます</p>
+              <div className="mt-[40px] flex flex-col items-start gap-3" data-testid="design-canvas-scenes">
+                {CANVAS_SCENES.map((scene) => <button key={scene} type="button" onClick={() => setPrompt(scene)} className="flex h-10 items-center gap-2 rounded-xl px-4 text-left text-base text-neutral-200 hover:bg-white/5"><Lightbulb className="h-5 w-5 shrink-0 text-neutral-300" />{scene}</button>)}
+              </div>
+            </> : <>
             <h1 className="mt-[52px] text-[26px] font-medium leading-[34px]">こんにちは<br />専属のデザインアシスタントがサポートします。</h1>
             <p className="mt-4 text-sm leading-5 text-neutral-400">具体的なリクエストを入力するか、以下のプリセットから最適なシーンを選択してください。</p>
             <div className="mt-[40px] flex flex-col items-start gap-3">
               {visiblePresets.map((preset) => <button key={preset} type="button" onClick={() => setPrompt(preset)} className="flex h-10 items-center gap-2 rounded-xl px-4 text-left text-base text-neutral-200 hover:bg-white/5"><Lightbulb className="h-5 w-5 shrink-0 text-neutral-300" />{preset}</button>)}
               <button type="button" onClick={() => setPresetPage((page) => page + 1)} className="-mt-1 flex h-8 w-[72px] items-center gap-1.5 rounded-lg px-3 text-sm text-neutral-300 hover:bg-white/5"><RefreshCw className="h-4 w-4" />更新</button>
             </div>
+            </>}
           </div>}
           {visible?.draft && !visible?.dialogue?.attempts.length && <p data-testid="design-entry-prompt" className="ml-auto mt-4 w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl bg-white/[0.07] px-4 py-3 text-sm">{visible.draft.prompt}</p>}
           {visible?.dialogue?.attempts.map((attempt, index) => <article key={attempt.input.requestId} className="mt-4" data-testid="design-dialogue-attempt">
@@ -501,7 +638,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
             <button type="button" disabled={visible.busy} className="mt-3 text-[#0bcabc]" onClick={() => setRetry((value) => value + 1)}>保存状態を再確認</button></div>}
         </div>
         <form className="mx-[11px] mb-4 shrink-0 rounded-2xl border border-white/10 bg-[#20262a] px-[15px] pb-4 pt-4" onSubmit={(event) => { event.preventDefault(); submit(); }}>
-          {selectedOutput && <div className="mb-2 flex items-center justify-between text-xs text-[#0bcabc]"><span>選択した画像を参考に編集</span><button type="button" onClick={() => setSelected(null)} aria-label="選択を解除">×</button></div>}
+          {(selectedOutput || selectedCanvasReference) && <div className="mb-2 flex items-center justify-between text-xs text-[#0bcabc]"><span>選択した画像を参考に編集</span><button type="button" onClick={() => setSelected(null)} aria-label="選択を解除">×</button></div>}
           {referenceTray}
           {(entryError || references.error) && <p role="alert" className="mb-2 text-xs text-red-300">{entryError ?? references.error}</p>}
           <textarea data-testid="design-followup-prompt" aria-label="デザインの指示" value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={4000}
@@ -514,12 +651,11 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           </div>
         </form>
       </> : <div className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="design-layer-panel">
-        {!imageObjects.length && <p className="text-sm text-neutral-500">レイヤーはまだありません</p>}
-        <ol>{[...imageObjects].reverse().map((object) => <li key={String(object.id)}><button type="button" data-testid="design-layer-select" aria-pressed={selected === object.id}
+        {!canvasObjects.length && <p className="text-sm text-neutral-500">レイヤーはまだありません</p>}
+        <ol>{[...canvasObjects].reverse().map((object) => <li key={String(object.id)}><button type="button" data-testid="design-layer-select" aria-pressed={selected === object.id}
           onClick={() => setSelected(String(object.id))} className={`mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${selected === object.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
           <span className="h-10 w-10 shrink-0 overflow-hidden rounded bg-white/5">{typeof object.src === 'string' && urls[object.src] && <img src={urls[object.src]} alt="" className="h-full w-full object-cover" />}</span>
           {String(object.label ?? 'デザイン画像')}</button></li>)}</ol>
-        {projectId && <Link data-testid="design-full-editor" to={`/canvas/${encodeURIComponent(projectId)}/edit`} className="mt-3 inline-flex rounded-lg border border-white/15 px-4 py-2 text-sm">Canvasで編集</Link>}
       </div>}
     </aside>}
   </main>;
