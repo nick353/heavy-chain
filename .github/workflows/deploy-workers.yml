@@ -1,0 +1,58 @@
+# Deploys the Cloudflare Workers behind heavychain.app when their code changes on main:
+# heavy-chain-api (cloudflare/heavy-api) after its tests pass, and heavy-chain-alerts (cloudflare/heavy-alerts).
+# Secrets set with `wrangler secret put` are kept across deploys. D1 migrations are not run here.
+name: Deploy Workers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare/heavy-api/src/**'
+      - 'cloudflare/heavy-api/wrangler.production.jsonc'
+      - 'cloudflare/heavy-api/package*.json'
+      - 'cloudflare/heavy-alerts/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-workers
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: cloudflare/heavy-api/package-lock.json
+      - name: Install
+        run: npm ci --prefix cloudflare/heavy-api
+      - name: Which Workers changed
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "api=true" >> "$GITHUB_OUTPUT"; echo "alerts=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          files=$(git diff --name-only HEAD~1 HEAD)
+          echo "$files" | grep -qE '^cloudflare/heavy-api/(src/|wrangler\.production\.jsonc|package)' && echo "api=true" >> "$GITHUB_OUTPUT" || echo "api=false" >> "$GITHUB_OUTPUT"
+          echo "$files" | grep -q '^cloudflare/heavy-alerts/' && echo "alerts=true" >> "$GITHUB_OUTPUT" || echo "alerts=false" >> "$GITHUB_OUTPUT"
+      - name: Test and deploy heavy-chain-api
+        if: steps.changed.outputs.api == 'true'
+        working-directory: cloudflare/heavy-api
+        run: |
+          npm test
+          npx wrangler deploy --config wrangler.production.jsonc --message "main ${GITHUB_SHA::8}"
+      - name: Deploy heavy-chain-alerts
+        if: steps.changed.outputs.alerts == 'true'
+        working-directory: cloudflare/heavy-alerts
+        run: ../heavy-api/node_modules/.bin/wrangler deploy --message "main ${GITHUB_SHA::8}"
+      - name: Readback
+        if: steps.changed.outputs.api == 'true'
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H 'Origin: https://heavychain.app' -H 'Access-Control-Request-Method: GET' https://heavy-chain-api.nichika2000823.workers.dev/api/v1/health)
+          echo "CORS preflight from heavychain.app: $code"
