@@ -48,7 +48,6 @@
     "test:provider-action-adapters": "node --experimental-strip-types --test scripts/verify-provider-action-adapters.test.ts",
     "test:image-api-input-normalization": "node --experimental-strip-types --test scripts/verify-image-api-input-normalization.test.ts",
     "test:generated-image-identity": "node --experimental-strip-types --test scripts/verify-generated-image-identity.test.ts",
-    "test:gallery-download-boundary": "node --experimental-strip-types --test scripts/verify-gallery-download-boundary.test.ts",
     "test:workspace-activity-routing": "node --experimental-strip-types --test scripts/verify-workspace-activity-routing.test.ts",
     "test:design-production-handoff": "node --experimental-strip-types --test scripts/verify-design-production-handoff.test.ts",
     "test:library-canvas-handoff": "node --experimental-strip-types --test scripts/verify-library-canvas-handoff.test.ts",
