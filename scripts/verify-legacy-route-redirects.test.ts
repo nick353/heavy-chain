@@ -36,3 +36,16 @@ test('redirects keep the incoming query and hash', () => {
     pathname: '/designProduction', search: '?feature=chat-edit', hash: '',
   });
 });
+
+test('heavychain.app counts as the Heavy runtime, so every signed-in screen gets the Light frame', async () => {
+  const { isHeavyWorkspaceRuntime } = await import('../src/lib/heavyWorkspace.ts');
+  const original = (globalThis as { window?: unknown }).window;
+  try {
+    for (const [hostname, expected] of [['heavychain.app', true], ['www.heavychain.app', true], ['heavy-chain-zeabur.zeabur.app', true], ['example.com', false]] as const) {
+      (globalThis as { window?: unknown }).window = { location: { hostname, pathname: '/brand/settings' } };
+      assert.equal(isHeavyWorkspaceRuntime(), expected, hostname);
+    }
+  } finally {
+    (globalThis as { window?: unknown }).window = original;
+  }
+});

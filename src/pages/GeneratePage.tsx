@@ -82,7 +82,6 @@ import {
   buildLightchainFeatureHref,
   getLightchainFeature,
   getLightchainTaskCodes,
-  lightchainParityGoals,
   lightchainCategories,
   lightchainFeatureCatalog,
   type LightchainCategoryId,
@@ -4352,9 +4351,6 @@ export function GeneratePage() {
   const generateWorkflowContract = selectedCatalogFeature
     ? getLightchainUnifiedFeatureWorkflowContract(selectedCatalogFeature.id)
     : null;
-  const selectedParityGoal = selectedCatalogFeature
-    ? lightchainParityGoals.find((goal) => goal.title === selectedCatalogFeature.title) ?? null
-    : null;
 
   if (!selectedFeature) {
     const nextPath = categoryParam
@@ -4635,36 +4631,6 @@ export function GeneratePage() {
           transition={{ duration: 0.45 }}
           className="space-y-4"
         >
-          {selectedParityGoal && (
-            <section className="rounded-2xl border border-cyan-300/20 bg-cyan-300/8 p-4 shadow-soft">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">
-                    実装優先度 {selectedParityGoal.priority}
-                  </p>
-                  <h3 className="mt-2 text-sm font-semibold text-white">
-                    {selectedParityGoal.title} を先に Light 寄せする
-                  </h3>
-                  <p className="mt-2 text-xs leading-5 text-neutral-300">
-                    {selectedParityGoal.heavyTarget}
-                  </p>
-                </div>
-                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-neutral-200">
-                  {selectedParityGoal.status === 'in_progress' ? '進行中' : '待機'}
-                </span>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Light の見え方</p>
-                  <p className="mt-2 text-sm leading-6 text-white">{selectedParityGoal.lightBehavior}</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">完了条件</p>
-                  <p className="mt-2 text-sm leading-6 text-white">{selectedParityGoal.acceptanceEvidence}</p>
-                </div>
-              </div>
-            </section>
-          )}
 
           <details
             className="mx-auto hidden w-fit overflow-hidden rounded-xl border border-white/10 bg-neutral-950 shadow-2xl sm:block"

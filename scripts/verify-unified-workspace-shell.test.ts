@@ -12,7 +12,7 @@ test('first complete apparel flows use the unified workspace shell', () => {
 
   // Old Heavy-only URLs redirect to the Light-shaped screens instead of rendering the old workbenches.
   for (const [path, to] of [
-    ['/fitting', '/model'], ['/generate', '/designProduction'], ['/workspace', '/dashboard'],
+    ['/fitting', '/model'], ['/workspace', '/dashboard'],
     ['/studio', '/flow/integration'], ['/lab', '/flow/laboratory'], ['/patterns', '/editor/patternDesign'],
     ['/patterns/workbench', '/editor/patternDesign'], ['/lightchain', '/dashboard'], ['/heavy', '/dashboard'],
     ['/lightchain/fabric-image', '/tools/fabric'], ['/lightchain/printing-image', '/tools/printing'],
@@ -23,6 +23,9 @@ test('first complete apparel flows use the unified workspace shell', () => {
   assert.ok(app.includes('<Route path="/lightchain/:toolId" element={<LegacyToolRedirect />} />'));
   assert.ok(app.includes('<Route path="/heavy/:toolId" element={<LegacyToolRedirect />} />'));
   assert.match(app, /path="\/tools\/fabric"[\s\S]*?<LightchainMaterialWorkbenchPage \/>/);
+  // /generate stays a real screen: generate buttons across the workspace hand their prompt to it.
+  assert.match(app, /path="\/generate"[\s\S]*?<GeneratePage \/>/);
+  assert.match(app, /path="\/change-password"[\s\S]*?<ForgotPasswordPage \/>/);
   assert.match(app, /path="\/tools\/printing"[\s\S]*?<LightchainPrintingPage \/>/);
   assert.match(app, /path="\/model-library\/model-custom-form"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<ModelLibraryPage \/>/);
   assert.match(app, /path="\/flow\/integration"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<FashionStudioPage \/>/);

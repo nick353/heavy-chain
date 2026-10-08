@@ -5,6 +5,8 @@ export const isHeavyWorkspaceRuntime = (): boolean => {
   if (typeof window === 'undefined') return false;
   const hostname = window.location.hostname.toLowerCase();
   return hostname.includes('heavy-chain')
+    || hostname === 'heavychain.app'
+    || hostname.endsWith('.heavychain.app')
     || window.location.pathname === '/heavy'
     || window.location.pathname.startsWith('/heavy/');
 };
