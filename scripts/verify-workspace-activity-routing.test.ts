@@ -87,14 +87,11 @@ test('generic provider jobs resume through their persisted Lightchain feature id
 
 test('Activity timeline and Dashboard use the same canonical Gallery selection key', async () => {
   const activity = await read('../src/lib/workspaceActivity.ts');
-  const dashboard = await read('../src/pages/DashboardPage.tsx');
   const queue = await read('../src/components/workspace/JobQueuePanel.tsx');
   // Saved outputs open the library's 生成履歴 (Light has no Gallery screen).
   assert.match(activity, /outputHref: LIBRARY_HISTORY_HREF/);
   assert.match(activity, /href: LIBRARY_HISTORY_HREF/);
   assert.match(queue, /to=\{job\.outputHref\}/);
-  assert.match(dashboard, /getGeneratedImageSelectionKey\(image\)/);
-  assert.match(dashboard, /encodeURIComponent\(getGeneratedImageSelectionKey\(image\)\)/);
 });
 
 test('Heavy Chain task steps survive remote-image to local-artifact fallback', async () => {
@@ -145,21 +142,13 @@ test('Lightchain workbench accepts a resumeJob readback without a legacy source 
 
 test('model-matrix Fitting jobs resume to the canonical model lane with saved conditions', async () => {
   const activity = await read('../src/lib/workspaceActivity.ts');
-  const fitting = await read('../src/pages/FittingPage.tsx');
   assert.match(activity, /sourceResumePath === '\/fitting' \|\| sourceResumePath === '\/model'/);
   assert.match(activity, /return `\/model\?\$\{params\.toString\(\)\}`/);
   assert.match(activity, /getMetadataStringList\(metadata, 'bodyTypes'\)/);
   assert.match(activity, /getMetadataStringList\(metadata, 'ageGroups'\)/);
-  assert.match(fitting, /useSearchParams/);
-  assert.match(fitting, /const resumeJob = searchParams\.get\('resumeJob'\)/);
-  assert.match(fitting, /sourceResumePath: '\/fitting'/);
 });
 
 test('workspace handoff Canvas objects retain the persisted artifact/job identity', async () => {
   const handoff = await read('../src/lib/workspaceHandoff.ts');
-  const marketing = await read('../src/pages/MarketingWorkspacePage.tsx');
   assert.match(handoff, /sourceArtifactId: artifact\.id,[\s\S]*sourceJobId: artifact\.sourceJobId \?\? null/);
-  assert.match(marketing, /let persistedArtifactId: string \| null = null/);
-  assert.match(marketing, /persistedSourceJobId = result\.artifact\.sourceJobId/);
-  assert.match(marketing, /sourceArtifactId: persistedArtifactId/);
 });

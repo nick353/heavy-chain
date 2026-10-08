@@ -9,7 +9,6 @@ const parityPages = await readFile(new URL('../src/pages/LightchainParityPages.t
 const libraryPage = await readFile(new URL('../src/pages/LightchainLibraryPage.tsx', import.meta.url), 'utf8');
 const libraryHandoff = await readFile(new URL('../src/lib/lightchainLibraryHandoff.ts', import.meta.url), 'utf8');
 const canvasPage = await readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
-const fittingPage = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
 
 test('library persisted artifacts can be routed to Canvas with source identity', () => {
   assert.match(parityPages, /listWorkspaceArtifacts\(currentBrand\.id, user\?\.id\)/);
@@ -65,8 +64,6 @@ test('Lightchain library exposes working upload and group controls', () => {
   assert.doesNotMatch(libraryPage, /2026AW|ノイズバリュー用ホリゾンカラー|新規格/);
   assert.doesNotMatch(libraryPage, /title="素材の登録は各ワークベンチから行います"/);
   assert.doesNotMatch(libraryPage, /disabled title="グループ管理はβ版で準備中"/);
-  assert.match(fittingPage, /libraryArtifactId/);
-  assert.match(fittingPage, /readWorkspaceArtifactImage/);
 });
 
 test('Lightchain library starts on the canonical history-upload group and uses the compact card action icon', () => {

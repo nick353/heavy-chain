@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 
 const source = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
 const paritySource = await readFile(new URL('../src/pages/LightchainParityPages.tsx', import.meta.url), 'utf8');
-const patternSource = await readFile(new URL('../src/pages/PatternWorkspacePage.tsx', import.meta.url), 'utf8');
 const studioSource = await readFile(new URL('../src/pages/FashionStudioPage.tsx', import.meta.url), 'utf8');
 const launcherSource = await readFile(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
 
@@ -48,8 +47,7 @@ test('Lightchain parity entrypoints do not inject fixed external or sample libra
   assert.doesNotMatch(paritySource, /gallery-style-reference/);
 });
 
-test('pattern and studio workbenches do not prefill nonexistent reference files', () => {
-  assert.doesNotMatch(patternSource, /chain_mark_ref\.svg|vintage_bandana_grid\.png|tee_mockup_front\.jpg/);
+test('studio workbench does not prefill nonexistent reference files', () => {
   assert.doesNotMatch(studioSource, /lookbook_ref_01\.jpg|fabric_ref_02\.png/);
 });
 

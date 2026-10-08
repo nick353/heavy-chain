@@ -6,11 +6,8 @@ const parityPagesSourcePath = new URL('../src/pages/LightchainParityPages.tsx', 
 const materialWorkbenchSourcePath = new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url);
 const workbenchSourcePath = new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url);
 const modelLibrarySourcePath = new URL('../src/pages/ModelLibraryPage.tsx', import.meta.url);
-const fittingSourcePath = new URL('../src/pages/FittingPage.tsx', import.meta.url);
-const generateSourcePath = new URL('../src/pages/GeneratePage.tsx', import.meta.url);
 const canvasSourcePath = new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url);
 const chatSourcePath = new URL('../src/components/ChatEditor.tsx', import.meta.url);
-const creditsSourcePath = new URL('../src/pages/CreditsPage.tsx', import.meta.url);
 const fashionDetailSourcePath = new URL('../src/pages/FashionStudioDetailPage.tsx', import.meta.url);
 
 test('Lightchain parity does not add a Heavy-only rights checkbox', async () => {
@@ -68,41 +65,15 @@ test('Wear Design Lab mirrors the current project cards without a seeded project
   assert.doesNotMatch(source, /boardProjectCode=2088009465900642306/);
 });
 
-test('AI fitting exposes Gallery selection and the source permission surface before generation', async () => {
-  const source = await readFile(fittingSourcePath, 'utf8');
-
-  assert.doesNotMatch(source, /data-testid="heavy-native-fallback-banner"/);
-  assert.doesNotMatch(source, /Lightchainの「権限がありません」はプラン規制として維持/);
-  assert.match(source, /Gallery素材を選択/);
-  assert.match(source, /data-testid="fitting-model-gallery-select"/);
-  assert.match(source, /const heavyGenerationReady = Boolean\(currentBrand\?\.id && user\?\.id\)/);
-  assert.match(source, /生成を準備できません/);
-  assert.doesNotMatch(source, /getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
-  assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|type="checkbox"/);
-});
-
 test('Heavy parity surfaces keep Heavy consent separate from the Light-missing rights badge', async () => {
   const sources = await Promise.all([
-    readFile(generateSourcePath, 'utf8'),
     readFile(canvasSourcePath, 'utf8'),
     readFile(chatSourcePath, 'utf8'),
-    readFile(creditsSourcePath, 'utf8'),
     readFile(fashionDetailSourcePath, 'utf8'),
   ]);
   const source = sources.join('\n');
 
   assert.doesNotMatch(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL|GENERATION_LEGAL_COPY/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
-  const generate = sources[0];
-  assert.match(generate, /const heavyEntitlementReady = noImageGenerationMode[\s\S]*?Boolean\(user\?\.id\) && Boolean\(currentBrand\?\.id\)/);
-  assert.match(generate, /const providerRightsConfirmed = heavyEntitlementReady/);
-  assert.doesNotMatch(generate, /if \(!noImageGenerationMode && !heavyEntitlementReady\)/);
-  assert.match(generate, /const heavyConsent = undefined/);
-  assert.doesNotMatch(generate, /data-testid="heavy-terms-acceptance"|data-testid="heavy-rights-attestation"|data-testid="heavy-terms-copy"/);
-  assert.doesNotMatch(generate, /Heavy利用条件|権利表明|規約同意/);
-  assert.doesNotMatch(generate, /権限がありません/);
-  assert.doesNotMatch(generate, /isLightchainGenerationSurface|sourceGenerationAccess|getLightchainSourceGenerationAccess(?:ForWorkflow)?\(/);
-  assert.doesNotMatch(generate, /const rightsConfirmed = true/);
-  assert.doesNotMatch(generate, /sourceModelGenerationDenied/);
   assert.doesNotMatch(source, /権利確認ゲート|権利確認後/);
 });

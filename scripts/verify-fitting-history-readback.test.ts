@@ -4,158 +4,14 @@ import test from 'node:test';
 import { compactFittingMaterialReferenceForPersistence } from '../src/lib/fittingPersistence.ts';
 import { prepareFittingDraftMaterialReferenceForPersistence } from '../src/lib/fittingPersistence.ts';
 
-test('Fitting history is rebuilt from persisted provider and local preview artifacts', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-
-  assert.match(source, /listWorkspaceGeneratedImages/);
-  assert.match(source, /withSignedImageUrls/);
-  assert.match(source, /buildFittingHistoryFromPersistedImages/);
-  assert.match(source, /FITTING_LOCAL_PREVIEW_FEATURE_TYPE/);
-  assert.match(source, /const isLocalPreview = image\.feature_type === FITTING_LOCAL_PREVIEW_FEATURE_TYPE/);
-  assert.match(source, /const isProviderArtifact = image\.feature_type === 'model-matrix'/);
-  assert.match(source, /generationMode: isLocalPreview \? 'preview' : 'provider'/);
-  assert.match(source, /const getPersistedFittingResultStatus = \(\s*image: GeneratedImageListRow,?\s*\)/);
-  assert.match(source, /persistenceStatus: getPersistedFittingResultStatus\(image\)/);
-  assert.match(source, /if \(\['pending', 'processing', 'not_started'\]\.includes\(explicitStatus\)\)/);
-  assert.match(source, /group\.persistenceStatus = 'failed'/);
-  assert.match(source, /group\.persistenceStatus === 'pending'/);
-  assert.match(source, /'保存中'/);
-  assert.match(source, /const remoteJobId = image\.job_id \?\? getGeneratedImageMetadataString/);
-  assert.match(source, /materialReference\?\.imageUrl/);
-  assert.match(source, /materialReference\?\.extractedImageUrl/);
-  assert.match(source, /prompt: image\.prompt \?\? undefined/);
-  assert.match(source, /bodyTypes: \[\]/);
-  assert.match(source, /ageGroups: \[\]/);
-  assert.match(source, /getGeneratedImageMetadataString\(image, 'bodyType'\)/);
-  assert.match(source, /getGeneratedImageMetadataString\(image, 'ageGroup'\)/);
-  assert.match(source, /setHistory\(buildFittingHistoryFromPersistedImages\(signedImages\)\)/);
-  assert.doesNotMatch(source, /const seedHistory: HistoryItem\[\]/);
-});
-
-test('Fitting conditions can be saved as a local preview without claiming provider generation', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-
-  assert.match(source, /const handleSaveFittingBriefPreview = \(\) =>/);
-  assert.match(source, /generationMode: 'preview'/);
-  assert.match(source, /backendProvider: FITTING_LOCAL_PREVIEW_BACKEND/);
-  assert.match(source, /featureType: FITTING_LOCAL_PREVIEW_FEATURE_TYPE/);
-  assert.match(source, /provider未実行/);
-  assert.match(source, /data-testid="fitting-save-brief-preview"/);
-  assert.match(source, /providerResultArtifact: !isLocalPreview/);
-  assert.match(source, /localPreviewArtifact: isLocalPreview/);
-});
-
-test('Fitting history hydration does not fabricate a record without persisted artifacts', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-  const historyBuilder = source.slice(
-    source.indexOf('export const buildFittingHistoryFromPersistedImages'),
-    source.indexOf('const bodyTypeOptions ='),
-  );
-
-  assert.match(historyBuilder, /const groups = new Map/);
-  assert.match(historyBuilder, /return Array\.from\(groups\.values\(\)\)/);
-  assert.doesNotMatch(historyBuilder, /fit-1042|fit-1038/);
-  assert.match(historyBuilder, /getGeneratedImageMetadataString\(image, 'backendProvider'\) \?\? 'unknown'/);
-  assert.doesNotMatch(historyBuilder, /cloudflare-workers-ai|supabase-edge-function/);
-});
-
 test('new Cloudflare result metadata cannot default to the retired execution backend', async () => {
-  for (const page of ['FittingPage', 'LightchainWorkbenchPage', 'LightchainMaterialWorkbenchPage']) {
+  for (const page of ['LightchainWorkbenchPage', 'LightchainMaterialWorkbenchPage']) {
     const source = await readFile(new URL(`../src/pages/${page}.tsx`, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /supabase-edge-function/);
     assert.match(source, /backendProvider: (?:response|providerResult)\.backendProvider \?\? 'cloudflare-workers-ai'/);
   }
   const workbench = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   assert.match(workbench, /backendProvider = modelResult\.backendProvider \?\? backendProvider/);
-});
-
-test('Canvas resume uses only persisted material-reference URLs after reload', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-  assert.match(
-    source,
-    /const sourceMaterialImageUrl = item\.sourceMaterialImageUrl\s*\n\s*\?\? item\.materialReference\?\.imageUrl\s*\n\s*\?\? item\.materialReference\?\.extractedImageUrl/,
-  );
-  assert.match(source, /const prompt = item\.prompt \?\? lastRequest\?\.productDescription/);
-  assert.match(source, /bodyTypes: item\.bodyTypes \?\? lastRequest\?\.bodyTypes \?\? \[\]/);
-  assert.match(source, /ageGroups: item\.ageGroups \?\? lastRequest\?\.ageGroups \?\? \[\]/);
-  assert.match(source, /modelReferenceImageUrl: request\.modelReferenceImageUrl \? '\[provided\]' : null/);
-});
-
-test('Fitting supports a library-first model reference and preserves its canonical lineage', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-
-  assert.match(source, /data-testid="fitting-model-gallery-select"/);
-  assert.match(source, /Gallery \/ モデルライブラリから選ぶ/);
-  assert.match(source, /handleSelectModelGalleryImage/);
-  assert.match(source, /sourceImageId: imageId/);
-  assert.match(source, /sourceStoragePath: storagePath \?\? null/);
-  assert.match(source, /modelReferenceSourceImageId: request\.modelReferenceSourceImageId \?\? null/);
-  assert.match(source, /modelReferenceSourceStoragePath: request\.modelReferenceSourceStoragePath \?\? null/);
-  assert.match(source, /getGeneratedImageMetadataString\(image, 'modelReferenceSourceStoragePath'\)/);
-  assert.match(source, /feature: 'model-matrix-model-reference'/);
-  assert.match(source, /resolveGeneratedImageUrl\(item\.modelReferenceSourceStoragePath\)/);
-});
-
-test('Fitting compacts large cutout data for durable Gallery and platform sources before local readback', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-
-  const reference = {
-    hasImage: true,
-    imageUrl: '/assets/printing/blank-white-tshirt.svg',
-    fileName: 'platform.svg',
-    materialKind: 'Tシャツ',
-    maskMode: 'auto' as const,
-    activeLayer: 'base',
-    placement: '中央',
-    scale: 100,
-    note: 'cutout',
-    extractedImageUrl: `data:image/png;base64,${'A'.repeat(120_000)}`,
-    extractedLayerReady: true,
-    nextStepReady: true,
-  };
-
-  const compacted = compactFittingMaterialReferenceForPersistence(
-    reference,
-    '/assets/printing/blank-white-tshirt.svg',
-  );
-  assert.equal(compacted?.extractedImageUrl, null);
-  assert.equal(compacted?.extractedLayerReady, false);
-  assert.equal(compacted?.nextStepReady, false);
-  assert.match(compacted?.note ?? '', /localStorage容量保護/);
-  const smallLocalReference = {
-    ...reference,
-    imageUrl: 'data:image/png;base64,local-source',
-    extractedImageUrl: 'data:image/png;base64,small-cutout',
-  };
-  assert.equal(
-    compactFittingMaterialReferenceForPersistence(smallLocalReference, smallLocalReference.imageUrl)?.extractedImageUrl,
-    smallLocalReference.extractedImageUrl,
-  );
-
-  const localReference = {
-    ...reference,
-    imageUrl: `data:image/png;base64,${'B'.repeat(120_000)}`,
-    extractedImageUrl: null,
-  };
-  const localCompacted = compactFittingMaterialReferenceForPersistence(localReference, localReference.imageUrl);
-  assert.equal(localCompacted?.hasImage, false);
-  assert.equal(localCompacted?.imageUrl, null);
-  assert.equal(localCompacted?.extractedImageUrl, null);
-  assert.match(localCompacted?.note ?? '', /再アップロードが必要/);
-  assert.match(source, /compactFittingMaterialReferenceForPersistence/);
-});
-
-test('Fitting stores remote model-matrix results by canonical storage path, not large data URLs', async () => {
-  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-  assert.match(
-    source,
-    /imageUrl: item\.storagePath \? '' : item\.imageUrl,/,
-  );
-  assert.match(source, /remoteStoragePath: item\.storagePath \?\? null/);
-  assert.match(
-    source,
-    /Keep the provider data URL available in the active result matrix/,
-  );
 });
 
 test('Fitting draft persistence clears signed URLs while retaining the canonical source path', () => {
@@ -205,11 +61,8 @@ test('Fitting draft persistence retains a bounded remote cutout for reload recov
 });
 
 test('high-precision Fitting cutout awaits durable local save before the change resolves', async () => {
-  const fittingPage = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
   const materialWorkbench = await readFile(new URL('../src/components/workspace/MaterialWorkbench.tsx', import.meta.url), 'utf8');
 
-  assert.match(fittingPage, /const handleMaterialReferenceChange = useCallback\(async/);
-  assert.match(fittingPage, /await saveFittingDraftCutout\(currentBrand\.id, user\.id, nextMaterialReference\)/);
   assert.match(materialWorkbench, /onChange: \(nextState: MaterialReferenceState\) => void \| Promise<void>/);
   assert.match(materialWorkbench, /await updateStateAsync\(\{/);
 });

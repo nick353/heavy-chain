@@ -49,13 +49,9 @@ test('project links use the exact remote document ID', () => {
 });
 
 test('Dashboard uses the authenticated list and exposes a failure retry', () => {
-  const dashboard = readFileSync(new URL('../src/pages/DashboardPage.tsx', import.meta.url), 'utf8');
   const api = readFileSync(new URL('../src/lib/cloudflareApi.ts', import.meta.url), 'utf8');
 
   assert.match(api, /async listCanvasDocuments\(brandId: string\): Promise<CloudflareCanvasDocument\[\]>[\s\S]*\/v1\/canvas-documents\?brand_id=/);
-  assert.match(dashboard, /fetchCanvasProjects\(resolvedBrand\)/);
-  assert.match(dashboard, /onClick=\{\(\) => void fetchCanvasProjects\(\)\}/);
-  assert.match(dashboard, /一覧取得に失敗したため、保存済みプロジェクトがないとは判定していません/);
 });
 
 test('Fashion Studio uses the same authenticated project-grid source and Light-compatible detail route', () => {

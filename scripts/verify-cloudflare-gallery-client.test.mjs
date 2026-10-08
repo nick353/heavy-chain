@@ -65,21 +65,11 @@ test('Gallery mutations address the canonical API image and never retry a failed
 });
 
 test('migrated Gallery and reuse readers cannot execute old data calls', () => {
-  for (const path of ['pages/DashboardPage.tsx', 'components/GallerySelector.tsx',
+  for (const path of ['components/GallerySelector.tsx',
     'pages/LightchainLibraryPage.tsx', 'pages/LightchainWorkbenchPage.tsx']) {
     const source = readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /\bsupabase\s*(?:\.|\n)|\bfrom\(['"]generated_images['"]\)/, path);
     assert.match(source, /(?:cloudflareDataPlane|cloudflare)\.listGeneratedImages/, path);
   }
-  const dashboard = readFileSync(new URL('../src/pages/DashboardPage.tsx', import.meta.url), 'utf8');
-  assert.match(dashboard, /state\.user\?\.id !== user\.id/);
-  assert.match(dashboard, /setCurrentBrand\(confirmedCreatedBrand\)/);
-  assert.match(dashboard, /再作成は不要です/);
 });
 
-test('Fitting wires feature/job and order into server-side pagination', () => {
-  const fitting = readFileSync(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-  assert.doesNotMatch(fitting, /\bfrom\(['"]generated_images['"]\)/);
-  assert.match(fitting, /featureType: 'model-matrix', jobId: resumeJob, limit: 1, offset: 0/);
-  assert.match(fitting, /featureType: 'model-matrix', limit: 100, offset: 0/);
-});

@@ -293,7 +293,6 @@ test('keeps every non-video generation route on a feature-specific prompt branch
 test('keeps direct provider promotion behind durable result and Canvas lineage guards', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
-  const fitting = readFileSync(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
   const persistence = readFileSync(new URL('../src/lib/providerResultPersistence.ts', import.meta.url), 'utf8');
 
   for (const source of [workbench, material]) {
@@ -301,17 +300,6 @@ test('keeps direct provider promotion behind durable result and Canvas lineage g
     assert.match(source, /persistProviderResultArtifact/);
     assert.match(source, /sourceProviderResultArtifactId/);
   }
-  assert.match(fitting, /assertCompletedModelMatrixResult/);
-  assert.match(fitting, /saveWorkspaceArtifactPersisted/);
-  assert.match(fitting, /downloadValidatedImage/);
-  assert.match(fitting, /fitting_result_download/);
-  assert.match(fitting, /fitting-history-\$\{item\.id\}/);
-  assert.match(fitting, /data-testid=\{`fitting-result-download-\$\{item\.bodyType\}-\$\{item\.ageGroup\}-\$\{index\}`\}/);
-  assert.match(fitting, /data-testid=\{`fitting-history-download-\$\{item\.id\}`\}/);
-  // Light has no Gallery/History/Jobs screens; fitting results keep Canvas reuse and the library link.
-  assert.doesNotMatch(fitting, /data-testid="fitting-result-(?:gallery|history|jobs)-link"/);
-  assert.match(fitting, /data-testid="fitting-result-save-to-canvas"/);
-  assert.match(fitting, /Canvasへ再利用/);
   assert.match(workbench, /data-testid="lightchain-fitting-history-link"/);
   assert.match(workbench, /data-testid="lightchain-fitting-history-panel"/);
   assert.match(workbench, /setFittingHistoryOpen/);
@@ -335,12 +323,6 @@ test('keeps direct provider promotion behind durable result and Canvas lineage g
       `${marker} must use the shared validated download handler`,
     );
   }
-  assert.match(fitting, /id="fitting-history"/);
-  assert.match(fitting, /const authBrandFence = captureCurrentAuthBrandFence\(generationBrand\.id\)/);
-  assert.match(fitting, /const generationBrandId = authBrandFence\.brandId/);
-  assert.match(fitting, /assertCurrentAuthBrandFence\(authBrandFence, 'before_provider'\)/);
-  assert.match(fitting, /response = await generateModelMatrix\([\s\S]*?generationBrandId/);
-  assert.match(fitting, /setErrorMessage\(getErrorMessage/);
   assert.match(persistence, /provider_result_persistence_unverified/);
 });
 

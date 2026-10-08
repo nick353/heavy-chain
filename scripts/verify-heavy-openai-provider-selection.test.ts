@@ -23,15 +23,11 @@ test('Heavy provider selection is OpenAI-only and fails closed on Workers AI con
 });
 
 test('Heavy UI generation callers do not silently select Workers AI', async () => {
-  const [generatePage, canvasPage, chatEditor] = await Promise.all([
-    readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8'),
+  const [canvasPage, chatEditor] = await Promise.all([
     readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/ChatEditor.tsx', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(generatePage, /resolveHeavyImageProviderConfiguration/);
-  assert.match(generatePage, /Workers AIへは自動切替しません/);
-  assert.match(generatePage, /const generationProvider = heavySurface \? HEAVY_IMAGE_PROVIDER : lightGenerationProvider/);
   assert.match(canvasPage, /generationProvider: HEAVY_IMAGE_PROVIDER/);
   assert.match(chatEditor, /generationProvider: HEAVY_IMAGE_PROVIDER/);
   assert.doesNotMatch(canvasPage, /generationProvider:\s*'workers_ai'/);

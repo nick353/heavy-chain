@@ -6,7 +6,6 @@ import { buildWorkspaceArtifactLineage } from '../src/lib/workspaceArtifactLinea
 const persistenceSurfaces = [
   'src/pages/FashionStudioPage.tsx',
   'src/pages/ModelLibraryPage.tsx',
-  'src/pages/PatternWorkspacePage.tsx',
   'src/pages/LabPage.tsx',
 ];
 
@@ -22,16 +21,6 @@ test('auxiliary apparel workspaces promote completed only after persisted artifa
     assert.doesNotMatch(source, /completed: history\.length > 0/);
     assert.doesNotMatch(source, /persisted: history\.length > 0/);
   });
-});
-
-test('marketing workspace does not promote a local job to completed before artifact persistence', () => {
-  const source = fs.readFileSync('src/pages/MarketingWorkspacePage.tsx', 'utf8');
-  assert.match(source, /listWorkspaceArtifacts/);
-  assert.match(source, /savedArtifactId/);
-  assert.match(source, /completed: Boolean\(savedArtifactId\)/);
-  assert.match(source, /persisted: Boolean\(savedArtifactId\)/);
-  assert.match(source, /setSavedArtifactId\(result\.artifact\.id\)/);
-  assert.doesNotMatch(source, /completed: job\.status === 'succeeded'/);
 });
 
 test('workspace lineage separates provider results from local handoffs and stores IDs only', () => {

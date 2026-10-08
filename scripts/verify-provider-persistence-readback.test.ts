@@ -67,16 +67,14 @@ test('model-matrix promotion requires completed persistence for every matrix ite
 });
 
 test('all direct provider promotion paths use the shared readback guards', async () => {
-  const [workbench, material, fitting, canvas] = await Promise.all([
+  const [workbench, material, canvas] = await Promise.all([
     readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8'),
   ]);
   assert.match(workbench, /assertCompletedImageEditResult/);
   assert.match(workbench, /assertCompletedModelMatrixResult/);
   assert.match(material, /assertCompletedImageEditResult/);
-  assert.match(fitting, /assertCompletedModelMatrixResult/);
   assert.match(canvas, /assertCompletedImageEditResult/);
 });
 
@@ -154,10 +152,9 @@ test('derived protected composites keep provider provenance separate from Galler
 });
 
 test('model-matrix provider provenance survives the Cloudflare response, Fitting history, and Canvas reuse', async () => {
-  const [imageApi, client, fitting, workbench, imageAi] = await Promise.all([
+  const [imageApi, client, workbench, imageAi] = await Promise.all([
     readFile(new URL('../src/lib/imageApi.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/lib/cloudflareApi.ts', import.meta.url), 'utf8'),
-    readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../cloudflare/heavy-api/src/image-ai.ts', import.meta.url), 'utf8'),
   ]);
@@ -165,15 +162,6 @@ test('model-matrix provider provenance survives the Cloudflare response, Fitting
   assert.match(client, /listGenerationJobs/);
   assert.match(client, /listGeneratedImages/);
   assert.match(imageAi, /providerModel/);
-  assert.match(fitting, /providerModel: item\.modelUsed \?\? null/);
-  assert.match(fitting, /providerTaskId: item\.providerTaskId \?\? null/);
-  assert.match(fitting, /providerModels: matrix\.map\(\(item\) => item\.modelUsed \?\? null\)/);
-  assert.match(fitting, /resultKind: 'fitting'/);
-  assert.match(fitting, /generationMode: 'provider'/);
-  assert.match(fitting, /providerResultArtifact: true/);
-  assert.match(fitting, /persistenceStatus: item\.persistenceStatus \?\? response\.persistenceStatus \?\? null/);
-  assert.match(fitting, /resultKind: item\.resultKind \?\? 'fitting'/);
-  assert.match(fitting, /generationMode: item\.generationMode \?\? 'provider'/);
   assert.match(workbench, /providerModel = modelResult\.matrix\[0\]\.modelUsed/);
   assert.match(workbench, /providerTaskId: lightchainResult\.providerTaskId \?\? null/);
 });
@@ -233,45 +221,16 @@ test('main Workbench provider parity runtime survives result and later Canvas pr
 });
 
 test('fitting and Canvas derived edits preserve the captured parity runtime', async () => {
-  const [fitting, canvas] = await Promise.all([
-    readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8'),
-  ]);
-  assert.match(fitting, /rowId: 'ai-fitting'/);
-  assert.match(fitting, /const parityRuntimeJson = serializeLightchainParityRuntime/);
-  assert.match(fitting, /const providerCompositionPreview =/);
-  assert.match(fitting, /compositionPreview: providerCompositionPreview/);
+  const canvas = await readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
   assert.match(canvas, /const parityRuntime = getParityRuntimeForObject/);
   assert.match(canvas, /const parityRuntime = sourceObject\?\.metadata\?\.parityRuntime/);
   assert.match(canvas, /\.\.\.\(parityRuntime \? \{ parityRuntime \} : \{\}\)/);
   assert.match(canvas, /\.\.\.\(parityRuntime \? \{ parityRuntime \} : \{\}\),\n\s{6}lightchainEditStages/);
 });
 
-test('GeneratePage direct provider results preserve the provider receipt into artifacts and Canvas', async () => {
-  const [generate, canvas] = await Promise.all([
-    readFile(new URL('../src/pages/GeneratePage.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8'),
-  ]);
-  assert.match(generate, /const getGeneratedProviderReceipt =/);
-  assert.match(generate, /const getGeneratedResultReceiptMetadata =/);
-  assert.match(generate, /getGeneratedProviderReceipt\(data, image\)/);
-  assert.match(generate, /providerModel: image\.providerModel \?\? null/);
-  assert.match(generate, /persistenceStatus: image\.persistenceStatus \?\? null/);
-  assert.match(generate, /\.\.\.getGeneratedResultReceiptMetadata\(image\),\n\s+\.\.\.materialHandoffMetadata/);
+test('direct provider results preserve the provider receipt into Canvas', async () => {
+  const canvas = await readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
   assert.match(canvas, /provider: image\.provider \|\| null/);
   assert.match(canvas, /persistenceStatus: image\.persistenceStatus \|\| null/);
 });
 
-test('fitting model-matrix promotion requires local artifact readback before result or history promotion', async () => {
-  const fitting = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
-  assert.match(fitting, /saveWorkspaceArtifactPersisted/);
-  assert.match(fitting, /deleteWorkspaceArtifactsPersisted\(generationBrandId, attemptedArtifactIds, user\?\.id\)/);
-  assert.match(fitting, /if \(!persisted\.ok\)/);
-
-  const persistenceGate = fitting.indexOf('if (!persisted.ok)');
-  const resultPromotion = fitting.indexOf('setResultMatrix(matrix)');
-  const historyPromotion = fitting.indexOf('setHistory((items)');
-  assert.ok(persistenceGate >= 0);
-  assert.ok(resultPromotion > persistenceGate);
-  assert.ok(historyPromotion > persistenceGate);
-});
