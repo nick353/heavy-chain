@@ -59,8 +59,10 @@ export function LightchainHistoryPanel({ onClose, locked = false }: { onClose: (
     void (async () => {
       const rows = (await cloudflareDataPlane.listGeneratedImages(brandId, { order: 'newest', limit: HISTORY_LIMIT, offset: 0 }))
         .map(asGeneratedImageListRow)
-        .filter((row) => row.image_url && !isVideo(row));
-      const signed = await withSignedImageUrls(rows);
+        .filter((row) => !isVideo(row));
+      // Rows carry only storage_path; the readable URL exists after signing.
+      const signed = (await withSignedImageUrls(rows)).filter((row) => row.image_url);
+      if (rows.length > 0 && signed.length === 0) throw new Error('history_media_unavailable');
       if (!cancelled) setItems(signed);
     })().catch(() => { if (!cancelled) { setItems([]); setFailed(true); } });
     return () => { cancelled = true; };
