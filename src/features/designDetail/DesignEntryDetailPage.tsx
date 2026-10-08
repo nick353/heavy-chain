@@ -19,9 +19,10 @@ import { createDesignDialogueController, type DesignDialogueClient, type DesignD
 import { designCanvasClient } from './designCanvasAdapter';
 import {
   DESIGN_ENTRY_SESSION_DB, DIALOGUE_WORKSPACES, createDesignEntryCoordinator, designEntryClient,
-  type DesignEntryClient, type DialogueWorkspaceId,
+  type DesignEntryClient, type DialogueWorkspaceId, validateOwnedDesignDocument,
 } from './designEntryCoordinator';
 import { useDialogueReferences } from './useDialogueReferences';
+import { DESIGN_ATTACH_ARTIFACT_PARAM, DESIGN_ATTACH_GALLERY_PARAM, resolveDesignAttachment } from './canvasHandoff';
 import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
@@ -86,6 +87,10 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const projectId = params.get('projectId') ?? '';
   const conversationId = params.get('conversationId') ?? '';
   const isNewFile = !projectId && !conversationId;
+  // A saved Canvas document opened without a chat (old /canvas/:id links): show it, and start a chat on it on first send.
+  const isDocumentOnly = Boolean(projectId) && !conversationId;
+  const attachImageId = params.get(DESIGN_ATTACH_GALLERY_PARAM);
+  const attachArtifactId = params.get(DESIGN_ATTACH_ARTIFACT_PARAM);
   const identity = JSON.stringify([userId, brandId, projectId, conversationId]);
   const brandReady = Boolean(userId && brandId && (!isHeavyWorkspaceRuntime() || isHeavyWorkspaceBrandName(currentBrand?.name)));
   const generation = useRef(0);
@@ -139,6 +144,19 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     controller.current = null;
     sending.current = false;
     setSelected(null); setPrompt(''); setTitleDraft(null); setState({ identity, busy: brandReady && !isNewFile });
+    if (brandReady && isDocumentOnly) {
+      void (async () => {
+        // Resume this document's latest chat when one exists here; otherwise show the document alone.
+        const chats = (await stores.drafts.list(scope, assertView)).filter((draft) => draft.projectId === projectId && draft.ready); assertView();
+        const latest = chats[chats.length - 1];
+        if (latest) { navigate(`${workspace.detailPath}?${new URLSearchParams({ projectId, conversationId: latest.conversationId })}`, { replace: true }); return; }
+        const document = validateOwnedDesignDocument(await client.getDocument(projectId, brandId, { userId, assertContext }), scope, projectId); assertView();
+        setState({ identity, busy: false, dialogue: { attempts: [], document, outputs: [], turns: [], recoveryErrors: {} } });
+      })().catch(() => {
+        try { assertView(); setState({ identity, busy: false, error: true }); } catch { /* obsolete view */ }
+      });
+      return () => { if (generation.current === epoch) generation.current++; };
+    }
     if (!brandReady || !projectId || !conversationId) {
       if (brandReady && !isNewFile) setState({ identity, busy: false, error: true });
       return () => { if (generation.current === epoch) generation.current++; };
@@ -159,7 +177,23 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       try { assertView(); setState((previous) => ({ ...previous, identity, busy: false, error: true })); } catch { /* obsolete view */ }
     });
     return () => { if (generation.current === epoch) generation.current++; };
-  }, [activeDialogueClient, brandId, brandReady, client, conversationId, identity, isNewFile, projectId, retry, stores, userId]);
+  }, [activeDialogueClient, brandId, brandReady, client, conversationId, identity, isDocumentOnly, isNewFile, navigate, projectId, retry, stores, userId, workspace.detailPath]);
+  // Images handed over from 「キャンバスで編集」 become the first send's references.
+  const addReferenceFiles = references.addFiles;
+  const attachedFrom = useRef('');
+  useEffect(() => {
+    const key = JSON.stringify([userId, brandId, attachImageId, attachArtifactId]);
+    if (!brandReady || (!attachImageId && !attachArtifactId) || attachedFrom.current === key) return;
+    attachedFrom.current = key;
+    void resolveDesignAttachment({ brandId, userId, galleryImageId: attachImageId, artifactId: attachArtifactId })
+      .then((file) => addReferenceFiles([file]))
+      .catch(() => setEntryError('引き継いだ画像を読み込めませんでした。画像を追加し直してください'))
+      .finally(() => {
+        const next = new URLSearchParams(location.search);
+        next.delete(DESIGN_ATTACH_GALLERY_PARAM); next.delete(DESIGN_ATTACH_ARTIFACT_PARAM);
+        navigate(`${location.pathname}${next.toString() ? `?${next}` : ''}`, { replace: true });
+      });
+  }, [attachArtifactId, attachImageId, brandId, brandReady, location.pathname, location.search, navigate, addReferenceFiles, userId]);
   const visible = state.identity === identity ? state : undefined;
   const sources = [...new Set([
     ...(visible?.draft?.references.map((reference) => reference.storagePath) ?? []),
@@ -241,7 +275,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     const coordinator = createDesignEntryCoordinator({ scope: { userId, brandId }, workspace, client,
       assertScope: () => { const auth = useAuthStore.getState(); if (auth.user?.id !== userId || auth.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); } });
     try {
-      const href = await coordinator.prepare(text.trim(), manifest);
+      const href = await coordinator.prepare(text.trim(), manifest, isDocumentOnly ? projectId : undefined);
       references.clear();
       navigate(href, { replace: true });
     } catch (error) {
@@ -255,7 +289,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const submit = () => {
     const text = prompt;
     if (!text.trim()) return;
-    if (isNewFile) { void startProject(text); return; }
+    if (isNewFile || isDocumentOnly) { void startProject(text); return; }
     let manifest: DesignDialogueManifestReference[];
     try { manifest = references.manifest(); }
     catch { setEntryError('参考画像の保存が終わるまでお待ちください'); return; }
@@ -283,7 +317,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       const fresh = await activeDialogueClient.getDocument(projectId, brandId, context);
       await activeDialogueClient.updateDocument({ documentId: projectId, brandId, title, expectedRevision: fresh.revision, snapshot: fresh.snapshot }, context);
     } catch { setTitleError(true); }
-    await controller.current?.refresh().catch(() => setTitleError(true));
+    if (controller.current) await controller.current.refresh().catch(() => setTitleError(true));
+    else setRetry((value) => value + 1);
   };
   const downloadSelected = async () => {
     const object = selectedObject ?? imageObjects[imageObjects.length - 1];
@@ -384,9 +419,9 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       <button type="button" aria-label="取り消し" disabled={!viewHistory.back.length} onClick={() => setViewHistory((current) => { const previous = current.back[current.back.length - 1]; if (!previous) return current; setView(previous); return { back: current.back.slice(0, -1), forward: [...current.forward, view] }; })} className={toolbarButton}><Undo2 className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="やり直し" disabled={!viewHistory.forward.length} onClick={() => setViewHistory((current) => { const next = current.forward[current.forward.length - 1]; if (!next) return current; setView(next); return { back: [...current.back, view], forward: current.forward.slice(0, -1) }; })} className={toolbarButton}><Redo2 className="h-[18px] w-[18px]" /></button>
       <span className="mx-[2px] h-5 w-px bg-white/15" />
-      <Link to={`/canvas/${encodeURIComponent(projectId)}?tool=shape`} aria-label="図形" className={toolbarButton}><Shapes className="h-[18px] w-[18px]" /></Link>
-      <Link to={`/canvas/${encodeURIComponent(projectId)}?tool=frame`} aria-label="パネル" className={toolbarButton}><LayoutPanelTop className="h-[18px] w-[18px]" /></Link>
-      <Link to={`/canvas/${encodeURIComponent(projectId)}?tool=text`} aria-label="テキスト" className={toolbarButton}><Type className="h-[18px] w-[18px]" /></Link>
+      <Link to={`/canvas/${encodeURIComponent(projectId)}/edit?tool=shape`} aria-label="図形" className={toolbarButton}><Shapes className="h-[18px] w-[18px]" /></Link>
+      <Link to={`/canvas/${encodeURIComponent(projectId)}/edit?tool=frame`} aria-label="パネル" className={toolbarButton}><LayoutPanelTop className="h-[18px] w-[18px]" /></Link>
+      <Link to={`/canvas/${encodeURIComponent(projectId)}/edit?tool=text`} aria-label="テキスト" className={toolbarButton}><Type className="h-[18px] w-[18px]" /></Link>
       <button type="button" aria-label="画像/動画を挿入する" onClick={() => uploadRef.current?.click()} className={toolbarButton}><ImagePlus className="h-[18px] w-[18px]" /></button>
       <span className="mx-[2px] h-5 w-px bg-white/15" />
       {/* Light ends the tool group with 企画提案書; Heavy opens its own design documents (/board/edit). */}
@@ -477,7 +512,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           onClick={() => setSelected(String(object.id))} className={`mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${selected === object.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>
           <span className="h-10 w-10 shrink-0 overflow-hidden rounded bg-white/5">{typeof object.src === 'string' && urls[object.src] && <img src={urls[object.src]} alt="" className="h-full w-full object-cover" />}</span>
           {String(object.label ?? 'デザイン画像')}</button></li>)}</ol>
-        {projectId && <Link data-testid="design-full-editor" to={`/canvas/${encodeURIComponent(projectId)}`} className="mt-3 inline-flex rounded-lg border border-white/15 px-4 py-2 text-sm">Canvasで編集</Link>}
+        {projectId && <Link data-testid="design-full-editor" to={`/canvas/${encodeURIComponent(projectId)}/edit`} className="mt-3 inline-flex rounded-lg border border-white/15 px-4 py-2 text-sm">Canvasで編集</Link>}
       </div>}
     </aside>}
   </main>;

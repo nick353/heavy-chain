@@ -8,6 +8,7 @@ import { HeavyChainLogo } from './components/icons';
 import { LightchainLauncherHeader } from './components/layout/LightchainLauncherHeader';
 import { resolveAuthReturnPath } from './lib/authRedirect';
 import { isHeavyWorkspaceRuntime, mergeLegacyLocation, resolveLegacyToolLocation } from './lib/heavyWorkspace';
+import { designDetailHrefForLegacyCanvas } from './lib/legacyCanvasRoute';
 import { LightchainUnifiedWorkspaceShell } from './components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
@@ -373,6 +374,12 @@ function lazyPage(page: React.ReactNode) {
 }
 
 /** Old Heavy-only screens: send every visit (links, history entries, bookmarks) to the Light-shaped page. */
+function LegacyCanvasRedirect() {
+  const { projectId } = useParams();
+  const location = useLocation();
+  return <Navigate to={designDetailHrefForLegacyCanvas(projectId, location.search)} replace />;
+}
+
 function LegacyRouteRedirect({ to }: { to: string }) {
   const location = useLocation();
   return <Navigate to={mergeLegacyLocation(to, location.search, location.hash)} replace />;
@@ -1392,9 +1399,12 @@ function AppRoutes() {
         />
       </Route>
 
-      {/* Canvas Editor (full screen, no layout) */}
+      {/* Light's canvas is the design workspace detail; old Canvas links open it there. */}
+      <Route path="/canvas" element={<LegacyCanvasRedirect />} />
+      <Route path="/canvas/:projectId" element={<LegacyCanvasRedirect />} />
+      {/* Full editor for shapes, panels and text, opened from the design detail toolbar (full screen, no layout) */}
       <Route
-        path="/canvas/:projectId?"
+        path="/canvas/:projectId/edit"
         element={
           <ProtectedRoute>
             {lazyPage(<CanvasEditorPage />)}

@@ -49,6 +49,6 @@ test('Canvas retains scoped identity before recoverable save and exposes context
 
 test('old local bookmarks resolve only the same app-user-brand save identity',()=>{
   assert.match(page,/initialCanvasDocumentId\(scope,projectId\)\.then\(id=>\{\s*assertLocalRoute\(\)/);
-  assert.match(page,/if\(readCanvasSaveRecovery\(scope,id\)\)\{navigate\(`\/canvas\/\$\{id\}`/);
+  assert.match(page,/if\(readCanvasSaveRecovery\(scope,id\)\)\{navigate\(`\/canvas\/\$\{id\}\/edit`/);
   assert.match(page,/localProject\.brandId!==scope\.brandId/);
 });

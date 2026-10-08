@@ -1172,7 +1172,7 @@ export function CanvasEditorPage() {
           assertLocalRoute();
           // The first Save can remove the lightweight local index entry.
           // Old bookmarks still lead to the exact same existing draft/row.
-          if(readCanvasSaveRecovery(scope,id)){navigate(`/canvas/${id}`,{replace:true});return;}
+          if(readCanvasSaveRecovery(scope,id)){navigate(`/canvas/${id}/edit`,{replace:true});return;}
           if(!localProject||localProject.brandId!==scope.brandId){clearCanvas();setCanvasPersistenceStatus('failed');return;}
           loadProject(projectId);setCanvasPersistenceStatus('unsaved');
         }).catch(()=>{try{assertLocalRoute();clearCanvas();setCanvasPersistenceStatus('failed');}catch{/* A later scope owns the page. */}});
@@ -1982,7 +1982,7 @@ export function CanvasEditorPage() {
       suppressPersistenceDirtyRef.current = true;
       saveCurrentProject();
       acknowledgeCanvasRemoteReadback(user.id, brandId, document.id, document.snapshot);
-      if (projectId !== document.id) navigate(`/canvas/${document.id}`, { replace: true });
+      if (projectId !== document.id) navigate(`/canvas/${document.id}/edit`, { replace: true });
       setCanvasPersistenceStatus('saved');
       toast.success('最新のCanvas状態を再読み込みしました');
     } catch (error: any) {
@@ -2110,7 +2110,7 @@ export function CanvasEditorPage() {
           const transitionToken = Object.freeze({ save: active, epoch: active.epoch });
           ownedCanvasRouteTransitionRef.current = { from: projectId, to: documentId, token: transitionToken };
           imageEditRouteRef.current=documentId;
-          navigate(`/canvas/${documentId}`,{replace:true});
+          navigate(`/canvas/${documentId}/edit`,{replace:true});
         }
         assertSaveContext=captureCanvasImageEditContext(null);
         diagnosticStage='save';
@@ -2196,7 +2196,7 @@ export function CanvasEditorPage() {
         }
       }
       assertSaveContext();
-      if (projectId !== readback.id) { diagnosticStage='navigate'; navigate(`/canvas/${readback.id}`, { replace: true }); }
+      if (projectId !== readback.id) { diagnosticStage='navigate'; navigate(`/canvas/${readback.id}/edit`, { replace: true }); }
       diagnosticStage='finalize';
       setCanvasPersistenceStatus('saved');
       toast.success('Canvasを保存し、サーバーで確認しました');
@@ -4341,7 +4341,8 @@ export function CanvasEditorPage() {
       <header className="h-12 sm:h-14 flex items-center justify-between border-b border-white/10 bg-[#070b0b]/95 px-2 sm:px-4 z-20 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(projectId && projectId !== 'new' ? `/designProduction/detail?projectId=${encodeURIComponent(projectId)}` : '/designProduction')}
+            aria-label="デザインワークスペースに戻る"
             className="p-1.5 sm:p-2 hover:bg-white/[0.08] rounded-lg transition-colors text-neutral-300 flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />

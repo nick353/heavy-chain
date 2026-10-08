@@ -60,10 +60,10 @@ export const createDesignEntryCoordinator = (options: {
   let flight: Promise<string> | undefined;
   const assertContext = () => { if (!active) throw new Error('design_entry_scope_stale'); options.assertScope(); };
   const context = { userId: scope.userId, assertContext };
-  const prepare = async (prompt: string, references: readonly DesignDialogueManifestReference[]) => {
+  const prepare = async (prompt: string, references: readonly DesignDialogueManifestReference[], existingProjectId?: string) => {
     assertContext();
-    const draft = await drafts.reserve(scope, prompt, references, assertContext); assertContext();
-    if (!draft.ready) {
+    const draft = await drafts.reserve(scope, prompt, references, assertContext, existingProjectId); assertContext();
+    if (!draft.ready && existingProjectId === undefined) {
       const claimed = await drafts.mark(scope, draft.projectId, draft.conversationId, false, assertContext); assertContext();
       if (claimed.sendCreate) {
         try {
@@ -74,12 +74,24 @@ export const createDesignEntryCoordinator = (options: {
     }
     const document = validateOwnedDesignDocument(await client.getDocument(draft.projectId, scope.brandId, context), scope, draft.projectId);
     assertContext();
-    if (!draft.ready && (document.snapshot.projectId !== draft.projectId || document.snapshot.objects.length !== 0)) {
+    if (!draft.ready && existingProjectId === undefined && (document.snapshot.projectId !== draft.projectId || document.snapshot.objects.length !== 0)) {
       throw new Error('design_entry_snapshot_unverified');
     }
     if (!draft.ready) {
-      await sessions.putProject(scope, { projectId: document.id, ownerId: document.ownerId, brandId: document.brandId, conversationIds: [draft.conversationId] }); assertContext();
-      await sessions.ensureSession(scope, { projectId: document.id, conversationId: draft.conversationId }); assertContext();
+      const project = { projectId: document.id, ownerId: document.ownerId, brandId: document.brandId, conversationIds: [draft.conversationId] };
+      if (existingProjectId === undefined) {
+        await sessions.putProject(scope, project); assertContext();
+        await sessions.ensureSession(scope, { projectId: document.id, conversationId: draft.conversationId }); assertContext();
+      } else {
+        // A saved document may already have conversations here; ensureSession appends to that project record.
+        try { await sessions.ensureSession(scope, { projectId: document.id, conversationId: draft.conversationId }); }
+        catch {
+          assertContext();
+          await sessions.putProject(scope, project); assertContext();
+          await sessions.ensureSession(scope, { projectId: document.id, conversationId: draft.conversationId });
+        }
+        assertContext();
+      }
       await drafts.mark(scope, draft.projectId, draft.conversationId, true, assertContext); assertContext();
     }
     const session = await sessions.getSession(scope, draft.conversationId); assertContext();
@@ -87,9 +99,9 @@ export const createDesignEntryCoordinator = (options: {
     return designEntryDetailHref(document.id, session.conversationId, workspace.detailPath);
   };
   return {
-    prepare(prompt: string, references: readonly DesignDialogueManifestReference[]) {
+    prepare(prompt: string, references: readonly DesignDialogueManifestReference[], existingProjectId?: string) {
       if (flight) return flight;
-      flight = prepare(prompt, references);
+      flight = prepare(prompt, references, existingProjectId);
       const current = flight;
       void current.finally(() => { if (flight === current) flight = undefined; }).catch(() => undefined);
       return current;
