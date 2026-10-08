@@ -62,3 +62,32 @@ export const mimeMessage = (from: string, to: string, subject: string, text: str
     body,
   ].join('\r\n');
 };
+
+/** New feedback is mailed once per aligned 15-minute window, so each submission lands in exactly one email even if the cron fires late. */
+export type FeedbackRow = { created_at: string; email: string; pathname: string; message: string;
+  screenshot_path: string | null; audio_path: string | null };
+
+export const feedbackWindow = (now: Date) => {
+  const step = WINDOW_MINUTES * 60_000;
+  const end = Math.floor(now.getTime() / step) * step;
+  return { start: new Date(end - step).toISOString(), end: new Date(end).toISOString() };
+};
+
+const jst = (iso: string) => new Date(new Date(iso).getTime() + 9 * 3_600_000).toISOString().slice(0, 16).replace('T', ' ');
+
+export const feedbackBody = (rows: FeedbackRow[], adminUrl: string): { subject: string; text: string } => ({
+  subject: `[Heavy Chain] フィードバックが${rows.length}件届きました`,
+  text: [
+    `新しいフィードバックが${rows.length}件あります。スクショと音声は管理画面で確認できます。`,
+    adminUrl,
+    '',
+    ...rows.flatMap((row, index) => [
+      `■ ${index + 1}. ${jst(row.created_at)}（日本時間）  ${row.email}`,
+      `  画面: ${row.pathname}`,
+      `  添付: ${[row.screenshot_path ? 'スクショ' : '', row.audio_path ? '音声メモ' : ''].filter(Boolean).join('・') || 'なし'}`,
+      ...row.message.slice(0, 600).split('\n').map((line) => `  ${line}`),
+      ...(row.message.length > 600 ? ['  …（続きは管理画面で）'] : []),
+      '',
+    ]),
+  ].join('\n'),
+});
