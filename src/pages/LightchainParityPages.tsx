@@ -346,6 +346,7 @@ export function LightchainCreatorPage() {
     const brandId = currentBrand?.id;
     if (!selectedCategory || !brandId || creatorRun.status === 'running') return;
     const run = ++creatorRunRef.current;
+    setCategoryPickerOpen(false);
     setCreatorRun({ status: 'running', images: [] });
     const prompt = [
       'アパレルのデザイン案を1点作成してください。商品として成立する、着用イメージが伝わる平置きまたはトルソー写真にしてください。',
