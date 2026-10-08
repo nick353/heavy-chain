@@ -17,8 +17,8 @@ export type DesignEntryDraft = {
 const key = (scope: DesignScope, projectId: string, conversationId: string): IDBValidKey =>
   [scope.userId, scope.brandId, projectId, conversationId];
 // Retain an exact-input pointer until L4 explicitly consumes the initial entry.
-const activeKey = (scope: DesignScope, prompt: string, references: readonly DesignDialogueManifestReference[]): IDBValidKey =>
-  [scope.userId, scope.brandId, JSON.stringify([prompt, references])];
+const activeKey = (scope: DesignScope, prompt: string, references: readonly DesignDialogueManifestReference[], projectId?: string): IDBValidKey =>
+  [scope.userId, scope.brandId, JSON.stringify(projectId ? [prompt, references, projectId] : [prompt, references])];
 const text = (value: unknown, max: number): value is string => typeof value === 'string'
   && value.trim().length > 0 && value.length <= max && !/[\u0000-\u001f\u007f]/u.test(value);
 const identity = (value: unknown): value is string => text(value, 512) && !/^[a-z][a-z\d+.-]*:/i.test(value);
@@ -107,17 +107,19 @@ export const createEntryDraftStore = (options: { idb: IDBFactory; dbName: string
         };
       });
     },
-    async reserve(scope: DesignScope, prompt: string, references: readonly DesignDialogueManifestReference[], assertCurrent = () => {}) {
+    /** existingProjectId starts a new conversation on an already saved Canvas document, so no create is sent. */
+    async reserve(scope: DesignScope, prompt: string, references: readonly DesignDialogueManifestReference[], assertCurrent = () => {}, existingProjectId?: string) {
       const newId = options.newId ?? (() => crypto.randomUUID());
       assertCurrent();
-      const proposed = validateEntryDraft({ version: 1, scope: { ...scope }, projectId: newId(), conversationId: newId(), prompt,
-        references: structuredClone([...references]), createAttempted: false, ready: false }, scope);
+      if (existingProjectId !== undefined && !identity(existingProjectId)) throw new Error('design_entry_draft_invalid');
+      const proposed = validateEntryDraft({ version: 1, scope: { ...scope }, projectId: existingProjectId ?? newId(), conversationId: newId(), prompt,
+        references: structuredClone([...references]), createAttempted: existingProjectId !== undefined, ready: false }, scope);
       return transact<DesignEntryDraft>('readwrite', (tx, finish, fail) => {
         const drafts = tx.objectStore('drafts');
         const active = tx.objectStore('active');
-        const current = active.get(activeKey(scope, prompt, references));
+        const current = active.get(activeKey(scope, prompt, references, existingProjectId));
         const add = () => { assertCurrent(); drafts.add(proposed, key(scope, proposed.projectId, proposed.conversationId));
-          active.put([proposed.projectId, proposed.conversationId], activeKey(scope, prompt, references)); finish(proposed); };
+          active.put([proposed.projectId, proposed.conversationId], activeKey(scope, prompt, references, existingProjectId)); finish(proposed); };
         current.onsuccess = () => {
           try { assertCurrent(); } catch (error) { return fail(error); }
           if (!current.result) { try { add(); } catch (error) { fail(error); } return; }
