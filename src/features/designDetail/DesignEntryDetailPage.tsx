@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop, MessageCircleMore,
   MessageSquarePlus, MousePointer2, Palette, PanelRightClose, PanelRightOpen, Redo2, RefreshCw, Shapes, Sparkles,
-  Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2, ZoomIn, ZoomOut, BookOpen, Keyboard,
+  Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2, ZoomIn, ZoomOut, BookOpen, Keyboard, Mouse,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
@@ -24,6 +24,7 @@ import {
 import { useDialogueReferences } from './useDialogueReferences';
 import { DESIGN_ATTACH_ARTIFACT_PARAM, DESIGN_ATTACH_GALLERY_PARAM, designAttachmentName, resolveDesignAttachment } from './canvasHandoff';
 import { canvasImageReference, openImageProject } from './imageProject';
+import { BEGINNER_GUIDE_TABS, CANVAS_SHORTCUT_GROUPS, moveCanvasLayer, type CanvasLayerMove } from './designCanvasShortcuts';
 import { DESIGN_SHAPES, DesignCanvasShape, createDesignCanvasObject, type DesignCanvasObject, type DesignShapeKind } from './designCanvasObjects';
 import { DESIGN_OPEN_IMAGE_PARAM } from '../../lib/legacyCanvasRoute';
 import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
@@ -73,20 +74,13 @@ const ASSISTANT_PRESETS: Record<DialogueWorkspaceId, readonly string[]> = {
   ],
 };
 
-const CANVAS_GUIDE: readonly (readonly [string, string])[] = [
-  ['1', '画像をアップロードするか、キャンバスの画像を選びます'], ['2', '右のAIアシスタントに要望を書いて送信します'],
-  ['3', '生成された画像がキャンバスに並びます。選んで続けて修正できます'], ['4', '図形・パネル・テキストで資料に仕上げます'],
-];
-const CANVAS_SHORTCUTS: readonly (readonly [string, string])[] = [
-  ['クリック', '選択'], ['ドラッグ', '移動'], ['Delete', '削除'], ['ダブルクリック', 'テキスト編集'],
-  ['ホイール', 'キャンバス移動'], ['Ctrl + ホイール', '拡大・縮小'],
-];
 // Light's scenes for a project that already has a canvas.
 const CANVAS_SCENES = ['生地パターン適用', '線画から実写化', 'デザインミックス', 'プリント修正'] as const;
 
 /** A document "has a canvas" when it holds objects and no chat has started on it yet. */
 const hasContentNow = (dialogue: DesignDialogueState) => dialogue.document.snapshot.objects.length > 0 && dialogue.attempts.length === 0;
 
+const GUIDE_EMPTY_ICON = '/lightchain-assets/mirror/jp/static/none_list.png';
 const INSPIRATION_PLACEHOLDER = '/lightchain-assets/mirror/lightchain-qlxy-prod/persistence/font-end/design-empty-placeholder.png';
 const IMAGE_ACCEPT = '.png,.jpg,.jpeg,.avif,.webp';
 const FIT_PADDING = 80;
@@ -126,6 +120,9 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const [panelTab, setPanelTab] = useState<'assistant' | 'layers'>('assistant');
   const [panelOpen, setPanelOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState<'guide' | 'shortcuts' | null>(null);
+  const [guideTab, setGuideTab] = useState<string>(BEGINNER_GUIDE_TABS[0]);
+  const copiedObject = useRef<Record<string, unknown> | null>(null);
+  const spacePan = useRef(false);
   const [presetPage, setPresetPage] = useState(0);
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [titleError, setTitleError] = useState(false);
@@ -340,13 +337,51 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     void mutateObjects((objects) => objects.filter((object) => object.id !== id));
   };
   useEffect(() => {
+    // Light's canvas shortcuts (see the キーボード panel).
     const onKey = (event: KeyboardEvent) => {
-      if ((event.key !== 'Delete' && event.key !== 'Backspace') || editingText) return;
-      if ((event.target as HTMLElement | null)?.closest('input, textarea, [contenteditable="true"]')) return;
-      if (selected) { event.preventDefault(); deleteSelected(); }
+      if (editingText || (event.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const mod = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
+      const area = canvasRef.current?.getBoundingClientRect();
+      const center = { x: area ? (area.width - (panelOpen ? 435 : 0)) / 2 : 500, y: area ? area.height / 2 : 400 };
+      const selectedItem = selected ? canvasObjects.find((object) => object.id === selected) : undefined;
+      const paste = (source: Record<string, unknown>) => {
+        const id = `${String(source.type)}-${crypto.randomUUID()}`;
+        const clone = { ...structuredClone(source), id, x: (Number(source.x) || 0) + 40, y: (Number(source.y) || 0) + 40, zIndex: nextZ() };
+        setSelected(id);
+        void mutateObjects((objects) => [...objects, clone]);
+      };
+      if (event.key === ' ' && !mod) { if (!spacePan.current) { spacePan.current = true; setMove(true); } event.preventDefault(); return; }
+      if (event.key === 'Escape') { setSelected(null); setShapeMenu(false); setHelpOpen(null); return; }
+      if ((event.key === 'Delete' || event.key === 'Backspace') && selected) { event.preventDefault(); deleteSelected(); return; }
+      if (mod) {
+        if (key === '=' || key === '+') { event.preventDefault(); pushView(zoomStudioViewport(view, view.zoom * 1.25, center)); return; }
+        if (key === '-') { event.preventDefault(); pushView(zoomStudioViewport(view, view.zoom / 1.25, center)); return; }
+        if (key === '1') { event.preventDefault(); const next = fitView(); if (next) pushView(next); return; }
+        if (key === '0') { event.preventDefault(); pushView(zoomStudioViewport(view, 1, center)); return; }
+        if (!editable) return;
+        if (key === 'c' && !event.shiftKey && selectedItem) { event.preventDefault(); copiedObject.current = structuredClone(selectedItem); return; }
+        if (key === 'x' && selectedItem) { event.preventDefault(); copiedObject.current = structuredClone(selectedItem); deleteSelected(); return; }
+        if (key === 'v' && copiedObject.current) { event.preventDefault(); paste(copiedObject.current); return; }
+        if (key === 'd' && selectedItem) { event.preventDefault(); paste(selectedItem); return; }
+        if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && selected) {
+          event.preventDefault();
+          const move: CanvasLayerMove = event.key === 'ArrowUp' ? (event.shiftKey ? 'front' : 'up') : (event.shiftKey ? 'back' : 'down');
+          const id = selected;
+          void mutateObjects((objects) => moveCanvasLayer(objects, id, move));
+        }
+        return;
+      }
+      if (event.altKey || event.shiftKey) return;
+      if (key === 'v') { setMove(false); return; }
+      if (!editable) return;
+      const tool = ({ t: 'text', r: 'rect', o: 'circle', l: 'line' } as const)[key as 't' | 'r' | 'o' | 'l'];
+      if (tool) { event.preventDefault(); addObject(tool); }
     };
+    const onKeyUp = (event: KeyboardEvent) => { if (event.key === ' ' && spacePan.current) { spacePan.current = false; setMove(false); } };
+    window.addEventListener('keyup', onKeyUp);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKeyUp); };
   });
 
   const pushView = (next: StudioViewport) => {
@@ -616,16 +651,40 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         </label>
         <button type="button" aria-label="拡大" onClick={() => pushView(zoomStudioViewport(view, view.zoom * 1.25, { x: 500, y: 400 }))} className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-300 hover:text-white"><ZoomIn className="h-[18px] w-[18px]" /></button>
       </span>
-      {([['guide', '使い方ガイド', BookOpen, CANVAS_GUIDE], ['shortcuts', 'ショートカット', Keyboard, CANVAS_SHORTCUTS]] as const).map(([id, label, Icon, rows]) => <span key={id} className="relative">
-        <button type="button" aria-label={label} aria-expanded={helpOpen === id} onClick={() => setHelpOpen((open) => open === id ? null : id)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#1b2023]/95 text-neutral-300 hover:text-white"><Icon className="h-[18px] w-[18px]" /></button>
-        {helpOpen === id && <div role="dialog" aria-label={label} data-testid={`design-${id}`} className="absolute bottom-[52px] right-0 w-72 rounded-xl border border-white/10 bg-[#1b2023] p-4 text-sm text-neutral-200 shadow-2xl">
-          <p className="mb-3 font-medium">{label}</p>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-neutral-300">
-            {rows.map(([term, detail]) => <div key={term} className="contents"><dt className="text-neutral-400">{term}</dt><dd>{detail}</dd></div>)}
-          </dl>
-        </div>}
-      </span>)}
+      <button type="button" aria-label="初心者ガイド" aria-expanded={helpOpen === 'guide'} onClick={() => setHelpOpen((open) => open === 'guide' ? null : 'guide')}
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#1b2023]/95 text-neutral-300 hover:text-white"><BookOpen className="h-[18px] w-[18px]" /></button>
+      <button type="button" aria-label="ショートカット" aria-expanded={helpOpen === 'shortcuts'} onClick={() => setHelpOpen((open) => open === 'shortcuts' ? null : 'shortcuts')}
+        className={`flex h-10 w-10 items-center justify-center rounded-full border bg-[#1b2023]/95 text-neutral-300 hover:text-white ${helpOpen === 'shortcuts' ? 'border-[#0bcabc]' : 'border-white/10'}`}><Keyboard className="h-[18px] w-[18px]" /></button>
+    </div>}
+
+    {/* Light's キーボード button opens this shortcut panel on the right of the canvas. */}
+    {helpOpen === 'shortcuts' && <aside role="dialog" aria-label="ショートカット" data-testid="design-shortcuts" className="absolute bottom-[84px] z-40 flex w-[420px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#202628] shadow-2xl"
+      style={{ right: panelOpen ? 452 : 28, top: 104 }}>
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-white/10 px-4 text-sm text-neutral-400">ショートカット
+        <button type="button" aria-label="閉じる" onClick={() => setHelpOpen(null)} className="text-neutral-400 hover:text-white"><X className="h-4 w-4" /></button></div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        {CANVAS_SHORTCUT_GROUPS.map((group) => <section key={group.title} className="border-b border-white/10 py-3 last:border-b-0">
+          <h3 className="mb-2 text-base font-medium text-white">{group.title}</h3>
+          <dl className="flex flex-col gap-2">{group.rows.map((row) => <div key={row.label} className="flex items-center justify-between gap-3 text-sm">
+            <dt className="shrink-0 text-neutral-200">{row.label}</dt>
+            <dd className="flex max-w-[60%] items-center gap-1 rounded-md bg-white/[0.06] px-2 py-1 text-right text-neutral-400">{row.keys}{row.mouse && <Mouse className="h-4 w-4 shrink-0" />}</dd>
+          </div>)}</dl>
+        </section>)}
+      </div>
+    </aside>}
+
+    {/* Light's 本 button opens the 初心者ガイド; Light's Japanese guide shows データなし on every tab. */}
+    {helpOpen === 'guide' && <div className="absolute inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-6" onClick={() => setHelpOpen(null)}>
+      <div role="dialog" aria-modal="true" aria-label="初心者ガイド" data-testid="design-guide" onClick={(event) => event.stopPropagation()}
+        className="flex h-[min(820px,calc(100%-40px))] w-full max-w-[1600px] flex-col rounded-3xl border border-white/10 bg-[#202628] p-8 shadow-2xl">
+        <div className="flex items-center justify-between"><h2 className="text-xl font-medium text-white">初心者ガイド</h2>
+          <button type="button" aria-label="閉じる" onClick={() => setHelpOpen(null)} className="text-neutral-300 hover:text-white"><X className="h-5 w-5" /></button></div>
+        <div role="tablist" aria-label="初心者ガイド" className="mt-6 flex flex-wrap gap-2">{BEGINNER_GUIDE_TABS.map((tab) => <button key={tab} type="button" role="tab" aria-selected={guideTab === tab} onClick={() => setGuideTab(tab)}
+          className={`rounded-lg border px-3 py-2 text-base font-medium ${guideTab === tab ? 'border-[#0bcabc]/70 bg-white/10 text-white' : 'border-transparent text-neutral-400 hover:text-white'}`}>{tab}</button>)}</div>
+        <div role="tabpanel" className="flex flex-1 flex-col items-center justify-center gap-4 text-base text-neutral-200">
+          <img src={GUIDE_EMPTY_ICON} alt="" className="h-32 w-32" />データなし
+        </div>
+      </div>
     </div>}
 
     {!panelOpen && <button type="button" aria-label="パネルを開く" title="AIアシスタント" onClick={() => setPanelOpen(true)} className="absolute right-3 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-[#1b2023] text-neutral-200 shadow-lg hover:text-white"><PanelRightOpen className="h-5 w-5" /></button>}

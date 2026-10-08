@@ -4,6 +4,7 @@ import test from 'node:test';
 import { designEntryHref } from '../src/lib/designProjectArtifacts.ts';
 import { canvasImageReference, imageProjectId, openImageProject } from '../src/features/designDetail/imageProject.ts';
 import { createDesignCanvasObject, DESIGN_SHAPES } from '../src/features/designDetail/designCanvasShapes.ts';
+import { BEGINNER_GUIDE_TABS, CANVAS_SHORTCUT_GROUPS, moveCanvasLayer } from '../src/features/designDetail/designCanvasShortcuts.ts';
 
 const artifact = (metadata: Record<string, unknown>) => ({ id: 'a-1', title: 't', featureType: 'text-to-image', createdAt: '2026-10-01T00:00:00Z', metadata }) as never;
 
@@ -65,9 +66,24 @@ test('inspiration card, zoom group and collapsed assistant follow Light', () => 
   assert.match(detail, /params\.get\('projectSubType'\) === 'clothingDesign'/);
   assert.match(detail, /Hello！デザインはここから始まります/);
   assert.match(detail, /data-testid="design-zoom-group"/);
-  assert.match(detail, /aria-label=\{label\}[\s\S]*?使い方ガイド|使い方ガイド[\s\S]*?ショートカット/);
+  assert.match(detail, /aria-label="初心者ガイド"/);
+  assert.match(detail, /data-testid="design-shortcuts"/);
   assert.match(detail, /setPanelOpen\(!\(panelDefaultKey\.endsWith\(':inspiration'\) \|\| panelDefaultKey\.endsWith\(':canvas'\)\)\)/);
   assert.ok(fs.existsSync('public/lightchain-assets/mirror/lightchain-qlxy-prod/persistence/font-end/design-empty-placeholder.png'));
   const pages = fs.readFileSync('src/pages/LightchainParityPages.tsx', 'utf8');
   assert.match(pages, /title="インスピレーション"[^\n]*navigate\('\/designProduction\/detail\?projectSubType=clothingDesign'\)/);
+});
+
+test('Light guide tabs, shortcut groups and layer ordering', () => {
+  assert.equal(BEGINNER_GUIDE_TABS.length, 7);
+  assert.deepEqual(CANVAS_SHORTCUT_GROUPS.map((group) => group.title), ['キャンバス', '要素', '新しいオブジェクトを作成', 'レイヤー操作']);
+  const objects = [{ id: 'a', zIndex: 1 }, { id: 'b', zIndex: 2 }, { id: 'c', zIndex: 3 }];
+  const order = (list: { id: string; zIndex: unknown }[]) => [...list].sort((x, y) => Number(x.zIndex) - Number(y.zIndex)).map((o) => o.id).join('');
+  assert.equal(order(moveCanvasLayer(objects, 'a', 'front')), 'bca');
+  assert.equal(order(moveCanvasLayer(objects, 'c', 'back')), 'cab');
+  assert.equal(order(moveCanvasLayer(objects, 'a', 'up')), 'bac');
+  assert.equal(order(moveCanvasLayer(objects, 'c', 'down')), 'acb');
+  const detail = fs.readFileSync('src/features/designDetail/DesignEntryDetailPage.tsx', 'utf8');
+  assert.match(detail, /\{ t: 'text', r: 'rect', o: 'circle', l: 'line' \}/);
+  assert.ok(fs.existsSync('public/lightchain-assets/mirror/jp/static/none_list.png'));
 });
