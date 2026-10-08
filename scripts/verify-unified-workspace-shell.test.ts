@@ -10,11 +10,19 @@ test('first complete apparel flows use the unified workspace shell', () => {
   const app = fs.readFileSync('src/App.tsx', 'utf8');
   const shell = fs.readFileSync('src/components/workspace/LightchainUnifiedWorkspaceShell.tsx', 'utf8');
 
-  assert.match(app, /<LightchainUnifiedWorkspaceShell>[\s\S]*?<FittingPage \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
-  assert.match(app, /path="\/lightchain\/:toolId"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<LightchainWorkbenchPage \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
-  assert.match(app, /path="\/lightchain"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<GenerateLightchainEntry \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
-  assert.match(app, /path="\/lightchain\/fabric-image"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<LightchainMaterialWorkbenchPage \/>/);
-  assert.match(app, /path="\/lightchain\/printing-image"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<LightchainMaterialWorkbenchPage \/>/);
+  // Old Heavy-only URLs redirect to the Light-shaped screens instead of rendering the old workbenches.
+  for (const [path, to] of [
+    ['/fitting', '/model'], ['/generate', '/designProduction'], ['/workspace', '/dashboard'],
+    ['/studio', '/flow/integration'], ['/lab', '/flow/laboratory'], ['/patterns', '/editor/patternDesign'],
+    ['/patterns/workbench', '/editor/patternDesign'], ['/lightchain', '/dashboard'], ['/heavy', '/dashboard'],
+    ['/lightchain/fabric-image', '/tools/fabric'], ['/lightchain/printing-image', '/tools/printing'],
+    ['/heavy/fabric-image', '/tools/fabric'], ['/heavy/printing-image', '/tools/printing'],
+  ]) {
+    assert.ok(app.includes(`<Route path="${path}" element={<LegacyRouteRedirect to="${to}" />} />`), path);
+  }
+  assert.ok(app.includes('<Route path="/lightchain/:toolId" element={<LegacyToolRedirect />} />'));
+  assert.ok(app.includes('<Route path="/heavy/:toolId" element={<LegacyToolRedirect />} />'));
+  assert.match(app, /path="\/tools\/fabric"[\s\S]*?<LightchainMaterialWorkbenchPage \/>/);
   assert.match(app, /path="\/tools\/printing"[\s\S]*?<LightchainPrintingPage \/>/);
   assert.match(app, /path="\/model-library\/model-custom-form"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<ModelLibraryPage \/>/);
   assert.match(app, /path="\/flow\/integration"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<FashionStudioPage \/>/);
@@ -129,7 +137,7 @@ test('unified workspace aliases current Heavy-compatible Lightchain entry routes
     ['design-agent', '/agent'],
     ['lab', '/flow/laboratory'],
     ['print-design-project', '/editor/patternDesign'],
-    ['print-design-detail', '/patterns/workbench'],
+    ['print-design-detail', '/editor/patternDesign/detail'],
     ['fabric-image', '/tools/fabric'],
     ['line-to-real', '/tools/line-draft-to-tile'],
     ['pattern-vector-pro', '/tools/vector-special'],
@@ -148,9 +156,8 @@ test('pattern workspace aliases preserve distinct project and detail feature sco
   assert.deepEqual(getLightchainUnifiedRouteAliases('print-design-project'), [
     '/editor/patternDesign',
     '/printing',
-    '/patterns',
   ]);
-  assert.deepEqual(getLightchainUnifiedRouteAliases('print-design-detail'), ['/patterns/workbench']);
+  assert.deepEqual(getLightchainUnifiedRouteAliases('print-design-detail'), ['/editor/patternDesign/detail']);
 
   const layout = fs.readFileSync('src/components/layout/Layout.tsx', 'utf8');
   const shell = fs.readFileSync('src/components/workspace/LightchainUnifiedWorkspaceShell.tsx', 'utf8');
@@ -168,7 +175,7 @@ test('every unified workspace alias is implemented by an App route inside the sh
 
   // The stale plural /models alias was intentionally removed with the current
   // Lightchain route map; keep this count tied to the live alias set.
-  assert.equal(aliasPaths.size, 40);
+  assert.equal(aliasPaths.size, 34);
   for (const path of aliasPaths) {
     const routePath = path.split('?')[0];
     const exactMatches = routeBlocks.filter((route) => route.path === routePath);

@@ -7,7 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { HeavyChainLogo } from './components/icons';
 import { LightchainLauncherHeader } from './components/layout/LightchainLauncherHeader';
 import { resolveAuthReturnPath } from './lib/authRedirect';
-import { isHeavyWorkspaceRuntime, resolveHeavyCanonicalLocation } from './lib/heavyWorkspace';
+import { isHeavyWorkspaceRuntime, mergeLegacyLocation, resolveLegacyToolLocation } from './lib/heavyWorkspace';
 import { LightchainUnifiedWorkspaceShell } from './components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
@@ -72,14 +72,10 @@ const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ def
 const SignupPage = lazy(() => import('./pages/SignupPage').then((module) => ({ default: module.SignupPage })));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then((module) => ({ default: module.AuthCallbackPage })));
 const SharedImagePage = lazy(() => import('./pages/SharedImagePage').then((module) => ({ default: module.SharedImagePage })));
-const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
-const GeneratePage = lazy(() => import('./pages/GeneratePage').then((module) => ({ default: module.GeneratePage })));
 const GenerateLightchainEntry = lazy(() => import('./components/GenerateLightchainEntry').then((module) => ({ default: module.GenerateLightchainEntry })));
 const WorkflowBoardPage = lazy(() => import('./pages/WorkflowBoardPage').then((module) => ({ default: module.WorkflowBoardPage })));
-const FittingPage = lazy(() => import('./pages/FittingPage').then((module) => ({ default: module.FittingPage })));
 const FashionStudioPage = lazy(() => import('./pages/FashionStudioPage').then((module) => ({ default: module.FashionStudioPage })));
 const FashionStudioDetailPage = lazy(() => import('./pages/FashionStudioDetailPage').then((module) => ({ default: module.FashionStudioDetailPage })));
-const PatternWorkspacePage = lazy(() => import('./pages/PatternWorkspacePage').then((module) => ({ default: module.PatternWorkspacePage })));
 const PatternProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PatternProjectDashboardPage })));
 const PrintDesignProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PrintDesignProjectDashboardPage })));
 const PrintDesignDetailPage = lazy(() => import('./pages/PrintDesignDetailPage').then((module) => ({ default: module.PrintDesignDetailPage })));
@@ -377,24 +373,16 @@ function lazyPage(page: React.ReactNode) {
   return page;
 }
 
-function HeavyCanonicalRouteBoundary({ toolId: explicitToolId }: { toolId?: string }) {
+/** Old Heavy-only screens: send every visit (links, history entries, bookmarks) to the Light-shaped page. */
+function LegacyRouteRedirect({ to }: { to: string }) {
+  const location = useLocation();
+  return <Navigate to={mergeLegacyLocation(to, location.search, location.hash)} replace />;
+}
+
+function LegacyToolRedirect() {
   const { toolId } = useParams();
   const location = useLocation();
-  const sourceToolId = explicitToolId ?? toolId;
-  const canonicalLocation = resolveHeavyCanonicalLocation(
-    sourceToolId,
-    location.search,
-    location.hash,
-  );
-  if (canonicalLocation) {
-    if (sourceToolId === 'model-library' || sourceToolId === 'model-custom') {
-      const params = new URLSearchParams(canonicalLocation.search);
-      params.set('workspaceFeature', sourceToolId);
-      return <Navigate to={{ ...canonicalLocation, search: `?${params.toString()}` }} replace />;
-    }
-    return <Navigate to={canonicalLocation} replace />;
-  }
-  return lazyPage(<LightchainWorkbenchPage />);
+  return <Navigate to={resolveLegacyToolLocation(toolId, location.search, location.hash)} replace />;
 }
 
 function LazyLayout() {
@@ -802,30 +790,8 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/workspace"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(<DashboardPage />)}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/generate"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <GeneratePage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/workspace" element={<LegacyRouteRedirect to="/dashboard" />} />
+        <Route path="/generate" element={<LegacyRouteRedirect to="/designProduction" />} />
         <Route
           path="/workflows/:workflowId"
           element={
@@ -840,20 +806,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/fitting"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <FittingPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/fitting" element={<LegacyRouteRedirect to="/model" />} />
         <Route
           path="/marketing"
           element={
@@ -882,20 +835,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/studio"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <FashionStudioPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/studio" element={<LegacyRouteRedirect to="/flow/integration" />} />
         <Route
           path="/model-library"
           element={
@@ -910,34 +850,8 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/patterns"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <PatternWorkspacePage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/patterns/workbench"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <PatternWorkspacePage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/patterns" element={<LegacyRouteRedirect to="/editor/patternDesign" />} />
+        <Route path="/patterns/workbench" element={<LegacyRouteRedirect to="/editor/patternDesign" />} />
         <Route
           path="/flow/GenerateShortVideo"
           element={
@@ -958,192 +872,23 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/lab"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <LabPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/heavy/lab"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <HeavyCanonicalRouteBoundary toolId="lab" />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/heavy"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <GenerateLightchainEntry />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/heavy/fabric-image"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <LightchainMaterialWorkbenchPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/heavy/printing-image"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <HeavyCanonicalRouteBoundary toolId="printing-image" />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/heavy/marketing"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <LightchainMarketingHomePage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/heavy/marketing-home"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <LightchainMarketingHomePage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/heavy/design-production"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <LightchainDesignProductionPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/heavy/:toolId"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <HeavyCanonicalRouteBoundary />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/lightchain"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <GenerateLightchainEntry />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/lightchain/:toolId"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/lab" element={<LegacyRouteRedirect to="/flow/laboratory" />} />
+        <Route path="/heavy/lab" element={<LegacyRouteRedirect to="/flow/laboratory" />} />
+        <Route path="/heavy" element={<LegacyRouteRedirect to="/dashboard" />} />
+        <Route path="/heavy/fabric-image" element={<LegacyRouteRedirect to="/tools/fabric" />} />
+        <Route path="/heavy/printing-image" element={<LegacyRouteRedirect to="/tools/printing" />} />
+        <Route path="/heavy/marketing" element={<LegacyRouteRedirect to="/marketing" />} />
+        <Route path="/heavy/marketing-home" element={<LegacyRouteRedirect to="/marketing" />} />
+        <Route path="/heavy/design-production" element={<LegacyRouteRedirect to="/designProduction" />} />
+        <Route path="/heavy/:toolId" element={<LegacyToolRedirect />} />
+        <Route path="/lightchain" element={<LegacyRouteRedirect to="/dashboard" />} />
+        <Route path="/lightchain/:toolId" element={<LegacyToolRedirect />} />
         {/* Light has no /history screen: its results live in the library's 生成履歴. */}
         <Route path="/history" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />
         {/* Light has no /jobs screen: its results live in the library's 生成履歴. */}
         <Route path="/jobs" element={<Navigate to={LIBRARY_HISTORY_HREF} replace />} />
-        <Route
-          path="/lightchain/fabric-image"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <LightchainMaterialWorkbenchPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/lightchain/printing-image"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                {lazyPage(
-                  <LightchainUnifiedWorkspaceShell>
-                    <LightchainMaterialWorkbenchPage />
-                  </LightchainUnifiedWorkspaceShell>,
-                )}
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/lightchain/fabric-image" element={<LegacyRouteRedirect to="/tools/fabric" />} />
+        <Route path="/lightchain/printing-image" element={<LegacyRouteRedirect to="/tools/printing" />} />
         <Route
           path="/creator"
           element={

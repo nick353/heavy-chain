@@ -1,3 +1,5 @@
+import { getLightchainUnifiedRouteAliases } from './lightchainUnifiedFeatureCatalog.ts';
+
 /** Shared runtime identity for the Heavy deployment and its /heavy aliases. */
 export const isHeavyWorkspaceRuntime = (): boolean => {
   if (typeof window === 'undefined') return false;
@@ -75,4 +77,35 @@ export const resolveHeavyCanonicalLocation = (
     return null;
   }
   return { pathname: HEAVY_CANONICAL_PATHS[toolId], search, hash };
+};
+
+type LegacyLocation = { pathname: string; search: string; hash: string };
+
+/** Joins a target that may carry its own query (e.g. `/model?tab=参考図`) with the incoming query; incoming keys win. */
+export const mergeLegacyLocation = (target: string, search: string, hash: string): LegacyLocation => {
+  const [pathname, targetQuery = ''] = target.split('?');
+  const params = new URLSearchParams(targetQuery);
+  new URLSearchParams(search).forEach((value, key) => params.set(key, value));
+  const query = params.toString();
+  return { pathname, search: query ? `?${query}` : '', hash };
+};
+
+/**
+ * `/lightchain/:toolId` and `/heavy/:toolId` are old URLs (saved history, bookmarks, older links).
+ * Each one goes to the feature's Light-shaped page; an unknown id goes to the home screen so no
+ * old workbench is ever shown.
+ */
+export const resolveLegacyToolLocation = (toolId: string | undefined, search: string, hash: string): LegacyLocation => {
+  const raw = toolId ?? '';
+  const canonical = resolveHeavyCanonicalLocation(raw, search, hash);
+  if (canonical) {
+    if (raw === 'model-library' || raw === 'model-custom') {
+      const params = new URLSearchParams(canonical.search);
+      params.set('workspaceFeature', raw);
+      return { ...canonical, search: `?${params.toString()}` };
+    }
+    return canonical;
+  }
+  const alias = getLightchainUnifiedRouteAliases(resolveHeavyWorkspaceToolId(raw))[0];
+  return mergeLegacyLocation(alias ?? '/dashboard', search, hash);
 };

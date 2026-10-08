@@ -28,25 +28,25 @@ export const LIGHTCHAIN_MATERIAL_TABS: LightchainMaterialTab[] = [
   {
     id: 'fabric-image',
     label: '生地イメージ',
-    route: '/lightchain/fabric-image',
+    route: '/tools/fabric',
     description: '異なる生地の質感を商品画像で確認します。',
   },
   {
     id: 'printing-image',
     label: 'プリントイメージ',
-    route: '/lightchain/printing-image',
+    route: '/tools/printing',
     description: 'スポット／全体のプリント効果を確認します。',
   },
   {
     id: 'line-to-real',
     label: '線画の実写化',
-    route: '/lightchain/line-to-real',
+    route: '/tools/line-draft-to-tile',
     description: '線画を平置き・実写候補へ展開します。',
   },
   {
     id: 'line-generation',
     label: '平絵生成',
-    route: '/lightchain/line-generation',
+    route: '/tools/line',
     description: '着用画像や平置き画像から線画を作ります。',
   },
 ];
