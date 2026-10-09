@@ -177,7 +177,7 @@ function SourceUploadCard({
           ) : exampleSrc ? (
             <img className="size-full object-cover" src={exampleSrc} alt="demo" />
           ) : null}
-          <span className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-black/60 px-1.5 py-0.5 text-[12px] leading-[17.1429px] text-white">例</span>
+          {!preview && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-black/60 px-1.5 py-0.5 text-[12px] leading-[17.1429px] text-white">例</span>}
         </div>
       </div>
     </label>
@@ -449,7 +449,7 @@ export function SourceModelToolSurface() {
         <div className="flex shrink-0 items-end gap-2 px-2 py-4">
           {select('aspectRatio', '画像比率', MODEL_ASPECT_OPTIONS, false, 'w-[104px]')}
           {select('resolution', '解像度', MODEL_RESOLUTION_OPTIONS, false, 'w-24')}
-          <button type="button" data-testid="heavy-model-tool-generate" disabled={locked||!workspace.slots.primary||!settings||invalidBodyDraft} onClick={()=>void generate()} className="flex h-10 flex-1 items-center justify-center rounded-lg bg-[#65d3cf] text-sm font-medium text-neutral-950 disabled:opacity-50">AI生成</button>
+          <button type="button" data-testid="heavy-model-tool-generate" disabled={locked||!workspace.slots.primary||!settings||invalidBodyDraft} onClick={()=>void generate()} className="flex h-10 flex-1 items-center justify-center rounded-lg bg-[#65d3cf] text-sm font-medium text-neutral-950 disabled:opacity-50">{workspace.status==='running'?'生成中…':'AI生成'}</button>
         </div>
       </aside>
 
@@ -465,8 +465,10 @@ export function SourceModelToolSurface() {
           <RefreshCw className="h-5 w-5" aria-hidden="true" />
           生成履歴
         </button>
-        {workspace.result ? <div className="flex h-full items-center justify-center pb-16 pl-6 pr-[312px] pt-16" data-testid="model-tool-result-preview">
+        {workspace.result ? <div className="flex h-full items-center justify-center pb-16 pl-6 pr-6 pt-16" data-testid="model-tool-result-preview">
           <img src={workspace.result.imageUrl} alt={`${config.title}の生成結果`} className="h-full w-full object-contain" />
+        </div> : workspace.status==='running' ? <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-neutral-300" role="status">
+          <RefreshCw className="h-8 w-8 animate-spin text-[#65d3cf]" aria-hidden="true" />生成しています…
         </div> : <div className="flex h-full flex-col items-center justify-center px-10 text-center">
           <h2 className="font-[AlimamaFangYuanTiVF] text-lg font-bold leading-[25.2px] text-white">{config.title}</h2>
           <p className="mt-2 text-sm leading-[21px] text-[#aab8b6]">{config.subtitle}</p>
