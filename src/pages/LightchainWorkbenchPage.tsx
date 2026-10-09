@@ -6056,7 +6056,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     className="absolute inset-0 z-[2] block h-full w-full object-cover"
                   />
                   <span className="absolute right-[-8px] top-[18px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">{currentWorkspaceTab === 'AIグラフィックデザイン' ? '視覚的な訴求力' : '精度の高い商品選定'}</span>
-                  <span className="absolute left-[-6px] bottom-[24px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">{currentWorkspaceTab === 'AIグラフィックデザイン' ? 'オリジナル図案' : '市場インサイト'}</span>
+                  <span className="absolute left-[-6px] bottom-[64px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">{currentWorkspaceTab === 'AIグラフィックデザイン' ? 'オリジナル図案' : '市場インサイト'}</span>
                 </div>
               </section>
             ) : (

@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Layers, Chrome } from 'lucide-react';
+import { Chrome } from 'lucide-react';
+import { HeavyChainLogo } from '../components/icons';
 import { Button, Input, PasswordStrengthMeter } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 import { cloudflareAuthEnabled } from '../lib/auth';
 import { getAuthErrorMessage } from '../lib/authErrorMessage';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+
+// Google/Apple sign-in only works once the auth worker has provider credentials; hide the buttons until then.
+const socialLoginEnabled = import.meta.env.VITE_SOCIAL_LOGIN_ENABLED === 'true';
 
 export function SignupPage() {
   const navigate = useNavigate();
@@ -58,7 +62,7 @@ export function SignupPage() {
     try {
       await signUpWithEmail(email, password, name);
       toast.success('アカウントを作成しました。メールを確認してください。');
-      navigate(cloudflareAuthEnabled ? '/login' : '/dashboard');
+      navigate(cloudflareAuthEnabled ? '/login?registered=1' : '/dashboard');
     } catch (error: any) {
       toast.error(getAuthErrorMessage(error, 'アカウント作成に失敗しました'));
     }
@@ -91,7 +95,8 @@ export function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-surface-50 dark:bg-surface-950">
+    <div className="dark">
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-[#070b12]">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-primary-200/20 blur-[120px] animate-float" />
@@ -106,13 +111,9 @@ export function SignupPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-3 group">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform duration-500">
-              <Layers className="w-7 h-7 text-white" />
-            </div>
-            <span className="font-display text-2xl font-semibold text-neutral-900 dark:text-white tracking-wide">
-              Heavy Chain
-            </span>
+          <Link to="/login" className="inline-flex items-center gap-2.5" aria-label="Heavy Chain">
+            <HeavyChainLogo height={24} showText={false} className="shrink-0" />
+            <span className="text-xs font-semibold tracking-[0.22em] text-white/85">HEAVY CHAIN</span>
           </Link>
         </div>
 
@@ -142,6 +143,7 @@ export function SignupPage() {
             無料で始めましょう
           </p>
 
+          {socialLoginEnabled && <>
           {/* OAuth Buttons */}
           <div className="space-y-3 mb-6">
             <button
@@ -170,6 +172,7 @@ export function SignupPage() {
             <span className="text-sm text-neutral-400 dark:text-neutral-500">または</span>
             <div className="flex-1 h-px bg-neutral-200 dark:bg-neutral-700" />
           </div>
+          </>}
 
           {/* Email Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -182,7 +185,7 @@ export function SignupPage() {
               onChange={(e) => setName(e.target.value)}
               error={errors.name}
               disabled={isLoading}
-              className="bg-white/50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
+              className="dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
             />
             <Input
               type="email"
@@ -193,21 +196,21 @@ export function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
               error={errors.email}
               disabled={isLoading}
-              className="bg-white/50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
+              className="dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
             />
             <div className="space-y-2">
               <Input
                 type="password"
                 label="パスワード"
-                placeholder="8文字以上"
+                placeholder={`${cloudflareAuthEnabled ? 12 : 8}文字以上`}
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={errors.password}
                 disabled={isLoading}
-                className="bg-white/50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
+                className="dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
               />
-              <PasswordStrengthMeter password={password} />
+              <PasswordStrengthMeter password={password} minLength={cloudflareAuthEnabled ? 12 : 8} />
             </div>
             <Input
               type="password"
@@ -218,7 +221,7 @@ export function SignupPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={errors.confirmPassword}
               disabled={isLoading}
-              className="bg-white/50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
+              className="dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
             />
 
             <Button
@@ -249,6 +252,7 @@ export function SignupPage() {
           </Link>
         </p>
       </motion.div>
+    </div>
     </div>
   );
 }

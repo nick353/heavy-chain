@@ -39,7 +39,9 @@ test('public and auth recovery shells use the Heavy Chain identity without Light
   assert.match(login, /アカウントIDを下に入力してログインをお願いします。/);
   assert.match(login, /placeholder="アカウントを入力"/);
   assert.match(login, /placeholder="パスワードを入力する"/);
-  assert.doesNotMatch(login, /handleGoogleLogin|handleAppleLogin|>Google<|>Apple<|\/signup|LIGHTCHAIN AI \/ LOGIN/);
+  assert.doesNotMatch(login, /handleGoogleLogin|handleAppleLogin|>Google<|>Apple<|LIGHTCHAIN AI \/ LOGIN/);
+  // Heavy is distributed to colleagues, so the login card links to self sign-up (Light has no such link).
+  assert.match(login, /data-testid="login-signup-link"/);
   assert.doesNotMatch(login, /Lightchain|Light chain|LIGHTCHAIN/);
 });
 

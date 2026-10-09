@@ -697,7 +697,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       {titleError && <p role="alert" className="px-3 pb-2 text-xs text-red-300">名前を保存できませんでした</p>}
     </div>
 
-    {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute top-4 z-20 flex h-[37px] items-center gap-1.5 rounded-xl border border-white/10 bg-[#1b2023] px-3 text-sm text-neutral-200"
+    {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute top-4 z-20 flex h-[37px] max-[640px]:top-[124px] items-center gap-1.5 rounded-xl border border-white/10 bg-[#1b2023] px-3 text-sm text-neutral-200"
       style={{ right: panelOpen ? 452 : 64 }}><Sparkles className="h-4 w-4" />{remainingUnits.toLocaleString()}</div>}
 
     {hasContent && <nav aria-label="キャンバスメニュー" className="absolute left-[13px] z-20 flex flex-col gap-2 rounded-xl border border-white/10 bg-[#1b2023]/95 p-2" style={{ top: 'calc(50% - 109px)' }}>

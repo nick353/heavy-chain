@@ -106,7 +106,8 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
                 disabled={navigationLocked}
                 role="tab"
                 aria-selected={tab.id === active}
-                className={`min-h-[31px] overflow-hidden whitespace-nowrap rounded-lg px-2 py-1 text-xs font-semibold transition sm:px-3 sm:text-sm ${tab.id === active
+                title={tab.label}
+                className={`min-h-[31px] overflow-hidden whitespace-nowrap text-ellipsis rounded-lg px-2 py-1 text-xs font-semibold transition sm:px-3 sm:text-sm ${tab.id === active
                   ? 'bg-[#737d84] text-white shadow-lg shadow-black/20'
                   : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
               >
