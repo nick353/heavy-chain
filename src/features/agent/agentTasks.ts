@@ -61,6 +61,20 @@ export function defaultAgentTaskTitle(now = new Date()) {
   return `クリエイティブ企画${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}`;
 }
 
+const PROMPT_TITLE_LENGTH = 24;
+
+/** Until the plan names the task, the start of the request tells tasks apart better than the hour it was made. */
+export function promptAgentTaskTitle(prompt: string, now = new Date()) {
+  const text = prompt.replace(/\s+/g, ' ').trim();
+  if (!text) return defaultAgentTaskTitle(now);
+  return text.length > PROMPT_TITLE_LENGTH ? `${text.slice(0, PROMPT_TITLE_LENGTH)}…` : text;
+}
+
+/** True while the title is still the automatic one, so the plan's title may replace it. */
+export function isAutomaticAgentTaskTitle(title: string, task: Pick<AgentTask, 'prompt'>) {
+  return title.startsWith('クリエイティブ企画') || title === promptAgentTaskTitle(task.prompt);
+}
+
 export async function listAgentTasks(brandId: string): Promise<AgentTaskDocument[]> {
   const documents = await api().listCanvasDocuments(brandId);
   return documents.map(toAgentTaskDocument).filter((value): value is AgentTaskDocument => Boolean(value))
@@ -73,7 +87,7 @@ export async function loadAgentTask(taskId: string): Promise<AgentTaskDocument |
 
 export async function createAgentTask(input: { brandId: string; scene: AgentScene; subtype: string; prompt: string; profile: string; project: string | null }): Promise<AgentTaskDocument> {
   const id = crypto.randomUUID();
-  const title = defaultAgentTaskTitle();
+  const title = promptAgentTaskTitle(input.prompt);
   const task: AgentTask = { kind: AGENT_TASK_KIND, version: 1, scene: input.scene, subtype: input.subtype, prompt: input.prompt.slice(0, 2400),
     profile: input.profile.slice(0, 800), project: input.project, createdAt: new Date().toISOString(), rounds: [], choice: null, plan: null, image: null };
   const created = await api().createCanvasDocument({ id, brand_id: input.brandId, title, snapshot: { version: 1, name: title, objects: [], agentTask: task } });

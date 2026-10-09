@@ -9,7 +9,7 @@ import { isHeavyWorkspaceBrandName, isHeavyWorkspaceRuntime } from '../lib/heavy
 import { useAuthStore } from '../stores/authStore';
 import { AgentSidebar } from '../features/agent/AgentSidebar';
 import {
-  agentConversationId, agentImagePrompt, assistantStepFrom, loadAgentTask, parsePlanResponse, parseThemeResponse, planPrompt, themePrompt, updateAgentTask,
+  agentConversationId, agentImagePrompt, assistantStepFrom, isAutomaticAgentTaskTitle, loadAgentTask, parsePlanResponse, parseThemeResponse, planPrompt, themePrompt, updateAgentTask,
   type AgentAssistantStep, type AgentImageStep, type AgentTask, type AgentTaskDocument,
 } from '../features/agent/agentTasks';
 
@@ -187,7 +187,7 @@ export default function HeavyAgentTaskPage() {
     if (task.plan.state === 'running') { const step = task.plan; guard(() => runAssistant('plan', step, null, (current, result) => ({ ...current, plan: result }))); return; }
     if (task.plan.state !== 'completed' || !task.plan.content) return;
     const parsed = parsePlanResponse(task.plan.content);
-    if (parsed.title && doc.title !== parsed.title && doc.title.startsWith('クリエイティブ企画')) { const title = parsed.title; guard(() => commit((current) => current, { title })); return; }
+    if (parsed.title && doc.title !== parsed.title && isAutomaticAgentTaskTitle(doc.title, task)) { const title = parsed.title; guard(() => commit((current) => current, { title })); return; }
     if (!task.image) { const theme = task.choice.theme; guard(() => startImage(parsed.imagePrompt ?? `Apparel planning mood board for a womenswear collection, ${theme}, fabric swatches, color palette, editorial photo`)); return; }
     if (task.image.state === 'running') { const step = task.image; guard(() => reconcileImage(step)); }
   }, [doc, brandId, status, tick, guard, startThemeRound, startPlan, startImage, reconcileImage, runAssistant, commit]);
