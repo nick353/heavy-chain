@@ -723,8 +723,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       <button type="button" aria-label="テキスト" disabled={!editable} onClick={() => addObject('text')} className={toolbarButton}><Type className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="画像/動画を挿入する" onClick={() => uploadRef.current?.click()} className={toolbarButton}><ImagePlus className="h-[18px] w-[18px]" /></button>
       <span className="mx-[2px] h-5 w-px bg-white/15" />
-      {/* Light ends the tool group with 企画提案書; Heavy opens its own design documents (/board/edit). */}
-      <Link to="/board/edit" aria-label="企画提案書" className={toolbarButton}><FileText className="h-[18px] w-[18px]" /></Link>
+      {/* Light ends the tool group with 企画提案書; Heavy opens its design document list (/board/edit needs an id). */}
+      <Link to="/board" aria-label="企画提案書" className={toolbarButton}><FileText className="h-[18px] w-[18px]" /></Link>
       <span className="mx-[2px] h-5 w-px bg-white/15" />
       <button type="button" aria-label="ダウンロード" onClick={() => void downloadSelected()} className={toolbarButton}><Download className="h-[18px] w-[18px]" /></button>
     </div>}

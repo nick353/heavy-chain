@@ -127,6 +127,7 @@ import {
 import { HEAVY_IMAGE_PROVIDER } from '../lib/heavyImageProvider';
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
 import { buildLocalCanvasAssetReference, isLocalCanvasAssetReference, putLocalCanvasAsset, resolveLocalCanvasAsset, type LocalCanvasAssetResolution } from '../lib/canvasLocalAssets';
+import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
 type LightchainVisibleCategoryId = 'recommended' | 'planning' | 'fitting' | 'graphics';
@@ -1931,7 +1932,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             }}
             className="group relative flex min-h-48 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-[#181d1f] p-2 transition hover:border-cyan-300/70"
           >
-            <img src={item.imageUrl} alt={item.name} loading="lazy" className="h-48 w-full object-contain" />
+            <img src={thumbnailImageUrl(item.imageUrl)} alt={item.name} loading="lazy" className="h-48 w-full object-contain" />
             <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-lg bg-cyan-300 px-4 py-2 text-xs font-semibold text-neutral-950 opacity-0 transition group-hover:opacity-100">使用</span>
           </button>
         ))}
@@ -5543,7 +5544,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                   <div className="grid flex-1 content-start gap-3 overflow-y-auto p-4 sm:grid-cols-2">
                     {fittingHistoryItems.map((item) => (
                       <article key={item.id} className="overflow-hidden rounded-xl border border-white/10 bg-[#1a1f22]">
-                        <img src={item.imageUrl} alt="" className="aspect-[4/5] w-full object-cover" loading="lazy" />
+                        <img src={thumbnailImageUrl(item.imageUrl)} alt="" className="aspect-[4/5] w-full object-cover" loading="lazy" />
                         <div className="p-3">
                           <p className="truncate text-sm font-semibold text-white">{item.title}</p>
                           <p className="mt-1 text-xs text-neutral-500">{item.note}</p>
