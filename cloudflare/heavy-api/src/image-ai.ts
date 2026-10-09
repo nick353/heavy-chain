@@ -532,7 +532,7 @@ const JOB_POLL_MS = 2000;
 
 /** Runs every planned candidate of an admitted request. Returns a response only when the run must stop early. */
 async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageInput, typedAction: ImageAction, provider: ProviderConfig,
-  normalized: Awaited<ReturnType<typeof normalizedRequest>>): Promise<Response | null> {
+  normalized: { digest: string; normalized: Json }): Promise<Response | null> {
   const id = row.request_id; const user = row.user_id; const action: string = typedAction; const fingerprint = row.fingerprint;
   const jobId = row.job_id; const count = input.candidates.length;
   for (let index = 0; index < count; index++) {
@@ -629,9 +629,14 @@ export async function processImageJob(env: Env, requestId: string): Promise<void
   }
   const raw = JSON.parse(await object.text()) as Json;
   const provider = providerConfig(env,row.action,raw);
-  const input = parseImageInput(row.action,raw,provider);
-  const normalized = await normalizedRequest(env,row.user_id,row.action,raw,input,provider);
-  if (normalized.digest === row.fingerprint && input.brandId === row.brand_id) {
+  const parsed = parseImageInput(row.action,raw,provider);
+  // Re-parsing draws new random seeds, so the admitted fingerprint and the seeds recorded at
+  // admission are authoritative. The stored input is private and written only after admission.
+  const planned = await outputs(env,requestId);
+  const input = { ...parsed, candidates: parsed.candidates.map((candidate,index) =>
+    planned[index] && Number.isSafeInteger(Number(planned[index].seed)) ? { ...candidate, seed: Number(planned[index].seed) } : candidate) };
+  const normalized = { digest: row.fingerprint, normalized: rowNormalizedInput(row) ?? {} };
+  if (input.brandId === row.brand_id && planned.length === input.candidates.length) {
     await executeAdmitted(env,{ userId: row.user_id },row,input,row.action,provider,normalized);
   }
   if ((await rowEntitlement(env,row)).allowed) await reconcile(env,row,true);
