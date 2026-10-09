@@ -12,3 +12,8 @@ test('3D function asks the provider for a CGI render while keeping the user text
 test('other functions send the user text unchanged', () => {
   for (const id of ['text', 'region', 'underwear']) assert.equal(studioProviderPrompt('そのまま', id), 'そのまま');
 });
+
+test('a text-mode request that asks for 3D also gets the 3D directive', () => {
+  assert.match(studioProviderPrompt('この服を立体感のある3Dレンダリング画像に変換してください。', 'text'), /3D CGI product render/);
+  assert.match(studioProviderPrompt('３Ｄ画像にして', 'text'), /3D CGI product render/);
+});
