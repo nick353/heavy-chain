@@ -770,3 +770,19 @@ test('a failed queue send runs the job inline once and returns the result',async
   assert.equal(s.bucket.rows.has(`image-job-inputs/${id}`),false);
   await processImageJob(s.env as never,id); assert.equal(s.calls.length,1);
 });
+
+test('a queued job without a client seed still runs: admitted seeds and fingerprint are authoritative',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  const sent: string[]=[];
+  Object.assign(s.env,{ IMAGE_JOB_QUEUE: { send: async (body: { requestId: string }) => { sent.push(body.requestId); } } });
+  const id=crypto.randomUUID();
+  const pending=s.call(url+'generate-image','alice',s.input(),id);
+  while (!sent.length) await new Promise(resolve=>setTimeout(resolve,5));
+  // Production callers send no seed; the fixture adds one, so strip it from the stored input.
+  const key=`image-job-inputs/${id}`; const stored=JSON.parse(new TextDecoder().decode(s.bucket.rows.get(key)!.bytes));
+  delete stored.seed; s.bucket.rows.get(key)!.bytes=new TextEncoder().encode(JSON.stringify(stored));
+  await processImageJob(s.env as never,id);
+  assert.equal(s.calls.length,1); assert.equal(s.calls[0].form.get('seed'),String(s.db.sql.prepare('SELECT seed FROM heavy_ai_candidates').get()!.seed));
+  assert.equal(s.db.sql.prepare('SELECT state FROM heavy_ai_requests').get()!.state,'completed');
+  assert.equal((await json(await pending)).success,true);
+});
