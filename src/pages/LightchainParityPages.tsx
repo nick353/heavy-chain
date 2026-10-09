@@ -46,6 +46,7 @@ import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../compon
 import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 import { formatProjectAge, ProjectThumbnail, useFeatureProjects } from './PatternProjectDashboardPage';
 import { downloadValidatedImage } from '../lib/imageDownload';
+import { projectNameFromFile } from '../lib/projectNames';
 import { generateImage } from '../lib/imageApi';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
@@ -2419,7 +2420,7 @@ export function LightchainOrientedDesignDetailPage() {
         <button type="button" onClick={() => navigate(explicitFeature === null || explicitFeature === 'wear-design-detail' ? '/flow/orientedDesign' : orientedDesignLabHref(location, '/flow/orientedDesign'))} className="flex w-fit items-center gap-2 text-base text-neutral-400 transition hover:text-white">
           <ChevronLeft className="h-5 w-5" />
           <div className="h-full w-px bg-transparent" />
-          <span className="rounded-sm px-1 py-1">Untitled</span>
+          <span className="rounded-sm px-1 py-1">{projectNameFromFile(workspace.slots.primary?.name)}</span>
         </button>
       </aside>
       <label className="absolute left-1/2 top-[158px] flex h-[534px] w-[min(768px,calc(100vw-40px))] -translate-x-1/2 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/15 bg-[#25292b] text-center transition hover:border-cyan-500/60" data-testid="oriented-design-detail-upload">

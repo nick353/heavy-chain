@@ -307,7 +307,7 @@ export default function HeavyAgentTaskPage() {
           <button type="button" aria-label="概要を閉じる" onClick={() => setPanelOpen(false)} className="absolute right-3 top-3 rounded-md p-1.5 text-neutral-400 hover:bg-white/10"><PanelRightClose className="h-4 w-4" /></button>
           <h2 className="text-base font-medium text-white">概要</h2>
           <dl className="mt-4 space-y-3">
-            <div><dt className="text-xs text-neutral-500">業務シーン</dt><dd>{task.scene}（{task.subtype}）</dd></div>
+            <div><dt className="text-xs text-neutral-500">業務シーン</dt><dd>{task.subtype && task.subtype !== task.scene ? `${task.scene}（${task.subtype}）` : task.scene}</dd></div>
             <div><dt className="text-xs text-neutral-500">ステータス</dt><dd>{statusLabel}</dd></div>
             {task.choice && <div><dt className="text-xs text-neutral-500">テーマ</dt><dd>{task.choice.theme}</dd></div>}
             <div><dt className="text-xs text-neutral-500">作成日</dt><dd>{new Date(task.createdAt).toLocaleString('ja-JP')}</dd></div>

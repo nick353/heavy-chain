@@ -6,6 +6,7 @@ import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 import { useBoardDraftCards } from '../features/boardDraftProjects';
+import { projectTitleFromMetadata } from '../lib/projectNames';
 
 export const formatProjectAge = (value: string) => {
   const date = new Date(value);
@@ -52,7 +53,7 @@ export function useFeatureProjects(featureId: string) {
         if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
         setProjects(unique.map((image, index) => {
           const metadata = image.metadata && typeof image.metadata === 'object' && !Array.isArray(image.metadata) ? image.metadata as Record<string, unknown> : {};
-          const title = typeof metadata.projectTitle === 'string' && metadata.projectTitle.trim() ? metadata.projectTitle : 'Untitled';
+          const title = typeof metadata.projectTitle === 'string' && metadata.projectTitle.trim() ? metadata.projectTitle : projectTitleFromMetadata(metadata);
           return { id: image.id, jobId: image.job_id!, title, updatedAt: image.created_at, imageUrl: signed[index]?.image_url ?? '' };
         }));
         setStatus('success');

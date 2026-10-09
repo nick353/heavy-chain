@@ -611,7 +611,8 @@ export function VideoWorkstationPage() {
       scopeId: user?.id,
       featureType: 'video-workstation',
       title: projectNameFromFile(materialReference.fileName),
-      imageUrl: previewImageUrl,
+      // Library and dashboard cards show the uploaded garment; the storyboard sketch stays in metadata.
+      imageUrl: persistedSourceImage && !persistedSourceImage.startsWith('blob:') ? persistedSourceImage : previewImageUrl,
       prompt: values.editPrompt,
       metadata: {
         ...(persistedVideoDraft?.metadata ?? {}),
@@ -626,6 +627,7 @@ export function VideoWorkstationPage() {
         videoReferencePreviewTruncated: Boolean(values.referencePreview && !persistedReferencePreview),
         videoSourceImageUrl: persistedSourceImage,
         videoSourceFileName: materialReference.fileName,
+        videoStoryboardPreview: previewImageUrl,
         sourceWorkspace: 'video',
         sourceLabel: 'Video Workstation',
         sourceResumePath: '/flow/GenerateShortVideo/detail',

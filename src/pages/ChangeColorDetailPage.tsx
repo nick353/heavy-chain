@@ -213,7 +213,7 @@ function ChangeColorWorkspace() {
         onPointerDown={(event) => { if (tool === 'drag') { setDragOrigin({ x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y }); event.currentTarget.setPointerCapture(event.pointerId); } else if (event.target === event.currentTarget) { setSelected(null); setToneOpen(false); } }}
         onPointerMove={(event) => { if (dragOrigin) setPan({ x: dragOrigin.panX + event.clientX - dragOrigin.x, y: dragOrigin.panY + event.clientY - dragOrigin.y }); }}
         onPointerUp={() => setDragOrigin(null)}>
-        <div className="absolute left-1/2 top-1/2 flex items-center gap-16" style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y + 28}px)) scale(${zoom})` }}>
+        <div className="absolute left-1/2 top-1/2 flex items-center gap-16 md:left-[calc(50%+168px)]" style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y + 28}px)) scale(${zoom})` }}>
           {source && (
             <div className={`relative ${selected === 'source' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select' && !picking) { event.stopPropagation(); setSelected('source'); } }}>
               {selected === 'source' && !picking && imageToolbar('source', source.imageUrl)}
@@ -223,7 +223,7 @@ function ChangeColorWorkspace() {
           {visibleResult && resultUrl && (
             <div data-testid="change-color-result" className={`relative ${selected === 'result' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select') { event.stopPropagation(); setSelected('result'); } }}>
               {selected === 'result' && imageToolbar('result', resultUrl)}
-              <img src={resultUrl} alt="色変更 AI生成" className="block max-h-[360px] max-w-[360px] select-none object-contain" style={{ filter }} draggable={false} />
+              <img src={resultUrl} alt="色変更 AI生成" className="block max-h-[min(360px,calc(100vh-290px))] max-w-[360px] select-none object-contain" style={{ filter }} draggable={false} />
             </div>
           )}
           {workspace.status === 'running' && <div className="flex h-[260px] w-[260px] items-center justify-center rounded-lg bg-white/[0.04] text-sm text-white/70" role="status">生成中…</div>}

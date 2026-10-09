@@ -2,6 +2,7 @@ import { ChevronLeft, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { CanonicalImageWorkspaceControls } from '../components/CanonicalImageWorkspaceControls';
+import { projectNameFromFile } from '../lib/projectNames';
 
 const LIGHTCHAIN_LAB_PROJECT_ICON = '/lightchain-assets/icons/laboratory.png';
 
@@ -40,7 +41,7 @@ export function LightchainLabDetailPage() {
         >
           <ChevronLeft className="h-5 w-5" />
           <div className="h-full w-px bg-transparent" />
-          <span className="rounded-sm px-1 py-1">Untitled</span>
+          <span className="rounded-sm px-1 py-1">{projectNameFromFile(workspace.slots.primary?.name)}</span>
         </Link>
       </aside>
       <label
