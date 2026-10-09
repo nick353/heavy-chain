@@ -87,6 +87,12 @@ export function decodeImage(value: unknown, reference = true): Raster {
   return image;
 }
 
+function closestRatio(ratios: Record<string, [number,number]>, width: number, height: number): [number,number] {
+  const target = Math.log(width / height);
+  return Object.values(ratios).reduce((best, size) =>
+    Math.abs(Math.log(size[0] / size[1]) - target) < Math.abs(Math.log(best[0] / best[1]) - target) ? size : best);
+}
+
 export async function sha256(value: Uint8Array | string): Promise<string> {
   const bytes = typeof value === 'string' ? new TextEncoder().encode(value) : value;
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes as BufferSource)), n => n.toString(16).padStart(2,'0')).join('');
@@ -226,9 +232,6 @@ export function parseImageInput(
     : body.prompt, 12000);
   const ratios: Record<string, [number,number]> = { '1:1': [1024,1024], '3:4': [768,1024], '4:3': [1024,768], '4:5': [1024,1280], '5:4': [1280,1024], '16:9': [1024,576], '9:16': [576,1024], '2:3': [768,1152], '3:2': [1152,768] };
   if (body.aspectRatio !== undefined && (typeof body.aspectRatio !== 'string' || !ratios[body.aspectRatio])) throw new ImageInputError('image_aspect_ratio_not_supported');
-  const defaults = ratios[String(body.aspectRatio)] ?? (action === 'model-matrix' ? [768,1024] : [1024,1024]);
-  const width = body.width ?? defaults[0]; const height = body.height ?? defaults[1];
-  if (![width,height].every(v => typeof v === 'number' && Number.isSafeInteger(v) && v >= 256 && v <= 1920 && v % 8 === 0)) throw new ImageInputError('invalid_image_dimensions');
   const inputURLs = action === 'edit-image' ? body.imageUrls ?? [body.imageUrl]
     : action === 'model-matrix' ? [body.imageUrl, body.modelReferenceImageUrl].filter(Boolean) : body.imageUrls ?? [];
   const maxReferenceCount = action === 'model-matrix' ? 2
@@ -238,6 +241,13 @@ export function parseImageInput(
   }
   if (action === 'model-matrix' && body.modelReferenceImageUrl && !body.imageUrl) throw new ImageInputError('fitting_garment_reference_required');
   const references = inputURLs.map(v => decodeImage(v));
+  // An edit with no requested ratio keeps the source framing: a portrait photo
+  // must not come back square with the head and feet cropped.
+  const editSource = action === 'edit-image' && body.aspectRatio === undefined ? references[0] : undefined;
+  const defaults = ratios[String(body.aspectRatio)] ?? (editSource ? closestRatio(ratios, editSource.width, editSource.height)
+    : action === 'model-matrix' ? [768,1024] : [1024,1024]);
+  const width = body.width ?? defaults[0]; const height = body.height ?? defaults[1];
+  if (![width,height].every(v => typeof v === 'number' && Number.isSafeInteger(v) && v >= 256 && v <= 1920 && v % 8 === 0)) throw new ImageInputError('invalid_image_dimensions');
   const protectedEdit = body.protectedEdit;
   if (protectedEdit !== undefined) {
     if (body.inputFidelity !== undefined || body.quality !== undefined) throw new ImageInputError('protected_image_quality_setting_not_supported',422);
@@ -282,10 +292,13 @@ export function parseImageInput(
     if (isRecord(protectedEdit)) instruction += `\nImage ${protectedEdit.guideIndex} is ONLY a spatial edit guide aligned exactly with image 0: WHITE is the editable region; BLACK is protected. Do not copy this guide, its black/white colors, or its edges into the artwork. Apply the requested change inside the white region and retain image 0 framing. Other references describe the requested material/artwork. The client will restore every protected source pixel after generation; this is reference-guided editing, not native masked inference.`;
     if (action === 'model-matrix') {
       instruction = `Professional full-body apparel try-on photograph. ${descriptor.gender} adult in their ${descriptor.ageGroup}, ${BODY_TYPES[String(descriptor.bodyType)][1]} body type.\n` +
-        (references[0] ? 'Dress the person in EXACTLY the garment in image 0. Preserve its color, print, fabric, pockets, fastenings, proportions and logos; do not substitute a similar item.\n' : '') +
+        (references[0] ? 'If image 0 is clothing: Dress the person in EXACTLY the garment in image 0. Preserve its color, print, fabric, pockets, fastenings, proportions and logos; do not substitute a similar item.\n' +
+          'If image 0 is an accessory (necklace, chain, jewelry, bag, hat, belt, eyewear or shoes): the person wears that exact accessory in its natural place and keeps ' +
+          (references[1] ? 'the outfit from image 1' : 'a simple neutral outfit') + '; never turn an accessory into clothing, a print or a graphic.\n' : '') +
         (references[1] ? 'Image 1 is the person reference: preserve their face, hairstyle, pose direction and identity while applying the selected fit and adult age context.\n' : '') +
         (body.skinTone ? `Selected skin tone: ${body.skinTone}.\n` : '') + (body.hairStyle ? `Selected hair length: ${body.hairStyle}.\n` : '') +
-        `The garment is worn naturally, not a flat product mockup. Neutral studio background, professional lighting.\nGarment/request: ${prompt}`;
+        'Frame the entire person from the top of the head through both feet, with visible margin above the head and below the feet. Keep both feet and all limbs inside the image; do not crop at the torso, thighs, knees or ankles. Use wider camera framing as needed, including when a supplied person reference is cropped.\n' +
+        `The item is worn naturally, not a flat product mockup. Neutral studio background, professional lighting.\nGarment/request: ${prompt}`;
     }
     const seed = body.seed === undefined ? crypto.getRandomValues(new Uint32Array(1))[0] % 2147483647 : Number(body.seed) + index;
     if (!Number.isSafeInteger(seed) || seed < 0 || seed > 2147483647) throw new ImageInputError('invalid_image_seed');

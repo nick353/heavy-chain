@@ -133,8 +133,8 @@ test('Lightchain AI fitting readback reflects the selected garment state', () =>
   const lightchainWorkbench = fs.readFileSync('src/pages/LightchainWorkbenchPage.tsx', 'utf8');
   assert.match(lightchainWorkbench, /const fittingGarmentCount = materialSlotFiles\.primary \? 1 : 0;/);
   assert.match(lightchainWorkbench, /data-testid="lightchain-fitting-garment-count"/);
-  assert.match(lightchainWorkbench, /data-count=\{`\$\{fittingGarmentCount\}\/4`\}/);
-  assert.match(lightchainWorkbench, /衣服の画像 \(\{fittingGarmentCount\}\/4\)/);
+  assert.match(lightchainWorkbench, /data-count=\{`\$\{fittingGarmentCount\}\/1`\}/);
+  assert.match(lightchainWorkbench, /衣服の画像 \(\{fittingGarmentCount\}\/1\)/);
   assert.match(lightchainWorkbench, /data-testid="lightchain-fitting-garment-selection"/);
   assert.match(lightchainWorkbench, /materialSlotFiles\.primary\?\.name &&/);
   assert.match(lightchainWorkbench, /\{materialSlotFiles\.primary\.name\}/);

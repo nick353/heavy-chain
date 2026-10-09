@@ -704,3 +704,27 @@ async function nativeFixture(s: ReturnType<typeof imageSetup>) {
   const final=async()=>({...await f.finalInput(),featureType:input.featureType,imageUrl:data,metadata:{nativePrintFinalFrame:native}});
   return {...f,input,native,final};
 }
+
+test('an edit with no requested ratio keeps the source framing instead of a square crop',()=>{
+  const s=imageSetup(); s.db.sql.close();
+  const ref=(w:number,h:number)=>'data:image/png;base64,'+Buffer.from(pngFixture(w,h)).toString('base64');
+  const { width, height, ...input }=s.input() as Record<string, unknown>; void width; void height;
+  const portrait=parseImageInput('edit-image',{...input,imageUrls:[ref(256,512)]} as never);
+  assert.ok(portrait.height>portrait.width,`portrait source became ${portrait.width}x${portrait.height}`);
+  const landscape=parseImageInput('edit-image',{...input,imageUrls:[ref(512,288)]} as never);
+  assert.deepEqual([landscape.width,landscape.height],[1024,576]);
+  const square=parseImageInput('edit-image',{...input,imageUrls:[ref(256,256)]} as never);
+  assert.deepEqual([square.width,square.height],[1024,1024]);
+  const chosen=parseImageInput('edit-image',{...input,aspectRatio:'1:1',imageUrls:[ref(256,512)]} as never);
+  assert.deepEqual([chosen.width,chosen.height],[1024,1024]);
+});
+
+test('fitting keeps accessories as accessories and frames the whole person',()=>{
+  const s=imageSetup(); s.db.sql.close();
+  const ref='data:image/png;base64,'+Buffer.from(pngFixture(128,128)).toString('base64');
+  const parsed=parseImageInput('model-matrix',{...s.input(),imageUrl:ref,modelReferenceImageUrl:ref,productDescription:'silver chain'} as never);
+  const prompt=parsed.candidates[0].prompt;
+  assert.match(prompt,/accessory/); assert.match(prompt,/keeps the outfit from image 1/);
+  assert.match(prompt,/never turn an accessory into clothing/);
+  assert.match(prompt,/Frame the entire person from the top of the head through both feet/);
+});
