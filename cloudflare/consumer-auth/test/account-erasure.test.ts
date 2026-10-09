@@ -288,5 +288,6 @@ test('old confirmation links cannot verify a re-registered account with the same
   assert.equal((await s.login()).status, 200);
   const relative = new URL(newLink); relative.searchParams.set('callbackURL', '/');
   const defaultRedirect = await s.request(relative.pathname + relative.search);
-  assert.equal(defaultRedirect.status, 302); assert.equal(defaultRedirect.headers.get('location'), s.env.AUTH_BASE_URL + '/');
+  // "/" has no page, so the default callback ends on the MyPro success page instead of a redirect to it.
+  assert.equal(defaultRedirect.status, 200); assert.match(defaultRedirect.headers.get('content-type')!, /text\/html/);
 });

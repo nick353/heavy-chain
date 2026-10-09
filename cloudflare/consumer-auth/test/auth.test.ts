@@ -201,6 +201,24 @@ test('MyPro account emails come from "MyPro" with a branded body, and the link p
   assert.equal(bad.status, 400);
   assert.match(bad.headers.get('content-type')!, /text\/html/);
   assert.match(await bad.text(), /新しい確認メールが届きます/);
-  assert.equal((await s.verify()).status, 302);
+  // The newest mail was resent by the blocked sign-in (no callback): it ends on the success page.
+  assert.equal((await s.verify()).status, 200);
   assert.equal((await s.login('new@example.test')).status, 200);
+});
+
+test('a MyPro link without a callback ends on the MyPro success page, never a JSON error', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  s.env.APP_ID = 'mypro'; s.env.EMAIL_FROM = 'mypro@notify.nisen.uk';
+  // Resent / app-less sign-ups: Better Auth fills in the bare origin "/".
+  assert.equal((await s.request('/api/auth/sign-up/email', { email: 'resend@example.test', password: s.password, name: 'R' })).status, 200);
+  const page = await s.verify();
+  assert.equal(page.status, 200);
+  assert.match(page.headers.get('content-type')!, /text\/html/);
+  // A second tap on the same link still shows the success page.
+  assert.equal((await s.verify()).status, 200);
+  assert.equal((await s.login('resend@example.test')).status, 200);
+  // The bare origin itself is a MyPro page, not {"error":"not_found"}.
+  const root = await handleRequest(new Request('https://auth.test/'), s.env);
+  assert.equal(root.status, 200);
+  assert.match(root.headers.get('content-type')!, /text\/html/);
 });

@@ -55,6 +55,11 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   if (env.APP_ID === 'mypro' && request.method === 'GET' && ['/reset-password', '/login'].includes(url.pathname)) {
     return recoveryPage(url.pathname === '/login');
   }
+  // The bare origin is opened from mail links and browser history; give it the
+  // MyPro account page instead of a raw JSON error.
+  if (env.APP_ID === 'mypro' && request.method === 'GET' && url.pathname === '/') {
+    return recoveryPage(true);
+  }
   const authPath = url.pathname.startsWith('/api/auth/') ? url.pathname.slice('/api/auth'.length) : '';
   if (authPath.includes('email-otp')
     && (env.APP_ID === 'mypro' || !heavyEmailOTPEndpoints.has(authPath))) return json({ error: 'not_found' }, 404);

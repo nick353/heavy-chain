@@ -39,6 +39,12 @@ export async function verifyMyProEmail(request: Request, env: Env, origins: stri
     WHERE id = ? AND email = ? AND NOT EXISTS (SELECT 1 FROM auth_erasure WHERE user_id = user.id)
     RETURNING id`).bind(new Date().toISOString(), claims.sub, claims.email).first<{ id: string }>();
   if (!updated) return invalid();
-  return callback ? new Response(null, { status: 302, headers: { ...headers, location: callback.href } })
+  // Better Auth fills in the bare origin ("/") when no callback was given, e.g.
+  // for a resent email. That path has no page, so people saw {"error":"not_found"}
+  // after a successful confirmation. Only follow callbacks to a page we serve.
+  const servesPage = callback && callback.origin === new URL(env.AUTH_BASE_URL).origin
+    ? ['/login', '/reset-password'].includes(callback.pathname)
+    : Boolean(callback);
+  return callback && servesPage ? new Response(null, { status: 302, headers: { ...headers, location: callback.href } })
     : verificationResultPage(true);
 }
