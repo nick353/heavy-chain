@@ -15,6 +15,11 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Admitted image jobs run here so a generation finishes even after the user leaves the page.
+  "queues": {
+    "producers": [{ "binding": "IMAGE_JOB_QUEUE", "queue": "heavy-image-jobs" }],
+    "consumers": [{ "queue": "heavy-image-jobs", "max_batch_size": 1, "max_batch_timeout": 0, "max_retries": 2 }]
+  },
   "r2_buckets": [
     {
       "binding": "PRIVATE_MEDIA",

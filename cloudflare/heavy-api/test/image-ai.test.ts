@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test, { type TestContext } from 'node:test';
 import { IMAGE_MODEL, decodeImage, parseImageInput, imageEstimate } from '../src/image-ai-contracts.ts';
 import { imageSetup, pngFixture, TEST_HEAVY_DOCUMENT_DIGEST, TEST_HEAVY_DOCUMENT_VERSION, TEST_HEAVY_RIGHTS_VERSION } from './image-ai-fixture.ts';
+import { processImageJob } from '../src/image-ai.ts';
 import { PROTECTED_IMAGE_EDIT_MODE,protectedImageDigest,protectedImageSaveRequestId } from '../../../src/lib/protectedImageEditContract.ts';
 type Json=Record<string,any>;
 const url='/v1/provider-actions/';
@@ -727,4 +728,45 @@ test('fitting keeps accessories as accessories and frames the whole person',()=>
   assert.match(prompt,/accessory/); assert.match(prompt,/keeps the outfit from image 1/);
   assert.match(prompt,/never turn an accessory into clothing/);
   assert.match(prompt,/Frame the entire person from the top of the head through both feet/);
+});
+
+test('queued jobs finish without the caller and never send a claimed candidate twice',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  const sent: string[]=[];
+  // The caller "leaves": the queue holds the message until the consumer runs on its own.
+  Object.assign(s.env,{ IMAGE_JOB_QUEUE: { send: async (body: { requestId: string }) => { sent.push(body.requestId); } } });
+  const id=crypto.randomUUID();
+  const pending=s.call(url+'generate-image','alice',{...s.input(),count:2},id);
+  while (!sent.length) await new Promise(resolve=>setTimeout(resolve,5));
+  assert.equal(s.calls.length,0,'no inference runs on the caller path');
+  assert.ok(s.bucket.rows.has(`image-job-inputs/${id}`));
+  await processImageJob(s.env as never,id);
+  assert.equal(s.calls.length,2); assert.equal(s.db.sql.prepare('SELECT state FROM heavy_ai_requests').get()!.state,'completed');
+  assert.equal(s.bucket.rows.has(`image-job-inputs/${id}`),false,'the stored job input is removed');
+  await processImageJob(s.env as never,id); assert.equal(s.calls.length,2,'a redelivered message does not send again');
+  const result=await json(await pending); assert.equal(result.success,true); assert.equal(result.persistedCandidateCount,2);
+});
+
+test('a queued job stops when the owner lost editor access before it ran',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  Object.assign(s.env,{ IMAGE_JOB_QUEUE: { send: async () => {
+    s.db.sql.prepare("UPDATE brand_members SET role='viewer' WHERE user_id='bob'").run(); } } });
+  const id=crypto.randomUUID();
+  const pending=s.call(url+'generate-image','bob',s.input(),id);
+  while (!s.bucket.rows.has(`image-job-inputs/${id}`)) await new Promise(resolve=>setTimeout(resolve,5));
+  await new Promise(resolve=>setTimeout(resolve,20));
+  await processImageJob(s.env as never,id);
+  assert.equal(s.calls.length,0);
+  assert.notEqual(s.db.sql.prepare('SELECT state FROM heavy_ai_requests').get()!.state,'completed');
+  await pending;
+});
+
+test('a failed queue send runs the job inline once and returns the result',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  Object.assign(s.env,{ IMAGE_JOB_QUEUE: { send: async () => { throw new Error('queue unavailable'); } } });
+  const id=crypto.randomUUID();
+  const result=await json(await s.call(url+'generate-image','alice',s.input(),id));
+  assert.equal(result.success,true); assert.equal(s.calls.length,1);
+  assert.equal(s.bucket.rows.has(`image-job-inputs/${id}`),false);
+  await processImageJob(s.env as never,id); assert.equal(s.calls.length,1);
 });

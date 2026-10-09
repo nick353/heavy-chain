@@ -474,6 +474,11 @@ async function brandRole(env: CoreEnv, userID: string, brandID: string): Promise
   return row?.role ?? null;
 }
 
+/** Role check for work that runs without a caller request (queued image jobs). */
+export async function userHasBrandRole(env: CoreEnv, userID: string, brandID: string, required: "viewer" | "editor"): Promise<boolean> {
+  return roleAtLeast(await brandRole(env, userID, brandID), required);
+}
+
 function roleAtLeast(role: string | null, required: "viewer" | "editor"): boolean {
   if (!role) return false;
   if (required === "viewer") return ["viewer", "editor", "admin", "owner"].includes(role);

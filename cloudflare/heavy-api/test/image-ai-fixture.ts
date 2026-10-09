@@ -67,7 +67,7 @@ export class ImageBucket {
   }
   async get(key: string) {
     const row=this.rows.get(key);
-    return row ? { ...row,body: row.bytes,writeHttpMetadata(headers: Headers) { headers.set('content-type',row.httpMetadata.contentType); } } : null;
+    return row ? { ...row,body: row.bytes,text: async () => new TextDecoder().decode(row.bytes),writeHttpMetadata(headers: Headers) { headers.set('content-type',row.httpMetadata.contentType); } } : null;
   }
   async delete(key: string) { this.rows.delete(key); }
 }
