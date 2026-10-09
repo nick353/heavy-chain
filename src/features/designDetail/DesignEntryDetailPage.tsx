@@ -272,6 +272,17 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     catch { if (generation.current === epoch) setState((previous) => ({ ...previous, error: true })); }
     finally { if (generation.current === epoch) { sending.current = false; setState((previous) => ({ ...previous, busy: false })); } }
   }
+  // Reopening a project while a request is still pending re-reads that same request once (reconcile never creates
+  // a new one), instead of waiting for 作成状態を再確認.
+  const autoReconciled = useRef(new Set<string>());
+  const pendingRequestId = visible?.dialogue?.attempts.find((attempt) => attempt.assistant.state === 'running' || attempt.assistant.state === 'unknown'
+    || (attempt.imageAttempted && !['completed', 'failed'].includes(attempt.imageResult ?? '')))?.input.requestId;
+  useEffect(() => {
+    if (!pendingRequestId || visible?.busy || autoReconciled.current.has(pendingRequestId)) return;
+    autoReconciled.current.add(pendingRequestId);
+    void act((active) => active.reconcile(pendingRequestId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingRequestId, visible?.busy]);
   const imageObjects = useMemo(() => visible?.dialogue?.document.snapshot.objects.filter((object) => object.type === 'image' && object.visible !== false) ?? [],
     [visible?.dialogue?.document]);
   // Every visible object (images, shapes, panels, text) in paint order.

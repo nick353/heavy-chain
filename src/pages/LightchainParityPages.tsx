@@ -1814,7 +1814,10 @@ export function LightchainDialogueParityPanel({
     const code = error instanceof Error && /^[a-z0-9_:-]{1,96}$/i.test(error.message)
       ? error.message
       : 'design_dialogue_reference_failed';
-    setReferenceActionError({ scopeIdentity, message: `参照画像を保存できませんでした（${code}）` });
+    // A stale selection or scope means the user picked another scene or brand while an earlier image was still
+    // being saved; the current selection is unaffected, so there is nothing to report.
+    if (code === 'design_dialogue_reference_selection_stale' || code === 'design_dialogue_reference_scope_stale') return;
+    setReferenceActionError({ scopeIdentity, message: '参照画像を保存できませんでした。画像を選び直してください。' });
   }, [scopeIdentity]);
 
   const getCurrentController = useCallback(() => {
