@@ -43,6 +43,7 @@ import {
 } from '../lib/localWorkspaceArtifacts';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { matchesVideoProjectArtifact, shouldHydrateVideoSourceImage } from '../lib/videoWorkspacePersistence';
+import { projectNameFromFile } from '../lib/projectNames';
 
 /** Shown to users while no video provider is connected; it never falls back to image generation. */
 const VIDEO_GENERATION_UNAVAILABLE = '動画の生成は準備中です。今は下書きの保存とCanvasへの受け渡しが使えます。';
@@ -609,7 +610,7 @@ export function VideoWorkstationPage() {
       brandId: currentBrand.id,
       scopeId: user?.id,
       featureType: 'video-workstation',
-      title: 'Untitled',
+      title: projectNameFromFile(materialReference.fileName),
       imageUrl: previewImageUrl,
       prompt: values.editPrompt,
       metadata: {
@@ -859,6 +860,7 @@ export function VideoWorkstationPage() {
 
   return (
     <VideoSourceEditorParity
+      projectName={projectNameFromFile(materialReference.fileName)}
       key={`${videoDraftArtifactId ?? persistedVideoDraft?.id ?? videoProjectCode}:${persistedVideoDraft?.createdAt ?? 'new'}`}
       imageUrl={materialReference.imageUrl}
       secondaryImageUrl={hasExistingVideoProject ? LIGHTCHAIN_VIDEO_REFERENCE_IMAGE : undefined}
@@ -1265,7 +1267,9 @@ function VideoSourceEditorParity({
   initialValues,
   onPersist,
   onHandoffToCanvas,
+  projectName = 'Untitled',
 }: {
+  projectName?: string;
   imageUrl: string;
   secondaryImageUrl?: string;
   onImageChange: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -1358,7 +1362,7 @@ function VideoSourceEditorParity({
               <button type="button" aria-label="閉じる" className="text-[#9da6a7]" onClick={() => setIsPanelOpen(false)}>×</button>
             </div>
             <div className="video-source-existing-tip"><Sparkles size={14} /> 参考動画をアップロードすると、動きとスタイルを再現できます</div>
-            <div className="video-source-existing-preview-row"><LightchainVideoImage src={displayVideo} alt="動画の修正プレビュー" fallbackLabel="動画プレビュー" /><div><p className="text-[12px] text-white">Untitled</p><p className="mt-1 text-[10px] text-[#9da6a7]">動画を修正</p></div></div>
+            <div className="video-source-existing-preview-row"><LightchainVideoImage src={displayVideo} alt="動画の修正プレビュー" fallbackLabel="動画プレビュー" /><div><p className="text-[12px] text-white">{projectName}</p><p className="mt-1 text-[10px] text-[#9da6a7]">動画を修正</p></div></div>
             <div className="video-source-existing-duration-row"><span>動画の長さ</span><span>{duration} · 00:00–{durationLabel}</span></div>
             <label className="video-source-existing-label" htmlFor="video-reference-upload">参考画像</label>
             <label htmlFor="video-reference-upload" className="video-source-existing-reference-upload"><LightchainVideoImage src={displayReference} alt="参考画像" fallbackLabel="参考画像" /><span>{referenceName || '画像を追加'}</span><ImagePlus size={15} /></label>
@@ -1380,12 +1384,11 @@ function VideoSourceEditorParity({
 
         <aside className="video-source-existing-project-rail absolute left-4 top-6 z-30 w-[264px] overflow-hidden rounded-xl border bg-[#252b2d] text-sm text-neutral-200 shadow-xl">
           <div className="flex h-[35px] items-center border-b border-white/10 px-3 text-xs text-neutral-300">動画ワークステーション</div>
-          <button type="button" onClick={onBack} className="flex h-[48px] w-full items-center px-3 text-left hover:bg-white/5"><span aria-hidden="true" className="mr-5 text-lg">‹</span>Untitled</button>
+          <button type="button" onClick={onBack} className="flex h-[48px] w-full items-center px-3 text-left hover:bg-white/5"><span aria-hidden="true" className="mr-5 text-lg">‹</span>{projectName}</button>
         </aside>
 
         <label htmlFor="video-main-image-upload" aria-label="アセット" title="アセット" className="video-source-existing-asset-trigger absolute left-4 top-[356px] z-30 flex size-12 cursor-pointer items-center justify-center rounded-lg border bg-[#252b2d] text-neutral-200 hover:bg-[#30383a]"><Layers size={19} /></label>
         <input ref={mainImageInputRef} id="video-main-image-upload" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="sr-only" onChange={onImageChange} />
-        <div className="video-source-existing-points"><Sparkles size={14} /> 残り生成回数 <strong>9</strong></div>
         <div className="video-source-existing-task"><span><Layers size={14} /> タスク</span><span>0&nbsp;&nbsp;進行中⌃</span></div>
         <div className="video-source-existing-canvas-toolbar" role="toolbar" aria-label="キャンバスツール">
           <button type="button" aria-label="選択" aria-pressed={activeTool === 'select'} className={activeTool === 'select' ? 'is-active' : ''} onClick={() => setActiveTool('select')}><MousePointer2 size={17} /></button><button type="button" aria-label="移動" aria-pressed={activeTool === 'pan'} className={activeTool === 'pan' ? 'is-active' : ''} onClick={() => setActiveTool('pan')}><Hand size={17} /></button><button type="button" aria-label="画像を追加" onClick={() => mainImageInputRef.current?.click()}><ImagePlus size={17} /></button><button type="button" aria-label="元に戻す" onClick={() => dispatchEditor({ type: 'undo' })}><Undo2 size={17} /></button><button type="button" aria-label="やり直す" onClick={() => dispatchEditor({ type: 'redo' })}><Redo2 size={17} /></button>
@@ -1438,10 +1441,6 @@ export function VideoSourceEditorParityLegacy({
             <span aria-hidden="true" className="mr-5 text-lg">‹</span>
             Untitled
           </button>
-        </div>
-
-        <div className="absolute right-4 top-5 rounded-xl border border-white/10 bg-[#252b2d] px-4 py-3 text-xs text-neutral-300 shadow-xl">
-          ✨ 残り生成回数 <span className="ml-2 font-semibold text-white">9</span>
         </div>
 
         <div className="relative mt-[80px] min-h-[660px] rounded-2xl">

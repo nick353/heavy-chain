@@ -1183,7 +1183,8 @@
 
 .video-source-existing-main-node {
   top: 25.67px;
-  left: 39.263%;
+  /* Never start under the edit panel (left 363.54px + 280px wide) on narrower windows. */
+  left: max(39.263%, 659.54px);
   width: 404.8px;
   height: 553.33px;
 }
@@ -1661,9 +1662,8 @@
 }
 
 @media (max-width: 1100px) {
-  .video-source-existing-main-node { left: 32%; }
+  .video-source-existing-main-node { left: max(32%, calc(22% + 296px)); }
   .video-source-existing-edit-panel { left: 22%; }
-  .video-source-existing-points { display: none; }
 }
 
 @media (max-width: 900px) {

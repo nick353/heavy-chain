@@ -7,6 +7,7 @@ import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { ZoomControl } from './PatternDesignDetailPage';
 import { watermarkImageBlobIfOn } from '../lib/imageDownload';
+import { projectNameFromFile } from '../lib/projectNames';
 
 /**
  * Light `/editor/changeColor/detail` = "色変更", measured at 1440×900 on 2026-10-07: first visit shows the
@@ -143,7 +144,7 @@ function ChangeColorWorkspace() {
       <div className="flex h-8 items-center gap-2 text-sm text-white/70"><span className="h-5 w-5 rounded bg-gradient-to-br from-slate-400 to-slate-600" aria-hidden="true" />色変更</div>
       <div className="my-1 h-px bg-white/10" />
       <button type="button" disabled={locked} onClick={() => navigate('/editor/changeColor')} className="flex h-9 w-full items-center gap-6 text-left text-base text-white/80 disabled:opacity-50">
-        <ChevronLeft className="h-4 w-4" aria-label="一覧へ戻る" /><span className="truncate">Untitled</span>
+        <ChevronLeft className="h-4 w-4" aria-label="一覧へ戻る" /><span className="truncate">{projectNameFromFile(source?.name)}</span>
       </button>
     </div>
   );

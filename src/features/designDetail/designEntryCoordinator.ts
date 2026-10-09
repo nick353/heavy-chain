@@ -3,6 +3,7 @@ import type { DesignDialogueManifestReference } from '../../lib/designDialogueRe
 import { createEntryDraftStore, type EntryDraftStore } from './entryDraftStore';
 import { createSessionStore, type DesignSessionStore } from './sessionStore';
 import type { DesignScope } from './types';
+import { projectNameFromPrompt } from '../../lib/projectNames';
 
 export type DesignEntryClient = {
   createDocument: typeof createCanvasDocument;
@@ -67,7 +68,7 @@ export const createDesignEntryCoordinator = (options: {
       const claimed = await drafts.mark(scope, draft.projectId, draft.conversationId, false, assertContext); assertContext();
       if (claimed.sendCreate) {
         try {
-          await client.createDocument({ documentId: draft.projectId, brandId: scope.brandId, title: 'Untitled',
+          await client.createDocument({ documentId: draft.projectId, brandId: scope.brandId, title: projectNameFromPrompt(prompt),
             snapshot: { version: 1, projectId: draft.projectId, objects: [] } }, context);
         } catch { assertContext(); /* unknown effect: reconcile the same ID below, never create again */ }
       }

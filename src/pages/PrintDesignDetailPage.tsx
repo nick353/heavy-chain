@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useBoardDraftProject } from '../features/boardDraftProjects';
 import { ZoomControl } from './PatternDesignDetailPage';
 import { watermarkImageBlobIfOn } from '../lib/imageDownload';
+import { projectNameFromFile } from '../lib/projectNames';
 
 /**
  * Light `/editor/patternDesign/detail` = "プリントデザイン", measured at 1440×900 on 2026-10-07: empty project →
@@ -176,7 +177,7 @@ function PrintDesignWorkspace() {
       <div className="flex h-8 items-center gap-2 text-sm text-white/70"><span className="h-5 w-5 rounded bg-gradient-to-br from-rose-400 via-orange-300 to-amber-300" aria-hidden="true" />プリントデザイン</div>
       <div className="my-1 h-px bg-white/10" />
       <button type="button" disabled={locked} onClick={() => navigate('/editor/patternDesign')} className="flex h-9 w-full items-center gap-6 text-left text-base text-white/80 disabled:opacity-50">
-        <ChevronLeft className="h-4 w-4" aria-label="一覧へ戻る" /><span className="truncate">Untitled</span>
+        <ChevronLeft className="h-4 w-4" aria-label="一覧へ戻る" /><span className="truncate">{projectNameFromFile(source?.name)}</span>
       </button>
     </div>
   );
