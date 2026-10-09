@@ -301,8 +301,9 @@ function PrintDesignWorkspace() {
                 </>
               ) : (
                 <>
-                  <span className="group-hover:hidden">スタイルマップをアップロードします。</span>
-                  <div className="hidden w-full flex-col gap-2 px-6 group-hover:flex group-focus-within:flex">
+                  {/* Light reveals these on hover; they stay reachable by keyboard focus and are always shown on touch screens. */}
+                  <span className="group-hover:hidden group-focus-within:hidden [@media(hover:none)]:hidden">スタイルマップをアップロードします。</span>
+                  <div className="absolute inset-0 flex w-full flex-col justify-center gap-2 px-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100">
                     <label className="flex h-9 cursor-pointer items-center justify-center rounded-lg bg-white/10">画像をアップロード<input type="file" accept={ACCEPT} className="sr-only" disabled={locked} onChange={pick('secondary')} aria-label="スタイルマップの画像をアップロード" /></label>
                     <button type="button" disabled={locked} onClick={() => void styleMapFromCanvas()} className="h-9 rounded-lg bg-white/10">キャンバスから選択</button>
                   </div>

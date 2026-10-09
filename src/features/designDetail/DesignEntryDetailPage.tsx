@@ -674,9 +674,10 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     {!hasContent && !inspiration && <label data-testid="design-entry-dropzone" className={`absolute flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed transition ${dragOver ? 'border-[#0bcabc] bg-[#0bcabc]/5' : 'border-white/20 bg-white/[0.015] hover:border-white/35'}`}
       style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2 - 384px)`, top: 'calc(50% - 249px)', width: 768, height: 498 }}>
       <input type="file" accept={IMAGE_ACCEPT} multiple className="sr-only" onChange={onUpload} aria-label="画像をアップロード" />
-      <Upload className="h-9 w-9 text-neutral-200" strokeWidth={1.75} />
+      {/* While a design is being made, show progress rather than upload prompts. */}
+      {visible?.busy ? <RefreshCw className="h-9 w-9 animate-spin text-neutral-200" strokeWidth={1.75} /> : <Upload className="h-9 w-9 text-neutral-200" strokeWidth={1.75} />}
       <p className="mt-5 text-base font-medium text-neutral-100">{visible?.busy ? 'デザインを作成しています' : 'クリック・ドラッグ＆ドロップで画像をアップロード、またはAIとチャット'}</p>
-      <p className="mt-2 text-sm text-neutral-500">対応形式：jpg、jpeg、png、webp（最大20MBまで）</p>
+      {!visible?.busy && <p className="mt-2 text-sm text-neutral-500">対応形式：jpg、jpeg、png、webp（最大20MBまで）</p>}
     </label>}
 
     <div className="absolute left-8 top-8 z-20 w-[295px] rounded-xl border border-white/10 bg-[#1b2023]/95 shadow-xl backdrop-blur" data-testid="design-project-card">

@@ -5137,7 +5137,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded border border-white/10 bg-black/40 px-1 py-0.5 backdrop-blur transition-all duration-300 group-hover:bg-[#0bc1b8]">
                           <button
                             type="button"
-                            className="hidden whitespace-nowrap text-sm font-medium leading-4 text-[#111817] group-hover:block hover:opacity-80"
+                            className="hidden whitespace-nowrap text-sm font-medium leading-4 text-[#111817] group-hover:block group-focus-within:block hover:opacity-80 [@media(hover:none)]:block"
                             onClick={(event) => {
                               event.stopPropagation();
                               handleUseFittingRecentUpload();

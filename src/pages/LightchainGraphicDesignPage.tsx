@@ -128,7 +128,7 @@ function LightchainGraphicDesignWorkspace() {
                   <button type="button" onClick={() => setSelected(index as 0 | 1)} aria-label={`参考画像 ${index + 1}`} aria-pressed={selected === index} className={`block size-[52px] overflow-hidden rounded border-2 bg-white ${selected === index ? 'border-[#20d0c4]' : 'border-transparent'}`}>
                     <img src={reference.imageUrl} alt="" className="size-full object-cover" />
                   </button>
-                  <button type="button" onClick={() => removeReference(index as 0 | 1)} disabled={locked} aria-label={`参考画像 ${index + 1}を削除`} className="absolute -right-1.5 -top-1.5 hidden size-4 items-center justify-center rounded-full bg-black/70 text-[10px] leading-none text-white group-hover:flex">×</button>
+                  <button type="button" onClick={() => removeReference(index as 0 | 1)} disabled={locked} aria-label={`参考画像 ${index + 1}を削除`} className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-black/70 text-[10px] leading-none text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100">×</button>
                 </div>
               ))}
               {references.length < MAX_REFERENCES && (
