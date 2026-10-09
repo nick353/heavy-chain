@@ -31,7 +31,7 @@ type ReceiptRow = {
   request_id: string; owner_id: string; brand_id: string; project_id: string;
   conversation_id: string; input_digest: string; provider: string; model: string;
   state: 'running' | 'completed' | 'failed' | 'unknown';
-  content: string | null; usage_json: string | null; error_code: string | null;
+  content: string | null; usage_json: string | null; error_code: string | null; updated_at: string;
 };
 type ContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
 
@@ -296,6 +296,9 @@ async function send(request: Request, env: Env): Promise<Response> {
     provider: provider.provider, model: provider.model }, 503);
 }
 
+/** Far longer than DESIGN_ASSISTANT_TIMEOUT_MS: only a reservation whose Worker never finished stays running this long. */
+export const DESIGN_ASSISTANT_ABANDONED_MS = 10 * 60 * 1000;
+
 export async function handleDesignAssistantRequest(request: Request, env: Env): Promise<Response | null> {
   const url = new URL(request.url);
   const match = /^\/v1\/design-assistant\/requests\/([^/]+)$/.exec(url.pathname);
@@ -308,8 +311,20 @@ export async function handleDesignAssistantRequest(request: Request, env: Env): 
       if (!scope(input)) return error('invalid_design_assistant_request', 400);
       const owner = await authorize(request, env, input);
       if (owner instanceof Response) return owner;
-      const row = await readRow(env, input.requestId);
-      return row && owns(row, owner, input) ? receipt(row) : error('not_found', 404);
+      let row = await readRow(env, input.requestId);
+      if (!row || !owns(row, owner, input)) return error('not_found', 404);
+      // A reservation still running long after any provider call could have finished means the Worker was cut off
+      // (for example the page closed mid-request). Settle it as failed so the user can send again instead of waiting
+      // forever; a late result can no longer overwrite it because its UPDATE requires state = 'running'.
+      const age = Date.now() - Date.parse(row.updated_at);
+      if (row.state === 'running' && Number.isFinite(age) && age > DESIGN_ASSISTANT_ABANDONED_MS) {
+        const now = new Date().toISOString();
+        await env.DB.prepare(`UPDATE design_assistant_requests SET state = 'failed', error_code = 'design_assistant_abandoned', updated_at = ?, completed_at = ?
+          WHERE request_id = ? AND owner_id = ? AND state = 'running' AND updated_at = ?`)
+          .bind(now, now, row.request_id, owner, row.updated_at).run();
+        row = await readRow(env, input.requestId) ?? row;
+      }
+      return receipt(row);
     }
     return error('method_not_allowed', 405);
   } catch { return error('design_assistant_storage_unavailable', 503); }

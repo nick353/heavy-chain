@@ -5,7 +5,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { handleRequest, type Env } from '../src/index.ts';
-import { DESIGN_ASSISTANT_DAILY_LIMIT, DESIGN_ASSISTANT_MODEL, DESIGN_ASSISTANT_TIMEOUT_MS } from '../src/designAssistant.ts';
+import { DESIGN_ASSISTANT_ABANDONED_MS, DESIGN_ASSISTANT_DAILY_LIMIT, DESIGN_ASSISTANT_MODEL, DESIGN_ASSISTANT_TIMEOUT_MS } from '../src/designAssistant.ts';
 
 class Db {
   sql: DatabaseSync;
@@ -276,6 +276,20 @@ test('lost INSERT acknowledgement or crash-running row never dispatches again; r
   const result = await response.json() as { state: string; errorCode: string };
   assert.equal(result.state, 'running'); assert.equal(result.errorCode, 'reconciliation_required'); assert.equal(s.calls.length, 0);
   assert.deepEqual(await (await s.call('POST', body)).json(), result); assert.deepEqual(await (await s.call('GET', body)).json(), result);
+  assert.equal(s.calls.length, 0);
+});
+
+test('a reservation left running past the abandoned window settles as failed on GET and never dispatches', async t => {
+  const s = setup(); t.after(() => s.db.sql.close()); const body = input();
+  s.db.fail = { match: /INSERT INTO design_assistant_requests/, phase: 'after' };
+  await s.call('POST', body);
+  // A fresh reservation is still reported as running.
+  assert.equal((await (await s.call('GET', body)).json() as { state: string }).state, 'running');
+  const stale = new Date(Date.now() - DESIGN_ASSISTANT_ABANDONED_MS - 1000).toISOString();
+  s.db.sql.prepare('UPDATE design_assistant_requests SET updated_at = ? WHERE request_id = ?').run(stale, body.requestId);
+  const settled = await (await s.call('GET', body)).json() as { state: string; errorCode: string };
+  assert.equal(settled.state, 'failed'); assert.equal(settled.errorCode, 'design_assistant_abandoned');
+  assert.equal((await (await s.call('POST', body)).json() as { state: string }).state, 'failed');
   assert.equal(s.calls.length, 0);
 });
 

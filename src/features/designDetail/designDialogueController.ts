@@ -52,10 +52,22 @@ export function createDesignDialogueController(options: { scope: DesignScope; pr
       try {
         receipt = sendNow ? await client.sendAssistant(current.input, context) : await client.readAssistant(current.input, context);
         assertContext();
-      } catch {
+      } catch (cause) {
         assertContext();
+        // The server has no record of this ID: the page closed before the POST arrived. The POST is idempotent per
+        // request ID, so sending the SAME ID once is safe and is the only way the request can ever finish; it then
+        // continues to the image like the original send would have.
+        const neverReceived = !sendNow && cause instanceof Error && cause.message === 'cloudflare_api_404_not_found';
+        if (neverReceived) {
+          allowImage = true;
+          try { receipt = await client.sendAssistant(current.input, context); assertContext(); }
+          catch {
+            assertContext();
+            try { receipt = await client.readAssistant(current.input, context); assertContext(); }
+            catch { assertContext(); receipt = { ...current.assistant, state: 'unknown' }; }
+          }
         // POST uncertainty has one read of the SAME ID, never another POST.
-        if (sendNow) {
+        } else if (sendNow) {
           try { receipt = await client.readAssistant(current.input, context); assertContext(); }
           catch { assertContext(); receipt = { ...current.assistant, state: 'unknown' }; }
         } else receipt = { ...current.assistant, state: 'unknown' };
