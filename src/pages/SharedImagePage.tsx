@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertCircle, ExternalLink, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ArrowUpRight, ImageOff, Loader2 } from 'lucide-react';
+import { HeavyChainLogo } from '../components/icons';
 import { getSharedImage, type SharedImagePayload } from '../lib/imageApi';
 import { buildSourceContextSummaryRows, displaySourceSummaryLabel } from '../lib/sourceContextSummary';
 
@@ -49,106 +50,87 @@ export function SharedImagePage() {
 
   const image = payload?.image;
   const hasError = !isLoading && (!payload?.success || !image);
+  const errorMessage = payload?.error && !/^[\w.:-]+$/.test(payload.error) ? payload.error : 'リンクが存在しないか、有効期限が切れています。';
+  const details = [
+    { label: '生成日時', value: image?.createdAt ? formatDateTime(image.createdAt) : null },
+    { label: 'リンクの有効期限', value: payload?.share?.expiresAt ? formatDateTime(payload.share.expiresAt) : null },
+  ].filter((row): row is { label: string; value: string } => Boolean(row.value));
 
   return (
-    <main className="min-h-screen bg-[#111617] text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500 text-neutral-950">
-              <ImageIcon className="h-5 w-5" />
-            </span>
-            <span className="font-display text-lg font-semibold tracking-wide">HEAVY CHAIN</span>
-          </Link>
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm font-medium text-white/85 transition hover:border-primary-400 hover:text-primary-300"
-          >
-            アプリを開く
-            <ExternalLink className="h-4 w-4" />
-          </Link>
-        </header>
+    <div className="flex min-h-screen flex-col bg-[#181a1d] text-white" data-testid="shared-image-page">
+      <header className="flex h-[50px] w-full shrink-0 items-center justify-between gap-4 border-b border-white/10 bg-[#05090b]/90 px-4 backdrop-blur-xl sm:px-6">
+        <Link to="/" aria-label="Heavy Chain" className="flex items-center text-white">
+          <HeavyChainLogo height={24} showText className="shrink-0" />
+        </Link>
+        <Link to="/dashboard" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-neutral-300 transition hover:bg-white/10 hover:text-white">
+          Heavy Chainを開く
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </Link>
+      </header>
 
-        <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.75fr)] lg:py-14">
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30 shadow-2xl shadow-black/30">
-            {isLoading ? (
-              <div className="flex aspect-[4/5] min-h-[420px] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary-300" />
-              </div>
-            ) : hasError ? (
-              <div className="flex aspect-[4/5] min-h-[420px] flex-col items-center justify-center gap-3 px-6 text-center">
-                <AlertCircle className="h-9 w-9 text-red-300" />
-                <p className="text-lg font-semibold">共有画像を表示できません</p>
-                <p className="max-w-sm text-sm leading-6 text-white/60">
-                  {payload?.error && !/^[\w.:-]+$/.test(payload.error) ? payload.error : 'リンクが存在しないか、有効期限が切れています。'}
-                </p>
-              </div>
-            ) : (
-              <img
-                src={image?.imageUrl ?? ''}
-                alt={image?.prompt ?? 'Heavy Chain shared image'}
-                className="h-full max-h-[78vh] w-full object-contain"
-              />
-            )}
+      <main className="relative flex flex-1 items-center justify-center px-4 py-8 sm:px-6">
+        <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: 'radial-gradient(#464b50 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+        {isLoading ? (
+          <div className="relative flex flex-col items-center gap-3 text-sm text-neutral-400" role="status">
+            <Loader2 className="h-7 w-7 animate-spin text-[#20d0c4]" />
+            共有画像を読み込んでいます
           </div>
+        ) : hasError ? (
+          <section className="relative flex w-full max-w-[420px] flex-col items-center rounded-xl border border-white/10 bg-[#202426] px-6 py-10 text-center shadow-xl">
+            <ImageOff className="h-9 w-9 text-neutral-500" />
+            <h1 className="mt-4 text-base font-medium">共有画像を表示できません</h1>
+            <p className="mt-2 text-sm leading-6 text-neutral-400">{errorMessage}</p>
+            <Link to="/" className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-[#20d0c4] px-5 text-sm font-medium text-neutral-950 transition hover:brightness-110">
+              Heavy Chainのトップへ
+            </Link>
+          </section>
+        ) : (
+          <div className="relative grid w-full max-w-[1120px] gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <section className="flex min-h-[360px] items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-[#25292b] p-3">
+              <img src={image?.imageUrl ?? ''} alt={image?.prompt ?? '共有された画像'} className="max-h-[calc(100vh-150px)] w-full rounded-lg object-contain" />
+            </section>
 
-          <aside className="rounded-2xl border border-white/10 bg-white/[0.06] p-5 shadow-xl shadow-black/20 backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary-300">
-              Shared output
-            </p>
-            <h1 className="mt-4 font-display text-2xl font-semibold leading-tight sm:text-3xl">
-              {image?.prompt ?? 'Heavy Chain 共有画像'}
-            </h1>
-            <p className="mt-4 text-sm leading-7 text-white/65">
-              生成画像、プロンプト、素材情報をまとめて確認できます。リンクは期限付きで公開されます。
-            </p>
+            <aside className="flex flex-col rounded-xl border border-white/10 bg-[#202426] p-4 text-sm">
+              <p className="text-xs text-neutral-400">共有された画像</p>
+              {image?.prompt && <h1 className="mt-2 text-base font-medium leading-6 text-white">{image.prompt}</h1>}
 
-            <div className="mt-6 grid gap-3 text-sm">
-              <div className="rounded-xl bg-black/20 p-4">
-                <p className="text-xs text-white/45">生成タイプ</p>
-                <p className="mt-1 font-medium text-white">{image?.featureType ?? '未設定'}</p>
-              </div>
-              <div className="rounded-xl bg-black/20 p-4">
-                <p className="text-xs text-white/45">生成日時</p>
-                <p className="mt-1 font-medium text-white">{formatDateTime(image?.createdAt)}</p>
-              </div>
-              <div className="rounded-xl bg-black/20 p-4">
-                <p className="text-xs text-white/45">リンク有効期限</p>
-                <p className="mt-1 font-medium text-white">{formatDateTime(payload?.share?.expiresAt)}</p>
-              </div>
-            </div>
-
-            {summaryRows.length > 0 && (
-              <div className="mt-6 border-t border-white/10 pt-5">
-                <h2 className="text-sm font-semibold text-white">生成条件</h2>
-                <dl className="mt-3 space-y-3">
-                  {summaryRows.map((row) => (
-                    <div key={`${row.label}-${row.value}`}>
-                      <dt className="text-xs text-white/45">{displaySourceSummaryLabel(row.label)}</dt>
-                      <dd className="mt-1 text-sm leading-6 text-white/85">{row.value}</dd>
+              {details.length > 0 && (
+                <dl className="mt-4 divide-y divide-white/10 rounded-lg bg-black/20">
+                  {details.map((row) => (
+                    <div key={row.label} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                      <dt className="text-xs text-neutral-400">{row.label}</dt>
+                      <dd className="text-xs text-neutral-200">{row.value}</dd>
                     </div>
                   ))}
                 </dl>
-              </div>
-            )}
+              )}
 
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to="/designProduction"
-                className="inline-flex flex-1 items-center justify-center rounded-lg bg-primary-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-primary-300"
-              >
-                Heavy Chainで生成する
-              </Link>
-              <Link
-                to="/signup"
-                className="inline-flex flex-1 items-center justify-center rounded-lg border border-white/15 px-4 py-3 text-sm font-semibold text-white transition hover:border-primary-300 hover:text-primary-200"
-              >
-                アカウント作成
-              </Link>
-            </div>
-          </aside>
-        </section>
-      </div>
-    </main>
+              {summaryRows.length > 0 && (
+                <div className="mt-4">
+                  <h2 className="text-xs text-neutral-400">生成条件</h2>
+                  <dl className="mt-2 space-y-2">
+                    {summaryRows.map((row) => (
+                      <div key={`${row.label}-${row.value}`} className="rounded-lg bg-black/20 px-3 py-2">
+                        <dt className="text-[11px] text-neutral-500">{displaySourceSummaryLabel(row.label)}</dt>
+                        <dd className="mt-0.5 text-xs leading-5 text-neutral-200">{row.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              )}
+
+              <div className="mt-auto flex flex-col gap-2 pt-6">
+                <Link to="/designProduction" className="inline-flex h-10 items-center justify-center rounded-lg bg-[#20d0c4] text-sm font-medium text-neutral-950 transition hover:brightness-110">
+                  Heavy Chainで作る
+                </Link>
+                <Link to="/signup" className="inline-flex h-10 items-center justify-center rounded-lg border border-white/10 text-sm text-neutral-200 transition hover:bg-white/5">
+                  アカウントを作成
+                </Link>
+              </div>
+            </aside>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
