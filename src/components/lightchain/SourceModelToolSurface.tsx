@@ -152,7 +152,7 @@ function SourceUploadCard({
         type="file"
         accept="image/*"
         className="sr-only"
-        onChange={(event) => onFile(event.target.files?.[0] ?? null)}
+        onChange={(event) => { onFile(event.target.files?.[0] ?? null); event.target.value = ''; }}
       />
       <div className="flex size-full flex-1 gap-2">
         <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center">
