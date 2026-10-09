@@ -59,6 +59,8 @@ export interface Env {
   /** Shared account-wide monthly admission cap across all brands. */
   AI_ACCOUNT_MONTHLY_IMAGE_UNITS?: string;
   AI_DAILY_IMAGE_UNITS?: string;
+  AI_CONCURRENT_IMAGE_JOBS?: string;
+  AI_USER_CONCURRENT_IMAGE_JOBS?: string;
   AI_DAILY_ESTIMATED_NEURONS?: string;
   /** Explicit opt-in for public share-link reads and creation. */
   PUBLIC_SHARE_ENABLED?: string;

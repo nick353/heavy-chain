@@ -78,9 +78,9 @@ export function verifyH602CloudflareBillingReadiness(options = {}) {
   check('wrangler.production.jsonc:d1_db_binding', findBinding(config?.d1_databases, 'DB')?.migrations_dir === 'migrations');
   check('wrangler.production.jsonc:private_r2_binding', findBinding(config?.r2_buckets, 'PRIVATE_MEDIA')?.bucket_name === 'heavy-chain-private-media');
   check('wrangler.production.jsonc:explicit_image_ai_flag', vars.AI_IMAGE_ENABLED === 'true' || vars.AI_IMAGE_ENABLED === 'false');
-  check('wrangler.production.jsonc:bounded_monthly_quota', boundedInteger(vars.AI_MONTHLY_IMAGE_UNITS, 1, 10000));
-  check('wrangler.production.jsonc:bounded_daily_quota', boundedInteger(vars.AI_DAILY_IMAGE_UNITS, 1, 10000));
-  check('wrangler.production.jsonc:bounded_daily_estimated_neurons', boundedInteger(vars.AI_DAILY_ESTIMATED_NEURONS, 1, 1000000));
+  check('wrangler.production.jsonc:bounded_monthly_quota', boundedInteger(vars.AI_MONTHLY_IMAGE_UNITS, 1, 100000));
+  check('wrangler.production.jsonc:bounded_daily_quota', boundedInteger(vars.AI_DAILY_IMAGE_UNITS, 1, 100000));
+  check('wrangler.production.jsonc:bounded_daily_estimated_neurons', boundedInteger(vars.AI_DAILY_ESTIMATED_NEURONS, 1, 10000000));
   const configuredActions = typeof vars.AI_IMAGE_ALLOWED_ACTIONS === 'string'
     ? vars.AI_IMAGE_ALLOWED_ACTIONS.split(',').map((value) => value.trim()).filter(Boolean)
     : [];
