@@ -19,7 +19,7 @@ test('one entry per generation keeps the newest-first order and every image of t
     ['job:job-a', ['a1', 'a2']], ['image:b1', ['b1']], ['job:job-c', ['c1']],
   ]);
   assert.equal(entries[0].title, 'プリントイメージ');
-  assert.equal(entries[2].title, 'edit image');
+  assert.equal(entries[2].title, '画像編集');
 });
 
 test('resume links reopen the tool route with the job, and only for Lightchain tool results', () => {
@@ -28,6 +28,11 @@ test('resume links reopen the tool route with the job, and only for Lightchain t
   assert.equal(lightchainHistoryResumeHref({ feature_type: 'edit-image', job_id: 'ai-3' }), null);
   assert.equal(lightchainHistoryResumeHref({ feature_type: 'lightchain-printing-image', job_id: null }), null);
   assert.equal(lightchainHistoryTitle(null), '生成画像');
+  // Saved types without a catalog entry get a Japanese name instead of the raw id.
+  assert.equal(lightchainHistoryTitle('model-matrix'), 'モデル画像');
+  assert.equal(lightchainHistoryTitle('lightchain-change-color'), '色変更');
+  assert.equal(lightchainHistoryTitle('fashion-studio-detail-generated-result'), 'ファッションスタジオ');
+  assert.equal(lightchainHistoryTitle('some-unknown-type'), '生成画像');
 });
 
 test('the panel mirrors the measured Light layout and pages older results on scroll', () => {
