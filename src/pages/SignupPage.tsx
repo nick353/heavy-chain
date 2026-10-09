@@ -126,8 +126,6 @@ export function SignupPage() {
             無料で始めましょう
           </p>
 
-          <SocialSignInButtons />
-
           {/* Email Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
@@ -187,6 +185,7 @@ export function SignupPage() {
               アカウントを作成
             </Button>
           </form>
+          <SocialSignInButtons />
 
           {/* Terms */}
           <p className="mt-6 text-xs text-center text-neutral-500 dark:text-neutral-400 leading-relaxed">

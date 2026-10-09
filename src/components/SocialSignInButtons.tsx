@@ -6,7 +6,7 @@ import { getAuthErrorMessage } from '../lib/authErrorMessage';
 type Providers = { google: boolean; apple: boolean };
 
 let cached: Promise<Providers> | null = null;
-/** The auth worker reports which providers have credentials; only those buttons are shown. */
+/** Shown below the email form. The auth worker reports which providers have credentials; only those buttons are shown. */
 function loadProviders(): Promise<Providers> {
   cached ??= fetch('/api/auth/providers', { credentials: 'same-origin' })
     .then(async (response) => {
@@ -40,6 +40,11 @@ export function SocialSignInButtons() {
 
   return (
     <div data-testid="social-sign-in">
+      <div className="my-6 flex items-center gap-4">
+        <div className="h-px flex-1 bg-white/10" />
+        <span className="text-sm text-neutral-500">または</span>
+        <div className="h-px flex-1 bg-white/10" />
+      </div>
       <div className="space-y-3">
         {providers.google && (
           <button
@@ -72,11 +77,6 @@ export function SocialSignInButtons() {
             Appleで続ける
           </button>
         )}
-      </div>
-      <div className="my-6 flex items-center gap-4">
-        <div className="h-px flex-1 bg-white/10" />
-        <span className="text-sm text-neutral-500">または</span>
-        <div className="h-px flex-1 bg-white/10" />
       </div>
     </div>
   );
