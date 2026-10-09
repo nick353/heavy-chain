@@ -17,3 +17,13 @@ export function projectNameFromPrompt(prompt?: string | null) {
   if (!text) return 'Untitled';
   return text.length > 24 ? `${text.slice(0, 24)}…` : text;
 }
+
+const PLACEHOLDER_TITLES = new Set(['', 'Untitled', 'プロジェクト名', '無題のプロジェクト', '名称未設定ドキュメント']);
+export const isPlaceholderProjectTitle = (title?: string | null) => PLACEHOLDER_TITLES.has(clean(title ?? ''));
+
+/** Keeps a real title; a project still called "Untitled" takes its name from the request being generated. */
+export function namedProjectTitle(title: string, prompt?: string | null) {
+  if (!isPlaceholderProjectTitle(title)) return title;
+  const named = projectNameFromPrompt(prompt);
+  return named === 'Untitled' ? title : named;
+}

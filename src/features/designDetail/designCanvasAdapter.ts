@@ -1,3 +1,4 @@
+import { namedProjectTitle } from '../../lib/projectNames';
 import { getCanvasDocument, updateCanvasDocument, type CanvasDocumentRecord } from '../../lib/canvasDocumentPersistence';
 import type { DesignDialogueManifestReference } from '../../lib/designDialogueReferences';
 import type { DesignScope, DesignTurn, DesignTurnOutput } from './types';
@@ -80,7 +81,7 @@ export function createDesignCanvasAdapter(options: { scope: DesignScope; project
       if (additions.length) {
         assertContext();
         try {
-          await client.updateDocument({ documentId: projectId, brandId: scope.brandId, title: before.title,
+          await client.updateDocument({ documentId: projectId, brandId: scope.brandId, title: namedProjectTitle(before.title, turn.prompt),
             expectedRevision: before.revision, snapshot: { ...before.snapshot, objects: [...retained, ...additions] } }, context);
         } catch { assertContext(); /* A lost PATCH or CAS conflict can only be resolved by this exact GET. */ }
       }
