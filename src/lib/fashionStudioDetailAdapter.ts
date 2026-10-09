@@ -3,6 +3,7 @@ import type { CanvasDocumentRecord, CanvasDocumentSnapshot, CanvasDocumentReques
 import type { FashionStudioGenerationHandoff, FashionStudioGenerationAdapters } from './fashionStudioDetailGeneration';
 import type { ArtifactPersistenceContext } from './cloudflareApi';
 import type { StudioAckStore } from './fashionStudioPendingAck';
+import { projectNameFromFile } from './projectNames';
 
 export const FASHION_STUDIO_UPLOAD_MAX_BYTES = 20 * 1024 * 1024;
 const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -244,7 +245,7 @@ export const createFashionStudioInputController = (adapters: FashionStudioInputA
         if (!attempt.documentSent) {
           const snapshot = replaceFashionStudioRole({ version: 1, objects: [], view: { zoom: 0.3, panX: 0, panY: 0, gridVisible: false, snapToGrid: false, gridSize: 20 } }, 'main', remote, attempt.requestId);
           attempt.documentSent = true;
-          try { await adapters.createDocument({ documentId: attempt.documentId, brandId: attempt.scope.brandId, title: 'Untitled', snapshot }, context); }
+          try { await adapters.createDocument({ documentId: attempt.documentId, brandId: attempt.scope.brandId, title: projectNameFromFile(attempt.file.name), snapshot }, context); }
           catch { assertContext(); /* uncertain create reconciles the same ID below */ }
         }
         document = verified(await adapters.getDocument(attempt.documentId, attempt.scope.brandId, context));

@@ -10,6 +10,9 @@ import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import type { CanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
+import { projectNameFromFile } from '../lib/projectNames';
+
+const draftFileName = (metadata: unknown) => (metadata && typeof metadata === 'object' && !Array.isArray(metadata) && typeof (metadata as Record<string, unknown>).originalFileName === 'string' ? (metadata as Record<string, string>).originalFileName : null);
 
 /**
  * Light saves a board project as soon as the first image is uploaded (it shows up as "Untitled" on the board before
@@ -237,7 +240,7 @@ export function useBoardDraftCards(featureId: string, detailPath: string) {
         });
         const signed = await withSignedImageUrls(drafts.map((image) => ({ storage_path: image.storage_path, image_url: '' })));
         if (!active) return;
-        setCards(drafts.map((image, index) => ({ id: image.id, title: 'Untitled', updatedAt: image.created_at, imageUrl: signed[index]?.image_url ?? '', href: href(image.id) })));
+        setCards(drafts.map((image, index) => ({ id: image.id, title: projectNameFromFile(draftFileName(image.metadata)), updatedAt: image.created_at, imageUrl: signed[index]?.image_url ?? '', href: href(image.id) })));
       })
       .catch(() => { if (active) setCards([]); });
     return () => { active = false; };
