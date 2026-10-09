@@ -455,7 +455,9 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
       // Keep a private server copy of each uploaded input so a resume in another
       // browser can show it. A failed copy never blocks the generation. busy is
       // held during the copy so a second click cannot start another request.
+      // The copy can take several seconds, so show 生成中 from the click.
       busy.current = true;
+      setState(s=>({...s,status:'running',error:null}));
       try { for (const key of ['primary','secondary'] as const) {
         const slot = snapshot.slots[key];
         if (!slot || slot.sourceStoragePath || slot.sourceMediaPath || !slot.imageUrl) continue;
