@@ -51,7 +51,10 @@ const sanitizeInputState=(value:unknown):Record<string,Json>=>{
 const workspaceInputState = (feature: string, value: unknown): Record<string, Json> => isModelToolFeature(feature) ? readModelToolSettings(feature, value) ?? readLegacyModelToolSettings(feature, value) ?? {} : isModelLibraryFeature(feature) ? readModelLibrarySettings(value) ?? sanitizeInputState(value) : sanitizeInputState(value);
 type State = { brief: string; referenceNote: string; slots: Record<SlotKey, Source | null>; result: LightchainResumeResult | null;
   inputState: Record<string,Json>; libraryInputReadback:LibraryInputReadback|null; candidates:CanonicalModelCandidate[]; selectedCandidateId:string|null; inputsAvailable: boolean; originalInputsAvailable: boolean; status: Status; error: string | null; pendingId: string | null };
-type Pending = { requestId: string; originJob: string | null; brief: string; referenceNote: string; backendAction?:unknown; requestedOutputSize?:unknown; inputState?:Record<string,Json>; materialSlots: ReturnType<typeof serializeLightchainResumeSlots> };
+type Pending = { requestId: string; createdAt?: number; originJob: string | null; brief: string; referenceNote: string; backendAction?:unknown; requestedOutputSize?:unknown; inputState?:Record<string,Json>; materialSlots: ReturnType<typeof serializeLightchainResumeSlots> };
+// A request the server has never seen may still be in flight for a moment; after this it was never sent.
+const PENDING_NOT_FOUND_GRACE_MS = 60_000;
+const RUNNING_RECHECK_MS = 4_000;
 const emptyState = (): State => ({ brief: '', referenceNote: '', slots: { primary: null, secondary: null }, result: null,
   inputState:{},libraryInputReadback:null,candidates:[],selectedCandidateId:null, inputsAvailable: false, originalInputsAvailable: false, status: 'empty', error: null, pendingId: null });
 const authSnapshot = () => { const s = useAuthStore.getState(); return captureAuthBrandFence(s.brandState, s.user?.id ?? null, s.currentBrand?.id ?? null); };
@@ -94,6 +97,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
     pending.current = value;
   };
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; sequence.current++; restoredArtifact.current=null; releaseAll(); }; }, []);
+  const autoReconciled = useRef<string | null>(null);
   useEffect(() => {
     const token = ++sequence.current; uploadSequence.current.primary++; uploadSequence.current.secondary++;
     busy.current = false; releaseAll(); pending.current = null;restoredArtifact.current=null;
@@ -464,7 +468,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
         } catch { /* local copy still works in this browser */ }
       } } finally { busy.current = false; }
     }
-    const request = action === 'reconcile' ? pending.current : {requestId:crypto.randomUUID(),originJob:jobId,brief:snapshot.brief,
+    const request = action === 'reconcile' ? pending.current : {requestId:crypto.randomUUID(),createdAt:Date.now(),originJob:jobId,brief:snapshot.brief,
       referenceNote:snapshot.referenceNote,backendAction:newAction,...(creationOutputSize?{requestedOutputSize:creationOutputSize}:{}),inputState:workspaceInputState(toolId,snapshot.inputState),materialSlots:serializeLightchainResumeSlots(snapshot.slots)};
     if (!request) return;
     busy.current = true;
@@ -480,8 +484,24 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
       let receipt: (ImageEditResult | ModelMatrixResult) & {state?:string};
       if (action === 'reconcile') {
         if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
-        receipt = await cloudflareDataPlane.readImageAIRequest(request.requestId) as unknown as ImageEditResult;
+        try { receipt = await cloudflareDataPlane.readImageAIRequest(request.requestId) as unknown as ImageEditResult; }
+        catch (error) {
+          // The server never admitted this ID (e.g. the page was left before it was sent): release the lock.
+          if (error instanceof Error && error.message.startsWith('cloudflare_api_404_image_request_not_found')
+            && Date.now() - (request.createdAt ?? 0) > PENDING_NOT_FOUND_GRACE_MS) {
+            assertCurrent(); rememberPending(null);
+            setState(s=>({...s,status:s.result?'saved':'empty',pendingId:null,error:'前回の依頼はサーバーに届いていませんでした。もう一度生成してください。'}));
+            return;
+          }
+          throw error;
+        }
         if (receipt.requestId !== request.requestId) throw new Error('image_request_identity_mismatch');
+        if (receipt.state === 'running') {
+          // Still generating on the server (it continues after the page was left); check again shortly.
+          setState(s=>({...s,status:'running',error:null,pendingId:request.requestId}));
+          window.setTimeout(()=>{ if (mounted.current && scopeRef.current===captured && pending.current?.requestId===request.requestId) void run('reconcile'); },RUNNING_RECHECK_MS);
+          return;
+        }
       } else {
         const customRequest = isModelDescriptionFeature(toolId) && readModelToolSettings(toolId, request.inputState)?.inputMode === 'custom';
         const dispatchSlots = librarySettings ? request.materialSlots.filter(slot=>slot.key===(librarySettings.inputMode==='custom'?'secondary':'primary')) : customRequest ? request.materialSlots.filter(slot => slot.key !== 'secondary') : request.materialSlots;
@@ -587,6 +607,14 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
     } }
     finally { if (scopeRef.current===captured && sequence.current===token) busy.current=false; }
   };
+  useEffect(() => {
+    // Returning to a page with a retained request reads its receipt once (read-only, never a resend), so a job
+    // that kept running after the page was left shows its result without a manual 照合.
+    if (!state.pendingId || state.status !== 'unknown' || autoReconciled.current === state.pendingId || !authSnapshot()) return;
+    autoReconciled.current = state.pendingId;
+    void run('reconcile');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.pendingId, state.status, brandState.status]);
   const selectCandidate=async(imageId:string)=>{
     if(busy.current||stateRef.current.pendingId||stateRef.current.status==='loading')return;
     const snapshot=stateRef.current,candidate=snapshot.candidates.find(item=>item.imageId===imageId),fence=authSnapshot(),captured=scopeRef.current;
