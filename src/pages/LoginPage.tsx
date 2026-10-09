@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { SocialSignInButtons } from '../components/SocialSignInButtons';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -14,6 +15,7 @@ export function LoginPage() {
     const params = new URLSearchParams(location.search);
     if (params.get('registered') === '1') return '確認メールを送りました。メール内のリンクを開いてから、ここでログインしてください。';
     if (params.get('verified') === '1') return 'メールアドレスを確認しました。ログインしてください。';
+    if (params.get('oauth_error')) return 'Google / Apple でのログインを完了できませんでした。同じメールアドレスでパスワード登録済みの場合は、メールアドレスとパスワードでログインしてください。';
     return null;
   })();
   const navigate = useNavigate();
@@ -135,6 +137,8 @@ export function LoginPage() {
                 </div>
               </div>
             )}
+
+            <SocialSignInButtons />
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-7">
               <label className="block">

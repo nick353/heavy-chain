@@ -117,7 +117,7 @@ export function createCloudflareBrowserAuth(
     },
     async signInWithOAuth(input: { provider: 'google' | 'apple'; options?: { redirectTo?: string } }) {
       try {
-        const result = await request<{ url: string }>('/sign-in/social', { provider: input.provider, callbackURL: input.options?.redirectTo || `${origin}/auth/callback` });
+        const result = await request<{ url: string }>('/sign-in/social', { provider: input.provider, callbackURL: input.options?.redirectTo || `${origin}/auth/callback`, errorCallbackURL: `${origin}/login?oauth_error=1` });
         const target = new URL(result.url);
         if (target.protocol !== 'https:') throw new Error('認証先URLが不正です。');
         window.location.assign(target.toString()); return { error: null };

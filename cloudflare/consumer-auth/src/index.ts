@@ -1,4 +1,5 @@
-import { allowedOrigins, appleReady, createAuth, emailReady, mailFailure, type Env } from './auth.ts';
+import { allowedOrigins, appleReady, createAuth, emailReady, googleReady, mailFailure, type Env } from './auth.ts';
+import { withAppleWebSecret } from './apple-web-secret.ts';
 import { recoveryPage } from './recovery-page.ts';
 import { verifyMyProEmail } from './email-verification.ts';
 import { exchangeNativeCode, NativeOAuthError } from './native-oauth.ts';
@@ -41,7 +42,7 @@ async function boundedRequest(request: Request): Promise<Request | null> {
 }
 
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
-  env = { ...env, [mailFailure]: {} };
+  env = await withAppleWebSecret({ ...env, [mailFailure]: {} });
   const url = new URL(request.url);
   // Same-origin browser proxy preserves its URL. No arbitrary Host/X-Forwarded-Host trust.
   if (!allowedOrigins(env).includes(url.origin)) return json({ error: 'host_not_allowed' }, 403);
@@ -51,6 +52,10 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   if (origin && !allowedOrigins(env).includes(origin) && !appleCallback) return json({ error: 'origin_not_allowed' }, 403);
   if (url.pathname === '/health' && request.method === 'GET') {
     return json({ service: 'consumer-auth', appId: env.APP_ID ?? 'heavy', storage: 'cloudflare-d1', emailConfigured: emailReady(env), emailBudgetConfigured: mailBudgetConfigured(env) });
+  }
+  // Lets the web app show only the sign-in buttons whose provider is configured.
+  if (url.pathname === '/api/auth/providers' && request.method === 'GET') {
+    return json({ google: googleReady(env), apple: appleReady(env) });
   }
   if (env.APP_ID === 'mypro' && request.method === 'GET' && ['/reset-password', '/login'].includes(url.pathname)) {
     return recoveryPage(url.pathname === '/login');

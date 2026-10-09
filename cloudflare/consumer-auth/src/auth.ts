@@ -34,6 +34,9 @@ export interface Env extends MailBudgetEnv {
   APPLE_NATIVE_TEAM_ID?: string;
   APPLE_NATIVE_KEY_ID?: string;
   APPLE_NATIVE_PRIVATE_KEY?: string;
+  APPLE_WEB_TEAM_ID?: string;
+  APPLE_WEB_KEY_ID?: string;
+  APPLE_WEB_PRIVATE_KEY?: string;
 }
 
 export function allowedOrigins(env: Env): string[] {
@@ -43,6 +46,10 @@ export function allowedOrigins(env: Env): string[] {
 export function emailReady(env: Env): boolean {
   return Boolean(typeof env.EMAIL?.send === 'function' && env.EMAIL_FROM
     && /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(env.EMAIL_FROM));
+}
+
+export function googleReady(env: Env): boolean {
+  return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 }
 
 export function appleReady(env: Env): boolean {
