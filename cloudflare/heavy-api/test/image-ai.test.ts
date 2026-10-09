@@ -725,7 +725,7 @@ test('fitting keeps accessories as accessories and frames the whole person',()=>
   const ref='data:image/png;base64,'+Buffer.from(pngFixture(128,128)).toString('base64');
   const parsed=parseImageInput('model-matrix',{...s.input(),imageUrl:ref,modelReferenceImageUrl:ref,productDescription:'silver chain'} as never);
   const prompt=parsed.candidates[0].prompt;
-  assert.match(prompt,/accessory/); assert.match(prompt,/keeps the outfit from image 1/);
+  assert.match(prompt,/accessory/); assert.match(prompt,/keeps the outfit from image 1 exactly as it is/); assert.match(prompt,/do not recolor or replace any clothing/);
   assert.match(prompt,/never turn an accessory into clothing/);
   assert.match(prompt,/Frame the entire person from the top of the head through both feet/);
 });
