@@ -294,7 +294,7 @@ export function parseImageInput(
       instruction = `Professional full-body apparel try-on photograph. ${descriptor.gender} adult in their ${descriptor.ageGroup}, ${BODY_TYPES[String(descriptor.bodyType)][1]} body type.\n` +
         (references[0] ? 'If image 0 is clothing: Dress the person in EXACTLY the garment in image 0. Preserve its color, print, fabric, pockets, fastenings, proportions and logos; do not substitute a similar item.\n' +
           'If image 0 is an accessory (necklace, chain, jewelry, bag, hat, belt, eyewear or shoes): the person wears that exact accessory in its natural place and keeps ' +
-          (references[1] ? 'the outfit from image 1' : 'a simple neutral outfit') + '; never turn an accessory into clothing, a print or a graphic.\n' : '') +
+          (references[1] ? 'the outfit from image 1 exactly as it is (same garments, colors and fit; do not recolor or replace any clothing)' : 'a simple neutral outfit') + '; never turn an accessory into clothing, a print or a graphic.\n' : '') +
         (references[1] ? 'Image 1 is the person reference: preserve their face, hairstyle, pose direction and identity while applying the selected fit and adult age context.\n' : '') +
         (body.skinTone ? `Selected skin tone: ${body.skinTone}.\n` : '') + (body.hairStyle ? `Selected hair length: ${body.hairStyle}.\n` : '') +
         'Frame the entire person from the top of the head through both feet, with visible margin above the head and below the feet. Keep both feet and all limbs inside the image; do not crop at the torso, thighs, knees or ankles. Use wider camera framing as needed, including when a supplied person reference is cropped.\n' +

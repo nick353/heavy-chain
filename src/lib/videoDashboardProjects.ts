@@ -15,7 +15,7 @@ const relativeAge = (createdAt: string, now = Date.now()): string => {
   const timestamp = Date.parse(createdAt);
   if (!Number.isFinite(timestamp)) return '新規';
   const days = Math.max(0, Math.floor((now - timestamp) / 86_400_000));
-  if (days < 1) return '今日';
+  if (days < 1) { const d = new Date(timestamp); return `今日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
   if (days < 30) return `${days}日前`;
   const months = Math.max(1, Math.floor(days / 30));
   if (months < 12) return `${months}ヶ月前`;
