@@ -1,6 +1,6 @@
 import { EmailMessage } from 'cloudflare:email';
 import { alertBody, feedbackBody, feedbackWindow, mimeMessage, shouldAlert, windowBounds, type AlertCounts, type FeedbackRow } from './alerts';
-import { backupDatabase } from './backup';
+import { backupDatabase, pruneBackups } from './backup';
 
 export const BACKUP_CRON = '0 18 * * *'; // 03:00 JST
 
@@ -51,6 +51,7 @@ export default {
     if (event.cron === BACKUP_CRON) {
       try {
         await backupDatabase(env.DB, env.BACKUPS, now);
+        await pruneBackups(env.BACKUPS, now);
       } catch (error) {
         await send(env, '[Heavy Chain] データベースのバックアップに失敗しました',
           `毎日のデータベースのバックアップ（${now.toISOString()}）が失敗しました。\n\n${String(error).slice(0, 500)}`, now);

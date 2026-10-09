@@ -1,9 +1,12 @@
 /**
- * Daily copy of the production D1 database to R2 (backups/d1/<date>/). D1 Time Travel only reaches 30 days back;
- * these copies stay until removed by hand. Each table becomes one NDJSON file; manifest.json records the
- * CREATE statements and row counts so a restore can rebuild the schema first.
+ * Daily copy of the production D1 database to R2 (backups/d1/<date>/). Copies older than BACKUP_RETENTION_DAYS
+ * are removed after each run, so a deleted account leaves no copy behind after 30 days (privacy policy).
+ * Each table becomes one NDJSON file; manifest.json records the CREATE statements and row counts so a
+ * restore can rebuild the schema first.
  */
 const PAGE_SIZE = 500;
+export const BACKUP_RETENTION_DAYS = 28;
+const BACKUP_KEY = /^backups\/d1\/(\d{4}-\d{2}-\d{2})\//;
 
 export type BackupResult = { prefix: string; tables: Array<{ name: string; rows: number; bytes: number }> };
 
@@ -30,4 +33,21 @@ export async function backupDatabase(db: D1Database, bucket: R2Bucket, now = new
   const manifest = { createdAt: now.toISOString(), database: 'heavy-chain-production-db', schema: schema.results, tables: result.tables };
   await bucket.put(`${prefix}/manifest.json`, JSON.stringify(manifest, null, 1), { httpMetadata: { contentType: 'application/json' } });
   return result;
+}
+
+/** Deletes backup copies whose date is more than BACKUP_RETENTION_DAYS before `now`. Only keys under backups/d1/<date>/ are touched. */
+export async function pruneBackups(bucket: R2Bucket, now = new Date()): Promise<string[]> {
+  const cutoff = backupPrefix(new Date(now.getTime() - BACKUP_RETENTION_DAYS * 86_400_000)).slice('backups/d1/'.length);
+  const expired: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await bucket.list({ prefix: 'backups/d1/', cursor });
+    for (const object of page.objects) {
+      const date = BACKUP_KEY.exec(object.key)?.[1];
+      if (date && date < cutoff) expired.push(object.key);
+    }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  for (let i = 0; i < expired.length; i += 1000) await bucket.delete(expired.slice(i, i + 1000));
+  return expired;
 }
