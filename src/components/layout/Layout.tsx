@@ -274,6 +274,7 @@ export function Layout() {
                                 <p className="font-medium text-white">{lightchainUserName}</p>
                                 <p className="mt-1 break-all text-xs text-neutral-400">{user?.email ?? ''}</p>
                                 <Link to="/change-password" className="mt-4 block text-xs text-neutral-300 underline transition hover:text-white">パスワードを変更する</Link>
+                                <Link to="/account/delete" data-testid="account-menu-delete" onClick={() => setIsLightAccountMenuOpen(false)} className="mt-3 block text-xs text-[#f39aa5] underline transition hover:text-[#ffc2ca]">アカウントを削除する</Link>
                               </div>
                             </>
                           ) : (

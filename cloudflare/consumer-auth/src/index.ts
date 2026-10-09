@@ -7,6 +7,7 @@ import { withAppleNativeSecret } from './apple-native-secret.ts';
 import { validateProviderSession } from './provider-validation.ts';
 import { MailBudgetError, mailBudgetConfigured } from './mail-budget.ts';
 import { cleanupExpiredAuth } from './housekeeping.ts';
+import { eraseHeavyAccount } from './heavy-account-erase.ts';
 export type { Env } from './auth.ts';
 
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: {
@@ -83,6 +84,9 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
       if (providerStatus !== 200) return providerFailure(providerStatus);
       return json({ issuer: env.AUTH_BASE_URL, appId: env.APP_ID ?? 'heavy', subject: session.user.id,
         email: session.user.email, emailVerified: true, name: session.user.name });
+    }
+    if (url.pathname === '/v1/account/erase' && request.method === 'POST' && env.APP_ID !== 'mypro') {
+      return await eraseHeavyAccount(request, env, auth);
     }
     if (!url.pathname.startsWith('/api/auth/')) return json({ error: 'not_found' }, 404);
     if (request.method !== 'GET' && request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);

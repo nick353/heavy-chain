@@ -1198,6 +1198,15 @@ class CloudflareDataPlaneClient {
     await this.request<void>(`/v1/canvas-documents/${encodeURIComponent(documentId)}`, { method: 'DELETE' });
   }
 
+  /** Deletes the signed-in account and everything it owns (heavy-api, then the auth user). */
+  async deleteAccount(): Promise<void> {
+    await this.request<void>('/v1/account/delete', {
+      method: 'POST',
+      body: JSON.stringify({ confirmation: 'DELETE_ACCOUNT' }),
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const response = await this.fetchRaw(path, init);
     if (response.status === 204) return undefined as T;

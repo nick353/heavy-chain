@@ -1,6 +1,7 @@
 const DEFAULT_MAX_MEDIA_BYTES = 10 * 1024 * 1024;
 import { handleDomainRequest } from "./domain.ts";
 import { handleCoreRequest, handleMediaReadGateway } from "./core.ts";
+import { handleAccountDeletionRequest } from "./account-deletion.ts";
 import { configuredTokenVerifier } from "./auth.ts";
 import { saveWorkspaceArtifact,readWorkspaceArtifact } from "./workspace.ts";
 import { handleFeedbackAdminRequest } from "./feedback-admin.ts";
@@ -485,6 +486,8 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   if (imageRead) return withCors(request, env, imageRead);
   const designAssistantResponse = await handleDesignAssistantRequest(request, env);
   if (designAssistantResponse) return respond(designAssistantResponse);
+  const accountDeletion = await handleAccountDeletionRequest(request, env);
+  if (accountDeletion) return respond(accountDeletion);
   const coreResponse = await handleCoreRequest(request, env);
   if (coreResponse) return respond(coreResponse);
   if (url.pathname === "/v1/media" && request.method === "POST") {
