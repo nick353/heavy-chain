@@ -5,6 +5,8 @@ import clsx from 'clsx';
 interface PasswordStrengthMeterProps {
   password: string;
   className?: string;
+  /** The sign-up minimum enforced by the auth server (12 on Cloudflare auth). */
+  minLength?: number;
 }
 
 interface PasswordRequirement {
@@ -12,15 +14,16 @@ interface PasswordRequirement {
   test: (password: string) => boolean;
 }
 
-const requirements: PasswordRequirement[] = [
-  { label: '8文字以上', test: (p) => p.length >= 8 },
+const requirementsFor = (minLength: number): PasswordRequirement[] => [
+  { label: `${minLength}文字以上`, test: (p) => p.length >= minLength },
   { label: '大文字を含む', test: (p) => /[A-Z]/.test(p) },
   { label: '小文字を含む', test: (p) => /[a-z]/.test(p) },
   { label: '数字を含む', test: (p) => /[0-9]/.test(p) },
   { label: '記号を含む(!@#$%など)', test: (p) => /[!@#$%^&*(),.?":{}|<>]/.test(p) },
 ];
 
-export function PasswordStrengthMeter({ password, className }: PasswordStrengthMeterProps) {
+export function PasswordStrengthMeter({ password, className, minLength = 8 }: PasswordStrengthMeterProps) {
+  const requirements = useMemo(() => requirementsFor(minLength), [minLength]);
   const analysis = useMemo(() => {
     const passed = requirements.filter((r) => r.test(password));
     const strength = passed.length / requirements.length;
@@ -44,7 +47,7 @@ export function PasswordStrengthMeter({ password, className }: PasswordStrengthM
     }
 
     return { passed, strength, level, label, color };
-  }, [password]);
+  }, [password, requirements]);
 
   if (!password) return null;
 

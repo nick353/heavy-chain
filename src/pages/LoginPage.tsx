@@ -10,6 +10,12 @@ import toast from 'react-hot-toast';
 
 export function LoginPage() {
   const location = useLocation();
+  const signupNotice = (() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('registered') === '1') return '確認メールを送りました。メール内のリンクを開いてから、ここでログインしてください。';
+    if (params.get('verified') === '1') return 'メールアドレスを確認しました。ログインしてください。';
+    return null;
+  })();
   const navigate = useNavigate();
   const { user, signInWithEmail, isLoading } = useAuthStore();
   const [accountId, setAccountId] = useState('');
@@ -78,7 +84,7 @@ export function LoginPage() {
     <main className="relative min-h-screen overflow-hidden bg-[#070b12] text-white">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_72%_at_0%_4%,rgba(0,172,174,0.35),transparent_72%),radial-gradient(50%_48%_at_2%_100%,rgba(29,61,201,0.38),transparent_72%),radial-gradient(42%_52%_at_100%_100%,rgba(23,48,151,0.42),transparent_75%)]" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.11] [background-image:radial-gradient(rgba(137,184,214,0.55)_0.7px,transparent_0.7px)] [background-size:8px_8px]" />
-      <div className="relative mx-auto grid min-h-screen w-full max-w-[1200px] items-center gap-8 px-6 py-10 lg:ml-auto lg:mr-6 lg:w-[calc(100%-3rem)] lg:grid-cols-[minmax(0,1fr)_416px] lg:px-0">
+      <div className="relative mx-auto grid min-h-screen w-full max-w-[1200px] items-center gap-8 px-6 py-10 lg:ml-auto lg:mr-6 lg:w-[calc(100%-3rem)] lg:grid-cols-[minmax(0,1fr)_480px] lg:px-0">
         <section className="relative z-10 hidden max-w-[720px] lg:block" aria-labelledby="heavy-chain-login-hero-title">
           <p className="mb-5 text-[clamp(2.5rem,4vw,4rem)] font-semibold leading-none tracking-[0.015em]">HELLO</p>
           <h1 id="heavy-chain-login-hero-title" className="text-[clamp(1.9rem,2.35vw,2.5rem)] font-medium leading-tight tracking-[-0.02em]">
@@ -89,7 +95,7 @@ export function LoginPage() {
           </p>
         </section>
 
-        <section className="relative z-10 mx-auto w-full max-w-[416px] rounded-[22px] border border-white/[0.06] bg-[#20252a]/95 px-6 pt-[87px] pb-[57px] shadow-[0_24px_72px_rgba(0,0,0,0.24)] lg:mx-0 lg:justify-self-end sm:px-8 lg:px-0" aria-labelledby="lightchain-login-title">
+        <section className="relative z-10 mx-auto w-full max-w-[416px] lg:max-w-[480px] rounded-[22px] border border-white/[0.06] bg-[#20252a]/95 px-6 pt-[87px] pb-[57px] shadow-[0_24px_72px_rgba(0,0,0,0.24)] lg:mx-0 lg:justify-self-end sm:px-8 lg:px-0" aria-labelledby="lightchain-login-title">
           <div className="w-full lg:ml-16 lg:w-[352px] lg:translate-x-[3px]">
           <div className="mb-6">
             <div className="mb-3 flex items-center gap-2.5" aria-label="Heavy Chain">
@@ -100,6 +106,12 @@ export function LoginPage() {
               アカウントIDを下に入力してログインをお願いします。
             </h1>
           </div>
+
+            {signupNotice && !authError && (
+              <div role="status" data-testid="login-signup-notice" className="mb-6 rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-sm leading-6 text-cyan-50">
+                {signupNotice}
+              </div>
+            )}
 
             {authError && (
               <div role="alert" className="mb-6 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm leading-6 text-amber-100">
@@ -167,6 +179,10 @@ export function LoginPage() {
                 <button type="submit" disabled={isLoading} className="h-12 w-full rounded-lg bg-[#12c5bc] text-base font-semibold text-[#071114] transition-colors hover:bg-[#24d1c8] disabled:cursor-not-allowed disabled:opacity-60">
                   ログイン
                 </button>
+                <p className="text-center text-sm text-white/60">
+                  はじめての方は{' '}
+                  <Link to="/signup" data-testid="login-signup-link" className="font-semibold text-cyan-300 transition hover:text-cyan-200">新規登録</Link>
+                </p>
               </div>
             </form>
           </div>
