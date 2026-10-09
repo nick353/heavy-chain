@@ -1548,6 +1548,14 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
   const [activeFittingMode, setActiveFittingMode] = useState<'regular' | 'underwear'>('regular');
   const [fittingModeNoticeVisible, setFittingModeNoticeVisible] = useState(true);
+  // Once closed, the hint stays closed for this visit instead of returning after every upload or re-render.
+  const fittingModeNoticeDismissedRef = useRef(false);
+  useEffect(() => {
+    // The hint sits over the task tabs; it must not keep covering them.
+    if (!fittingModeNoticeVisible) return undefined;
+    const timer = window.setTimeout(() => setFittingModeNoticeVisible(false), 6000);
+    return () => window.clearTimeout(timer);
+  }, [fittingModeNoticeVisible, activeFittingMode]);
   const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
   const [fittingBatchTasks, setFittingBatchTasks] = useState<FittingBatchTask[]>([]);
   const [fittingBatchLoadedScope, setFittingBatchLoadedScope] = useState('');
@@ -2834,7 +2842,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     setActiveWorkspaceTab(nextWorkspaceTab);
     setWorkspaceTextDrafts(nextWorkspaceTab ? { [nextWorkspaceTab]: nextWorkspaceText } : {});
     setActiveFittingMode('regular');
-    setFittingModeNoticeVisible(true);
+    setFittingModeNoticeVisible(!fittingModeNoticeDismissedRef.current);
     setActiveFittingTaskTab('シングルタスク');
     setActiveFittingInputTab(selectedTool.id === 'ai-fitting-reference' || isModelReferenceRoute ? '参考画像' : '説明生成');
     setWorkspaceText(nextWorkspaceText);
@@ -5026,9 +5034,9 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     <p
                       className="mt-2 text-[14px] font-bold leading-4 text-[#e3e8e8]"
                       data-testid="lightchain-fitting-garment-count"
-                      data-count={`${fittingGarmentCount}/4`}
+                      data-count={`${fittingGarmentCount}/1`}
                     >
-                      衣服の画像 ({fittingGarmentCount}/4)
+                      衣服の画像 ({fittingGarmentCount}/1)
                     </p>
                     <p className="mt-1 mb-1 text-[14px] leading-6 text-[#aab8b6]">自動でアパレル平置き画像に変換</p>
                     {materialSlotFiles.primary?.name && (
@@ -5060,7 +5068,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                   <label className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/15 bg-white/[0.04] p-3 text-center">
                     <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
                     <ImagePlus className="h-6 w-6 text-neutral-300" />
-                    <span className="mt-2 text-[14px] leading-[21px] text-[#e3e8e8]">続けてアップロードする</span>
+                    <span className="mt-2 text-[14px] leading-[21px] text-[#e3e8e8]">画像を差し替える</span>
                     <span className="mt-1 text-xs leading-[17.1429px] text-[#aab8b6]">ここをクリック/ドラッグします。</span>
                     <button
                       type="button"
@@ -5622,7 +5630,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
               <p className="mt-2 text-sm leading-[21px] text-[#aab8b6]">AIでモデル着用イメージを素早く実現</p>
               {lightchainResult ? (
                 <div className="mx-auto mt-8 max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#1a1f22] text-left shadow-2xl">
-                  {renderLightchainResultPreviewImage('h-56 w-full object-cover', '生成結果プレビュー')}
+                  {renderLightchainResultPreviewImage('h-56 w-full object-contain', '生成結果プレビュー')}
                   <div className="px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -5669,7 +5677,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
               <button
                 type="button"
                 aria-label="閉じる"
-                onClick={() => setFittingModeNoticeVisible(false)}
+                onClick={() => { fittingModeNoticeDismissedRef.current = true; setFittingModeNoticeVisible(false); }}
                 className="pointer-events-auto ml-auto flex size-5 shrink-0 items-center justify-center rounded-full text-[#162323] transition hover:bg-black/10"
               >
                 <X className="size-5" aria-hidden="true" />
@@ -7071,7 +7079,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
               </div>
               {lightchainResult ? (
                 <div className="mt-4 overflow-hidden rounded-xl bg-[#0f1416]" data-testid="lightchain-print-design-readback">
-                  {renderLightchainResultPreviewImage('h-56 w-full object-cover', '柄・グラフィックプレビュー')}
+                  {renderLightchainResultPreviewImage('h-56 w-full object-contain', '柄・グラフィックプレビュー')}
                   <div className="p-4">
                     <p className="text-sm font-semibold text-white">{lightchainResult.title}</p>
                     <p className="mt-2 text-xs leading-6 text-neutral-400">{lightchainResult.summary}</p>
@@ -7415,7 +7423,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
               </div>
               {lightchainResult ? (
                 <div className="mt-4 overflow-hidden rounded-xl bg-[#0f1416]" data-testid="lightchain-wear-design-readback">
-                  {renderLightchainResultPreviewImage('h-56 w-full object-cover', 'ディテール変更プレビュー')}
+                  {renderLightchainResultPreviewImage('h-56 w-full object-contain', 'ディテール変更プレビュー')}
                   <div className="p-4">
                     <p className="text-sm font-semibold text-white">{lightchainResult.title}</p>
                     <p className="mt-2 text-xs leading-6 text-neutral-400">{lightchainResult.summary}</p>
