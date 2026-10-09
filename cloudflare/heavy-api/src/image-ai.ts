@@ -1,6 +1,6 @@
 import type { Env } from './index.ts';
 import { principal } from './domain.ts';
-import { requireBrandRole, handleMediaReadGateway } from './core.ts';
+import { requireBrandRole, handleMediaReadGateway, userHasBrandRole } from './core.ts';
 import { IMAGE_MODEL, IMAGE_ACTIONS, ImageInputError, boundedImageJSON, decodeImage, imageEstimate,
   isRecord, modelMultipart, normalizedImageRequestDigest, parseImageInput, sha256, type AuthorizedSourceAsset,
   type ImageAction, type ImageInput, type Json } from './image-ai-contracts.ts';
@@ -179,8 +179,12 @@ const enabled = (env: Env, action: string, provider: ProviderKind) => env.AI_IMA
   (provider === 'openai' ? true : !!env.AI) &&
   (env.AI_IMAGE_ALLOWED_ACTIONS ?? '').split(',').map(v => v.trim()).includes(action);
 
-async function canContinue(request: Request, env: Env, row: Row, enforceEntitlement = false): Promise<Response | null> {
-  const owner = await requireBrandRole(request, env, row.brand_id, 'editor');
+/** A connected caller, or the stored owner when the queue finishes a job after the caller left. */
+type JobAuth = Request | { userId: string };
+
+async function canContinue(auth: JobAuth, env: Env, row: Row, enforceEntitlement = false): Promise<Response | null> {
+  const owner = auth instanceof Request ? await requireBrandRole(auth, env, row.brand_id, 'editor')
+    : await userHasBrandRole(env, auth.userId, row.brand_id, 'editor') ? auth.userId : fail('brand_forbidden',403);
   if (owner instanceof Response) return owner;
   if (owner !== row.user_id || !await read(env,row.request_id)) return fail('image_request_not_found',404);
   // `requireBrandRole` above is the generation authorization boundary.  Do
@@ -491,74 +495,25 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
     if (row.execution_id !== executionId) return receipt(request,env,row);
     const planned = await outputs(env,id);
     if (planned.length !== count || !await env.DB.prepare('SELECT id FROM generation_jobs WHERE id=? AND user_id=?').bind(jobId,user).first()) return fail('image_admission_unavailable',503);
-    for (let index = 0; index < count; index++) {
-      const denied = await canContinue(request,env,row,true); if (denied) { await reconcile(env,row,true); return denied; }
-      const changed = await env.DB.prepare("UPDATE heavy_ai_candidates SET state='running',attempted_at=? WHERE request_id=? AND candidate_index=? AND state='planned'")
-        .bind(new Date().toISOString(),id,index).run();
-      if (changed.meta.changes !== 1) break;
-      const beforeProvider = resolveHeavyGenerationAccess({
-        userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
-      });
-      if (!beforeProvider.allowed) { await reconcile(env,row,true); return fail(beforeProvider.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeProvider.reason ?? 'heavy_generation_disabled')); }
-      const started = Date.now(); let output: unknown;
-      try { output = await runModel(env,typedAction,input,index,provider); }
-      catch (error) {
-        const beforeUnknown = await canContinue(request,env,row,true); if (beforeUnknown) { await reconcile(env,row,true); return beforeUnknown; }
-        const providerError = error instanceof OpenAIImageError ? error : null;
-        const state = providerError?.category === 'request_rejected' ? 'failed' : 'unknown';
-        const descriptor = isRecord(input.candidates[index].descriptor)
-          ? {...input.candidates[index].descriptor,...(providerError ? {providerError:providerError.diagnostics} : {})}
-          : input.candidates[index].descriptor;
-        await env.DB.prepare("UPDATE heavy_ai_candidates SET state=?,error_code=?,latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'")
-          .bind(state,providerError?.errorCode ?? 'image_outcome_unknown',Date.now()-started,JSON.stringify(descriptor),id,index).run();
-        break;
-      }
-      const latency = Date.now()-started;
-      let image;
+    if (env.IMAGE_JOB_QUEUE) {
+      // The queue finishes the job even if this caller disconnects; a connected
+      // caller still gets the final receipt from this response.
+      let queued = false;
       try {
-        if (!isRecord(output) || typeof output.image !== 'string') throw new Error('invalid');
-        image = decodeImage(output.image,false);
-        const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height) : [input.width,input.height];
-        if (image.width !== expected[0] || image.height !== expected[1]) throw new Error('dimensions');
+        await env.PRIVATE_MEDIA.put(jobInputKey(id),new TextEncoder().encode(JSON.stringify(raw)),{ httpMetadata: { contentType: 'application/json' } });
+        await env.IMAGE_JOB_QUEUE.send({ requestId: id });
+        queued = true;
       } catch {
-        const beforeInvalid = await canContinue(request,env,row,true); if (beforeInvalid) { await reconcile(env,row,true); return beforeInvalid; }
-        const providerError = provider.provider === 'openai' ? new OpenAIImageError('unusable_response',200,undefined,
-          isRecord(output) && typeof output.providerTaskId === 'string' ? output.providerTaskId : undefined) : null;
-        const descriptor = isRecord(input.candidates[index].descriptor)
-          ? {...input.candidates[index].descriptor,...(providerError ? {providerError:providerError.diagnostics} : {})}
-          : input.candidates[index].descriptor;
-        await env.DB.prepare("UPDATE heavy_ai_candidates SET state=?,error_code='image_provider_invalid_output',latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'")
-          .bind(providerError ? 'unknown' : 'failed',latency,JSON.stringify(descriptor),id,index).run();
-        break;
+        // Run inline instead. Even if the message was delivered, the consumer finds no input and
+        // each candidate can only be claimed planned->running once, so nothing is sent twice.
+        await env.PRIVATE_MEDIA.delete(jobInputKey(id)).catch(() => undefined);
       }
-      const estimate = imageEstimate(input); const checksum = await sha256(image.bytes); const imageId = `${jobId}-${index}`;
-      const providerTaskId = isRecord(output) && typeof output.providerTaskId === 'string' ? output.providerTaskId : null;
-      const descriptor = isRecord(input.candidates[index].descriptor)
-        ? { ...input.candidates[index].descriptor, ...(providerTaskId ? { providerTaskId } : {}) }
-        : input.candidates[index].descriptor;
-      // Record immutable output identity BEFORE writing R2, so a lost R2 or D1
-      // response can finish this save without paying for another inference.
-      const beforeOutputRecord = resolveHeavyGenerationAccess({
-        userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
-      });
-      if (!beforeOutputRecord.allowed) { await reconcile(env,row,true); return fail(beforeOutputRecord.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeOutputRecord.reason ?? 'heavy_generation_disabled')); }
-      const recorded = await env.DB.prepare(`UPDATE heavy_ai_candidates SET state='storing',content_type=?,content_bytes=?,sha256=?,width=?,height=?,
-        estimated_micro_usd=?,estimated_neurons=?,latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'`)
-        .bind(image.contentType,image.bytes.length,checksum,image.width,image.height,estimate.microUSD,estimate.neurons,latency,JSON.stringify(descriptor),id,index).run();
-      if (recorded.meta.changes !== 1) break;
-      const access = await canContinue(request,env,row,true); if (access) { await reconcile(env,row,true); return access; }
-      try {
-        await env.PRIVATE_MEDIA.put(`generated-images/${imageId}`,image.bytes,{ onlyIf: { etagDoesNotMatch: '*' }, httpMetadata: { contentType: image.contentType },
-          customMetadata: { sha256: checksum,requestId: id,imageId } });
-      } catch { /* HEAD the same immutable target even if the PUT response was lost. */ }
-      const afterStore = await canContinue(request,env,row,true); if (afterStore) return afterStore;
-      const candidate = (await outputs(env,id))[index];
-      const beforeCommit = resolveHeavyGenerationAccess({
-        userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
-      });
-      if (!beforeCommit.allowed) { await reconcile(env,row,true); return fail(beforeCommit.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeCommit.reason ?? 'heavy_generation_disabled')); }
-      if (!candidate || !await commitStoredCandidate(env,row,candidate)) break;
+      if (queued) {
+        row = await waitForSettled(env,row,input.candidates.length,provider);
+        return receipt(request,env,row);
+      }
     }
+    const stopped = await executeAdmitted(env,request,row,input,typedAction,provider,normalized); if (stopped) return stopped;
     const beforeReconcile = resolveHeavyGenerationAccess({
       userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
     });
@@ -570,6 +525,117 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
     // Never automatically submit again after an admission/provider/storage fault.
     return fail(row ? 'image_receipt_readback_required' : 'image_service_unavailable',503);
   }
+}
+
+const jobInputKey = (requestId: string) => `image-job-inputs/${requestId}`;
+const JOB_POLL_MS = 2000;
+
+/** Runs every planned candidate of an admitted request. Returns a response only when the run must stop early. */
+async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageInput, typedAction: ImageAction, provider: ProviderConfig,
+  normalized: Awaited<ReturnType<typeof normalizedRequest>>): Promise<Response | null> {
+  const id = row.request_id; const user = row.user_id; const action: string = typedAction; const fingerprint = row.fingerprint;
+  const jobId = row.job_id; const count = input.candidates.length;
+  for (let index = 0; index < count; index++) {
+    const denied = await canContinue(auth,env,row,true); if (denied) { await reconcile(env,row,true); return denied; }
+    const changed = await env.DB.prepare("UPDATE heavy_ai_candidates SET state='running',attempted_at=? WHERE request_id=? AND candidate_index=? AND state='planned'")
+      .bind(new Date().toISOString(),id,index).run();
+    if (changed.meta.changes !== 1) break;
+    const beforeProvider = resolveHeavyGenerationAccess({
+      userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
+    });
+    if (!beforeProvider.allowed) { await reconcile(env,row,true); return fail(beforeProvider.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeProvider.reason ?? 'heavy_generation_disabled')); }
+    const started = Date.now(); let output: unknown;
+    try { output = await runModel(env,typedAction,input,index,provider); }
+    catch (error) {
+      const beforeUnknown = await canContinue(auth,env,row,true); if (beforeUnknown) { await reconcile(env,row,true); return beforeUnknown; }
+      const providerError = error instanceof OpenAIImageError ? error : null;
+      const state = providerError?.category === 'request_rejected' ? 'failed' : 'unknown';
+      const descriptor = isRecord(input.candidates[index].descriptor)
+        ? {...input.candidates[index].descriptor,...(providerError ? {providerError:providerError.diagnostics} : {})}
+        : input.candidates[index].descriptor;
+      await env.DB.prepare("UPDATE heavy_ai_candidates SET state=?,error_code=?,latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'")
+        .bind(state,providerError?.errorCode ?? 'image_outcome_unknown',Date.now()-started,JSON.stringify(descriptor),id,index).run();
+      break;
+    }
+    const latency = Date.now()-started;
+    let image;
+    try {
+      if (!isRecord(output) || typeof output.image !== 'string') throw new Error('invalid');
+      image = decodeImage(output.image,false);
+      const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height) : [input.width,input.height];
+      if (image.width !== expected[0] || image.height !== expected[1]) throw new Error('dimensions');
+    } catch {
+      const beforeInvalid = await canContinue(auth,env,row,true); if (beforeInvalid) { await reconcile(env,row,true); return beforeInvalid; }
+      const providerError = provider.provider === 'openai' ? new OpenAIImageError('unusable_response',200,undefined,
+        isRecord(output) && typeof output.providerTaskId === 'string' ? output.providerTaskId : undefined) : null;
+      const descriptor = isRecord(input.candidates[index].descriptor)
+        ? {...input.candidates[index].descriptor,...(providerError ? {providerError:providerError.diagnostics} : {})}
+        : input.candidates[index].descriptor;
+      await env.DB.prepare("UPDATE heavy_ai_candidates SET state=?,error_code='image_provider_invalid_output',latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'")
+        .bind(providerError ? 'unknown' : 'failed',latency,JSON.stringify(descriptor),id,index).run();
+      break;
+    }
+    const estimate = imageEstimate(input); const checksum = await sha256(image.bytes); const imageId = `${jobId}-${index}`;
+    const providerTaskId = isRecord(output) && typeof output.providerTaskId === 'string' ? output.providerTaskId : null;
+    const descriptor = isRecord(input.candidates[index].descriptor)
+      ? { ...input.candidates[index].descriptor, ...(providerTaskId ? { providerTaskId } : {}) }
+      : input.candidates[index].descriptor;
+    // Record immutable output identity BEFORE writing R2, so a lost R2 or D1
+    // response can finish this save without paying for another inference.
+    const beforeOutputRecord = resolveHeavyGenerationAccess({
+      userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
+    });
+    if (!beforeOutputRecord.allowed) { await reconcile(env,row,true); return fail(beforeOutputRecord.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeOutputRecord.reason ?? 'heavy_generation_disabled')); }
+    const recorded = await env.DB.prepare(`UPDATE heavy_ai_candidates SET state='storing',content_type=?,content_bytes=?,sha256=?,width=?,height=?,
+      estimated_micro_usd=?,estimated_neurons=?,latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'`)
+      .bind(image.contentType,image.bytes.length,checksum,image.width,image.height,estimate.microUSD,estimate.neurons,latency,JSON.stringify(descriptor),id,index).run();
+    if (recorded.meta.changes !== 1) break;
+    const access = await canContinue(auth,env,row,true); if (access) { await reconcile(env,row,true); return access; }
+    try {
+      await env.PRIVATE_MEDIA.put(`generated-images/${imageId}`,image.bytes,{ onlyIf: { etagDoesNotMatch: '*' }, httpMetadata: { contentType: image.contentType },
+        customMetadata: { sha256: checksum,requestId: id,imageId } });
+    } catch { /* HEAD the same immutable target even if the PUT response was lost. */ }
+    const afterStore = await canContinue(auth,env,row,true); if (afterStore) return afterStore;
+    const candidate = (await outputs(env,id))[index];
+    const beforeCommit = resolveHeavyGenerationAccess({
+      userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
+    });
+    if (!beforeCommit.allowed) { await reconcile(env,row,true); return fail(beforeCommit.reason ?? 'heavy_generation_disabled', entitlementFailureStatus(beforeCommit.reason ?? 'heavy_generation_disabled')); }
+    if (!candidate || !await commitStoredCandidate(env,row,candidate)) break;
+  }
+  return null;
+}
+
+/** Waits (connected caller only) until the queued job leaves `running` or its observation window ends. */
+async function waitForSettled(env: Env, row: Row, count: number, provider: ProviderConfig): Promise<Row> {
+  const deadline = Date.now() + count * (modelTimeoutMs(env,provider.provider) + 30_000);
+  let current = row;
+  while (current.state === 'running' && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve,JOB_POLL_MS));
+    current = (await read(env,row.request_id)) ?? current;
+  }
+  return current;
+}
+
+/** Queue consumer: finishes an admitted request whose caller may already be gone. Never re-sends a claimed candidate. */
+export async function processImageJob(env: Env, requestId: string): Promise<void> {
+  if (!UUID.test(requestId)) return;
+  const row = await read(env,requestId);
+  const object = await env.PRIVATE_MEDIA.get(jobInputKey(requestId));
+  if (!row || row.state !== 'running' || !object) {
+    if (row?.state === 'running') await reconcile(env,row,false);
+    await env.PRIVATE_MEDIA.delete(jobInputKey(requestId));
+    return;
+  }
+  const raw = JSON.parse(await object.text()) as Json;
+  const provider = providerConfig(env,row.action,raw);
+  const input = parseImageInput(row.action,raw,provider);
+  const normalized = await normalizedRequest(env,row.user_id,row.action,raw,input,provider);
+  if (normalized.digest === row.fingerprint && input.brandId === row.brand_id) {
+    await executeAdmitted(env,{ userId: row.user_id },row,input,row.action,provider,normalized);
+  }
+  if ((await rowEntitlement(env,row)).allowed) await reconcile(env,row,true);
+  await env.PRIVATE_MEDIA.delete(jobInputKey(requestId));
 }
 
 const entitlementActionPath = (pathname: string): 'prepare' | 'acceptance' | 'attestation' | null => {

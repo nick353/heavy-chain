@@ -5,7 +5,7 @@ import { handleAccountDeletionRequest } from "./account-deletion.ts";
 import { configuredTokenVerifier } from "./auth.ts";
 import { saveWorkspaceArtifact,readWorkspaceArtifact } from "./workspace.ts";
 import { handleFeedbackAdminRequest } from "./feedback-admin.ts";
-import { handleHeavyEntitlementAction, handleImageAIRead } from "./image-ai.ts";
+import { handleHeavyEntitlementAction, handleImageAIRead, processImageJob } from "./image-ai.ts";
 import { readWorkspaceExecutionSteps } from './workspace-execution.ts';
 import { handleDesignAssistantRequest } from './designAssistant.ts';
 const MAX_IDENTITY_PART_LENGTH = 512;
@@ -29,6 +29,8 @@ export interface Env {
   AUTH_SERVICE?: { fetch(request: Request): Promise<Response> };
   DB: D1Database;
   PRIVATE_MEDIA: R2Bucket;
+  /** Optional: when bound, admitted image jobs run on this queue so they finish after the caller leaves. */
+  IMAGE_JOB_QUEUE?: Queue<{ requestId: string }>;
   /** Cloudflare Images binding; builds grid thumbnails of generated images. Optional: without it the original is served. */
   IMAGES?: ImagesBinding;
   /** Optional test seam. Production requires the bound consumer-auth verifier. */
@@ -501,5 +503,13 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   return respond(errorResponse("method_not_allowed", 405));
 }
 
-const worker = { fetch: handleRequest };
+const worker = {
+  fetch: handleRequest,
+  async queue(batch: MessageBatch<{ requestId: string }>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try { await processImageJob(env, String(message.body?.requestId ?? '')); message.ack(); }
+      catch { message.retry(); }
+    }
+  },
+};
 export default worker;
