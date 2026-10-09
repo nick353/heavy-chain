@@ -1712,7 +1712,6 @@ function LightchainMaterialWorkbenchSession() {
   const [fabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [fabricPrompt, setFabricPrompt] = useState('');
   const [fabricImageRatio, setFabricImageRatio] = useState('画像比率自動');
-  const [fabricBannerVisible, setFabricBannerVisible] = useState(true);
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
   const [printGarmentSelectionMaskUrl, setPrintGarmentSelectionMaskUrl] = useState<string | null>(null);
@@ -6741,18 +6740,6 @@ function LightchainMaterialWorkbenchSession() {
                 ))}
               </nav>
 
-                {fabricBannerVisible && <div
-                    data-testid="lightchain-fabric-deprecation-banner"
-                    className="mt-2 flex rounded-lg bg-[#5b1f2a] px-4 py-2 text-sm leading-6 text-white"
-                  >
-                    <span className="flex-1">
-                      この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
-                      <Link to="/designProduction" className="ml-7 underline text-primary hover:opacity-80" target="_blank">
-                        今すぐ体験
-                      </Link>
-                    </span>
-                    <button type="button" aria-label="閉じる" onClick={() => setFabricBannerVisible(false)} className="ml-3 self-start px-1 text-white/70 hover:text-white">×</button>
-                </div>}
 
               <div className="flex flex-col gap-4">
 

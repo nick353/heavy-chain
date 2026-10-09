@@ -1590,7 +1590,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
   const [fabricNotice, setFabricNotice] = useState('');
   const [lineDraftType, setLineDraftType] = useState<'カラー線画' | 'モノクロ線画'>('カラー線画');
   const [lineToRealImageType, setLineToRealImageType] = useState<'平置き画像' | 'モデル図'>('平置き画像');
-  const [lineDeprecationBannerVisible, setLineDeprecationBannerVisible] = useState(true);
   const [lineGenerationImageType, setLineGenerationImageType] = useState<'平置き画像' | 'モデル図'>('平置き画像');
   const [patternVectorLayers, setPatternVectorLayers] = useState<Array<'積み重ね' | '分割'>>(['積み重ね']);
   const [lineToRealPrompt, setLineToRealPrompt] = useState('');
@@ -6780,10 +6779,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       ...persistedPrintProjects,
       ...sourcePrintProjectCards.slice(0, missingSourcePrintProjects),
     ];
-    const exampleCards = [
-      { title: 'ファッションアプリケーション', age: '10 个月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#111827_42%,#65d3cf_43%,#f8fafc_72%)]' },
-      { title: 'ホームテキスタイル用途', age: '10 个月前 修正', tone: 'bg-[radial-gradient(circle_at_35%_26%,#fef3c7,#111827_28%,#f8fafc_29%,#f8fafc_64%,#fb7185_65%)]' },
-    ];
 
     return (
       <main
@@ -6919,18 +6914,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             ))}
           </div>
 
-          <h2 className="mt-6 text-base font-semibold text-white">参考事例</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
-            {exampleCards.map((card) => (
-              <div key={card.title} onClick={() => navigate('/editor/patternDesign/detail')} className="cursor-pointer overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
-                <div className={`h-40 ${card.tone}`} />
-                <div className="px-4 py-4">
-                  <p className="text-sm font-semibold text-neutral-200">{card.title}</p>
-                  <p className="mt-2 text-xs text-neutral-500">{card.age}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </section>
       </main>
     );
@@ -7112,10 +7095,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       ['lightchain-wear-design-lab', 'lightchain-wear-design-detail'],
       '新規ファイル',
     );
-    const exampleCards = [
-      { title: 'デザイン要素融合', age: '参考サンプル', tone: 'bg-[linear-gradient(135deg,#dbeafe,#f8fafc_52%,#65d3cf_53%)]' },
-      { title: 'ディテール変更', age: '参考サンプル', tone: 'bg-[linear-gradient(135deg,#f8fafc,#fca5a5_58%,#111827_59%)]' },
-    ];
 
     return (
       <main
@@ -7217,18 +7196,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             ))}
           </div>
 
-          <h2 className="mt-6 text-base font-semibold text-white">参考事例</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {exampleCards.map((card) => (
-              <button key={card.title} type="button" onClick={() => navigate(`/flow/orientedDesign/detail?boardProjectCode=${encodeURIComponent(card.title)}&boardProjectType=orientedDesignSystem`)} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
-                <div className={`h-40 ${card.tone}`} />
-                <div className="px-4 py-4">
-                  <p className="text-sm font-semibold text-neutral-200">{card.title}</p>
-                  <p className="mt-2 text-xs text-neutral-500">{card.age}</p>
-                </div>
-              </button>
-            ))}
-          </div>
         </section>
       </main>
     );
@@ -7747,12 +7714,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
       data-lightchain-generation-error={lightchainGenerationError ?? ''}
     >
-      {isFeatureDetail && selectedTool.id === 'line-to-real' && lineDeprecationBannerVisible && !isLightParityTallDetail && (
-        <div className="absolute left-[128px] top-[84px] z-30 flex h-16 w-[564px] justify-between gap-2 rounded-lg bg-[#5b1f2a] px-4 py-2 text-base leading-6 text-white">
-          <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<Link to="/designProduction" className="underline">今すぐ体験</Link></span>
-          <button type="button" aria-label="告知を閉じる" className="flex size-6 shrink-0 items-center justify-center rounded hover:bg-white/10" onClick={() => setLineDeprecationBannerVisible(false)}>×</button>
-        </div>
-      )}
       {isFeatureDetail && (
         <aside className={`fixed left-4 top-[66px] z-20 hidden w-20 flex-col gap-3 lg:flex ${isLightParityTallDetail ? 'h-[746px]' : ''}`} aria-label="ツールバー">
           {[
@@ -8547,12 +8508,6 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                             </Link>
                           ))}
                         </div>
-                      </div>
-                    )}
-                    {['line-generation', 'line-to-real'].includes(selectedTool.id) && lineDeprecationBannerVisible && (
-                      <div className="mx-4 mt-[18px] flex h-16 justify-between gap-2 rounded-lg bg-[#5b1f2a] px-4 py-2 text-sm leading-6 text-white">
-                        <span className="flex-1">この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください。<Link to="/designProduction" className="underline">今すぐ体験</Link></span>
-                        <button type="button" aria-label="告知を閉じる" className="flex size-6 shrink-0 items-center justify-center rounded hover:bg-white/10" onClick={() => setLineDeprecationBannerVisible(false)}>×</button>
                       </div>
                     )}
                     {lightchainToolPanelConfig.notice && (

@@ -71,7 +71,6 @@ export type ProjectBoardConfig = {
   detailPath: string;
   /** Canonical workspace feature whose saved provider results are this board's projects. */
   featureId: string;
-  references: readonly string[];
   testId: string;
 };
 
@@ -127,8 +126,6 @@ export function LightchainProjectBoard({ config }: { config: ProjectBoardConfig 
             <button type="button" aria-label="次のページ" disabled={page === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}><ChevronRight className="h-3 w-3" aria-hidden="true" /></button>
           </nav>
         )}
-        <h2 className="pattern-project-dashboard-section-title">参考事例</h2>
-        <div className="pattern-project-dashboard-reference-grid">{config.references.map((title) => <div key={title} onClick={() => navigate(`${config.detailPath}?boardProjectCode=&boardProjectType=`)} className="pattern-project-dashboard-card pattern-project-dashboard-reference-card"><div className="pattern-project-dashboard-media"><span className="pattern-project-dashboard-reference-art" aria-hidden="true" /></div><div className="pattern-project-dashboard-meta"><p className="pattern-project-dashboard-name">{title}</p><p className="pattern-project-dashboard-date">1年前 修正</p></div></div>)}</div>
       </section>
     </main>
   );
@@ -138,7 +135,6 @@ const PATTERN_ARRANGE_BOARD: ProjectBoardConfig = {
   title: 'デザインアレンジ',
   detailPath: '/editor/pattern/detail',
   featureId: 'pattern-arrange',
-  references: ['花型工艺呈现', 'レトロなイラスト', 'プランナーコミック', '夏のフルーツポスター'],
   testId: 'lightchain-pattern-overview',
 };
 
@@ -146,7 +142,6 @@ const PRINT_DESIGN_BOARD: ProjectBoardConfig = {
   title: 'プリントデザイン',
   detailPath: '/editor/patternDesign/detail',
   featureId: 'pattern-print-design',
-  references: ['ファッションアプリケーション', 'ホームテキスタイル用途'],
   testId: 'lightchain-print-design-overview',
 };
 
@@ -154,7 +149,6 @@ const CHANGE_COLOR_BOARD: ProjectBoardConfig = {
   title: '色変更',
   detailPath: '/editor/changeColor/detail',
   featureId: 'change-color',
-  references: ['フェアアイルセーターの色変更', 'コートの部分的な色変更'],
   testId: 'lightchain-change-color-overview',
 };
 

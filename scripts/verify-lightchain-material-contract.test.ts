@@ -188,8 +188,8 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /data-testid="lightchain-fabric-generate"/);
   assert.doesNotMatch(page, /data-testid="lightchain-material-provider-gate"/);
   assert.doesNotMatch(page, /data-testid="lightchain-material-retirement-notice"/);
-  assert.match(page, /data-testid="lightchain-fabric-deprecation-banner"/);
-  assert.match(page, /この機能はまもなく終了します/);
+  assert.doesNotMatch(page, /data-testid="lightchain-fabric-deprecation-banner"/);
+  assert.doesNotMatch(page, /この機能はまもなく終了します/);
   assert.match(page, /data-testid="lightchain-material-retry-fabric"/);
   assert.match(page, /data-testid="lightchain-material-retry-printing"/);
   assert.match(page, /生地を衣服領域へ適用したプレビュー/);
