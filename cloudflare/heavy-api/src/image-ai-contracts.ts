@@ -293,7 +293,7 @@ export function parseImageInput(
     if (action === 'model-matrix') {
       instruction = `Professional full-body apparel try-on photograph. ${descriptor.gender} adult in their ${descriptor.ageGroup}, ${BODY_TYPES[String(descriptor.bodyType)][1]} body type.\n` +
         (references[0] ? 'If image 0 is clothing: Dress the person in EXACTLY the garment in image 0. Preserve its color, print, fabric, pockets, fastenings, proportions and logos; do not substitute a similar item.\n' +
-          'If image 0 is an accessory (necklace, chain, jewelry, bag, hat, belt, eyewear or shoes): the person wears that exact accessory in its natural place and keeps ' +
+          'If image 0 is an accessory (necklace, chain, jewelry, bag, hat, belt, eyewear or shoes): the person wears that exact accessory in its natural place at a realistic, true-to-life size and keeps ' +
           (references[1] ? 'the outfit from image 1 exactly as it is (same garments, colors and fit; do not recolor or replace any clothing)' : 'a simple neutral outfit') + '; never turn an accessory into clothing, a print or a graphic.\n' : '') +
         (references[1] ? 'Image 1 is the person reference: preserve their face, hairstyle, pose direction and identity while applying the selected fit and adult age context.\n' : '') +
         (body.skinTone ? `Selected skin tone: ${body.skinTone}.\n` : '') + (body.hairStyle ? `Selected hair length: ${body.hairStyle}.\n` : '') +
