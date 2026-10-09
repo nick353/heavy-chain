@@ -137,6 +137,9 @@ type WorkbenchStep = 'asset' | 'mask' | 'extracted' | 'next';
 type MaterialTab = 'upload-history' | 'generation-history' | 'my-library' | 'team-library' | 'platform-assets';
 type MaterialSlotKey = 'primary' | 'secondary';
 type FittingReferenceSlotKey = 'model' | 'pose' | 'background';
+/** The setting value stays 'スマート' (Light's id); users see it as 自動, like the other setting menus. */
+const displayAutoOption = (option: string) => option === 'スマート' ? '自動' : option;
+
 const FITTING_REFERENCE_ROLE: Record<FittingReferenceSlotKey, string> = { model: 'model appearance reference', pose: 'pose reference', background: 'background scene reference' };
 /** Durable form of the 参考画像 tab picks: library images keep their app path, uploads their local asset ref; blob-only uploads are skipped. */
 const serializeFittingReferenceSlots = (slots: Record<FittingReferenceSlotKey, MaterialSlotFile | null>) => (Object.entries(slots) as [FittingReferenceSlotKey, MaterialSlotFile | null][])
@@ -5137,7 +5140,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded border border-white/10 bg-black/40 px-1 py-0.5 backdrop-blur transition-all duration-300 group-hover:bg-[#0bc1b8]">
                           <button
                             type="button"
-                            className="hidden whitespace-nowrap text-sm font-medium leading-4 text-[#111817] group-hover:block hover:opacity-80"
+                            className="hidden whitespace-nowrap text-sm font-medium leading-4 text-[#111817] group-hover:block group-focus-within:block hover:opacity-80 [@media(hover:none)]:block"
                             onClick={(event) => {
                               event.stopPropagation();
                               handleUseFittingRecentUpload();
@@ -5402,7 +5405,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                 >
                   <summary className="cursor-pointer text-sm font-semibold text-neutral-100">
                     レイヤー詳細
-                    <span className="ml-2 text-xs font-medium text-neutral-400">{activeLayer} / {printPlacement}</span>
+                    <span className="ml-2 text-xs font-medium text-neutral-400">{workbenchLabels.layers.find(([layer]) => layer === activeLayer)?.[1] ?? activeLayer} / {printPlacement}</span>
                   </summary>
                   <p className="mt-3 text-xs font-semibold text-neutral-400">デザインレイヤー</p>
                   <div className="mt-2 grid grid-cols-2 gap-2">
@@ -5457,9 +5460,9 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                   className="flex h-10 w-full items-center justify-between rounded-lg bg-[#24292c] gap-1 whitespace-nowrap px-2 text-sm font-semibold text-neutral-200"
                 >
                   <span role="img" aria-label="" className="flex h-[18px] w-[18px] shrink-0 items-center justify-center"><ImageIcon aria-hidden="true" className="h-[18px] w-[18px]" /></span>
-                  {fittingAspectRatio}
+                  {displayAutoOption(fittingAspectRatio)}
                 </button>
-                {fittingControlOpen === 'aspect' && <div role="listbox" className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-lg border border-white/10 bg-[#24292c] p-1 shadow-xl">{['スマート', '1:1', '2:3', '3:2', '4:3', '3:4', '4:5', '5:4', '9:16', '16:9'].map((option) => <button key={option} type="button" role="option" aria-selected={fittingAspectRatio === option} className="block w-full rounded px-2 py-1.5 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setFittingAspectRatio(option); setFittingControlOpen(null); }}>{option}</button>)}</div>}
+                {fittingControlOpen === 'aspect' && <div role="listbox" className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-lg border border-white/10 bg-[#24292c] p-1 shadow-xl">{['スマート', '1:1', '2:3', '3:2', '4:3', '3:4', '4:5', '5:4', '9:16', '16:9'].map((option) => <button key={option} type="button" role="option" aria-selected={fittingAspectRatio === option} className="block w-full rounded px-2 py-1.5 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setFittingAspectRatio(option); setFittingControlOpen(null); }}>{displayAutoOption(option)}</button>)}</div>}
               </div>
               <div className="relative h-10 w-24 shrink-0">
                 <button
@@ -8172,7 +8175,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                             </div>
                           </div>
 	                          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                              <button type="button" onClick={() => updateModelFormState('bodyType', modelFormState.bodyType === '標準体型' ? 'スマート' : '標準体型')} className="rounded-xl bg-[#252b2e] px-4 py-3 text-left text-sm font-semibold text-neutral-200">体型 <span className="float-right text-white">{modelFormState.bodyType}</span></button>
+                              <button type="button" onClick={() => updateModelFormState('bodyType', modelFormState.bodyType === '標準体型' ? 'スマート' : '標準体型')} className="rounded-xl bg-[#252b2e] px-4 py-3 text-left text-sm font-semibold text-neutral-200">体型 <span className="float-right text-white">{modelFormState.bodyType === 'スマート' ? 'おまかせ' : modelFormState.bodyType}</span></button>
                               <button
                                 type="button"
                                 onClick={() => updateModelFormState('customBody', modelFormState.customBody === 'on' ? 'off' : 'on')}
@@ -8302,7 +8305,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     <div className="shrink-0 grid gap-2 border-t border-white/10 bg-[#141717] p-2 sm:grid-cols-[1fr_1fr_2fr]">
                       {['スマート', '1K'].map((control) => (
                         <span key={control} className="whitespace-nowrap rounded-lg bg-[#252b2e] px-3 py-3 text-sm font-semibold text-neutral-200">
-                          {control}
+                          {displayAutoOption(control)}
                         </span>
                       ))}
                       <button
@@ -9036,7 +9039,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                         <summary className="cursor-pointer rounded-lg text-sm font-semibold text-neutral-800 outline-none focus-visible:ring-2 focus-visible:ring-primary-300 dark:text-neutral-100">
                           レイヤー詳細
                           <span className="ml-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                            {activeLayer} / {printPlacement}
+                            {workbenchLabels.layers.find(([layer]) => layer === activeLayer)?.[1] ?? activeLayer} / {printPlacement}
                           </span>
                         </summary>
                         <p className="mt-3 text-xs font-semibold text-neutral-500 dark:text-neutral-400">デザインレイヤー</p>
