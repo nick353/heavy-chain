@@ -30,8 +30,9 @@ const readStrengths = (value: unknown): [StrengthIndex, StrengthIndex] => {
 
 export function graphicDesignBrief(referenceCount: number, strengths: readonly StrengthIndex[], assist: boolean): string {
   return [
-    'AIグラフィックデザイン: 参考画像から、アパレル向けのオリジナル柄・プリントグラフィックを作成してください。',
+    'グラフィックデザイン: 参考画像から、アパレル向けのオリジナル柄・プリントグラフィックを作成してください。',
     '出力はプリント用のグラフィック単体とし、衣服・人物・モックアップは描かないでください。',
+    '参考画像にない文字・ロゴ・ラベル（「AI」などの文字を含む）や、電子回路・デジタル風の装飾は加えないでください。',
     '背景は純白（#FFFFFF）の均一な無地で塗りつぶしてください。参考画像の背景が黒や暗い色でもその背景色は引き継がず、モチーフの周りに光彩・発光・にじみ・グラデーション・周辺を暗くする効果（ビネット）は入れないでください。モチーフはくっきりした輪郭の塗りで描いてください。',
     ...Array.from({ length: referenceCount }, (_, index) => `参考画像${index + 1}の参照強度: ${GRAPHIC_STRENGTH_LEVELS[strengths[index] ?? DEFAULT_STRENGTH]}`),
     assist ? 'アシスト: 参考画像のデザイン要素（モチーフ・配色・構図）を解析して反映してください。' : '',
@@ -50,6 +51,8 @@ function LightchainGraphicDesignWorkspace() {
     providerModel: 'gpt-image-1.5',
     requiredSources: 1,
     title: 'AIグラフィックデザイン',
+    // With 「AI」 in the prompt the model drew AI badges and circuit glow into the graphic.
+    promptTitle: 'グラフィックデザイン',
     initialInputState: { referenceStrengths: [DEFAULT_STRENGTH, DEFAULT_STRENGTH], assist: false },
   });
   const inputRef = useRef<HTMLInputElement | null>(null);
