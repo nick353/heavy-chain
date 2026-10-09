@@ -4973,13 +4973,14 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
         {/* The fitting layout fills the viewport, so the running/error notice floats over it instead of pushing the panels down. The containers clip rather than hide overflow: the
-            header row is wider than the 432px input panel, and an overflow-hidden box can still be scrolled sideways by focus. */}
+            header row can be wider than the 432px input panel, and an overflow-hidden box can still be scrolled sideways by focus. */}
         <div className="pointer-events-none absolute right-4 top-14 z-40 w-[360px] [&>*]:pointer-events-auto [&>*]:mt-0">{renderLightchainProviderGate()}</div>
         <div className="relative grid h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-clip lg:grid-cols-[432px_minmax(0,1fr)]">
           <section className="flex h-full min-h-0 flex-col overflow-clip border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
-            <div className="flex h-12 items-center border-b border-white/10 px-4">
+            <div className="flex min-h-12 items-center border-b border-white/10 px-4 py-2">
               <p className="shrink-0 text-[14px] font-semibold leading-6 text-white">AIフィッティング</p>
-              <div className="ml-2 flex min-w-0 items-center gap-2">
+              {/* The row is wider than the 432px panel; wrap the task tabs instead of clipping "マルチタスク". */}
+              <div className="ml-2 flex min-w-0 flex-wrap items-center gap-2">
                 <div
                   className={`inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-[#262a2b] p-1 ${activeFittingMode === 'regular' ? 'w-[140px]' : 'w-[104px]'}`}
                   role="tablist"
@@ -5093,7 +5094,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                       <div className="flex size-full shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border-none bg-transparent p-4 text-center text-[#aab8b6] transition hover:border-cyan-300/40">
                         <ImagePlus className="h-6 w-6 text-neutral-300" />
                         <p className="mt-2 w-full break-words text-center text-[14px] leading-[21px] text-[#e3e8e8]">
-                          複数のコーディネートのアップロードに対応
+                          {activeFittingTaskTab === 'マルチタスク' ? '複数のコーディネートのアップロードに対応' : '衣服の画像を1枚アップロード'}
                         </p>
                         <p className="mt-1 break-words text-center text-xs leading-[17.1429px] text-[#aab8b6]">
                           ここをクリック/ドラッグしてアイテムを追加します。

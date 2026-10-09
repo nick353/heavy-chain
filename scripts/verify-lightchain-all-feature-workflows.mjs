@@ -759,8 +759,8 @@ async function verifyVisibleTabInteractions(page, tool, result) {
       },
       {
         tab: 'シングルタスク',
-        expected: '複数のコーディネートのアップロードに対応',
-        headline: '複数のコーディネートのアップロードに対応',
+        expected: '衣服の画像を1枚アップロード',
+        headline: '衣服の画像を1枚アップロード',
       },
       {
         tab: '参考画像',
