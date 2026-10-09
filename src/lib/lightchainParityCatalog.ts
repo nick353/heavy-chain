@@ -514,12 +514,9 @@ const lightchainLauncherDescriptionOverrides: Record<string, string> = {
   'print-design': 'オリジナル柄のデザイン・シミュレーション 独自の柄をAIが設計し、着用イメージを即座に作成。',
 };
 
-const lightchainLauncherBadges: Record<string, 'Beta' | 'まもなく提供終了'> = {
+// Heavy Chain keeps offering these tools, so no "ending soon" badge is shown.
+const lightchainLauncherBadges: Record<string, 'Beta'> = {
   'design-agent': 'Beta',
-  'fabric-simulation': 'まもなく提供終了',
-  'lineart-to-real': 'まもなく提供終了',
-  'flat-vector': 'まもなく提供終了',
-  'remove-background': 'まもなく提供終了',
 };
 
 export const lightchainLauncherFeatureCatalog: readonly LightchainFeature[] = Object.freeze([
@@ -542,7 +539,7 @@ export const getLightchainLauncherDescription = (feature: LightchainFeature): st
   lightchainLauncherDescriptionOverrides[feature.id] ?? feature.description
 );
 
-export const getLightchainLauncherBadge = (feature: LightchainFeature): 'Beta' | 'まもなく提供終了' | null => (
+export const getLightchainLauncherBadge = (feature: LightchainFeature): 'Beta' | null => (
   lightchainLauncherBadges[feature.id] ?? null
 );
 

@@ -6,6 +6,7 @@ import {
   getLightchainLauncherFeatures,
   getLightchainLauncherTitle,
   lightchainCategories,
+  lightchainLauncherFeatureCatalog,
 } from '../src/lib/lightchainParityCatalog.ts';
 
 test('launcher mirrors the current Lightchain card counts by category', () => {
@@ -57,7 +58,11 @@ test('launcher uses Heavy display labels instead of internal readiness labels', 
   assert.equal(getLightchainLauncherBadge(getLightchainLauncherFeatures('recommended').find((feature) => feature.id === 'marketing-workspace')!), null);
   assert.equal(getLightchainLauncherBadge(getLightchainLauncherFeatures('recommended').find((feature) => feature.id === 'design-agent')!), 'Beta');
   assert.equal(getLightchainLauncherBadge(getLightchainLauncherFeatures('graphics').find((feature) => feature.id === 'design-workspace')!), null);
-  assert.equal(getLightchainLauncherBadge(fitting.find((feature) => feature.id === 'remove-background')!), 'まもなく提供終了');
+  for (const id of ['fabric-simulation', 'lineart-to-real', 'flat-vector', 'remove-background']) {
+    const feature = lightchainLauncherFeatureCatalog.find((item) => item.id === id);
+    assert.ok(feature, id);
+    assert.equal(getLightchainLauncherBadge(feature!), null, `${id} has no ending-soon badge`);
+  }
 });
 
 test('launcher preserves the current Lightchain card order with Heavy display names', () => {
