@@ -714,7 +714,7 @@
 }
 
 .fashion-studio-source-result-node {
-  top: 557.16px;
+  top: 452px;
   left: 56.31%;
   width: 372.41px;
   height: 300px;
@@ -741,10 +741,11 @@
 .fashion-studio-source-generation-panel {
   position: absolute;
   z-index: 25;
-  top: 379.36px;
-  left: 11.67vw;
-  width: 210px;
-  height: 459px;
+  /* Larger and higher than Light's 30% node so its controls stay usable and clear of the bottom task bar. */
+  top: 96px;
+  left: max(16px, calc(30.29% - 296px));
+  width: 280px;
+  height: 612px;
   overflow: hidden;
   border: 1px solid #3d4346;
   border-radius: 12px;
@@ -761,7 +762,7 @@
   flex-direction: column;
   gap: 24px;
   padding: 32px;
-  transform: scale(0.3);
+  transform: scale(0.4);
   transform-origin: top left;
 }
 
@@ -788,7 +789,7 @@
 
 .fashion-studio-source-task {
   bottom: 39px;
-  left: 16px;
+  right: 186px;
   display: flex;
   width: 276px;
   height: 47px;

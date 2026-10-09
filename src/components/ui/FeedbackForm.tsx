@@ -495,7 +495,7 @@ export function FeedbackButton() {
         data-testid="feedback-tab"
         onClick={handleOpen}
         type="button"
-        className="fixed left-0 top-1/2 z-[2147483645] flex -translate-x-[calc(100%_-_6px)] -translate-y-1/2 select-none items-center gap-1.5 rounded-r-md bg-[#0bcabc] px-[3px] py-2.5 text-[11px] font-semibold leading-none tracking-[0.15em] text-[#06201e] shadow-lg shadow-black/30 transition-[transform,background-color] duration-150 hover:translate-x-0 hover:bg-[#2ee0d2] focus-visible:translate-x-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+        className="fixed left-0 top-1/2 z-[2147483645] flex -translate-y-1/2 select-none items-center gap-1.5 rounded-r-md bg-[#0bcabc]/90 px-[3px] py-2.5 text-[11px] font-semibold leading-none tracking-[0.15em] text-[#06201e] shadow-lg shadow-black/30 transition-colors duration-150 hover:bg-[#2ee0d2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
         style={{ writingMode: 'vertical-rl' }}
         aria-label="フィードバックを送信"
         title="フィードバックを送信（画面のスクショ付き）"

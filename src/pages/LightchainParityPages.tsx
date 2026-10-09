@@ -102,7 +102,8 @@ const formatArtifactDate = (createdAt: string) => {
   const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return '日時未確認';
   const daysSinceEdit = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
-  if (daysSinceEdit === 0) return '今日 修正';
+  // The time tells same-day projects apart (new projects are all "Untitled").
+  if (daysSinceEdit === 0) return `今日 ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')} 修正`;
   if (daysSinceEdit < 30) return `${daysSinceEdit}日前 修正`;
   return `${Math.max(1, Math.floor(daysSinceEdit / 30))}ヶ月前 修正`;
 };

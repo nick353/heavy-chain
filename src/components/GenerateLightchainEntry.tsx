@@ -532,7 +532,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             />
           </form>
 
-          <div role="tablist" aria-label="Heavy Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] items-center justify-start gap-2 overflow-x-auto rounded-lg sm:justify-center border border-white/15 bg-white/[0.07] p-1">
+          <div role="tablist" aria-label="Heavy Chainカテゴリ" className="mt-12 flex h-10 w-fit max-w-full items-center justify-start gap-2 overflow-x-auto rounded-lg border border-white/15 bg-white/[0.07] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {lightchainCategories.map((category) => {
               const active = category.id === activeCategory;
               return (
@@ -599,7 +599,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
         <div className="mx-auto max-w-none">
           <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">事例共有</h2>
           <div className="mt-[23px] flex flex-wrap items-center gap-4">
-            <div role="tablist" aria-label="事例共有カテゴリ" className="flex h-10 w-fit items-center justify-center gap-2 overflow-x-auto rounded-lg border border-white/10 bg-[#262a2b] p-1 text-neutral-400 xl:overflow-x-visible">
+            <div role="tablist" aria-label="事例共有カテゴリ" className="flex h-10 w-fit max-w-full items-center justify-start gap-2 overflow-x-auto rounded-lg border border-white/10 bg-[#262a2b] p-1 text-neutral-400 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {galleryTabs.map((tab) => (
               <button
                 key={tab.id}

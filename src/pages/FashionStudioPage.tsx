@@ -141,7 +141,10 @@ const encodeSvg = (svg: string) => {
 };
 
 const formatProjectAge = (value: string) => {
-  const elapsedDays = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000));
+  const date = new Date(value);
+  const elapsedDays = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
+  // The time tells same-day projects apart (new projects are all "Untitled").
+  if (elapsedDays === 0 && !Number.isNaN(date.getTime())) return `今日 ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')} 修正`;
   if (elapsedDays === 0) return '今日 修正';
   if (elapsedDays === 1) return '1日前 修正';
   if (elapsedDays < 30) return `${elapsedDays}日前 修正`;

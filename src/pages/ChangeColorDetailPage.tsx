@@ -216,13 +216,13 @@ function ChangeColorWorkspace() {
           {source && (
             <div className={`relative ${selected === 'source' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select' && !picking) { event.stopPropagation(); setSelected('source'); } }}>
               {selected === 'source' && !picking && imageToolbar('source', source.imageUrl)}
-              <img ref={sourceRef} src={source.imageUrl} alt="元画像" data-source-slot="primary" onPointerDown={samplePixel} className={`block max-h-[200px] max-w-[200px] select-none object-contain ${picking ? 'cursor-crosshair' : ''}`} style={{ filter }} draggable={false} />
+              <img ref={sourceRef} src={source.imageUrl} alt="元画像" data-source-slot="primary" onPointerDown={samplePixel} className={`block max-h-[360px] max-w-[360px] select-none object-contain ${picking ? 'cursor-crosshair' : ''}`} style={{ filter }} draggable={false} />
             </div>
           )}
           {visibleResult && resultUrl && (
             <div data-testid="change-color-result" className={`relative ${selected === 'result' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select') { event.stopPropagation(); setSelected('result'); } }}>
               {selected === 'result' && imageToolbar('result', resultUrl)}
-              <img src={resultUrl} alt="色変更 AI生成" className="block max-h-[420px] max-w-[460px] select-none object-contain" style={{ filter }} draggable={false} />
+              <img src={resultUrl} alt="色変更 AI生成" className="block max-h-[360px] max-w-[360px] select-none object-contain" style={{ filter }} draggable={false} />
             </div>
           )}
           {workspace.status === 'running' && <div className="flex h-[260px] w-[260px] items-center justify-center rounded-lg bg-white/[0.04] text-sm text-white/70" role="status">生成中…</div>}

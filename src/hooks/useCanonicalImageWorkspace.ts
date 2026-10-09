@@ -314,7 +314,8 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
   useEffect(() => {
     // Runs after the initializer above (same dependencies): restore a fresh page's un-generated draft.
     draftReady.current = null;
-    if (!draftEnabled || jobId || libraryArtifactId || pending.current || configRef.current.identityConflict || !authSnapshot()) return;
+    // Inputs are restored even with a retained request, so the upload is still there once that request is resolved.
+    if (!draftEnabled || jobId || libraryArtifactId || configRef.current.identityConflict || !authSnapshot()) return;
     const token = sequence.current;
     let cancelled = false;
     const current = () => !cancelled && mounted.current && scopeRef.current === scope && sequence.current === token;

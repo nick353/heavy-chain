@@ -11,7 +11,7 @@ export const formatProjectAge = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '今日';
   const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
-  if (days === 0) return '今日';
+  if (days === 0) return `今日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   if (days < 30) return `${days}日前`;
   if (days < 365) return `${Math.floor(days / 30)}ヶ月前`;
   return `${Math.floor(days / 365)}年前`;
