@@ -576,7 +576,8 @@ function StaticInfoPage({
   sections: Array<{ heading: string; body: string }>;
 }) {
   return (
-    <main className="min-h-screen bg-surface-50 dark:bg-surface-950 px-4 py-10">
+    <div className="dark">
+    <main className="min-h-screen bg-[#070b12] px-4 py-10">
       <div className="mx-auto max-w-3xl">
         <a
           href="/"
@@ -606,6 +607,7 @@ function StaticInfoPage({
         </div>
       </div>
     </main>
+    </div>
   );
 }
 
