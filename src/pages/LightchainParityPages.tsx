@@ -671,7 +671,8 @@ function LightchainPrintingWorkspace() {
   );
   const printingResult = (
     <div className="flex h-full flex-col" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status}>
-      {workspace.result ? (
+      {/* A rerun keeps the previous result in state; show progress instead of the stale image. */}
+      {workspace.result && workspace.status !== 'running' ? (
         <div data-testid="print-image-result" className="flex h-full flex-col items-center justify-center gap-4 px-10 pb-6 pt-16">
           {printingResultUrl && <img src={printingResultUrl} alt="プリントイメージ AI生成" className="min-h-0 max-w-full flex-1 rounded-lg object-contain" />}
           <div className="space-y-2" data-testid="printing-canvas-handoff">
@@ -780,7 +781,7 @@ export function LightchainVectorSpecialPage() {
   );
   const vectorResult = (
     <div className="flex h-full flex-col" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId??''} data-resume-state={workspace.status}>
-      {workspace.result ? (
+      {workspace.result && workspace.status !== 'running' ? (
         <div data-testid="vector-result" className="flex h-full flex-col items-center justify-center gap-3 px-10 pb-6 pt-16">
           {vectorResultUrl && <img src={vectorResultUrl} alt={toolTitle} className={`min-h-0 max-w-full flex-1 rounded-lg object-contain ${isSvgConvert ? 'bg-white' : ''}`} />}
           {vectorResultUrl && <SvgExportPanel imageUrl={vectorResultUrl} fileName={isSvgConvert ? 'flat-drawing-vector' : 'pattern-vector'} colors={isSvgConvert ? 6 : 8} />}

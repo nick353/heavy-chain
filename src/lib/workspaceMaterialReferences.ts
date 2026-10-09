@@ -1345,7 +1345,7 @@ const buildEdgeConnectedBackgroundMask = (
   const threshold = backgroundLum > 185 ? 34 : 46;
   const shouldTreatAsBackground = (color: Rgb) => {
     const lum = luminance(color);
-    if (backgroundLum > 185 && lum < 70) return true;
+    // Dark pixels are never bright-background: treating them as background erased black garments on white.
     if (backgroundLum > 185 && lum > backgroundLum + 10) return false;
     return colorDistance(color, background) <= threshold;
   };

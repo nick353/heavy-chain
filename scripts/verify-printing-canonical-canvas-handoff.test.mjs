@@ -70,7 +70,11 @@ for (const pathname of ['/tools/printing', '/printing']) test(`retained output w
   assert.equal(f.workspace.originalInputsAvailable, false); assert.equal(f.workspace.inputsAvailable, false);
   assert.equal(f.workspace.brief, 'retained original brief'); f.safe();
 });
-for (const status of ['loading', 'running', 'unknown']) test(`${status} disables handoff and dispatches no list or navigation`, async () => {
+test('running hides the previous output and its handoff', () => {
+  const f = fixture(); f.workspace.status = 'running'; f.render(); assert.equal(f.button, null);
+  assert.deepEqual(f.calls.lists, []); assert.deepEqual(f.calls.navigation, []); f.safe();
+});
+for (const status of ['loading', 'unknown']) test(`${status} disables handoff and dispatches no list or navigation`, async () => {
   const f = fixture(); f.workspace.status = status; f.render(); assert.equal(f.button.props.disabled, true);
   f.click(); await settle(); assert.deepEqual(f.calls.lists, []); assert.deepEqual(f.calls.navigation, []); f.safe();
 });
