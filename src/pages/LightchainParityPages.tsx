@@ -1232,10 +1232,6 @@ export function LightchainMarketingHomePage() {
             })}
           </div>
         </div>
-        <section className="w-full rounded-2xl p-4" data-testid="lightchain-marketing-reference-cases">
-          <h2 className="mb-4 text-xl font-normal leading-7">参考事例</h2>
-          <div className="flex min-h-24 flex-col items-center justify-center text-sm text-neutral-500"><img src="/lightchain-assets/static/searchEmpty.png" alt="search empty" className="h-12 w-12 object-contain opacity-70" /><span className="mt-2">データなし</span></div>
-        </section>
       </div>
     </ParityShell>
   );

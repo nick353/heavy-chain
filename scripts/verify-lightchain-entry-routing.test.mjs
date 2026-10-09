@@ -114,8 +114,8 @@ test('maps vector-special to the Light legacy parity surface', async () => {
   assert.match(route, /LightchainVectorSpecialPage/);
   assert.doesNotMatch(route, /LightchainWorkbenchPage/);
   const page = (await readFile(parityPagesPath, 'utf8')) + (await readFile(new URL('../src/components/lightchain/LightchainDesignToolFrame.tsx', import.meta.url), 'utf8'));
-  assert.match(page, /この機能はまもなく終了します/);
-  assert.match(page, /今すぐ体験/);
+  // The owner removed the Light "まもなく終了" banner: Heavy Chain keeps these tools.
+  assert.doesNotMatch(page, /この機能はまもなく終了します/);
   assert.match(page, /参考画像をアップロードしてください/);
   assert.match(page, /生成履歴/);
 });
@@ -130,7 +130,8 @@ test('maps the Light design-arrange entry to a project dashboard before editing'
   const page = await readFile(new URL('../src/pages/PatternProjectDashboardPage.tsx', import.meta.url), 'utf8');
   assert.match(page, /デザインアレンジ/);
   assert.match(page, /新規ファイル/);
-  assert.match(page, /参考事例/);
+  // Placeholder 参考事例 cards (no real example images) are hidden by owner decision.
+  assert.doesNotMatch(page, /参考事例<\/h2>/);
   assert.match(page, /detailPath: '\/editor\/pattern\/detail'/);
   assert.match(page, /navigate\(`\$\{config\.detailPath\}\?boardProjectCode=&boardProjectType=`\)/);
   assert.match(page, /boardProjectType=custom&resumeJob=/);

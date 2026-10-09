@@ -361,7 +361,7 @@ test('desktop printing keeps the primary composition and generate action pinned 
   const fabricStart = page.indexOf('data-testid="lightchain-fabric-parity-view"');
   assert.ok(printingStart >= 0 && fabricStart > printingStart, 'printing and fabric branches must remain ordered');
   assert.doesNotMatch(page.slice(printingStart, fabricStart), /この機能はまもなく終了します/);
-  assert.match(page.slice(fabricStart), /この機能はまもなく終了します/);
+  assert.doesNotMatch(page.slice(fabricStart), /この機能はまもなく終了します/);
   assert.match(layout, /overflow-x-clip/);
   assert.doesNotMatch(layout, /overflow-x-hidden/);
   const results = page.indexOf('data-testid="print-result-run-history"');

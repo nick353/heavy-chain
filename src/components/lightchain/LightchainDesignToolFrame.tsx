@@ -90,7 +90,6 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
   workspaceAttributes?: Record<string, string>;
 }) {
   const navigate = useNavigate();
-  const [bannerVisible, setBannerVisible] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [controls, result] = Children.toArray(children);
   return (
@@ -115,15 +114,6 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
               </button>
             ))}
           </nav>
-          {showNotice && bannerVisible && (
-            <div data-testid="lightchain-design-tool-deprecation-banner" className="flex rounded-lg bg-[#5b1f2a] px-4 py-2 text-sm leading-6 text-white">
-              <span className="flex-1">
-                この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
-                <Link to="/designProduction" className="ml-7 underline text-primary hover:opacity-80" target="_blank">今すぐ体験</Link>
-              </span>
-              <button type="button" aria-label="閉じる" onClick={() => setBannerVisible(false)} className="ml-3 self-start px-1 text-white/70 hover:text-white">×</button>
-            </div>
-          )}
           {controls}
         </section>
         <aside className="relative min-w-0 overflow-hidden rounded-none bg-[#232728] shadow-2xl shadow-black/20">

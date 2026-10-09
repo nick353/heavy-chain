@@ -284,7 +284,7 @@ export function FashionStudioPage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
   const { setFlowState } = useUnifiedWorkspaceFlow();
-  const [studioOverview, setStudioOverview] = useState(true);
+  const [studioOverview] = useState(true);
   const [activeChoice, setActiveChoice] = useState(choices[0]);
   const [progress, setProgress] = useState(35);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -691,13 +691,6 @@ export function FashionStudioPage() {
     const currentProjectPage = Math.min(projectPage, projectPageCount);
     const visibleProjectCards = allProjectCards.slice((currentProjectPage - 1) * projectsPerPage, currentProjectPage * projectsPerPage);
     const pageItems = buildPageItems(currentProjectPage, projectPageCount);
-    const referenceExamples = [
-      'スタジオ撮影を屋外風の写真に変える',
-      'スマート画像検索＋コーデ調整',
-      '新作Look‐SNSマーケティング',
-      '着用画像を物画像に変換',
-      'モデルの雰囲気マーケティング画像',
-    ];
 
     return (
       <main
@@ -801,23 +794,6 @@ export function FashionStudioPage() {
             </nav>
           )}
 
-          <h2 className="mt-7 text-base font-semibold text-white">参考事例</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {referenceExamples.map((title) => (
-              <button
-                key={title}
-                type="button"
-                onClick={() => setStudioOverview(false)}
-                className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
-              >
-                <div className="h-40 bg-[linear-gradient(135deg,#dbeafe,#f8fafc_52%,#65d3cf_53%)]" />
-                <div className="px-4 py-4">
-                  <p className="line-clamp-2 text-sm font-semibold text-neutral-200">{title}</p>
-                  <p className="mt-2 text-xs text-neutral-500">参考事例</p>
-                </div>
-              </button>
-            ))}
-          </div>
         </section>
       </main>
     );
