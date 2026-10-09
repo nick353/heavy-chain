@@ -1709,11 +1709,10 @@
     position: relative;
   }
 
+  /* Sticky, not absolute: an absolute bar scrolled with the panel and covered the uploaded fabric image. */
   [data-testid="lightchain-material-fabric-controls"] {
-    position: absolute;
-    right: 16px;
-    bottom: 16px;
-    left: 16px;
+    position: sticky;
+    bottom: 0;
     z-index: 20;
     height: 56px;
     background: #171d20;

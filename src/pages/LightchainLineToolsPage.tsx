@@ -19,7 +19,7 @@ const LINE_TOOLS = {
   'line-to-real': {
     tab: 'line-draft' as const,
     title: '線画の実写化',
-    description: '平絵を編集可能なベクター画像に変換します',
+    description: '線画から実物の平置き画像を生成します',
     sourceTypes: ['カラー線画', 'モノクロ線画'] as const,
     outputType: '平置き画像',
     stylePrompt: true,
