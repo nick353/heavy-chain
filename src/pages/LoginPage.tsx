@@ -138,9 +138,7 @@ export function LoginPage() {
               </div>
             )}
 
-            <SocialSignInButtons />
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-7">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-7">
               <label className="block">
                 <span className="sr-only">アカウントID</span>
                 <input
@@ -189,6 +187,7 @@ export function LoginPage() {
                 </p>
               </div>
             </form>
+            <SocialSignInButtons />
           </div>
         </section>
       </div>
