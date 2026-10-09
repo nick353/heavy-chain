@@ -448,8 +448,11 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       const w = (Number(object.width) || 440) * (Number(object.scaleX) || 1); const h = (Number(object.height) || 440) * (Number(object.scaleY) || 1);
       return { left: Math.min(box.left, x), top: Math.min(box.top, y), right: Math.max(box.right, x + w), bottom: Math.max(box.bottom, y + h) };
     }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
-    const availableWidth = area.width - (panelOpen ? 435 : 0) - FIT_PADDING * 2;
-    const availableHeight = area.height - 140 - FIT_PADDING;
+    // On narrow windows the assistant panel covers the canvas instead of sitting beside it, so only reserve its
+    // width when there is room; never let the fit area go negative (that pushed the image off-screen at 10%).
+    const panelWidth = panelOpen && area.width >= 900 ? 435 : 0;
+    const availableWidth = Math.max(160, area.width - panelWidth - FIT_PADDING * 2);
+    const availableHeight = Math.max(160, area.height - 140 - FIT_PADDING);
     const zoom = Math.min(1, Math.max(0.1, Math.min(availableWidth / (bounds.right - bounds.left), availableHeight / (bounds.bottom - bounds.top))));
     const panX = FIT_PADDING + (availableWidth - (bounds.right - bounds.left) * zoom) / 2 - bounds.left * zoom;
     const panY = FIT_PADDING + (availableHeight - (bounds.bottom - bounds.top) * zoom) / 2 - bounds.top * zoom;
