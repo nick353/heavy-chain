@@ -210,8 +210,8 @@ export function SourceModelLibrarySurface() {
           </div>
 
           {activeTab==='ラベル'&&<div className="mt-4 space-y-4">
-            <label id="gender" className="flex items-center justify-between">
-              <span className="text-sm font-medium leading-5 text-[#e3e8e8]">性別</span>
+            <div id="gender" role="group" aria-labelledby="gender-label" className="flex items-center justify-between">
+              <span id="gender-label" className="text-sm font-medium leading-5 text-[#e3e8e8]">性別</span>
               <div className="relative flex w-[280px] shrink-0 gap-1 rounded-lg border border-white/10 p-1 leading-4" data-testid="lightchain-source-model-gender">
                 {(['男性', '女性'] as const).map((option) => (
                   <button type="button" disabled={locked} aria-pressed={gender===option}
@@ -223,7 +223,7 @@ export function SourceModelLibrarySurface() {
                   </button>
                 ))}
               </div>
-            </label>
+            </div>
 
             {(['age', 'nationality'] as SourceModelField[]).map((field) => (
               <label key={field} id={field} className="flex items-center justify-between">
@@ -310,7 +310,7 @@ export function SourceModelLibrarySurface() {
         </div>
 
         <div className="shrink-0 border-t border-white/10 bg-[#171b1c] px-2 py-4">
-          <button type="button" data-testid="heavy-model-generate" disabled={locked||!settings||invalidBodyDraft||(settings.inputMode==='custom'&&!workspace.slots.secondary)} onClick={()=>void generate()} className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#65d3cf] text-sm text-neutral-950 disabled:opacity-50">AI生成</button>
+          <button type="button" data-testid="heavy-model-generate" disabled={locked||!settings||invalidBodyDraft||(settings.inputMode==='custom'&&!workspace.slots.secondary)} onClick={()=>void generate()} className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#65d3cf] text-sm text-neutral-950 disabled:opacity-50">{workspace.status==='running'?'生成中…':'AI生成'}</button>
           {workspace.error&&<p role="alert">{workspace.error}</p>}
         </div>
       </aside>
@@ -328,8 +328,10 @@ export function SourceModelLibrarySurface() {
           <RefreshCw className="h-5 w-5" aria-hidden="true" />
           生成履歴
         </button>
-        {workspace.result ? <div className="flex h-full items-center justify-center pb-16 pl-6 pr-[312px] pt-16" data-testid="model-result-preview">
+        {workspace.result ? <div className="flex h-full items-center justify-center pb-16 pl-6 pr-6 pt-16" data-testid="model-result-preview">
           <img src={workspace.result.imageUrl} alt="保存モデルのプレビュー" className="h-full w-full object-contain" />
+        </div> : workspace.status==='running' ? <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-neutral-300" role="status">
+          <RefreshCw className="h-8 w-8 animate-spin text-[#65d3cf]" aria-hidden="true" />生成しています…
         </div> : <div className="flex h-full flex-col items-center justify-center px-10 text-center">
           <h2 className="font-[AlimamaFangYuanTiVF] text-lg font-bold leading-[25.2px] text-white">モデルカスタマイズ</h2>
           <p className="mt-2 text-sm leading-[21px] text-[#aab8b6]">ワンクリックで専用のバーチャルモデルイメージを生成</p>

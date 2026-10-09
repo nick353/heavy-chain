@@ -569,7 +569,9 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     <section ref={canvasRef} aria-label="デザインCanvas" className="absolute inset-0 select-none" data-testid="design-own-canvas"
       style={{ cursor: move ? 'grab' : 'default' }}
       onPointerDown={(event) => {
-        if ((event.target as HTMLElement).closest('button, a, input, textarea')) return;
+        // In ドラッグ mode the canvas layers are pan surfaces too, so only real controls block panning.
+        const blocker = (event.target as HTMLElement).closest('button, a, input, textarea');
+        if (blocker && !(move && blocker.matches('[data-testid="design-canvas-layer"]'))) return;
         if (event.button === 0 && !move) {
           // 複数選択: drag a marquee on empty canvas; a plain click on empty canvas clears the selection.
           if (!event.shiftKey) setSelected(null);
