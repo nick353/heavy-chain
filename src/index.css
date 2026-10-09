@@ -1245,8 +1245,10 @@
   top: 207.08px;
   left: 363.54px;
   width: 280px;
-  height: 656.27px;
-  overflow: hidden;
+  /* Short windows: keep the panel inside the canvas and scroll it, so AI生成 / 保存 / Canvasへ stay reachable. */
+  height: min(656.27px, calc(100% - 223px));
+  overflow-x: hidden;
+  overflow-y: auto;
   box-sizing: border-box;
   border: 1px solid #3d4346;
   border-radius: 16px;
@@ -1257,7 +1259,7 @@
 
 .video-source-existing-edit-inner {
   display: flex;
-  height: 100%;
+  min-height: 100%;
   flex-direction: column;
   gap: 10px;
   box-sizing: border-box;
@@ -1425,6 +1427,13 @@
   opacity: .58;
 }
 
+.video-source-existing-unavailable {
+  margin: -2px 0 0;
+  color: #aab3b4;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 .video-source-existing-actions {
   display: flex;
   gap: 7px;
@@ -1511,7 +1520,8 @@
   position: absolute;
   z-index: 30;
   bottom: 39px;
-  left: 50%;
+  /* Never under the 動画の修正 panel (left 363.54 + width 280), whose right edge sits past the centre on narrow windows. */
+  left: max(50%, 767px);
   display: flex;
   height: 56px;
   align-items: center;

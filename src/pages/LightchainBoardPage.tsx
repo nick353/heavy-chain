@@ -11,6 +11,7 @@ import type Konva from 'konva';
 import { useAuthStore } from '../stores/authStore';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
+import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
 import {
   BOARD_DEFAULT_TITLE, BOARD_PAGE_HEIGHT, BOARD_PAGE_WIDTH, boardSnapshot, emptyBoardDocument, fitBoardZoom, formatBoardDate,
@@ -829,7 +830,7 @@ export function LightchainBoardEditPage() {
                   <div className="grid max-h-[360px] grid-cols-3 gap-2 overflow-y-auto">
                     {library.map((asset) => (
                       <button key={asset.id} type="button" aria-label="ライブラリーの画像を追加" onClick={() => { setFlyout(null); void addImageItem(asset.storagePath, asset.url).catch(() => toast.error('画像を追加できませんでした')); }} className="aspect-square overflow-hidden rounded-md bg-white/5 hover:ring-2 hover:ring-[#5fcfc4]">
-                        <img src={asset.url} alt="" className="size-full object-cover" loading="lazy" />
+                        <img src={thumbnailImageUrl(asset.url)} alt="" className="size-full object-cover" loading="lazy" />
                       </button>
                     ))}
                   </div>

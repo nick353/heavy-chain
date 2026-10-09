@@ -188,7 +188,7 @@ function PersistedHistoryPanel({
           <div className="flex items-start gap-3">
             <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white/[0.06]">
               {artifact.imageUrl ? (
-                <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                <img src={thumbnailImageUrl(artifact.imageUrl)} alt="" className="h-full w-full object-cover" loading="lazy" />
               ) : (
                 <ImageIcon className="m-5 h-6 w-6 text-neutral-500" />
               )}
@@ -2382,7 +2382,7 @@ export function LightchainOrientedDesignPage() {
           <div className="oriented-design-reference-grid">
             {orientedDesignReferenceImages.map((image, index) => (
               <div key={image} className="oriented-design-project-card" onClick={() => navigateToDetail({ key: 'reference', value: index + 1 })}>
-                <div className="oriented-design-project-media"><img src={image} alt="coverImg" loading="lazy" /></div>
+                <div className="oriented-design-project-media"><img src={thumbnailImageUrl(image)} alt="coverImg" loading="lazy" /></div>
                 <div className="oriented-design-project-meta">
                   <div className="oriented-design-project-name">{index === 0 ? 'デザイン要素融合' : 'ディテール変更'}</div>
                   <div className="oriented-design-project-date">8ヶ月前 修正</div>

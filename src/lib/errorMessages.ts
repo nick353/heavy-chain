@@ -40,7 +40,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   GEMINI_API_KEY_MISSING: 'Gemini生成の設定がサーバーにありません。管理者がCloudflare側のprovider設定を確認してから再試行してください。',
   IMAGE_PROVIDER_QUOTA_EXHAUSTED: '画像生成プロバイダの利用枠が不足しています。APIキーは届いていても、画像生成quota、課金設定、またはモデル利用権限が不足している可能性があります。',
   AI_FITTING_PROVIDER_QUOTA_EXHAUSTED: 'AI fittingの画像生成quotaまたはモデル利用権限が不足しています。課金設定・provider quota・モデル権限を確認してから同じ入力で再開してください。',
-  VIDEO_PROVIDER_NOT_ADMITTED: '動画providerはまだ利用可能な状態ではありません。providerの接続状態を確認するまで生成は再開できません。',
+  VIDEO_PROVIDER_NOT_ADMITTED: '動画の生成は準備中です。今は下書きの保存とCanvasへの受け渡しが使えます。',
   GEMINI_IMAGE_REQUEST_FAILED: 'Geminiでの画像生成に失敗しました。入力を少し短く具体化して再試行し、続く場合はAPIキー、モデル名、利用上限を確認してください。',
   GEMINI_IMAGE_EMPTY_RESPONSE: 'Geminiから画像が返りませんでした。プロンプトを調整して再試行してください。',
   OPENAI_IMAGE_API_KEY_MISSING: 'OpenAI画像生成の設定がサーバーにありません。管理者がCloudflare側のprovider設定を確認してから再試行してください。',
