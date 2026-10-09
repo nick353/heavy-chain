@@ -504,12 +504,12 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
 
   return (
     <div className="min-h-[calc(100vh-50px)] bg-[#171b1c] text-white">
-      <section className="relative px-10 pt-12">
+      <section className="relative px-4 pt-12 sm:px-10">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_6%,rgba(24,78,83,0.12),transparent_40%)]" />
         <div className="relative mx-auto max-w-none">
-          <div className="flex h-14 items-end gap-4">
+          <div className="flex min-h-14 flex-wrap items-end gap-x-4 gap-y-1">
             <h1 className="sr-only">HEAVY CHAIN</h1>
-            <svg aria-label="Heavy Chain AI" role="img" viewBox="0 0 318 35" fill="none" className="h-12 w-[318px] shrink-0 text-white">
+            <svg aria-label="Heavy Chain AI" role="img" viewBox="0 0 318 35" fill="none" className="h-12 w-full max-w-[318px] shrink-0 text-white">
               <text x="0" y="28" fill="currentColor" fontFamily="Arial, Helvetica, sans-serif" fontSize="31" fontWeight="600" textLength="318" lengthAdjust="spacingAndGlyphs">HEAVY CHAIN AI</text>
             </svg>
             <p className="text-sm font-medium text-neutral-300 sm:text-base">アパレル特化のAIデザインワークスペース</p>
@@ -532,7 +532,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             />
           </form>
 
-          <div role="tablist" aria-label="Heavy Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.07] p-1">
+          <div role="tablist" aria-label="Heavy Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] items-center justify-start gap-2 overflow-x-auto rounded-lg sm:justify-center border border-white/15 bg-white/[0.07] p-1">
             {lightchainCategories.map((category) => {
               const active = category.id === activeCategory;
               return (
