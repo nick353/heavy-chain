@@ -44,6 +44,9 @@ import {
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { matchesVideoProjectArtifact, shouldHydrateVideoSourceImage } from '../lib/videoWorkspacePersistence';
 
+/** Shown to users while no video provider is connected; it never falls back to image generation. */
+const VIDEO_GENERATION_UNAVAILABLE = '動画の生成は準備中です。今は下書きの保存とCanvasへの受け渡しが使えます。';
+
 const choices = ['構成', '編集', '書き出し'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
 type VideoStoryboardCandidate = {
@@ -1017,15 +1020,15 @@ export function VideoWorkstationPage() {
               disabled
               data-testid="video-generation-blocked"
               aria-disabled="true"
-              title={videoProviderBlocker}
+              title={VIDEO_GENERATION_UNAVAILABLE}
               className="btn-primary inline-flex cursor-not-allowed items-center justify-center gap-2 text-sm opacity-60"
             >
               <Film className="h-4 w-4" />
-              動画生成（provider未接続）
+              動画生成（準備中）
               <ChevronRight className="h-4 w-4" />
             </button>
             <p data-testid="video-provider-blocker" className="rounded-xl border border-amber-300/35 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">
-              {videoProviderBlocker}。画像生成への代替は行いません。
+              {VIDEO_GENERATION_UNAVAILABLE}
             </p>
             <button
               type="button"
@@ -1366,7 +1369,8 @@ function VideoSourceEditorParity({
               <label>動画の長さ<select value={duration} onChange={(event) => dispatchEditor({ type: 'patch', patch: { duration: event.target.value } })}><option>5秒</option><option>10秒</option><option>15秒</option></select></label>
               <label>解像度<select value={resolution} onChange={(event) => dispatchEditor({ type: 'patch', patch: { resolution: event.target.value } })}><option>720P</option><option>1080P</option></select></label>
             </div>
-            <button type="button" disabled data-testid="video-generation-blocked" aria-disabled="true" title="video_provider_not_admitted: 動画providerの利用可能状態が未確認です" data-lightchain-provider-route="unsupported" className="video-source-existing-generate">AI生成 <span>600</span></button>
+            <button type="button" disabled data-testid="video-generation-blocked" aria-disabled="true" title={VIDEO_GENERATION_UNAVAILABLE} data-lightchain-provider-route="unsupported" className="video-source-existing-generate">AI生成 <span>600</span></button>
+            <p className="video-source-existing-unavailable" data-testid="video-generation-unavailable">{VIDEO_GENERATION_UNAVAILABLE}</p>
             {(onPersist || onHandoffToCanvas) && <div className="video-source-existing-actions" aria-label="動画編集の保存操作">
               {onPersist && <button type="button" data-testid="video-draft-save" disabled={isSaving} onClick={() => void handleSave()}>保存</button>}
               {onHandoffToCanvas && <button type="button" data-testid="video-canvas-handoff" disabled={isSaving} onClick={() => void onHandoffToCanvas(currentValues)}>Canvasへ</button>}
@@ -1497,7 +1501,7 @@ export function VideoSourceEditorParityLegacy({
               disabled
               data-testid="video-generation-blocked"
               aria-disabled="true"
-              title="video_provider_not_admitted: 動画providerの利用可能状態が未確認です"
+              title={VIDEO_GENERATION_UNAVAILABLE}
               data-lightchain-provider-route="unsupported"
               className="mt-3 w-full rounded-lg bg-cyan-300/85 px-2 py-2 text-[11px] font-semibold text-neutral-950 disabled:cursor-not-allowed"
             >

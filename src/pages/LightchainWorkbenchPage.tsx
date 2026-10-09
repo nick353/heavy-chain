@@ -3668,9 +3668,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     }
     const generationBrandId = authBrandFence.brandId;
     if (!lightchainProviderSupported) {
-      const message = 'video_provider_not_admitted: 動画providerの利用可能状態が未確認です';
-      setLightchainGenerationError(message);
-      toast.error(message);
+      setLightchainGenerationError('video_provider_not_admitted: 動画providerの利用可能状態が未確認です');
+      toast.error('動画の生成は準備中です');
       return;
     }
     if (effectiveProviderRoute === 'edit-image' && !providerSourceImageUrl && !briefOnlyProviderRequest) {
@@ -4248,7 +4247,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         )}
         {lightchainGenerationError && (
           <p className="rounded-xl border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-xs font-semibold text-rose-100" data-testid="lightchain-generation-error">
-            {lightchainGenerationError}
+            {getErrorMessage(lightchainGenerationError)}
           </p>
         )}
       </div>
