@@ -730,6 +730,16 @@ test('fitting keeps accessories as accessories and frames the whole person',()=>
   assert.match(prompt,/Frame the entire person from the top of the head through both feet/);
 });
 
+test('model tools edit the person photo instead of treating it as a garment',()=>{
+  const s=imageSetup(); s.db.sql.close();
+  const ref='data:image/png;base64,'+Buffer.from(pngFixture(128,128)).toString('base64');
+  const tool=parseImageInput('model-matrix',{...s.input(),featureType:'lightchain-angle-change',imageUrl:ref,productDescription:'アングル: 右45°'} as never).candidates[0].prompt;
+  assert.match(tool,/^Edit image 0, a photograph of a person/); assert.match(tool,/same garments with the same colors/); assert.match(tool,/Request: アングル: 右45°/);
+  assert.doesNotMatch(tool,/try-on/);
+  const fitting=parseImageInput('model-matrix',{...s.input(),featureType:'lightchain-ai-fitting',imageUrl:ref,productDescription:'tee'} as never).candidates[0].prompt;
+  assert.match(fitting,/try-on photograph/);
+});
+
 test('queued jobs finish without the caller and never send a claimed candidate twice',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close());
   const sent: string[]=[];

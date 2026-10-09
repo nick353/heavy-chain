@@ -1,5 +1,9 @@
 export const IMAGE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b';
 import { PROTECTED_IMAGE_EDIT_MODE } from '../../../src/lib/protectedImageEditContract.ts';
+
+/** Model-tool requests send a photo of a person, not a garment, as image 0. */
+const MODEL_TOOL_FEATURE_TYPES = new Set(['model-face', 'model-change', 'body-shape', 'clothing-size', 'pose-change', 'background-change', 'angle-change']
+  .map(feature => `lightchain-${feature}`));
 // Actions served by handleImageAIAction. Text actions (Claude) are dispatched
 // before any image parsing and never reach the image pipeline.
 export const IMAGE_ACTIONS = new Set(['generate-image', 'edit-image', 'model-matrix', 'optimize-prompt', 'chat-plan', 'image-plan']);
@@ -290,7 +294,13 @@ export function parseImageInput(
     let instruction = prompt;
     if (action === 'edit-image') instruction = `Edit image 0 according to the request. Preserve the garment identity, construction, texture, logos, and all unrequested details. Other indexed images are references, not replacements.\nRequest: ${prompt}`;
     if (isRecord(protectedEdit)) instruction += `\nImage ${protectedEdit.guideIndex} is ONLY a spatial edit guide aligned exactly with image 0: WHITE is the editable region; BLACK is protected. Do not copy this guide, its black/white colors, or its edges into the artwork. Apply the requested change inside the white region and retain image 0 framing. Other references describe the requested material/artwork. The client will restore every protected source pixel after generation; this is reference-guided editing, not native masked inference.`;
-    if (action === 'model-matrix') {
+    if (action === 'model-matrix' && references[0] && MODEL_TOOL_FEATURE_TYPES.has(featureType)) {
+      // Model tools (face, model, body, size, pose, background, angle) edit a photo of a person; image 0 is not a garment.
+      instruction = 'Edit image 0, a photograph of a person wearing clothes. Make ONLY the change described in the request below and keep everything else exactly as in image 0: ' +
+        'the same garments with the same colors, prints, fabric, fit, pockets and logos (do not add logos, text, patterns or pockets), and the same face and identity unless the request changes them.\n' +
+        (references[1] ? 'Image 1 is a reference only for the requested change (for example a face, a model, a pose or a background); do not copy its clothing.\n' : '') +
+        `Keep a natural, photorealistic result.\nRequest: ${prompt}`;
+    } else if (action === 'model-matrix') {
       instruction = `Professional full-body apparel try-on photograph. ${descriptor.gender} adult in their ${descriptor.ageGroup}, ${BODY_TYPES[String(descriptor.bodyType)][1]} body type.\n` +
         (references[0] ? 'If image 0 is clothing: Dress the person in EXACTLY the garment in image 0. Preserve its color, print, fabric, pockets, fastenings, proportions and logos; do not substitute a similar item.\n' +
           'If image 0 is an accessory (necklace, chain, jewelry, bag, hat, belt, eyewear or shoes): the person wears that exact accessory in its natural place at a realistic, true-to-life size and keeps ' +
@@ -325,3 +335,4 @@ export function imageEstimate(input: Pick<ImageInput, 'width' | 'height' | 'refe
   return { microUSD: inputTiles * 59 + outputTiles * 287, neurons: inputTiles * 5.37 + outputTiles * 26.05 };
 }
 import { validateLegalSafetyInput } from './legalSafety.ts';
+

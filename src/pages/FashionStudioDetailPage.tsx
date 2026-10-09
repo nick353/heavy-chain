@@ -390,7 +390,7 @@ export function FashionStudioDetailPage() {
     const resultImage = detail.roles.result.candidates;
 
     return (
-      <main className="fashion-studio-project-detail-parity dark relative min-h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white" data-testid="lightchain-fashion-studio-project-detail" data-lightchain-parity-shell="fashion-studio-project-detail">
+      <main className="fashion-studio-project-detail-parity dark relative min-h-[calc(100vh-50px)] overflow-clip bg-[#171b1c] text-white" data-testid="lightchain-fashion-studio-project-detail" data-lightchain-parity-shell="fashion-studio-project-detail">
         {inputControls}
         <div className="fashion-studio-source-dots pointer-events-none absolute inset-0" />
         <aside className="fashion-studio-source-project-rail absolute left-4 top-6 z-30 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#262a2b] shadow-xl">
@@ -472,7 +472,7 @@ export function FashionStudioDetailPage() {
   };
   const pendingFunction = STUDIO_FUNCTIONS.find((item) => item.id === studioFunction && studioFunctionChosen);
   return (
-    <main className="dark relative h-[calc(100vh-50px)] min-h-[620px] overflow-hidden bg-[#171b1c] text-white" data-testid="lightchain-fashion-studio-detail" data-lightchain-parity-shell="fashion-studio-detail">
+    <main className="dark relative h-[calc(100vh-50px)] min-h-[620px] overflow-clip bg-[#171b1c] text-white" data-testid="lightchain-fashion-studio-detail" data-lightchain-parity-shell="fashion-studio-detail">
       {inputControls}
       <div className="fashion-studio-source-dots pointer-events-none absolute inset-0" />
       <aside className="absolute left-4 top-6 z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#262a2b]"><div className="flex h-10 items-center gap-1.5 border-b border-white/10 px-2 text-sm text-neutral-400"><img src={FASHION_STUDIO_PROJECT_ICON} alt="" className="size-5 object-contain" /><span>ファッションスタジオ</span></div><Link to="/flow/integration" aria-label="ファッションスタジオへ戻る" className="flex h-11 items-center gap-3 px-3 text-sm text-neutral-300 transition hover:bg-white/5 hover:text-white"><ChevronLeft className="h-5 w-5" /><span>Untitled</span></Link></aside>
