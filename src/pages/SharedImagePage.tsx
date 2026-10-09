@@ -80,7 +80,7 @@ export function SharedImagePage() {
                 <AlertCircle className="h-9 w-9 text-red-300" />
                 <p className="text-lg font-semibold">共有画像を表示できません</p>
                 <p className="max-w-sm text-sm leading-6 text-white/60">
-                  {payload?.error ?? 'リンクが存在しないか、有効期限が切れています。'}
+                  {payload?.error && !/^[\w.:-]+$/.test(payload.error) ? payload.error : 'リンクが存在しないか、有効期限が切れています。'}
                 </p>
               </div>
             ) : (

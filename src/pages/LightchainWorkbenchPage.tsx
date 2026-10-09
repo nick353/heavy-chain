@@ -5933,7 +5933,9 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       historyLabel: workspaceStyle.kind === 'marketing' ? 'マイプロジェクト' : '履歴',
       examples: workspaceStyle.examples,
     };
-    const agentThemePrompt = workspaceStyle.kind === 'agent' && agentTaskType === 'テーマ企画';
+    // The 新商品企画/テーマ企画 chip only applies to the 商品企画 scene; other scenes have no subtype.
+    const agentSubtypeChip = workspaceStyle.kind === 'agent' && currentWorkspaceTab === '商品企画';
+    const agentThemePrompt = agentSubtypeChip && agentTaskType === 'テーマ企画';
     const agentTaskTypeLabel = agentTaskType === '商品企画' ? '新商品企画' : 'テーマ企画';
     const agentTaskTypePlaceholder = 'テーマ企画のテーマ、目標、納品要件を入力してください…';
     const visibleExamples = currentWorkspaceCopy.examples ?? workspaceStyle.examples;
@@ -6161,7 +6163,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                   </button>
                 )}
                 <div className={`${workspaceStyle.kind === 'agent' ? 'relative h-24 min-h-24 w-full flex-1' : 'relative h-full min-h-[112px]'}`}>
-                  {workspaceStyle.kind === 'agent' && (
+                  {agentSubtypeChip && (
                     <>
                       <button
                         type="button"
@@ -6227,7 +6229,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     aria-label={workspaceStyle.kind === 'agent' ? currentWorkspaceCopy.prompt : undefined}
                     placeholder={currentWorkspaceCopy.prompt}
                     maxLength={4000}
-                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 pl-1 text-base font-normal leading-6 text-[#e8eeed] [text-indent:112px] placeholder:text-[#8f9b99]' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
+                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 text-base font-normal leading-6 text-[#e8eeed] placeholder:text-[#8f9b99]' + (agentSubtypeChip ? ' pl-1 [text-indent:112px]' : ' pl-2') : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
                   />
                 )}
                 </div>

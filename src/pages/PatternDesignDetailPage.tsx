@@ -7,6 +7,7 @@ import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { useBoardDraftProject } from '../features/boardDraftProjects';
 import { watermarkImageBlobIfOn } from '../lib/imageDownload';
+import { projectNameFromFile } from '../lib/projectNames';
 
 /**
  * Light `/editor/pattern/detail` = "デザインアレンジ" editor, measured at 1440×900 on 2026-10-07:
@@ -136,7 +137,7 @@ function PatternDesignDetailWorkspace() {
       <div className="my-1 h-px bg-white/10" />
       <button type="button" disabled={locked} onClick={() => navigate('/editor/pattern')} className="flex h-9 w-full items-center gap-6 text-left text-base text-white/80 disabled:opacity-50">
         <ChevronLeft className="h-4 w-4" aria-label="一覧へ戻る" />
-        <span className="truncate">{workspace.result?.title && workspace.result.title !== 'デザインアレンジ' ? workspace.result.title : 'Untitled'}</span>
+        <span className="truncate">{workspace.result?.title && workspace.result.title !== 'デザインアレンジ' ? workspace.result.title : projectNameFromFile(source?.name)}</span>
       </button>
     </div>
   );
@@ -176,7 +177,7 @@ function PatternDesignDetailWorkspace() {
         onPointerMove={onCanvasPointerMove}
         onPointerUp={() => { dragOrigin.current = null; }}
       >
-        <div className="absolute left-1/2 top-1/2 flex items-center gap-16" style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y + 28}px)) scale(${zoom})` }}>
+        <div className="absolute left-1/2 top-1/2 flex items-center gap-16 md:left-[calc(50%+168px)]" style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y + 28}px)) scale(${zoom})` }}>
           {source && (
             <div className={`relative ${selected === 'source' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select') { event.stopPropagation(); setSelected('source'); } }}>
               {selected === 'source' && imageToolbar('source', source.imageUrl)}
@@ -186,7 +187,7 @@ function PatternDesignDetailWorkspace() {
           {visibleResult && resultUrl && (
             <div data-testid="pattern-arrange-result" className={`relative ${selected === 'result' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select') { event.stopPropagation(); setSelected('result'); } }}>
               {selected === 'result' && imageToolbar('result', resultUrl)}
-              <img src={resultUrl} alt="デザインアレンジ AI生成" className="block max-h-[420px] max-w-[460px] select-none object-contain" draggable={false} />
+              <img src={resultUrl} alt="デザインアレンジ AI生成" className="block max-h-[min(420px,calc(100vh-290px))] max-w-[460px] select-none object-contain" draggable={false} />
             </div>
           )}
           {workspace.status === 'running' && <div className="flex h-[260px] w-[260px] items-center justify-center rounded-lg bg-white/[0.04] text-sm text-white/70" role="status">生成中…</div>}

@@ -18,3 +18,10 @@ test('an untitled project takes its name from the request being generated', asyn
   assert.ok(isPlaceholderProjectTitle(' Untitled '));
   assert.ok(!isPlaceholderProjectTitle('tshirt'));
 });
+
+test('a saved result without a title is named after its primary material', async () => {
+  const { projectTitleFromMetadata } = await import('../src/lib/projectNames.ts');
+  assert.equal(projectTitleFromMetadata({ materialReferences: [{ key: 'secondary', fileName: 'chain.png' }, { key: 'primary', fileName: 'tshirt.png' }] }), 'tshirt');
+  assert.equal(projectTitleFromMetadata({ materialReferences: [{ key: 'reference', fileName: 'model.jpg' }] }), 'model');
+  assert.equal(projectTitleFromMetadata({}), 'Untitled');
+});

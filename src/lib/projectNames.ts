@@ -27,3 +27,11 @@ export function namedProjectTitle(title: string, prompt?: string | null) {
   const named = projectNameFromPrompt(prompt);
   return named === 'Untitled' ? title : named;
 }
+
+/** A saved result without a project title is named after the file it was made from (its primary material). */
+export function projectTitleFromMetadata(metadata: Record<string, unknown>) {
+  const references = Array.isArray(metadata.materialReferences) ? metadata.materialReferences : [];
+  const primary = references.find((item) => item && typeof item === 'object' && (item as Record<string, unknown>).key === 'primary') ?? references[0];
+  const fileName = primary && typeof primary === 'object' ? (primary as Record<string, unknown>).fileName : undefined;
+  return projectNameFromFile(typeof fileName === 'string' ? fileName : null);
+}

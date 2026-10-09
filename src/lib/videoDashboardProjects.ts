@@ -23,7 +23,10 @@ const relativeAge = (createdAt: string, now = Date.now()): string => {
 };
 
 const readPreviewImage = (artifact: WorkspaceArtifact): string | undefined => {
+  // The uploaded garment is the recognisable cover; the storyboard SVG is only a fallback.
+  const source = artifact.metadata.videoSourceImageUrl;
   const candidates: unknown[] = [
+    typeof source === 'string' && !source.startsWith('blob:') ? source : undefined,
     artifact.imageUrl,
     artifact.metadata.videoReferencePreview,
     (artifact.metadata.preview as Record<string, unknown> | undefined)?.imageUrl,

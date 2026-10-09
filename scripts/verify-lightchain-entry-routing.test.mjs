@@ -98,7 +98,7 @@ test('keeps the official Lab detail route on the source empty-canvas surface wit
   ]);
   assert.match(app, /path="\/flow\/laboratory\/detail"[\s\S]*?<LightchainLabDetailPage \/>/);
   assert.match(page, /Heavy Chain Lab/);
-  assert.match(page, /Untitled/);
+  assert.match(page, /projectNameFromFile\(workspace\.slots\.primary\?\.name\)/);
   assert.match(page, /ここをクリックまたはドラッグして画像を追加/);
   assert.match(page, /最大20M/);
   assert.match(page, /radial-gradient\(#464b50 1px, transparent 1px\)/);

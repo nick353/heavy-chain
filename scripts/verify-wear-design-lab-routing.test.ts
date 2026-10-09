@@ -50,6 +50,8 @@ for (const statement of parsed.statements) {
   mocks[source] = `${clause.name ? "export default {error(){throw new Error('wear_routing_service_forbidden');}};" : ''}${names.map(name => `export const ${name}=()=>{throw new Error('wear_routing_unused_service:${name}');};`).join('')}`;
 }
 mocks['../hooks/useCanonicalImageWorkspace'] = `export function useCanonicalImageWorkspace(toolId,options){const f=globalThis.__wearRouting;f.workspaceCalls.push({toolId,identityConflict:options?.identityConflict===true});return {toolId,status:options?.identityConflict?'failed':'ready',pendingId:null,jobId:f.jobId,result:f.jobId?{jobId:f.jobId,imageUrl:'fixture-image'}:null,slots:f.primary?{primary:f.primary}:{},error:options?.identityConflict?'workspace_identity_conflict':null,originalInputsAvailable:true,inputsAvailable:true,continueHref:f.continueHref,generate(){f.effects.generation++;throw new Error('generation_forbidden');},upload(){f.effects.upload++;throw new Error('upload_forbidden');},setInputState(){f.effects.inputWrites++;throw new Error('input_write_forbidden');}};}`;
+// The detail header names the project from its first file; with no file it reads Untitled.
+mocks['../lib/projectNames'] = `export const projectNameFromFile=name=>name?String(name).replace(/\\.[^.]+$/,''):'Untitled';`;
 // Card covers pass their URL through the grid-thumbnail helper, which is pure.
 mocks['../lib/mediaThumbnail'] = `export const thumbnailImageUrl=url=>url??undefined;`;
 mocks['../components/CanonicalImageWorkspaceControls'] = `import React from 'react';export const CanonicalImageWorkspaceControls=({workspace})=>React.createElement('section',{'data-testid':'workspace-boundary','data-feature':workspace.toolId,'data-conflict':String(workspace.error!==null)});`;
