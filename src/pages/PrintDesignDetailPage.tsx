@@ -234,7 +234,7 @@ function PrintDesignWorkspace() {
   return (
     <main className="relative h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white" data-testid="lightchain-print-design-detail" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId ?? ''} data-resume-state={workspace.status}>
       <div className={`absolute inset-0 ${tool === 'drag' ? 'cursor-grab' : ''}`} data-testid="print-design-canvas" onPointerDown={onCanvasPointerDown} onPointerMove={(event) => { if (dragOrigin) setPan({ x: dragOrigin.panX + event.clientX - dragOrigin.x, y: dragOrigin.panY + event.clientY - dragOrigin.y }); }} onPointerUp={() => setDragOrigin(null)}>
-        <div className="absolute left-1/2 top-1/2 flex items-center gap-16" style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y + 28}px)) scale(${zoom})` }}>
+        <div className="absolute left-1/2 top-1/2 flex items-center gap-16 md:left-[calc(50%+168px)]" style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y + 28}px)) scale(${zoom})` }}>
           {source && (
             <div className={`relative ${selected === 'source' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select') { event.stopPropagation(); setSelected('source'); } }}>
               {selected === 'source' && imageToolbar('source', source.imageUrl)}
@@ -246,7 +246,7 @@ function PrintDesignWorkspace() {
           {visibleResult && resultUrl && (
             <div data-testid="print-design-result" className={`relative ${selected === 'result' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select') { event.stopPropagation(); setSelected('result'); } }}>
               {selected === 'result' && imageToolbar('result', resultUrl)}
-              <img src={resultUrl} alt="プリントデザイン AI生成" className="block max-h-[420px] max-w-[460px] select-none object-contain" style={{ filter: filterOf(adjust.result), transform: transformOf(adjust.result) }} draggable={false} />
+              <img src={resultUrl} alt="プリントデザイン AI生成" className="block max-h-[min(420px,calc(100vh-290px))] max-w-[460px] select-none object-contain" style={{ filter: filterOf(adjust.result), transform: transformOf(adjust.result) }} draggable={false} />
             </div>
           )}
           {workspace.status === 'running' && <div className="flex h-[260px] w-[260px] items-center justify-center rounded-lg bg-white/[0.04] text-sm text-white/70" role="status">生成中…</div>}
