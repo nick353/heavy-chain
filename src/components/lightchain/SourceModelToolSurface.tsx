@@ -188,6 +188,9 @@ function SourceUploadCard({
   );
 }
 
+/** The stored 'スマート' ratio means "match automatically" (Light's 智能); shown as 自動 so it is not read as "slim". */
+const displaySettingOption = (option: string) => option === 'スマート' ? '自動' : option;
+
 function ModelSettingSelect({ label, value, options, open, disabled, onToggle, onClose, onChange, hideLabel = false, placement = 'up', className = 'min-w-24' }: {
   label: string; value: string; options: readonly string[]; open: boolean; disabled: boolean;
   onToggle: () => void; onClose: () => void; onChange: (value: string) => void;
@@ -201,13 +204,13 @@ function ModelSettingSelect({ label, value, options, open, disabled, onToggle, o
     <button ref={trigger} type="button" role="combobox" aria-label={label} aria-expanded={open}
       aria-controls={`model-setting-${label}`} disabled={disabled} onClick={onToggle}
       className={`flex h-10 items-center justify-between gap-2 rounded-md border border-white/10 bg-[#262a2b] px-2 text-base text-[#e3e8e8] disabled:opacity-50 ${className}`}>
-      {value || '設定未取得'}<ChevronDown className="h-4 w-4" aria-hidden="true" />
+      {value ? displaySettingOption(value) : '設定未取得'}<ChevronDown className="h-4 w-4" aria-hidden="true" />
     </button>
     {open && !disabled && <div role="listbox" id={`model-setting-${label}`} aria-label={label}
       className={`absolute z-30 max-h-64 min-w-full overflow-y-auto rounded-md border border-white/10 bg-[#262a2b] p-1 shadow-xl ${placement === 'down' ? 'top-full mt-2' : 'bottom-full mb-2'}`}>
       {options.map(option => <button key={option} type="button" role="option" aria-selected={value === option}
         onClick={() => { if (!disabled) { onChange(option); onClose(); trigger.current?.focus(); } }}
-        className="block w-full whitespace-nowrap rounded px-3 py-2 text-left text-sm hover:bg-white/10">{option}</button>)}
+        className="block w-full whitespace-nowrap rounded px-3 py-2 text-left text-sm hover:bg-white/10">{displaySettingOption(option)}</button>)}
     </div>}
   </div>;
 }

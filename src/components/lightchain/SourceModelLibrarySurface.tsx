@@ -42,6 +42,8 @@ const sourceModelFieldLabels: Record<SourceModelField, string> = {
 };
 
 const sourceModelFieldOptions = MODEL_LIBRARY_LABEL_OPTIONS;
+/** 'スマート' is the stored "let the AI choose" value (from Light's 智能); in Japanese it reads as "slim", so show おまかせ. */
+const displayModelOption = (option: string) => option === 'スマート' ? 'おまかせ' : option;
 
 type SourceModelComboboxProps = {
   field: SourceModelField | 'height';
@@ -78,7 +80,7 @@ function SourceModelCombobox({ field, label, value, options, disabled, open, onT
         onClick={onToggle}
         className="flex h-8 w-[280px] shrink-0 items-center justify-between rounded-lg border border-white/10 bg-[#262a2b] px-3 py-2 text-left text-sm font-normal leading-[21px] text-neutral-200 outline-none transition hover:bg-[#303637]"
       >
-        <span>{value}</span>
+        <span>{displayModelOption(value)}</span>
         <ChevronDown className="h-4 w-4 text-neutral-400" aria-hidden="true" />
       </button>
       {open && (
@@ -96,7 +98,7 @@ function SourceModelCombobox({ field, label, value, options, disabled, open, onT
               onClick={() => onChange(option)}
               className="cursor-pointer rounded-md px-3 py-1.5 text-sm text-neutral-200 hover:bg-white/[0.08]"
             >
-              {option}
+              {displayModelOption(option)}
             </div>
           ))}
         </div>

@@ -20,7 +20,8 @@ export function createFittingBatchExecution(client: Client, scope: FittingBatchS
         brandId: scope.brandId, generationProvider: 'openai', featureType: `lightchain-${scope.featureId}`,
         productDescription: task.input.prompt || task.input.garmentName,
         imageUrl: task.input.garment, modelReferenceImageUrl: task.input.model ?? undefined,
-        bodyTypes: [String(settings.bodyType ?? '').includes('スマート') ? 'slim' : String(settings.bodyType ?? '').includes('プラス') ? 'plus' : 'regular'],
+        // 'スマート' is the おまかせ default, not "slim".
+        bodyTypes: [/痩せ|スリム/.test(String(settings.bodyType ?? '')) ? 'slim' : /プラス|肥満/.test(String(settings.bodyType ?? '')) ? 'plus' : 'regular'],
         ageGroups: [String(settings.ageGroup ?? '').match(/30|40|50/)?.[0] ? `${String(settings.ageGroup).match(/30|40|50/)![0]}s` : '20s'],
         gender: String(settings.gender ?? '').includes('男') ? 'male' : 'female',
         // Existing single uses these internal fields, without new user-facing approval gates.

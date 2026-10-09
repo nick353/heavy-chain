@@ -175,6 +175,10 @@ function LightchainGraphicDesignWorkspace() {
       </div>
 
       <aside className="flex w-80 shrink-0 flex-col overflow-auto rounded-lg bg-[#262a2b] p-4" aria-label="生成設定" data-testid="graphic-design-settings">
+        {/* Without a reference the panel was blank and looked broken. */}
+        {references.length === 0 && (
+          <p className="mt-2 flex items-start gap-2 rounded-2xl bg-white/[0.04] px-4 py-3 text-xs leading-[18px] text-neutral-400" data-testid="graphic-design-settings-empty"><Sparkles aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-300" />左で参考画像をアップロードすると、参照強度と生成の設定がここに表示されます</p>
+        )}
         {references.length > 0 && (
           <>
             <h6 className="text-base font-normal">画像参照強度</h6>

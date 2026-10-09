@@ -10,22 +10,23 @@ export function LightchainLauncherHeader() {
   const user = useAuthStore((state) => state.user);
 
   return (
-    <header className="flex h-[50px] w-full items-center justify-between gap-4 border-b border-white/10 bg-[#05090b]/90 px-6 backdrop-blur-xl">
-      <div className="flex items-center gap-5">
+    <header className="flex h-[50px] w-full items-center justify-between gap-4 border-b border-white/10 bg-[#05090b]/90 px-4 backdrop-blur-xl sm:px-6">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-5">
         <Link to="/" aria-label="Heavy Chain" className="flex items-center text-white">
           <HeavyChainLogo height={24} showText className="shrink-0" />
         </Link>
-        <button type="button" aria-label="日本語" className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-neutral-300 transition hover:bg-white/10 hover:text-white">
+        {/* Narrow screens: icons only, so the labels never wrap one character per line. */}
+        <button type="button" aria-label="日本語" className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-1.5 text-xs text-neutral-300 transition hover:bg-white/10 hover:text-white">
           <Globe2 className="h-3.5 w-3.5" />
-          日本語
+          <span className="hidden sm:inline">日本語</span>
           <ChevronDown className="h-3 w-3" />
         </button>
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-neutral-300">
-        <button type="button" aria-label="ヘルプセンター" className="inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 transition hover:bg-white/10 hover:text-white">
+      <div className="flex shrink-0 items-center gap-2 text-xs text-neutral-300 sm:gap-4">
+        <button type="button" aria-label="ヘルプセンター" className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1.5 transition hover:bg-white/10 hover:text-white">
           <HelpCircle className="h-3.5 w-3.5" />
-          ヘルプセンター
+          <span className="hidden sm:inline">ヘルプセンター</span>
         </button>
         {user ? (
           <button type="button" aria-label="avatar" className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 transition hover:bg-white/15">

@@ -1392,7 +1392,7 @@ const workspaceStyleConfig: Record<string, {
     kind: 'lab',
     title: 'ラボ',
     subtitle: '参考事例',
-    prompt: '物マーケティング画像への変換',
+    prompt: '物撮りからマーケティング画像への変換',
   },
   'fashion-studio': {
     kind: 'studio',
@@ -3756,7 +3756,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       if (effectiveProviderRoute === 'model-matrix') {
         const providerRequestImageUrl = await prepareProviderImageUrl(providerSourceImageUrl);
         assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_after_input_prepare');
-        const bodyType = modelFormState.bodyType.includes('スマート') ? 'slim' : modelFormState.bodyType.includes('プラス') ? 'plus' : 'regular';
+        // 'スマート' is the おまかせ default, not "slim".
+        const bodyType = /痩せ|スリム/.test(modelFormState.bodyType) ? 'slim' : /プラス|肥満/.test(modelFormState.bodyType) ? 'plus' : 'regular';
         const ageGroup = modelFormState.age.includes('30') ? '30s' : modelFormState.age.includes('40') ? '40s' : modelFormState.age.includes('50') ? '50s' : '20s';
         const gender = (modelFormState.gender || modelFormState.bodyGender).includes('男') ? 'male' : 'female';
           assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_before_provider');
@@ -6201,11 +6202,11 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                         setWorkspaceText(nextValue);
                         setAgentTaskTypeDrafts((drafts) => ({ ...drafts, [agentTaskType]: nextValue }));
                       }}
-                      className="relative z-[2] h-full w-full overflow-visible whitespace-pre-wrap break-words p-1 text-base font-normal leading-6 text-[#e8eeed] outline-none"
+                      className="relative z-[2] h-full w-full overflow-visible whitespace-pre-wrap break-words p-1 text-base font-normal leading-6 text-[#e8eeed] outline-none [text-indent:112px]"
                     >
                       {workspaceText}
                     </div>
-                    {!workspaceText && <span aria-hidden="true" className="pointer-events-none absolute left-[94px] top-1 z-[1] text-[#8f9b99]">{agentTaskTypePlaceholder}</span>}
+                    {!workspaceText && <span aria-hidden="true" className="pointer-events-none absolute left-[116px] top-1 z-[1] text-[#8f9b99]">{agentTaskTypePlaceholder}</span>}
                   </div>
                 ) : (
                   <textarea
@@ -6223,7 +6224,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     aria-label={workspaceStyle.kind === 'agent' ? currentWorkspaceCopy.prompt : undefined}
                     placeholder={currentWorkspaceCopy.prompt}
                     maxLength={4000}
-                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 pl-1 text-base font-normal leading-6 text-[#e8eeed] [text-indent:90px] placeholder:text-transparent' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
+                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 pl-1 text-base font-normal leading-6 text-[#e8eeed] [text-indent:112px] placeholder:text-[#8f9b99]' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
                   />
                 )}
                 </div>
@@ -8289,7 +8290,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                               onClick={() => updateModelFormState(stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType', modelFormState[stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType'] === 'スマート' ? '標準' : 'スマート')}
                               className="w-full rounded-xl bg-[#252b2e] px-4 py-3 text-left text-sm font-semibold text-neutral-200"
                             >
-                              {label}<span className="float-right text-white">{modelFormState[stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType']}</span>
+                              {label}<span className="float-right text-white">{modelFormState[stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType'] === 'スマート' ? 'おまかせ' : modelFormState[stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType']}</span>
                             </button>
                           ))}
                           <button type="button" onClick={() => updateModelFormState('half', modelFormState.half === 'オフ' ? 'オン' : 'オフ')} className="w-full rounded-xl bg-[#252b2e] px-4 py-3 text-left text-sm font-semibold text-neutral-200">

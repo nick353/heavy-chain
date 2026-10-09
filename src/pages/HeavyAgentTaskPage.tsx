@@ -228,6 +228,8 @@ export default function HeavyAgentTaskPage() {
           {task && (
             <div className="space-y-8 text-[15px] leading-7 text-neutral-200">
               <h1 className="text-xl font-semibold leading-8 text-white" data-testid="agent-task-prompt">{task.prompt}</h1>
+              {/* The first round only appears once the request is admitted; show progress before that too. */}
+              {task.rounds.length === 0 && !done && !notice && <StepSpinner label="市場とトレンドを整理し、テーマを考えています…" />}
               {task.rounds.map((round, index) => {
                 const last = index === task.rounds.length - 1;
                 const confirmed = !last || Boolean(task.choice);
