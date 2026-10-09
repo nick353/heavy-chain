@@ -85,7 +85,7 @@ function DetailRoleImage({ candidates, scopeKey, role, alt, className, assertCon
   };
   return current?.url ? <img key={`${imageScope}:${current.attempt}`} src={current.url} alt={alt} loading="eager"
     className={className} data-image-status={current.status} onLoad={() => event('load')} onError={() => event('error')} />
-    : <span className={`${className} inline-flex items-center justify-center text-neutral-400`} role="status">{alt} 未確認</span>;
+    : <span className={`${className} inline-flex items-center justify-center text-neutral-400`} role="status">{alt}なし</span>;
 }
 
 function FashionStudioImageNode({
