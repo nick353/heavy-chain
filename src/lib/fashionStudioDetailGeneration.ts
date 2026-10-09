@@ -2,6 +2,7 @@ import type { ImageEditResult } from './imageApi';
 import type { ProviderResultArtifactInput } from './providerResultPersistence';
 import type { WorkspaceArtifactBestEffortResult } from './localWorkspaceArtifacts';
 import type { CanvasDocumentRecord, CanvasDocumentSnapshot, CanvasDocumentRequestContext } from './canvasDocumentPersistence';
+import { namedProjectTitle } from './projectNames.ts';
 import { studioDocumentProof, type StudioAckStore, type StudioPendingAck } from './fashionStudioPendingAck.ts';
 
 export type FashionStudioGenerationScope = {
@@ -176,7 +177,7 @@ export const createFashionStudioDetailGeneration = (adapters: FashionStudioGener
           assertContext(attempt);
           try {
             const updated = await adapters.updateCanvasDocument({
-              brandId: attempt.input.scope.brandId, documentId: document.id, title: document.title,
+              brandId: attempt.input.scope.brandId, documentId: document.id, title: namedProjectTitle(document.title, attempt.input.prompt),
               snapshot, expectedRevision: document.revision,
             }, contextFor(attempt));
             assertContext(attempt);

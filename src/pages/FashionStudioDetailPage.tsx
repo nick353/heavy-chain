@@ -15,6 +15,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { studioProviderPrompt } from '../lib/studioFunctionPrompt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { cloudflareDataPlane, type ArtifactPersistenceContext } from '../lib/cloudflareApi';
 import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
@@ -225,6 +226,8 @@ export function FashionStudioDetailPage() {
   };
   const [studioFunction, setStudioFunctionState] = useState<StudioFunctionId>(() => readStudioFunction(projectCode));
   const [studioFunctionChosen, setStudioFunctionChosen] = useState(false);
+  const studioFunctionRef = useRef(studioFunction);
+  studioFunctionRef.current = studioFunction;
   const setStudioFunction = (id: StudioFunctionId) => { setStudioFunctionState(id); setStudioFunctionChosen(true); };
   const studioFunctionLabel = STUDIO_FUNCTIONS.find((item) => item.id === studioFunction)?.label ?? 'テキストで生成';
   // A function chosen on the new-file screen belongs to the project created by the first upload.
@@ -315,7 +318,8 @@ export function FashionStudioDetailPage() {
       assertScope: assertAttempt,
       activity: value => { assertAttempt(); setActivity({ scopeKey, value }); },
       committedInputs: () => committedInputsRef.current,
-      editImageWithPrompt, assertCompletedImageEditResult, resolveImage: resolveGeneratedImageUrlWithStatus,
+      editImageWithPrompt: (imageUrl, prompt, brandId, options) => editImageWithPrompt(imageUrl, studioProviderPrompt(prompt, studioFunctionRef.current), brandId, options),
+      assertCompletedImageEditResult, resolveImage: resolveGeneratedImageUrlWithStatus,
       capturePersistenceContext: async context => {
         if (!cloudflareDataPlane) throw new Error('fashion_studio_generation_unavailable');
         return cloudflareDataPlane.captureArtifactPersistenceContext(context);
