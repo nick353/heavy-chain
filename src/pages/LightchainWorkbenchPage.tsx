@@ -3756,7 +3756,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       if (effectiveProviderRoute === 'model-matrix') {
         const providerRequestImageUrl = await prepareProviderImageUrl(providerSourceImageUrl);
         assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_after_input_prepare');
-        const bodyType = modelFormState.bodyType.includes('スマート') ? 'slim' : modelFormState.bodyType.includes('プラス') ? 'plus' : 'regular';
+        // 'スマート' is the おまかせ default, not "slim".
+        const bodyType = /痩せ|スリム/.test(modelFormState.bodyType) ? 'slim' : /プラス|肥満/.test(modelFormState.bodyType) ? 'plus' : 'regular';
         const ageGroup = modelFormState.age.includes('30') ? '30s' : modelFormState.age.includes('40') ? '40s' : modelFormState.age.includes('50') ? '50s' : '20s';
         const gender = (modelFormState.gender || modelFormState.bodyGender).includes('男') ? 'male' : 'female';
           assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_before_provider');
@@ -8289,7 +8290,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                               onClick={() => updateModelFormState(stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType', modelFormState[stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType'] === 'スマート' ? '標準' : 'スマート')}
                               className="w-full rounded-xl bg-[#252b2e] px-4 py-3 text-left text-sm font-semibold text-neutral-200"
                             >
-                              {label}<span className="float-right text-white">{modelFormState[stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType']}</span>
+                              {label}<span className="float-right text-white">{modelFormState[stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType'] === 'スマート' ? 'おまかせ' : modelFormState[stateKey as 'age' | 'nationality' | 'skinTone' | 'bodyType']}</span>
                             </button>
                           ))}
                           <button type="button" onClick={() => updateModelFormState('half', modelFormState.half === 'オフ' ? 'オン' : 'オフ')} className="w-full rounded-xl bg-[#252b2e] px-4 py-3 text-left text-sm font-semibold text-neutral-200">

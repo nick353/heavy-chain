@@ -495,13 +495,14 @@ export function FeedbackButton() {
         data-testid="feedback-tab"
         onClick={handleOpen}
         type="button"
-        className="fixed left-0 top-1/2 z-[2147483645] flex -translate-y-1/2 select-none items-center gap-1.5 rounded-r-md bg-[#0bcabc]/90 px-[3px] py-2.5 text-[11px] font-semibold leading-none tracking-[0.15em] text-[#06201e] shadow-lg shadow-black/30 transition-colors duration-150 hover:bg-[#2ee0d2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+        className="group fixed left-0 top-1/2 z-[2147483645] flex -translate-y-1/2 select-none items-center gap-1.5 rounded-r-md bg-[#0bcabc]/90 px-[3px] py-2 text-[11px] font-semibold leading-none tracking-[0.15em] text-[#06201e] shadow-lg shadow-black/30 transition-colors duration-150 hover:bg-[#2ee0d2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
         style={{ writingMode: 'vertical-rl' }}
         aria-label="フィードバックを送信"
         title="フィードバックを送信（画面のスクショ付き）"
       >
         <MessageSquare className="h-3.5 w-3.5" />
-        フィードバック
+        {/* Icon only until hover/focus: the full label covered rail labels and headings at the left edge. */}
+        <span className="hidden group-hover:inline group-focus-visible:inline">フィードバック</span>
       </button>
 
       <div data-feedback-capture-ignore>
