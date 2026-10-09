@@ -156,7 +156,7 @@ function LightchainLabBoardParity() {
       <section className="lightchain-lab-source-reference-grid" aria-label="参考事例">
         <div onClick={() => navigate('/flow/laboratory/detail?boardProjectCode=light-lab-reference')} className="lightchain-lab-source-reference-card cursor-pointer" data-testid="lightchain-lab-reference-card" data-track-id="laboratory:project-card">
           <div className="lightchain-lab-source-reference-media"><img src={LIGHTCHAIN_LAB_REFERENCE_IMAGE} alt="coverImg" /></div>
-          <div className="lightchain-lab-source-reference-meta"><div>物マーケティング画像への変換</div><p>8ヶ月前 修正</p></div>
+          <div className="lightchain-lab-source-reference-meta"><div>物撮りからマーケティング画像への変換</div><p>8ヶ月前 修正</p></div>
         </div>
       </section>
     </main>

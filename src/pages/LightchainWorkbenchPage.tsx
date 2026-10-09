@@ -1392,7 +1392,7 @@ const workspaceStyleConfig: Record<string, {
     kind: 'lab',
     title: 'ラボ',
     subtitle: '参考事例',
-    prompt: '物マーケティング画像への変換',
+    prompt: '物撮りからマーケティング画像への変換',
   },
   'fashion-studio': {
     kind: 'studio',
