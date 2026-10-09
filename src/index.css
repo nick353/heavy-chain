@@ -745,8 +745,9 @@
   top: 96px;
   left: max(16px, calc(30.29% - 296px));
   width: 280px;
-  height: 612px;
-  overflow: hidden;
+  height: min(612px, calc(100% - 112px));
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid #3d4346;
   border-radius: 12px;
   background: #262a2b;
@@ -762,8 +763,7 @@
   flex-direction: column;
   gap: 24px;
   padding: 32px;
-  transform: scale(0.4);
-  transform-origin: top left;
+  zoom: 0.4;
 }
 
 .fashion-studio-source-generation-inner button,

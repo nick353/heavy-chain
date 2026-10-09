@@ -111,7 +111,7 @@ function FashionStudioImageNode({
 }) {
   return (
     <figure className={`fashion-studio-source-image-node ${className}`} data-testid={testId} data-studio-object-id={objectId ?? undefined} data-selected={selected} onDragStart={event => event.preventDefault()}>
-      <DetailRoleImage candidates={candidates} scopeKey={scopeKey} role={role} assertContext={assertContext} alt={alt} className="h-full w-full object-cover" />
+      <DetailRoleImage candidates={candidates} scopeKey={scopeKey} role={role} assertContext={assertContext} alt={alt} className="h-full w-full object-contain" />
       <button type="button" className="fashion-studio-source-expand" aria-label={`${alt}を拡大`}>
         <ArrowUpRight className="h-5 w-5" />
       </button>
