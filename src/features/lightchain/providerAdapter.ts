@@ -124,7 +124,7 @@ export function buildLightchainProviderPrompt(input: PromptInput) {
       case 'line-generation':
         return `Create a precise fashion line drawing from ${primary}. Preserve every garment construction line and distinctive detail, using the requested color or monochrome treatment. Keep the output clean, complete, and suitable for production review.`;
       case 'line-to-real':
-        return `Transform the line-art/design reference in ${primary} into a realistic fashion product image. Preserve the exact design, proportions, construction, and requested material direction; add believable light and folds without changing the design.`;
+        return `Transform the line-art/design reference in ${primary} into a realistic fashion product image. Preserve the exact design, proportions, construction, and requested material direction; add believable light and folds without changing the design. Do not add any logo, brand mark, text or patch that is not in the drawing.`;
       case 'pattern-vector':
       case 'pattern-vector-pro':
         return `Convert the pattern/design in ${primary} into a clean, repeatable vector-style graphic while preserving motif geometry, spacing, palette, and layer intent. Do not simplify away distinctive details or add a logo.`;

@@ -1,9 +1,18 @@
 import type { CanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 
 /** Additional editing controls leave the canonical empty upload canvas intact. */
-export function CanonicalImageWorkspaceControls({workspace,onSourceEdit}: {workspace:CanonicalImageWorkspace;onSourceEdit?:()=>void}) {
+export function CanonicalImageWorkspaceControls({workspace,onSourceEdit,statusOnly=false}: {workspace:CanonicalImageWorkspace;onSourceEdit?:()=>void;statusOnly?:boolean}) {
   if (!workspace.jobId && !workspace.slots.primary && !workspace.pendingId) return null;
   const locked = workspace.status==='running' || workspace.status==='loading' || Boolean(workspace.pendingId);
+  // Pages that already have their own input form only need the request status, not a second form.
+  if (statusOnly) {
+    if (!workspace.pendingId && !workspace.error) return null;
+    return <section className="absolute bottom-4 right-4 z-20 w-[280px] rounded-xl border border-white/10 bg-[#202426] p-3 text-sm text-neutral-200" data-testid="canonical-image-workspace-controls">
+      {workspace.error && <p role="alert" className="text-amber-200">{workspace.error}</p>}
+      {workspace.pendingId && <p>前回の依頼の結果をまだ受け取れていません。</p>}
+      {workspace.pendingId && <button type="button" disabled={workspace.status==='running'} onClick={()=>void workspace.reconcile()} className="mt-2 rounded bg-white/10 px-3 py-2 disabled:opacity-40">同じ依頼を照合</button>}
+    </section>;
+  }
   return <section className="absolute right-4 top-6 z-20 w-[280px] rounded-xl border border-white/10 bg-[#202426] p-3 text-sm text-neutral-200" data-testid="canonical-image-workspace-controls">
     <p className="font-semibold">入力と生成</p>
     <div className="mt-3 space-y-3">

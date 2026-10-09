@@ -267,6 +267,18 @@ function StepSlider({ label, heading, value, options, disabled, onChange }: {
   </div>;
 }
 
+/** Each model tool changes one thing; say plainly what must stay as it is, or the image model redraws the garment. */
+const KEEP_GARMENT = '服は色・柄・素材・形・ロゴの有無まで元の画像のままにし、柄やロゴ、ポケット、文字を足さないでください。';
+const MODEL_TOOL_KEEP_RULES: Record<ModelToolFeature, string> = {
+  'model-face': `顔だけを変えてください。髪型・体型・ポーズ・背景・照明は元の画像のままにしてください。${KEEP_GARMENT}`,
+  'model-change': `モデルだけを入れ替えてください。ポーズ・構図・背景・照明は元の画像のままにしてください。${KEEP_GARMENT}`,
+  'body-shape': `指定した体型だけを変えてください。顔・髪型・ポーズ・背景・照明は元の画像のままにしてください。${KEEP_GARMENT}`,
+  'clothing-size': `指定した服のサイズ感だけを変えてください。顔・体型・ポーズ・背景・照明は元の画像のままにしてください。服のデザインは変えないでください。`,
+  'pose-change': `ポーズだけを変えてください。顔・髪型・体型・背景・照明は元の画像のままにしてください。${KEEP_GARMENT}`,
+  'background-change': `背景だけを変えてください。モデルの顔・体型・ポーズは元の画像のままにしてください。${KEEP_GARMENT}`,
+  'angle-change': `カメラのアングルだけを変えてください。顔・体型・背景の雰囲気・照明は元の画像のままにしてください。${KEEP_GARMENT}`,
+};
+
 export function SourceModelToolSurface() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -274,7 +286,7 @@ export function SourceModelToolSurface() {
   const config = sourceModelToolConfig[toolKey] ?? sourceModelToolConfig['head-form'];
   const featureIds:Record<string,CanonicalWorkspaceFeature>={'head-form':'model-face','model-change-form':'model-change','body-form':'body-shape','size-form':'clothing-size','pose-form':'pose-change','background-form':'background-change','perspective-form':'angle-change'};
   const feature = (featureIds[toolKey] ?? 'model-face') as ModelToolFeature;
-  const workspace=useCanonicalImageWorkspace(feature,{requiredSources:1,title:config.title,promptContext:config.rightDescription,initialInputState:defaultModelToolSettings(feature)});
+  const workspace=useCanonicalImageWorkspace(feature,{requiredSources:1,title:config.title,promptContext:`${config.rightDescription}\n${MODEL_TOOL_KEEP_RULES[feature]}`,initialInputState:defaultModelToolSettings(feature)});
   const locked=workspace.status==='running'||workspace.status==='loading'||Boolean(workspace.pendingId);
   const settings = readModelToolSettings(feature, workspace.inputState);
   const legacySettings = readLegacyModelToolSettings(feature, workspace.inputState);
@@ -442,7 +454,7 @@ export function SourceModelToolSurface() {
       </aside>
 
       <main className="relative min-w-0 flex-1 bg-[#171b1c]">
-        <CanonicalImageWorkspaceControls workspace={workspace} />
+        <CanonicalImageWorkspaceControls workspace={workspace} statusOnly />
         {historyOpen && <LightchainHistoryPanel locked={locked} onClose={() => setHistoryOpen(false)} />}
         {workspace.candidates.length>1&&<div className="absolute bottom-4 left-4 flex gap-2" aria-label="モデル候補">{workspace.candidates.map((candidate,index)=><button type="button" disabled={locked} aria-pressed={workspace.selectedCandidateId===candidate.imageId} key={candidate.imageId} onClick={()=>void workspace.selectCandidate(candidate.imageId)}>候補 {index+1} ({candidate.bodyType}/{candidate.ageGroup})</button>)}</div>}
         <button

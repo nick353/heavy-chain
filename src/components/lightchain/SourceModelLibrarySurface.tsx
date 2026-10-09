@@ -316,7 +316,7 @@ export function SourceModelLibrarySurface() {
       </aside>
 
       <main className="relative min-w-0 flex-1 bg-[#171b1c]">
-        <CanonicalImageWorkspaceControls workspace={workspace} />
+        <CanonicalImageWorkspaceControls workspace={workspace} statusOnly />
         {historyOpen && <LightchainHistoryPanel locked={locked} onClose={() => setHistoryOpen(false)} />}
         {workspace.candidates.length>1&&<div className="absolute bottom-4 left-4 flex gap-2" aria-label="モデル候補">{workspace.candidates.map((candidate,index)=><button type="button" disabled={locked} aria-pressed={workspace.selectedCandidateId===candidate.imageId} key={candidate.imageId} onClick={()=>void workspace.selectCandidate(candidate.imageId)}>候補 {index+1} ({candidate.bodyType}/{candidate.ageGroup})</button>)}</div>}
         <button

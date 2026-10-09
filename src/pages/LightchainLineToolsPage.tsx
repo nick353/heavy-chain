@@ -39,6 +39,7 @@ export function lineToolBrief(mode: LineToolMode, sourceType: string, style: str
     return [
       `線画の実写化: アップロードした${sourceType}の衣服デザインを、実物の衣服を撮影した平置き画像として描き起こしてください。`,
       '線画のシルエット・パーツ・ディテール・配色の指示を正確に保ち、素材の質感と自然な陰影をつけてください。白い背景、人物なし。',
+      '線画に描かれていないロゴ・ブランドマーク・文字・ワッペンは加えないでください。既存ブランドに似たマークも入れないでください。',
       style.trim() ? `スタイルの指定: ${style.trim()}` : '',
     ].filter(Boolean).join('\n');
   }
