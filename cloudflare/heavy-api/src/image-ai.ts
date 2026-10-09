@@ -42,8 +42,9 @@ const outputs = async (env: Env, id: string) => (await env.DB.prepare('SELECT * 
 const limit = (value: string | undefined, fallback: number, max: number) => {
   const number = Number(value); return value !== undefined && Number.isSafeInteger(number) && number >= 0 && number <= max ? number : fallback;
 };
-const limits = (env: Env) => ({ monthly: limit(env.AI_MONTHLY_IMAGE_UNITS, 25, 10000), accountMonthly: limit(env.AI_ACCOUNT_MONTHLY_IMAGE_UNITS ?? env.AI_MONTHLY_IMAGE_UNITS, 25, 10000), daily: limit(env.AI_DAILY_IMAGE_UNITS, 100, 10000),
-  dailyNeuronCenti: limit(env.AI_DAILY_ESTIMATED_NEURONS, 5000, 1000000) * 100, concurrent: 2 });
+const limits = (env: Env) => ({ monthly: limit(env.AI_MONTHLY_IMAGE_UNITS, 25, 100000), accountMonthly: limit(env.AI_ACCOUNT_MONTHLY_IMAGE_UNITS ?? env.AI_MONTHLY_IMAGE_UNITS, 25, 100000), daily: limit(env.AI_DAILY_IMAGE_UNITS, 100, 100000),
+  dailyNeuronCenti: limit(env.AI_DAILY_ESTIMATED_NEURONS, 5000, 10000000) * 100,
+  concurrent: Math.max(1, limit(env.AI_CONCURRENT_IMAGE_JOBS, 2, 50)), userConcurrent: Math.max(1, limit(env.AI_USER_CONCURRENT_IMAGE_JOBS, 1, 10)) });
 type ProviderKind = 'workers_ai' | 'openai';
 type ProviderConfig = { provider: ProviderKind; backendProvider: string; model: string };
 type SourceCandidate = { id?: string; storagePath?: string; revision?: number | string; contentDigest?: string };
@@ -464,11 +465,11 @@ export async function handleImageAIAction(request: Request, env: Env, action: st
       AND COALESCE((SELECT admitted_units FROM heavy_ai_daily WHERE utc_day=?),0)+? <= ?
       AND COALESCE((SELECT admitted_centi_neurons FROM heavy_ai_daily WHERE utc_day=?),0)+? <= ?
       AND (SELECT COUNT(*) FROM heavy_ai_requests r WHERE state='running' AND (${activeSinceSQL})>?) < ?
-      AND NOT EXISTS(SELECT 1 FROM heavy_ai_requests r WHERE user_id=? AND state='running' AND (${activeSinceSQL})>?)`)
+      AND (SELECT COUNT(*) FROM heavy_ai_requests r WHERE user_id=? AND state='running' AND (${activeSinceSQL})>?) < ?`)
       .bind(id,user,input.brandId,action,fingerprint,executionId,provider.model,jobId,metadata,count,count,reservedNeuronCenti,
         entitlement.termsAcceptanceId,entitlement.rightsAttestationId,entitlement.requestBinding,preparationId,utcMonth,utcDay,now,now,
         utcMonth,count,quota.accountMonthly,utcDay,count,quota.daily,utcDay,reservedNeuronCenti,quota.dailyNeuronCenti,
-        new Date(Date.now()-STALE_MS).toISOString(),quota.concurrent,user,new Date(Date.now()-STALE_MS).toISOString());
+        new Date(Date.now()-STALE_MS).toISOString(),quota.concurrent,user,new Date(Date.now()-STALE_MS).toISOString(),quota.userConcurrent);
     const admissionEntitlement = resolveHeavyGenerationAccess({
       userId: user, brandId: input.brandId, action, requestId: id, inputDigest: fingerprint, normalizedInput: normalized.normalized,
     });

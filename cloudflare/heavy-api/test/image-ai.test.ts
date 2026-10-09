@@ -453,6 +453,18 @@ test('monthly units are atomically reserved per brand; concurrency and UTC daily
   assert.equal(s.calls.length,2);
 });
 
+test('configurable total and per-user running limits',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close()); s.env.AI_CONCURRENT_IMAGE_JOBS='2'; s.env.AI_USER_CONCURRENT_IMAGE_JOBS='2';
+  let release!:()=>void; const wait=new Promise<void>(resolve=>{release=resolve;}); let arrivals=0; let both!:()=>void;
+  const twoArrived=new Promise<void>(resolve=>{both=resolve;});
+  s.setHook(async()=>{if(++arrivals===2) both(); await wait; return {image:Buffer.from(s.output).toString('base64')};});
+  const first=s.call(url+'generate-image','alice',s.input(),crypto.randomUUID());
+  const second=s.call(url+'generate-image','alice',s.input(),crypto.randomUUID()); await twoArrived;
+  assert.equal((await s.call(url+'generate-image','bob',s.input(),crypto.randomUUID())).status,429);
+  release(); assert.equal((await json(await first)).success,true); assert.equal((await json(await second)).success,true);
+  assert.equal(s.calls.length,2);
+});
+
 test('account-wide monthly admission cap is shared across brands',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close()); s.env.AI_MONTHLY_IMAGE_UNITS='25'; s.env.AI_ACCOUNT_MONTHLY_IMAGE_UNITS='2';
   s.db.sql.exec("INSERT INTO brands(id,owner_id,name,created_at,updated_at) VALUES('brand-two','alice','Brand Two','2026-09-06','2026-09-06'); INSERT INTO brand_members(id,brand_id,user_id,role,joined_at) VALUES('brand-two-bob','brand-two','bob','editor','2026-09-06')");

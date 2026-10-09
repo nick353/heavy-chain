@@ -1,5 +1,11 @@
 # Auth mail allocation and expiry maintenance
 
+## Current allocation (2026-10-09)
+
+Heavy (`wrangler.production.jsonc`): 200 per UTC day, 100000 cumulative, raised at the owner's request so
+colleague signups and password resets are not blocked. MyPro stays at 5/20. The real ceiling is the
+Cloudflare Email Service account quota shown in the dashboard.
+
 ## Contract
 
 Both Auth Workers use the same code and separate D1 databases. Before **every**
