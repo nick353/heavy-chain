@@ -6201,11 +6201,11 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                         setWorkspaceText(nextValue);
                         setAgentTaskTypeDrafts((drafts) => ({ ...drafts, [agentTaskType]: nextValue }));
                       }}
-                      className="relative z-[2] h-full w-full overflow-visible whitespace-pre-wrap break-words p-1 text-base font-normal leading-6 text-[#e8eeed] outline-none"
+                      className="relative z-[2] h-full w-full overflow-visible whitespace-pre-wrap break-words p-1 text-base font-normal leading-6 text-[#e8eeed] outline-none [text-indent:112px]"
                     >
                       {workspaceText}
                     </div>
-                    {!workspaceText && <span aria-hidden="true" className="pointer-events-none absolute left-[94px] top-1 z-[1] text-[#8f9b99]">{agentTaskTypePlaceholder}</span>}
+                    {!workspaceText && <span aria-hidden="true" className="pointer-events-none absolute left-[116px] top-1 z-[1] text-[#8f9b99]">{agentTaskTypePlaceholder}</span>}
                   </div>
                 ) : (
                   <textarea
@@ -6223,7 +6223,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     aria-label={workspaceStyle.kind === 'agent' ? currentWorkspaceCopy.prompt : undefined}
                     placeholder={currentWorkspaceCopy.prompt}
                     maxLength={4000}
-                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 pl-1 text-base font-normal leading-6 text-[#e8eeed] [text-indent:90px] placeholder:text-transparent' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
+                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 pl-1 text-base font-normal leading-6 text-[#e8eeed] [text-indent:112px] placeholder:text-[#8f9b99]' : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
                   />
                 )}
                 </div>
