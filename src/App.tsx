@@ -116,6 +116,7 @@ const LightchainBoardEditPage = lazy(() => import('./pages/LightchainBoardPage')
 const LightchainOrientedDesignPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignPage })));
 const LightchainOrientedDesignDetailPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignDetailPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
+const AccountDeletePage = lazy(() => import('./pages/AccountDeletePage').then((module) => ({ default: module.AccountDeletePage })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })));
 const BrandSettingsPage = lazy(() => import('./pages/BrandSettingsPage').then((module) => ({ default: module.BrandSettingsPage })));
@@ -745,7 +746,7 @@ function AppRoutes() {
               },
               {
                 heading: '保持と削除',
-                body: '生成のために一時的に預かった素材は、生成が終わったあとに削除します。プロジェクトや生成画像は、利用者が削除するまで保存します。退会を希望する場合は、サイト上の問い合わせ導線からご連絡ください。退会後30日以内に、アカウント情報・プロジェクト・生成画像・アップロード素材を、バックアップも含めてすべて削除します。障害に備えたバックアップは毎日作成し、28日を過ぎたものは自動で削除します。',
+                body: '生成のために一時的に預かった素材は、生成が終わったあとに削除します。プロジェクトや生成画像は、利用者が削除するまで保存します。退会は、マイアカウントの「アカウントを削除する」からいつでも手続きできます。削除するとすぐに消え、遅くとも退会後30日以内に、アカウント情報・プロジェクト・生成画像・アップロード素材を、バックアップも含めてすべて削除します。障害に備えたバックアップは毎日作成し、28日を過ぎたものは自動で削除します。',
               },
             ]}
           />
@@ -832,6 +833,7 @@ function AppRoutes() {
         <Route path="/generate" element={<LegacyGenerateRedirect />} />
         {/* Signed-in password change uses the same email-code reset as the login screen. */}
         <Route path="/change-password" element={<ProtectedRoute>{lazyPage(<ForgotPasswordPage />)}</ProtectedRoute>} />
+        <Route path="/account/delete" element={<ProtectedRoute>{lazyPage(<AccountDeletePage />)}</ProtectedRoute>} />
         <Route path="/workflows/:workflowId" element={<LegacyWorkflowRedirect />} />
         <Route path="/fitting" element={<LegacyRouteRedirect to="/model" />} />
         <Route
