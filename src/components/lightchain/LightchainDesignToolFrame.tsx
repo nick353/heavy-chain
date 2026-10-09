@@ -30,8 +30,8 @@ export const LIGHTCHAIN_DESIGN_TOOL_TABS = [
 export type LightchainDesignToolTabId = typeof LIGHTCHAIN_DESIGN_TOOL_TABS[number]['id'];
 
 export const LIGHTCHAIN_VECTOR_TOOL_TABS = [
-  { id: 'pattern-vector', label: 'パターンをベクター画像に変換（通常版）', route: '/tools/pattern-to-vector' },
-  { id: 'pattern-vector-pro', label: 'パターンをベクター画像に変換（プロフェッショナル版）', route: '/tools/vector-special' },
+  { id: 'pattern-vector', label: 'パターンをベクター画像に変換（通常版）', shortLabel: 'ベクター変換（通常版）', route: '/tools/pattern-to-vector' },
+  { id: 'pattern-vector-pro', label: 'パターンをベクター画像に変換（プロフェッショナル版）', shortLabel: 'ベクター変換（プロ版）', route: '/tools/vector-special' },
 ] as const;
 
 export const LIGHTCHAIN_IMAGE_REPAIR_TABS = [
@@ -42,7 +42,7 @@ export const LIGHTCHAIN_SVG_CONVERT_TABS = [
   { id: 'svg-convert', label: '平絵をベクター化', route: '/tools/svg-convert' },
 ] as const;
 
-type FrameTab = { readonly id: string; readonly label: string; readonly route: string };
+type FrameTab = { readonly id: string; readonly label: string; readonly shortLabel?: string; readonly route: string };
 /** Rail entry highlighted for the current tool group: 0 = デザインツール, 1 = フィッティングツール, 2 = グラフィックデザインツール, 3 = 衣類生産ツール. */
 export type LightchainRailGroup = 0 | 1 | 2 | 3;
 
@@ -111,7 +111,8 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
                   ? 'bg-[#737d84] text-white shadow-lg shadow-black/20'
                   : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
               >
-                {tab.label}
+                {/* Long names are cut off in the half-width tabs; the full name stays in the tooltip and for screen readers. */}
+                {tab.shortLabel ? <><span aria-hidden="true">{tab.shortLabel}</span><span className="sr-only">{tab.label}</span></> : tab.label}
               </button>
             ))}
           </nav>

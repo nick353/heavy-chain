@@ -4,10 +4,34 @@ import { getLightchainUnifiedRouteAliases, lightchainUnifiedFeatureCatalog } fro
 /** Pure helpers for the 生成履歴 panel: titles, resume links and one entry per generation. */
 const featureIdOf = (featureType: string | null) => featureType?.match(/^lightchain-(.+?)(?:-provider-result)?$/)?.[1] ?? null;
 
+/** Japanese names for saved feature types that have no catalog entry; the raw ids (e.g. "model matrix") showed in the panel. */
+const historyTitleOverrides: Record<string, string> = {
+  'design-gacha': 'デザイン案',
+  'model-matrix': 'モデル画像',
+  'change-color': '色変更',
+  'fashion-studio': 'ファッションスタジオ',
+  'fashion-studio-detail-generated-result': 'ファッションスタジオ',
+  'fashion-studio-detail-edit-result': 'ファッションスタジオ',
+  'chat-edit': 'チャット編集',
+  'edit-image': '画像編集',
+  'canvas-inpaint': '部分修正',
+  'canvas-partial-edit': '部分修正',
+  'design-dialogue': 'デザイン相談',
+  'design-dialogue-reference': 'デザイン相談',
+  'marketing-dialogue': 'マーケティング',
+  'lab-workflow': 'ラボ',
+  'video-workstation': '動画',
+  'fitting-background-draft': 'フィッティング背景',
+  'library-upload': 'アップロード素材',
+  'platform-asset': '素材',
+};
+
 export const lightchainHistoryTitle = (featureType: string | null): string => {
   const id = featureIdOf(featureType);
   const feature = id ? lightchainUnifiedFeatureCatalog.find((entry) => entry.id === id) : undefined;
-  return feature?.title ?? (featureType ? featureType.replaceAll('-', ' ') : '生成画像');
+  if (feature) return feature.title;
+  const key = (featureType ?? '').replace(/^lightchain-/, '').replace(/-provider-result$/, '');
+  return historyTitleOverrides[key] ?? '生成画像';
 };
 
 /** The tool screen that reopens this result with its saved inputs, or null when the result has no tool to return to. */
