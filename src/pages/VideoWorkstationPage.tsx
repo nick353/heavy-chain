@@ -44,6 +44,7 @@ import {
 } from '../lib/localWorkspaceArtifacts';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { withSignedImageUrls } from '../lib/storage';
+import { designImageProjectHref } from '../lib/legacyCanvasRoute';
 import { compactVideoMetadataImage, isRasterDataUrl, matchesVideoProjectArtifact, rasterSourceDataUrl, shouldHydrateVideoSourceImage } from '../lib/videoWorkspacePersistence';
 import { projectNameFromFile } from '../lib/projectNames';
 
@@ -714,7 +715,7 @@ export function VideoWorkstationPage() {
     const nextStep = `${videoProjectCode}を動画ワークステーションで再利用し、動画providerの利用可能確認後にレンダーへ進める`;
 
     try {
-      const { projectId } = handoffWorkspaceToCanvas({
+      handoffWorkspaceToCanvas({
         brandId: currentBrand.id,
         scopeId: user?.id,
         featureType: 'video-workstation',
@@ -784,7 +785,11 @@ export function VideoWorkstationPage() {
         },
       });
       toast.success('動画編集内容を保存し、Canvasへ渡しました');
-      navigate(`/canvas/${projectId}`);
+      // The handoff project only holds a placeholder preview, so Canvas opens the saved source image itself.
+      const remoteImageId = persisted.artifact.metadata?.remoteImageId;
+      navigate(typeof remoteImageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(remoteImageId)
+        ? designImageProjectHref(remoteImageId)
+        : `/canvas/new?sourceArtifactId=${encodeURIComponent(persisted.artifact.id)}`);
     } catch (error) {
       console.error('Failed to persist Video Source Editor handoff:', error);
       toast.error(error instanceof Error ? error.message : 'Canvas保存に失敗しました');
