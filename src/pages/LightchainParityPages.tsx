@@ -46,6 +46,7 @@ import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../compon
 import { thumbnailImageUrl } from '../lib/mediaThumbnail';
 import { formatProjectAge, ProjectThumbnail, useFeatureProjects } from './PatternProjectDashboardPage';
 import { downloadValidatedImage } from '../lib/imageDownload';
+import { downloadImagesAsZip } from '../lib/clientImageOps';
 import { projectNameFromFile } from '../lib/projectNames';
 import { generateImage } from '../lib/imageApi';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
@@ -2282,7 +2283,17 @@ export function LightchainAssetCenterPage() {
 
   const handleBulkDownload = async () => {
     const selected = persistedArtifacts.filter((artifact) => selectedIds.has(artifact.id) && artifact.imageUrl);
-    await Promise.all(selected.map((artifact) => downloadValidatedImage(artifact.imageUrl, `${artifact.title || artifact.id}.png`, 'library_bulk_download')));
+    if (selected.length === 1) {
+      await downloadValidatedImage(selected[0].imageUrl, `${selected[0].title || selected[0].id}.png`, 'library_bulk_download');
+      return;
+    }
+    // Chrome only lets the first of several simultaneous downloads through, so more than one asset goes out as a single ZIP.
+    try {
+      const { included, failed } = await downloadImagesAsZip(selected.map((artifact) => ({ url: artifact.imageUrl, name: artifact.title || artifact.id })), 'heavy-chain-library.zip');
+      toast.success(failed ? `${included}件をZIPで保存しました（${failed}件は取得できませんでした）` : `${included}件をZIPで保存しました`);
+    } catch {
+      toast.error('ダウンロードに失敗しました');
+    }
   };
 
   const handleBulkDelete = () => {
