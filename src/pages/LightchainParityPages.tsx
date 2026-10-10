@@ -329,6 +329,18 @@ function CreatorCategoryPicker({ selectedCategory, onSelect }: { selectedCategor
   );
 }
 
+/** キーワード辞典: each group opens its own words; picking one appends it to the keyword box. */
+const creatorKeywordDictionary: Array<{ group: string; words: string[] }> = [
+  { group: 'シルエット', words: ['Aライン', 'Iライン', 'Hライン', 'Xライン', 'Oversized', 'ゆったり', 'タイト', 'ボクシー', 'ドロップショルダー', 'クロップド丈', 'ロング丈'] },
+  { group: '素材感', words: ['コットン', 'リネン', 'ウール', 'シルク', 'デニム', 'レザー', 'ニット', 'シアー', 'サテン', 'ツイード', 'コーデュロイ', 'ヘビーウェイト'] },
+  { group: 'カラー', words: ['オートミール', 'アイボリー', 'ベージュ', 'チャコール', 'ネイビー', 'ブラック', 'カーキ', 'テラコッタ', 'くすみピンク', 'セージグリーン', 'モノトーン'] },
+  { group: '柄・プリント', words: ['チェック', 'ストライプ', 'ボーダー', 'ドット', '花柄', 'ペイズリー', 'レオパード', 'カモフラージュ', 'ロゴプリント', 'グラフィック', '無地'] },
+  { group: 'シーン', words: ['通勤', 'オフィス', 'デート', 'リゾート', 'アウトドア', 'パーティー', '休日', 'ストリート', 'ルームウェア', 'スポーツ'] },
+  { group: 'ディテール', words: ['パフスリーブ', 'U字襟', 'Vネック', 'スタンドカラー', 'フリル', 'ギャザー', 'プリーツ', 'スリット', '隠しポケット', 'ドロスト', 'ステッチ'] },
+  { group: '季節', words: ['春', '夏', '秋', '冬', '春夏', '秋冬', '梅雨', '真夏', '真冬'] },
+  { group: '雰囲気', words: ['ミニマル', 'エレガント', 'カジュアル', 'クラシック', 'モード', 'フェミニン', 'ボーイッシュ', 'ヴィンテージ', 'ナチュラル', 'ラグジュアリー'] },
+  { group: 'アイテム', words: ['Tシャツ', 'シャツ', 'ブラウス', 'ニット', 'パーカー', 'ジャケット', 'コート', 'ワンピース', 'スカート', 'パンツ', 'デニムパンツ'] },
+];
 const creatorKeywordPlaceholder = '生成画像について細かい指定がある場合は、こちらでキーワードを入力できます\n\n例1：オートミール色、H型カット、チェック柄生地、通勤用ワンピース…\n\n例2：18歳のヨーロッパ系モデルが両手を後ろに組んでオートミール色のワンピースを着用。ワンピースはチェック柄生地で作られ、U字型襟のデザイン、パフスリーブ、H型カットが特徴。隠しポケット付きで、通勤スタイルを演出';
 
 export function LightchainCreatorPage() {
@@ -337,6 +349,7 @@ export function LightchainCreatorPage() {
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [dictionaryOpen, setDictionaryOpen] = useState(false);
+  const [dictionaryGroup, setDictionaryGroup] = useState<string | null>(null);
   const [historyArtifacts, setHistoryArtifacts] = useState<WorkspaceArtifact[]>([]);
   const { currentBrand, profile, user } = useAuthStore();
   const navigate = useNavigate();
@@ -428,7 +441,9 @@ export function LightchainCreatorPage() {
       </div>
 
       {historyOpen && <section className="fixed inset-x-4 bottom-4 top-[67px] z-20 overflow-auto rounded-xl border border-white/10 bg-[#262a2b] p-5 shadow-2xl" data-testid="creator-persisted-history"><h2 className="font-semibold">生成履歴</h2><PersistedHistoryPanel artifacts={historyArtifacts} emptyMessage="保存確認できたデザイン成果物はまだありません。provider生成後に保存すると、ここから再利用できます。" reuseLabel="Canvasへ再利用" onReuse={(artifact) => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)} /></section>}
-      {dictionaryOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5" role="dialog" aria-modal="true" aria-label="キーワード辞典"><div className="max-h-[80vh] w-full max-w-3xl overflow-auto rounded-2xl border border-white/10 bg-[#262a2b] p-6 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">キーワード辞典</h2><button type="button" className="rounded-lg border border-white/10 px-3 py-2 text-sm" onClick={() => setDictionaryOpen(false)}>閉じる</button></div><div className="mt-5 grid gap-2 sm:grid-cols-3">{['シルエット', '素材感', 'カラー', '柄・プリント', 'シーン', 'ディテール', '季節', '雰囲気', 'アイテム'].map((tag) => <button key={tag} type="button" className="rounded-xl border border-white/10 px-3 py-3 text-left text-sm text-neutral-300 hover:border-cyan-300" onClick={() => setKeywords((value) => `${value}${value ? '、' : ''}${tag}`)}>{tag}<ChevronRight className="float-right h-4 w-4 text-neutral-500" /></button>)}</div></div></div>}
+      {dictionaryOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5" role="dialog" aria-modal="true" aria-label="キーワード辞典"><div className="max-h-[80vh] w-full max-w-3xl overflow-auto rounded-2xl border border-white/10 bg-[#262a2b] p-6 shadow-2xl"><div className="flex items-center justify-between gap-3"><h2 className="flex items-center gap-2 text-lg font-semibold">{dictionaryGroup && <button type="button" aria-label="分類に戻る" className="rounded-lg p-1 text-neutral-400 hover:text-white" onClick={() => setDictionaryGroup(null)}><ChevronLeft className="h-5 w-5" /></button>}{dictionaryGroup ?? 'キーワード辞典'}</h2><button type="button" className="rounded-lg border border-white/10 px-3 py-2 text-sm" onClick={() => { setDictionaryOpen(false); setDictionaryGroup(null); }}>閉じる</button></div>{dictionaryGroup
+        ? <div className="mt-5 flex flex-wrap gap-2" data-testid="creator-keyword-words">{(creatorKeywordDictionary.find((entry) => entry.group === dictionaryGroup)?.words ?? []).map((word) => { const added = keywords.split('、').includes(word); return <button key={word} type="button" aria-pressed={added} className={`rounded-full border px-3 py-1.5 text-sm ${added ? 'border-cyan-300 bg-cyan-300/15 text-cyan-100' : 'border-white/10 text-neutral-300 hover:border-cyan-300'}`} onClick={() => setKeywords((value) => added ? value : `${value}${value ? '、' : ''}${word}`.slice(0, 1000))}>{word}</button>; })}</div>
+        : <div className="mt-5 grid gap-2 sm:grid-cols-3">{creatorKeywordDictionary.map(({ group }) => <button key={group} type="button" className="rounded-xl border border-white/10 px-3 py-3 text-left text-sm text-neutral-300 hover:border-cyan-300" onClick={() => setDictionaryGroup(group)}>{group}<ChevronRight className="float-right h-4 w-4 text-neutral-500" /></button>)}</div>}</div></div>}
     </ParityShell>
   );
 }
