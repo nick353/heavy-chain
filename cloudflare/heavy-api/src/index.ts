@@ -451,7 +451,7 @@ async function readMedia(request: Request, env: Env, id: string): Promise<Respon
   return new Response(object.body, { status: 200, headers });
 }
 
-export async function handleRequest(request: Request, env: Env): Promise<Response> {
+export async function handleRequest(request: Request, env: Env, ctx?: Pick<ExecutionContext, 'waitUntil'>): Promise<Response> {
   const url = new URL(request.url);
   if (request.method === "OPTIONS") return corsPreflight(request, env);
   const respond = (response: Response): Response => withCors(request, env, response);
@@ -486,7 +486,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   if (heavyEntitlementWrite) return withCors(request, env, heavyEntitlementWrite);
   const imageRead = await handleImageAIRead(request, env);
   if (imageRead) return withCors(request, env, imageRead);
-  const designAssistantResponse = await handleDesignAssistantRequest(request, env);
+  const designAssistantResponse = await handleDesignAssistantRequest(request, env, ctx);
   if (designAssistantResponse) return respond(designAssistantResponse);
   const accountDeletion = await handleAccountDeletionRequest(request, env);
   if (accountDeletion) return respond(accountDeletion);

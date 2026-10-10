@@ -204,7 +204,7 @@ async function infer(env: Env, input: Input, parts: ContentPart[], provider: Ass
   } finally { clearTimeout(timer); }
 }
 
-async function send(request: Request, env: Env): Promise<Response> {
+async function send(request: Request, env: Env, ctx?: Pick<ExecutionContext, 'waitUntil'>): Promise<Response> {
   const body = await readBody(request);
   if (body instanceof Response) return body;
   const input = validate(body);
@@ -267,6 +267,15 @@ async function send(request: Request, env: Env): Promise<Response> {
     return row.input_digest === inputDigest ? receipt(row) : error('design_assistant_request_conflict', 409);
   }
 
+  // The provider call and its durable write run under waitUntil: leaving the page mid-request must not cut
+  // the Worker off and leave the reservation running until it is settled as abandoned.
+  const settle = complete(env, input, parts, provider, owner, inputDigest);
+  ctx?.waitUntil(settle.catch(() => undefined));
+  return settle;
+}
+
+async function complete(env: Env, input: Input, parts: ContentPart[], provider: AssistantProvider,
+  owner: string, inputDigest: string): Promise<Response> {
   let content: string | null = null;
   let usage: Record<string, number> | null = null;
   let state: 'completed' | 'unknown' = 'unknown';
@@ -299,12 +308,12 @@ async function send(request: Request, env: Env): Promise<Response> {
 /** Far longer than DESIGN_ASSISTANT_TIMEOUT_MS: only a reservation whose Worker never finished stays running this long. */
 export const DESIGN_ASSISTANT_ABANDONED_MS = 10 * 60 * 1000;
 
-export async function handleDesignAssistantRequest(request: Request, env: Env): Promise<Response | null> {
+export async function handleDesignAssistantRequest(request: Request, env: Env, ctx?: Pick<ExecutionContext, 'waitUntil'>): Promise<Response | null> {
   const url = new URL(request.url);
   const match = /^\/v1\/design-assistant\/requests\/([^/]+)$/.exec(url.pathname);
   if (!match && url.pathname !== '/v1/design-assistant/requests') return null;
   try {
-    if (!match && request.method === 'POST') return await send(request, env);
+    if (!match && request.method === 'POST') return await send(request, env, ctx);
     if (match && request.method === 'GET') {
       const input = { requestId: decodeURIComponent(match[1]), brandId: url.searchParams.get('brand_id'),
         projectId: url.searchParams.get('project_id'), conversationId: url.searchParams.get('conversation_id') };
