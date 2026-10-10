@@ -62,3 +62,38 @@ export const shouldHydrateVideoSourceImage = (
   const current = currentImageUrl.trim();
   return !current || current === defaultProjectImageUrl.trim();
 };
+
+/** The workspace API stores only PNG/JPEG/WebP/GIF data URLs as the artifact image. */
+export const isRasterDataUrl = (url: string | null | undefined): url is string => (
+  typeof url === 'string' && /^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(url)
+);
+
+/**
+ * Metadata travels with the remote save, which caps it at 128 KB. Keep short
+ * URLs and small previews; drop large inline images (the artifact image holds the source).
+ */
+export const compactVideoMetadataImage = (url: string | null | undefined, limit = 32_000): string => {
+  if (typeof url !== 'string' || !url || url.startsWith('blob:')) return '';
+  return !url.startsWith('data:') || url.length <= limit ? url : '';
+};
+
+/** Turn the editor's source image into a raster data URL the workspace API accepts. */
+export const rasterSourceDataUrl = async (
+  url: string | null | undefined,
+  fetcher: typeof fetch = fetch,
+): Promise<string | null> => {
+  if (!url) return null;
+  if (isRasterDataUrl(url)) return url;
+  try {
+    const response = await fetcher(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    if (!/^image\/(?:png|jpeg|webp|gif)$/i.test(blob.type)) return null;
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+    return `data:${blob.type.toLowerCase()};base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
+};
