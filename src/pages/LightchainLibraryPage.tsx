@@ -178,7 +178,8 @@ export function LightchainLibraryPage() {
       await navigator.clipboard.writeText(result.shareUrl);
       toast.success('共有リンクをコピーしました（7日間有効）');
     } catch {
-      toast.success(`共有リンク: ${result.shareUrl}`);
+      // Clipboard writes fail in background tabs or without permission; show the link so it can be copied manually.
+      setShareLinkFallback(result.shareUrl);
     }
   };
   const saveOperationRef = useRef<symbol | null>(null);
@@ -240,6 +241,7 @@ export function LightchainLibraryPage() {
   const [selectedFeatureId, setSelectedFeatureId] = useState('ai-fitting');
   const [librarySearchOpen, setLibrarySearchOpen] = useState(false);
   const [librarySearch, setLibrarySearch] = useState('');
+  const [shareLinkFallback, setShareLinkFallback] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ card?: LibraryCard; localIds?: string[]; label: string } | null>(null);
 
   const activeFolder = folders.find((folder) => folder.id === activeGroup) ?? null;
@@ -999,6 +1001,36 @@ export function LightchainLibraryPage() {
             <div className="mt-6 flex justify-end gap-2">
               <button type="button" className={mutedButton} onClick={() => setDownloadOpen(false)}>キャンセル</button>
               <button type="button" className="rounded-xl bg-cyan-200 px-4 py-2 text-sm font-semibold text-neutral-950" onClick={() => void handleConfirmDownloadSelected()}>ダウンロードを確認</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shareLinkFallback && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-5" role="dialog" aria-modal="true" aria-labelledby="library-share-title" data-testid="library-share-link-dialog">
+          <div className={`${darkPanel} w-full max-w-md p-6`}>
+            <h2 id="library-share-title" className="text-lg font-semibold">共有リンク（7日間有効）</h2>
+            <p className="mt-3 text-sm text-neutral-300">自動でコピーできませんでした。下のリンクを選択してコピーしてください。</p>
+            <input
+              readOnly
+              autoFocus
+              value={shareLinkFallback}
+              aria-label="共有リンク"
+              onFocus={event => event.currentTarget.select()}
+              className="mt-4 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-neutral-100"
+              data-testid="library-share-link-input"
+            />
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" className={mutedButton} onClick={() => setShareLinkFallback(null)}>閉じる</button>
+              <button
+                type="button"
+                className="rounded-xl bg-cyan-200 px-4 py-2 text-sm font-semibold text-neutral-950"
+                onClick={() => {
+                  navigator.clipboard.writeText(shareLinkFallback)
+                    .then(() => { toast.success('共有リンクをコピーしました（7日間有効）'); setShareLinkFallback(null); })
+                    .catch(() => toast.error('コピーできませんでした。リンクを選択してコピーしてください'));
+                }}
+              >コピー</button>
             </div>
           </div>
         </div>
