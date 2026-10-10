@@ -117,6 +117,14 @@ export function buildZip(files: Array<{ name: string; data: Uint8Array }>): Uint
 
 const EXTENSIONS: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg' };
 
+/** Two assets with the same title must not overwrite each other inside the ZIP. */
+export function uniqueZipName(files: Array<{ name: string }>, base: string, extension: string) {
+  const taken = new Set(files.map((file) => file.name));
+  let name = `${base}.${extension}`;
+  for (let n = 2; taken.has(name); n++) name = `${base} (${n}).${extension}`;
+  return name;
+}
+
 /** Fetch every image and save one ZIP. Returns how many images were included. */
 export async function downloadImagesAsZip(images: Array<{ url: string; name: string }>, zipName: string): Promise<{ included: number; failed: number }> {
   const files: Array<{ name: string; data: Uint8Array }> = []; let failed = 0;
@@ -126,7 +134,7 @@ export async function downloadImagesAsZip(images: Array<{ url: string; name: str
       if (!response.ok) throw new Error(String(response.status));
       const blob = await watermarkImageBlobIfOn(await response.blob());
       const extension = EXTENSIONS[blob.type] ?? 'png';
-      files.push({ name: `${image.name}.${extension}`, data: new Uint8Array(await blob.arrayBuffer()) });
+      files.push({ name: uniqueZipName(files, image.name, extension), data: new Uint8Array(await blob.arrayBuffer()) });
     } catch { failed++; }
   }
   if (!files.length) throw new Error('bulk_download_no_images');

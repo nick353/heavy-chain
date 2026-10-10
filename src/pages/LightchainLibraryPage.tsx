@@ -22,6 +22,7 @@ import {
 } from '../lib/lightchainUnifiedFeatureCatalog';
 import { buildLightchainLibraryFeatureHref } from '../lib/lightchainLibraryHandoff';
 import { downloadValidatedImage } from '../lib/imageDownload';
+import { downloadImagesAsZip } from '../lib/clientImageOps';
 import { copyLibraryCanvasReference } from '../lib/libraryCanvasClipboard';
 import { createShareLink } from '../lib/imageApi';
 
@@ -571,7 +572,17 @@ export function LightchainLibraryPage() {
 
   const handleBulkDownload = async () => {
     const cards = visibleArtifacts.filter((card) => selectedIds.has(getCardId(card)) && cardImageUrl(card));
-    await Promise.all(cards.map((card) => downloadValidatedImage(cardImageUrl(card), `${cardTitle(card) || getCardId(card)}.png`, 'library_bulk_download')));
+    if (cards.length === 1) {
+      await downloadValidatedImage(cardImageUrl(cards[0]), `${cardTitle(cards[0]) || getCardId(cards[0])}.png`, 'library_bulk_download');
+      return;
+    }
+    // Chrome only lets the first of several simultaneous downloads through, so more than one asset goes out as a single ZIP.
+    try {
+      const { included, failed } = await downloadImagesAsZip(cards.map((card) => ({ url: cardImageUrl(card), name: cardTitle(card) || getCardId(card) })), 'heavy-chain-library.zip');
+      toast.success(failed ? `${included}件をZIPで保存しました（${failed}件は取得できませんでした）` : `${included}件をZIPで保存しました`);
+    } catch {
+      toast.error('ダウンロードに失敗しました');
+    }
   };
 
   const handleBulkDelete = () => {
