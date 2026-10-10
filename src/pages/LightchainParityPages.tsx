@@ -2338,6 +2338,12 @@ export function LightchainOrientedDesignPage() {
     if (explicitFeature !== null && explicitFeature !== 'wear-design-lab') return;
     navigate(orientedDesignLabHref(location, '/flow/orientedDesign/detail', index));
   };
+  // A reference case opens the example board, which the detail page shows only for a boardProjectCode.
+  const openReferenceCase = (index: number) => {
+    if (explicitFeature !== null && explicitFeature !== 'wear-design-lab') return;
+    const code = index === 0 ? 'デザイン要素融合' : 'ディテール変更';
+    navigate(`/flow/orientedDesign/detail?boardProjectCode=${encodeURIComponent(code)}&boardProjectType=orientedDesignSystem`);
+  };
   // A saved project reopens its own job: the previous job's candidate and card indexes do not carry over.
   const openProject = (savedJobId: string) => {
     if (explicitFeature !== null && explicitFeature !== 'wear-design-lab') return;
@@ -2412,7 +2418,8 @@ export function LightchainOrientedDesignPage() {
           <h6 id="oriented-design-reference-cases" className="oriented-design-section-title">参考事例</h6>
           <div className="oriented-design-reference-grid">
             {orientedDesignReferenceImages.map((image, index) => (
-              <div key={image} className="oriented-design-project-card" onClick={() => navigateToDetail({ key: 'reference', value: index + 1 })}>
+              <div key={image} role="button" tabIndex={0} className="oriented-design-project-card" data-testid={`oriented-design-reference-${index + 1}`}
+                onClick={() => openReferenceCase(index)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openReferenceCase(index); } }}>
                 <div className="oriented-design-project-media"><img src={thumbnailImageUrl(image)} alt="coverImg" loading="lazy" /></div>
                 <div className="oriented-design-project-meta">
                   <div className="oriented-design-project-name">{index === 0 ? 'デザイン要素融合' : 'ディテール変更'}</div>

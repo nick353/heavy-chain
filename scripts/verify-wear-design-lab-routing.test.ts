@@ -90,7 +90,7 @@ async function fixture(initial:string,options:{jobId?:string;primary?:Record<str
 }
 const home='/flow/orientedDesign';
 const detail=home+'/detail';
-for(const kind of ['new','reference'] as const)test(`actual ${kind} card preserves resume/candidate/other query/hash and lab workspace through detail and Back`,async()=>{
+for(const kind of ['new'] as const)test(`actual ${kind} card preserves resume/candidate/other query/hash and lab workspace through detail and Back`,async()=>{
   const f=await fixture(`${home}?resumeJob=wa-proof&candidate=3&other=a%2Fb&project=12&reference=2&tag=x&tag=y#keep-context`);
   try{
     assert.equal(f.service.workspaceCalls.at(-1)?.toolId,'wear-design-lab');await f.click(f.card(kind,kind==='project'?4:1));
@@ -109,9 +109,9 @@ test('actual project card reopens its saved job and drops the previous candidate
   }finally{await f.unmount();}
 });
 
-test('actual reference index update leaves project and unrelated parameters unchanged',async()=>{
+for(const [index,code] of [[0,'デザイン要素融合'],[1,'ディテール変更']] as const)test(`actual reference card ${index+1} opens the ${code} example board`,async()=>{
   const f=await fixture(`${home}?workspaceFeature=wear-design-lab&reference=99&project=7&resumeJob=same#reference`);
-  try{await f.click(f.card('reference',0));const l=f.location();assert.equal(l.params.get('reference'),'1');assert.equal(l.params.get('project'),'7');assert.equal(l.params.get('resumeJob'),'same');assert.equal(l.hash,'#reference');}finally{await f.unmount();}
+  try{await f.click(f.card('reference',index));const l=f.location();assert.equal(l.pathname,detail);assert.equal(l.params.get('boardProjectCode'),code);assert.equal(l.params.get('boardProjectType'),'orientedDesignSystem');assert.equal(l.params.get('reference'),null);}finally{await f.unmount();}
 });
 for(const feature of ['fashion-studio','wear-design-detail',''])test(`explicit conflicting feature ${JSON.stringify(feature)} blocks all actual lab cards without rewriting route or clearing conflict`,async()=>{
   const f=await fixture(`${home}?workspaceFeature=${feature}&resumeJob=foreign#conflict`);
