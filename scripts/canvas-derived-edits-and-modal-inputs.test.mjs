@@ -65,5 +65,8 @@ test('chat edits are recorded as chat-edit jobs and the floating toolbar is boun
   const chat = readFileSync(new URL('../src/components/ChatEditor.tsx', import.meta.url), 'utf8');
   const toolbar = readFileSync(new URL('../src/components/canvas/FloatingToolbar.tsx', import.meta.url), 'utf8');
   assert.match(chat, /editImageWithPrompt\(currentImage, plan\.instruction, currentBrand\.id, \{ rightsConfirmed: requestReadiness\.ready, featureType: 'chat-edit' \}\)/);
-  assert.match(toolbar, /minTop: toolbar\.parentElement\?\.getBoundingClientRect\(\)\.top \?\? 0/);
+  assert.match(toolbar, /toolbar\.parentElement\?\.getBoundingClientRect\(\)\.top \?\? 0/);
+  assert.match(toolbar, /document\.querySelector\('\[data-canvas-main-toolbar\]'\)\?\.getBoundingClientRect\(\)\.bottom \?\? 0/);
+  const page = readFileSync(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
+  assert.match(page, /<div data-canvas-main-toolbar className=/);
 });
