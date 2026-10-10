@@ -39,7 +39,11 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
         toolbarHeight: toolbar.offsetHeight,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
-        minTop: toolbar.parentElement?.getBoundingClientRect().top ?? 0,
+        // Stay below the canvas area top and the canvas's own zoom/tool bar.
+        minTop: Math.max(
+          toolbar.parentElement?.getBoundingClientRect().top ?? 0,
+          document.querySelector('[data-canvas-main-toolbar]')?.getBoundingClientRect().bottom ?? 0,
+        ),
       }));
     };
     updatePosition();
