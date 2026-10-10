@@ -63,3 +63,23 @@ test('already-saved candidates are read back after restart without canvas encodi
   const corrupt={...result,images:result.images.map((c,index)=>index===1?{...c,batchId:'foreign'}:c)};
   assert.equal(normalizeCanvasImageEditCandidates(corrupt).length,3);
 });
+
+test('OpenAI receipts (the production image backend) finalize and save with their own provider identity',async()=>{
+  const requestId=crypto.randomUUID(); const batchId=`ai-${requestId}`;
+  const plan={mode:contract.PROTECTED_IMAGE_EDIT_MODE,sourceWidth:256,sourceHeight:256,sourceSha256:'a'.repeat(64),maskSha256:'b'.repeat(64),guideIndex:1,coveragePercent:20};
+  const receipt={success:true,state:'completed',requestId,jobId:batchId,requestedCandidateCount:4,persistedCandidateCount:4,protectedEdit:plan,
+    provider:'openai',backendProvider:'openai-images-api',providerModel:'gpt-image-1-mini',persistenceStatus:'completed',recovery:'terminal',
+    images:Array.from({length:4},(_,candidateIndex)=>({candidateIndex,imageId:`ai-${requestId}-${candidateIndex}`,jobId:batchId,
+      storagePath:`generated-images/ai-${requestId}-${candidateIndex}`,imageUrl:'https://raw.test/image',persistenceStatus:'completed'}))};
+  const saves=await Promise.all([0,1,2,3].map(index=>contract.protectedImageSaveRequestId(requestId,index)));
+  const result=await edit.finalizeProtectedCloudflareEdit({prepared:{body:{brandId:'brand'},plan,sourceImageUrl:'unneeded',maskDataUrl:'unneeded'},receipt,
+    assertCurrent:async()=>{},save:async()=>{throw new Error('must not upload');},call:async path=>{
+      if(path.startsWith('/v1/media/read?'))return{url:'https://final.test/image?path='+encodeURIComponent(new URLSearchParams(path.split('?')[1]).get('path'))};
+      const id=path.split('/').at(-1); const index=saves.indexOf(id);assert(index>=0);
+      return{success:true,remote:{jobId:'wa-'+id,imageId:'wa-'+id,storagePath:'generated-images/wa-'+id},metadata:{provider:'openai',backendProvider:'openai-images-api',providerModel:'gpt-image-1-mini',providerRequestId:requestId,candidateIndex:index,protectedEdit:plan}};
+    }});
+  assert.equal(result.protectedRegionComposited,true);
+  assert.equal(normalizeCanvasImageEditCandidates(result).length,4);
+  assert.equal(edit.protectedEditProviderIdentity({provider:'openai',backendProvider:'openai-images-api',providerModel:'not a model'}),null);
+  assert.equal(edit.protectedEditProviderIdentity({provider:'workers_ai',backendProvider:'cloudflare-workers-ai',providerModel:'gpt-image-1-mini'}),null);
+});

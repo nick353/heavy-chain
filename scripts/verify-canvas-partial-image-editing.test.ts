@@ -103,7 +103,7 @@ test('partial edit submit makes one four-candidate batch and refuses incomplete 
   assert.match(handler, /placement\.placed\.length !== 4/);
   assert.match(handler, /deleteObject\(objectId\)/);
   assert.match(handler, /candidates: placement\.placed\.map\(\(\{ candidate \}\) => candidate\)/);
-  assert.match(handler, /externalInpaintRequestCount: result\.provider === 'workers_ai' \? result\.requestedCandidateCount : 1/);
+  assert.match(handler, /externalInpaintRequestCount: result\.provider === 'workers_ai' \|\| result\.provider === 'openai' \? result\.requestedCandidateCount : 1/);
   assert.match(handler, /clientSubmissionCount:1/);
   assert.match(handler, /backendJobId: candidate\.jobId/);
   assert.match(handler, /backendImageId: candidate\.imageId/);

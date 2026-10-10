@@ -36,6 +36,18 @@ export async function prepareProtectedCloudflareEdit(body: Body) {
  * reads a deterministic private save before re-encoding anything; no model
  * invocation lives in this function. The caller keeps the provider ID until
  * its history/Canvas handoff is acknowledged. */
+/** The protected compositor accepts either image backend the server runs (OpenAI by default, Workers AI as fallback). */
+export function protectedEditProviderIdentity(receipt: Record<string, unknown>) {
+  if (receipt.provider === 'workers_ai' && receipt.backendProvider === 'cloudflare-workers-ai' && receipt.providerModel === CLOUDFLARE_IMAGE_MODEL) {
+    return { provider:'workers_ai',backendProvider:'cloudflare-workers-ai',providerModel:CLOUDFLARE_IMAGE_MODEL } as const;
+  }
+  if (receipt.provider === 'openai' && receipt.backendProvider === 'openai-images-api' &&
+      typeof receipt.providerModel === 'string' && /^gpt-image-[0-9a-z.-]+$/.test(receipt.providerModel)) {
+    return { provider:'openai',backendProvider:'openai-images-api',providerModel:receipt.providerModel } as const;
+  }
+  return null;
+}
+
 export async function finalizeProtectedCloudflareEdit(options: {
   prepared: Awaited<ReturnType<typeof prepareProtectedCloudflareEdit>>;
   receipt: ImageReceipt;
@@ -45,7 +57,8 @@ export async function finalizeProtectedCloudflareEdit(options: {
 }): Promise<ImageReceipt> {
   const { prepared,receipt } = options;
   const receiptPlan = receipt.protectedEdit;
-  if (receipt.provider !== 'workers_ai' || receipt.backendProvider !== 'cloudflare-workers-ai' || receipt.providerModel !== CLOUDFLARE_IMAGE_MODEL ||
+  const identity = protectedEditProviderIdentity(receipt as Record<string, unknown>);
+  if (!identity ||
       receipt.jobId !== `ai-${receipt.requestId}` || !record(receiptPlan) || Object.entries(prepared.plan).some(([k,v])=>receiptPlan[k] !== v) ||
       !Array.isArray(receipt.images) || receipt.images.length !== receipt.requestedCandidateCount) throw new Error('protected_edit_receipt_plan_mismatch');
   const images: Body[] = [];
@@ -70,7 +83,7 @@ export async function finalizeProtectedCloudflareEdit(options: {
         prompt:typeof prepared.body.prompt === 'string' ? prepared.body.prompt : null,sourceJobId:String(receipt.jobId),sourceStoragePath:null,
         imageAI:{ requestId:receipt.requestId,candidateIndex:index },
         metadata:{ ...metadata,protectedEdit:prepared.plan,protectedRegionComposited:true,maskApplied:true,
-          provider:'workers_ai',backendProvider:'cloudflare-workers-ai',providerModel:String(receipt.providerModel),
+          provider:identity.provider,backendProvider:identity.backendProvider,providerModel:identity.providerModel,
           providerRequestId:receipt.requestId,providerJobId:String(receipt.jobId),providerImageId:String(raw.imageId),providerStoragePath:String(raw.storagePath),
           batchId:String(receipt.jobId),candidateIndex:index,artifactRole:'protected-edit-final',outputSize:{width:composite.width,height:composite.height} } };
       try { saved = await options.save(input); }
@@ -81,7 +94,7 @@ export async function finalizeProtectedCloudflareEdit(options: {
       }
     }
     if (!saved.success || saved.remote?.imageId !== expectedImageId || saved.remote.storagePath !== expectedPath ||
-        saved.remote.jobId !== expectedImageId || saved.metadata?.provider !== 'workers_ai' || saved.metadata?.backendProvider !== 'cloudflare-workers-ai' || saved.metadata?.providerModel !== CLOUDFLARE_IMAGE_MODEL ||
+        saved.remote.jobId !== expectedImageId || saved.metadata?.provider !== identity.provider || saved.metadata?.backendProvider !== identity.backendProvider || saved.metadata?.providerModel !== identity.providerModel ||
         saved.metadata?.providerRequestId !== receipt.requestId || saved.metadata?.candidateIndex !== index ||
         !record(saved.metadata?.protectedEdit) || Object.entries(prepared.plan).some(([k,v])=>(saved!.metadata!.protectedEdit as Body)[k] !== v)) throw new Error('protected_edit_final_save_readback_mismatch');
     const query = new URLSearchParams({ bucket:'generated-images',path:expectedPath,expiresIn:'3600' });
