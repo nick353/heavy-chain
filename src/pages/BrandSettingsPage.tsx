@@ -104,6 +104,8 @@ export function BrandSettingsPage() {
     let cancelled = false;
     let objectUrl: string | null = null;
     const source = currentBrand?.logo_url ?? null;
+    // A failed load belongs to the previous URL; the stored media/v1 path itself is never an image URL.
+    setLogoLoadFailed(false);
     if (!source) {
       setLogoDisplayUrl(null);
       return () => { cancelled = true; };
@@ -341,9 +343,9 @@ export function BrandSettingsPage() {
           {/* Logo */}
           <div className="flex items-center gap-6 mb-8">
             <div className="w-24 h-24 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center overflow-hidden shadow-inner">
-              {(logoDisplayUrl || currentBrand.logo_url) && !logoLoadFailed ? (
+              {logoDisplayUrl && !logoLoadFailed ? (
                 <img 
-                  src={logoDisplayUrl || currentBrand.logo_url || undefined}
+                  src={logoDisplayUrl}
                   alt="Logo" 
                   className="w-full h-full object-cover"
                   onError={() => setLogoLoadFailed(true)}
