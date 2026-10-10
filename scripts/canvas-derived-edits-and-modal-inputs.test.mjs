@@ -60,3 +60,10 @@ test('canvas chat editor receives a resolved, readable image URL instead of the 
   assert.match(chat, /aria-label="送信"/);
   assert.match(chat, /text-neutral-900 placeholder:text-neutral-400/);
 });
+
+test('chat edits are recorded as chat-edit jobs and the floating toolbar is bounded by the canvas area', () => {
+  const chat = readFileSync(new URL('../src/components/ChatEditor.tsx', import.meta.url), 'utf8');
+  const toolbar = readFileSync(new URL('../src/components/canvas/FloatingToolbar.tsx', import.meta.url), 'utf8');
+  assert.match(chat, /editImageWithPrompt\(currentImage, plan\.instruction, currentBrand\.id, \{ rightsConfirmed: requestReadiness\.ready, featureType: 'chat-edit' \}\)/);
+  assert.match(toolbar, /minTop: toolbar\.parentElement\?\.getBoundingClientRect\(\)\.top \?\? 0/);
+});

@@ -168,7 +168,7 @@ export function ChatEditor({
 
       if (editing && currentImage) {
         // Edit existing image
-        result = await editImageWithPrompt(currentImage, plan.instruction, currentBrand.id, { rightsConfirmed: requestReadiness.ready });
+        result = await editImageWithPrompt(currentImage, plan.instruction, currentBrand.id, { rightsConfirmed: requestReadiness.ready, featureType: 'chat-edit' });
       } else {
         // Generate new image
         result = await generateImage(plan.instruction, currentBrand.id, {
