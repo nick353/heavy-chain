@@ -784,7 +784,7 @@ function AppRoutes() {
             sections={[
               {
                 heading: '連絡先',
-                body: '現在の問い合わせ先は contact@heavy-chain.app です。サービス名、ブランド名、対象URL、発生日時、画面や生成物の状況を添えて連絡してください。',
+                body: '現在の問い合わせ先は contact@heavychain.app です。サービス名、ブランド名、対象URL、発生日時、画面や生成物の状況を添えて連絡してください。',
               },
               {
                 heading: '不具合報告',
