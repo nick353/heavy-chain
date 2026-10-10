@@ -395,11 +395,12 @@ export function ChatEditor({
               setInput(e.target.value);
             }}
             placeholder={currentImage ? "編集内容を入力..." : "生成したい画像を説明..."}
-            className="flex-1 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="flex-1 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             disabled={isLoading}
           />
           <button
             type="submit"
+            aria-label="送信"
             disabled={!input.trim() || isLoading || !currentBrand}
             className="px-4 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >

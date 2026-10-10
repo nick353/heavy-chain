@@ -33,7 +33,7 @@ export function normalizeCanvasImageEditCandidates(
   const seenUrls = new Set<string>();
   const seenCandidateIndices = new Set<number>();
   let batchJobId = '';
-  const protectedBatch = result.provider === 'workers_ai' && result.protectedRegionComposited === true &&
+  const protectedBatch = (result.provider === 'workers_ai' || result.provider === 'openai') && result.protectedRegionComposited === true &&
     result.maskTreatment === PROTECTED_IMAGE_EDIT_MODE && typeof result.batchId === 'string' && !!result.batchId;
 
   return rawCandidates.flatMap((candidate, responseIndex) => {

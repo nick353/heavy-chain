@@ -100,7 +100,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={`
-                relative w-full ${sizes[size]} 
+                ui-modal-panel relative w-full ${sizes[size]} 
                 bg-white/90 dark:bg-surface-900/90 backdrop-blur-xl 
                 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/50 dark:border-surface-700
                 overflow-hidden flex flex-col max-h-[calc(100dvh-4rem)] sm:max-h-[calc(100dvh-6rem)] md:max-h-[calc(100dvh-8rem)] my-4

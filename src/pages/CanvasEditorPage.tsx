@@ -47,6 +47,7 @@ import {
   resolveLocalCanvasAsset,
 } from '../lib/canvasLocalAssets';
 import { assertCompletedImageEditResult, editImageWithPrompt, edgeFunctionErrorMessage } from '../lib/imageApi';
+import { runAdmissionLimitedTasks } from '../lib/admissionLimitedTasks';
 import {
   buildCanvasImageEditBatchProof,
   normalizeCanvasImageEditCandidates,
@@ -2663,7 +2664,9 @@ export function CanvasEditorPage() {
       ? (options.colors?.length ? options.colors : ['レッド', 'ネイビー', 'グリーン', 'イエロー']).slice(0, 4).map((color) => ({ label: color, prompt: `Change the color of the main garment to ${color}. ${keep}` }))
       : ['a different print or pattern', 'different trims and details', 'a different neckline and sleeve design', 'a different fabric texture']
         .map((direction, index) => ({ label: `バリエーション ${index + 1}`, prompt: `Create a design variation of the main garment with ${direction}${options.prompt ? ` (${options.prompt})` : ''}. Keep the model, pose, framing and background the same.` }));
-    const settled = await Promise.allSettled(requests.map((request) => edit(request.prompt, kind === 'colorize' ? 'canvas-colorize' : 'canvas-variations')));
+    // The image API admits only a few running jobs per user: cap concurrency and retry admission refusals.
+    // A refused admission creates no job, so each retry is a fresh request.
+    const settled = await runAdmissionLimitedTasks(requests.map((request) => () => edit(request.prompt, kind === 'colorize' ? 'canvas-colorize' : 'canvas-variations')));
     return { variations: settled.flatMap((entry, index) => entry.status === 'fulfilled' ? [{ imageUrl: entry.value, colorName: requests[index].label }] : []) };
   };
 
@@ -3341,6 +3344,28 @@ export function CanvasEditorPage() {
   };
 
   // Handle chat edit result
+  // The chat editor sends the selected image to the edit API, so it needs a readable URL,
+  // not the object's raw src (often a storage path or local asset key).
+  const [chatSelectedImageUrl, setChatSelectedImageUrl] = useState<string | undefined>(undefined);
+  const chatSelectedImageObject = sidePanel === 'chat' && selectedObject?.type === 'image' ? selectedObject : null;
+  const chatSelectedImageObjectRef = useRef(chatSelectedImageObject);
+  chatSelectedImageObjectRef.current = chatSelectedImageObject;
+  // Re-resolve only when the selected image itself changes, not when it is moved or resized.
+  const chatSelectedImageKey = chatSelectedImageObject ? `${chatSelectedImageObject.id}|${(chatSelectedImageObject as any).src ?? ''}` : '';
+  useEffect(() => {
+    const object = chatSelectedImageObjectRef.current;
+    if (!chatSelectedImageKey || !object) {
+      setChatSelectedImageUrl(undefined);
+      return;
+    }
+    let cancelled = false;
+    setChatSelectedImageUrl(undefined);
+    resolveCanvasObjectImageUrl(object)
+      .then((url) => { if (!cancelled) setChatSelectedImageUrl(url); })
+      .catch(() => { if (!cancelled) toast.error('選択中の画像を読み込めませんでした'); });
+    return () => { cancelled = true; };
+  }, [chatSelectedImageKey, resolveCanvasObjectImageUrl]);
+
   const handleChatEditResult = (imageUrl: string) => {
     addImageToCanvasSafely(imageUrl, '編集結果');
   };
@@ -3672,7 +3697,7 @@ export function CanvasEditorPage() {
         maskCoveragePercent: payload.maskCoveragePercent,
         maskWidth: payload.maskWidth,
         maskHeight: payload.maskHeight,
-        externalInpaintRequestCount: result.provider === 'workers_ai' ? result.requestedCandidateCount : 1,
+        externalInpaintRequestCount: result.provider === 'workers_ai' || result.provider === 'openai' ? result.requestedCandidateCount : 1,
         clientSubmissionCount:1,
         imageAICompletion:result.clientRecoveryKey ? { requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey } : null,
         requestedCandidateCount: result.requestedCandidateCount,
@@ -3863,7 +3888,7 @@ export function CanvasEditorPage() {
               provider,
               status,
               persistenceStatus: candidate.persistenceStatus,
-              externalInpaintRequestCount: result.provider === 'workers_ai' ? result.requestedCandidateCount : 1,
+              externalInpaintRequestCount: result.provider === 'workers_ai' || result.provider === 'openai' ? result.requestedCandidateCount : 1,
               clientSubmissionCount:1,
               imageAICompletion:result.clientRecoveryKey ? { requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey } : null,
               requestedCandidateCount: result.requestedCandidateCount,
@@ -4786,7 +4811,7 @@ export function CanvasEditorPage() {
                   )}
                   {sidePanel === 'chat' && (
                     <ChatEditor
-                      selectedImageUrl={selectedObject?.type === 'image' ? (selectedObject as any).src : undefined}
+                      selectedImageUrl={chatSelectedImageUrl}
                       heavyReadiness={{
                         ready: heavyGenerationReady,
                         reason: 'ログインとブランド設定が確認できれば画像編集を開始できます',

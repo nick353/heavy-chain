@@ -1736,3 +1736,11 @@
     top: 16px;
   }
 }
+
+/* Modal panels are light unless the document is in dark mode, but the glass inputs assume a dark surface
+   (white text). Without this, text typed into a modal's input or textarea is white on white. */
+html:not(.dark) .ui-modal-panel .input-field-glass {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(23, 23, 23, 0.12);
+  color: #171717;
+}
