@@ -336,19 +336,20 @@ function sharedImageContentURL(request: Request, token: string): string {
   return url.toString();
 }
 
+/**
+ * Anyone with the link can read this, so it carries only what the share page shows:
+ * prompts, generation parameters and metadata (source file names, storage paths) stay private.
+ */
 function sharedImagePayload(row: GeneratedImageRow, share: ShareLinkRow, request: Request): Record<string, unknown> {
+  const metadata = parseStored(row.metadata, {}) as Record<string, unknown>;
+  const projectTitle = typeof metadata.projectTitle === "string" ? metadata.projectTitle.trim().slice(0, 80) : "";
   return {
     success: true,
     image: {
       id: row.id,
       imageUrl: sharedImageContentURL(request, share.token),
-      prompt: row.prompt,
-      negativePrompt: row.negative_prompt,
+      title: projectTitle || null,
       featureType: row.feature_type,
-      stylePreset: row.style_preset,
-      modelUsed: row.model_used,
-      generationParams: parseStored(row.generation_params, {}),
-      metadata: parseStored(row.metadata, {}),
       createdAt: row.created_at,
     },
     share: {

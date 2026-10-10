@@ -184,13 +184,9 @@ export type CloudflareSharedImagePayload = {
   image?: {
     id: string;
     imageUrl: string;
-    prompt: string | null;
-    negativePrompt: string | null;
+    /** The project title, when one was set; the public payload carries no prompt or metadata. */
+    title: string | null;
     featureType: string | null;
-    stylePreset: string | null;
-    modelUsed: string | null;
-    generationParams: Json | null;
-    metadata: Json | null;
     createdAt: string;
   };
   share?: {

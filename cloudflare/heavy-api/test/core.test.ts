@@ -723,11 +723,14 @@ test("share links are opt-in, editor-created, expiry-bound, and serve private R2
   assert.equal(publicRead.status, 200);
   const publicPayload = await json<{
     success: boolean;
-    image: { imageUrl: string; prompt: string; metadata: { source: string } };
+    image: { imageUrl: string; title: string | null } & Record<string, unknown>;
     share: { token: string };
   }>(publicRead);
-  assert.equal(publicPayload.image.prompt, "studio shirt");
-  assert.equal(publicPayload.image.metadata.source, "share-test");
+  // Public readers get the image, never the prompt, parameters or metadata.
+  assert.equal(publicPayload.image.title, null);
+  for (const key of ["prompt", "negativePrompt", "generationParams", "metadata", "modelUsed", "stylePreset"]) {
+    assert.equal(key in publicPayload.image, false, key);
+  }
   assert.equal(publicPayload.share.token, createdPayload.token);
 
   const content = await handleRequest(new Request(publicPayload.image.imageUrl), environment);
