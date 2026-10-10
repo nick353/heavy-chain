@@ -1,4 +1,4 @@
-import type { FittingBatchReceipt, FittingBatchScope, FittingBatchTask } from './fittingBatch';
+import { fittingModeSummary, type FittingBatchReceipt, type FittingBatchScope, type FittingBatchTask } from './fittingBatch.ts';
 import type { FittingBatchExecution } from './fittingBatchRunner';
 import { listPendingIdentities } from './cloudflareImagePendingStore.ts';
 type Client = {
@@ -18,7 +18,7 @@ export function createFittingBatchExecution(client: Client, scope: FittingBatchS
       const settings = task.input.settings ?? {};
       return client.invokeProviderAction<FittingBatchReceipt>('model-matrix', {
         brandId: scope.brandId, generationProvider: 'openai', featureType: `lightchain-${scope.featureId}`,
-        productDescription: task.input.prompt || task.input.garmentName,
+        productDescription: fittingModeSummary(task.input.prompt || task.input.garmentName, task.input.mode),
         imageUrl: task.input.garment, modelReferenceImageUrl: task.input.model ?? undefined,
         // 'スマート' is the おまかせ default, not "slim".
         bodyTypes: [/痩せ|スリム/.test(String(settings.bodyType ?? '')) ? 'slim' : /プラス|肥満/.test(String(settings.bodyType ?? '')) ? 'plus' : 'regular'],
