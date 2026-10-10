@@ -39,7 +39,7 @@ import {
 import { AgentProfileDialog, AgentSidebar, useAgentProjects } from '../features/agent/AgentSidebar';
 import { AGENT_SCENES, createAgentTask, readAgentProfile, type AgentScene } from '../features/agent/agentTasks';
 import toast from 'react-hot-toast';
-import { addFittingBatchTask, removeFittingBatchTask, readFittingBatch, fittingBatchScopeKey, type FittingBatchTask } from '../lib/fittingBatch';
+import { addFittingBatchTask, removeFittingBatchTask, readFittingBatch, fittingBatchScopeKey, fittingModeSummary, type FittingBatchTask } from '../lib/fittingBatch';
 import { fittingBatchStorage, freezeFittingBatchImage } from '../lib/fittingBatchStorage';
 import { runFittingBatchTask, type FittingBatchExecution } from '../lib/fittingBatchRunner';
 import { createFittingBatchRuntime } from '../lib/fittingBatchRuntime';
@@ -2345,6 +2345,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         printScale,
         featureSettings: {
           autoConvertGarment: isFittingDetail ? autoConvertGarment : null,
+          fittingMode: isFittingDetail ? activeFittingMode : null,
           fittingTaskTab: isFittingDetail ? activeFittingTaskTab : null,
           fittingInputTab: isFittingDetail ? activeFittingInputTab : null,
           fittingAspectRatio: isFittingDetail ? fittingAspectRatio : null,
@@ -2493,6 +2494,20 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
   const fittingBatchCanExecute = Boolean(fittingBatchExecution || cloudflareDataPlane);
   const fittingBatchReady = fittingBatchLoadedScope === fittingBatchScope && Boolean(user?.id && currentBrand?.id);
   const visibleFittingBatchTasks = fittingBatchReady ? fittingBatchTasks : [];
+  // Receipt URLs expire, so a finished task's result is re-signed from its storage path for display.
+  const [fittingBatchResultUrls, setFittingBatchResultUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const unsigned = visibleFittingBatchTasks.filter(task => task.status === 'completed' && task.receipt?.images?.[0]?.storagePath && !fittingBatchResultUrls[task.id]);
+    if (!unsigned.length) return;
+    let cancelled = false;
+    void withSignedImageUrls(unsigned.map(task => ({ id: task.id, storage_path: task.receipt!.images![0].storagePath, image_url: '' })))
+      .then(signed => {
+        const urls = Object.fromEntries(signed.filter(item => item.image_url).map(item => [item.id, item.image_url]));
+        if (!cancelled && Object.keys(urls).length) setFittingBatchResultUrls(current => ({ ...current, ...urls }));
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [visibleFittingBatchTasks, fittingBatchResultUrls]);
   async function updateFittingBatch(removeId?: string, clear = false) {
     if (!fittingBatchReady || fittingBatchBusyRef.current || !user?.id || !currentBrand?.id) return;
     const scopeKey = fittingBatchScope;
@@ -3603,11 +3618,11 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       lightchainToolPanelConfig?.bottomControl ?? null,
       fabricPrompt.trim() || null,
     ].filter(Boolean).join(' / ');
-    const fittingSummary = [
+    const fittingSummary = fittingModeSummary([
       selectedTool.title,
       materialSlotFiles.primary?.name ?? '衣服画像',
       referenceNote.trim() || null,
-    ].filter(Boolean).join(' / ');
+    ].filter(Boolean).join(' / '), activeFittingMode);
     const modelSummary = selectedTool.id === 'fabric-image'
       ? fabricSummary
       : selectedTool.id === 'line-to-real'
@@ -5572,7 +5587,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
               </section>
             ) : activeFittingTaskTab === 'マルチタスク' ? (
               <section className="absolute inset-0 flex flex-col text-left" data-testid="lightchain-fitting-batch-panel">
-                <div className="flex items-center gap-3 border-b border-white/10 px-4 py-4">
+                <div className="flex items-center gap-3 border-b border-white/10 py-4 pl-4 pr-36">
                   <div className="flex flex-1 items-center gap-3">
                     <h2 className="text-lg font-semibold text-white">一括試着タスク（{visibleFittingBatchTasks.length}/8）</h2>
                     <span className="h-6 w-px bg-white/10" aria-hidden="true" />
@@ -5597,7 +5612,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                 {visibleFittingBatchTasks.length ? <div className="flex-1 overflow-y-auto p-4 space-y-3" data-testid="lightchain-fitting-batch-tasks">
                   {visibleFittingBatchTasks.map(task => <article key={task.id} className="flex items-center gap-3 rounded-xl border border-white/10 p-3">
                     <img src={task.input.garment} alt={task.input.garmentName || '衣服'} className="h-20 w-20 object-contain" />
-                    <div className="min-w-0 flex-1"><p>{task.input.garmentName}</p><p className="text-xs text-neutral-400">{task.input.mode} / {task.input.aspect} / {task.input.resolution}</p><p className="text-xs">{task.status === 'unknown' || task.status === 'saved' ? '結果の照合が必要です' : task.status === 'completed' ? '完了' : task.status === 'failed' ? '失敗（確定）' : task.status === 'pending' ? '実行中' : '保存済み・未実行'}</p></div>
+                    {fittingBatchResultUrls[task.id] && <a href={fittingBatchResultUrls[task.id]} target="_blank" rel="noreferrer" className="shrink-0"><img src={fittingBatchResultUrls[task.id]} alt={`${task.input.garmentName || 'タスク'}の生成結果`} className="h-20 w-16 rounded object-cover" data-testid="lightchain-fitting-batch-result" /></a>}
+                    <div className="min-w-0 flex-1"><p>{task.input.garmentName}</p><p className="text-xs text-neutral-400">{task.input.mode === 'underwear' ? '下着' : 'レギュラー'} / {task.input.aspect} / {task.input.resolution}</p><p className="text-xs">{task.status === 'unknown' || task.status === 'saved' ? '結果の照合が必要です' : task.status === 'completed' ? '完了' : task.status === 'failed' ? '失敗（確定）' : task.status === 'pending' || (fittingBatchBusy && task.status === 'ready') ? '実行中…' : '保存済み・未実行'}</p></div>
                     {fittingBatchCanExecute && (task.status === 'unknown' || task.status === 'saved') && <button type="button" disabled={fittingBatchBusy} onClick={() => void executeFittingBatch(task.id)}>結果を照合</button>}
                     <button type="button" aria-label={`${task.input.garmentName || 'タスク'}を削除`} disabled={fittingBatchBusy || task.status === 'pending' || task.status === 'unknown' || task.status === 'saved'} onClick={() => void updateFittingBatch(task.id)}>削除</button>
                   </article>)}
@@ -5611,7 +5627,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                       loading="lazy"
                     />
                   </div>
-                  <p className="text-sm text-neutral-400">ロット試着の任務はまだありません,先に左側から配置してください</p>
+                  <p className="text-sm text-neutral-400">一括試着タスクはまだありません。左側で設定して「追加」してください</p>
                   <p className="text-xs text-neutral-500">最大8つのタスクの追加をサポートします。</p>
                 </div>
                 )}
@@ -5623,9 +5639,9 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     data-testid="lightchain-fitting-batch-permission"
                     data-track-id="GENERATE_CLICK"
                     aria-label={visibleFittingBatchTasks.length ? (fittingBatchCanExecute ? "一括実行" : "一括実行は準備中です") : "タスクを追加してください"}
-                    className="inline-flex h-10 w-full max-w-60 flex-1 items-center justify-center gap-2 rounded-lg bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 opacity-40 transition-colors disabled:cursor-not-allowed"
+                    className="inline-flex h-10 w-full max-w-60 flex-1 items-center justify-center gap-2 rounded-lg bg-[#65d3cf] px-5 text-base font-medium text-neutral-950 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {visibleFittingBatchTasks.length ? (fittingBatchCanExecute ? "一括実行" : "一括実行は準備中です") : "タスクを追加してください"}
+                    {fittingBatchBusy ? "実行中…" : visibleFittingBatchTasks.length ? (fittingBatchCanExecute ? "一括実行" : "一括実行は準備中です") : "タスクを追加してください"}
                     <Sparkles className="size-4" aria-hidden="true" />
                   </button>
                 </div>

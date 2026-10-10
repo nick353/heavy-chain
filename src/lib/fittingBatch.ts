@@ -11,6 +11,11 @@ export type FittingBatchTask = {
   receipt?: FittingBatchReceipt;
 };
 export const FITTING_BATCH_LIMIT = 8;
+/** The 下着 mode changes what the model wears; without this line it would render the garment as ordinary outerwear. */
+export const UNDERWEAR_FITTING_INSTRUCTION = '下着モード: 衣服画像は下着・インナーとして扱い、モデルが素肌に直接着用した下着カタログ写真にする。上から他の服を重ね着させない。';
+export function fittingModeSummary(summary: string, mode: string) {
+  return mode === 'underwear' ? [summary, UNDERWEAR_FITTING_INSTRUCTION].filter(Boolean).join(' / ') : summary;
+}
 export const fittingBatchScopeKey = (scope: FittingBatchScope) => {
   if (!scope.userId || !scope.brandId || !scope.featureId) throw new Error('fitting_batch_scope_missing');
   return JSON.stringify([scope.userId, scope.brandId, scope.featureId]);
