@@ -39,6 +39,7 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
         toolbarHeight: toolbar.offsetHeight,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
+        minTop: toolbar.parentElement?.getBoundingClientRect().top ?? 0,
       }));
     };
     updatePosition();

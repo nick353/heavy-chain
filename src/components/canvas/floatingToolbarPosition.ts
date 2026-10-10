@@ -7,6 +7,7 @@ export const clampFloatingToolbarPosition = ({
   viewportHeight,
   margin = 8,
   verticalGap = 12,
+  minTop = 0,
 }: {
   anchorX: number;
   anchorY: number;
@@ -16,11 +17,14 @@ export const clampFloatingToolbarPosition = ({
   viewportHeight: number;
   margin?: number;
   verticalGap?: number;
+  /** Top edge of the canvas area; keeps the toolbar off the header and any banner above it. */
+  minTop?: number;
 }) => {
   const maximumLeft = Math.max(margin, viewportWidth - toolbarWidth - margin);
-  const maximumTop = Math.max(margin, viewportHeight - toolbarHeight - margin);
+  const minimumTop = Math.max(margin, minTop + margin);
+  const maximumTop = Math.max(minimumTop, viewportHeight - toolbarHeight - margin);
   return {
     left: Math.min(Math.max(margin, anchorX - toolbarWidth / 2), maximumLeft),
-    top: Math.min(Math.max(margin, anchorY - toolbarHeight - verticalGap), maximumTop),
+    top: Math.min(Math.max(minimumTop, anchorY - toolbarHeight - verticalGap), maximumTop),
   };
 };
