@@ -3344,6 +3344,28 @@ export function CanvasEditorPage() {
   };
 
   // Handle chat edit result
+  // The chat editor sends the selected image to the edit API, so it needs a readable URL,
+  // not the object's raw src (often a storage path or local asset key).
+  const [chatSelectedImageUrl, setChatSelectedImageUrl] = useState<string | undefined>(undefined);
+  const chatSelectedImageObject = sidePanel === 'chat' && selectedObject?.type === 'image' ? selectedObject : null;
+  const chatSelectedImageObjectRef = useRef(chatSelectedImageObject);
+  chatSelectedImageObjectRef.current = chatSelectedImageObject;
+  // Re-resolve only when the selected image itself changes, not when it is moved or resized.
+  const chatSelectedImageKey = chatSelectedImageObject ? `${chatSelectedImageObject.id}|${(chatSelectedImageObject as any).src ?? ''}` : '';
+  useEffect(() => {
+    const object = chatSelectedImageObjectRef.current;
+    if (!chatSelectedImageKey || !object) {
+      setChatSelectedImageUrl(undefined);
+      return;
+    }
+    let cancelled = false;
+    setChatSelectedImageUrl(undefined);
+    resolveCanvasObjectImageUrl(object)
+      .then((url) => { if (!cancelled) setChatSelectedImageUrl(url); })
+      .catch(() => { if (!cancelled) toast.error('選択中の画像を読み込めませんでした'); });
+    return () => { cancelled = true; };
+  }, [chatSelectedImageKey, resolveCanvasObjectImageUrl]);
+
   const handleChatEditResult = (imageUrl: string) => {
     addImageToCanvasSafely(imageUrl, '編集結果');
   };
@@ -4789,7 +4811,7 @@ export function CanvasEditorPage() {
                   )}
                   {sidePanel === 'chat' && (
                     <ChatEditor
-                      selectedImageUrl={selectedObject?.type === 'image' ? (selectedObject as any).src : undefined}
+                      selectedImageUrl={chatSelectedImageUrl}
                       heavyReadiness={{
                         ready: heavyGenerationReady,
                         reason: 'ログインとブランド設定が確認できれば画像編集を開始できます',

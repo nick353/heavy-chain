@@ -50,3 +50,13 @@ test('glass inputs inside a light modal panel get dark text instead of white-on-
   assert.match(modal, /ui-modal-panel relative w-full/);
   assert.match(css, /html:not\(\.dark\) \.ui-modal-panel \.input-field-glass \{[^}]*color: #171717;/);
 });
+
+test('canvas chat editor receives a resolved, readable image URL instead of the raw object src', () => {
+  const page = readFileSync(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
+  const chat = readFileSync(new URL('../src/components/ChatEditor.tsx', import.meta.url), 'utf8');
+  assert.match(page, /selectedImageUrl=\{chatSelectedImageUrl\}/);
+  assert.doesNotMatch(page, /selectedImageUrl=\{selectedObject\?\.type === 'image' \? \(selectedObject as any\)\.src/);
+  assert.match(page, /resolveCanvasObjectImageUrl\(object\)\s*\.then\(\(url\) => \{ if \(!cancelled\) setChatSelectedImageUrl\(url\)/);
+  assert.match(chat, /aria-label="送信"/);
+  assert.match(chat, /text-neutral-900 placeholder:text-neutral-400/);
+});
