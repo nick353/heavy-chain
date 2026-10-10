@@ -119,7 +119,7 @@ test('Lightchain AI fitting exposes the same library-first garment entry', () =>
   assert.match(lightchainWorkbench, /setActiveMaterialTab\('platform-assets'\)/);
   assert.match(lightchainWorkbench, /Gallery素材を選択/);
   assert.match(lightchainWorkbench, /const generationBrand = currentBrand \?\? await refreshCurrentBrand\(\)/);
-  assert.match(lightchainWorkbench, /const generationBrandId = authBrandFence\.brandId[\s\S]*generateModelMatrix\(generationSummary, generationBrandId/);
+  assert.match(lightchainWorkbench, /const generationBrandId = authBrandFence\.brandId[\s\S]*generateModelMatrix\(isFittingDetail \? fittingModeSummary\(generationSummary, activeFittingMode\) : generationSummary, generationBrandId/);
   assert.match(lightchainWorkbench, /async function prepareProviderImageUrl\(imageUrl\?: string\)/);
   assert.match(lightchainWorkbench, /const providerRequestImageUrl = await prepareProviderImageUrl\(providerSourceImageUrl\)/);
   assert.match(lightchainWorkbench, /imageUrl: providerRequestImageUrl/);

@@ -3618,11 +3618,12 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       lightchainToolPanelConfig?.bottomControl ?? null,
       fabricPrompt.trim() || null,
     ].filter(Boolean).join(' / ');
-    const fittingSummary = fittingModeSummary([
+    const fittingSummary = [
       selectedTool.title,
       materialSlotFiles.primary?.name ?? '衣服画像',
+      activeFittingMode === 'underwear' ? '下着' : null,
       referenceNote.trim() || null,
-    ].filter(Boolean).join(' / '), activeFittingMode);
+    ].filter(Boolean).join(' / ');
     const modelSummary = selectedTool.id === 'fabric-image'
       ? fabricSummary
       : selectedTool.id === 'line-to-real'
@@ -3779,7 +3780,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         const ageGroup = modelFormState.age.includes('30') ? '30s' : modelFormState.age.includes('40') ? '40s' : modelFormState.age.includes('50') ? '50s' : '20s';
         const gender = (modelFormState.gender || modelFormState.bodyGender).includes('男') ? 'male' : 'female';
           assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_before_provider');
-          const modelResult = await generateModelMatrix(generationSummary, generationBrandId, {
+          // The underwear instruction is for the provider only; the result card keeps the short summary.
+          const modelResult = await generateModelMatrix(isFittingDetail ? fittingModeSummary(generationSummary, activeFittingMode) : generationSummary, generationBrandId, {
           bodyTypes: [bodyType],
           ageGroups: [ageGroup],
           gender,
