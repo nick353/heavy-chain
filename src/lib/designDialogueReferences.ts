@@ -162,7 +162,10 @@ type Dependencies = {
   encodeImage?: (blob: Blob, mimeType: 'image/png' | 'image/jpeg' | 'image/webp') => Promise<string>;
   requestId?: () => string;
   publish?: (state: DesignDialogueReferenceState) => void;
+  restoreTimeoutMs?: number;
 };
+
+const DESIGN_DIALOGUE_RESTORE_TIMEOUT_MS = 20_000;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -716,17 +719,29 @@ export const createDesignDialogueReferenceController = (dependencies: Dependenci
 
     async restore(): Promise<DesignDialogueReferenceState> {
       const scope = requireScope();
+      const selected = (requestId: string) => references.some((reference) => reference.requestId === requestId);
+      const timeoutMs = dependencies.restoreTimeoutMs ?? DESIGN_DIALOGUE_RESTORE_TIMEOUT_MS;
       for (const reference of references.slice()) {
-        assertAttempt(scope, reference.requestId);
+        // A reference removed while an earlier one was recovering must not abort the rest.
+        assertAttempt(scope);
+        if (!selected(reference.requestId)) continue;
         setStatus(scope, reference.requestId, 'recovering');
+        let timer: ReturnType<typeof setTimeout> | undefined;
         try {
-          const context = await captureContext(scope, reference.requestId);
-          const receipt = await readExact(scope, reference.requestId, context);
+          const receipt = await Promise.race([
+            (async () => readExact(scope, reference.requestId, await captureContext(scope, reference.requestId)))(),
+            new Promise<never>((_, reject) => {
+              timer = setTimeout(() => reject(new Error('design_dialogue_reference_restore_timeout')), timeoutMs);
+            }),
+          ]);
           storeReceipt(scope, reference.requestId, receipt);
         } catch (error) {
           const live = dependencies.getCurrentScope();
           if (!active || !live || !sameScope(live, scope) || !currentScope || !sameScope(currentScope, scope)) throw error;
-          setStatus(scope, reference.requestId, 'failure', error);
+          // A stalled or failed recovery becomes a visible failure (retry/remove) instead of an endless pending state.
+          if (selected(reference.requestId)) setStatus(scope, reference.requestId, 'failure', error);
+        } finally {
+          if (timer !== undefined) clearTimeout(timer);
         }
       }
       return snapshot();
