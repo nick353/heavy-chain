@@ -46,7 +46,7 @@
     "AI_DAILY_ESTIMATED_NEURONS": "3000000",
     "AI_CONCURRENT_IMAGE_JOBS": "8",
     "AI_USER_CONCURRENT_IMAGE_JOBS": "3",
-    "PUBLIC_SHARE_ENABLED": "false",
+    "PUBLIC_SHARE_ENABLED": "true",
     "PUBLIC_APP_ORIGIN": "https://heavychain.app"
   }
 }

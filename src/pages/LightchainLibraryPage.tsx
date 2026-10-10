@@ -23,6 +23,7 @@ import {
 import { buildLightchainLibraryFeatureHref } from '../lib/lightchainLibraryHandoff';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { copyLibraryCanvasReference } from '../lib/libraryCanvasClipboard';
+import { createShareLink } from '../lib/imageApi';
 
 // Fixed views of the library. Light also lists the signed-in user's own asset
 // groups below these; Heavy lists the brand's folders from /v1/folders instead
@@ -161,6 +162,23 @@ export function LightchainLibraryPage() {
     } catch {
       try { assertCurrent(); toast.error('素材をコピーできませんでした'); } catch { /* A later scope owns the page. */ }
     } finally { if (boardCopyRef.current === operation) boardCopyRef.current = null; }
+  };
+  /** Public share links point at a saved generated image; they expire after 7 days. */
+  const handleCopyShareLink = async (card: LibraryCard) => {
+    const imageId = card.kind === 'remote' ? card.asset.remoteImageId
+      : typeof card.artifact.metadata.remoteImageId === 'string' ? card.artifact.metadata.remoteImageId : '';
+    if (!imageId) { toast.error('この素材はまだ保存されていないため共有できません'); return; }
+    const result = await createShareLink(imageId, 7);
+    if (!result.success || !result.shareUrl) {
+      toast.error(result.error === 'external_public_sharing_disabled' ? '共有リンクは現在使えません' : '共有リンクを作成できませんでした');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(result.shareUrl);
+      toast.success('共有リンクをコピーしました（7日間有効）');
+    } catch {
+      toast.success(`共有リンク: ${result.shareUrl}`);
+    }
   };
   const saveOperationRef = useRef<symbol | null>(null);
   useEffect(() => {
@@ -822,6 +840,7 @@ export function LightchainLibraryPage() {
                       {openMenuId === getCardId(card) && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); setSelectedAssetId(getCardId(card)); setDetailMode(true); setRenameValue(cardTitle(card)); setRenameOpen(true); }}>編集する</button>
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); void handleCopyToBoard(card); }}>キャンバスをコピー</button>
+                          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); void handleCopyShareLink(card); }}>共有リンクをコピー</button>
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setOpenMenuId(null); setSelectedAssetId(getCardId(card)); setDownloadFormat('png'); setDownloadOpen(true); }}>ダウンロード</button>
                           <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => { setOpenMenuId(null); setPendingDelete({ card, label: `「${cardTitle(card)}」` }); }}>削除</button>
                         </div>}
