@@ -1,6 +1,5 @@
 import { normalizeCloudflareGeneratedImageStoragePath, normalizeGeneratedImageStoragePath } from './storagePathSafety';
 import { cloudflareDataPlane, type HeavyGenerationConsent } from './cloudflareApi';
-import type { Json } from '../types/database';
 import type { HeavyGenerationPreflight } from './heavyGenerationPreflight';
 export { assertCompletedImageEditResult, assertCompletedModelMatrixResult } from './providerResultReadback';
 
@@ -128,13 +127,9 @@ export interface SharedImagePayload {
   image?: {
     id: string;
     imageUrl: string;
-    prompt: string | null;
-    negativePrompt: string | null;
+    /** The project title, when one was set; the public payload carries no prompt or metadata. */
+    title: string | null;
     featureType: string | null;
-    stylePreset: string | null;
-    modelUsed: string | null;
-    generationParams: Json | null;
-    metadata: Json | null;
     createdAt: string;
   };
   share?: {

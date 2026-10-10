@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowUpRight, ImageOff, Loader2 } from 'lucide-react';
 import { HeavyChainLogo } from '../components/icons';
 import { getSharedImage, type SharedImagePayload } from '../lib/imageApi';
-import { buildSourceContextSummaryRows, displaySourceSummaryLabel } from '../lib/sourceContextSummary';
 
 const formatDateTime = (value: string | null | undefined) => {
   if (!value) return '未設定';
@@ -42,11 +41,6 @@ export function SharedImagePage() {
       mounted = false;
     };
   }, [token]);
-
-  const summaryRows = useMemo(
-    () => buildSourceContextSummaryRows(payload?.image?.metadata),
-    [payload?.image?.metadata],
-  );
 
   const image = payload?.image;
   const hasError = !isLoading && (!payload?.success || !image);
@@ -87,12 +81,12 @@ export function SharedImagePage() {
         ) : (
           <div className="relative grid w-full max-w-[1120px] gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
             <section className="flex min-h-[360px] items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-[#25292b] p-3">
-              <img src={image?.imageUrl ?? ''} alt={image?.prompt ?? '共有された画像'} className="max-h-[calc(100vh-150px)] w-full rounded-lg object-contain" />
+              <img src={image?.imageUrl ?? ''} alt={image?.title || '共有された画像'} className="max-h-[calc(100vh-150px)] w-full rounded-lg object-contain" />
             </section>
 
             <aside className="flex flex-col rounded-xl border border-white/10 bg-[#202426] p-4 text-sm">
               <p className="text-xs text-neutral-400">共有された画像</p>
-              {image?.prompt && <h1 className="mt-2 text-base font-medium leading-6 text-white">{image.prompt}</h1>}
+              <h1 className="mt-2 text-base font-medium leading-6 text-white">{image?.title || 'Heavy Chainで作成した画像'}</h1>
 
               {details.length > 0 && (
                 <dl className="mt-4 divide-y divide-white/10 rounded-lg bg-black/20">
@@ -105,19 +99,6 @@ export function SharedImagePage() {
                 </dl>
               )}
 
-              {summaryRows.length > 0 && (
-                <div className="mt-4">
-                  <h2 className="text-xs text-neutral-400">生成条件</h2>
-                  <dl className="mt-2 space-y-2">
-                    {summaryRows.map((row) => (
-                      <div key={`${row.label}-${row.value}`} className="rounded-lg bg-black/20 px-3 py-2">
-                        <dt className="text-[11px] text-neutral-500">{displaySourceSummaryLabel(row.label)}</dt>
-                        <dd className="mt-0.5 text-xs leading-5 text-neutral-200">{row.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              )}
 
               <div className="mt-auto flex flex-col gap-2 pt-6">
                 <Link to="/designProduction" className="inline-flex h-10 items-center justify-center rounded-lg bg-[#20d0c4] text-sm font-medium text-neutral-950 transition hover:brightness-110">

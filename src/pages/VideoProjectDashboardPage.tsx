@@ -5,6 +5,7 @@ import { MoreVertical } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import {
   deleteWorkspaceArtifactsPersisted,
+  getWorkspaceArtifactCanonicalStoragePath,
   listWorkspaceArtifacts,
   saveWorkspaceArtifactBestEffort,
 } from '../lib/localWorkspaceArtifacts';
@@ -15,6 +16,7 @@ import {
 } from '../lib/videoDashboardProjects';
 import { getVideoProjectCodeFromArtifact } from '../lib/videoWorkspacePersistence';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { withSignedImageUrls } from '../lib/storage';
 
 type VideoProject = VideoDashboardProject;
 
@@ -52,8 +54,35 @@ export function VideoProjectDashboardPage() {
   const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
   const [pinnedProjectIds, setPinnedProjectIds] = useState<Set<string>>(new Set());
   const [pinsHydrated, setPinsHydrated] = useState(false);
+  // Server-saved drafts keep no inline pixels locally; their covers are signed from the storage path.
+  const [signedCovers, setSignedCovers] = useState<Record<string, string>>({});
+  const savedArtifacts = brandId ? listWorkspaceArtifacts(brandId, userId).filter((artifact) => artifact.featureType === 'video-workstation') : [];
+  const savedProjects = buildSavedVideoDashboardProjects(savedArtifacts).map((project) => (
+    project.imageUrl ? project : { ...project, imageUrl: signedCovers[project.id] }
+  ));
+  const unsignedCoverKey = savedProjects.filter((project) => !project.imageUrl).map((project) => project.id).join('|');
+  useEffect(() => {
+    if (!unsignedCoverKey) return;
+    let active = true;
+    const pending = savedArtifacts.flatMap((artifact) => {
+      const id = getVideoProjectCodeFromArtifact(artifact) || artifact.id;
+      const storagePath = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
+      return unsignedCoverKey.split('|').includes(id) && storagePath ? [{ id, storagePath }] : [];
+    });
+    if (!pending.length) return;
+    void withSignedImageUrls(pending.map((item) => ({ storage_path: item.storagePath, image_url: '' }))).then((rows) => {
+      if (!active) return;
+      setSignedCovers((current) => ({
+        ...current,
+        ...Object.fromEntries(pending.flatMap((item, index) => rows[index]?.image_url ? [[item.id, rows[index].image_url as string]] : [])),
+      }));
+    }).catch(() => { /* Cards keep their placeholder when signing is unavailable. */ });
+    return () => { active = false; };
+    // savedArtifacts is re-read each render; the key captures what needs signing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unsignedCoverKey, brandId, userId]);
   const recentProjects = buildRecentVideoDashboardProjects(
-    brandId ? buildSavedVideoDashboardProjects(listWorkspaceArtifacts(brandId, userId)) : [],
+    savedProjects,
     projects.filter((project) => !project.reference),
   );
 
