@@ -42,7 +42,7 @@ import {
   type WorkspaceArtifactPersistenceResult,
 } from '../lib/localWorkspaceArtifacts';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
-import { matchesVideoProjectArtifact, shouldHydrateVideoSourceImage } from '../lib/videoWorkspacePersistence';
+import { compactVideoMetadataImage, isRasterDataUrl, matchesVideoProjectArtifact, rasterSourceDataUrl, shouldHydrateVideoSourceImage } from '../lib/videoWorkspacePersistence';
 import { projectNameFromFile } from '../lib/projectNames';
 
 /** Shown to users while no video provider is connected; it never falls back to image generation. */
@@ -150,7 +150,6 @@ const initialMaterialReference: MaterialReferenceState = {
 
 const VIDEO_GUIDE_DISMISSED_STORAGE_KEY = 'heavy-chain-video-guide-dismissed';
 const VIDEO_SOURCE_EDITOR_VERSION = 'video-source-editor-parity-v1';
-const VIDEO_PERSISTED_DATA_URL_LIMIT = 1_500_000;
 const LIGHTCHAIN_VIDEO_MAIN_IMAGE = '/lightchain-assets/mirror/static-jp/c914c5010e17ca8f3bdbdb93ae2088fc-ea2376f8.webp';
 const LIGHTCHAIN_VIDEO_REFERENCE_IMAGE = '/lightchain-assets/mirror/static-jp/73e4af273bd3f306c8ed549efd3a7cb5-25a93659.webp';
 const LIGHTCHAIN_VIDEO_SOURCE_RESULT = '/lightchain-assets/mirror/static-jp/c44b4aecfba3ddee5a37d94925b4f40d-b039d6f5.jpg';
@@ -436,7 +435,9 @@ export function VideoWorkstationPage() {
   }, [currentBrand?.id, user?.id, videoDraftArtifactId, videoProjectCode]);
 
   useEffect(() => {
-    const savedSourceImage = readVideoMetadataString(persistedVideoDraft, 'videoSourceImageUrl');
+    // Large uploads live in the draft's own image rather than its metadata.
+    const savedSourceImage = readVideoMetadataString(persistedVideoDraft, 'videoSourceImageUrl')
+      || (isRasterDataUrl(persistedVideoDraft?.imageUrl) ? persistedVideoDraft.imageUrl : '');
     if (!shouldHydrateVideoSourceImage(materialReference.imageUrl, savedSourceImage, LIGHTCHAIN_VIDEO_MAIN_IMAGE)) return;
     setMaterialReference((current) => ({
       ...current,
@@ -591,17 +592,10 @@ export function VideoWorkstationPage() {
     }
   };
 
-  const buildVideoEditorArtifactInput = (values: VideoSourceEditorPersistedState): WorkspaceArtifactInput | null => {
+  const buildVideoEditorArtifactInput = (values: VideoSourceEditorPersistedState, sourceImageDataUrl: string): WorkspaceArtifactInput | null => {
     if (!currentBrand?.id) return null;
     const generationIntent = buildVideoEditorGenerationIntent(videoProjectCode, values.editPrompt);
-    const persistedReferencePreview = values.referencePreview.startsWith('data:')
-      && values.referencePreview.length <= VIDEO_PERSISTED_DATA_URL_LIMIT
-      ? values.referencePreview
-      : '';
-    const persistedSourceImage = materialReference.imageUrl.startsWith('data:')
-      && materialReference.imageUrl.length > VIDEO_PERSISTED_DATA_URL_LIMIT
-      ? ''
-      : materialReference.imageUrl;
+    const persistedReferencePreview = compactVideoMetadataImage(values.referencePreview);
     const artifactId = videoDraftArtifactId
       ?? persistedVideoDraft?.id
       ?? (!hasExistingVideoProject ? newVideoDraftId : undefined);
@@ -611,8 +605,8 @@ export function VideoWorkstationPage() {
       scopeId: user?.id,
       featureType: 'video-workstation',
       title: projectNameFromFile(materialReference.fileName),
-      // Library and dashboard cards show the uploaded garment; the storyboard sketch stays in metadata.
-      imageUrl: persistedSourceImage && !persistedSourceImage.startsWith('blob:') ? persistedSourceImage : previewImageUrl,
+      // The uploaded garment is the saved image (the API takes raster images only); the storyboard sketch stays in metadata.
+      imageUrl: sourceImageDataUrl,
       prompt: values.editPrompt,
       metadata: {
         ...(persistedVideoDraft?.metadata ?? {}),
@@ -625,9 +619,9 @@ export function VideoWorkstationPage() {
         videoReferenceName: values.referenceName,
         videoReferencePreview: persistedReferencePreview,
         videoReferencePreviewTruncated: Boolean(values.referencePreview && !persistedReferencePreview),
-        videoSourceImageUrl: persistedSourceImage,
+        videoSourceImageUrl: compactVideoMetadataImage(materialReference.imageUrl),
         videoSourceFileName: materialReference.fileName,
-        videoStoryboardPreview: previewImageUrl,
+        videoStoryboardPreview: compactVideoMetadataImage(previewImageUrl),
         sourceWorkspace: 'video',
         sourceLabel: 'Video Workstation',
         sourceResumePath: '/flow/GenerateShortVideo/detail',
@@ -651,7 +645,9 @@ export function VideoWorkstationPage() {
   const persistVideoEditorBestEffort = async (
     values: VideoSourceEditorPersistedState,
   ): Promise<WorkspaceArtifactPersistenceResult> => {
-    const input = buildVideoEditorArtifactInput(values);
+    const sourceImageDataUrl = await rasterSourceDataUrl(materialReference.imageUrl);
+    if (!sourceImageDataUrl) return { ok: false, error: new Error('video_source_image_unavailable') };
+    const input = buildVideoEditorArtifactInput(values, sourceImageDataUrl);
     if (!input) return { ok: false, error: new Error('video_workspace_brand_not_ready') };
     const result = await saveWorkspaceArtifactBestEffort(input);
     if (!result.localPersisted) {
