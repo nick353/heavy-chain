@@ -10,7 +10,7 @@ import { isHeavyWorkspaceBrandName, isHeavyWorkspaceRuntime } from '../lib/heavy
  * (images, cover, name, extracted elements, status) is read back from the server after reload.
  */
 export const CUSTOM_STYLE_KIND = 'lightchain-custom-style';
-const CONTACT_EMAIL = 'contact@heavy-chain.app';
+const CONTACT_EMAIL = 'contact@heavychain.app';
 const ANALYSIS_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const MAX_ANALYSIS_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_ANALYSIS_TOTAL_BYTES = 30 * 1024 * 1024;
