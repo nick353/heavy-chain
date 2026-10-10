@@ -215,7 +215,8 @@ export default function HeavyAgentTaskPage() {
   const task = doc?.task ?? null;
   const plan = task?.plan?.state === 'completed' && task.plan.content ? parsePlanResponse(task.plan.content) : null;
   const done = Boolean(task?.image?.state === 'completed');
-  const statusLabel = !task ? '' : done ? '完了' : task.choice ? '作成中' : task.rounds.at(-1)?.step.state === 'completed' ? '確認待ち' : '調査中';
+  const stepFailed = (state?: string) => state === 'failed' || state === 'unknown';
+  const statusLabel = !task ? '' : done ? '完了' : stepFailed(task.plan?.state) || stepFailed(task.image?.state) ? '失敗' : task.choice ? '作成中' : task.rounds.at(-1)?.step.state === 'completed' ? '確認待ち' : '調査中';
 
   return (
     <main className="dark flex h-[calc(100vh-50px)] min-h-full bg-[#171b1c] text-white" data-testid="agent-task-page"

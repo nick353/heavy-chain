@@ -388,3 +388,15 @@ test('with an Anthropic key the design consultation answers with Claude (image b
   const row = s.row(body.requestId) as Record<string, unknown>;
   assert.equal(row.provider, 'anthropic'); assert.equal(row.state, 'completed');
 });
+
+test('the provider call and its write are kept alive with waitUntil, so leaving the page does not abandon the request', async t => {
+  const s = setup(); t.after(() => s.db.sql.close()); const body = input();
+  const kept: Promise<unknown>[] = [];
+  const response = await handleRequest(new Request('https://api.test/v1/design-assistant/requests', {
+    method: 'POST', headers: { authorization: 'Bearer alice', origin: 'https://heavy.test', 'content-type': 'application/json' }, body: JSON.stringify(body),
+  }), s.env, { waitUntil: (promise: Promise<unknown>) => { kept.push(promise); } });
+  assert.equal(response.status, 200);
+  assert.equal(kept.length, 1);
+  await kept[0];
+  assert.equal(s.row(body.requestId)?.state, 'completed');
+});
