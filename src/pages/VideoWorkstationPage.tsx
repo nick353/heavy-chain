@@ -35,6 +35,7 @@ import {
   type GenerationIntent,
 } from '../lib/workspaceHandoff';
 import {
+  getWorkspaceArtifactCanonicalStoragePath,
   listWorkspaceArtifacts,
   saveWorkspaceArtifactBestEffort,
   type WorkspaceArtifact,
@@ -42,6 +43,7 @@ import {
   type WorkspaceArtifactPersistenceResult,
 } from '../lib/localWorkspaceArtifacts';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { withSignedImageUrls } from '../lib/storage';
 import { compactVideoMetadataImage, isRasterDataUrl, matchesVideoProjectArtifact, rasterSourceDataUrl, shouldHydrateVideoSourceImage } from '../lib/videoWorkspacePersistence';
 import { projectNameFromFile } from '../lib/projectNames';
 
@@ -435,15 +437,27 @@ export function VideoWorkstationPage() {
   }, [currentBrand?.id, user?.id, videoDraftArtifactId, videoProjectCode]);
 
   useEffect(() => {
-    // Large uploads live in the draft's own image rather than its metadata.
+    // Large uploads live in the draft's own image rather than its metadata; a server-saved
+    // draft keeps no inline pixels locally, so its source is signed from the storage path.
     const savedSourceImage = readVideoMetadataString(persistedVideoDraft, 'videoSourceImageUrl')
       || (isRasterDataUrl(persistedVideoDraft?.imageUrl) ? persistedVideoDraft.imageUrl : '');
-    if (!shouldHydrateVideoSourceImage(materialReference.imageUrl, savedSourceImage, LIGHTCHAIN_VIDEO_MAIN_IMAGE)) return;
-    setMaterialReference((current) => ({
-      ...current,
-      imageUrl: savedSourceImage,
-      fileName: readVideoMetadataString(persistedVideoDraft, 'videoSourceFileName') || current.fileName,
-    }));
+    const storagePath = persistedVideoDraft ? getWorkspaceArtifactCanonicalStoragePath(persistedVideoDraft.metadata) : null;
+    const fileName = readVideoMetadataString(persistedVideoDraft, 'videoSourceFileName');
+    const apply = (imageUrl: string) => setMaterialReference((current) => (
+      shouldHydrateVideoSourceImage(current.imageUrl, imageUrl, LIGHTCHAIN_VIDEO_MAIN_IMAGE)
+        ? { ...current, imageUrl, fileName: fileName || current.fileName }
+        : current
+    ));
+    if (savedSourceImage) {
+      if (shouldHydrateVideoSourceImage(materialReference.imageUrl, savedSourceImage, LIGHTCHAIN_VIDEO_MAIN_IMAGE)) apply(savedSourceImage);
+      return;
+    }
+    if (!storagePath || !shouldHydrateVideoSourceImage(materialReference.imageUrl, storagePath, LIGHTCHAIN_VIDEO_MAIN_IMAGE)) return;
+    let active = true;
+    void withSignedImageUrls([{ storage_path: storagePath, image_url: '' }])
+      .then(([row]) => { if (active && row?.image_url) apply(row.image_url); })
+      .catch(() => { /* The editor keeps its placeholder when signing is unavailable. */ });
+    return () => { active = false; };
   }, [materialReference.imageUrl, persistedVideoDraft]);
 
   const recordProgress = (choice: string) => {
