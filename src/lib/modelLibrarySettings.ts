@@ -95,12 +95,15 @@ function resetModelLibraryBody(value: ModelLibrarySettings, height: string): Mod
   return { ...value, height, ...Object.fromEntries(MODEL_BODY_MEASUREMENTS.map(({ key }) => [key, String(profile[key][0])])) };
 }
 
+/** 'スマート' is the stored "let the AI choose" value; sent as-is, 体型: スマート reads as "slim". */
+const promptOption = (option: unknown) => option === 'スマート' ? 'おまかせ（指定なし）' : String(option);
+
 export function modelLibrarySettingsPrompt(value: unknown): string {
   const settings = readModelLibrarySettings(value);
   if (!settings) throw new Error('model_library_settings_unavailable');
   return settings.inputMode === 'label'
     ? ['入力モード: ラベル', `性別: ${settings.gender}`, `ハーフ: ${settings.half ? 'オン' : 'オフ'}`,
-      `年齢: ${settings.age}`, `国籍: ${settings.nationality}`, `肌の色: ${settings.skinColor}`, `体型: ${settings.bodyType}`].join('\n')
+      `年齢: ${promptOption(settings.age)}`, `国籍: ${promptOption(settings.nationality)}`, `肌の色: ${promptOption(settings.skinColor)}`, `体型: ${promptOption(settings.bodyType)}`].join('\n')
     : ['入力モード: カスタム', `性別: ${settings.customGender}`, `身長: ${settings.height}`,
       ...MODEL_BODY_MEASUREMENTS.map(({ key, label }) => `${label}: ${settings[key]}cm`),
       `顔の参考程度: ${settings.customSimilarity}`,

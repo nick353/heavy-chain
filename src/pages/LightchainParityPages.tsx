@@ -2434,12 +2434,67 @@ export function LightchainOrientedDesignPage() {
   );
 }
 
+// Light's two reference cases: the example images (reference + main -> result) shown read-only, with a way to start a new file.
+const ORIENTED_DESIGN_REFERENCE_CASES = {
+  'デザイン要素融合': {
+    note: '参考画像のデザイン要素をメイン画像の服に融合した事例です。',
+    images: [
+      { src: '/lightchain-assets/mirror/lightchain-qlxy-test/cae9b142c24f1137fd4a66111ef7e583-cdf58a79.webp', label: '参考画像' },
+      { src: '/lightchain-assets/mirror/lightchain-qlxy-test/37cb1e7e309c3e3edf4870678b8625e0-e2383695.webp', label: 'メイン画像' },
+      { src: '/lightchain-assets/mirror/lightchain-qlxy-test/6a1d37284e65c215fe6fcd1994972a78-5902ed6b.webp', label: '生成結果' },
+    ],
+  },
+  'ディテール変更': {
+    note: '指示テキストで服のディテールを変更した事例です。',
+    images: [{ src: '/lightchain-assets/oriented-design/reference-2.webp', label: '生成結果' }],
+  },
+} as const;
+type OrientedDesignReferenceCaseName = keyof typeof ORIENTED_DESIGN_REFERENCE_CASES;
+
+export function orientedDesignReferenceCase(search: string): OrientedDesignReferenceCaseName | null {
+  const params = new URLSearchParams(search);
+  const code = params.get('boardProjectCode') ?? '';
+  return params.get('boardProjectType') === 'orientedDesignSystem' && code in ORIENTED_DESIGN_REFERENCE_CASES ? code as OrientedDesignReferenceCaseName : null;
+}
+
+function OrientedDesignReferenceCaseBoard({ referenceCase }: { referenceCase: OrientedDesignReferenceCaseName }) {
+  const navigate = useNavigate();
+  const { note, images } = ORIENTED_DESIGN_REFERENCE_CASES[referenceCase];
+  return (
+    <main className="dark relative min-h-[calc(100vh-50px)] overflow-hidden bg-[#181a1d] text-white" data-testid="oriented-design-reference-case" data-reference-case={referenceCase}>
+      <div className="pointer-events-none absolute inset-0 opacity-70" style={{ backgroundImage: 'radial-gradient(#464b50 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+      <aside className="absolute left-4 top-6 z-10 flex h-[84px] w-[264px] flex-col gap-y-2 overflow-hidden rounded-xl border border-white/10 bg-[#202426] p-2 text-neutral-200 shadow-xl">
+        <div className="text-sm text-neutral-400"><img src={ORIENTED_DESIGN_PROJECT_ICON} alt="" className="mr-1 inline-block size-5 rounded object-contain" />ウェアデザインラボ</div>
+        <div className="h-px w-full bg-white/10" />
+        <button type="button" onClick={() => navigate('/flow/orientedDesign')} className="flex w-fit items-center gap-2 text-base text-neutral-400 transition hover:text-white">
+          <ChevronLeft className="h-5 w-5" /><span className="rounded-sm px-1 py-1">{referenceCase}</span>
+        </button>
+      </aside>
+      <section className="relative z-0 mx-auto flex min-h-[calc(100vh-50px)] max-w-5xl flex-col items-center justify-center gap-6 px-6 pt-28 pb-10">
+        <p className="text-sm text-neutral-300">{note}</p>
+        <div className="flex flex-wrap items-start justify-center gap-5">
+          {images.map((image) => (
+            <figure key={image.src} className="w-[200px] overflow-hidden rounded-xl border border-white/10 bg-white shadow-2xl">
+              <img src={image.src} alt={`${referenceCase}の${image.label}`} className="aspect-[3/4] w-full object-cover" />
+              <figcaption className="bg-[#202426] px-3 py-2 text-xs text-neutral-300">{image.label}</figcaption>
+            </figure>
+          ))}
+        </div>
+        <button type="button" onClick={() => navigate('/flow/orientedDesign/detail?workspaceFeature=wear-design-lab')} className="rounded-lg bg-[#10c8c0] px-5 py-2 text-sm font-semibold text-neutral-950 hover:bg-[#2fd8d0]" data-testid="oriented-design-reference-start">新規ファイルで試す</button>
+      </section>
+    </main>
+  );
+}
+
 export function LightchainOrientedDesignDetailPage() {
   const location=useLocation(),explicitFeature=new URLSearchParams(location.search).get('workspaceFeature');
   const toolId=explicitFeature==='wear-design-lab'?'wear-design-lab':'wear-design-detail';
   const workspace = useCanonicalImageWorkspace(toolId,{identityConflict:explicitFeature!==null&&explicitFeature!=='wear-design-lab'&&explicitFeature!=='wear-design-detail'});
   const imageUrl = workspace.result?.imageUrl ?? workspace.slots.primary?.imageUrl;
   const navigate = useNavigate();
+  const referenceCase = orientedDesignReferenceCase(location.search);
+
+  if (referenceCase) return <OrientedDesignReferenceCaseBoard referenceCase={referenceCase} />;
 
   return (
     <main className="dark relative min-h-[calc(100vh-50px)] overflow-hidden bg-[#181a1d] text-white" data-testid="oriented-design-detail" data-lightchain-parity-shell="oriented-design-detail"

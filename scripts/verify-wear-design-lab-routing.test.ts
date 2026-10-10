@@ -111,7 +111,8 @@ test('actual project card reopens its saved job and drops the previous candidate
 
 for(const [index,code] of [[0,'デザイン要素融合'],[1,'ディテール変更']] as const)test(`actual reference card ${index+1} opens the ${code} example board`,async()=>{
   const f=await fixture(`${home}?workspaceFeature=wear-design-lab&reference=99&project=7&resumeJob=same#reference`);
-  try{await f.click(f.card('reference',index));const l=f.location();assert.equal(l.pathname,detail);assert.equal(l.params.get('boardProjectCode'),code);assert.equal(l.params.get('boardProjectType'),'orientedDesignSystem');assert.equal(l.params.get('reference'),null);}finally{await f.unmount();}
+  try{await f.click(f.card('reference',index));const l=f.location();assert.equal(l.pathname,detail);assert.equal(l.params.get('boardProjectCode'),code);assert.equal(l.params.get('boardProjectType'),'orientedDesignSystem');assert.equal(l.params.get('reference'),null);
+    const board=f.nodes().find(n=>n.props['data-testid']==='oriented-design-reference-case');assert(board,'example board renders');assert.equal(board.props['data-reference-case'],code);}finally{await f.unmount();}
 });
 for(const feature of ['fashion-studio','wear-design-detail',''])test(`explicit conflicting feature ${JSON.stringify(feature)} blocks all actual lab cards without rewriting route or clearing conflict`,async()=>{
   const f=await fixture(`${home}?workspaceFeature=${feature}&resumeJob=foreign#conflict`);
@@ -138,3 +139,4 @@ test('Library Continue keeps exact pre-existing workspace.continueHref',async()=
   const f=await fixture(`${home}?libraryArtifactId=image-proof`,{primary:{sourceImageId:'image-proof'}});
   try{await f.click(f.nodes().find(n=>n.props['data-testid']==='lightchain-wear-library-continue')!);const l=f.location();assert.equal(l.pathname,'/existing-continue');assert.equal(l.params.toString(),'keep=exact');assert.equal(l.hash,'#unchanged');}finally{await f.unmount();}
 });
+
