@@ -1744,3 +1744,21 @@ html:not(.dark) .ui-modal-panel .input-field-glass {
   border-color: rgba(23, 23, 23, 0.12);
   color: #171717;
 }
+
+/* Narrow screens: the design workspace is pixel-matched to a 960px desktop layout; let it fit the viewport instead
+   of overflowing (centred content was cut off on the left and could not be scrolled to). Desktop is unchanged. */
+@media (max-width: 1023px) {
+  .design-production-parity [data-testid="design-dialogue-tabpanel"] { left: 0; width: 100%; transform: none; }
+  .design-production-parity [data-design-dialogue-editor] { width: 100%; }
+  .design-production-parity [data-design-dialogue-prompt] { width: calc(100% - 167px); }
+  .design-production-parity [data-design-dialogue-error] { max-width: calc(100% - 160px); }
+  .design-production-parity [data-testid="design-dialogue-scenes"] { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .design-production-parity [data-design-tablist] > [role="tab"]:first-child,
+  .design-production-parity [data-design-tablist] > [role="tab"]:last-child { width: auto; padding: 4px 14px; font-size: 15px; }
+}
+
+/* Library cards keep their image area on every screen width (the ratio was only set at >=1024px, so phones showed no thumbnails). */
+.asset-center-parity .asset-center-card-media { aspect-ratio: 0.79024; }
+@media (max-width: 1023px) {
+  .asset-center-parity { height: auto; overflow: visible; }
+}
