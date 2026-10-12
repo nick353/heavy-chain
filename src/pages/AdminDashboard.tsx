@@ -301,7 +301,7 @@ export function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl mb-8 w-fit shadow-inner">
+        <div className="flex max-w-full gap-1 overflow-x-auto p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl mb-8 w-fit shadow-inner">
           {[
             { id: 'overview', label: '概要' },
             { id: 'users', label: 'ユーザー' },
@@ -320,7 +320,7 @@ export function AdminDashboard() {
                 }
               }}
               className={`
-                px-4 py-2 text-sm font-medium rounded-lg transition-all
+                shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg transition-all
                 ${activeTab === tab.id
                   ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'

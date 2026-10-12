@@ -747,6 +747,8 @@ export function LightchainLibraryPage() {
     toast.success('ローカル成果物を削除しました');
   };
 
+  const libraryGroups = [...SYSTEM_LIBRARY_GROUPS.map((group) => ({ id: group as string, name: group as string, type: null as LibraryAssetType | null })), ...folders];
+
   return (
     <div className="asset-center-parity min-h-[calc(100vh-70px)] bg-[#222627] text-white">
       <div className="flex min-h-[calc(100vh-70px)] w-full gap-0">
@@ -764,7 +766,7 @@ export function LightchainLibraryPage() {
             <button type="button" aria-label="アセットグループを新規作成" className="rounded p-0.5 text-neutral-200 hover:bg-white/10" onClick={() => setNewGroupOpen(true)}><FolderPlus className="h-5 w-5" /></button>
           </div>
           <div className="asset-center-library-groups flex flex-col gap-4 px-4 pt-4">
-          {[...SYSTEM_LIBRARY_GROUPS.map((group) => ({ id: group, name: group, type: null as LibraryAssetType | null })), ...folders].map((group) => (
+          {libraryGroups.map((group) => (
             <button key={group.id} type="button" aria-current={activeGroup === group.id ? 'page' : undefined} onClick={() => { setActiveGroup(group.id); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`asset-center-library-group flex h-8 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition ${activeGroup === group.id ? 'border-l-2 border-[#5ec4bd] bg-white/[0.12] text-white' : 'text-neutral-200 hover:bg-white/[0.06] hover:text-white'}`}>
               {group.type ? <LibraryTypeIcon type={group.type} /> : group.id === 'ウェアデザインラボ生成結果' ? <LibraryTypeIcon type="media" /> : <History className="h-4 w-4" />}
               <span className="truncate">{group.name}</span>
@@ -795,6 +797,14 @@ export function LightchainLibraryPage() {
               </button>
             </div>
           </div>
+
+          {/* The group sidebar is desktop-only; narrow screens switch groups here. */}
+          <nav aria-label="ライブラリーのグループ" data-testid="library-mobile-groups" className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            {libraryGroups.map((group) => (
+              <button key={group.id} type="button" aria-current={activeGroup === group.id ? 'page' : undefined} onClick={() => { setActiveGroup(group.id); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`shrink-0 whitespace-nowrap rounded-lg border px-3 py-1.5 text-sm ${activeGroup === group.id ? 'border-white/20 bg-[#4b5152] text-white' : 'border-white/10 text-neutral-300'}`}>{group.name}</button>
+            ))}
+            <button type="button" aria-label="ライブラリーを検索" aria-expanded={librarySearchOpen} className="flex shrink-0 items-center rounded-lg border border-white/10 px-3 py-1.5 text-neutral-300" onClick={() => setLibrarySearchOpen((current) => !current)}><Search className="h-4 w-4" /></button>
+          </nav>
 
           <div className="asset-center-toolbar flex flex-wrap items-center justify-between gap-3">
             {librarySearchOpen && <div className="flex flex-wrap items-center gap-2">

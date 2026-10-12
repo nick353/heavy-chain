@@ -4996,7 +4996,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         {/* The fitting layout fills the viewport, so the running/error notice floats over it instead of pushing the panels down. The containers clip rather than hide overflow: the
             header row can be wider than the 432px input panel, and an overflow-hidden box can still be scrolled sideways by focus. */}
         <div className="pointer-events-none absolute right-4 top-14 z-40 w-[360px] [&>*]:pointer-events-auto [&>*]:mt-0">{renderLightchainProviderGate()}</div>
-        <div className="relative grid h-[calc(100vh-50px)] min-h-[calc(100vh-50px)] overflow-clip lg:grid-cols-[432px_minmax(0,1fr)]">
+        <div className="relative grid min-h-[calc(100vh-50px)] grid-cols-[minmax(0,1fr)] lg:h-[calc(100vh-50px)] lg:overflow-clip lg:grid-cols-[432px_minmax(0,1fr)]">
           <section className="flex h-full min-h-0 flex-col overflow-clip border-r border-white/10 bg-transparent" data-testid="lightchain-fitting-input-flow">
             <div className="flex min-h-12 items-center border-b border-white/10 px-4 py-2">
               <p className="shrink-0 text-[14px] font-semibold leading-6 text-white">AIフィッティング</p>
@@ -6519,7 +6519,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         data-workflow-retry-policy={workflowRetryPolicy}
         data-workflow-rights-gate={workflowRightsGate}
       >
-        <section className="grid min-h-[calc(100vh-102px)] gap-4 xl:grid-cols-[296px_minmax(0,1fr)_420px]">
+        <section className="grid min-h-[calc(100vh-102px)] grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[296px_minmax(0,1fr)_420px]">
           {renderLightchainProviderGate()}
           <aside className="self-start mt-4 h-[84px] overflow-hidden rounded-xl border border-white/10 bg-[#151a1d] p-2 shadow-xl">
             <button
@@ -7007,7 +7007,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             </div>
           </section>
         ) : (
-          <section className="grid gap-4 lg:grid-cols-[84px_596px_minmax(0,1fr)]" data-testid="lightchain-print-design-workbench">
+          <section className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[84px_596px_minmax(0,1fr)]" data-testid="lightchain-print-design-workbench">
             <aside className="hidden rounded-2xl border border-neutral-800 bg-neutral-900/90 p-3 lg:block">
               <div className="flex flex-col items-center gap-5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-200">
@@ -7343,7 +7343,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             </div>
           </section>
         ) : (
-          <section className="grid gap-4 lg:grid-cols-[84px_596px_minmax(0,1fr)]" data-testid="lightchain-wear-design-workbench">
+          <section className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[84px_596px_minmax(0,1fr)]" data-testid="lightchain-wear-design-workbench">
             <aside className="hidden rounded-2xl border border-neutral-800 bg-neutral-900/90 p-3 lg:block">
               <div className="flex flex-col items-center gap-5">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-200">
@@ -7539,7 +7539,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         data-workflow-retry-policy={workflowRetryPolicy}
         data-workflow-rights-gate={workflowRightsGate}
       >
-        <div className="grid gap-4 lg:grid-cols-[84px_minmax(0,1fr)]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[84px_minmax(0,1fr)]">
           <aside className="hidden rounded-2xl border border-neutral-800 bg-neutral-900/90 p-3 lg:block">
             <div className="flex flex-col items-center gap-5">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-200">
@@ -7678,7 +7678,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                 </div>
                 <button type="button" onClick={() => setMaterialModalOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-500 transition hover:bg-neutral-100 dark:hover:bg-neutral-800">閉じる</button>
               </div>
-              <div className="grid gap-4 p-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 lg:grid-cols-[220px_minmax(0,1fr)]">
                 <div className="space-y-2">
                   {materialTabs.map((tab) => (
                     <button
@@ -7964,7 +7964,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             </p>
           )}
 
-          <div className={isFeatureDetail ? `${isLightParityTallDetail ? 'relative -top-5 h-[746px] ' : ''}grid gap-4 ${isModelToolDetail ? 'lg:grid-cols-[432px_minmax(0,1fr)]' : 'lg:grid-cols-[596px_minmax(0,1fr)]'}` : 'grid gap-5 xl:grid-cols-[1fr_420px]'}>
+          <div className={isFeatureDetail ? `${isLightParityTallDetail ? 'relative -top-5 lg:h-[746px] ' : ''}grid grid-cols-[minmax(0,1fr)] gap-4 ${isModelToolDetail ? 'lg:grid-cols-[432px_minmax(0,1fr)]' : 'lg:grid-cols-[596px_minmax(0,1fr)]'}` : 'grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[1fr_420px]'}>
             {!isFeatureDetail && (
             <section className="space-y-4">
               <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
@@ -8354,7 +8354,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                         </span>
                       </div>
                     </div>
-                    <div className="grid gap-4 p-4 xl:grid-cols-[340px_minmax(0,1fr)]">
+                    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 xl:grid-cols-[340px_minmax(0,1fr)]">
                       <div className="space-y-4">
                         <div className="rounded-[26px] border border-white/10 bg-white/[0.025] p-4">
                           <div className="mb-3 flex items-center justify-between">

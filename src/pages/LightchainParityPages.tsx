@@ -1205,7 +1205,7 @@ export function LightchainMarketingHomePage() {
           </div>
         </div>
         <div className="relative flex w-full flex-col items-center gap-4 overflow-hidden" aria-label="おすすめのシーン">
-          <div className={`flex w-full items-center justify-center gap-4 rounded-xl ${tourRing('scenes')}`} data-tour="marketing-scenes">
+          <div className={`flex w-full items-center justify-start gap-4 overflow-x-auto rounded-xl lg:justify-center ${tourRing('scenes')}`} data-tour="marketing-scenes">
             <span className="whitespace-nowrap text-base font-medium text-neutral-500">おすすめのシーン 👉</span>
             <div className="flex items-center gap-2">
               {marketingSceneCards.map((sceneCard) => (
