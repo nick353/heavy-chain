@@ -22,10 +22,19 @@ test('design workspace and library fit narrow screens without changing the deskt
   assert.match(library, /data-testid="library-mobile-groups" className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden"/);
   const parity = read('src/pages/LightchainParityPages.tsx');
   assert.match(parity, /justify-start gap-4 overflow-x-auto rounded-xl lg:justify-center/);
+  assert.match(parity, /w-\[1392px\] max-w-full flex-col items-center gap-y-6 pt-\[70px\] max-lg:px-4/);
 });
 
 test('admin tabs stay on one scrollable line on phones', () => {
   const admin = read('src/pages/AdminDashboard.tsx');
   assert.match(admin, /flex max-w-full gap-1 overflow-x-auto p-1/);
   assert.match(admin, /shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg/);
+});
+
+test('fixed-width scene cards and the fitting-mode notice do not overflow phones', () => {
+  const css = read('src/index.css');
+  assert.match(css, /design-dialogue-scenes"\] > button \{ width: 100%; \}/);
+  assert.match(css, /\n\.asset-center-parity \.asset-center-bulk-button \{ display: inline-flex; align-items: center; gap: 8px; \}/);
+  const page = read('src/pages/LightchainWorkbenchPage.tsx');
+  assert.match(page, /flex h-9 w-\[388px\] max-md:hidden/);
 });
