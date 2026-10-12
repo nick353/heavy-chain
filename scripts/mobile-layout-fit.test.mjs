@@ -38,3 +38,10 @@ test('fixed-width scene cards and the fitting-mode notice do not overflow phones
   const page = read('src/pages/LightchainWorkbenchPage.tsx');
   assert.match(page, /flex h-9 w-\[388px\] max-md:hidden/);
 });
+
+test('canvas stage container can shrink when the recovery banner appears above it', () => {
+  const canvas = read('src/pages/CanvasEditorPage.tsx');
+  // Without min-h-0 the flex item keeps the Konva stage's earlier height, pushing the bottom actions off-screen.
+  assert.match(canvas, /<div ref=\{containerRef\} className="flex-1 min-h-0 relative bg-\[#050808\]">/);
+  assert.match(canvas, /<main className="flex-1 flex flex-col relative overflow-hidden">/);
+});
