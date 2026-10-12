@@ -1165,7 +1165,7 @@ export function LightchainMarketingHomePage() {
     <ParityShell className="relative h-full overflow-y-auto overflow-x-hidden bg-[#171b1c] pr-1 text-white" workflowFeature="marketing-home">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[170px] bg-[radial-gradient(ellipse_40%_100%_at_6%_0%,rgba(72,186,160,0.34),transparent_70%),radial-gradient(ellipse_45%_90%_at_96%_0%,rgba(74,84,214,0.42),transparent_70%),radial-gradient(ellipse_30%_70%_at_62%_0%,rgba(120,70,160,0.16),transparent_70%)]" />
       {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-[#202527] p-2.5 text-base leading-4 text-neutral-300"><Sparkles className="h-4 w-4" />{remainingUnits.toLocaleString()}</div>}
-      <div data-testid="lightchain-marketing-home" className="relative z-[2] mx-auto flex w-[1392px] max-w-full flex-col items-center gap-y-6 pt-[70px]">
+      <div data-testid="lightchain-marketing-home" className="relative z-[2] mx-auto flex w-[1392px] max-w-full flex-col items-center gap-y-6 pt-[70px] max-lg:px-4">
         <div className="flex w-full flex-col items-center gap-6">
           <div className="flex flex-col items-center gap-3">
             <h1 className="w-full text-center text-[34px] font-medium leading-10">マーケティングワークスペースへようこそ</h1>

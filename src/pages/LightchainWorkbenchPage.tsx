@@ -5693,7 +5693,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             <div
               role="status"
               data-testid="lightchain-fitting-mode-notice"
-              className="pointer-events-none absolute top-[5px] z-30 flex h-9 w-[388px] items-center rounded-full bg-[#8debe5] px-4 text-[14px] font-medium leading-5 text-[#162323] shadow-xl before:absolute before:-left-2 before:top-1/2 before:-translate-y-1/2 before:border-y-[10px] before:border-y-transparent before:border-r-[14px] before:border-r-[#8debe5]"
+              className="pointer-events-none absolute top-[5px] z-30 flex h-9 w-[388px] max-md:hidden items-center rounded-full bg-[#8debe5] px-4 text-[14px] font-medium leading-5 text-[#162323] shadow-xl before:absolute before:-left-2 before:top-1/2 before:-translate-y-1/2 before:border-y-[10px] before:border-y-transparent before:border-r-[14px] before:border-r-[#8debe5]"
               style={{ left: activeFittingMode === 'regular' ? 284 : 227 }}
             >
               <span className="truncate">🎉下着のモードを増やして、クリックして試してみましょう!</span>
