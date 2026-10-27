@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowRight,
+  ArrowLeft,
+  Download,
   Search,
+  Share2,
+  Sparkles,
   X,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import {
   buildLightchainFeatureHref,
   getLightchainLauncherBadge,
@@ -495,6 +499,14 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
     ));
   }, [galleryItems, gallerySearchTerm]);
 
+  // A shared 事例 link (?case=<id>) opens that case, like Light's share button.
+  const sharedCaseId = searchParams.get('case');
+  useEffect(() => {
+    if (!sharedCaseId) return;
+    const match = galleryItems.find((item) => item.id === sharedCaseId);
+    if (match) setSelectedCase(match);
+  }, [sharedCaseId, galleryItems]);
+
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
     setActiveCategory(categoryId);
     const nextParams = new URLSearchParams(searchParams);
@@ -674,34 +686,71 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
         </div>
       </section>
 
-      {selectedCase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={selectedCase.title}>
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/15 bg-[#111416] p-6 shadow-2xl sm:p-8">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <span className="text-xs font-semibold text-cyan-200">Heavy Chain 事例</span>
-                <h2 className="mt-2 text-xl font-semibold leading-8 text-white">{selectedCase.title}</h2>
-              </div>
-              <button type="button" onClick={() => setSelectedCase(null)} aria-label="閉じる" className="rounded-full p-2 text-neutral-400 hover:bg-white/10 hover:text-white">
-                <X className="h-5 w-5" />
+      {selectedCase && (() => {
+        // Light's 事例 viewer (measured signed in, 2026-10-28): a full-screen page with 戻る, download / share at the
+        // top-right of the image, the image centred, and a right panel with the title, an AI note, the description,
+        // 実現ステップ (feature tag + steps) and 同じもの作成.
+        const caseFeature = lightchainFeatureCatalog.find((feature) => feature.id === selectedCase.featureId) ?? lightchainFeatureCatalog[0];
+        const downloadCase = async () => {
+          if (!selectedCase.imageUrl) return;
+          try {
+            const response = await fetch(selectedCase.imageUrl);
+            if (!response.ok) throw new Error('case_image_unavailable');
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `${selectedCase.title}.${blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg'}`;
+            anchor.click();
+            URL.revokeObjectURL(url);
+          } catch {
+            toast.error('画像をダウンロードできませんでした');
+          }
+        };
+        const shareCase = async () => {
+          const url = `${window.location.origin}${window.location.pathname}?case=${encodeURIComponent(selectedCase.id)}`;
+          try { await navigator.clipboard.writeText(url); toast.success('リンクをコピーしました'); }
+          catch { toast.error('リンクをコピーできませんでした'); }
+        };
+        return (
+          <div className="fixed inset-0 z-50 flex bg-[#0a0d0e] text-white" role="dialog" aria-modal="true" aria-label={selectedCase.title} data-testid="case-viewer">
+            <div className="relative flex min-w-0 flex-1 items-center justify-center p-10">
+              <button type="button" onClick={() => setSelectedCase(null)} className="absolute left-8 top-6 inline-flex items-center gap-1.5 text-sm text-white/85 hover:text-white">
+                <ArrowLeft className="h-4 w-4" />戻る
               </button>
+              <div className="absolute right-6 top-6 flex items-center gap-2">
+                <button type="button" aria-label="ダウンロード" title="ダウンロード" disabled={!selectedCase.imageUrl} onClick={() => void downloadCase()} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.12] text-white hover:bg-white/20 disabled:opacity-40"><Download className="h-5 w-5" /></button>
+                <button type="button" aria-label="共有" title="共有" onClick={() => void shareCase()} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white hover:bg-white/10"><Share2 className="h-5 w-5" /></button>
+              </div>
+              {selectedCase.videoUrl ? (
+                <video src={selectedCase.videoUrl} controls autoPlay muted playsInline className="max-h-[calc(100vh-160px)] max-w-full rounded object-contain" />
+              ) : selectedCase.imageUrl ? (
+                <img src={selectedCase.imageUrl} alt={selectedCase.title} className="max-h-[calc(100vh-160px)] max-w-full object-contain" />
+              ) : null}
             </div>
-            <p className="mt-5 text-sm leading-7 text-neutral-300">{selectedCase.description}</p>
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-              <p className="text-xs font-semibold text-neutral-400">実現ステップ</p>
-              <p className="mt-2 text-sm leading-6 text-white">{selectedCase.step}</p>
-            </div>
-            <Link
-              to={buildLauncherFeatureHref(lightchainFeatureCatalog.find((feature) => feature.id === selectedCase.featureId) ?? lightchainFeatureCatalog[0])}
-              onClick={() => setSelectedCase(null)}
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
-            >
-              同じもの作成
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <aside className="flex w-[352px] shrink-0 flex-col border-l border-white/10 bg-[#1f2324]">
+              <div className="border-b border-white/10 px-6 pb-4 pt-8">
+                <h2 className="text-lg font-semibold leading-7 text-white">{selectedCase.title}</h2>
+                <p className="mt-1 text-xs text-white/45">コンテンツはAIによって生成されます</p>
+                <p className="mt-3 text-sm leading-6 text-white/70">{selectedCase.description}</p>
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5">
+                <p className="text-base font-semibold text-white">実現ステップ</p>
+                <span className="mt-4 w-fit rounded bg-[#5fd0c8]/15 px-2 py-0.5 text-sm text-[#5fd0c8]">{getLightchainLauncherTitle(caseFeature)}</span>
+                <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white/80">{selectedCase.step}</p>
+                <Link
+                  to={buildLauncherFeatureHref(caseFeature)}
+                  onClick={() => setSelectedCase(null)}
+                  className="mt-6 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-[#13c4b8] text-sm font-medium text-slate-950 transition hover:brightness-105"
+                >
+                  同じもの作成
+                  <Sparkles className="h-4 w-4" />
+                </Link>
+              </div>
+            </aside>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
