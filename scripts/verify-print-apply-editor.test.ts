@@ -80,3 +80,12 @@ test('the draft keeps the garment from before 適用, so a reload never treats t
   assert.match(page, /persistPrintInputState\(currentBrand\.id,draftGarment,designs,/);
   assert.match(page, /if\(!printApplied\)applyGarmentRef\.current=referenceImage;/);
 });
+
+test('garments and prints uploaded on the printing page are kept in the library 履歴アップロード, like Light', () => {
+  const history = readFileSync(new URL('../src/lib/libraryUploadHistory.ts', import.meta.url), 'utf8');
+  assert.match(history, /featureType: 'lightchain-library-upload'/);
+  assert.match(history, /libraryGroup: '履歴アップロード'/);
+  assert.match(page, /void recordLibraryUpload\(\{brandId:currentBrand\.id,userId:user\?\.id,file\}\)/);
+  // Draft restores never record again (they go through workspace.upload only).
+  assert.equal((page.match(/recordLibraryUpload\(/g) ?? []).length, 2);
+});
