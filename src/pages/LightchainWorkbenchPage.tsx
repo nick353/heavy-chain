@@ -6234,6 +6234,12 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                 ) : (
                   <textarea
                     value={workspaceText}
+                    onKeyDown={(event) => {
+                      // Light: Enter sends, Shift+Enter breaks the line (IME composition is left alone).
+                      if (workspaceStyle.kind !== 'agent' || event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+                      event.preventDefault();
+                      if (!specialProviderGenerationLocked && workspaceText.trim()) void handleWorkspaceStyleGenerate();
+                    }}
                     onChange={(event) => {
                       const nextValue = event.target.value;
                       setWorkspaceText(nextValue);
@@ -6287,8 +6293,10 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                   className={`${workspaceStyle.kind === 'agent' ? 'absolute right-3 bottom-3 top-auto flex h-10 w-10' : 'relative flex h-11 w-11'} items-center justify-center rounded-full bg-[#0d6261] text-[rgba(0,0,0,0.5)] transition hover:bg-[#65d3cf] hover:text-neutral-950`}
                   aria-label={workspaceStyle.kind === 'agent' ? '送信' : 'AI生成'}
                 >
-                  <ArrowRight className="h-5 w-5 -rotate-45" />
+                  {/* Light's agent composer sends with an upward arrow. */}
+                  <ArrowRight className={`h-5 w-5 ${workspaceStyle.kind === 'agent' ? '-rotate-90' : '-rotate-45'}`} />
                 </button>
+                {workspaceStyle.kind === 'agent' && <span aria-hidden="true" className="pointer-events-none absolute bottom-[22px] right-16 text-xs text-[#6f7c7a]">Enterで送信・Shift+Enterで改行</span>}
               </div>
               {workspaceStyle.kind === 'agent' && (
                 <div className="flex h-12 w-full flex-none items-start gap-2 px-3 py-2">
@@ -6360,7 +6368,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
               </div>
             )}
 
-            {workspaceStyle.kind === 'agent' && (
+            {/* Light shows nothing under the quick starts until something has been sent. */}
+            {workspaceStyle.kind === 'agent' && (lightchainResult || lightchainGenerationError || lightchainGenerationRunning) && (
               <section
                 className="order-5 mx-auto mt-4 w-[720px] flex-none pb-8 max-[1120px]:w-[min(720px,calc(100%-32px))]"
                 data-testid="lightchain-agent-result"
@@ -7154,7 +7163,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       >
         <section className="mx-auto max-w-[1180px]">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-base font-semibold text-white">ウェアデザインラボ</h1>
+            <h1 className="text-base font-semibold text-white">マイプロジェクト</h1>
             <button
               type="button"
               onClick={handleProjectHomeGenerate}

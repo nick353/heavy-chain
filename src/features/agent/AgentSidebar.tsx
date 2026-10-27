@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Folder, FolderPlus, MessageSquareText, PanelLeft, PanelLeftClose, Search, Sparkles, X } from 'lucide-react';
+import { ChevronDown, ClipboardList, Folder, FolderPlus, MessageSquareText, PanelLeft, PanelLeftClose, Search, Sparkles, X } from 'lucide-react';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
 import { useAuthStore } from '../../stores/authStore';
 import { addAgentProject, listAgentTasks, readAgentProfile, readAgentProjects, writeAgentProfile, type AgentTaskDocument } from './agentTasks';
@@ -167,7 +167,7 @@ export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, on
         <div className="mt-2 h-px w-full bg-white/10" />
         <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="mt-[16.65625px] flex h-6 items-center justify-between text-base font-medium leading-5 text-neutral-400">
-            <button type="button" aria-label="最近" onClick={() => setProjectFilter(null)} className="flex h-6 items-center gap-1">{projectFilter ? `‹ ${projectFilter}` : '最近'}</button>
+            <button type="button" aria-label="最近" onClick={() => setProjectFilter(null)} className="flex h-6 items-center gap-1">{projectFilter ? `‹ ${projectFilter}` : <>最近<ChevronDown aria-hidden="true" className="h-3.5 w-3.5" /></>}</button>
             <button type="button" aria-label="新規ファイル" aria-haspopup="dialog" onClick={() => setProjectOpen(true)} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-neutral-300 hover:bg-white/10"><FolderPlus className="h-4 w-4" /></button>
           </div>
           {!projectFilter && projects.length > 0 && <div className="mt-3 space-y-0" data-testid="agent-projects">

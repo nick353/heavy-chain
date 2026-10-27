@@ -17,7 +17,8 @@ export const GRAPHIC_STRENGTH_LEVELS = ['弱', 'やや弱', '中', 'やや強', 
 type StrengthIndex = 0 | 1 | 2 | 3 | 4;
 const DEFAULT_STRENGTH: StrengthIndex = 2;
 const MAX_REFERENCES = 2;
-const GRAPHIC_VIDEO = '/lightchain-assets/mirror/lightchain-qlxy-prod/print-on-body.mp4';
+// Light's AIグラフィックデザイン plays its own demo (図案設計), not the プリントイメージ one.
+const GRAPHIC_VIDEO = '/lightchain-assets/mirror/lightchain-qlxy-prod/graphic-design.mp4';
 
 const readStrengths = (value: unknown): [StrengthIndex, StrengthIndex] => {
   const list = Array.isArray(value) ? value : [];

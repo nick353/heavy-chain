@@ -713,7 +713,8 @@ export function FashionStudioPage() {
         )}
         <section className="w-full">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="text-base font-semibold text-white">ファッションスタジオ</h1>
+            {/* Light titles this board マイプロジェクト (re-measured 2026-10-28). */}
+            <h1 className="text-base font-semibold text-white">マイプロジェクト</h1>
           </div>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
             <div
