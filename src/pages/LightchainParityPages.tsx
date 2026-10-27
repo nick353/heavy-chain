@@ -2419,7 +2419,7 @@ export function LightchainOrientedDesignPage() {
   return (
     <ParityShell workflowFeature="wear-design-lab" className="oriented-design-parity">
       <div className="oriented-design-content">
-        <h6 className="oriented-design-title">ウェアデザインラボ</h6>
+        <h6 className="oriented-design-title">マイプロジェクト</h6>
         {workspace.jobId&&<main className="mb-6 rounded-xl border border-white/10 bg-[#202426] p-4" data-testid="oriented-design-resume"
           data-resume-job={workspace.result?.jobId??''} data-resume-state={workspace.status} data-resume-feature={workspace.toolId} data-resume-inputs={String(workspace.originalInputsAvailable)}>
           {workspace.result&&<img src={workspace.result.imageUrl} alt="保存されたウェア画像" className="h-40 w-full object-contain" />}

@@ -136,7 +136,7 @@ function LightchainLabBoardParity() {
   return (
     <main className="lightchain-lab-source-board" data-testid="lightchain-lab-source-board" data-resume-job={workspace.result?.jobId ?? ''} data-resume-state={workspace.status} data-resume-inputs={String(workspace.originalInputsAvailable)}>
       <div role="alert" aria-live="polite" className="sr-only" />
-      <h6 className="lightchain-lab-source-title">Heavy Chain Lab</h6>
+      <h6 className="lightchain-lab-source-title">マイプロジェクト</h6>
       <section className="lightchain-lab-source-new-section" aria-label="新規ファイル">
         <div onClick={() => navigate('/flow/laboratory/detail')} className="lightchain-lab-source-new-card cursor-pointer" data-testid="lightchain-lab-new-card" data-track-id="laboratory:project-card">
           <img className="lightchain-lab-source-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
