@@ -74,3 +74,9 @@ test('after 適用 only the composed garment is sent, so prints that were not pl
   assert.match(page, /sendSecondary:sendPrintReference/);
   assert.match(page, /useEffect\(\(\)=>\{setSendPrintReference\(!printApplied\);\},\[printApplied\]\);/);
 });
+
+test('the draft keeps the garment from before 適用, so a reload never treats the composite as the garment', () => {
+  assert.match(page, /const draftGarment=printApplied&&applyGarmentRef\.current\?applyGarmentRef\.current:referenceImage;/);
+  assert.match(page, /persistPrintInputState\(currentBrand\.id,draftGarment,designs,/);
+  assert.match(page, /if\(!printApplied\)applyGarmentRef\.current=referenceImage;/);
+});
