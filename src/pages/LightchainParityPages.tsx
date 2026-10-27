@@ -53,6 +53,7 @@ import { generateImage } from '../lib/imageApi';
 import { persistPrintInputState, restorePrintInputState, updatePrintInputCoverage } from '../lib/printInputPersistence';
 import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls';
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
+import { recordLibraryUpload } from '../lib/libraryUploadHistory';
 import { MAX_PRINTS, PrintApplyEditor, type PrintApplyEditorState, type PrintEditorPrint } from '../components/lightchain/PrintApplyEditor';
 import { LIGHTCHAIN_SVG_CONVERT_TABS, LIGHTCHAIN_VECTOR_TOOL_TABS, LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
 import { SvgExportPanel } from '../components/lightchain/SvgExportPanel';
@@ -555,13 +556,15 @@ function LightchainPrintingWorkspace() {
   },[draftContext,workspace.jobId,workspace.pendingId,user?.id,currentBrand?.id,persistenceScope,workspace.slots.primary,workspace.slots.secondary,coverage,extraPrints]);
   const handleFile=(event:ChangeEvent<HTMLInputElement>,kind:'base'|'pattern')=>{
     if(kind==='pattern'){addPrintFiles(Array.from(event.target.files??[]));event.target.value='';return;}
-    const file=event.target.files?.[0];if(file){beginDraftEdit();applyStateRef.current=null;applyGarmentRef.current=null;void workspace.upload('primary',file);setMessage('');}};
+    const file=event.target.files?.[0];if(file){beginDraftEdit();applyStateRef.current=null;applyGarmentRef.current=null;void workspace.upload('primary',file);if(currentBrand?.id)void recordLibraryUpload({brandId:currentBrand.id,userId:user?.id,file});setMessage('');}};
   const printCount=(workspace.slots.secondary?1:0)+extraPrints.length;
   const addPrintFiles=(files:File[])=>{
     const room=MAX_PRINTS-printCount;if(!files.length)return;
     if(room<=0){toast.error(`プリントは${MAX_PRINTS}枚までです`);return;}
     const accepted=files.slice(0,room);if(files.length>room)toast.error(`プリントは${MAX_PRINTS}枚までです`);
     beginDraftEdit();setMessage('');
+    // Light keeps each uploaded print in the library's 履歴アップロード too.
+    if(currentBrand?.id)for(const file of accepted)void recordLibraryUpload({brandId:currentBrand.id,userId:user?.id,file});
     const rest=workspace.slots.secondary?accepted:accepted.slice(1);
     if(!workspace.slots.secondary)void workspace.upload('secondary',accepted[0]);
     if(rest.length)setExtraPrints(current=>[...current,...rest.map(file=>({id:`print-extra-${crypto.randomUUID()}`,url:URL.createObjectURL(file),file}))]);
