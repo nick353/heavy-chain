@@ -485,7 +485,10 @@ const PRIMARY_PRINT_ID='print-slot';
 type ExtraPrint={id:string;url:string;file:File};
 
 function LightchainPrintingWorkspace() {
-  const workspace=useCanonicalImageWorkspace('printing-image',{requiredSources:2,title:'プリントイメージ',initialInputState:{coverage:'spot'}});
+  // After 適用 the reference image already carries the placed prints; sending a print as well made the provider
+  // add prints that were never placed (2026-10-28: an un-placed chain appeared on the shirt).
+  const [sendPrintReference,setSendPrintReference]=useState(true);
+  const workspace=useCanonicalImageWorkspace('printing-image',{requiredSources:2,title:'プリントイメージ',initialInputState:{coverage:'spot'},sendSecondary:sendPrintReference});
   const referenceImage=workspace.slots.primary?{url:workspace.slots.primary.imageUrl,referenceType:'base' as const,
     ...(workspace.slots.primary.sourceImageId?{galleryImageId:workspace.slots.primary.sourceImageId,fromGallery:true}:{}),
     ...(workspace.slots.primary.sourceStoragePath?{storagePath:workspace.slots.primary.sourceStoragePath}:{})}:null;
@@ -571,6 +574,7 @@ function LightchainPrintingWorkspace() {
   const applyGarmentRef=useRef<string|null>(null);
   const applyStateRef=useRef<PrintApplyEditorState|null>(null);
   const printApplied=workspace.slots.primary?.name===PRINT_APPLIED_FILE_NAME;
+  useEffect(()=>{setSendPrintReference(!printApplied);},[printApplied]);
   const editorPrints:PrintEditorPrint[]=[...(printImage?[{id:PRIMARY_PRINT_ID,url:printImage.url}]:[]),...extraPrints.map(item=>({id:item.id,url:item.url}))];
   // 適用 on a tile places that print; the round button on the garment opens the same dialog without adding one.
   const openApplyEditor=(printId:string|null)=>{

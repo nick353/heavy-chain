@@ -27,7 +27,7 @@ type LibrarySettingsKind = 'absent' | 'null' | 'invalid' | 'valid';
 type LibraryInputReadback = { source: 'local' | 'remote' | 'request' | 'none'; remoteLookup: 'not-needed' | 'matched' | 'no-match' | 'unavailable'; modernSettings:LibrarySettingsKind; legacySettings:LibrarySettingsKind; requestLookup:'not-needed'|'matched'|'identity-mismatch'|'unavailable'; requestModernSettings:LibrarySettingsKind|'not-read'; requestLegacySettings:LibrarySettingsKind|'not-read' };
 export type CanonicalWorkspaceFeature = 'lab' | 'print-design-project' | 'wear-design-lab' | 'wear-design-detail' | 'printing-image' | 'line-to-real' | 'line-generation' | 'svg-convert' | 'image-repair' | 'pattern-arrange' | 'pattern-print-design' | 'change-color' | 'pattern-vector' | 'pattern-vector-pro' | 'model-face' | 'model-change' | 'body-shape' | 'clothing-size' | 'pose-change' | 'background-change' | 'angle-change' | 'model-library' | 'model-custom';
 export type CanonicalModelCandidate = {imageId:string;storagePath:string;jobId:string;bodyType:string;ageGroup:string;provider:string};
-type WorkspaceConfig = {prepareSourceImage?:(url:string)=>Promise<string>;providerModel?:string;modelLibraryCreation?:boolean;initialInputState?:Record<string,Json>;requiredSources?:number;title?:string;/** Overrides title as the first prompt line, when the display name would steer the image. */promptTitle?:string;promptContext?:string;identityConflict?:boolean};
+type WorkspaceConfig = {prepareSourceImage?:(url:string)=>Promise<string>;/** false keeps the secondary slot out of what the provider sees (it is still stored). */sendSecondary?:boolean;providerModel?:string;modelLibraryCreation?:boolean;initialInputState?:Record<string,Json>;requiredSources?:number;title?:string;/** Overrides title as the first prompt line, when the display name would steer the image. */promptTitle?:string;promptContext?:string;identityConflict?:boolean};
 const record = (value:unknown): value is Record<string,Json> => Boolean(value) && typeof value==='object' && !Array.isArray(value);
 const readCandidates = (metadata: Record<string,Json | undefined>,currentJobId:string): CanonicalModelCandidate[] => {
  const raw=metadata.modelCandidates;if(!Array.isArray(raw))return [];
@@ -539,7 +539,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
           receipt = await generateImage(prompt,fence.brandId,{...options,generationProvider:HEAVY_IMAGE_PROVIDER});
         }
         else {
-          const ordered = [snapshot.slots.primary,snapshot.slots.secondary].filter((value): value is Source => Boolean(value)).filter(value=>!librarySettings||value===(librarySettings.inputMode==='custom'?snapshot.slots.secondary:snapshot.slots.primary));
+          const ordered = [snapshot.slots.primary,configRef.current.sendSecondary===false?null:snapshot.slots.secondary].filter((value): value is Source => Boolean(value)).filter(value=>!librarySettings||value===(librarySettings.inputMode==='custom'?snapshot.slots.secondary:snapshot.slots.primary));
           let target = ordered[0]?.imageUrl ?? '';
           let references = ordered.slice(1).map(value=>value.imageUrl);
           if (action === 'edit-result') { const [signed] = await withSignedImageUrls([{storage_path:snapshot.result!.storagePath!,image_url:''}]);
