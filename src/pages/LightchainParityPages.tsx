@@ -485,7 +485,10 @@ const PRIMARY_PRINT_ID='print-slot';
 type ExtraPrint={id:string;url:string;file:File};
 
 function LightchainPrintingWorkspace() {
-  const workspace=useCanonicalImageWorkspace('printing-image',{requiredSources:2,title:'プリントイメージ',initialInputState:{coverage:'spot'}});
+  // After 適用 the reference image already carries the placed prints; sending a print as well made the provider
+  // add prints that were never placed (2026-10-28: an un-placed chain appeared on the shirt).
+  const [sendPrintReference,setSendPrintReference]=useState(true);
+  const workspace=useCanonicalImageWorkspace('printing-image',{requiredSources:2,title:'プリントイメージ',initialInputState:{coverage:'spot'},sendSecondary:sendPrintReference});
   const referenceImage=workspace.slots.primary?{url:workspace.slots.primary.imageUrl,referenceType:'base' as const,
     ...(workspace.slots.primary.sourceImageId?{galleryImageId:workspace.slots.primary.sourceImageId,fromGallery:true}:{}),
     ...(workspace.slots.primary.sourceStoragePath?{storagePath:workspace.slots.primary.sourceStoragePath}:{})}:null;
@@ -544,7 +547,8 @@ function LightchainPrintingWorkspace() {
       return;
     }
     const designs=printImage?[printImage,...extraPrints.map(item=>({url:item.url,referenceType:'pattern' as const,file:item.file}))]:[];
-    void persistPrintInputState(currentBrand.id,referenceImage,designs,{garment:null,designs:[]},{scope:persistenceScope,assertContext,
+    const draftGarment=printApplied&&applyGarmentRef.current?applyGarmentRef.current:referenceImage;
+    void persistPrintInputState(currentBrand.id,draftGarment,designs,{garment:null,designs:[]},{scope:persistenceScope,assertContext,
       editorState: { version:1, coverageMode:coverage??'spot', outputScale:1, placementConfirmed:false, printableSurfaceEnabled:false,
         layers:designs.map((_,designIndex)=>({designIndex,layerId:`print-design-${designIndex+1}`,transform:{x:0,y:0,scale:1,rotation:0,opacity:1,flipX:false,flipY:false}})) },
     }).catch(()=>undefined);
@@ -568,15 +572,17 @@ function LightchainPrintingWorkspace() {
     if(!workspace.jobId&&user?.id&&currentBrand?.id&&persistenceScope)void persistPrintInputState(currentBrand.id,null,[],{garment:null,designs:[]},{scope:persistenceScope}).catch(()=>undefined);};
   // Light's 「適用」: the print is placed on the garment in PrintApplyEditor and the composite becomes the reference image.
   const [applyOpen,setApplyOpen]=useState<string|null>(null);
-  const applyGarmentRef=useRef<string|null>(null);
+  // The garment before 適用; kept so 再調整 starts from it and the draft stores it (a reload must not treat the composite as the garment).
+  const applyGarmentRef=useRef<NonNullable<typeof referenceImage>|null>(null);
   const applyStateRef=useRef<PrintApplyEditorState|null>(null);
   const printApplied=workspace.slots.primary?.name===PRINT_APPLIED_FILE_NAME;
+  useEffect(()=>{setSendPrintReference(!printApplied);},[printApplied]);
   const editorPrints:PrintEditorPrint[]=[...(printImage?[{id:PRIMARY_PRINT_ID,url:printImage.url}]:[]),...extraPrints.map(item=>({id:item.id,url:item.url}))];
   // 適用 on a tile places that print; the round button on the garment opens the same dialog without adding one.
   const openApplyEditor=(printId:string|null)=>{
     if(locked||!referenceImage)return;
     if(!printImage){toast.error('画像をアップロードしてください');return;}
-    if(!printApplied)applyGarmentRef.current=referenceImage.url;
+    if(!printApplied)applyGarmentRef.current=referenceImage;
     setApplyOpen(printId??'');
   };
   const confirmApply=(composite:Blob,state:PrintApplyEditorState)=>{applyStateRef.current=state;setApplyOpen(null);beginDraftEdit();void workspace.upload('primary',new File([composite],PRINT_APPLIED_FILE_NAME,{type:'image/png'}));setMessage('');};
@@ -763,7 +769,7 @@ function LightchainPrintingWorkspace() {
   return (
     <ParityShell workflowFeature="printing-image" className="lightchain-printing-parity bg-[#0b1113] text-white">
       <LightchainDesignToolFrame active="printing" testId="print-image-page" navigationLocked={locked}>{printingControls}{printingResult}</LightchainDesignToolFrame>
-      {applyOpen!==null && referenceImage && printImage && <PrintApplyEditor garmentUrl={printApplied&&applyGarmentRef.current?applyGarmentRef.current:referenceImage.url} prints={editorPrints} initialPrintId={applyOpen||null} initialState={printApplied?applyStateRef.current:null} onCancel={()=>setApplyOpen(null)} onConfirm={confirmApply} />}
+      {applyOpen!==null && referenceImage && printImage && <PrintApplyEditor garmentUrl={printApplied&&applyGarmentRef.current?applyGarmentRef.current.url:referenceImage.url} prints={editorPrints} initialPrintId={applyOpen||null} initialState={printApplied?applyStateRef.current:null} onCancel={()=>setApplyOpen(null)} onConfirm={confirmApply} />}
     </ParityShell>
   );
 }

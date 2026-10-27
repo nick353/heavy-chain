@@ -67,3 +67,16 @@ test('a cloth-model cutout cropped to the garment is drawn back into its bounds'
   const full = cutoutDrawRect({ bounds: { x: 100, y: 400, width: 600, height: 900 }, sourceSize: frame, sourceFrameSize: frame, outputSize: { width: 500, height: 1000 } }, { width: 500, height: 1000 });
   assert.deepEqual(full, { x: 0, y: 0, width: 500, height: 1000 });
 });
+
+test('after 適用 only the composed garment is sent, so prints that were not placed cannot appear', () => {
+  const hook = readFileSync(new URL('../src/hooks/useCanonicalImageWorkspace.ts', import.meta.url), 'utf8');
+  assert.match(hook, /configRef\.current\.sendSecondary===false\?null:snapshot\.slots\.secondary/);
+  assert.match(page, /sendSecondary:sendPrintReference/);
+  assert.match(page, /useEffect\(\(\)=>\{setSendPrintReference\(!printApplied\);\},\[printApplied\]\);/);
+});
+
+test('the draft keeps the garment from before 適用, so a reload never treats the composite as the garment', () => {
+  assert.match(page, /const draftGarment=printApplied&&applyGarmentRef\.current\?applyGarmentRef\.current:referenceImage;/);
+  assert.match(page, /persistPrintInputState\(currentBrand\.id,draftGarment,designs,/);
+  assert.match(page, /if\(!printApplied\)applyGarmentRef\.current=referenceImage;/);
+});
