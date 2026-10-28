@@ -25,6 +25,7 @@ import {
   Grid2X2,
   Image as ImageIcon,
   ImagePlus,
+  ImageUp,
   Layers,
   Megaphone,
   MessageCircle,
@@ -861,7 +862,9 @@ export function LightchainVectorSpecialPage() {
     void withSignedImageUrls([{storage_path:result.storagePath,image_url:''}]).then(([signed])=>{if(!cancelled)setVectorResultUrl(signed?.image_url||null);}).catch(()=>{if(!cancelled)setVectorResultUrl(null);});
     return()=>{cancelled=true;};
   },[workspace.result]);
-  const handleReferenceImage=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];event.target.value='';if(file)void workspace.upload('primary',file);};
+  // Light shows a アップロード中 card in the result panel while the source uploads (measured 2026-10-28).
+  const [vectorUploading,setVectorUploading]=useState(false);
+  const handleReferenceImage=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;setVectorUploading(true);void Promise.resolve(workspace.upload('primary',file)).finally(()=>setVectorUploading(false));};
   const toggleLayerMode=(mode:'stack'|'split')=>{if(locked)return;workspace.setInputState({...workspace.inputState,layerModes:layerModes.includes(mode)?(layerModes.length>1?layerModes.filter(value=>value!==mode):layerModes):[...layerModes,mode]});};
   const generate=()=>workspace.generate({brief:workspace.brief||(isSvgConvert?svgConvertBrief():vectorBrief(isProfessionalFlow,layerModes))});
 
@@ -869,11 +872,12 @@ export function LightchainVectorSpecialPage() {
   // two 278px ベクター tabs, 564×280 dashed upload box, (pro) 160×165 積み重ね/分割 cards, 使用回数 and AI生成 at (404,828).
   const vectorControls = (
     <div className="flex flex-1 flex-col">
-      <label data-testid="vector-source-input" className="mt-[18px] flex h-[280px] shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-white/20 bg-[#33393b] text-center transition hover:border-[#20d0c4]">
+      <label data-testid="vector-source-input" className="relative mt-[18px] flex h-[280px] shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-white/20 bg-[#33393b] text-center transition hover:border-[#20d0c4]">
         <input className="sr-only" disabled={locked} type="file" accept="image/*" aria-label="参考画像をアップロードしてください" onChange={handleReferenceImage} />
         {referenceImage ? <>
           <img src={referenceImage} alt="参考画像" className="max-h-full max-w-full object-contain" />
           <span className="sr-only" data-testid="vector-file-name">{workspace.slots.primary?.name}</span>
+          <span aria-hidden="true" title="再アップロード" data-testid="vector-reupload" className="absolute right-4 top-4 inline-flex size-8 items-center justify-center rounded-lg bg-white/15 text-white"><ImageUp className="h-4 w-4" /></span>
         </> : <>
           <ImagePlus aria-hidden="true" className="h-6 w-6 text-neutral-200" />
           <span className="mt-2 text-base text-neutral-200">参考画像をアップロードしてください</span>
@@ -916,7 +920,9 @@ export function LightchainVectorSpecialPage() {
       ) : workspace.status === 'running' ? (
         <div className="flex h-full items-center justify-center text-sm text-white/70" role="status">生成中…</div>
       ) : (
-        <div className="flex h-full flex-col items-center justify-center px-14 text-center"><h5 className="text-[20px] font-bold leading-[25.2px] text-white">{toolTitle}</h5><p className="mt-2 text-sm leading-[21px] text-neutral-400">{toolDescription}</p></div>
+        <div className="relative flex h-full flex-col items-center justify-center px-14 text-center">
+          {vectorUploading && <div role="status" data-testid="vector-uploading" className="absolute left-[136px] top-1/2 flex size-40 -translate-y-1/2 flex-col items-center justify-center gap-4 rounded-lg bg-[#1b2224] text-sm text-white/85"><span aria-hidden="true" className="size-8 animate-spin rounded-full border-[3px] border-[#20d0c4] border-t-transparent" />アップロード中</div>}
+          <h5 className="text-[20px] font-bold leading-[25.2px] text-white">{toolTitle}</h5><p className="mt-2 text-sm leading-[21px] text-neutral-400">{toolDescription}</p></div>
       )}
     </div>
   );
