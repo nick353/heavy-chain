@@ -1,11 +1,12 @@
 import {
   ArrowUpRight,
   BookOpen,
+  Boxes,
+  LayoutGrid,
   ChevronLeft,
   Hand,
   ImageIcon,
   ImagePlus,
-  Layers,
   MousePointer2,
   Redo2,
   Search,
@@ -403,7 +404,7 @@ export function FashionStudioDetailPage() {
         </aside>
 
         <aside className="fashion-studio-source-asset-trigger absolute left-4 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2 overflow-hidden rounded-xl border border-white/10 bg-[#262a2b] p-1 shadow-xl" aria-label="アセット">
-          <button type="button" aria-label="アセット" className="flex size-12 cursor-pointer items-center justify-center rounded-lg bg-[#353a3b] text-neutral-200 hover:bg-white/10"><Layers className="h-5 w-5" /></button>
+          <button type="button" aria-label="アセット" className="flex size-12 cursor-pointer items-center justify-center rounded-lg bg-[#353a3b] text-neutral-200 hover:bg-white/10"><Boxes className="h-5 w-5" /></button>
         </aside>
 
         <section ref={viewportRef} className="fashion-studio-viewport absolute inset-0 z-10" tabIndex={0} data-mode={viewportState.mode} data-panning={viewportState.panning} data-testid="lightchain-fashion-studio-canvas" aria-label="Fashion Studio Canvas"
@@ -439,14 +440,14 @@ export function FashionStudioDetailPage() {
             <div className="flex items-center justify-between"><div className="text-[30px] text-neutral-400" data-testid="fashion-studio-function-title">{studioFunctionLabel}</div><div className="flex items-center gap-3 text-[30px] text-neutral-300"><ImageIcon className="h-8 w-8" />画像検索</div></div>
             <div className="flex items-center rounded-[32px] bg-gradient-to-r from-[#00a1ff66] to-[#c861ff66] px-5 py-2.5 text-[30px] text-white"><Sparkles className="mr-2.5 h-[30px] w-[30px]" />指令と参考画像を使ってワンクリック生成</div>
             <div className="flex items-center justify-between rounded-[32px] border border-white/10 bg-[#353a3b] p-5 text-[30px]"><div className="flex items-center gap-5"><DetailRoleImage candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} onReady={url => setLoadedMain({ identity: mainIdentity, url })} alt="メイン画像" className="size-[100px] rounded-[20px] object-contain" /><span>メイン画像</span></div><button type="button" aria-label="メイン画像を差し替え" disabled={busy || recoveryRequired || !scope || visible?.status !== 'success'} onClick={() => mainInputRef.current?.click()}><ImagePlus className="h-8 w-8" /></button></div>
-            <div className="text-[30px] text-neutral-400">参考画像</div>
+            <div className="flex items-baseline gap-4 text-[30px] text-neutral-400">参考画像<span className="text-[24px] text-neutral-500" data-testid="fashion-studio-reference-count">最大1枚、アップロード済み{detail.roles.reference.status === 'available' ? 1 : 0}/1</span></div>
             <div className="flex items-center gap-5"><DetailRoleImage candidates={referenceImage} scopeKey={scopeKey} role="reference" assertContext={assertContext} alt="参考画像" className="size-[140px] rounded-[20px] object-contain" /><button type="button" aria-label="参考画像を追加" disabled={busy || recoveryRequired || !scope || visible?.status !== 'success'} onClick={() => referenceInputRef.current?.click()} className="flex size-[100px] items-center justify-center rounded-[20px] border border-white/10 bg-[#353a3b]"><ImagePlus className="h-8 w-8" /></button></div>
             {activeUpload?.preview && busy && <img src={activeUpload.preview} className="size-[100px] rounded-[20px] object-contain" alt="アップロード準備中" />}
             <div className="flex flex-col gap-5">
               <label className="flex items-center text-[30px] text-neutral-400" htmlFor="fashion-studio-detail-prompt">指示テキスト *</label>
-              <div className="flex h-[420px] flex-col justify-between gap-5 rounded-[32px] border border-white/15 bg-[#353a3b] p-5"><textarea id="fashion-studio-detail-prompt" value={prompt} disabled={busy || recoveryRequired} onChange={(event) => setPrompt(event.target.value)} maxLength={2000} className="h-full resize-none border-none bg-transparent p-0 text-[30px] leading-[42px] text-white outline-none" aria-label="指令を入力してください。" /><div className="flex items-center justify-between"><div className="flex gap-2 text-[30px] text-neutral-300"><button type="button" aria-label="プロンプト補助"><Sparkles className="h-5 w-5" /></button><button type="button" aria-label="入力画像"><ImageIcon className="h-5 w-5" /></button></div><span className="text-[30px] text-neutral-400">文字数：{prompt.length}/2000</span><button type="button" disabled={busy || recoveryRequired} onClick={() => setPrompt('')} className="rounded-xl bg-[#505c5e] px-5 py-2 text-[30px] text-white">全削除</button></div></div>
+              <div className="flex h-[420px] flex-col justify-between gap-5 rounded-[32px] border border-white/15 bg-[#353a3b] p-5"><textarea id="fashion-studio-detail-prompt" value={prompt} disabled={busy || recoveryRequired} onChange={(event) => setPrompt(event.target.value)} maxLength={2000} className="h-full resize-none border-none bg-transparent p-0 text-[30px] leading-[42px] text-white outline-none" aria-label="指令を入力してください。" /><div className="flex items-center justify-between"><div className="flex gap-2 text-[30px] text-neutral-300"><button type="button" aria-label="プロンプト補助"><Sparkles className="h-5 w-5" /></button><button type="button" aria-label="入力画像"><ImageIcon className="h-5 w-5" /></button></div><span className="ml-auto mr-4 text-[30px] text-neutral-400"><span className="text-[#0bcabc]">{prompt.length}</span>/2000</span><button type="button" disabled={busy || recoveryRequired} onClick={() => setPrompt('')} className="rounded-xl bg-[#505c5e] px-5 py-2 text-[30px] text-white">全削除</button></div></div>
             </div>
-            {/* The provider takes no mode/quality choice; the output follows the main image's aspect ratio. */}<p className="text-[26px] text-neutral-400" data-testid="fashion-studio-generation-settings">比率：メイン画像に合わせる ・ 画質：標準</p>
+            {/* Light titles this 生成設定. The provider takes no mode/quality choice; the output follows the main image's aspect ratio. */}<div className="flex flex-col gap-3"><div className="text-[30px] text-neutral-400">生成設定</div><p className="text-[26px] text-neutral-400" data-testid="fashion-studio-generation-settings">比率：メイン画像に合わせる ・ 画質：標準</p></div>
             <button type="button" disabled={busy || recoveryRequired || visible?.status !== 'success' || detail.roles.main.status !== 'available' || detail.roles.reference.status === 'ambiguous' || loadedMain.identity !== mainIdentity || !prompt.trim()} onClick={() => void generate()} aria-label="AI生成" className="h-20 w-full rounded-3xl bg-[#0bc1b8] text-[30px] font-medium text-[#111817]">AI生成</button>
           </div>
         </section>
@@ -461,8 +462,8 @@ export function FashionStudioDetailPage() {
           <button type="button" aria-label="元に戻す" disabled title="履歴操作は未接続"><Undo2 className="h-4 w-4" /></button><button type="button" aria-label="やり直す" disabled title="履歴操作は未接続"><Redo2 className="h-4 w-4" /></button>
         </div>
         <div className="fashion-studio-source-zoom-controls" data-studio-chrome data-testid="lightchain-fashion-studio-zoom-controls"><button type="button" aria-label="ズームアウト" disabled={viewportState.view.zoom <= 0.1} onClick={() => viewportInteractionRef.current?.zoom(-1, viewportCenter())}><ZoomOut className="h-4 w-4" /></button><span>{Math.round(viewportState.view.zoom * 100)}%</span><button type="button" aria-label="ズームイン" disabled={viewportState.view.zoom >= 2} onClick={() => viewportInteractionRef.current?.zoom(1, viewportCenter())}><ZoomIn className="h-4 w-4" /></button></div>
+        <button type="button" className="fashion-studio-source-panel-toggle" aria-label="キャンバスを整理" title="キャンバスを整理" onClick={() => viewportInteractionRef.current?.reset()}><LayoutGrid className="h-5 w-5" /></button>
         <button type="button" className="fashion-studio-source-handbook" aria-label="操作ガイド"><BookOpen className="h-5 w-5" /></button>
-        <button type="button" className="fashion-studio-source-panel-toggle" aria-label="パネルを開く"><Layers className="h-5 w-5" /></button>
 
         <div className="fashion-studio-source-points" aria-label="ポイント"><Sparkles className="h-4 w-4" />{visible?.remainingUnits ?? '未確認'}</div>
         <div className="fashion-studio-source-image-search" aria-label="画像検索"><Search className="h-4 w-4" />画像検索<span className="ml-auto">☷<span className="inline-block w-4" aria-hidden="true" />⇧⌄</span></div>

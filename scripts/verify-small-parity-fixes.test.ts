@@ -43,3 +43,14 @@ test('marketing project cards match Light: checkbox, bulk delete, rename in plac
   assert.match(page, /onClick=\{\(\) => void saveProjectToLibrary\(entry\)\}><Bookmark className="h-4 w-4" \/>アセットライブラリに保存/);
   assert.match(page, /<h2 className="mb-4 text-lg font-normal leading-7">マイプロジェクト<\/h2>/);
 });
+
+test('fashion studio list and detail match Light\'s layout', () => {
+  const css = read('src/index.css');
+  assert.match(css, /div:first-child h1 \{ height: 25px; margin: 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 25px; \}/);
+  assert.match(css, /section > div:nth-child\(2\) \{ display: flex; width: 100%; flex-wrap: wrap; gap: 8px; margin-top: 16px; \}/);
+  assert.match(css, /\.fashion-studio-source-task \{\n  bottom: 40px;\n  left: 16px;/);
+  const detail = read('src/pages/FashionStudioDetailPage.tsx');
+  assert.match(detail, /aria-label="キャンバスを整理"/);
+  assert.match(detail, /data-testid="fashion-studio-reference-count"/);
+  assert.match(detail, />生成設定</);
+});
