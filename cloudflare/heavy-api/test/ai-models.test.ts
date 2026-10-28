@@ -32,8 +32,8 @@ test('OpenAI model: the chosen model is used when the endpoint supports it, othe
   assert.equal(openAIModelForEndpoint(env, false, 'gpt-image-1.5'), 'gpt-image-1.5');
   assert.equal(openAIModelForEndpoint(env, false, null), 'gpt-image-2');
   assert.equal(openAIModelForEndpoint(env, true, 'gpt-image-1'), 'gpt-image-1');
-  // gpt-image-2 is not an edit model here, so edits keep the default edit model.
-  assert.equal(openAIModelForEndpoint(env, true, 'gpt-image-2'), 'gpt-image-1-mini');
+  // gpt-image-2 is not an edit model here, so edits keep the default edit model (1.5, which keeps the source's details).
+  assert.equal(openAIModelForEndpoint(env, true, 'gpt-image-2'), 'gpt-image-1.5');
   assert.equal(openAIModelForEndpoint(env, false, 'made-up'), 'gpt-image-2');
 });
 
@@ -44,7 +44,7 @@ test('the settings list shows only models whose key is registered', () => {
   const both = availableAIModels({ AI_IMAGE_PROVIDER: 'openai', OPENAI_API_KEY: 'o', ANTHROPIC_API_KEY: 'a' } as Env) as Json;
   assert.deepEqual(both.image.models.map((m: Json) => m.id), ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini']);
   assert.equal(both.image.models.find((m: Json) => m.id === 'gpt-image-2').edit, false);
-  assert.deepEqual(both.image.defaults, { generate: 'gpt-image-2', edit: 'gpt-image-1-mini' });
+  assert.deepEqual(both.image.defaults, { generate: 'gpt-image-2', edit: 'gpt-image-1.5' });
   assert.deepEqual(both.text.models, CLAUDE_TEXT_MODELS);
   assert.equal(both.text.default, 'claude-sonnet-5-5');
 });

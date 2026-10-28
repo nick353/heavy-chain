@@ -41,7 +41,10 @@ const dataURL = (blob: Blob): Promise<string> => new Promise((resolve,reject) =>
   reader.onerror = () => reject(new Error('image_reference_encode_failed')); reader.readAsDataURL(blob);
 });
 
-export async function prepareCloudflareImageInput(action: string, body: Body): Promise<Body> {
+/** Longest side sent to OpenAI edits (its server accepts 1536px); Workers AI (FLUX) stays at 512px. */
+export const OPENAI_REFERENCE_SIDE = 1536;
+export async function prepareCloudflareImageInput(action: string, body: Body, options: { referenceSide?: number } = {}): Promise<Body> {
+  const side = options.referenceSide ?? 512;
   if (!CLOUDFLARE_IMAGE_ACTIONS.has(action)) return body;
   if (body.maskDataUrl || body.maskApplied === true || body.outputBackground === 'transparent') throw new Error('マスク編集・透過出力はCloudflare画像AIでまだ対応していません。入力は保持されています。');
   if (action === 'generate-image' && ![body.prompt,body.brief].some(value => typeof value === 'string' && value.trim())) throw new Error('Cloudflare画像AIにはプロンプトまたは brief が必要です。');
@@ -68,12 +71,14 @@ export async function prepareCloudflareImageInput(action: string, body: Body): P
       const image = await new Promise<HTMLImageElement>((resolve,reject) => { const value = new Image(); value.onload = () => resolve(value); value.onerror = () => reject(new Error('image_reference_decode_failed')); value.src = url; });
       const sourceWidth = image.naturalWidth; const sourceHeight = image.naturalHeight;
       if (!sourceWidth || !sourceHeight || sourceWidth > 16384 || sourceHeight > 16384 || sourceWidth * sourceHeight > 64 * 1024 * 1024) throw new Error('image_reference_dimensions_invalid');
-      const scale = Math.min(1,512 / sourceWidth,512 / sourceHeight);
+      const scale = Math.min(1,side / sourceWidth,side / sourceHeight);
       const width = Math.max(1,Math.round(sourceWidth * scale)); const height = Math.max(1,Math.round(sourceHeight * scale));
       const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
       const context = canvas.getContext('2d'); if (!context) throw new Error('image_reference_canvas_unavailable');
       context.drawImage(image,0,0,width,height);
-      const png = await new Promise<Blob>((resolve,reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('image_reference_encode_failed')),'image/png'));
+      // Large references go as JPEG so several still fit the request; 512px ones stay PNG as before.
+      const png = await new Promise<Blob>((resolve,reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('image_reference_encode_failed')),
+        side > 512 ? 'image/jpeg' : 'image/png', side > 512 ? 0.92 : undefined));
       references.push(await dataURL(png)); transforms.push({ index, sourceWidth,sourceHeight,width,height,resized: scale < 1 });
     } finally { URL.revokeObjectURL(url); }
   }
