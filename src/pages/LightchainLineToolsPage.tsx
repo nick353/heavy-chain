@@ -180,7 +180,7 @@ function LightchainLineToolWorkspace({ mode }: { mode: LineToolMode }) {
 
   return (
     <div className="contents" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId ?? ''} data-resume-state={workspace.status}>
-      <LightchainDesignToolFrame active={tool.tab} testId={`line-tool-page-${mode}`} navigationLocked={locked}>{controls}{result}</LightchainDesignToolFrame>
+      <LightchainDesignToolFrame active={tool.tab} historyToolIds={[mode]} testId={`line-tool-page-${mode}`} navigationLocked={locked}>{controls}{result}</LightchainDesignToolFrame>
     </div>
   );
 }

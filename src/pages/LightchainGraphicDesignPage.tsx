@@ -174,7 +174,7 @@ function LightchainGraphicDesignWorkspace() {
           {heavyBrand.failed && <p role="alert" className="mt-4 text-sm text-rose-300">ワークスペースを準備できません。ページを再読み込みしてください。</p>}
           {workspace.error && <p role="alert" className="mt-4 text-sm text-rose-300">{workspace.error}</p>}
         </div>
-        {historyOpen && <LightchainHistoryPanel locked={locked} onClose={() => setHistoryOpen(false)} />}
+        {historyOpen && <LightchainHistoryPanel locked={locked} toolIds={['print-design-project']} onClose={() => setHistoryOpen(false)} />}
       </main>
       </div>
 
