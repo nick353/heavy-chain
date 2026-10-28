@@ -19,6 +19,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Folder,
   Clock3,
   FolderOpen,
   Grid2X2,
@@ -45,6 +46,8 @@ import {
   X,
   Wand2,
 } from 'lucide-react';
+import { MoveToGroupDialog } from '../components/lightchain/ProjectGroupDialogs';
+import { readDesignProjectGroups, writeDesignProjectGroups, type DesignProjectGroupState } from '../lib/designProjectGroups';
 import { PointDetailButton } from '../components/lightchain/PointDetailDialog';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
@@ -137,6 +140,7 @@ export function DesignRecentProjectEntryCard({
   onTogglePin,
   onSaveToLibrary,
   onDelete,
+  onMove,
 }: {
   entry: DesignProjectEntry;
   userId?: string;
@@ -154,6 +158,8 @@ export function DesignRecentProjectEntryCard({
   onTogglePin: () => void;
   onSaveToLibrary: () => void;
   onDelete: () => void;
+  /** Light's 移動: put the project into a group. */
+  onMove?: () => void;
 }) {
   const { artifact } = entry;
   const href = designEntryHref(entry);
@@ -198,6 +204,7 @@ export function DesignRecentProjectEntryCard({
         {menuOpen && <>
           <div className="fixed inset-0 z-20" aria-hidden="true" onClick={(event) => { event.stopPropagation(); onToggleMenu(); }} />
           <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-[224px] rounded-xl border border-white/10 bg-[#25292b] p-1.5 shadow-2xl">
+            {onMove && <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={onMove}><ArrowRight className="h-4 w-4" />移動</button>}
             <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={onTogglePin}><ArrowUpToLine className="h-4 w-4" />{pinned ? 'ピン留めを解除' : 'ピン留め'}</button>
             <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={onSaveToLibrary}><Bookmark className="h-4 w-4" />アセットライブラリに保存</button>
             <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-red-400 hover:bg-white/10" onClick={onDelete}><Trash2 className="h-4 w-4" />削除</button>
@@ -1526,6 +1533,10 @@ export function LightchainDesignProductionPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
   const [designPinState, setDesignPinState] = useState<{ scopeKey: string; ids: Set<string>; hydrated: boolean }>({ scopeKey: '', ids: new Set(), hydrated: false });
+  // Light's groups (移動 / 新規グループ作成): the open group, and the project being moved.
+  const [groupState, setGroupState] = useState<DesignProjectGroupState>({ groups: [], members: {} });
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
+  const [movingProjectId, setMovingProjectId] = useState<string | null>(null);
   const [remainingUnits, setRemainingUnits] = useState<number | null>(null);
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
@@ -1675,11 +1686,24 @@ export function LightchainDesignProductionPage() {
   const conversationProjects = useDesignConversationProjects();
   const visibleConversationProjects = designUserId && designBrandId ? conversationProjects.entries : [];
   // Light renders conversation and saved design projects in one paged "マイプロジェクト" grid.
-  const projectGridItems = mergeDesignProjectGridItems(visibleConversationProjects, displayDesignEntries);
+  const gridItemId = (item: { kind: string; entry: unknown }) => item.kind === 'conversation' ? (item.entry as DesignConversationProject).projectId : (item.entry as DesignProjectEntry).artifact.id;
+  const openGroup = groupState.groups.find((group) => group.id === openGroupId) ?? null;
+  // At the root Light hides grouped projects behind their group card; inside a group only its projects are listed.
+  const projectGridItems = mergeDesignProjectGridItems(visibleConversationProjects, displayDesignEntries)
+    .filter((item) => openGroup ? groupState.members[gridItemId(item)] === openGroup.id : !groupState.members[gridItemId(item)]);
   /** Saved results the selection bar can act on (conversation projects are not deletable from this grid). */
   const selectableProjectArtifacts = displayDesignEntries.map((entry) => entry.artifact);
   const page = paginate(projectGridItems, projectPage, DESIGN_PROJECT_PAGE_SIZE);
   const visibleProjectItems = page.items;
+  useEffect(() => {
+    setGroupState(designUserId && designBrandId ? readDesignProjectGroups(designUserId, designBrandId) : { groups: [], members: {} });
+    setOpenGroupId(null);
+  }, [designUserId, designBrandId]);
+  const saveGroupState = (next: DesignProjectGroupState) => {
+    setGroupState(next);
+    if (designUserId && designBrandId) writeDesignProjectGroups(designUserId, designBrandId, next);
+  };
+  const groupCount = (groupId: string) => Object.values(groupState.members).filter((id) => id === groupId).length;
 
   useEffect(() => {
     if (projectPage !== page.page) setProjectPage(page.page);
@@ -1878,6 +1902,7 @@ export function LightchainDesignProductionPage() {
         onTogglePin={() => { toggleDesignProjectPin(artifact.id); setOpenProjectMenuId(null); }}
         onSaveToLibrary={() => { void saveDesignArtifactToLibrary(artifact); setOpenProjectMenuId(null); }}
         onDelete={() => { void deleteDesignArtifact(artifact); }}
+        onMove={activeTab === '対話から開始' ? undefined : () => { setMovingProjectId(artifact.id); setOpenProjectMenuId(null); }}
       />
     );
   };
@@ -1922,7 +1947,29 @@ export function LightchainDesignProductionPage() {
               <CreationCard icon={<FileText />} title="企画提案書" actionLabel="企画提案書を新規作成" onClick={() => navigate('/agent')} />
             </section>
             <section className="mt-12" data-testid="design-production-persisted-projects">
-              <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2></div>
+              <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{openGroup
+                ? <span className="flex items-center gap-1"><button type="button" onClick={() => setOpenGroupId(null)} className="text-neutral-400 hover:text-white">マイプロジェクト</button><ChevronRight className="h-4 w-4 text-neutral-500" /><span data-testid="design-open-group">{openGroup.name}</span></span>
+                : 'マイプロジェクト'}</h2></div>
+              {!openGroup && groupState.groups.length > 0 && <div className="mt-4 grid gap-4 grid-cols-2 sm:grid-cols-5" data-testid="design-project-groups">
+                {groupState.groups.map((group) => <button key={group.id} type="button" onClick={() => { setOpenGroupId(group.id); setProjectPage(1); }} data-testid="design-project-group"
+                  className="h-60 overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40">
+                  <span className="block h-[167px] w-full overflow-hidden bg-white/10"><img src={group.cover} alt="" className="h-full w-full object-cover" /></span>
+                  <span className="block p-4"><span className="flex items-center gap-1 truncate text-base text-neutral-200"><Folder className="h-4 w-4 shrink-0 text-neutral-400" />{group.name}</span>
+                    <span className="mt-2 block text-xs text-neutral-400">{groupCount(group.id)}件</span></span>
+                </button>)}
+              </div>}
+              {movingProjectId && <MoveToGroupDialog groups={groupState.groups} currentGroupId={groupState.members[movingProjectId] ?? null}
+                onCancel={() => setMovingProjectId(null)}
+                onCreate={(name, cover) => { const id = crypto.randomUUID(); saveGroupState({ ...groupState, groups: [...groupState.groups, { id, name, cover, createdAt: new Date().toISOString() }] }); return id; }}
+                onConfirm={(groupId) => {
+                  const members = { ...groupState.members };
+                  if (groupId) members[movingProjectId] = groupId; else delete members[movingProjectId];
+                  // Read the latest groups (a group may have just been created inside the dialog).
+                  const latest = designUserId && designBrandId ? readDesignProjectGroups(designUserId, designBrandId) : groupState;
+                  saveGroupState({ groups: latest.groups, members });
+                  setMovingProjectId(null);
+                  toast.success(groupId ? '移動しました' : 'ルートフォルダーに戻しました');
+                }} />}
               {selectedProjectIds.size > 0 && <div className="mt-4 flex items-center justify-between" data-testid="design-project-selection-bar">
                 <div className="flex items-center gap-1">
                   <button type="button" className="h-8 rounded-lg px-4 text-sm text-white hover:bg-white/10" onClick={() => setSelectedProjectIds(new Set(selectableProjectArtifacts.map((artifact) => artifact.id)))}>全選択</button>
