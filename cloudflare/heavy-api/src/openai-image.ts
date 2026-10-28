@@ -85,7 +85,13 @@ const normalizeMimeType = (value: unknown) => {
 
 const extensionFromMimeType = (value: string) => normalizeMimeType(value) === 'image/jpeg' ? 'jpg' : 'png';
 
-const imageSize = (width?: number, height?: number) => {
+/** gpt-image-2 takes free sizes (multiples of 16, long side < 3840); Light returns 2048px-class images (2026-10-29). */
+const LARGE_SIZES: Record<string, string> = { '1536x1024': '2048x1360', '1024x1536': '1360x2048', '1024x1024': '2048x2048' };
+const imageSize = (width?: number, height?: number, model?: string) => {
+  const base = baseImageSize(width, height);
+  return model === 'gpt-image-2' ? LARGE_SIZES[base] ?? base : base;
+};
+const baseImageSize = (width?: number, height?: number) => {
   if (!width || !height) return '1024x1024';
   const ratio = width / height;
   if (Math.abs(ratio - 3 / 2) < 0.08 || Math.abs(ratio - 16 / 9) < 0.08 || width > height) return '1536x1024';
@@ -93,8 +99,8 @@ const imageSize = (width?: number, height?: number) => {
   return '1024x1024';
 };
 
-export function openAIExpectedDimensions(width: number, height: number): [number, number] {
-  const value = imageSize(width, height);
+export function openAIExpectedDimensions(width: number, height: number, model?: string): [number, number] {
+  const value = imageSize(width, height, model);
   const [w, h] = value.split('x').map(Number);
   return [w, h];
 }
@@ -192,7 +198,7 @@ export async function runOpenAIImage(
     response = await observeResponse(fetchImpl, `${baseURL(env)}/images/generations`, {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model, prompt: promptFor(candidate), n: 1, size: imageSize(input.width, input.height) }),
+      body: JSON.stringify({ model, prompt: promptFor(candidate), n: 1, size: imageSize(input.width, input.height, model) }),
     });
   } else {
     const form = new FormData();

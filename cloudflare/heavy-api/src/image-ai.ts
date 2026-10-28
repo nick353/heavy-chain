@@ -562,7 +562,7 @@ async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageIn
     try {
       if (!isRecord(output) || typeof output.image !== 'string') throw new Error('invalid');
       image = decodeImage(output.image,false);
-      const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height) : [input.width,input.height];
+      const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height,typeof output.providerModel === 'string' ? output.providerModel : undefined) : [input.width,input.height];
       if (image.width !== expected[0] || image.height !== expected[1]) throw new Error('dimensions');
     } catch {
       const beforeInvalid = await canContinue(auth,env,row,true); if (beforeInvalid) { await reconcile(env,row,true); return beforeInvalid; }

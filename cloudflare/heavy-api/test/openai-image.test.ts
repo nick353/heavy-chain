@@ -48,7 +48,7 @@ test('OpenAI generation uses gpt-image-2 only when no model is requested or conf
   assert.equal(result.providerModel, 'gpt-image-2');
   const request = requestBox.value;
   assert(request);
-  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'studio product image', n: 1, size: '1024x1024' });
+  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'studio product image', n: 1, size: '2048x2048' });
 });
 
 test('OpenAI edit adapter sends decoded references as multipart without source URLs', async () => {
@@ -101,7 +101,7 @@ test('OpenAI model-matrix without references uses text generation and the reques
   const request = requestBox.value;
   assert(request);
   assert.equal(request.url, 'https://api.openai.com/v1/images/generations');
-  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'professional adult apparel try-on photograph', n: 1, size: '1024x1024' });
+  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'professional adult apparel try-on photograph', n: 1, size: '2048x2048' });
 });
 
 test('OpenAI adapter fails closed without a key and does not echo provider error text', async () => {
@@ -199,4 +199,13 @@ test('OpenAI edits accept references up to 1536px; Workers AI keeps the 512px li
   const wide = `data:image/png;base64,${Buffer.from(pngFixture(1000, 8)).toString('base64')}`;
   assert.equal(decodeImage(wide, true, OPENAI_REFERENCE_SIDE).width, 1000);
   assert.throws(() => decodeImage(wide), /image_reference_exceeds_512px/);
+});
+
+test('gpt-image-2 asks for 2048px-class images (Light returns 2048x2048, 2026-10-29); other models keep their sizes', async () => {
+  const { openAIExpectedDimensions } = await import('../src/openai-image.ts');
+  assert.deepEqual(openAIExpectedDimensions(512, 512, 'gpt-image-2'), [2048, 2048]);
+  assert.deepEqual(openAIExpectedDimensions(768, 1152, 'gpt-image-2'), [1360, 2048]);
+  assert.deepEqual(openAIExpectedDimensions(1152, 768, 'gpt-image-2'), [2048, 1360]);
+  assert.deepEqual(openAIExpectedDimensions(768, 1152, 'gpt-image-1.5'), [1024, 1536]);
+  assert.deepEqual(openAIExpectedDimensions(768, 1152), [1024, 1536]);
 });
