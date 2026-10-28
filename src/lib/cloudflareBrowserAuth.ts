@@ -57,6 +57,17 @@ export function createCloudflareBrowserAuth(
         : 'SIGNED_OUT';
       if (event) notify(event, cached);
       return cached;
+    }).catch((cause: unknown) => {
+      // The auth Worker is sometimes slow or briefly unavailable (2026-10-29: 503 auth_unavailable after 9-30s).
+      // Treating that as signed out stopped long generations with cloudflare_session_changed. A still-valid cached
+      // session stays in use (the API checks the token on every call) and the next read retries soon.
+      const status = (cause as { status?: unknown } | null)?.status;
+      const transient = typeof status !== 'number' || status >= 500 || status === 429;
+      if (generation === revision && transient && cached && (cached.expires_at ?? 0) * 1000 > Date.now()) {
+        cacheUntil = Date.now() + 5000;
+        return cached;
+      }
+      throw cause;
     }).finally(() => { if (loading === operation) loading = null; });
     loading = operation; return operation;
   };

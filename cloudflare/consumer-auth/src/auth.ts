@@ -185,6 +185,9 @@ export function createAuth(
     rateLimit: {
       enabled: true, storage: 'database', window: AUTH_RATE_WINDOW_SECONDS, max: 100,
       customRules: {
+        // Reading the session is not a credential guess; its D1 rate-limit write on every call made each check
+        // wait on the database (9-30s, 503s on 2026-10-29) while the app re-reads the session once a minute.
+        '/get-session': false,
         '/sign-in/email': { window: AUTH_RATE_WINDOW_SECONDS, max: 5 },
         '/sign-up/email': { window: AUTH_RATE_WINDOW_SECONDS, max: 3 },
         '/request-password-reset': { window: AUTH_RATE_WINDOW_SECONDS, max: 3 },
