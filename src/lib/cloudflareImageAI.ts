@@ -127,8 +127,20 @@ export async function invokeDurableImageAction<T>(options: {
     if (pending.state === 'conflict') throw new Error('image_pending_identity_conflict');
     if (pending.state === 'unavailable' && !pending.requestId) throw new Error('image_pending_identity_unavailable', { cause: pending.cause });
     const reconcileOnly = pending.state === 'unavailable';
-    const previous = pending.state === 'present' || pending.state === 'unavailable' ? pending.requestId : null;
-    if (options.idempotencyKey && previous && previous !== options.idempotencyKey) throw new Error('同じ入力の生成依頼が未照合です。先にその結果を確認してください。');
+    let previous = pending.state === 'present' || pending.state === 'unavailable' ? pending.requestId : null;
+    if (options.idempotencyKey && previous && previous !== options.idempotencyKey) {
+      // A new turn with the same input: a held ID the server never admitted (exact GET 404) is
+      // released, so a request lost before admission cannot block that input for good.
+      let absent = false;
+      if (!reconcileOnly) {
+        try { await options.call(`/v1/image-ai/requests/${previous}`); }
+        catch (error) { absent = error instanceof Error && error.message.includes('_404_image_request_not_found'); }
+        await options.assertCurrent();
+      }
+      if (!absent) throw new Error('同じ入力の生成依頼が未照合です。先にその結果を確認してください。');
+      await forgetPendingIdentity(key,previous,options.assertCurrent); await options.assertCurrent();
+      previous = null;
+    }
     const id = previous ?? options.idempotencyKey ?? crypto.randomUUID();
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) throw new Error('image_request_id_invalid');
     if (!reconcileOnly) {
@@ -155,7 +167,8 @@ export async function invokeDurableImageAction<T>(options: {
         // Only definite pre-admission rejection can discard the ID. A generic
         // 401/403 may arrive AFTER inference if the session/brand role changed.
         if (error instanceof Error && (/_(400|413|422|429)_/.test(error.message) ||
-          /_403_(rights_confirmation_required|legal_safety_prompt_blocked)$/.test(error.message))) {
+          /_403_(rights_confirmation_required|legal_safety_prompt_blocked)$/.test(error.message) ||
+          /_503_token_verifier_unavailable$/.test(error.message))) {
           await requirePendingIdentity(key,id); await options.assertCurrent();
           await options.onTerminal?.(id,key); await options.assertCurrent();
           await forgetPendingIdentity(key,id,options.assertCurrent); throw error;
