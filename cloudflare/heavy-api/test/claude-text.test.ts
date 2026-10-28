@@ -189,3 +189,36 @@ test('provider endpoint serves image-plan behind the same gates', async (t) => {
   });
   assert.equal(s.calls.length, 0);
 });
+
+test('profile-extract sends each material as its own block and keeps only the listed choices', async () => {
+  const { extractProfile } = await import('../src/claude-text.ts');
+  const box: { body?: Json } = {};
+  const result = await extractProfile(env(), { files: [
+    { name: 'brand.pdf', kind: 'pdf', data: 'JVBERi0x' },
+    { name: 'look.png', kind: 'image', mediaType: 'image/png', data: 'iVBORw0K' },
+    { name: 'plan.csv', kind: 'text', text: '価格帯,3000〜8000円' },
+  ] }, async (_url, init) => { box.body = JSON.parse(String(init?.body)); return claudeReply({
+    name: '試しブランド', categories: ['レディース', 'ユニセックス'], priceMin: '3,000', priceMax: '8000円', currency: 'JPY',
+    countries: ['日本', '韓国'], ages: ['25〜34歳'], channels: ['自社EC'], brands: ['UNIQLO'], visual: '白とベージュ', summary: '春夏の新作',
+  }); });
+  assert.deepEqual(result, { success: true, name: '試しブランド', categories: ['レディース'], priceMin: '3000', priceMax: '8000', currency: 'JPY',
+    countries: ['日本'], ages: ['25〜34歳'], channels: ['自社EC'], brands: ['UNIQLO'], visual: '白とベージュ', summary: '春夏の新作' });
+  const content = box.body?.messages[0].content as Json[];
+  assert.equal(content[0].type, 'document');
+  assert.equal(content[0].source.media_type, 'application/pdf');
+  assert.equal(content[2].type, 'image');
+  assert.match(content[3].text, /<material name="plan.csv">/);
+  assert.deepEqual(box.body?.output_config.format.schema.properties.currency.enum, ['', 'JPY', 'CNY', 'USD', 'EUR']);
+});
+
+test('profile-extract refuses missing, too many and malformed materials before calling Claude', async () => {
+  const { extractProfile } = await import('../src/claude-text.ts');
+  const never = async () => { throw new Error('should not call'); };
+  await assert.rejects(extractProfile(env(), { files: [] }, never), (error: ClaudeTextError) => error.code === 'profile_materials_required');
+  await assert.rejects(extractProfile(env(), { files: Array.from({ length: 9 }, () => ({ name: 'a.txt', kind: 'text', text: 'a' })) }, never),
+    (error: ClaudeTextError) => error.code === 'profile_materials_too_many');
+  await assert.rejects(extractProfile(env(), { files: [{ name: 'x.gif', kind: 'image', mediaType: 'image/gif', data: 'R0lG' }] }, never),
+    (error: ClaudeTextError) => error.code === 'profile_material_invalid');
+  await assert.rejects(extractProfile(env(), { files: [{ name: 'big.txt', kind: 'text', text: 'a'.repeat(60_001) }] }, never),
+    (error: ClaudeTextError) => error.code === 'profile_materials_too_large');
+});

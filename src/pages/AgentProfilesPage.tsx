@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronDown, Pencil, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, ChevronDown, FileText, Loader2, Pencil, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { AgentSidebar } from '../features/agent/AgentSidebar';
 import {
   AGENT_PROFILE_AGES, AGENT_PROFILE_CATEGORIES, AGENT_PROFILE_COUNTRIES, AGENT_PROFILE_CURRENCIES, deleteAgentProfile,
   readActiveAgentProfileId, readAgentProfiles, saveAgentProfile, selectAgentProfile, type AgentPreferenceProfile,
 } from '../features/agent/agentTasks';
+import { extractProfileFromMaterials, isProfileMaterial, PROFILE_MATERIAL_ACCEPT, PROFILE_MATERIAL_LIMIT, type ExtractedProfile } from '../lib/profileMaterials';
 
-const EMPTY: Omit<AgentPreferenceProfile, 'id' | 'updatedAt'> = { name: '', categories: [], priceMin: '', priceMax: '', currency: '', countries: [], ages: [], channels: [], brands: [], visual: '' };
+const EMPTY: Omit<AgentPreferenceProfile, 'id' | 'updatedAt'> = { name: '', categories: [], priceMin: '', priceMax: '', currency: '', countries: [], ages: [], channels: [], brands: [], visual: '', materials: [], materialsSummary: '' };
 const EMPTY_ICON = '/lightchain-assets/mirror/jp/static/none_list.png';
 
 function useProfiles() {
@@ -63,6 +64,109 @@ function TagInput({ label, placeholder, value, onChange }: { label: string; plac
   </div>;
 }
 
+const MATERIAL_FORMATS = '対応形式：PDF、PPTX、DOCX、XLSX、CSV、JPG、PNG';
+type MaterialRow = { name: string; size: number };
+
+function MaterialRows({ rows, onRemove }: { rows: MaterialRow[]; onRemove?: (index: number) => void }) {
+  return <div className="mt-4 grid max-h-40 gap-2 overflow-auto">
+    {rows.map((row, index) => <div key={`${row.name}-${index}`} className="flex h-10 min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-[#202426] p-2 text-sm font-medium text-neutral-100" data-testid="agent-profile-material">
+      <FileText className="h-5 w-5 shrink-0 text-neutral-300" /><span className="min-w-0 flex-1 truncate">{row.name}</span>
+      {onRemove && <button type="button" aria-label={`${row.name}を外す`} onClick={() => onRemove(index)} className="rounded p-1 text-neutral-400 hover:bg-white/10 hover:text-white"><Trash2 className="h-4 w-4" /></button>}
+    </div>)}
+  </div>;
+}
+
+/** Light's 資料をアップロード: drop or pick up to eight materials, then 解析を開始. */
+function MaterialUploadDialog({ onCancel, onStart }: { onCancel: () => void; onStart: (files: File[]) => void }) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement | null>(null);
+  const add = (picked: File[]) => {
+    const usable = picked.filter(isProfileMaterial);
+    setError(usable.length < picked.length ? '対応していない形式のファイルは追加していません' : null);
+    setFiles((current) => {
+      const next = [...current, ...usable];
+      if (next.length > PROFILE_MATERIAL_LIMIT) setError(`画像とファイルは合計${PROFILE_MATERIAL_LIMIT}点までです`);
+      return next.slice(0, PROFILE_MATERIAL_LIMIT);
+    });
+  };
+  return <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4" role="presentation" onClick={onCancel}>
+    <div role="dialog" aria-modal="true" aria-label="資料をアップロード" data-testid="agent-profile-material-dialog" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === 'Escape') onCancel(); }}
+      className="w-[512px] max-w-full rounded-lg border border-white/10 bg-[#25292b] p-6 text-white shadow-2xl">
+      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">資料をアップロード</h2>
+        <button type="button" aria-label="閉じる" onClick={onCancel} className="text-neutral-400 hover:text-white"><X className="h-4 w-4" /></button></div>
+      <p className="mt-4 text-xs leading-4 text-neutral-300">システムは資料に明記された情報のみ自動入力します。記載のない項目は空欄のままになります</p>
+      <input ref={input} type="file" multiple accept={PROFILE_MATERIAL_ACCEPT} aria-label="資料を選択" className="sr-only" onChange={(event) => { add(Array.from(event.target.files ?? [])); event.target.value = ''; }} />
+      <button type="button" onClick={() => input.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); add(Array.from(event.dataTransfer.files)); }}
+        className="mt-3 flex h-[176px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.03] px-2 text-center hover:border-white/30">
+        <span className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#6fd7cf_0%,#3d6475_42%,#9964ac_100%)] text-[8px] font-bold tracking-[0.12em] text-white/90">CUSTOM<span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-neutral-900"><Plus className="h-3.5 w-3.5" /></span></span>
+        <span className="mt-4 text-sm font-medium text-white">ここにファイルをドラッグするか、クリックして選択</span>
+        <span className="mt-2 text-xs leading-4 text-neutral-400">{MATERIAL_FORMATS}。画像とファイルは合計{PROFILE_MATERIAL_LIMIT}点までです</span>
+      </button>
+      {files.length > 0 && <MaterialRows rows={files} onRemove={(index) => setFiles((current) => current.filter((_, at) => at !== index))} />}
+      {error && <p role="alert" className="mt-2 text-xs text-red-300">{error}</p>}
+      <div className="mt-8 flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="h-10 rounded-lg bg-[#4a5052] px-5 text-sm text-white hover:bg-[#565d60]">キャンセル</button>
+        <button type="button" disabled={!files.length} onClick={() => onStart(files)} className="h-10 rounded-lg bg-[#0bcabc] px-5 text-sm font-medium text-neutral-950 hover:bg-[#3dd8cc] disabled:bg-[#4a5052] disabled:text-neutral-400">解析を開始</button>
+      </div>
+    </div>
+  </div>;
+}
+
+const ANALYSIS_STEPS = (name: string) => [`${name}を読み込み中…`, '商品カテゴリと価格情報を抽出', '品類、国、年齢層、チャネルを識別'];
+
+/** Light's 資料ファイル card: idle → 資料を選択, analysing → スマート自動入力 with progress, done → 再アップロードして解析. */
+function MaterialsCard({ materials, brandId, onExtracted, onRemove }: {
+  materials: MaterialRow[]; brandId: string; onExtracted: (profile: ExtractedProfile, files: File[]) => void; onRemove: (index: number) => void;
+}) {
+  const [dialog, setDialog] = useState(false);
+  const [analyzing, setAnalyzing] = useState<{ files: File[]; step: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!analyzing || analyzing.step >= 2) return;
+    const timer = window.setTimeout(() => setAnalyzing((current) => current && { ...current, step: current.step + 1 }), 2500);
+    return () => window.clearTimeout(timer);
+  }, [analyzing]);
+  const start = async (files: File[]) => {
+    setDialog(false); setError(null); setAnalyzing({ files, step: 0 });
+    try { onExtracted(await extractProfileFromMaterials(brandId, files), files); }
+    catch (cause) { setError(cause instanceof Error && /[ぁ-んァ-ン一-龥]/.test(cause.message) ? cause.message : '資料を解析できませんでした。時間をおいてもう一度お試しください'); }
+    finally { setAnalyzing(null); }
+  };
+  const card = 'mt-8 rounded-2xl border border-white/10 bg-[#202426] p-6';
+  return <>
+    {analyzing ? <div data-testid="agent-profile-material-analyzing">
+      <p className="mt-8 flex flex-wrap items-center gap-2 text-sm font-medium text-white">スマート自動入力
+        <span className="flex items-center gap-1 text-[10px] font-normal text-amber-400"><AlertTriangle className="h-3 w-3" />システムは資料に明記された情報のみ自動入力します。記載のない項目は空欄のままになります</span></p>
+      <div className="mt-3 rounded-2xl border border-white/10 bg-[#202426] p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div><p className="text-sm font-medium text-white">資料パックをアップロードして自動入力</p>
+            <p className="mt-1 text-xs leading-5 text-neutral-400">商品企画、ブランド資料、販売振り返り、顧客提案などに対応<br />{MATERIAL_FORMATS}</p></div>
+          <button type="button" disabled className="h-8 shrink-0 rounded-lg bg-[#4a5052] px-4 text-xs text-neutral-300">解析中…</button>
+        </div>
+        <MaterialRows rows={analyzing.files} />
+      </div>
+      <div className="mt-3 rounded-2xl border border-white/10 bg-[#202426] p-6">
+        <div className="flex items-center gap-4"><p className="shrink-0 text-sm font-medium text-white">資料パックを解析中</p>
+          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><span className="block h-full rounded-full bg-[#0bcabc] transition-all" style={{ width: `${[20, 50, 80][analyzing.step]}%` }} /></span>
+          <span className="text-xs text-[#0bcabc]">{[20, 50, 80][analyzing.step]}%</span></div>
+        <ul className="mt-4 grid gap-2 text-xs text-neutral-400">
+          {ANALYSIS_STEPS(analyzing.files[0]?.name ?? '資料').map((label, index) => <li key={label} className="flex items-center gap-2">
+            {index < analyzing.step ? <Check className="h-3.5 w-3.5 text-[#0bcabc]" /> : index === analyzing.step ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="h-3.5 w-3.5 rounded-full border border-white/20" />}{label}</li>)}
+        </ul>
+      </div>
+    </div> : <div className={card} data-testid="agent-profile-materials">
+      <div className="flex items-start justify-between gap-4">
+        <div><p className="text-sm font-medium text-white">資料ファイル</p><p className="mt-1 text-xs text-neutral-400">複数ファイルに対応。アップロード後、プロファイルに保存されます</p></div>
+        <button type="button" onClick={() => setDialog(true)} className="h-8 shrink-0 rounded-lg bg-[#0bcabc] px-4 text-xs font-medium text-neutral-950 hover:bg-[#3dd8cc]">{materials.length ? '再アップロードして解析' : '資料を選択'}</button>
+      </div>
+      {materials.length > 0 && <MaterialRows rows={materials} onRemove={onRemove} />}
+      {error && <p role="alert" className="mt-3 text-xs text-red-300">{error}</p>}
+    </div>}
+    {dialog && <MaterialUploadDialog onCancel={() => setDialog(false)} onStart={(files) => void start(files)} />}
+  </>;
+}
+
 function ProfileForm({ initial, onDone }: { initial: AgentPreferenceProfile | null; onDone: () => void }) {
   const { userId, brandId } = useProfiles();
   const [form, setForm] = useState(() => initial ? { ...initial } : { ...EMPTY });
@@ -79,6 +183,18 @@ function ProfileForm({ initial, onDone }: { initial: AgentPreferenceProfile | nu
   return <div className="relative mx-auto w-full max-w-[716px] pb-32" data-testid="agent-profile-form">
     <h1 className="text-[32px] font-semibold leading-[44px] text-white">業務プリファレンスプロファイルを{initial ? '編集' : '作成'}</h1>
     <p className="mt-2 text-sm text-neutral-400">複数のタスクで繰り返し使う業務範囲を保存します。タスク開始時に自動で適用されます</p>
+    <MaterialsCard materials={form.materials ?? []} brandId={brandId}
+      onRemove={(index) => setForm((current) => ({ ...current, materials: (current.materials ?? []).filter((_, at) => at !== index) }))}
+      onExtracted={(found, files) => setForm((current) => ({
+        ...current,
+        // Light fills only what the materials state and leaves the rest as it was.
+        name: found.name || current.name, categories: found.categories.length ? found.categories : current.categories,
+        priceMin: found.priceMin || current.priceMin, priceMax: found.priceMax || current.priceMax, currency: found.currency || current.currency,
+        countries: found.countries.length ? found.countries : current.countries, ages: found.ages.length ? found.ages : current.ages,
+        channels: found.channels.length ? found.channels : current.channels, brands: found.brands.length ? found.brands : current.brands,
+        visual: found.visual || current.visual, materialsSummary: found.summary || current.materialsSummary,
+        materials: files.map((file) => ({ name: file.name, size: file.size })),
+      }))} />
     <label className="mt-8 block">{label('プロファイル名', true)}
       <input value={form.name} maxLength={60} onChange={(event) => set('name', event.target.value)} placeholder="例：通勤レディースプロファイル" aria-label="プロファイル名"
         className="h-8 w-full rounded-md border border-white/10 bg-[#202426] px-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-[#0bcabc]" /></label>

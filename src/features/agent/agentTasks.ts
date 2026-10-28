@@ -220,6 +220,8 @@ export function writeAgentProfile(userId: string, brandId: string, value: string
 export type AgentPreferenceProfile = {
   id: string; name: string; categories: string[]; priceMin: string; priceMax: string; currency: string;
   countries: string[]; ages: string[]; channels: string[]; brands: string[]; visual: string; updatedAt: string;
+  /** Light's 資料ファイル: the names of the analysed materials and the planning facts read from them. */
+  materials?: Array<{ name: string; size: number }>; materialsSummary?: string;
 };
 export const AGENT_PROFILE_CATEGORIES = ['メンズ', 'レディース', 'キッズ'] as const;
 export const AGENT_PROFILE_COUNTRIES = ['中国', '日本', '北米', 'ヨーロッパ', 'アフリカ'] as const;
@@ -237,6 +239,9 @@ export function readAgentProfiles(userId: string, brandId: string): AgentPrefere
       priceMax: String(item.priceMax ?? '').slice(0, 12), currency: String(item.currency ?? '').slice(0, 3), countries: stringList(item.countries, 5),
       ages: stringList(item.ages, 5), channels: stringList(item.channels, 20), brands: stringList(item.brands, 20), visual: String(item.visual ?? '').slice(0, 500),
       updatedAt: String(item.updatedAt ?? ''),
+      materials: Array.isArray(item.materials) ? item.materials.filter((file: { name?: unknown }) => typeof file?.name === 'string').slice(0, 8)
+        .map((file: { name: string; size?: unknown }) => ({ name: file.name.slice(0, 120), size: Number(file.size) || 0 })) : [],
+      materialsSummary: String(item.materialsSummary ?? '').slice(0, 300),
     }));
   } catch { return []; }
 }
@@ -251,6 +256,7 @@ export function describeAgentProfile(profile: AgentPreferenceProfile): string {
     profile.channels.length ? `チャネル：${profile.channels.join('・')}` : '',
     profile.brands.length ? `参考ブランド：${profile.brands.join('・')}` : '',
     profile.visual ? `ビジュアルの好み：${profile.visual}` : '',
+    profile.materialsSummary ? `資料の要点：${profile.materialsSummary}` : '',
   ].filter(Boolean).join('\n').slice(0, 800);
 }
 export function readActiveAgentProfileId(userId: string, brandId: string): string | null {

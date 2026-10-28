@@ -6,7 +6,7 @@ const MODEL_TOOL_FEATURE_TYPES = new Set(['model-face', 'model-change', 'body-sh
   .map(feature => `lightchain-${feature}`));
 // Actions served by handleImageAIAction. Text actions (Claude) are dispatched
 // before any image parsing and never reach the image pipeline.
-export const IMAGE_ACTIONS = new Set(['generate-image', 'edit-image', 'model-matrix', 'optimize-prompt', 'chat-plan', 'image-plan']);
+export const IMAGE_ACTIONS = new Set(['generate-image', 'edit-image', 'model-matrix', 'optimize-prompt', 'chat-plan', 'image-plan', 'profile-extract']);
 export type ImageAction = 'generate-image' | 'edit-image' | 'model-matrix';
 const OPENAI_IMAGE_MODELS = new Set(['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini', 'chatgpt-image-latest']);
 export type Json = Record<string, unknown>;
