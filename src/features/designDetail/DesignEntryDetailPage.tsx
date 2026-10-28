@@ -327,7 +327,10 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const selectedObject = canvasObjects.find((object) => object.id === selected);
   // Light (measured 2026-10-29) shows a purple-to-teal 生成中... box on the canvas, sized like the source image, where the
   // result will land, and the same box in the chat's 画像タスク. Heavy places results in the next grid slot (designCanvasAdapter).
-  const generatingAttempts = visible?.dialogue?.attempts.filter((attempt) => attempt.imageAttempted && !['completed', 'failed'].includes(attempt.imageResult ?? '')
+  // Only a request that is actually running gets the box: one the server reports in flight, or the one being sent now.
+  // A stuck (unknown) request keeps its 作成状態を再確認 text instead of a box that never resolves.
+  const generatingAttempts = visible?.dialogue?.attempts.filter((attempt) => attempt.imageAttempted
+    && (attempt.imageResult === 'in-flight' || (attempt.imageResult === undefined && visible.busy))
     && !visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.length) ?? [];
   const placeholderSource = (selectedObject?.type === 'image' ? selectedObject : imageObjects.at(-1)) as Record<string, unknown> | undefined;
   const placeholderScale = Math.min(1, 440 / (Number(placeholderSource?.width) || 440), 440 / (Number(placeholderSource?.height) || 440));
