@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop,
+  ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop, MessageCircleMore,
   MessageSquarePlus, MousePointer2, Palette, PanelRightClose, PanelRightOpen, Redo2, RefreshCw, Shapes, Sparkles,
   Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2, ZoomIn, ZoomOut, BookOpen, Keyboard, Mouse, History, ChevronsLeft, Plus,
   LayoutGrid, Map as MapIcon, Wand2, Maximize2,
@@ -131,6 +131,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const [view, setView] = useState<StudioViewport>({ zoom: 0.2, panX: 20, panY: 20 });
   const [fitted, setFitted] = useState('');
   // Light's left panel (タスク・アセット・レイヤー) opens from the canvas menu; the right panel is the assistant only.
+  const [panelTab, setPanelTab] = useState<'assistant' | 'layers'>('assistant');
   const [leftTab, setLeftTab] = useState<'tasks' | 'assets' | 'layers' | null>(null);
   const [taskHint, setTaskHint] = useState(() => { try { return localStorage.getItem(TASK_HINT_KEY) !== '1'; } catch { return true; } });
   const [chatMenu, setChatMenu] = useState<DesignEntryDraft[] | null>(null);
@@ -611,6 +612,18 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     </li>)}
   </ol>;
 
+  const layerList = <>
+        {!canvasObjects.length && <p className="text-sm text-neutral-500">レイヤーはまだありません</p>}
+        <ol>{[...canvasObjects].reverse().map((object) => <li key={String(object.id)} className="group relative"><button type="button" data-testid="design-layer-select" aria-pressed={selectedIds.includes(String(object.id))}
+          onClick={() => setSelected(String(object.id))} className={`mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${selectedIds.includes(String(object.id)) ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+          <span className="h-10 w-10 shrink-0 overflow-hidden rounded bg-white/5">{typeof object.src === 'string' && urls[object.src] && <img src={urls[object.src]} alt="" className="h-full w-full object-cover" />}</span>
+          <span className="truncate">{object.type === 'text' && typeof object.text === 'string' ? object.text : String(object.label ?? 'デザイン画像')}</span></button>
+          {editable && <button type="button" data-testid="design-layer-delete" aria-label={`${String(object.label ?? 'レイヤー')}を削除`}
+            onClick={() => { const id = String(object.id); setSelectedIds((current) => current.filter((item) => item !== id)); void mutateObjects((objects) => objects.filter((item) => item.id !== id)); }}
+            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-neutral-400 opacity-0 transition hover:bg-white/10 hover:text-red-300 focus:opacity-100 group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>}
+        </li>)}</ol>
+  </>;
+
   const toolbarButton = 'flex h-[34px] w-[34px] items-center justify-center rounded-lg text-neutral-300 transition hover:bg-white/10 hover:text-white disabled:opacity-35 disabled:hover:bg-transparent';
   const WorkspaceIcon = workspaceId === 'marketing' ? Clapperboard : Palette;
 
@@ -770,13 +783,13 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       style={{ right: panelOpen ? 452 : 64 }}><Sparkles className="h-4 w-4" />{remainingUnits.toLocaleString()}</div>}
 
     {/* Light keeps this menu on screen from the first moment; each button opens its tab of the 400px left panel. */}
-    <nav aria-label="キャンバスメニュー" className="absolute left-[13px] z-20 flex flex-col gap-2 rounded-xl border border-white/10 bg-[#1b2023]/95 p-2" style={{ top: 'calc(50% - 134px)' }} data-testid="design-canvas-menu">
+    <nav aria-label="キャンバスメニュー" className="absolute left-[13px] z-20 flex flex-col gap-2 rounded-xl border border-white/10 bg-[#1b2023]/95 p-2" style={{ top: 'calc(50% - 158px)' }} data-testid="design-canvas-menu">
       {([['layers', 'レイヤー', Layers], ['assets', 'アセット', Boxes], ['tasks', 'タスク', History]] as const).map(([tab, label, Icon]) => <button key={tab} type="button" aria-label={label}
         aria-pressed={leftTab === tab} onClick={() => openLeft(tab)} className={`flex h-[47px] w-[47px] items-center justify-center rounded-lg text-neutral-200 hover:bg-white/10 ${leftTab === tab ? 'bg-white/[0.12]' : ''}`}><Icon className="h-6 w-6" /></button>)}
     </nav>
-    {taskHint && !leftTab && <div role="status" data-testid="design-task-hint" className="absolute left-[78px] z-20 flex items-center gap-2 rounded-lg bg-[#2b3134] px-3 py-2 text-sm text-neutral-100 shadow-xl" style={{ top: 'calc(50% + 50px)' }}>
+    {taskHint && !leftTab && <div role="status" data-testid="design-task-hint" className="absolute left-[80px] z-20 flex h-[34px] items-center gap-3 rounded-lg bg-[#6ee8d8] px-3 text-sm font-medium text-neutral-900 shadow-xl before:absolute before:-left-[6px] before:top-1/2 before:-translate-y-1/2 before:border-y-[6px] before:border-r-[6px] before:border-y-transparent before:border-r-[#6ee8d8]" style={{ top: 'calc(50% - 36px)' }}>
       🎉 タスク履歴が新登場！完了した生成結果をいつでも確認できます
-      <button type="button" aria-label="閉じる" onClick={dismissTaskHint} className="text-neutral-400 hover:text-white"><X className="h-4 w-4" /></button>
+      <button type="button" aria-label="閉じる" onClick={dismissTaskHint} className="text-neutral-700 hover:text-neutral-950"><X className="h-4 w-4" /></button>
     </div>}
 
     {leftTab && <aside aria-label="キャンバスパネル" data-testid="design-left-panel" className="absolute bottom-3 left-3 top-4 z-30 flex w-[400px] max-w-[calc(100%-24px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#171c1f]">
@@ -802,15 +815,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         setPanelOpen(true); navigate(`${location.pathname}?${next}`, { replace: true });
       }} />}
       {leftTab === 'layers' && <div className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="design-layer-panel">
-        {!canvasObjects.length && <p className="text-sm text-neutral-500">レイヤーはまだありません</p>}
-        <ol>{[...canvasObjects].reverse().map((object) => <li key={String(object.id)} className="group relative"><button type="button" data-testid="design-layer-select" aria-pressed={selectedIds.includes(String(object.id))}
-          onClick={() => setSelected(String(object.id))} className={`mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${selectedIds.includes(String(object.id)) ? 'bg-white/10' : 'hover:bg-white/5'}`}>
-          <span className="h-10 w-10 shrink-0 overflow-hidden rounded bg-white/5">{typeof object.src === 'string' && urls[object.src] && <img src={urls[object.src]} alt="" className="h-full w-full object-cover" />}</span>
-          <span className="truncate">{object.type === 'text' && typeof object.text === 'string' ? object.text : String(object.label ?? 'デザイン画像')}</span></button>
-          {editable && <button type="button" data-testid="design-layer-delete" aria-label={`${String(object.label ?? 'レイヤー')}を削除`}
-            onClick={() => { const id = String(object.id); setSelectedIds((current) => current.filter((item) => item !== id)); void mutateObjects((objects) => objects.filter((item) => item.id !== id)); }}
-            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-neutral-400 opacity-0 transition hover:bg-white/10 hover:text-red-300 focus:opacity-100 group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>}
-        </li>)}</ol>
+        {layerList}
       </div>}
     </aside>}
 
@@ -934,13 +939,18 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
 
     {panelOpen && <aside className="absolute bottom-3 right-3 top-4 z-30 flex w-[423px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#171c1f]" aria-label="デザインアシスタント" data-testid="design-assistant-panel"
       data-project-id={visible?.draft?.projectId} data-conversation-id={visible?.draft?.conversationId}>
-      {/* Light's header: 「新しいチャット ▾」 switches between this project's chats, ＋ starts a new one. */}
+      <div className="flex h-[67px] shrink-0 items-center gap-1 border-b border-white/10 px-[17px]">
+        {([['assistant', 'AIアシスタント', MessageCircleMore], ['layers', 'レイヤー設定', Layers]] as const).map(([id, label, Icon]) => <button key={id} type="button" aria-pressed={panelTab === id} onClick={() => setPanelTab(id)}
+          className={`flex h-8 items-center gap-1 rounded-full px-3 text-sm font-medium ${panelTab === id ? 'border border-[#0bcabc]/70 bg-[#0bcabc]/10 text-white' : 'text-neutral-400 hover:text-white'}`}><Icon className="h-4 w-4" />{label}</button>)}
+        <button type="button" aria-label="パネルを閉じる" onClick={() => setPanelOpen(false)} className="ml-auto text-neutral-400 hover:text-white"><PanelRightClose className="h-4 w-4" /></button>
+      </div>
+      {panelTab === 'assistant' ? <>
+        {/* Light's second row: 「新しいチャット ▾」 switches between this project's chats, ＋ starts a new one. */}
         <div className="relative flex h-[52px] shrink-0 items-center gap-2 px-[11px] pt-1">
           <button type="button" aria-haspopup="menu" aria-expanded={Boolean(chatMenu)} onClick={() => void toggleChatMenu()} data-testid="design-chat-switcher"
             className="flex h-8 min-w-0 items-center gap-1 rounded-lg px-2 text-base font-medium hover:bg-white/5">
             <span className="truncate">{visible?.dialogue?.attempts.length ? (visible.dialogue.attempts[0].input.prompt.slice(0, 20) || 'チャット') : '新しいチャット'}</span><ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" /></button>
           <Link to={workspace.detailPath} aria-label="新しいチャット" className="ml-auto text-neutral-400 hover:text-white" data-testid="design-new-chat"><MessageSquarePlus className="h-5 w-5" /></Link>
-          <button type="button" aria-label="パネルを閉じる" onClick={() => setPanelOpen(false)} className="text-neutral-400 hover:text-white"><PanelRightClose className="h-4 w-4" /></button>
           {chatMenu && <div role="menu" aria-label="チャット履歴" data-testid="design-chat-menu" className="absolute left-[11px] top-[48px] z-10 w-[300px] rounded-xl border border-white/10 bg-[#20262a] p-1 shadow-2xl">
             {chatMenu.length === 0 ? <p className="px-3 py-3 text-sm text-neutral-400">チャット履歴はありません</p>
               : chatMenu.map((draft) => <button key={draft.conversationId} type="button" role="menuitem" onClick={() => { setChatMenu(null); navigate(`${workspace.detailPath}?${new URLSearchParams({ projectId: draft.projectId, conversationId: draft.conversationId })}`); }}
@@ -1006,6 +1016,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
               className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#61fff4] disabled:bg-white/10 disabled:text-neutral-500"><ArrowUp className="h-5 w-5" /></button>
           </div>
         </form>
+      </> : <div className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="design-layer-settings">{layerList}</div>}
     </aside>}
   </main>;
 }
