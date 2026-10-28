@@ -35,8 +35,8 @@ function setup() {
       return Response.json(payload, { status });
     } },
   } as unknown as Env;
-  const profile = () => handleRequest(new Request('https://api.test/v1/profile', {
-    headers: { authorization: 'Bearer session-token', 'x-user-id': 'attacker', 'x-role': 'admin' },
+  const profile = (token = 'session-token') => handleRequest(new Request('https://api.test/v1/profile', {
+    headers: { authorization: `Bearer ${token}`, 'x-user-id': 'attacker', 'x-role': 'admin' },
   }), env);
   return { sql, subject, env, profile, writes: () => writes, change: (value: Partial<typeof payload>) => { payload = { ...payload, ...value }; }, status: (value: number) => { status = value; } };
 }
@@ -47,8 +47,9 @@ test('verified Cloudflare subject provisions once and never adopts by email', as
   assert.equal((await first.json() as { id: string }).id, s.subject);
   assert.equal((await s.profile()).status, 200); assert.equal(s.writes(), 1);
   assert.equal(s.sql.prepare('SELECT count(*) AS n FROM user_identities').get()!.n, 1);
+  // A different person signs in with their own session (admissions are remembered per session token).
   const second = crypto.randomUUID(); s.change({ subject: second });
-  assert.equal((await s.profile()).status, 200);
+  assert.equal((await s.profile('second-session-token')).status, 200);
   assert.equal(s.sql.prepare('SELECT count(*) AS n FROM users').get()!.n, 2);
 });
 

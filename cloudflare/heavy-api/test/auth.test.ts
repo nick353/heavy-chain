@@ -105,3 +105,36 @@ test("missing binding and invalid issuer fail closed without global fetch or JWK
     globalThis.fetch = previousFetch;
   }
 });
+
+test("an admitted session is remembered briefly and concurrent checks share one Auth request", async () => {
+  const s = fixture();
+  const verifier = configuredTokenVerifier(s.env);
+  assert.ok(verifier);
+  const [first, second] = await Promise.all([verifier(s.request), verifier(request())]);
+  assert.equal(first?.subject, second?.subject);
+  assert.equal(s.calls(), 1, "concurrent checks share one request");
+  // A fresh verifier for the same binding (one is built per API request) reuses the admission.
+  const again = await configuredTokenVerifier(s.env)!(request());
+  assert.equal(again?.subject, first?.subject);
+  assert.equal(s.calls(), 1);
+});
+
+test("refusals are never remembered, and a slow Auth Worker gets one retry", async () => {
+  const s = fixture();
+  const verifier = configuredTokenVerifier(s.env);
+  assert.ok(verifier);
+  s.setStatus(401);
+  assert.equal(await verifier(s.request), null);
+  assert.equal(await verifier(s.request), null);
+  assert.equal(s.calls(), 2, "401 is asked again every time");
+
+  let attempts = 0;
+  const flaky = { async fetch(): Promise<Response> {
+    attempts += 1;
+    if (attempts === 1) throw new DOMException("timed out", "TimeoutError");
+    return Response.json(identity());
+  } };
+  const retried = await configuredTokenVerifier({ AUTH_SERVICE: flaky, AUTH_ISSUER: issuer })!(request());
+  assert.ok(retried);
+  assert.equal(attempts, 2);
+});
