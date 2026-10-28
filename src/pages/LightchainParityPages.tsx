@@ -483,6 +483,7 @@ export function LightchainPrintingPage() {
 
 const PRINT_APPLIED_FILE_NAME='プリント適用済み.png';
 const PRIMARY_PRINT_ID='print-slot';
+const PRINTING_HISTORY_TOOLS=['printing-image'] as const;
 type ExtraPrint={id:string;url:string;file:File};
 
 function LightchainPrintingWorkspace() {
@@ -692,7 +693,7 @@ function LightchainPrintingWorkspace() {
     <button type="button" className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-40" disabled={canvasHandoffDisabled} onClick={()=>void handlePrintingCanvasHandoff()}>Canvasで再編集</button>
     {canvasHandoffMessage&&<p className="text-sm text-neutral-400" role="status">{canvasHandoffMessage}</p>}
   </div>:null}
-            {historyOpen && <LightchainHistoryPanel locked={locked} onClose={() => setHistoryOpen(false)} />}
+            {historyOpen && <LightchainHistoryPanel locked={locked} toolIds={PRINTING_HISTORY_TOOLS} onClose={() => setHistoryOpen(false)} />}
           </aside>
         </div>
       </ParityShell>
@@ -771,7 +772,7 @@ function LightchainPrintingWorkspace() {
   );
   return (
     <ParityShell workflowFeature="printing-image" className="lightchain-printing-parity bg-[#0b1113] text-white">
-      <LightchainDesignToolFrame active="printing" testId="print-image-page" navigationLocked={locked}>{printingControls}{printingResult}</LightchainDesignToolFrame>
+      <LightchainDesignToolFrame active="printing" historyToolIds={PRINTING_HISTORY_TOOLS} testId="print-image-page" navigationLocked={locked}>{printingControls}{printingResult}</LightchainDesignToolFrame>
       {applyOpen!==null && referenceImage && printImage && <PrintApplyEditor garmentUrl={printApplied&&applyGarmentRef.current?applyGarmentRef.current.url:referenceImage.url} prints={editorPrints} initialPrintId={applyOpen||null} initialState={printApplied?applyStateRef.current:null} onCancel={()=>setApplyOpen(null)} onConfirm={confirmApply} />}
     </ParityShell>
   );
@@ -877,7 +878,7 @@ export function LightchainVectorSpecialPage() {
   );
   return (
     <ParityShell workflowFeature="pattern-vector-pro" className="bg-[#0b1113] text-white">
-      <LightchainDesignToolFrame active={isSvgConvert ? 'svg-convert' : isProfessionalFlow ? 'pattern-vector-pro' : 'pattern-vector'} tabs={isSvgConvert ? LIGHTCHAIN_SVG_CONVERT_TABS : LIGHTCHAIN_VECTOR_TOOL_TABS} railGroup={isSvgConvert ? 3 : 2} testId={isSvgConvert ? 'svg-convert-page' : 'vector-tool-page'} navigationLocked={locked}>{vectorControls}{vectorResult}</LightchainDesignToolFrame>
+      <LightchainDesignToolFrame active={isSvgConvert ? 'svg-convert' : isProfessionalFlow ? 'pattern-vector-pro' : 'pattern-vector'} historyToolIds={[isSvgConvert?'svg-convert':isProfessionalFlow?'pattern-vector-pro':'pattern-vector']} tabs={isSvgConvert ? LIGHTCHAIN_SVG_CONVERT_TABS : LIGHTCHAIN_VECTOR_TOOL_TABS} railGroup={isSvgConvert ? 3 : 2} testId={isSvgConvert ? 'svg-convert-page' : 'vector-tool-page'} navigationLocked={locked}>{vectorControls}{vectorResult}</LightchainDesignToolFrame>
     </ParityShell>
   );
 }

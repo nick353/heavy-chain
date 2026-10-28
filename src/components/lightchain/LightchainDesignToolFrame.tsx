@@ -76,7 +76,9 @@ export function LightchainDesignToolRail({ locked = false, activeIndex = 0 }: { 
   );
 }
 
-export function LightchainDesignToolFrame({ active, testId, children, workspaceAttributes, navigationLocked = false, tabs = LIGHTCHAIN_DESIGN_TOOL_TABS, railGroup = 0, showNotice = true }: {
+export function LightchainDesignToolFrame({ active, testId, children, workspaceAttributes, navigationLocked = false, tabs = LIGHTCHAIN_DESIGN_TOOL_TABS, railGroup = 0, showNotice = true, historyToolIds }: {
+  /** The workspace tool ids whose results the 生成履歴 panel lists (Light shows only the open tool's). */
+  historyToolIds?: readonly string[];
   /** Light shows the deprecation notice on the デザインツール pages but not on 画像修正. */
   showNotice?: boolean;
   active: string;
@@ -127,7 +129,7 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
             生成履歴
           </button>
           {result}
-          {historyOpen && <LightchainHistoryPanel locked={navigationLocked} onClose={() => setHistoryOpen(false)} />}
+          {historyOpen && <LightchainHistoryPanel locked={navigationLocked} toolIds={historyToolIds} onClose={() => setHistoryOpen(false)} />}
         </aside>
       </div>
     </div>

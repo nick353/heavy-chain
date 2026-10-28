@@ -45,7 +45,20 @@ export const lightchainHistoryResumeHref = (image: Pick<GeneratedImageListRow, '
   return `${path}?${params.toString()}`;
 };
 
-export type HistoryEntry = { key: string; title: string; createdAt: string; images: GeneratedImageListRow[] };
+/** Uploaded inputs are library material, not generations; Light keeps them out of 生成履歴. */
+const NON_GENERATION_TYPES = new Set(['library-upload', 'platform-asset', 'local-upload', 'library-import', 'gallery-import']);
+
+/**
+ * Light's 生成履歴 lists only the open tool's results (/tools/printing shows プリントイメージ, /printing shows none of them).
+ * With no tool ids every generation is listed; uploads never are.
+ */
+export const isHistoryRowFor = (featureType: string | null, toolIds?: readonly string[]): boolean => {
+  const key = (featureType ?? '').replace(/^lightchain-/, '').replace(/-provider-result$/, '');
+  if (NON_GENERATION_TYPES.has(key)) return false;
+  return !toolIds || toolIds.includes(key);
+};
+
+export type HistoryEntry ={ key: string; title: string; createdAt: string; images: GeneratedImageListRow[] };
 
 /** One entry per generation (job); results without a job stand alone. Keeps newest-first order. */
 export const groupHistoryEntries = (rows: GeneratedImageListRow[]): HistoryEntry[] => {

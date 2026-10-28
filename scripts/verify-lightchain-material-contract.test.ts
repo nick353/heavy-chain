@@ -58,7 +58,7 @@ test('priority material routes keep the current Lightchain content frame and sou
   assert.match(page, /LIGHTCHAIN_FABRIC_EMPTY_PREVIEW_VIDEO/);
   assert.match(page, /data-testid="lightchain-fabric-source-preview-video"/);
   assert.match(page, /onClick=\{\(\) => setMaterialHistoryOpen\(true\)\}/);
-  assert.match(page, /<LightchainHistoryPanel onClose=/);
+  assert.match(page, /<LightchainHistoryPanel toolIds=\{\[isPrinting \? 'printing-image' : 'fabric-image'\]\} onClose=/);
   assert.match(page, /lightchainSourceAppearance/);
   assert.match(page, /data-testid="lightchain-source-toolbar"/);
   assert.doesNotMatch(page, /lg:\[writing-mode:vertical-rl\]/);

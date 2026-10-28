@@ -9,16 +9,19 @@ import { withSignedImageUrls } from '../../lib/storage';
 import { thumbnailImageUrl } from '../../lib/mediaThumbnail';
 import { downloadValidatedImage } from '../../lib/imageDownload';
 import { saveWorkspaceArtifactBestEffort } from '../../lib/localWorkspaceArtifacts';
-import { groupHistoryEntries, lightchainHistoryResumeHref, lightchainHistoryTitle } from '../../lib/lightchainHistoryEntries';
+import { groupHistoryEntries, isHistoryRowFor, lightchainHistoryResumeHref, lightchainHistoryTitle } from '../../lib/lightchainHistoryEntries';
 
 /**
  * Light's 生成履歴 panel, measured at 1440×900 (/tools/vector-special and /tools/printing after a generation): it replaces
  * the result column in place (the URL does not change). Header: 生成履歴 ⓘ, 全削除 and a collapse button. Each entry is one
  * generation: "title date" with 32px download-all / delete-all buttons, then its images in a two-column grid of 314px
  * tiles; hovering a tile shows download / save to library / delete (top right) and edit / send (bottom left).
- * Like Light, it lists every tool's results, newest first, and loads older entries as the list is scrolled.
+ * Like Light, it lists the open tool's results (toolIds), newest first, and loads older entries as the list is scrolled.
  */
 const PAGE_SIZE = 40;
+/** Pages read in one go while the open tool's results are still too few to fill the panel. */
+const MAX_PAGES_PER_LOAD = 8;
+const MIN_ROWS_PER_LOAD = 6;
 
 const isVideo = (image: GeneratedImageListRow) => /video|動画/i.test(image.feature_type || '');
 
@@ -39,7 +42,7 @@ const SEND_TARGETS = [
 const tileButton = 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-white/80 transition hover:text-white disabled:opacity-40';
 const headerButton = 'inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.12] text-white/80 transition hover:bg-white/[0.2] disabled:opacity-40';
 
-export function LightchainHistoryPanel({ onClose, locked = false }: { onClose: () => void; locked?: boolean }) {
+export function LightchainHistoryPanel({ onClose, locked = false, toolIds }: { onClose: () => void; locked?: boolean; toolIds?: readonly string[] }) {
   const navigate = useNavigate();
   const brandId = useAuthStore((state) => state.currentBrand?.id);
   const userId = useAuthStore((state) => state.user?.id);
@@ -54,13 +57,16 @@ export function LightchainHistoryPanel({ onClose, locked = false }: { onClose: (
     const state = pageState.current;
     if (state.loading || (!reset && state.done)) return;
     state.loading = true;
-    const offset = reset ? 0 : state.offset;
+    if (reset) { state.offset = 0; state.done = false; }
     try {
-      const page = (await cloudflareDataPlane.listGeneratedImages(brandId, { order: 'newest', limit: PAGE_SIZE, offset }))
-        .map(asGeneratedImageListRow);
-      state.offset = offset + page.length;
-      state.done = page.length < PAGE_SIZE;
-      const visible = page.filter((row) => !isVideo(row));
+      const visible: GeneratedImageListRow[] = [];
+      for (let pages = 0; pages < MAX_PAGES_PER_LOAD && !state.done && visible.length < MIN_ROWS_PER_LOAD; pages += 1) {
+        const page = (await cloudflareDataPlane.listGeneratedImages(brandId, { order: 'newest', limit: PAGE_SIZE, offset: state.offset }))
+          .map(asGeneratedImageListRow);
+        state.offset += page.length;
+        state.done = page.length < PAGE_SIZE;
+        visible.push(...page.filter((row) => !isVideo(row) && isHistoryRowFor(row.feature_type, toolIds)));
+      }
       // Rows carry only storage_path; the readable URL exists after signing.
       const signed = (await withSignedImageUrls(visible)).filter((row) => row.image_url);
       if (visible.length > 0 && signed.length === 0) throw new Error('history_media_unavailable');
@@ -70,7 +76,7 @@ export function LightchainHistoryPanel({ onClose, locked = false }: { onClose: (
     } finally {
       state.loading = false;
     }
-  }, [brandId]);
+  }, [brandId, toolIds?.join(',')]);
 
   useEffect(() => {
     pageState.current = { offset: 0, done: false, loading: false };
@@ -161,7 +167,7 @@ export function LightchainHistoryPanel({ onClose, locked = false }: { onClose: (
         {entries === null ? (
           [0, 1].map((key) => <div key={key} className="mb-6 h-[360px] w-full animate-pulse rounded-lg bg-white/[0.04]" />)
         ) : entries.length === 0 ? (
-          <p className="mt-24 text-center text-sm text-neutral-400">{failed ? '生成履歴を読み込めませんでした' : 'まだ生成履歴がありません'}</p>
+          <p className="mt-24 text-center text-sm text-neutral-400">{failed ? '生成履歴を読み込めませんでした' : '生成記録はありません'}</p>
         ) : entries.map((entry) => (
           <article key={entry.key} data-testid="lightchain-history-item" className="mb-8 px-4">
             <div className="flex items-center gap-2">

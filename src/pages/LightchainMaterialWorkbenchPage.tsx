@@ -6955,7 +6955,7 @@ function LightchainMaterialWorkbenchSession() {
                   ))}
                 </div>
               )}
-              {materialHistoryOpen && <LightchainHistoryPanel onClose={() => setMaterialHistoryOpen(false)} />}
+              {materialHistoryOpen && <LightchainHistoryPanel toolIds={[isPrinting ? 'printing-image' : 'fabric-image']} onClose={() => setMaterialHistoryOpen(false)} />}
             </aside>
             </div>
           </div>

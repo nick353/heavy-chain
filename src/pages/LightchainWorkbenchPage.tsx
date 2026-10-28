@@ -9256,7 +9256,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                 >
                   生成履歴
                 </button>
-                {featureHistoryOpen && <LightchainHistoryPanel onClose={() => setFeatureHistoryOpen(false)} />}
+                {featureHistoryOpen && <LightchainHistoryPanel toolIds={toolId ? [toolId] : undefined} onClose={() => setFeatureHistoryOpen(false)} />}
                 <section className={`flex min-h-[560px] items-center justify-center ${isLightParityTallDetail ? 'h-full rounded-[28px] bg-[#232728]' : ''}`}>
                   {['line-generation', 'line-to-real'].includes(selectedTool.id) && !lightchainResult ? (
                     <div className="translate-x-[4px] translate-y-[13px] text-center">

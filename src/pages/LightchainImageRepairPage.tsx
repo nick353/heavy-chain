@@ -191,7 +191,7 @@ function LightchainImageRepairWorkspace() {
 
   return (
     <div className="contents" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId ?? ''} data-resume-state={workspace.status}>
-      <LightchainDesignToolFrame active="image-repair" tabs={LIGHTCHAIN_IMAGE_REPAIR_TABS} railGroup={1} showNotice={false} testId="image-repair-page" navigationLocked={locked}>{controls}{result}</LightchainDesignToolFrame>
+      <LightchainDesignToolFrame active="image-repair" historyToolIds={['image-repair']} tabs={LIGHTCHAIN_IMAGE_REPAIR_TABS} railGroup={1} showNotice={false} testId="image-repair-page" navigationLocked={locked}>{controls}{result}</LightchainDesignToolFrame>
     </div>
   );
 }
