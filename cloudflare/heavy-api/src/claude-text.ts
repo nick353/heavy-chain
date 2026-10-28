@@ -81,6 +81,8 @@ export async function callClaudeJSON<T>(
     throw new ClaudeTextError('claude_request_failed', 502);
   }
   if (!response.ok) {
+    // The upstream reason goes to the Worker log only (wrangler tail), never to the client.
+    console.warn('claude_upstream_error', response.status, (await response.text().catch(() => '')).slice(0, 500));
     // Upstream 429/529 are retryable for the client; everything else is a
     // server-side configuration or request problem it cannot fix.
     const status = response.status === 429 || response.status === 529 ? 429 : 502;
