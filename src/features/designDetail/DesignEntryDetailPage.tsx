@@ -783,11 +783,11 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       style={{ right: panelOpen ? 452 : 64 }}><Sparkles className="h-4 w-4" />{remainingUnits.toLocaleString()}</div>}
 
     {/* Light keeps this menu on screen from the first moment; each button opens its tab of the 400px left panel. */}
-    <nav aria-label="キャンバスメニュー" className="absolute left-[13px] z-20 flex flex-col gap-2 rounded-xl border border-white/10 bg-[#1b2023]/95 p-2" style={{ top: 'calc(50% - 158px)' }} data-testid="design-canvas-menu">
+    <nav aria-label="キャンバスメニュー" className="absolute left-[13px] z-20 flex flex-col gap-2 rounded-xl border border-white/10 bg-[#1b2023]/95 p-2" style={{ top: 'calc(50% - 134px)' }} data-testid="design-canvas-menu">
       {([['layers', 'レイヤー', Layers], ['assets', 'アセット', Boxes], ['tasks', 'タスク', History]] as const).map(([tab, label, Icon]) => <button key={tab} type="button" aria-label={label}
         aria-pressed={leftTab === tab} onClick={() => openLeft(tab)} className={`flex h-[47px] w-[47px] items-center justify-center rounded-lg text-neutral-200 hover:bg-white/10 ${leftTab === tab ? 'bg-white/[0.12]' : ''}`}><Icon className="h-6 w-6" /></button>)}
     </nav>
-    {taskHint && !leftTab && <div role="status" data-testid="design-task-hint" className="absolute left-[80px] z-20 flex h-[34px] items-center gap-3 rounded-lg bg-[#6ee8d8] px-3 text-sm font-medium text-neutral-900 shadow-xl before:absolute before:-left-[6px] before:top-1/2 before:-translate-y-1/2 before:border-y-[6px] before:border-r-[6px] before:border-y-transparent before:border-r-[#6ee8d8]" style={{ top: 'calc(50% - 36px)' }}>
+    {taskHint && !leftTab && <div role="status" data-testid="design-task-hint" className="absolute left-[80px] z-20 flex h-[34px] items-center gap-3 rounded-lg bg-[#6ee8d8] px-3 text-sm font-medium text-neutral-900 shadow-xl before:absolute before:-left-[6px] before:top-1/2 before:-translate-y-1/2 before:border-y-[6px] before:border-r-[6px] before:border-y-transparent before:border-r-[#6ee8d8]" style={{ top: 'calc(50% - 12px)' }}>
       🎉 タスク履歴が新登場！完了した生成結果をいつでも確認できます
       <button type="button" aria-label="閉じる" onClick={dismissTaskHint} className="text-neutral-700 hover:text-neutral-950"><X className="h-4 w-4" /></button>
     </div>}
@@ -961,15 +961,15 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           {(isNewFile || (!visible?.dialogue?.attempts.length && !visible?.draft)) && !visible?.busy && <div data-testid="design-assistant-welcome">
             {workspaceId === 'design' ? <>
               {/* Light's design assistant always greets with these editing scenes (no 更新 rotation). */}
-              <h1 className="mt-[52px] text-[26px] font-medium leading-[34px]">今日は何をデザインしますか？</h1>
+              <h1 className="mt-[22px] text-[26px] font-medium leading-[34px]">今日は何をデザインしますか？</h1>
               <p className="mt-4 text-sm leading-5 text-neutral-400">下からデザイン要望を入力するか、画像をアップロード／キャンバスから選択して修正・デザインできます</p>
-              <div className="mt-[40px] flex flex-col items-start gap-3" data-testid="design-canvas-scenes">
+              <div className="mt-[36px] flex flex-col items-start gap-2" data-testid="design-canvas-scenes">
                 {CANVAS_SCENES.map((scene) => <button key={scene} type="button" onClick={() => setPrompt(scene)} className="flex h-10 items-center gap-2 rounded-xl px-4 text-left text-base text-neutral-200 hover:bg-white/5"><Lightbulb className="h-5 w-5 shrink-0 text-neutral-300" />{scene}</button>)}
               </div>
             </> : <>
-            <h1 className="mt-[52px] text-[26px] font-medium leading-[34px]">こんにちは<br />専属のデザインアシスタントがサポートします。</h1>
+            <h1 className="mt-[22px] text-[26px] font-medium leading-[34px]">こんにちは<br />専属のデザインアシスタントがサポートします。</h1>
             <p className="mt-4 text-sm leading-5 text-neutral-400">具体的なリクエストを入力するか、以下のプリセットから最適なシーンを選択してください。</p>
-            <div className="mt-[40px] flex flex-col items-start gap-3">
+            <div className="mt-[36px] flex flex-col items-start gap-2">
               {visiblePresets.map((preset) => <button key={preset} type="button" onClick={() => setPrompt(preset)} className="flex h-10 items-center gap-2 rounded-xl px-4 text-left text-base text-neutral-200 hover:bg-white/5"><Lightbulb className="h-5 w-5 shrink-0 text-neutral-300" />{preset}</button>)}
               <button type="button" onClick={() => setPresetPage((page) => page + 1)} className="-mt-1 flex h-8 w-[72px] items-center gap-1.5 rounded-lg px-3 text-sm text-neutral-300 hover:bg-white/5"><RefreshCw className="h-4 w-4" />更新</button>
             </div>
@@ -1009,8 +1009,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           {(entryError || references.error) && <p role="alert" className="mb-2 text-xs text-red-300">{entryError ?? references.error}</p>}
           <textarea data-testid="design-followup-prompt" aria-label="デザインの指示" value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={4000}
             onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }}
-            placeholder="商品画像をアップロードして、デザインのリクエストを教えてください" rows={1} className="block max-h-40 min-h-8 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-neutral-500" />
-          <div className="mt-7 flex items-center justify-between">
+            placeholder="商品画像をアップロードして、デザインのリクエストを教えてください" rows={2} className="block max-h-40 min-h-12 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-neutral-500" />
+          <div className="mt-4 flex items-center justify-between">
             <button type="button" aria-label="画像を追加" onClick={() => uploadRef.current?.click()} className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 hover:bg-white/10"><Plus className="h-5 w-5" /></button>
             <button type="submit" aria-label="送信" data-testid="design-followup-send" disabled={!prompt.trim() || Boolean(visible?.busy) || entrySending || !references.ready || (!isNewFile && !visible?.dialogue)}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#61fff4] disabled:bg-white/10 disabled:text-neutral-500"><ArrowUp className="h-5 w-5" /></button>
