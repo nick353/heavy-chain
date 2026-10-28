@@ -168,6 +168,12 @@ test('D1 rate limits persist between Worker instances', async t => {
   assert.ok(Number(s.db.sql.prepare('SELECT count(*) AS n FROM rateLimit').get()!.n) > 0);
 });
 
+test('reading the session writes no rate-limit row (it was a D1 write on every check)', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  for (let i = 0; i < 3; i++) assert.equal((await s.request('/api/auth/get-session')).status, 200);
+  assert.equal(Number(s.db.sql.prepare("SELECT count(*) AS n FROM rateLimit WHERE key LIKE '%get-session%'").get()!.n), 0);
+});
+
 test('native OAuth audiences are explicit; Apple origin is limited to its configured callback', async t => {
   const s = setup(); t.after(() => s.db.sql.close());
   s.env.GOOGLE_CLIENT_ID = 'web-client'; s.env.GOOGLE_IOS_CLIENT_ID = 'ios-client'; s.env.GOOGLE_CLIENT_SECRET = 'local-fixture';

@@ -119,3 +119,32 @@ test('provider errors and unverified or expired sessions fail closed', async t =
     assert.equal((await auth.getSession()).data.session, null); auth.dispose();
   }
 });
+
+test('a slow or unavailable auth Worker keeps a still-valid cached session instead of signing out', async t => {
+  let mode = 'ok'; const events = []; let calls = 0;
+  const payload = sessionPayload();
+  const fetchImpl = async () => {
+    calls++;
+    if (mode === 'down') return Response.json({ error: 'auth_unavailable' }, { status: 503 });
+    if (mode === 'network') throw new TypeError('Failed to fetch');
+    if (mode === 'signed-out') return Response.json(null);
+    return Response.json(payload);
+  };
+  const auth = createCloudflareBrowserAuth(fetchImpl, 'https://heavy.test'); t.after(() => auth.dispose());
+  auth.onAuthStateChange(event => events.push(event));
+  assert.equal((await auth.getSession()).data.session.access_token, 'opaque-test-session');
+  for (mode of ['down', 'network']) {
+    const result = await auth.refreshSession();
+    assert.equal(result.error, null, mode);
+    assert.equal(result.data.session.access_token, 'opaque-test-session', mode);
+  }
+  assert.deepEqual(events, ['SIGNED_IN']);
+  // A real answer that the session is gone still signs out.
+  mode = 'signed-out';
+  assert.equal((await auth.refreshSession()).data.session, null);
+  assert.deepEqual(events, ['SIGNED_IN', 'SIGNED_OUT']);
+  // With nothing cached, an outage is still reported as an error.
+  mode = 'down';
+  assert.notEqual((await auth.refreshSession()).error, null);
+  assert.ok(calls >= 5);
+});
