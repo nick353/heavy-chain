@@ -87,3 +87,12 @@ test('editor lists and planning tasks match Light', () => {
   assert.match(task, /max-w-\[752px\]/);
   assert.match(task, /rounded-2xl border border-white\/10 bg-\[#262a2b\] p-4 text-sm text-neutral-300/);
 });
+
+test('design projects can be moved into groups like Light (移動 / 新規グループ作成)', () => {
+  const dialogs = read('src/components/lightchain/ProjectGroupDialogs.tsx');
+  for (const text of ['移動', 'ルートフォルダー', '利用可能な移動先グループがありません', '新規グループ作成', 'グループ名を入力', 'グループのカバー画像 *', '画像をアップロード']) assert.ok(dialogs.includes(text), text);
+  const page = read('src/pages/LightchainParityPages.tsx');
+  assert.match(page, /onClick=\{onMove\}><ArrowRight className="h-4 w-4" \/>移動<\/button>/);
+  assert.match(page, /data-testid="design-project-groups"/);
+  assert.match(page, /groupState\.members\[gridItemId\(item\)\] === openGroup\.id/);
+});
