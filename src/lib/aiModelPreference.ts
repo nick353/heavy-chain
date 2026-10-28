@@ -25,7 +25,7 @@ export const writeAIModelPreference = (userId: string | null | undefined, prefer
   try { globalThis.localStorage?.setItem(storageKey(userId), JSON.stringify(preference)); } catch { /* storage unavailable */ }
 };
 
-export const CLAUDE_TEXT_ACTIONS = new Set(['optimize-prompt', 'chat-plan', 'image-plan']);
+export const CLAUDE_TEXT_ACTIONS = new Set(['optimize-prompt', 'chat-plan', 'image-plan', 'profile-extract']);
 const IMAGE_ACTIONS = new Set(['generate-image', 'edit-image', 'model-matrix']);
 
 /**
