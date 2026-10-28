@@ -172,11 +172,14 @@ test('a new turn releases a held ID the server never admitted, but not one it kn
   assert.equal((await image.invokeDurableImageAction(known.options)).requestId,fresh); assert.equal(posts,1);
 });
 
-test('a token verifier outage is rejected before admission and does not hold the input',async () => {
-  const s = setup(); let count = 0;
-  s.options.call = async () => { count++; throw new Error('cloudflare_api_503_token_verifier_unavailable'); };
-  await assert.rejects(image.invokeDurableImageAction(s.options),/token_verifier_unavailable/);
-  assert.equal(count,1); assert.equal(s.store.size,0);
+test('a token verifier outage keeps the request held: the server can return it after admitting the job',async () => {
+  const s = setup(); let id;
+  s.options.call = async (path,init = {}) => {
+    if (init.method === 'POST') { id = new Headers(init.headers).get('idempotency-key'); throw new Error('cloudflare_api_503_token_verifier_unavailable'); }
+    throw new Error('cloudflare_api_503_token_verifier_unavailable');
+  };
+  await assert.rejects(image.invokeDurableImageAction(s.options),/保持/);
+  assert.equal([...s.store.values()][0],id);
 });
 
 test('a 403 after inference retains its ID, while a definite rights rejection is not submitted again automatically',async () => {
