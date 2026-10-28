@@ -59,3 +59,12 @@ test('a new file whose create never reached the server recreates the SAME ID onc
   assert.match(coordinator, /error\.message === 'cloudflare_api_404_not_found'\)\) throw error;\n\s+try \{ await createSnapshot\(\); \}/);
   assert.match(coordinator, /const createSnapshot = \(\) => client\.createDocument\(\{ documentId: draft\.projectId/);
 });
+
+test('images are drawn from the request plus the assistant\'s design direction, like Light\'s rewritten brief', async () => {
+  const { imagePrompt } = await import('../src/features/designDetail/imagePrompt.ts');
+  const input = { prompt: 'トレンチコートを作って' } as never;
+  const prompt = imagePrompt({ input, assistant: { state: 'completed', content: 'ベルトと肩章のあるダブルのトレンチ。\n→ 色違いを作る' } } as never);
+  assert.match(prompt, /^トレンチコートを作って\n\nDesign direction:\nベルトと肩章のあるダブルのトレンチ。$/);
+  assert.equal(imagePrompt({ input, assistant: { state: 'failed' } } as never), 'トレンチコートを作って');
+  assert.ok(imagePrompt({ input, assistant: { state: 'completed', content: 'x'.repeat(9000) } } as never).length <= 4000);
+});

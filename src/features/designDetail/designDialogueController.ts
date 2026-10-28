@@ -6,6 +6,7 @@ import { createTurnRunner, type DesignTurnGenerateInput } from './turnRunner';
 import type { DesignSessionStore } from './sessionStore';
 import type { DesignEntryDraft, EntryDraftStore } from './entryDraftStore';
 import type { DialogueAttempt, DialogueStore } from './dialogueStore';
+import { imagePrompt } from './imagePrompt';
 import { createDesignCanvasAdapter, selectedDesignReference, type DesignCanvasClient } from './designCanvasAdapter';
 import type { DesignScope, DesignTurn, DesignTurnOutput } from './types';
 
@@ -100,7 +101,7 @@ export function createDesignDialogueController(options: { scope: DesignScope; pr
         runners.set(current.input.requestId, runner);
       }
       const result = await runner.runTurn(scope, { conversationId, clientRequestKey: current.imageClientRequestKey,
-        prompt: current.input.prompt, references: current.input.references }); assertContext();
+        prompt: imagePrompt(current), references: current.input.references }); assertContext();
       await dialogues.image(scope, current.input, stopped.has(current.input.requestId) ? 'unknown' : result.kind, assertContext); assertContext();
       await refresh();
     };
