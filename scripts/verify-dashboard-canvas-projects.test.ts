@@ -58,7 +58,7 @@ test('Fashion Studio uses the same authenticated project-grid source and Light-c
   const studio = readFileSync(new URL('../src/pages/FashionStudioPage.tsx', import.meta.url), 'utf8');
 
   assert.match(studio, /dataPlane\.listCanvasDocuments\(brandId\)/);
-  assert.match(studio, /lg:grid-cols-7/);
+  assert.match(studio, /mt-4 flex flex-wrap gap-2/);
   assert.doesNotMatch(studio, /to="\/credits"/);
   assert.match(studio, /className="w-full"/);
   assert.match(studio, /projectPageCount/);

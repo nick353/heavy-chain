@@ -14,6 +14,9 @@ import { DesignCreationCard } from '../components/design/DesignCreationCard';
 import {
   ArrowRight,
   ArrowUp,
+  ArrowUpToLine,
+  Bookmark,
+  Check,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -24,6 +27,7 @@ import {
   Layers,
   Megaphone,
   MessageCircle,
+  MoreHorizontal,
   MoreVertical,
   Palette,
   FileText,
@@ -124,8 +128,10 @@ export function DesignRecentProjectEntryCard({
   heavyRuntime,
   pinned,
   menuOpen,
+  selected = false,
   onOpen,
   onToggleMenu,
+  onToggleSelect,
   onTogglePin,
   onSaveToLibrary,
   onDelete,
@@ -136,8 +142,11 @@ export function DesignRecentProjectEntryCard({
   heavyRuntime: boolean;
   pinned: boolean;
   menuOpen: boolean;
+  /** Light's card checkbox (top left): selecting any card shows 全選択 / 選択を反転 / 一括削除. */
+  selected?: boolean;
   onOpen: () => void;
   onToggleMenu: () => void;
+  onToggleSelect?: () => void;
   onTogglePin: () => void;
   onSaveToLibrary: () => void;
   onDelete: () => void;
@@ -145,7 +154,10 @@ export function DesignRecentProjectEntryCard({
   const { artifact } = entry;
   const href = designEntryHref(entry);
   return (
-    <article key={artifact.id} data-design-project-origin={entry.origin} className="relative h-60 overflow-visible rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40">
+    <article key={artifact.id} data-design-project-origin={entry.origin} data-selected={selected ? 'true' : undefined} className={`group relative h-60 overflow-visible rounded-2xl border bg-white/5 text-left ${selected ? 'border-[#0bcabc]' : 'border-white/10 hover:border-white/40'}`}>
+      {onToggleSelect && <div role="checkbox" aria-checked={selected} aria-label={`プロジェクトを選択 ${artifact.title}`} tabIndex={0} data-testid="design-project-select"
+        onClick={(event) => { event.stopPropagation(); onToggleSelect(); }} onKeyDown={(event) => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); onToggleSelect(); } }}
+        className={`absolute left-2 top-2 z-20 flex size-6 cursor-pointer items-center justify-center rounded-full border transition ${selected ? 'border-[#0bcabc] bg-[#0bcabc] text-neutral-950 opacity-100' : 'border-white/70 bg-black/30 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>{selected && <Check className="h-4 w-4" />}</div>}
       <DesignArtifactThumbnail artifact={artifact} userId={userId} brandId={brandId} href={href} onOpen={onOpen} />
       <button
         type="button"
@@ -156,16 +168,20 @@ export function DesignRecentProjectEntryCard({
         data-design-card-title=""
         onClick={onOpen}
       >
-        <p data-design-card-name="" className="truncate font-medium">{pinned ? '📌 ' : ''}{artifact.title}</p>
+        <p data-design-card-name="" className="truncate text-base text-neutral-400">{pinned ? '📌 ' : ''}{artifact.title}</p>
         <p data-design-card-date="" className="mt-2 truncate text-xs text-neutral-400">{heavyRuntime ? formatArtifactDate(artifact.createdAt) : `${artifact.featureType} ・ ${formatArtifactDate(artifact.createdAt)}`}</p>
       </button>
-      <div className="absolute right-2 top-2 z-20" data-design-card-menu="">
-        <button type="button" aria-label={`${artifact.title}のメニュー`} aria-expanded={menuOpen} className="rounded-lg bg-black/45 p-2 text-neutral-200 hover:bg-black/70" onClick={(event) => { event.stopPropagation(); onToggleMenu(); }}><MoreVertical className="h-4 w-4" /></button>
-        {menuOpen && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-48 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
-          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={onTogglePin}>ピン留め</button>
-          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={onSaveToLibrary}>アセットライブラリに保存</button>
-          <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-white/10" onClick={onDelete}>削除</button>
-        </div>}
+      {/* Light: a 32px ··· button on a translucent black tile, shown on hover; the menu closes on Escape or an outside click. */}
+      <div className="absolute right-2 top-2 z-20" data-design-card-menu="" onKeyDown={(event) => { if (event.key === 'Escape' && menuOpen) onToggleMenu(); }}>
+        <button type="button" aria-label={`${artifact.title}のメニュー`} aria-haspopup="menu" aria-expanded={menuOpen} className={`flex size-8 items-center justify-center rounded-lg bg-black/50 text-white transition hover:bg-black/70 ${menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`} onClick={(event) => { event.stopPropagation(); onToggleMenu(); }}><MoreHorizontal className="h-4 w-4" /></button>
+        {menuOpen && <>
+          <div className="fixed inset-0 z-20" aria-hidden="true" onClick={(event) => { event.stopPropagation(); onToggleMenu(); }} />
+          <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-[224px] rounded-xl border border-white/10 bg-[#25292b] p-1.5 shadow-2xl">
+            <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={onTogglePin}><ArrowUpToLine className="h-4 w-4" />{pinned ? 'ピン留めを解除' : 'ピン留め'}</button>
+            <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={onSaveToLibrary}><Bookmark className="h-4 w-4" />アセットライブラリに保存</button>
+            <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-red-400 hover:bg-white/10" onClick={onDelete}><Trash2 className="h-4 w-4" />削除</button>
+          </div>
+        </>}
       </div>
     </article>
   );
@@ -684,7 +700,7 @@ function LightchainPrintingWorkspace() {
               <div className="mt-6 h-[340px] w-full max-w-[1056px] overflow-hidden rounded-lg bg-[#0d1113]">
                 <video src="/lightchain-assets/mirror/lightchain-qlxy-prod/print-on-body.mp4" className="h-full w-full object-cover" autoPlay controls muted playsInline aria-label="AIグラフィックデザイン動画" />
               </div>
-              {(referenceImage || printImage) && <button type="button" className="mt-6 rounded-xl bg-cyan-300 px-6 py-3 text-sm font-semibold text-neutral-950" disabled={locked||!workspace.slots.primary||!workspace.slots.secondary} onClick={() => void handleGenerate()}>AI生成</button>}
+              {(referenceImage || printImage) && <button type="button" className="mt-6 rounded-xl bg-cyan-300 px-6 py-3 text-sm font-semibold text-neutral-950" disabled={locked} onClick={() => { if(!workspace.slots.primary||!workspace.slots.secondary){toast.error('画像をアップロードしてください');return;} void handleGenerate(); }}>AI生成</button>}
               {message && <p className="mt-3 text-sm text-neutral-300" role="status">{message}</p>}
             </section>
           </main>
@@ -747,7 +763,7 @@ function LightchainPrintingWorkspace() {
       {workspace.error && <p role="alert" className="mt-3 text-sm text-rose-200">{workspace.error}</p>}
       {workspace.pendingId && workspace.status !== 'running' && <button type="button" onClick={()=>void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
       <div className="mt-auto flex justify-end pt-6">
-        <button type="submit" data-testid="print-image-generate" className="inline-flex h-10 w-[288px] items-center justify-center gap-1 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60" disabled={locked||!workspace.slots.primary||!workspace.slots.secondary} onClick={() => void handleGenerate()}>AI生成<Sparkles aria-hidden="true" className="h-4 w-4" /></button>
+        <button type="submit" data-testid="print-image-generate" className="inline-flex h-10 w-[288px] items-center justify-center gap-1 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60" disabled={locked} onClick={() => { if(!workspace.slots.primary||!workspace.slots.secondary){toast.error('画像をアップロードしてください');return;} void handleGenerate(); }}>AI生成<Sparkles aria-hidden="true" className="h-4 w-4" /></button>
       </div>
     </div>
   );
@@ -855,7 +871,7 @@ export function LightchainVectorSpecialPage() {
       {workspace.pendingId && workspace.status !== 'running' && <button type="button" onClick={()=>void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85 disabled:opacity-40">同じ依頼を照合</button>}
       <div className="mt-auto flex flex-col items-end gap-3 pt-4">
         {isProfessionalFlow && <span className="pr-4 text-base text-white/70">使用回数 {usage}/30</span>}
-        <button type="button" data-testid={isProfessionalFlow ? 'heavy-pattern-vector-pro-generate' : 'heavy-pattern-vector-generate'} className="inline-flex h-10 w-[288px] items-center justify-center gap-1.5 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60" disabled={locked||!referenceImage} onClick={()=>void generate()}>
+        <button type="button" data-testid={isProfessionalFlow ? 'heavy-pattern-vector-pro-generate' : 'heavy-pattern-vector-generate'} className="inline-flex h-10 w-[288px] items-center justify-center gap-1.5 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60" disabled={locked} onClick={()=>{ if(!referenceImage){toast.error('画像をアップロードしてください');return;} void generate(); }}>
           AI生成{isProfessionalFlow && <span className="inline-flex items-center gap-0.5"><span aria-hidden="true" className="inline-block size-3.5 rounded-full bg-slate-950" />1</span>}
         </button>
       </div>
@@ -1426,6 +1442,8 @@ export function LightchainDesignProductionPage() {
   const [persistedDesignScopeKey, setPersistedDesignScopeKey] = useState<string | null>(null);
   const designLoadRequestTokenRef = useRef(0);
   const [projectPage, setProjectPage] = useState(1);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(() => new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [openProjectMenuId, setOpenProjectMenuId] = useState<string | null>(null);
   const [designPinState, setDesignPinState] = useState<{ scopeKey: string; ids: Set<string>; hydrated: boolean }>({ scopeKey: '', ids: new Set(), hydrated: false });
   const [remainingUnits, setRemainingUnits] = useState<number | null>(null);
@@ -1573,6 +1591,8 @@ export function LightchainDesignProductionPage() {
   const visibleConversationProjects = designUserId && designBrandId ? conversationProjects.entries : [];
   // Light renders conversation and saved design projects in one paged "マイプロジェクト" grid.
   const projectGridItems = mergeDesignProjectGridItems(visibleConversationProjects, displayDesignEntries);
+  /** Saved results the selection bar can act on (conversation projects are not deletable from this grid). */
+  const selectableProjectArtifacts = displayDesignEntries.map((entry) => entry.artifact);
   const page = paginate(projectGridItems, projectPage, DESIGN_PROJECT_PAGE_SIZE);
   const visibleProjectItems = page.items;
 
@@ -1665,11 +1685,12 @@ export function LightchainDesignProductionPage() {
     }
     toast.success('アセットライブラリーに保存しました');
   };
-  const deleteDesignArtifact = async (artifact: WorkspaceArtifact) => {
+  /** Deletes one saved result. The bulk delete asks once in Light's 注意 dialog, so it skips the per-item confirm and toast. */
+  const deleteDesignArtifact = async (artifact: WorkspaceArtifact, options: { bulk?: boolean } = {}): Promise<boolean> => {
     const brandId = designBrandId;
     const userId = designUserId;
     const scopeKey = designScopeKey;
-    if (!brandId || !window.confirm(`「${artifact.title}」を削除しますか？`)) return;
+    if (!brandId || (!options.bulk && !window.confirm(`「${artifact.title}」を削除しますか？`))) return false;
     const remoteImageId = typeof artifact.metadata.remoteImageId === 'string'
       ? artifact.metadata.remoteImageId
       : null;
@@ -1682,15 +1703,15 @@ export function LightchainDesignProductionPage() {
       } catch {
         const liveAuth = useAuthStore.getState();
         if (isCurrentDesignArtifactScope(scopeKey, createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id))) {
-          toast.error('削除に失敗しました');
+          if (!options.bulk) toast.error('削除に失敗しました');
         }
-        return;
+        return false;
       }
     }
     const result = deleteWorkspaceArtifactsPersisted(brandId, [artifact.id], userId);
-    if (!result.ok) return toast.error('成果物を削除できませんでした');
+    if (!result.ok) { if (!options.bulk) toast.error('成果物を削除できませんでした'); return false; }
     const liveAuth = useAuthStore.getState();
-    if (!isCurrentDesignArtifactScope(scopeKey, createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id))) return;
+    if (!isCurrentDesignArtifactScope(scopeKey, createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id))) return false;
     setDesignArtifactLoadState((current) => {
       const currentEntries = entriesForDesignProjectLoad(current).filter((entry) => entry.artifact.id !== artifact.id);
       if (current.status === 'error') {
@@ -1701,7 +1722,22 @@ export function LightchainDesignProductionPage() {
     });
     setGalleryReferenceAssets((current) => current.filter((asset) => asset.id !== artifact.id));
     setOpenProjectMenuId(null);
-    toast.success(isRemoteArtifact ? '画像を削除しました' : 'ローカル成果物を削除しました');
+    setSelectedProjectIds((current) => { if (!current.has(artifact.id)) return current; const next = new Set(current); next.delete(artifact.id); return next; });
+    if (!options.bulk) toast.success(isRemoteArtifact ? '画像を削除しました' : 'ローカル成果物を削除しました');
+    return true;
+  };
+  const toggleProjectSelection = (id: string) => setSelectedProjectIds((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const deleteSelectedProjects = async () => {
+    setBulkDeleteOpen(false);
+    const targets = selectableProjectArtifacts.filter((artifact) => selectedProjectIds.has(artifact.id));
+    let removed = 0;
+    for (const artifact of targets) if (await deleteDesignArtifact(artifact, { bulk: true })) removed += 1;
+    if (removed === targets.length) toast.success(`${removed}件のプロジェクトを削除しました`);
+    else toast.error(`${targets.length - removed}件を削除できませんでした`);
   };
   const openProposal = () => {
     if (!canOpenProposal) return;
@@ -1728,6 +1764,8 @@ export function LightchainDesignProductionPage() {
         heavyRuntime={heavyRuntime}
         pinned={pinnedProjectIds.has(artifact.id)}
         menuOpen={openProjectMenuId === artifact.id}
+        selected={selectedProjectIds.has(artifact.id)}
+        onToggleSelect={activeTab === '対話から開始' ? undefined : () => toggleProjectSelection(artifact.id)}
         onOpen={() => { if (href) navigate(href); }}
         onToggleMenu={() => setOpenProjectMenuId((current) => current === artifact.id ? null : artifact.id)}
         onTogglePin={() => { toggleDesignProjectPin(artifact.id); setOpenProjectMenuId(null); }}
@@ -1778,6 +1816,23 @@ export function LightchainDesignProductionPage() {
             </section>
             <section className="mt-12" data-testid="design-production-persisted-projects">
               <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2></div>
+              {selectedProjectIds.size > 0 && <div className="mt-4 flex items-center justify-between" data-testid="design-project-selection-bar">
+                <div className="flex items-center gap-1">
+                  <button type="button" className="h-8 rounded-lg px-4 text-sm text-white hover:bg-white/10" onClick={() => setSelectedProjectIds(new Set(selectableProjectArtifacts.map((artifact) => artifact.id)))}>全選択</button>
+                  <button type="button" className="h-8 rounded-lg px-4 text-sm text-white hover:bg-white/10" onClick={() => setSelectedProjectIds((current) => new Set(selectableProjectArtifacts.map((artifact) => artifact.id).filter((id) => !current.has(id))))}>選択を反転</button>
+                </div>
+                <button type="button" className="h-8 rounded-lg bg-[#0bcabc] px-4 text-sm font-medium text-neutral-950 hover:bg-[#3dd8cc]" onClick={() => setBulkDeleteOpen(true)}>一括削除</button>
+              </div>}
+              {bulkDeleteOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" role="dialog" aria-modal="true" aria-label="注意" data-testid="design-project-bulk-delete-dialog" onKeyDown={(event) => { if (event.key === 'Escape') setBulkDeleteOpen(false); }}>
+                <div className="w-[400px] rounded-xl border border-white/10 bg-[#25292b] p-6 shadow-2xl">
+                  <h3 className="text-sm font-semibold text-white">注意</h3>
+                  <p className="mt-2 text-sm text-neutral-300">選択したファイルを削除しますか？削除すると元に戻せません</p>
+                  <div className="mt-6 flex justify-end gap-2">
+                    <button type="button" autoFocus className="h-8 rounded-lg bg-[#4a5052] px-4 text-sm text-white hover:bg-[#565d60]" onClick={() => setBulkDeleteOpen(false)}>キャンセル</button>
+                    <button type="button" className="h-8 rounded-lg bg-[#0bcabc] px-4 text-sm font-medium text-neutral-950 hover:bg-[#3dd8cc]" onClick={() => void deleteSelectedProjects()}>決定</button>
+                  </div>
+                </div>
+              </div>}
               {displayedDesignLoadState.status === 'loading' && <p className="mt-4 rounded-2xl border border-white/10 px-5 py-8 text-center text-sm text-neutral-400" role="status" data-testid="design-project-loading">デザイン成果物を読み込んでいます。</p>}
               {displayedDesignLoadState.status === 'error' && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-200/5 px-4 py-3 text-sm text-amber-100" role="alert" data-testid="design-project-remote-error"><span>リモートのデザイン成果物を読み込めませんでした。{displayedDesignLoadState.remoteError}</span><button type="button" className="rounded-lg border border-amber-100/30 px-3 py-1.5 text-xs font-semibold hover:bg-white/10" onClick={() => { startDesignArtifactLoad(designScopeKey, designUserId, designBrandId); }} data-testid="design-project-retry">再試行</button></div>}
               <DesignConversationProjectStatus view={conversationProjects} />

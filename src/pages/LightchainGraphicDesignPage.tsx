@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { Clock3, ImagePlus, Plus, Sparkles, WandSparkles } from 'lucide-react';
+import { History, ImagePlus, Plus, Sparkles, WandSparkles } from 'lucide-react';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { whitenDarkBackground } from '../lib/whitenDarkBackground';
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
@@ -118,8 +118,8 @@ function LightchainGraphicDesignWorkspace() {
         {references.length === 0 ? (
           <button type="button" data-testid="graphic-design-upload" onClick={() => inputRef.current?.click()} disabled={locked} className="mt-4 flex h-72 w-full shrink-0 flex-col items-center justify-center rounded border border-dashed border-transparent bg-[#333839] p-4 text-neutral-400 transition hover:border-[#20d0c4]">
             <ImagePlus aria-hidden="true" className="h-6 w-6 text-neutral-300" />
-            <span className="mt-2 w-full break-words text-center text-base text-neutral-300">画像をアップロードします</span>
-            <span className="mt-1 break-words text-center text-sm text-neutral-500">jpg、jpeg、png、webpに対応しています。サイズ20M以内の画像を2枚までアップロードできます</span>
+            <span className="mt-2 w-full break-words text-center text-sm text-neutral-200">画像をアップロードします</span>
+            <span className="mt-1 break-words text-center text-xs text-neutral-400">jpg、jpeg、png、webpに対応しています。サイズ20M以内の画像を2枚までアップロードできます</span>
           </button>
         ) : (
           <>
@@ -157,8 +157,8 @@ function LightchainGraphicDesignWorkspace() {
 
       <div className="flex min-w-[596px] flex-1 p-4">
       <main className="relative flex min-w-0 flex-1 rounded-lg bg-[#262a2b] p-4" aria-label="AIグラフィックデザイン">
-        <button type="button" onClick={() => setHistoryOpen(true)} className="absolute right-4 top-4 z-10 flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] pl-2.5 pr-4 text-sm font-medium text-white">
-          <Clock3 aria-hidden="true" className="h-5 w-5" />生成履歴
+        <button type="button" onClick={() => setHistoryOpen(true)} className="absolute right-4 top-4 z-10 flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] pl-2.5 pr-3 text-xs font-medium text-white">
+          <History aria-hidden="true" className="h-4 w-4" />生成履歴
         </button>
         <div className="flex size-full flex-col items-center justify-center px-10">
           {resultUrl ? (
@@ -167,7 +167,7 @@ function LightchainGraphicDesignWorkspace() {
             <>
               <h5 className="text-xl font-bold text-[#20d0c4]">AIグラフィックデザイン</h5>
               <p className="mt-2 w-[328px] text-center text-sm text-neutral-400">AIでグラフィックを作成</p>
-              <div className="mt-4 h-[340px] w-full"><video src={GRAPHIC_VIDEO} className="size-full" autoPlay controls muted playsInline aria-label="AIグラフィックデザイン動画" /></div>
+              <div className="mt-4 h-[340px] w-full"><video src={GRAPHIC_VIDEO} className="size-full" autoPlay controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture muted playsInline aria-label="AIグラフィックデザイン動画" /></div>
             </>
           )}
           {workspace.status === 'running' && <p role="status" className="mt-4 text-sm text-neutral-300">生成中です…</p>}
