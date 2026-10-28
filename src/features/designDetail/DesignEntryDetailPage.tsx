@@ -556,25 +556,36 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     if (!images.length) return;
     // Light (measured 2026-10-29): on a new file, one uploaded image becomes the project at once — placed on the
     // canvas and selected, with the assistant still collapsed. Several images stay as chat references.
-    if (isNewFile && images.length === 1) { newFileUpload.current = true; setEntryError(null); void references.addFiles(images); return; }
+    if (isNewFile && images.length === 1) { void openUploadedImageProject(images[0]); return; }
     setPanelOpen(true); void references.addFiles(images);
   };
-  const newFileUpload = useRef(false);
-  const newFileReference = references.references.find((reference) => reference.status === 'ready' && reference.receipt?.imageId);
-  const newFileFailed = references.references.some((reference) => reference.status === 'failure');
-  useEffect(() => {
-    if (!isNewFile || !newFileUpload.current || !brandReady) return;
-    if (newFileFailed) { newFileUpload.current = false; return; }
-    const imageId = newFileReference?.receipt?.imageId;
-    if (!imageId) return;
-    newFileUpload.current = false;
+  const [newFileSaving, setNewFileSaving] = useState(false);
+  /** Saves the image directly (not through the chat references) and opens it as its own project. */
+  const openUploadedImageProject = async (file: File) => {
+    if (!cloudflareDataPlane || !brandReady || newFileSaving) return;
+    setEntryError(null);
+    setNewFileSaving(true);
     const assertContext = () => { const auth = useAuthStore.getState(); if (auth.user?.id !== userId || auth.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); };
-    void openImageProject({ scope: { userId, brandId }, imageId, assertContext, client, measure: designCanvasClient.measureImage })
-      .then((document) => { references.clear(); navigate(`${workspace.detailPath}?${new URLSearchParams({ projectId: document.id })}`, { replace: true }); })
-      .catch(() => setEntryError('画像のプロジェクトを開けませんでした。もう一度お試しください'));
-    // references.clear is stable; the effect runs when the upload's receipt arrives.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandId, brandReady, client, isNewFile, navigate, newFileFailed, newFileReference?.receipt?.imageId, userId, workspace.detailPath]);
+    try {
+      const imageUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('design_new_file_read_failed'));
+        reader.onerror = () => reject(new Error('design_new_file_read_failed'));
+        reader.readAsDataURL(file);
+      });
+      const persistenceContext = await cloudflareDataPlane.captureArtifactPersistenceContext({ assertContext });
+      const saved = await cloudflareDataPlane.saveWorkspaceArtifact({ requestId: crypto.randomUUID(), brandId, featureType: 'design-dialogue-reference',
+        title: 'Design new file', imageUrl, prompt: null, metadata: { source: 'design-new-file' }, canvasProjectId: null, sourceStoragePath: null }, undefined, persistenceContext);
+      const document = await openImageProject({ scope: { userId, brandId }, imageId: saved.remote.imageId, assertContext, client, measure: designCanvasClient.measureImage });
+      navigate(`${workspace.detailPath}?${new URLSearchParams({ projectId: document.id })}`, { replace: true });
+    } catch (error) {
+      const code = error instanceof Error && /^[a-z0-9_:-]{1,96}$/i.test(error.message) ? error.message : 'design_new_file_failed';
+      setEntryError(`画像を保存できませんでした（${code}）`);
+      setPanelOpen(true);
+    } finally {
+      setNewFileSaving(false);
+    }
+  };
   const onUpload = (event: ChangeEvent<HTMLInputElement>) => { addFiles(Array.from(event.target.files ?? [])); event.target.value = ''; };
   const onDrop = (event: DragEvent<HTMLElement>) => { event.preventDefault(); setDragOver(false); addFiles(Array.from(event.dataTransfer.files ?? [])); };
   const renameProject = async (next: string) => {
@@ -813,6 +824,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2)`, transform: 'translateX(-50%)', width: 'min(960px, calc(100% - 120px))' }}>
       <input type="file" accept={IMAGE_ACCEPT} multiple className="sr-only" onChange={onUpload} aria-label="画像をアップロード" />
       <h1 className="text-[44px] font-semibold leading-tight text-white">Hello！デザインはここから始まります</h1>
+      {newFileSaving && <p role="status" data-testid="design-new-file-saving" className="mt-2 inline-flex items-center gap-2 text-sm text-neutral-200"><RefreshCw className="h-4 w-4 animate-spin" />画像をアップロードしています</p>}
       <p className="mt-3 text-lg text-neutral-300">まずは下のボタンから線画画像／デザイン／グラフィック／生地画像をアップロードしてください</p>
       <img src={INSPIRATION_PLACEHOLDER} alt="" className="mt-4 w-full max-w-[798px] object-cover" draggable={false} />
       {inspiration && <>
