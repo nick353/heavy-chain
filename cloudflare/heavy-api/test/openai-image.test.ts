@@ -186,10 +186,12 @@ test('edits default to gpt-image-1.5 with input_fidelity=high so the source garm
   const preferred = await send({ OPENAI_IMAGE_MODEL: undefined });
   assert.equal(preferred.result.providerModel, 'gpt-image-1.5');
   assert.equal(preferred.form.get('input_fidelity'), 'high');
+  assert.equal(preferred.form.get('quality'), 'high');
   // mini cannot take input_fidelity, so it is not sent there.
   const mini = await send({ OPENAI_IMAGE_EDIT_MODEL: 'gpt-image-1-mini' });
   assert.equal(mini.result.providerModel, 'gpt-image-1-mini');
   assert.equal(mini.form.get('input_fidelity'), null);
+  assert.equal(mini.form.get('quality'), null);
 });
 
 test('OpenAI edits accept references up to 1536px; Workers AI keeps the 512px limit', async () => {

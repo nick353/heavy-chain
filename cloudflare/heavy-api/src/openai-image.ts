@@ -201,7 +201,8 @@ export async function runOpenAIImage(
     form.set('n', '1');
     form.set('size', imageSize(input.width, input.height));
     form.set('output_format', 'png');
-    if (HIGH_FIDELITY_EDIT_MODELS.has(model)) form.set('input_fidelity', 'high');
+    // Small repeats (dots, seams, buttons) keep their scale only at high quality (Light parity 2026-10-29).
+    if (HIGH_FIDELITY_EDIT_MODELS.has(model)) { form.set('input_fidelity', 'high'); form.set('quality', 'high'); }
     input.references.forEach((reference, index) => {
       const contentType = normalizeMimeType(reference.contentType);
       form.append('image[]', referenceBlob(reference.bytes, contentType), `reference-${index + 1}.${extensionFromMimeType(contentType)}`);
