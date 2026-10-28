@@ -61,13 +61,15 @@ export type ConfiguredTokenVerifier = (request: Request) => Promise<VerifiedIden
  * isolate and binding, and identical checks in flight share one request. The
  * page issues dozens of API calls a minute and the Auth Worker's session lookup
  * sometimes takes several seconds (measured 2026-10-29: usually ~0.6s, spikes
- * to 8s+), which used to surface as 503 token_verifier_unavailable on uploads,
+ * to 8-16s), which used to surface as 503 token_verifier_unavailable on uploads,
  * project creation and generation. Only admissions are cached; 401 and outages
  * are never remembered, so a revoked session is refused again within the TTL.
  */
-const ADMITTED_TTL_MS = 30_000;
+// 5 minutes: the Auth Worker's D1 lookup sometimes takes 16s (measured 2026-10-29 with Smart Placement on),
+// so fewer checks matter more than instant revocation; a revoked session stops working here within 5 minutes.
+const ADMITTED_TTL_MS = 5 * 60_000;
 const ADMITTED_MAX = 500;
-const VERIFY_TIMEOUT_MS = 8000;
+const VERIFY_TIMEOUT_MS = 12_000;
 type AdmittedCache = { admitted: Map<string, { identity: VerifiedIdentity; expiresAt: number }>; inFlight: Map<string, Promise<VerifiedIdentity | null>> };
 const admittedByService = new WeakMap<object, AdmittedCache>();
 
