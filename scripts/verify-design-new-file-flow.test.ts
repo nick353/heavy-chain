@@ -6,9 +6,11 @@ const page = readFileSync(new URL('../src/features/designDetail/DesignEntryDetai
 const hook = readFileSync(new URL('../src/features/designDetail/useDialogueReferences.ts', import.meta.url), 'utf8');
 
 test('a new file turns its first uploaded image into the project, placed on the canvas (Light, measured 2026-10-29)', () => {
-  assert.match(page, /if \(isNewFile && images\.length === 1\) \{ newFileUpload\.current = true;/);
-  assert.match(page, /openImageProject\(\{ scope: \{ userId, brandId \}, imageId, assertContext, client, measure: designCanvasClient\.measureImage \}\)/);
-  assert.match(page, /references\.clear\(\); navigate\(`\$\{workspace\.detailPath\}\?\$\{new URLSearchParams\(\{ projectId: document\.id \}\)\}`/);
+  assert.match(page, /if \(isNewFile && images\.length === 1\) \{ void openUploadedImageProject\(images\[0\]\); return; \}/);
+  // Saved directly, not through the chat references, so a closed assistant panel cannot hold it up.
+  assert.match(page, /cloudflareDataPlane\.saveWorkspaceArtifact\(\{ requestId: crypto\.randomUUID\(\), brandId, featureType: 'design-dialogue-reference'/);
+  assert.match(page, /openImageProject\(\{ scope: \{ userId, brandId \}, imageId: saved\.remote\.imageId/);
+  assert.match(page, /data-testid="design-new-file-saving"/);
 });
 
 test('a new file starts without images left by an earlier unfinished new file', () => {
