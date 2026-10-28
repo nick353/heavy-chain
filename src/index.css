@@ -44,7 +44,9 @@
 .design-production-parity [data-design-dialogue-send]:disabled { cursor: not-allowed; opacity: .55; }
 .design-production-parity [data-design-dialogue-counter] { position: absolute; right: 72px; bottom: 28px; color: #a3a3a3; font-size: 12px; line-height: 16px; white-space: nowrap; }
 .design-production-parity [data-testid="design-production-recent-projects"] { position: relative; left: 50%; width: calc(100vw - 59px); transform: translateX(-50%); }
-.design-production-parity [data-testid="design-dialogue-recent-project-grid"] { grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); column-gap: 8px; row-gap: 16px; }
+/* Light: fixed 220px cards, 8px apart, in a centered 1368px row (six cards; first card at x=221 at 1811px). */
+.design-production-parity [data-testid="design-dialogue-recent-project-grid"] { grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 220px)); column-gap: 8px; row-gap: 16px; }
+.design-production-parity .design-dialogue-recent-projects { width: 100%; max-width: 1368px; margin-left: auto; margin-right: auto; }
 .design-production-parity [data-testid="design-dialogue-scenes"] > button { box-sizing: border-box; }
 .design-production-parity [data-design-dialogue-scene-cover] { object-fit: cover; }
 .design-production-parity [data-design-dialogue-scene-cover] + div { transition: background-color .2s ease; }
@@ -130,16 +132,16 @@
 /* Match the canonical Wear Design Lab project board. */
 .oriented-design-parity { min-height: 100vh; overflow: hidden; background-color: #202526 !important; background-image: url('/lightchain-assets/mirror/lightchain-qlxy-prod/Frame_1000001557_1_-e22a4fc9.webp') !important; background-size: 100% 100%; background-repeat: no-repeat; font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
 .oriented-design-content { height: 100%; overflow-y: auto; padding: 16px 20px 16px 16px; background: transparent; }
-.oriented-design-title { height: 18px; margin: 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 18px; }
-.oriented-design-card-grid, .oriented-design-reference-grid { display: flex; width: 100%; flex-wrap: wrap; gap: 16px; }
-.oriented-design-card-grid { margin-top: 18px; }
+.oriented-design-title { height: 28px; margin: 0; color: #fff; font-size: 18px; font-weight: 500; line-height: 28px; }
+.oriented-design-card-grid, .oriented-design-reference-grid { display: flex; width: 100%; flex-wrap: wrap; gap: 8px; }
+.oriented-design-card-grid { margin-top: 16px; }
 .oriented-design-reference-grid { margin-top: 16px; }
 .oriented-design-reference-grid + * { margin-top: 0; }
 .oriented-design-new-card, .oriented-design-project-card { position: relative; width: 220px; height: 240px; flex: 0 0 220px; overflow: hidden; border: 0; border-radius: 16px; color: #fff; text-align: left; }
 .oriented-design-new-card { cursor: pointer; background: #2f3233; transition: background .15s ease; }
 .oriented-design-new-card:hover { background: #3a3e3f; }
 .oriented-design-new-card-inner { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; color: #abb8b6; font-size: 14px; line-height: 21px; }
-.oriented-design-new-card-inner h6 { margin: 8px 0 0; color: #abb8b6; font-size: 16px; font-weight: 400; line-height: 21px; }
+.oriented-design-new-card-inner h6 { margin: 8px 0 0; color: #abb8b6; font-size: 14px; font-weight: 400; line-height: 21px; }
 .oriented-design-project-mark { display: none; position: relative; width: 80px; height: 80px; margin-bottom: 0; }
 .oriented-design-project-mark-image { display: block; width: 80px; height: 80px; margin-bottom: 0; }
 .oriented-design-project-sheet { position: absolute; display: block; overflow: hidden; border: 1px solid rgba(0,0,0,.78); border-radius: 10px; background: #f7f7f5; box-shadow: 0 2px 3px rgba(0,0,0,.18); }
@@ -158,7 +160,7 @@
 .oriented-design-project-date { padding: 1px 4px; color: #abb8b6; font-size: 14px; line-height: 21px; }
 .oriented-design-project-menu { position: absolute; top: 8px; right: 8px; display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 999px; color: #fff; opacity: 0; transition: opacity .15s ease; }
 .oriented-design-project-card:hover .oriented-design-project-menu { opacity: 1; }
-.oriented-design-section-title { height: 18px; margin: 24px 0 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 18px; }
+.oriented-design-section-title { height: 28px; margin: 24px 0 0; color: #fff; font-size: 18px; font-weight: 500; line-height: 28px; }
 .oriented-design-content > section:last-child { margin-top: 24px; }
 .oriented-design-reference-grid .oriented-design-project-media { height: 240px; }
 
@@ -942,20 +944,20 @@
 .lightchain-lab-source-title,
 .lightchain-lab-source-reference-title {
   color: #fff;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
-  line-height: 18px;
+  line-height: 28px;
 }
 
 .lightchain-lab-source-title {
-  height: 18px;
+  height: 28px;
   margin: 0;
 }
 
 .lightchain-lab-source-new-section {
   display: flex;
   width: 100%;
-  margin-top: 18px;
+  margin-top: 16px;
 }
 
 .lightchain-lab-source-new-card,
@@ -1043,19 +1045,19 @@
 }
 
 .lightchain-lab-source-new-card > span:last-child {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 21px;
 }
 
 .lightchain-lab-source-reference-title {
-  height: 18px;
+  height: 28px;
   margin: 24px 0 0;
 }
 
 .lightchain-lab-source-reference-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 8px;
   width: 100%;
   margin-top: 16px;
 }

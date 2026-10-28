@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ClipboardList, Folder, FolderPlus, MessageSquareText, PanelLeft, PanelLeftClose, Search, Sparkles, X } from 'lucide-react';
+import { ChevronDown, ClipboardList, Folder, FolderPlus, MessageSquareText, PanelLeft, PanelLeftClose, Search, Sparkles, X, SquarePen } from 'lucide-react';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
 import { useAuthStore } from '../../stores/authStore';
 import { addAgentProject, listAgentTasks, readAgentProfile, readAgentProjects, writeAgentProfile, type AgentTaskDocument } from './agentTasks';
@@ -159,10 +159,10 @@ export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, on
         {searching && <input autoFocus aria-label="タスクを検索" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="タスクを検索"
           className="mt-3 h-9 w-full rounded-lg border border-white/10 bg-[#1b1f20] px-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-500" />}
         <nav aria-label="ワークベンチ入口" className="mt-4 grid gap-2">
-          <button type="button" onClick={onNewTask} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
-            <MessageSquareText className="h-4 w-4" />新規タスク</button>
-          <button type="button" onClick={() => setProfileOpen(true)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-lg font-medium leading-6 text-neutral-300 hover:bg-white/10">
-            <ClipboardList className="h-4 w-4" />業務プリファレンスプロファイル</button>
+          <button type="button" onClick={onNewTask} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base font-medium leading-6 text-neutral-300 hover:bg-white/10">
+            <SquarePen className="h-4 w-4" />新規タスク</button>
+          <button type="button" onClick={() => setProfileOpen(true)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base font-medium leading-6 text-neutral-300 hover:bg-white/10">
+            <ClipboardList className="h-4 w-4 flex-none" /><span className="truncate">業務プリファレンスプロファイル</span></button>
         </nav>
         <div className="mt-2 h-px w-full bg-white/10" />
         <div className="flex min-h-0 flex-auto flex-col overflow-y-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -183,7 +183,7 @@ export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, on
             {visible.map((task) => (
               <button key={task.id} type="button" aria-current={task.id === activeTaskId ? 'page' : undefined} onClick={() => navigate(`/agent/${task.id}`)}
                 data-testid={`agent-task-${task.id}`}
-                className={`relative flex min-h-[58px] w-full items-start gap-2 rounded-lg py-2 pl-7 pr-2 text-left text-base font-normal leading-5 text-neutral-300 hover:bg-white/10 ${task.id === activeTaskId ? 'bg-white/10' : ''}`}>
+                className={`relative flex min-h-[58px] w-full items-start gap-2 rounded-lg py-2 pl-7 pr-2 text-left text-sm font-normal leading-5 text-neutral-300 hover:bg-white/10 ${task.id === activeTaskId ? 'bg-white/10' : ''}`}>
                 {task.id === activeTaskId && <span aria-hidden="true" className="absolute left-3 top-4 h-1.5 w-1.5 rounded-full bg-cyan-300" />}
                 <span className="min-w-0 flex-1 truncate">{task.title}<span className="mt-1 block text-xs leading-4 text-neutral-500"><span className="mr-1 inline-block rounded border border-white/10 px-1 text-[10px] leading-4">{task.task.subtype}</span>{formatDate(task.task.createdAt)}</span></span>
               </button>

@@ -1,5 +1,6 @@
 import { Children, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { History } from 'lucide-react';
 import { LightchainHistoryPanel } from './LightchainHistoryPanel';
 
 /**
@@ -124,9 +125,9 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
-            className="absolute right-4 top-4 z-10 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-white/15 bg-[#171b1c]/80 px-2.5 text-sm font-medium text-white/80 shadow-xs backdrop-blur-sm transition hover:bg-white/[0.08]"
+            className="absolute right-4 top-4 z-10 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-white/15 bg-[#171b1c]/80 px-2.5 text-xs font-medium text-white/80 shadow-xs backdrop-blur-sm transition hover:bg-white/[0.08]"
           >
-            生成履歴
+            <History aria-hidden="true" className="h-4 w-4" />生成履歴
           </button>
           {result}
           {historyOpen && <LightchainHistoryPanel locked={navigationLocked} toolIds={historyToolIds} onClose={() => setHistoryOpen(false)} />}
@@ -142,7 +143,7 @@ export function LightchainDesignToolEmptyState({ title, description, videoUrl, v
     <div className="flex h-full w-full flex-col items-center justify-center gap-0 px-14 text-center">
       <h5 className="text-[20px] font-bold leading-[25.2px] text-white">{title}</h5>
       <p className="mt-2 max-w-[28rem] text-sm leading-[21px] text-neutral-400">{description}</p>
-      <video data-testid={videoTestId} className="mt-4 h-[340px] w-full" src={videoUrl} autoPlay controls muted playsInline loop />
+      <video data-testid={videoTestId} className="mt-4 h-[340px] w-full" src={videoUrl} autoPlay controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture muted playsInline loop />
     </div>
   );
 }

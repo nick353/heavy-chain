@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from 'react';
+import toast from 'react-hot-toast';
 import { Brush, ImagePlus, Sparkles, Trash2 } from 'lucide-react';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
@@ -169,7 +170,7 @@ function LightchainImageRepairWorkspace() {
       {workspace.error && <p role="alert" className="mt-3 text-sm text-rose-200">{workspace.error}</p>}
       {workspace.pendingId && workspace.status !== 'running' && <button type="button" onClick={() => void workspace.reconcile()} className="mt-3 self-start rounded-lg border border-white/15 px-3 py-2 text-sm text-white/85">同じ依頼を照合</button>}
       <div className="mt-auto flex justify-end pt-4">
-        <button type="button" data-testid="image-repair-generate" disabled={locked || !source} onClick={generate} className="inline-flex h-10 w-[288px] items-center justify-center gap-1 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60">
+        <button type="button" data-testid="image-repair-generate" disabled={locked} onClick={() => { if (!source) { toast.error('画像をアップロードしてください'); return; } void generate(); }} className="inline-flex h-10 w-[288px] items-center justify-center gap-1 rounded-lg bg-[#5fd0c8] text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60">
           {workspace.status === 'running' ? '生成中…' : 'AI生成'}<Sparkles aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>

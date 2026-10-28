@@ -35,6 +35,7 @@ import {
   WandSparkles,
   Upload,
   X,
+  Lightbulb,
 } from 'lucide-react';
 import { AgentProfileDialog, AgentSidebar, useAgentProjects } from '../features/agent/AgentSidebar';
 import { AGENT_SCENES, createAgentTask, readAgentProfile, type AgentScene } from '../features/agent/agentTasks';
@@ -1382,7 +1383,7 @@ const workspaceStyleConfig: Record<string, {
   },
   'design-agent': {
     kind: 'agent',
-    title: '今日は何から始めますか？',
+    title: '今日は何から始めますか?',
     subtitle: '業務シーンを選択し、目標を入力してください。Agentが後続ステップを案内します。',
     prompt: '調査したい市場、カテゴリ、スタイル方向を入力してください…',
     tabs: ['商品企画', '顧客提案', 'インスピレーション', 'AIグラフィックデザイン'],
@@ -6046,7 +6047,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
               ✦ 33607
             </div>
           )}
-          <div className={`${workspaceStyle.kind === 'agent' ? 'workspace-shell mx-auto flex min-h-full w-[720px] flex-col items-center justify-start pt-[68px] max-[1120px]:w-[min(720px,calc(100%-32px))] max-[760px]:pt-8' : `relative mx-auto ${workspaceStyle.kind === 'marketing' ? 'max-w-[980px]' : 'max-w-[720px]'} text-center`}`}>
+          <div className={`${workspaceStyle.kind === 'agent' ? 'workspace-shell mx-auto flex min-h-full w-[720px] flex-col items-center justify-start pt-[56px] max-[1120px]:w-[min(720px,calc(100%-32px))] max-[760px]:pt-8' : `relative mx-auto ${workspaceStyle.kind === 'marketing' ? 'max-w-[980px]' : 'max-w-[720px]'} text-center`}`}>
             {workspaceStyle.kind === 'agent' ? (
               <section className="workspace-header relative z-[1] flex min-h-[172px] w-[720px] flex-none flex-col items-start gap-4 px-2 py-6 max-[1120px]:w-[min(720px,calc(100%-32px))] max-[760px]:h-auto max-[760px]:min-h-[144px]">
                 <div className="workspace-copy relative z-[3] w-[472px] px-2 max-[900px]:w-full max-[900px]:pr-0">
@@ -6113,7 +6114,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             {workspaceStyle.kind === 'agent' ? (
               <section className="quick-start order-3 mt-0 w-[720px] flex-none overflow-hidden py-6 max-[1120px]:w-[min(720px,calc(100%-32px))]" data-testid={workspaceStyle.kind === 'agent' ? 'lightchain-agent-quick-start' : undefined}>
                 <button type="button" aria-expanded={agentQuickStartOpen} className="flex h-14 w-full items-center justify-between gap-2 bg-transparent px-2 py-4 text-white" onClick={() => setAgentQuickStartOpen((open) => !open)}>
-                  <span className="flex items-center gap-1 text-xs font-medium leading-5 text-[#aab8b6]"><Sparkles aria-hidden="true" className="h-3 w-3" /><strong className="text-sm font-bold text-white">クイックスタート</strong></span>
+                  <span className="flex items-center gap-1 text-xs font-medium leading-5 text-[#aab8b6]"><Lightbulb aria-hidden="true" className="h-4 w-4" /><strong className="text-sm font-bold text-white">クイックスタート</strong></span>
                   <span className="flex items-center gap-1 text-sm text-[#7b8a88]">迷ったら、こちらのテンプレートをお試しください <ChevronDown aria-hidden="true" className="h-3 w-3" /></span>
                 </button>
                 {agentQuickStartOpen && <div className="grid h-[88px] grid-cols-3 gap-2 overflow-hidden max-[760px]:grid-cols-1">
