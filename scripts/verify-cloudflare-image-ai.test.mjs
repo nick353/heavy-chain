@@ -141,6 +141,37 @@ test('when no receipt exists after a lost POST, only a later explicit invocation
   assert.deepEqual(methods,['POST','GET','GET','POST']);
 });
 
+test('a new turn releases a held ID the server never admitted, but not one it knows',async () => {
+  const s = setup(); let held;
+  s.options.call = async (path,init = {}) => {
+    if (init.method === 'POST') { held = new Headers(init.headers).get('idempotency-key'); throw new TypeError('network lost'); }
+    throw new Error('cloudflare_api_404_image_request_not_found');
+  };
+  await assert.rejects(image.invokeDurableImageAction(s.options),/同じ依頼/); assert.equal([...s.store.values()][0],held);
+  const next = crypto.randomUUID(); const seen = [];
+  s.options.idempotencyKey = next;
+  s.options.call = async (path,init = {}) => {
+    seen.push(`${init.method ?? 'GET'} ${path.endsWith(held) ? 'held' : path.endsWith(next) ? 'next' : path}`);
+    if (init.method === 'POST') return receipt(new Headers(init.headers).get('idempotency-key'));
+    throw new Error('cloudflare_api_404_image_request_not_found');
+  };
+  assert.equal((await image.invokeDurableImageAction(s.options)).requestId,next);
+  assert.deepEqual(seen,['GET held','POST /v1/provider-actions/generate-image']); assert.equal(s.store.size,0);
+  const known = setup(); let first;
+  known.options.call = async (path,init = {}) => { first = new Headers(init.headers).get('idempotency-key'); return receipt(first,'unknown'); };
+  await image.invokeDurableImageAction(known.options);
+  known.options.idempotencyKey = crypto.randomUUID(); let posts = 0;
+  known.options.call = async (path,init = {}) => { if (init.method === 'POST') posts++; return receipt(first,'running'); };
+  await assert.rejects(image.invokeDurableImageAction(known.options),/未照合/); assert.equal(posts,0);
+});
+
+test('a token verifier outage is rejected before admission and does not hold the input',async () => {
+  const s = setup(); let count = 0;
+  s.options.call = async () => { count++; throw new Error('cloudflare_api_503_token_verifier_unavailable'); };
+  await assert.rejects(image.invokeDurableImageAction(s.options),/token_verifier_unavailable/);
+  assert.equal(count,1); assert.equal(s.store.size,0);
+});
+
 test('a 403 after inference retains its ID, while a definite rights rejection is not submitted again automatically',async () => {
   const s = setup(); let id;
   s.options.call = async (path,init = {}) => { if (init.method === 'POST') id = new Headers(init.headers).get('idempotency-key'); throw new Error('cloudflare_api_403_forbidden'); };
