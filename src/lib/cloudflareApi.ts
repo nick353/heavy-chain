@@ -46,6 +46,10 @@ export interface CloudflareImageUsage {
   billing: 'estimate_not_invoice'; accountFreeAllocationRemaining: null; accountWideBudgetGuaranteed: false;
 }
 
+export interface CloudflareImageUsageEvent {
+  requestId: string; action: string; units: number; state: string; createdAt: string; userName: string | null; userEmail: string | null;
+}
+
 /** Read-only Heavy server entitlement status. A status read never authorizes a request by itself. */
 export interface CloudflareHeavyEntitlement {
   allowed: boolean;
@@ -836,6 +840,11 @@ class CloudflareDataPlaneClient {
 
   async getImageUsage(brandId: string): Promise<CloudflareImageUsage> {
     return this.request(`/v1/image-ai/usage?brand_id=${encodeURIComponent(brandId)}`);
+  }
+
+  /** The brand's charged image requests, newest first (ポイント詳細). */
+  async getImageUsageEvents(brandId: string): Promise<{ events: CloudflareImageUsageEvent[] }> {
+    return this.request(`/v1/image-ai/usage/events?brand_id=${encodeURIComponent(brandId)}`);
   }
 
   async getHeavyEntitlement(brandId: string, action = 'generate-image'): Promise<CloudflareHeavyEntitlement> {

@@ -38,7 +38,7 @@ test('design production creation cards match the current Light source contract',
   assert.match(source, /className="mt-6 grid gap-2 grid-cols-2 sm:grid-cols-5"/);
   assert.match(source, /max-w-\[1157px\] px-6 py-7 lg:px-0/);
   assert.match(source, /border-dashed border-white\/10 bg-white\/5 p-5 text-center/);
-  assert.match(source, /aria-label="残りクレジット"/);
+  assert.match(source, /<PointDetailButton className=/);
   const newFileCard = source.match(/export function DesignNewFileCard\(\)[\s\S]*?\n\}/)?.[0] ?? '';
   assert.notEqual(newFileCard, '');
   assert.match(newFileCard, /<Plus className="h-6 w-6" \/>/);
