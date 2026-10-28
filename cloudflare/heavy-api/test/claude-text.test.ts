@@ -222,3 +222,16 @@ test('profile-extract refuses missing, too many and malformed materials before c
   await assert.rejects(extractProfile(env(), { files: [{ name: 'big.txt', kind: 'text', text: 'a'.repeat(60_001) }] }, never),
     (error: ClaudeTextError) => error.code === 'profile_materials_too_large');
 });
+
+test('provider endpoint serves profile-extract through the same entrance and gates', async (t) => {
+  const s = textSetup({ AI_IMAGE_ALLOWED_ACTIONS: 'optimize-prompt,chat-plan,image-plan,profile-extract' }); t.after(() => s.db.sql.close());
+  await withFetch(async () => claudeReply({ name: '試し', categories: ['レディース'], priceMin: '3000', priceMax: '8000', currency: 'JPY',
+    countries: ['日本'], ages: [], channels: [], brands: [], visual: '', summary: '' }), async () => {
+    const response = await s.call('/v1/provider-actions/profile-extract', 'alice', { brandId: 'brand', files: [{ name: 'a.csv', kind: 'text', text: 'レディース' }] });
+    assert.equal(response.status, 200);
+    const body = await response.json() as Json;
+    assert.equal(body.name, '試し');
+    assert.deepEqual(body.countries, ['日本']);
+  });
+  assert.equal(s.calls.length, 0);
+});
