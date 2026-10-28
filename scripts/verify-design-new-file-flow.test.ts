@@ -47,3 +47,9 @@ test('while it works, 送信 becomes a stop square like Light; stopping frees th
   assert.match(controller, /const assertRunning = \(\) => \{ assertContext\(\); if \(stopped\.has\(requestId\)\) throw new Error\('design_request_stopped'\); \};/);
   assert.match(controller, /if \(stopped\.has\(current\.input\.requestId\) \|\| current\.assistant\.state !== 'completed'\) return;/);
 });
+
+test('a text-only new file shows the bubble, 考え中...... and a 生成中... square at once, like Light (measured 2026-10-29)', () => {
+  assert.match(page, /isNewFile && entrySending && <div role="status" data-testid="design-new-file-generating"/);
+  assert.match(page, /isNewFile && entrySending && <div data-testid="design-new-file-sending">/);
+  assert.match(page, /\(\(visible\?\.busy && visible\.dialogue\) \|\| \(isNewFile && entrySending\)\) && <p role="status" data-testid="design-thinking"/);
+});

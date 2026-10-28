@@ -664,12 +664,16 @@ class CloudflareDataPlaneClient {
       const { data,error } = await auth.getSession(); if (error) throw error;
       const session = data.session;
       if (!session?.user?.id || !session.access_token) throw new Error('cloudflare_session_missing');
-      const userId = session.user.id, accessToken = session.access_token;
+      const userId = session.user.id;
+      let accessToken = session.access_token;
+      // The fence is the signed-in user. A routine token refresh for the SAME user (on page load or every hour)
+      // used to fail project creation with cloudflare_session_changed; later calls now use the refreshed token.
       const assertCurrent = async () => {
         try {
           await assertContext?.();
           const current = await auth.getSession();
-          if (current.error || current.data.session?.user?.id !== userId || current.data.session?.access_token !== accessToken) throw new Error('cloudflare_session_changed');
+          if (current.error || current.data.session?.user?.id !== userId || !current.data.session.access_token) throw new Error('cloudflare_session_changed');
+          accessToken = current.data.session.access_token;
           await assertContext?.();
         } catch (cause) {
           throw contextError ? contextError(cause) : cause;
@@ -965,7 +969,7 @@ class CloudflareDataPlaneClient {
     await acknowledgeDurableImageAction({ origin:this.origin,userId:session.user.id,receipt,
       cleanup:()=>deleteProtectedImageInput({origin:this.origin,userId:session.user.id,brandId},String(receipt.requestId),String(receipt.clientRecoveryKey)),assertCurrent:async()=>{
       const current = await auth.getSession();
-      if (current.error || current.data.session?.user?.id !== session.user.id || current.data.session?.access_token !== session.access_token) throw new Error('cloudflare_session_changed');
+      if (current.error || current.data.session?.user?.id !== session.user.id || !current.data.session.access_token) throw new Error('cloudflare_session_changed');
     } });
   }
 
