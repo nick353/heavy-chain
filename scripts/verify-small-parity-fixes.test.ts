@@ -34,3 +34,12 @@ test('library groups nest inside a 汎用 group like Light', () => {
   assert.match(library, /data-testid="library-child-group"/);
   assert.match(library, /renderChildGroups\(group\.id, 1\)/);
 });
+
+test('marketing project cards match Light: checkbox, bulk delete, rename in place, ··· menu', () => {
+  const page = read('src/pages/LightchainParityPages.tsx');
+  assert.match(page, /data-testid="marketing-project-select"/);
+  assert.match(page, /data-testid="marketing-project-selection-bar"/);
+  assert.match(page, /data-testid="marketing-card-rename-input"/);
+  assert.match(page, /onClick=\{\(\) => void saveProjectToLibrary\(entry\)\}><Bookmark className="h-4 w-4" \/>アセットライブラリに保存/);
+  assert.match(page, /<h2 className="mb-4 text-lg font-normal leading-7">マイプロジェクト<\/h2>/);
+});

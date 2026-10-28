@@ -4,7 +4,7 @@ import {
   ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop, MessageCircleMore,
   MessageSquarePlus, MousePointer2, Palette, PanelRightClose, PanelRightOpen, Redo2, RefreshCw, Shapes, Sparkles,
   Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2, ZoomIn, ZoomOut, BookOpen, Keyboard, Mouse, History, ChevronsLeft, Plus,
-  LayoutGrid, Map as MapIcon, Wand2, Maximize2,
+  LayoutGrid, Map as MapIcon, Wand2, Maximize2, ArrowUpRight,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
@@ -86,6 +86,13 @@ const hasContentNow = (dialogue: DesignDialogueState) => dialogue.document.snaps
 const GUIDE_EMPTY_ICON = '/lightchain-assets/mirror/jp/static/none_list.png';
 const INSPIRATION_PLACEHOLDER = '/lightchain-assets/mirror/lightchain-qlxy-prod/persistence/font-end/design-empty-placeholder.png';
 const IMAGE_ACCEPT = '.png,.jpg,.jpeg,.avif,.webp';
+/** The assistant ends its reply with "→ " lines; Light shows them as follow-up request buttons under the message. */
+const splitAssistantSuggestions = (content: string) => {
+  const lines = content.split('\n');
+  const suggestions = lines.filter((line) => /^\s*(?:→|->)\s*\S/.test(line)).map((line) => line.replace(/^\s*(?:→|->)\s*/, '').trim()).slice(0, 4);
+  const body = lines.filter((line) => !/^\s*(?:→|->)\s*\S/.test(line)).join('\n').trim();
+  return { body, suggestions };
+};
 const TASK_HINT_KEY = 'heavy.design.taskHistoryHintDismissed';
 const LEFT_TABS = [['tasks', 'タスク'], ['assets', 'アセット'], ['layers', 'レイヤー']] as const;
 const MINIMAP = { width: 200, height: 130 };
@@ -949,7 +956,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         <div className="relative flex h-[52px] shrink-0 items-center gap-2 px-[11px] pt-1">
           <button type="button" aria-haspopup="menu" aria-expanded={Boolean(chatMenu)} onClick={() => void toggleChatMenu()} data-testid="design-chat-switcher"
             className="flex h-8 min-w-0 items-center gap-1 rounded-lg px-2 text-base font-medium hover:bg-white/5">
-            <span className="truncate">{visible?.dialogue?.attempts.length ? (visible.dialogue.attempts[0].input.prompt.slice(0, 20) || 'チャット') : '新しいチャット'}</span><ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" /></button>
+            <span className="truncate">{visible?.dialogue?.attempts.length ? 'デザインアシスタント' : '新しいチャット'}</span><ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" /></button>
           <Link to={workspace.detailPath} aria-label="新しいチャット" className="ml-auto text-neutral-400 hover:text-white" data-testid="design-new-chat"><MessageSquarePlus className="h-5 w-5" /></Link>
           {chatMenu && <div role="menu" aria-label="チャット履歴" data-testid="design-chat-menu" className="absolute left-[11px] top-[48px] z-10 w-[300px] rounded-xl border border-white/10 bg-[#20262a] p-1 shadow-2xl">
             {chatMenu.length === 0 ? <p className="px-3 py-3 text-sm text-neutral-400">チャット履歴はありません</p>
@@ -980,7 +987,17 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
             {!!attempt.input.references.length && <div className="mb-2 ml-auto flex w-fit flex-wrap justify-end gap-1.5" aria-label="参考画像">{attempt.input.references.map((reference) => <span key={`${reference.order}-${reference.imageId}`} data-testid="design-entry-reference" data-image-id={reference.imageId} data-storage-path={reference.storagePath} className="block h-14 w-14 overflow-hidden rounded-lg bg-white/5">
               {urls[reference.storagePath] && <img src={urls[reference.storagePath]} alt={reference.name} className="h-full w-full object-cover" />}</span>)}</div>}
             <p data-testid={index === 0 ? 'design-entry-prompt' : 'design-user-message'} className="ml-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl bg-white/[0.07] px-4 py-3 text-sm">{attempt.input.prompt}</p>
-            {attempt.assistant.state === 'completed' ? <p data-testid="design-assistant-message" className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-200">{attempt.assistant.content}</p>
+            {attempt.assistant.state === 'completed' ? (() => {
+              const { body, suggestions } = splitAssistantSuggestions(attempt.assistant.content ?? "");
+              return <>
+                <p data-testid="design-assistant-message" className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-200">{body}</p>
+                {index === (visible.dialogue?.attempts.length ?? 0) - 1 && suggestions.length > 0 && <div className="mt-3 flex flex-col items-start gap-2" data-testid="design-assistant-suggestions">
+                  {suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setPrompt(suggestion)}
+                    className="flex max-w-full items-start gap-2 rounded-lg bg-white/[0.12] px-3 py-2 text-left text-xs leading-[18px] text-neutral-100 hover:bg-white/[0.18]">
+                    <span>{suggestion}</span><ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0" /></button>)}
+                </div>}
+              </>;
+            })()
               : <p className="mt-3 text-sm text-neutral-400">{attempt.assistant.state === 'failed' ? '応答を取得できませんでした。指示を編集してもう一度送信できます。' : '応答の状態を確認しています。'}</p>}
             {attempt.imageAttempted && <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3" data-testid="design-image-task">
               <p className="flex items-center gap-2 text-sm text-neutral-300"><Sparkles className="h-4 w-4 text-[#0bcabc]" />画像タスク
