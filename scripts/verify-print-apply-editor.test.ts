@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { cutoutDrawRect, movePlacementLayer, type PrintPlacement } from '../src/components/lightchain/printPlacement.ts';
+import { cutoutDrawRect, fitPlacementToBounds, maskBounds, movePlacementLayer, regionAtPoint, type PrintPlacement } from '../src/components/lightchain/printPlacement.ts';
 
 const editor = readFileSync(new URL('../src/components/lightchain/PrintApplyEditor.tsx', import.meta.url), 'utf8');
 const page = readFileSync(new URL('../src/pages/LightchainParityPages.tsx', import.meta.url), 'utf8');
@@ -25,7 +25,7 @@ test('AIマスク認識 segments the garment with the cloth model and keeps the 
 test('ステップ2 places any of the uploaded prints, and the side tools match Light (レイヤー, flips, 複製, 削除)', () => {
   assert.match(editor, /export const MAX_PRINTS = 5;/);
   assert.match(editor, /prints\.map\(\(print\) => \(/);
-  for (const label of ['トップに移動', '上に移動', '下に移動', '一番下に移動', 'レイヤー', '左右反転', '上下反転', '複製', 'プリントを削除', 'マスクを全て消す']) {
+  for (const label of ['トップに移動', '上に移動', '下に移動', '一番下に移動', 'レイヤー', '左右反転', '上下反転', '複製', 'プリントを削除', '全削除']) {
     assert.ok(editor.includes(label), label);
   }
   // Every placement is drawn in stacking order onto one layer that the mask clips.
@@ -88,4 +88,25 @@ test('garments and prints uploaded on the printing page are kept in the library 
   assert.match(page, /void recordLibraryUpload\(\{brandId:currentBrand\.id,userId:user\?\.id,file\}\)/);
   // Draft restores never record again (they go through workspace.upload only).
   assert.equal((page.match(/recordLibraryUpload\(/g) ?? []).length, 2);
+});
+
+test('the toolbar has Light 選択範囲にオブジェクトを追加 (追加 / 取り除く), ワンクリックでトリミング, 透過度 and the shortcut sheet (measured 2026-10-28)', () => {
+  for (const label of ['選択範囲にオブジェクトを追加', '>追加<', '>取り除く<', 'ワンクリックでトリミング', 'マスクを塗ってください。', 'aria-label="透過度"', '<ShortcutSheetButton']) assert.ok(editor.includes(label), label);
+  // 取り除く is unavailable until something is selected, like Light.
+  assert.match(editor, /disabled=\{maskIsEmpty\(\)\}/);
+  assert.match(editor, /layerContext\.globalAlpha = placement\.opacity \?\? 1;/);
+});
+
+test('mask helpers: bounds of the painted area, fitting a print inside it, and the clicked colour region', () => {
+  const size = { width: 4, height: 4 };
+  const data = new Uint8ClampedArray(4 * 4 * 4);
+  assert.equal(maskBounds({ ...size, data }), null);
+  data[(1 * 4 + 1) * 4 + 3] = 255; data[(2 * 4 + 2) * 4 + 3] = 255;
+  assert.deepEqual(maskBounds({ ...size, data }), { x: 1, y: 1, width: 2, height: 2 });
+  const placement: PrintPlacement = { id: 'p', printId: 'a', x: 0.1, y: 0.1, scale: 1, rotation: 15, flipX: true, flipY: false };
+  const fitted = fitPlacementToBounds(placement, { x: 1, y: 1, width: 2, height: 2 }, size, 2);
+  assert.deepEqual([fitted.x, fitted.y, fitted.scale, fitted.rotation, fitted.flipX], [0.5, 0.5, 0.25, 15, true]);
+  // A 4x1 strip: two red pixels then two blue ones; clicking red selects only the red pair.
+  const strip = new Uint8ClampedArray([255, 0, 0, 255, 250, 5, 0, 255, 0, 0, 255, 255, 0, 0, 255, 255]);
+  assert.deepEqual([...regionAtPoint({ width: 4, height: 1, data: strip }, 0, 0)], [1, 1, 0, 0]);
 });

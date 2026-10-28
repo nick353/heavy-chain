@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, ChevronLeft, Download, Hand, ImagePlus, Info, MousePointer2, Pipette, Redo2, RotateCcw, SlidersHorizontal, Sparkles, Undo2 } from 'lucide-react';
+import { BookOpen, ChevronLeft, Hand, ImagePlus, Info, MousePointer2, Pipette, Redo2, RotateCcw, Sparkles, Undo2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
-import { ZoomControl } from './PatternDesignDetailPage';
+import { CollectButton, ColorAdjustPanel, DownloadMenu, NO_EDIT, NO_TONE, ShortcutSheetButton, ToolbarTextButton, imageEditStyle, renderEditedImage, type EditorExportFormat, type ImageTone } from '../components/lightchain/EditorImageTools';
+import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { watermarkImageBlobIfOn } from '../lib/imageDownload';
 import { projectNameFromFile } from '../lib/projectNames';
 
@@ -52,7 +55,8 @@ function ChangeColorWorkspace() {
   const [zoom, setZoom] = useState(1);
   const [dragOrigin, setDragOrigin] = useState<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const [picking, setPicking] = useState(false);
-  const [tone, setTone] = useState({ brightness: 100, contrast: 100, saturate: 100 });
+  const [tone, setTone] = useState<ImageTone>(NO_TONE);
+  const [tonePreview, setTonePreview] = useState<ImageTone | null>(null);
   const [toneOpen, setToneOpen] = useState(false);
   const sourceRef = useRef<HTMLImageElement | null>(null);
   const locked = heavyBrand.pending || workspace.status === 'running' || workspace.status === 'loading' || Boolean(workspace.pendingId);
@@ -117,26 +121,33 @@ function ChangeColorWorkspace() {
     } catch { /* cross-origin source: type the colour instead */ }
   };
   const generate = () => { if (canGenerate) void workspace.generate({ brief: changeColorBrief({ color, area, ratio }) }); };
-  const download = async (url: string | null | undefined, name: string) => {
+  const download = async (url: string | null | undefined, name: string, format: EditorExportFormat = 'png') => {
     if (!url) return;
     try {
-      const bitmap = await createImageBitmap(await (await fetch(url)).blob());
-      const canvas = document.createElement('canvas');
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('canvas');
-      context.filter = `brightness(${tone.brightness}%) contrast(${tone.contrast}%) saturate(${tone.saturate}%)`;
-      context.drawImage(bitmap, 0, 0);
-      const rendered = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!rendered) throw new Error('blob');
+      const rendered = await renderEditedImage(url, { ...NO_EDIT, tone }, format);
       const href = URL.createObjectURL(await watermarkImageBlobIfOn(rendered));
       const anchor = document.createElement('a');
       anchor.href = href;
-      anchor.download = name;
+      anchor.download = `${name.replace(/\.[^.]+$/, '')}.${format === 'jpeg' ? 'jpg' : format}`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(href), 1000);
-    } catch { window.open(url, '_blank', 'noopener'); }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('format_unsupported')) toast.error('このブラウザではこの形式で保存できません');
+      else window.open(url, '_blank', 'noopener');
+    }
+  };
+  /** Light's コレクション: the selected image goes to マイライブラリー. */
+  const collect = async (url: string, kind: 'source' | 'result') => {
+    const { user, currentBrand } = useAuthStore.getState();
+    if (!currentBrand?.id || !user?.id) return;
+    try {
+      const persistenceContext = await cloudflareDataPlane?.captureArtifactPersistenceContext();
+      const storagePath = kind === 'result' ? workspace.result?.storagePath : undefined;
+      const result = await saveWorkspaceArtifactBestEffort({ brandId: currentBrand.id, scopeId: user.id, featureType: 'change-color', title: '色変更', prompt: '色変更', imageUrl: url,
+        createdAt: new Date().toISOString(), metadata: { librarySource: 'change-color-collection', libraryGroup: 'マイライブラリー', ...(storagePath ? { sourceStoragePath: storagePath } : {}) } }, { persistenceContext });
+      if (!result.localPersisted || (cloudflareDataPlane && !result.remote)) throw new Error('library_save_unconfirmed');
+      toast.success('アセットライブラリに保存しました');
+    } catch { toast.error('ライブラリーへ保存できませんでした'); }
   };
 
   const projectCard = (
@@ -175,7 +186,7 @@ function ChangeColorWorkspace() {
     return (
       <main className="relative h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white" data-testid="lightchain-change-color-detail" data-workspace-feature={workspace.toolId} data-resume-state={workspace.status}>
         {projectCard}
-        <label className="absolute bottom-4 left-[338px] right-4 top-[134px] flex cursor-pointer flex-col items-center justify-center rounded-lg bg-[#33393b] text-center" data-testid="change-color-upload-dropzone">
+        <label className="absolute left-1/2 top-1/2 flex h-[484px] w-[min(764px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 cursor-pointer flex-col items-center justify-center rounded-lg bg-[#33393b] text-center" data-testid="change-color-upload-dropzone">
           <ImagePlus className="h-6 w-6 text-white/80" aria-hidden="true" />
           <span className="mt-3 text-base text-white/90">ここをクリックまたはドラッグして画像を追加</span>
           <span className="mt-2 text-sm text-white/50">jpg、jpeg、png、webp形式の画像（最大20M）に対応</span>
@@ -183,27 +194,21 @@ function ChangeColorWorkspace() {
         </label>
         {guideChooser}
         {guideBubble}
+        <ShortcutSheetButton />
       </main>
     );
   }
 
   const visibleResult = Boolean(resultUrl) && showResult;
   const currentImage = visibleResult && selected !== 'source' ? resultUrl : source?.imageUrl ?? null;
-  const filter = `brightness(${tone.brightness}%) contrast(${tone.contrast}%) saturate(${tone.saturate}%)`;
+  const imageStyle = imageEditStyle({ ...NO_EDIT, tone: tonePreview ?? tone });
+  // Light's 色変更 image toolbar: 色調整, コレクション and ダウンロード (PNG / JPG / AVIF).
   const imageToolbar = (kind: 'source' | 'result', url: string) => (
-    <div className="absolute -top-14 left-1/2 z-10 flex h-10 -translate-x-1/2 items-center gap-4 whitespace-nowrap rounded-xl border border-white/10 bg-[#262a2b] px-3 text-sm text-white/85 shadow-lg" onPointerDown={(event) => event.stopPropagation()} data-testid={`change-color-${kind}-toolbar`}>
-      <button type="button" onClick={() => setToneOpen((value) => !value)} className="flex items-center gap-1 hover:text-white"><SlidersHorizontal className="h-4 w-4" />色調整</button>
-      <button type="button" aria-label="ダウンロード" onClick={() => void download(url, kind === 'result' ? '色変更.png' : source?.name ?? '元画像.png')} className="hover:text-white"><Download className="h-4 w-4" /></button>
-      {toneOpen && (
-        <div className="absolute left-0 top-12 w-64 rounded-lg border border-white/10 bg-[#262a2b] p-3 text-xs" role="dialog" aria-label="色調整">
-          {(['brightness', 'contrast', 'saturate'] as const).map((key) => (
-            <label key={key} className="mb-2 flex items-center gap-2">
-              <span className="w-12 text-white/70">{key === 'brightness' ? '明るさ' : key === 'contrast' ? 'コントラスト' : '彩度'}</span>
-              <input type="range" min={50} max={150} value={tone[key]} onChange={(event) => setTone((value) => ({ ...value, [key]: Number(event.target.value) }))} className="flex-1" />
-            </label>
-          ))}
-        </div>
-      )}
+    <div className="absolute -top-14 left-1/2 z-10 flex h-10 -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-xl border border-white/10 bg-[#262a2b] px-1.5 text-sm text-white/85 shadow-lg" onPointerDown={(event) => event.stopPropagation()} data-testid={`change-color-${kind}-toolbar`}>
+      <ToolbarTextButton label="色調整" icon="color" active={toneOpen} onClick={() => { setTonePreview(null); setToneOpen((value) => !value); }} testId="change-color-tone" />
+      <CollectButton onClick={() => void collect(url, kind)} />
+      <DownloadMenu onSelect={(format) => void download(url, kind === 'result' ? '色変更' : source?.name ?? '元画像', format)} />
+      {toneOpen && <ColorAdjustPanel value={tone} onPreview={setTonePreview} onApply={setTone} onClose={() => { setToneOpen(false); setTonePreview(null); }} />}
     </div>
   );
 
@@ -212,18 +217,19 @@ function ChangeColorWorkspace() {
       <div className={`absolute inset-0 ${tool === 'drag' ? 'cursor-grab' : picking ? 'cursor-crosshair' : ''}`} data-testid="change-color-canvas"
         onPointerDown={(event) => { if (tool === 'drag') { setDragOrigin({ x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y }); event.currentTarget.setPointerCapture(event.pointerId); } else if (event.target === event.currentTarget) { setSelected(null); setToneOpen(false); } }}
         onPointerMove={(event) => { if (dragOrigin) setPan({ x: dragOrigin.panX + event.clientX - dragOrigin.x, y: dragOrigin.panY + event.clientY - dragOrigin.y }); }}
-        onPointerUp={() => setDragOrigin(null)}>
+        onPointerUp={() => setDragOrigin(null)}
+        onWheel={(event) => setZoom((value) => Math.min(4, Math.max(0.25, value * (event.deltaY < 0 ? 1.1 : 0.9))))}>
         <div className="absolute left-1/2 top-1/2 flex items-center gap-16 md:left-[calc(50%+168px)]" style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y + 28}px)) scale(${zoom})` }}>
           {source && (
             <div className={`relative ${selected === 'source' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select' && !picking) { event.stopPropagation(); setSelected('source'); } }}>
               {selected === 'source' && !picking && imageToolbar('source', source.imageUrl)}
-              <img ref={sourceRef} src={source.imageUrl} alt="元画像" data-source-slot="primary" onPointerDown={samplePixel} className={`block max-h-[360px] max-w-[360px] select-none object-contain ${picking ? 'cursor-crosshair' : ''}`} style={{ filter }} draggable={false} />
+              <img ref={sourceRef} src={source.imageUrl} alt="元画像" data-source-slot="primary" onPointerDown={samplePixel} className={`block max-h-[360px] max-w-[360px] select-none object-contain ${picking ? 'cursor-crosshair' : ''}`} style={imageStyle} draggable={false} />
             </div>
           )}
           {visibleResult && resultUrl && (
             <div data-testid="change-color-result" className={`relative ${selected === 'result' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select') { event.stopPropagation(); setSelected('result'); } }}>
               {selected === 'result' && imageToolbar('result', resultUrl)}
-              <img src={resultUrl} alt="色変更 AI生成" className="block max-h-[min(360px,calc(100vh-290px))] max-w-[360px] select-none object-contain" style={{ filter }} draggable={false} />
+              <img src={resultUrl} alt="色変更 AI生成" className="block max-h-[min(360px,calc(100vh-290px))] max-w-[360px] select-none object-contain" style={imageStyle} draggable={false} />
             </div>
           )}
           {workspace.status === 'running' && <div className="flex h-[260px] w-[260px] items-center justify-center rounded-lg bg-white/[0.04] text-sm text-white/70" role="status">生成中…</div>}
@@ -281,7 +287,7 @@ function ChangeColorWorkspace() {
       </section>
 
       {guideBubble}
-      <ZoomControl zoom={zoom} onChange={setZoom} onReset={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} />
+      <ShortcutSheetButton />
     </main>
   );
 }

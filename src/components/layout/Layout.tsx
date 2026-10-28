@@ -11,11 +11,12 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
-import { ChevronDown, ChevronLeft, FileText, FolderOpen, Globe2, HelpCircle, LogOut, ShieldCheck, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
+import { ChevronDown, FileText, FolderOpen, Globe2, HelpCircle, LogOut, ShieldCheck, Stamp, User, UserCircle, UserRound, Users } from 'lucide-react';
 import { isHeavyWorkspaceRuntime } from '../../lib/heavyWorkspace';
 import { readWatermarkPreference, setWatermarkUser, writeWatermarkPreference } from '../../lib/watermarkPreference';
 import { setAIModelUser } from '../../lib/aiModelPreference';
 import { FaqPanel, HelpMenu, LanguageMenu, NotificationsPanel, useHeavyNotificationsSeen } from './LightchainHeaderMenus';
+import { AccountCenterDialog, type AccountCenterTab } from './AccountCenterDialog';
 
 // Heavy Chain owns the visible identity; parity route identifiers remain internal compatibility details.
 
@@ -25,7 +26,7 @@ export function Layout() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [isLightAccountMenuOpen, setIsLightAccountMenuOpen] = useState(false);
-  const [isLightAccountDetailOpen, setIsLightAccountDetailOpen] = useState(false);
+  const [accountCenterTab, setAccountCenterTab] = useState<AccountCenterTab | null>(null);
   const currentBrand = useAuthStore((state) => state.currentBrand);
   const lightchainUserName = (typeof user?.user_metadata?.full_name === 'string' && user.user_metadata.full_name.trim())
     || user?.email?.split('@')[0] || 'ユーザー';
@@ -63,7 +64,7 @@ export function Layout() {
   useEffect(() => {
     if (!isLightAccountMenuOpen) return;
     const close = (event: PointerEvent) => {
-      if (!(event.target as Element | null)?.closest?.('[data-light-account-menu]')) { setIsLightAccountMenuOpen(false); setIsLightAccountDetailOpen(false); }
+      if (!(event.target as Element | null)?.closest?.('[data-light-account-menu]')) { setIsLightAccountMenuOpen(false); }
     };
     window.addEventListener('pointerdown', close);
     return () => window.removeEventListener('pointerdown', close);
@@ -142,7 +143,6 @@ export function Layout() {
   const handleLightchainSignOut = async () => {
     await signOut();
     setIsLightAccountMenuOpen(false);
-    setIsLightAccountDetailOpen(false);
     navigate('/login', { replace: true });
   };
 
@@ -165,7 +165,6 @@ export function Layout() {
 
   useEffect(() => {
     setIsLightAccountMenuOpen(false);
-    setIsLightAccountDetailOpen(false);
     setHeaderMenu(null);
   }, [location.pathname, location.search]);
 
@@ -264,20 +263,7 @@ export function Layout() {
                       {isLightAccountMenuOpen && (
                         // Light: a 240px dark menu under the avatar — account card, then groups split by rules.
                         <div role="menu" className="absolute right-0 top-[42px] z-50 w-60 rounded-xl border border-white/10 bg-[#2b2f31] px-3 py-[9px] text-sm text-neutral-200 shadow-2xl">
-                          {isLightAccountDetailOpen ? (
-                            <>
-                              <button type="button" onClick={() => setIsLightAccountDetailOpen(false)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 text-left font-semibold transition hover:bg-white/10">
-                                <ChevronLeft className="h-4 w-4" aria-hidden="true" /> マイアカウント
-                              </button>
-                              <div className="my-3 h-px bg-white/10" />
-                              <div className="px-3 pb-2">
-                                <p className="font-medium text-white">{lightchainUserName}</p>
-                                <p className="mt-1 break-all text-xs text-neutral-400">{user?.email ?? ''}</p>
-                                <Link to="/change-password" className="mt-4 block text-xs text-neutral-300 underline transition hover:text-white">パスワードを変更する</Link>
-                                <Link to="/account/delete" data-testid="account-menu-delete" onClick={() => setIsLightAccountMenuOpen(false)} className="mt-3 block text-xs text-[#f39aa5] underline transition hover:text-[#ffc2ca]">アカウントを削除する</Link>
-                              </div>
-                            </>
-                          ) : (
+                          {(
                             <>
                               <div className="flex h-[72px] items-center gap-2">
                                 <img src={lightchainAvatarUrl} alt="avatar" className="size-12 shrink-0 rounded-full object-cover" />
@@ -287,14 +273,14 @@ export function Layout() {
                                 </div>
                               </div>
                               <div className="my-3 h-px bg-white/10" />
-                              <button type="button" role="menuitem" onClick={() => setIsLightAccountDetailOpen(true)} className={lightMenuItem}><UserRound className="h-5 w-5" aria-hidden="true" />マイアカウント</button>
+                              <button type="button" role="menuitem" onClick={() => { setAccountCenterTab('account'); setIsLightAccountMenuOpen(false); }} className={lightMenuItem}><UserRound className="h-5 w-5" aria-hidden="true" />マイアカウント</button>
                               <div className="my-3 h-px bg-white/10" />
                               <div className="flex flex-col gap-1">
                                 <Link to="/board" role="menuitem" onClick={() => setIsLightAccountMenuOpen(false)} className={lightMenuItem}><FileText className="h-5 w-5" aria-hidden="true" /><span>デザインドキュメント</span></Link>
                                 <Link to="/asset-center" role="menuitem" onClick={() => setIsLightAccountMenuOpen(false)} className={lightMenuItem}><FolderOpen className="h-5 w-5" aria-hidden="true" /><span>ライブラリー</span></Link>
                               </div>
                               <div className="my-3 h-px bg-white/10" />
-                              <Link to="/brand/settings" role="menuitem" onClick={() => setIsLightAccountMenuOpen(false)} className={lightMenuItem}><Users className="h-5 w-5" aria-hidden="true" /><span>チーム管理</span></Link>
+                              <button type="button" role="menuitem" onClick={() => { setAccountCenterTab('team'); setIsLightAccountMenuOpen(false); }} className={lightMenuItem}><Users className="h-5 w-5" aria-hidden="true" /><span>チーム管理</span></button>
                               {/* Only platform admins (server-granted) see the way into the admin dashboard. */}
                               {profile?.is_admin === true && <Link to="/admin?tab=feedback" role="menuitem" data-testid="account-menu-admin" onClick={() => setIsLightAccountMenuOpen(false)} className={lightMenuItem}><ShieldCheck className="h-5 w-5" aria-hidden="true" /><span>管理画面（フィードバック）</span></Link>}
                               <div className="my-3 h-px bg-white/10" />
@@ -309,6 +295,8 @@ export function Layout() {
                           )}
                         </div>
                       )}
+                      {accountCenterTab && <AccountCenterDialog initialTab={accountCenterTab} userName={lightchainUserName} avatarUrl={lightchainAvatarUrl} watermarkOn={watermarkOn}
+                        onToggleWatermark={toggleWatermark} onSignOut={() => { setAccountCenterTab(null); void handleLightchainSignOut(); }} onClose={() => setAccountCenterTab(null)} />}
                     </div>
                   </div>
                 ) : (
