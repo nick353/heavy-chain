@@ -35,3 +35,15 @@ test('sending shows the message at once, 考え中...... over the input, and 生
   // Stuck (unknown) requests do not keep a 生成中... box forever.
   assert.match(page, /attempt\.imageResult === 'in-flight' \|\| \(attempt\.imageResult === undefined && visible\.busy\)/);
 });
+
+test('a stuck request can be made again, and opening a project does not re-read settled ones (input stays free)', () => {
+  assert.match(page, /data-testid="design-attempt-retry"[\s\S]{0,200}active\.send\(attempt\.input\.prompt, attempt\.input\.references\)/);
+  assert.match(page, /attempt\.imageAttempted && \(attempt\.imageResult === undefined \|\| attempt\.imageResult === 'in-flight'\)\)\)\?\.input\.requestId/);
+});
+
+test('while it works, 送信 becomes a stop square like Light; stopping frees the input and places nothing', () => {
+  const controller = readFileSync(new URL('../src/features/designDetail/designDialogueController.ts', import.meta.url), 'utf8');
+  assert.match(page, /data-testid="design-followup-stop"[\s\S]{0,500}void active\.stop\(\)/);
+  assert.match(controller, /const assertRunning = \(\) => \{ assertContext\(\); if \(stopped\.has\(requestId\)\) throw new Error\('design_request_stopped'\); \};/);
+  assert.match(controller, /if \(stopped\.has\(current\.input\.requestId\) \|\| current\.assistant\.state !== 'completed'\) return;/);
+});

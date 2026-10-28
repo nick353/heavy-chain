@@ -29,6 +29,10 @@ export function createDesignDialogueController(options: { scope: DesignScope; pr
   const canvas = createDesignCanvasAdapter({ scope, projectId, conversationId, client, assertContext });
   const runners = new Map<string, ReturnType<typeof createTurnRunner>>();
   const recoveryErrors: DesignDialogueState['recoveryErrors'] = {};
+  // Light's stop button: the stopped request's answer and image are not waited for or placed on the canvas.
+  // A server generation already running still finishes into the history; nothing is sent again.
+  const running = new Set<string>();
+  const stopped = new Set<string>();
   async function refresh() {
     assertContext();
     const document = await canvas.read(); assertContext();
@@ -76,13 +80,15 @@ export function createDesignDialogueController(options: { scope: DesignScope; pr
       if ((current.assistant.state === 'completed' || current.assistant.state === 'failed') && receipt.state === 'unknown') receipt = current.assistant;
       current = await dialogues.receipt(scope, attempt.input, receipt, assertContext); assertContext();
       await refresh();
-      if (current.assistant.state !== 'completed') return;
+      if (stopped.has(current.input.requestId) || current.assistant.state !== 'completed') return;
       if (!current.imageAttempted && !allowImage) return;
       const claim = await dialogues.image(scope, current.input, undefined, assertContext); assertContext();
       let runner = runners.get(current.input.requestId);
       if (!runner) {
         let imageDispatched = false;
-        runner = createTurnRunner({ store: sessions, assertContext, readRequest: client.readImage, acknowledge: client.acknowledgeImage,
+        const requestId = current.input.requestId;
+        const assertRunning = () => { assertContext(); if (stopped.has(requestId)) throw new Error('design_request_stopped'); };
+        runner = createTurnRunner({ store: sessions, assertContext: assertRunning, readRequest: client.readImage, acknowledge: client.acknowledgeImage,
         adoptOutputs: canvas.adoptOutputs,
         generate: async (input) => {
           assertContext();
@@ -95,7 +101,7 @@ export function createDesignDialogueController(options: { scope: DesignScope; pr
       }
       const result = await runner.runTurn(scope, { conversationId, clientRequestKey: current.imageClientRequestKey,
         prompt: current.input.prompt, references: current.input.references }); assertContext();
-      await dialogues.image(scope, current.input, result.kind, assertContext); assertContext();
+      await dialogues.image(scope, current.input, stopped.has(current.input.requestId) ? 'unknown' : result.kind, assertContext); assertContext();
       await refresh();
     };
     const operation = Promise.resolve().then(async () => {
@@ -124,7 +130,11 @@ export function createDesignDialogueController(options: { scope: DesignScope; pr
       });
     });
     flights.set(flightKey, operation);
-    try { await operation; } finally { if (flights.get(flightKey) === operation) flights.delete(flightKey); }
+    running.add(attempt.input.requestId);
+    try { await operation; } finally {
+      running.delete(attempt.input.requestId);
+      if (flights.get(flightKey) === operation) flights.delete(flightKey);
+    }
   }
   return {
     refresh,
@@ -168,6 +178,18 @@ export function createDesignDialogueController(options: { scope: DesignScope; pr
       const admission = await dialogues.admit(scope, { brandId: scope.brandId, projectId, conversationId, prompt,
         history, references: canonical.map((reference, order) => ({ ...reference, order })) }, false, assertContext); assertContext();
       await run(admission.attempt, admission.created, admission.created);
+    },
+    /** Stops waiting for every request this view is running (Light's stop button). */
+    async stop() {
+      for (const requestId of running) stopped.add(requestId);
+      const attempts = await dialogues.list(scope, projectId, conversationId, assertContext); assertContext();
+      for (const attempt of attempts) {
+        if (stopped.has(attempt.input.requestId) && attempt.imageAttempted && attempt.assistant.state === 'completed' && attempt.imageResult !== 'completed') {
+          await dialogues.image(scope, attempt.input, 'unknown', assertContext); assertContext();
+        }
+      }
+      await refresh();
+      return [...stopped];
     },
     async reconcile(requestId: string) {
       const attempts = await dialogues.list(scope, projectId, conversationId, assertContext); assertContext();
