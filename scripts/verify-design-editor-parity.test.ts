@@ -7,7 +7,8 @@ const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.ur
 test('a new design file opens on Light\'s Hello start screen with the assistant collapsed', () => {
   const detail = read('src/features/designDetail/DesignEntryDetailPage.tsx');
   assert.match(detail, /const helloStart = isNewFile && \(inspiration \|\| workspaceId === 'design'\)/);
-  assert.match(detail, /\{!hasContent && helloStart && <label data-testid="design-inspiration-start"/);
+  // While a text-only request is being sent the Hello screen gives way to the 生成中... square (#178).
+  assert.match(detail, /\{!hasContent && helloStart && !entrySending && <label data-testid="design-inspiration-start"/);
   assert.match(detail, /\$\{helloStart \? 'inspiration'/);
 });
 
