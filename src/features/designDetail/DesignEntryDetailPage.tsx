@@ -325,6 +325,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     .filter((object) => object.visible !== false && typeof object.id === 'string')
     .sort((left, right) => (Number(left.zIndex) || 0) - (Number(right.zIndex) || 0)) as DesignCanvasObject[], [visible?.dialogue?.document]);
   const selectedObject = canvasObjects.find((object) => object.id === selected);
+  // Light (measured 2026-10-29) shows a purple-to-teal 生成中... box on the canvas, sized like the source image, where the
+  // result will land, and the same box in the chat's 画像タスク. Heavy places results in the next grid slot (designCanvasAdapter).
+  const generatingAttempts = visible?.dialogue?.attempts.filter((attempt) => attempt.imageAttempted && !['completed', 'failed'].includes(attempt.imageResult ?? '')
+    && !visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.length) ?? [];
+  const placeholderSource = (selectedObject?.type === 'image' ? selectedObject : imageObjects.at(-1)) as Record<string, unknown> | undefined;
+  const placeholderScale = Math.min(1, 440 / (Number(placeholderSource?.width) || 440), 440 / (Number(placeholderSource?.height) || 440));
+  const placeholderSize = { width: (Number(placeholderSource?.width) || 440) * placeholderScale, height: (Number(placeholderSource?.height) || 440) * placeholderScale };
+  const placeholderBase = visible?.dialogue?.document.snapshot.objects.length ?? 0;
   const selectedOutput = selectedObject && visible?.dialogue?.outputs.some((output) => (selectedObject.metadata as Record<string, unknown> | undefined)?.imageId === output.imageId);
   // Any saved image on the canvas (e.g. an opened library image) can be selected and sent as the edit reference.
   const selectedCanvasReference = !selectedOutput ? canvasImageReference(selectedObject as Record<string, unknown> | undefined) : null;
@@ -544,10 +552,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     let manifest: DesignDialogueManifestReference[];
     try { manifest = references.manifest(); }
     catch { setEntryError('参考画像の保存が終わるまでお待ちください'); return; }
+    // Light shows the sent message at once (then 考え中......); the saved attempt replaces this bubble.
+    setSentPrompt({ text, count: visible?.dialogue?.attempts.length ?? 0 });
     void act(async (active) => {
-      await active.send(text, selectedOutput ? manifest : withSelectedReference([...(visible?.draft?.references ?? []), ...manifest]),
-        selectedOutput ? selected! : undefined);
-      if (generation.current && controller.current === active) { setPrompt(''); references.clear(); }
+      try {
+        await active.send(text, selectedOutput ? manifest : withSelectedReference([...(visible?.draft?.references ?? []), ...manifest]),
+          selectedOutput ? selected! : undefined);
+        if (generation.current && controller.current === active) { setPrompt(''); references.clear(); }
+      } finally { setSentPrompt(null); }
     });
   };
   const addFiles = (files: File[]) => {
@@ -560,9 +572,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     setPanelOpen(true); void references.addFiles(images);
   };
   const [newFileSaving, setNewFileSaving] = useState(false);
+  const [sentPrompt, setSentPrompt] = useState<{ text: string; count: number } | null>(null);
+  const [waitingFile, setWaitingFile] = useState<File | null>(null);
   /** Saves the image directly (not through the chat references) and opens it as its own project. */
   const openUploadedImageProject = async (file: File) => {
-    if (!cloudflareDataPlane || !brandReady || newFileSaving) return;
+    // Right after the page opens the brand may still be loading; keep the image and save it once it is ready.
+    if (cloudflareDataPlane && !brandReady) { setWaitingFile(file); setNewFileSaving(true); return; }
+    if (!cloudflareDataPlane || newFileSaving && file !== waitingFile) return;
+    setWaitingFile(null);
     setEntryError(null);
     setNewFileSaving(true);
     const assertContext = () => { const auth = useAuthStore.getState(); if (auth.user?.id !== userId || auth.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); };
@@ -586,6 +603,10 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       setNewFileSaving(false);
     }
   };
+  useEffect(() => {
+    if (brandReady && waitingFile) void openUploadedImageProject(waitingFile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandReady, waitingFile]);
   const onUpload = (event: ChangeEvent<HTMLInputElement>) => { addFiles(Array.from(event.target.files ?? [])); event.target.value = ''; };
   const onDrop = (event: DragEvent<HTMLElement>) => { event.preventDefault(); setDragOver(false); addFiles(Array.from(event.dataTransfer.files ?? [])); };
   const renameProject = async (next: string) => {
@@ -814,6 +835,9 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
               : <DesignCanvasShape object={object} />}
           </button>;
         })}
+        {generatingAttempts.map((attempt, index) => <div key={attempt.input.requestId} role="status" data-testid="design-canvas-generating"
+          className="absolute flex animate-pulse items-center justify-center rounded-lg bg-[linear-gradient(135deg,#7b5cff,#3fb8e8_55%,#0bcabc)] text-2xl font-medium text-white"
+          style={{ left: 80 + ((placeholderBase + index) % 3) * 480, top: 80 + Math.floor((placeholderBase + index) / 3) * 480, ...placeholderSize }}>生成中...</div>)}
       </div>
       {marquee && <div aria-hidden="true" data-testid="design-marquee" className="pointer-events-none absolute border border-[#0bcabc] bg-[#0bcabc]/10"
         style={{ left: Math.min(marquee.x1, marquee.x2) * view.zoom + view.panX, top: Math.min(marquee.y1, marquee.y2) * view.zoom + view.panY,
@@ -1081,6 +1105,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
               <p className="flex items-center gap-2 text-sm text-neutral-300"><ImagePlus className="h-4 w-4 text-[#0bcabc]" />画像タスク
                 {attempt.imageResult !== 'completed' && <span className="ml-auto text-xs text-neutral-500">{attempt.imageResult === 'failed' ? '失敗' : '生成中'}</span>}</p>
               {/* Light shows each result at the panel's width; hovering it offers コレクション (to the asset library) and ダウンロード. */}
+              {generatingAttempts.includes(attempt) && <div data-testid="design-image-generating" className="mt-2 flex w-full max-w-[320px] animate-pulse items-center justify-center rounded-lg bg-[linear-gradient(135deg,#7b5cff,#3fb8e8_55%,#0bcabc)] text-sm font-medium text-white"
+                style={{ aspectRatio: `${placeholderSize.width} / ${placeholderSize.height}` }}>生成中...</div>}
               <div className="mt-2 grid gap-2" aria-label="生成画像">{visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.map((output) =>
                 <div key={output.imageId} className="group relative w-full max-w-[320px]">
                   <button type="button" data-testid="design-generated-preview" data-image-id={output.imageId} className="block w-full" onClick={() => {
@@ -1104,10 +1130,15 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
             {(attempt.assistant.state === 'running' || attempt.assistant.state === 'unknown' || (attempt.imageAttempted && !['completed', 'failed'].includes(attempt.imageResult ?? '')))
               && <button type="button" data-testid="design-attempt-reconcile" disabled={visible.busy} className="mt-3 text-sm text-[#0bcabc]" onClick={() => void act((active) => active.reconcile(attempt.input.requestId))}>作成状態を再確認</button>}
           </article>)}
-          {visible?.busy && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-neutral-400"><RefreshCw className="h-4 w-4 animate-spin" />{visible?.dialogue ? 'デザインを作成しています' : '保存状態を確認しています。'}</p>}
+          {visible?.busy && sentPrompt && (visible.dialogue?.attempts.length ?? 0) === sentPrompt.count
+            && <div className={`${userBubble} mt-4`} data-testid="design-user-bubble-sending"><p className="whitespace-pre-wrap">{sentPrompt.text}</p></div>}
+          {visible?.busy && !visible.dialogue && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-neutral-400"><RefreshCw className="h-4 w-4 animate-spin" />保存状態を確認しています。</p>}
           {visible?.error && <div role="alert" data-testid="design-entry-recovery" className="my-4 rounded-lg bg-white/5 p-4 text-sm"><p>保存・作成状態を確認できませんでした。入力と以前の画像は保持されています。</p>
             <button type="button" disabled={visible.busy} className="mt-3 text-[#0bcabc]" onClick={() => setRetry((value) => value + 1)}>保存状態を再確認</button></div>}
         </div>
+        {/* Light keeps a 考え中...... strip on top of the input while the assistant works. */}
+        {visible?.busy && visible.dialogue && <p role="status" data-testid="design-thinking" className="mx-[11px] -mb-3 flex items-center gap-2 rounded-t-2xl border border-b-0 border-white/10 bg-[#1b2023] px-[15px] pb-5 pt-2 text-sm text-neutral-300">
+          <RefreshCw className="h-4 w-4 animate-spin text-[#0bcabc]" />考え中......</p>}
         <form className="mx-[11px] mb-4 shrink-0 rounded-2xl border border-white/10 bg-[#20262a] px-[15px] pb-4 pt-4" onSubmit={(event) => { event.preventDefault(); submit(); }}>
           {(selectedOutput || selectedCanvasReference) && <div className="mb-2 flex items-center justify-between text-xs text-[#0bcabc]"><span>選択した画像を参考に編集</span><button type="button" onClick={() => setSelected(null)} aria-label="選択を解除">×</button></div>}
           {referenceTray}

@@ -18,3 +18,18 @@ test('a new file starts without images left by an earlier unfinished new file', 
   assert.match(hook, /if \(startEmpty\) for \(const reference of activated\) leftovers\.add\(reference\.id\);/);
   assert.match(hook, /dropLeftovers\(\);\n\s+void controller\.restore\(\)/);
 });
+
+test('an image dropped before the brand is ready waits and is saved once it is', () => {
+  assert.match(page, /if \(cloudflareDataPlane && !brandReady\) \{ setWaitingFile\(file\); setNewFileSaving\(true\); return; \}/);
+  assert.match(page, /if \(brandReady && waitingFile\) void openUploadedImageProject\(waitingFile\);/);
+});
+
+test('sending shows the message at once, 考え中...... over the input, and 生成中... boxes like Light (measured 2026-10-29)', () => {
+  assert.match(page, /setSentPrompt\(\{ text, count: visible\?\.dialogue\?\.attempts\.length \?\? 0 \}\)/);
+  assert.match(page, /data-testid="design-user-bubble-sending"/);
+  assert.match(page, /data-testid="design-thinking"[\s\S]{0,400}考え中\.\.\.\.\.\./);
+  // Same grid slot that designCanvasAdapter.adoptOutputs uses for the result.
+  assert.match(page, /left: 80 \+ \(\(placeholderBase \+ index\) % 3\) \* 480, top: 80 \+ Math\.floor\(\(placeholderBase \+ index\) \/ 3\) \* 480/);
+  assert.match(page, /data-testid="design-canvas-generating"[\s\S]{0,400}生成中\.\.\./);
+  assert.match(page, /data-testid="design-image-generating"/);
+});
