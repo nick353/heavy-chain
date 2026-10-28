@@ -201,8 +201,9 @@
 
 /* The Fashion Studio list uses the same canonical project-board geometry. */
 .fashion-studio-overview-parity { background: #171b1c !important; padding: 16px 20px 16px 16px !important; font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; }
-.fashion-studio-overview-parity > section > div:first-child h1 { height: 18px; margin: 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 18px; }
-.fashion-studio-overview-parity > section > div:nth-child(2) { display: flex; width: 100%; flex-wrap: wrap; gap: 16px; margin-top: 18px; }
+/* Light (re-measured 2026-10-28 at 1880px): 16px heading on a 25px line, cards 16px below it and 8px apart. */
+.fashion-studio-overview-parity > section > div:first-child h1 { height: 25px; margin: 0; color: #fff; font-size: 16px; font-weight: 500; line-height: 25px; }
+.fashion-studio-overview-parity > section > div:nth-child(2) { display: flex; width: 100%; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .fashion-studio-overview-parity > section > div:nth-child(2) > button,
 .fashion-studio-overview-parity > section > div:nth-child(2) > [data-testid="lightchain-fashion-studio-new-file"],
 .fashion-studio-overview-parity > section > div:nth-child(2) > article,
@@ -218,7 +219,7 @@
 .fashion-studio-overview-parity > section > div:nth-child(2) > .studio-new-file-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; overflow: hidden; background: #3c4143; }
 .fashion-studio-overview-parity .studio-new-file-icon { display: block; width: 80px; height: 80px; object-fit: contain; }
 .fashion-studio-overview-parity .studio-new-file-label { margin: 0; color: #d4d4d4; font-size: 14px; line-height: 20px; }
-.fashion-studio-overview-parity .studio-project-title { font-weight: 400; }
+.fashion-studio-overview-parity .studio-project-title { font-size: 14px; font-weight: 400; }
 .fashion-studio-overview-parity .studio-project-date { color: #a3a3a3; }
 .fashion-studio-overview-parity > section > div:nth-child(2) > article > button { height: 240px; }
 .fashion-studio-overview-parity > section > div:nth-child(2) > article > button > div:first-child img,
@@ -790,12 +791,13 @@
   box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
 }
 
+/* Light (2026-10-28): タスク sits at the bottom left; zoom, キャンバスを整理 and the guide line up at the bottom right. */
 .fashion-studio-source-task {
-  bottom: 39px;
-  right: 186px;
+  bottom: 40px;
+  left: 16px;
   display: flex;
-  width: 276px;
-  height: 47px;
+  width: 240px;
+  height: 46px;
   align-items: center;
   justify-content: space-between;
   box-sizing: border-box;
@@ -839,7 +841,7 @@
 }
 
 .fashion-studio-source-zoom-controls {
-  right: 16px;
+  right: 114px;
   bottom: 39px;
   display: flex;
   width: 154px;
@@ -880,11 +882,11 @@
 }
 
 .fashion-studio-source-handbook {
-  right: 120px;
+  right: 16px;
 }
 
 .fashion-studio-source-panel-toggle {
-  right: 72px;
+  right: 64px;
 }
 
 .fashion-studio-source-points {
@@ -942,16 +944,17 @@
   font-family: -apple-system, "system-ui", "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
 }
 
+/* Light (re-measured 2026-10-28 at 1880px): both headings are 16px on a 25px line. */
 .lightchain-lab-source-title,
 .lightchain-lab-source-reference-title {
   color: #fff;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
-  line-height: 28px;
+  line-height: 25px;
 }
 
 .lightchain-lab-source-title {
-  height: 28px;
+  height: 25px;
   margin: 0;
 }
 
@@ -1051,7 +1054,7 @@
 }
 
 .lightchain-lab-source-reference-title {
-  height: 28px;
+  height: 25px;
   margin: 24px 0 0;
 }
 
