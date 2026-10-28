@@ -34,6 +34,8 @@ import { DESIGN_OPEN_IMAGE_PARAM } from '../../lib/legacyCanvasRoute';
 import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
 import { saveWorkspaceArtifactBestEffort } from '../../lib/localWorkspaceArtifacts';
 import { DesignAssetLibrary } from './DesignAssetLibrary';
+import { ANSWER_MARK, answerPrompt, parseAssistantReply } from './assistantQuestions';
+import { AssistantQuestionCard } from './AssistantQuestionCard';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 export const createDesignDialogueClient = (featureType: string): DesignDialogueClient => ({
@@ -96,13 +98,6 @@ const hasContentNow = (dialogue: DesignDialogueState) => dialogue.document.snaps
 const GUIDE_EMPTY_ICON = '/lightchain-assets/mirror/jp/static/none_list.png';
 const INSPIRATION_PLACEHOLDER = '/lightchain-assets/mirror/lightchain-qlxy-prod/persistence/font-end/design-empty-placeholder.png';
 const IMAGE_ACCEPT = '.png,.jpg,.jpeg,.avif,.webp';
-/** The assistant ends its reply with "→ " lines; Light shows them as follow-up request buttons under the message. */
-const splitAssistantSuggestions = (content: string) => {
-  const lines = content.split('\n');
-  const suggestions = lines.filter((line) => /^\s*(?:→|->)\s*\S/.test(line)).map((line) => line.replace(/^\s*(?:→|->)\s*/, '').trim()).slice(0, 4);
-  const body = lines.filter((line) => !/^\s*(?:→|->)\s*\S/.test(line)).join('\n').trim();
-  return { body, suggestions };
-};
 const TASK_HINT_KEY = 'heavy.design.taskHistoryHintDismissed';
 const LEFT_TABS = [['tasks', 'タスク'], ['assets', 'アセット'], ['layers', 'レイヤー']] as const;
 const MINIMAP = { width: 200, height: 130 };
@@ -1122,16 +1117,20 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           </div>}
           {visible?.draft && !visible?.dialogue?.attempts.length && <p data-testid="design-entry-prompt" className={`${userBubble} mt-4 whitespace-pre-wrap`}>{visible.draft.prompt}</p>}
           {visible?.dialogue?.attempts.map((attempt, index) => <article key={attempt.input.requestId} className="mt-4" data-testid="design-dialogue-attempt">
-            {/* Light's own message is a teal bubble with the attached images as 画像N tags at its top. */}
-            <div className={userBubble} data-testid="design-user-bubble">
+            {/* Light's own message is a teal bubble with the attached images as 画像N tags at its top. Answers to its
+                confirmation form are sent as a request too, but Light shows no bubble for them. */}
+            {!attempt.input.prompt.includes(ANSWER_MARK) && <div className={userBubble} data-testid="design-user-bubble">
               {!!attempt.input.references.length && <div className="mb-2 flex flex-wrap gap-1.5" aria-label="参考画像">{attempt.input.references.map((reference, referenceIndex) => <span key={`${reference.order}-${reference.imageId}`} data-testid="design-entry-reference" data-image-id={reference.imageId} data-storage-path={reference.storagePath} className="flex h-7 items-center gap-1 rounded-md bg-[#25292b] px-1.5 text-xs text-white">
                 <span className="block h-4 w-4 overflow-hidden rounded-sm bg-white/10">{urls[reference.storagePath] && <img src={urls[reference.storagePath]} alt={reference.name} className="h-full w-full object-cover" />}</span>画像{referenceIndex + 1}</span>)}</div>}
               <p data-testid={index === 0 ? 'design-entry-prompt' : 'design-user-message'} className="whitespace-pre-wrap">{attempt.input.prompt}</p>
-            </div>
+            </div>}
             {attempt.assistant.state === 'completed' ? (() => {
-              const { body, suggestions } = splitAssistantSuggestions(attempt.assistant.content ?? "");
+              const { body, suggestions, questions } = parseAssistantReply(attempt.assistant.content ?? "");
+              const latest = index === (visible.dialogue?.attempts.length ?? 0) - 1;
               return <>
                 <p data-testid="design-assistant-message" className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-200">{body}</p>
+                {questions.length > 0 && <AssistantQuestionCard key={attempt.input.requestId} questions={questions} disabled={!latest || Boolean(visible.busy)}
+                  onConfirm={(answers) => void act((active) => active.send(answerPrompt(attempt.input.prompt, questions, answers), attempt.input.references))} />}
                 {index === (visible.dialogue?.attempts.length ?? 0) - 1 && suggestions.length > 0 && <div className="mt-3 flex flex-col items-start gap-2" data-testid="design-assistant-suggestions">
                   {suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setPrompt(suggestion)}
                     className="flex max-w-full items-start gap-2 rounded-lg bg-white/[0.12] px-3 py-2 text-left text-xs leading-[18px] text-neutral-100 hover:bg-white/[0.18]">
@@ -1166,7 +1165,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
                 : attempt.imageResult === 'failed' ? '画像を作成できませんでした。以前の画像はそのまま使用できます。'
                 : attempt.imageResult === 'ack-deferred' ? '画像を保存しました。生成記録の確認を続けられます。' : '画像の作成・保存状態を確認しています。'}</p>}
             </div>}
-            {attempt.assistant.state === 'completed' && !attempt.imageAttempted && <button type="button" disabled={visible.busy} className="mt-3 text-sm text-[#0bcabc]" onClick={() => void act((active) => active.continueImage(attempt.input.requestId))}>画像を作成</button>}
+            {attempt.assistant.state === 'completed' && !attempt.imageAttempted && !parseAssistantReply(attempt.assistant.content ?? '').questions.length && <button type="button" disabled={visible.busy} className="mt-3 text-sm text-[#0bcabc]" onClick={() => void act((active) => active.continueImage(attempt.input.requestId))}>画像を作成</button>}
             {attempt.imageAttempted && (attempt.imageResult === 'unknown' || attempt.imageResult === 'failed') && !visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.length
               && <button type="button" data-testid="design-attempt-retry" disabled={visible.busy} className="mr-4 mt-3 text-sm text-[#0bcabc]"
                 onClick={() => void act((active) => active.send(attempt.input.prompt, attempt.input.references))}>もう一度作成</button>}

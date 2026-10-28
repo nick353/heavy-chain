@@ -7,6 +7,7 @@ import type { DesignSessionStore } from './sessionStore';
 import type { DesignEntryDraft, EntryDraftStore } from './entryDraftStore';
 import type { DialogueAttempt, DialogueStore } from './dialogueStore';
 import { imagePrompt } from './imagePrompt';
+import { hasAssistantQuestions } from './assistantQuestions';
 import { createDesignCanvasAdapter, selectedDesignReference, type DesignCanvasClient } from './designCanvasAdapter';
 import type { DesignScope, DesignTurn, DesignTurnOutput } from './types';
 
@@ -82,6 +83,8 @@ export function createDesignDialogueController(options: { scope: DesignScope; pr
       current = await dialogues.receipt(scope, attempt.input, receipt, assertContext); assertContext();
       await refresh();
       if (stopped.has(current.input.requestId) || current.assistant.state !== 'completed') return;
+      // A reply that asks Light's confirmation questions draws nothing; the answers come back as the next request.
+      if (hasAssistantQuestions(current.assistant.content)) return;
       if (!current.imageAttempted && !allowImage) return;
       const claim = await dialogues.image(scope, current.input, undefined, assertContext); assertContext();
       let runner = runners.get(current.input.requestId);
