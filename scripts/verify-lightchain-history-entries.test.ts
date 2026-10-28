@@ -33,6 +33,11 @@ test('resume links reopen the tool route with the job, and only for Lightchain t
   assert.equal(lightchainHistoryTitle('lightchain-change-color'), '色変更');
   assert.equal(lightchainHistoryTitle('fashion-studio-detail-generated-result'), 'ファッションスタジオ');
   assert.equal(lightchainHistoryTitle('some-unknown-type'), '生成画像');
+  // Light titles a spot print 「プリントイメージ‐ポイントプリントイメージ」; other modes keep the tool name.
+  assert.equal(lightchainHistoryTitle('lightchain-printing-image', { coverageMode: 'spot' }), 'プリントイメージ‐ポイントプリントイメージ');
+  assert.equal(lightchainHistoryTitle('lightchain-printing-image', { generationIntent: { coverageMode: 'spot' } }), 'プリントイメージ‐ポイントプリントイメージ');
+  assert.equal(lightchainHistoryTitle('lightchain-printing-image', { coverageMode: 'full' }), 'プリントイメージ');
+  assert.equal(lightchainHistoryTitle('lightchain-printing-image'), 'プリントイメージ');
 });
 
 test('the panel mirrors the measured Light layout and pages older results on scroll', () => {

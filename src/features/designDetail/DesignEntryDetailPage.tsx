@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { createPortal } from 'react-dom';
+import toast from 'react-hot-toast';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop, MessageCircleMore,
   MessageSquarePlus, MousePointer2, Palette, PanelRightClose, PanelRightOpen, Redo2, RefreshCw, Shapes, Sparkles,
   Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2, ZoomIn, ZoomOut, BookOpen, Keyboard, Mouse, History, ChevronsLeft, Plus,
-  LayoutGrid, Map as MapIcon, Wand2, Maximize2, ArrowUpRight,
+  LayoutGrid, Map as MapIcon, Wand2, Maximize2, ArrowUpRight, Moon, Star, Sun,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
@@ -30,6 +32,7 @@ import { BEGINNER_GUIDE_TABS, CANVAS_SHORTCUT_GROUPS, applyCanvasPatch, cloneCan
 import { DESIGN_SHAPES, DesignCanvasShape, createDesignCanvasObject, type DesignCanvasObject, type DesignShapeKind } from './designCanvasObjects';
 import { DESIGN_OPEN_IMAGE_PARAM } from '../../lib/legacyCanvasRoute';
 import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
+import { saveWorkspaceArtifactBestEffort } from '../../lib/localWorkspaceArtifacts';
 import { DesignAssetLibrary } from './DesignAssetLibrary';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
@@ -98,10 +101,23 @@ const LEFT_TABS = [['tasks', 'タスク'], ['assets', 'アセット'], ['layers'
 const MINIMAP = { width: 200, height: 130 };
 const FIT_PADDING = 80;
 
+type EditorTheme = 'dark' | 'light';
+const EDITOR_THEME_KEY = 'heavy-editor-theme:v1';
+const readEditorTheme = (): EditorTheme => { try { return localStorage.getItem(EDITOR_THEME_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } };
+
 /** Dedicated assistant + canvas project view, shared by Light's design and marketing workspaces. */
 export default function DesignEntryDetailPage({ client = designEntryClient, dialogueClient, workspace: workspaceId = 'design' }:
   { client?: DesignEntryClient; dialogueClient?: DesignDialogueClient; workspace?: DialogueWorkspaceId }) {
   const workspace = DIALOGUE_WORKSPACES[workspaceId];
+  const [editorTheme, setEditorTheme] = useState<EditorTheme>(readEditorTheme);
+  const [themeSlot, setThemeSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setThemeSlot(document.getElementById('lightchain-header-context')); }, []);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (editorTheme === 'light') root.dataset.editorTheme = 'light'; else delete root.dataset.editorTheme;
+    try { localStorage.setItem(EDITOR_THEME_KEY, editorTheme); } catch { /* storage unavailable */ }
+    return () => { delete root.dataset.editorTheme; };
+  }, [editorTheme]);
   const activeDialogueClient = dialogueClient ?? (workspaceId === 'marketing' ? marketingDialogueClient : designDialogueClient);
   const { user, currentBrand } = useAuthStore();
   const location = useLocation();
@@ -567,6 +583,23 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   };
+  const downloadResult = async (url: string, imageId: string) => {
+    const blob = await watermarkImageBlobIfOn(await (await fetch(url)).blob());
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${imageId}.png`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  };
+  /** Light's コレクション on a chat result: the image goes to マイライブラリー. */
+  const collectResult = async (imageUrl: string, imageId: string) => {
+    if (!brandId) return;
+    const title = visible?.dialogue?.attempts[0]?.input.prompt.slice(0, 80) || workspace.label;
+    const result = await saveWorkspaceArtifactBestEffort({ brandId, scopeId: userId, featureType: workspace.featureType,
+      title, prompt: title, imageUrl, createdAt: new Date().toISOString(), metadata: { librarySource: 'design-chat-result', libraryGroup: 'マイライブラリー', projectId, imageId } });
+    if (!result.localPersisted || (cloudflareDataPlane && !result.remote)) { toast.error('ライブラリーへ保存できませんでした'); return; }
+    toast.success('アセットライブラリに保存しました');
+  };
   /** Light's キャンバスを整理: lays the objects out in one row, left to right in their current order, then fits the view. */
   const arrangeCanvas = async () => {
     if (!editable || !canvasObjects.length) return;
@@ -632,10 +665,15 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   </>;
 
   const toolbarButton = 'flex h-[34px] w-[34px] items-center justify-center rounded-lg text-neutral-300 transition hover:bg-white/10 hover:text-white disabled:opacity-35 disabled:hover:bg-transparent';
+  const userBubble = 'ml-auto w-fit max-w-[85%] rounded-2xl bg-[#1fcfc0] px-4 py-3 text-sm text-neutral-950';
   const WorkspaceIcon = workspaceId === 'marketing' ? Clapperboard : Palette;
 
   return <main className="relative h-[calc(100dvh-50px)] min-h-[620px] overflow-hidden bg-[#0d1113] text-white" data-testid="design-entry-detail"
-    data-workspace={workspaceId} onDragOver={(event) => { event.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={onDrop}>
+    data-workspace={workspaceId} data-editor-theme={editorTheme} onDragOver={(event) => { event.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={onDrop}>
+    {/* Light's editor pages put a light/dark switch next to the language menu; the choice is kept in this browser. */}
+    {themeSlot && createPortal(<button type="button" data-testid="design-theme-toggle" aria-label={editorTheme === 'light' ? 'ダークモードに切り替え' : 'ライトモードに切り替え'} title={editorTheme === 'light' ? 'ダークモードに切り替え' : 'ライトモードに切り替え'}
+      onClick={() => setEditorTheme((theme) => (theme === 'light' ? 'dark' : 'light'))}
+      className="ml-4 flex size-8 items-center justify-center rounded-lg text-neutral-300 transition hover:bg-white/10 hover:text-white">{editorTheme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>, themeSlot)}
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_62%_8%,rgba(64,140,150,0.16),transparent_42%),radial-gradient(ellipse_at_30%_70%,rgba(110,60,40,0.10),transparent_38%)]" />
     <input ref={uploadRef} type="file" accept={IMAGE_ACCEPT} multiple className="hidden" onChange={onUpload} data-testid="design-entry-upload-input" />
 
@@ -843,11 +881,12 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       <button type="button" aria-label="パネル" disabled={!editable} onClick={() => addObject('frame')} className={toolbarButton}><LayoutPanelTop className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="テキスト" disabled={!editable} onClick={() => addObject('text')} className={toolbarButton}><Type className="h-[18px] w-[18px]" /></button>
       <button type="button" aria-label="画像/動画を挿入する" onClick={() => uploadRef.current?.click()} className={toolbarButton}><ImagePlus className="h-[18px] w-[18px]" /></button>
-      <span className="mx-[2px] h-5 w-px bg-white/15" />
-      {/* Light ends the tool group with 企画提案書; Heavy opens its design document list (/board/edit needs an id). */}
-      <Link to="/board" aria-label="企画提案書" className={toolbarButton}><FileText className="h-[18px] w-[18px]" /></Link>
-      <span className="mx-[2px] h-5 w-px bg-white/15" />
-      <button type="button" aria-label="ダウンロード" onClick={() => void downloadSelected()} className={toolbarButton}><Download className="h-[18px] w-[18px]" /></button>
+      {/* Light's design workspace ends the tool group with 企画提案書 (Heavy opens its design document list; /board/edit needs an id).
+          The marketing workspace stops at 画像/動画を挿入する, and neither has a download button here (it is on the selected image). */}
+      {workspaceId === 'design' && <>
+        <span className="mx-[2px] h-5 w-px bg-white/15" />
+        <Link to="/board" aria-label="企画提案書" className={toolbarButton}><FileText className="h-[18px] w-[18px]" /></Link>
+      </>}
     </div>}
 
     {/* Light keeps zoom and its two round help buttons as a separate group at the bottom right of the canvas. */}
@@ -982,11 +1021,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
             </div>
             </>}
           </div>}
-          {visible?.draft && !visible?.dialogue?.attempts.length && <p data-testid="design-entry-prompt" className="ml-auto mt-4 w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl bg-white/[0.07] px-4 py-3 text-sm">{visible.draft.prompt}</p>}
+          {visible?.draft && !visible?.dialogue?.attempts.length && <p data-testid="design-entry-prompt" className={`${userBubble} mt-4 whitespace-pre-wrap`}>{visible.draft.prompt}</p>}
           {visible?.dialogue?.attempts.map((attempt, index) => <article key={attempt.input.requestId} className="mt-4" data-testid="design-dialogue-attempt">
-            {!!attempt.input.references.length && <div className="mb-2 ml-auto flex w-fit flex-wrap justify-end gap-1.5" aria-label="参考画像">{attempt.input.references.map((reference) => <span key={`${reference.order}-${reference.imageId}`} data-testid="design-entry-reference" data-image-id={reference.imageId} data-storage-path={reference.storagePath} className="block h-14 w-14 overflow-hidden rounded-lg bg-white/5">
-              {urls[reference.storagePath] && <img src={urls[reference.storagePath]} alt={reference.name} className="h-full w-full object-cover" />}</span>)}</div>}
-            <p data-testid={index === 0 ? 'design-entry-prompt' : 'design-user-message'} className="ml-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl bg-white/[0.07] px-4 py-3 text-sm">{attempt.input.prompt}</p>
+            {/* Light's own message is a teal bubble with the attached images as 画像N tags at its top. */}
+            <div className={userBubble} data-testid="design-user-bubble">
+              {!!attempt.input.references.length && <div className="mb-2 flex flex-wrap gap-1.5" aria-label="参考画像">{attempt.input.references.map((reference, referenceIndex) => <span key={`${reference.order}-${reference.imageId}`} data-testid="design-entry-reference" data-image-id={reference.imageId} data-storage-path={reference.storagePath} className="flex h-7 items-center gap-1 rounded-md bg-[#25292b] px-1.5 text-xs text-white">
+                <span className="block h-4 w-4 overflow-hidden rounded-sm bg-white/10">{urls[reference.storagePath] && <img src={urls[reference.storagePath]} alt={reference.name} className="h-full w-full object-cover" />}</span>画像{referenceIndex + 1}</span>)}</div>}
+              <p data-testid={index === 0 ? 'design-entry-prompt' : 'design-user-message'} className="whitespace-pre-wrap">{attempt.input.prompt}</p>
+            </div>
             {attempt.assistant.state === 'completed' ? (() => {
               const { body, suggestions } = splitAssistantSuggestions(attempt.assistant.content ?? "");
               return <>
@@ -1000,15 +1042,25 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
             })()
               : <p className="mt-3 text-sm text-neutral-400">{attempt.assistant.state === 'failed' ? '応答を取得できませんでした。指示を編集してもう一度送信できます。' : '応答の状態を確認しています。'}</p>}
             {attempt.imageAttempted && <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3" data-testid="design-image-task">
-              <p className="flex items-center gap-2 text-sm text-neutral-300"><Sparkles className="h-4 w-4 text-[#0bcabc]" />画像タスク
-                <span className="ml-auto text-xs text-neutral-500">{attempt.imageResult === 'completed' ? '完了' : attempt.imageResult === 'failed' ? '失敗' : '生成中'}</span></p>
-              <div className="mt-2 flex flex-wrap gap-2" aria-label="生成画像">{visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.map((output) =>
-                <button key={output.imageId} type="button" data-testid="design-generated-preview" data-image-id={output.imageId} className="w-24" onClick={() => {
-                  const object = imageObjects.find((item) => (item.metadata as Record<string, unknown> | undefined)?.imageId === output.imageId);
-                  if (object) setSelected(String(object.id));
-                }}>
-                  {urls[output.storagePath] && <img src={urls[output.storagePath]} alt="生成したデザイン" className="h-28 w-24 rounded-lg bg-white/5 object-contain" />}
-                </button>)}</div>
+              <p className="flex items-center gap-2 text-sm text-neutral-300"><ImagePlus className="h-4 w-4 text-[#0bcabc]" />画像タスク
+                {attempt.imageResult !== 'completed' && <span className="ml-auto text-xs text-neutral-500">{attempt.imageResult === 'failed' ? '失敗' : '生成中'}</span>}</p>
+              {/* Light shows each result at the panel's width; hovering it offers コレクション (to the asset library) and ダウンロード. */}
+              <div className="mt-2 grid gap-2" aria-label="生成画像">{visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.map((output) =>
+                <div key={output.imageId} className="group relative w-full max-w-[320px]">
+                  <button type="button" data-testid="design-generated-preview" data-image-id={output.imageId} className="block w-full" onClick={() => {
+                    const object = imageObjects.find((item) => (item.metadata as Record<string, unknown> | undefined)?.imageId === output.imageId);
+                    if (object) setSelected(String(object.id));
+                  }}>
+                    {urls[output.storagePath] ? <img src={urls[output.storagePath]} alt="生成したデザイン" className="max-h-[420px] w-full rounded-lg bg-white/5 object-contain" />
+                      : <span className="block aspect-square w-full rounded-lg bg-white/5" />}
+                  </button>
+                  {urls[output.storagePath] && <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+                    <button type="button" aria-label="コレクション" title="コレクション" data-testid="design-generated-collect" onClick={() => void collectResult(urls[output.storagePath], output.imageId)}
+                      className="flex h-6 w-6 items-center justify-center rounded-md bg-black/50 text-white hover:text-[#0bcabc]"><Star className="h-4 w-4" /></button>
+                    <button type="button" aria-label="ダウンロード" title="ダウンロード" data-testid="design-generated-download" onClick={() => void downloadResult(urls[output.storagePath], output.imageId)}
+                      className="flex h-6 w-6 items-center justify-center rounded-md bg-black/50 text-white hover:text-[#0bcabc]"><Download className="h-4 w-4" /></button>
+                  </div>}
+                </div>)}</div>
               {attempt.imageResult !== 'completed' && <p className="mt-2 text-xs text-neutral-400">{attempt.imageResult === 'failed' ? '画像を作成できませんでした。以前の画像はそのまま使用できます。'
                 : attempt.imageResult === 'ack-deferred' ? '画像を保存しました。生成記録の確認を続けられます。' : '画像の作成・保存状態を確認しています。'}</p>}
             </div>}
