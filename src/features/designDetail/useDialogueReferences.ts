@@ -15,8 +15,8 @@ type Controller = ReturnType<typeof createDesignDialogueReferenceController>;
  * private generated_images row before it can be sent, so the assistant and the
  * image request only ever see canonical IDs.
  */
-export function useDialogueReferences(options: { userId: string; brandId: string; selectionId: string }) {
-  const { userId, brandId, selectionId } = options;
+export function useDialogueReferences(options: { userId: string; brandId: string; selectionId: string; startEmpty?: boolean }) {
+  const { userId, brandId, selectionId, startEmpty = false } = options;
   const [references, setReferences] = useState<DesignDialogueReferenceView[]>([]);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -37,9 +37,22 @@ export function useDialogueReferences(options: { userId: string; brandId: string
       publish: (snapshot) => { if (active) setReferences(snapshot.references); },
     });
     controllerRef.current = controller;
+    // A new file starts empty like Light: images left by an earlier unfinished new file are dropped,
+    // while anything uploaded after this point is kept.
+    const leftovers = new Set<string>();
+    const dropLeftovers = () => {
+      for (const id of leftovers) { try { setReferences(controller.remove(id).references); } catch { /* already gone */ } }
+    };
     try {
-      setReferences(controller.activate(scope).references);
-      void controller.restore().then((snapshot) => { if (active) setReferences(snapshot.references); }).catch(() => undefined);
+      const activated = controller.activate(scope).references;
+      if (startEmpty) for (const reference of activated) leftovers.add(reference.id);
+      setReferences(activated);
+      dropLeftovers();
+      void controller.restore().then((snapshot) => {
+        if (!active) return;
+        setReferences(snapshot.references);
+        dropLeftovers();
+      }).catch(() => undefined);
     } catch {
       setError('参考画像を読み込めませんでした');
     }
@@ -51,6 +64,7 @@ export function useDialogueReferences(options: { userId: string; brandId: string
       for (const url of urls.values()) URL.revokeObjectURL(url);
       urls.clear();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startEmpty only matters when the scope opens.
   }, [brandId, selectionId, userId]);
 
   // Restored (reloaded) references have no local bytes; show their private copy instead.
