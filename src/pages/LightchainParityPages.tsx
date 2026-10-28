@@ -1147,6 +1147,9 @@ export function LightchainMarketingHomePage() {
   const [renaming, setRenaming] = useState<{ projectId: string; value: string } | null>(null);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  // Light's marketing cards share the design list's checkbox → 全選択 / 選択を反転 / 一括削除.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [covers, setCovers] = useState<Record<string, string>>({});
   const uploadRef = useRef<HTMLInputElement | null>(null);
   const projectsView = useDesignConversationProjects(undefined, 'marketing');
@@ -1230,14 +1233,34 @@ export function LightchainMarketingHomePage() {
     });
     setOpenProjectMenuId(null);
   };
-  const hideProject = (entry: DesignConversationProject) => {
-    if (!window.confirm(`「${entry.title}」を削除しますか？`)) return;
+  const hideProjects = (projectIds: string[]) => {
     setHiddenIds((current) => {
-      const next = new Set(current).add(entry.projectId);
+      const next = new Set(current);
+      projectIds.forEach((id) => next.add(id));
       writeStoredIds(marketingProjectStorageKey('hidden', userId, brandId), next);
       return next;
     });
+    setSelectedIds((current) => new Set([...current].filter((id) => !projectIds.includes(id))));
     setOpenProjectMenuId(null);
+  };
+  const hideProject = (entry: DesignConversationProject) => {
+    if (!window.confirm(`「${entry.title}」を削除しますか？`)) return;
+    hideProjects([entry.projectId]);
+  };
+  const toggleSelected = (projectId: string) => setSelectedIds((current) => {
+    const next = new Set(current);
+    if (next.has(projectId)) next.delete(projectId); else next.add(projectId);
+    return next;
+  });
+  /** Light's アセットライブラリに保存: the project's cover image goes to the library. */
+  const saveProjectToLibrary = async (entry: DesignConversationProject) => {
+    setOpenProjectMenuId(null);
+    const imageUrl = entry.coverPath ? covers[entry.coverPath] : undefined;
+    if (!brandId || !imageUrl) { toast.error('保存できる画像がありません'); return; }
+    const result = await saveWorkspaceArtifactBestEffort({ brandId, scopeId: userId, featureType: 'marketing-dialogue', title: entry.title, prompt: entry.title, imageUrl,
+      createdAt: new Date().toISOString(), metadata: { librarySource: 'marketing-card-menu', libraryGroup: 'マイライブラリー', projectId: entry.projectId } });
+    if (!result.localPersisted || (cloudflareDataPlane && !result.remote)) { toast.error('ライブラリーへ保存できませんでした'); return; }
+    toast.success('アセットライブラリに保存しました');
   };
   const renameProject = async () => {
     const target = renaming;
@@ -1325,8 +1348,26 @@ export function LightchainMarketingHomePage() {
           </div>
           {tutorial?.target === 'scenes' && <div className="z-30">{tutorialBubble}</div>}
         </div>
-        <div className="w-full rounded-2xl p-4" data-testid="lightchain-marketing-projects">
-          <h2 className="mb-4 text-xl font-normal leading-7">マイプロジェクト</h2>
+        <div className="-mt-[11px] w-full rounded-2xl px-4 pb-4" data-testid="lightchain-marketing-projects">
+          {/* Light (2026-10-28): 18px heading 48px under the scene chips, cards 16px below it. */}
+          <h2 className="mb-4 text-lg font-normal leading-7">マイプロジェクト</h2>
+          {selectedIds.size > 0 && <div className="mb-4 flex items-center justify-between" data-testid="marketing-project-selection-bar">
+            <div className="flex items-center gap-1">
+              <button type="button" className="h-8 rounded-lg px-4 text-sm text-white hover:bg-white/10" onClick={() => setSelectedIds(new Set(projects.map((entry) => entry.projectId)))}>全選択</button>
+              <button type="button" className="h-8 rounded-lg px-4 text-sm text-white hover:bg-white/10" onClick={() => setSelectedIds((current) => new Set(projects.map((entry) => entry.projectId).filter((id) => !current.has(id))))}>選択を反転</button>
+            </div>
+            <button type="button" className="h-8 rounded-lg bg-[#0bcabc] px-4 text-sm font-medium text-neutral-950 hover:bg-[#3dd8cc]" onClick={() => setBulkDeleteOpen(true)}>一括削除</button>
+          </div>}
+          {bulkDeleteOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" role="dialog" aria-modal="true" aria-label="注意" data-testid="marketing-project-bulk-delete-dialog" onKeyDown={(event) => { if (event.key === 'Escape') setBulkDeleteOpen(false); }}>
+            <div className="w-[400px] rounded-xl border border-white/10 bg-[#25292b] p-6 shadow-2xl">
+              <h3 className="text-sm font-semibold text-white">注意</h3>
+              <p className="mt-2 text-sm text-neutral-300">選択したファイルを削除しますか？削除すると元に戻せません</p>
+              <div className="mt-6 flex justify-end gap-2">
+                <button type="button" autoFocus className="h-8 rounded-lg bg-[#4a5052] px-4 text-sm text-white hover:bg-[#565d60]" onClick={() => setBulkDeleteOpen(false)}>キャンセル</button>
+                <button type="button" className="h-8 rounded-lg bg-[#0bcabc] px-4 text-sm font-medium text-neutral-950 hover:bg-[#3dd8cc]" onClick={() => { hideProjects([...selectedIds]); setBulkDeleteOpen(false); }}>決定</button>
+              </div>
+            </div>
+          </div>}
           {tutorial?.target === 'projects' && <div className="relative z-30 mb-3">{tutorialBubble}</div>}
           <DesignConversationProjectStatus view={projectsView} />
           <div className={`flex flex-wrap gap-2 rounded-2xl ${tourRing('projects')}`}>
@@ -1338,20 +1379,34 @@ export function LightchainMarketingHomePage() {
             </button>
             {projects.map((entry) => {
               const cover = entry.coverPath ? covers[entry.coverPath] : undefined;
-              return <article key={entry.projectId} className="group relative h-60 w-[220px] overflow-hidden rounded-2xl bg-[#202527] text-left hover:bg-[#283033]" data-testid="marketing-project-card" data-project-id={entry.projectId}>
-                <Link to={entry.href} aria-label={`${entry.title}を開く`} className="absolute inset-0 flex flex-col">
-                  <span className="flex h-[176px] items-center justify-center overflow-hidden bg-white/[0.04]">{cover ? <img src={thumbnailImageUrl(cover) ?? cover} alt="" className="h-full w-full object-cover" loading="lazy" onError={(event) => { if (event.currentTarget.src !== cover) event.currentTarget.src = cover; }} /> : <img src="/lightchain-assets/static/project_default_cover.png" alt="" className="h-12 w-12 object-contain" loading="lazy" />}</span>
-                  <span className="block px-3 py-2"><span className="block truncate text-base">{pinnedIds.has(entry.projectId) ? '📌 ' : ''}{entry.title}</span><span className="mt-1 block truncate text-xs text-neutral-500">{formatArtifactDate(entry.updatedAt)}</span></span>
+              const selected = selectedIds.has(entry.projectId);
+              const menuOpen = openProjectMenuId === entry.projectId;
+              return <article key={entry.projectId} className={`group relative h-60 w-[220px] overflow-visible rounded-2xl border bg-[#202527] text-left hover:bg-[#283033] ${selected ? 'border-[#0bcabc]' : 'border-transparent'}`} data-testid="marketing-project-card" data-project-id={entry.projectId} data-selected={selected ? 'true' : undefined}>
+                <div role="checkbox" aria-checked={selected} aria-label={`プロジェクトを選択 ${entry.title}`} tabIndex={0} data-testid="marketing-project-select"
+                  onClick={(event) => { event.stopPropagation(); toggleSelected(entry.projectId); }} onKeyDown={(event) => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleSelected(entry.projectId); } }}
+                  className={`absolute left-2 top-2 z-20 flex size-6 cursor-pointer items-center justify-center rounded-full border transition ${selected ? 'border-[#0bcabc] bg-[#0bcabc] text-neutral-950 opacity-100' : 'border-white/70 bg-black/30 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>{selected && <Check className="h-4 w-4" />}</div>
+                <Link to={entry.href} aria-label={`${entry.title}を開く`} className="block h-[168px] overflow-hidden rounded-t-2xl">
+                  <span className="flex h-full items-center justify-center overflow-hidden bg-white/[0.04]">{cover ? <img src={thumbnailImageUrl(cover) ?? cover} alt="" className="h-full w-full object-cover" loading="lazy" onError={(event) => { if (event.currentTarget.src !== cover) event.currentTarget.src = cover; }} /> : <img src="/lightchain-assets/static/project_default_cover.png" alt="" className="h-12 w-12 object-contain" loading="lazy" />}</span>
                 </Link>
-                {renaming?.projectId === entry.projectId && <input autoFocus aria-label="プロジェクト名" value={renaming.value} maxLength={160} onChange={(event) => setRenaming({ projectId: entry.projectId, value: event.target.value })}
-                  onBlur={() => void renameProject()} onKeyDown={(event) => { if (event.key === 'Enter') void renameProject(); if (event.key === 'Escape') setRenaming(null); }}
-                  className="absolute bottom-8 left-2 right-2 z-20 rounded border border-[#0bcabc] bg-[#171b1c] px-2 py-1 text-sm outline-none" />}
-                <div className="absolute right-2 top-2 z-20"><button type="button" aria-label={`${entry.title}のメニュー`} aria-expanded={openProjectMenuId === entry.projectId} className="rounded-lg bg-black/45 p-2 text-neutral-200 opacity-0 transition hover:bg-black/70 focus:opacity-100 group-hover:opacity-100" onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === entry.projectId ? null : entry.projectId); }}><MoreVertical className="h-4 w-4" /></button>
-                  {openProjectMenuId === entry.projectId && <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-40 rounded-lg border border-white/10 bg-[#202627] p-1 shadow-2xl">
-                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => togglePin(entry.projectId)}>{pinnedIds.has(entry.projectId) ? 'ピン留めを解除' : 'ピン留め'}</button>
-                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10" onClick={() => { setRenaming({ projectId: entry.projectId, value: entry.title }); setOpenProjectMenuId(null); }}>名前を変更</button>
-                    <button type="button" role="menuitem" className="block w-full rounded px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10" onClick={() => hideProject(entry)}>削除</button>
-                  </div>}
+                {/* Light renames in place: click the title, type, then Enter or click away. */}
+                <div className="px-4 pt-[14px]">
+                  {renaming?.projectId === entry.projectId
+                    ? <input autoFocus aria-label="プロジェクト名" value={renaming.value} maxLength={160} data-testid="marketing-card-rename-input" onChange={(event) => setRenaming({ projectId: entry.projectId, value: event.target.value })}
+                      onBlur={() => void renameProject()} onKeyDown={(event) => { if (event.key === 'Enter') void renameProject(); if (event.key === 'Escape') setRenaming(null); }}
+                      className="h-6 w-full rounded-sm border border-[#0bcabc] bg-[#171b1c] px-1 text-sm text-white outline-none" />
+                    : <span role="textbox" aria-label={`${entry.title}の名前を変更`} className="block cursor-text truncate rounded-sm text-sm leading-6 text-neutral-200 hover:bg-white/10" onClick={() => setRenaming({ projectId: entry.projectId, value: entry.title })}>{pinnedIds.has(entry.projectId) ? '📌 ' : ''}{entry.title}</span>}
+                  <span className="mt-1 block truncate text-xs leading-4 text-neutral-500">{formatArtifactDate(entry.updatedAt)}</span>
+                </div>
+                <div className="absolute right-2 top-2 z-20" onKeyDown={(event) => { if (event.key === 'Escape' && menuOpen) setOpenProjectMenuId(null); }}>
+                  <button type="button" aria-label={`${entry.title}のメニュー`} aria-haspopup="menu" aria-expanded={menuOpen} className={`flex size-8 items-center justify-center rounded-lg bg-black/50 text-white transition hover:bg-black/70 ${menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`} onClick={(event) => { event.stopPropagation(); setOpenProjectMenuId((current) => current === entry.projectId ? null : entry.projectId); }}><MoreHorizontal className="h-4 w-4" /></button>
+                  {menuOpen && <>
+                    <div className="fixed inset-0 z-20" aria-hidden="true" onClick={() => setOpenProjectMenuId(null)} />
+                    <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-[224px] rounded-xl border border-white/10 bg-[#25292b] p-1.5 shadow-2xl">
+                      <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={() => togglePin(entry.projectId)}><ArrowUpToLine className="h-4 w-4" />{pinnedIds.has(entry.projectId) ? 'ピン留めを解除' : 'ピン留め'}</button>
+                      <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={() => void saveProjectToLibrary(entry)}><Bookmark className="h-4 w-4" />アセットライブラリに保存</button>
+                      <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-red-400 hover:bg-white/10" onClick={() => hideProject(entry)}><Trash2 className="h-4 w-4" />削除</button>
+                    </div>
+                  </>}
                 </div>
               </article>;
             })}
