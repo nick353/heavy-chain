@@ -6071,7 +6071,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                           const nextCopy = workspaceTabCopy[tab];
                           setWorkspaceText(workspaceTextDrafts[tab] ?? nextCopy?.prompt ?? '');
                         }}
-                        className={`relative z-[1] flex h-8 flex-none items-center justify-center rounded-lg px-4 py-1 text-xs font-medium leading-4 whitespace-nowrap transition-colors ${currentWorkspaceTab === tab ? 'text-[#20d0c4]' : 'text-[#aab8b6] hover:text-white'}`}
+                        className={`relative z-[1] flex h-8 flex-none items-center justify-center rounded-lg px-4 py-1 text-xs font-medium leading-4 whitespace-nowrap transition-colors ${currentWorkspaceTab === tab ? 'bg-[#2c3335] text-[#20d0c4]' : 'text-[#aab8b6] hover:text-white'}`}
                       >
                         {tab}
                       </button>
@@ -6089,8 +6089,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     }}
                     className="absolute inset-0 z-[2] block h-full w-full object-cover"
                   />
-                  <span className="absolute right-[-8px] top-[18px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">{currentWorkspaceTab === 'AIグラフィックデザイン' ? '視覚的な訴求力' : '精度の高い商品選定'}</span>
-                  <span className="absolute left-[-6px] bottom-[64px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-xs text-[#dfe8e6]">{currentWorkspaceTab === 'AIグラフィックデザイン' ? 'オリジナル図案' : '市場インサイト'}</span>
+                  <span className="absolute right-0 top-[26px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-sm text-[#dfe8e6]">{currentWorkspaceTab === 'AIグラフィックデザイン' ? '視覚的な訴求力' : '精度の高い商品選定'}</span>
+                  <span className="absolute left-[-2px] bottom-[24px] z-[3] whitespace-nowrap rounded-full border border-white/10 bg-[#353a3b] px-3 py-1 text-sm text-[#dfe8e6]">{currentWorkspaceTab === 'AIグラフィックデザイン' ? 'オリジナル図案' : '市場インサイト'}</span>
                 </div>
               </section>
             ) : (
@@ -6187,7 +6187,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                       <button
                         type="button"
                         aria-expanded={agentTaskTypeOpen}
-                        className="absolute left-1 top-1 z-20 flex h-6 min-w-[100px] items-center gap-0.5 whitespace-nowrap rounded-md bg-[#244440] pr-1 pl-2 text-base font-normal leading-5 text-[#7ee1d4]"
+                        className="absolute left-1 top-1 z-20 flex h-6 min-w-[100px] items-center gap-0.5 whitespace-nowrap rounded-md bg-[#244440] pr-1 pl-2 text-sm font-normal leading-5 text-[#7ee1d4]"
                         onClick={() => setAgentTaskTypeOpen((open) => !open)}
                       >
                         {agentTaskTypeLabel} <ChevronDown aria-hidden="true" className="h-3 w-3" />
@@ -6254,7 +6254,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                     aria-label={workspaceStyle.kind === 'agent' ? currentWorkspaceCopy.prompt : undefined}
                     placeholder={currentWorkspaceCopy.prompt}
                     maxLength={4000}
-                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 text-base font-normal leading-6 text-[#e8eeed] placeholder:text-[#8f9b99]' + (agentSubtypeChip ? ' pl-1 [text-indent:112px]' : ' pl-2') : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
+                    className={`${workspaceStyle.kind === 'agent' ? 'block h-14 min-h-14 overflow-hidden px-4 pt-1 pb-1 text-sm font-normal leading-6 text-[#e8eeed] placeholder:text-[#8f9b99]' + (agentSubtypeChip ? ' pl-1 [text-indent:104px]' : ' pl-2') : 'h-full min-h-[112px] py-5'} w-full resize-none border-0 bg-transparent outline-none placeholder:text-neutral-400`}
                   />
                 )}
                 </div>
