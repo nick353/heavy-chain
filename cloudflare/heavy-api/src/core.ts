@@ -182,6 +182,7 @@ const PROVIDER_ACTIONS = new Set([
   "optimize-prompt",
   "chat-plan",
   "image-plan",
+  "profile-extract",
   "design-gacha",
   "product-shots",
   "model-matrix",
