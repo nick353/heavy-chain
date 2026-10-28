@@ -48,3 +48,18 @@ test('the assistant ends with follow-up requests that show as Light\'s suggestio
   const server = read('cloudflare/heavy-api/src/designAssistant.ts');
   assert.match(server, /each on its own line starting with "→ "/);
 });
+
+test('a scene button fills Light\'s prompt template and attaches its sample images as chips', () => {
+  const detail = read('src/features/designDetail/DesignEntryDetailPage.tsx');
+  assert.match(detail, /title: '生地パターン適用', prompt: '服装のデザインを変更せず、異なる生地を服装に適用してください', assets: \['fabric1\.jpg', 'fabric2\.jpg', 'fabric3\.jpg', 'fabric4\.jpg', 'fabric5\.png'\]/);
+  assert.match(detail, /title: '線画から実写化', prompt: 'シャツを白黒線稿の服装デザイン図に変換し、白背景にしてください', assets: \['draft1\.png'\]/);
+  assert.match(detail, /title: 'デザインミックス', prompt: '画像1の色と生地を変更せず、襟型を画像2の襟型に変更してください', assets: \['multi1\.jpg', 'multi2\.jpg'\]/);
+  assert.match(detail, /title: 'プリント修正', prompt: '画像1のアジサイ要素を参考に、四方連続のプリントパターンをデザインし、レイアウトとスタイルは画像2を参考にしてください', assets: \['print1\.png', 'print2\.jpg'\]/);
+  // Light replaces the earlier chips when another scene is pressed.
+  assert.match(detail, /setPrompt\(scene\.prompt\); setEntryError\(null\); references\.clear\(\);/);
+  assert.match(detail, /fetch\(`\/scene-assets\/\$\{name\}`/);
+  assert.match(detail, /if \(run === sceneRun\.current\) await references\.addFiles\(files\);/);
+  for (const name of ['fabric1.jpg', 'fabric5.png', 'draft1.png', 'multi1.jpg', 'multi2.jpg', 'print1.png', 'print2.jpg']) {
+    assert.ok(readFileSync(new URL(`../public/scene-assets/${name}`, import.meta.url)).byteLength > 0, name);
+  }
+});

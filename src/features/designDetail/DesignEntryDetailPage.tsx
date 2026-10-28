@@ -80,8 +80,15 @@ const ASSISTANT_PRESETS: Record<DialogueWorkspaceId, readonly string[]> = {
   ],
 };
 
-// Light's scenes for a project that already has a canvas.
-const CANVAS_SCENES = ['生地パターン適用', '線画から実写化', 'デザインミックス', 'プリント修正'] as const;
+// Light's scenes (measured 2026-10-29): a scene fills the prompt with its template and attaches its sample images
+// (the same files Light serves from light-chain-platform/design/ja) as 画像N chips, replacing the earlier chips.
+const CANVAS_SCENES = [
+  { title: '生地パターン適用', prompt: '服装のデザインを変更せず、異なる生地を服装に適用してください', assets: ['fabric1.jpg', 'fabric2.jpg', 'fabric3.jpg', 'fabric4.jpg', 'fabric5.png'] },
+  { title: '線画から実写化', prompt: 'シャツを白黒線稿の服装デザイン図に変換し、白背景にしてください', assets: ['draft1.png'] },
+  { title: 'デザインミックス', prompt: '画像1の色と生地を変更せず、襟型を画像2の襟型に変更してください', assets: ['multi1.jpg', 'multi2.jpg'] },
+  { title: 'プリント修正', prompt: '画像1のアジサイ要素を参考に、四方連続のプリントパターンをデザインし、レイアウトとスタイルは画像2を参考にしてください', assets: ['print1.png', 'print2.jpg'] },
+] as const;
+type CanvasScene = typeof CANVAS_SCENES[number];
 
 /** A document "has a canvas" when it holds objects and no chat has started on it yet. */
 const hasContentNow = (dialogue: DesignDialogueState) => dialogue.document.snapshot.objects.length > 0 && dialogue.attempts.length === 0;
@@ -575,6 +582,19 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     // canvas and selected, with the assistant still collapsed. Several images stay as chat references.
     if (isNewFile && images.length === 1) { void openUploadedImageProject(images[0]); return; }
     setPanelOpen(true); void references.addFiles(images);
+  };
+  const sceneRun = useRef(0);
+  const applyScene = async (scene: CanvasScene) => {
+    const run = ++sceneRun.current;
+    setPrompt(scene.prompt); setEntryError(null); references.clear();
+    try {
+      const files = await Promise.all(scene.assets.map(async (name) => {
+        const response = await fetch(`/scene-assets/${name}`, { credentials: 'omit' });
+        if (!response.ok) throw new Error('design_scene_asset_unavailable');
+        return new File([await response.blob()], name, { type: name.endsWith('.png') ? 'image/png' : 'image/jpeg' });
+      }));
+      if (run === sceneRun.current) await references.addFiles(files);
+    } catch { if (run === sceneRun.current) setEntryError('場面の画像を読み込めませんでした'); }
   };
   const [newFileSaving, setNewFileSaving] = useState(false);
   const [stoppedIds, setStoppedIds] = useState<Set<string>>(() => new Set());
@@ -1089,7 +1109,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
               <h1 className="mt-[22px] text-[26px] font-medium leading-[34px]">今日は何をデザインしますか？</h1>
               <p className="mt-4 text-sm leading-5 text-neutral-400">下からデザイン要望を入力するか、画像をアップロード／キャンバスから選択して修正・デザインできます</p>
               <div className="mt-[36px] flex flex-col items-start gap-2" data-testid="design-canvas-scenes">
-                {CANVAS_SCENES.map((scene) => <button key={scene} type="button" onClick={() => setPrompt(scene)} className="flex h-10 items-center gap-2 rounded-xl px-4 text-left text-base text-neutral-200 hover:bg-white/5"><Lightbulb className="h-5 w-5 shrink-0 text-neutral-300" />{scene}</button>)}
+                {CANVAS_SCENES.map((scene) => <button key={scene.title} type="button" data-testid="design-canvas-scene" onClick={() => { void applyScene(scene); }} className="flex h-10 items-center gap-2 rounded-xl px-4 text-left text-base text-neutral-200 hover:bg-white/5"><Lightbulb className="h-5 w-5 shrink-0 text-neutral-300" />{scene.title}</button>)}
               </div>
             </> : <>
             <h1 className="mt-[22px] text-[26px] font-medium leading-[34px]">こんにちは<br />専属のデザインアシスタントがサポートします。</h1>
