@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { OpenAIImageError, openAIExpectedDimensions, resolveOpenAIModel, runOpenAIImage } from '../src/openai-image.ts';
 import type { Env } from '../src/index.ts';
-import type { ImageInput } from '../src/image-ai-contracts.ts';
+import { raster, type ImageInput } from '../src/image-ai-contracts.ts';
 import { pngFixture } from './image-ai-fixture.ts';
 
 const env = (overrides: Record<string, string | undefined> = {}) => ({
@@ -208,4 +208,21 @@ test('gpt-image-2 asks for 2048px-class images (Light returns 2048x2048, 2026-10
   assert.deepEqual(openAIExpectedDimensions(1152, 768, 'gpt-image-2'), [2048, 1360]);
   assert.deepEqual(openAIExpectedDimensions(768, 1152, 'gpt-image-1.5'), [1024, 1536]);
   assert.deepEqual(openAIExpectedDimensions(768, 1152), [1024, 1536]);
+});
+
+test('OpenAI results are enlarged to Light\'s 2048px-class sizes, and kept as they are when enlarging fails', async () => {
+  const { enlargeLikeLight, LIGHT_OUTPUT_SIZES } = await import('../src/image-ai.ts');
+  assert.deepEqual(LIGHT_OUTPUT_SIZES['1024x1536'], [1696, 2528]);
+  const original = raster(pngFixture(1024, 1536))!;
+  const calls: unknown[] = [];
+  const images = (result: Uint8Array | Error) => ({ input: () => ({ transform: (options: unknown) => { calls.push(options); return {
+    output: async () => { if (result instanceof Error) throw result; return { response: () => new Response(result as BufferSource) }; } }; } }) });
+  const enlarged = await enlargeLikeLight({ IMAGES: images(pngFixture(1696, 2528)) } as never, original);
+  assert.equal(enlarged.width, 1696); assert.equal(enlarged.height, 2528);
+  assert.deepEqual(calls[0], { width: 1696, height: 2528, fit: 'cover' });
+  assert.equal(await enlargeLikeLight({ IMAGES: images(new Error('images_down')) } as never, original), original);
+  assert.equal(await enlargeLikeLight({ IMAGES: images(pngFixture(1024, 1536)) } as never, original), original);
+  assert.equal(await enlargeLikeLight({} as never, original), original);
+  const large = raster(pngFixture(2048, 1360))!;
+  assert.equal(await enlargeLikeLight({ IMAGES: images(pngFixture(1, 1)) } as never, large), large);
 });

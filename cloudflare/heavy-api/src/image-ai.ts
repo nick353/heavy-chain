@@ -2,8 +2,8 @@ import type { Env } from './index.ts';
 import { principal } from './domain.ts';
 import { requireBrandRole, handleMediaReadGateway, userHasBrandRole } from './core.ts';
 import { IMAGE_MODEL, IMAGE_ACTIONS, ImageInputError, boundedImageJSON, decodeImage, imageEstimate,
-  isRecord, modelMultipart, normalizedImageRequestDigest, parseImageInput, sha256, type AuthorizedSourceAsset,
-  type ImageAction, type ImageInput, type Json } from './image-ai-contracts.ts';
+  isRecord, modelMultipart, normalizedImageRequestDigest, parseImageInput, raster, sha256, type AuthorizedSourceAsset,
+  type ImageAction, type ImageInput, type Json, type Raster } from './image-ai-contracts.ts';
 import { CLAUDE_TEXT_ACTIONS, ClaudeTextError, claudeConfigured, runClaudeTextAction, type ClaudeTextAction } from './claude-text.ts';
 import { MAX_OPENAI_IMAGE_TIMEOUT_MS, OpenAIImageError, OPENAI_IMAGE_BACKEND, OPENAI_IMAGE_EDIT_MODELS, OPENAI_IMAGE_MODEL_LABELS, OPENAI_IMAGE_MODELS, OPENAI_IMAGE_PROVIDER, openAIExpectedDimensions, openAIModelForEndpoint, resolveOpenAIModel, runOpenAIImage } from './openai-image.ts';
 import { CLAUDE_TEXT_MODELS, defaultClaudeModel } from './claude-text.ts';
@@ -403,6 +403,22 @@ async function handleClaudeTextAction(request: Request, env: Env, action: Claude
   }
 }
 
+/** Light returns 2048px-class images (measured 2026-10-29: an edit came back 1696x2528, a new one 2048x2048).
+ * OpenAI edits stop at 1536px, so the stored copy is enlarged to Light's size; on any failure the original is kept. */
+export const LIGHT_OUTPUT_SIZES: Readonly<Record<string,[number,number]>> = { '1024x1536': [1696,2528], '1536x1024': [2528,1696], '1024x1024': [2048,2048] };
+export async function enlargeLikeLight(env: Pick<Env,'IMAGES'>, image: Raster): Promise<Raster> {
+  const target = LIGHT_OUTPUT_SIZES[`${image.width}x${image.height}`];
+  if (!target || !env.IMAGES) return image;
+  try {
+    const source = new Response(image.bytes as BufferSource).body;
+    if (!source) return image;
+    const output = await env.IMAGES.input(source).transform({ width: target[0], height: target[1], fit: 'cover' })
+      .output({ format: image.contentType === 'image/jpeg' ? 'image/jpeg' : 'image/png', quality: 95 });
+    const enlarged = raster(new Uint8Array(await output.response().arrayBuffer()));
+    return enlarged && enlarged.width === target[0] && enlarged.height === target[1] ? enlarged : image;
+  } catch { return image; }
+}
+
 export async function handleImageAIAction(request: Request, env: Env, action: string): Promise<Response> {
   if (!IMAGE_ACTIONS.has(action)) return fail('image_action_not_implemented',503);
   if (CLAUDE_TEXT_ACTIONS.has(action)) return handleClaudeTextAction(request,env,action as ClaudeTextAction);
@@ -564,6 +580,7 @@ async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageIn
       image = decodeImage(output.image,false);
       const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height,typeof output.providerModel === 'string' ? output.providerModel : undefined) : [input.width,input.height];
       if (image.width !== expected[0] || image.height !== expected[1]) throw new Error('dimensions');
+      if (provider.provider === 'openai') image = await enlargeLikeLight(env,image);
     } catch {
       const beforeInvalid = await canContinue(auth,env,row,true); if (beforeInvalid) { await reconcile(env,row,true); return beforeInvalid; }
       const providerError = provider.provider === 'openai' ? new OpenAIImageError('unusable_response',200,undefined,
