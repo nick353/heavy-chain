@@ -163,6 +163,13 @@ test('a new turn releases a held ID the server never admitted, but not one it kn
   known.options.idempotencyKey = crypto.randomUUID(); let posts = 0;
   known.options.call = async (path,init = {}) => { if (init.method === 'POST') posts++; return receipt(first,'running'); };
   await assert.rejects(image.invokeDurableImageAction(known.options),/未照合/); assert.equal(posts,0);
+  // Once the server says it finished, the next turn goes ahead with its own ID.
+  const fresh = known.options.idempotencyKey;
+  known.options.call = async (path,init = {}) => {
+    if (init.method === 'POST') { posts++; return receipt(new Headers(init.headers).get('idempotency-key')); }
+    return receipt(first,'failed');
+  };
+  assert.equal((await image.invokeDurableImageAction(known.options)).requestId,fresh); assert.equal(posts,1);
 });
 
 test('a token verifier outage is rejected before admission and does not hold the input',async () => {

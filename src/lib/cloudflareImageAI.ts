@@ -129,15 +129,17 @@ export async function invokeDurableImageAction<T>(options: {
     const reconcileOnly = pending.state === 'unavailable';
     let previous = pending.state === 'present' || pending.state === 'unavailable' ? pending.requestId : null;
     if (options.idempotencyKey && previous && previous !== options.idempotencyKey) {
-      // A new turn with the same input: a held ID the server never admitted (exact GET 404) is
-      // released, so a request lost before admission cannot block that input for good.
-      let absent = false;
+      // A new turn with the same input: a held ID the server never admitted (exact GET 404) or already
+      // finished (completed results are saved server-side; its own turn reads them by ID) is released,
+      // so an old request cannot block that input for good. Only a still-running one blocks.
+      let released = false;
       if (!reconcileOnly) {
-        try { await options.call(`/v1/image-ai/requests/${previous}`); }
-        catch (error) { absent = error instanceof Error && error.message.includes('_404_image_request_not_found'); }
+        try { released = ['completed','failed'].includes(readReceipt(await options.call(`/v1/image-ai/requests/${previous}`),previous).state); }
+        catch (error) { released = error instanceof Error && error.message.includes('_404_image_request_not_found'); }
         await options.assertCurrent();
       }
-      if (!absent) throw new Error('同じ入力の生成依頼が未照合です。先にその結果を確認してください。');
+      if (!released) throw new Error('同じ入力の生成依頼が未照合です。先にその結果を確認してください。');
+      await options.onTerminal?.(previous,key); await options.assertCurrent();
       await forgetPendingIdentity(key,previous,options.assertCurrent); await options.assertCurrent();
       previous = null;
     }
