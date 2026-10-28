@@ -22,7 +22,7 @@ test('design workspace and library fit narrow screens without changing the deskt
   assert.match(library, /data-testid="library-mobile-groups" className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden"/);
   const parity = read('src/pages/LightchainParityPages.tsx');
   assert.match(parity, /justify-start gap-4 overflow-x-auto rounded-xl lg:justify-center/);
-  assert.match(parity, /w-\[1392px\] max-w-full flex-col items-center gap-y-6 pt-\[70px\] max-lg:px-4/);
+  assert.match(parity, /w-\[1392px\] max-w-full flex-col items-center gap-y-6 pt-\[89px\] max-lg:px-4/);
 });
 
 test('admin tabs stay on one scrollable line on phones', () => {

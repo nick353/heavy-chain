@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Box, ChevronDown, Copy, Download, Eye, FolderOpen, FolderPlus, Grid2X2, History, Image as ImageIcon, LayoutList, MoreVertical, Palette, PanelsTopLeft, Plus, Search, SwatchBook, Trash2, Upload, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { Box, ChevronDown, ChevronUp, Copy, Download, Eye, FolderOpen, FolderPlus, Grid2X2, History, Image as ImageIcon, LayoutList, MoreVertical, Palette, PanelsTopLeft, Plus, Search, SwatchBook, Trash2, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -40,7 +40,8 @@ export const LIBRARY_ASSET_TYPES = [
   { id: 'canvas', label: 'キャンバスプロジェクト' },
 ] as const;
 export type LibraryAssetType = typeof LIBRARY_ASSET_TYPES[number]['id'];
-type LibraryFolder = { id: string; name: string; type: LibraryAssetType };
+/** parentId: Light nests groups inside a 汎用 group (shown indented in the sidebar and as folder cards inside it). */
+type LibraryFolder = { id: string; name: string; type: LibraryAssetType; parentId: string | null };
 const folderTypesKey = (brandId: string) => `heavy:library-folder-types:v1:${brandId}`;
 const readFolderTypes = (brandId: string): Record<string, LibraryAssetType> => {
   try {
@@ -226,6 +227,9 @@ export function LightchainLibraryPage() {
   const [newGroupType, setNewGroupType] = useState<LibraryAssetType | ''>('');
   const [newGroupTypeOpen, setNewGroupTypeOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
+  /** The 汎用 group a new group goes into (Light's 新規グループ作成 inside a group); null for a top-level group. */
+  const [newGroupParent, setNewGroupParent] = useState<string | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set());
   const [creatingGroup, setCreatingGroup] = useState(false);
   const pendingFolderId = useRef<string | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -317,7 +321,7 @@ export function LightchainLibraryPage() {
     void cloudflareDataPlane.listFolders(brandId).then((rows) => {
       if (cancelled) return;
       const types = readFolderTypes(brandId);
-      setFolders(rows.map((row) => ({ id: row.id, name: row.name, type: types[row.id] ?? 'media' })));
+      setFolders(rows.map((row) => ({ id: row.id, name: row.name, type: types[row.id] ?? 'media', parentId: row.parent_folder_id ?? null })));
     }).catch(() => { if (!cancelled) toast.error('アセットグループを読み込めませんでした'); });
     return () => { cancelled = true; };
   }, [currentBrand?.id]);
@@ -523,14 +527,15 @@ export function LightchainLibraryPage() {
     try {
       let created: { id: string; name: string } | undefined;
       try {
-        created = await cloudflareDataPlane.createFolder({ id, brand_id: brandId, name });
+        created = await cloudflareDataPlane.createFolder({ id, brand_id: brandId, name, parent_folder_id: newGroupParent });
       } catch {
         created = (await cloudflareDataPlane.listFolders(brandId)).find((folder) => folder.id === id);
         if (!created) throw new Error('library_group_create_failed');
       }
       const types = { ...readFolderTypes(brandId), [created.id]: newGroupType };
       try { window.localStorage.setItem(folderTypesKey(brandId), JSON.stringify(types)); } catch { /* icon only */ }
-      setFolders((current) => [...current.filter((folder) => folder.id !== created.id), { id: created.id, name: created.name, type: newGroupType }]);
+      setFolders((current) => [...current.filter((folder) => folder.id !== created.id), { id: created.id, name: created.name, type: newGroupType, parentId: newGroupParent }]);
+      if (newGroupParent) setExpandedFolders((current) => new Set(current).add(newGroupParent));
       pendingFolderId.current = null;
       setActiveGroup(created.id);
       setSelectedAssetId(null);
@@ -748,6 +753,35 @@ export function LightchainLibraryPage() {
   };
 
   const libraryGroups = [...SYSTEM_LIBRARY_GROUPS.map((group) => ({ id: group as string, name: group as string, type: null as LibraryAssetType | null })), ...folders];
+  const childFolders = (parentId: string) => folders.filter((folder) => folder.parentId === parentId);
+  const hasChildren = (id: string) => folders.some((folder) => folder.parentId === id);
+  /** Opening a group shows it; a group with groups inside also unfolds them in the sidebar, like Light. */
+  const openGroup = (id: string) => {
+    if (hasChildren(id)) setExpandedFolders((current) => { const next = new Set(current); if (next.has(id) && activeGroup === id) next.delete(id); else next.add(id); return next; });
+    setActiveGroup(id); setSelectedAssetId(null); setSelectedIds(new Set());
+  };
+  const renderChildGroups = (parentId: string, depth: number): ReactNode => (
+    <div className="flex flex-col gap-2">
+      {childFolders(parentId).map((child) => (
+        <div key={child.id} className="flex flex-col gap-2">
+          <button type="button" aria-current={activeGroup === child.id ? 'page' : undefined} aria-expanded={hasChildren(child.id) ? expandedFolders.has(child.id) : undefined} onClick={() => openGroup(child.id)} style={{ paddingLeft: 10 + depth * 24 }}
+            className={`asset-center-library-group flex h-8 w-full items-center gap-2 rounded-md pr-2.5 text-left text-sm transition ${activeGroup === child.id ? 'border-l-2 border-[#5ec4bd] bg-white/[0.12] text-white' : 'text-neutral-200 hover:bg-white/[0.06] hover:text-white'}`}>
+            <LibraryTypeIcon type={child.type} />
+            <span className="min-w-0 flex-1 truncate">{child.name}</span>
+            {hasChildren(child.id) && (expandedFolders.has(child.id) ? <ChevronUp className="h-3.5 w-3.5 text-neutral-400" /> : <ChevronDown className="h-3.5 w-3.5 text-neutral-400" />)}
+          </button>
+          {expandedFolders.has(child.id) && renderChildGroups(child.id, depth + 1)}
+        </div>
+      ))}
+    </div>
+  );
+  const activeGroupPath = (() => {
+    const path: string[] = [];
+    let cursor: LibraryFolder | undefined = activeFolder ?? undefined;
+    while (cursor) { path.unshift(cursor.name); cursor = cursor.parentId ? folders.find((folder) => folder.id === cursor!.parentId) : undefined; }
+    return path.length ? path : [activeGroupLabel];
+  })();
+  const activeChildFolders = activeFolder?.type === 'general' ? childFolders(activeFolder.id) : [];
 
   return (
     <div className="asset-center-parity min-h-[calc(100vh-70px)] bg-[#222627] text-white">
@@ -763,14 +797,18 @@ export function LightchainLibraryPage() {
               <span>マイライブラリー</span>
               <ChevronDown className="h-3.5 w-3.5 text-neutral-400" />
             </button>
-            <button type="button" aria-label="アセットグループを新規作成" className="rounded p-0.5 text-neutral-200 hover:bg-white/10" onClick={() => setNewGroupOpen(true)}><FolderPlus className="h-5 w-5" /></button>
+            <button type="button" aria-label="アセットグループを新規作成" className="rounded p-0.5 text-neutral-200 hover:bg-white/10" onClick={() => { setNewGroupParent(null); setNewGroupOpen(true); }}><FolderPlus className="h-5 w-5" /></button>
           </div>
           <div className="asset-center-library-groups flex flex-col gap-4 px-4 pt-4">
-          {libraryGroups.map((group) => (
-            <button key={group.id} type="button" aria-current={activeGroup === group.id ? 'page' : undefined} onClick={() => { setActiveGroup(group.id); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`asset-center-library-group flex h-8 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition ${activeGroup === group.id ? 'border-l-2 border-[#5ec4bd] bg-white/[0.12] text-white' : 'text-neutral-200 hover:bg-white/[0.06] hover:text-white'}`}>
-              {group.type ? <LibraryTypeIcon type={group.type} /> : group.id === 'ウェアデザインラボ生成結果' ? <LibraryTypeIcon type="media" /> : <History className="h-4 w-4" />}
-              <span className="truncate">{group.name}</span>
-            </button>
+          {libraryGroups.filter((group) => !('parentId' in group) || !group.parentId).map((group) => (
+            <div key={group.id} className="flex flex-col gap-4">
+              <button type="button" aria-current={activeGroup === group.id ? 'page' : undefined} aria-expanded={hasChildren(group.id) ? expandedFolders.has(group.id) : undefined} onClick={() => openGroup(group.id)} className={`asset-center-library-group flex h-8 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition ${activeGroup === group.id ? 'border-l-2 border-[#5ec4bd] bg-white/[0.12] text-white' : 'text-neutral-200 hover:bg-white/[0.06] hover:text-white'}`}>
+                {group.type ? <LibraryTypeIcon type={group.type} /> : group.id === 'ウェアデザインラボ生成結果' ? <LibraryTypeIcon type="media" /> : <History className="h-4 w-4" />}
+                <span className="min-w-0 flex-1 truncate">{group.name}</span>
+                {hasChildren(group.id) && (expandedFolders.has(group.id) ? <ChevronUp className="h-3.5 w-3.5 text-neutral-400" /> : <ChevronDown className="h-3.5 w-3.5 text-neutral-400" />)}
+              </button>
+              {expandedFolders.has(group.id) && renderChildGroups(group.id, 1)}
+            </div>
           ))}
           </div>
         </aside>
@@ -779,7 +817,7 @@ export function LightchainLibraryPage() {
           <nav aria-label="パンくずナビゲーション" className="asset-center-breadcrumb mb-5 flex items-center gap-2 text-xs text-neutral-500">
             <span>マイライブラリー</span>
             <span aria-hidden="true">/</span>
-            <span className="text-neutral-200">{activeGroupLabel}</span>
+            {activeGroupPath.map((name, index) => <span key={`${index}-${name}`} className="contents">{index > 0 && <span aria-hidden="true">/</span>}<span className={index === activeGroupPath.length - 1 ? 'text-neutral-200' : undefined}>{name}</span></span>)}
           </nav>
           <div className="flex flex-wrap items-center justify-between gap-4 lg:hidden">
             <div>
@@ -792,7 +830,7 @@ export function LightchainLibraryPage() {
               <button type="button" className={mutedButton} onClick={() => uploadInputRef.current?.click()} disabled={uploading}>
                 <Upload className="mr-2 inline h-4 w-4" />{uploading ? 'アップロード中…' : 'アップロード'}
               </button>
-              <button type="button" className={mutedButton} onClick={() => setNewGroupOpen(true)}>
+              <button type="button" className={mutedButton} onClick={() => { setNewGroupParent(null); setNewGroupOpen(true); }}>
                 <Plus className="mr-2 inline h-4 w-4" />新規グループ作成
               </button>
             </div>
@@ -823,7 +861,8 @@ export function LightchainLibraryPage() {
               </div>
           ) : (
               <div className="flex items-center gap-2">
-                {activeFolder && <button type="button" className="asset-center-bulk-button" onClick={() => uploadInputRef.current?.click()} disabled={uploading}><Upload className="h-4 w-4" />{uploading ? 'アップロード中…' : 'アップロード'}</button>}
+                {activeFolder?.type === 'general' && <button type="button" data-testid="library-new-child-group" className="asset-center-bulk-button !bg-[#0bcabc] !text-neutral-950" onClick={() => { setNewGroupParent(activeFolder.id); setNewGroupOpen(true); }}><Plus className="h-4 w-4" />新規グループ作成</button>}
+                {activeFolder && activeFolder.type !== 'general' && <button type="button" className="asset-center-bulk-button" onClick={() => uploadInputRef.current?.click()} disabled={uploading}><Upload className="h-4 w-4" />{uploading ? 'アップロード中…' : 'アップロード'}</button>}
                 <button type="button" className="asset-center-bulk-button" disabled={visibleArtifacts.length === 0} onClick={() => setSelectMode(true)}><LayoutList className="h-4 w-4" />一括操作</button>
               </div>
             )}
@@ -836,7 +875,20 @@ export function LightchainLibraryPage() {
           )}
           {selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(visibleArtifacts.map(getCardId)))}>全選択</button>}
 
-          {visibleArtifacts.length === 0 ? (!activeFolder ? <div className="mt-5 flex min-h-80 items-center justify-center text-sm text-neutral-500" data-testid="library-empty-view">まだ画像がありません。生成した画像やアップロードした画像がここに表示されます。</div> :
+          {activeChildFolders.length > 0 && <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6" data-testid="library-child-groups">
+            {activeChildFolders.map((child) => (
+              <button key={child.id} type="button" onClick={() => openGroup(child.id)} className="flex h-[248px] flex-col items-center justify-center gap-4 rounded-lg border border-white/10 bg-[#262a2b] text-sm text-white hover:bg-[#2f3436]" data-testid="library-child-group">
+                <span className="relative block h-[100px] w-[118px]" aria-hidden="true">
+                  <span className="absolute left-0 top-0 h-5 w-12 rounded-t-lg bg-[#2d6f66]" />
+                  <span className="absolute inset-x-2 top-3 h-5 rounded-sm bg-white/90" />
+                  <span className="absolute inset-x-0 bottom-0 top-5 flex items-end rounded-lg bg-gradient-to-b from-[#a9efe1] to-[#3f9b8c] p-2 text-[10px] font-semibold text-white">{child.type === 'general' ? 'FOLDER' : child.type === 'fabric' ? 'FABRIC' : child.type === 'color' ? 'COLOR' : child.type === 'canvas' ? 'CANVAS' : 'IMAGE'}</span>
+                </span>
+                <span className="max-w-[90%] truncate">{child.name}</span>
+              </button>
+            ))}
+          </div>}
+          {activeFolder?.type === 'general' && visibleArtifacts.length === 0 ? (activeChildFolders.length === 0 ? <div className="mt-5 flex min-h-80 items-center justify-center text-sm text-neutral-500" data-testid="library-empty-general">「新規グループ作成」で、このグループの中にグループを作れます。</div> : null)
+          : visibleArtifacts.length === 0 ? (!activeFolder ? <div className="mt-5 flex min-h-80 items-center justify-center text-sm text-neutral-500" data-testid="library-empty-view">まだ画像がありません。生成した画像やアップロードした画像がここに表示されます。</div> :
             <div className="mt-10 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center">
               <Grid2X2 className="h-8 w-8 text-neutral-600" />
               <h2 className="mt-4 font-semibold">まだ素材がありません</h2>

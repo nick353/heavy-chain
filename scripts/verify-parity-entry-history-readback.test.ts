@@ -10,7 +10,7 @@ test('Lightchain parity entry pages read persisted local history without seed re
   assert.match(source, /designHistoryFeatureTypes/);
   assert.match(source, /cloudflareDataPlane\.listGeneratedImages\(brandId, \{/);
   assert.match(source, /return remoteRows\.map\(asGeneratedImageListRow\)/);
-  assert.match(source, /signRemoteArtifacts: \(rows\) => withSignedImageUrls\(\[\.\.\.rows\]\)/);
+  assert.match(source, /withSignedImageUrls\(rows\.slice\(0, DESIGN_REFERENCE_SIGN_LIMIT\)\)/);
   assert.match(source, /generatedImageToWorkspaceArtifact/);
   assert.match(source, /remoteImageId: image\.id/);
   // Saved results are re-read from the server list rather than merged into local state.

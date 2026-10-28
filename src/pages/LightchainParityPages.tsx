@@ -133,6 +133,7 @@ export function DesignRecentProjectEntryCard({
   onOpen,
   onToggleMenu,
   onToggleSelect,
+  onRename,
   onTogglePin,
   onSaveToLibrary,
   onDelete,
@@ -148,30 +149,49 @@ export function DesignRecentProjectEntryCard({
   onOpen: () => void;
   onToggleMenu: () => void;
   onToggleSelect?: () => void;
+  /** Light renames a project in place: click the title, type, then Enter or click away. */
+  onRename?: (title: string) => Promise<boolean>;
   onTogglePin: () => void;
   onSaveToLibrary: () => void;
   onDelete: () => void;
 }) {
   const { artifact } = entry;
   const href = designEntryHref(entry);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const commitRename = async () => {
+    if (renaming === null) return;
+    const next = renaming.trim();
+    setRenaming(null);
+    if (!onRename || !next || next === artifact.title) return;
+    await onRename(next);
+  };
   return (
     <article key={artifact.id} data-design-project-origin={entry.origin} data-selected={selected ? 'true' : undefined} className={`group relative h-60 overflow-visible rounded-2xl border bg-white/5 text-left ${selected ? 'border-[#0bcabc]' : 'border-white/10 hover:border-white/40'}`}>
       {onToggleSelect && <div role="checkbox" aria-checked={selected} aria-label={`プロジェクトを選択 ${artifact.title}`} tabIndex={0} data-testid="design-project-select"
         onClick={(event) => { event.stopPropagation(); onToggleSelect(); }} onKeyDown={(event) => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); onToggleSelect(); } }}
         className={`absolute left-2 top-2 z-20 flex size-6 cursor-pointer items-center justify-center rounded-full border transition ${selected ? 'border-[#0bcabc] bg-[#0bcabc] text-neutral-950 opacity-100' : 'border-white/70 bg-black/30 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>{selected && <Check className="h-4 w-4" />}</div>}
       <DesignArtifactThumbnail artifact={artifact} userId={userId} brandId={brandId} href={href} onOpen={onOpen} />
-      <button
-        type="button"
-        disabled={!href}
+      {/* A div rather than a button so the title can turn into a text field in place. */}
+      <div
+        role="button"
+        tabIndex={href ? 0 : -1}
+        aria-disabled={!href}
         title={!href ? 'Canvasで開くためのリモート画像IDがありません' : undefined}
-        className="block h-[96px] w-full cursor-pointer overflow-hidden rounded-b-2xl p-4 pr-12 text-left disabled:cursor-not-allowed"
+        className={`block h-[96px] w-full overflow-hidden rounded-b-2xl p-4 pr-12 text-left ${href ? 'cursor-pointer' : 'cursor-not-allowed'}`}
         aria-label={`${artifact.title}をCanvasで開く`}
         data-design-card-title=""
-        onClick={onOpen}
+        onClick={() => { if (href && renaming === null) onOpen(); }}
+        onKeyDown={(event) => { if (event.target === event.currentTarget && href && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onOpen(); } }}
       >
-        <p data-design-card-name="" className="truncate text-base text-neutral-400">{pinned ? '📌 ' : ''}{artifact.title}</p>
+        {renaming !== null
+          ? <input autoFocus aria-label="プロジェクト名" value={renaming} maxLength={200} data-testid="design-card-rename-input"
+            onClick={(event) => event.stopPropagation()} onChange={(event) => setRenaming(event.target.value)} onBlur={() => void commitRename()}
+            onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'Enter') void commitRename(); if (event.key === 'Escape') setRenaming(null); }}
+            className="h-7 w-full rounded-sm border border-[#0bcabc] bg-[#171b1c] px-1 text-base text-white outline-none" />
+          : <span data-design-card-name="" role={onRename ? 'textbox' : undefined} aria-label={onRename ? `${artifact.title}の名前を変更` : undefined} className={`block truncate rounded-sm p-0.5 text-base text-neutral-400 ${onRename ? 'cursor-text hover:bg-white/10' : ''}`}
+            onClick={onRename ? (event) => { event.stopPropagation(); setRenaming(artifact.title); } : undefined}>{pinned ? '📌 ' : ''}{artifact.title}</span>}
         <p data-design-card-date="" className="mt-2 truncate text-xs text-neutral-400">{heavyRuntime ? formatArtifactDate(artifact.createdAt) : `${artifact.featureType} ・ ${formatArtifactDate(artifact.createdAt)}`}</p>
-      </button>
+      </div>
       {/* Light: a 32px ··· button on a translucent black tile, shown on hover; the menu closes on Escape or an outside click. */}
       <div className="absolute right-2 top-2 z-20" data-design-card-menu="" onKeyDown={(event) => { if (event.key === 'Escape' && menuOpen) onToggleMenu(); }}>
         <button type="button" aria-label={`${artifact.title}のメニュー`} aria-haspopup="menu" aria-expanded={menuOpen} className={`flex size-8 items-center justify-center rounded-lg bg-black/50 text-white transition hover:bg-black/70 ${menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`} onClick={(event) => { event.stopPropagation(); onToggleMenu(); }}><MoreHorizontal className="h-4 w-4" /></button>
@@ -1033,9 +1053,12 @@ const asArtifactMetadata = (metadata: Json | null): Record<string, Json | undefi
     : {}
 );
 
+/** Reference images offered on the dialogue tab (the first ones of the design list). */
+const DESIGN_REFERENCE_SIGN_LIMIT = 12;
+
 const generatedImageToWorkspaceArtifact = (image: ReturnType<typeof asGeneratedImageListRow>): WorkspaceArtifact => {
   const metadata = asArtifactMetadata(image.metadata);
-  const titleCandidate = [metadata.title, metadata.projectName, metadata.name]
+  const titleCandidate = [metadata.libraryTitle, metadata.title, metadata.projectName, metadata.name]
     .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
   return {
     id: image.id,
@@ -1246,11 +1269,12 @@ export function LightchainMarketingHomePage() {
     <ParityShell className="relative h-full overflow-y-auto overflow-x-hidden bg-[#171b1c] pr-1 text-white" workflowFeature="marketing-home">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[170px] bg-[radial-gradient(ellipse_40%_100%_at_6%_0%,rgba(72,186,160,0.34),transparent_70%),radial-gradient(ellipse_45%_90%_at_96%_0%,rgba(74,84,214,0.42),transparent_70%),radial-gradient(ellipse_30%_70%_at_62%_0%,rgba(120,70,160,0.16),transparent_70%)]" />
       {remainingUnits !== null && <PointDetailButton className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-[#202527] p-2.5 text-base leading-4 text-neutral-300"><Sparkles className="h-4 w-4" />{remainingUnits.toLocaleString()}</PointDetailButton>}
-      <div data-testid="lightchain-marketing-home" className="relative z-[2] mx-auto flex w-[1392px] max-w-full flex-col items-center gap-y-6 pt-[70px] max-lg:px-4">
+      {/* Light re-measured 2026-10-28: 36px title with its top at y=138, ~15px subtitle and request text, 14px scene chips. */}
+      <div data-testid="lightchain-marketing-home" className="relative z-[2] mx-auto flex w-[1392px] max-w-full flex-col items-center gap-y-6 pt-[89px] max-lg:px-4">
         <div className="flex w-full flex-col items-center gap-6">
           <div className="flex flex-col items-center gap-3">
-            <h1 className="w-full text-center text-[34px] font-medium leading-10">マーケティングワークスペースへようこそ</h1>
-            <p className="w-full text-center text-base leading-6 text-neutral-400">今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！</p>
+            <h1 className="w-full text-center text-[36px] font-medium leading-10">マーケティングワークスペースへようこそ</h1>
+            <p className="w-full text-center text-[15px] leading-6 text-neutral-300">今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！</p>
           </div>
           <div className={`relative w-[960px] max-w-full rounded-[32px] ${tourRing('input')}`} data-tour="marketing-input">
             <input ref={uploadRef} type="file" accept=".png,.jpg,.jpeg,.avif,.webp" multiple className="hidden" aria-label="参考画像を選択" onChange={(event) => { addFiles(Array.from(event.target.files ?? [])); event.target.value = ''; }} />
@@ -1267,7 +1291,7 @@ export function LightchainMarketingHomePage() {
                   <textarea value={prompt} onChange={(event) => setPrompt(event.target.value.slice(0, 4000))} maxLength={4000} aria-label="マーケティングのリクエスト"
                     onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }}
                     placeholder="商品画像をアップロードして、デザインのリクエストを教えてください"
-                    className="min-h-20 max-h-50 w-full flex-1 resize-none border-0 bg-transparent p-0 text-base leading-6 text-white caret-[#0bcabc] outline-none placeholder:text-neutral-500" />
+                    className="min-h-20 max-h-50 w-full flex-1 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 text-white caret-[#0bcabc] outline-none placeholder:text-neutral-500" />
                 </div>
               </div>
               <div className="flex h-[72px] w-full shrink-0 items-center gap-3 p-4">
@@ -1287,13 +1311,13 @@ export function LightchainMarketingHomePage() {
         </div>
         <div className="relative flex w-full flex-col items-center gap-4 overflow-hidden" aria-label="おすすめのシーン">
           <div className={`flex w-full items-center justify-start gap-4 overflow-x-auto rounded-xl lg:justify-center ${tourRing('scenes')}`} data-tour="marketing-scenes">
-            <span className="whitespace-nowrap text-base font-medium text-neutral-500">おすすめのシーン 👉</span>
+            <span className="whitespace-nowrap text-sm font-medium text-neutral-500">おすすめのシーン 👉</span>
             <div className="flex items-center gap-2">
               {marketingSceneCards.map((sceneCard) => (
                 <button key={sceneCard.label} type="button" aria-pressed={scene === sceneCard.label} onClick={() => setScene((current) => current === sceneCard.label ? null : sceneCard.label)}
                   className={`group flex h-10 w-fit items-center gap-1 overflow-hidden rounded-xl px-4 transition-all duration-300 ${scene === sceneCard.label ? 'bg-[#0bcabc]/15' : 'bg-[#25292c] hover:bg-[#30363a]'}`}>
-                  <span className="h-5 w-5 shrink-0 overflow-hidden transition-all duration-300 group-hover:w-[0.1px]"><sceneCard.icon className="h-5 w-5 text-neutral-300" /></span>
-                  <span className="whitespace-nowrap text-base font-medium leading-5 text-white">{sceneCard.label}</span>
+                  <span className="h-4 w-4 shrink-0 overflow-hidden transition-all duration-300 group-hover:w-[0.1px]"><sceneCard.icon className="h-4 w-4 text-neutral-300" /></span>
+                  <span className="whitespace-nowrap text-sm font-medium leading-5 text-white">{sceneCard.label}</span>
                   <span className="h-[0.1px] w-[0.1px] shrink-0 overflow-hidden transition-all duration-300 group-hover:h-5 group-hover:w-5"><ArrowRight className="h-5 w-5 -rotate-45 text-neutral-300 transition-transform duration-300 group-hover:rotate-0" /></span>
                 </button>
               ))}
@@ -1506,9 +1530,14 @@ export function LightchainDesignProductionPage() {
           order: 'newest',
         });
         if (!isCurrent()) throw new Error('design_artifact_load_stale');
-        return remoteRows.map(asGeneratedImageListRow);
+        // Only design results reach the grid; signing the other tools' rows first kept the page on its loading box for ~1 minute.
+        return remoteRows.map(asGeneratedImageListRow).filter((row) => designHistoryFeatureTypes.has(row.feature_type ?? 'generate-image'));
       },
-      signRemoteArtifacts: (rows) => withSignedImageUrls([...rows]),
+      // Cards read their own cover from the storage path; only the dialogue tab's 12 reference images need a URL up front.
+      signRemoteArtifacts: async (rows) => {
+        const head = await withSignedImageUrls(rows.slice(0, DESIGN_REFERENCE_SIGN_LIMIT));
+        return [...head, ...rows.slice(DESIGN_REFERENCE_SIGN_LIMIT)];
+      },
       toEntries: (localArtifacts, signedRows) => {
         const remoteArtifacts = signedRows
           .map(generatedImageToWorkspaceArtifact)
@@ -1727,6 +1756,27 @@ export function LightchainDesignProductionPage() {
     if (!options.bulk) toast.success(isRemoteArtifact ? '画像を削除しました' : 'ローカル成果物を削除しました');
     return true;
   };
+  /** Saves the new name as the result's library title (the same field the library renames), then shows it on the card. */
+  const renameDesignArtifact = async (artifact: WorkspaceArtifact, title: string): Promise<boolean> => {
+    const remoteImageId = typeof artifact.metadata.remoteImageId === 'string' ? artifact.metadata.remoteImageId : null;
+    if (!cloudflareDataPlane || !remoteImageId) return false;
+    const scopeKey = designScopeKey;
+    try {
+      const context = await cloudflareDataPlane.captureArtifactPersistenceContext();
+      await cloudflareDataPlane.updateGeneratedImageLibraryTitle(remoteImageId, title, context);
+    } catch {
+      toast.error('名前を変更できませんでした');
+      return false;
+    }
+    const liveAuth = useAuthStore.getState();
+    if (!isCurrentDesignArtifactScope(scopeKey, createDesignArtifactScopeKey(liveAuth.user?.id, liveAuth.currentBrand?.id))) return false;
+    const renamed = (entry: DesignProjectEntry): DesignProjectEntry => entry.artifact.id === artifact.id
+      ? { ...entry, artifact: { ...entry.artifact, title, metadata: { ...entry.artifact.metadata, libraryTitle: title } } }
+      : entry;
+    setDesignArtifactLoadState((current) => current.status === 'ready' ? { ...current, entries: current.entries.map(renamed) }
+      : current.status === 'error' ? { ...current, localEntries: current.localEntries.map(renamed) } : current);
+    return true;
+  };
   const toggleProjectSelection = (id: string) => setSelectedProjectIds((current) => {
     const next = new Set(current);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -1767,6 +1817,7 @@ export function LightchainDesignProductionPage() {
         menuOpen={openProjectMenuId === artifact.id}
         selected={selectedProjectIds.has(artifact.id)}
         onToggleSelect={activeTab === '対話から開始' ? undefined : () => toggleProjectSelection(artifact.id)}
+        onRename={typeof artifact.metadata.remoteImageId === 'string' ? (title) => renameDesignArtifact(artifact, title) : undefined}
         onOpen={() => { if (href) navigate(href); }}
         onToggleMenu={() => setOpenProjectMenuId((current) => current === artifact.id ? null : artifact.id)}
         onTogglePin={() => { toggleDesignProjectPin(artifact.id); setOpenProjectMenuId(null); }}
