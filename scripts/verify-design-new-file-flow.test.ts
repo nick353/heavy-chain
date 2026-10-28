@@ -53,3 +53,9 @@ test('a text-only new file shows the bubble, 考え中...... and a 生成中... 
   assert.match(page, /isNewFile && entrySending && <div data-testid="design-new-file-sending">/);
   assert.match(page, /\(\(visible\?\.busy && visible\.dialogue\) \|\| \(isNewFile && entrySending\)\) && <p role="status" data-testid="design-thinking"/);
 });
+
+test('a new file whose create never reached the server recreates the SAME ID once instead of failing with 404 forever', () => {
+  const coordinator = readFileSync(new URL('../src/features/designDetail/designEntryCoordinator.ts', import.meta.url), 'utf8');
+  assert.match(coordinator, /error\.message === 'cloudflare_api_404_not_found'\)\) throw error;\n\s+try \{ await createSnapshot\(\); \}/);
+  assert.match(coordinator, /const createSnapshot = \(\) => client\.createDocument\(\{ documentId: draft\.projectId/);
+});
