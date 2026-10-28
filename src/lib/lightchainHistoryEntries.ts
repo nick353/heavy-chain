@@ -46,7 +46,7 @@ export const lightchainHistoryResumeHref = (image: Pick<GeneratedImageListRow, '
 };
 
 /** Uploaded inputs are library material, not generations; Light keeps them out of 生成履歴. */
-const NON_GENERATION_TYPES = new Set(['library-upload', 'platform-asset', 'local-upload', 'library-import', 'gallery-import']);
+export const NON_GENERATION_TYPES: ReadonlySet<string> = new Set(['library-upload', 'platform-asset', 'local-upload', 'library-import', 'gallery-import']);
 
 /**
  * Light's 生成履歴 lists only the open tool's results (/tools/printing shows プリントイメージ, /printing shows none of them).
