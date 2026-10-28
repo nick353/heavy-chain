@@ -162,7 +162,7 @@ type CloudflareStylePreset = {
   created_at: string;
   updated_at: string;
 };
-type CloudflareBrandMember = {
+export type CloudflareBrandMember = {
   user_id: string;
   role: 'owner' | 'admin' | 'editor' | 'viewer';
   joined_at: string;

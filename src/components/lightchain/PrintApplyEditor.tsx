@@ -1,23 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { BringToFront, Brush, ChevronDown, ChevronsDown, ChevronsUp, Copy, Eraser, FlipHorizontal2, FlipVertical2, Layers, Paintbrush, Redo2, RefreshCw, Repeat, ScanSearch, SendToBack, Sparkles, Trash2, Undo2 } from 'lucide-react';
+import { BringToFront, Brush, ChevronDown, ChevronsDown, ChevronsUp, Contrast, Copy, Crop, Eraser, FlipHorizontal2, FlipVertical2, Layers, MousePointer2, MousePointerClick, Paintbrush, Redo2, RefreshCw, Repeat, ScanSearch, SendToBack, Sparkles, Trash2, Undo2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { buildMaterialCutoutDataUrl, buildPrintGarmentCutoutDataUrl } from '../../lib/workspaceMaterialReferences';
-import { cutoutDrawRect, movePlacementLayer, type LayerMove, type PrintPlacement } from './printPlacement';
+import { cutoutDrawRect, fitPlacementToBounds, maskBounds, movePlacementLayer, regionAtPoint, type LayerMove, type PrintPlacement } from './printPlacement';
+import { ShortcutSheetButton } from './EditorImageTools';
 
 export type { PrintPlacement } from './printPlacement';
 import type { GarmentSegmentationTarget } from '../../features/printing/selection/garmentSegmentationPolicy';
 
 /**
  * Light's プリントイメージ 「適用」 dialog (re-measured signed in on jp.linkaigc.com, 2026-10-28):
- * hint pill + キャンセル / 決定, a toolbar (AIマスク認識 ▾, ブラシ, 消しゴム, 切り替え, 全消し, undo / redo) and two panes.
+ * hint pill + キャンセル / 決定, a toolbar (AIマスク認識 ▾, 選択範囲にオブジェクトを追加 ▾ (追加 / 取り除く), ブラシ, 消しゴム,
+ * ワンクリックでトリミング, 切り替え, 全削除, undo / redo, ショートカット) and two panes.
  * ステップ1 paints the print area as a teal mask on the garment; AIマスク認識 segments the garment part with the
  * cloth model. ステップ2 lists every uploaded print (up to 5) beside the garment: clicking a thumbnail places it,
- * any number can be stacked, the selected one moves / resizes / rotates, and the side tools are レイヤー
+ * any number can be stacked, the selected one moves / resizes / rotates, and the side tools are 透過度, レイヤー
  * (トップに移動 / 上に移動 / 下に移動 / 一番下に移動), 左右反転, 上下反転, 複製, 削除.
  * 決定 returns the garment with every print composited in stacking order inside the mask.
  */
 type Step = 1 | 2;
-type Tool = 'brush' | 'eraser';
+type Tool = 'brush' | 'eraser' | 'object-add' | 'object-remove';
 export type PrintEditorPrint = { id: string; url: string };
 export type PrintApplyEditorState = { placements: PrintPlacement[]; mask: ImageData | null; maskCandidate: string | null };
 const MASK_CANDIDATES = ['トップス', 'ボトムス', '全身'] as const;
@@ -65,8 +67,10 @@ export function composePrintsOnGarment(
     layerContext.translate(placement.x * size.width, placement.y * size.height);
     layerContext.rotate((placement.rotation * Math.PI) / 180);
     layerContext.scale(placement.flipX ? -1 : 1, placement.flipY ? -1 : 1);
+    layerContext.globalAlpha = placement.opacity ?? 1;
     layerContext.drawImage(print, -printWidth / 2, -printHeight / 2, printWidth, printHeight);
   }
+  layerContext.globalAlpha = 1;
   layerContext.setTransform(1, 0, 0, 1, 0, 0);
   if (mask) {
     layerContext.globalCompositeOperation = 'destination-in';
@@ -91,6 +95,8 @@ export function PrintApplyEditor({ garmentUrl, prints, initialPrintId, initialSt
   const [tool, setTool] = useState<Tool>('brush');
   const [maskMenuOpen, setMaskMenuOpen] = useState(false);
   const [layerMenuOpen, setLayerMenuOpen] = useState(false);
+  const [objectMenuOpen, setObjectMenuOpen] = useState(false);
+  const [opacityOpen, setOpacityOpen] = useState(false);
   const [maskCandidate, setMaskCandidate] = useState<string | null>(initialState?.maskCandidate ?? null);
   const [detecting, setDetecting] = useState(false);
   const [garment, setGarment] = useState<HTMLImageElement | null>(null);
@@ -224,6 +230,47 @@ export function PrintApplyEditor({ garmentUrl, prints, initialPrintId, initialSt
     setRevision((value) => value + 1);
   };
 
+  const maskIsEmpty = () => {
+    const mask = maskRef.current, context = mask?.getContext('2d');
+    return !mask || !context || !maskBounds(context.getImageData(0, 0, mask.width, mask.height));
+  };
+
+  // 選択範囲にオブジェクトを追加: a click adds (or removes) the connected area of similar colour on the garment.
+  const selectObjectAt = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    const overlay = overlayRef.current, mask = maskRef.current, context = mask?.getContext('2d');
+    if (!overlay || !mask || !context || !garment) return;
+    const pixels = document.createElement('canvas');
+    pixels.width = mask.width; pixels.height = mask.height;
+    const pixelContext = pixels.getContext('2d');
+    if (!pixelContext) return;
+    pixelContext.drawImage(garment, 0, 0, mask.width, mask.height);
+    const rect = overlay.getBoundingClientRect();
+    const region = regionAtPoint(pixelContext.getImageData(0, 0, mask.width, mask.height), ((event.clientX - rect.left) / rect.width) * mask.width, ((event.clientY - rect.top) / rect.height) * mask.height);
+    snapshot();
+    const data = context.getImageData(0, 0, mask.width, mask.height);
+    for (let index = 0; index < region.length; index += 1) {
+      if (!region[index]) continue;
+      data.data[index * 4 + 3] = tool === 'object-remove' ? 0 : 255;
+    }
+    context.putImageData(data, 0, 0);
+    setRevision((value) => value + 1);
+  };
+
+  // ワンクリックでトリミング: fits the selected print (or the top one) inside the painted area.
+  const trimToMask = () => {
+    const mask = maskRef.current, context = mask?.getContext('2d');
+    const bounds = mask && context ? maskBounds(context.getImageData(0, 0, mask.width, mask.height)) : null;
+    if (!bounds || !size) { toast.error('マスクを塗ってください。'); return; }
+    const target = selected ?? placements[placements.length - 1];
+    if (!target) { toast.error('まず図案を追加してください'); return; }
+    const image = printImages.get(target.printId);
+    const aspect = image ? image.naturalHeight / image.naturalWidth : 1;
+    const fitted = fitPlacementToBounds(target, bounds, size, aspect);
+    setPlacements((current) => current.map((item) => item.id === target.id ? fitted : item));
+    setSelectedId(target.id);
+    setStep(2);
+  };
+
   const paintAt = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     const overlay = overlayRef.current, mask = maskRef.current, context = mask?.getContext('2d');
     if (!overlay || !mask || !context) return;
@@ -337,7 +384,7 @@ export function PrintApplyEditor({ garmentUrl, prints, initialPrintId, initialSt
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" role="dialog" aria-modal="true" aria-label="プリントを適用" data-testid="print-apply-editor">
-      <div className="flex h-[773px] max-h-[calc(100vh-24px)] w-[1296px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg bg-[#232728] text-white shadow-2xl">
+      <div className="relative flex h-[773px] max-h-[calc(100vh-24px)] w-[1296px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg bg-[#232728] text-white shadow-2xl">
         <div className="flex items-center justify-between px-4 pt-3">
           <p className="flex max-w-[400px] items-center gap-2 rounded-full bg-[#2f3442] px-4 py-2 text-xs leading-4 text-[#b9c6ff]"><Sparkles aria-hidden="true" className="h-4 w-4 shrink-0 text-white" />画像の生成位置をマスクで選択して、角度とサイズを調整してください</p>
           <div className="flex items-center gap-4">
@@ -360,13 +407,26 @@ export function PrintApplyEditor({ garmentUrl, prints, initialPrintId, initialSt
               </div>
             )}
           </div>
+          <div className="relative">
+            <button type="button" onClick={() => { setStep(1); setObjectMenuOpen((open) => !open); }} aria-expanded={objectMenuOpen} aria-pressed={step === 1 && tool.startsWith('object')} className={toolbarButton(step === 1 && tool.startsWith('object'))}>
+              <MousePointerClick aria-hidden="true" className="h-4 w-4" /><ChevronDown aria-hidden="true" className="h-3 w-3" />選択範囲にオブジェクトを追加
+            </button>
+            {objectMenuOpen && (
+              <div role="menu" className="absolute left-0 top-12 z-10 w-40 rounded-lg bg-black p-1.5 shadow-xl" data-testid="print-apply-object-menu">
+                <button type="button" role="menuitemradio" aria-checked={tool === 'object-add'} onClick={() => { setTool('object-add'); setObjectMenuOpen(false); }} className="flex w-full items-center gap-2 rounded px-3 py-2.5 text-left text-sm hover:bg-white/10"><MousePointerClick aria-hidden="true" className="h-4 w-4" />追加</button>
+                <button type="button" role="menuitemradio" aria-checked={tool === 'object-remove'} disabled={maskIsEmpty()} onClick={() => { setTool('object-remove'); setObjectMenuOpen(false); }} className="flex w-full items-center gap-2 rounded px-3 py-2.5 text-left text-sm hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"><MousePointer2 aria-hidden="true" className="h-4 w-4" />取り除く</button>
+              </div>
+            )}
+          </div>
           <button type="button" onClick={() => { setStep(1); setTool('brush'); }} aria-pressed={step === 1 && tool === 'brush'} className={toolbarButton(step === 1 && tool === 'brush')}><Brush aria-hidden="true" className="h-4 w-4" />ブラシ</button>
           <button type="button" onClick={() => { setStep(1); setTool('eraser'); }} aria-pressed={step === 1 && tool === 'eraser'} className={toolbarButton(step === 1 && tool === 'eraser')}><Eraser aria-hidden="true" className="h-4 w-4" />消しゴム</button>
+          <button type="button" onClick={trimToMask} data-testid="print-apply-trim" className={toolbarButton(false)}><Crop aria-hidden="true" className="h-4 w-4" />ワンクリックでトリミング</button>
           <button type="button" onClick={invertMask} className={toolbarButton(false)}><Repeat aria-hidden="true" className="h-4 w-4" />切り替え</button>
           <div className="ml-auto flex items-center gap-1">
-            <button type="button" aria-label="マスクを全て消す" title="マスクを全て消す" onClick={clearMask} className="inline-flex h-8 w-8 items-center justify-center rounded text-white/80 hover:bg-white/[0.06]"><Paintbrush aria-hidden="true" className="h-4 w-4" /></button>
+            <button type="button" aria-label="全削除" title="全削除" onClick={clearMask} className="inline-flex h-8 w-8 items-center justify-center rounded text-white/80 hover:bg-white/[0.06]"><Paintbrush aria-hidden="true" className="h-4 w-4" /></button>
             <button type="button" aria-label="元に戻す" onClick={() => stepHistory('undo')} className="inline-flex h-8 w-8 items-center justify-center rounded text-white/80 hover:bg-white/[0.06]"><Undo2 aria-hidden="true" className="h-4 w-4" /></button>
             <button type="button" aria-label="やり直し" onClick={() => stepHistory('redo')} className="inline-flex h-8 w-8 items-center justify-center rounded text-white/80 hover:bg-white/[0.06]"><Redo2 aria-hidden="true" className="h-4 w-4" /></button>
+            <ShortcutSheetButton buttonClassName="inline-flex h-8 w-8 items-center justify-center rounded text-white/80 hover:bg-white/[0.06]" />
           </div>
         </div>
         <div className="grid min-h-0 flex-1 grid-cols-2 gap-[42px] px-[18px] pb-4 pt-4">
@@ -398,7 +458,7 @@ export function PrintApplyEditor({ garmentUrl, prints, initialPrintId, initialSt
                         ref={overlayRef}
                         data-testid="print-apply-mask"
                         className={`absolute inset-0 size-full ${step === 1 ? 'cursor-crosshair' : 'opacity-60'}`}
-                        onPointerDown={(event) => { if (step !== 1) return; snapshot(); painting.current = true; event.currentTarget.setPointerCapture(event.pointerId); paintAt(event); }}
+                        onPointerDown={(event) => { if (step !== 1) return; if (tool.startsWith('object')) { selectObjectAt(event); return; } snapshot(); painting.current = true; event.currentTarget.setPointerCapture(event.pointerId); paintAt(event); }}
                         onPointerMove={(event) => { if (painting.current) paintAt(event); }}
                         onPointerUp={() => { painting.current = false; setRevision((value) => value + 1); }}
                       />
@@ -418,7 +478,7 @@ export function PrintApplyEditor({ garmentUrl, prints, initialPrintId, initialSt
                               style={{ left: `${placement.x * 100}%`, top: `${placement.y * 100}%`, width: `${placement.scale * 100}%`, aspectRatio: `1 / ${aspect}`, transform: `translate(-50%, -50%) rotate(${placement.rotation}deg)` }}
                               onPointerDown={startDrag('move', placement)}
                             >
-                              <img src={urlById.get(placement.printId)} alt="" className="size-full object-contain" style={{ transform: `scale(${placement.flipX ? -1 : 1}, ${placement.flipY ? -1 : 1})` }} draggable={false} />
+                              <img src={urlById.get(placement.printId)} alt="" className="size-full object-contain" style={{ transform: `scale(${placement.flipX ? -1 : 1}, ${placement.flipY ? -1 : 1})`, opacity: placement.opacity ?? 1 }} draggable={false} />
                               {active && <>
                                 <span onPointerDown={startDrag('rotate', placement)} className="absolute -top-8 left-1/2 flex h-6 w-6 -translate-x-1/2 cursor-grab items-center justify-center rounded-full border border-white/60 bg-white text-slate-800"><RefreshCw aria-hidden="true" className="h-3 w-3" /></span>
                                 <span onPointerDown={startDrag('resize', placement)} className="absolute -bottom-1.5 -right-1.5 h-3 w-3 cursor-nwse-resize rounded-full border border-[#8fb3ff] bg-white" />
@@ -432,6 +492,15 @@ export function PrintApplyEditor({ garmentUrl, prints, initialPrintId, initialSt
                 ) : <div className="h-full w-full animate-pulse rounded bg-white/[0.04]" />}
                 {paneStep === 2 && (
                   <div className="absolute right-3 top-3 z-10 flex flex-col gap-1 rounded-lg bg-[#1b1f20]/95 p-1" onPointerDown={(event) => event.stopPropagation()} data-testid="print-apply-tools">
+                    <div className="relative">
+                      <button type="button" aria-label="透過度" title="透過度" aria-expanded={opacityOpen} disabled={!selected} onClick={() => setOpacityOpen((open) => !open)} className={sideButton}><Contrast aria-hidden="true" className="h-4 w-4" /></button>
+                      {opacityOpen && selected && (
+                        <div className="absolute right-9 top-0 z-20 flex w-48 items-center gap-2 rounded-lg bg-[#2b3133] px-3 py-2 shadow-xl" data-testid="print-apply-opacity">
+                          <input type="range" min={0} max={100} value={Math.round((selected.opacity ?? 1) * 100)} aria-label="透過度" onChange={(event) => updateSelected({ opacity: Number(event.target.value) / 100 })} className="min-w-0 flex-1 accent-[#5fd0c8]" />
+                          <span className="w-9 text-right text-xs text-white/80">{Math.round((selected.opacity ?? 1) * 100)}%</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="relative">
                       <button type="button" aria-label="レイヤー" title="レイヤー" aria-expanded={layerMenuOpen} disabled={!selected} onClick={() => setLayerMenuOpen((open) => !open)} className={sideButton}><Layers aria-hidden="true" className="h-4 w-4" /></button>
                       {layerMenuOpen && selected && (

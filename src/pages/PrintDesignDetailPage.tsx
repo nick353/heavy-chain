@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Crop, Download, Expand, Hand, ImagePlus, Info, MousePointer2, Redo2, SlidersHorizontal, Sparkles, Undo2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Expand, Hand, ImagePlus, Info, MousePointer2, Redo2, Sparkles, Undo2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { useBoardDraftProject } from '../features/boardDraftProjects';
-import { ZoomControl } from './PatternDesignDetailPage';
+import { CollectButton, ColorAdjustPanel, CropFrame, DownloadMenu, ImageAdjustPanel, NO_EDIT, ShortcutSheetButton, ToolbarTextButton, UpscaleMenu, decodeImageEdit, encodeImageEdit, imageEditStyle, renderEditedImage, type EditorExportFormat, type ImageEdit } from '../components/lightchain/EditorImageTools';
+import { upscaleImage } from '../lib/imageApi';
+import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { watermarkImageBlobIfOn } from '../lib/imageDownload';
 import { projectNameFromFile } from '../lib/projectNames';
 
@@ -47,20 +51,11 @@ export function PrintDesignDetailPage() {
   return <PrintDesignWorkspace key={JSON.stringify([currentBrand?.id, user?.id])} />;
 }
 
-type Adjust = { brightness: number; contrast: number; saturate: number; rotate: number; flip: boolean };
-const NO_ADJUST: Adjust = { brightness: 100, contrast: 100, saturate: 100, rotate: 0, flip: false };
-const filterOf = (adjust: Adjust) => `brightness(${adjust.brightness}%) contrast(${adjust.contrast}%) saturate(${adjust.saturate}%)`;
-const transformOf = (adjust: Adjust) => `rotate(${adjust.rotate}deg) scaleX(${adjust.flip ? -1 : 1})`;
-/** 色調整 / 画像調整 are kept as `brightness,contrast,saturate,rotate,flip` so they survive a reload. */
-export const encodeAdjust = (adjust: Adjust) => [adjust.brightness, adjust.contrast, adjust.saturate, adjust.rotate, adjust.flip ? 1 : 0].join(',');
-export const decodeAdjust = (value: unknown): Adjust => {
-  if (typeof value !== 'string') return NO_ADJUST;
-  const [brightness, contrast, saturate, rotate, flip] = value.split(',').map(Number);
-  const pct = (n: number) => Number.isFinite(n) ? Math.min(150, Math.max(50, n)) : 100;
-  return { brightness: pct(brightness), contrast: pct(contrast), saturate: pct(saturate),
-    rotate: [0, 90, 180, 270].includes(rotate) ? rotate : 0, flip: flip === 1 };
-};
-const adjustStorageKey = (userId: string, brandId: string, jobId: string) => `heavy:print-adjust:v1:${userId}:${brandId}:${jobId}`;
+/** 色調整 / 画像調整 (see EditorImageTools) are kept per image so they survive a reload. */
+const adjustStorageKey = (userId: string, brandId: string, jobId: string) => `heavy:print-adjust:v2:${userId}:${brandId}:${jobId}`;
+const EXPORT_EXTENSION: Record<EditorExportFormat, string> = { png: 'png', jpeg: 'jpg', avif: 'avif' };
+const TILE_MIN = 0.1;
+const TILE_MAX = 2;
 
 function PrintDesignWorkspace() {
   const navigate = useNavigate();
@@ -77,7 +72,11 @@ function PrintDesignWorkspace() {
   const [dragOrigin, setDragOrigin] = useState<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const [tileOpen, setTileOpen] = useState(false);
   const [panel, setPanel] = useState<'color' | 'image' | null>(null);
-  const [adjust, setAdjustState] = useState<Record<'source' | 'result', Adjust>>({ source: NO_ADJUST, result: NO_ADJUST });
+  const [adjust, setAdjustState] = useState<Record<'source' | 'result', ImageEdit>>({ source: NO_EDIT, result: NO_EDIT });
+  // While a 色調整 / 画像調整 panel is open the image shows the draft; 適用 saves it.
+  const [preview, setPreview] = useState<{ kind: 'source' | 'result'; edit: ImageEdit } | null>(null);
+  const [tileDraft, setTileDraft] = useState<number | null>(null);
+  const [busyTool, setBusyTool] = useState(false);
   // Restore: a saved project keeps later adjustments per job; an unsaved one keeps them in its draft input.
   const adjustKey = workspace.jobId && user?.id && currentBrand?.id ? adjustStorageKey(user.id, currentBrand.id, workspace.jobId) : null;
   const restoredAdjust = useRef<string | null>(null);
@@ -88,13 +87,13 @@ function PrintDesignWorkspace() {
     restoredAdjust.current = token;
     let stored: Record<string, unknown> | null = null;
     try { stored = adjustKey ? JSON.parse(localStorage.getItem(adjustKey) ?? 'null') : null; } catch { stored = null; }
-    setAdjustState({ source: decodeAdjust(stored?.source ?? workspace.inputState.printAdjustSource), result: decodeAdjust(stored?.result ?? workspace.inputState.printAdjustResult) });
+    setAdjustState({ source: decodeImageEdit(stored?.source ?? workspace.inputState.printAdjustSource), result: decodeImageEdit(stored?.result ?? workspace.inputState.printAdjustResult) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adjustKey, workspace.status]);
-  const setAdjust = (next: (value: Record<'source' | 'result', Adjust>) => Record<'source' | 'result', Adjust>) => {
+  const setAdjust = (next: (value: Record<'source' | 'result', ImageEdit>) => Record<'source' | 'result', ImageEdit>) => {
     const updated = next(adjust);
     setAdjustState(updated);
-    const encoded = { source: encodeAdjust(updated.source), result: encodeAdjust(updated.result) };
+    const encoded = { source: encodeImageEdit(updated.source), result: encodeImageEdit(updated.result) };
     if (adjustKey) { try { localStorage.setItem(adjustKey, JSON.stringify(encoded)); } catch { /* storage unavailable */ } }
     else workspace.setInputState({ ...workspace.inputState, printAdjustSource: encoded.source, printAdjustResult: encoded.result });
   };
@@ -105,7 +104,7 @@ function PrintDesignWorkspace() {
   const mode: 'compose' | 'create' = input.printMode === 'create' ? 'create' : 'compose';
   const ratio = typeof input.printRatio === 'string' && (PRINT_DESIGN_RATIOS as readonly string[]).includes(input.printRatio) ? input.printRatio : '自動';
   const resolution = typeof input.printResolution === 'string' && (PRINT_DESIGN_RESOLUTIONS as readonly string[]).includes(input.printResolution) ? input.printResolution : '1K';
-  const tile = Math.min(3, Math.max(0.5, Number(input.printTile) || 1));
+  const tile = Math.min(TILE_MAX, Math.max(TILE_MIN, Number(input.printTile) || 1));
   const prompt = typeof input.printPrompt === 'string' ? input.printPrompt : '';
   const canGenerate = Boolean(source) && !locked && (mode === 'compose' ? Boolean(styleMap) : prompt.trim().length > 0);
 
@@ -145,31 +144,65 @@ function PrintDesignWorkspace() {
     } catch { /* the canvas image could not be read; the upload button still works */ }
   };
 
-  const download = async (url: string | null | undefined, kind: 'source' | 'result') => {
+  const download = async (url: string | null | undefined, kind: 'source' | 'result', format: EditorExportFormat = 'png') => {
     if (!url) return;
     try {
-      const bitmap = await createImageBitmap(await (await fetch(url)).blob());
-      const value = adjust[kind];
-      const quarter = value.rotate % 180 !== 0;
-      const canvas = document.createElement('canvas');
-      canvas.width = quarter ? bitmap.height : bitmap.width;
-      canvas.height = quarter ? bitmap.width : bitmap.height;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('canvas');
-      context.filter = filterOf(value);
-      context.translate(canvas.width / 2, canvas.height / 2);
-      context.rotate((value.rotate * Math.PI) / 180);
-      context.scale(value.flip ? -1 : 1, 1);
-      context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
-      const rendered = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!rendered) throw new Error('blob');
+      const rendered = await renderEditedImage(url, adjust[kind], format);
       const href = URL.createObjectURL(await watermarkImageBlobIfOn(rendered));
       const anchor = document.createElement('a');
       anchor.href = href;
-      anchor.download = kind === 'result' ? 'プリントデザイン.png' : source?.name ?? 'プリント柄.png';
+      const base = kind === 'result' ? 'プリントデザイン' : (source?.name ?? 'プリント柄').replace(/\.[^.]+$/, '');
+      anchor.download = `${base}.${EXPORT_EXTENSION[format]}`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(href), 1000);
-    } catch { window.open(url, '_blank', 'noopener'); }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('format_unsupported')) toast.error('このブラウザではこの形式で保存できません');
+      else window.open(url, '_blank', 'noopener');
+    }
+  };
+  /** Light's コレクション: the selected image goes to マイライブラリー. */
+  const collect = async (url: string, kind: 'source' | 'result') => {
+    if (!currentBrand?.id || !user?.id) return;
+    try {
+      const persistenceContext = await cloudflareDataPlane?.captureArtifactPersistenceContext();
+      const storagePath = kind === 'result' ? workspace.result?.storagePath : undefined;
+      const result = await saveWorkspaceArtifactBestEffort({ brandId: currentBrand.id, scopeId: user.id, featureType: 'pattern-print-design', title: 'プリントデザイン', prompt: 'プリントデザイン', imageUrl: url,
+        createdAt: new Date().toISOString(), metadata: { librarySource: 'print-design-collection', libraryGroup: 'マイライブラリー', ...(storagePath ? { sourceStoragePath: storagePath } : {}) } }, { persistenceContext });
+      if (!result.localPersisted || (cloudflareDataPlane && !result.remote)) throw new Error('library_save_unconfirmed');
+      toast.success('アセットライブラリに保存しました');
+    } catch { toast.error('ライブラリーへ保存できませんでした'); }
+  };
+  /** Light's 高画質化 2K / 4K: the upscaled copy becomes the canvas result. */
+  const upscale = async (url: string, scale: 2 | 4) => {
+    if (!currentBrand?.id || busyTool) return;
+    setBusyTool(true);
+    try {
+      const result = await upscaleImage(url, currentBrand.id, scale, { lightchainFeatureId: 'pattern-print-design', lightchainFeatureTitle: 'プリントデザイン', lightchainTaskCodes: ['upscale'] }, { rightsConfirmed: true });
+      const next = result.imageUrl ?? result.images?.[0]?.imageUrl;
+      if (!result.success || !next) throw new Error('upscale_failed');
+      setResultUrl(next); setShowResult(true); setSelected('result');
+      setAdjust((value) => ({ ...value, result: NO_EDIT }));
+    } catch { toast.error('高画質化できませんでした'); }
+    finally { setBusyTool(false); }
+  };
+  /** タイル表示とズーム › キャンバスに保存: the tiled print is drawn once and placed on the canvas as the result. */
+  const saveTileToCanvas = async (scale: number) => {
+    const url = source?.imageUrl;
+    if (!url) return;
+    try {
+      const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024; canvas.height = 1024;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('canvas');
+      const size = Math.max(16, Math.round((1024 / 3) * scale));
+      const height = Math.round(size * (bitmap.height / bitmap.width));
+      for (let y = 0; y < 1024; y += height) for (let x = 0; x < 1024; x += size) context.drawImage(bitmap, x, y, size, height);
+      bitmap.close();
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('blob');
+      setResultUrl(URL.createObjectURL(blob)); setShowResult(true); setSelected('result');
+    } catch { toast.error('キャンバスに保存できませんでした'); }
   };
 
   const projectCard = (
@@ -186,45 +219,41 @@ function PrintDesignWorkspace() {
     return (
       <main className="relative h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white" data-testid="lightchain-print-design-detail" data-workspace-feature={workspace.toolId} data-resume-state={workspace.status}>
         {projectCard}
-        <label className="absolute bottom-4 left-[338px] right-4 top-[134px] flex cursor-pointer flex-col items-center justify-center rounded-lg bg-[#33393b] text-center" data-testid="print-design-upload-dropzone">
+        <label className="absolute left-1/2 top-1/2 flex h-[484px] w-[min(764px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 cursor-pointer flex-col items-center justify-center rounded-lg bg-[#33393b] text-center" data-testid="print-design-upload-dropzone">
           <ImagePlus className="h-6 w-6 text-white/80" aria-hidden="true" />
           <span className="mt-3 text-base text-white/90">ここをクリックまたはドラッグして画像を追加</span>
           <span className="mt-2 text-sm text-white/50">jpg、jpeg、png、webp形式の画像（最大20M）に対応</span>
           <input type="file" accept={ACCEPT} className="sr-only" disabled={locked} onChange={pick('primary')} aria-label="ここをクリックまたはドラッグして画像を追加" />
         </label>
         {heavyBrand.failed && <p role="alert" className="absolute bottom-6 left-4 text-sm text-rose-200">ワークスペースを準備できません。ページを再読み込みしてください。</p>}
+        <ShortcutSheetButton />
       </main>
     );
   }
 
   const visibleResult = Boolean(resultUrl) && showResult;
   const currentImage = visibleResult && selected !== 'source' ? resultUrl : source?.imageUrl ?? null;
-  const tileStyle = (url: string): CSSProperties => ({ backgroundImage: `url("${url}")`, backgroundSize: `${Math.round(150 / tile)}px`, backgroundRepeat: 'repeat' });
+  const tileStyle = (url: string, scale = tile): CSSProperties => ({ backgroundImage: `url("${url}")`, backgroundSize: `${Math.round(50 * scale)}px`, backgroundRepeat: 'repeat' });
+  const editOf = (kind: 'source' | 'result') => (preview?.kind === kind ? preview.edit : adjust[kind]);
 
+  // Light's image toolbar: 色調整, 画像調整, シームレス, 高画質化 (2K / 4K), コレクション and ダウンロード (PNG / JPG / AVIF).
   const imageToolbar = (kind: 'source' | 'result', url: string) => (
-    <div className="absolute -top-14 left-1/2 z-10 flex h-10 -translate-x-1/2 items-center gap-4 whitespace-nowrap rounded-xl border border-white/10 bg-[#262a2b] px-3 text-sm text-white/85 shadow-lg" data-testid={`print-design-${kind}-toolbar`} onPointerDown={(event) => event.stopPropagation()}>
-      <button type="button" onClick={() => setPanel(panel === 'color' ? null : 'color')} className="flex items-center gap-1 hover:text-white"><SlidersHorizontal className="h-4 w-4" />色調整</button>
-      <button type="button" onClick={() => setPanel(panel === 'image' ? null : 'image')} className="flex items-center gap-1 hover:text-white"><Crop className="h-4 w-4" />画像調整</button>
-      <button type="button" disabled={locked} onClick={() => run('seamless')} className="flex items-center gap-1 hover:text-white disabled:opacity-40" data-testid="print-design-seamless"><Expand className="h-4 w-4" />シームレス</button>
-      <button type="button" aria-label="ダウンロード" onClick={() => void download(url, kind)} className="hover:text-white"><Download className="h-4 w-4" /></button>
-      {panel && (
-        <div className="absolute left-0 top-12 w-64 rounded-lg border border-white/10 bg-[#262a2b] p-3 text-xs" role="dialog" aria-label={panel === 'color' ? '色調整' : '画像調整'}>
-          {panel === 'color' ? (['brightness', 'contrast', 'saturate'] as const).map((key) => (
-            <label key={key} className="mb-2 flex items-center gap-2">
-              <span className="w-12 text-white/70">{key === 'brightness' ? '明るさ' : key === 'contrast' ? 'コントラスト' : '彩度'}</span>
-              <input type="range" min={50} max={150} value={adjust[kind][key]} onChange={(event) => setAdjust((value) => ({ ...value, [kind]: { ...value[kind], [key]: Number(event.target.value) } }))} className="flex-1" />
-            </label>
-          )) : (
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setAdjust((value) => ({ ...value, [kind]: { ...value[kind], rotate: (value[kind].rotate + 90) % 360 } }))} className="rounded border border-white/15 px-2 py-1">90°回転</button>
-              <button type="button" onClick={() => setAdjust((value) => ({ ...value, [kind]: { ...value[kind], flip: !value[kind].flip } }))} className="rounded border border-white/15 px-2 py-1">左右反転</button>
-            </div>
-          )}
-          <button type="button" onClick={() => setAdjust((value) => ({ ...value, [kind]: NO_ADJUST }))} className="mt-1 text-white/60 hover:text-white">リセット</button>
-        </div>
-      )}
+    <div className="absolute -top-14 left-1/2 z-10 flex h-10 -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-xl border border-white/10 bg-[#262a2b] px-1.5 text-sm text-white/85 shadow-lg" data-testid={`print-design-${kind}-toolbar`} onPointerDown={(event) => event.stopPropagation()}>
+      <ToolbarTextButton label="色調整" icon="color" active={panel === 'color'} onClick={() => { setPreview(null); setPanel(panel === 'color' ? null : 'color'); }} testId="print-design-color" />
+      <ToolbarTextButton label="画像調整" icon="image" active={panel === 'image'} onClick={() => { setPreview(null); setPanel(panel === 'image' ? null : 'image'); }} testId="print-design-image" />
+      <button type="button" disabled={locked} onClick={() => run('seamless')} className="flex h-8 items-center gap-1 rounded-lg px-1.5 hover:bg-white/10 disabled:opacity-40" data-testid="print-design-seamless"><Expand className="h-4 w-4" />シームレス</button>
+      <UpscaleMenu disabled={busyTool || locked} onSelect={(scale) => void upscale(url, scale)} />
+      <span className="mx-0.5 h-5 w-px bg-white/10" />
+      <CollectButton onClick={() => void collect(url, kind)} />
+      <DownloadMenu onSelect={(format) => void download(url, kind, format)} />
+      {panel === 'color' && <ColorAdjustPanel value={adjust[kind].tone} onClose={() => { setPanel(null); setPreview(null); }}
+        onPreview={(tone) => setPreview({ kind, edit: { ...adjust[kind], tone } })} onApply={(tone) => setAdjust((value) => ({ ...value, [kind]: { ...value[kind], tone } }))} />}
+      {panel === 'image' && <ImageAdjustPanel value={adjust[kind]} onClose={() => { setPanel(null); setPreview(null); }}
+        onPreview={(edit) => setPreview({ kind, edit })} onApply={(edit) => setAdjust((value) => ({ ...value, [kind]: edit }))} />}
     </div>
   );
+  const cropFrameFor = (kind: 'source' | 'result') => panel === 'image' && preview?.kind === kind && preview.edit.crop
+    ? <CropFrame crop={preview.edit.crop} onChange={(crop) => setPreview({ kind, edit: { ...preview.edit, crop } })} /> : null;
 
   const onCanvasPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (tool !== 'drag') { if (event.target === event.currentTarget) { setSelected(null); setPanel(null); } return; }
@@ -234,20 +263,23 @@ function PrintDesignWorkspace() {
 
   return (
     <main className="relative h-[calc(100vh-50px)] overflow-hidden bg-[#171b1c] text-white" data-testid="lightchain-print-design-detail" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId ?? ''} data-resume-state={workspace.status}>
-      <div className={`absolute inset-0 ${tool === 'drag' ? 'cursor-grab' : ''}`} data-testid="print-design-canvas" onPointerDown={onCanvasPointerDown} onPointerMove={(event) => { if (dragOrigin) setPan({ x: dragOrigin.panX + event.clientX - dragOrigin.x, y: dragOrigin.panY + event.clientY - dragOrigin.y }); }} onPointerUp={() => setDragOrigin(null)}>
+      <div className={`absolute inset-0 ${tool === 'drag' ? 'cursor-grab' : ''}`} data-testid="print-design-canvas" onPointerDown={onCanvasPointerDown} onPointerMove={(event) => { if (dragOrigin) setPan({ x: dragOrigin.panX + event.clientX - dragOrigin.x, y: dragOrigin.panY + event.clientY - dragOrigin.y }); }} onPointerUp={() => setDragOrigin(null)}
+        onWheel={(event) => setZoom((value) => Math.min(4, Math.max(0.25, value * (event.deltaY < 0 ? 1.1 : 0.9))))}>
         <div className="absolute left-1/2 top-1/2 flex items-center gap-16 md:left-[calc(50%+168px)]" style={{ transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y + 28}px)) scale(${zoom})` }}>
           {source && (
             <div className={`relative ${selected === 'source' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select') { event.stopPropagation(); setSelected('source'); } }}>
               {selected === 'source' && imageToolbar('source', source.imageUrl)}
               {tile !== 1
-                ? <div className="h-[150px] w-[150px]" style={{ ...tileStyle(source.imageUrl), filter: filterOf(adjust.source), transform: transformOf(adjust.source) }} data-testid="print-design-tile-preview" role="img" aria-label="プリント柄（タイル表示）" />
-                : <img src={source.imageUrl} alt="プリント柄" data-source-slot="primary" className="block max-h-[150px] max-w-[150px] select-none object-contain" style={{ filter: filterOf(adjust.source), transform: transformOf(adjust.source) }} draggable={false} />}
+                ? <div className="h-[150px] w-[150px]" style={{ ...tileStyle(source.imageUrl), ...imageEditStyle(editOf('source')) }} data-testid="print-design-tile-preview" role="img" aria-label="プリント柄（タイル表示）" />
+                : <img src={source.imageUrl} alt="プリント柄" data-source-slot="primary" className="block max-h-[150px] max-w-[150px] select-none object-contain" style={imageEditStyle(editOf('source'))} draggable={false} />}
+              {cropFrameFor('source')}
             </div>
           )}
           {visibleResult && resultUrl && (
             <div data-testid="print-design-result" className={`relative ${selected === 'result' ? 'ring-2 ring-[#5aa9ff]' : ''}`} onPointerDown={(event) => { if (tool === 'select') { event.stopPropagation(); setSelected('result'); } }}>
               {selected === 'result' && imageToolbar('result', resultUrl)}
-              <img src={resultUrl} alt="プリントデザイン AI生成" className="block max-h-[min(420px,calc(100vh-290px))] max-w-[460px] select-none object-contain" style={{ filter: filterOf(adjust.result), transform: transformOf(adjust.result) }} draggable={false} />
+              <img src={resultUrl} alt="プリントデザイン AI生成" className="block max-h-[min(420px,calc(100vh-290px))] max-w-[460px] select-none object-contain" style={imageEditStyle(editOf('result'))} draggable={false} />
+              {cropFrameFor('result')}
             </div>
           )}
           {workspace.status === 'running' && <div className="flex h-[260px] w-[260px] items-center justify-center rounded-lg bg-white/[0.04] text-sm text-white/70" role="status">生成中…</div>}
@@ -273,16 +305,9 @@ function PrintDesignWorkspace() {
           {source && <span className="sr-only" data-testid="print-design-file-name">{source.name}</span>}
         </div>
         <div className="relative mt-4">
-          <button type="button" aria-expanded={tileOpen} onClick={() => setTileOpen((value) => !value)} className="flex h-6 w-full items-center gap-1.5 px-1 text-sm text-white/80">
+          <button type="button" aria-expanded={tileOpen} onClick={() => { setTileDraft(tile); setTileOpen((value) => !value); }} className="flex h-[33px] w-full items-center gap-1.5 rounded-lg bg-white/[0.06] px-2 text-sm text-white/80" data-testid="print-design-tile-toggle">
             <Expand className="h-3.5 w-3.5 text-white/60" aria-hidden="true" />タイル表示とズーム<span className="ml-auto">{tile.toFixed(1)}</span><ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
-          {tileOpen && (
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-white/70">
-              <span>0.5</span>
-              <input type="range" aria-label="タイル表示とズーム" min={0.5} max={3} step={0.1} value={tile} disabled={locked} onChange={(event) => update({ printTile: Number(event.target.value).toFixed(1) })} className="flex-1" />
-              <span>3.0</span>
-            </div>
-          )}
         </div>
 
         <div role="tablist" aria-label="プリントデザイン" className="mt-4 grid h-8 grid-cols-2">
@@ -342,7 +367,24 @@ function PrintDesignWorkspace() {
         </div>
       </section>
 
-      <ZoomControl zoom={zoom} onChange={setZoom} onReset={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} />
+      {/* Light's タイル表示とズーム opens beside the panel: preview, ズーム倍率, キャンバスに保存 and 適用. */}
+      {tileOpen && source && (
+        <section role="dialog" aria-label="タイル表示とズーム" data-testid="print-design-tile-panel" className="absolute left-[352px] top-[121px] z-30 w-[255px] rounded-2xl border border-white/10 bg-[#25292b] p-4 text-sm text-white shadow-2xl">
+          <div className="flex items-center justify-between"><h3 className="font-medium">タイル表示とズーム</h3>
+            <button type="button" aria-label="閉じる" onClick={() => setTileOpen(false)} className="text-white/60 hover:text-white"><X className="h-4 w-4" /></button></div>
+          <p className="mt-1 text-xs leading-5 text-white/60">ズーム倍率が大きいほど、上半身のプリントが大きくなります</p>
+          <div className="mt-3 h-[224px] w-full rounded bg-white/5" style={tileStyle(source.imageUrl, (tileDraft ?? tile) * 4.5)} role="img" aria-label="タイル表示のプレビュー" />
+          <div className="mt-4 flex items-center justify-between"><span className="text-white/80">ズーム倍率</span>
+            <input type="number" aria-label="ズーム倍率" step={0.1} min={TILE_MIN} max={TILE_MAX} value={(tileDraft ?? tile).toFixed(1)} onChange={(event) => setTileDraft(Math.min(TILE_MAX, Math.max(TILE_MIN, Number(event.target.value) || 1)))}
+              className="h-8 w-12 rounded-lg border border-white/10 bg-transparent px-2 text-sm text-white outline-none" /></div>
+          <input type="range" aria-label="ズーム倍率のスライダー" min={TILE_MIN} max={TILE_MAX} step={0.1} value={tileDraft ?? tile} disabled={locked} onChange={(event) => setTileDraft(Number(event.target.value))} className="mt-2 w-full accent-[#0bcabc]" />
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <button type="button" disabled={locked} onClick={() => void saveTileToCanvas(tileDraft ?? tile)} className="h-8 flex-1 rounded-lg bg-white/10 px-3 text-sm hover:bg-white/15 disabled:opacity-40">キャンバスに保存</button>
+            <button type="button" disabled={locked} onClick={() => { update({ printTile: (tileDraft ?? tile).toFixed(1) }); setTileOpen(false); }} className="h-8 rounded-lg bg-[#0bcabc] px-4 text-sm font-medium text-neutral-950 hover:bg-[#3dd8cc] disabled:opacity-40">適用</button>
+          </div>
+        </section>
+      )}
+      <ShortcutSheetButton />
     </main>
   );
 }

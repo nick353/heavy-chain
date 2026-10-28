@@ -52,7 +52,8 @@ export function BrandSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [members, setMembers] = useState<BrandMember[]>([]);
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  // The account window's 追加 opens this page with ?invite=1.
+  const [showInviteModal, setShowInviteModal] = useState(() => new URLSearchParams(window.location.search).get('invite') === '1');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('editor');
   const [inviteCode, setInviteCode] = useState('');
