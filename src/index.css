@@ -46,7 +46,8 @@
 .design-production-parity [data-testid="design-production-recent-projects"] { position: relative; left: 50%; width: calc(100vw - 59px); transform: translateX(-50%); }
 /* Light: fixed 220px cards, 8px apart, in a centered 1368px row (six cards; first card at x=221 at 1811px). */
 .design-production-parity [data-testid="design-dialogue-recent-project-grid"] { grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 220px)); column-gap: 8px; row-gap: 16px; }
-.design-production-parity .design-dialogue-recent-projects { width: 100%; max-width: 1368px; margin-left: auto; margin-right: auto; }
+/* The row is wider than the 960px input above it, so it leaves that column and centers on the page (left edge 256px at 1880px, like Light). */
+.design-production-parity .design-dialogue-recent-projects { position: relative; left: 50%; width: min(1368px, calc(100vw - 32px)); max-width: none; margin-left: 0; margin-right: 0; transform: translateX(-50%); }
 .design-production-parity [data-testid="design-dialogue-scenes"] > button { box-sizing: border-box; }
 .design-production-parity [data-design-dialogue-scene-cover] { object-fit: cover; }
 .design-production-parity [data-design-dialogue-scene-cover] + div { transition: background-color .2s ease; }
