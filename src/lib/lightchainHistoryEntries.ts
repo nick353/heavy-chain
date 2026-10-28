@@ -26,10 +26,23 @@ const historyTitleOverrides: Record<string, string> = {
   'platform-asset': '素材',
 };
 
-export const lightchainHistoryTitle = (featureType: string | null): string => {
+const recordOf = (value: unknown): Record<string, unknown> => (value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {});
+
+/** Light names a print result by tool and mode, e.g. プリントイメージ‐ポイントプリントイメージ for a スポット print (the only mode its history showed). */
+const historyModeTitle = (id: string | null, metadata: unknown): string | null => {
+  if (id !== 'printing-image') return null;
+  const data = recordOf(metadata);
+  const coverage = data.coverageMode ?? recordOf(data.generationIntent).coverageMode ?? recordOf(data.compositionPreview).coverageMode;
+  return coverage === 'spot' ? 'ポイントプリントイメージ' : null;
+};
+
+export const lightchainHistoryTitle = (featureType: string | null, metadata?: unknown): string => {
   const id = featureIdOf(featureType);
   const feature = id ? lightchainUnifiedFeatureCatalog.find((entry) => entry.id === id) : undefined;
-  if (feature) return feature.title;
+  if (feature) {
+    const mode = historyModeTitle(id, metadata);
+    return mode ? `${feature.title}‐${mode}` : feature.title;
+  }
   const key = (featureType ?? '').replace(/^lightchain-/, '').replace(/-provider-result$/, '');
   return historyTitleOverrides[key] ?? '生成画像';
 };
@@ -68,7 +81,7 @@ export const groupHistoryEntries = (rows: GeneratedImageListRow[]): HistoryEntry
     const key = row.job_id ? `job:${row.job_id}` : `image:${row.id}`;
     const existing = byJob.get(key);
     if (existing) { existing.images.push(row); continue; }
-    const entry = { key, title: lightchainHistoryTitle(row.feature_type), createdAt: row.created_at, images: [row] };
+    const entry = { key, title: lightchainHistoryTitle(row.feature_type, row.metadata), createdAt: row.created_at, images: [row] };
     byJob.set(key, entry);
     entries.push(entry);
   }

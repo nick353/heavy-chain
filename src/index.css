@@ -1771,3 +1771,26 @@ html:not(.dark) .ui-modal-panel .input-field-glass {
 @media (max-width: 1023px) {
   .asset-center-parity { height: auto; overflow: visible; }
 }
+
+/* Light's editor light mode (DesignEntryDetailPage's ライトモードに切り替え): the header, canvas and panels turn light. */
+html[data-editor-theme="light"] header { background: #ffffff; border-color: rgba(0, 0, 0, 0.08); color: #1c1f21; }
+html[data-editor-theme="light"] header button, html[data-editor-theme="light"] header a { color: #3d4245; }
+html[data-editor-theme="light"] header button:hover { background: rgba(0, 0, 0, 0.05); color: #1c1f21; }
+[data-editor-theme="light"][data-testid="design-entry-detail"] { background: #f2f3f4; color: #1c1f21; }
+[data-editor-theme="light"][data-testid="design-entry-detail"] > div[aria-hidden="true"] { opacity: 0; }
+[data-editor-theme="light"] .bg-\[\#1b2023\]\/95, [data-editor-theme="light"] .bg-\[\#1b2023\],
+[data-editor-theme="light"] .bg-\[\#171c1f\], [data-editor-theme="light"] .bg-\[\#202628\] { background-color: #ffffff; }
+[data-editor-theme="light"] .bg-\[\#20262a\] { background-color: #f6f7f8; }
+[data-editor-theme="light"] .border-white\/10, [data-editor-theme="light"] .border-white\/20 { border-color: rgba(0, 0, 0, 0.08); }
+[data-editor-theme="light"] .bg-white\/5, [data-editor-theme="light"] .bg-white\/\[0\.03\], [data-editor-theme="light"] .bg-white\/\[0\.06\] { background-color: rgba(0, 0, 0, 0.04); }
+[data-editor-theme="light"] .bg-white\/10, [data-editor-theme="light"] .bg-white\/\[0\.12\] { background-color: rgba(0, 0, 0, 0.07); }
+[data-editor-theme="light"] .bg-white\/15 { background-color: rgba(0, 0, 0, 0.1); }
+[data-editor-theme="light"] .hover\:bg-white\/10:hover, [data-editor-theme="light"] .hover\:bg-white\/5:hover, [data-editor-theme="light"] .hover\:bg-white\/\[0\.18\]:hover { background-color: rgba(0, 0, 0, 0.06); }
+[data-editor-theme="light"] .text-white, [data-editor-theme="light"] .text-neutral-100, [data-editor-theme="light"] .text-neutral-200 { color: #1c1f21; }
+[data-editor-theme="light"] .text-neutral-300 { color: #3d4245; }
+[data-editor-theme="light"] .text-neutral-400, [data-editor-theme="light"] .text-neutral-500 { color: #6b7175; }
+[data-editor-theme="light"] .hover\:text-white:hover { color: #000000; }
+[data-editor-theme="light"] textarea { color: #1c1f21; }
+/* The teal bubbles, primary buttons and image tags keep Light's colours in both modes. */
+[data-editor-theme="light"] .bg-\[\#1fcfc0\], [data-editor-theme="light"] .bg-\[\#1fcfc0\] .whitespace-pre-wrap { color: #0d1113; }
+[data-editor-theme="light"] .bg-\[\#25292b\] { background-color: #ffffff; color: #1c1f21; }

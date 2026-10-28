@@ -117,7 +117,7 @@ export function LightchainHistoryPanel({ onClose, locked = false, toolIds }: { o
   const download = async (images: GeneratedImageListRow[]) => {
     try {
       for (const image of images) {
-        await downloadValidatedImage(image.image_url as string, `${lightchainHistoryTitle(image.feature_type)}-${image.id.slice(0, 8)}.png`, 'history_panel_download');
+        await downloadValidatedImage(image.image_url as string, `${lightchainHistoryTitle(image.feature_type, image.metadata)}-${image.id.slice(0, 8)}.png`, 'history_panel_download');
       }
     } catch {
       toast.error('ダウンロードに失敗しました');
@@ -134,7 +134,7 @@ export function LightchainHistoryPanel({ onClose, locked = false, toolIds }: { o
         brandId,
         scopeId: userId,
         featureType: image.feature_type || 'lightchain-library-generated',
-        title: lightchainHistoryTitle(image.feature_type),
+        title: lightchainHistoryTitle(image.feature_type, image.metadata),
         imageUrl: image.image_url,
         prompt: image.prompt,
         createdAt: image.created_at,

@@ -106,3 +106,22 @@ test('marketing projects can be moved into their own groups like Light (移動)'
   const groups = read('src/lib/designProjectGroups.ts');
   assert.match(groups, /heavy-\$\{workspace\}-project-groups:v1:/);
 });
+
+test('the design and marketing editors match Light: toolbar, chat bubble, result card and light mode', () => {
+  const page = readFileSync(new URL('../src/features/designDetail/DesignEntryDetailPage.tsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+  // 企画提案書 ends only the design workspace's tool group, and the tool group has no download button.
+  assert.match(page, /workspaceId === 'design' && <>[\s\S]*?aria-label="企画提案書"/);
+  assert.doesNotMatch(page, /aria-label="ダウンロード" onClick=\{\(\) => void downloadSelected\(\)\} className=\{toolbarButton\}/);
+  // The user's message is a teal bubble with 画像N tags for its attachments.
+  assert.match(page, /bg-\[#1fcfc0\]/);
+  assert.match(page, /画像\{referenceIndex \+ 1\}/);
+  // Results show at the panel's width with コレクション and ダウンロード on hover.
+  assert.match(page, /data-testid="design-generated-collect"/);
+  assert.match(page, /data-testid="design-generated-download"/);
+  assert.match(page, /max-w-\[320px\]/);
+  // ライトモードに切り替え sits in the header next to the language menu and turns the editor light.
+  assert.match(page, /getElementById\('lightchain-header-context'\)/);
+  assert.match(page, /'ライトモードに切り替え'/);
+  assert.match(css, /html\[data-editor-theme="light"\] header/);
+});
