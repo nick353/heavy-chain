@@ -775,6 +775,15 @@ export async function imageUsage(env: Env, brandId: string): Promise<Json> {
     dailyWorkerAdmissionLimit: quota.daily, dailyWorkerEstimatedNeuronLimit: quota.dailyNeuronCenti / 100, accountWideBudgetGuaranteed: false };
 }
 
+/** The brand's charged requests, newest first, for the ポイント詳細 dialog (refunded requests carry no units and are left out). */
+export async function imageUsageEvents(env: Env, brandId: string): Promise<Json> {
+  const rows = await env.DB.prepare(`SELECT r.request_id AS requestId, r.action, r.quota_units AS units, r.state, r.created_at AS createdAt,
+    u.name AS userName, u.email AS userEmail
+    FROM heavy_ai_requests r LEFT JOIN users u ON u.id=r.user_id
+    WHERE r.brand_id=? AND r.quota_units>0 ORDER BY r.created_at DESC LIMIT 100`).bind(brandId).all<Json>();
+  return { events: rows.results ?? [] };
+}
+
 /** Models whose provider key is registered on this Worker; the settings screen lists only these. */
 export function availableAIModels(env: Env): Json {
   const provider = configuredProvider(env);
@@ -804,6 +813,11 @@ export async function handleImageAIRead(request: Request, env: Env): Promise<Res
   if (url.pathname === '/v1/ai/models' && request.method === 'GET') {
     const user = await principal(request,env); if (user instanceof Response) return user;
     return reply(availableAIModels(env));
+  }
+  if (url.pathname === '/v1/image-ai/usage/events' && request.method === 'GET') {
+    const brand = url.searchParams.get('brand_id'); if (!brand) return fail('invalid_brand_id',400);
+    const owner = await requireBrandRole(request,env,brand,'viewer'); if (owner instanceof Response) return owner;
+    return reply(await imageUsageEvents(env,brand));
   }
   if (url.pathname === '/v1/image-ai/usage' && request.method === 'GET') {
     const brand = url.searchParams.get('brand_id'); if (!brand) return fail('invalid_brand_id',400);

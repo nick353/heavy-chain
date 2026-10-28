@@ -1,3 +1,4 @@
+import { PointDetailButton } from '../components/lightchain/PointDetailDialog';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -706,10 +707,10 @@ export function FashionStudioPage() {
         data-workflow-result-destinations={fashionStudioWorkflowContract?.resultDestinations.join(',') ?? ''}
       >
         {remainingUnits !== null && (
-          <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white">
+          <PointDetailButton className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white">
             <Sparkles className="h-3.5 w-3.5" />
             {remainingUnits.toLocaleString()}
-          </div>
+          </PointDetailButton>
         )}
         <section className="w-full">
           <div className="flex items-center justify-between gap-4">

@@ -45,6 +45,7 @@ import {
   X,
   Wand2,
 } from 'lucide-react';
+import { PointDetailButton } from '../components/lightchain/PointDetailDialog';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../components/DesignArtifactThumbnail';
@@ -1244,7 +1245,7 @@ export function LightchainMarketingHomePage() {
   return (
     <ParityShell className="relative h-full overflow-y-auto overflow-x-hidden bg-[#171b1c] pr-1 text-white" workflowFeature="marketing-home">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[170px] bg-[radial-gradient(ellipse_40%_100%_at_6%_0%,rgba(72,186,160,0.34),transparent_70%),radial-gradient(ellipse_45%_90%_at_96%_0%,rgba(74,84,214,0.42),transparent_70%),radial-gradient(ellipse_30%_70%_at_62%_0%,rgba(120,70,160,0.16),transparent_70%)]" />
-      {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-[#202527] p-2.5 text-base leading-4 text-neutral-300"><Sparkles className="h-4 w-4" />{remainingUnits.toLocaleString()}</div>}
+      {remainingUnits !== null && <PointDetailButton className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-[#202527] p-2.5 text-base leading-4 text-neutral-300"><Sparkles className="h-4 w-4" />{remainingUnits.toLocaleString()}</PointDetailButton>}
       <div data-testid="lightchain-marketing-home" className="relative z-[2] mx-auto flex w-[1392px] max-w-full flex-col items-center gap-y-6 pt-[70px] max-lg:px-4">
         <div className="flex w-full flex-col items-center gap-6">
           <div className="flex flex-col items-center gap-3">
@@ -1789,7 +1790,7 @@ export function LightchainDesignProductionPage() {
   return (
     <ParityShell className="design-production-parity relative overflow-hidden bg-[#171b1c] text-white" workflowFeature="print-design-project">
       <div aria-hidden="true" className="design-production-hero-glow pointer-events-none absolute inset-x-0 top-0" />
-      {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</div>}
+      {remainingUnits !== null && <PointDetailButton className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</PointDetailButton>}
       <div data-testid="design-production-page" className="relative z-10 mx-auto max-w-[1157px] px-6 py-7 lg:px-0"><div className="text-center"><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1><p className="mt-3 text-sm text-neutral-400">アイデアを形にし、制作をスムーズに</p></div>
         <div role="tablist" data-design-tablist="" className="mx-auto mt-8 flex w-fit rounded-2xl border border-white/10 bg-white/10 p-1">{['プロジェクトから開始', '対話から開始'].map((tab) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => selectStartTab(tab)} className={`h-10 ${tab === 'プロジェクトから開始' ? 'w-[210px]' : 'w-[146px]'} rounded-xl px-0 py-1 text-lg font-medium transition ${activeTab === tab ? 'shadow-sm' : 'text-neutral-400 hover:text-white'}`}>{tab}</button>)}</div>
         {activeTab === '対話から開始' ? (
@@ -2213,7 +2214,7 @@ export function LightchainDialogueParityPanel({
   return (
     <ParityShell className="design-production-parity bg-[#171b1c] relative overflow-hidden text-white" workflowFeature="print-design-project">
       <div aria-hidden="true" className="design-production-hero-glow pointer-events-none absolute inset-x-0 top-0" />
-      {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</div>}
+      {remainingUnits !== null && <PointDetailButton className="absolute right-5 top-4 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white"><Sparkles className="h-3.5 w-3.5" />{remainingUnits.toLocaleString()}</PointDetailButton>}
       <div data-testid="design-production-page" className="relative z-10 mx-auto max-w-[1157px] px-6 py-7 lg:px-0">
         <div className="text-center">
           <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1>
