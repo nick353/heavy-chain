@@ -117,6 +117,15 @@ export async function updateAgentTask(document: AgentTaskDocument, change: (task
   throw new Error('agent_task_update_failed');
 }
 
+/** Light's task menu: 名前を変更 keeps the task and only changes its title. */
+export async function renameAgentTask(document: AgentTaskDocument, title: string): Promise<AgentTaskDocument> {
+  return updateAgentTask(document, (task) => task, { title: title.trim().slice(0, 120) });
+}
+/** Light's task menu: 削除 removes the task's document. */
+export async function deleteAgentTask(taskId: string): Promise<void> {
+  await api().deleteCanvasDocument(taskId);
+}
+
 const sceneGuide: Record<AgentScene, string> = {
   商品企画: '市場・顧客・トレンドを踏まえた商品企画',
   顧客提案: 'クライアント向けの商品提案',

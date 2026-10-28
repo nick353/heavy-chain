@@ -74,3 +74,16 @@ test('業務プリファレンスプロファイル is its own page with Light\'
   const sidebar = read('src/features/agent/AgentSidebar.tsx');
   assert.match(sidebar, /onClick=\{\(\) => navigate\('\/agent\/profiles'\)\}/);
 });
+
+test('editor lists and planning tasks match Light', () => {
+  const css = read('src/index.css');
+  assert.match(css, /\.pattern-project-dashboard-new-label \{ color: #abb8b6; font-size: 14px; line-height: 21px; \}/);
+  assert.match(css, /\.pattern-project-dashboard-name \{[^}]*font-size: 14px;/);
+  const sidebar = read('src/features/agent/AgentSidebar.tsx');
+  assert.match(sidebar, /aria-label="更に見る"/);
+  assert.match(sidebar, />名前を変更<\/button>/);
+  assert.match(sidebar, /deleteAgentTask\(task\.id\)/);
+  const task = read('src/pages/HeavyAgentTaskPage.tsx');
+  assert.match(task, /max-w-\[752px\]/);
+  assert.match(task, /rounded-2xl border border-white\/10 bg-\[#262a2b\] p-4 text-sm text-neutral-300/);
+});
