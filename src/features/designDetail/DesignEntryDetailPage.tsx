@@ -177,7 +177,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const uploadRef = useRef<HTMLInputElement | null>(null);
   const controller = useRef<ReturnType<typeof createDesignDialogueController> | null>(null);
   const sending = useRef(false);
-  const references = useDialogueReferences({ userId, brandId, selectionId: `${workspace.selectionId}:${projectId || 'new'}` });
+  const references = useDialogueReferences({ userId, brandId, selectionId: `${workspace.selectionId}:${projectId || 'new'}`, startEmpty: isNewFile });
   const stores = useMemo(() => ({ sessions: createSessionStore({ idb: window.indexedDB, dbName: DESIGN_ENTRY_SESSION_DB }),
     drafts: createEntryDraftStore({ idb: window.indexedDB, dbName: workspace.draftDb }), dialogues: createDialogueStore({ idb: window.indexedDB }) }), [workspace.draftDb]);
   useEffect(() => {
@@ -553,8 +553,28 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const addFiles = (files: File[]) => {
     const images = files.filter((file) => /^image\/(png|jpe?g|webp|avif)$/.test(file.type) && file.size <= 20 * 1024 * 1024);
     if (images.length !== files.length) setEntryError('jpg、jpeg、png、webp（最大20MBまで）の画像を選択してください');
-    if (images.length) { setPanelOpen(true); void references.addFiles(images); }
+    if (!images.length) return;
+    // Light (measured 2026-10-29): on a new file, one uploaded image becomes the project at once — placed on the
+    // canvas and selected, with the assistant still collapsed. Several images stay as chat references.
+    if (isNewFile && images.length === 1) { newFileUpload.current = true; setEntryError(null); void references.addFiles(images); return; }
+    setPanelOpen(true); void references.addFiles(images);
   };
+  const newFileUpload = useRef(false);
+  const newFileReference = references.references.find((reference) => reference.status === 'ready' && reference.receipt?.imageId);
+  const newFileFailed = references.references.some((reference) => reference.status === 'failure');
+  useEffect(() => {
+    if (!isNewFile || !newFileUpload.current || !brandReady) return;
+    if (newFileFailed) { newFileUpload.current = false; return; }
+    const imageId = newFileReference?.receipt?.imageId;
+    if (!imageId) return;
+    newFileUpload.current = false;
+    const assertContext = () => { const auth = useAuthStore.getState(); if (auth.user?.id !== userId || auth.currentBrand?.id !== brandId) throw new Error('design_entry_scope_stale'); };
+    void openImageProject({ scope: { userId, brandId }, imageId, assertContext, client, measure: designCanvasClient.measureImage })
+      .then((document) => { references.clear(); navigate(`${workspace.detailPath}?${new URLSearchParams({ projectId: document.id })}`, { replace: true }); })
+      .catch(() => setEntryError('画像のプロジェクトを開けませんでした。もう一度お試しください'));
+    // references.clear is stable; the effect runs when the upload's receipt arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandId, brandReady, client, isNewFile, navigate, newFileFailed, newFileReference?.receipt?.imageId, userId, workspace.detailPath]);
   const onUpload = (event: ChangeEvent<HTMLInputElement>) => { addFiles(Array.from(event.target.files ?? [])); event.target.value = ''; };
   const onDrop = (event: DragEvent<HTMLElement>) => { event.preventDefault(); setDragOver(false); addFiles(Array.from(event.dataTransfer.files ?? [])); };
   const renameProject = async (next: string) => {
