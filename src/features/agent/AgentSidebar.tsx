@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ClipboardList, Folder, FolderPlus, MessageSquareText, PanelLeft, PanelLeftClose, Search, Sparkles, X, SquarePen } from 'lucide-react';
+import { ChevronDown, ClipboardList, Folder, FolderPlus, MessageSquareText, MoreHorizontal, PanelLeft, PanelLeftClose, Search, Sparkles, X, SquarePen } from 'lucide-react';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
 import { useAuthStore } from '../../stores/authStore';
-import { addAgentProject, listAgentTasks, readActiveAgentProfileId, readAgentProfiles, readAgentProjects, selectAgentProfile, type AgentPreferenceProfile, type AgentTaskDocument } from './agentTasks';
+import { addAgentProject, deleteAgentTask, listAgentTasks, renameAgentTask, readActiveAgentProfileId, readAgentProfiles, readAgentProjects, selectAgentProfile, type AgentPreferenceProfile, type AgentTaskDocument } from './agentTasks';
 
 const formatDate = (value: string) => {
   const date = new Date(value);
@@ -126,14 +126,32 @@ type SidebarProps = { title: string; activeTaskId?: string | null; refreshKey?: 
 /** Light's 352px planning sidebar: 新規タスク, 業務プリファレンスプロファイル, 最近 (the user's real tasks) and credits. */
 export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, onNewTask, profilesActive = false }: SidebarProps) {
   const navigate = useNavigate();
-  const tasks = useAgentTasks(refreshKey);
+  const [taskChange, setTaskChange] = useState(0);
+  const tasks = useAgentTasks(`${String(refreshKey)}:${taskChange}`);
   const credits = useRemainingCredits();
   const [open, setOpen] = useState(true);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
+  const [taskMenu, setTaskMenu] = useState<string | null>(null);
+  const [renamingTask, setRenamingTask] = useState<{ id: string; value: string } | null>(null);
   const projects = useAgentProjects();
+  const commitRename = async (task: AgentTaskDocument) => {
+    const next = renamingTask?.value.trim();
+    setRenamingTask(null);
+    if (!next || next === task.title) return;
+    try { await renameAgentTask(task, next); setTaskChange((value) => value + 1); } catch { window.alert('名前を変更できませんでした'); }
+  };
+  const removeTask = async (task: AgentTaskDocument) => {
+    setTaskMenu(null);
+    if (!window.confirm(`「${task.title}」を削除しますか？`)) return;
+    try {
+      await deleteAgentTask(task.id);
+      setTaskChange((value) => value + 1);
+      if (task.id === activeTaskId) navigate('/agent');
+    } catch { window.alert('削除できませんでした'); }
+  };
   const visible = (tasks ?? []).filter((task) => (!query.trim() || task.title.includes(query.trim()) || task.task.prompt.includes(query.trim()))
     && (!projectFilter || task.task.project === projectFilter));
 
@@ -185,12 +203,28 @@ export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, on
             {tasks === null && <p className="pl-7 text-sm text-neutral-500">読み込み中…</p>}
             {tasks !== null && visible.length === 0 && <p className="pl-7 text-sm leading-6 text-neutral-500">{query ? '該当するタスクがありません。' : 'まだタスクがありません。'}</p>}
             {visible.map((task) => (
-              <button key={task.id} type="button" aria-current={task.id === activeTaskId ? 'page' : undefined} onClick={() => navigate(`/agent/${task.id}`)}
-                data-testid={`agent-task-${task.id}`}
-                className={`relative flex min-h-[58px] w-full items-start gap-2 rounded-lg py-2 pl-7 pr-2 text-left text-sm font-normal leading-5 text-neutral-300 hover:bg-white/10 ${task.id === activeTaskId ? 'bg-white/10' : ''}`}>
-                {task.id === activeTaskId && <span aria-hidden="true" className="absolute left-3 top-4 h-1.5 w-1.5 rounded-full bg-cyan-300" />}
-                <span className="min-w-0 flex-1 truncate">{task.title}<span className="mt-1 block text-xs leading-4 text-neutral-500"><span className="mr-1 inline-block rounded border border-white/10 px-1 text-[10px] leading-4">{task.task.subtype}</span>{formatDate(task.task.createdAt)}</span></span>
-              </button>
+              <div key={task.id} className="group relative">
+                {renamingTask?.id === task.id
+                  ? <input autoFocus aria-label="タスク名" value={renamingTask.value} maxLength={120} onChange={(event) => setRenamingTask({ id: task.id, value: event.target.value })}
+                    onBlur={() => void commitRename(task)} onKeyDown={(event) => { if (event.key === 'Enter') void commitRename(task); if (event.key === 'Escape') setRenamingTask(null); }}
+                    className="my-2 ml-7 h-9 w-[calc(100%-36px)] rounded-lg border border-cyan-300/60 bg-[#1b1f20] px-2 text-sm text-neutral-100 outline-none" />
+                  : <button type="button" aria-current={task.id === activeTaskId ? 'page' : undefined} onClick={() => navigate(`/agent/${task.id}`)}
+                    data-testid={`agent-task-${task.id}`}
+                    className={`relative flex min-h-[58px] w-full items-start gap-2 rounded-lg py-2 pl-7 pr-8 text-left text-sm font-normal leading-5 text-neutral-300 hover:bg-white/10 ${task.id === activeTaskId ? 'bg-white/10' : ''}`}>
+                    {task.id === activeTaskId && <span aria-hidden="true" className="absolute left-3 top-4 h-1.5 w-1.5 rounded-full bg-cyan-300" />}
+                    <span className="min-w-0 flex-1 truncate">{task.title}<span className="mt-1 block text-xs leading-4 text-neutral-500"><span className="mr-1 inline-block rounded border border-white/10 px-1 text-[10px] leading-4">{task.task.subtype}</span>{formatDate(task.task.createdAt)}</span></span>
+                  </button>}
+                {/* Light's 更に見る (···) on the current or hovered task: 名前を変更 / 削除. */}
+                {renamingTask?.id !== task.id && <button type="button" aria-label="更に見る" aria-haspopup="menu" aria-expanded={taskMenu === task.id} onClick={() => setTaskMenu((current) => current === task.id ? null : task.id)}
+                  className={`absolute right-1 top-3 flex h-7 w-7 items-center justify-center rounded-md text-neutral-300 hover:bg-white/10 ${task.id === activeTaskId || taskMenu === task.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`}><MoreHorizontal className="h-4 w-4" /></button>}
+                {taskMenu === task.id && <>
+                  <div className="fixed inset-0 z-20" aria-hidden="true" onClick={() => setTaskMenu(null)} />
+                  <div role="menu" className="absolute right-1 top-10 z-30 w-36 rounded-lg border border-white/10 bg-[#303536] p-1 shadow-xl" onKeyDown={(event) => { if (event.key === 'Escape') setTaskMenu(null); }}>
+                    <button type="button" role="menuitem" onClick={() => { setTaskMenu(null); setRenamingTask({ id: task.id, value: task.title }); }} className="block w-full rounded-md px-3 py-2 text-left text-sm text-neutral-200 hover:bg-white/10">名前を変更</button>
+                    <button type="button" role="menuitem" onClick={() => void removeTask(task)} className="block w-full rounded-md px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10">削除</button>
+                  </div>
+                </>}
+              </div>
             ))}
           </div>
         </div>

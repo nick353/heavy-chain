@@ -223,11 +223,11 @@ export default function HeavyAgentTaskPage() {
       data-agent-task={doc?.id ?? ''} data-agent-status={statusLabel} data-agent-plan={task?.plan?.requestId ?? ''} data-agent-image={task?.image?.jobId ?? ''}>
       <AgentSidebar title={task?.subtype ?? 'インスピレーションワークスペース'} activeTaskId={doc?.id ?? taskId} refreshKey={`${doc?.id}:${doc?.title}`} onNewTask={() => navigate('/agent')} />
       <section className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-        <div className="mx-auto w-full max-w-[672px] px-4 py-10">
+        <div className="mx-auto w-full max-w-[752px] px-4 py-10">
           {status === 'loading' && <StepSpinner label="タスクを読み込んでいます…" />}
           {status === 'missing' && <div role="alert" className="rounded-xl border border-white/10 bg-[#202426] p-6 text-sm text-neutral-300">このタスクは見つかりません。<button type="button" onClick={() => navigate('/agent')} className="ml-2 text-cyan-300 underline">新規タスクへ</button></div>}
           {task && (
-            <div className="space-y-8 text-[15px] leading-7 text-neutral-200">
+            <div className="space-y-8 text-sm leading-6 text-neutral-200">
               <h1 className="text-xl font-semibold leading-8 text-white" data-testid="agent-task-prompt">{task.prompt}</h1>
               {/* The first round only appears once the request is admitted; show progress before that too. */}
               {task.rounds.length === 0 && !done && !notice && <StepSpinner label="市場とトレンドを整理し、テーマを考えています…" />}
@@ -304,7 +304,9 @@ export default function HeavyAgentTaskPage() {
         </div>
       </section>
       {task && (panelOpen ? (
-        <aside aria-label="概要" className="relative hidden w-[320px] shrink-0 overflow-y-auto border-l border-white/10 bg-[#1d2122] p-5 text-sm text-neutral-300 lg:block" data-testid="agent-summary-panel">
+        // Light floats 概要 as a rounded card 12px from the window edges, like the sidebar on the left.
+        <aside aria-label="概要" className="hidden w-[337px] shrink-0 p-3 lg:block" data-testid="agent-summary-panel">
+          <div className="relative h-full overflow-y-auto rounded-2xl border border-white/10 bg-[#262a2b] p-4 text-sm text-neutral-300">
           <button type="button" aria-label="概要を閉じる" onClick={() => setPanelOpen(false)} className="absolute right-3 top-3 rounded-md p-1.5 text-neutral-400 hover:bg-white/10"><PanelRightClose className="h-4 w-4" /></button>
           <h2 className="text-base font-medium text-white">概要</h2>
           <dl className="mt-4 space-y-3">
@@ -316,6 +318,7 @@ export default function HeavyAgentTaskPage() {
           </dl>
           <h2 className="mt-6 text-base font-medium text-white">参考資料</h2>
           <p className="mt-2 text-xs leading-5 text-neutral-500">Heavy Chainはウェブ検索を行いません。概要とテーマはAIモデルの知識に基づいて作成しています。</p>
+          </div>
         </aside>
       ) : (
         <button type="button" aria-label="概要を開く" onClick={() => setPanelOpen(true)} className="absolute right-3 top-[62px] hidden rounded-md p-1.5 text-neutral-400 hover:bg-white/10 lg:block"><PanelRightOpen className="h-4 w-4" /></button>
