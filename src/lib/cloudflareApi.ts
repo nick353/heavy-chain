@@ -239,6 +239,7 @@ const artifactPersistenceContexts = new WeakMap<ArtifactPersistenceContext, {
   assertCurrent: () => Promise<void>;
 }>();
 
+export const WORKSPACE_ARTIFACT_SAVE_TIMEOUT_MS = 60_000;
 const WORKSPACE_REQUEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const WORKSPACE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const WORKSPACE_STORAGE_PATH = /^generated-images\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
@@ -994,7 +995,9 @@ class CloudflareDataPlaneClient {
     try {
       const result = await send('/v1/workspace-artifacts', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...input, imageUrl }), signal: AbortSignal.timeout(8000),
+        // Up to 20MB of image data plus the Worker's session check and storage write: 8s aborted ordinary
+        // uploads (the Worker saw the request cancelled and the readback found no receipt, 2026-10-29).
+        body: JSON.stringify({ ...input, imageUrl }), signal: AbortSignal.timeout(WORKSPACE_ARTIFACT_SAVE_TIMEOUT_MS),
       });
       return asWorkspaceArtifactRemoteResponse(result, input.requestId, input.sourceStoragePath);
     } catch (error) {
@@ -1022,7 +1025,7 @@ class CloudflareDataPlaneClient {
       ? await this.artifactPersistenceRequest(persistenceContext, checkedRequest)
       : checkedRequest ?? this.request.bind(this);
     const result = await read(`/v1/workspace-artifacts/${encodeURIComponent(requestId)}`, {
-      method: 'GET', signal: AbortSignal.timeout(8000),
+      method: 'GET', signal: AbortSignal.timeout(20_000),
     });
     return asWorkspaceArtifactRemoteResponse(result, requestId, expectedSourceStoragePath);
   }
