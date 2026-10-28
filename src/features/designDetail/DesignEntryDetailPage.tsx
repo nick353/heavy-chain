@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop, MessageCircleMore,
   MessageSquarePlus, MousePointer2, Palette, PanelRightClose, PanelRightOpen, Redo2, RefreshCw, Shapes, Sparkles,
   Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2, ZoomIn, ZoomOut, BookOpen, Keyboard, Mouse, History, ChevronsLeft, Plus,
-  LayoutGrid, Map as MapIcon, Wand2, Maximize2, ArrowUpRight, Moon, Star, Sun,
+  LayoutGrid, Map as MapIcon, Wand2, Maximize2, ArrowUpRight, Moon, Star, Sun, Square,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
@@ -310,8 +310,10 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   // Reopening a project while a request is still pending re-reads that same request once (reconcile never creates
   // a new one), instead of waiting for 作成状態を再確認.
   const autoReconciled = useRef(new Set<string>());
-  const pendingRequestId = visible?.dialogue?.attempts.find((attempt) => attempt.assistant.state === 'running' || attempt.assistant.state === 'unknown'
-    || (attempt.imageAttempted && !['completed', 'failed'].includes(attempt.imageResult ?? '')))?.input.requestId;
+  // A request already settled as unknown was re-read before and did not change; re-reading it on every open only
+  // locked the input for 10s+ (Light lets you type at once). Those keep their 作成状態を再確認 / もう一度作成 buttons.
+  const pendingRequestId = visible?.dialogue?.attempts.find((attempt) => attempt.assistant.state === 'running'
+    || (attempt.imageAttempted && (attempt.imageResult === undefined || attempt.imageResult === 'in-flight')))?.input.requestId;
   useEffect(() => {
     if (!pendingRequestId || visible?.busy || autoReconciled.current.has(pendingRequestId)) return;
     autoReconciled.current.add(pendingRequestId);
@@ -575,6 +577,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     setPanelOpen(true); void references.addFiles(images);
   };
   const [newFileSaving, setNewFileSaving] = useState(false);
+  const [stoppedIds, setStoppedIds] = useState<Set<string>>(() => new Set());
   const [sentPrompt, setSentPrompt] = useState<{ text: string; count: number } | null>(null);
   const [waitingFile, setWaitingFile] = useState<File | null>(null);
   /** Saves the image directly (not through the chat references) and opens it as its own project. */
@@ -1126,10 +1129,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
                       className="flex h-6 w-6 items-center justify-center rounded-md bg-black/50 text-white hover:text-[#0bcabc]"><Download className="h-4 w-4" /></button>
                   </div>}
                 </div>)}</div>
-              {attempt.imageResult !== 'completed' && <p className="mt-2 text-xs text-neutral-400">{attempt.imageResult === 'failed' ? '画像を作成できませんでした。以前の画像はそのまま使用できます。'
+              {attempt.imageResult !== 'completed' && <p className="mt-2 text-xs text-neutral-400">{stoppedIds.has(attempt.input.requestId) ? '停止しました。'
+                : attempt.imageResult === 'failed' ? '画像を作成できませんでした。以前の画像はそのまま使用できます。'
                 : attempt.imageResult === 'ack-deferred' ? '画像を保存しました。生成記録の確認を続けられます。' : '画像の作成・保存状態を確認しています。'}</p>}
             </div>}
             {attempt.assistant.state === 'completed' && !attempt.imageAttempted && <button type="button" disabled={visible.busy} className="mt-3 text-sm text-[#0bcabc]" onClick={() => void act((active) => active.continueImage(attempt.input.requestId))}>画像を作成</button>}
+            {attempt.imageAttempted && (attempt.imageResult === 'unknown' || attempt.imageResult === 'failed') && !visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.length
+              && <button type="button" data-testid="design-attempt-retry" disabled={visible.busy} className="mr-4 mt-3 text-sm text-[#0bcabc]"
+                onClick={() => void act((active) => active.send(attempt.input.prompt, attempt.input.references))}>もう一度作成</button>}
             {(attempt.assistant.state === 'running' || attempt.assistant.state === 'unknown' || (attempt.imageAttempted && !['completed', 'failed'].includes(attempt.imageResult ?? '')))
               && <button type="button" data-testid="design-attempt-reconcile" disabled={visible.busy} className="mt-3 text-sm text-[#0bcabc]" onClick={() => void act((active) => active.reconcile(attempt.input.requestId))}>作成状態を再確認</button>}
           </article>)}
@@ -1151,8 +1158,18 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
             placeholder="商品画像をアップロードして、デザインのリクエストを教えてください" rows={2} className="block max-h-40 min-h-12 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-neutral-500" />
           <div className="mt-4 flex items-center justify-between">
             <button type="button" aria-label="画像を追加" onClick={() => uploadRef.current?.click()} className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 hover:bg-white/10"><Plus className="h-5 w-5" /></button>
-            <button type="submit" aria-label="送信" data-testid="design-followup-send" disabled={!prompt.trim() || Boolean(visible?.busy) || entrySending || !references.ready || (!isNewFile && !visible?.dialogue)}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#61fff4] disabled:bg-white/10 disabled:text-neutral-500"><ArrowUp className="h-5 w-5" /></button>
+            {visible?.busy && visible.dialogue && !isNewFile ? <button type="button" aria-label="停止" data-testid="design-followup-stop"
+              onClick={() => {
+                const active = controller.current;
+                if (!active) return;
+                // Light turns 送信 into a stop square while it works; stopping frees the input at once.
+                sending.current = false;
+                setState((previous) => ({ ...previous, busy: false }));
+                void active.stop().then((ids) => setStoppedIds(new Set(ids))).catch(() => undefined);
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#61fff4]"><Square className="h-4 w-4 fill-current" /></button>
+            : <button type="submit" aria-label="送信" data-testid="design-followup-send" disabled={!prompt.trim() || Boolean(visible?.busy) || entrySending || !references.ready || (!isNewFile && !visible?.dialogue)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#61fff4] disabled:bg-white/10 disabled:text-neutral-500"><ArrowUp className="h-5 w-5" /></button>}
           </div>
         </form>
       </> : <div className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="design-layer-settings">{layerList}</div>}
