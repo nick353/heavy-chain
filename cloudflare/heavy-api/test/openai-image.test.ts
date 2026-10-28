@@ -171,3 +171,30 @@ test('OpenAI model and output dimensions are explicit and bounded', () => {
   assert.deepEqual(openAIExpectedDimensions(1024, 1024), [1024, 1024]);
   assert.throws(() => resolveOpenAIModel(env(), 'edit-image', 'gpt-image-2'), /openai_image_model_not_supported/);
 });
+
+test('edits default to gpt-image-1.5 with input_fidelity=high so the source garment keeps its details (Light parity 2026-10-29)', async () => {
+  const image = pngFixture(8, 8);
+  const reference = { bytes: pngFixture(8, 8), contentType: 'image/png', width: 8, height: 8 };
+  const send = async (overrides: Record<string, string | undefined>) => {
+    const box: { value?: Request } = {};
+    const result = await runOpenAIImage(env(overrides), 'edit-image', input([reference]), 0, async (url, init) => {
+      box.value = new Request(url, init);
+      return Response.json({ data: [{ b64_json: Buffer.from(image).toString('base64') }] });
+    });
+    return { result, form: await box.value!.formData() };
+  };
+  const preferred = await send({ OPENAI_IMAGE_MODEL: undefined });
+  assert.equal(preferred.result.providerModel, 'gpt-image-1.5');
+  assert.equal(preferred.form.get('input_fidelity'), 'high');
+  // mini cannot take input_fidelity, so it is not sent there.
+  const mini = await send({ OPENAI_IMAGE_EDIT_MODEL: 'gpt-image-1-mini' });
+  assert.equal(mini.result.providerModel, 'gpt-image-1-mini');
+  assert.equal(mini.form.get('input_fidelity'), null);
+});
+
+test('OpenAI edits accept references up to 1536px; Workers AI keeps the 512px limit', async () => {
+  const { decodeImage, OPENAI_REFERENCE_SIDE } = await import('../src/image-ai-contracts.ts');
+  const wide = `data:image/png;base64,${Buffer.from(pngFixture(1000, 8)).toString('base64')}`;
+  assert.equal(decodeImage(wide, true, OPENAI_REFERENCE_SIDE).width, 1000);
+  assert.throws(() => decodeImage(wide), /image_reference_exceeds_512px/);
+});

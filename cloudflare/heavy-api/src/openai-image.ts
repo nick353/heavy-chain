@@ -43,6 +43,8 @@ export const OPENAI_IMAGE_MODELS = new Set([
   'gpt-image-1',
   'gpt-image-1-mini',
 ]);
+/** Edit models that accept input_fidelity=high (OpenAI: gpt-image-1 and 1.5; not mini). */
+const HIGH_FIDELITY_EDIT_MODELS = new Set(['gpt-image-1.5', 'gpt-image-1']);
 export const OPENAI_IMAGE_EDIT_MODELS = new Set([
   'gpt-image-1.5',
   'gpt-image-1',
@@ -115,7 +117,9 @@ export function resolveOpenAIModel(env: Env, action: ImageAction, requested?: un
     if (edit && OPENAI_IMAGE_EDIT_MODELS.has(edit)) return edit;
     const configuredEdit = env.OPENAI_IMAGE_MODEL?.trim();
     if (configuredEdit && OPENAI_IMAGE_EDIT_MODELS.has(configuredEdit)) return configuredEdit;
-    return 'gpt-image-1-mini';
+    // Edits must keep the source's buttons, seams and silhouette (Light keeps them, measured 2026-10-29);
+    // mini redrew the garment and cannot take input_fidelity, so the default edit model is 1.5.
+    return 'gpt-image-1.5';
   }
   const configured = env.OPENAI_IMAGE_MODEL?.trim();
   if (configured && OPENAI_IMAGE_MODELS.has(configured)) return configured;
@@ -197,6 +201,7 @@ export async function runOpenAIImage(
     form.set('n', '1');
     form.set('size', imageSize(input.width, input.height));
     form.set('output_format', 'png');
+    if (HIGH_FIDELITY_EDIT_MODELS.has(model)) form.set('input_fidelity', 'high');
     input.references.forEach((reference, index) => {
       const contentType = normalizeMimeType(reference.contentType);
       form.append('image[]', referenceBlob(reference.bytes, contentType), `reference-${index + 1}.${extensionFromMimeType(contentType)}`);

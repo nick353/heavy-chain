@@ -2,7 +2,7 @@ import type { Brand, CanvasDocument, Folder, GeneratedImage, Json, User } from '
 import type { GeneratedImageListRow } from './generatedImageQuery';
 import type { WorkspaceExecutionStep } from './workspaceExecution';
 import { auth, refreshAuthSession } from './auth';
-import { CLOUDFLARE_IMAGE_ACTIONS, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
+import { CLOUDFLARE_IMAGE_ACTIONS, OPENAI_REFERENCE_SIDE, invokeDurableImageAction, prepareCloudflareImageInput,acknowledgeDurableImageAction,canonicalCloudflareImageBody,type ImageReceipt } from './cloudflareImageAI';
 import { COMPOSITE_PROVIDER_ACTIONS, runCompositeProviderAction } from './providerActionAdapters';
 import { readAIModelPreference, withAIModelPreference } from './aiModelPreference';
 import { prepareProtectedCloudflareEdit,finalizeProtectedCloudflareEdit } from './cloudflareProtectedImageEdit';
@@ -757,7 +757,8 @@ class CloudflareDataPlaneClient {
         ? { ...(protectedEdit?.body ?? body), seed: crypto.getRandomValues(new Uint32Array(1))[0] % 2147483647 }
         : (protectedEdit?.body ?? body);
       const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(heavyInput, options.heavyPreparation) : heavyInput;
-      const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody)); await assertCurrent();
+      const referenceSide = await this.imageProvider() === 'openai' ? OPENAI_REFERENCE_SIDE : 512; await assertCurrent();
+      const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody,{ referenceSide })); await assertCurrent();
       let requestId = options.idempotencyKey;
       let heavyPreparation = options.heavyPreparation;
       if (options.heavyConsent) {
@@ -832,6 +833,16 @@ class CloudflareDataPlaneClient {
       beforeSubmit:(id,key)=>persistProtectedImageInput(scope,entry.prepared,id,key),
       onTerminal:(id,key)=>deleteProtectedImageInput(scope,id,key),
       finalize:receipt=>finalizeProtectedCloudflareEdit({prepared:entry.prepared,receipt,assertCurrent,call,save:input=>this.saveWorkspaceArtifact(input,call)})});
+  }
+
+  private imageProviderPromise: Promise<string | null> | null = null;
+  /** The server's image provider, read once; a failed read is retried next time and falls back to 512px references. */
+  private imageProvider(): Promise<string | null> {
+    if (!this.imageProviderPromise) {
+      this.imageProviderPromise = this.getAIModels().then((models) => models.image.provider)
+        .catch(() => { this.imageProviderPromise = null; return null; });
+    }
+    return this.imageProviderPromise;
   }
 
   /** Image and text models whose provider key is registered on the API. */

@@ -79,15 +79,17 @@ export function raster(bytes: Uint8Array): Raster | null {
   return width > 0 && height > 0 && width <= 8192 && height <= 8192 ? { bytes, contentType, width, height } : null;
 }
 
-export function decodeImage(value: unknown, reference = true): Raster {
+/** Workers AI (FLUX) takes 512px references; OpenAI edits get up to 1536px so buttons and seams survive. */
+export const OPENAI_REFERENCE_SIDE = 1536;
+export function decodeImage(value: unknown, reference = true, referenceSide = 512): Raster {
   const match = typeof value === 'string' ? /^(?:data:(image\/(?:png|jpeg));base64,)?([A-Za-z0-9+/]+={0,2})$/.exec(value) : null;
-  const max = reference ? 1536 * 1024 : 10 * 1024 * 1024;
+  const max = reference ? (referenceSide > 512 ? 3 * 1024 * 1024 : 1536 * 1024) : 10 * 1024 * 1024;
   if (!match || match[2].length > Math.ceil(max / 3) * 4) throw new ImageInputError('invalid_image_bytes');
   let bytes: Uint8Array;
   try { bytes = Uint8Array.from(atob(match[2]), c => c.charCodeAt(0)); } catch { throw new ImageInputError('invalid_image_bytes'); }
   const image = raster(bytes);
   if (!image || bytes.length > max || (match[1] && match[1] !== image.contentType)) throw new ImageInputError('invalid_image_bytes');
-  if (reference && (image.width > 512 || image.height > 512)) throw new ImageInputError('image_reference_exceeds_512px');
+  if (reference && (image.width > referenceSide || image.height > referenceSide)) throw new ImageInputError(referenceSide > 512 ? 'image_reference_too_large' : 'image_reference_exceeds_512px');
   return image;
 }
 
@@ -244,7 +246,7 @@ export function parseImageInput(
     throw new ImageInputError('image_reference_count_not_supported', 422);
   }
   if (action === 'model-matrix' && body.modelReferenceImageUrl && !body.imageUrl) throw new ImageInputError('fitting_garment_reference_required');
-  const references = inputURLs.map(v => decodeImage(v));
+  const references = inputURLs.map(v => decodeImage(v, true, providerContext.provider === 'openai' ? OPENAI_REFERENCE_SIDE : 512));
   // An edit with no requested ratio keeps the source framing: a portrait photo
   // must not come back square with the head and feet cropped.
   const editSource = action === 'edit-image' && body.aspectRatio === undefined ? references[0] : undefined;
