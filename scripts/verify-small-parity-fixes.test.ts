@@ -41,7 +41,7 @@ test('marketing project cards match Light: checkbox, bulk delete, rename in plac
   assert.match(page, /data-testid="marketing-project-selection-bar"/);
   assert.match(page, /data-testid="marketing-card-rename-input"/);
   assert.match(page, /onClick=\{\(\) => void saveProjectToLibrary\(entry\)\}><Bookmark className="h-4 w-4" \/>アセットライブラリに保存/);
-  assert.match(page, /<h2 className="mb-4 text-lg font-normal leading-7">マイプロジェクト<\/h2>/);
+  assert.match(page, /<h2 className="mb-4 text-lg font-normal leading-7">\{openGroup[\s\S]*?: 'マイプロジェクト'\}<\/h2>/);
 });
 
 test('fashion studio list and detail match Light\'s layout', () => {
@@ -95,4 +95,14 @@ test('design projects can be moved into groups like Light (移動 / 新規グル
   assert.match(page, /onClick=\{onMove\}><ArrowRight className="h-4 w-4" \/>移動<\/button>/);
   assert.match(page, /data-testid="design-project-groups"/);
   assert.match(page, /groupState\.members\[gridItemId\(item\)\] === openGroup\.id/);
+});
+
+test('marketing projects can be moved into their own groups like Light (移動)', () => {
+  const page = read('src/pages/LightchainParityPages.tsx');
+  assert.match(page, /setMovingProjectId\(entry\.projectId\); setOpenProjectMenuId\(null\); \}\}><ArrowRight className="h-4 w-4" \/>移動<\/button>/);
+  assert.match(page, /data-testid="marketing-project-groups"/);
+  assert.match(page, /groupState\.members\[entry\.projectId\] === openGroupId/);
+  assert.match(page, /readDesignProjectGroups\(userId, brandId, 'marketing'\)/);
+  const groups = read('src/lib/designProjectGroups.ts');
+  assert.match(groups, /heavy-\$\{workspace\}-project-groups:v1:/);
 });
