@@ -172,10 +172,10 @@ export async function invokeDurableImageAction<T>(options: {
         }),id);
       } catch (error) {
         // Only definite pre-admission rejection can discard the ID. A generic
-        // 401/403 may arrive AFTER inference if the session/brand role changed.
+        // 401/403 may arrive AFTER inference if the session/brand role changed, and so can
+        // 503 token_verifier_unavailable: the server re-checks the login after admitting the job (2026-10-29).
         if (error instanceof Error && (/_(400|413|422|429)_/.test(error.message) ||
-          /_403_(rights_confirmation_required|legal_safety_prompt_blocked)$/.test(error.message) ||
-          /_503_token_verifier_unavailable$/.test(error.message))) {
+          /_403_(rights_confirmation_required|legal_safety_prompt_blocked)$/.test(error.message))) {
           await requirePendingIdentity(key,id); await options.assertCurrent();
           await options.onTerminal?.(id,key); await options.assertCurrent();
           await forgetPendingIdentity(key,id,options.assertCurrent); throw error;
