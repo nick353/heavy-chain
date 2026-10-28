@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop, MessageCircleMore,
+  ChevronDown, ChevronLeft, Clapperboard, Download, Hand, ImagePlus, Layers, Lightbulb, LayoutPanelTop,
   MessageSquarePlus, MousePointer2, Palette, PanelRightClose, PanelRightOpen, Redo2, RefreshCw, Shapes, Sparkles,
-  Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2, ZoomIn, ZoomOut, BookOpen, Keyboard, Mouse,
+  Type, Undo2, Upload, X, Boxes, ArrowUp, FileText, Trash2, ZoomIn, ZoomOut, BookOpen, Keyboard, Mouse, History, ChevronsLeft, Plus,
+  LayoutGrid, Map as MapIcon, Wand2, Maximize2,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
@@ -29,6 +30,7 @@ import { BEGINNER_GUIDE_TABS, CANVAS_SHORTCUT_GROUPS, applyCanvasPatch, cloneCan
 import { DESIGN_SHAPES, DesignCanvasShape, createDesignCanvasObject, type DesignCanvasObject, type DesignShapeKind } from './designCanvasObjects';
 import { DESIGN_OPEN_IMAGE_PARAM } from '../../lib/legacyCanvasRoute';
 import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
+import { DesignAssetLibrary } from './DesignAssetLibrary';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 export const createDesignDialogueClient = (featureType: string): DesignDialogueClient => ({
@@ -84,6 +86,9 @@ const hasContentNow = (dialogue: DesignDialogueState) => dialogue.document.snaps
 const GUIDE_EMPTY_ICON = '/lightchain-assets/mirror/jp/static/none_list.png';
 const INSPIRATION_PLACEHOLDER = '/lightchain-assets/mirror/lightchain-qlxy-prod/persistence/font-end/design-empty-placeholder.png';
 const IMAGE_ACCEPT = '.png,.jpg,.jpeg,.avif,.webp';
+const TASK_HINT_KEY = 'heavy.design.taskHistoryHintDismissed';
+const LEFT_TABS = [['tasks', 'タスク'], ['assets', 'アセット'], ['layers', 'レイヤー']] as const;
+const MINIMAP = { width: 200, height: 130 };
 const FIT_PADDING = 80;
 
 /** Dedicated assistant + canvas project view, shared by Light's design and marketing workspaces. */
@@ -107,6 +112,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const openImageId = params.get(DESIGN_OPEN_IMAGE_PARAM);
   // Light's インスピレーション card opens this detail with an upload-first start screen.
   const inspiration = isNewFile && params.get('projectSubType') === 'clothingDesign';
+  // Light's design workspace opens every new file on the same Hello start screen with the assistant collapsed.
+  const helloStart = isNewFile && (inspiration || workspaceId === 'design');
   const identity = JSON.stringify([userId, brandId, projectId, conversationId]);
   const brandReady = Boolean(userId && brandId && (!isHeavyWorkspaceRuntime() || isHeavyWorkspaceBrandName(currentBrand?.name)));
   const generation = useRef(0);
@@ -123,7 +130,11 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const [move, setMove] = useState(false);
   const [view, setView] = useState<StudioViewport>({ zoom: 0.2, panX: 20, panY: 20 });
   const [fitted, setFitted] = useState('');
-  const [panelTab, setPanelTab] = useState<'assistant' | 'layers'>('assistant');
+  // Light's left panel (タスク・アセット・レイヤー) opens from the canvas menu; the right panel is the assistant only.
+  const [leftTab, setLeftTab] = useState<'tasks' | 'assets' | 'layers' | null>(null);
+  const [taskHint, setTaskHint] = useState(() => { try { return localStorage.getItem(TASK_HINT_KEY) !== '1'; } catch { return true; } });
+  const [chatMenu, setChatMenu] = useState<DesignEntryDraft[] | null>(null);
+  const [minimap, setMinimap] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState<'guide' | 'shortcuts' | null>(null);
   const [guideTab, setGuideTab] = useState<string>(BEGINNER_GUIDE_TABS[0]);
@@ -298,7 +309,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     .map((reference, order) => ({ ...reference, order }));
   // A project opened from a single image starts with that image selected, so the first request edits it.
   // Like Light, a project that already has a canvas (and no chat yet) or the inspiration start opens with the assistant collapsed.
-  const panelDefaultKey = `${identity}:${inspiration ? 'inspiration' : visible?.dialogue ? (hasContentNow(visible.dialogue) ? 'canvas' : 'empty') : 'loading'}`;
+  const panelDefaultKey = `${identity}:${helloStart ? 'inspiration' : visible?.dialogue ? (hasContentNow(visible.dialogue) ? 'canvas' : 'empty') : 'loading'}`;
   const appliedPanelDefault = useRef('');
   useEffect(() => {
     if (panelDefaultKey.endsWith(':loading') || appliedPanelDefault.current === panelDefaultKey) return;
@@ -518,7 +529,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   const addFiles = (files: File[]) => {
     const images = files.filter((file) => /^image\/(png|jpe?g|webp|avif)$/.test(file.type) && file.size <= 20 * 1024 * 1024);
     if (images.length !== files.length) setEntryError('jpg、jpeg、png、webp（最大20MBまで）の画像を選択してください');
-    if (images.length) { setPanelOpen(true); setPanelTab('assistant'); void references.addFiles(images); }
+    if (images.length) { setPanelOpen(true); void references.addFiles(images); }
   };
   const onUpload = (event: ChangeEvent<HTMLInputElement>) => { addFiles(Array.from(event.target.files ?? [])); event.target.value = ''; };
   const onDrop = (event: DragEvent<HTMLElement>) => { event.preventDefault(); setDragOver(false); addFiles(Array.from(event.dataTransfer.files ?? [])); };
@@ -548,12 +559,54 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   };
+  /** Light's キャンバスを整理: lays the objects out in one row, left to right in their current order, then fits the view. */
+  const arrangeCanvas = async () => {
+    if (!editable || !canvasObjects.length) return;
+    const order = [...canvasObjects].filter((object) => object.locked !== true).sort((left, right) => (Number(left.x) || 0) - (Number(right.x) || 0));
+    const top = Math.min(...order.map((object) => Number(object.y) || 0));
+    let left = Math.min(...order.map((object) => Number(object.x) || 0));
+    const placed = new Map<string, { x: number; y: number }>();
+    for (const object of order) {
+      placed.set(String(object.id), { x: left, y: top });
+      left += (Number(object.width) || 440) * (Number(object.scaleX) || 1) + 40;
+    }
+    await mutateObjects((objects) => objects.map((item) => placed.has(String(item.id)) ? { ...item, ...placed.get(String(item.id)) } : item));
+    setFitted('');
+  };
+  const objectBounds = (objects: DesignCanvasObject[]) => objects.reduce<{ left: number; top: number; right: number; bottom: number }>((box, object) => {
+    const x = Number(object.x) || 0; const y = Number(object.y) || 0;
+    return { left: Math.min(box.left, x), top: Math.min(box.top, y), right: Math.max(box.right, x + (Number(object.width) || 440) * (Number(object.scaleX) || 1)),
+      bottom: Math.max(box.bottom, y + (Number(object.height) || 440) * (Number(object.scaleY) || 1)) };
+  }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
+  /** 拡大 on the selection toolbar: zooms so the selected objects fill the visible canvas. */
+  const zoomToSelection = () => {
+    const area = canvasRef.current?.getBoundingClientRect();
+    const objects = canvasObjects.filter((object) => selectedIds.includes(String(object.id)));
+    if (!area || !objects.length) return;
+    const box = objectBounds(objects);
+    const width = Math.max(160, area.width - (panelOpen && area.width >= 900 ? 435 : 0) - FIT_PADDING * 2);
+    const height = Math.max(160, area.height - 140 - FIT_PADDING);
+    const zoom = Math.min(2, Math.max(0.1, Math.min(width / (box.right - box.left), height / (box.bottom - box.top))));
+    pushView({ zoom, panX: FIT_PADDING + (width - (box.right - box.left) * zoom) / 2 - box.left * zoom, panY: FIT_PADDING + (height - (box.bottom - box.top) * zoom) / 2 - box.top * zoom });
+  };
+  /** 新しいチャット ▾ lists this project's other chats, like Light's chat switcher. */
+  const toggleChatMenu = async () => {
+    if (chatMenu) { setChatMenu(null); return; }
+    try {
+      const drafts = projectId ? (await stores.drafts.list({ userId, brandId }, () => undefined)).filter((draft) => draft.projectId === projectId && draft.ready) : [];
+      setChatMenu(drafts.reverse());
+    } catch { setChatMenu([]); }
+  };
+  const dismissTaskHint = () => { setTaskHint(false); try { localStorage.setItem(TASK_HINT_KEY, '1'); } catch { /* keep it hidden for this view */ } };
+  const openLeft = (tab: 'tasks' | 'assets' | 'layers') => { dismissTaskHint(); setLeftTab((current) => current === tab ? null : tab); };
+  const taskOutputs = (visible?.dialogue?.turns ?? []).flatMap((turn) => turn.outputs).slice().reverse();
 
   const referenceTray = references.references.length > 0 && <ol className="mb-2 flex flex-wrap gap-2" aria-label="送信する参考画像" data-testid="design-pending-references">
-    {references.references.map((reference) => <li key={reference.id} className="relative h-14 w-14 overflow-hidden rounded-lg bg-white/5" data-status={reference.status}>
-      {references.previews[reference.id] && <img src={references.previews[reference.id]} alt={reference.name} className="h-full w-full object-cover" />}
-      {reference.status !== 'ready' && <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-[10px] text-white">{reference.status === 'failure' ? '失敗' : '保存中'}</span>}
-      <button type="button" aria-label={`${reference.name}を削除`} onClick={() => references.remove(reference.id)} className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/70 text-white"><X className="h-3 w-3" /></button>
+    {/* Light shows each attached image as a 「画像1 ×」 chip. */}
+    {references.references.map((reference, index) => <li key={reference.id} className="flex h-7 items-center gap-1.5 rounded-lg bg-white/[0.08] pl-1 pr-1.5 text-xs text-neutral-200" data-status={reference.status} data-testid="design-reference-chip">
+      <span className="relative h-5 w-5 overflow-hidden rounded bg-white/5">{references.previews[reference.id] && <img src={references.previews[reference.id]} alt={reference.name} className="h-full w-full object-cover" />}</span>
+      画像{index + 1}{reference.status !== 'ready' && <span className="text-neutral-400">{reference.status === 'failure' ? '（失敗）' : '（保存中）'}</span>}
+      <button type="button" aria-label={`${reference.name}を削除`} onClick={() => references.remove(reference.id)} className="flex h-4 w-4 items-center justify-center rounded text-neutral-400 hover:text-white"><X className="h-3 w-3" /></button>
       <span className="sr-only" role="status">{reference.name}</span>
     </li>)}
   </ol>;
@@ -674,17 +727,19 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           width: Math.abs(marquee.x2 - marquee.x1) * view.zoom, height: Math.abs(marquee.y2 - marquee.y1) * view.zoom }} />}
     </section>
 
-    {!hasContent && inspiration && <label data-testid="design-inspiration-start" className={`absolute top-0 flex cursor-pointer flex-col items-center pt-6 text-center ${dragOver ? 'opacity-80' : ''}`}
+    {!hasContent && helloStart && <label data-testid="design-inspiration-start" className={`absolute top-0 flex cursor-pointer flex-col items-center pt-6 text-center ${dragOver ? 'opacity-80' : ''}`}
       style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2)`, transform: 'translateX(-50%)', width: 'min(960px, calc(100% - 120px))' }}>
       <input type="file" accept={IMAGE_ACCEPT} multiple className="sr-only" onChange={onUpload} aria-label="画像をアップロード" />
       <h1 className="text-[44px] font-semibold leading-tight text-white">Hello！デザインはここから始まります</h1>
       <p className="mt-3 text-lg text-neutral-300">まずは下のボタンから線画画像／デザイン／グラフィック／生地画像をアップロードしてください</p>
       <img src={INSPIRATION_PLACEHOLDER} alt="" className="mt-4 w-full max-w-[798px] object-cover" draggable={false} />
-      <p className="mt-2 text-base text-neutral-200">画像をクリックまたはドラッグ＆ドロップでアップロードするか、AIに直接相談してください</p>
-      <p className="mt-2 text-sm text-neutral-500">jpg、jpeg、png、webp形式の画像に対応しています。最大20MBまでアップロードできます</p>
+      {inspiration && <>
+        <p className="mt-2 text-base text-neutral-200">画像をクリックまたはドラッグ＆ドロップでアップロードするか、AIに直接相談してください</p>
+        <p className="mt-2 text-sm text-neutral-500">jpg、jpeg、png、webp形式の画像に対応しています。最大20MBまでアップロードできます</p>
+      </>}
     </label>}
 
-    {!hasContent && !inspiration && <label data-testid="design-entry-dropzone" className={`absolute flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed transition ${dragOver ? 'border-[#0bcabc] bg-[#0bcabc]/5' : 'border-white/20 bg-white/[0.015] hover:border-white/35'}`}
+    {!hasContent && !helloStart && <label data-testid="design-entry-dropzone" className={`absolute flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed transition ${dragOver ? 'border-[#0bcabc] bg-[#0bcabc]/5' : 'border-white/20 bg-white/[0.015] hover:border-white/35'}`}
       style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2 - 384px)`, top: 'calc(50% - 249px)', width: 768, height: 498 }}>
       <input type="file" accept={IMAGE_ACCEPT} multiple className="sr-only" onChange={onUpload} aria-label="画像をアップロード" />
       {/* While a design is being made, show progress rather than upload prompts. */}
@@ -714,10 +769,50 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     {remainingUnits !== null && <div aria-label="残りクレジット" className="absolute top-4 z-20 flex h-[37px] max-[640px]:top-[124px] items-center gap-1.5 rounded-xl border border-white/10 bg-[#1b2023] px-3 text-sm text-neutral-200"
       style={{ right: panelOpen ? 452 : 64 }}><Sparkles className="h-4 w-4" />{remainingUnits.toLocaleString()}</div>}
 
-    {hasContent && <nav aria-label="キャンバスメニュー" className="absolute left-[13px] z-20 flex flex-col gap-2 rounded-xl border border-white/10 bg-[#1b2023]/95 p-2" style={{ top: 'calc(50% - 109px)' }}>
-      <button type="button" aria-label="レイヤー" aria-pressed={panelTab === 'layers' && panelOpen} onClick={() => { setPanelOpen(true); setPanelTab('layers'); }} className="flex h-[47px] w-[47px] items-center justify-center rounded-lg bg-white/[0.06] text-neutral-200 hover:bg-white/10"><Layers className="h-6 w-6" /></button>
-      <button type="button" aria-label="アセット" onClick={() => uploadRef.current?.click()} className="flex h-[47px] w-[47px] items-center justify-center rounded-lg text-neutral-200 hover:bg-white/10"><Boxes className="h-6 w-6" /></button>
-    </nav>}
+    {/* Light keeps this menu on screen from the first moment; each button opens its tab of the 400px left panel. */}
+    <nav aria-label="キャンバスメニュー" className="absolute left-[13px] z-20 flex flex-col gap-2 rounded-xl border border-white/10 bg-[#1b2023]/95 p-2" style={{ top: 'calc(50% - 134px)' }} data-testid="design-canvas-menu">
+      {([['layers', 'レイヤー', Layers], ['assets', 'アセット', Boxes], ['tasks', 'タスク', History]] as const).map(([tab, label, Icon]) => <button key={tab} type="button" aria-label={label}
+        aria-pressed={leftTab === tab} onClick={() => openLeft(tab)} className={`flex h-[47px] w-[47px] items-center justify-center rounded-lg text-neutral-200 hover:bg-white/10 ${leftTab === tab ? 'bg-white/[0.12]' : ''}`}><Icon className="h-6 w-6" /></button>)}
+    </nav>
+    {taskHint && !leftTab && <div role="status" data-testid="design-task-hint" className="absolute left-[78px] z-20 flex items-center gap-2 rounded-lg bg-[#2b3134] px-3 py-2 text-sm text-neutral-100 shadow-xl" style={{ top: 'calc(50% + 50px)' }}>
+      🎉 タスク履歴が新登場！完了した生成結果をいつでも確認できます
+      <button type="button" aria-label="閉じる" onClick={dismissTaskHint} className="text-neutral-400 hover:text-white"><X className="h-4 w-4" /></button>
+    </div>}
+
+    {leftTab && <aside aria-label="キャンバスパネル" data-testid="design-left-panel" className="absolute bottom-3 left-3 top-4 z-30 flex w-[400px] max-w-[calc(100%-24px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#171c1f]">
+      <div className="flex h-[56px] shrink-0 items-center gap-1 border-b border-white/10 px-3" role="tablist" aria-label="キャンバスパネル">
+        {LEFT_TABS.map(([tab, label]) => <button key={tab} type="button" role="tab" aria-selected={leftTab === tab} onClick={() => setLeftTab(tab)}
+          className={`h-8 rounded-lg px-3 text-sm font-medium ${leftTab === tab ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'}`}>{label}</button>)}
+        <button type="button" aria-label="パネルを畳む" onClick={() => setLeftTab(null)} className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-white/10 hover:text-white"><ChevronsLeft className="h-4 w-4" /></button>
+      </div>
+      {leftTab === 'tasks' && <div className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="design-task-panel">
+        {!taskOutputs.length ? <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+          <img src={GUIDE_EMPTY_ICON} alt="" className="h-24 w-24" />
+          <p className="text-base text-neutral-200">タスク履歴はありません</p>
+          <p className="text-sm text-neutral-500">画像をアップロードしてデザインを始めましょう</p>
+        </div> : <div className="grid grid-cols-3 gap-2">{taskOutputs.map((output) => <button key={output.imageId} type="button" data-testid="design-task-item" onClick={() => {
+          const object = imageObjects.find((item) => (item.metadata as Record<string, unknown> | undefined)?.imageId === output.imageId);
+          if (object) setSelected(String(object.id));
+        }} className="aspect-square overflow-hidden rounded-lg bg-white/5 hover:ring-2 hover:ring-[#0bcabc]">
+          {urls[output.storagePath] && <img src={urls[output.storagePath]} alt="生成したデザイン" className="h-full w-full object-cover" />}</button>)}</div>}
+      </div>}
+      {leftTab === 'assets' && <DesignAssetLibrary brandId={brandId} onPick={(imageId) => {
+        // Picked assets join the chat as references (画像1, 画像2 …), the same path as 「キャンバスで編集」.
+        const next = new URLSearchParams(location.search); next.set(DESIGN_ATTACH_GALLERY_PARAM, imageId);
+        setPanelOpen(true); navigate(`${location.pathname}?${next}`, { replace: true });
+      }} />}
+      {leftTab === 'layers' && <div className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="design-layer-panel">
+        {!canvasObjects.length && <p className="text-sm text-neutral-500">レイヤーはまだありません</p>}
+        <ol>{[...canvasObjects].reverse().map((object) => <li key={String(object.id)} className="group relative"><button type="button" data-testid="design-layer-select" aria-pressed={selectedIds.includes(String(object.id))}
+          onClick={() => setSelected(String(object.id))} className={`mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${selectedIds.includes(String(object.id)) ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+          <span className="h-10 w-10 shrink-0 overflow-hidden rounded bg-white/5">{typeof object.src === 'string' && urls[object.src] && <img src={urls[object.src]} alt="" className="h-full w-full object-cover" />}</span>
+          <span className="truncate">{object.type === 'text' && typeof object.text === 'string' ? object.text : String(object.label ?? 'デザイン画像')}</span></button>
+          {editable && <button type="button" data-testid="design-layer-delete" aria-label={`${String(object.label ?? 'レイヤー')}を削除`}
+            onClick={() => { const id = String(object.id); setSelectedIds((current) => current.filter((item) => item !== id)); void mutateObjects((objects) => objects.filter((item) => item.id !== id)); }}
+            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-neutral-400 opacity-0 transition hover:bg-white/10 hover:text-red-300 focus:opacity-100 group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>}
+        </li>)}</ol>
+      </div>}
+    </aside>}
 
     {hasContent && <div role="toolbar" aria-label="キャンバスツール" className="absolute bottom-[18px] z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-[#1b2023]/95 p-[3px]" style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2)`, transform: 'translateX(-50%)' }} data-testid="design-canvas-toolbar">
       <button type="button" aria-label="選択" aria-pressed={!move} onClick={() => setMove(false)} className={`${toolbarButton} ${!move ? 'bg-white/10 text-white' : ''}`}><MousePointer2 className="h-[18px] w-[18px]" /></button>
@@ -745,6 +840,10 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
 
     {/* Light keeps zoom and its two round help buttons as a separate group at the bottom right of the canvas. */}
     {hasContent && <div className="absolute bottom-[18px] z-20 flex items-center gap-2" style={{ right: panelOpen ? 452 : 24 }} data-testid="design-zoom-group">
+      <button type="button" aria-label="キャンバスを整理" title="キャンバスを整理" disabled={!editable} onClick={() => void arrangeCanvas()} data-testid="design-arrange"
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#1b2023]/95 text-neutral-300 hover:text-white disabled:opacity-40"><LayoutGrid className="h-[18px] w-[18px]" /></button>
+      <button type="button" aria-label="ミニマップ" title="ミニマップ" aria-pressed={minimap} onClick={() => setMinimap((open) => !open)} data-testid="design-minimap-toggle"
+        className={`flex h-10 w-10 items-center justify-center rounded-full border bg-[#1b2023]/95 text-neutral-300 hover:text-white ${minimap ? 'border-[#0bcabc]' : 'border-white/10'}`}><MapIcon className="h-[18px] w-[18px]" /></button>
       <span className="flex h-12 items-center gap-1 rounded-full border border-white/10 bg-[#1b2023]/95 px-2">
         <button type="button" aria-label="縮小" onClick={() => pushView(zoomStudioViewport(view, view.zoom / 1.25, { x: 500, y: 400 }))} className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-300 hover:text-white"><ZoomOut className="h-[18px] w-[18px]" /></button>
         <label className="relative flex h-8 w-20 items-center justify-between rounded-lg px-2 text-base text-neutral-200">
@@ -764,6 +863,42 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       <button type="button" aria-label="ショートカット" aria-expanded={helpOpen === 'shortcuts'} onClick={() => setHelpOpen((open) => open === 'shortcuts' ? null : 'shortcuts')}
         className={`flex h-10 w-10 items-center justify-center rounded-full border bg-[#1b2023]/95 text-neutral-300 hover:text-white ${helpOpen === 'shortcuts' ? 'border-[#0bcabc]' : 'border-white/10'}`}><Keyboard className="h-[18px] w-[18px]" /></button>
     </div>}
+
+    {hasContent && minimap && (() => {
+      const area = canvasRef.current?.getBoundingClientRect();
+      const box = objectBounds(canvasObjects);
+      const scale = Math.min(MINIMAP.width / (box.right - box.left || 1), MINIMAP.height / (box.bottom - box.top || 1)) * 0.9;
+      const offsetX = (MINIMAP.width - (box.right - box.left) * scale) / 2; const offsetY = (MINIMAP.height - (box.bottom - box.top) * scale) / 2;
+      const toMap = (x: number, y: number) => ({ x: offsetX + (x - box.left) * scale, y: offsetY + (y - box.top) * scale });
+      const viewTopLeft = toMap(-view.panX / view.zoom, -view.panY / view.zoom);
+      return <div data-testid="design-minimap" aria-label="ミニマップ" className="absolute bottom-[78px] z-20 overflow-hidden rounded-xl border border-white/10 bg-[#1b2023]/95" style={{ right: panelOpen ? 452 : 24, width: MINIMAP.width, height: MINIMAP.height }}
+        onClick={(event) => {
+          // Clicking the map centres the canvas on that spot.
+          const rect = event.currentTarget.getBoundingClientRect();
+          const worldX = box.left + (event.clientX - rect.left - offsetX) / scale; const worldY = box.top + (event.clientY - rect.top - offsetY) / scale;
+          if (area) pushView({ ...view, panX: area.width / 2 - worldX * view.zoom, panY: area.height / 2 - worldY * view.zoom });
+        }}>
+        {canvasObjects.map((object) => { const point = toMap(Number(object.x) || 0, Number(object.y) || 0);
+          return <span key={String(object.id)} className="absolute rounded-sm bg-white/30" style={{ left: point.x, top: point.y, width: (Number(object.width) || 440) * (Number(object.scaleX) || 1) * scale, height: (Number(object.height) || 440) * (Number(object.scaleY) || 1) * scale }} />; })}
+        {area && <span className="pointer-events-none absolute border border-[#0bcabc]" style={{ left: viewTopLeft.x, top: viewTopLeft.y, width: area.width / view.zoom * scale, height: area.height / view.zoom * scale }} />}
+      </div>;
+    })()}
+
+    {/* Light floats a tool bar over the selected image. Its デザイン・プリント・生地・線画 menus could not be opened for
+        measurement (Light's canvas only reacts to real pointer input), so Heavy carries the plain buttons. */}
+    {selectedIds.length > 0 && !dragged && (() => {
+      const box = objectBounds(canvasObjects.filter((object) => selectedIds.includes(String(object.id))));
+      const left = (box.left + box.right) / 2 * view.zoom + view.panX; const top = box.top * view.zoom + view.panY - 52;
+      const button = 'flex h-8 items-center gap-1 rounded-lg px-2 text-sm text-neutral-200 hover:bg-white/10';
+      return <div role="toolbar" aria-label="選択中の画像" data-testid="design-selection-toolbar" className="absolute z-20 flex items-center gap-0.5 rounded-xl border border-white/10 bg-[#1b2023]/95 p-1 shadow-xl"
+        style={{ left, top: Math.max(8, top), transform: 'translateX(-50%)' }}>
+        <button type="button" className={button} onClick={() => { setPanelOpen(true); window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('[data-testid="design-followup-prompt"]')?.focus(), 0); }}><Wand2 className="h-4 w-4" />AI編集</button>
+        <span className="mx-0.5 h-4 w-px bg-white/15" />
+        <Link to="/board" className={button}><FileText className="h-4 w-4" />企画書</Link>
+        <button type="button" aria-label="拡大" className={button} onClick={zoomToSelection}><Maximize2 className="h-4 w-4" />拡大</button>
+        <button type="button" aria-label="選択した画像をダウンロード" className={button} onClick={() => void downloadSelected()}><Download className="h-4 w-4" />ダウンロード</button>
+      </div>;
+    })()}
 
     {/* Light's キーボード button opens this shortcut panel on the right of the canvas. */}
     {helpOpen === 'shortcuts' && <aside role="dialog" aria-label="ショートカット" data-testid="design-shortcuts" className="absolute bottom-[84px] z-40 flex w-[420px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#202628] shadow-2xl"
@@ -799,20 +934,23 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
 
     {panelOpen && <aside className="absolute bottom-3 right-3 top-4 z-30 flex w-[423px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#171c1f]" aria-label="デザインアシスタント" data-testid="design-assistant-panel"
       data-project-id={visible?.draft?.projectId} data-conversation-id={visible?.draft?.conversationId}>
-      <div className="flex h-[67px] shrink-0 items-center gap-1 border-b border-white/10 px-[17px]">
-        {([['assistant', 'AIアシスタント', MessageCircleMore], ['layers', 'レイヤー設定', Layers]] as const).map(([id, label, Icon]) => <button key={id} type="button" aria-pressed={panelTab === id} onClick={() => setPanelTab(id)}
-          className={`flex h-8 items-center gap-1 rounded-full px-3 text-sm font-medium ${panelTab === id ? 'border border-[#0bcabc]/70 bg-[#0bcabc]/10 text-white' : 'text-neutral-400 hover:text-white'}`}><Icon className="h-4 w-4" />{label}</button>)}
-        <button type="button" aria-label="パネルを閉じる" onClick={() => setPanelOpen(false)} className="ml-auto text-neutral-400 hover:text-white"><PanelRightClose className="h-4 w-4" /></button>
-      </div>
-      {panelTab === 'assistant' ? <>
-        <div className="flex h-[38px] shrink-0 items-center justify-between px-[11px] pt-3">
-          <h2 className="text-base font-medium">{visible?.dialogue?.attempts.length ? 'デザインアシスタント' : '新しいチャット'}</h2>
-          <Link to={workspace.detailPath} aria-label="新しいチャット" className="text-neutral-400 hover:text-white" data-testid="design-new-chat"><MessageSquarePlus className="h-5 w-5" /></Link>
+      {/* Light's header: 「新しいチャット ▾」 switches between this project's chats, ＋ starts a new one. */}
+        <div className="relative flex h-[52px] shrink-0 items-center gap-2 px-[11px] pt-1">
+          <button type="button" aria-haspopup="menu" aria-expanded={Boolean(chatMenu)} onClick={() => void toggleChatMenu()} data-testid="design-chat-switcher"
+            className="flex h-8 min-w-0 items-center gap-1 rounded-lg px-2 text-base font-medium hover:bg-white/5">
+            <span className="truncate">{visible?.dialogue?.attempts.length ? (visible.dialogue.attempts[0].input.prompt.slice(0, 20) || 'チャット') : '新しいチャット'}</span><ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" /></button>
+          <Link to={workspace.detailPath} aria-label="新しいチャット" className="ml-auto text-neutral-400 hover:text-white" data-testid="design-new-chat"><MessageSquarePlus className="h-5 w-5" /></Link>
+          <button type="button" aria-label="パネルを閉じる" onClick={() => setPanelOpen(false)} className="text-neutral-400 hover:text-white"><PanelRightClose className="h-4 w-4" /></button>
+          {chatMenu && <div role="menu" aria-label="チャット履歴" data-testid="design-chat-menu" className="absolute left-[11px] top-[48px] z-10 w-[300px] rounded-xl border border-white/10 bg-[#20262a] p-1 shadow-2xl">
+            {chatMenu.length === 0 ? <p className="px-3 py-3 text-sm text-neutral-400">チャット履歴はありません</p>
+              : chatMenu.map((draft) => <button key={draft.conversationId} type="button" role="menuitem" onClick={() => { setChatMenu(null); navigate(`${workspace.detailPath}?${new URLSearchParams({ projectId: draft.projectId, conversationId: draft.conversationId })}`); }}
+                className={`block w-full truncate rounded-lg px-3 py-2 text-left text-sm hover:bg-white/10 ${draft.conversationId === conversationId ? 'text-[#0bcabc]' : 'text-neutral-200'}`}>{draft.prompt || 'チャット'}</button>)}
+          </div>}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-[11px] pb-4" data-testid={visible?.draft ? 'design-entry-draft' : undefined} data-project-id={visible?.draft?.projectId} data-conversation-id={visible?.draft?.conversationId}>
           {(isNewFile || (!visible?.dialogue?.attempts.length && !visible?.draft)) && !visible?.busy && <div data-testid="design-assistant-welcome">
-            {(hasContent || inspiration) && workspaceId === 'design' ? <>
-              {/* Light greets a project that already has a canvas with editing scenes instead of the new-file presets. */}
+            {workspaceId === 'design' ? <>
+              {/* Light's design assistant always greets with these editing scenes (no 更新 rotation). */}
               <h1 className="mt-[52px] text-[26px] font-medium leading-[34px]">今日は何をデザインしますか？</h1>
               <p className="mt-4 text-sm leading-5 text-neutral-400">下からデザイン要望を入力するか、画像をアップロード／キャンバスから選択して修正・デザインできます</p>
               <div className="mt-[40px] flex flex-col items-start gap-3" data-testid="design-canvas-scenes">
@@ -863,22 +1001,11 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
             onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }}
             placeholder="商品画像をアップロードして、デザインのリクエストを教えてください" rows={1} className="block max-h-40 min-h-8 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-neutral-500" />
           <div className="mt-7 flex items-center justify-between">
-            <button type="button" aria-label="画像を追加" onClick={() => uploadRef.current?.click()} className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-300 hover:bg-white/10"><ImagePlus className="h-5 w-5" /></button>
+            <button type="button" aria-label="画像を追加" onClick={() => uploadRef.current?.click()} className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-neutral-300 hover:bg-white/10"><Plus className="h-5 w-5" /></button>
             <button type="submit" aria-label="送信" data-testid="design-followup-send" disabled={!prompt.trim() || Boolean(visible?.busy) || entrySending || !references.ready || (!isNewFile && !visible?.dialogue)}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0bcabc] text-neutral-950 transition hover:bg-[#61fff4] disabled:bg-white/10 disabled:text-neutral-500"><ArrowUp className="h-5 w-5" /></button>
           </div>
         </form>
-      </> : <div className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="design-layer-panel">
-        {!canvasObjects.length && <p className="text-sm text-neutral-500">レイヤーはまだありません</p>}
-        <ol>{[...canvasObjects].reverse().map((object) => <li key={String(object.id)} className="group relative"><button type="button" data-testid="design-layer-select" aria-pressed={selectedIds.includes(String(object.id))}
-          onClick={() => setSelected(String(object.id))} className={`mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${selectedIds.includes(String(object.id)) ? 'bg-white/10' : 'hover:bg-white/5'}`}>
-          <span className="h-10 w-10 shrink-0 overflow-hidden rounded bg-white/5">{typeof object.src === 'string' && urls[object.src] && <img src={urls[object.src]} alt="" className="h-full w-full object-cover" />}</span>
-          <span className="truncate">{object.type === 'text' && typeof object.text === 'string' ? object.text : String(object.label ?? 'デザイン画像')}</span></button>
-          {editable && <button type="button" data-testid="design-layer-delete" aria-label={`${String(object.label ?? 'レイヤー')}を削除`}
-            onClick={() => { const id = String(object.id); setSelectedIds((current) => current.filter((item) => item !== id)); void mutateObjects((objects) => objects.filter((item) => item.id !== id)); }}
-            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-neutral-400 opacity-0 transition hover:bg-white/10 hover:text-red-300 focus:opacity-100 group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>}
-        </li>)}</ol>
-      </div>}
     </aside>}
   </main>;
 }
