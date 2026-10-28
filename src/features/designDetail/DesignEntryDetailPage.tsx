@@ -842,15 +842,21 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           </button>;
         })}
         {generatingAttempts.map((attempt, index) => <div key={attempt.input.requestId} role="status" data-testid="design-canvas-generating"
-          className="absolute flex animate-pulse items-center justify-center rounded-lg bg-[linear-gradient(135deg,#7b5cff,#3fb8e8_55%,#0bcabc)] text-2xl font-medium text-white"
-          style={{ left: 80 + ((placeholderBase + index) % 3) * 480, top: 80 + Math.floor((placeholderBase + index) / 3) * 480, ...placeholderSize }}>生成中...</div>)}
+          className="absolute flex flex-col items-center justify-center gap-3 rounded-lg bg-[linear-gradient(160deg,#6b5f92,#46628a_45%,#3a8391)] text-lg text-neutral-200"
+          style={{ left: 80 + ((placeholderBase + index) % 3) * 480, top: 80 + Math.floor((placeholderBase + index) / 3) * 480, ...placeholderSize }}>
+          <RefreshCw className="h-10 w-10 animate-spin" strokeWidth={1.5} />生成中...</div>)}
       </div>
       {marquee && <div aria-hidden="true" data-testid="design-marquee" className="pointer-events-none absolute border border-[#0bcabc] bg-[#0bcabc]/10"
         style={{ left: Math.min(marquee.x1, marquee.x2) * view.zoom + view.panX, top: Math.min(marquee.y1, marquee.y2) * view.zoom + view.panY,
           width: Math.abs(marquee.x2 - marquee.x1) * view.zoom, height: Math.abs(marquee.y2 - marquee.y1) * view.zoom }} />}
     </section>
 
-    {!hasContent && helloStart && <label data-testid="design-inspiration-start" className={`absolute top-0 flex cursor-pointer flex-col items-center pt-6 text-center ${dragOver ? 'opacity-80' : ''}`}
+    {/* Light (measured 2026-10-29): a text-only request puts a 生成中... square in the middle of the canvas at once. */}
+    {isNewFile && entrySending && <div role="status" data-testid="design-new-file-generating"
+      className="absolute flex flex-col items-center justify-center gap-3 rounded-lg bg-[linear-gradient(160deg,#6b5f92,#46628a_45%,#3a8391)] text-lg text-neutral-200"
+      style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2 - 204px)`, top: 'calc(50% - 204px)', width: 408, height: 408 }}>
+      <RefreshCw className="h-10 w-10 animate-spin" strokeWidth={1.5} />生成中...</div>}
+    {!hasContent && helloStart && !entrySending && <label data-testid="design-inspiration-start" className={`absolute top-0 flex cursor-pointer flex-col items-center pt-6 text-center ${dragOver ? 'opacity-80' : ''}`}
       style={{ left: `calc((100% - ${panelOpen ? 435 : 0}px) / 2)`, transform: 'translateX(-50%)', width: 'min(960px, calc(100% - 120px))' }}>
       <input type="file" accept={IMAGE_ACCEPT} multiple className="sr-only" onChange={onUpload} aria-label="画像をアップロード" />
       <h1 className="text-[44px] font-semibold leading-tight text-white">Hello！デザインはここから始まります</h1>
@@ -1070,7 +1076,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
           </div>}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-[11px] pb-4" data-testid={visible?.draft ? 'design-entry-draft' : undefined} data-project-id={visible?.draft?.projectId} data-conversation-id={visible?.draft?.conversationId}>
-          {(isNewFile || (!visible?.dialogue?.attempts.length && !visible?.draft)) && !visible?.busy && <div data-testid="design-assistant-welcome">
+          {isNewFile && entrySending && <div data-testid="design-new-file-sending">
+            <div className={`${userBubble} mt-4`}><p className="whitespace-pre-wrap">{prompt}</p></div>
+            <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <p className="flex items-center gap-2 text-sm text-neutral-300"><ImagePlus className="h-4 w-4 text-[#0bcabc]" />画像タスク</p>
+              <div className="mt-2 flex aspect-square w-full max-w-[240px] items-center justify-center rounded-lg bg-[linear-gradient(160deg,#6b5f92,#46628a_45%,#3a8391)] text-xs text-neutral-200">生成中...</div>
+            </div>
+          </div>}
+          {(isNewFile || (!visible?.dialogue?.attempts.length && !visible?.draft)) && !visible?.busy && !entrySending && <div data-testid="design-assistant-welcome">
             {workspaceId === 'design' ? <>
               {/* Light's design assistant always greets with these editing scenes (no 更新 rotation). */}
               <h1 className="mt-[22px] text-[26px] font-medium leading-[34px]">今日は何をデザインしますか？</h1>
@@ -1111,7 +1124,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
               <p className="flex items-center gap-2 text-sm text-neutral-300"><ImagePlus className="h-4 w-4 text-[#0bcabc]" />画像タスク
                 {attempt.imageResult !== 'completed' && <span className="ml-auto text-xs text-neutral-500">{attempt.imageResult === 'failed' ? '失敗' : '生成中'}</span>}</p>
               {/* Light shows each result at the panel's width; hovering it offers コレクション (to the asset library) and ダウンロード. */}
-              {generatingAttempts.includes(attempt) && <div data-testid="design-image-generating" className="mt-2 flex w-full max-w-[320px] animate-pulse items-center justify-center rounded-lg bg-[linear-gradient(135deg,#7b5cff,#3fb8e8_55%,#0bcabc)] text-sm font-medium text-white"
+              {generatingAttempts.includes(attempt) && <div data-testid="design-image-generating" className="mt-2 flex w-full max-w-[320px] items-center justify-center rounded-lg bg-[linear-gradient(160deg,#6b5f92,#46628a_45%,#3a8391)] text-xs text-neutral-200"
                 style={{ aspectRatio: `${placeholderSize.width} / ${placeholderSize.height}` }}>生成中...</div>}
               <div className="mt-2 grid gap-2" aria-label="生成画像">{visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.map((output) =>
                 <div key={output.imageId} className="group relative w-full max-w-[320px]">
@@ -1147,7 +1160,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
             <button type="button" disabled={visible.busy} className="mt-3 text-[#0bcabc]" onClick={() => setRetry((value) => value + 1)}>保存状態を再確認</button></div>}
         </div>
         {/* Light keeps a 考え中...... strip on top of the input while the assistant works. */}
-        {visible?.busy && visible.dialogue && <p role="status" data-testid="design-thinking" className="mx-[11px] -mb-3 flex items-center gap-2 rounded-t-2xl border border-b-0 border-white/10 bg-[#1b2023] px-[15px] pb-5 pt-2 text-sm text-neutral-300">
+        {((visible?.busy && visible.dialogue) || (isNewFile && entrySending)) && <p role="status" data-testid="design-thinking" className="mx-[11px] -mb-3 flex items-center gap-2 rounded-t-2xl border border-b-0 border-white/10 bg-[#1b2023] px-[15px] pb-5 pt-2 text-sm text-neutral-300">
           <RefreshCw className="h-4 w-4 animate-spin text-[#0bcabc]" />考え中......</p>}
         <form className="mx-[11px] mb-4 shrink-0 rounded-2xl border border-white/10 bg-[#20262a] px-[15px] pb-4 pt-4" onSubmit={(event) => { event.preventDefault(); submit(); }}>
           {(selectedOutput || selectedCanvasReference) && <div className="mb-2 flex items-center justify-between text-xs text-[#0bcabc]"><span>選択した画像を参考に編集</span><button type="button" onClick={() => setSelected(null)} aria-label="選択を解除">×</button></div>}

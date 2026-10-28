@@ -47,8 +47,12 @@ test('actual Canvas transport fences expected user, late token changes and calle
   setup();let calls=0;const id=crypto.randomUUID();
   globalThis.fetch=async()=>{calls++;return Response.json({id});};
   await assert.rejects(client.getCanvasDocument(id,{...context,userId:'bob'}),/session_changed/);assert.equal(calls,0);
-  globalThis.fetch=async()=>{calls++;current={...current,access_token:'rotated'};return Response.json({id});};
-  await assert.rejects(client.getCanvasDocument(id,context),/session_changed/);assert.equal(calls,1);
+  // A token refresh for the same user is not a session change; the next call carries the refreshed token.
+  let seen=[];globalThis.fetch=async(url,init)=>{calls++;seen.push(new Headers(init.headers).get('authorization'));current={...current,access_token:'rotated'};return Response.json({id});};
+  await client.getCanvasDocument(id,context);assert.equal(calls,1);
+  await client.getCanvasDocument(id,context);assert.equal(seen.at(-1),'Bearer rotated');calls=1;
+  globalThis.fetch=async()=>{calls++;current={...current,user:{id:'bob'}};return Response.json({id});};
+  await assert.rejects(client.getCanvasDocument(id,context),/session_changed/);assert.equal(calls,2);current={...current,user:{id:'alice'}};calls=1;
   let valid=true;globalThis.fetch=async()=>{calls++;valid=false;return Response.json({id});};
   await assert.rejects(client.getCanvasDocument(id,{...context,assertContext:()=>{if(!valid)throw new Error('route_changed');}}),/route_changed/);assert.equal(calls,2);assert.equal(refreshes,0);
 });
