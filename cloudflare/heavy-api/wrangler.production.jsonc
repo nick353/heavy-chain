@@ -4,6 +4,8 @@
   "name": "heavy-chain-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-03",
+  // Run next to D1 and the auth service binding (identity checks took 1-5s, 2026-10-29).
+  "placement": { "mode": "smart" },
   "ai": { "binding": "AI" },
   "images": { "binding": "IMAGES" },
   "services": [{ "binding": "AUTH_SERVICE", "service": "consumer-auth" }],
