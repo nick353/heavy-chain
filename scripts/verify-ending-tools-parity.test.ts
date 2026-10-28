@@ -18,5 +18,6 @@ test('画像修正 after an upload matches Light: 再アップロード, the rou
 
 test('ベクター and 平絵をベクター化 show 再アップロード on the source and アップロード中 in the result panel', () => {
   assert.match(parity, /data-testid="vector-reupload"/);
+  assert.match(parity, /data-testid="print-image-reupload"/);
   assert.match(parity, /data-testid="vector-uploading"[^>]*>.*アップロード中/s);
 });

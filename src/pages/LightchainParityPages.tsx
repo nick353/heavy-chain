@@ -754,6 +754,8 @@ function LightchainPrintingWorkspace() {
         {referenceImage ? <>
           <img src={referenceImage.url} alt="参考画像" data-source-slot="primary" data-source-image-id={workspace.slots.primary?.sourceImageId??''} data-source-storage-path={workspace.slots.primary?.sourceStoragePath??''} className="max-h-full max-w-full object-contain" />
           <span className="sr-only" data-testid="print-image-file-name">{workspace.slots.primary?.name}</span>
+          {/* Light (re-measured 2026-10-28): 再アップロード at the top right; the label underneath opens the file picker. */}
+          <span aria-hidden="true" title="再アップロード" data-testid="print-image-reupload" className="absolute right-4 top-4 inline-flex size-8 items-center justify-center rounded-lg bg-white/15 text-white"><ImageUp className="h-4 w-4" /></span>
           {/* Light: the round teal button at the bottom-right of the garment opens the mask / placement dialog. */}
           <button type="button" data-testid="print-image-open-editor" aria-label="プリントの位置を編集" title="プリントの位置を編集" disabled={locked} onClick={(event)=>{event.preventDefault();event.stopPropagation();openApplyEditor(null);}} className="absolute bottom-4 right-4 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#5fd0c8] text-slate-950 disabled:opacity-50"><Wand2 aria-hidden="true" className="h-4 w-4" /></button>
         </> : <>
