@@ -1525,12 +1525,35 @@ export function DesignConversationProjectStatus({ view }: { view: DesignConversa
 }
 
 /** Same 220x240 card as a saved design project; a conversation has no cover, so Light's default cover is shown. */
+// One signed URL per cover path for the page's lifetime, shared by every card that shows it.
+const designCoverUrls = new Map<string, Promise<string | null>>();
+const designCoverUrl = (path: string) => {
+  let pending = designCoverUrls.get(path);
+  if (!pending) {
+    pending = withSignedImageUrls([{ storage_path: path, image_url: '' }])
+      .then((rows) => (typeof rows[0]?.image_url === 'string' && rows[0].image_url) || null)
+      .catch(() => { designCoverUrls.delete(path); return null; });
+    designCoverUrls.set(path, pending);
+  }
+  return pending;
+};
+
+/** Light's design project cards show the work itself (measured 2026-10-29); the box icon is only for empty canvases. */
 export function DesignConversationProjectCard({ entry }: { entry: DesignConversationProject }) {
+  const [cover, setCover] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setCover(null);
+    if (entry.coverPath) void designCoverUrl(entry.coverPath).then((url) => { if (!cancelled) setCover(url); });
+    return () => { cancelled = true; };
+  }, [entry.coverPath]);
   return (
     <article data-design-project-origin="conversation" className="relative h-60 overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left hover:border-white/40">
       <Link to={entry.href} data-testid="design-conversation-project-card" data-project-id={entry.projectId} data-conversation-id={entry.conversationId} aria-label={`${entry.title}を開く`} className="block h-full w-full">
-        <div data-design-conversation-cover="" className="flex h-[167px] w-full items-center justify-center bg-white/10">
-          <img src={DESIGN_PROJECT_DEFAULT_COVER} alt="" className="h-12 w-12 object-contain" loading="lazy" />
+        <div data-design-conversation-cover="" className="flex h-[167px] w-full items-center justify-center overflow-hidden bg-white/10">
+          {cover ? <img src={thumbnailImageUrl(cover) ?? cover} alt="" data-testid="design-project-cover" className="h-full w-full object-cover" loading="lazy"
+            onError={(event) => { if (event.currentTarget.src !== cover) event.currentTarget.src = cover; }} />
+            : <img src={DESIGN_PROJECT_DEFAULT_COVER} alt="" className="h-12 w-12 object-contain" loading="lazy" />}
         </div>
         <div data-design-card-title="" className="block w-full overflow-hidden text-left">
           <p data-design-card-name="" className="truncate font-medium">{entry.title}</p>
