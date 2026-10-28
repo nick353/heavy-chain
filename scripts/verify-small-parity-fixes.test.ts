@@ -54,3 +54,23 @@ test('fashion studio list and detail match Light\'s layout', () => {
   assert.match(detail, /data-testid="fashion-studio-reference-count"/);
   assert.match(detail, />生成設定</);
 });
+
+test('custom style matches Light\'s 16px titles and 5:6 cards', () => {
+  const page = read('src/pages/LightchainCustomStylePage.tsx');
+  assert.match(page, /text-base font-medium leading-4 text-white">ラーニング素材をアップロードしてください/);
+  assert.match(page, /text-base font-medium leading-10 text-white">カスタムスタイルライブラリ/);
+  assert.match(page, /aspect-\[5\/6\]/);
+});
+
+test('業務プリファレンスプロファイル is its own page with Light\'s list and form', () => {
+  const app = read('src/App.tsx');
+  for (const path of ['/agent/profiles', '/agent/profiles/create', '/agent/profiles/:profileId']) assert.ok(app.includes(`path="${path}"`), path);
+  assert.ok(app.indexOf('path="/agent/profiles"') < app.indexOf('path="/agent/:taskId"'));
+  const page = read('src/pages/AgentProfilesPage.tsx');
+  for (const text of ['業務プリファレンスプロファイルはまだありません', 'プロファイル名と内容を検索', '業務範囲', '件の必須項目', 'プロファイルを保存', 'チャネル名を入力し、Enterで確定', '希望する色、シルエット、素材、ディテール、モデル、構図、避けたい表現を入力してください']) assert.ok(page.includes(text), text);
+  const tasks = read('src/features/agent/agentTasks.ts');
+  assert.match(tasks, /AGENT_PROFILE_COUNTRIES = \['中国', '日本', '北米', 'ヨーロッパ', 'アフリカ'\]/);
+  assert.match(tasks, /AGENT_PROFILE_AGES = \['0〜18歳', '19〜24歳', '25〜34歳', '35〜44歳', '45〜65歳'\]/);
+  const sidebar = read('src/features/agent/AgentSidebar.tsx');
+  assert.match(sidebar, /onClick=\{\(\) => navigate\('\/agent\/profiles'\)\}/);
+});
