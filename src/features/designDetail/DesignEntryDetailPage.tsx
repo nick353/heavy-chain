@@ -592,13 +592,17 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   };
   /** Light's コレクション on a chat result: the image goes to マイライブラリー. */
-  const collectResult = async (imageUrl: string, imageId: string) => {
+  const collectResult = async (imageUrl: string, imageId: string, storagePath: string) => {
     if (!brandId) return;
     const title = visible?.dialogue?.attempts[0]?.input.prompt.slice(0, 80) || workspace.label;
-    const result = await saveWorkspaceArtifactBestEffort({ brandId, scopeId: userId, featureType: workspace.featureType,
-      title, prompt: title, imageUrl, createdAt: new Date().toISOString(), metadata: { librarySource: 'design-chat-result', libraryGroup: 'マイライブラリー', projectId, imageId } });
-    if (!result.localPersisted || (cloudflareDataPlane && !result.remote)) { toast.error('ライブラリーへ保存できませんでした'); return; }
-    toast.success('アセットライブラリに保存しました');
+    try {
+      // The saved result is reused by its storage path (as 生成履歴 does), not copied from the signed preview URL.
+      const persistenceContext = await cloudflareDataPlane?.captureArtifactPersistenceContext();
+      const result = await saveWorkspaceArtifactBestEffort({ brandId, scopeId: userId, featureType: workspace.featureType, title, prompt: title, imageUrl, createdAt: new Date().toISOString(),
+        metadata: { librarySource: 'design-chat-result', libraryGroup: 'マイライブラリー', projectId, remoteImageId: imageId, sourceImageId: imageId, sourceStoragePath: storagePath } }, { persistenceContext });
+      if (!result.localPersisted || (cloudflareDataPlane && !result.remote)) throw new Error('library_save_unconfirmed');
+      toast.success('アセットライブラリに保存しました');
+    } catch { toast.error('ライブラリーへ保存できませんでした'); }
   };
   /** Light's キャンバスを整理: lays the objects out in one row, left to right in their current order, then fits the view. */
   const arrangeCanvas = async () => {
@@ -1055,7 +1059,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
                       : <span className="block aspect-square w-full rounded-lg bg-white/5" />}
                   </button>
                   {urls[output.storagePath] && <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                    <button type="button" aria-label="コレクション" title="コレクション" data-testid="design-generated-collect" onClick={() => void collectResult(urls[output.storagePath], output.imageId)}
+                    <button type="button" aria-label="コレクション" title="コレクション" data-testid="design-generated-collect" onClick={() => void collectResult(urls[output.storagePath], output.imageId, output.storagePath)}
                       className="flex h-6 w-6 items-center justify-center rounded-md bg-black/50 text-white hover:text-[#0bcabc]"><Star className="h-4 w-4" /></button>
                     <button type="button" aria-label="ダウンロード" title="ダウンロード" data-testid="design-generated-download" onClick={() => void downloadResult(urls[output.storagePath], output.imageId)}
                       className="flex h-6 w-6 items-center justify-center rounded-md bg-black/50 text-white hover:text-[#0bcabc]"><Download className="h-4 w-4" /></button>
