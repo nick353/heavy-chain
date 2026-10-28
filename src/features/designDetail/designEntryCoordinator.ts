@@ -73,7 +73,19 @@ export const createDesignEntryCoordinator = (options: {
         } catch { assertContext(); /* unknown effect: reconcile the same ID below, never create again */ }
       }
     }
-    const document = validateOwnedDesignDocument(await client.getDocument(draft.projectId, scope.brandId, context), scope, draft.projectId);
+    const createSnapshot = () => client.createDocument({ documentId: draft.projectId, brandId: scope.brandId, title: projectNameFromPrompt(prompt),
+      snapshot: { version: 1, projectId: draft.projectId, objects: [] } }, context);
+    let fetched;
+    try { fetched = await client.getDocument(draft.projectId, scope.brandId, context); }
+    catch (error) {
+      assertContext();
+      // A claimed create that never reached the server (e.g. stopped before sending) left the draft unable to finish:
+      // the exact GET says the ID does not exist, so creating that SAME ID once cannot make a second project.
+      if (draft.ready || existingProjectId !== undefined || !(error instanceof Error && error.message === 'cloudflare_api_404_not_found')) throw error;
+      try { await createSnapshot(); } catch { assertContext(); /* unknown effect: the GET below decides */ }
+      fetched = await client.getDocument(draft.projectId, scope.brandId, context);
+    }
+    const document = validateOwnedDesignDocument(fetched, scope, draft.projectId);
     assertContext();
     if (!draft.ready && existingProjectId === undefined && (document.snapshot.projectId !== draft.projectId || document.snapshot.objects.length !== 0)) {
       throw new Error('design_entry_snapshot_unverified');
