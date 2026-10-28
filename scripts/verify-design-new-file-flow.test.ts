@@ -32,4 +32,6 @@ test('sending shows the message at once, 考え中...... over the input, and 生
   assert.match(page, /left: 80 \+ \(\(placeholderBase \+ index\) % 3\) \* 480, top: 80 \+ Math\.floor\(\(placeholderBase \+ index\) \/ 3\) \* 480/);
   assert.match(page, /data-testid="design-canvas-generating"[\s\S]{0,400}生成中\.\.\./);
   assert.match(page, /data-testid="design-image-generating"/);
+  // Stuck (unknown) requests do not keep a 生成中... box forever.
+  assert.match(page, /attempt\.imageResult === 'in-flight' \|\| \(attempt\.imageResult === undefined && visible\.busy\)/);
 });
