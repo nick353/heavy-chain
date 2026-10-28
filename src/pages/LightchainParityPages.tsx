@@ -1158,6 +1158,10 @@ export function LightchainMarketingHomePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [covers, setCovers] = useState<Record<string, string>>({});
+  // Light's 移動 / グループ on the marketing cards, kept apart from the design workspace's groups.
+  const [groupState, setGroupState] = useState<DesignProjectGroupState>({ groups: [], members: {} });
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
+  const [movingProjectId, setMovingProjectId] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement | null>(null);
   const projectsView = useDesignConversationProjects(undefined, 'marketing');
   const references = useDialogueReferences({ userId, brandId, selectionId: 'marketing-home' });
@@ -1171,6 +1175,16 @@ export function LightchainMarketingHomePage() {
     setHiddenIds(readStoredIds(marketingProjectStorageKey('hidden', userId, brandId)));
   }, [brandId, userId]);
   useEffect(() => {
+    setGroupState(userId && brandId ? readDesignProjectGroups(userId, brandId, 'marketing') : { groups: [], members: {} });
+    setOpenGroupId(null);
+  }, [brandId, userId]);
+  const saveGroupState = (next: DesignProjectGroupState) => {
+    setGroupState(next);
+    if (userId && brandId) writeDesignProjectGroups(userId, brandId, next, 'marketing');
+  };
+  const groupCount = (groupId: string) => Object.values(groupState.members).filter((id) => id === groupId).length;
+  const openGroup = groupState.groups.find((group) => group.id === openGroupId) ?? null;
+  useEffect(() => {
     let cancelled = false;
     if (!brandId || !cloudflareDataPlane) { setRemainingUnits(null); return () => { cancelled = true; }; }
     void cloudflareDataPlane.getImageUsage(brandId).then((summary) => {
@@ -1181,8 +1195,9 @@ export function LightchainMarketingHomePage() {
 
   const projects = useMemo(() => projectsView.entries
     .filter((entry) => !hiddenIds.has(entry.projectId))
+    .filter((entry) => openGroupId ? groupState.members[entry.projectId] === openGroupId : !groupState.members[entry.projectId])
     .sort((left, right) => Number(pinnedIds.has(right.projectId)) - Number(pinnedIds.has(left.projectId))),
-  [hiddenIds, pinnedIds, projectsView.entries]);
+  [groupState.members, hiddenIds, openGroupId, pinnedIds, projectsView.entries]);
   const coverKey = JSON.stringify(projects.map((entry) => entry.coverPath ?? ''));
   useEffect(() => {
     let cancelled = false;
@@ -1357,7 +1372,29 @@ export function LightchainMarketingHomePage() {
         </div>
         <div className="-mt-[11px] w-full rounded-2xl px-4 pb-4" data-testid="lightchain-marketing-projects">
           {/* Light (2026-10-28): 18px heading 48px under the scene chips, cards 16px below it. */}
-          <h2 className="mb-4 text-lg font-normal leading-7">マイプロジェクト</h2>
+          <h2 className="mb-4 text-lg font-normal leading-7">{openGroup
+            ? <span className="flex items-center gap-1"><button type="button" onClick={() => setOpenGroupId(null)} className="text-neutral-400 hover:text-white">マイプロジェクト</button><ChevronRight className="h-4 w-4 text-neutral-500" /><span data-testid="marketing-open-group">{openGroup.name}</span></span>
+            : 'マイプロジェクト'}</h2>
+          {!openGroup && groupState.groups.length > 0 && <div className="mb-2 flex flex-wrap gap-2" data-testid="marketing-project-groups">
+            {groupState.groups.map((group) => <button key={group.id} type="button" onClick={() => { setOpenGroupId(group.id); setSelectedIds(new Set()); }} data-testid="marketing-project-group"
+              className="h-60 w-[220px] overflow-hidden rounded-2xl bg-[#202527] text-left hover:bg-[#283033]">
+              <span className="block h-[168px] w-full overflow-hidden bg-white/[0.04]"><img src={group.cover} alt="" className="h-full w-full object-cover" /></span>
+              <span className="block px-4 pt-[14px]"><span className="flex items-center gap-1 truncate text-sm leading-6 text-neutral-200"><Folder className="h-4 w-4 shrink-0 text-neutral-400" />{group.name}</span>
+                <span className="mt-1 block text-xs leading-4 text-neutral-500">{groupCount(group.id)}件</span></span>
+            </button>)}
+          </div>}
+          {movingProjectId && <MoveToGroupDialog groups={groupState.groups} currentGroupId={groupState.members[movingProjectId] ?? null}
+            onCancel={() => setMovingProjectId(null)}
+            onCreate={(name, cover) => { const id = crypto.randomUUID(); saveGroupState({ ...groupState, groups: [...groupState.groups, { id, name, cover, createdAt: new Date().toISOString() }] }); return id; }}
+            onConfirm={(groupId) => {
+              const members = { ...groupState.members };
+              if (groupId) members[movingProjectId] = groupId; else delete members[movingProjectId];
+              // Read the latest groups (a group may have just been created inside the dialog).
+              const latest = userId && brandId ? readDesignProjectGroups(userId, brandId, 'marketing') : groupState;
+              saveGroupState({ groups: latest.groups, members });
+              setMovingProjectId(null);
+              toast.success(groupId ? '移動しました' : 'ルートフォルダーに戻しました');
+            }} />}
           {selectedIds.size > 0 && <div className="mb-4 flex items-center justify-between" data-testid="marketing-project-selection-bar">
             <div className="flex items-center gap-1">
               <button type="button" className="h-8 rounded-lg px-4 text-sm text-white hover:bg-white/10" onClick={() => setSelectedIds(new Set(projects.map((entry) => entry.projectId)))}>全選択</button>
@@ -1409,6 +1446,7 @@ export function LightchainMarketingHomePage() {
                   {menuOpen && <>
                     <div className="fixed inset-0 z-20" aria-hidden="true" onClick={() => setOpenProjectMenuId(null)} />
                     <div role="menu" className="absolute right-0 top-full z-30 mt-2 min-w-[224px] rounded-xl border border-white/10 bg-[#25292b] p-1.5 shadow-2xl">
+                      <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={() => { setMovingProjectId(entry.projectId); setOpenProjectMenuId(null); }}><ArrowRight className="h-4 w-4" />移動</button>
                       <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={() => togglePin(entry.projectId)}><ArrowUpToLine className="h-4 w-4" />{pinnedIds.has(entry.projectId) ? 'ピン留めを解除' : 'ピン留め'}</button>
                       <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-200 hover:bg-white/10" onClick={() => void saveProjectToLibrary(entry)}><Bookmark className="h-4 w-4" />アセットライブラリに保存</button>
                       <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-red-400 hover:bg-white/10" onClick={() => hideProject(entry)}><Trash2 className="h-4 w-4" />削除</button>
