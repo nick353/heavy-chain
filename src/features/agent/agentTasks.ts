@@ -207,6 +207,67 @@ export function writeAgentProfile(userId: string, brandId: string, value: string
   try { localStorage.setItem(agentProfileKey(userId, brandId), value.slice(0, 800)); } catch { /* storage unavailable */ }
 }
 
+/** Light's 業務プリファレンスプロファイル (/agent/profiles): named business scopes; the chosen one is added to every planning request. */
+export type AgentPreferenceProfile = {
+  id: string; name: string; categories: string[]; priceMin: string; priceMax: string; currency: string;
+  countries: string[]; ages: string[]; channels: string[]; brands: string[]; visual: string; updatedAt: string;
+};
+export const AGENT_PROFILE_CATEGORIES = ['メンズ', 'レディース', 'キッズ'] as const;
+export const AGENT_PROFILE_COUNTRIES = ['中国', '日本', '北米', 'ヨーロッパ', 'アフリカ'] as const;
+export const AGENT_PROFILE_AGES = ['0〜18歳', '19〜24歳', '25〜34歳', '35〜44歳', '45〜65歳'] as const;
+export const AGENT_PROFILE_CURRENCIES = ['JPY', 'CNY', 'USD', 'EUR'] as const;
+export function agentProfilesKey(userId: string, brandId: string) { return `heavy:agent-profiles:v1:${userId}:${brandId}`; }
+export function agentActiveProfileKey(userId: string, brandId: string) { return `heavy:agent-profile-active:v1:${userId}:${brandId}`; }
+const stringList = (value: unknown, limit: number) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.slice(0, 60)).slice(0, limit) : [];
+export function readAgentProfiles(userId: string, brandId: string): AgentPreferenceProfile[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(agentProfilesKey(userId, brandId)) ?? '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => item && typeof item.id === 'string' && typeof item.name === 'string').map((item) => ({
+      id: item.id, name: String(item.name).slice(0, 60), categories: stringList(item.categories, 3), priceMin: String(item.priceMin ?? '').slice(0, 12),
+      priceMax: String(item.priceMax ?? '').slice(0, 12), currency: String(item.currency ?? '').slice(0, 3), countries: stringList(item.countries, 5),
+      ages: stringList(item.ages, 5), channels: stringList(item.channels, 20), brands: stringList(item.brands, 20), visual: String(item.visual ?? '').slice(0, 500),
+      updatedAt: String(item.updatedAt ?? ''),
+    }));
+  } catch { return []; }
+}
+/** The planning request reads one plain-text profile; this is the chosen profile written out. */
+export function describeAgentProfile(profile: AgentPreferenceProfile): string {
+  return [
+    `プロファイル：${profile.name}`,
+    profile.categories.length ? `カテゴリー：${profile.categories.join('・')}` : '',
+    profile.priceMin || profile.priceMax ? `価格帯：${profile.priceMin || '—'}〜${profile.priceMax || '—'} ${profile.currency}`.trim() : '',
+    profile.countries.length ? `国：${profile.countries.join('・')}` : '',
+    profile.ages.length ? `年齢層：${profile.ages.join('・')}` : '',
+    profile.channels.length ? `チャネル：${profile.channels.join('・')}` : '',
+    profile.brands.length ? `参考ブランド：${profile.brands.join('・')}` : '',
+    profile.visual ? `ビジュアルの好み：${profile.visual}` : '',
+  ].filter(Boolean).join('\n').slice(0, 800);
+}
+export function readActiveAgentProfileId(userId: string, brandId: string): string | null {
+  try { return localStorage.getItem(agentActiveProfileKey(userId, brandId)); } catch { return null; }
+}
+/** Chooses the profile used for new tasks (null clears it). */
+export function selectAgentProfile(userId: string, brandId: string, profile: AgentPreferenceProfile | null) {
+  try {
+    if (profile) localStorage.setItem(agentActiveProfileKey(userId, brandId), profile.id); else localStorage.removeItem(agentActiveProfileKey(userId, brandId));
+  } catch { /* storage unavailable */ }
+  writeAgentProfile(userId, brandId, profile ? describeAgentProfile(profile) : '');
+  try { window.dispatchEvent(new Event('heavy-agent-profiles')); } catch { /* no window */ }
+}
+export function saveAgentProfile(userId: string, brandId: string, profile: AgentPreferenceProfile) {
+  const next = [profile, ...readAgentProfiles(userId, brandId).filter((item) => item.id !== profile.id)].slice(0, 50);
+  try { localStorage.setItem(agentProfilesKey(userId, brandId), JSON.stringify(next)); } catch { /* storage unavailable */ }
+  // A new or edited profile becomes the one used for new tasks, like Light applying it at task start.
+  selectAgentProfile(userId, brandId, profile);
+}
+export function deleteAgentProfile(userId: string, brandId: string, profileId: string) {
+  const next = readAgentProfiles(userId, brandId).filter((item) => item.id !== profileId);
+  try { localStorage.setItem(agentProfilesKey(userId, brandId), JSON.stringify(next)); } catch { /* storage unavailable */ }
+  if (readActiveAgentProfileId(userId, brandId) === profileId) selectAgentProfile(userId, brandId, null);
+  else try { window.dispatchEvent(new Event('heavy-agent-profiles')); } catch { /* no window */ }
+}
+
 /** Projects group planning tasks (Light: 新規ファイル → プロジェクトを作成). Names are kept per user and brand. */
 export function agentProjectsKey(userId: string, brandId: string) { return `heavy:agent-projects:v1:${userId}:${brandId}`; }
 export function readAgentProjects(userId: string, brandId: string): string[] {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ClipboardList, Folder, FolderPlus, MessageSquareText, PanelLeft, PanelLeftClose, Search, Sparkles, X, SquarePen } from 'lucide-react';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
 import { useAuthStore } from '../../stores/authStore';
-import { addAgentProject, listAgentTasks, readAgentProfile, readAgentProjects, writeAgentProfile, type AgentTaskDocument } from './agentTasks';
+import { addAgentProject, listAgentTasks, readActiveAgentProfileId, readAgentProfiles, readAgentProjects, selectAgentProfile, type AgentPreferenceProfile, type AgentTaskDocument } from './agentTasks';
 
 const formatDate = (value: string) => {
   const date = new Date(value);
@@ -40,27 +40,32 @@ export function useRemainingCredits() {
   return remaining;
 }
 
-/** 業務プリファレンスプロファイル: company/brand context added to every planning request. */
+/** The input bar's 業務プリファレンスプロファイル ›: pick which saved profile new tasks use (Light manages them at /agent/profiles). */
 export function AgentProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
-  const [value, setValue] = useState('');
-  useEffect(() => { if (open && user?.id && currentBrand?.id) setValue(readAgentProfile(user.id, currentBrand.id)); }, [open, user?.id, currentBrand?.id]);
+  const [profiles, setProfiles] = useState<AgentPreferenceProfile[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open || !user?.id || !currentBrand?.id) return;
+    setProfiles(readAgentProfiles(user.id, currentBrand.id)); setActiveId(readActiveAgentProfileId(user.id, currentBrand.id));
+  }, [open, user?.id, currentBrand?.id]);
   if (!open) return null;
+  const choose = (profile: AgentPreferenceProfile | null) => { if (user?.id && currentBrand?.id) selectAgentProfile(user.id, currentBrand.id, profile); onClose(); };
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" role="presentation" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="agent-profile-title" className="w-[560px] max-w-full rounded-2xl border border-white/10 bg-[#262a2b] p-6 text-neutral-100 shadow-2xl" onClick={(event) => event.stopPropagation()} data-testid="agent-profile-dialog">
+      <div role="dialog" aria-modal="true" aria-labelledby="agent-profile-title" className="w-[480px] max-w-full rounded-2xl border border-white/10 bg-[#262a2b] p-6 text-neutral-100 shadow-2xl" onClick={(event) => event.stopPropagation()} data-testid="agent-profile-dialog">
         <div className="flex items-center justify-between"><h2 id="agent-profile-title" className="text-xl font-semibold">業務プリファレンスプロファイル</h2>
           <button type="button" aria-label="閉じる" onClick={onClose} className="rounded-md p-1 text-neutral-400 hover:bg-white/10"><X className="h-5 w-5" /></button></div>
-        <p className="mt-2 text-sm leading-6 text-neutral-400">会社やブランドの特徴、主な顧客、価格帯、得意なカテゴリなどを書いておくと、企画の提案に反映されます。</p>
-        <label className="sr-only" htmlFor="agent-profile-text">プロファイル</label>
-        <textarea id="agent-profile-text" value={value} maxLength={800} onChange={(event) => setValue(event.target.value)} rows={7}
-          placeholder="例：30代女性向けのオフィスカジュアルブランド。価格帯は1万〜3万円。自然素材を重視。"
-          className="mt-4 w-full resize-none rounded-xl border border-white/10 bg-[#1b1f20] p-3 text-sm leading-6 text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-cyan-400/60" />
-        <div className="mt-1 text-right text-xs text-neutral-500">{value.length} / 800</div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="h-10 rounded-lg border border-white/10 px-4 text-sm text-neutral-300 hover:bg-white/10">キャンセル</button>
-          <button type="button" onClick={() => { if (user?.id && currentBrand?.id) writeAgentProfile(user.id, currentBrand.id, value.trim()); onClose(); }}
-            className="h-10 rounded-lg bg-cyan-300 px-4 text-sm font-medium text-neutral-950 hover:bg-cyan-200">保存</button>
+        <p className="mt-2 text-sm leading-6 text-neutral-400">このタスクに適用するプロファイルを選んでください。</p>
+        <div role="listbox" aria-label="プロファイル" className="mt-4 grid max-h-[320px] gap-1 overflow-y-auto">
+          <button type="button" role="option" aria-selected={!activeId} onClick={() => choose(null)} className={`rounded-lg px-3 py-2 text-left text-sm ${!activeId ? 'bg-white/10 text-white' : 'text-neutral-300 hover:bg-white/5'}`}>適用しない</button>
+          {profiles.map((profile) => <button key={profile.id} type="button" role="option" aria-selected={profile.id === activeId} onClick={() => choose(profile)}
+            className={`truncate rounded-lg px-3 py-2 text-left text-sm ${profile.id === activeId ? 'bg-white/10 text-white' : 'text-neutral-300 hover:bg-white/5'}`}>{profile.name}</button>)}
+          {profiles.length === 0 && <p className="px-3 py-2 text-sm text-neutral-500">業務プリファレンスプロファイルはまだありません</p>}
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button type="button" onClick={() => { onClose(); navigate('/agent/profiles/create'); }} className="h-10 rounded-lg bg-cyan-300 px-4 text-sm font-medium text-neutral-950 hover:bg-cyan-200">新規プロファイル</button>
         </div>
       </div>
     </div>
@@ -116,15 +121,14 @@ export function AgentProjectCreateDialog({ open, onClose, onCreated }: { open: b
   );
 }
 
-type SidebarProps = { title: string; activeTaskId?: string | null; refreshKey?: unknown; onNewTask: () => void };
+type SidebarProps = { title: string; activeTaskId?: string | null; refreshKey?: unknown; onNewTask: () => void; profilesActive?: boolean };
 
 /** Light's 352px planning sidebar: 新規タスク, 業務プリファレンスプロファイル, 最近 (the user's real tasks) and credits. */
-export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, onNewTask }: SidebarProps) {
+export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, onNewTask, profilesActive = false }: SidebarProps) {
   const navigate = useNavigate();
   const tasks = useAgentTasks(refreshKey);
   const credits = useRemainingCredits();
   const [open, setOpen] = useState(true);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
@@ -138,8 +142,7 @@ export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, on
       <aside aria-label="企画ワークスペースサイドバー" className="relative z-20 flex h-full w-[64px] shrink-0 flex-col items-center gap-3 overflow-hidden border-r border-white/10 bg-[#262a2b] py-3 text-neutral-100">
         <button type="button" aria-label="サイドバーを開く" onClick={() => setOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><PanelLeft className="h-4 w-4" /></button>
         <button type="button" aria-label="新規タスク" onClick={onNewTask} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><MessageSquareText className="h-4 w-4" /></button>
-        <button type="button" aria-label="業務プリファレンスプロファイル" onClick={() => setProfileOpen(true)} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><ClipboardList className="h-4 w-4" /></button>
-        <AgentProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
+        <button type="button" aria-label="業務プリファレンスプロファイル" onClick={() => navigate('/agent/profiles')} className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><ClipboardList className="h-4 w-4" /></button>
       </aside>
     );
   }
@@ -161,7 +164,8 @@ export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, on
         <nav aria-label="ワークベンチ入口" className="mt-4 grid gap-2">
           <button type="button" onClick={onNewTask} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base font-medium leading-6 text-neutral-300 hover:bg-white/10">
             <SquarePen className="h-4 w-4" />新規タスク</button>
-          <button type="button" onClick={() => setProfileOpen(true)} className="flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base font-medium leading-6 text-neutral-300 hover:bg-white/10">
+          {/* Light opens its own page for these (/agent/profiles) and highlights the entry there. */}
+          <button type="button" aria-current={profilesActive ? 'page' : undefined} onClick={() => navigate('/agent/profiles')} className={`flex h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-base font-medium leading-6 text-neutral-300 hover:bg-white/10 ${profilesActive ? 'bg-white/10 text-white' : ''}`}>
             <ClipboardList className="h-4 w-4 flex-none" /><span className="truncate">業務プリファレンスプロファイル</span></button>
         </nav>
         <div className="mt-2 h-px w-full bg-white/10" />
@@ -194,7 +198,6 @@ export function AgentSidebar({ title, activeTaskId = null, refreshKey = null, on
           残りクレジット <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> {credits === null ? '—' : credits.toLocaleString()}
         </div>
       </div>
-      <AgentProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
       <AgentProjectCreateDialog open={projectOpen} onClose={() => setProjectOpen(false)} />
     </aside>
   );

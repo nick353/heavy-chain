@@ -247,7 +247,7 @@ export function LightchainCustomStylePage() {
         </div>
       </nav>
 
-      <main className="min-w-0 flex-1 rounded-2xl bg-[#232829] px-10 py-8">
+      <main className="min-w-0 flex-1 rounded-2xl bg-[#232829] px-10 pb-8 pt-6">
         {selected ? (
           <section data-testid="custom-style-detail" data-style-id={selected.id} className="flex min-h-[calc(100vh-150px)] flex-col">
             <div className="flex items-center gap-4">
@@ -311,8 +311,9 @@ export function LightchainCustomStylePage() {
           </section>
         ) : (
           <>
-            <h1 className="text-xl font-medium leading-6 text-white">ラーニング素材をアップロードしてください</h1>
-            <label className={`mt-2 flex h-40 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#65d3cf]/60 px-6 text-center transition hover:bg-white/[0.02] ${busy ? 'pointer-events-none opacity-60' : ''}`}
+            {/* Light (re-measured 2026-10-28): 16px titles, the drop zone 16px under the first, the library title on a 40px line right under it, 5:6 cards. */}
+            <h1 className="text-base font-medium leading-4 text-white">ラーニング素材をアップロードしてください</h1>
+            <label className={`mt-4 flex h-40 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/25 px-6 text-center transition hover:bg-white/[0.02] ${busy ? 'pointer-events-none opacity-60' : ''}`}
               onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void startUpload([...event.dataTransfer.files]); }}>
               <input ref={fileInput} type="file" multiple accept="image/png,image/jpeg,image/webp" className="sr-only" aria-label="ラーニング素材" disabled={busy || !brandId}
                 onChange={event => void startUpload([...(event.target.files ?? [])])} />
@@ -323,7 +324,7 @@ export function LightchainCustomStylePage() {
             </label>
             {notice && <p role="alert" className="mt-2 text-sm text-[#e5484d]">{notice}</p>}
 
-            <h2 className="mt-6 text-lg font-medium leading-7 text-white">カスタムスタイルライブラリ</h2>
+            <h2 className="text-base font-medium leading-10 text-white">カスタムスタイルライブラリ</h2>
             <div className="mt-2 flex h-[43px] items-center justify-between">
               <div role="tablist" className="flex gap-8 pl-6">
                 {([['personal', 'パーソナルスペース'], ['team', 'チームスペース']] as const).map(([id, label]) => (
@@ -352,7 +353,7 @@ export function LightchainCustomStylePage() {
                   const cover = style.settings.images.find(image => image.imageId === style.settings.coverImageId) ?? style.settings.images[0];
                   return (
                     <button key={style.id} type="button" onClick={() => setSelectedId(style.id)} className="text-left" data-testid="custom-style-card" data-style-id={style.id}>
-                      <div className="relative h-[222px] overflow-hidden rounded-lg bg-[#1b1f20]">
+                      <div className="relative aspect-[5/6] overflow-hidden rounded-lg bg-[#1b1f20]">
                         {cover && mediaUrls[cover.storagePath] && <img src={mediaUrls[cover.storagePath]} alt="" className="size-full object-cover" />}
                         <span className="absolute left-2 top-2"><StatusBadge status={effectiveStatus(style)} /></span>
                       </div>

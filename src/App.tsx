@@ -87,6 +87,7 @@ const VideoProjectDashboardPage = lazy(() => import('./pages/VideoProjectDashboa
 const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').then((module) => ({ default: module.VideoWorkstationPage })));
 const LightchainSourceNotFoundPage = lazy(() => import('./pages/LightchainSourceNotFoundPage').then((module) => ({ default: module.LightchainSourceNotFoundPage })));
 const LabPage = lazy(() => import('./pages/LabPage').then((module) => ({ default: module.LabPage })));
+const AgentProfilesPage = lazy(() => import('./pages/AgentProfilesPage').then((module) => ({ default: module.AgentProfilesPage })));
 const LightchainLabDetailPage = prefetchedLazy(() => import('./pages/LightchainLabDetailPage').then((module) => ({ default: module.LightchainLabDetailPage })));
 const HeavyAgentTaskPage = lazy(() => import('./pages/HeavyAgentTaskPage'));
 const LightchainCustomStylePage = lazy(() => import('./pages/LightchainCustomStylePage').then((module) => ({ default: module.LightchainCustomStylePage })));
@@ -1260,6 +1261,36 @@ function AppRoutes() {
             <ProtectedRoute>
               <ErrorBoundary>
                 {lazyPage(<LightchainLabDetailPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agent/profiles"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<AgentProfilesPage mode="list" />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agent/profiles/create"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<AgentProfilesPage mode="create" />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agent/profiles/:profileId"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<AgentProfilesPage mode="edit" />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }
