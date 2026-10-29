@@ -167,7 +167,8 @@ function LightchainLineToolWorkspace({ mode }: { mode: LineToolMode }) {
     </div>
   );
 
-  const result = resultUrl ? (
+  // A rerun keeps the previous result in state; show progress instead of the stale image (as プリントイメージ does).
+  const result = resultUrl && workspace.status !== 'running' ? (
     <div data-testid="line-tool-result" className="flex h-full flex-col items-center justify-center px-10 pb-6 pt-16">
       <img src={resultUrl} alt={`${tool.title} AI生成`} className="min-h-0 max-w-full flex-1 rounded-lg object-contain" />
       {/* The result could only be saved from 生成履歴; keep a download right under it. */}
