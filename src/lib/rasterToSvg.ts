@@ -7,13 +7,14 @@
  * opens in Illustrator/Figma as separate, editable shapes.
  */
 export type RasterPixels = { width: number; height: number; data: Uint8ClampedArray | Uint8Array };
-export type TraceOptions = { colors?: number; simplify?: number; minArea?: number; keepBackground?: boolean };
+export type TraceOptions = { colors?: number; simplify?: number; minArea?: number; keepBackground?: boolean; lineArt?: boolean };
 type Rgb = [number, number, number];
 type Point = [number, number];
 
 const DEFAULT_COLORS = 8;
 const DEFAULT_SIMPLIFY = 0.8;
 const DEFAULT_MIN_AREA = 6;
+const LINE_ART_SIDE = 1600;
 
 const distance2 = (a: Rgb, b: Rgb) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
 const hex = (c: Rgb) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
@@ -63,6 +64,45 @@ export function quantize(pixels: RasterPixels, colorCount = DEFAULT_COLORS): { p
     labels[i] = nearest;
   }
   return { palette, labels };
+}
+
+/**
+ * Black-and-white line art (a 平絵): almost every pixel is grey. k-means then splits each anti-aliased stroke
+ * into several grey bands and the traced lines break into dashes (10/29: a blouse flat came out as 5 greys with
+ * most sleeve and hem outlines missing), so such images are split into ink and paper by brightness instead.
+ */
+export function isLineArt(pixels: RasterPixels): boolean {
+  const { width, height, data } = pixels;
+  const total = width * height;
+  const step = Math.max(1, Math.floor(total / 8192));
+  let coloured = 0;
+  let inked = 0;
+  let paper = 0;
+  let count = 0;
+  for (let i = 0; i < total; i += step) {
+    const [r, g, b] = pixelAt(data, i * 4);
+    const level = (r + g + b) / 3;
+    if (Math.max(r, g, b) - Math.min(r, g, b) > 28) coloured++;
+    if (level < LINE_INK_LEVEL) inked++;
+    if (level > 238) paper++;
+    count++;
+  }
+  // A pale cream or grey fabric is not line art: the paper has to be near white too.
+  return coloured / count < 0.02 && paper / count > 0.5 && inked / count > 0.002 && inked / count < 0.35;
+}
+
+const LINE_INK_LEVEL = 200;
+function binarize(pixels: RasterPixels): { palette: Rgb[]; labels: Uint8Array } {
+  const { width, height, data } = pixels;
+  const labels = new Uint8Array(width * height);
+  const ink = [0, 0, 0, 0];
+  for (let i = 0; i < labels.length; i++) {
+    const [r, g, b] = pixelAt(data, i * 4);
+    if ((r + g + b) / 3 < LINE_INK_LEVEL) { labels[i] = 1; ink[0] += r; ink[1] += g; ink[2] += b; ink[3]++; }
+  }
+  // The ink takes the darkest honest colour of the strokes rather than a mid grey from their soft edges.
+  const shade = ink[3] ? Math.min(60, (ink[0] + ink[1] + ink[2]) / 3 / ink[3]) : 0;
+  return { palette: [[255, 255, 255], [shade, shade, shade]], labels };
 }
 
 /** Most frequent label along the image border = background. */
@@ -149,7 +189,7 @@ const loopArea = (loop: Point[]) => Math.abs(loop.reduce((sum, [x, y], i) => {
 
 export function tracePixelsToSvg(pixels: RasterPixels, options: TraceOptions = {}): { svg: string; colors: string[]; pathCount: number } {
   const { width, height } = pixels;
-  const { palette, labels } = quantize(pixels, options.colors ?? DEFAULT_COLORS);
+  const { palette, labels } = (options.lineArt ?? isLineArt(pixels)) ? binarize(pixels) : quantize(pixels, options.colors ?? DEFAULT_COLORS);
   const background = borderLabel(labels, width, height);
   const minArea = options.minArea ?? DEFAULT_MIN_AREA;
   const paths: string[] = [];
@@ -174,16 +214,22 @@ export async function traceImageUrlToSvg(url: string, options: TraceOptions & { 
   const response = await fetch(url);
   if (!response.ok) throw new Error('svg_source_unavailable');
   const bitmap = await createImageBitmap(await response.blob());
-  const maxSide = options.maxSide ?? 640;
-  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-  const width = Math.max(1, Math.round(bitmap.width * scale));
-  const height = Math.max(1, Math.round(bitmap.height * scale));
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('svg_canvas_unavailable');
-  context.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
-  return tracePixelsToSvg(context.getImageData(0, 0, width, height), options);
+  const draw = (maxSide: number) => {
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('svg_canvas_unavailable');
+    context.drawImage(bitmap, 0, 0, width, height);
+    return context.getImageData(0, 0, width, height);
+  };
+  try {
+    // Thin strokes vanish at 640px, so line art is traced at up to 1600px; colour artwork keeps the small size.
+    const large = draw(options.maxSide ?? LINE_ART_SIDE);
+    if (options.lineArt ?? isLineArt(large)) return tracePixelsToSvg(large, { ...options, lineArt: true });
+    return tracePixelsToSvg(draw(options.maxSide ?? 640), { ...options, lineArt: false });
+  } finally { bitmap.close(); }
 }
