@@ -158,7 +158,7 @@ test('a passing rate limit is waited out, an empty balance is not retried, and b
   await assert.rejects(() => runOpenAIImage(env(), 'generate-image', input(), 0, async () => {
     quotaCalls++;
     return Response.json({error:{type:'insufficient_quota',code:'insufficient_quota',message:'no credit'}},{status:429});
-  }), (error: unknown) => error instanceof OpenAIImageError && error.errorCode === 'image_provider_request_rejected' && error.providerCode === 'insufficient_quota'
+  }), (error: unknown) => error instanceof OpenAIImageError && error.errorCode === 'image_provider_quota_exhausted' && error.providerCode === 'insufficient_quota'
     && error.diagnostics.providerType === 'insufficient_quota');
   assert.equal(quotaCalls, 1);
   await assert.rejects(() => runOpenAIImage(env(), 'generate-image', input(), 0, async () =>
