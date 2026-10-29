@@ -400,8 +400,8 @@ export function VideoWorkstationPage() {
     materials,
   }), [activeChoice, aspectRatio, duration, materials, selectedStoryboard, shotPlan, subtitleCta]);
   const primaryInput = `${duration} / ${aspectRatio} / ${shotPlan}`;
-  const nextStep = `${shotPlan}をvideo-shot-planとして保存し、動画providerの利用可能確認後にレンダーへ進める`;
-  const videoProviderBlocker = 'video_provider_not_admitted: 動画providerの利用可能状態が未確認です';
+  const nextStep = `${shotPlan}を構成として保存し、動画の生成が使えるようになったら書き出しへ進める`;
+  const videoProviderBlocker = 'video_provider_not_admitted: 動画の生成は準備中です';
 
   // React Router can update only the query string when a saved project is
   // opened from the dashboard.  Keep route-owned state fenced to that
@@ -712,7 +712,7 @@ export function VideoWorkstationPage() {
     const generationIntent = buildVideoEditorGenerationIntent(videoProjectCode, values.editPrompt);
     const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
     const primaryInput = `${values.duration} / ${values.resolution} / ${values.editPrompt}`;
-    const nextStep = `${videoProjectCode}を動画ワークステーションで再利用し、動画providerの利用可能確認後にレンダーへ進める`;
+    const nextStep = `${videoProjectCode}を動画ワークステーションで再利用し、動画の生成が使えるようになったら書き出しへ進める`;
 
     try {
       handoffWorkspaceToCanvas({
@@ -934,7 +934,7 @@ export function VideoWorkstationPage() {
             <div>
               <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">動画レーンを選ぶ</h2>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                尺・比率・ショット順・CTAをまとめて決めます。動画providerがadmittedされるまで、生成はfail-closedです。
+                尺・比率・ショット順・CTAをまとめて決めます。動画の生成は準備中のため、今は構成づくりとCanvasでの仕上げまでです。
               </p>
             </div>
             <span className="w-fit rounded-full bg-cyan-300/15 px-3 py-1 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30">
@@ -995,12 +995,12 @@ export function VideoWorkstationPage() {
           eyebrow="HEAVY CHAIN / VIDEO START"
           title="ショット構成を決めてから、素材と書き出しへ進みます"
           description="動画は最初にストーリーボードを選び、比率・尺・CTAを確認します。素材が未選択でも構成の保存とCanvas handoffを先に進められます。"
-            nextAction="構成 → 素材 → provider admission待ち / Canvas保存"
+            nextAction="構成 → 素材 → Canvas保存（動画の生成は準備中）"
           steps={[
             { label: 'ストーリーボード', detail: selectedStoryboard.label, ready: Boolean(selectedStoryboard.id) },
             { label: '尺・比率', detail: `${duration} / ${aspectRatio}`, ready: Boolean(duration && aspectRatio) },
             { label: '素材', detail: materialReference.imageUrl ? '参照素材を選択済み' : '素材なしでも構成を保存できます', ready: Boolean(materialReference.imageUrl) },
-            { label: '次の操作', detail: 'provider admission待ち / Canvasへ保存', ready: Boolean(currentBrand) },
+            { label: '次の操作', detail: 'Canvasへ保存（動画の生成は準備中）', ready: Boolean(currentBrand) },
           ]}
         />
       </section>
@@ -1014,7 +1014,7 @@ export function VideoWorkstationPage() {
               Video flow
             </p>
             <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
-              ショット順、尺、CTAを決めて、provider admission待ちまたはCanvas仕上げへ進む
+              ショット順、尺、CTAを決めて、Canvasでの仕上げへ進む
             </h2>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
               {[

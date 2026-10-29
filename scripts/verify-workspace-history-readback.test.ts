@@ -29,7 +29,7 @@ test('workspace History never uses fixed seed rows after reload', async () => {
 
 test('video History restoration remains separate from unsupported provider admission', async () => {
   const video = await readFile(new URL('../src/pages/VideoWorkstationPage.tsx', import.meta.url), 'utf8');
-  assert.match(video, /video_provider_not_admitted: 動画providerの利用可能状態が未確認です/);
+  assert.match(video, /video_provider_not_admitted: 動画の生成は準備中です/);
   assert.match(video, /providerRoute: 'unsupported'/);
   assert.match(video, /restoreWorkspaceHandoffHistory\([\s\S]*'video-workstation'[\s\S]*videoProjectCode[\s\S]*videoDraftArtifactId/);
   assert.doesNotMatch(video, /setHistory\(initialHistory\)/);

@@ -3693,7 +3693,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     }
     const generationBrandId = authBrandFence.brandId;
     if (!lightchainProviderSupported) {
-      setLightchainGenerationError('video_provider_not_admitted: 動画providerの利用可能状態が未確認です');
+      setLightchainGenerationError('video_provider_not_admitted: 動画の生成は準備中です');
       toast.error('動画の生成は準備中です');
       return;
     }
@@ -7967,7 +7967,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
               </div>
               {!lightchainProviderSupported && (selectedTool.id === 'video-workstation' || selectedTool.id === 'video-detail') ? (
                 <p className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-3 text-xs font-semibold leading-5 text-amber-100" data-testid="lightchain-video-provider-blocker">
-                  動画プロバイダの同一run tools/readback が未確認のため、AI生成は開始できません。
+                  動画の生成は準備中です。今はストーリーボードと構成づくりまでお使いいただけます。
                 </p>
               ) : null}
             </div>
@@ -7980,7 +7980,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
           )}
           {resumeInputReadback === 'unavailable' && (
             <p className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-3 text-xs font-semibold leading-5 text-amber-100" data-testid="lightchain-resume-input-unavailable">
-              再開元の画像は現在のローカル保存から復元できません。providerを実行する前に、入力素材を選び直してください。
+              前回の画像をこのブラウザから読み込めませんでした。もう一度生成する前に、画像を選び直してください。
             </p>
           )}
 
