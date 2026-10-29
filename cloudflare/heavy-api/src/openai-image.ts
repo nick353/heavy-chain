@@ -24,11 +24,12 @@ export class OpenAIImageError extends Error {
   readonly status?: number;
   readonly providerCode?: string;
   readonly providerRequestId?: string;
-  constructor(category: OpenAIImageErrorCategory, status?: number, providerCode?: unknown, providerRequestId?: string | null) {
+  constructor(category: OpenAIImageErrorCategory, status?: number, providerCode?: unknown, providerRequestId?: string | null, rateLimited = false) {
     super(errorCodes[category]);
     this.name = 'OpenAIImageError';
     this.category = category;
-    this.errorCode = errorCodes[category];
+    // A per-minute/day limit is still a rejection (nothing ran), but the person should wait, not change the input.
+    this.errorCode = rateLimited ? 'image_provider_rate_limited' : errorCodes[category];
     this.status = status;
     this.providerCode = typeof providerCode === 'string' && SAFE_PROVIDER_ERROR_CODES.has(providerCode) ? providerCode : undefined;
     this.providerRequestId = providerRequestId && /^req[-_][a-zA-Z0-9_-]{1,96}$/.test(providerRequestId) ? providerRequestId : undefined;
@@ -148,15 +149,32 @@ function extractImages(value: unknown): OpenAIImageCandidate[] {
   });
 }
 
-function safeProviderError(status: number, value: unknown, requestId: string | null): OpenAIImageError {
-  const record = asRecord(value);
+function safeProviderError(status: number, data: unknown, requestId: string | null): OpenAIImageError {
+  const record = asRecord(data);
   const providerError = asRecord(record?.error);
   const explicitRejection = [400, 401, 403, 404, 413, 415, 422, 429].includes(status) &&
     ['invalid_request_error', 'authentication_error', 'permission_error', 'rate_limit_error', 'insufficient_quota']
       .includes(String(providerError?.type ?? ''));
   // A server/gateway error, timeout response or opaque HTTP error does not
   // establish that the provider rejected the inference before executing it.
-  return new OpenAIImageError(explicitRejection ? 'request_rejected' : 'transport_uncertainty', status, providerError?.code, requestId);
+  return new OpenAIImageError(explicitRejection ? 'request_rejected' : 'transport_uncertainty', status, providerError?.code, requestId,
+    explicitRejection && isRateLimit(status, data));
+}
+
+/** 429 from a request/token-per-minute limit (not an empty balance): nothing ran, so waiting and resending is safe. */
+function isRateLimit(status: number, value: unknown): boolean {
+  const providerError = asRecord(asRecord(value)?.error);
+  return status === 429 && providerError?.type === 'rate_limit_error' && providerError?.code !== 'insufficient_quota';
+}
+const RATE_LIMIT_RETRIES = 2;
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const RATE_LIMIT_MAX_WAIT_MS = 20_000;
+/** OpenAI says how long to wait in retry-after (seconds) or retry-after-ms; without it, back off 5s then 10s. */
+function rateLimitWait(response: Response, attempt: number): number {
+  const ms = Number(response.headers.get('retry-after-ms'));
+  const seconds = Number(response.headers.get('retry-after'));
+  const asked = Number.isFinite(ms) && ms > 0 ? ms : Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 5000 * (attempt + 1);
+  return Math.min(asked, RATE_LIMIT_MAX_WAIT_MS);
 }
 
 async function observeResponse(fetchImpl: typeof fetch, url: string, init: RequestInit): Promise<Response> {
@@ -193,9 +211,9 @@ export async function runOpenAIImage(
   const modelAction: ImageAction = edit ? 'edit-image' : 'generate-image';
   void modelAction;
   const model = openAIModelForEndpoint(env, edit, chosenModel);
-  let response: Response;
+  const send = async (): Promise<Response> => {
   if (!edit) {
-    response = await observeResponse(fetchImpl, `${baseURL(env)}/images/generations`, {
+    return observeResponse(fetchImpl, `${baseURL(env)}/images/generations`, {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
       body: JSON.stringify({ model, prompt: promptFor(candidate), n: 1, size: imageSize(input.width, input.height, model) }),
@@ -216,17 +234,26 @@ export async function runOpenAIImage(
       const contentType = normalizeMimeType(reference.contentType);
       form.append('image[]', referenceBlob(reference.bytes, contentType), `reference-${index + 1}.${extensionFromMimeType(contentType)}`);
     });
-    response = await observeResponse(fetchImpl, `${baseURL(env)}/images/edits`, {
+    return observeResponse(fetchImpl, `${baseURL(env)}/images/edits`, {
       method: 'POST',
       headers: { authorization: `Bearer ${key}` },
       body: form,
     });
   }
+  };
+  let response: Response;
   let data: unknown;
-  const requestId = response.headers.get('x-request-id');
-  try { data = await response.json(); }
-  catch (error) {
-    throw new OpenAIImageError(response.ok && error instanceof SyntaxError ? 'unusable_response' : 'transport_uncertainty', response.status, undefined, requestId);
+  let requestId: string | null;
+  // 10/29: twenty-odd generations in a row hit the per-minute limit and every tool just said 「失敗しました」.
+  for (let attempt = 0; ; attempt++) {
+    response = await send();
+    requestId = response.headers.get('x-request-id');
+    try { data = await response.json(); }
+    catch (error) {
+      throw new OpenAIImageError(response.ok && error instanceof SyntaxError ? 'unusable_response' : 'transport_uncertainty', response.status, undefined, requestId);
+    }
+    if (response.ok || attempt >= RATE_LIMIT_RETRIES || !isRateLimit(response.status, data)) break;
+    await sleep(rateLimitWait(response, attempt));
   }
   if (!response.ok) throw safeProviderError(response.status, data, requestId);
   const image = extractImages(data)[0];

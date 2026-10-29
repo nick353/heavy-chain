@@ -121,7 +121,7 @@ test('OpenAI errors distinguish explicit rejection, uncertain HTTP/transport and
   const secret = 'server-only-test-key private-prompt';
   const cases: Array<[() => Promise<Response>, string, number | undefined]> = [
     [async () => Response.json({error:{type:'invalid_request_error',code:secret,message:secret}},{status:400}), 'request_rejected', 400],
-    [async () => Response.json({error:{type:'rate_limit_error',message:secret}},{status:429}), 'request_rejected', 429],
+    [async () => Response.json({error:{type:'rate_limit_error',message:secret}},{status:429,headers:{'retry-after-ms':'1'}}), 'request_rejected', 429],
     [async () => Response.json({error:{type:'invalid_request_error',message:secret}},{status:500}), 'transport_uncertainty', 500],
     [async () => Response.json({error:{type:'invalid_request_error',message:secret}},{status:408}), 'transport_uncertainty', 408],
     [async () => Response.json({error:{type:secret,message:secret}},{status:400}), 'transport_uncertainty', 400],
@@ -140,8 +140,29 @@ test('OpenAI errors distinguish explicit rejection, uncertain HTTP/transport and
         assert(!`${error.message} ${error.stack} ${JSON.stringify(error)}`.includes(secret));
         return true;
       });
-    assert.equal(calls, 1, category);
+    // A per-minute limit is waited out and resent twice (nothing ran on a 429); every other error is sent once.
+    assert.equal(calls, status === 429 ? 3 : 1, category);
   }
+});
+
+test('a passing rate limit is waited out, an empty balance is not retried, and both stay recognisable', async () => {
+  let calls = 0;
+  const ok = await runOpenAIImage(env(), 'generate-image', input(), 0, async () => {
+    calls++;
+    return calls === 1
+      ? Response.json({error:{type:'rate_limit_error',code:'rate_limit_exceeded',message:'slow down'}},{status:429,headers:{'retry-after-ms':'1'}})
+      : Response.json({data:[{b64_json:Buffer.from(pngFixture(1024,1024)).toString('base64')}]});
+  });
+  assert.equal(calls, 2); assert.match(ok.image, /^data:image\/png;base64,/);
+  let quotaCalls = 0;
+  await assert.rejects(() => runOpenAIImage(env(), 'generate-image', input(), 0, async () => {
+    quotaCalls++;
+    return Response.json({error:{type:'insufficient_quota',code:'insufficient_quota',message:'no credit'}},{status:429});
+  }), (error: unknown) => error instanceof OpenAIImageError && error.errorCode === 'image_provider_request_rejected' && error.providerCode === 'insufficient_quota');
+  assert.equal(quotaCalls, 1);
+  await assert.rejects(() => runOpenAIImage(env(), 'generate-image', input(), 0, async () =>
+    Response.json({error:{type:'rate_limit_error',message:'slow down'}},{status:429,headers:{'retry-after-ms':'1'}})),
+  (error: unknown) => error instanceof OpenAIImageError && error.errorCode === 'image_provider_rate_limited');
 });
 
 test('OpenAI diagnostic exceptions retain only allowlisted codes and bounded request identifiers', async () => {
