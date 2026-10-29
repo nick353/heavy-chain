@@ -34,8 +34,11 @@ import { DESIGN_OPEN_IMAGE_PARAM } from '../../lib/legacyCanvasRoute';
 import { watermarkImageBlobIfOn } from '../../lib/imageDownload';
 import { saveWorkspaceArtifactBestEffort } from '../../lib/localWorkspaceArtifacts';
 import { DesignAssetLibrary } from './DesignAssetLibrary';
-import { ANSWER_MARK, answerPrompt, parseAssistantReply } from './assistantQuestions';
+import { ANSWER_MARK, answerPrompt, hasAssistantQuestions, parseAssistantReply, searchAnswerPrompt } from './assistantQuestions';
 import { AssistantQuestionCard } from './AssistantQuestionCard';
+import { AssistantImageSearchCard } from './AssistantImageSearchCard';
+import type { DialogueAttempt } from './dialogueStore';
+import { foundImageFile, type FoundImage } from './referenceImageSearch';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 export const createDesignDialogueClient = (featureType: string): DesignDialogueClient => ({
@@ -58,8 +61,9 @@ export const createDesignDialogueClient = (featureType: string): DesignDialogueC
       if (!resolved.ok) throw new Error('design_reference_unavailable');
       urls.push(resolved.url);
     }
+    const variations = input.variations?.length ? { count: input.variations.length, variations: [...input.variations] } : {};
     const options = { rightsConfirmed: ready, idempotencyKey: input.idempotencyKey, assertContext: input.assertContext,
-      retainUntilAcknowledged: input.retainUntilAcknowledged, featureType };
+      retainUntilAcknowledged: input.retainUntilAcknowledged, featureType, ...variations };
     return urls.length ? editImageWithPrompt(urls[0], input.prompt, input.brandId, { ...options, referenceImageUrls: urls.slice(1) })
       : generateImage(input.prompt, input.brandId, options);
   },
@@ -591,6 +595,22 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
       if (run === sceneRun.current) await references.addFiles(files);
     } catch { if (run === sceneRun.current) setEntryError('場面の画像を読み込めませんでした'); }
   };
+  /** Light's image-search answer: the chosen found images are attached to the next request as ordinary references. */
+  const answerImageSearch = (attempt: DialogueAttempt, chosen: FoundImage[]) => void act(async (active) => {
+    let found: DesignDialogueManifestReference[] = [];
+    if (chosen.length) {
+      references.clear();
+      const files = (await Promise.allSettled(chosen.map((image) => foundImageFile(image))))
+        .flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
+      if (files.length) await references.addFiles(files);
+      try { found = references.manifest(); } catch { found = []; }
+    }
+    const merged = [...attempt.input.references, ...found.filter((item) => !attempt.input.references.some((ref) => ref.imageId === item.imageId))].slice(0, 16);
+    try {
+      await active.send(searchAnswerPrompt(attempt.input.prompt, found.length ? chosen.slice(0, found.length).map((image) => image.title) : []),
+        merged.map((reference, order) => ({ ...reference, order })));
+    } finally { if (found.length) references.clear(); }
+  });
   const [newFileSaving, setNewFileSaving] = useState(false);
   const [stoppedIds, setStoppedIds] = useState<Set<string>>(() => new Set());
   const [sentPrompt, setSentPrompt] = useState<{ text: string; count: number } | null>(null);
@@ -1125,12 +1145,14 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
               <p data-testid={index === 0 ? 'design-entry-prompt' : 'design-user-message'} className="whitespace-pre-wrap">{attempt.input.prompt}</p>
             </div>}
             {attempt.assistant.state === 'completed' ? (() => {
-              const { body, suggestions, questions } = parseAssistantReply(attempt.assistant.content ?? "");
+              const { body, suggestions, questions, searches } = parseAssistantReply(attempt.assistant.content ?? "");
               const latest = index === (visible.dialogue?.attempts.length ?? 0) - 1;
               return <>
                 <p data-testid="design-assistant-message" className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-200">{body}</p>
                 {questions.length > 0 && <AssistantQuestionCard key={attempt.input.requestId} questions={questions} disabled={!latest || Boolean(visible.busy)}
                   onConfirm={(answers) => void act((active) => active.send(answerPrompt(attempt.input.prompt, questions, answers), attempt.input.references))} />}
+                {searches.length > 0 && <AssistantImageSearchCard key={`${attempt.input.requestId}-search`} searches={searches} disabled={!latest || Boolean(visible.busy)}
+                  onConfirm={(chosen) => answerImageSearch(attempt, chosen)} />}
                 {index === (visible.dialogue?.attempts.length ?? 0) - 1 && suggestions.length > 0 && <div className="mt-3 flex flex-col items-start gap-2" data-testid="design-assistant-suggestions">
                   {suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setPrompt(suggestion)}
                     className="flex max-w-full items-start gap-2 rounded-lg bg-white/[0.12] px-3 py-2 text-left text-xs leading-[18px] text-neutral-100 hover:bg-white/[0.18]">
@@ -1145,8 +1167,11 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
               {/* Light shows each result at the panel's width; hovering it offers コレクション (to the asset library) and ダウンロード. */}
               {generatingAttempts.includes(attempt) && <div data-testid="design-image-generating" className="mt-2 flex w-full max-w-[320px] items-center justify-center rounded-lg bg-[linear-gradient(160deg,#6b5f92,#46628a_45%,#3a8391)] text-xs text-neutral-200"
                 style={{ aspectRatio: `${placeholderSize.width} / ${placeholderSize.height}` }}>生成中...</div>}
-              <div className="mt-2 grid gap-2" aria-label="生成画像">{visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.map((output) =>
+              {/* Light's final step shows four variations #01〜#04 two by two. */}
+              {(() => { const outputs = visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs ?? [];
+                return <div className={`mt-2 grid gap-2 ${outputs.length > 1 ? 'max-w-[320px] grid-cols-2' : ''}`} aria-label="生成画像">{outputs.map((output, outputIndex) =>
                 <div key={output.imageId} className="group relative w-full max-w-[320px]">
+                  {outputs.length > 1 && <span data-testid="design-variation-tag" className="absolute left-1.5 top-1.5 z-10 rounded bg-black/60 px-1.5 text-[10px] text-white">#0{outputIndex + 1}</span>}
                   <button type="button" data-testid="design-generated-preview" data-image-id={output.imageId} className="block w-full" onClick={() => {
                     const object = imageObjects.find((item) => (item.metadata as Record<string, unknown> | undefined)?.imageId === output.imageId);
                     if (object) setSelected(String(object.id));
@@ -1160,12 +1185,12 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
                     <button type="button" aria-label="ダウンロード" title="ダウンロード" data-testid="design-generated-download" onClick={() => void downloadResult(urls[output.storagePath], output.imageId)}
                       className="flex h-6 w-6 items-center justify-center rounded-md bg-black/50 text-white hover:text-[#0bcabc]"><Download className="h-4 w-4" /></button>
                   </div>}
-                </div>)}</div>
+                </div>)}</div>; })()}
               {attempt.imageResult !== 'completed' && <p className="mt-2 text-xs text-neutral-400">{stoppedIds.has(attempt.input.requestId) ? '停止しました。'
                 : attempt.imageResult === 'failed' ? '画像を作成できませんでした。以前の画像はそのまま使用できます。'
                 : attempt.imageResult === 'ack-deferred' ? '画像を保存しました。生成記録の確認を続けられます。' : '画像の作成・保存状態を確認しています。'}</p>}
             </div>}
-            {attempt.assistant.state === 'completed' && !attempt.imageAttempted && !parseAssistantReply(attempt.assistant.content ?? '').questions.length && <button type="button" disabled={visible.busy} className="mt-3 text-sm text-[#0bcabc]" onClick={() => void act((active) => active.continueImage(attempt.input.requestId))}>画像を作成</button>}
+            {attempt.assistant.state === 'completed' && !attempt.imageAttempted && !hasAssistantQuestions(attempt.assistant.content) && <button type="button" disabled={visible.busy} className="mt-3 text-sm text-[#0bcabc]" onClick={() => void act((active) => active.continueImage(attempt.input.requestId))}>画像を作成</button>}
             {attempt.imageAttempted && (attempt.imageResult === 'unknown' || attempt.imageResult === 'failed') && !visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.length
               && <button type="button" data-testid="design-attempt-retry" disabled={visible.busy} className="mr-4 mt-3 text-sm text-[#0bcabc]"
                 onClick={() => void act((active) => active.send(attempt.input.prompt, attempt.input.references))}>もう一度作成</button>}

@@ -796,3 +796,14 @@ test('a queued job without a client seed still runs: admitted seeds and fingerpr
   assert.equal(s.db.sql.prepare('SELECT state FROM heavy_ai_requests').get()!.state,'completed');
   assert.equal((await json(await pending)).success,true);
 });
+
+test('Light\'s four variations: each candidate gets its own direction, and a mismatched list is refused',()=>{
+  const s=imageSetup(); s.db.sql.close();
+  const variations=['水彩: 淡い水彩','線画: 細い線','幾何: 単純化','濃色地: 紺の地'];
+  const parsed=parseImageInput('generate-image',{...s.input(),count:4,variations} as never);
+  assert.equal(parsed.candidates.length,4);
+  parsed.candidates.forEach((candidate,index)=>assert.match(candidate.prompt,new RegExp(`This is variation ${index+1} of 4; follow this direction for it: ${variations[index]}`)));
+  assert.doesNotMatch(parseImageInput('generate-image',s.input()).candidates[0].prompt,/variation/);
+  assert.throws(()=>parseImageInput('generate-image',{...s.input(),count:2,variations} as never),/invalid_image_variations/);
+  assert.throws(()=>parseImageInput('generate-image',{...s.input(),count:1,variations:['']} as never),/invalid_image_variations/);
+});

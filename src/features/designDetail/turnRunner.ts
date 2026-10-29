@@ -24,6 +24,7 @@ export type DesignTurnGenerateInput = Readonly<{
   idempotencyKey: string;
   assertContext: () => void;
   retainUntilAcknowledged: true;
+  variations?: readonly string[];
 }>;
 
 export type DesignTurnRunnerDependencies = Readonly<{
