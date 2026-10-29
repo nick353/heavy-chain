@@ -87,24 +87,29 @@ test('reference images come from Wikimedia Commons bitmaps and become ordinary u
   const calls: string[] = [];
   const fetcher = (async (url: string) => {
     calls.push(String(url));
+    if (String(url).startsWith('https://commons.wikimedia.org/') && new URL(String(url)).searchParams.get('gsrsearch') !== 'hydrangea watercolor filetype:bitmap') {
+      // The narrower query finds nothing; the search retries with fewer words.
+      return new Response(JSON.stringify({ batchcomplete: '' }));
+    }
     if (String(url).startsWith('https://commons.wikimedia.org/')) return new Response(JSON.stringify({ query: { pages: {
       '2': { pageid: 2, index: 2, title: 'File:B.png', imageinfo: [{ thumburl: 'https://upload.wikimedia.org/b.png', mime: 'image/png', descriptionurl: 'https://commons.wikimedia.org/wiki/File:B.png' }] },
-      '1': { pageid: 1, index: 1, title: 'File:A flower.jpg', imageinfo: [{ thumburl: 'https://upload.wikimedia.org/a.jpg', mime: 'image/jpeg', extmetadata: { LicenseShortName: { value: 'CC BY-SA 4.0' } } }] },
+      '1': { pageid: 1, index: 1, title: 'File:A flower.jpg', imageinfo: [{ thumburl: 'https://thumb.wikimedia.org/a.jpg', mime: 'image/jpeg', extmetadata: { LicenseShortName: { value: 'CC BY-SA 4.0' } } }] },
       '3': { pageid: 3, index: 3, title: 'File:C.svg', imageinfo: [{ thumburl: 'https://upload.wikimedia.org/c.svg.png', mime: 'image/svg+xml' }] },
       '4': { pageid: 4, index: 4, title: 'File:D.jpg', imageinfo: [{ thumburl: 'https://evil.example/d.jpg', mime: 'image/jpeg' }] },
     } } }));
     return new Response(new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' }));
   }) as typeof fetch;
-  const found = await searchReferenceImages('hydrangea watercolor', { fetcher });
+  const found = await searchReferenceImages('hydrangea watercolor blue', { fetcher });
   assert.deepEqual(found.map((image) => image.title), ['A flower', 'B']);
   assert.equal(found[0].license, 'CC BY-SA 4.0');
+  assert.deepEqual(calls.filter((url) => url.startsWith('https://commons.')).map((url) => new URL(url).searchParams.get('gsrsearch')),
+    ['hydrangea watercolor blue filetype:bitmap', 'hydrangea watercolor filetype:bitmap', 'hydrangea filetype:bitmap']);
   const query = new URL(calls[0]).searchParams;
-  assert.equal(query.get('gsrsearch'), 'hydrangea watercolor filetype:bitmap');
   assert.equal(query.get('origin'), '*');
   const file = await foundImageFile(found[0], fetcher);
   assert.equal(file.type, 'image/jpeg');
   assert.equal(file.name, 'search-1.jpg');
   const server = readFileSync(new URL('../cloudflare/heavy-api/src/designAssistant.ts', import.meta.url), 'utf8');
-  assert.match(server, /\[S\] <topic in Japanese>/);
+  assert.match(server, /\[S\] <topic in Japanese> \| <1 or 2 common English words/);
   assert.match(server, /exactly four lines "\[V\] <short name>/);
 });
