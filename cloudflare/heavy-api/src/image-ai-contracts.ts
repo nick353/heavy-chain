@@ -283,7 +283,7 @@ export function parseImageInput(
   let descriptors: Json[];
   if (action === 'model-matrix') {
     const types = choices(body.bodyTypes, BODY_TYPES, ['regular']); const ages = choices(body.ageGroups, AGES, ['20s']);
-    if (types.length * ages.length > 3 || (body.gender !== undefined && !['male','female'].includes(String(body.gender)))) throw new ImageInputError('invalid_fitting_options');
+    if (types.length * ages.length > 3 || (body.gender !== undefined && !['male','female','auto'].includes(String(body.gender)))) throw new ImageInputError('invalid_fitting_options');
     if ((body.skinTone !== undefined && !['light','medium','dark'].includes(String(body.skinTone))) ||
         (body.hairStyle !== undefined && !['short','medium','long'].includes(String(body.hairStyle)))) throw new ImageInputError('invalid_fitting_options');
     descriptors = types.flatMap(type => ages.map(age => ({ bodyType: type, bodyTypeName: BODY_TYPES[type][0], ageGroup: age, ageGroupName: AGES[age], gender: body.gender ?? 'female' })));
@@ -307,7 +307,11 @@ export function parseImageInput(
         (references[1] ? 'Image 1 is a reference only for the requested change (for example a face, a model, a pose or a background); do not copy its clothing.\n' : '') +
         `Keep a natural, photorealistic result.\nRequest: ${prompt}`;
     } else if (action === 'model-matrix') {
-      instruction = `Professional full-body apparel try-on photograph. ${descriptor.gender} adult in their ${descriptor.ageGroup}, ${BODY_TYPES[String(descriptor.bodyType)][1]} body type.\n` +
+      // 'auto' (nothing chosen on screen): the model's gender follows the garment, or the person reference when given.
+      const person = descriptor.gender === 'auto'
+        ? `An adult model (${references[1] ? 'the same gender as the person in image 1' : 'the gender the garment in image 0 is designed for'})`
+        : `${descriptor.gender} adult`;
+      instruction = `Professional full-body apparel try-on photograph. ${person} in their ${descriptor.ageGroup}, ${BODY_TYPES[String(descriptor.bodyType)][1]} body type.\n` +
         (references[0] ? 'If image 0 is clothing: Dress the person in EXACTLY the garment in image 0. Preserve its color, print, fabric, pockets, fastenings, proportions and logos; do not substitute a similar item.\n' +
           'If image 0 is an accessory (necklace, chain, jewelry, bag, hat, belt, eyewear or shoes): the person wears that exact accessory in its natural place at a realistic, true-to-life size and keeps ' +
           (references[1] ? 'the outfit from image 1 exactly as it is (same garments, colors and fit; do not recolor or replace any clothing)' : 'a simple neutral outfit') + '; never turn an accessory into clothing, a print or a graphic.\n' : '') +

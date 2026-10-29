@@ -36,6 +36,7 @@ import {
   Upload,
   X,
   Lightbulb,
+  RotateCw,
 } from 'lucide-react';
 import { AgentProfileDialog, AgentSidebar, useAgentProjects } from '../features/agent/AgentSidebar';
 import { AGENT_SCENES, createAgentTask, readAgentProfile, type AgentScene } from '../features/agent/agentTasks';
@@ -2817,6 +2818,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     lightchainGenerationSequenceRef.current += 1;
     lightchainGenerationRequestRef.current = null;
     setModelFormState(defaultModelFormState);
+    modelGenderChosenRef.current = false;
     setPrintingGenerationStatus('idle');
     setPrintingGenerationError(null);
     printingGenerationSequenceRef.current += 1;
@@ -3520,7 +3522,10 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
     if (!persistFittingActionHandoff()) event.preventDefault();
   };
 
+  // The default 男性 is only the form's starting value; AI fitting lets the garment decide until a gender is picked.
+  const modelGenderChosenRef = useRef(false);
   const updateModelFormState = <Key extends keyof ModelFormState>(key: Key, value: ModelFormState[Key]) => {
+    if (key === 'gender' || key === 'bodyGender') modelGenderChosenRef.current = true;
     setModelFormState((current) => ({ ...current, [key]: value }));
   };
 
@@ -3779,7 +3784,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
         // 'スマート' is the おまかせ default, not "slim".
         const bodyType = /痩せ|スリム/.test(modelFormState.bodyType) ? 'slim' : /プラス|肥満/.test(modelFormState.bodyType) ? 'plus' : 'regular';
         const ageGroup = modelFormState.age.includes('30') ? '30s' : modelFormState.age.includes('40') ? '40s' : modelFormState.age.includes('50') ? '50s' : '20s';
-        const gender = (modelFormState.gender || modelFormState.bodyGender).includes('男') ? 'male' : 'female';
+        const gender = !modelGenderChosenRef.current ? 'auto' as const
+          : (modelFormState.gender || modelFormState.bodyGender).includes('男') ? 'male' as const : 'female' as const;
           assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_before_provider');
           // The underwear instruction is for the provider only; the result card keeps the short summary.
           const modelResult = await generateModelMatrix(isFittingDetail ? fittingModeSummary(generationSummary, activeFittingMode) : generationSummary, generationBrandId, {
@@ -5652,9 +5658,13 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
             ) : <div className="flex size-full flex-col items-center justify-center px-10 text-center">
               <h5 className="font-[AlimamaFangYuanTiVF] text-[18px] font-bold leading-[25.2px] text-[#0bc1b8]">AIフィッティング</h5>
               <p className="mt-2 text-sm leading-[21px] text-[#aab8b6]">AIでモデル着用イメージを素早く実現</p>
+              {/* While generating, the picture stays in place under a 生成中 veil instead of looking idle. */}
+              {lightchainGenerationRunning && <div role="status" data-testid="lightchain-fitting-generating" className="mx-auto mt-8 flex items-center gap-2 rounded-full bg-[#0bcabc]/10 px-4 py-2 text-sm text-[#6ee7df]">
+                <RotateCw className="h-4 w-4 animate-spin" aria-hidden="true" />生成中...（30秒〜1分ほどかかります）</div>}
               {lightchainResult ? (
-                <div className="mx-auto mt-8 max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#1a1f22] text-left shadow-2xl">
-                  {renderLightchainResultPreviewImage('h-56 w-full object-contain', '生成結果プレビュー')}
+                <div className={`mx-auto mt-6 w-full max-w-[560px] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1f22] text-left shadow-2xl ${lightchainGenerationRunning ? 'opacity-50' : ''}`}>
+                  {/* The result is shown as large as the garment preview was, so the fit can be judged without opening it. */}
+                  {renderLightchainResultPreviewImage('mx-auto max-h-[52vh] w-full bg-black/20 object-contain', '生成結果プレビュー')}
                   <div className="px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -5686,7 +5696,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                   </div>
                 </div>
               ) : garmentImageUrl ? (
-                <img src={garmentImageUrl} alt="右側プレビュー" className="mx-auto mt-8 max-h-[58vh] max-w-[50vw] rounded-xl object-contain" />
+                <img src={garmentImageUrl} alt="右側プレビュー" className={`mx-auto mt-6 max-h-[58vh] max-w-[50vw] rounded-xl object-contain ${lightchainGenerationRunning ? 'animate-pulse opacity-60' : ''}`} />
               ) : null}
             </div>}
           </aside>

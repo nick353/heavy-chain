@@ -685,7 +685,7 @@ export async function generateModelMatrix(
   options?: {
     bodyTypes?: string[];
     ageGroups?: string[];
-    gender?: 'male' | 'female';
+    gender?: 'male' | 'female' | 'auto';
     imageUrl?: string;
     modelReferenceImageUrl?: string;
     generationModel?: string;
