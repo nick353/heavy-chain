@@ -103,7 +103,8 @@ test('reference images come from Wikimedia Commons bitmaps and become ordinary u
   assert.deepEqual(found.map((image) => image.title), ['A flower', 'B']);
   assert.equal(found[0].license, 'CC BY-SA 4.0');
   assert.deepEqual(calls.filter((url) => url.startsWith('https://commons.')).map((url) => new URL(url).searchParams.get('gsrsearch')),
-    ['hydrangea watercolor blue filetype:bitmap', 'hydrangea watercolor filetype:bitmap', 'hydrangea filetype:bitmap']);
+    ['hydrangea watercolor blue filetype:bitmap', 'hydrangea watercolor filetype:bitmap', 'hydrangea filetype:bitmap',
+      'watercolor blue filetype:bitmap', 'blue filetype:bitmap']);
   const query = new URL(calls[0]).searchParams;
   assert.equal(query.get('origin'), '*');
   const file = await foundImageFile(found[0], fetcher);
