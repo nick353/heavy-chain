@@ -9,13 +9,17 @@ const BITMAP = /^image\/(jpeg|png|webp)$/;
 
 const WIKIMEDIA_IMAGE = /^https:\/\/(?:thumb|upload)\.wikimedia\.org\//;
 
-/** Commons matches every word, so a narrow query finds little: drop the last word until four images are found. */
+/** Commons matches every word, so a narrow query finds little: drop the last words, then the first ones
+ * (a rare leading word such as "ditsy" finds nothing alone), until four images are found. */
 export async function searchReferenceImages(query: string, options: { limit?: number; signal?: AbortSignal; fetcher?: typeof fetch } = {}): Promise<FoundImage[]> {
   const limit = options.limit ?? 4;
   const words = query.trim().split(/\s+/).filter(Boolean);
+  const queries = [...words.map((_, index) => words.slice(0, words.length - index).join(' ')),
+    ...words.slice(1).map((_, index) => words.slice(index + 1).join(' '))];
   const found: FoundImage[] = [];
-  for (let count = words.length; count > 0 && found.length < limit; count--) {
-    for (const image of await searchOnce(words.slice(0, count).join(' '), options)) {
+  for (const attempt of queries) {
+    if (found.length >= limit) break;
+    for (const image of await searchOnce(attempt, options)) {
       if (found.length < limit && !found.some((item) => item.id === image.id)) found.push(image);
     }
   }
