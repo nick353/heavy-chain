@@ -7,7 +7,22 @@ export type FoundImage = { id: string; title: string; thumbUrl: string; pageUrl:
 const API = 'https://commons.wikimedia.org/w/api.php';
 const BITMAP = /^image\/(jpeg|png|webp)$/;
 
+const WIKIMEDIA_IMAGE = /^https:\/\/(?:thumb|upload)\.wikimedia\.org\//;
+
+/** Commons matches every word, so a narrow query finds little: drop the last word until four images are found. */
 export async function searchReferenceImages(query: string, options: { limit?: number; signal?: AbortSignal; fetcher?: typeof fetch } = {}): Promise<FoundImage[]> {
+  const limit = options.limit ?? 4;
+  const words = query.trim().split(/\s+/).filter(Boolean);
+  const found: FoundImage[] = [];
+  for (let count = words.length; count > 0 && found.length < limit; count--) {
+    for (const image of await searchOnce(words.slice(0, count).join(' '), options)) {
+      if (found.length < limit && !found.some((item) => item.id === image.id)) found.push(image);
+    }
+  }
+  return found;
+}
+
+async function searchOnce(query: string, options: { signal?: AbortSignal; fetcher?: typeof fetch }): Promise<FoundImage[]> {
   const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: `${query} filetype:bitmap`, gsrnamespace: '6',
     gsrlimit: '12', prop: 'imageinfo', iiprop: 'url|mime|extmetadata', iiurlwidth: '1024', format: 'json', origin: '*' });
   const response = await (options.fetcher ?? fetch)(`${API}?${params}`, { signal: options.signal ?? AbortSignal.timeout(10_000), credentials: 'omit' });
@@ -16,10 +31,10 @@ export async function searchReferenceImages(query: string, options: { limit?: nu
     imageinfo?: Array<{ thumburl?: string; descriptionurl?: string; mime?: string; extmetadata?: { LicenseShortName?: { value?: string } } }> }> } };
   return Object.values(data.query?.pages ?? {}).sort((a, b) => (a.index ?? 0) - (b.index ?? 0)).flatMap((page) => {
     const info = page.imageinfo?.[0];
-    if (!info?.thumburl || !info.mime || !BITMAP.test(info.mime) || !/^https:\/\/upload\.wikimedia\.org\//.test(info.thumburl)) return [];
+    if (!info?.thumburl || !info.mime || !BITMAP.test(info.mime) || !WIKIMEDIA_IMAGE.test(info.thumburl)) return [];
     return [{ id: String(page.pageid), title: page.title.replace(/^File:/, '').replace(/\.[a-z]+$/i, ''), thumbUrl: info.thumburl,
       pageUrl: info.descriptionurl ?? '', license: info.extmetadata?.LicenseShortName?.value ?? '' }];
-  }).slice(0, options.limit ?? 4);
+  });
 }
 
 /** The chosen image becomes an ordinary chat reference (the same upload as a file from the computer). */
