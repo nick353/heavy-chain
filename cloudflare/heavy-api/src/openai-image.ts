@@ -207,6 +207,9 @@ export async function runOpenAIImage(
     form.set('n', '1');
     form.set('size', imageSize(input.width, input.height));
     form.set('output_format', 'png');
+    // Left on auto, a print or pattern came back with a transparent ground (10/29: white was asked, the PNG was
+    // alpha 0 over dark green). Heavy never asks for transparency (the contract refuses it), so the ground is opaque.
+    form.set('background', 'opaque');
     // Small repeats (dots, seams, buttons) keep their scale only at high quality (Light parity 2026-10-29).
     if (HIGH_FIDELITY_EDIT_MODELS.has(model)) { form.set('input_fidelity', 'high'); form.set('quality', 'high'); }
     input.references.forEach((reference, index) => {
