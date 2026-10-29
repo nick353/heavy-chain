@@ -102,6 +102,7 @@ import {
   runDesignProjectArtifactLoad,
   type DesignProjectArtifactLoadState,
 } from '../lib/designProjectLoader';
+import { cardButton } from '../lib/cardButton';
 
 const darkPanel = 'rounded-2xl border border-white/10 bg-[#151a1c]';
 const mutedButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-300 transition hover:border-cyan-200/50 hover:bg-white/[0.08] hover:text-white';
@@ -2724,7 +2725,7 @@ export function LightchainOrientedDesignPage() {
         </section>}
         <section>
           <div className="oriented-design-card-grid">
-            <div className="oriented-design-new-card" onClick={() => navigateToDetail()}>
+            <div className="oriented-design-new-card" {...cardButton(() => navigateToDetail())}>
               <div className="oriented-design-new-card-inner">
                 <img className="oriented-design-project-mark-image" src="/lightchain-oriented-design-icon.svg" alt="" aria-hidden="true" />
                 <svg className="oriented-design-project-mark" width="80" height="80" viewBox="0 0 80 80" aria-hidden="true">
@@ -2747,7 +2748,7 @@ export function LightchainOrientedDesignPage() {
               </div>
             </div>
             {projects.map((project) => (
-              <div key={project.id} className="oriented-design-project-card" data-testid={`oriented-design-project-${project.id}`} onClick={() => openProject(project.jobId)}>
+              <div key={project.id} className="oriented-design-project-card" data-testid={`oriented-design-project-${project.id}`} {...cardButton(() => openProject(project.jobId))}>
                 <div className="oriented-design-project-media">
                   <ProjectThumbnail url={project.imageUrl} fallback={<img src={DESIGN_PROJECT_DEFAULT_COVER} alt="coverImg" className="oriented-design-project-default-cover" />} />
                 </div>
