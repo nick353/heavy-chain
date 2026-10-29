@@ -158,7 +158,8 @@ test('a passing rate limit is waited out, an empty balance is not retried, and b
   await assert.rejects(() => runOpenAIImage(env(), 'generate-image', input(), 0, async () => {
     quotaCalls++;
     return Response.json({error:{type:'insufficient_quota',code:'insufficient_quota',message:'no credit'}},{status:429});
-  }), (error: unknown) => error instanceof OpenAIImageError && error.errorCode === 'image_provider_request_rejected' && error.providerCode === 'insufficient_quota');
+  }), (error: unknown) => error instanceof OpenAIImageError && error.errorCode === 'image_provider_request_rejected' && error.providerCode === 'insufficient_quota'
+    && error.diagnostics.providerType === 'insufficient_quota');
   assert.equal(quotaCalls, 1);
   await assert.rejects(() => runOpenAIImage(env(), 'generate-image', input(), 0, async () =>
     Response.json({error:{type:'rate_limit_error',message:'slow down'}},{status:429,headers:{'retry-after-ms':'1'}})),
@@ -171,7 +172,7 @@ test('OpenAI diagnostic exceptions retain only allowlisted codes and bounded req
       {status:401,headers:{'x-request-id':'req_local_123'}})),
   (error: unknown) => {
     assert(error instanceof OpenAIImageError);
-    assert.deepEqual(error.diagnostics,{category:'request_rejected',status:401,providerCode:'invalid_api_key',providerRequestId:'req_local_123'});
+    assert.deepEqual(error.diagnostics,{category:'request_rejected',status:401,providerCode:'invalid_api_key',providerType:'authentication_error',providerRequestId:'req_local_123'});
     assert(!JSON.stringify(error).includes('server-only-test-key')); return true;
   });
   await assert.rejects(() => runOpenAIImage(env(), 'generate-image', input(), 0, async () =>
