@@ -1334,13 +1334,17 @@ export function LightchainMarketingHomePage() {
             <div className="flex min-h-[216px] w-full flex-col overflow-hidden rounded-[32px] border-2 border-white/10 bg-[#25292c]">
               <div className="flex min-h-0 w-full flex-1 items-center px-2">
                 <button type="button" aria-label="参考画像を追加" onClick={() => uploadRef.current?.click()} className="group relative flex h-[120px] w-[120px] shrink-0 items-center justify-center">
-                  {references.references.length ? <span className="flex -space-x-8">{references.references.slice(0, 3).map((reference, index) => <span key={reference.id} className="relative block h-24 w-20 overflow-hidden rounded-xl border border-white/20 bg-[#1b2023] shadow-lg" style={{ transform: `rotate(${(index - 1) * 6}deg)` }}>
-                    {references.previews[reference.id] && <img src={references.previews[reference.id]} alt={reference.name} className="h-full w-full object-cover" />}
-                    {reference.status !== 'ready' && <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-[10px]">{reference.status === 'failure' ? '失敗' : '保存中'}</span>}
-                  </span>)}</span>
-                    : <span className="block h-24 w-20 -rotate-6 overflow-hidden rounded-xl opacity-70 transition duration-300 group-hover:rotate-0 group-hover:opacity-100"><img src="/lightchain-assets/marketing/upload-placeholder.png" alt="" className="h-full w-full object-cover" draggable={false} /></span>}
+                  <span className="block h-24 w-20 -rotate-6 overflow-hidden rounded-xl opacity-70 transition duration-300 group-hover:rotate-0 group-hover:opacity-100"><img src="/lightchain-assets/marketing/upload-placeholder.png" alt="" className="h-full w-full object-cover" draggable={false} /></span>
                 </button>
                 <div className="flex h-full min-w-0 flex-1 flex-col gap-2 overflow-hidden px-3.5 py-5">
+                  {/* Light lists the attached images as 「画像1 ×」 chips above the request, as in the design chat. */}
+                  {!!references.references.length && <ol className="flex flex-wrap gap-2" aria-label="送信する参考画像" data-testid="marketing-reference-chips">
+                    {references.references.map((reference, index) => <li key={reference.id} data-status={reference.status} data-testid="marketing-reference-chip" className="flex h-7 items-center gap-1.5 rounded-lg bg-white/[0.08] pl-1 pr-1.5 text-xs text-neutral-200">
+                      <span className="relative h-5 w-5 overflow-hidden rounded bg-white/5">{references.previews[reference.id] && <img src={references.previews[reference.id]} alt={reference.name} className="h-full w-full object-cover" />}</span>
+                      画像{index + 1}{reference.status !== 'ready' && <span className="text-neutral-400">{reference.status === 'failure' ? '（失敗）' : '（保存中）'}</span>}
+                      <button type="button" aria-label={`${reference.name}を削除`} onClick={() => references.remove(reference.id)} className="flex h-4 w-4 items-center justify-center rounded text-neutral-400 hover:text-white"><X className="h-3 w-3" /></button>
+                    </li>)}
+                  </ol>}
                   <textarea value={prompt} onChange={(event) => setPrompt(event.target.value.slice(0, 4000))} maxLength={4000} aria-label="マーケティングのリクエスト"
                     onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }}
                     placeholder="商品画像をアップロードして、デザインのリクエストを教えてください"

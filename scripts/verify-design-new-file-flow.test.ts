@@ -25,7 +25,9 @@ test('an image dropped before the brand is ready waits and is saved once it is',
 });
 
 test('sending shows the message at once, 考え中...... over the input, and 生成中... boxes like Light (measured 2026-10-29)', () => {
-  assert.match(page, /setSentPrompt\(\{ text, count: visible\?\.dialogue\?\.attempts\.length \?\? 0 \}\)/);
+  assert.match(page, /setSentPrompt\(\{ text, count: visible\?\.dialogue\?\.attempts\.length \?\? 0,\s*images: references\.references\.map/);
+  // The sending bubble carries the 画像N tags at once, like Light.
+  assert.match(page, /data-testid="design-sending-reference"/);
   assert.match(page, /data-testid="design-user-bubble-sending"/);
   assert.match(page, /data-testid="design-thinking"[\s\S]{0,400}考え中\.\.\.\.\.\./);
   // Same grid slot that designCanvasAdapter.adoptOutputs uses for the result.

@@ -564,7 +564,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     try { manifest = references.manifest(); }
     catch { setEntryError('参考画像の保存が終わるまでお待ちください'); return; }
     // Light shows the sent message at once (then 考え中......); the saved attempt replaces this bubble.
-    setSentPrompt({ text, count: visible?.dialogue?.attempts.length ?? 0 });
+    setSentPrompt({ text, count: visible?.dialogue?.attempts.length ?? 0,
+      images: references.references.map((reference) => references.previews[reference.id] ?? '') });
     void act(async (active) => {
       try {
         await active.send(text, selectedOutput ? manifest : withSelectedReference([...(visible?.draft?.references ?? []), ...manifest]),
@@ -613,7 +614,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
   });
   const [newFileSaving, setNewFileSaving] = useState(false);
   const [stoppedIds, setStoppedIds] = useState<Set<string>>(() => new Set());
-  const [sentPrompt, setSentPrompt] = useState<{ text: string; count: number } | null>(null);
+  const [sentPrompt, setSentPrompt] = useState<{ text: string; count: number; images: string[] } | null>(null);
   const [waitingFile, setWaitingFile] = useState<File | null>(null);
   /** Saves the image directly (not through the chat references) and opens it as its own project. */
   const openUploadedImageProject = async (file: File) => {
@@ -1198,7 +1199,11 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
               && <button type="button" data-testid="design-attempt-reconcile" disabled={visible.busy} className="mt-3 text-sm text-[#0bcabc]" onClick={() => void act((active) => active.reconcile(attempt.input.requestId))}>作成状態を再確認</button>}
           </article>)}
           {visible?.busy && sentPrompt && (visible.dialogue?.attempts.length ?? 0) === sentPrompt.count
-            && <div className={`${userBubble} mt-4`} data-testid="design-user-bubble-sending"><p className="whitespace-pre-wrap">{sentPrompt.text}</p></div>}
+            && <div className={`${userBubble} mt-4`} data-testid="design-user-bubble-sending">
+              {/* Light shows the 画像N tags from the moment of sending, not only after the attempt is saved. */}
+              {!!sentPrompt.images.length && <div className="mb-2 flex flex-wrap gap-1.5" aria-label="参考画像">{sentPrompt.images.map((src, imageIndex) => <span key={imageIndex} data-testid="design-sending-reference" className="flex h-7 items-center gap-1 rounded-md bg-[#25292b] px-1.5 text-xs text-white">
+                <span className="block h-4 w-4 overflow-hidden rounded-sm bg-white/10">{src && <img src={src} alt="" className="h-full w-full object-cover" />}</span>画像{imageIndex + 1}</span>)}</div>}
+              <p className="whitespace-pre-wrap">{sentPrompt.text}</p></div>}
           {visible?.busy && !visible.dialogue && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-neutral-400"><RefreshCw className="h-4 w-4 animate-spin" />保存状態を確認しています。</p>}
           {visible?.error && <div role="alert" data-testid="design-entry-recovery" className="my-4 rounded-lg bg-white/5 p-4 text-sm"><p>保存・作成状態を確認できませんでした。入力と以前の画像は保持されています。</p>
             <button type="button" disabled={visible.busy} className="mt-3 text-[#0bcabc]" onClick={() => setRetry((value) => value + 1)}>保存状態を再確認</button></div>}
