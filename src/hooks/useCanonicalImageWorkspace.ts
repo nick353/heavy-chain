@@ -563,9 +563,11 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
       if (receipt.requestId !== request.requestId) throw new Error('image_request_identity_mismatch');
       if (receipt.state === 'failed') {
         // A per-minute limit asks the person to wait, not to change anything (10/29).
-        const rateLimited = (receipt as { failedCandidates?: Array<{ error?: string }> }).failedCandidates?.some((candidate) => candidate.error === 'image_provider_rate_limited');
+        const failures = (receipt as { failedCandidates?: Array<{ error?: string }> }).failedCandidates ?? [];
+        const rateLimited = failures.some((candidate) => candidate.error === 'image_provider_rate_limited');
+        const emptyBalance = failures.some((candidate) => candidate.error === 'image_provider_quota_exhausted');
         rememberPending(null);
-        setState(s=>({...s,status:'error',error:rateLimited ? ERROR_MESSAGES.IMAGE_PROVIDER_RATE_LIMITED : '画像の生成に失敗しました。保存済みの結果は保持されています。',pendingId:null}));
+        setState(s=>({...s,status:'error',error:emptyBalance ? ERROR_MESSAGES.AI_FITTING_PROVIDER_QUOTA_EXHAUSTED : rateLimited ? ERROR_MESSAGES.IMAGE_PROVIDER_RATE_LIMITED : '画像の生成に失敗しました。保存済みの結果は保持されています。',pendingId:null}));
         return;
       }
       let candidates:CanonicalModelCandidate[]=[];

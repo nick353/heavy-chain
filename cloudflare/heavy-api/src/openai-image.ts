@@ -33,8 +33,10 @@ export class OpenAIImageError extends Error {
     super(errorCodes[category]);
     this.name = 'OpenAIImageError';
     this.category = category;
-    // A per-minute/day limit is still a rejection (nothing ran), but the person should wait, not change the input.
-    this.errorCode = rateLimited ? 'image_provider_rate_limited' : errorCodes[category];
+    // A per-minute/day limit is still a rejection (nothing ran), but the person should wait, not change the input;
+    // an empty balance (10/29: type insufficient_quota, no code) needs someone to top it up.
+    const emptyBalance = category === 'request_rejected' && (providerCode === 'insufficient_quota' || providerType === 'insufficient_quota');
+    this.errorCode = emptyBalance ? 'image_provider_quota_exhausted' : rateLimited ? 'image_provider_rate_limited' : errorCodes[category];
     this.status = status;
     this.providerCode = typeof providerCode === 'string' && SAFE_PROVIDER_ERROR_CODES.has(providerCode) ? providerCode : undefined;
     this.providerRequestId = providerRequestId && /^req[-_][a-zA-Z0-9_-]{1,96}$/.test(providerRequestId) ? providerRequestId : undefined;
