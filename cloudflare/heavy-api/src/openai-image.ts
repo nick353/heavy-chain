@@ -16,6 +16,10 @@ const SAFE_PROVIDER_ERROR_CODES = new Set([
   'model_not_found', 'content_policy_violation', 'billing_hard_limit_reached',
 ]);
 
+const SAFE_PROVIDER_ERROR_TYPES = new Set([
+  'invalid_request_error', 'authentication_error', 'permission_error', 'rate_limit_error', 'insufficient_quota', 'server_error', 'tokens', 'requests',
+]);
+
 // Retain only fixed categories, HTTP status, allowlisted codes and a bounded
 // request identifier. Raw messages and transport errors can contain secrets.
 export class OpenAIImageError extends Error {
@@ -24,7 +28,8 @@ export class OpenAIImageError extends Error {
   readonly status?: number;
   readonly providerCode?: string;
   readonly providerRequestId?: string;
-  constructor(category: OpenAIImageErrorCategory, status?: number, providerCode?: unknown, providerRequestId?: string | null, rateLimited = false) {
+  readonly providerType?: string;
+  constructor(category: OpenAIImageErrorCategory, status?: number, providerCode?: unknown, providerRequestId?: string | null, rateLimited = false, providerType?: unknown) {
     super(errorCodes[category]);
     this.name = 'OpenAIImageError';
     this.category = category;
@@ -33,9 +38,11 @@ export class OpenAIImageError extends Error {
     this.status = status;
     this.providerCode = typeof providerCode === 'string' && SAFE_PROVIDER_ERROR_CODES.has(providerCode) ? providerCode : undefined;
     this.providerRequestId = providerRequestId && /^req[-_][a-zA-Z0-9_-]{1,96}$/.test(providerRequestId) ? providerRequestId : undefined;
+    // The error type tells a per-minute limit from an empty balance when the code is missing (10/29: 429s with no code).
+    this.providerType = typeof providerType === 'string' && SAFE_PROVIDER_ERROR_TYPES.has(providerType) ? providerType : undefined;
   }
   get diagnostics() {
-    return { category: this.category, status: this.status, providerCode: this.providerCode, providerRequestId: this.providerRequestId };
+    return { category: this.category, status: this.status, providerCode: this.providerCode, providerType: this.providerType, providerRequestId: this.providerRequestId };
   }
 }
 export const OPENAI_IMAGE_MODELS = new Set([
@@ -158,7 +165,7 @@ function safeProviderError(status: number, data: unknown, requestId: string | nu
   // A server/gateway error, timeout response or opaque HTTP error does not
   // establish that the provider rejected the inference before executing it.
   return new OpenAIImageError(explicitRejection ? 'request_rejected' : 'transport_uncertainty', status, providerError?.code, requestId,
-    explicitRejection && isRateLimit(status, data));
+    explicitRejection && isRateLimit(status, data), providerError?.type);
 }
 
 /** 429 from a request/token-per-minute limit (not an empty balance): nothing ran, so waiting and resending is safe. */

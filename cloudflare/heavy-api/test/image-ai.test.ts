@@ -674,9 +674,9 @@ test('OpenAI error receipts keep unusable output uncertain, fail explicit reject
   const cases: Array<[() => Promise<Response>,string,string,Json]> = [
     [async () => { throw new Error(secret); },'unknown','image_provider_transport_uncertain',{category:'transport_uncertainty'}],
     [async () => Response.json({error:{type:'invalid_request_error',message:secret,code:secret}},{status:503,headers}),
-      'unknown','image_provider_transport_uncertain',{category:'transport_uncertainty',status:503,providerRequestId:'req-local-error'}],
+      'unknown','image_provider_transport_uncertain',{category:'transport_uncertainty',status:503,providerType:'invalid_request_error',providerRequestId:'req-local-error'}],
     [async () => Response.json({error:{type:'invalid_request_error',message:secret,code:'content_policy_violation'}},{status:400,headers}),
-      'failed','image_provider_request_rejected',{category:'request_rejected',status:400,providerCode:'content_policy_violation',providerRequestId:'req-local-error'}],
+      'failed','image_provider_request_rejected',{category:'request_rejected',status:400,providerCode:'content_policy_violation',providerType:'invalid_request_error',providerRequestId:'req-local-error'}],
     [async () => Response.json({data:[]},{headers}),'unknown','image_provider_invalid_output',{category:'unusable_response',status:200,providerRequestId:'req-local-error'}],
     [async () => Response.json({data:[{b64_json:Buffer.from(pngFixture(8,8)).toString('base64')}]},{headers}),
       'unknown','image_provider_invalid_output',{category:'unusable_response',status:200,providerRequestId:'req-local-error'}],
