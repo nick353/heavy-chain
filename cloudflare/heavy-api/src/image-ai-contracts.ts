@@ -292,6 +292,10 @@ export function parseImageInput(
     if (typeof count !== 'number' || !Number.isInteger(count) || count < 1 || count > 4) throw new ImageInputError('invalid_image_count');
     descriptors = Array.from({ length: count }, (_, candidateIndex) => ({ candidateIndex }));
   }
+  // Light's final step draws one image per chosen proposal (#01〜#04): each candidate gets its own direction.
+  const variations = body.variations;
+  if (variations !== undefined && (!Array.isArray(variations) || variations.length !== descriptors.length
+    || variations.some(item => typeof item !== 'string' || !item.trim() || item.length > 600))) throw new ImageInputError('invalid_image_variations');
   const candidates = descriptors.map((descriptor, index) => {
     let instruction = prompt;
     if (action === 'edit-image') instruction = `Edit image 0 according to the request. Preserve the garment identity, construction, texture, logos, and all unrequested details. Other indexed images are references, not replacements.\nRequest: ${prompt}`;
@@ -312,6 +316,7 @@ export function parseImageInput(
         'Frame the entire person from the top of the head through both feet, with visible margin above the head and below the feet. Keep both feet and all limbs inside the image; do not crop at the torso, thighs, knees or ankles. Use wider camera framing as needed, including when a supplied person reference is cropped.\n' +
         `The item is worn naturally, not a flat product mockup. Neutral studio background, professional lighting.\nGarment/request: ${prompt}`;
     }
+    if (Array.isArray(variations)) instruction += `\nThis is variation ${index + 1} of ${variations.length}; follow this direction for it: ${String(variations[index]).trim()}`;
     const seed = body.seed === undefined ? crypto.getRandomValues(new Uint32Array(1))[0] % 2147483647 : Number(body.seed) + index;
     if (!Number.isSafeInteger(seed) || seed < 0 || seed > 2147483647) throw new ImageInputError('invalid_image_seed');
     return { prompt: `${instruction}\n${suffix}`.trim(), descriptor, seed };

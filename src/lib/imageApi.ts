@@ -269,6 +269,8 @@ export async function generateImage(
     width?: number;
     height?: number;
     count?: number;
+    /** One direction per candidate (Light's #01〜#04); its length is the count. */
+    variations?: string[];
     textOverlay?: TextOverlayPayload;
     campaignMeta?: Record<string, any>;
     lightchainCompat?: LightchainCompatPayload;
@@ -400,6 +402,7 @@ export async function editImageWithPrompt(
     canvasProjectId?: string | null;
     generation?: number;
     count?: number;
+    variations?: string[];
     featureType?: string;
     assertContext?: ()=>void | Promise<void>;
     retainUntilAcknowledged?: boolean;
@@ -456,6 +459,7 @@ export async function editImageWithPrompt(
       canvasProjectId: options?.canvasProjectId ?? null,
       generation: options?.generation,
       count: options?.count,
+      variations: options?.variations,
       featureType: options?.featureType,
       maskApplied: options?.maskApplied === true,
       maskCoveragePercent: options?.maskCoveragePercent,

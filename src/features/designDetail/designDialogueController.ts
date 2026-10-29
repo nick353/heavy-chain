@@ -7,7 +7,7 @@ import type { DesignSessionStore } from './sessionStore';
 import type { DesignEntryDraft, EntryDraftStore } from './entryDraftStore';
 import type { DialogueAttempt, DialogueStore } from './dialogueStore';
 import { imagePrompt } from './imagePrompt';
-import { hasAssistantQuestions } from './assistantQuestions';
+import { hasAssistantQuestions, variationDirections } from './assistantQuestions';
 import { createDesignCanvasAdapter, selectedDesignReference, type DesignCanvasClient } from './designCanvasAdapter';
 import type { DesignScope, DesignTurn, DesignTurnOutput } from './types';
 
@@ -99,7 +99,8 @@ export function createDesignDialogueController(options: { scope: DesignScope; pr
           // L2's definite-404 recovery may create a request. Reload/reconciliation is deliberately read-only here.
           if (!allowImage || !claim.created || imageDispatched) throw new Error('design_image_reconciliation_only');
           imageDispatched = true;
-          return client.generate(input);
+          const variations = variationDirections(current.assistant.content);
+          return client.generate(variations.length ? { ...input, variations } : input);
         } });
         runners.set(current.input.requestId, runner);
       }

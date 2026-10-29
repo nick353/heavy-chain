@@ -8,6 +8,6 @@ import type { DialogueAttempt } from './dialogueStore';
  */
 export const imagePrompt = (attempt: Pick<DialogueAttempt, 'input' | 'assistant'>) => {
   const direction = attempt.assistant.state === 'completed' && typeof attempt.assistant.content === 'string'
-    ? attempt.assistant.content.split('\n').filter((line) => !/^\s*(?:→|->)\s*\S/.test(line)).join('\n').trim() : '';
+    ? attempt.assistant.content.split('\n').filter((line) => !/^\s*(?:(?:→|->)\s*\S|\[V\])/.test(line)).join('\n').trim() : '';
   return direction ? `${attempt.input.prompt}\n\nDesign direction:\n${direction}`.slice(0, 4000) : attempt.input.prompt;
 };
