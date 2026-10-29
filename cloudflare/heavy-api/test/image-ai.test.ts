@@ -730,6 +730,17 @@ test('fitting keeps accessories as accessories and frames the whole person',()=>
   assert.match(prompt,/Frame the entire person from the top of the head through both feet/);
 });
 
+test('fitting with no gender chosen lets the garment or the person reference decide',()=>{
+  const s=imageSetup(); s.db.sql.close();
+  const ref='data:image/png;base64,'+Buffer.from(pngFixture(128,128)).toString('base64');
+  const auto=parseImageInput('model-matrix',{...s.input(),imageUrl:ref,gender:'auto',productDescription:'blouse'} as never).candidates[0].prompt;
+  assert.match(auto,/An adult model \(the gender the garment in image 0 is designed for\)/); assert.doesNotMatch(auto,/male adult/);
+  const withPerson=parseImageInput('model-matrix',{...s.input(),imageUrl:ref,modelReferenceImageUrl:ref,gender:'auto',productDescription:'blouse'} as never).candidates[0].prompt;
+  assert.match(withPerson,/the same gender as the person in image 1/);
+  assert.match(parseImageInput('model-matrix',{...s.input(),imageUrl:ref,gender:'male',productDescription:'tee'} as never).candidates[0].prompt,/male adult in their/);
+  assert.throws(()=>parseImageInput('model-matrix',{...s.input(),imageUrl:ref,gender:'other',productDescription:'tee'} as never));
+});
+
 test('model tools edit the person photo instead of treating it as a garment',()=>{
   const s=imageSetup(); s.db.sql.close();
   const ref='data:image/png;base64,'+Buffer.from(pngFixture(128,128)).toString('base64');
