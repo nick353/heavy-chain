@@ -18,6 +18,7 @@ import type { Json } from '../types/database';
 import { defaultModelToolSettings, isModelToolFeature, isModelDescriptionFeature, modelToolSettingsPrompt, readModelToolSettings, readLegacyModelToolSettings } from '../lib/modelToolSettings';
 import { normalizeGenerationSourceReferences } from '../lib/generationSourceReferences';
 import { isModelLibraryFeature, readModelLibrarySettings, readLegacyModelLibrarySettings, modelLibrarySettingsPrompt, modelLibraryBodyPreview, MODEL_LIBRARY_BODY_CATALOG_SHA256 } from '../lib/modelLibrarySettings';
+import { ERROR_MESSAGES } from '../lib/errorMessages';
 
 type SlotKey = 'primary' | 'secondary';
 type Source = { name: string; kind: string; imageUrl: string; sourceImageId?: string | null; sourceStoragePath?: string | null; sourceMediaPath?: string | null;
@@ -560,7 +561,13 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
       }
       assertCurrent();
       if (receipt.requestId !== request.requestId) throw new Error('image_request_identity_mismatch');
-      if (receipt.state === 'failed') { rememberPending(null); setState(s=>({...s,status:'error',error:'画像の生成に失敗しました。保存済みの結果は保持されています。',pendingId:null})); return; }
+      if (receipt.state === 'failed') {
+        // A per-minute limit asks the person to wait, not to change anything (10/29).
+        const rateLimited = (receipt as { failedCandidates?: Array<{ error?: string }> }).failedCandidates?.some((candidate) => candidate.error === 'image_provider_rate_limited');
+        rememberPending(null);
+        setState(s=>({...s,status:'error',error:rateLimited ? ERROR_MESSAGES.IMAGE_PROVIDER_RATE_LIMITED : '画像の生成に失敗しました。保存済みの結果は保持されています。',pendingId:null}));
+        return;
+      }
       let candidates:CanonicalModelCandidate[]=[];
       let storagePath:string|undefined|null,imageUrl:string|undefined,imageId:string|undefined|null,providerJob:string|undefined|null;
       if(requestAction==='model-matrix'){
