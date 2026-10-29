@@ -192,7 +192,9 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.doesNotMatch(page, /この機能はまもなく終了します/);
   assert.match(page, /data-testid="lightchain-material-retry-fabric"/);
   assert.match(page, /data-testid="lightchain-material-retry-printing"/);
-  assert.match(page, /生地を衣服領域へ適用したプレビュー/);
+  // The crude try-on composite is no longer shown; the model image and a swatch of the chosen fabric are.
+  assert.doesNotMatch(page, /alt="生地を衣服領域へ適用したプレビュー"/);
+  assert.match(page, /data-testid="lightchain-fabric-swatch"/);
   assert.match(page, /buildFabricModelGarmentMask/);
   assert.match(page, /buildHighPrecisionMaterialCutoutDataUrl/);
   assert.match(page, /preserveSourceFrame: true/);

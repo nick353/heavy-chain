@@ -1706,7 +1706,7 @@ function LightchainMaterialWorkbenchSession() {
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
   const [fabricPreviewOverlayUrl, setFabricPreviewOverlayUrl] = useState<string | null>(null);
   const [fabricModelGarmentMaskResult, setFabricModelGarmentMaskResult] = useState<MaterialCutoutResult | null>(null);
-  const [fabricTryOnPreviewUrl, setFabricTryOnPreviewUrl] = useState<string | null>(null);
+  const [, setFabricTryOnPreviewUrl] = useState<string | null>(null);
   const [fabricPreviewState, setFabricPreviewState] = useState<CutoutState>('idle');
   const [fabricPreviewError, setFabricPreviewError] = useState<string | null>(null);
   const [fabricLayer, setFabricLayer] = useState<AssetLayer | null>(null);
@@ -6853,12 +6853,18 @@ function LightchainMaterialWorkbenchSession() {
                 </div>
 
                 <div ref={stageRef} data-testid="lightchain-fabric-preview" className={`order-5 relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 ${fabricDesign || fabricBase ? '' : 'hidden'}`}>
-                  {fabricTryOnPreviewUrl ? (
-                    <img src={fabricTryOnPreviewUrl} alt="生地を衣服領域へ適用したプレビュー" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
-                  ) : fabricDesign ? (
+                  {/* The in-browser try-on composite (fabricTryOnPreviewUrl) darkened the whole person and tiled the cloth
+                      into dots (10/29), nothing like the AI result; show the inputs as they are instead. */}
+                  {fabricDesign ? (
                     <img src={fabricDesign.url} alt="モデル/デザインプレビュー" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-sm text-white/40">モデル/デザイン画像をアップロードしてください</div>
+                  )}
+                  {fabricDesign && fabricBase && (
+                    <figure data-testid="lightchain-fabric-swatch" className="absolute bottom-12 right-3 m-0 w-20 overflow-hidden rounded-lg border border-white/20 bg-black/40 shadow-lg">
+                      <img src={fabricBase.url} alt="適用する生地" className="h-20 w-20 object-cover" />
+                      <figcaption className="px-1.5 py-0.5 text-center text-[10px] text-white/80">適用する生地</figcaption>
+                    </figure>
                   )}
                   {fabricBase && fabricPreviewState === 'processing' && (
                     <div className="absolute inset-x-3 top-3 rounded-lg border border-cyan-200/20 bg-slate-950/60 px-3 py-2 text-center text-[11px] text-cyan-100 backdrop-blur">
