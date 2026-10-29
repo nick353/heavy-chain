@@ -1,9 +1,10 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import toast from 'react-hot-toast';
-import { ChevronDown, ImagePlus, RotateCw, Sparkles } from 'lucide-react';
+import { ChevronDown, Download, ImagePlus, RotateCw, Sparkles } from 'lucide-react';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
 import { withSignedImageUrls } from '../lib/storage';
+import { downloadValidatedImage } from '../lib/imageDownload';
 import { useAuthStore } from '../stores/authStore';
 import { LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
 
@@ -166,9 +167,14 @@ function LightchainLineToolWorkspace({ mode }: { mode: LineToolMode }) {
     </div>
   );
 
-  const result = resultUrl ? (
+  // A rerun keeps the previous result in state; show progress instead of the stale image (as プリントイメージ does).
+  const result = resultUrl && workspace.status !== 'running' ? (
     <div data-testid="line-tool-result" className="flex h-full flex-col items-center justify-center px-10 pb-6 pt-16">
-      <img src={resultUrl} alt={`${tool.title} AI生成`} className="max-h-full max-w-full rounded-lg object-contain" />
+      <img src={resultUrl} alt={`${tool.title} AI生成`} className="min-h-0 max-w-full flex-1 rounded-lg object-contain" />
+      {/* The result could only be saved from 生成履歴; keep a download right under it. */}
+      <button type="button" data-testid="line-tool-download" className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-4 py-2 text-sm text-white/85 hover:bg-white/5"
+        onClick={() => { void downloadValidatedImage(resultUrl, `${mode}.png`, 'line_tool_result_download').catch(() => toast.error('ダウンロードできませんでした')); }}>
+        <Download className="h-4 w-4" aria-hidden="true" />ダウンロード</button>
     </div>
   ) : workspace.status === 'running' ? (
     <div className="flex h-full items-center justify-center text-sm text-white/70" role="status">生成中…</div>
