@@ -298,7 +298,7 @@ export function parseImageInput(
     || variations.some(item => typeof item !== 'string' || !item.trim() || item.length > 600))) throw new ImageInputError('invalid_image_variations');
   const candidates = descriptors.map((descriptor, index) => {
     let instruction = prompt;
-    if (action === 'edit-image') instruction = `Edit image 0 according to the request. Preserve the garment identity, construction, texture, logos, and all unrequested details. Other indexed images are references, not replacements.\nRequest: ${prompt}`;
+    if (action === 'edit-image') instruction = `Edit image 0 according to the request. Preserve the garment identity, construction, logos, and every detail the request does not change (its fabric, color or print change only when the request asks). Other indexed images are references, not replacements.\nRequest: ${prompt}`;
     if (isRecord(protectedEdit)) instruction += `\nImage ${protectedEdit.guideIndex} is ONLY a spatial edit guide aligned exactly with image 0: WHITE is the editable region; BLACK is protected. Do not copy this guide, its black/white colors, or its edges into the artwork. Apply the requested change inside the white region and retain image 0 framing. Other references describe the requested material/artwork. The client will restore every protected source pixel after generation; this is reference-guided editing, not native masked inference.`;
     if (action === 'model-matrix' && references[0] && MODEL_TOOL_FEATURE_TYPES.has(featureType)) {
       // Model tools (face, model, body, size, pose, background, angle) edit a photo of a person; image 0 is not a garment.

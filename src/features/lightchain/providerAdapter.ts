@@ -118,7 +118,8 @@ export function buildLightchainProviderPrompt(input: PromptInput) {
     : (() => {
     switch (input.toolId) {
       case 'fabric-image':
-        return `Apply the textile material and weave/texture characteristics from ${secondary} to the garment/design in ${primary}. Keep the garment silhouette and construction exactly stable. Preserve seams, folds, cuffs, hardware, and the original color relationship while making the fabric read naturally at close range.`;
+        // 10/29: asking to keep "the original color relationship" made the model keep the old fabric entirely.
+        return `Replace the fabric of the garment in ${primary} with the fabric shown in ${secondary}. The garment's color, weave, surface texture, sheen, drape and any pattern must now come from ${secondary}; remove the garment's previous color and print. Keep the garment silhouette, construction, seams, folds, cuffs, buttons and hardware, and keep the person, pose and background unchanged, so the new fabric reads naturally at close range.`;
       case 'printing-image':
         return `Apply the print artwork from ${secondary} to the garment in ${primary}. Respect the requested placement, scale, mode, and transform described in the workflow summary. Keep the garment shape, folds, seams, lighting, and material stable; warp the print naturally to the garment surface without inventing extra marks.`;
       case 'line-generation':

@@ -38,7 +38,10 @@ test('builds source-preserving material prompt with both input roles', () => {
     primaryName: 'モデル.png',
     secondaryName: '生地.png',
   });
-  assert.match(prompt, /textile material/);
+  assert.match(prompt, /Replace the fabric of the garment/);
+  // The old fabric must not be kept: the request names the new colour and print as coming from the textile image.
+  assert.match(prompt, /remove the garment.s previous color and print/);
+  assert.doesNotMatch(prompt, /original color relationship/);
   assert.match(prompt, /モデル\.png/);
   assert.match(prompt, /生地\.png/);
   assert.match(prompt, /Use the first uploaded reference/);
