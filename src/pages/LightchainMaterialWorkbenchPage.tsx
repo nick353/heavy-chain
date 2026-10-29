@@ -596,7 +596,8 @@ function WorkbenchResultCard({
       <button
         type="button"
         onClick={() => onOpen(result)}
-        className="relative block aspect-[4/5] w-full cursor-zoom-in bg-neutral-900 text-left transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primary-400/60"
+        // A full-width 4:5 box grew to ~1300px on the wide result panel and cut the model's head off (10/29); cap its height.
+        className="relative block aspect-[4/5] max-h-[62vh] w-full cursor-zoom-in bg-neutral-900 text-left transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primary-400/60"
         aria-label={`${result.title} を拡大`}
       >
         <img
@@ -3649,7 +3650,8 @@ function LightchainMaterialWorkbenchSession() {
         : buildLightchainProviderPrompt({
             toolId: 'fabric-image',
             toolTitle: '生地イメージ',
-            summary: `${fabricImageRatio} / ${fabricPresetIds.map((id) => fabricVariants.find((variant) => variant.id === id)?.name ?? id).join('・')}`,
+            // The cotton / denim / satin presets are not chosen on screen; naming them told the model a different fabric.
+            summary: `${fabricImageRatio} / 生地画像の生地に置き換え`,
             primaryName: fabricDesign?.file?.name ?? 'モデル/デザイン画像',
             secondaryName: fabricBase?.file?.name ?? '生地画像',
             brief: fabricPrompt.trim() || '白い衣服に指定した生地の質感と柄を自然に反映する',
