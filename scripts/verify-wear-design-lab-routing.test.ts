@@ -54,6 +54,8 @@ mocks['../hooks/useCanonicalImageWorkspace'] = `export function useCanonicalImag
 mocks['../lib/projectNames'] = `export const projectNameFromFile=name=>name?String(name).replace(/\\.[^.]+$/,''):'Untitled';`;
 // Card covers pass their URL through the grid-thumbnail helper, which is pure.
 mocks['../lib/mediaThumbnail'] = `export const thumbnailImageUrl=url=>url??undefined;`;
+// Cards are keyboard buttons through this pure helper; it keeps the card's own click handler.
+mocks['../lib/cardButton'] = `export const cardButton=activate=>({role:'button',tabIndex:0,onClick:activate,onKeyDown:event=>{if(event.target!==event.currentTarget||(event.key!=='Enter'&&event.key!==' '))return;event.preventDefault();activate();}});`;
 mocks['../components/CanonicalImageWorkspaceControls'] = `import React from 'react';export const CanonicalImageWorkspaceControls=({workspace})=>React.createElement('section',{'data-testid':'workspace-boundary','data-feature':workspace.toolId,'data-conflict':String(workspace.error!==null)});`;
 // The lab lists the brand's saved projects (five fixture rows here); a card reopens that project's own job.
 mocks['./PatternProjectDashboardPage'] = `export const useFeatureProjects=()=>({projects:[1,2,3,4,5].map(n=>({id:'p'+n,jobId:'saved-job-'+n,title:'Project '+n,updatedAt:'2026-10-08T00:00:00.000Z',imageUrl:null})),status:'success'});export const formatProjectAge=()=>'';export const ProjectThumbnail=()=>null;`;
