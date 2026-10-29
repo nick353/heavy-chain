@@ -217,11 +217,14 @@ test('OpenAI results are enlarged to Light\'s 2048px-class sizes, and kept as th
   assert.deepEqual(LIGHT_OUTPUT_SIZES['1024x1536'], [1696, 2528]);
   const original = raster(pngFixture(1024, 1536))!;
   const calls: unknown[] = [];
+  const outputs: unknown[] = [];
   const images = (result: Uint8Array | Error) => ({ input: () => ({ transform: (options: unknown) => { calls.push(options); return {
-    output: async () => { if (result instanceof Error) throw result; return { response: () => new Response(result as BufferSource) }; } }; } }) });
+    output: async (options: unknown) => { outputs.push(options); if (result instanceof Error) throw result; return { response: () => new Response(result as BufferSource) }; } }; } }) });
   const enlarged = await enlargeLikeLight({ IMAGES: images(pngFixture(1696, 2528)) } as never, original);
   assert.equal(enlarged.width, 1696); assert.equal(enlarged.height, 2528);
   assert.deepEqual(calls[0], { width: 1696, height: 2528, fit: 'cover' });
+  // A PNG is written without quality, so Cloudflare keeps full colour instead of a 256-colour palette.
+  assert.deepEqual(outputs[0], { format: 'image/png' });
   assert.equal(await enlargeLikeLight({ IMAGES: images(new Error('images_down')) } as never, original), original);
   assert.equal(await enlargeLikeLight({ IMAGES: images(pngFixture(1024, 1536)) } as never, original), original);
   assert.equal(await enlargeLikeLight({} as never, original), original);

@@ -412,8 +412,11 @@ export async function enlargeLikeLight(env: Pick<Env,'IMAGES'>, image: Raster): 
   try {
     const source = new Response(image.bytes as BufferSource).body;
     if (!source) return image;
+    // An explicit quality lets Cloudflare write PNG as a 256-colour palette (PNG8), which dithered every enlarged
+    // image (10/29: all six checked were mode P); quality is passed for JPEG only so PNG stays full colour.
+    const jpeg = image.contentType === 'image/jpeg';
     const output = await env.IMAGES.input(source).transform({ width: target[0], height: target[1], fit: 'cover' })
-      .output({ format: image.contentType === 'image/jpeg' ? 'image/jpeg' : 'image/png', quality: 95 });
+      .output(jpeg ? { format: 'image/jpeg', quality: 95 } : { format: 'image/png' });
     const enlarged = raster(new Uint8Array(await output.response().arrayBuffer()));
     return enlarged && enlarged.width === target[0] && enlarged.height === target[1] ? enlarged : image;
   } catch { return image; }
