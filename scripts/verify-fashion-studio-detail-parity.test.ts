@@ -16,7 +16,7 @@ test('fashion studio saved-project detail keeps the Light canvas shell landmarks
         'cloudflareDataPlane.getCanvasDocument',
         'resolveGeneratedImageUrlWithStatus',
         'testId="fashion-studio-saved-main-image"',
-        'testId="fashion-studio-saved-result-image"',
+        "'fashion-studio-saved-result-image'",
         'data-testid="fashion-studio-flow"',
   ]) assert.ok(source.includes(marker), `missing parity marker: ${marker}`);
   assert.match(styleSource, /\.fashion-studio-source-dots[\s\S]*radial-gradient/);
@@ -76,4 +76,19 @@ test('empty studio keeps Light\'s one-row buttons and real icons; generation kee
   assert.match(source, /toast\.error\(studioErrorMessage\(activityError\)/);
   assert.match(source, /legal_safety_prompt_blocked\/\.test\(error\)\) return '指示テキストに、人物の顔/);
   assert.match(styleSource, /\.fashion-studio-source-task \{[\s\S]*?white-space: nowrap;/);
+});
+
+// Light (2026-11-11, saved projects): テキストで生成 takes 参考画像 最大9枚, 範囲指定で生成 最大3か所 (融合ポイントを追加 →
+// 画像をアップロード / キャンバスから選択), and the result node keeps the sample with every result lined up to its right.
+test('studio takes nine references, three fusion points, and lines results up beside the sample', () => {
+  assert.match(source, /最大\{STUDIO_MAX_TEXT_REFERENCES\}枚、アップロード済み/);
+  assert.match(source, /textReferences\.length < STUDIO_MAX_TEXT_REFERENCES/);
+  assert.match(source, /regionPoints\.length < STUDIO_MAX_REGION_POINTS/);
+  for (const marker of ['画像をアップロード', 'キャンバスから選択', 'data-testid="fashion-studio-region-point"', 'data-testid="fashion-studio-result-row"',
+    "'fashion-studio-history-result-image'", 'const showExampleResult = Boolean(settings.example);']) assert.ok(source.includes(marker), `missing marker: ${marker}`);
+  assert.doesNotMatch(source, /融合ポイントは1か所まで追加できます/);
+  assert.match(styleSource, /\.fashion-studio-result-row \{\n  display: flex;/);
+  const examples = readFileSync(new URL('../src/lib/fashionStudioExamples.ts', import.meta.url), 'utf8');
+  assert.match(examples, /STUDIO_MAX_TEXT_REFERENCES = 9;/);
+  assert.match(examples, /STUDIO_MAX_REGION_POINTS = 3;/);
 });

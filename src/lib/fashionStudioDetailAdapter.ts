@@ -1,9 +1,9 @@
-import { extractFashionStudioSavedDetail, type FashionStudioDetailRole, type FashionStudioSavedDetail } from './fashionStudioDetailHydration.ts';
+import { extractFashionStudioSavedDetail, fashionStudioExtraSlot, FASHION_STUDIO_EXTRA_REFERENCE_ROLE, FASHION_STUDIO_MAX_EXTRA_REFERENCES, FASHION_STUDIO_RESULT_HISTORY_ROLE, type FashionStudioDetailRole, type FashionStudioSavedDetail } from './fashionStudioDetailHydration.ts';
 import type { CanvasDocumentRecord, CanvasDocumentSnapshot, CanvasDocumentRequestContext } from './canvasDocumentPersistence';
 import type { FashionStudioGenerationHandoff, FashionStudioGenerationAdapters } from './fashionStudioDetailGeneration';
 import type { ArtifactPersistenceContext } from './cloudflareApi';
 import type { StudioAckStore } from './fashionStudioPendingAck';
-import { projectNameFromFile } from './projectNames';
+import { projectNameFromFile } from './projectNames.ts';
 
 export const FASHION_STUDIO_UPLOAD_MAX_BYTES = 20 * 1024 * 1024;
 const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -40,6 +40,42 @@ const roleObject = (snapshot: CanvasDocumentSnapshot, role: FashionStudioDetailR
 const sameRole = (left: CanvasDocumentSnapshot, right: CanvasDocumentSnapshot, role: FashionStudioDetailRole) => {
   if (JSON.stringify(roleObject(left, role)) !== JSON.stringify(roleObject(right, role))) throw new Error(`fashion_studio_${role}_role_changed`);
 };
+/** An upload target: the main image, the first reference, or reference slot 1-8 (`reference-1` … `reference-8`). */
+export type FashionStudioInputRole = 'main' | 'reference' | `reference-${number}`;
+export const fashionStudioInputSlot = (role: FashionStudioInputRole): number => {
+  if (!role.startsWith('reference-')) return 0;
+  const slot = Number(role.slice('reference-'.length));
+  if (!Number.isInteger(slot) || slot < 1 || slot > FASHION_STUDIO_MAX_EXTRA_REFERENCES) throw new Error('fashion_studio_reference_slot_invalid');
+  return slot;
+};
+const inputObject = (snapshot: CanvasDocumentSnapshot, role: FashionStudioInputRole) => {
+  const slot = fashionStudioInputSlot(role);
+  if (!slot) return roleObject(snapshot, role as 'main' | 'reference');
+  const matches = snapshot.objects.filter(object => object.type === 'image' && fashionStudioExtraSlot(object as Record<string, unknown>) === slot);
+  if (matches.length > 1) throw new Error(`fashion_studio_${role}_role_ambiguous`);
+  return matches[0];
+};
+const sameInput = (left: CanvasDocumentSnapshot, right: CanvasDocumentSnapshot, role: FashionStudioInputRole) => {
+  if (JSON.stringify(inputObject(left, role)) !== JSON.stringify(inputObject(right, role))) throw new Error(`fashion_studio_${role}_role_changed`);
+};
+/** Writes an upload into its target; references 2-9 are their own layers so the reference role stays unique. */
+export const replaceFashionStudioInput = (snapshot: CanvasDocumentSnapshot, role: FashionStudioInputRole, remote: FashionStudioCanonicalImage, operationId: string): CanvasDocumentSnapshot => {
+  const slot = fashionStudioInputSlot(role);
+  if (!slot) return replaceFashionStudioRole(snapshot, role as 'main' | 'reference', remote, operationId);
+  if (!remote.jobId || !remote.imageId || !remote.storagePath || /^(?:blob|data):/i.test(remote.storagePath)) throw new Error('fashion_studio_canonical_image_invalid');
+  const previous = inputObject(snapshot, role);
+  const metadata = record(previous?.metadata);
+  const replacement = {
+    ...(previous ?? { id: crypto.randomUUID(), type: 'image', x: 600 + slot * 40, y: 180 + slot * 40, width: 360, height: 480, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, locked: false }),
+    src: remote.storagePath,
+    metadata: { ...metadata, feature: 'fashion-studio-detail-material-reference-extra', prompt: '', jobId: remote.jobId, imageId: remote.imageId,
+      storagePath: remote.storagePath, persistenceStatus: 'completed',
+      parameters: { ...record(metadata.parameters), layerRole: FASHION_STUDIO_EXTRA_REFERENCE_ROLE, referenceSlot: slot, inputOperationId: operationId, prompt: '' } },
+  };
+  return { ...snapshot, objects: previous ? snapshot.objects.map(object => object === previous ? replacement : object) : [...snapshot.objects, replacement] };
+};
+/** Light lists every result beside the sample; at most this many earlier results stay on the canvas. */
+export const FASHION_STUDIO_MAX_RESULT_HISTORY = 30;
 export const findFashionStudioOperationResult = (snapshot: CanvasDocumentSnapshot, operationId: string) => {
   const matches = snapshot.objects.filter(object => record(record(object.metadata).parameters).generationOperationId === operationId);
   if (matches.length > 1) throw new Error('fashion_studio_operation_ambiguous');
@@ -68,7 +104,21 @@ export const buildFashionStudioGeneratedSnapshot = (document: CanvasDocumentReco
   sameRole(handoff.baseDocument.snapshot, document.snapshot, 'result');
   const main = roleObject(document.snapshot, 'main');
   if (!main || main.id !== handoff.input.main.objectId) throw new Error('fashion_studio_main_role_changed');
-  return replaceFashionStudioRole(document.snapshot, 'result', handoff.persisted.remote, handoff.requestId, handoff.input.prompt);
+  // Light keeps earlier results beside the new one: the current result becomes a history layer (its operation ID is
+  // renamed so it is never read back as this operation's result) and the new result is a new layer.
+  const previous = roleObject(document.snapshot, 'result');
+  let objects = document.snapshot.objects;
+  if (previous) {
+    const metadata = record(previous.metadata);
+    const { generationOperationId, ...parameters } = record(metadata.parameters);
+    const demoted = { ...previous, metadata: { ...metadata, feature: 'fashion-studio-detail-generated-result-history',
+      parameters: { ...parameters, layerRole: FASHION_STUDIO_RESULT_HISTORY_ROLE, historyOperationId: generationOperationId ?? null } } };
+    objects = objects.map(object => object === previous ? demoted : object);
+    const history = objects.filter(object => record(record(object.metadata).parameters).layerRole === FASHION_STUDIO_RESULT_HISTORY_ROLE);
+    const overflow = new Set(history.slice(0, Math.max(0, history.length - FASHION_STUDIO_MAX_RESULT_HISTORY)));
+    if (overflow.size) objects = objects.filter(object => !overflow.has(object));
+  }
+  return replaceFashionStudioRole({ ...document.snapshot, objects }, 'result', handoff.persisted.remote, handoff.requestId, handoff.input.prompt);
 };
 export const createFashionStudioGenerationAdapters = (dependencies: {
   ackStore?: StudioAckStore;
@@ -120,6 +170,7 @@ export const createFashionStudioGenerationAdapters = (dependencies: {
         if (JSON.stringify(fresh.roles[role]) !== JSON.stringify(committed.roles[role])) throw new Error(`fashion_studio_${role}_role_changed`);
         roleObject(document.snapshot, role);
       }
+      if (JSON.stringify(fresh.extraReferences) !== JSON.stringify(committed.extraReferences ?? [])) throw new Error('fashion_studio_reference_role_changed');
       if (fresh.roles.main.objectId !== options.parentObjectId) throw new Error('fashion_studio_main_role_changed');
       roleObject(document.snapshot, 'result');
       attempt = { persistenceContext, document: structuredClone(document) }; attempts.set(options.idempotencyKey, attempt);
@@ -174,12 +225,12 @@ export const createFashionStudioGenerationAdapters = (dependencies: {
 };
 
 export type FashionStudioInputScope = { userId: string; brandId: string; documentId: string; generation: number };
-export type FashionStudioInputState = { status: 'preparing' | 'saving' | 'recovering' | 'success' | 'failure'; preview?: string; role: 'main' | 'reference'; error?: string; recoverable?: boolean; document?: CanvasDocumentRecord };
+export type FashionStudioInputState = { status: 'preparing' | 'saving' | 'recovering' | 'success' | 'failure'; preview?: string; role: FashionStudioInputRole; error?: string; recoverable?: boolean; document?: CanvasDocumentRecord };
 export type FashionStudioInputAdapters = {
   assertScope(scope: FashionStudioInputScope): void;
   readFile(file: Blob): Promise<string>;
   begin?(requestId: string, scope: FashionStudioInputScope, context: CanvasDocumentRequestContext): Promise<void>;
-  saveInput(input: { requestId: string; scope: FashionStudioInputScope; imageUrl: string; role: 'main' | 'reference' }, context: CanvasDocumentRequestContext): Promise<FashionStudioCanonicalImage>;
+  saveInput(input: { requestId: string; scope: FashionStudioInputScope; imageUrl: string; role: FashionStudioInputRole }, context: CanvasDocumentRequestContext): Promise<FashionStudioCanonicalImage>;
   recoverInput(requestId: string, scope: FashionStudioInputScope, context: CanvasDocumentRequestContext): Promise<FashionStudioCanonicalImage>;
   getDocument(id: string, brandId: string, context: CanvasDocumentRequestContext): Promise<CanvasDocumentRecord>;
   createDocument(input: { documentId: string; brandId: string; title: string; snapshot: CanvasDocumentSnapshot }, context: CanvasDocumentRequestContext): Promise<CanvasDocumentRecord>;
@@ -190,7 +241,7 @@ export type FashionStudioInputAdapters = {
 };
 /** Retain uncertain writes and recover their exact identities; never repeat a POST. */
 export const createFashionStudioInputController = (adapters: FashionStudioInputAdapters) => {
-  type Attempt = { scope: FashionStudioInputScope; role: 'main' | 'reference'; file: File; requestId: string; documentId: string; begun?: boolean; remote?: FashionStudioCanonicalImage; preview?: string; uploadSent: boolean; documentSent: boolean; base?: CanvasDocumentRecord; state?: FashionStudioInputState; flight?: Promise<FashionStudioInputState> };
+  type Attempt = { scope: FashionStudioInputScope; role: FashionStudioInputRole; file: File; requestId: string; documentId: string; begun?: boolean; remote?: FashionStudioCanonicalImage; preview?: string; uploadSent: boolean; documentSent: boolean; base?: CanvasDocumentRecord; state?: FashionStudioInputState; flight?: Promise<FashionStudioInputState> };
   let active = true;
   let current: Attempt | undefined;
   const execute = async (attempt: Attempt): Promise<FashionStudioInputState> => {
@@ -207,7 +258,7 @@ export const createFashionStudioInputController = (adapters: FashionStudioInputA
       if (!attempt.begun) { await adapters.begin?.(attempt.requestId, attempt.scope, context); assertContext(); attempt.begun = true; }
       if (attempt.scope.documentId && !attempt.base) {
         attempt.base = structuredClone(verified(await adapters.getDocument(attempt.documentId, attempt.scope.brandId, context)));
-        assertContext(); roleObject(attempt.base.snapshot, attempt.role);
+        assertContext(); inputObject(attempt.base.snapshot, attempt.role);
       }
       if (!attempt.preview) {
         emit({ status: 'preparing', role: attempt.role });
@@ -224,7 +275,7 @@ export const createFashionStudioInputController = (adapters: FashionStudioInputA
       const remote = attempt.remote;
       if (!remote.jobId || !remote.imageId || !remote.storagePath) throw new Error('fashion_studio_upload_remote_unverified');
       const isCommitted = (document: CanvasDocumentRecord) => {
-        const object = roleObject(document.snapshot, attempt.role);
+        const object = inputObject(document.snapshot, attempt.role);
         return object?.src === remote.storagePath && record(record(object?.metadata).parameters).inputOperationId === attempt.requestId
           && record(object?.metadata).imageId === remote.imageId && record(object?.metadata).jobId === remote.jobId;
       };
@@ -233,12 +284,12 @@ export const createFashionStudioInputController = (adapters: FashionStudioInputA
         document = verified(await adapters.getDocument(attempt.documentId, attempt.scope.brandId, context)); assertContext();
         if (!isCommitted(document)) {
           if (attempt.documentSent) throw new Error('fashion_studio_upload_document_reconciliation_required');
-          sameRole(attempt.base!.snapshot, document.snapshot, attempt.role);
-          const snapshot = replaceFashionStudioRole(document.snapshot, attempt.role, remote, attempt.requestId);
+          sameInput(attempt.base!.snapshot, document.snapshot, attempt.role);
+          const snapshot = replaceFashionStudioInput(document.snapshot, attempt.role, remote, attempt.requestId);
           attempt.documentSent = true;
           try { await adapters.updateDocument({ documentId: document.id, brandId: document.brandId, title: document.title, expectedRevision: document.revision, snapshot }, context); }
           catch (error) { assertContext(); document = verified(await adapters.getDocument(attempt.documentId, attempt.scope.brandId, context));
-            if (!isCommitted(document)) { sameRole(attempt.base!.snapshot, document.snapshot, attempt.role); throw new Error(`fashion_studio_upload_document_reconciliation_required:${errorMessage(error)}`); } }
+            if (!isCommitted(document)) { sameInput(attempt.base!.snapshot, document.snapshot, attempt.role); throw new Error(`fashion_studio_upload_document_reconciliation_required:${errorMessage(error)}`); } }
           assertContext(); document = verified(await adapters.getDocument(attempt.documentId, attempt.scope.brandId, context));
         }
       } else {
@@ -265,7 +316,7 @@ export const createFashionStudioInputController = (adapters: FashionStudioInputA
     void flight.then(() => { if (attempt.flight === flight) attempt.flight = undefined; }); return flight;
   };
   return {
-    start(file: File, role: 'main' | 'reference', scope: FashionStudioInputScope) {
+    start(file: File, role: FashionStudioInputRole, scope: FashionStudioInputScope) {
       if (!active) return Promise.reject(new Error('fashion_studio_upload_scope_stale'));
       adapters.assertScope(scope); validateFashionStudioUpload(file);
       if (current?.flight || (current?.state?.status === 'failure' && (current.uploadSent || current.documentSent))) return Promise.reject(new Error('fashion_studio_upload_recovery_required'));

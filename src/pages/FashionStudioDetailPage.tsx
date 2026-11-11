@@ -32,17 +32,17 @@ import { useAuthStore } from '../stores/authStore';
 import { canSelectConfirmedBrand } from '../lib/authBrandSelection';
 import { createFashionStudioThumbnailController, fashionStudioThumbnailScopeKey, type FashionStudioThumbnailState } from '../lib/fashionStudioThumbnails';
 import { createFashionStudioDetailHydration, emptyFashionStudioDetail, extractFashionStudioSavedDetail, fashionStudioDetailScopeKey, type FashionStudioDetailHydrationState, type FashionStudioDetailScope } from '../lib/fashionStudioDetailHydration';
-import { createFashionStudioInputController, createFashionStudioGenerationAdapters, readFashionStudioUpload, type FashionStudioInputState } from '../lib/fashionStudioDetailAdapter';
+import { createFashionStudioInputController, createFashionStudioGenerationAdapters, readFashionStudioUpload, type FashionStudioInputRole, type FashionStudioInputState } from '../lib/fashionStudioDetailAdapter';
 import { createFashionStudioDetailGeneration, type FashionStudioGenerationOutcome } from '../lib/fashionStudioDetailGeneration';
 import { createStudioAckStore } from '../lib/fashionStudioPendingAck';
 import { createCanvasDocument, getCanvasDocument, updateCanvasDocument, type CanvasDocumentRecord } from '../lib/canvasDocumentPersistence';
 import { editImageWithPrompt, assertCompletedImageEditResult } from '../lib/imageApi';
 import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
 import { createStudioViewportInteraction, STUDIO_DEFAULT_VIEWPORT, STUDIO_INTERACTIVE_SELECTOR, studioWorldTransform, type StudioViewportState } from '../lib/studioViewport';
-import { DEFAULT_STUDIO_SETTINGS, STUDIO_ASPECT_RATIOS, STUDIO_EXAMPLES, STUDIO_GARMENT_AREAS, STUDIO_PERSPECTIVES, STUDIO_TEXT_SAMPLE_PROMPT,
+import { DEFAULT_STUDIO_SETTINGS, STUDIO_ASPECT_RATIOS, STUDIO_EXAMPLES, STUDIO_GARMENT_AREAS, STUDIO_MAX_REGION_POINTS, STUDIO_MAX_TEXT_REFERENCES, STUDIO_PERSPECTIVES, STUDIO_TEXT_SAMPLE_PROMPT,
   STUDIO_UNDERWEAR_NO_MODEL_PROMPT, STUDIO_UNDERWEAR_WITH_MODEL_PROMPT, loadStudioExampleFile, readStudioSettings, studioAspectRatioLabel,
   studioFunctionPromptText, writeStudioSettings, type StudioAspectRatio, type StudioFunctionId, type StudioGarmentArea, type StudioSettings } from '../lib/fashionStudioExamples';
-import { buildRegionGuideUrl, naturalImageSize, regionMaskImageData, regionMaskToDataUrl } from '../lib/fashionStudioRegionGuide';
+import { buildRegionGuideUrl, naturalImageSize, REGION_POINT_COLORS, regionMaskImageData, regionMaskToDataUrl } from '../lib/fashionStudioRegionGuide';
 import { MaskPaintDialog } from '../components/lightchain/MaskPaintDialog';
 import { StudioFunctionIcon } from '../components/lightchain/StudioFunctionIcon';
 
@@ -64,7 +64,7 @@ const readStudioFunction = (projectId: string): StudioFunctionId => {
   } catch { return 'text'; }
 };
 const examplePrompt = (fn: StudioFunctionId) => fn === 'text' ? STUDIO_TEXT_SAMPLE_PROMPT : fn === 'underwear' ? STUDIO_UNDERWEAR_WITH_MODEL_PROMPT : '';
-const regionMaskKey = (projectId: string) => `heavy-fashion-studio-region-mask:${projectId}`;
+const regionMaskKey = (projectId: string, slot = 0) => `heavy-fashion-studio-region-mask:${projectId}${slot ? `:slot${slot}` : ''}`;
 const REGION_EXAMPLE_MASK = '/lightchain-assets/flow-examples/directional-mask.png';
 const FLOW_TIP_ICON = '/lightchain-assets/static/flow_tip.png';
 const SAVED_PROMPTS_KEY = 'heavy-fashion-studio-saved-prompts';
@@ -137,6 +137,7 @@ function FashionStudioImageNode({
   label,
   staticUrl,
   onExpand,
+  flowNode,
 }: {
   candidates: readonly string[];
   scopeKey: string;
@@ -152,11 +153,13 @@ function FashionStudioImageNode({
   /** A bundled example image instead of a saved role. */
   staticUrl?: string;
   onExpand: (url: string) => void;
+  /** The flow measures one node per role; images inside the result row leave this off. */
+  flowNode?: string | null;
 }) {
   const [url, setUrl] = useState('');
   const shown = staticUrl || url;
   return (
-    <div className="fashion-studio-flow-node" data-flow-node={role}>
+    <div className="fashion-studio-flow-node" data-flow-node={flowNode === undefined ? role : flowNode ?? undefined}>
       {label && <p className="fashion-studio-flow-node-label">{label}</p>}
       <figure className={`fashion-studio-source-image-node ${className}`} data-testid={testId} data-studio-object-id={objectId ?? undefined} data-selected={selected} onDragStart={event => event.preventDefault()}>
         {staticUrl ? <img src={staticUrl} alt={alt} className="block h-auto w-full" draggable={false} />
@@ -299,16 +302,22 @@ export function FashionStudioDetailPage() {
   const exampleReferenceStartedRef = useRef('');
   const [exampleLoad, setExampleLoad] = useState<{ scopeKey: string; loading: StudioFunctionId | null; failed: StudioFunctionId | null }>({ scopeKey: '', loading: null, failed: null });
   const exampleState = exampleLoad.scopeKey === scopeKey ? exampleLoad : { loading: null, failed: null };
-  const [regionMaskState, setRegionMaskState] = useState<{ projectCode: string; url: string } | null>(null);
-  const storedRegionMask = (() => { try { return projectCode ? window.localStorage.getItem(regionMaskKey(projectCode)) ?? '' : ''; } catch { return ''; } })();
-  const regionMaskUrl = regionMaskState?.projectCode === projectCode ? regionMaskState.url : storedRegionMask;
-  const setRegionMask = (url: string) => {
-    try { if (url) window.localStorage.setItem(regionMaskKey(projectCode), url); else window.localStorage.removeItem(regionMaskKey(projectCode)); } catch { /* storage unavailable */ }
-    setRegionMaskState({ projectCode, url });
+  // Light's 範囲指定で生成 has up to three fusion points; each point is one reference slot (0-2) with its own mask.
+  const [regionMaskState, setRegionMaskState] = useState<{ projectCode: string; urls: Record<number, string> }>({ projectCode: '', urls: {} });
+  const regionMaskFor = (slot: number) => {
+    if (regionMaskState.projectCode === projectCode && slot in regionMaskState.urls) return regionMaskState.urls[slot];
+    try { return projectCode ? window.localStorage.getItem(regionMaskKey(projectCode, slot)) ?? '' : ''; } catch { return ''; }
   };
-  const [maskDialog, setMaskDialog] = useState<{ initial: ImageData | null } | null>(null);
+  const regionMaskUrl = regionMaskFor(0);
+  const setRegionMask = (url: string, slot = 0) => {
+    try { if (url) window.localStorage.setItem(regionMaskKey(projectCode, slot), url); else window.localStorage.removeItem(regionMaskKey(projectCode, slot)); } catch { /* storage unavailable */ }
+    setRegionMaskState(current => ({ projectCode, urls: { ...(current.projectCode === projectCode ? current.urls : {}), [slot]: url } }));
+  };
+  const [maskDialog, setMaskDialog] = useState<{ initial: ImageData | null; slot: number } | null>(null);
+  /** Which reference slot the reference file picker writes to (Light: add a reference / a fusion point, or replace one). */
+  const referenceTargetRef = useRef<FashionStudioInputRole>('reference');
   const [loadedReference, setLoadedReference] = useState({ identity: '', url: '' });
-  const providerContextRef = useRef({ hasReference: false });
+  const providerContextRef = useRef({ hasReference: false, referenceCount: 0, points: 1 });
   const [lightbox, setLightbox] = useState('');
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -406,7 +415,8 @@ export function FashionStudioDetailPage() {
       activity: value => { assertAttempt(); setActivity({ scopeKey, value }); },
       committedInputs: () => committedInputsRef.current,
       editImageWithPrompt: (imageUrl, prompt, brandId, options) => editImageWithPrompt(imageUrl, studioProviderPrompt(prompt, studioFunctionRef.current, {
-        garment: settingsRef.current.garment, perspective: settingsRef.current.perspective, hasReference: providerContextRef.current.hasReference }), brandId, options),
+        garment: settingsRef.current.garment, perspective: settingsRef.current.perspective, hasReference: providerContextRef.current.hasReference,
+          referenceCount: providerContextRef.current.referenceCount, points: providerContextRef.current.points }), brandId, options),
       assertCompletedImageEditResult, resolveImage: resolveGeneratedImageUrlWithStatus,
       capturePersistenceContext: async context => {
         if (!cloudflareDataPlane) throw new Error('fashion_studio_generation_unavailable');
@@ -433,7 +443,7 @@ export function FashionStudioDetailPage() {
   const busy = ['preparing', 'generating', 'recovering', 'saving'].includes(activityValue);
   const recoveryRequired = (activeUpload?.status === 'failure' && activeUpload.recoverable === true) || activeGeneration?.status === 'failure';
   const mainIdentity = JSON.stringify([scopeKey, detail.roles.main.objectId, detail.roles.main.candidates]);
-  const uploadFile = async (file: File | undefined, role: 'main' | 'reference') => {
+  const uploadFile = async (file: File | undefined, role: FashionStudioInputRole) => {
     if (!file || !scope || busyRef.current || recoveryRequired) return;
     const capturedScopeKey = scopeKey;
     try {
@@ -445,11 +455,21 @@ export function FashionStudioDetailPage() {
     } finally { if (currentScopeRef.current === capturedScopeKey) busyRef.current = false; }
   };
   const referenceIdentity = JSON.stringify([scopeKey, detail.roles.reference.objectId, detail.roles.reference.candidates]);
+  const slotRole = (slot: number): FashionStudioInputRole => slot ? `reference-${slot}` : 'reference';
+  /** References on the form in slot order (slot 0 = the reference role); removed ones stay saved but hidden. */
+  const shownReferences = [
+    ...(detail.roles.reference.status === 'available' && !settings.referenceOff ? [{ slot: 0, candidates: detail.roles.reference.candidates, objectId: detail.roles.reference.objectId }] : []),
+    ...detail.extraReferences.filter(extra => extra.status === 'available' && !settings.extraOff.includes(extra.slot))
+      .map(extra => ({ slot: extra.slot, candidates: extra.candidates, objectId: extra.objectId })),
+  ];
+  const freeReferenceSlot = (limit: number) => { for (let slot = 0; slot < limit; slot += 1) if (!shownReferences.some(item => item.slot === slot)) return slot; return -1; };
+  const regionPoints = shownReferences.filter(item => item.slot < STUDIO_MAX_REGION_POINTS);
+  const textReferences = shownReferences.slice(0, STUDIO_MAX_TEXT_REFERENCES);
   const regionGuideRef = useRef<{ key: string; url: string } | null>(null);
-  const regionGuideUrl = async (mainUrl: string, maskUrl: string) => {
-    const key = JSON.stringify([mainUrl, maskUrl]);
+  const regionGuideUrl = async (mainUrl: string, maskUrls: string[]) => {
+    const key = JSON.stringify([mainUrl, maskUrls]);
     if (regionGuideRef.current?.key === key) return regionGuideRef.current.url;
-    const url = await buildRegionGuideUrl(mainUrl, maskUrl);
+    const url = await buildRegionGuideUrl(mainUrl, maskUrls);
     regionGuideRef.current = { key, url };
     return url;
   };
@@ -461,8 +481,9 @@ export function FashionStudioDetailPage() {
       // Light checks the form when AI生成 is pressed and says what is missing.
       if (detail.roles.main.status !== 'available' || loadedMain.identity !== mainIdentity || !loadedMain.url) { toast.error('メイン画像を追加してください'); return; }
       if ((fn === 'text' || fn === 'underwear') && !prompt.trim()) { toast.error(fn === 'underwear' ? 'フィッティングの説明を入力してください' : '指示テキストを入力してください'); return; }
-      if (fn === 'region' && !referenceAvailable) { toast.error('参考画像を追加してください'); return; }
-      if (fn === 'region' && !regionMaskUrl) { toast.error('マスク調整で範囲を選択してください'); return; }
+      if (fn === 'region' && !regionPoints.length) { toast.error('参考画像を追加してください'); return; }
+      const unmasked = fn === 'region' ? regionPoints.findIndex(point => !regionMaskFor(point.slot)) : -1;
+      if (unmasked >= 0) { toast.error(regionPoints.length > 1 ? `ポイント${unmasked + 1}のマスク調整で範囲を選択してください` : 'マスク調整で範囲を選択してください'); return; }
     }
     const capturedScopeKey = scopeKey;
     try {
@@ -471,12 +492,14 @@ export function FashionStudioDetailPage() {
       if (retry) outcome = await generationControllerRef.current.retry();
       else {
         if (!detail.roles.main.objectId || detail.roles.reference.status === 'ambiguous') throw new Error('fashion_studio_generation_input_unverified');
-        const promptText = studioFunctionPromptText(fn, prompt.trim(), settings);
-        const references = referenceAvailable
-          ? [loadedReference.identity === referenceIdentity && loadedReference.url ? loadedReference.url : detail.roles.reference.candidates[0]] : [];
-        if (fn === 'region') references.push(await regionGuideUrl(loadedMain.url, regionMaskUrl));
+        const promptText = studioFunctionPromptText(fn, prompt.trim(), settings, regionPoints.length);
+        const sourceOf = (item: { slot: number; candidates: readonly string[] }) => item.slot === 0 && loadedReference.identity === referenceIdentity && loadedReference.url ? loadedReference.url : item.candidates[0];
+        // テキストで生成 sends every reference (up to nine); 範囲指定 one per fusion point plus the coloured guide; 下着 the model image.
+        const chosen = fn === 'text' ? textReferences : fn === 'region' ? regionPoints : fn === 'underwear' && referenceAvailable ? shownReferences.filter(item => item.slot === 0) : [];
+        const references = chosen.map(sourceOf);
+        if (fn === 'region') references.push(await regionGuideUrl(loadedMain.url, regionPoints.map(point => regionMaskFor(point.slot))));
         assertContext();
-        providerContextRef.current = { hasReference: referenceAvailable };
+        providerContextRef.current = { hasReference: chosen.length > 0, referenceCount: chosen.length, points: Math.max(1, regionPoints.length) };
         const editOptions = fn !== 'region' && settings.aspectRatio !== 'auto' ? { aspectRatio: settings.aspectRatio } : undefined;
         const inputIdentity = JSON.stringify([scopeKey, mainIdentity, fn, promptText, references, editOptions ?? null]);
         if (logicalAttemptRef.current?.identity !== inputIdentity) logicalAttemptRef.current = { identity: inputIdentity, key: crypto.randomUUID() };
@@ -510,16 +533,36 @@ export function FashionStudioDetailPage() {
     setExampleLoad(current => current.scopeKey === captured ? { scopeKey: captured, loading: null, failed: null } : current);
   };
   const uploadOwnMain = (file: File | undefined) => { pendingExampleRef.current = null; void uploadFile(file, 'main'); };
-  const uploadReference = (file: File | undefined) => {
+  const uploadReference = (file: File | undefined, role: FashionStudioInputRole = referenceTargetRef.current) => {
     if (!file) return;
-    if (settings.referenceOff) updateSettings({ referenceOff: false });
+    const slot = role === 'reference' ? 0 : Number(role.slice('reference-'.length));
+    if (slot === 0 && settings.referenceOff) updateSettings({ referenceOff: false });
+    if (slot > 0 && settings.extraOff.includes(slot)) updateSettings({ extraOff: settings.extraOff.filter(value => value !== slot) });
     if (studioFunction === 'underwear' && prompt === STUDIO_UNDERWEAR_NO_MODEL_PROMPT) setPrompt(STUDIO_UNDERWEAR_WITH_MODEL_PROMPT);
-    void uploadFile(file, 'reference');
+    void uploadFile(file, role);
   };
-  const removeReference = () => {
-    updateSettings({ referenceOff: true });
-    if (studioFunction === 'underwear' && prompt === STUDIO_UNDERWEAR_WITH_MODEL_PROMPT) setPrompt(STUDIO_UNDERWEAR_NO_MODEL_PROMPT);
+  /** Opens the reference picker for one slot: a free slot adds a reference / fusion point, a shown one is replaced. */
+  const pickReference = (slot: number) => { referenceTargetRef.current = slotRole(slot); referenceInputRef.current?.click(); };
+  const removeReferenceSlot = (slot: number) => {
+    if (slot === 0) updateSettings({ referenceOff: true });
+    else updateSettings({ extraOff: [...new Set([...settings.extraOff, slot])] });
+    if (slot === 0 && studioFunction === 'underwear' && prompt === STUDIO_UNDERWEAR_WITH_MODEL_PROMPT) setPrompt(STUDIO_UNDERWEAR_NO_MODEL_PROMPT);
   };
+  const removeReference = () => removeReferenceSlot(0);
+  /** Light's 融合ポイントを追加 → キャンバスから選択: an image already on the canvas becomes the new point's reference. */
+  const [canvasPicker, setCanvasPicker] = useState<{ slot: number; images: { key: string; url: string }[] } | null>(null);
+  const openCanvasPicker = async (slot: number) => {
+    const sources = [...detail.history.map(item => item.candidates[0]), detail.roles.result.candidates[0], detail.roles.main.candidates[0]].filter((value): value is string => Boolean(value));
+    const resolved = await Promise.all(sources.map(async source => { const value = await resolveGeneratedImageUrlWithStatus(source).catch(() => null); return value?.ok ? value.url : ''; }));
+    const images = [...(settings.example ? [{ key: 'sample', url: STUDIO_EXAMPLES[settings.example].result }] : []), ...resolved.filter(Boolean).map((url, index) => ({ key: `canvas-${index}`, url }))];
+    if (!images.length) { toast.error('キャンバスに選べる画像がありません'); return; }
+    setCanvasPicker({ slot, images });
+  };
+  const chooseCanvasImage = async (slot: number, url: string) => {
+    setCanvasPicker(null);
+    try { uploadReference(await loadStudioExampleFile(url), slotRole(slot)); } catch { toast.error('画像を読み込めませんでした'); }
+  };
+  const [pointMenu, setPointMenu] = useState(false);
   // The example's main image created the project; add its reference (model / fusion garment) and Light's toast.
   useEffect(() => {
     if (!pendingExample || pendingExample.projectCode !== projectCode || visible?.status !== 'success' || detail.roles.main.status !== 'available') return;
@@ -530,15 +573,16 @@ export function FashionStudioDetailPage() {
     exampleReferenceStartedRef.current = projectCode;
     void loadStudioExampleFile(example.reference).then(file => uploadFile(file, 'reference')).catch(() => { setPendingExample(null); toast.error(STUDIO_EXAMPLE_FAILED); });
   }, [pendingExample, projectCode, visible?.status, detail.roles.main.status, detail.roles.reference.status, busy]);
-  const openMaskDialog = async () => {
+  const openMaskDialog = async (slot = 0) => {
     if (!loadedMain.url) { toast.error('メイン画像を追加してください'); return; }
     let initial: ImageData | null = null;
-    if (regionMaskUrl) {
-      try { const size = await naturalImageSize(loadedMain.url); initial = await regionMaskImageData(regionMaskUrl, size.width, size.height); } catch { initial = null; }
+    const current = regionMaskFor(slot);
+    if (current) {
+      try { const size = await naturalImageSize(loadedMain.url); initial = await regionMaskImageData(current, size.width, size.height); } catch { initial = null; }
     }
-    setMaskDialog({ initial });
+    setMaskDialog({ initial, slot });
   };
-  const confirmMask = (mask: ImageData | null) => { setMaskDialog(null); setRegionMask(mask ? regionMaskToDataUrl(mask) : ''); };
+  const confirmMask = (mask: ImageData | null) => { const slot = maskDialog?.slot ?? 0; setMaskDialog(null); setRegionMask(mask ? regionMaskToDataUrl(mask) : '', slot); };
   const savePrompt = () => {
     const value = prompt.trim();
     if (!value) { toast.error('保存する指示がありません'); return; }
@@ -550,8 +594,10 @@ export function FashionStudioDetailPage() {
   // Light's flow: main → form → result side by side, joined by curved edges, fitted into view.
   const flowRef = useRef<HTMLDivElement>(null);
   const [flowSize, setFlowSize] = useState({ main: 0, form: 0, result: 0, width: 0, height: 0 });
-  const showExampleResult = Boolean(settings.example) && detail.roles.result.status !== 'available';
-  const hasResultNode = detail.roles.result.status === 'available' || showExampleResult;
+  // Light keeps the sample (仕上がりのサンプル) and lines every result up to its right, oldest first.
+  const showExampleResult = Boolean(settings.example);
+  const resultItems = [...detail.history.filter(item => item.status === 'available'), ...(detail.roles.result.status === 'available' ? [detail.roles.result] : [])];
+  const hasResultNode = resultItems.length > 0 || showExampleResult;
   useEffect(() => {
     const flow = flowRef.current;
     if (!hasProject || !flow) return;
@@ -564,7 +610,7 @@ export function FashionStudioDetailPage() {
     observer.observe(flow); flow.querySelectorAll('[data-flow-node]').forEach(node => observer.observe(node));
     measure();
     return () => observer.disconnect();
-  }, [hasProject, hasResultNode, studioFunction, viewportScopeKey]);
+  }, [hasProject, hasResultNode, resultItems.length, studioFunction, viewportScopeKey]);
   const fittedRef = useRef('');
   const fitFlow = () => {
     const viewport = viewportRef.current; const interaction = viewportInteractionRef.current;
@@ -578,10 +624,10 @@ export function FashionStudioDetailPage() {
     return true;
   };
   useEffect(() => {
-    const key = JSON.stringify([viewportScopeKey, hasResultNode, studioFunction]);
+    const key = JSON.stringify([viewportScopeKey, hasResultNode, resultItems.length, studioFunction]);
     if (fittedRef.current === key || !flowSize.width) return;
     if (fitFlow()) fittedRef.current = key;
-  }, [flowSize, viewportScopeKey, hasResultNode, studioFunction]);
+  }, [flowSize, viewportScopeKey, hasResultNode, resultItems.length, studioFunction]);
   const activityText = ({ preparing: '準備中', generating: '生成中', recovering: '復旧中', saving: '保存中', failure: '失敗', success: '完了' } as Record<string, string>)[activityValue] || 'タスク';
   const activityError = activeUpload?.error || activeGeneration?.error || '';
   useEffect(() => { if (activityError) toast.error(studioErrorMessage(activityError), { id: `studio-error:${activityError}` }); }, [activityError]);
@@ -596,7 +642,6 @@ export function FashionStudioDetailPage() {
 
   if (hasProject) {
     const mainImage = detail.roles.main.candidates;
-    const resultImage = detail.roles.result.candidates;
     const referenceShown = detail.roles.reference.status === 'available' && !settings.referenceOff;
     const inputsReady = !busy && !recoveryRequired && visible?.status === 'success';
     const referenceLabel = studioFunction === 'underwear' ? 'モデル図' : '参考画像';
@@ -607,7 +652,18 @@ export function FashionStudioDetailPage() {
           <DetailRoleImage candidates={detail.roles.reference.candidates} scopeKey={scopeKey} role="reference" assertContext={assertContext} alt={referenceLabel} className="h-full w-full rounded-[20px] object-cover" onReady={url => setLoadedReference({ identity: referenceIdentity, url })} />
           <button type="button" aria-label={`${referenceLabel}を削除`} disabled={!inputsReady} onClick={removeReference} className="absolute -right-3 -top-3 flex size-10 items-center justify-center rounded-full bg-[#505c5e] text-white"><X className="h-6 w-6" /></button>
         </div>
-      : <button type="button" aria-label={`${referenceLabel}を追加`} disabled={!inputsReady || !scope} onClick={() => referenceInputRef.current?.click()} className="flex size-[120px] shrink-0 items-center justify-center rounded-[20px] border border-[#3d4346] bg-[#353a3b] text-neutral-300"><ImagePlus className="h-10 w-10" /></button>;
+      : <button type="button" aria-label={`${referenceLabel}を追加`} disabled={!inputsReady || !scope} onClick={() => pickReference(0)} className="flex size-[120px] shrink-0 items-center justify-center rounded-[20px] border border-[#3d4346] bg-[#353a3b] text-neutral-300"><ImagePlus className="h-10 w-10" /></button>;
+    // Light's テキストで生成: 参考画像 最大9枚 — one tile per reference, then an add tile while fewer than nine.
+    const textReferenceTiles = <>
+      {textReferences.map(item => (
+        <div key={item.slot} className="relative size-[120px] shrink-0 rounded-[20px] border border-[#3d4346] bg-[#353a3b]" data-testid="fashion-studio-reference-tile">
+          <DetailRoleImage candidates={item.candidates} scopeKey={scopeKey} role="reference" assertContext={assertContext} alt={`参考画像${item.slot + 1}`} className="h-full w-full rounded-[20px] object-cover"
+            onReady={item.slot === 0 ? url => setLoadedReference({ identity: referenceIdentity, url }) : undefined} />
+          <button type="button" aria-label={`参考画像${textReferences.indexOf(item) + 1}を削除`} disabled={!inputsReady} onClick={() => removeReferenceSlot(item.slot)} className="absolute -right-3 -top-3 flex size-10 items-center justify-center rounded-full bg-[#505c5e] text-white"><X className="h-6 w-6" /></button>
+        </div>
+      ))}
+      {textReferences.length < STUDIO_MAX_TEXT_REFERENCES && <button type="button" aria-label="参考画像を追加" disabled={!inputsReady || !scope} onClick={() => pickReference(freeReferenceSlot(STUDIO_MAX_TEXT_REFERENCES))} className="flex size-[120px] shrink-0 items-center justify-center rounded-[20px] border border-[#3d4346] bg-[#353a3b] text-neutral-300"><ImagePlus className="h-10 w-10" /></button>}
+    </>;
     const promptField = (label: string) => (
       <div className="w-full px-8">
         <label className={sectionLabel} htmlFor="fashion-studio-detail-prompt">{label}<span className="ml-1 text-[#f04438]">*</span></label>
@@ -651,25 +707,35 @@ export function FashionStudioDetailPage() {
     );
     const functionBody = studioFunction === 'region' ? (
       <div className="flex w-full flex-col gap-6 px-8" data-testid="fashion-studio-region-points">
-        <div className="rounded-[32px] border border-[#3d4346] bg-[#2f3436]">
-          <div className="flex items-center justify-between border-b border-[#3d4346] px-6 py-5 text-[30px] text-neutral-200">
-            <span className="flex items-center gap-3">ポイント：1<button type="button" aria-label="参考画像を差し替え" title="参考画像を差し替え" disabled={!inputsReady} onClick={() => referenceInputRef.current?.click()}><RotateCw className="h-8 w-8" /></button></span>
-            <button type="button" aria-label="融合ポイントを削除" title="融合ポイントを削除" disabled={!inputsReady} onClick={() => { setRegionMask(''); removeReference(); }}><Trash2 className="h-8 w-8" /></button>
-          </div>
-          <div className="flex items-center gap-5 p-6">
-            <button type="button" aria-label="マスク調整" onClick={() => void openMaskDialog()} className="relative h-[140px] w-[100px] shrink-0 overflow-hidden rounded-[16px] border border-[#3d4346] bg-[#353a3b]">
-              <DetailRoleImage candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} alt="メイン画像" className="h-full w-full object-cover" />
-              {regionMaskUrl && <img src={regionMaskUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />}
-            </button>
-            {referenceShown
-              ? <button type="button" aria-label="参考画像を差し替え" disabled={!inputsReady} onClick={() => referenceInputRef.current?.click()} className="h-[140px] w-[100px] shrink-0 overflow-hidden rounded-[16px] border border-[#3d4346] bg-[#353a3b]">
-                  <DetailRoleImage candidates={detail.roles.reference.candidates} scopeKey={scopeKey} role="reference" assertContext={assertContext} alt="参考画像" className="h-full w-full object-cover" onReady={url => setLoadedReference({ identity: referenceIdentity, url })} />
+        {regionPoints.map((point, index) => {
+          const mask = regionMaskFor(point.slot);
+          return (
+            <div key={point.slot} className="rounded-[32px] border border-[#3d4346] bg-[#2f3436]" data-testid="fashion-studio-region-point">
+              <div className="flex items-center justify-between border-b border-[#3d4346] px-6 py-5 text-[30px] text-neutral-200">
+                <span className="flex items-center gap-3">ポイント：{index + 1}{regionPoints.length > 1 && <span aria-hidden="true" className="size-5 rounded-full" style={{ background: REGION_POINT_COLORS[index].hex }} />}<button type="button" aria-label={`ポイント${index + 1}の参考画像を差し替え`} title="参考画像を差し替え" disabled={!inputsReady} onClick={() => pickReference(point.slot)}><RotateCw className="h-8 w-8" /></button></span>
+                <button type="button" aria-label={`ポイント${index + 1}を削除`} title="融合ポイントを削除" disabled={!inputsReady} onClick={() => { setRegionMask('', point.slot); removeReferenceSlot(point.slot); }}><Trash2 className="h-8 w-8" /></button>
+              </div>
+              <div className="flex items-center gap-5 p-6">
+                <button type="button" aria-label={`ポイント${index + 1}のマスク調整`} onClick={() => void openMaskDialog(point.slot)} className="relative h-[140px] w-[100px] shrink-0 overflow-hidden rounded-[16px] border border-[#3d4346] bg-[#353a3b]">
+                  <DetailRoleImage candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} alt="メイン画像" className="h-full w-full object-cover" />
+                  {mask && <img src={mask} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />}
                 </button>
-              : <button type="button" aria-label="参考画像を追加" disabled={!inputsReady || !scope} onClick={() => referenceInputRef.current?.click()} className="flex h-[140px] w-[100px] shrink-0 items-center justify-center rounded-[16px] border border-[#3d4346] bg-[#353a3b] text-neutral-300"><ImagePlus className="h-10 w-10" /></button>}
-            <button type="button" onClick={() => void openMaskDialog()} className="ml-auto flex items-center gap-1 text-[30px] text-neutral-300">マスク調整<ChevronRight className="h-8 w-8" /></button>
-          </div>
-        </div>
-        <button type="button" disabled title="融合ポイントは1か所まで追加できます" className="flex h-[120px] items-center justify-center gap-2 rounded-[32px] border border-[#3d4346] bg-[#2f3436] text-[30px] text-neutral-500"><Plus className="h-8 w-8" />融合ポイントを追加</button>
+                <button type="button" aria-label={`ポイント${index + 1}の参考画像を差し替え`} disabled={!inputsReady} onClick={() => pickReference(point.slot)} className="h-[140px] w-[100px] shrink-0 overflow-hidden rounded-[16px] border border-[#3d4346] bg-[#353a3b]">
+                  <DetailRoleImage candidates={point.candidates} scopeKey={scopeKey} role="reference" assertContext={assertContext} alt="参考画像" className="h-full w-full object-cover"
+                    onReady={point.slot === 0 ? url => setLoadedReference({ identity: referenceIdentity, url }) : undefined} />
+                </button>
+                <button type="button" onClick={() => void openMaskDialog(point.slot)} className="ml-auto flex items-center gap-1 text-[30px] text-neutral-300">マスク調整<ChevronRight className="h-8 w-8" /></button>
+              </div>
+            </div>
+          );
+        })}
+        {regionPoints.length < STUDIO_MAX_REGION_POINTS && <div className="relative">
+          <button type="button" aria-label="融合ポイントを追加" aria-expanded={pointMenu} disabled={!inputsReady || !scope} onClick={() => setPointMenu(open => !open)} className="flex h-[120px] w-full items-center justify-center gap-2 rounded-[32px] border border-[#3d4346] bg-[#2f3436] text-[30px] text-neutral-200 hover:bg-[#353a3b] disabled:text-neutral-500"><Plus className="h-8 w-8" />融合ポイントを追加</button>
+          {pointMenu && <div role="menu" aria-label="融合ポイントを追加" className="absolute left-full top-0 z-20 ml-4 w-[400px] overflow-hidden rounded-[28px] border border-[#3d4346] bg-[#262a2b] py-3 text-[34px] text-neutral-100 shadow-xl">
+            <button type="button" role="menuitem" className="block w-full px-8 py-4 text-left hover:bg-white/10" onClick={() => { setPointMenu(false); pickReference(freeReferenceSlot(STUDIO_MAX_REGION_POINTS)); }}>画像をアップロード</button>
+            <button type="button" role="menuitem" className="block w-full px-8 py-4 text-left hover:bg-white/10" onClick={() => { setPointMenu(false); void openCanvasPicker(freeReferenceSlot(STUDIO_MAX_REGION_POINTS)); }}>キャンバスから選択</button>
+          </div>}
+        </div>}
       </div>
     ) : studioFunction === '3d' ? (
       <>
@@ -695,8 +761,8 @@ export function FashionStudioDetailPage() {
     ) : (
       <>
         <div className="w-full px-8">
-          <div className={`${sectionLabel} gap-4`}>{referenceLabel}{studioFunction === 'text' && <span className="text-[26px] text-neutral-500" data-testid="fashion-studio-reference-count">最大1枚、アップロード済み<span className="text-[#20d0c4]">{referenceShown ? 1 : 0}</span>/1</span>}</div>
-          <div className="flex items-center gap-5">{referenceTile}</div>
+          <div className={`${sectionLabel} gap-4`}>{referenceLabel}{studioFunction === 'text' && <span className="text-[26px] text-neutral-500" data-testid="fashion-studio-reference-count">最大{STUDIO_MAX_TEXT_REFERENCES}枚、アップロード済み<span className="text-[#20d0c4]">{textReferences.length}</span>/{STUDIO_MAX_TEXT_REFERENCES}</span>}</div>
+          <div className="flex flex-wrap items-center gap-5">{studioFunction === 'text' ? textReferenceTiles : referenceTile}</div>
         </div>
         {promptField(studioFunction === 'underwear' ? 'フィッティングの説明' : '指示テキスト')}
         {generationSettings}
@@ -762,9 +828,12 @@ export function FashionStudioDetailPage() {
                 </div>
               </section>
               {hasResultNode && <FlowEdge width={FLOW_GAP_OUT} from={flowSize.form / 2} to={flowSize.result / 2} height={flowSize.height} />}
-              {detail.roles.result.status === 'available'
-                ? <FashionStudioImageNode candidates={resultImage} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="生成結果" testId="fashion-studio-saved-result-image" className="fashion-studio-source-result-node" objectId={detail.roles.result.objectId} selected={Boolean(detail.roles.result.objectId && viewportState.selectedObjectId === detail.roles.result.objectId)} onExpand={setLightbox} />
-                : showExampleResult && settings.example && <FashionStudioImageNode candidates={[]} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="仕上がりのサンプル" testId="fashion-studio-example-result-image" className="fashion-studio-source-result-node" objectId={null} selected={false} label="仕上がりのサンプルをご覧ください。" staticUrl={STUDIO_EXAMPLES[settings.example].result} onExpand={setLightbox} />}
+              {hasResultNode && <div className="fashion-studio-flow-node fashion-studio-result-row" data-flow-node="result" data-testid="fashion-studio-result-row">
+                {showExampleResult && settings.example && <FashionStudioImageNode candidates={[]} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="仕上がりのサンプル" testId="fashion-studio-example-result-image" className="fashion-studio-source-result-node" objectId={null} selected={false} label="仕上がりのサンプルをご覧ください。" staticUrl={STUDIO_EXAMPLES[settings.example].result} onExpand={setLightbox} flowNode={null} />}
+                {resultItems.map((item, index) => <FashionStudioImageNode key={item.objectId ?? index} candidates={item.candidates} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="生成結果"
+                  testId={index === resultItems.length - 1 ? 'fashion-studio-saved-result-image' : 'fashion-studio-history-result-image'} className="fashion-studio-source-result-node" objectId={item.objectId}
+                  selected={Boolean(item.objectId && viewportState.selectedObjectId === item.objectId)} onExpand={setLightbox} flowNode={null} />)}
+              </div>}
             </div>
           </div>
         </section>
@@ -789,7 +858,15 @@ export function FashionStudioDetailPage() {
             <div className="flex items-center justify-between text-sm text-neutral-400"><span><span className="text-[#20d0c4]">{prompt.length}</span>/2000</span><button type="button" onClick={() => setPromptExpanded(false)} className="rounded-lg bg-[#20d0c4] px-5 py-2 text-sm font-medium text-[#111817]">決定</button></div>
           </div>
         </div>}
-        {maskDialog && loadedMain.url && <MaskPaintDialog imageUrl={loadedMain.url} hint="範囲指定で生成" paneTitle="参考画像の服を合わせたい部分をマスクで選択してください" initialMask={maskDialog.initial} onCancel={() => setMaskDialog(null)} onConfirm={confirmMask} />}
+        {maskDialog && loadedMain.url && <MaskPaintDialog imageUrl={loadedMain.url} hint={regionPoints.length > 1 ? `範囲指定で生成（ポイント${Math.max(1, regionPoints.findIndex(point => point.slot === maskDialog.slot) + 1)}）` : '範囲指定で生成'} paneTitle="参考画像の服を合わせたい部分をマスクで選択してください" initialMask={maskDialog.initial} onCancel={() => setMaskDialog(null)} onConfirm={confirmMask} />}
+        {canvasPicker && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-8" role="dialog" aria-label="キャンバスから選択" onClick={() => setCanvasPicker(null)}>
+          <div className="w-[min(720px,100%)] rounded-2xl border border-[#3d4346] bg-[#262a2b] p-6" onClick={event => event.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between text-base text-neutral-200">キャンバスから選択<button type="button" aria-label="閉じる" onClick={() => setCanvasPicker(null)}><X className="h-5 w-5" /></button></div>
+            <div className="grid max-h-[60vh] grid-cols-4 gap-3 overflow-y-auto">
+              {canvasPicker.images.map(image => <button key={image.key} type="button" aria-label="この画像を参考画像にする" onClick={() => void chooseCanvasImage(canvasPicker.slot, image.url)} className="aspect-[3/4] overflow-hidden rounded-xl border border-[#3d4346] bg-[#353a3b] hover:border-[#20d0c4]"><img src={image.url} alt="" className="h-full w-full object-cover" /></button>)}
+            </div>
+          </div>
+        </div>}
         {lightboxView}
       </main>
     );

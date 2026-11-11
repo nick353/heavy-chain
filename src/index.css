@@ -675,6 +675,12 @@
   white-space: nowrap;
 }
 
+/* Light lines the sample and every result up side by side in the result node. */
+.fashion-studio-result-row {
+  display: flex;
+  align-items: flex-start;
+}
+
 .fashion-studio-flow-edge {
   flex: 0 0 auto;
   pointer-events: none;

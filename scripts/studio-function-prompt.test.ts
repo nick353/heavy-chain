@@ -55,3 +55,14 @@ test('a text-mode request that asks for 3D also gets the 3D directive', () => {
   assert.match(studioProviderPrompt('この服を立体感のある3Dレンダリング画像に変換してください。', 'text'), /ghost-mannequin/);
   assert.match(studioProviderPrompt('３Ｄ画像にして', 'text'), /ghost-mannequin/);
 });
+
+// Light: 範囲指定 has up to three fusion points (one reference each), テキストで生成 up to nine references.
+test('multi-point region and multi-reference text name every image and still pass the server guard', () => {
+  const region = studioProviderPrompt('範囲指定で生成（融合ポイント3）', 'region', { hasReference: true, points: 3 });
+  assert.match(region, /Images 2 to 4 are reference garments\. Image 5 is image 1 with coloured brush strokes/);
+  assert.match(region, /the teal marks take the garment design of image 2, the magenta marks take the garment design of image 3, the orange marks take the garment design of image 4/);
+  const text = studioProviderPrompt('この服で撮影', 'text', { referenceCount: 3 });
+  assert.match(text, /Images 2 to 4 are reference images/);
+  assert.match(studioProviderPrompt('この服で撮影', 'text', { referenceCount: 1 }), /Image 2 is a reference image/);
+  for (const prompt of [region, text]) assert.deepEqual(validateLegalSafetyInput([prompt]), { blocked: false, reasons: [] });
+});
