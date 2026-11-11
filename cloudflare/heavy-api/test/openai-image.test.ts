@@ -35,7 +35,7 @@ test('OpenAI generation adapter keeps the credential server-side and parses b64 
   assert(request);
   assert.equal(request.url, 'https://api.openai.com/v1/images/generations');
   assert.equal(request.headers.get('authorization'), 'Bearer server-only-test-key');
-  assert.deepEqual(await request.json(), { model: 'gpt-image-1-mini', prompt: 'studio product image', n: 1, size: '1024x1024' });
+  assert.deepEqual(await request.json(), { model: 'gpt-image-1-mini', prompt: 'studio product image', n: 1, size: '1024x1024', moderation: 'low' });
 });
 
 test('OpenAI generation uses gpt-image-2 only when no model is requested or configured', async () => {
@@ -48,7 +48,7 @@ test('OpenAI generation uses gpt-image-2 only when no model is requested or conf
   assert.equal(result.providerModel, 'gpt-image-2');
   const request = requestBox.value;
   assert(request);
-  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'studio product image', n: 1, size: '2048x2048' });
+  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'studio product image', n: 1, size: '2048x2048', moderation: 'low' });
 });
 
 test('OpenAI edit adapter sends decoded references as multipart without source URLs', async () => {
@@ -101,7 +101,7 @@ test('OpenAI model-matrix without references uses text generation and the reques
   const request = requestBox.value;
   assert(request);
   assert.equal(request.url, 'https://api.openai.com/v1/images/generations');
-  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'professional adult apparel try-on photograph', n: 1, size: '2048x2048' });
+  assert.deepEqual(await request.json(), { model: 'gpt-image-2', prompt: 'professional adult apparel try-on photograph', n: 1, size: '2048x2048', moderation: 'low' });
 });
 
 test('OpenAI adapter fails closed without a key and does not echo provider error text', async () => {
@@ -125,6 +125,7 @@ test('OpenAI errors distinguish explicit rejection, uncertain HTTP/transport and
     [async () => Response.json({error:{type:'invalid_request_error',message:secret}},{status:500}), 'transport_uncertainty', 500],
     [async () => Response.json({error:{type:'invalid_request_error',message:secret}},{status:408}), 'transport_uncertainty', 408],
     [async () => Response.json({error:{type:secret,message:secret}},{status:400}), 'transport_uncertainty', 400],
+    [async () => Response.json({error:{type:'image_generation_user_error',code:'moderation_blocked',message:secret}},{status:400}), 'request_rejected', 400],
     [async () => new Response(secret,{status:502}), 'transport_uncertainty', 502],
     [async () => { throw new Error(secret); }, 'transport_uncertainty', undefined],
     [async () => Response.json({data:[]}), 'unusable_response', 200],
@@ -252,4 +253,24 @@ test('OpenAI results are enlarged to Light\'s 2048px-class sizes, and kept as th
   assert.equal(await enlargeLikeLight({} as never, original), original);
   const large = raster(pngFixture(2048, 1360))!;
   assert.equal(await enlargeLikeLight({ IMAGES: images(pngFixture(1, 1)) } as never, large), large);
+});
+
+// 2026-11-11 production: the innerwear sample came back 400 from the image safety system and was recorded as a lost
+// connection (state unknown), which blocked the same input for good. It is a rejection with its own error code, and the
+// requests ask for the documented `low` moderation level that apparel work needs.
+test('a safety refusal is a recorded rejection and image requests ask for low moderation', async () => {
+  const env = { OPENAI_API_KEY: 'server-only-test-key' } as never;
+  let form: FormData | undefined; let json: Record<string, unknown> | undefined;
+  const refusal = async (_url: string | URL | Request, init?: RequestInit) => {
+    if (init?.body instanceof FormData) form = init.body; else if (typeof init?.body === 'string') json = JSON.parse(init.body);
+    return Response.json({ error: { type: 'image_generation_user_error', code: 'moderation_blocked', message: 'blocked' } }, { status: 400, headers: { 'x-request-id': 'req_safety_1' } });
+  };
+  const input = (references: unknown[]) => ({ width: 1024, height: 1536, references, candidates: [{ prompt: 'p', descriptor: {} }] }) as never;
+  const png = { bytes: new Uint8Array([137, 80, 78, 71]), contentType: 'image/png', width: 8, height: 8 };
+  await assert.rejects(runOpenAIImage(env, 'edit-image', input([png, png]), 0, refusal as typeof fetch), (error: unknown) =>
+    error instanceof OpenAIImageError && error.category === 'request_rejected' && error.errorCode === 'image_provider_moderation_blocked'
+      && error.diagnostics.providerCode === 'moderation_blocked' && error.diagnostics.providerType === 'image_generation_user_error');
+  assert.equal(form?.get('moderation'), 'low');
+  await assert.rejects(runOpenAIImage(env, 'generate-image', input([]), 0, refusal as typeof fetch));
+  assert.equal(json?.moderation, 'low');
 });

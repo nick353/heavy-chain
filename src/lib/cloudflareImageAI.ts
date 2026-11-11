@@ -98,6 +98,17 @@ export async function prepareCloudflareImageInput(action: string, body: Body, op
   return next;
 }
 
+/**
+ * A held request a new turn may release: finished on the server, or `unknown` with nothing that can still arrive.
+ * The server never re-infers an `unknown` request (recovery reconcile_only_no_reinference); when no candidate got as
+ * far as storage the provider returned no image, so no result can ever come back for that ID. 2026-11-11 production:
+ * one dropped connection to the image provider left the same input blocked for good (同じ入力の生成依頼が未照合です).
+ */
+function settledForNewTurn(receipt: ImageReceipt): boolean {
+  if (receipt.state === 'completed' || receipt.state === 'failed') return true;
+  if (receipt.state !== 'unknown' || Number(receipt.persistedCandidateCount ?? 0) !== 0 || !Array.isArray(receipt.failedCandidates)) return false;
+  return receipt.failedCandidates.length > 0 && receipt.failedCandidates.every(candidate => candidate && typeof candidate === 'object' && (candidate as Body).state !== 'storing');
+}
 function readReceipt(value: unknown,id: string): ImageReceipt {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('image_receipt_invalid');
   const receipt = value as ImageReceipt;
@@ -147,7 +158,7 @@ export async function invokeDurableImageAction<T>(options: {
       // so an old request cannot block that input for good. Only a still-running one blocks.
       let released = false;
       if (!reconcileOnly) {
-        try { released = ['completed','failed'].includes(readReceipt(await options.call(`/v1/image-ai/requests/${previous}`),previous).state); }
+        try { released = settledForNewTurn(readReceipt(await options.call(`/v1/image-ai/requests/${previous}`),previous)); }
         catch (error) { released = error instanceof Error && error.message.includes('_404_image_request_not_found'); }
         await options.assertCurrent();
       }

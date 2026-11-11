@@ -172,6 +172,26 @@ test('a new turn releases a held ID the server never admitted, but not one it kn
   assert.equal((await image.invokeDurableImageAction(known.options)).requestId,fresh); assert.equal(posts,1);
 });
 
+// 2026-11-11 production: a dropped provider connection left the request `unknown` with no candidate stored, and the
+// same input could never be generated again. Nothing can arrive for such an ID, so a new turn releases it; a request
+// whose image reached storage (`storing`) can still be reconciled and keeps blocking.
+test('a new turn releases an unknown request that stored nothing, but not one with a candidate in storage',async () => {
+  const unknownReceipt = (id, candidateState) => ({ ...receipt(id,'unknown'), persistedCandidateCount: 0,
+    failedCandidates: [{ candidateIndex: 0, state: candidateState, error: 'image_provider_transport_uncertain' }] });
+  for (const [candidateState, released] of [['unknown', true], ['storing', false]]) {
+    const s = setup(); let first;
+    s.options.call = async (path,init = {}) => { first = new Headers(init.headers).get('idempotency-key'); return unknownReceipt(first,candidateState); };
+    await image.invokeDurableImageAction(s.options);
+    const next = crypto.randomUUID(); s.options.idempotencyKey = next; let posts = 0;
+    s.options.call = async (path,init = {}) => {
+      if (init.method === 'POST') { posts++; return receipt(new Headers(init.headers).get('idempotency-key')); }
+      return unknownReceipt(first,candidateState);
+    };
+    if (released) { assert.equal((await image.invokeDurableImageAction(s.options)).requestId,next); assert.equal(posts,1); }
+    else { await assert.rejects(image.invokeDurableImageAction(s.options),/未照合/); assert.equal(posts,0); }
+  }
+});
+
 test('a token verifier outage keeps the request held: the server can return it after admitting the job',async () => {
   const s = setup(); let id;
   s.options.call = async (path,init = {}) => {
