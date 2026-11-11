@@ -27,3 +27,10 @@ test('a quick start fills the text without its label and focuses the composer at
 test('the profile shortcut is hidden on インスピレーション and AIグラフィックデザイン like Light', () => {
   assert.match(source, /!\['インスピレーション', 'AIグラフィックデザイン'\]\.includes\(currentWorkspaceTab\) && <button type="button" aria-label="業務プリファレンスプロファイル"/);
 });
+
+test('the task page retries its first automatic steps before showing a failure', () => {
+  const task = readFileSync(new URL('../src/pages/HeavyAgentTaskPage.tsx', import.meta.url), 'utf8');
+  assert.match(task, /guard\(startThemeRound, 'タスクを開始できませんでした。', 'start'\)/);
+  assert.match(task, /guard\(\(\) => startPlan\(theme\), '企画書の作成を開始できませんでした。', 'plan'\)/);
+  assert.match(task, /if \(used < 2 && retryKey\) \{[\s\S]*?loadAgentTask\(taskId\)/);
+});
