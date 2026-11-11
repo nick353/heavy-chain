@@ -48,10 +48,11 @@ test('with three or more citations only the cited pages are sources, titled from
       { type: 'web_search_result_location', url: 'https://zozo.example/a', title: 'ZOZOTOWN ベスト', cited_text: 'again' },
     ] },
   ]));
+  // Light shows the cited sentence under each source (2026-11-12): the first one cited from each page is kept.
   assert.deepEqual(result.sources, [
-    { url: 'https://zozo.example/a', title: 'ZOZOTOWN ベスト' },
-    { url: 'https://rakuten.example/b', title: '楽天 アウター' },
-    { url: 'https://weather.example/c', title: '秋の天気' },
+    { url: 'https://zozo.example/a', title: 'ZOZOTOWN ベスト', quote: 'x' },
+    { url: 'https://rakuten.example/b', title: '楽天 アウター', quote: 'y' },
+    { url: 'https://weather.example/c', title: '秋の天気', quote: 'z' },
   ]);
   assert.equal(result.searchUsed, true);
 });
@@ -199,8 +200,8 @@ test('every planning request stays under the cap even with the longest parts, an
 // Light's 「ビジュアル方向性を選択」 and its HTML report (2026-11-11).
 test('directions read as name, description and recommendation, and the report escapes everything it shows', () => {
   assert.deepEqual(parseAgentDirection('リラックス・テーラリング（ジャンプスーツ）｜ドレープ素材のハイウエスト。軽量。｜天猫の中価格帯で実績'),
-    { name: 'リラックス・テーラリング（ジャンプスーツ）', description: 'ドレープ素材のハイウエスト。軽量。', recommendation: '天猫の中価格帯で実績' });
-  assert.deepEqual(parseAgentDirection('アーバン・リネン：麻混の通勤着'), { name: 'アーバン・リネン', description: '麻混の通勤着', recommendation: '' });
+    { name: 'リラックス・テーラリング（ジャンプスーツ）', description: 'ドレープ素材のハイウエスト。軽量。', recommendation: '天猫の中価格帯で実績', imagePrompt: '' });
+  assert.deepEqual(parseAgentDirection('アーバン・リネン：麻混の通勤着'), { name: 'アーバン・リネン', description: '麻混の通勤着', recommendation: '', imagePrompt: '' });
   const research = { requestId: 'r', state: 'completed' as const, content: formatAgentResearchContent({ text: '## トレンド\n- <script>alert(1)</script>', sources: [{ title: 'A"<b>', url: 'https://example.com/?q="x"' }], searchUsed: true, searchErrors: [] }) };
   const html = buildAgentResearchReportHtml(conversationTask({ research, rounds: [{ step: { requestId: 't', state: 'completed' }, summary: '', themes: ['名前｜説明｜理由'] }] }));
   assert.doesNotMatch(html, /<script>alert/);
@@ -211,12 +212,15 @@ test('directions read as name, description and recommendation, and the report es
 
 test('the task page follows Light\'s conversation and lists the research sources', () => {
   const page = readFileSync(new URL('../src/pages/HeavyAgentTaskPage.tsx', import.meta.url), 'utf8');
-  for (const text of ['問題ありません、続行', '条件を補足する', '調査範囲を確認', '選択をリセット', '確認して調査を開始', '条件を追加、または続けて質問…', 'Enterで送信・Shift+Enterで改行',
+  for (const text of ['問題ありません、続行', '調査範囲を確認', '選択をリセット', '確認して調査を開始', '条件を追加、または続けて質問…', 'Enterで送信・Shift+Enterで改行',
     'その他のECプラットフォームや独立サイト名をカンマで区切って入力してください', 'data-testid="agent-research-sources"', '今回の要件の理解：',
-    '調査が完了しました。続いて調査結果をHTMLレポートに整理して表示します。', 'オンラインで表示', 'ダウンロード', 'ビジュアル方向性を選択', '商品構成計画に進む方向性を1つ以上選択してください',
-    '全選択', '修正・補足する', '確認して続行', 'タスク成果物'])
+    'オンラインで表示', 'ダウンロード', 'ビジュアル方向性を選択', '全選択', '修正・補足する', '確認して続行', 'タスク成果物'])
     assert.ok(page.includes(text), text);
-  assert.match(page, /\{!conversation && !roundSources && <p className="mt-2 text-xs leading-5 text-neutral-500">\{agentThemeSearches\(task\)/);
+  // Light's words per scene live with the steps (agentMerch.ts).
+  const merch = readFileSync(new URL('../src/features/agent/agentMerch.ts', import.meta.url), 'utf8');
+  for (const text of ['条件を補足する', '調査が完了しました。続いて調査結果をHTMLレポートに整理して表示します。', '商品構成計画に進む方向性を1つ以上選択してください'])
+    assert.ok(merch.includes(text), text);
+  assert.match(page, /\{!roundSources && <p className="mt-2 text-xs leading-5 text-neutral-500">\{agentThemeSearches\(task\)/);
   assert.match(page, /runAssistant\('theme', step, prompt, applyRound\(requestId\), themeMode\(saved\.task\)\)/);
   assert.match(page, /guard\(startResearch, '調査を開始できませんでした。', 'research'\)/);
   assert.match(page, /'agent-research'\)/);
@@ -232,7 +236,8 @@ test('the task page follows Light\'s conversation and lists the research sources
   assert.match(page, /\{last && \(round\.step\.state === 'failed' \|\| round\.step\.state === 'unknown'\) && \(/);
   assert.match(page, /\{round\.summary && !conversation && <div className="whitespace-pre-wrap" data-testid="agent-summary">/);
   const tasks = readFileSync(new URL('../src/features/agent/agentTasks.ts', import.meta.url), 'utf8');
-  assert.match(tasks, /input\.subtype === '新商品企画' \? \{ flow: 'conversation' as const, requirements: null, notes: \[\], aligned: null, scope: null, research: null \}/);
+  assert.match(tasks, /AGENT_CONVERSATION_SUBTYPES: readonly string\[\] = \['新商品企画', '顧客提案'\]/);
+  assert.match(tasks, /AGENT_CONVERSATION_SUBTYPES\.includes\(input\.subtype\) \? \{ flow: 'conversation' as const, requirements: null, notes: \[\], aligned: null, scope: null, research: null \}/);
 });
 
 // Light (2026-11-11): 新商品企画 runs the conversation; テーマ企画 goes straight to the themes with web sources under 参考資料.

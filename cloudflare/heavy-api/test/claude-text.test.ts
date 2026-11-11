@@ -235,3 +235,18 @@ test('provider endpoint serves profile-extract through the same entrance and gat
   });
   assert.equal(s.calls.length, 0);
 });
+
+// Light's 添付を追加 → ファイル (2026-11-12): the planning agent keeps what an attached PDF says, through the same entrance.
+test('profile-extract with purpose planning-material returns what the materials say, not a profile', async () => {
+  const { runClaudeTextAction } = await import('../src/claude-text.ts');
+  const box: { body?: Json } = {};
+  const result = await runClaudeTextAction(env(), 'profile-extract', { brandId: 'brand', purpose: 'planning-material', files: [{ name: 'collection.pdf', kind: 'pdf', data: 'JVBERi0x' }] },
+    async (_url, init) => { box.body = JSON.parse(String(init?.body)); return claudeReply({ text: `  2025秋冬「United Jam」。90年代のヒップホップとスノーボード。${'あ'.repeat(3000)}` }); });
+  assert.equal((result as { success: boolean }).success, true);
+  assert.match((result as { text: string }).text, /^2025秋冬「United Jam」/);
+  assert.equal((result as { text: string }).text.length, 2000);
+  assert.equal('categories' in (result as object), false);
+  assert.match(box.body?.system, /attached to an apparel planning request/);
+  assert.deepEqual(Object.keys(box.body?.output_config.format.schema.properties), ['text']);
+  assert.equal((box.body?.messages[0].content as Json[])[0].type, 'document');
+});

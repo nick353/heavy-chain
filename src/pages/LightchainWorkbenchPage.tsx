@@ -39,7 +39,8 @@ import {
   RotateCw,
 } from 'lucide-react';
 import { AgentProfileDialog, AgentSidebar, useAgentProjects } from '../features/agent/AgentSidebar';
-import { AGENT_SCENES, createAgentTask, readAgentProfile, type AgentScene } from '../features/agent/agentTasks';
+import { AGENT_SCENES, createAgentTask, readAgentProfile, type AgentAttachment, type AgentScene } from '../features/agent/agentTasks';
+import { AgentAttachMenu, AgentAttachmentChips } from '../features/agent/AgentAttachMenu';
 import toast from 'react-hot-toast';
 import { addFittingBatchTask, removeFittingBatchTask, readFittingBatch, fittingBatchScopeKey, fittingModeSummary, type FittingBatchTask } from '../lib/fittingBatch';
 import { fittingBatchStorage, freezeFittingBatchImage } from '../lib/fittingBatchStorage';
@@ -1556,6 +1557,8 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
   const [agentProject, setAgentProject] = useState<string | null>(null);
   const [agentProjectMenuOpen, setAgentProjectMenuOpen] = useState(false);
   const [agentStarting, setAgentStarting] = useState(false);
+  const [agentAttachments, setAgentAttachments] = useState<AgentAttachment[]>([]);
+  const [agentAttaching, setAgentAttaching] = useState(false);
   const agentProjects = useAgentProjects();
   const [agentTaskTypeOpen, setAgentTaskTypeOpen] = useState(false);
   const [agentTaskTypeDrafts, setAgentTaskTypeDrafts] = useState<Record<string, string>>({});
@@ -4034,13 +4037,13 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
   const startAgentTask = async () => {
     const request = workspaceText.trim();
     if (!request) { toast.error('目標を入力してください'); return; }
-    if (!currentBrand?.id || !user?.id || agentStarting) return;
+    if (!currentBrand?.id || !user?.id || agentStarting || agentAttaching) return;
     const scene = (AGENT_SCENES as readonly string[]).includes(activeWorkspaceTab) ? activeWorkspaceTab as AgentScene : '商品企画';
     const subtype = scene === '商品企画' ? (agentTaskType === '商品企画' ? '新商品企画' : 'テーマ企画') : scene;
     setAgentStarting(true);
     try {
-      const created = await createAgentTask({ brandId: currentBrand.id, scene, subtype, prompt: request, profile: readAgentProfile(user.id, currentBrand.id), project: agentProject });
-      setWorkspaceText('');
+      const created = await createAgentTask({ brandId: currentBrand.id, scene, subtype, prompt: request, profile: readAgentProfile(user.id, currentBrand.id), project: agentProject, attachments: agentAttachments });
+      setWorkspaceText(''); setAgentAttachments([]);
       navigate(`/agent/${created.id}`);
     } catch {
       toast.error('タスクを作成できませんでした。もう一度お試しください。');
@@ -6290,31 +6293,13 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                 )}
                 </div>
                 {workspaceStyle.kind === 'agent' && (
+                  // Light's 添付を追加: ファイル / 画像. What is attached here goes with the new task to every planning step.
                   <>
-                    <label
-                      htmlFor="lightchain-agent-attachment-file"
-                      role="button"
-                      tabIndex={0}
-                      aria-label="添付を追加"
-                      className="absolute bottom-3 left-0 rounded-md px-2 py-1 text-xs font-semibold text-neutral-300 transition hover:bg-white/10"
-                    >
-                      <span className="sr-only">添付を追加</span><span aria-hidden="true" className="text-2xl font-normal leading-6">＋</span>
-                    </label>
-                    <input
-                      id="lightchain-agent-attachment-file"
-                      type="file"
-                      accept=".pdf,.doc,.docx,.txt,image/*"
-                      aria-label="アップロードするファイルを選択"
-                      className="sr-only"
-                      onChange={(event) => handleMaterialSlotUpload('primary', event)}
-                    />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      aria-label="アップロードする画像を選択"
-                      className="sr-only"
-                      onChange={(event) => handleMaterialSlotUpload('primary', event)}
-                    />
+                    {agentAttachments.length > 0 && (
+                      <div className="absolute bottom-14 left-2 right-16"><AgentAttachmentChips items={agentAttachments} onRemove={(id) => setAgentAttachments((current) => current.filter((item) => item.id !== id))} /></div>
+                    )}
+                    <AgentAttachMenu brandId={currentBrand?.id ?? null} disabled={agentStarting} count={agentAttachments.length} onBusy={setAgentAttaching} className="absolute bottom-3 left-0"
+                      onAdd={(items) => setAgentAttachments((current) => [...current, ...items])} onError={(message) => toast.error(message)} />
                   </>
                 )}
                 <button
