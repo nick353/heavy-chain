@@ -30,6 +30,17 @@ export function assetDescriptor(relativePath, bytes) {
   };
 }
 
+/**
+ * Files the Worker serves from the R2 app-asset bucket instead of Static Assets: everything over the 25 MiB static
+ * limit, and every top-level runtime/model file (.wasm, .onnx). The .assetsignore below drops all assets/*.wasm and
+ * assets/*.onnx from Static Assets once one of them is oversized, so a smaller one has to come from R2 too: on
+ * 2026-11-11 the 24 MB WebGPU runtime (ort-wasm-simd-threaded.asyncify) was in neither place, answered 404, and
+ * AIマスク認識 silently fell back to the colour heuristic. Exported for tests.
+ */
+export function servesFromR2(relativePath, size) {
+  return size > STATIC_LIMIT || /^assets\/[a-zA-Z0-9_.-]+\.(onnx|wasm)$/.test(relativePath);
+}
+
 async function walk(dir) {
   const files = [];
   for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
@@ -162,8 +173,8 @@ export async function build() {
   await fs.writeFile(path.join(site, '_redirects'), '# SPA fallback is configured in the Workers assets binding.\n');
   const manifest = {};
   for (const file of await walk(site)) {
-    if ((await fs.stat(file)).size <= STATIC_LIMIT) continue;
     const relative = path.relative(site, file).split(path.sep).join('/');
+    if (!servesFromR2(relative, (await fs.stat(file)).size)) continue;
     const bytes = await fs.readFile(file);
     manifest[`/${relative}`] = assetDescriptor(relative, bytes);
   }

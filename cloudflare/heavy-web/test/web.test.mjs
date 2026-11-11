@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import web, { parseRange } from '../src/index.mjs';
-import { assetDescriptor } from '../build.mjs';
+import { assetDescriptor, servesFromR2, STATIC_LIMIT } from '../build.mjs';
 
 const bytes = new TextEncoder().encode('test-public-model');
 const asset = assetDescriptor('assets/silueta.onnx', bytes);
@@ -30,6 +30,15 @@ test('only explicitly allowlisted app models/runtime files can be offloaded', ()
     assert.throws(() => assetDescriptor(path, bytes));
   }
   assert.equal(assetDescriptor('assets/runtime.wasm', bytes).contentType, 'application/wasm');
+});
+test('every top-level .wasm/.onnx is served from R2, not only the oversized ones (2026-11-11 the 24 MB WebGPU runtime answered 404)', () => {
+  // .assetsignore drops all assets/*.wasm once one is over the static limit, so a smaller runtime must come from R2.
+  assert.equal(servesFromR2('assets/ort-wasm-simd-threaded.asyncify-CvvOzbbq.wasm', 24_254_953), true);
+  assert.equal(servesFromR2('assets/ort-wasm-simd-threaded.jsep-DC5y_g6C.wasm', 26_827_543), true);
+  assert.equal(servesFromR2('assets/u2net.onnx', 1024), true);
+  assert.equal(servesFromR2('assets/index-abc.js', 400_000), false);
+  assert.equal(servesFromR2('assets/nested/key.wasm', 1024), false);
+  assert.equal(servesFromR2('assets/huge-video.mp4', STATIC_LIMIT + 1), true);
 });
 test('full and HEAD reads use the manifest key, not a user supplied R2 key', async () => {
   const { env, calls } = fixture();
