@@ -258,6 +258,18 @@ test('OpenAI provider prepares five distinct references in input order with boun
   ]);
 });
 
+test('a protected (range) edit keeps every OpenAI-side reference as PNG, other edits still send large references as JPEG (2026-11-11)',async () => {
+  const urls = ['https://image.test/source','https://image.test/guide'];
+  const mimes = async body => withImagePlatform({ dimensions:[[859,1280],[859,1280]] },async () => {
+    const value = await image.prepareCloudflareImageInput('edit-image',body,{ referenceSide:1536 });
+    return [...value.imageUrls.map(url => url.slice(5,url.indexOf(';'))),...value.referenceTransforms.map(item => `${item.width}x${item.height}`)];
+  });
+  // The server requires the guide as PNG and the browser snapshot check requires every image as PNG.
+  // Capped at 1024 px (inside the 9 MB request limit), the source and the guide keep one size.
+  assert.deepEqual(await mimes({ generationProvider:'openai',imageUrls:urls,brandId:'brand',protectedEdit:{ mode:'reference-guide-protected-composite-v1' } }),['image/png','image/png','687x1024','687x1024']);
+  assert.deepEqual(await mimes({ generationProvider:'openai',imageUrls:urls,brandId:'brand' }),['image/jpeg','image/jpeg','859x1280','859x1280']);
+});
+
 test('model-matrix keeps the garment and person references in its two dedicated fields',async () => {
   const garment = 'https://image.test/garment'; const person = 'https://image.test/person';
   const prepared = await withImagePlatform({},async platform => {
