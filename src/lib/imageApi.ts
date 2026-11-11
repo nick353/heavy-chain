@@ -410,6 +410,8 @@ export async function editImageWithPrompt(
     maskCoveragePercent?: number;
     maskWidth?: number;
     maskHeight?: number;
+    /** The frame the user asked for (e.g. '1:1'); without it the edit keeps the source photo's frame. */
+    aspectRatio?: string;
     providerModel?: string;
     inputFidelity?: 'low' | 'high';
     quality?: 'low' | 'medium' | 'high' | 'auto';
@@ -465,6 +467,8 @@ export async function editImageWithPrompt(
       maskCoveragePercent: options?.maskCoveragePercent,
       maskWidth: options?.maskWidth,
       maskHeight: options?.maskHeight,
+      // A masked (protected) edit keeps the source pixels outside the mask, so it always keeps the source frame.
+      ...(options?.aspectRatio && !options?.maskDataUrl ? { aspectRatio: options.aspectRatio } : {}),
       providerModel: options?.providerModel,
       inputFidelity: options?.inputFidelity,
       quality: options?.quality,

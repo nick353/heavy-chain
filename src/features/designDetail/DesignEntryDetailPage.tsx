@@ -39,6 +39,7 @@ import { AssistantQuestionCard } from './AssistantQuestionCard';
 import { AssistantImageSearchCard } from './AssistantImageSearchCard';
 import type { DialogueAttempt } from './dialogueStore';
 import { foundImageFile, type FoundImage } from './referenceImageSearch';
+import { requestedAspectRatio } from './requestedAspectRatio';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 export const createDesignDialogueClient = (featureType: string): DesignDialogueClient => ({
@@ -62,8 +63,10 @@ export const createDesignDialogueClient = (featureType: string): DesignDialogueC
       urls.push(resolved.url);
     }
     const variations = input.variations?.length ? { count: input.variations.length, variations: [...input.variations] } : {};
+    // 「正方形の宣伝画像」 must come back square like Light, not in the garment photo's portrait frame (2026-11-11).
+    const aspectRatio = requestedAspectRatio(input.prompt);
     const options = { rightsConfirmed: ready, idempotencyKey: input.idempotencyKey, assertContext: input.assertContext,
-      retainUntilAcknowledged: input.retainUntilAcknowledged, featureType, ...variations };
+      retainUntilAcknowledged: input.retainUntilAcknowledged, featureType, ...variations, ...(aspectRatio ? { aspectRatio } : {}) };
     return urls.length ? editImageWithPrompt(urls[0], input.prompt, input.brandId, { ...options, referenceImageUrls: urls.slice(1) })
       : generateImage(input.prompt, input.brandId, options);
   },
