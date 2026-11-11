@@ -61,6 +61,43 @@ const canvasOf = (width: number, height: number) => {
 
 const analyses = new Map<string, Promise<ClothPartsAnalysis>>();
 
+/** Results are kept per garment content (and model), so the same garment after a reload answers at once. */
+const RESULT_CACHE = 'heavy-cloth-parts-results-v1';
+const hex = (buffer: ArrayBuffer) => Array.from(new Uint8Array(buffer), (byte) => byte.toString(16).padStart(2, '0')).join('');
+const resultKey = async (rgba: Uint8ClampedArray) =>
+  `https://heavy-cloth-parts.invalid/${REMBG_CLOTH_SEG_MODEL_SHA256.slice(0, 16)}/${hex(await crypto.subtle.digest('SHA-256', new Uint8Array(rgba)))}`;
+const readCachedResult = async (key: string) => {
+  try {
+    const hit = await (await caches.open(RESULT_CACHE)).match(key);
+    if (!hit) return null;
+    const bytes = new Uint8Array(await hit.arrayBuffer());
+    return bytes.length === CLOTH_PARTS_INPUT_SIDE * CLOTH_PARTS_INPUT_SIDE ? bytes : null;
+  } catch { return null; }
+};
+const writeCachedResult = async (key: string, classMap: Uint8Array) => {
+  try { await (await caches.open(RESULT_CACHE)).put(key, new Response(classMap.slice(0), { headers: { 'content-type': 'application/octet-stream' } })); }
+  catch { /* storage full or unavailable: keep working without it */ }
+};
+
+const post = (message: Record<string, unknown>, transfer: Transferable[] = []) => {
+  const requestId = nextRequestId++;
+  return new Promise<Reply>((resolve, reject) => {
+    pending.set(requestId, { resolve, reject });
+    getWorker().postMessage({ requestId, ...message }, transfer);
+  });
+};
+
+let warmed: Promise<unknown> | null = null;
+/**
+ * Builds the session and compiles the GPU kernels in the background (WebGPU only; the worker skips it otherwise), so
+ * AIマスク認識 answers in seconds, like Light. Called when the print page opens; repeated calls share one warm-up.
+ */
+export function warmClothParts() {
+  const url = modelUrl();
+  if (!url || warmed) return;
+  warmed = post({ modelUrl: url, modelSha256: REMBG_CLOTH_SEG_MODEL_SHA256, warm: true }).catch(() => undefined);
+}
+
 /**
  * Runs the cloth model once per garment image (cached by URL) in a worker. The editor starts this as soon as it
  * opens, so AIマスク認識 can list the found parts at once, like Light.
@@ -75,13 +112,16 @@ export function analyzeClothParts(imageUrl: string): Promise<ClothPartsAnalysis>
     const input = canvasOf(CLOTH_PARTS_INPUT_SIDE, CLOTH_PARTS_INPUT_SIDE);
     input.context.drawImage(image, 0, 0, CLOTH_PARTS_INPUT_SIDE, CLOTH_PARTS_INPUT_SIDE);
     const rgba = input.context.getImageData(0, 0, CLOTH_PARTS_INPUT_SIDE, CLOTH_PARTS_INPUT_SIDE).data;
-    const requestId = nextRequestId++;
-    const reply = await new Promise<Reply>((resolve, reject) => {
-      pending.set(requestId, { resolve, reject });
-      getWorker().postMessage({ requestId, modelUrl: url, modelSha256: REMBG_CLOTH_SEG_MODEL_SHA256, rgba: rgba.buffer }, [rgba.buffer]);
-    });
-    if (!reply.classMap) throw new Error('cloth_parts_output_invalid');
-    const classMap = new Uint8Array(reply.classMap);
+    const key = await resultKey(rgba);
+    const cached = await readCachedResult(key);
+    let fresh: Uint8Array | null = null;
+    if (!cached) {
+      const reply = await post({ modelUrl: url, modelSha256: REMBG_CLOTH_SEG_MODEL_SHA256, rgba: rgba.buffer }, [rgba.buffer]);
+      if (!reply.classMap) throw new Error('cloth_parts_output_invalid');
+      fresh = new Uint8Array(reply.classMap);
+      void writeCachedResult(key, fresh);
+    }
+    const classMap: Uint8Array = cached ?? (fresh as Uint8Array);
     const found = foundClothParts(classMap);
     const small = new Map<ClothPartLabel, HTMLCanvasElement>();
     const partCanvas = (label: ClothPartLabel) => {

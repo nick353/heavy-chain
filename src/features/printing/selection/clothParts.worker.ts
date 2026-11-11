@@ -21,8 +21,10 @@ type Request = {
   requestId: number;
   modelUrl: string;
   modelSha256: string;
-  /** RGBA of the garment already resized to CLOTH_PARTS_INPUT_SIDE square on the page. */
-  rgba: ArrayBuffer;
+  /** RGBA of the garment already resized to CLOTH_PARTS_INPUT_SIDE square on the page; absent for a warm-up. */
+  rgba?: ArrayBuffer;
+  /** Build the session and compile the GPU kernels now (one blank inference), so the first real request is fast. */
+  warm?: boolean;
 };
 
 let sessionPromise: Promise<ort.InferenceSession> | null = null;
@@ -72,7 +74,14 @@ const loadSession = (modelUrl: string, sha256: string) => {
   return sessionPromise;
 };
 
-const classMapFor = async (request: Request, rgba: Uint8ClampedArray) => {
+/** One inference at a time: the warm-up and a real request can arrive together, and a session runs one call at once. */
+let runQueue: Promise<unknown> = Promise.resolve();
+const classMapFor = (request: Request, rgba: Uint8ClampedArray) => {
+  const run = runQueue.then(() => classMapNow(request, rgba));
+  runQueue = run.catch(() => undefined);
+  return run;
+};
+const classMapNow = async (request: Request, rgba: Uint8ClampedArray) => {
   const session = await loadSession(request.modelUrl, request.modelSha256);
   const input = new ort.Tensor('float32', clothPartsInputTensorData(rgba), [1, 3, CLOTH_PARTS_INPUT_SIDE, CLOTH_PARTS_INPUT_SIDE]);
   const outputs = await session.run({ [session.inputNames[0]]: input });
@@ -81,9 +90,27 @@ const classMapFor = async (request: Request, rgba: Uint8ClampedArray) => {
   return clothPartsClassMap(output.data, Number(output.dims[1]));
 };
 
+/**
+ * Light answers AIマスク認識 in about three seconds from its server. Here the first WebGPU inference compiles its kernels
+ * (about 18 s measured 2026-11-11) and later ones take about 5 s, so the print page warms the session up when it opens.
+ * Only on WebGPU: a WASM warm-up would keep a phone's CPU busy for a minute for an editor that may never open.
+ */
+const warmUp = async (request: Request) => {
+  if (!hasWebGpu()) return;
+  await classMapFor(request, new Uint8ClampedArray(CLOTH_PARTS_INPUT_SIDE * CLOTH_PARTS_INPUT_SIDE * 4));
+};
+
 self.addEventListener('message', (event: MessageEvent<Request>) => {
   const request = event.data;
+  if (request.warm) {
+    void warmUp(request).then(
+      () => self.postMessage({ requestId: request.requestId, ok: true }),
+      () => self.postMessage({ requestId: request.requestId, ok: true, warmFailed: true }),
+    );
+    return;
+  }
   void (async () => {
+    if (!request.rgba) throw new Error('cloth_parts_input_missing');
     const rgba = new Uint8ClampedArray(request.rgba);
     let map: Uint8Array;
     try { map = await classMapFor(request, rgba); }

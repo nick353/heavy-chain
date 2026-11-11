@@ -45,6 +45,22 @@ test('AIマスク認識 is fast enough to be ready when the editor opens: WebGPU
   assert.match(page, /useEffect\(\(\)=>\{if\(garmentUrl\)void analyzeClothParts\(garmentUrl\)\.catch\(\(\)=>undefined\);\},\[garmentUrl\]\);/);
 });
 
+test('AIマスク認識 answers in seconds like Light: the GPU session is warmed when the print page opens and results are kept per garment (2026-11-11)', () => {
+  const worker = readFileSync(new URL('../src/features/printing/selection/clothParts.worker.ts', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('../src/features/printing/selection/clothParts.ts', import.meta.url), 'utf8');
+  // Warm-up on WebGPU only (a WASM warm-up would busy a phone's CPU for a minute), one blank inference to compile kernels.
+  assert.match(worker, /const warmUp = async \(request: Request\) => \{\n\s*if \(!hasWebGpu\(\)\) return;/);
+  assert.match(worker, /if \(request\.warm\) \{/);
+  // A session runs one call at a time: the warm-up and a real request are queued.
+  assert.match(worker, /const run = runQueue\.then\(\(\) => classMapNow\(request, rgba\)\);/);
+  assert.match(client, /export function warmClothParts\(\)/);
+  assert.match(page, /useEffect\(\(\)=>\{warmClothParts\(\);\},\[\]\);/);
+  // Results are cached by garment content and model, so a reload answers at once.
+  assert.match(client, /const RESULT_CACHE = 'heavy-cloth-parts-results-v1';/);
+  assert.match(client, /const cached = await readCachedResult\(key\);/);
+  assert.match(client, /void writeCachedResult\(key, fresh\);/);
+});
+
 test('the composite keeps the garment resolution (up to 2528 px), so results are no longer 859×1280 (2026-11-11)', () => {
   assert.match(editor, /await composeAt\(outputSize\(garment\.naturalWidth, garment\.naturalHeight, size\)\)/);
   assert.match(editor, /context\.drawImage\(drawPrintLayer\(printImages, hasMask \? mask : null, placements, out\), 0, 0\);/);

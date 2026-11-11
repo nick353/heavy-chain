@@ -64,7 +64,7 @@ import { PrintDraftSafetyControls } from '../components/PrintDraftSafetyControls
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
 import { recordLibraryUpload } from '../lib/libraryUploadHistory';
 import { MAX_PRINTS, PrintApplyEditor, type PrintApplyEditorState, type PrintEditorPrint } from '../components/lightchain/PrintApplyEditor';
-import { analyzeClothParts } from '../features/printing/selection/clothParts';
+import { analyzeClothParts, warmClothParts } from '../features/printing/selection/clothParts';
 import { LIGHTCHAIN_SVG_CONVERT_TABS, LIGHTCHAIN_VECTOR_TOOL_TABS, LightchainDesignToolEmptyState, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
 import { SvgExportPanel } from '../components/lightchain/SvgExportPanel';
 import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
@@ -649,6 +649,9 @@ function LightchainPrintingWorkspace() {
   // Light finds the garment's parts on its server in about 3 s. Heavy's cloth model runs in the browser, so it starts as soon
   // as the garment is up (cached per URL): by the time the prints are added and the editor opens, AIマスク認識 is ready (2026-11-11).
   const garmentUrl=!printApplied?referenceImage?.url:undefined;
+  // The GPU session is built and its kernels compiled as soon as the print page opens (WebGPU only), and results are kept per
+  // garment, so the menu answers in seconds like Light's server (2026-11-11: first inference ~18 s cold, ~5 s warm).
+  useEffect(()=>{warmClothParts();},[]);
   useEffect(()=>{if(garmentUrl)void analyzeClothParts(garmentUrl).catch(()=>undefined);},[garmentUrl]);
   const editorPrints:PrintEditorPrint[]=[...(printImage?[{id:PRIMARY_PRINT_ID,url:printImage.url}]:[]),...extraPrints.map(item=>({id:item.id,url:item.url}))];
   // 適用 on a tile places that print; the round button on the garment opens the same dialog without adding one.
