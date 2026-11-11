@@ -2509,15 +2509,16 @@ export function LightchainDialogueParityPanel({
               onChange={(event) => { void handleUploadChange(event); }}
             />
             <div data-design-dialogue-references="" data-testid="design-dialogue-references" aria-label="選択した参考画像">
-              {visibleReferences.map((reference) => (
-                <div key={reference.id} data-design-dialogue-reference="" data-testid="design-dialogue-reference-chip" data-reference-id={reference.id}>
+              {/* Light tags each attached image 「画像N ×」 in a teal-edged chip; the file name and a ready state are not shown. */}
+              {visibleReferences.map((reference, referenceIndex) => (
+                <div key={reference.id} data-design-dialogue-reference="" data-testid="design-dialogue-reference-chip" data-reference-id={reference.id} data-status={reference.status}>
                   {thumbnailUrls[reference.id]
                     ? <img data-design-dialogue-reference-thumbnail="" src={thumbnailUrls[reference.id]} alt="" />
                     : <span data-design-dialogue-reference-thumbnail-placeholder="" aria-hidden="true"><ImageIcon className="h-4 w-4" /></span>}
-                  <span data-design-dialogue-reference-name="" title={reference.name}>{reference.name}</span>
-                  <span data-design-dialogue-reference-status="" aria-live="polite">{designDialogueReferenceStatusLabel[reference.status] ?? reference.status}</span>
+                  <span data-design-dialogue-reference-name="" title={reference.name}>画像{referenceIndex + 1}</span>
+                  {reference.status !== 'ready' && <span data-design-dialogue-reference-status="" aria-live="polite">{designDialogueReferenceStatusLabel[reference.status] ?? reference.status}</span>}
                   {reference.status === 'failure' && <button type="button" data-testid="design-dialogue-reference-retry" aria-label={`${reference.name}を再試行`} onClick={() => retryReference(reference)}>再試行</button>}
-                  <button type="button" data-testid="design-dialogue-reference-remove" aria-label={`${reference.name}を削除`} onClick={() => removeReference(reference.id)}><Trash2 aria-hidden="true" className="h-3.5 w-3.5" /></button>
+                  <button type="button" data-testid="design-dialogue-reference-remove" aria-label={`${reference.name}を削除`} onClick={() => removeReference(reference.id)}><X aria-hidden="true" className="h-3.5 w-3.5" /></button>
                 </div>
               ))}
             </div>

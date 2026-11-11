@@ -27,7 +27,7 @@
 .design-production-parity [data-design-dialogue-upload-illustration] { position: absolute; top: 19px; left: 24px; display: block; width: 90px; height: 104px; object-fit: contain; }
 .design-production-parity [data-design-dialogue-upload-trigger] { position: absolute; top: 19px; left: 24px; width: 90px; height: 104px; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .design-production-parity [data-design-dialogue-references] { position: absolute; top: 7px; left: 143px; right: 72px; display: flex; max-height: 28px; align-items: center; gap: 4px; overflow-x: auto; overflow-y: hidden; }
-.design-production-parity [data-design-dialogue-reference] { display: flex; height: 26px; min-width: 0; flex: 0 0 auto; align-items: center; gap: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: rgba(0,0,0,.2); padding: 2px 4px; color: #e3e8e8; font-size: 10px; line-height: 14px; }
+.design-production-parity [data-design-dialogue-reference] { display: flex; height: 26px; min-width: 0; flex: 0 0 auto; align-items: center; gap: 4px; overflow: hidden; border: 1px solid #0bcabc; border-radius: 8px; background: rgba(0,0,0,.2); padding: 2px 4px; color: #e3e8e8; font-size: 10px; line-height: 14px; }
 .design-production-parity [data-design-dialogue-reference-thumbnail],
 .design-production-parity [data-design-dialogue-reference-thumbnail-placeholder] { display: flex; width: 20px; height: 20px; flex: 0 0 20px; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; object-fit: cover; background: rgba(255,255,255,.08); }
 .design-production-parity [data-design-dialogue-reference-name] { max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
