@@ -18,8 +18,8 @@ export type FashionStudioGenerationInput = {
   main: { objectId: string; imageUrl: string; verified: boolean };
   referenceImageUrls?: readonly string[];
   prompt: string;
-  /** 生成設定 → 比率; omitted keeps the main image's frame. */
-  editOptions?: { aspectRatio?: string };
+  /** 生成設定 → 比率 (omitted keeps the main image's frame) and 画質 (omitted = 2K). */
+  editOptions?: { aspectRatio?: string; resolution?: '1k' | '4k' };
   /** 下着のフィッティング: the server's innerwear route (FLUX.2 [dev]) and the brand's rights/consent declaration for the model photo. */
   route?: 'innerwear';
   rightsConfirmed?: boolean;
@@ -53,7 +53,7 @@ export type FashionStudioGenerationAdapters = {
   editImageWithPrompt(imageUrl: string, prompt: string, brandId: string, options: {
     idempotencyKey: string; assertContext: () => void; canvasProjectId: string;
     parentObjectId: string; referenceImageUrls: string[]; featureType: string;
-    aspectRatio?: string; generationRoute?: 'innerwear'; rightsConfirmed?: boolean;
+    aspectRatio?: string; resolution?: '1k' | '4k'; generationRoute?: 'innerwear'; rightsConfirmed?: boolean;
   }): Promise<ImageEditResult>;
   assertCompletedImageEditResult(result: ImageEditResult): void;
   /** Adapters must also fence their internal async mutations using context. */
@@ -155,6 +155,7 @@ export const createFashionStudioDetailGeneration = (adapters: FashionStudioGener
           canvasProjectId: attempt.input.scope.documentId, parentObjectId: attempt.input.main.objectId,
           referenceImageUrls: [...(attempt.input.referenceImageUrls ?? [])], featureType: feature,
           ...(attempt.input.editOptions?.aspectRatio ? { aspectRatio: attempt.input.editOptions.aspectRatio } : {}),
+          ...(attempt.input.editOptions?.resolution ? { resolution: attempt.input.editOptions.resolution } : {}),
           ...(attempt.input.route ? { generationRoute: attempt.input.route } : {}),
           ...(attempt.input.rightsConfirmed ? { rightsConfirmed: true } : {}),
         });

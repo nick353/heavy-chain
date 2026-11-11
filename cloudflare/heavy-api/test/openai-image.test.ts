@@ -255,6 +255,50 @@ test('OpenAI results are enlarged to Light\'s 2048px-class sizes, and kept as th
   assert.equal(await enlargeLikeLight({ IMAGES: images(pngFixture(1, 1)) } as never, large), large);
 });
 
+// 画質 (Light's Fashion Studio 生成設定, 2026-11-12): 1K and 4K set the long edge; 4K stays under 9 MB by writing JPEG.
+const headerPng = (width: number, height: number, idatBytes = 16) => {
+  const bytes = new Uint8Array(8 + 25 + 12 + idatBytes + 12); const view = new DataView(bytes.buffer);
+  bytes.set([137, 80, 78, 71, 13, 10, 26, 10]); view.setUint32(8, 13); bytes.set([73, 72, 68, 82], 12); view.setUint32(16, width); view.setUint32(20, height);
+  view.setUint32(33, idatBytes); bytes.set([73, 68, 65, 84], 37); view.setUint32(45 + idatBytes, 0); bytes.set([73, 69, 78, 68], 49 + idatBytes);
+  return bytes;
+};
+const headerJpeg = (width: number, height: number) => {
+  const bytes = new Uint8Array([255, 216, 255, 192, 0, 17, 8, 0, 0, 0, 0, 3, 1, 34, 0, 2, 17, 1, 3, 17, 1, 255, 218, 255, 217]);
+  new DataView(bytes.buffer).setUint16(7, height); new DataView(bytes.buffer).setUint16(9, width);
+  return bytes;
+};
+test('画質 1K / 4K resize to the long edge Light uses, and a 4K result over 9 MB as PNG is written as JPEG', async () => {
+  const { sizeForResolution, LIGHT_LONG_EDGES, LIGHT_MAX_OUTPUT_BYTES } = await import('../src/image-ai.ts');
+  assert.deepEqual(LIGHT_LONG_EDGES, { '1k': 1024, '4k': 4096 });
+  assert.equal(LIGHT_MAX_OUTPUT_BYTES, 9 * 1024 * 1024);
+  const calls: unknown[] = []; const outputs: Array<Record<string, unknown>> = [];
+  const images = (answer: (format: Record<string, unknown>, size: { width: number; height: number }) => Uint8Array | Error) => ({ input: () => ({
+    transform: (options: { width: number; height: number }) => { calls.push(options); return {
+      output: async (format: Record<string, unknown>) => { outputs.push(format); const result = answer(format, options); if (result instanceof Error) throw result;
+        return { response: () => new Response(result as BufferSource) }; } }; } }) });
+  const drawn = raster(pngFixture(1024, 1536))!;
+  // 4K: PNG when it fits.
+  const small = await sizeForResolution({ IMAGES: images((_, size) => headerPng(size.width, size.height)) } as never, drawn, '4k');
+  assert.deepEqual([small?.width, small?.height, small?.contentType], [2731, 4096, 'image/png']);
+  assert.deepEqual(calls[0], { width: 2731, height: 4096, fit: 'cover' }); assert.deepEqual(outputs[0], { format: 'image/png' });
+  // 4K: a photo PNG over 9 MB is written again as JPEG quality 95.
+  outputs.length = 0;
+  const photo = await sizeForResolution({ IMAGES: images((format, size) => format.format === 'image/png'
+    ? headerPng(size.width, size.height, LIGHT_MAX_OUTPUT_BYTES + 1) : headerJpeg(size.width, size.height)) } as never, drawn, '4k');
+  assert.deepEqual([photo?.width, photo?.height, photo?.contentType], [2731, 4096, 'image/jpeg']);
+  assert.deepEqual(outputs, [{ format: 'image/png' }, { format: 'image/jpeg', quality: 95 }]);
+  // 1K shrinks the long edge to 1024; a result already 1024 long is kept as it is.
+  const quick = await sizeForResolution({ IMAGES: images((_, size) => headerPng(size.width, size.height)) } as never, drawn, '1k');
+  assert.deepEqual([quick?.width, quick?.height], [683, 1024]);
+  const flux = raster(pngFixture(768, 1024))!;
+  assert.equal(await sizeForResolution({} as never, flux, '1k'), flux);
+  // Nothing within 9 MB, a failed or wrong-sized transform, or no binding: null, so the caller keeps the 2K result.
+  assert.equal(await sizeForResolution({ IMAGES: images((_, size) => headerPng(size.width, size.height, LIGHT_MAX_OUTPUT_BYTES + 1)) } as never, drawn, '4k'), null);
+  assert.equal(await sizeForResolution({ IMAGES: images(() => new Error('images_down')) } as never, drawn, '4k'), null);
+  assert.equal(await sizeForResolution({ IMAGES: images(() => headerPng(10, 10)) } as never, drawn, '4k'), null);
+  assert.equal(await sizeForResolution({} as never, drawn, '4k'), null);
+});
+
 // 2026-11-11 production: the innerwear sample came back 400 from the image safety system and was recorded as a lost
 // connection (state unknown), which blocked the same input for good. It is a rejection with its own error code, and the
 // requests ask for the documented `low` moderation level that apparel work needs.

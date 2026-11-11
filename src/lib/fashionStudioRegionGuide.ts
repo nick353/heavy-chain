@@ -51,7 +51,12 @@ export const naturalImageSize = async (url: string) => {
   return { width: image.naturalWidth, height: image.naturalHeight };
 };
 
-/** Light allows three fusion points; each point's strokes get their own colour on the guide (point 1 stays teal). */
+/**
+ * Light allows three fusion points. Its mask window paints every point with the same brand colour (the dialog's default tools
+ * leave out colorDraw, so the brush is --brand-primary-hover; checked in Light's bundle 2026-11-12), and Heavy's MaskPaintDialog
+ * does the same. Only the guide image sent to the model gives each point's strokes their own colour (point 1 stays teal), so the
+ * model can tell the points apart; the person never sees these colours.
+ */
 export const REGION_POINT_COLORS = [{ hex: REGION_MASK_COLOR, name: 'teal' }, { hex: '#ff3fb4', name: 'magenta' }, { hex: '#ff9f1a', name: 'orange' }] as const;
 
 /** The guide image (main + one coloured stroke layer per point) as a blob: URL the image request reads like any other reference. */

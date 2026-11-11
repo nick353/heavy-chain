@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test, { type TestContext } from 'node:test';
-import { IMAGE_MODEL, INNERWEAR_IMAGE_MODEL, decodeImage, parseImageInput, imageEstimate } from '../src/image-ai-contracts.ts';
+import { IMAGE_MODEL, INNERWEAR_IMAGE_MODEL, decodeImage, parseImageInput, imageEstimate, raster } from '../src/image-ai-contracts.ts';
 import { imageSetup, pngFixture, TEST_HEAVY_DOCUMENT_DIGEST, TEST_HEAVY_DOCUMENT_VERSION, TEST_HEAVY_RIGHTS_VERSION } from './image-ai-fixture.ts';
 import { processImageJob } from '../src/image-ai.ts';
 import { PROTECTED_IMAGE_EDIT_MODE,protectedImageDigest,protectedImageSaveRequestId } from '../../../src/lib/protectedImageEditContract.ts';
@@ -859,6 +859,34 @@ test('the innerwear route draws again with another seed when an output is flagge
   const other=imageSetup(); t.after(()=>other.db.sql.close()); other.setHook(async()=>{ throw new Error('AiError: AiError: Your output has been flagged. (x)'); });
   const plain=await json(await other.call(url+'generate-image','alice',other.input(),crypto.randomUUID()));
   assert.equal(plain.success,false); assert.equal(other.calls.length,1);
+});
+
+test('画質: 2K keeps the request digest it had, 1K / 4K are part of it, and other values are refused',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  const { normalizedImageRequestDigest }=await import('../src/image-ai-contracts.ts');
+  const base={...s.input(),seed:7} as never; const provider={ provider:'workers_ai', backendProvider:'cloudflare-workers-ai', model:IMAGE_MODEL } as never;
+  const digest=async(extra: Record<string, unknown>)=>{ const body={...(base as Record<string, unknown>),...extra} as never; return (await normalizedImageRequestDigest('generate-image',body,parseImageInput('generate-image',body),provider,[])).digest; };
+  assert.equal(parseImageInput('generate-image',{...(base as Record<string, unknown>),resolution:'2k'} as never).resolution,undefined);
+  assert.equal(parseImageInput('generate-image',{...(base as Record<string, unknown>),resolution:'4k'} as never).resolution,'4k');
+  assert.equal(await digest({resolution:'2k'}),await digest({}));
+  assert.notEqual(await digest({resolution:'4k'}),await digest({}));
+  assert.notEqual(await digest({resolution:'1k'}),await digest({resolution:'4k'}));
+  assert.throws(()=>parseImageInput('generate-image',{...(base as Record<string, unknown>),resolution:'8k'} as never),/image_resolution_not_supported/);
+});
+
+test('a 1K request stores the result at the 1K long edge; without the image binding it keeps the drawn result',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  const sizes: unknown[]=[];
+  (s.env as unknown as Record<string,unknown>).IMAGES={ input:()=>({ transform:(size:{width:number;height:number})=>{ sizes.push(size); return {
+    output:async()=>({ response:()=>new Response(pngFixture(size.width,size.height) as BufferSource) }) }; } }) };
+  const result=await json(await s.call(url+'generate-image','alice',{...s.input(),resolution:'1k'},crypto.randomUUID()));
+  assert.equal(result.success,true); assert.deepEqual(sizes,[{ width:1024, height:1024, fit:'cover' }]);
+  const stored=[...s.bucket.rows.values()].find(row=>row.customMetadata?.imageId);
+  assert.ok(stored); const size=raster(stored.bytes); assert.deepEqual(size && [size.width,size.height],[1024,1024]);
+  const plain=imageSetup(); t.after(()=>plain.db.sql.close());
+  assert.equal((await json(await plain.call(url+'generate-image','alice',{...plain.input(),resolution:'4k'},crypto.randomUUID()))).success,true);
+  const kept=[...plain.bucket.rows.values()].find(row=>row.customMetadata?.imageId); const keptSize=kept && raster(kept.bytes);
+  assert.deepEqual(keptSize && [keptSize.width,keptSize.height],[256,256]);
 });
 
 test('the innerwear fitting keeps the model photo frame, not the garment photo frame',()=>{

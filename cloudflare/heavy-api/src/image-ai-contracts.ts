@@ -19,9 +19,11 @@ const OPENAI_IMAGE_MODELS = new Set(['gpt-image-2', 'gpt-image-1.5', 'gpt-image-
 export type Json = Record<string, unknown>;
 export type Raster = { bytes: Uint8Array; contentType: string; width: number; height: number };
 export type Candidate = { prompt: string; descriptor: Json; seed: number };
+/** Light's 画質: 1K / 2K / 4K. 2K (the default) is omitted so every existing request keeps its digest. */
+export type ImageResolution = '1k' | '4k';
 export type ImageInput = { action: ImageAction; brandId: string; prompt: string; featureType: string;
   width: number; height: number; references: Raster[]; candidates: Candidate[]; metadata: Json;
-  parentImageId: string | null; generation: number };
+  parentImageId: string | null; generation: number; resolution?: ImageResolution };
 export type ImageProviderContext = { provider: 'workers_ai' | 'openai'; model: string };
 export class ImageInputError extends Error {
   status: number;
@@ -165,6 +167,7 @@ export async function normalizedImageRequestDigest(
       parentImageId: input.parentImageId,
       generation: input.generation,
       candidateCount: input.candidates.length,
+      ...(input.resolution ? { resolution: input.resolution } : {}),
     },
     workflow: {
       featureType: input.featureType,
@@ -247,6 +250,8 @@ export function parseImageInput(
     : body.prompt, 12000);
   const ratios: Record<string, [number,number]> = { '1:1': [1024,1024], '3:4': [768,1024], '4:3': [1024,768], '4:5': [1024,1280], '5:4': [1280,1024], '16:9': [1024,576], '9:16': [576,1024], '2:3': [768,1152], '3:2': [1152,768] };
   if (body.aspectRatio !== undefined && (typeof body.aspectRatio !== 'string' || !ratios[body.aspectRatio])) throw new ImageInputError('image_aspect_ratio_not_supported');
+  if (body.resolution !== undefined && !['1k', '2k', '4k'].includes(String(body.resolution))) throw new ImageInputError('image_resolution_not_supported', 422);
+  const resolution = body.resolution === '1k' || body.resolution === '4k' ? body.resolution : undefined;
   const inputURLs = action === 'edit-image' ? body.imageUrls ?? [body.imageUrl]
     : action === 'model-matrix' ? [body.imageUrl, body.modelReferenceImageUrl].filter(Boolean) : body.imageUrls ?? [];
   const maxReferenceCount = action === 'model-matrix' ? 2
@@ -346,7 +351,8 @@ export function parseImageInput(
   if (parentImageId !== null && (typeof parentImageId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(parentImageId))) throw new ImageInputError('invalid_parent_image');
   const generation = body.generation ?? 1;
   if (typeof generation !== 'number' || !Number.isSafeInteger(generation) || generation < 1 || generation > 10000) throw new ImageInputError('invalid_image_generation');
-  return { action, brandId, prompt, featureType, width: width as number, height: height as number, references, candidates, metadata, parentImageId, generation };
+  return { action, brandId, prompt, featureType, width: width as number, height: height as number, references, candidates, metadata, parentImageId, generation,
+    ...(resolution ? { resolution } : {}) };
 }
 
 export function modelMultipart(input: ImageInput, candidate: Candidate): { body: ReadableStream<Uint8Array>; contentType: string } {

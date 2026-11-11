@@ -412,6 +412,8 @@ export async function editImageWithPrompt(
     maskHeight?: number;
     /** The frame the user asked for (e.g. '1:1'); without it the edit keeps the source photo's frame. */
     aspectRatio?: string;
+    /** 画質 1K / 4K (Fashion Studio); omitted is the 2K the server returns by default. */
+    resolution?: '1k' | '4k';
     /** 'innerwear': Fashion Studio's 下着のフィッティング runs on the server's FLUX.2 [dev] route (OpenAI refuses it). */
     generationRoute?: 'innerwear';
     providerModel?: string;
@@ -472,6 +474,7 @@ export async function editImageWithPrompt(
       // A masked (protected) edit keeps the source pixels outside the mask, so it always keeps the source frame.
       ...(options?.aspectRatio && !options?.maskDataUrl ? { aspectRatio: options.aspectRatio } : {}),
       ...(options?.generationRoute ? { generationRoute: options.generationRoute } : {}),
+      ...(options?.resolution ? { resolution: options.resolution } : {}),
       providerModel: options?.providerModel,
       inputFidelity: options?.inputFidelity,
       quality: options?.quality,
