@@ -64,9 +64,11 @@ export const createDesignDialogueClient = (featureType: string): DesignDialogueC
     }
     const variations = input.variations?.length ? { count: input.variations.length, variations: [...input.variations] } : {};
     // 「正方形の宣伝画像」 must come back square like Light, not in the garment photo's portrait frame (2026-11-11).
-    const aspectRatio = requestedAspectRatio(input.prompt);
+    // With no frame in the request Light's design and marketing chats still answer 2048×2048 (a navy recolour of a
+    // portrait shirt came back square, 2026-11-11), so square is the default here too.
+    const aspectRatio = requestedAspectRatio(input.prompt) ?? '1:1';
     const options = { rightsConfirmed: ready, idempotencyKey: input.idempotencyKey, assertContext: input.assertContext,
-      retainUntilAcknowledged: input.retainUntilAcknowledged, featureType, ...variations, ...(aspectRatio ? { aspectRatio } : {}) };
+      retainUntilAcknowledged: input.retainUntilAcknowledged, featureType, ...variations, aspectRatio };
     return urls.length ? editImageWithPrompt(urls[0], input.prompt, input.brandId, { ...options, referenceImageUrls: urls.slice(1) })
       : generateImage(input.prompt, input.brandId, options);
   },
@@ -1106,7 +1108,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
         <div className="relative flex h-[52px] shrink-0 items-center gap-2 px-[11px] pt-1">
           <button type="button" aria-haspopup="menu" aria-expanded={Boolean(chatMenu)} onClick={() => void toggleChatMenu()} data-testid="design-chat-switcher"
             className="flex h-8 min-w-0 items-center gap-1 rounded-lg px-2 text-base font-medium hover:bg-white/5">
-            <span className="truncate">{visible?.dialogue?.attempts.length ? 'デザインアシスタント' : '新しいチャット'}</span><ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" /></button>
+            <span className="truncate">{visible?.dialogue?.attempts.length || visible?.draft || entrySending ? 'デザインアシスタント' : '新しいチャット'}</span><ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" /></button>
           <Link to={workspace.detailPath} aria-label="新しいチャット" className="ml-auto text-neutral-400 hover:text-white" data-testid="design-new-chat"><MessageSquarePlus className="h-5 w-5" /></Link>
           {chatMenu && <div role="menu" aria-label="チャット履歴" data-testid="design-chat-menu" className="absolute left-[11px] top-[48px] z-10 w-[300px] rounded-xl border border-white/10 bg-[#20262a] p-1 shadow-2xl">
             {chatMenu.length === 0 ? <p className="px-3 py-3 text-sm text-neutral-400">チャット履歴はありません</p>
@@ -1148,23 +1150,7 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
                 <span className="block h-4 w-4 overflow-hidden rounded-sm bg-white/10">{urls[reference.storagePath] && <img src={urls[reference.storagePath]} alt={reference.name} className="h-full w-full object-cover" />}</span>画像{referenceIndex + 1}</span>)}</div>}
               <p data-testid={index === 0 ? 'design-entry-prompt' : 'design-user-message'} className="whitespace-pre-wrap">{attempt.input.prompt}</p>
             </div>}
-            {attempt.assistant.state === 'completed' ? (() => {
-              const { body, suggestions, questions, searches } = parseAssistantReply(attempt.assistant.content ?? "");
-              const latest = index === (visible.dialogue?.attempts.length ?? 0) - 1;
-              return <>
-                <p data-testid="design-assistant-message" className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-200">{body}</p>
-                {questions.length > 0 && <AssistantQuestionCard key={attempt.input.requestId} questions={questions} disabled={!latest || Boolean(visible.busy)}
-                  onConfirm={(answers) => void act((active) => active.send(answerPrompt(attempt.input.prompt, questions, answers), attempt.input.references))} />}
-                {searches.length > 0 && <AssistantImageSearchCard key={`${attempt.input.requestId}-search`} searches={searches} disabled={!latest || Boolean(visible.busy)}
-                  onConfirm={(chosen) => answerImageSearch(attempt, chosen)} />}
-                {index === (visible.dialogue?.attempts.length ?? 0) - 1 && suggestions.length > 0 && <div className="mt-3 flex flex-col items-start gap-2" data-testid="design-assistant-suggestions">
-                  {suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setPrompt(suggestion)}
-                    className="flex max-w-full items-start gap-2 rounded-lg bg-white/[0.12] px-3 py-2 text-left text-xs leading-[18px] text-neutral-100 hover:bg-white/[0.18]">
-                    <span>{suggestion}</span><ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0" /></button>)}
-                </div>}
-              </>;
-            })()
-              : <p className="mt-3 text-sm text-neutral-400">{attempt.assistant.state === 'failed' ? '応答を取得できませんでした。指示を編集してもう一度送信できます。' : '応答の状態を確認しています。'}</p>}
+            {/* Light shows the result first, then its explanation and the follow-up requests (2026-11-11). */}
             {attempt.imageAttempted && <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3" data-testid="design-image-task">
               <p className="flex items-center gap-2 text-sm text-neutral-300"><ImagePlus className="h-4 w-4 text-[#0bcabc]" />画像タスク
                 {attempt.imageResult !== 'completed' && <span className="ml-auto text-xs text-neutral-500">{attempt.imageResult === 'failed' ? '失敗' : '生成中'}</span>}</p>
@@ -1194,6 +1180,23 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
                 : attempt.imageResult === 'failed' ? '画像を作成できませんでした。以前の画像はそのまま使用できます。'
                 : attempt.imageResult === 'ack-deferred' ? '画像を保存しました。生成記録の確認を続けられます。' : '画像の作成・保存状態を確認しています。'}</p>}
             </div>}
+            {attempt.assistant.state === 'completed' ? (() => {
+              const { body, suggestions, questions, searches } = parseAssistantReply(attempt.assistant.content ?? "");
+              const latest = index === (visible.dialogue?.attempts.length ?? 0) - 1;
+              return <>
+                <p data-testid="design-assistant-message" className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-200">{body}</p>
+                {questions.length > 0 && <AssistantQuestionCard key={attempt.input.requestId} questions={questions} disabled={!latest || Boolean(visible.busy)}
+                  onConfirm={(answers) => void act((active) => active.send(answerPrompt(attempt.input.prompt, questions, answers), attempt.input.references))} />}
+                {searches.length > 0 && <AssistantImageSearchCard key={`${attempt.input.requestId}-search`} searches={searches} disabled={!latest || Boolean(visible.busy)}
+                  onConfirm={(chosen) => answerImageSearch(attempt, chosen)} />}
+                {index === (visible.dialogue?.attempts.length ?? 0) - 1 && suggestions.length > 0 && <div className="mt-3 flex flex-col items-start gap-2" data-testid="design-assistant-suggestions">
+                  {suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setPrompt(suggestion)}
+                    className="flex max-w-full items-start gap-2 rounded-lg bg-white/[0.12] px-3 py-2 text-left text-xs leading-[18px] text-neutral-100 hover:bg-white/[0.18]">
+                    <span>{suggestion}</span><ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0" /></button>)}
+                </div>}
+              </>;
+            })()
+              : <p className="mt-3 text-sm text-neutral-400">{attempt.assistant.state === 'failed' ? '応答を取得できませんでした。指示を編集してもう一度送信できます。' : '応答の状態を確認しています。'}</p>}
             {attempt.assistant.state === 'completed' && !attempt.imageAttempted && !hasAssistantQuestions(attempt.assistant.content) && <button type="button" disabled={visible.busy} className="mt-3 text-sm text-[#0bcabc]" onClick={() => void act((active) => active.continueImage(attempt.input.requestId))}>画像を作成</button>}
             {attempt.imageAttempted && (attempt.imageResult === 'unknown' || attempt.imageResult === 'failed') && !visible.dialogue?.turns.find((turn) => turn.clientRequestKey === attempt.imageClientRequestKey)?.outputs.length
               && <button type="button" data-testid="design-attempt-retry" disabled={visible.busy} className="mr-4 mt-3 text-sm text-[#0bcabc]"

@@ -42,7 +42,25 @@ test("the user's words decide first; the assistant's direction only fills in", (
 test('the design / marketing chat passes the ratio to both image calls, and a masked edit keeps the source frame', () => {
   const page = readFileSync(new URL('../src/features/designDetail/DesignEntryDetailPage.tsx', import.meta.url), 'utf8');
   const api = readFileSync(new URL('../src/lib/imageApi.ts', import.meta.url), 'utf8');
-  assert.match(page, /const aspectRatio = requestedAspectRatio\(input\.prompt\)/);
-  assert.match(page, /\.\.\.\(aspectRatio \? \{ aspectRatio \} : \{\}\)/);
+  // With no frame in the request Light still answers square (2048×2048), so 1:1 is the default.
+  assert.match(page, /const aspectRatio = requestedAspectRatio\(input\.prompt\) \?\? '1:1';/);
+  assert.match(page, /featureType, \.\.\.variations, aspectRatio \};/);
   assert.match(api, /options\?\.aspectRatio && !options\?\.maskDataUrl \? \{ aspectRatio: options\.aspectRatio \}/);
+});
+
+test('the design chat matches Light (2026-11-11): result before the explanation, 「画像N ×」 chips, white backgrounds honoured', () => {
+  const page = readFileSync(new URL('../src/features/designDetail/DesignEntryDetailPage.tsx', import.meta.url), 'utf8');
+  const landing = readFileSync(new URL('../src/pages/LightchainParityPages.tsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+  const contracts = readFileSync(new URL('../cloudflare/heavy-api/src/image-ai-contracts.ts', import.meta.url), 'utf8');
+  // The image task card comes before the assistant's explanation and follow-up requests.
+  assert.ok(page.indexOf('data-testid="design-image-task"') < page.indexOf('data-testid="design-assistant-message"'));
+  // Attached images are tagged 画像N with a × and a teal edge; no file name, no 準備完了.
+  assert.match(landing, /<span data-design-dialogue-reference-name="" title=\{reference\.name\}>画像\{referenceIndex \+ 1\}<\/span>/);
+  assert.match(landing, /\{reference\.status !== 'ready' && <span data-design-dialogue-reference-status=""/);
+  assert.match(landing, /<X aria-hidden="true" className="h-3\.5 w-3\.5" \/><\/button>/);
+  assert.match(css, /\[data-design-dialogue-reference\] \{[^}]*border: 1px solid #0bcabc/);
+  // A requested white background replaces the source photo's grey, and a product image fills the frame.
+  assert.match(contracts, /a white background is pure white \(#FFFFFF\) from edge to edge/);
+  assert.match(contracts, /show the whole garment large and centered, filling most of the frame/);
 });

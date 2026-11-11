@@ -44,7 +44,8 @@ test('the canvas has キャンバスを整理, ミニマップ and a toolbar ove
 test('the assistant ends with follow-up requests that show as Light\'s suggestion buttons', () => {
   const detail = read('src/features/designDetail/DesignEntryDetailPage.tsx');
   assert.match(detail, /data-testid="design-assistant-suggestions"/);
-  assert.match(detail, /\{visible\?\.dialogue\?\.attempts\.length \? 'デザインアシスタント' : '新しいチャット'\}/);
+  // Light names the chat デザインアシスタント from the first message on, not only once the reply arrived (2026-11-11).
+  assert.match(detail, /\{visible\?\.dialogue\?\.attempts\.length \|\| visible\?\.draft \|\| entrySending \? 'デザインアシスタント' : '新しいチャット'\}/);
   const server = read('cloudflare/heavy-api/src/designAssistant.ts');
   assert.match(server, /each on its own line starting with "→ "/);
 });
