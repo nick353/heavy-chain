@@ -526,6 +526,10 @@ export function FashionStudioDetailPage() {
           ...(fn === 'underwear' ? { route: 'innerwear' as const, ...(chosen.length && innerwearConsent ? { rightsConfirmed: true } : {}) } : {}) });
       }
       assertContext();
+      // Light makes a new image every time AI生成 is pressed: once this attempt has its image, the next press is a new
+      // attempt (production 2026-11-12: four more presses with the same inputs returned the first image and made nothing).
+      // A failed or uncertain attempt keeps its key, so pressing again settles it instead of paying twice.
+      if (outcome.status === 'success') logicalAttemptRef.current = null;
       if (outcome.status === 'success' && outcome.document) setHydration(previous => ({ scopeKey, status: 'success', title: outcome.document!.title,
         detail: extractFashionStudioSavedDetail(outcome.document!.snapshot), remainingUnits: previous?.scopeKey === scopeKey ? previous.remainingUnits : null }));
       setGeneration({ ...outcome, scopeKey }); setActivity({ scopeKey, value: outcome.status === 'success' ? 'success' : 'failure' });
