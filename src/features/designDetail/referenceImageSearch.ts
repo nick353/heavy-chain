@@ -10,20 +10,37 @@ const BITMAP = /^image\/(jpeg|png|webp)$/;
 const WIKIMEDIA_IMAGE = /^https:\/\/(?:thumb|upload)\.wikimedia\.org\//;
 
 /** Commons matches every word, so a narrow query finds little: drop the last words, then the first ones
- * (a rare leading word such as "ditsy" finds nothing alone), until four images are found. */
+ * (a rare leading word such as "ditsy" finds nothing alone), until four images are found.
+ * A shortened query also matches files about something else ("smocked" finds smock windmills, "high waist skirt" an Empire clock),
+ * so images whose title names a word of the query come first; the others only fill the places still empty at the end. */
 export async function searchReferenceImages(query: string, options: { limit?: number; signal?: AbortSignal; fetcher?: typeof fetch } = {}): Promise<FoundImage[]> {
   const limit = options.limit ?? 4;
   const words = query.trim().split(/\s+/).filter(Boolean);
   const queries = [...words.map((_, index) => words.slice(0, words.length - index).join(' ')),
     ...words.slice(1).map((_, index) => words.slice(index + 1).join(' '))];
+  const stems = referenceStems(query);
   const found: FoundImage[] = [];
+  const spare: FoundImage[] = [];
+  const known = (image: FoundImage) => found.some((item) => item.id === image.id) || spare.some((item) => item.id === image.id);
   for (const attempt of queries) {
     if (found.length >= limit) break;
     for (const image of await searchOnce(attempt, options)) {
-      if (found.length < limit && !found.some((item) => item.id === image.id)) found.push(image);
+      if (known(image)) continue;
+      if (titleNamesQuery(image.title, stems)) { if (found.length < limit) found.push(image); }
+      else spare.push(image);
     }
   }
-  return found;
+  return [...found, ...spare].slice(0, limit);
+}
+
+/** The first five letters of each word of four letters or more ("smocked" → "smock", "blouse" → "blous"), so plurals and -ed forms match. */
+export function referenceStems(query: string): string[] {
+  return [...new Set(query.toLowerCase().split(/[^a-z]+/).filter((word) => word.length >= 4).map((word) => word.slice(0, 5)))];
+}
+
+export function titleNamesQuery(title: string, stems: string[]): boolean {
+  const text = title.toLowerCase().replace(/[_-]+/g, ' ');
+  return stems.length === 0 || stems.some((stem) => text.includes(stem));
 }
 
 async function searchOnce(query: string, options: { signal?: AbortSignal; fetcher?: typeof fetch }): Promise<FoundImage[]> {
