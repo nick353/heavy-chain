@@ -26,7 +26,7 @@ test('research sends the web search tool with a cap and fallbacks, and collects 
     ]);
   });
   assert.equal(sent.length, 1);
-  assert.deepEqual(sent[0].tools, [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }]);
+  assert.deepEqual(sent[0].tools, [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5, allowed_callers: ['direct'] }]);
   assert.equal(sent[0].fallbacks, 'default');
   assert.equal(sent[0].model, 'claude-sonnet-5-5');
   assert.equal(result.text, '## トレンド\n- リネン混が伸びている');
@@ -48,6 +48,27 @@ test('pause_turn resumes by re-sending the assistant turn without an extra user 
   assert.equal(sent[1].messages[1].content[0].type, 'server_tool_use');
   assert.equal(result.text, '## 市場と気候\n- 寒暖差');
   assert.deepEqual(result.sources, [{ url: 'https://example.com/p', title: 'P' }]);
+});
+
+// Production 2026-11-12: with dynamic filtering one search over max_uses ended the whole code run, Claude saw none of the
+// 20 results and wrote that it had no data. Direct calls keep the earlier results; only the extra search fails.
+test('a search over the cap keeps the earlier results, the sources and an ok status, and the prompt states the cap', async () => {
+  const result = await callClaudeResearch(env, { system: 's', messages: [{ role: 'user', content: 'q' }] }, async () => reply([
+    { type: 'server_tool_use', id: 'srvtoolu_1', name: 'web_search', input: { query: 'pantone spring 2027' } },
+    search([{ type: 'web_search_result', url: 'https://example.com/pantone', title: 'Pantone SS27' }]),
+    { type: 'server_tool_use', id: 'srvtoolu_2', name: 'web_search', input: { query: 'one more' } },
+    { type: 'web_search_tool_result', tool_use_id: 'srvtoolu_2', content: { type: 'web_search_tool_result_error', error_code: 'max_uses_exceeded' } },
+    { type: 'text', text: '[調査結果]\n## トレンド\n- PantoneのSS27はバターイエロー' },
+  ]));
+  assert.equal(result.searchUsed, true);
+  assert.deepEqual(result.sources, [{ url: 'https://example.com/pantone', title: 'Pantone SS27' }]);
+  assert.deepEqual(result.searchErrors, ['max_uses_exceeded']);
+  const parsed = parseAgentResearch(formatAgentResearchContent(result));
+  assert.equal(parsed.search, 'ok');
+  assert.match(parsed.report, /バターイエロー/);
+  const designAssistant = readFileSync(new URL('../cloudflare/heavy-api/src/designAssistant.ts', import.meta.url), 'utf8');
+  assert.match(designAssistant, /You can search at most \$\{AGENT_RESEARCH_MAX_USES\} times/);
+  assert.match(designAssistant, /Never write that data could not be obtained when searches returned results/);
 });
 
 test('a search error inside a 200 answer is recorded, and a 400 falls back to one call without the tool', async () => {

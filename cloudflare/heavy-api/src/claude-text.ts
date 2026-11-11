@@ -169,7 +169,11 @@ export async function callClaudeResearch(
   if (!key) throw new ClaudeTextError('claude_api_key_missing', 503);
   const model = claudeModel(env, options.model);
   const deadline = Date.now() + (options.timeoutMs ?? AGENT_RESEARCH_TIMEOUT_MS);
-  const tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: options.maxUses ?? AGENT_RESEARCH_MAX_USES }];
+  // Direct calls, not dynamic filtering: with filtering the searches run inside code execution, and one search over
+  // max_uses ends the whole code run with an error, so Claude sees none of the results it already fetched (production
+  // 2026-11-12: 20 sources returned, report said the search limit left it without data). Directly, only the extra
+  // search gets a max_uses_exceeded result and every earlier result stays in Claude's context.
+  const tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: options.maxUses ?? AGENT_RESEARCH_MAX_USES, allowed_callers: ['direct'] }];
   let messages: ClaudeMessage[] = options.messages.filter((message, index) => index > 0 || message.role === 'user');
   let searchEnabled = true;
   const sources = new Map<string, string>();
@@ -205,6 +209,10 @@ export async function callClaudeResearch(
       inputTokens += data.usage!.input_tokens!; outputTokens += data.usage!.output_tokens!; counted = true;
     }
     const content = Array.isArray(data.content) ? data.content : [];
+    console.log('claude_research_call', JSON.stringify({ call, stop: data.stop_reason ?? null,
+      searches: content.filter(block => block.type === 'web_search_tool_result').length,
+      errors: content.filter(block => block.type === 'web_search_tool_result' && !Array.isArray(block.content)).length,
+      input: data.usage?.input_tokens ?? null, output: data.usage?.output_tokens ?? null }));
     for (const block of content) {
       if (block.type === 'web_search_tool_result') {
         if (Array.isArray(block.content)) {
