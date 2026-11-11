@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { callClaudeResearch, ClaudeTextError } from '../cloudflare/heavy-api/src/claude-text.ts';
 import { formatAgentResearchContent } from '../cloudflare/heavy-api/src/designAssistant.ts';
 import {
-  AGENT_INTAKE_STEPS, DEFAULT_AGENT_SCOPE, agentMissingNames, agentRoundSources, agentThemeSearches, parseThemeResponse, buildAgentResearchReportHtml, parseAgentDirection, agentResearchPrompt, agentResearchSteps, agentScopeOptions, agentScopeSummary,
+  AGENT_INTAKE_STEPS, AGENT_PROMPT_BUDGET, DEFAULT_AGENT_SCOPE, agentNotePrompt, agentRequestRejection, agentRequirementsPrompt, planPrompt, agentMissingNames, agentRoundSources, agentThemeSearches, parseThemeResponse, buildAgentResearchReportHtml, parseAgentDirection, agentResearchPrompt, agentResearchSteps, agentScopeOptions, agentScopeSummary,
   effectiveAgentRequirements, parseAgentRequirements, parseAgentResearch, pruneAgentScope, readAgentTask, themePrompt, type AgentTask,
 } from '../src/features/agent/agentFlow.ts';
 
@@ -148,6 +148,31 @@ test('research and themes carry the confirmed scope and the research; tasks made
   const read = readAgentTask({ agentTask: legacy });
   assert.ok(read); assert.equal(read!.flow, undefined);
   assert.doesNotMatch(themePrompt(read!), /ウェブ調査/);
+});
+
+// Production 2026-11-12: a detailed research report made the theme request about 5,000 characters; the server (then
+// 4,000) turned it away and the page kept reading back a request that never existed.
+test('every planning request stays under the cap even with the longest parts, and a rejection fails the step', () => {
+  const huge = 'あ'.repeat(20000);
+  const requirementsStep = { requestId: 'q', state: 'completed' as const, content: `[要件]\n目標：${huge}\n[補足が必要]\n①${huge}` };
+  const research = { requestId: 'r', state: 'completed' as const, content: formatAgentResearchContent({ text: `## トレンド\n- ${huge}`, sources: [], searchUsed: true, searchErrors: [] }) };
+  const notes = Array.from({ length: 12 }, (_, index) => ({ id: `n${index}`, text: huge, at: '2026-11-12T00:00:00.000Z', stage: 'themes' as const, reply: { requestId: `nr${index}`, state: 'completed' as const, content: '[返答]\nok' } }));
+  const rounds = Array.from({ length: 6 }, (_, index) => ({ step: { requestId: `t${index}`, state: 'completed' as const }, summary: '', themes: [huge, huge, huge, huge] }));
+  const task = conversationTask({ prompt: huge, profile: huge, requirements: requirementsStep, notes, research, rounds,
+    scope: { regions: ['日本'], ec: ['ZOZOTOWN'], sns: ['Instagram'], other: huge, at: '2026-11-12T00:00:00.000Z' } });
+  const prompts = { requirements: agentRequirementsPrompt(task), note: agentNotePrompt(task, { text: huge, stage: 'requirements' }), research: agentResearchPrompt(task), theme: themePrompt(task), plan: planPrompt(task, huge) };
+  Object.entries(prompts).forEach(([name, prompt]) => assert.ok(prompt.length <= AGENT_PROMPT_BUDGET, `${name}: ${prompt.length}`));
+  assert.ok(AGENT_PROMPT_BUDGET < 16000);
+  // Turned away or never stored: the step fails with a retry. Network drops, expired sessions, limits and outages do not.
+  assert.equal(agentRequestRejection(new Error('cloudflare_api_400_invalid_design_assistant_request')), 'invalid_design_assistant_request');
+  assert.equal(agentRequestRejection(new Error('cloudflare_api_404_not_found')), 'not_found');
+  assert.equal(agentRequestRejection(new Error('cloudflare_api_409_design_assistant_request_conflict')), 'design_assistant_request_conflict');
+  assert.equal(agentRequestRejection(new Error('cloudflare_api_413_design_assistant_body_too_large')), 'design_assistant_body_too_large');
+  ['cloudflare_api_401_unauthorized', 'cloudflare_api_403_forbidden', 'cloudflare_api_408_timeout', 'cloudflare_api_429_design_assistant_daily_limit', 'cloudflare_api_503_design_assistant_storage_unavailable', 'Failed to fetch', 'cloudflare_session_changed']
+    .forEach(message => assert.equal(agentRequestRejection(new Error(message)), null, message));
+  assert.equal(agentRequestRejection('not an error'), null);
+  const page = readFileSync(new URL('../src/pages/HeavyAgentTaskPage.tsx', import.meta.url), 'utf8');
+  assert.match(page, /const rejected = agentRequestRejection\(error\);\n\s+if \(rejected\) \{\n\s+try \{ await commit\(\(task\) => apply\(task, \{ requestId: step\.requestId, state: 'failed', errorCode: rejected \}\)\); return; \}/);
 });
 
 // Light's 「ビジュアル方向性を選択」 and its HTML report (2026-11-11).

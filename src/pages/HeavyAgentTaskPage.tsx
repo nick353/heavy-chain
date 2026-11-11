@@ -10,7 +10,7 @@ import { useAuthStore } from '../stores/authStore';
 import { AgentSidebar } from '../features/agent/AgentSidebar';
 import {
   AGENT_INTAKE_STEPS, AGENT_SCOPE_REGIONS, DEFAULT_AGENT_SCOPE, agentConversationId, agentImagePrompt, agentMissingNames, agentNotePrompt,
-  agentRequirementsPrompt, agentResearchPrompt, agentResearchSteps, agentRoundSources, agentScopeOptions, agentScopeSummary, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
+  agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentResearchSteps, agentRoundSources, agentScopeOptions, agentScopeSummary, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
   loadAgentTask, parseAgentRequirements, parseAgentResearch, parsePlanResponse, parseThemeResponse, planPrompt, pruneAgentScope, themePrompt, updateAgentTask,
   type AgentAssistantStep, type AgentImageStep, type AgentNote, type AgentNoteStage, type AgentResearchScope, type AgentTask, type AgentTaskDocument,
 } from '../features/agent/agentTasks';
@@ -326,7 +326,13 @@ export default function HeavyAgentTaskPage() {
       }
       if (result.state === 'running') result = await pollAssistant(result, conversationId);
       if (result.state !== 'running') await commit((task) => apply(task, result));
-    } catch {
+    } catch (error) {
+      // Turned away or never stored: waiting will not settle it, so the step fails and its retry appears (production
+      // 2026-11-12: an oversized theme request was rejected and the page kept reading back a request that did not exist).
+      const rejected = agentRequestRejection(error);
+      if (rejected) {
+        try { await commit((task) => apply(task, { requestId: step.requestId, state: 'failed', errorCode: rejected })); return; } catch { /* fall through to the notice */ }
+      }
       // The request may still have reached the server; reading it back on the next visit decides, it is not re-sent.
       if (mounted.current) setNotice('通信が中断されました。再読み込みすると続きを確認します。');
       // The advance effect resumes a running step at once; pause so a dropped connection is not read back in a tight loop.

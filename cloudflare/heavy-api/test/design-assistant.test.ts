@@ -417,3 +417,15 @@ test('agent modes are accepted, use the planning prompt and mark research withou
   assert.match(answer.content, /^## 市場と気候\n- 春は寒暖差が大きい\n\n\[出典\]\n\n\[検索\] unavailable$/);
   assert.equal((await s.call('POST', { ...input(), mode: 'chat' } as unknown as ReturnType<typeof input>)).status, 400);
 });
+
+// Production 2026-11-12: a theme request carrying a detailed research report (~5,000 characters) was turned away at 4,000.
+test('planning requests may be up to 16,000 characters while the plain assistant keeps its 4,000 cap', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  const long = 'テーマ'.repeat(2000);
+  const agent = await s.call('POST', { ...input(), prompt: long, mode: 'agent' } as unknown as ReturnType<typeof input>);
+  assert.equal(agent.status, 200, await agent.clone().text());
+  assert.equal((await s.call('POST', { ...input(), prompt: 'あ'.repeat(16000), mode: 'agent' } as unknown as ReturnType<typeof input>)).status, 200);
+  assert.equal((await s.call('POST', { ...input(), prompt: 'あ'.repeat(16001), mode: 'agent' } as unknown as ReturnType<typeof input>)).status, 400);
+  assert.equal((await s.call('POST', { ...input(), prompt: long })).status, 400);
+  assert.equal((await s.call('POST', { ...input(), prompt: 'あ'.repeat(4000) })).status, 200);
+});
