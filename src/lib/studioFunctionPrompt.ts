@@ -19,9 +19,11 @@ const flatDirective = (garment: StudioGarmentArea, perspective: StudioPerspectiv
 
 // The server's likeness guard reads "<word> <word> face|likeness|style" as a named person's look (2026-11-11 production:
 // "keep that model's face" was refused with legal_safety_prompt_blocked), so these directives say "facial features".
+// The innerwear fitting runs on FLUX.2 [dev], which reads "image 0/1" ambiguously; "the first/second image" matched Light's
+// sample in the 2026-11-12 trial (background, pose and the garment's colour blocks kept).
 const underwearDirective = (hasModel: boolean) => hasModel
-  ? 'Image 1 is the innerwear garment. Image 2 is the model photo: keep the facial features, hair, body, pose, framing and background of image 2 unchanged and dress the model in the garment from image 1 instead of the current clothing. Reproduce the garment\'s colors, lace, straps, seams and construction exactly.'
-  : 'Image 1 is the innerwear garment. Show a model wearing exactly this garment, reproducing its colors, lace, straps, seams and construction.';
+  ? 'The first image is the innerwear garment. The second image is the model photo: keep the facial features, hair, body, pose, framing and background of the second image unchanged and dress the model in the garment from the first image instead of the current clothing. Reproduce the garment\'s colors, lace, straps, seams and construction exactly.'
+  : 'The first image is the innerwear garment. Show a model wearing exactly this garment, reproducing its colors, lace, straps, seams and construction.';
 
 /**
  * Light's 範囲指定で生成 marks the spot with a brush stroke (its sample mask is one stroke across the chest) and the

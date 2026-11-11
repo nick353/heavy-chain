@@ -202,6 +202,8 @@ export function FashionStudioDetailPage() {
   // AI生成 never looks pressable while a click would be ignored (2026-11-12 production: a click 4s after adding a
   // reference did nothing).
   const [uploadingScope, setUploadingScope] = useState('');
+  // 下着のフィッティング dresses a real person's photo: the brand declares it may use the photo and has the person's consent.
+  const [innerwearConsent, setInnerwearConsent] = useState(false);
   const [generation, setGeneration] = useState<(FashionStudioGenerationOutcome & { scopeKey: string }) | null>(null);
   const [activity, setActivity] = useState({ scopeKey: '', value: '' });
   const [loadedMain, setLoadedMain] = useState({ identity: '', url: '' });
@@ -495,6 +497,7 @@ export function FashionStudioDetailPage() {
       if (detail.roles.main.status !== 'available' || loadedMain.identity !== mainIdentity || !loadedMain.url) { toast.error('メイン画像を追加してください'); return; }
       if ((fn === 'text' || fn === 'underwear') && !prompt.trim()) { toast.error(fn === 'underwear' ? 'フィッティングの説明を入力してください' : '指示テキストを入力してください'); return; }
       if (fn === 'region' && !regionPoints.length) { toast.error('参考画像を追加してください'); return; }
+      if (fn === 'underwear' && referenceAvailable && !innerwearConsent) { toast.error('モデル写真の使用許可と、写っている人の同意を確認してください'); return; }
       const unmasked = fn === 'region' ? regionPoints.findIndex(point => !regionMaskFor(point.slot)) : -1;
       if (unmasked >= 0) { toast.error(regionPoints.length > 1 ? `ポイント${unmasked + 1}のマスク調整で範囲を選択してください` : 'マスク調整で範囲を選択してください'); return; }
     }
@@ -518,7 +521,9 @@ export function FashionStudioDetailPage() {
         if (logicalAttemptRef.current?.identity !== inputIdentity) logicalAttemptRef.current = { identity: inputIdentity, key: crypto.randomUUID() };
         outcome = await generationControllerRef.current.start({ scope, logicalAttemptKey: logicalAttemptRef.current.key,
           main: { objectId: detail.roles.main.objectId, imageUrl: loadedMain.url, verified: true }, referenceImageUrls: references, prompt: promptText,
-          ...(editOptions ? { editOptions } : {}) });
+          ...(editOptions ? { editOptions } : {}),
+          // OpenAI refuses every innerwear-on-model image (2026-11-12), so 下着 goes to the server's FLUX.2 [dev] route.
+          ...(fn === 'underwear' ? { route: 'innerwear' as const, ...(chosen.length && innerwearConsent ? { rightsConfirmed: true } : {}) } : {}) });
       }
       assertContext();
       if (outcome.status === 'success' && outcome.document) setHydration(previous => ({ scopeKey, status: 'success', title: outcome.document!.title,
@@ -781,6 +786,10 @@ export function FashionStudioDetailPage() {
         <div className="w-full px-8">
           <div className={`${sectionLabel} gap-4`}>{referenceLabel}{studioFunction === 'text' && <span className="text-[26px] text-neutral-500" data-testid="fashion-studio-reference-count">最大{STUDIO_MAX_TEXT_REFERENCES}枚、アップロード済み<span className="text-[#20d0c4]">{textReferences.length}</span>/{STUDIO_MAX_TEXT_REFERENCES}</span>}</div>
           <div className="flex flex-wrap items-center gap-5">{studioFunction === 'text' ? textReferenceTiles : referenceTile}</div>
+          {studioFunction === 'underwear' && referenceShown && <label className="mt-5 flex items-start gap-4 text-[26px] leading-[36px] text-neutral-300" data-testid="fashion-studio-innerwear-consent">
+            <input type="checkbox" checked={innerwearConsent} disabled={busy || recoveryRequired} onChange={event => setInnerwearConsent(event.target.checked)} className="mt-1 size-8 shrink-0 accent-[#20d0c4]" />
+            <span>モデル写真の使用許可と、写っている人の同意を得ています</span>
+          </label>}
         </div>
         {promptField(studioFunction === 'underwear' ? 'フィッティングの説明' : '指示テキスト')}
         {generationSettings}

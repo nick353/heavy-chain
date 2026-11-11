@@ -1,7 +1,7 @@
 import type { Env } from './index.ts';
 import { principal } from './domain.ts';
 import { requireBrandRole, handleMediaReadGateway, userHasBrandRole } from './core.ts';
-import { IMAGE_MODEL, IMAGE_ACTIONS, ImageInputError, boundedImageJSON, decodeImage, imageEstimate,
+import { IMAGE_MODEL, INNERWEAR_IMAGE_MODEL, INNERWEAR_ROUTE, IMAGE_ACTIONS, ImageInputError, boundedImageJSON, decodeImage, imageEstimate,
   isRecord, modelMultipart, normalizedImageRequestDigest, parseImageInput, raster, sha256, type AuthorizedSourceAsset,
   type ImageAction, type ImageInput, type Json, type Raster } from './image-ai-contracts.ts';
 import { CLAUDE_TEXT_ACTIONS, ClaudeTextError, claudeConfigured, runClaudeTextAction, type ClaudeTextAction } from './claude-text.ts';
@@ -52,6 +52,11 @@ type SourceCandidate = { id?: string; storagePath?: string; revision?: number | 
 // OpenAI is the server default; Workers AI remains an explicit fallback only.
 const configuredProvider = (env: Env): ProviderKind => env.AI_IMAGE_PROVIDER?.trim() === 'workers_ai' ? 'workers_ai' : 'openai';
 const providerConfig = (env: Env, action: ImageAction, body: Json): ProviderConfig => {
+  // The innerwear fitting always runs on Workers AI FLUX.2 [dev], whatever the server default is.
+  if (body.generationRoute === INNERWEAR_ROUTE) {
+    if (!env.AI) throw new ImageInputError('image_provider_not_enabled', 422);
+    return { provider: 'workers_ai', backendProvider: 'cloudflare-workers-ai', model: INNERWEAR_IMAGE_MODEL };
+  }
   const provider = configuredProvider(env);
   const hasReferences = action === 'model-matrix'
     ? Boolean(body.imageUrl || body.modelReferenceImageUrl)
@@ -374,7 +379,7 @@ async function runModel(env: Env, action: ImageAction, input: ImageInput, index:
   let timer: ReturnType<typeof setTimeout> | undefined;
   const inference = provider.provider === 'openai'
     ? runOpenAIImage(env, action, input, index, fetch, provider.model)
-    : env.AI!.run(IMAGE_MODEL,{ multipart: modelMultipart(input,input.candidates[index]) });
+    : env.AI!.run(provider.model as typeof IMAGE_MODEL,{ multipart: modelMultipart(input,input.candidates[index]) });
   // A timeout is UNKNOWN, never a safe retry. Workers AI binding has no abort
   // or provider job lookup in this contract. Losing the observer is not cancel.
   try { return await Promise.race([inference,new Promise((_,reject) => { timer = setTimeout(() => reject(
@@ -406,8 +411,8 @@ async function handleClaudeTextAction(request: Request, env: Env, action: Claude
 /** Light returns 2048px-class images (measured 2026-10-29: an edit came back 1696x2528, a new one 2048x2048).
  * OpenAI edits stop at 1536px, so the stored copy is enlarged to Light's size; on any failure the original is kept. */
 export const LIGHT_OUTPUT_SIZES: Readonly<Record<string,[number,number]>> = { '1024x1536': [1696,2528], '1536x1024': [2528,1696], '1024x1024': [2048,2048] };
-export async function enlargeLikeLight(env: Pick<Env,'IMAGES'>, image: Raster): Promise<Raster> {
-  const target = LIGHT_OUTPUT_SIZES[`${image.width}x${image.height}`];
+export async function enlargeLikeLight(env: Pick<Env,'IMAGES'>, image: Raster, sizes: Readonly<Record<string,[number,number]>> = LIGHT_OUTPUT_SIZES): Promise<Raster> {
+  const target = sizes[`${image.width}x${image.height}`];
   if (!target || !env.IMAGES) return image;
   try {
     const source = new Response(image.bytes as BufferSource).body;
@@ -568,12 +573,15 @@ async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageIn
     catch (error) {
       const beforeUnknown = await canContinue(auth,env,row,true); if (beforeUnknown) { await reconcile(env,row,true); return beforeUnknown; }
       const providerError = error instanceof OpenAIImageError ? error : null;
-      const state = providerError?.category === 'request_rejected' ? 'failed' : 'unknown';
+      // Workers AI answers a blocked output with "AiError ... Your output has been flagged" (code 3030): no image exists,
+      // so it is a definite refusal, not an unknown outcome (2026-11-12, FLUX.2 [dev] on the innerwear fitting).
+      const flagged = provider.provider === 'workers_ai' && error instanceof Error && /output has been flagged|\b3030\b/i.test(error.message);
+      const state = providerError?.category === 'request_rejected' || flagged ? 'failed' : 'unknown';
       const descriptor = isRecord(input.candidates[index].descriptor)
         ? {...input.candidates[index].descriptor,...(providerError ? {providerError:providerError.diagnostics} : {})}
         : input.candidates[index].descriptor;
       await env.DB.prepare("UPDATE heavy_ai_candidates SET state=?,error_code=?,latency_ms=?,descriptor=? WHERE request_id=? AND candidate_index=? AND state='running'")
-        .bind(state,providerError?.errorCode ?? 'image_outcome_unknown',Date.now()-started,JSON.stringify(descriptor),id,index).run();
+        .bind(state,providerError?.errorCode ?? (flagged ? 'image_provider_moderation_blocked' : 'image_outcome_unknown'),Date.now()-started,JSON.stringify(descriptor),id,index).run();
       break;
     }
     const latency = Date.now()-started;
@@ -584,6 +592,8 @@ async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageIn
       const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height,typeof output.providerModel === 'string' ? output.providerModel : undefined) : [input.width,input.height];
       if (image.width !== expected[0] || image.height !== expected[1]) throw new Error('dimensions');
       if (provider.provider === 'openai') image = await enlargeLikeLight(env,image);
+      // FLUX.2 [dev] draws 768x1024; Light's innerwear result is about 1152x1552, so enlarge it 1.5x the same way.
+      else if (provider.model === INNERWEAR_IMAGE_MODEL) image = await enlargeLikeLight(env,image,{ [`${image.width}x${image.height}`]: [image.width * 3 / 2, image.height * 3 / 2] });
     } catch {
       const beforeInvalid = await canContinue(auth,env,row,true); if (beforeInvalid) { await reconcile(env,row,true); return beforeInvalid; }
       const providerError = provider.provider === 'openai' ? new OpenAIImageError('unusable_response',200,undefined,

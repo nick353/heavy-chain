@@ -20,6 +20,9 @@ export type FashionStudioGenerationInput = {
   prompt: string;
   /** 生成設定 → 比率; omitted keeps the main image's frame. */
   editOptions?: { aspectRatio?: string };
+  /** 下着のフィッティング: the server's innerwear route (FLUX.2 [dev]) and the brand's rights/consent declaration for the model photo. */
+  route?: 'innerwear';
+  rightsConfirmed?: boolean;
 };
 export type FashionStudioGenerationStage = 'provider' | 'persistence' | 'canvas' | 'acknowledgement' | 'completed';
 export type FashionStudioGenerationOutcome = {
@@ -50,7 +53,7 @@ export type FashionStudioGenerationAdapters = {
   editImageWithPrompt(imageUrl: string, prompt: string, brandId: string, options: {
     idempotencyKey: string; assertContext: () => void; canvasProjectId: string;
     parentObjectId: string; referenceImageUrls: string[]; featureType: string;
-    aspectRatio?: string;
+    aspectRatio?: string; generationRoute?: 'innerwear'; rightsConfirmed?: boolean;
   }): Promise<ImageEditResult>;
   assertCompletedImageEditResult(result: ImageEditResult): void;
   /** Adapters must also fence their internal async mutations using context. */
@@ -152,6 +155,8 @@ export const createFashionStudioDetailGeneration = (adapters: FashionStudioGener
           canvasProjectId: attempt.input.scope.documentId, parentObjectId: attempt.input.main.objectId,
           referenceImageUrls: [...(attempt.input.referenceImageUrls ?? [])], featureType: feature,
           ...(attempt.input.editOptions?.aspectRatio ? { aspectRatio: attempt.input.editOptions.aspectRatio } : {}),
+          ...(attempt.input.route ? { generationRoute: attempt.input.route } : {}),
+          ...(attempt.input.rightsConfirmed ? { rightsConfirmed: true } : {}),
         });
         assertContext(attempt);
         if (isSettledImageEditFailure(result, attempt.requestId)) attempt.settled = true;

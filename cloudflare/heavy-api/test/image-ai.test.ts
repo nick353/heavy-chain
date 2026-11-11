@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test, { type TestContext } from 'node:test';
-import { IMAGE_MODEL, decodeImage, parseImageInput, imageEstimate } from '../src/image-ai-contracts.ts';
+import { IMAGE_MODEL, INNERWEAR_IMAGE_MODEL, decodeImage, parseImageInput, imageEstimate } from '../src/image-ai-contracts.ts';
 import { imageSetup, pngFixture, TEST_HEAVY_DOCUMENT_DIGEST, TEST_HEAVY_DOCUMENT_VERSION, TEST_HEAVY_RIGHTS_VERSION } from './image-ai-fixture.ts';
 import { processImageJob } from '../src/image-ai.ts';
 import { PROTECTED_IMAGE_EDIT_MODE,protectedImageDigest,protectedImageSaveRequestId } from '../../../src/lib/protectedImageEditContract.ts';
@@ -817,4 +817,42 @@ test('Light\'s four variations: each candidate gets its own direction, and a mis
   assert.doesNotMatch(parseImageInput('generate-image',s.input()).candidates[0].prompt,/variation/);
   assert.throws(()=>parseImageInput('generate-image',{...s.input(),count:2,variations} as never),/invalid_image_variations/);
   assert.throws(()=>parseImageInput('generate-image',{...s.input(),count:1,variations:['']} as never),/invalid_image_variations/);
+});
+
+// 2026-11-12: OpenAI refuses every innerwear-on-model image, so Fashion Studio's 下着のフィッティング runs on FLUX.2 [dev].
+const innerwearRefs=()=>[0,1].map(i=>'data:image/png;base64,'+Buffer.from(pngFixture(64,64,[40+i*80,30,20])).toString('base64'));
+test('the innerwear route runs on Workers AI FLUX.2 [dev] even when OpenAI is the server default',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close()); delete (s.env as unknown as Record<string,unknown>).AI_IMAGE_PROVIDER;
+  const result=await json(await s.call(url+'edit-image','alice',{...s.input(),imageUrls:innerwearRefs(),generationRoute:'innerwear'},crypto.randomUUID()));
+  assert.equal(result.success,true); assert.equal(result.provider,'workers_ai'); assert.equal(result.providerModel,INNERWEAR_IMAGE_MODEL);
+  assert.equal(s.calls.length,1); assert.equal(s.calls[0].model,INNERWEAR_IMAGE_MODEL);
+  assert.equal(s.calls[0].form.getAll('input_image_0').length,1); assert.equal(s.calls[0].form.getAll('input_image_1').length,1);
+});
+
+test('dressing a model photo in innerwear needs the rights and consent declaration; an unknown route is refused',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  const refused=await s.call(url+'edit-image','alice',{...s.input(),legalSafety:{rightsConfirmed:false},imageUrls:innerwearRefs(),generationRoute:'innerwear'},crypto.randomUUID());
+  assert.equal(refused.status,403); assert.deepEqual(await refused.json(),{success:false,error:'legal_safety_rights_confirmation_required'});
+  const unknown=await s.call(url+'edit-image','alice',{...s.input(),imageUrls:innerwearRefs(),generationRoute:'lingerie'},crypto.randomUUID());
+  assert.equal(unknown.status,422); assert.deepEqual(await unknown.json(),{success:false,error:'image_route_not_supported'});
+  // The garment alone (no model photo) does not involve a real person.
+  await json(await s.call(url+'edit-image','alice',{...s.input(),legalSafety:{rightsConfirmed:false},imageUrls:innerwearRefs().slice(0,1),generationRoute:'innerwear'},crypto.randomUUID()));
+  assert.equal(s.calls.length,1);
+});
+
+test('a flagged FLUX output is a definite refusal: failed, moderation code, no units charged',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close());
+  s.setHook(async()=>{ throw new Error('AiError: AiError: Your output has been flagged. Please choose another prompt / input image combination (54b65f41)'); });
+  const id=crypto.randomUUID();
+  const result=await json(await s.call(url+'edit-image','alice',{...s.input(),imageUrls:innerwearRefs(),generationRoute:'innerwear'},id));
+  assert.equal(result.success,false); assert.equal(result.state,'failed'); assert.equal(result.error,'image_provider_moderation_blocked');
+  const usage=await json(await s.call('/v1/image-ai/usage?brand_id=brand')); assert.equal(usage.remainingUnits,25); assert.equal(usage.uncertainImages ?? 0,0);
+});
+
+test('the innerwear fitting keeps the model photo frame, not the garment photo frame',()=>{
+  const s=imageSetup(); s.db.sql.close();
+  const ref=(w:number,h:number)=>'data:image/png;base64,'+Buffer.from(pngFixture(w,h)).toString('base64');
+  const { width, height, ...input }=s.input() as Record<string, unknown>; void width; void height;
+  const fitted=parseImageInput('edit-image',{...input,generationRoute:'innerwear',imageUrls:[ref(512,288),ref(288,384)]} as never,{ provider:'workers_ai', model:INNERWEAR_IMAGE_MODEL } as never);
+  assert.deepEqual([fitted.width,fitted.height],[768,1024]);
 });

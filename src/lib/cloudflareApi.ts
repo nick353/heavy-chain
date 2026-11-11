@@ -763,7 +763,8 @@ class CloudflareDataPlaneClient {
         ? { ...(protectedEdit?.body ?? body), seed: crypto.getRandomValues(new Uint32Array(1))[0] % 2147483647 }
         : (protectedEdit?.body ?? body);
       const proofBody = options.heavyPreparation ? attachHeavyGenerationPreflight(heavyInput, options.heavyPreparation) : heavyInput;
-      const referenceSide = await this.imageProvider() === 'openai' ? OPENAI_REFERENCE_SIDE : 512; await assertCurrent();
+      // The innerwear route always runs on Workers AI FLUX, which takes references of 512px at most.
+      const referenceSide = body.generationRoute !== 'innerwear' && await this.imageProvider() === 'openai' ? OPENAI_REFERENCE_SIDE : 512; await assertCurrent();
       const prepared = canonicalCloudflareImageBody(await prepareCloudflareImageInput(action,proofBody,{ referenceSide })); await assertCurrent();
       let requestId = options.idempotencyKey;
       let heavyPreparation = options.heavyPreparation;
