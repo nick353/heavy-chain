@@ -802,6 +802,8 @@
   bottom: 40px;
   left: 16px;
   display: flex;
+  gap: 8px;
+  white-space: nowrap;
   width: 240px;
   height: 46px;
   align-items: center;

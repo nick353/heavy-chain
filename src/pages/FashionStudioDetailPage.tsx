@@ -175,6 +175,15 @@ function FashionStudioImageNode({
  * empty upload canvas for the new-file URL and render the observed project
  * shell when a board project code is present.
  */
+/** Readable messages for the task chip's failures (raw codes such as cloudflare_api_403_legal_safety_prompt_blocked). */
+export function studioErrorMessage(error: string) {
+  if (/legal_safety_prompt_blocked/.test(error)) return '指示テキストに、人物の顔・有名人・ブランドの模倣と判断される言葉が含まれています。言い回しを変えてお試しください。';
+  if (/rights_confirmation_required/.test(error)) return '画像の利用権限を確認できませんでした。もう一度お試しください。';
+  if (/quota|insufficient|points?_/.test(error)) return 'ポイントが不足しています。';
+  if (/timeout|timed_out/.test(error)) return '生成に時間がかかっています。しばらくしてから結果を確認してください。';
+  return '処理に失敗しました。もう一度お試しください。';
+}
+
 export function FashionStudioDetailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -561,9 +570,11 @@ export function FashionStudioDetailPage() {
     const viewport = viewportRef.current; const interaction = viewportInteractionRef.current;
     if (!viewport || !interaction || !flowSize.width || !flowSize.height) return false;
     const bounds = viewport.getBoundingClientRect();
-    // Light's fitView keeps a margin around the nodes and never enlarges past its fitted size.
-    const scale = Math.min(1, (bounds.width * 0.92) / flowSize.width, (bounds.height * 0.86) / flowSize.height);
-    interaction.set({ zoom: STUDIO_DEFAULT_VIEWPORT.zoom * scale, panX: (1 - scale) * bounds.width / 2, panY: (1 - scale) * bounds.height / 2 });
+    // Light's fitView keeps a margin around the nodes and never enlarges past its fitted size. The flow sits between the
+    // node labels above and the canvas toolbar below (2026-11-11 production: the toolbar covered the AI生成 button).
+    const top = 40, bottom = 104;
+    const scale = Math.min(1, (bounds.width * 0.92) / flowSize.width, (bounds.height - top - bottom) / flowSize.height);
+    interaction.set({ zoom: STUDIO_DEFAULT_VIEWPORT.zoom * scale, panX: (1 - scale) * bounds.width / 2, panY: (1 - scale) * bounds.height / 2 + (top - bottom) / 2 });
     return true;
   };
   useEffect(() => {
@@ -572,7 +583,9 @@ export function FashionStudioDetailPage() {
     if (fitFlow()) fittedRef.current = key;
   }, [flowSize, viewportScopeKey, hasResultNode, studioFunction]);
   const activityText = ({ preparing: '準備中', generating: '生成中', recovering: '復旧中', saving: '保存中', failure: '失敗', success: '完了' } as Record<string, string>)[activityValue] || 'タスク';
-  const activityContent = <><span role="status">{activityText}</span>{(activeUpload?.error || activeGeneration?.error) && <span role="alert">{activeUpload?.error || activeGeneration?.error}</span>}{activeUpload?.status === 'failure' && activeUpload.recoverable && <button type="button" disabled={busy} onClick={() => void retryUpload()}>保存を再試行</button>}{activeGeneration?.status === 'failure' && <button type="button" disabled={busy} onClick={() => void generate(true)}>保存を再試行</button>}</>;
+  const activityError = activeUpload?.error || activeGeneration?.error || '';
+  useEffect(() => { if (activityError) toast.error(studioErrorMessage(activityError), { id: `studio-error:${activityError}` }); }, [activityError]);
+  const activityContent = <><span role="status">{activityText}</span>{activityError && <span role="alert" className="sr-only">{studioErrorMessage(activityError)}</span>}{activeUpload?.status === 'failure' && activeUpload.recoverable && <button type="button" disabled={busy} onClick={() => void retryUpload()}>保存を再試行</button>}{activeGeneration?.status === 'failure' && <button type="button" disabled={busy} onClick={() => void generate(true)}>保存を再試行</button>}</>;
   const inputControls = <><input ref={mainInputRef} className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" disabled={busy || recoveryRequired} aria-label="メイン画像ファイル" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void uploadFile(file, 'main'); }} /><input ref={referenceInputRef} className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" disabled={busy || recoveryRequired} aria-label="参考画像ファイル" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; uploadReference(file); }} /></>;
   const lightboxView = lightbox && (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-8" role="dialog" aria-label="全画面表示" onClick={() => setLightbox('')}>
@@ -787,8 +800,8 @@ export function FashionStudioDetailPage() {
       {inputControls}
       <div className="fashion-studio-source-dots pointer-events-none absolute inset-0" />
       <aside className="absolute left-4 top-6 z-10 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#262a2b]"><div className="flex h-10 items-center gap-1.5 border-b border-white/10 px-2 text-sm text-neutral-400"><img src={FASHION_STUDIO_PROJECT_ICON} alt="" className="size-5 object-contain" /><span>ファッションスタジオ</span></div><Link to="/flow/integration" aria-label="ファッションスタジオへ戻る" className="flex h-11 items-center gap-3 px-3 text-sm text-neutral-300 transition hover:bg-white/5 hover:text-white"><ChevronLeft className="h-5 w-5" /><span>Untitled</span></Link></aside>
-      {/* Light (2026-11-11): one centred column — the hint, the four example buttons, the 624×360 drop box, then the loading line. */}
-      <section aria-label="サンプル" className="absolute left-1/2 top-1/2 z-[4] flex w-[784px] max-w-[calc(100%-32px)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-8 text-center">
+      {/* Light (2026-11-11): one centred column — the hint, the four example buttons in one row, the 624×360 drop box, then the loading line. */}
+      <section aria-label="サンプル" className="absolute left-1/2 top-1/2 z-[4] flex w-max max-w-[calc(100%-32px)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-8 text-center">
         <p className="text-lg font-medium leading-6 text-neutral-400">下から機能を選んでサンプルを見るか、「画像を追加」をクリックしてください。</p>
         <div className="flex flex-wrap justify-center gap-4" data-testid="fashion-studio-functions">
           {STUDIO_FUNCTIONS.map((item) => <button key={item.id} type="button" disabled={busy || recoveryRequired || !scope || Boolean(exampleState.loading)} onClick={() => void loadExample(item.id)}

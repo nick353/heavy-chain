@@ -60,3 +60,20 @@ test('saved Fashion Studio cards expose the Light menu landmarks', () => {
     assert.ok(overviewSource.includes(marker), `missing Fashion Studio overview marker: ${marker}`);
   }
 });
+
+// 2026-11-11 production check against Light: four example buttons on one row, Light's TryOnModel icon for 下着,
+// the project stays "Untitled" after generating, the fitted flow clears the canvas toolbar, and failures read as text.
+test('empty studio keeps Light\'s one-row buttons and real icons; generation keeps the Untitled name', () => {
+  assert.match(source, /flex w-max max-w-\[calc\(100%-32px\)\] -translate-x-1\/2 -translate-y-1\/2 flex-col/);
+  assert.doesNotMatch(source, /w-\[784px\]/);
+  const icons = readFileSync(new URL('../src/components/lightchain/StudioFunctionIcon.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(icons, /d: 'Union'/);
+  assert.match(icons, /'underwear': \[\n    \{ d: 'M6\.0805 19\.9629/);
+  const generation = readFileSync(new URL('../src/lib/fashionStudioDetailGeneration.ts', import.meta.url), 'utf8');
+  assert.match(generation, /documentId: document\.id, title: document\.title,/);
+  assert.doesNotMatch(generation, /namedProjectTitle/);
+  assert.match(source, /const top = 40, bottom = 104;/);
+  assert.match(source, /toast\.error\(studioErrorMessage\(activityError\)/);
+  assert.match(source, /legal_safety_prompt_blocked\/\.test\(error\)\) return '指示テキストに、人物の顔/);
+  assert.match(styleSource, /\.fashion-studio-source-task \{[\s\S]*?white-space: nowrap;/);
+});
