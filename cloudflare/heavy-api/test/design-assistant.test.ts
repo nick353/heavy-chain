@@ -400,3 +400,20 @@ test('the provider call and its write are kept alive with waitUntil, so leaving 
   await kept[0];
   assert.equal(s.row(body.requestId)?.state, 'completed');
 });
+
+// The planning agent (/agent) shares the receipt table: `mode` picks the planning system prompt, and research without
+// Claude (no web search) still answers in the research format with `[検索] unavailable`.
+test('agent modes are accepted, use the planning prompt and mark research without web search', async t => {
+  const s = setup(); t.after(() => s.db.sql.close());
+  const agent = { ...input(), mode: 'agent' as const };
+  const plain = await s.call('POST', agent as ReturnType<typeof input>); assert.equal(plain.status, 200, await plain.clone().text());
+  const sentAgent = s.calls.at(-1)!.input as { messages: { role: string; content: string }[] };
+  assert.match(String(sentAgent.messages[0].content), /planning assistant of an apparel brand/);
+  assert.doesNotMatch(String(sentAgent.messages[0].content), /Confirmation flow/);
+  s.setProvider(async () => ({ response: '## 市場と気候\n- 春は寒暖差が大きい', usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } }));
+  const research = { ...input(), mode: 'agent-research' as const };
+  const answer = await (await s.call('POST', research as ReturnType<typeof input>)).json() as { state: string; content: string };
+  assert.equal(answer.state, 'completed');
+  assert.match(answer.content, /^## 市場と気候\n- 春は寒暖差が大きい\n\n\[出典\]\n\n\[検索\] unavailable$/);
+  assert.equal((await s.call('POST', { ...input(), mode: 'chat' } as unknown as ReturnType<typeof input>)).status, 400);
+});

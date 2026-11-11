@@ -139,6 +139,109 @@ export async function callClaudeMessages(
   return { text, usage, model };
 }
 
+// ---------------------------------------------------------------------------
+// Planning-agent research (Light's 「確認して調査を開始」): one Messages call with Anthropic's server-side web search.
+// $10 per 1,000 searches plus tokens; max_uses keeps one research to a few searches.
+export const AGENT_RESEARCH_MAX_USES = 5;
+export const AGENT_RESEARCH_TIMEOUT_MS = 170_000;
+const AGENT_RESEARCH_MAX_TOKENS = 16_000;
+/** pause_turn is resumed by re-sending the assistant turn as-is (no extra user message), at most this many times. */
+const AGENT_RESEARCH_MAX_RESUMES = 2;
+export type ResearchSource = { title: string; url: string };
+export type ResearchResult = {
+  text: string; sources: ResearchSource[]; searchUsed: boolean; searchErrors: string[];
+  usage: Record<string, number> | null; model: string;
+};
+type ContentBlock = Record<string, unknown> & { type: string };
+const httpUrl = (value: unknown): value is string => typeof value === 'string' && /^https?:\/\//i.test(value) && value.length <= 2048;
+
+/**
+ * Asks Claude to research the request on the web and write the report. Web-search errors arrive inside a 200 response
+ * (the tool result's `content` is an error object instead of a list); a 400 on the first call (search not enabled for
+ * the organization, tool not offered) falls back to one call without the tool, reported through `searchUsed: false`.
+ */
+export async function callClaudeResearch(
+  env: Env,
+  options: { system: string; messages: ClaudeMessage[]; model?: unknown; timeoutMs?: number; maxUses?: number },
+  fetchImpl: Fetch = fetch,
+): Promise<ResearchResult> {
+  const key = env.ANTHROPIC_API_KEY?.trim();
+  if (!key) throw new ClaudeTextError('claude_api_key_missing', 503);
+  const model = claudeModel(env, options.model);
+  const deadline = Date.now() + (options.timeoutMs ?? AGENT_RESEARCH_TIMEOUT_MS);
+  const tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: options.maxUses ?? AGENT_RESEARCH_MAX_USES }];
+  let messages: ClaudeMessage[] = options.messages.filter((message, index) => index > 0 || message.role === 'user');
+  let searchEnabled = true;
+  const sources = new Map<string, string>();
+  const searchErrors: string[] = [];
+  const texts: string[] = [];
+  let searched = false;
+  let inputTokens = 0, outputTokens = 0, counted = false, resumes = 0;
+  for (let call = 0; call <= AGENT_RESEARCH_MAX_RESUMES + 1; call += 1) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 1000) throw new ClaudeTextError('claude_request_failed', 502);
+    let response: Response;
+    try {
+      response = await fetchImpl(`${claudeBaseURL(env)}/v1/messages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': ANTHROPIC_VERSION, 'anthropic-beta': FALLBACK_BETA },
+        body: JSON.stringify({
+          model, max_tokens: AGENT_RESEARCH_MAX_TOKENS, system: options.system, messages,
+          ...(searchEnabled ? { tools } : {}), output_config: { effort: 'medium' }, fallbacks: 'default',
+        }),
+        signal: AbortSignal.timeout(remaining),
+      });
+    } catch {
+      throw new ClaudeTextError('claude_request_failed', 502);
+    }
+    if (!response.ok) {
+      console.warn('claude_research_upstream_error', response.status, (await response.text().catch(() => '')).slice(0, 500));
+      if (response.status === 400 && searchEnabled && call === 0) { searchEnabled = false; searchErrors.push('web_search_unavailable'); continue; }
+      throw new ClaudeTextError(`claude_upstream_${response.status}`, response.status === 429 || response.status === 529 ? 429 : 502);
+    }
+    const data = await response.json() as { stop_reason?: string; content?: ContentBlock[]; usage?: { input_tokens?: number; output_tokens?: number } };
+    if (data.stop_reason === 'refusal') throw new ClaudeTextError('claude_request_refused', 422);
+    if (Number.isSafeInteger(data.usage?.input_tokens) && Number.isSafeInteger(data.usage?.output_tokens)) {
+      inputTokens += data.usage!.input_tokens!; outputTokens += data.usage!.output_tokens!; counted = true;
+    }
+    const content = Array.isArray(data.content) ? data.content : [];
+    for (const block of content) {
+      if (block.type === 'web_search_tool_result') {
+        if (Array.isArray(block.content)) {
+          searched = true;
+          for (const result of block.content as Record<string, unknown>[]) {
+            if (httpUrl(result?.url) && !sources.has(result.url)) sources.set(result.url, typeof result.title === 'string' ? result.title.slice(0, 200) : result.url);
+          }
+        } else {
+          const code = (block.content as Record<string, unknown> | undefined)?.error_code;
+          searchErrors.push(typeof code === 'string' ? code : 'web_search_error');
+        }
+      } else if (block.type === 'text' && typeof block.text === 'string') {
+        texts.push(block.text);
+        for (const citation of Array.isArray(block.citations) ? block.citations as Record<string, unknown>[] : []) {
+          if (httpUrl(citation?.url) && !sources.has(citation.url)) sources.set(citation.url, typeof citation.title === 'string' ? citation.title.slice(0, 200) : citation.url);
+        }
+      }
+    }
+    if (data.stop_reason === 'pause_turn' && resumes < AGENT_RESEARCH_MAX_RESUMES) {
+      resumes += 1;
+      messages = [...messages, { role: 'assistant', content }];
+      continue;
+    }
+    if (data.stop_reason === 'max_tokens') throw new ClaudeTextError('claude_output_truncated', 502);
+    break;
+  }
+  const joined = texts.join('');
+  const marker = joined.lastIndexOf('[調査結果]');
+  const text = (marker >= 0 ? joined.slice(marker + '[調査結果]'.length) : joined).trim();
+  if (!text) throw new ClaudeTextError('claude_empty_response', 502);
+  return {
+    text, sources: [...sources].slice(0, 20).map(([url, title]) => ({ url, title })), searchUsed: searchEnabled && searched,
+    searchErrors: [...new Set(searchErrors)], model,
+    usage: counted ? { prompt_tokens: inputTokens, completion_tokens: outputTokens, total_tokens: inputTokens + outputTokens } : null,
+  };
+}
+
 const requiredText = (value: unknown, code: string): string => {
   if (typeof value !== 'string' || !value.trim()) throw new ClaudeTextError(code, 400);
   if (value.length > MAX_PROMPT_CHARS) throw new ClaudeTextError('prompt_too_long', 413);
