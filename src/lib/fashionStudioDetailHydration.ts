@@ -1,4 +1,5 @@
 import { extractFashionStudioThumbnailCandidates } from './fashionStudioThumbnails.ts';
+import { readStudioLayout, type StudioPositions } from './studioCanvas.ts';
 
 export type FashionStudioDetailRole = 'main' | 'reference' | 'result';
 export type FashionStudioDetailAsset = {
@@ -23,13 +24,15 @@ export type FashionStudioSavedDetail = {
   extraReferences: FashionStudioExtraReference[];
   /** Earlier results, oldest first; the current result stays `roles.result`. */
   history: FashionStudioDetailAsset[];
+  /** Node positions the person dragged on the canvas (snapshot.studioLayout); missing nodes use the default flow. */
+  layout: StudioPositions;
 };
 const record = (value: unknown): Record<string, unknown> => (
   value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 );
 const emptyAsset = (): FashionStudioDetailAsset => ({ status: 'missing', objectId: null, candidates: [] });
 export const emptyFashionStudioDetail = (): FashionStudioSavedDetail => ({
-  roles: { main: emptyAsset(), reference: emptyAsset(), result: emptyAsset() }, prompt: '', extraReferences: [], history: [],
+  roles: { main: emptyAsset(), reference: emptyAsset(), result: emptyAsset() }, prompt: '', extraReferences: [], history: [], layout: {},
 });
 const assetOf = (image: Record<string, unknown>): FashionStudioDetailAsset => {
   const candidates = extractFashionStudioThumbnailCandidates({ objects: [image] });
@@ -60,6 +63,7 @@ const explicitRoles = (image: Record<string, unknown>): FashionStudioDetailRole[
 /** A missing/conflicting role never borrows another role's image or array position. */
 export const extractFashionStudioSavedDetail = (snapshot: unknown): FashionStudioSavedDetail => {
   const detail = emptyFashionStudioDetail();
+  detail.layout = readStudioLayout(snapshot);
   const objects = record(snapshot).objects;
   if (!Array.isArray(objects)) return detail;
   const matches: Record<FashionStudioDetailRole, Record<string, unknown>[]> = { main: [], reference: [], result: [] };

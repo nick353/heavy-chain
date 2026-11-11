@@ -644,24 +644,40 @@
   transform-origin: 0 0;
 }
 
-/* Light's flow (2026-11-11): main → form → result in one centred row, node tops aligned, fitted into view. */
+/* Light's canvas (2026-11-12): main → form → results are free nodes at their own world positions (studioCanvas.ts),
+   joined by curved edges; by default they sit in one row with the node tops aligned. */
 .fashion-studio-flow {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  display: flex;
-  align-items: flex-start;
-  transform: translate(-50%, -50%);
+  top: 0;
+  left: 0;
 }
 
-.fashion-studio-flow > .fashion-studio-flow-node,
-.fashion-studio-flow > .fashion-studio-source-generation-panel {
+.fashion-studio-node {
+  position: absolute;
+  top: 0;
+  left: 0;
   pointer-events: auto;
 }
 
-.fashion-studio-flow-node {
-  position: relative;
-  flex: 0 0 auto;
+.fashion-studio-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.fashion-studio-edge {
+  fill: none;
+  stroke: #5e6263;
+  stroke-width: 1.5;
+}
+
+/* Light: the selected node's edges turn into teal dashes. */
+.fashion-studio-edge.is-active {
+  stroke: #20d0c4;
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
 }
 
 .fashion-studio-flow-node-label {
@@ -675,25 +691,23 @@
   white-space: nowrap;
 }
 
-/* Light lines the sample and every result up side by side in the result node. */
-.fashion-studio-result-row {
-  display: flex;
-  align-items: flex-start;
-}
-
-.fashion-studio-flow-edge {
-  flex: 0 0 auto;
-  pointer-events: none;
-}
-
 .fashion-studio-source-image-node {
   touch-action: none;
   user-select: none;
 }
 
+/* Light: a selected node has a teal frame. */
 .fashion-studio-source-image-node[data-selected="true"] {
-  outline: 2px solid #52c9c3;
-  outline-offset: 3px;
+  outline: 2px solid #20d0c4;
+  outline-offset: 0;
+}
+
+.fashion-studio-node[data-studio-node="form"][data-selected="true"] .fashion-studio-source-generation-panel {
+  box-shadow: 0 0 0 2px #20d0c4, 0 4px 16px rgb(0 0 0 / 40%);
+}
+
+.fashion-studio-viewport[data-mode="select"] .fashion-studio-source-image-node {
+  cursor: grab;
 }
 
 .fashion-studio-viewport[data-mode="move"] .fashion-studio-nav-surface,
@@ -702,8 +716,86 @@
 }
 
 .fashion-studio-viewport[data-panning="true"] .fashion-studio-nav-surface,
-.fashion-studio-viewport[data-panning="true"] .fashion-studio-source-image-node {
+.fashion-studio-viewport[data-panning="true"] .fashion-studio-source-image-node,
+.fashion-studio-viewport[data-node-dragging="true"],
+.fashion-studio-viewport[data-node-dragging="true"] .fashion-studio-source-image-node {
   cursor: grabbing;
+}
+
+/* Light's snap guides: #5FB7FB dashes across the whole canvas. */
+.fashion-studio-snap-line {
+  position: absolute;
+  border-color: #5fb7fb;
+}
+
+.fashion-studio-snap-line.is-x {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-left: 1px dashed #5fb7fb;
+}
+
+.fashion-studio-snap-line.is-y {
+  top: 0;
+  right: 0;
+  left: 0;
+  border-top: 1px dashed #5fb7fb;
+}
+
+/* Light's toolbar above a selected image node and the bar below a selected result. */
+.fashion-studio-node-toolbar,
+.fashion-studio-node-feedback {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  height: 40px;
+  align-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  padding: 4px;
+  border: 1px solid #3d4346;
+  border-radius: 10px;
+  background: #262a2b;
+  color: #e3e8e8;
+  font-size: 13px;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 30%);
+}
+
+.fashion-studio-node-toolbar {
+  transform: translate(-50%, -100%);
+}
+
+.fashion-studio-node-feedback {
+  transform: translateX(-50%);
+}
+
+.fashion-studio-node-toolbar button,
+.fashion-studio-node-feedback button {
+  display: flex;
+  height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
+.fashion-studio-node-toolbar button:hover:not(:disabled),
+.fashion-studio-node-feedback button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 10%);
+}
+
+.fashion-studio-node-toolbar button:disabled,
+.fashion-studio-node-feedback button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.fashion-studio-node-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: #3d4346;
 }
 
 .fashion-studio-source-generation-panel {
@@ -791,8 +883,6 @@
 .fashion-studio-source-task,
 .fashion-studio-source-canvas-toolbar,
 .fashion-studio-source-zoom-controls,
-.fashion-studio-source-handbook,
-.fashion-studio-source-panel-toggle,
 .fashion-studio-source-points,
 .fashion-studio-source-image-search {
   position: absolute;
@@ -803,7 +893,7 @@
   box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
 }
 
-/* Light (2026-10-28): タスク sits at the bottom left; zoom, キャンバスを整理 and the guide line up at the bottom right. */
+/* Light (2026-10-28): タスク sits at the bottom left. Its bottom right (2026-11-12) is in the block after the toolbar. */
 .fashion-studio-source-task {
   bottom: 40px;
   left: 16px;
@@ -854,53 +944,241 @@
   opacity: 0.35;
 }
 
+/* Light's bottom right (2026-11-12, 16px from the corner): the zoom pill (縮小 / 30% ▾ / 拡大), then キャンバスを整理,
+   ミニマップ and グリッドにスナップ in 40px circles (112px from the right, the minimap card above them), then ヘルプ and
+   ショートカット at the corner. */
 .fashion-studio-source-zoom-controls {
-  right: 114px;
-  bottom: 39px;
-  display: flex;
-  width: 154px;
+  z-index: 31;
+  right: 256px;
+  bottom: 16px;
+  width: 146px;
   height: 40px;
-  align-items: center;
-  justify-content: space-around;
   border-radius: 20px;
   font-size: 13px;
 }
 
-.fashion-studio-source-zoom-controls button,
-.fashion-studio-source-handbook,
-.fashion-studio-source-panel-toggle {
+.fashion-studio-zoom-inner {
+  position: relative;
   display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.fashion-studio-zoom-inner > button {
+  display: flex;
+  height: 32px;
   align-items: center;
   justify-content: center;
+  border-radius: 8px;
   color: #e3e8e8;
 }
 
-.fashion-studio-source-zoom-controls button {
+.fashion-studio-zoom-inner > button:not(.fashion-studio-zoom-level) {
   width: 32px;
-  height: 32px;
-  border-radius: 8px;
 }
 
-.fashion-studio-source-zoom-controls button:hover,
-.fashion-studio-source-handbook:hover,
-.fashion-studio-source-panel-toggle:hover {
+.fashion-studio-zoom-level {
+  width: 72px;
+  gap: 2px;
+}
+
+.fashion-studio-zoom-inner > button:hover:not(:disabled) {
   background: #353a3b;
 }
 
-.fashion-studio-source-handbook,
-.fashion-studio-source-panel-toggle {
-  bottom: 39px;
+.fashion-studio-zoom-inner > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.fashion-studio-zoom-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  display: flex;
+  width: 112px;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 4px;
+  border: 1px solid #3d4346;
+  border-radius: 10px;
+  background: #262a2b;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 30%);
+  transform: translateX(-50%);
+}
+
+.fashion-studio-zoom-menu button {
+  display: flex;
+  height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: #a9b0b3;
+  white-space: nowrap;
+}
+
+.fashion-studio-zoom-menu button:hover,
+.fashion-studio-zoom-menu button.is-checked {
+  background: rgb(255 255 255 / 8%);
+}
+
+.fashion-studio-zoom-menu button.is-checked {
+  color: #20d0c4;
+}
+
+.fashion-studio-canvas-navigation,
+.fashion-studio-help-buttons {
+  position: absolute;
+  z-index: 30;
+  bottom: 16px;
+  display: flex;
+  pointer-events: none;
+}
+
+.fashion-studio-canvas-navigation {
+  right: 112px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.fashion-studio-help-buttons {
+  right: 16px;
+  gap: 8px;
+}
+
+.fashion-studio-round-button {
+  position: relative;
+  display: flex;
   width: 40px;
   height: 40px;
-  border-radius: 20px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #3d4346;
+  border-radius: 9999px;
+  background: #262a2b;
+  color: #a9b0b3;
+  pointer-events: auto;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
+  transition: color 0.15s, background-color 0.15s;
 }
 
-.fashion-studio-source-handbook {
+.fashion-studio-round-button:hover:not(:disabled) {
+  background: #353a3b;
+  color: #fff;
+}
+
+/* Light: a turned-on round button (ミニマップ / グリッドにスナップ) is teal on a 20% teal fill. */
+.fashion-studio-round-button.is-on,
+.fashion-studio-round-button.is-on:hover {
+  background: linear-gradient(rgb(32 208 196 / 20%), rgb(32 208 196 / 20%)), #262a2b;
+  color: #20d0c4;
+}
+
+.fashion-studio-round-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Light's minimap card: 240px, rounded 12, 4px padding, a 16:9 map that fades in over 0.2s. */
+.fashion-studio-minimap {
+  width: 240px;
+  max-width: calc(100vw - 48px);
+  box-sizing: border-box;
+  padding: 4px;
+  border: 1px solid #3d4346;
+  border-radius: 12px;
+  background: #262a2b;
+  pointer-events: auto;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
+  animation: fashion-studio-fade-in 0.2s ease-out;
+}
+
+.fashion-studio-minimap svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #171b1c;
+  outline: none;
+  touch-action: none;
+}
+
+.fashion-studio-minimap svg:focus-visible {
+  outline: 2px solid #20d0c4;
+}
+
+.fashion-studio-minimap-node {
+  fill: #50585c;
+}
+
+.fashion-studio-minimap-viewport {
+  fill: transparent;
+  stroke: #7c8488;
+  stroke-width: 1;
+}
+
+@keyframes fashion-studio-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Light's ショートカット: a panel on the right over a dark backdrop. */
+.fashion-studio-shortcuts-backdrop {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  background: rgb(0 0 0 / 50%);
+}
+
+.fashion-studio-shortcuts {
+  position: absolute;
+  top: 66px;
   right: 16px;
+  bottom: 16px;
+  width: min(360px, calc(100vw - 32px));
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 20px;
+  border-radius: 16px;
+  background: #262a2b;
+  color: #e3e8e8;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 40%);
 }
 
-.fashion-studio-source-panel-toggle {
-  right: 64px;
+.fashion-studio-shortcuts-label,
+.fashion-studio-help-muted {
+  color: #a9b0b3;
+}
+
+.fashion-studio-shortcuts-key {
+  max-width: 60%;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 6%);
+  color: #8a9296;
+  font-size: 13px;
+  text-align: end;
+}
+
+.fashion-studio-shortcuts-close {
+  color: #a9b0b3;
+}
+
+.fashion-studio-help {
+  width: min(672px, 100%);
+  max-height: 560px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 24px;
+  border-radius: 16px;
+  background: #262a2b;
+  color: #e3e8e8;
 }
 
 .fashion-studio-source-points {
@@ -937,6 +1215,50 @@
     display: none;
   }
 }
+
+/* Light's ライトモードに切り替え on the studio (2026-11-12, light/studio-light-mode.png): the header and canvas turn light
+   (a pale grey canvas with grey dots), panels white, text black; the teal buttons keep their colour. The dialogs
+   (マスク調整, 全画面表示) stay dark like Light's. */
+html[data-studio-theme="light"] header { background: #ffffff; border-color: rgba(0, 0, 0, 0.08); color: #1c1f21; }
+html[data-studio-theme="light"] header button, html[data-studio-theme="light"] header a { color: #3d4245; }
+html[data-studio-theme="light"] header button:hover { background: rgba(0, 0, 0, 0.05); color: #1c1f21; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] { background: #f2f3f4; color: #1c1f21; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-source-dots { background-color: #f2f3f4; background-image: radial-gradient(#c3c8cc 1px, transparent 1px); }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-project-rail, .fashion-studio-source-asset-trigger, .fashion-studio-source-task,
+  .fashion-studio-source-canvas-toolbar, .fashion-studio-source-zoom-controls, .fashion-studio-source-points, .fashion-studio-source-image-search,
+  .fashion-studio-round-button, .fashion-studio-minimap, .fashion-studio-node-toolbar, .fashion-studio-node-feedback, .fashion-studio-zoom-menu,
+  .fashion-studio-shortcuts, .fashion-studio-help, .fashion-studio-source-generation-panel, .fashion-studio-source-image-node) {
+  border-color: rgba(0, 0, 0, 0.08); background: #ffffff; color: #1c1f21; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-canvas-toolbar button, .fashion-studio-zoom-inner > button, .fashion-studio-node-toolbar button,
+  .fashion-studio-node-feedback button) { color: #1c1f21; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-canvas-toolbar button:hover, .fashion-studio-source-canvas-toolbar button.is-active,
+  .fashion-studio-zoom-inner > button:hover:not(:disabled), .fashion-studio-node-toolbar button:hover:not(:disabled), .fashion-studio-node-feedback button:hover:not(:disabled),
+  .fashion-studio-zoom-menu button:hover, .fashion-studio-zoom-menu button.is-checked) { background: rgba(0, 0, 0, 0.06); }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-round-button { color: #6b7175; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-round-button:hover:not(:disabled) { background: #f3f4f5; color: #1c1f21; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-round-button.is-on { background: linear-gradient(rgb(32 208 196 / 20%), rgb(32 208 196 / 20%)), #ffffff; color: #0fa89e; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-zoom-menu button, .fashion-studio-shortcuts-label, .fashion-studio-help-muted, .fashion-studio-shortcuts-close) { color: #6b7175; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-zoom-menu button.is-checked { color: #0fa89e; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-shortcuts-key { background: rgba(0, 0, 0, 0.05); color: #6b7175; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-toolbar-divider { background: rgba(0, 0, 0, 0.1); }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-minimap svg { background: #f2f3f4; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-minimap-node { fill: #dde1e4; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-minimap-viewport { stroke: #a9b0b5; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-edge { stroke: #b4babe; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-edge.is-active { stroke: #20d0c4; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-flow-node-label { color: #6b7175; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-shortcuts-backdrop { background: rgba(0, 0, 0, 0.25); }
+/* The form's own fields (Tailwind colour classes) on white. */
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-generation-panel, .fashion-studio-source-project-rail, .fashion-studio-source-asset-trigger) :is(.bg-\[\#353a3b\], .bg-\[\#2f3436\], .bg-\[\#262a2b\]) { background-color: #f3f4f5; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-generation-panel, .fashion-studio-source-project-rail, .fashion-studio-source-asset-trigger) :is(.border-\[\#3d4346\], .border-white\/10, .border-white\/25) { border-color: #e3e6e8; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-source-generation-panel :is(.bg-\[\#3d4346\], .disabled\:bg-\[\#3d4346\]:disabled) { background-color: #e3e6e8; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-source-generation-panel .bg-\[\#505c5e\] { background-color: #d9dde0; color: #1c1f21; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-generation-panel, .fashion-studio-source-project-rail, .fashion-studio-source-asset-trigger) :is(.text-white, .text-neutral-100, .text-neutral-200) { color: #1c1f21; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-generation-panel, .fashion-studio-source-project-rail, .fashion-studio-source-asset-trigger) .text-neutral-300 { color: #3d4245; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-generation-panel, .fashion-studio-source-project-rail, .fashion-studio-source-asset-trigger) :is(.text-neutral-400, .text-neutral-500) { color: #6b7175; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-source-generation-panel :is(.hover\:bg-white\/10:hover, .hover\:bg-\[\#353a3b\]:hover) { background-color: rgba(0, 0, 0, 0.06); }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-source-generation-panel :is(.disabled\:text-neutral-500:disabled) { color: #9aa0a4; }
 
 /* Lightchain Lab overview board. The canonical route is a compact 220x240
    project grid, separate from the richer Heavy lab workspace at /lab. */

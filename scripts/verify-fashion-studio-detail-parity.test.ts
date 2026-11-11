@@ -23,14 +23,17 @@ test('fashion studio saved-project detail keeps the Light canvas shell landmarks
 });
 
 // Light (2026-11-11): main → form → result in one row; the reference/model image sits inside the form, not on the canvas.
+// 2026-11-12: the row is the default place of free nodes (studioCanvas.ts studioNodePositions) joined by drawn edges.
 test('the project canvas is Light\'s main → form → result row with the reference inside the form', () => {
-  assert.match(styleSource, /\.fashion-studio-flow \{[\s\S]*?display: flex;[\s\S]*?align-items: flex-start;/);
+  assert.match(styleSource, /\.fashion-studio-node \{\n  position: absolute;/);
   assert.match(styleSource, /\.fashion-studio-source-main-node,\n\.fashion-studio-source-result-node \{\n  width: 448px;/);
   assert.match(styleSource, /\.fashion-studio-source-generation-panel \{[\s\S]*?width: 310px;/);
   assert.match(styleSource, /\.fashion-studio-source-generation-inner \{[\s\S]*?zoom: 0\.443;/);
   assert.doesNotMatch(source, /fashion-studio-source-reference-node/);
   assert.match(source, /aria-label=\{`\$\{referenceLabel\}を追加`\}/);
-  assert.match(source, /<FlowEdge width=\{FLOW_GAP_IN\}/);
+  assert.match(source, /data-studio-node="main"/);
+  assert.match(source, /data-studio-node="form"/);
+  assert.match(source, /d=\{studioEdgePath\(source, target\)\}/);
 });
 
 test('choosing a function on the empty canvas loads Light\'s example for it', () => {
@@ -84,7 +87,7 @@ test('studio takes nine references, three fusion points, and lines results up be
   assert.match(source, /最大\{STUDIO_MAX_TEXT_REFERENCES\}枚、アップロード済み/);
   assert.match(source, /textReferences\.length < STUDIO_MAX_TEXT_REFERENCES/);
   assert.match(source, /regionPoints\.length < STUDIO_MAX_REGION_POINTS/);
-  for (const marker of ['画像をアップロード', 'キャンバスから選択', 'data-testid="fashion-studio-region-point"', 'data-testid="fashion-studio-result-row"',
+  for (const marker of ['画像をアップロード', 'キャンバスから選択', 'data-testid="fashion-studio-region-point"', 'data-studio-node="sample"',
     "'fashion-studio-history-result-image'", 'const showExampleResult = Boolean(settings.example);']) assert.ok(source.includes(marker), `missing marker: ${marker}`);
   assert.doesNotMatch(source, /融合ポイントは1か所まで追加できます/);
   assert.ok(source.includes("banner: 'メイン画像1枚につき、最大3か所の定向融合が可能です'"));
@@ -92,7 +95,8 @@ test('studio takes nine references, three fusion points, and lines results up be
   // directly (no click first) still adds a reference instead of replacing the first one.
   assert.match(source, /slotFileInput\(freeReferenceSlot\(STUDIO_MAX_TEXT_REFERENCES\), '参考画像ファイル（追加）'\)/);
   assert.match(source, /slotFileInput\(freeReferenceSlot\(STUDIO_MAX_REGION_POINTS\), '融合ポイントの参考画像ファイル'\)/);
-  assert.match(styleSource, /\.fashion-studio-result-row \{\n  display: flex;/);
+  // Results start in a row beside the sample, each touching the one before (studioCanvas.ts studioNodePositions).
+  assert.match(readFileSync(new URL('../src/lib/studioCanvas.ts', import.meta.url), 'utf8'), /previous\.kind === 'form' \? STUDIO_FLOW_GAP_OUT : 0/);
   const examples = readFileSync(new URL('../src/lib/fashionStudioExamples.ts', import.meta.url), 'utf8');
   assert.match(examples, /STUDIO_MAX_TEXT_REFERENCES = 9;/);
   assert.match(examples, /STUDIO_MAX_REGION_POINTS = 3;/);
