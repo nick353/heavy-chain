@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Check, Image as ImageIcon, Heart, Folder as FolderIcon, ChevronRight, House } from 'lucide-react';
+import { Search, Check, Image as ImageIcon, Heart, Folder as FolderIcon, ChevronRight, House, ImagePlus } from 'lucide-react';
 import { Modal } from './ui';
 import { withSignedImageUrls } from '../lib/storage';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
@@ -43,6 +43,8 @@ interface GallerySelectorProps {
   onMultipleSelect?: (images: { url: string; id: string }[]) => void;
   assetPurpose?: PrintDesignAssetPurpose;
   platformAssetRole?: 'garment' | 'textile' | 'artwork';
+  /** Light's 素材を選択 opens on 履歴アップロード with 「ファイルをアップロード」 as its first tile (AIグラフィックデザイン, 2026-11-12). */
+  uploadTile?: { accept: string; multiple?: boolean; onFiles: (files: File[]) => void };
 }
 
 type FilterType = 'all' | 'recent' | 'favorites';
@@ -118,6 +120,7 @@ export function GallerySelector({
   onMultipleSelect,
   assetPurpose,
   platformAssetRole,
+  uploadTile,
 }: GallerySelectorProps) {
   const {
     currentBrand,
@@ -546,6 +549,20 @@ export function GallerySelector({
           aria-busy={displayLoading}
           className="h-[min(400px,calc(100dvh-16rem))] min-h-64 overflow-y-auto"
         >
+          {uploadTile && activeLibraryTab === 'upload-history' && (
+            <div className="mb-3 grid grid-cols-4 gap-3">
+              <label data-testid="gallery-upload-tile"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => { event.preventDefault(); const files = Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')); if (files.length) uploadTile.onFiles(files); }}
+                className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#20d0c4]/70 bg-neutral-50 p-3 text-center text-neutral-600 transition hover:bg-primary-50 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700">
+                <ImagePlus className="h-6 w-6" aria-hidden="true" />
+                <span className="text-sm">ファイルをアップロード</span>
+                <span className="text-[11px] leading-4 text-neutral-500 dark:text-neutral-400">クリック/ドラッグ&ドロップで画像をアップロードします。</span>
+                <input type="file" accept={uploadTile.accept} multiple={uploadTile.multiple} aria-label="ファイルをアップロード" className="sr-only"
+                  onChange={(event) => { const files = Array.from(event.target.files ?? []); event.target.value = ''; if (files.length) uploadTile.onFiles(files); }} />
+              </label>
+            </div>
+          )}
           {displayLoading ? (
             <div
               role="status"

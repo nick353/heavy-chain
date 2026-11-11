@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { History, ImagePlus, Plus, Sparkles, WandSparkles } from 'lucide-react';
+import { History, ImagePlus, ImageUp, Plus, Sparkles, Trash2, WandSparkles } from 'lucide-react';
+import { GallerySelector } from '../components/GallerySelector';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { whitenDarkBackground } from '../lib/whitenDarkBackground';
 import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate';
@@ -60,6 +61,8 @@ function LightchainGraphicDesignWorkspace() {
   const [selected, setSelected] = useState<0 | 1>(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  /** Light's 素材を選択: adding opens it on 履歴アップロード; `replace` is the slot 差し替え changes. */
+  const [library, setLibrary] = useState<{ replace: 'primary' | 'secondary' | null } | null>(null);
   const references = [workspace.slots.primary, workspace.slots.secondary].filter((slot): slot is NonNullable<typeof slot> => Boolean(slot));
   const strengths = readStrengths(workspace.inputState.referenceStrengths);
   const assist = workspace.inputState.assist === true;
@@ -88,9 +91,22 @@ function LightchainGraphicDesignWorkspace() {
   const handleFiles = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     event.target.value = '';
+    addFiles(files);
+  };
+  const addFiles = (files: File[], replace: 'primary' | 'secondary' | null = null) => {
+    if (replace) { if (files[0]) void workspace.upload(replace, files[0]); return; }
     const free = (['primary', 'secondary'] as const).filter((key) => !workspace.slots[key]);
     files.slice(0, free.length).forEach((file, index) => { void workspace.upload(free[index], file); });
     if (files.length > 0 && free.length > 0) setSelected(references.length === 0 ? 0 : 1);
+  };
+  const openLibrary = (replace: 'primary' | 'secondary' | null = null) => { if (!locked) setLibrary({ replace }); };
+  /** A library image is read and added like a file from the computer. */
+  const pickLibraryImage = (imageUrl: string, name: string) => {
+    const replace = library?.replace ?? null;
+    setLibrary(null);
+    void fetch(imageUrl, { credentials: 'omit' }).then((response) => response.blob())
+      .then((blob) => addFiles([new File([blob], name || 'library-image', { type: blob.type || 'image/png' })], replace))
+      .catch(() => undefined);
   };
   const removeReference = (index: 0 | 1) => {
     if (locked) return;
@@ -113,10 +129,13 @@ function LightchainGraphicDesignWorkspace() {
   return (
     <div className="lightchain-graphic-design flex h-[calc(100vh-50px)] min-h-[700px] gap-4 overflow-hidden bg-[#171b1c] p-4 text-white" data-testid="graphic-design-page" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId ?? ''} data-resume-state={workspace.status}>
       <input ref={inputRef} type="file" className="sr-only" accept="image/jpeg,image/png,image/webp" multiple disabled={locked} onChange={handleFiles} aria-label="参考画像ファイル" data-testid="graphic-design-file-input" />
+      <GallerySelector isOpen={Boolean(library) && !locked} title="素材を選択" onClose={() => setLibrary(null)}
+        onSelect={(imageUrl, _imageId, _storagePath, imageElement) => pickLibraryImage(imageUrl, imageElement?.alt?.trim() || '参考画像')}
+        uploadTile={{ accept: 'image/jpeg,image/png,image/webp', multiple: !library?.replace, onFiles: (files) => { const replace = library?.replace ?? null; setLibrary(null); addFiles(files, replace); } }} />
       <section className="flex w-80 shrink-0 flex-col rounded-lg bg-[#262a2b] p-4" aria-label="画像をアップロード">
         <h6 className="flex h-8 items-center text-base font-normal text-white">画像をアップロード</h6>
         {references.length === 0 ? (
-          <button type="button" data-testid="graphic-design-upload" onClick={() => inputRef.current?.click()} disabled={locked} className="mt-4 flex h-72 w-full shrink-0 flex-col items-center justify-center rounded border border-dashed border-transparent bg-[#333839] p-4 text-neutral-400 transition hover:border-[#20d0c4]">
+          <button type="button" data-testid="graphic-design-upload" onClick={() => openLibrary()} disabled={locked} className="mt-4 flex h-72 w-full shrink-0 flex-col items-center justify-center rounded border border-dashed border-transparent bg-[#333839] p-4 text-neutral-400 transition hover:border-[#20d0c4]">
             <ImagePlus aria-hidden="true" className="h-6 w-6 text-neutral-300" />
             <span className="mt-2 w-full break-words text-center text-sm text-neutral-200">画像をアップロードします</span>
             <span className="mt-1 break-words text-center text-xs text-neutral-400">jpg、jpeg、png、webpに対応しています。サイズ20M以内の画像を2枚までアップロードできます</span>
@@ -133,15 +152,26 @@ function LightchainGraphicDesignWorkspace() {
                 </div>
               ))}
               {references.length < MAX_REFERENCES && (
-                <button type="button" onClick={() => inputRef.current?.click()} disabled={locked} aria-label="画像を追加" className="flex size-[52px] items-center justify-center rounded border border-dashed border-white/25 text-neutral-300 hover:border-[#20d0c4]">
+                <button type="button" onClick={() => openLibrary()} disabled={locked} aria-label="画像を追加" className="flex size-[52px] items-center justify-center rounded border border-dashed border-white/25 text-neutral-300 hover:border-[#20d0c4]">
                   <Plus aria-hidden="true" className="h-5 w-5" />
                 </button>
               )}
             </div>
             {preview && (
-              <div className="mt-2 flex h-72 w-full shrink-0 items-center justify-center overflow-hidden rounded border border-[#20d0c4] bg-[#333839]" data-testid="graphic-design-preview">
+              <div className="group relative mt-2 flex h-72 w-full shrink-0 items-center justify-center overflow-hidden rounded border border-[#20d0c4] bg-[#333839]" data-testid="graphic-design-preview">
                 <img src={preview.imageUrl} alt="選択中の参考画像" className="max-h-full max-w-full object-contain" />
                 <span className="sr-only" data-testid="graphic-design-preview-name">{preview.name}</span>
+                {/* Light: hovering the selected image dims it and shows 差し替え and 削除 in a small bar (2026-11-12). */}
+                {!locked && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100" data-testid="graphic-design-preview-actions">
+                    <div className="flex rounded-lg bg-[#262a2b]/80 backdrop-blur-sm">
+                      <button type="button" aria-label="画像を差し替え" title="画像を差し替え" onClick={() => openLibrary(selected === 1 && workspace.slots.secondary ? 'secondary' : 'primary')}
+                        className="flex size-10 items-center justify-center rounded text-white hover:bg-white/10"><ImageUp className="h-5 w-5" aria-hidden="true" /></button>
+                      <button type="button" aria-label="画像を削除" title="画像を削除" onClick={() => removeReference(Math.min(selected, references.length - 1) as 0 | 1)}
+                        className="flex size-10 items-center justify-center rounded text-[#ff4d4f] hover:bg-white/10"><Trash2 className="h-5 w-5" aria-hidden="true" /></button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <label className="mt-0 flex items-center justify-between rounded-b bg-[#2f3436] px-4 py-3 text-sm text-neutral-300">
