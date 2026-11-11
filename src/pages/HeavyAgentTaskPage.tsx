@@ -208,9 +208,9 @@ function DirectionPicker({ themes, chosen, disabled, onRevise, onConfirm }: { th
               onClick={() => setPicked((current) => current.includes(theme) ? current.filter((entry) => entry !== theme) : [...current, theme])}
               className={`flex min-w-0 items-start gap-2 rounded-xl border px-3 py-3 text-left transition ${on ? 'border-cyan-300/70 bg-cyan-300/10' : 'border-white/10 hover:bg-white/5'} disabled:cursor-default`}>
               <span className="min-w-0 flex-1 space-y-1">
-                <span className="line-clamp-1 block text-sm font-medium text-white">{direction.name}</span>
-                {direction.description && <span className="line-clamp-2 block text-xs leading-5 text-neutral-300">{direction.description}</span>}
-                {direction.recommendation && <span className="line-clamp-2 block text-xs leading-5 text-neutral-500">{direction.recommendation}</span>}
+                <span className="line-clamp-1 text-sm font-medium text-white">{direction.name}</span>
+                {direction.description && <span className="line-clamp-2 text-xs leading-5 text-neutral-300">{direction.description}</span>}
+                {direction.recommendation && <span className="line-clamp-2 text-xs leading-5 text-neutral-500">{direction.recommendation}</span>}
               </span>
               <span aria-hidden="true" className={`mt-0.5 flex size-[18px] flex-none items-center justify-center rounded-full border ${on ? 'border-cyan-300 bg-cyan-300 text-neutral-900' : 'border-white/40'}`}>{on && <Check className="h-3 w-3" />}</span>
             </button>
@@ -576,7 +576,8 @@ export default function HeavyAgentTaskPage() {
                 return (
                   <article key={round.step.requestId} className="space-y-4" data-testid="agent-theme-round">
                     {round.step.state === 'running' && <StepSpinner label={agentThemeSearches(task) ? '市場とトレンドを調べ、テーマを考えています…（ウェブ検索で資料を集めています。1〜3分かかります）' : '市場とトレンドを整理し、テーマを考えています…'} />}
-                    {(round.step.state === 'failed' || round.step.state === 'unknown') && (
+                    {/* An attempt a retry already replaced has nothing to show: only the last round reports its failure. */}
+                    {last && (round.step.state === 'failed' || round.step.state === 'unknown') && (
                       <ErrorRow onRetry={last && !task.choice ? () => void retryThemes() : undefined}>テーマの提案に失敗しました（{round.step.errorCode ?? round.step.state}）。</ErrorRow>
                     )}
                     {/* Light goes straight from the report card to the direction form; the research itself is in the report. */}
