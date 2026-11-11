@@ -375,11 +375,29 @@ async function receipt(request: Request, env: Env, row: Row): Promise<Response> 
   return reply(payload);
 }
 
+/** Workers AI blocks some outputs with "AiError ... Your output has been flagged" (code 3030); no image exists then. */
+export const isFlaggedWorkersAIOutput = (error: unknown) => error instanceof Error && /output has been flagged|\b3030\b/i.test(error.message);
+/**
+ * FLUX.2 [dev] flags roughly a third to a half of innerwear catalogue outputs, and the seed decides it (2026-11-12: the same
+ * seed was flagged with two different prompts, other seeds passed). The innerwear route therefore draws again with another
+ * seed, up to three times in all, and only an output that passed the provider's check is ever delivered.
+ */
+export const INNERWEAR_FLAG_ATTEMPTS = 3;
+async function runWorkersAI(env: Env, input: ImageInput, index: number, provider: ProviderConfig): Promise<unknown> {
+  const candidate = input.candidates[index];
+  const attempts = provider.model === INNERWEAR_IMAGE_MODEL ? INNERWEAR_FLAG_ATTEMPTS : 1;
+  for (let attempt = 0; ; attempt++) {
+    const seed = attempt ? (candidate.seed + attempt * 7919) % 2147483647 : candidate.seed;
+    try { return await env.AI!.run(provider.model as typeof IMAGE_MODEL,{ multipart: modelMultipart(input,{ ...candidate, seed }) }); }
+    catch (error) { if (attempt + 1 >= attempts || !isFlaggedWorkersAIOutput(error)) throw error; }
+  }
+}
+
 async function runModel(env: Env, action: ImageAction, input: ImageInput, index: number, provider: ProviderConfig): Promise<unknown> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const inference = provider.provider === 'openai'
     ? runOpenAIImage(env, action, input, index, fetch, provider.model)
-    : env.AI!.run(provider.model as typeof IMAGE_MODEL,{ multipart: modelMultipart(input,input.candidates[index]) });
+    : runWorkersAI(env, input, index, provider);
   // A timeout is UNKNOWN, never a safe retry. Workers AI binding has no abort
   // or provider job lookup in this contract. Losing the observer is not cancel.
   try { return await Promise.race([inference,new Promise((_,reject) => { timer = setTimeout(() => reject(
@@ -575,7 +593,7 @@ async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageIn
       const providerError = error instanceof OpenAIImageError ? error : null;
       // Workers AI answers a blocked output with "AiError ... Your output has been flagged" (code 3030): no image exists,
       // so it is a definite refusal, not an unknown outcome (2026-11-12, FLUX.2 [dev] on the innerwear fitting).
-      const flagged = provider.provider === 'workers_ai' && error instanceof Error && /output has been flagged|\b3030\b/i.test(error.message);
+      const flagged = provider.provider === 'workers_ai' && isFlaggedWorkersAIOutput(error);
       const state = providerError?.category === 'request_rejected' || flagged ? 'failed' : 'unknown';
       const descriptor = isRecord(input.candidates[index].descriptor)
         ? {...input.candidates[index].descriptor,...(providerError ? {providerError:providerError.diagnostics} : {})}

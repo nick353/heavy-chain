@@ -840,13 +840,25 @@ test('dressing a model photo in innerwear needs the rights and consent declarati
   assert.equal(s.calls.length,1);
 });
 
-test('a flagged FLUX output is a definite refusal: failed, moderation code, no units charged',async t=>{
+test('a flagged FLUX output is a definite refusal after three seeds: failed, moderation code, no units charged',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close());
   s.setHook(async()=>{ throw new Error('AiError: AiError: Your output has been flagged. Please choose another prompt / input image combination (54b65f41)'); });
   const id=crypto.randomUUID();
   const result=await json(await s.call(url+'edit-image','alice',{...s.input(),imageUrls:innerwearRefs(),generationRoute:'innerwear'},id));
   assert.equal(result.success,false); assert.equal(result.state,'failed'); assert.equal(result.error,'image_provider_moderation_blocked');
   const usage=await json(await s.call('/v1/image-ai/usage?brand_id=brand')); assert.equal(usage.remainingUnits,25); assert.equal(usage.uncertainImages ?? 0,0);
+  assert.equal(s.calls.length,3); assert.equal(new Set(s.calls.map(call=>String(call.form.get('seed')))).size,3);
+});
+
+test('the innerwear route draws again with another seed when an output is flagged, and stops at the first pass',async t=>{
+  const s=imageSetup(); t.after(()=>s.db.sql.close()); let tries=0;
+  s.setHook(async()=>{ tries++; if (tries<2) throw new Error('AiError: AiError: Your output has been flagged. (5d3f1074)'); return { image: Buffer.from(s.output).toString('base64') }; });
+  const result=await json(await s.call(url+'edit-image','alice',{...s.input(),imageUrls:innerwearRefs(),generationRoute:'innerwear'},crypto.randomUUID()));
+  assert.equal(result.success,true); assert.equal(s.calls.length,2); assert.notEqual(String(s.calls[0].form.get('seed')),String(s.calls[1].form.get('seed')));
+  // Other errors and other routes are never retried: a lost response stays unknown and is not inferred twice.
+  const other=imageSetup(); t.after(()=>other.db.sql.close()); other.setHook(async()=>{ throw new Error('AiError: AiError: Your output has been flagged. (x)'); });
+  const plain=await json(await other.call(url+'generate-image','alice',other.input(),crypto.randomUUID()));
+  assert.equal(plain.success,false); assert.equal(other.calls.length,1);
 });
 
 test('the innerwear fitting keeps the model photo frame, not the garment photo frame',()=>{
