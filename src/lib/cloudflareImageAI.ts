@@ -44,7 +44,10 @@ const dataURL = (blob: Blob): Promise<string> => new Promise((resolve,reject) =>
 /** Longest side sent to OpenAI edits (its server accepts 1536px); Workers AI (FLUX) stays at 512px. */
 export const OPENAI_REFERENCE_SIDE = 1536;
 export async function prepareCloudflareImageInput(action: string, body: Body, options: { referenceSide?: number } = {}): Promise<Body> {
-  const side = options.referenceSide ?? 512;
+  // A protected (range) edit sends PNG (see below), capped at 1024 px so the source and its guide stay well inside the
+  // server's 9 MB request limit; both share one size, so they stay the same dimensions as the server requires.
+  const keepPng = !!body.protectedEdit && typeof body.protectedEdit === 'object';
+  const side = keepPng ? Math.min(options.referenceSide ?? 512, 1024) : options.referenceSide ?? 512;
   if (!CLOUDFLARE_IMAGE_ACTIONS.has(action)) return body;
   if (body.maskDataUrl || body.maskApplied === true || body.outputBackground === 'transparent') throw new Error('マスク編集・透過出力はCloudflare画像AIでまだ対応していません。入力は保持されています。');
   if (action === 'generate-image' && ![body.prompt,body.brief].some(value => typeof value === 'string' && value.trim())) throw new Error('Cloudflare画像AIにはプロンプトまたは brief が必要です。');
@@ -77,8 +80,13 @@ export async function prepareCloudflareImageInput(action: string, body: Body, op
       const context = canvas.getContext('2d'); if (!context) throw new Error('image_reference_canvas_unavailable');
       context.drawImage(image,0,0,width,height);
       // Large references go as JPEG so several still fit the request; 512px ones stay PNG as before.
+      // A protected (range) edit stays PNG: the server requires its black/white guide as PNG, and the browser keeps the
+      // request snapshot for recovery only with PNG images. Before 2026-11-11 the OpenAI side (1536 px) re-encoded
+      // them as JPEG, the snapshot check threw before the request was sent, and every 範囲編集 / プリントイメージ
+      // generation ended in 「処理結果を確認できません」.
+      const asJpeg = side > 512 && !keepPng;
       const png = await new Promise<Blob>((resolve,reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('image_reference_encode_failed')),
-        side > 512 ? 'image/jpeg' : 'image/png', side > 512 ? 0.92 : undefined));
+        asJpeg ? 'image/jpeg' : 'image/png', asJpeg ? 0.92 : undefined));
       references.push(await dataURL(png)); transforms.push({ index, sourceWidth,sourceHeight,width,height,resized: scale < 1 });
     } finally { URL.revokeObjectURL(url); }
   }
