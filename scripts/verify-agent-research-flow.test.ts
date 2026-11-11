@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { callClaudeResearch, ClaudeTextError } from '../cloudflare/heavy-api/src/claude-text.ts';
 import { formatAgentResearchContent } from '../cloudflare/heavy-api/src/designAssistant.ts';
 import {
-  AGENT_INTAKE_STEPS, DEFAULT_AGENT_SCOPE, agentMissingNames, buildAgentResearchReportHtml, parseAgentDirection, agentResearchPrompt, agentResearchSteps, agentScopeOptions, agentScopeSummary,
+  AGENT_INTAKE_STEPS, DEFAULT_AGENT_SCOPE, agentMissingNames, agentRoundSources, agentThemeSearches, parseThemeResponse, buildAgentResearchReportHtml, parseAgentDirection, agentResearchPrompt, agentResearchSteps, agentScopeOptions, agentScopeSummary,
   effectiveAgentRequirements, parseAgentRequirements, parseAgentResearch, pruneAgentScope, readAgentTask, themePrompt, type AgentTask,
 } from '../src/features/agent/agentFlow.ts';
 
@@ -149,9 +149,24 @@ test('the task page follows Light\'s conversation and lists the research sources
     '調査が完了しました。続いて調査結果をHTMLレポートに整理して表示します。', 'オンラインで表示', 'ダウンロード', 'ビジュアル方向性を選択', '商品構成計画に進む方向性を1つ以上選択してください',
     '全選択', '修正・補足する', '確認して続行', 'タスク成果物'])
     assert.ok(page.includes(text), text);
-  assert.match(page, /\{!conversation && <p className="mt-2 text-xs leading-5 text-neutral-500">Heavy Chainはウェブ検索を行いません。/);
+  assert.match(page, /\{!conversation && !roundSources && <p className="mt-2 text-xs leading-5 text-neutral-500">\{agentThemeSearches\(task\)/);
+  assert.match(page, /runAssistant\('theme', step, prompt, applyRound\(requestId\), themeMode\(saved\.task\)\)/);
   assert.match(page, /guard\(startResearch, '調査を開始できませんでした。', 'research'\)/);
   assert.match(page, /'agent-research'\)/);
   const tasks = readFileSync(new URL('../src/features/agent/agentTasks.ts', import.meta.url), 'utf8');
-  assert.match(tasks, /flow: 'conversation', requirements: null, notes: \[\], aligned: null, scope: null, research: null/);
+  assert.match(tasks, /input\.subtype === '新商品企画' \? \{ flow: 'conversation' as const, requirements: null, notes: \[\], aligned: null, scope: null, research: null \}/);
+});
+
+// Light (2026-11-11): 新商品企画 runs the conversation; テーマ企画 goes straight to the themes with web sources under 参考資料.
+test('テーマ企画 themes search the web and keep their sources apart from the themes', () => {
+  const themeTask = { ...conversationTask(), flow: undefined, subtype: 'テーマ企画' } as AgentTask;
+  assert.equal(agentThemeSearches(themeTask), true);
+  assert.equal(agentThemeSearches(conversationTask()), false);
+  assert.equal(agentThemeSearches({ ...themeTask, subtype: '新商品企画' }), false);
+  assert.match(themePrompt(themeTask), /キーエレメント：…」「インスピレーション：…」「カラーパレット：…/);
+  const content = formatAgentResearchContent({ text: '[概要]\n傾向。\n[テーマ]\n- A：a\n- B：b\n- C：c\n- D：d', sources: [{ title: 'hypebeast', url: 'https://hypebeast.com/x' }], searchUsed: true, searchErrors: [] });
+  assert.deepEqual(parseThemeResponse(content), { summary: '傾向。', themes: ['A：a', 'B：b', 'C：c', 'D：d'] });
+  const withRound = { ...themeTask, rounds: [{ step: { requestId: 'r', state: 'completed' as const, content }, summary: '', themes: [] }] };
+  assert.deepEqual(agentRoundSources(withRound)?.sources, [{ title: 'hypebeast', url: 'https://hypebeast.com/x' }]);
+  assert.equal(agentRoundSources({ ...themeTask, rounds: [{ step: { requestId: 'r', state: 'completed' as const, content: '[概要]\nx\n[テーマ]\n- A：a' }, summary: '', themes: [] }] }), null);
 });

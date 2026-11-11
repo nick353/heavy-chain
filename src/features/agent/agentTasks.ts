@@ -54,7 +54,9 @@ export async function createAgentTask(input: { brandId: string; scene: AgentScen
   const title = promptAgentTaskTitle(input.prompt);
   const task: AgentTask = { kind: AGENT_TASK_KIND, version: 1, scene: input.scene, subtype: input.subtype, prompt: input.prompt.slice(0, 2400),
     profile: input.profile.slice(0, 800), project: input.project, createdAt: new Date().toISOString(), rounds: [], choice: null, plan: null, image: null,
-    flow: 'conversation', requirements: null, notes: [], aligned: null, scope: null, research: null };
+    // Light runs the conversation (requirements → research scope → research) for 新商品企画 (planMode=newProduct, 2026-11-11);
+    // its テーマ企画 (planMode=plan) goes straight to the themes, with web sources under 参考資料.
+    ...(input.subtype === '新商品企画' ? { flow: 'conversation' as const, requirements: null, notes: [], aligned: null, scope: null, research: null } : { notes: [] }) };
   const created = await api().createCanvasDocument({ id, brand_id: input.brandId, title, snapshot: { version: 1, name: title, objects: [], agentTask: task } });
   const document = toAgentTaskDocument(created);
   if (!document) throw new Error('agent_task_create_failed');

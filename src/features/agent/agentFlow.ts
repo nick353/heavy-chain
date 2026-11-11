@@ -215,6 +215,16 @@ export function parseAgentResearch(content: string): ParsedResearch {
 const researchContext = (task: AgentTask) => task.research?.state === 'completed' && task.research.content
   ? `ウェブ調査の結果:\n${parseAgentResearch(task.research.content).report.slice(0, 3500)}` : '';
 
+/** Light's テーマ企画 researches the web for its themes (its 参考資料 lists the sites); Heavy searches in the theme request. */
+export const agentThemeSearches = (task: Pick<AgentTask, 'flow' | 'subtype'>) => task.flow !== 'conversation' && task.subtype === 'テーマ企画';
+/** Sources a web-searching theme round returned (its content carries the research `[出典]` block). */
+export function agentRoundSources(task: AgentTask) {
+  for (const round of [...task.rounds].reverse()) {
+    if (round.step.state === 'completed' && round.step.content && /^\[検索\]/m.test(round.step.content)) return parseAgentResearch(round.step.content);
+  }
+  return null;
+}
+
 export function themePrompt(task: AgentTask): string {
   const previous = task.rounds.flatMap((round) => round.themes);
   return [
@@ -229,7 +239,9 @@ export function themePrompt(task: AgentTask): string {
     '次の形式だけで、日本語で答えてください。',
     '[概要]',
     researchContext(task) ? 'ウェブ調査から読み取れる、4つのデザイン方向を考える上での要点を3〜5文で書く。出典やURLは書かない。'
-      : '依頼に関係する市場・トレンド・着用シーンの要点を4〜6文で書く。あなたの知識に基づいて書き、出典やURLは書かない。',
+      : agentThemeSearches(task)
+        ? 'ウェブ検索で分かった傾向を2〜3文で書き、続けて4つのテーマそれぞれについて、テーマ名の行と「キーエレメント：…」「インスピレーション：…」「カラーパレット：…」の3行を書く。出典やURLは書かない。'
+        : '依頼に関係する市場・トレンド・着用シーンの要点を4〜6文で書く。あなたの知識に基づいて書き、出典やURLは書かない。',
     '[テーマ]',
     ...(task.flow === 'conversation'
       ? ['- 方向性の名前（主なアイテム）｜特徴を2文で（素材・シルエット・色・ディテール）｜採用をすすめる理由を1文で（調査の根拠を入れる）', 'の形式でちょうど4行。区切りは全角の「｜」。']
@@ -261,7 +273,9 @@ export function agentImagePrompt(prompt: string): string {
 }
 
 export function parseThemeResponse(content: string): { summary: string; themes: string[] } {
-  const normalized = content.replace(/\r/g, '');
+  const raw = content.replace(/\r/g, '');
+  const tail = raw.search(/^\[出典\]$/m);
+  const normalized = (tail >= 0 ? raw.slice(0, tail) : raw.replace(/^\[検索\].*$/m, '')).trim();
   const themeIndex = normalized.search(/\[テーマ\]|【テーマ】/);
   const summaryPart = (themeIndex >= 0 ? normalized.slice(0, themeIndex) : normalized).replace(/\[概要\]|【概要】/g, '').trim();
   const themePart = themeIndex >= 0 ? normalized.slice(themeIndex) : normalized;

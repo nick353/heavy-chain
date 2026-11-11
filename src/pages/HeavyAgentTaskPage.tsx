@@ -10,7 +10,7 @@ import { useAuthStore } from '../stores/authStore';
 import { AgentSidebar } from '../features/agent/AgentSidebar';
 import {
   AGENT_INTAKE_STEPS, AGENT_SCOPE_REGIONS, DEFAULT_AGENT_SCOPE, agentConversationId, agentImagePrompt, agentMissingNames, agentNotePrompt,
-  agentRequirementsPrompt, agentResearchPrompt, agentResearchSteps, agentScopeOptions, agentScopeSummary, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
+  agentRequirementsPrompt, agentResearchPrompt, agentResearchSteps, agentRoundSources, agentScopeOptions, agentScopeSummary, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
   loadAgentTask, parseAgentRequirements, parseAgentResearch, parsePlanResponse, parseThemeResponse, planPrompt, pruneAgentScope, themePrompt, updateAgentTask,
   type AgentAssistantStep, type AgentImageStep, type AgentNote, type AgentNoteStage, type AgentResearchScope, type AgentTask, type AgentTaskDocument,
 } from '../features/agent/agentTasks';
@@ -328,6 +328,8 @@ export default function HeavyAgentTaskPage() {
   }, [brandId, commit, conversationFor, pollAssistant, taskId]);
 
   const textMode = (task: AgentTask): AssistantMode => (task.flow === 'conversation' ? 'agent' : undefined);
+  /** Light's テーマ企画 searches the web for its themes; its theme request runs as research. */
+  const themeMode = (task: AgentTask): AssistantMode => (agentThemeSearches(task) ? 'agent-research' : textMode(task));
   const applyRound = (requestId: string) => (task: AgentTask, result: AgentAssistantStep): AgentTask => ({ ...task, rounds: task.rounds.map((round) => round.step.requestId !== requestId ? round
     : { ...round, step: result, ...(result.state === 'completed' && result.content ? parseThemeResponse(result.content) : { summary: '', themes: [] }) }) });
   const applyNote = (noteId: string) => (task: AgentTask, result: AgentAssistantStep): AgentTask => ({ ...task, notes: (task.notes ?? []).map((note) => note.id === noteId ? { ...note, reply: result } : note) });
@@ -349,7 +351,7 @@ export default function HeavyAgentTaskPage() {
     const step: AgentAssistantStep = { requestId, state: 'running' };
     const saved = await commit((task) => ({ ...task, rounds: [...task.rounds, { step, summary: '', themes: [], at: new Date().toISOString() }] }));
     const prompt = themePrompt({ ...saved.task, rounds: saved.task.rounds.slice(0, -1) });
-    await runAssistant('theme', step, prompt, applyRound(requestId), textMode(saved.task));
+    await runAssistant('theme', step, prompt, applyRound(requestId), themeMode(saved.task));
   }, [commit, runAssistant]);
 
   const startPlan = useCallback(async (theme: string) => {
@@ -422,7 +424,7 @@ export default function HeavyAgentTaskPage() {
     }
     const lastRound = task.rounds[task.rounds.length - 1];
     if (!lastRound) { guard(startThemeRound, 'タスクを開始できませんでした。', 'start'); return; }
-    if (lastRound.step.state === 'running') { guard(() => runAssistant('theme', lastRound.step, null, applyRound(lastRound.step.requestId), textMode(task))); return; }
+    if (lastRound.step.state === 'running') { guard(() => runAssistant('theme', lastRound.step, null, applyRound(lastRound.step.requestId), themeMode(task))); return; }
     // Light's 「修正・補足する」: a note written after the directions asks for revised ones.
     if (!task.choice && task.flow === 'conversation' && lastRound.at && (task.notes ?? []).some((note) => note.stage === 'themes' && note.reply.state === 'completed' && note.at > lastRound.at!)) {
       guard(startThemeRound, '方向性の出し直しを開始できませんでした。'); return;
@@ -494,6 +496,8 @@ export default function HeavyAgentTaskPage() {
     : stepFailed(task.plan?.state) || stepFailed(task.image?.state) || stepFailed(task.research?.state) || stepFailed(task.requirements?.state) ? '失敗'
       : task.choice ? '作成中' : task.rounds.at(-1)?.step.state === 'completed' || waitingOnUser ? '確認待ち' : '調査中';
   const research = task?.research?.state === 'completed' && task.research.content ? parseAgentResearch(task.research.content) : null;
+  const roundSources = task && !conversation ? agentRoundSources(task) : null;
+  const sourceList = research ?? roundSources;
   const intakeSteps = task ? AGENT_INTAKE_STEPS.map((label, index) => {
     const finished = [task.requirements?.state === 'completed', Boolean(task.aligned), Boolean(task.scope)];
     const status = finished[index] ? '完了' as const : finished.findIndex((value) => !value) === index ? '進行中' as const : '待機中' as const;
@@ -556,7 +560,7 @@ export default function HeavyAgentTaskPage() {
                 const confirmed = !last || Boolean(task.choice);
                 return (
                   <article key={round.step.requestId} className="space-y-4" data-testid="agent-theme-round">
-                    {round.step.state === 'running' && <StepSpinner label="市場とトレンドを整理し、テーマを考えています…" />}
+                    {round.step.state === 'running' && <StepSpinner label={agentThemeSearches(task) ? '市場とトレンドを調べ、テーマを考えています…（ウェブ検索で資料を集めています。1〜3分かかります）' : '市場とトレンドを整理し、テーマを考えています…'} />}
                     {(round.step.state === 'failed' || round.step.state === 'unknown') && (
                       <ErrorRow onRetry={last && !task.choice ? () => void retryThemes() : undefined}>テーマの提案に失敗しました（{round.step.errorCode ?? round.step.state}）。</ErrorRow>
                     )}
@@ -663,11 +667,11 @@ export default function HeavyAgentTaskPage() {
             </>
           )}
           <h2 className="mt-6 text-base font-medium text-white">参考資料</h2>
-          {!conversation && <p className="mt-2 text-xs leading-5 text-neutral-500">Heavy Chainはウェブ検索を行いません。概要とテーマはAIモデルの知識に基づいて作成しています。</p>}
+          {!conversation && !roundSources && <p className="mt-2 text-xs leading-5 text-neutral-500">{agentThemeSearches(task) ? 'テーマができると、ウェブ検索で参照した資料がここに表示されます。' : 'Heavy Chainはウェブ検索を行いません。概要とテーマはAIモデルの知識に基づいて作成しています。'}</p>}
           {conversation && !research && <p className="mt-2 text-xs leading-5 text-neutral-500">調査が終わると、ウェブ検索で参照した資料がここに表示されます。</p>}
-          {research && research.sources.length > 0 && (
+          {sourceList && sourceList.sources.length > 0 && (
             <ol className="mt-2 space-y-2" data-testid="agent-research-sources">
-              {research.sources.map((source, index) => (
+              {sourceList.sources.map((source, index) => (
                 <li key={source.url} className="text-xs leading-5">
                   <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 hover:underline">{index + 1}. {source.title}</a>
                   <span className="block text-neutral-500">{hostOf(source.url)}</span>
@@ -675,8 +679,8 @@ export default function HeavyAgentTaskPage() {
               ))}
             </ol>
           )}
-          {research && research.sources.length === 0 && (
-            <p className="mt-2 text-xs leading-5 text-neutral-500">{research.search === 'ok' ? '参照した資料はありません。' : 'ウェブ検索を使えませんでした。調査結果とテーマはAIモデルの知識に基づいて作成しています。'}</p>
+          {sourceList && sourceList.sources.length === 0 && (
+            <p className="mt-2 text-xs leading-5 text-neutral-500">{sourceList.search === 'ok' ? '参照した資料はありません。' : 'ウェブ検索を使えませんでした。調査結果とテーマはAIモデルの知識に基づいて作成しています。'}</p>
           )}
           </div>
         </aside>
