@@ -644,9 +644,40 @@
   transform-origin: 0 0;
 }
 
-.fashion-studio-world > .fashion-studio-source-image-node,
-.fashion-studio-world > .fashion-studio-source-generation-panel {
+/* Light's flow (2026-11-11): main → form → result in one centred row, node tops aligned, fitted into view. */
+.fashion-studio-flow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: flex-start;
+  transform: translate(-50%, -50%);
+}
+
+.fashion-studio-flow > .fashion-studio-flow-node,
+.fashion-studio-flow > .fashion-studio-source-generation-panel {
   pointer-events: auto;
+}
+
+.fashion-studio-flow-node {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.fashion-studio-flow-node-label {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin: 0 0 8px;
+  color: #a3a3a3;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.fashion-studio-flow-edge {
+  flex: 0 0 auto;
+  pointer-events: none;
 }
 
 .fashion-studio-source-image-node {
@@ -689,53 +720,33 @@
   border-color: #3d4346;
 }
 
-.fashion-studio-source-edges {
-  z-index: 1;
-}
-
 .fashion-studio-source-image-node {
   z-index: 2;
-  position: absolute;
+  position: relative;
   margin: 0;
   overflow: hidden;
-  border: 1px solid #3d4346;
   border-radius: 12px;
   background: #262a2b;
   box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
 }
 
-.fashion-studio-source-main-node {
-  top: 190.86px;
-  left: 30.29%;
-  width: 351.06px;
-  height: 300px;
-}
-
-.fashion-studio-source-reference-node {
-  top: 134.36px;
-  left: 58.93%;
-  width: 372.41px;
-  height: 300px;
-}
-
+/* Light's image nodes are 1000 world px wide (448px at its 45% fit) with the image's own height. */
+.fashion-studio-source-main-node,
 .fashion-studio-source-result-node {
-  top: 452px;
-  left: 56.31%;
-  width: 372.41px;
-  height: 300px;
+  width: 448px;
 }
 
 .fashion-studio-source-expand {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 17px;
+  right: 17px;
   display: flex;
-  width: 24px;
-  height: 24px;
+  width: 35px;
+  height: 35px;
   align-items: center;
   justify-content: center;
   border-radius: 9px;
-  background: rgb(0 0 0 / 12%);
+  background: rgb(255 255 255 / 18%);
   color: #fff;
 }
 
@@ -743,32 +754,26 @@
   background: rgb(0 0 0 / 34%);
 }
 
+/* Light's form node: 700 world px (310px at its 45% fit), rounded 40, its height follows the fields. */
 .fashion-studio-source-generation-panel {
-  position: absolute;
+  position: relative;
   z-index: 25;
-  /* Larger and higher than Light's 30% node so its controls stay usable and clear of the bottom task bar. */
-  top: 96px;
-  left: max(16px, calc(30.29% - 296px));
-  width: 280px;
-  height: min(612px, calc(100% - 112px));
-  overflow-x: hidden;
-  overflow-y: auto;
+  flex: 0 0 auto;
+  width: 310px;
+  overflow: hidden;
   border: 1px solid #3d4346;
-  border-radius: 12px;
+  border-radius: 18px;
   background: #262a2b;
   color: #e3e8e8;
-  box-shadow: 0 4px 16px rgb(0 0 0 / 40%);
+  box-shadow: 0 0 0 2px rgb(61 67 70 / 55%), 0 4px 16px rgb(0 0 0 / 40%);
 }
 
 .fashion-studio-source-generation-inner {
   box-sizing: border-box;
   display: flex;
   width: 700px;
-  min-height: 1530px;
   flex-direction: column;
-  gap: 24px;
-  padding: 32px;
-  zoom: 0.4;
+  zoom: 0.443;
 }
 
 .fashion-studio-source-generation-inner button,
@@ -919,15 +924,6 @@
 }
 
 @media (max-width: 1100px) {
-  .fashion-studio-source-main-node {
-    left: 32%;
-  }
-
-  .fashion-studio-source-reference-node,
-  .fashion-studio-source-result-node {
-    left: 58%;
-  }
-
   .fashion-studio-source-points,
   .fashion-studio-source-image-search {
     display: none;
