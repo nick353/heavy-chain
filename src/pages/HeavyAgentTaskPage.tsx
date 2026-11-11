@@ -54,13 +54,27 @@ export default function HeavyAgentTaskPage() {
   const busy = useRef(false);
   const [tick, setTick] = useState(0);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  /** One automatic step at a time; when it settles the advance effect runs again. */
-  const guard = useCallback((work: () => Promise<unknown>, failure?: string) => {
+  const retries = useRef<Record<string, number>>({});
+  /**
+   * One automatic step at a time; when it settles the advance effect runs again. An automatic step (retryKey) that fails
+   * re-reads the task and tries again twice before saying so: right after the task is created its first save can fail
+   * once (2026-11-11: 「タスクを開始できませんでした。」 showed while the retry 7 s later went through).
+   */
+  const guard = useCallback((work: () => Promise<unknown>, failure?: string, retryKey?: string) => {
     if (busy.current) return;
     busy.current = true;
-    void work().catch(() => { if (failure && mounted.current) setNotice(failure); })
-      .finally(() => { busy.current = false; if (mounted.current) setTick((value) => value + 1); });
-  }, []);
+    void work().then(() => { if (retryKey) delete retries.current[retryKey]; }).catch(async () => {
+      const used = retryKey ? retries.current[retryKey] ?? 0 : Infinity;
+      if (used < 2 && retryKey) {
+        retries.current[retryKey] = used + 1;
+        await wait(1500);
+        const fresh = await loadAgentTask(taskId).catch(() => null);
+        if (fresh && mounted.current) { docRef.current = fresh; setDoc(fresh); }
+        return;
+      }
+      if (failure && mounted.current) setNotice(failure);
+    }).finally(() => { busy.current = false; if (mounted.current) setTick((value) => value + 1); });
+  }, [taskId]);
 
   const commit = useCallback(async (change: (task: AgentTask) => AgentTask, extra?: { title?: string; objects?: unknown[] }) => {
     const current = docRef.current;
@@ -176,14 +190,14 @@ export default function HeavyAgentTaskPage() {
     if (!doc || !brandId || status !== 'ready' || busy.current) return;
     const task = doc.task;
     const lastRound = task.rounds[task.rounds.length - 1];
-    if (!lastRound) { guard(startThemeRound, 'タスクを開始できませんでした。'); return; }
+    if (!lastRound) { guard(startThemeRound, 'タスクを開始できませんでした。', 'start'); return; }
     if (lastRound.step.state === 'running') {
       guard(() => runAssistant('theme', lastRound.step, null, (current, result) => ({ ...current, rounds: current.rounds.map((round) => round.step.requestId !== result.requestId ? round
         : { step: result, ...(result.state === 'completed' && result.content ? parseThemeResponse(result.content) : { summary: '', themes: [] }) }) })));
       return;
     }
     if (!task.choice) return;
-    if (!task.plan) { const theme = task.choice.theme; guard(() => startPlan(theme), '企画書の作成を開始できませんでした。'); return; }
+    if (!task.plan) { const theme = task.choice.theme; guard(() => startPlan(theme), '企画書の作成を開始できませんでした。', 'plan'); return; }
     if (task.plan.state === 'running') { const step = task.plan; guard(() => runAssistant('plan', step, null, (current, result) => ({ ...current, plan: result }))); return; }
     if (task.plan.state !== 'completed' || !task.plan.content) return;
     const parsed = parsePlanResponse(task.plan.content);
