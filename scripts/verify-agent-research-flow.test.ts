@@ -174,6 +174,13 @@ test('the task page follows Light\'s conversation and lists the research sources
   assert.match(page, /runAssistant\('theme', step, prompt, applyRound\(requestId\), themeMode\(saved\.task\)\)/);
   assert.match(page, /guard\(startResearch, '調査を開始できませんでした。', 'research'\)/);
   assert.match(page, /'agent-research'\)/);
+  // Light 2026-11-12: two directions to a row, each line cut short, select circle top right, 全選択 at the bottom left,
+  // and no summary paragraph between the report card and the form.
+  assert.match(page, /className="grid gap-2 sm:grid-cols-2" data-testid="agent-directions"/);
+  assert.match(page, /line-clamp-1 block text-sm font-medium text-white">\{direction\.name\}/);
+  assert.match(page, /line-clamp-2 block text-xs leading-5 text-neutral-300">\{direction\.description\}/);
+  assert.match(page, /flex flex-wrap items-center justify-between gap-2/);
+  assert.match(page, /\{round\.summary && !conversation && <div className="whitespace-pre-wrap" data-testid="agent-summary">/);
   const tasks = readFileSync(new URL('../src/features/agent/agentTasks.ts', import.meta.url), 'utf8');
   assert.match(tasks, /input\.subtype === '新商品企画' \? \{ flow: 'conversation' as const, requirements: null, notes: \[\], aligned: null, scope: null, research: null \}/);
 });
