@@ -8,8 +8,10 @@ import { cloudflareDataPlane, type CloudflareCanvasDocument, type CloudflareDesi
  * same request instead of sending another one.
  */
 export * from './agentFlow';
+import { AGENT_DIALOGUE_SCENES } from './agentDialogue';
 import { AGENT_TASK_CONVERSATION_PREFIX, AGENT_TASK_KIND, readAgentTask, type AgentAssistantStep, type AgentAttachment, type AgentScene, type AgentTask, type AgentTaskDocument } from './agentFlow';
 export * from './agentMerch';
+export * from './agentDialogue';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 
@@ -59,7 +61,9 @@ export async function createAgentTask(input: { brandId: string; scene: AgentScen
     // Light runs the conversation (requirements → research scope → research → directions → 商品構成 → AI designs → plan) for
     // 新商品企画 (planMode=newProduct) and 顧客提案 (planMode=clientProposal, 2026-11-12); its テーマ企画 (planMode=plan) goes
     // straight to the themes, with web sources under 参考資料.
-    ...(AGENT_CONVERSATION_SUBTYPES.includes(input.subtype) ? { flow: 'conversation' as const, requirements: null, notes: [], aligned: null, scope: null, research: null } : { notes: [] }),
+    // Its インスピレーション and AIグラフィックデザイン are one chat (questions → directions → reference images → 執行書 → 開始).
+    ...(AGENT_CONVERSATION_SUBTYPES.includes(input.subtype) ? { flow: 'conversation' as const, requirements: null, notes: [], aligned: null, scope: null, research: null }
+      : AGENT_DIALOGUE_SCENES.includes(input.scene) ? { flow: 'dialogue' as const, turns: [], dialogueStart: null, notes: [] } : { notes: [] }),
     ...(input.attachments?.length ? { attachments: input.attachments.slice(0, 12) } : {}) };
   const created = await api().createCanvasDocument({ id, brand_id: input.brandId, title, snapshot: { version: 1, name: title, objects: [], agentTask: task } });
   const document = toAgentTaskDocument(created);

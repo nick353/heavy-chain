@@ -33,6 +33,13 @@ export type AgentStyleImage = {
 };
 /** Light's 添付を追加 (ファイル / 画像): a file keeps the text read from it, an image is stored and sent to the assistant as a reference. */
 export type AgentAttachment = { id: string; kind: 'file' | 'image'; name: string; size: number; at: string; text?: string; imageId?: string; storagePath?: string };
+/** One message of the インスピレーション / AIグラフィックデザイン chat. A user turn's `prompt` is what the assistant reads when it
+ * differs from the bubble (form answers, picked images); an assistant turn's `mode` says whether it searched the web. */
+export type AgentTurn = {
+  id: string; role: 'user' | 'assistant'; at: string;
+  text?: string; prompt?: string; attachments?: string[];
+  step?: AgentAssistantStep; mode?: 'agent' | 'agent-research';
+};
 /** Light's 「調査範囲を確認」: values are Light's (中国/日本/北美/欧洲/非洲 and platform names). */
 export type AgentResearchScope = { regions: string[]; ec: string[]; sns: string[]; other: string; at: string };
 export type AgentTask = {
@@ -53,7 +60,7 @@ export type AgentTask = {
    * Light's conversation (2026-11-11): request → steps → requirement summary (「問題ありません、続行」) → research scope →
    * web research → themes. Tasks made before it have no `flow` and start at the themes.
    */
-  flow?: 'conversation';
+  flow?: 'conversation' | 'dialogue';
   requirements?: AgentAssistantStep | null;
   notes?: AgentNote[];
   aligned?: { at: string } | null;
@@ -69,6 +76,10 @@ export type AgentTask = {
   styleChoice?: { keys: string[]; at: string } | null;
   final?: AgentAssistantStep | null;
   attachments?: AgentAttachment[];
+  /** Light's インスピレーション / AIグラフィックデザイン (2026-11-12, `flow: 'dialogue'`): the chat, and the generation 「開始」 started
+   * (`after`: the turn it follows, `plan`: the 執行書 turn whose styles are generated into `designs`). */
+  turns?: AgentTurn[];
+  dialogueStart?: { after: string; plan: string; at: string } | null;
 };
 export type AgentTaskDocument = { id: string; title: string; revision: number; updatedAt: string; task: AgentTask; snapshot: Record<string, unknown> };
 
