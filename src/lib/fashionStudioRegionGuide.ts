@@ -51,14 +51,25 @@ export const naturalImageSize = async (url: string) => {
   return { width: image.naturalWidth, height: image.naturalHeight };
 };
 
-/** The guide image (main + teal strokes) as a blob: URL the image request reads like any other reference. */
-export async function buildRegionGuideUrl(mainUrl: string, maskUrl: string): Promise<string> {
-  const [main, mask] = await Promise.all([loadImage(mainUrl), loadImage(maskUrl)]);
+/** Light allows three fusion points; each point's strokes get their own colour on the guide (point 1 stays teal). */
+export const REGION_POINT_COLORS = [{ hex: REGION_MASK_COLOR, name: 'teal' }, { hex: '#ff3fb4', name: 'magenta' }, { hex: '#ff9f1a', name: 'orange' }] as const;
+
+/** The guide image (main + one coloured stroke layer per point) as a blob: URL the image request reads like any other reference. */
+export async function buildRegionGuideUrl(mainUrl: string, maskUrls: string | readonly string[]): Promise<string> {
+  const urls = (typeof maskUrls === 'string' ? [maskUrls] : [...maskUrls]).slice(0, REGION_POINT_COLORS.length);
+  const [main, ...masks] = await Promise.all([loadImage(mainUrl), ...urls.map(loadImage)]);
   const ratio = Math.min(1, GUIDE_MAX_EDGE / Math.max(main.naturalWidth, main.naturalHeight));
   const width = Math.round(main.naturalWidth * ratio); const height = Math.round(main.naturalHeight * ratio);
   const { canvas, context } = canvasOf(width, height);
   context.drawImage(main, 0, 0, width, height);
-  context.drawImage(mask, 0, 0, width, height);
+  masks.forEach((mask, index) => {
+    const layer = canvasOf(width, height);
+    layer.context.drawImage(mask, 0, 0, width, height);
+    layer.context.globalCompositeOperation = 'source-in';
+    layer.context.fillStyle = REGION_POINT_COLORS[index].hex;
+    layer.context.fillRect(0, 0, width, height);
+    context.drawImage(layer.canvas, 0, 0);
+  });
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
   if (!blob) throw new Error('region_guide_encode_failed');
   return URL.createObjectURL(blob);

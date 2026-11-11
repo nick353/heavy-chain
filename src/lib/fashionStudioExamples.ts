@@ -44,8 +44,13 @@ export type StudioSettings = {
   example: StudioFunctionId | null;
   /** The × on the reference/model thumbnail: the project stops using its reference image until a new one is added. */
   referenceOff: boolean;
+  /** References 2-9 (slots 1-8) the user removed from the form; the saved layers stay on the canvas document. */
+  extraOff: number[];
 };
-export const DEFAULT_STUDIO_SETTINGS: StudioSettings = { aspectRatio: 'auto', garment: '连身装', perspective: '正面', example: null, referenceOff: false };
+/** Light: テキストで生成 takes up to nine reference images, 範囲指定で生成 up to three fusion points. */
+export const STUDIO_MAX_TEXT_REFERENCES = 9;
+export const STUDIO_MAX_REGION_POINTS = 3;
+export const DEFAULT_STUDIO_SETTINGS: StudioSettings = { aspectRatio: 'auto', garment: '连身装', perspective: '正面', example: null, referenceOff: false, extraOff: [] };
 const settingsKey = (projectId: string) => `heavy-fashion-studio-settings:${projectId}`;
 const isFunction = (value: unknown): value is StudioFunctionId => value === 'text' || value === 'region' || value === 'underwear' || value === '3d';
 export const readStudioSettings = (projectId: string, storage: Pick<Storage, 'getItem'> | null = typeof window === 'undefined' ? null : window.localStorage): StudioSettings => {
@@ -58,6 +63,7 @@ export const readStudioSettings = (projectId: string, storage: Pick<Storage, 'ge
       perspective: STUDIO_PERSPECTIVES.includes(value.perspective as StudioPerspective) ? value.perspective as StudioPerspective : DEFAULT_STUDIO_SETTINGS.perspective,
       example: isFunction(value.example) ? value.example : null,
       referenceOff: value.referenceOff === true,
+      extraOff: Array.isArray(value.extraOff) ? [...new Set(value.extraOff.filter((slot): slot is number => Number.isInteger(slot) && slot >= 1 && slot <= 8))] : [],
     };
   } catch { return { ...DEFAULT_STUDIO_SETTINGS }; }
 };
@@ -66,9 +72,9 @@ export const writeStudioSettings = (projectId: string, settings: StudioSettings,
 };
 
 /** The prompt each function saves with its generation. 範囲指定 and 3D have no instruction field on Light's form. */
-export const studioFunctionPromptText = (fn: StudioFunctionId, prompt: string, settings: Pick<StudioSettings, 'garment' | 'perspective'>) => {
+export const studioFunctionPromptText = (fn: StudioFunctionId, prompt: string, settings: Pick<StudioSettings, 'garment' | 'perspective'>, points = 1) => {
   if (fn === '3d') return `${STUDIO_GARMENT_AREAS.find(area => area.value === settings.garment)?.label ?? 'ワンピース/セットアップ'}を3D画像に変換（${settings.perspective}）`;
-  if (fn === 'region') return '範囲指定で生成（融合ポイント1）';
+  if (fn === 'region') return `範囲指定で生成（融合ポイント${Math.min(3, Math.max(1, points))}）`;
   return prompt;
 };
 

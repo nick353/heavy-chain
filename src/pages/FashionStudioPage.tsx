@@ -19,6 +19,7 @@ import {
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
 import { cloudflareDataPlane, type CloudflareCanvasDocument } from '../lib/cloudflareApi';
+import { extractFashionStudioSavedDetail } from '../lib/fashionStudioDetailHydration';
 import { buildFashionStudioProjectHref, mergeFashionStudioProjectCards } from '../lib/fashionStudioProjects';
 import { buildPageItems } from '../lib/studioPagination';
 import { changePin, readPins, writePins, type FashionStudioPinState } from '../lib/fashionStudioPins';
@@ -435,7 +436,11 @@ export function FashionStudioPage() {
         if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
         // Light's board lists only Fashion Studio projects; other canvas documents (marketing, analysis, Canvas) stay out.
         const projectCards = documents.filter(isFashionStudioDocument).map((document) => {
-          const thumbnailCandidates = extractFashionStudioThumbnailCandidates(document.snapshot);
+          // Light's project card shows the latest result, or the main image before the first generation.
+          const latestResult = extractFashionStudioSavedDetail(document.snapshot).roles.result;
+          const allCandidates = extractFashionStudioThumbnailCandidates(document.snapshot);
+          const thumbnailCandidates = latestResult.status === 'available'
+            ? [...latestResult.candidates, ...allCandidates.filter(candidate => !latestResult.candidates.includes(candidate))] : allCandidates;
           return {
             id: document.id,
             title: document.title || 'Untitled',

@@ -13,21 +13,36 @@ const AREA_TEXT: Record<StudioGarmentArea, string> = {
 const flatDirective = (garment: StudioGarmentArea, perspective: StudioPerspective) => [
   `Output: a photorealistic e-commerce product photo of ${AREA_TEXT[garment]} worn in the image, shown alone as a 3D ghost-mannequin (invisible mannequin) form with natural volume, centred and filling most of the frame.`,
   perspective === '背面' ? 'Show the BACK view of the garment, inferring the back construction consistently with the front.' : 'Show the FRONT view of the garment.',
-  'Pure white (#FFFFFF) background from edge to edge with at most a soft contact shadow; no model, no body parts, no hanger, no props.',
+  'Pure white (#FFFFFF) background from edge to edge with at most a soft contact shadow: no grey, no gradient, no vignette; no model, no body parts, no hanger, no props.',
   'Keep the exact colors, print, fabric texture, collar, buttons, sleeves, belt and construction of the garment.',
 ].join(' ');
 
+// The server's likeness guard reads "<word> <word> face|likeness|style" as a named person's look (2026-11-11 production:
+// "keep that model's face" was refused with legal_safety_prompt_blocked), so these directives say "facial features".
 const underwearDirective = (hasModel: boolean) => hasModel
-  ? 'Image 1 is the innerwear garment. Image 2 is the model photo: keep that model\'s face, hair, body, pose, framing and background unchanged and dress the model in the garment from image 1 instead of their current clothing. Reproduce the garment\'s colors, lace, straps, seams and construction exactly.'
+  ? 'Image 1 is the innerwear garment. Image 2 is the model photo: keep the facial features, hair, body, pose, framing and background of image 2 unchanged and dress the model in the garment from image 1 instead of the current clothing. Reproduce the garment\'s colors, lace, straps, seams and construction exactly.'
   : 'Image 1 is the innerwear garment. Show a model wearing exactly this garment, reproducing its colors, lace, straps, seams and construction.';
 
 /**
  * Light's 範囲指定で生成 marks the spot with a brush stroke (its sample mask is one stroke across the chest) and the
  * whole garment there takes the reference design. Heavy sends the stroke as a guide image (image 3) the same way.
  */
-const regionDirective = (hasReference: boolean) => hasReference
-  ? 'Image 2 is the reference garment. Image 3 is image 1 with teal brush strokes marking the garment to change. Replace only the marked garment in image 1 with the garment design shown in image 2 (garment type, neckline, straps, colors and fabric), fitted naturally to the person\'s body, pose and lighting. Keep the person\'s face, hair, body, pose, the other clothing and the background identical to image 1. The output must not contain any teal marks.'
-  : 'Image 2 is image 1 with teal brush strokes marking the area to change. Change only the marked area and keep everything else identical. The output must not contain any teal marks.';
+const POINT_COLOR_NAMES = ['teal', 'magenta', 'orange'] as const;
+const regionDirective = (hasReference: boolean, points = 1) => !hasReference
+  ? 'Image 2 is image 1 with teal brush strokes marking the area to change. Change only the marked area and keep everything else identical. The output must not contain any teal marks.'
+  : points <= 1
+    ? 'Image 2 is the reference garment. Image 3 is image 1 with teal brush strokes marking the garment to change. Replace only the marked garment in image 1 with the garment design shown in image 2 (garment type, neckline, straps, colors and fabric), fitted naturally to the body, pose and lighting. Keep the facial features, hair, body, pose, the other clothing and the background identical to image 1. The output must not contain any teal marks.'
+    : (() => {
+      const count = Math.min(3, points);
+      const pairs = POINT_COLOR_NAMES.slice(0, count).map((color, index) => `the ${color} marks take the garment design of image ${index + 2}`).join(', ');
+      return `Images 2 to ${count + 1} are reference garments. Image ${count + 2} is image 1 with coloured brush strokes marking the garments to change: ${pairs}. Replace only the marked garments in image 1 with those designs (garment type, neckline, straps, colors and fabric), fitted naturally to the body, pose and lighting. Keep the facial features, hair, body, pose, the unmarked clothing and the background identical to image 1. The output must not contain any coloured marks.`;
+    })();
+
+/** Light's テキストで生成 keeps the garment from image 1 and returns a natural photograph (its sample: a film-like room shot). */
+const textDirective = (references = 0) => [
+  'Keep the garment from image 1 exactly (colors, fabric, ribbing, lace, trims and construction). Unless the instruction asks otherwise, make it a natural, photorealistic photograph with true-to-life skin texture and natural light, not an airbrushed or painted look.',
+  references > 0 ? `Image${references > 1 ? `s 2 to ${references + 1} are reference images` : ' 2 is a reference image'}: use ${references > 1 ? 'them' : 'it'} for what the instruction asks (a pose, setting, model, styling or detail), never as a replacement for the garment in image 1.` : '',
+].filter(Boolean).join(' ');
 
 // A project keeps the function it was created with, so a request that asks for 3D in words gets the 3D directive too.
 const asksFor3d = (prompt: string) => /[3３]\s*[DdＤｄ]/u.test(prompt);
@@ -35,11 +50,16 @@ const asksFor3d = (prompt: string) => /[3３]\s*[DdＤｄ]/u.test(prompt);
 /** The provider prompt per Fashion Studio function; the saved prompt stays the user's own text. */
 export const studioProviderPrompt = (prompt: string, studioFunction: string, options: {
   garment?: StudioGarmentArea; perspective?: StudioPerspective; hasReference?: boolean;
+  /** テキストで生成: how many reference images follow the main image (Light: up to nine). */
+  referenceCount?: number;
+  /** 範囲指定で生成: how many fusion points (Light: up to three), one reference image each. */
+  points?: number;
 } = {}) => {
   const fn = studioFunction === 'text' && asksFor3d(prompt) ? '3d' : studioFunction;
   const directive = fn === '3d' ? flatDirective(options.garment ?? '连身装', options.perspective ?? '正面')
     : fn === 'underwear' ? underwearDirective(Boolean(options.hasReference))
-      : fn === 'region' ? regionDirective(Boolean(options.hasReference))
-        : '';
+      : fn === 'region' ? regionDirective(Boolean(options.hasReference), options.points ?? 1)
+        : fn === 'text' ? textDirective(options.referenceCount ?? 0)
+          : '';
   return directive ? `${prompt}\n${directive}` : prompt;
 };

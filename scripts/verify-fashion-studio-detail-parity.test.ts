@@ -16,7 +16,7 @@ test('fashion studio saved-project detail keeps the Light canvas shell landmarks
         'cloudflareDataPlane.getCanvasDocument',
         'resolveGeneratedImageUrlWithStatus',
         'testId="fashion-studio-saved-main-image"',
-        'testId="fashion-studio-saved-result-image"',
+        "'fashion-studio-saved-result-image'",
         'data-testid="fashion-studio-flow"',
   ]) assert.ok(source.includes(marker), `missing parity marker: ${marker}`);
   assert.match(styleSource, /\.fashion-studio-source-dots[\s\S]*radial-gradient/);
@@ -59,4 +59,36 @@ test('saved Fashion Studio cards expose the Light menu landmarks', () => {
   for (const marker of ['ピン留め', 'アセットライブラリに保存', '削除', 'aria-expanded={openProjectMenuId === project.id}']) {
     assert.ok(overviewSource.includes(marker), `missing Fashion Studio overview marker: ${marker}`);
   }
+});
+
+// 2026-11-11 production check against Light: four example buttons on one row, Light's TryOnModel icon for 下着,
+// the project stays "Untitled" after generating, the fitted flow clears the canvas toolbar, and failures read as text.
+test('empty studio keeps Light\'s one-row buttons and real icons; generation keeps the Untitled name', () => {
+  assert.match(source, /flex w-max max-w-\[calc\(100%-32px\)\] -translate-x-1\/2 -translate-y-1\/2 flex-col/);
+  assert.doesNotMatch(source, /w-\[784px\]/);
+  const icons = readFileSync(new URL('../src/components/lightchain/StudioFunctionIcon.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(icons, /d: 'Union'/);
+  assert.match(icons, /'underwear': \[\n    \{ d: 'M6\.0805 19\.9629/);
+  const generation = readFileSync(new URL('../src/lib/fashionStudioDetailGeneration.ts', import.meta.url), 'utf8');
+  assert.match(generation, /documentId: document\.id, title: document\.title,/);
+  assert.doesNotMatch(generation, /namedProjectTitle/);
+  assert.match(source, /const top = 40, bottom = 104;/);
+  assert.match(source, /toast\.error\(studioErrorMessage\(activityError\)/);
+  assert.match(source, /legal_safety_prompt_blocked\/\.test\(error\)\) return '指示テキストに、人物の顔/);
+  assert.match(styleSource, /\.fashion-studio-source-task \{[\s\S]*?white-space: nowrap;/);
+});
+
+// Light (2026-11-11, saved projects): テキストで生成 takes 参考画像 最大9枚, 範囲指定で生成 最大3か所 (融合ポイントを追加 →
+// 画像をアップロード / キャンバスから選択), and the result node keeps the sample with every result lined up to its right.
+test('studio takes nine references, three fusion points, and lines results up beside the sample', () => {
+  assert.match(source, /最大\{STUDIO_MAX_TEXT_REFERENCES\}枚、アップロード済み/);
+  assert.match(source, /textReferences\.length < STUDIO_MAX_TEXT_REFERENCES/);
+  assert.match(source, /regionPoints\.length < STUDIO_MAX_REGION_POINTS/);
+  for (const marker of ['画像をアップロード', 'キャンバスから選択', 'data-testid="fashion-studio-region-point"', 'data-testid="fashion-studio-result-row"',
+    "'fashion-studio-history-result-image'", 'const showExampleResult = Boolean(settings.example);']) assert.ok(source.includes(marker), `missing marker: ${marker}`);
+  assert.doesNotMatch(source, /融合ポイントは1か所まで追加できます/);
+  assert.match(styleSource, /\.fashion-studio-result-row \{\n  display: flex;/);
+  const examples = readFileSync(new URL('../src/lib/fashionStudioExamples.ts', import.meta.url), 'utf8');
+  assert.match(examples, /STUDIO_MAX_TEXT_REFERENCES = 9;/);
+  assert.match(examples, /STUDIO_MAX_REGION_POINTS = 3;/);
 });
