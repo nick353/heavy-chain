@@ -41,8 +41,8 @@ test('no function directive trips the server likeness or brand guard', () => {
 
 test('underwear tells the provider which image is the garment and which is the model', () => {
   const withModel = studioProviderPrompt('図2のモデル外観・ポーズ・背景を維持し、全身の服を図1に変更', 'underwear', { hasReference: true });
-  assert.match(withModel, /Image 1 is the innerwear garment\. Image 2 is the model photo/);
-  assert.doesNotMatch(studioProviderPrompt('下着を着せて', 'underwear', { hasReference: false }), /Image 2/);
+  assert.match(withModel, /The first image is the innerwear garment\. The second image is the model photo/);
+  assert.doesNotMatch(studioProviderPrompt('下着を着せて', 'underwear', { hasReference: false }), /second image/);
 });
 
 test('region replaces the garment marked on the guide image with the reference design', () => {

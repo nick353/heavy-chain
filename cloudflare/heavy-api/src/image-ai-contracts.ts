@@ -1,4 +1,11 @@
 export const IMAGE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b';
+/**
+ * Fashion Studio's 下着のフィッティング only. OpenAI refuses every innerwear-on-model image (moderation: low too), so this
+ * route goes to FLUX.2 [dev] on Workers AI: on 2026-11-12 it matched Light's sample (background, pose, closed eyes and the
+ * garment's colour blocks) in 2 of 3 runs; the third output was flagged by the provider and costs the user nothing.
+ */
+export const INNERWEAR_IMAGE_MODEL = '@cf/black-forest-labs/flux-2-dev';
+export const INNERWEAR_ROUTE = 'innerwear';
 import { PROTECTED_IMAGE_EDIT_MODE } from '../../../src/lib/protectedImageEditContract.ts';
 
 /** Model-tool requests send a photo of a person, not a garment, as image 0. */
@@ -232,6 +239,8 @@ export function parseImageInput(
   if (body.generationProvider && body.generationProvider !== providerContext.provider) {
     throw new ImageInputError('image_provider_not_enabled', 422);
   }
+  const route = body.generationRoute;
+  if (route !== undefined && route !== INNERWEAR_ROUTE) throw new ImageInputError('image_route_not_supported', 422);
   const prompt = requiredText(action === 'model-matrix'
     ? (typeof body.productDescription === 'string' && body.productDescription.trim() ? body.productDescription
       : body.imageUrl ? 'Use the provided garment reference without inventing or replacing its design.' : body.productDescription)
@@ -247,9 +256,15 @@ export function parseImageInput(
   }
   if (action === 'model-matrix' && body.modelReferenceImageUrl && !body.imageUrl) throw new ImageInputError('fitting_garment_reference_required');
   const references = inputURLs.map(v => decodeImage(v, true, providerContext.provider === 'openai' ? OPENAI_REFERENCE_SIDE : 512));
+  // Dressing a real person's photo in innerwear needs the brand's declaration that it may use the photo and has the
+  // person's consent (the second image is the model photo).
+  if (route === INNERWEAR_ROUTE && references.length > 1 && !(isRecord(body.legalSafety) && body.legalSafety.rightsConfirmed === true)) {
+    throw new ImageInputError('legal_safety_rights_confirmation_required', 403);
+  }
   // An edit with no requested ratio keeps the source framing: a portrait photo
-  // must not come back square with the head and feet cropped.
-  const editSource = action === 'edit-image' && body.aspectRatio === undefined ? references[0] : undefined;
+  // must not come back square with the head and feet cropped. The innerwear fitting keeps the model photo's frame.
+  const editSource = action === 'edit-image' && body.aspectRatio === undefined
+    ? (route === INNERWEAR_ROUTE && references[1] ? references[1] : references[0]) : undefined;
   const defaults = ratios[String(body.aspectRatio)] ?? (editSource ? closestRatio(ratios, editSource.width, editSource.height)
     : action === 'model-matrix' ? [768,1024] : [1024,1024]);
   const width = body.width ?? defaults[0]; const height = body.height ?? defaults[1];
