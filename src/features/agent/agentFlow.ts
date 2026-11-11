@@ -319,7 +319,10 @@ export function themePrompt(task: AgentTask): string {
     '[概要]',
     researchContext(task) ? 'ウェブ調査から読み取れる、4つのデザイン方向を考える上での要点を3〜5文で書く。出典やURLは書かない。'
       : agentThemeSearches(task)
-        ? 'ウェブ検索で分かった傾向を2〜3文で書き、続けて4つのテーマそれぞれについて、テーマ名の行と「キーエレメント：…」「インスピレーション：…」「カラーパレット：…」の3行を書く。出典やURLは書かない。'
+        // Light lists each source with the sentence it was cited for. Claude cites only the sentences it bases on a result, so
+        // the trend sentences and each インスピレーション line are asked to state a page's concrete fact (2026-11-12: a theme round
+        // that wrote general lines came back with no citation at all, and 参考資料 showed bare titles and unrelated pages).
+        ? 'ウェブ検索で分かった傾向を2〜3文で書き、続けて4つのテーマそれぞれについて、テーマ名の行と「キーエレメント：…」「インスピレーション：…」「カラーパレット：…」の3行を書く。傾向の文と各テーマの「インスピレーション：」の行は、検索結果のページに書かれた具体的な事実（色名・アイテム・数字・事例）を1つずつ根拠にして書く。出典やURLは書かない。'
         : '依頼に関係する市場・トレンド・着用シーンの要点を4〜6文で書く。あなたの知識に基づいて書き、出典やURLは書かない。',
     '[テーマ]',
     ...(task.flow === 'conversation'
