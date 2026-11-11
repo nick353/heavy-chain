@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
-import * as ort from 'onnxruntime-web';
+// The WebGPU build (it includes the WASM backend too): the default bundle ran WebGPU requests at WASM speed (50 s, 2026-11-11).
+import * as ort from 'onnxruntime-web/webgpu';
 import { CLOTH_PARTS_INPUT_SIDE, clothPartsClassMap, clothPartsInputTensorData } from './clothPartsMath';
 
 /**
@@ -9,6 +10,9 @@ import { CLOTH_PARTS_INPUT_SIDE, clothPartsClassMap, clothPartsInputTensorData }
  * (1 = トップス, 2 = ボトムス, 3 = 全身), so the editor can list the found parts and apply one instantly.
  * Before 2026-11-11 the model ran on the page thread, was downloaded again for every request (bypassModelCache)
  * and ran once per part; the page froze for about a minute on each AIマスク認識.
+ * Measured on heavychain.app the same day: in this worker the single-threaded WASM backend took over 75 s per
+ * inference (119 s for the first request), WebGPU 6 s warm and about 24 s cold, so WebGPU runs first and WASM is the
+ * fallback when the browser has no WebGPU or the GPU run fails.
  */
 
 const CACHE_NAME = 'heavy-cloth-parts-model-v1';
@@ -23,6 +27,9 @@ type Request = {
 
 let sessionPromise: Promise<ort.InferenceSession> | null = null;
 let sessionKey = '';
+/** Set once a WebGPU session failed to build or run; later requests go straight to WASM. */
+let gpuFailed = false;
+const hasWebGpu = () => !gpuFailed && typeof navigator !== 'undefined' && 'gpu' in navigator && Boolean((navigator as Navigator & { gpu?: unknown }).gpu);
 
 const hex = (buffer: ArrayBuffer) => Array.from(new Uint8Array(buffer), (byte) => byte.toString(16).padStart(2, '0')).join('');
 const verified = async (bytes: ArrayBuffer, sha256: string) => hex(await crypto.subtle.digest('SHA-256', bytes)) === sha256;
@@ -46,28 +53,46 @@ const loadModelBytes = async (modelUrl: string, sha256: string) => {
 };
 
 const loadSession = (modelUrl: string, sha256: string) => {
-  const key = `${modelUrl}#${sha256}`;
+  const gpu = hasWebGpu();
+  const key = `${modelUrl}#${sha256}#${gpu ? 'webgpu' : 'wasm'}`;
   if (sessionPromise && sessionKey === key) return sessionPromise;
   // Emitted by Vite as a module worker: inference is already off the UI thread, so no ORT proxy worker.
   ort.env.wasm.proxy = false;
   ort.env.wasm.numThreads = 1;
   sessionKey = key;
   sessionPromise = loadModelBytes(modelUrl, sha256)
-    .then((bytes) => ort.InferenceSession.create(new Uint8Array(bytes), { executionProviders: ['wasm'] }))
+    .then(async (bytes) => {
+      if (gpu) {
+        try { return await ort.InferenceSession.create(new Uint8Array(bytes), { executionProviders: ['webgpu'] }); }
+        catch { gpuFailed = true; sessionKey = `${modelUrl}#${sha256}#wasm`; }
+      }
+      return ort.InferenceSession.create(new Uint8Array(bytes), { executionProviders: ['wasm'] });
+    })
     .catch((error) => { sessionPromise = null; sessionKey = ''; throw error; });
   return sessionPromise;
+};
+
+const classMapFor = async (request: Request, rgba: Uint8ClampedArray) => {
+  const session = await loadSession(request.modelUrl, request.modelSha256);
+  const input = new ort.Tensor('float32', clothPartsInputTensorData(rgba), [1, 3, CLOTH_PARTS_INPUT_SIDE, CLOTH_PARTS_INPUT_SIDE]);
+  const outputs = await session.run({ [session.inputNames[0]]: input });
+  const output = outputs[session.outputNames[0]];
+  if (!output || !(output.data instanceof Float32Array) || output.dims.length !== 4) throw new Error('cloth_parts_output_invalid');
+  return clothPartsClassMap(output.data, Number(output.dims[1]));
 };
 
 self.addEventListener('message', (event: MessageEvent<Request>) => {
   const request = event.data;
   void (async () => {
     const rgba = new Uint8ClampedArray(request.rgba);
-    const session = await loadSession(request.modelUrl, request.modelSha256);
-    const input = new ort.Tensor('float32', clothPartsInputTensorData(rgba), [1, 3, CLOTH_PARTS_INPUT_SIDE, CLOTH_PARTS_INPUT_SIDE]);
-    const outputs = await session.run({ [session.inputNames[0]]: input });
-    const output = outputs[session.outputNames[0]];
-    if (!output || !(output.data instanceof Float32Array) || output.dims.length !== 4) throw new Error('cloth_parts_output_invalid');
-    const map = clothPartsClassMap(output.data, Number(output.dims[1]));
+    let map: Uint8Array;
+    try { map = await classMapFor(request, rgba); }
+    catch (error) {
+      // A GPU run can fail after the session was built (lost device, unsupported kernel): retry once on WASM.
+      if (!sessionKey.endsWith('#webgpu')) throw error;
+      gpuFailed = true; sessionPromise = null; sessionKey = '';
+      map = await classMapFor(request, rgba);
+    }
     self.postMessage({ requestId: request.requestId, ok: true, classMap: map.buffer }, [map.buffer]);
   })().catch((error) => {
     self.postMessage({ requestId: request.requestId, ok: false, error: error instanceof Error ? error.message : String(error) });

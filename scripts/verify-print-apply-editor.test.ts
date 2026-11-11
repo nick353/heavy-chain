@@ -32,6 +32,19 @@ test('AIマスク認識 runs the cloth model in a worker once per garment, lists
   assert.match(editor, /buildMaterialCutoutDataUrl\(\{ imageUrl: garmentUrl, mode: 'auto', candidate: label/);
 });
 
+test('AIマスク認識 is fast enough to be ready when the editor opens: WebGPU first with a WASM fallback, started on garment upload (2026-11-11)', () => {
+  const worker = readFileSync(new URL('../src/features/printing/selection/clothParts.worker.ts', import.meta.url), 'utf8');
+  // Measured on heavychain.app: WASM in the worker took over 75 s per inference, WebGPU 6 s warm.
+  assert.match(worker, /executionProviders: \['webgpu'\]/);
+  assert.match(worker, /executionProviders: \['wasm'\]/);
+  assert.match(worker, /catch \{ gpuFailed = true;/);
+  // A GPU run that fails after the session was built is retried once on WASM.
+  assert.match(worker, /if \(!sessionKey\.endsWith\('#webgpu'\)\) throw error;\n\s*gpuFailed = true; sessionPromise = null; sessionKey = '';\n\s*map = await classMapFor\(request, rgba\);/);
+  // The print page starts the analysis as soon as the garment is up, not when AIマスク認識 is pressed.
+  assert.match(page, /const garmentUrl=!printApplied\?referenceImage\?\.url:undefined;/);
+  assert.match(page, /useEffect\(\(\)=>\{if\(garmentUrl\)void analyzeClothParts\(garmentUrl\)\.catch\(\(\)=>undefined\);\},\[garmentUrl\]\);/);
+});
+
 test('cloth parts math follows rembg u2net_cloth_seg: max-normalised ImageNet input, argmax classes, parts over 1%', () => {
   const side = 2;
   const rgba = new Uint8ClampedArray([200, 100, 50, 255, 100, 100, 100, 255, 0, 0, 0, 255, 200, 200, 200, 255]);
