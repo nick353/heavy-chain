@@ -380,8 +380,8 @@ export function FashionStudioDetailPage() {
         await persistenceContext.assertCurrent();
         context.assertContext();
         const receipt = await cloudflareDataPlane.saveWorkspaceArtifact({ requestId: input.requestId, brandId: requested.brandId,
-          featureType: `fashion-studio-detail-${input.role}-input`, title: 'Fashion Studio', imageUrl: input.imageUrl, prompt: null,
-          metadata: { inputOperationId: input.requestId, layerRole: input.role === 'main' ? 'original-base' : 'material-reference' },
+          featureType: `fashion-studio-detail-${input.role === 'main' ? 'main' : 'reference'}-input`, title: 'Fashion Studio', imageUrl: input.imageUrl, prompt: null,
+          metadata: { inputOperationId: input.requestId, layerRole: input.role === 'main' ? 'original-base' : input.role === 'reference' ? 'material-reference' : 'material-reference-extra' },
           canvasProjectId: requested.documentId || null, sourceStoragePath: null }, undefined, persistenceContext);
         context.assertContext();
         if (!receipt.success) throw new Error('fashion_studio_upload_remote_unverified');
