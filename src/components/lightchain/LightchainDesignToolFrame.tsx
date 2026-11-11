@@ -1,7 +1,7 @@
 import { Children, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { History } from 'lucide-react';
-import { LightchainHistoryPanel } from './LightchainHistoryPanel';
+import { LightchainHistoryPanel, type HistoryPendingEntry } from './LightchainHistoryPanel';
 
 /**
  * Light's デザインツール frame (生地イメージ / プリントイメージ / 線画の実写化 / 平絵生成), measured at 1440×900:
@@ -77,9 +77,15 @@ export function LightchainDesignToolRail({ locked = false, activeIndex = 0 }: { 
   );
 }
 
-export function LightchainDesignToolFrame({ active, testId, children, workspaceAttributes, navigationLocked = false, tabs = LIGHTCHAIN_DESIGN_TOOL_TABS, railGroup = 0, showNotice = true, historyToolIds }: {
+export function LightchainDesignToolFrame({ active, testId, children, workspaceAttributes, navigationLocked = false, tabs = LIGHTCHAIN_DESIGN_TOOL_TABS, railGroup = 0, showNotice = true, historyToolIds, historyOpen: historyOpenProp, onHistoryOpenChange, historyPending, historyPreviews, historyRefreshKey }: {
   /** The workspace tool ids whose results the 生成履歴 panel lists (Light shows only the open tool's). */
   historyToolIds?: readonly string[];
+  /** Light opens 生成履歴 itself when AI生成 is pressed; a page that does the same controls the panel here. */
+  historyOpen?: boolean;
+  onHistoryOpenChange?: (open: boolean) => void;
+  historyPending?: HistoryPendingEntry | null;
+  historyPreviews?: Readonly<Record<string, string>>;
+  historyRefreshKey?: number;
   /** Light shows the deprecation notice on the デザインツール pages but not on 画像修正. */
   showNotice?: boolean;
   active: string;
@@ -93,7 +99,9 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
   workspaceAttributes?: Record<string, string>;
 }) {
   const navigate = useNavigate();
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyOpenState, setHistoryOpenState] = useState(false);
+  const historyOpen = historyOpenProp ?? historyOpenState;
+  const setHistoryOpen = (open: boolean) => { setHistoryOpenState(open); onHistoryOpenChange?.(open); };
   const [controls, result] = Children.toArray(children);
   return (
     <div data-testid={testId} className="relative h-[calc(100vh-50px)] min-h-0 overflow-hidden bg-[#0b1113] px-4 py-4 pl-28 text-white" {...workspaceAttributes}>
@@ -130,7 +138,7 @@ export function LightchainDesignToolFrame({ active, testId, children, workspaceA
             <History aria-hidden="true" className="h-4 w-4" />生成履歴
           </button>
           {result}
-          {historyOpen && <LightchainHistoryPanel locked={navigationLocked} toolIds={historyToolIds} onClose={() => setHistoryOpen(false)} />}
+          {historyOpen && <LightchainHistoryPanel locked={navigationLocked} toolIds={historyToolIds} onClose={() => setHistoryOpen(false)} pending={historyPending} previews={historyPreviews} refreshKey={historyRefreshKey} />}
         </aside>
       </div>
     </div>

@@ -42,7 +42,19 @@ const SEND_TARGETS = [
 const tileButton = 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-white/80 transition hover:text-white disabled:opacity-40';
 const headerButton = 'inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.12] text-white/80 transition hover:bg-white/[0.2] disabled:opacity-40';
 
-export function LightchainHistoryPanel({ onClose, locked = false, toolIds }: { onClose: () => void; locked?: boolean; toolIds?: readonly string[] }) {
+/**
+ * A generation still running, shown first like Light (2026-11-11): its title and time, the composed preview, and a
+ * waiting tile. Once the result is saved the panel reloads (refreshKey) and the preview stays beside that result.
+ */
+export type HistoryPendingEntry = { title: string; previewUrl: string | null; startedAt: string };
+
+export function LightchainHistoryPanel({ onClose, locked = false, toolIds, pending = null, previews, refreshKey = 0 }: {
+  onClose: () => void; locked?: boolean; toolIds?: readonly string[];
+  pending?: HistoryPendingEntry | null;
+  /** The composed preview for a result id (Light shows the preview to the left of each result). */
+  previews?: Readonly<Record<string, string>>;
+  refreshKey?: number;
+}) {
   const navigate = useNavigate();
   const brandId = useAuthStore((state) => state.currentBrand?.id);
   const userId = useAuthStore((state) => state.user?.id);
@@ -83,6 +95,12 @@ export function LightchainHistoryPanel({ onClose, locked = false, toolIds }: { o
     setRows(null); setFailed(false);
     void loadPage(true);
   }, [loadPage]);
+  // A finished generation reloads the list so its result replaces the waiting row.
+  useEffect(() => {
+    if (!refreshKey) return;
+    pageState.current = { offset: 0, done: false, loading: false };
+    void loadPage(true);
+  }, [refreshKey, loadPage]);
 
   const onScroll = (event: UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
@@ -164,9 +182,21 @@ export function LightchainHistoryPanel({ onClose, locked = false, toolIds }: { o
         </button>
       </div>
       <div className="mt-4 flex-1 overflow-y-auto px-4 pb-6 scrollbar-hide" onScroll={onScroll} data-testid="lightchain-history-list">
+        {pending && (
+          <article data-testid="lightchain-history-pending" className="mb-8 px-4">
+            <p className="truncate text-sm"><span className="font-semibold text-white">{pending.title}</span><span className="ml-1 text-neutral-400">{formatDate(pending.startedAt)}</span></p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <figure className="relative aspect-square overflow-hidden rounded-sm bg-[#d9d9d9]/10">{pending.previewUrl && <img src={pending.previewUrl} alt={`${pending.title} の見本`} className="size-full object-contain" />}</figure>
+              <div role="status" className="flex aspect-square flex-col items-center justify-center gap-3 rounded-sm bg-gradient-to-b from-[#4a3a63] via-[#2c4a63] to-[#2e7a70] text-sm text-white/80">
+                <span className="h-0.5 w-28 overflow-hidden rounded-full bg-white/30"><span className="block h-full w-1/2 animate-pulse bg-white/80" /></span>
+                生成中…
+              </div>
+            </div>
+          </article>
+        )}
         {entries === null ? (
           [0, 1].map((key) => <div key={key} className="mb-6 h-[360px] w-full animate-pulse rounded-lg bg-white/[0.04]" />)
-        ) : entries.length === 0 ? (
+        ) : entries.length === 0 ? (pending ? null :
           <p className="mt-24 text-center text-sm text-neutral-400">{failed ? '生成履歴を読み込めませんでした' : '生成記録はありません'}</p>
         ) : entries.map((entry) => (
           <article key={entry.key} data-testid="lightchain-history-item" className="mb-8 px-4">
@@ -176,6 +206,7 @@ export function LightchainHistoryPanel({ onClose, locked = false, toolIds }: { o
               <button type="button" aria-label={`${entry.title} を削除`} onClick={() => confirmRemove(entry.images, `「${entry.title}」の生成結果 ${entry.images.length} 件`)} disabled={busy} className={headerButton}><Trash2 aria-hidden="true" className="h-4 w-4" /></button>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
+              {(() => { const preview = entry.images.map((image) => previews?.[image.id]).find(Boolean); return preview ? <figure data-testid="lightchain-history-preview" className="relative aspect-square overflow-hidden rounded-sm bg-[#d9d9d9]/10"><img src={preview} alt={`${entry.title} の見本`} className="size-full object-contain" /></figure> : null; })()}
               {entry.images.map((image) => {
                 const resumeHref = lightchainHistoryResumeHref(image);
                 return (

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { cutoutDrawRect, fitPlacementToBounds, maskBounds, movePlacementLayer, regionAtPoint, type PrintPlacement } from '../src/components/lightchain/printPlacement.ts';
+import { cutoutDrawRect, fitPlacementToBounds, initialPlacementGeometry, maskBounds, movePlacementLayer, printEditRegionMask, regionAtPoint, type PrintPlacement } from '../src/components/lightchain/printPlacement.ts';
+import { CLOTH_PARTS, clothPartMaskRgba, clothPartsClassMap, clothPartsInputTensorData, foundClothParts } from '../src/features/printing/selection/clothPartsMath.ts';
 
 const editor = readFileSync(new URL('../src/components/lightchain/PrintApplyEditor.tsx', import.meta.url), 'utf8');
 const page = readFileSync(new URL('../src/pages/LightchainParityPages.tsx', import.meta.url), 'utf8');
@@ -15,11 +16,95 @@ test('the 適用 dialog mirrors Light: two steps, AI mask candidates, brush/eras
   assert.match(editor, /globalCompositeOperation = 'destination-in'/);
 });
 
-test('AIマスク認識 segments the garment with the cloth model and keeps the colour heuristic only as a fallback', () => {
-  assert.match(editor, /buildPrintGarmentCutoutDataUrl\(\{ imageUrl: garmentUrl, modelName: 'u2net_cloth_seg', segmentationTarget: CANDIDATE_TARGET\[candidate\] \}\)/);
-  assert.match(editor, /CANDIDATE_TARGET[^=]*= \{ トップス: 'upper', ボトムス: 'lower', 全身: 'full' \}/);
-  assert.match(editor, /catch \{\s*return buildMaterialCutoutDataUrl\(\{ imageUrl: garmentUrl, mode: 'auto', candidate/);
-  assert.match(editor, /cutoutDrawRect\(cutout,/);
+test('AIマスク認識 runs the cloth model in a worker once per garment, lists only the found parts, and keeps the colour heuristic as a fallback (2026-11-11)', () => {
+  const worker = readFileSync(new URL('../src/features/printing/selection/clothParts.worker.ts', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('../src/features/printing/selection/clothParts.ts', import.meta.url), 'utf8');
+  // Started when the dialog opens, cached per garment URL, off the page thread.
+  assert.match(editor, /analyzeClothParts\(garmentUrl\)/);
+  assert.match(client, /new Worker\(new URL\('\.\/clothParts\.worker\.ts', import\.meta\.url\)/);
+  assert.match(client, /const analyses = new Map<string, Promise<ClothPartsAnalysis>>\(\);/);
+  // The model is fetched once, kept in Cache Storage and checked against the pinned hash on every read.
+  assert.match(worker, /caches\.open\(CACHE_NAME\)/);
+  assert.match(worker, /crypto\.subtle\.digest\('SHA-256'/);
+  assert.match(worker, /cloth_parts_model_hash_mismatch/);
+  // The menu lists the found parts; the fixed three only when the model gave nothing.
+  assert.match(editor, /parts\.status === 'ready' && parts\.analysis\?\.found\.length \? parts\.analysis\.found : \[\.\.\.MASK_CANDIDATES\]/);
+  assert.match(editor, /buildMaterialCutoutDataUrl\(\{ imageUrl: garmentUrl, mode: 'auto', candidate: label/);
+});
+
+test('cloth parts math follows rembg u2net_cloth_seg: max-normalised ImageNet input, argmax classes, parts over 1%', () => {
+  const side = 2;
+  const rgba = new Uint8ClampedArray([200, 100, 50, 255, 100, 100, 100, 255, 0, 0, 0, 255, 200, 200, 200, 255]);
+  const input = clothPartsInputTensorData(rgba, side);
+  assert.equal(input.length, 12);
+  assert.ok(Math.abs(input[0] - (1 - 0.485) / 0.229) < 1e-6);
+  assert.ok(Math.abs(input[side * side + 2] - (0 - 0.456) / 0.224) < 1e-6);
+  // 4 classes x 4 pixels: pixel 0 → class 1, pixel 1 → 0, pixel 2 → 3, pixel 3 → 1.
+  const logits = new Float32Array([0, 5, 0, 0, 9, 0, 0, 9, 0, 0, 0, 0, 0, 0, 9, 0]);
+  const map = clothPartsClassMap(logits, 4, side);
+  assert.deepEqual([...map], [1, 0, 3, 1]);
+  assert.deepEqual(foundClothParts(map, 0.2), ['トップス', '全身']);
+  assert.deepEqual(CLOTH_PARTS.map((part) => part.label), ['トップス', 'ボトムス', '全身']);
+  const mask = clothPartMaskRgba(map, 1);
+  assert.deepEqual([mask[3], mask[7], mask[11], mask[15]], [255, 0, 0, 255]);
+});
+
+test('Light parity of the dialog (2026-11-11): no tool at first, undo/redo/全削除 disabled without history, brush size slider, mask teal, tools hidden in ステップ2', () => {
+  assert.match(editor, /useState<Tool \| null>\(null\)/);
+  assert.match(editor, /disabled=\{!history\.undo\}/);
+  assert.match(editor, /disabled=\{!history\.redo\}/);
+  assert.match(editor, /aria-label="全削除" title="全削除" disabled=\{maskEmpty\}/);
+  assert.match(editor, /const BRUSH_MIN = 10, BRUSH_MAX = 100, BRUSH_DEFAULT = 40;/);
+  assert.match(editor, /aria-label="ブラシの大きさ"/);
+  assert.match(editor, /const MASK_COLOR = 'rgba\(43, 207, 190, 0\.75\)';/);
+  assert.match(editor, /\{step === 1 && <>/);
+  assert.match(editor, /h-\[86vh\][^"]*w-\[90vw\]/);
+  // Four corner handles keep the aspect, four side handles stretch.
+  for (const handle of ["'nw'", "'n'", "'ne'", "'e'", "'se'", "'s'", "'sw'", "'w'"]) assert.ok(editor.includes(`handle: ${handle}`), handle);
+  assert.match(editor, /initialPlacementGeometry\(data \? maskBounds\(data\) : null, size\)/);
+});
+
+test('a new print drops at the centre of the mask at 0.28 of its shorter side, or mid-image at a quarter without one', () => {
+  assert.deepEqual(initialPlacementGeometry(null, { width: 100, height: 200 }), { x: 0.5, y: 0.5, scale: 0.25 });
+  const geometry = initialPlacementGeometry({ x: 20, y: 40, width: 60, height: 100 }, { width: 100, height: 200 });
+  assert.deepEqual([geometry.x, geometry.y], [0.5, 0.45]);
+  assert.ok(Math.abs(geometry.scale - 0.168) < 1e-9);
+});
+
+test('the edit area covers the prints and a margin, softened, and never leaves the painted garment', () => {
+  const width = 20, height = 10;
+  const prints = new Uint8ClampedArray(width * height * 4);
+  for (let y = 4; y <= 5; y += 1) for (let x = 9; x <= 10; x += 1) prints[(y * width + x) * 4 + 3] = 255;
+  const mask = printEditRegionMask(prints, width, height, { grow: 2, feather: 0 });
+  const alpha = (x: number, y: number) => mask[(y * width + x) * 4 + 3];
+  assert.equal(alpha(9, 4), 0);      // the print itself is editable
+  assert.equal(alpha(7, 4), 0);      // grown by two pixels
+  assert.equal(alpha(6, 4), 255);    // beyond the margin the composite is kept
+  assert.equal(alpha(0, 0), 255);
+  // Limited to the garment: the left half is not garment, so the grown margin there is kept.
+  const garment = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y += 1) for (let x = 10; x < width; x += 1) garment[(y * width + x) * 4 + 3] = 255;
+  const clipped = printEditRegionMask(prints, width, height, { grow: 2, feather: 0, garmentAlpha: garment });
+  assert.equal(clipped[(4 * width + 9) * 4 + 3], 255);
+  assert.equal(clipped[(4 * width + 11) * 4 + 3], 0);
+  const soft = printEditRegionMask(prints, width, height, { grow: 2, feather: 1 });
+  const edge = soft[(4 * width + 7) * 4 + 3];
+  assert.ok(edge > 0 && edge < 255, `feathered edge ${edge}`);
+  assert.throws(() => printEditRegionMask(new Uint8ClampedArray(width * height * 4), width, height, { grow: 2, feather: 0 }));
+});
+
+test('after 適用 the printing page sends the edit area as a protected edit and names the printed-look details in the brief', () => {
+  const hook = readFileSync(new URL('../src/hooks/useCanonicalImageWorkspace.ts', import.meta.url), 'utf8');
+  assert.match(hook, /configRef\.current\.protectedEditMask\?\.\(\) \?\? null/);
+  assert.match(hook, /\.\.\.\(protectedMask\?\{maskDataUrl:protectedMask\}:\{\}\)/);
+  assert.match(page, /protectedEditMask:\(\)=>workspace\.slots\.primary\?\.name===PRINT_APPLIED_FILE_NAME\?applyEditMaskRef\.current:null/);
+  assert.match(page, /applyEditMaskRef\.current=editMaskDataUrl/);
+  for (const phrase of ['インクで刷った', 'シールやワッペンを貼ったようには見せない', 'ボタン・ステッチなどの衣服の部品はプリントの上に残し', '衣服の外にはプリントを描かない', '最後の白黒の画像は変更してよい範囲']) assert.ok(page.includes(phrase), phrase);
+});
+
+test('every print tile has ×, the first one too, and placed prints read 編集する after 決定 (Light 2026-11-11)', () => {
+  assert.match(page, /onClick=\{\(\)=>print\.id===PRIMARY_PRINT_ID\?removePrimaryPrint\(\):removeExtraPrint\(print\.id\)\}/);
+  assert.match(page, /\{printApplied&&appliedPrintIds\.includes\(print\.id\)\?'編集する':'適用'\}/);
 });
 
 test('ステップ2 places any of the uploaded prints, and the side tools match Light (レイヤー, flips, 複製, 削除)', () => {
@@ -93,7 +178,7 @@ test('garments and prints uploaded on the printing page are kept in the library 
 test('the toolbar has Light 選択範囲にオブジェクトを追加 (追加 / 取り除く), ワンクリックでトリミング, 透過度 and the shortcut sheet (measured 2026-10-28)', () => {
   for (const label of ['選択範囲にオブジェクトを追加', '>追加<', '>取り除く<', 'ワンクリックでトリミング', 'マスクを塗ってください。', 'aria-label="透過度"', '<ShortcutSheetButton']) assert.ok(editor.includes(label), label);
   // 取り除く is unavailable until something is selected, like Light.
-  assert.match(editor, /disabled=\{maskIsEmpty\(\)\}/);
+  assert.match(editor, /aria-checked=\{tool === 'object-remove'\} disabled=\{maskEmpty\}/);
   assert.match(editor, /layerContext\.globalAlpha = placement\.opacity \?\? 1;/);
 });
 
@@ -109,4 +194,17 @@ test('mask helpers: bounds of the painted area, fitting a print inside it, and t
   // A 4x1 strip: two red pixels then two blue ones; clicking red selects only the red pair.
   const strip = new Uint8ClampedArray([255, 0, 0, 255, 250, 5, 0, 255, 0, 0, 255, 255, 0, 0, 255, 255]);
   assert.deepEqual([...regionAtPoint({ width: 4, height: 1, data: strip }, 0, 0)], [1, 1, 0, 0]);
+});
+
+test('AI生成 opens 生成履歴 with the composed preview and a waiting tile first, then the result beside the preview (Light 2026-11-11)', () => {
+  const panel = readFileSync(new URL('../src/components/lightchain/LightchainHistoryPanel.tsx', import.meta.url), 'utf8');
+  const frame = readFileSync(new URL('../src/components/lightchain/LightchainDesignToolFrame.tsx', import.meta.url), 'utf8');
+  assert.match(panel, /data-testid="lightchain-history-pending"/);
+  assert.match(panel, /data-testid="lightchain-history-preview"/);
+  assert.match(panel, /if \(!refreshKey\) return;/);
+  assert.match(frame, /const historyOpen = historyOpenProp \?\? historyOpenState;/);
+  assert.match(page, /setPrintHistoryOpen\(true\);/);
+  // The click renders before the request starts, so a run settles only after it was seen in flight.
+  assert.match(page, /printRunSeenRunning\.current=true/);
+  assert.match(page, /if\(!printRunSeenRunning\.current\)\{if\(workspace\.status==='error'\)setPrintRun\(null\);return;\}/);
 });
