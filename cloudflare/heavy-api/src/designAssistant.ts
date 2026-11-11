@@ -54,10 +54,15 @@ const keys = (v: Record<string, unknown>, allowed: string[]) => Object.keys(v).e
 function scope(v: Record<string, unknown>): v is Record<string, unknown> & Scope {
   return id(v.requestId) && id(v.brandId) && id(v.projectId) && id(v.conversationId);
 }
+/**
+ * The planning agent's requests carry the confirmed requirements, the user's notes and the research report (production
+ * 2026-11-12: a theme request with a detailed report was about 5,000 characters and was turned away at 4,000).
+ */
+export const AGENT_PROMPT_MAX_CHARS = 16000;
 function validate(v: unknown): Input | null {
   if (!record(v) || !scope(v) || !keys(v, ['requestId', 'brandId', 'projectId', 'conversationId', 'prompt', 'history', 'references', 'textModel', 'mode']) ||
     (v.mode !== undefined && v.mode !== 'agent' && v.mode !== 'agent-research') ||
-    !text(v.prompt, 4000) || !v.prompt.trim() || !Array.isArray(v.history) || v.history.length > 8 ||
+    !text(v.prompt, v.mode === undefined ? 4000 : AGENT_PROMPT_MAX_CHARS) || !v.prompt.trim() || !Array.isArray(v.history) || v.history.length > 8 ||
     !Array.isArray(v.references) || v.references.length > DESIGN_ASSISTANT_REFERENCE_LIMIT) return null;
   let historyChars = 0;
   const history: Input['history'] = [];

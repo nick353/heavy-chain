@@ -126,11 +126,25 @@ export function agentResearchSteps(scope: Pick<AgentResearchScope, 'regions' | '
   return [`調査要件の組み立てと市場調査の実施（${regions}${platforms ? `／${platforms}` : ''}）`, '調査結果の整理とリサーチ・ビジュアル方向レポート（HTML）の表示', 'デザイン方向選択フォームの表示'];
 }
 
+/** Every planning request stays under the server's cap for agent requests (16,000 characters): each part is bounded. */
+export const AGENT_PROMPT_BUDGET = 15000;
 const contextLines = (task: AgentTask) => [
   `業務シーン: ${task.scene}（${task.subtype}）。目的: ${sceneGuide[task.scene]}。`,
-  task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile}` : '',
-  `依頼: ${task.prompt}`,
+  task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile.slice(0, 1000)}` : '',
+  `依頼: ${task.prompt.slice(0, 2000)}`,
 ];
+/**
+ * A request the server turned away (bad or oversized input, a conflicting resend) or a request it never stored (404 on
+ * reading it back) will not settle by waiting: the step fails with a retry instead of polling forever. Dropped
+ * connections, timeouts, an expired session, rate limits and server errors return null and stay "interrupted".
+ */
+export function agentRequestRejection(error: unknown): string | null {
+  const match = /^cloudflare_api_(\d{3})_(.*)$/.exec(error instanceof Error ? error.message : '');
+  if (!match) return null;
+  const status = Number(match[1]);
+  if (status < 400 || status >= 500 || [401, 403, 408, 429].includes(status)) return null;
+  return match[2] || `http_${status}`;
+}
 /** The requirement summary in force: the latest completed answer that carries a [要件] block. */
 export function effectiveAgentRequirements(task: AgentTask): string {
   const candidates = [task.requirements, ...(task.notes ?? []).filter(note => note.stage === 'requirements').map(note => note.reply)];
@@ -158,7 +172,7 @@ export function agentNotePrompt(task: AgentTask, note: Pick<AgentNote, 'text' | 
     ...contextLines(task),
     requirements ? `現在の要件:\n${requirements.slice(0, 2400)}` : '',
     task.research?.state === 'completed' && task.research.content ? `ウェブ調査の結果（抜粋）:\n${parseAgentResearch(task.research.content).report.slice(0, 1500)}` : '',
-    `ユーザーの追加の書き込み: ${note.text}`,
+    `ユーザーの追加の書き込み: ${note.text.slice(0, 2000)}`,
     updating
       ? `最初に「[返答]」の行のあとに、追加の内容を受け取ったことや質問への答えを1〜3文で書き、続けて要件を更新して次の形式で書いてください。\n${REQUIREMENT_FORMAT}`
       : '「[返答]」の行のあとに、質問への答え、または追加の条件を以降の企画に反映することを1〜4文で書いてください。',
@@ -188,7 +202,7 @@ export function agentResearchPrompt(task: AgentTask): string {
     ...contextLines(task),
     requirements ? `確認済みの要件:\n${requirements.slice(0, 2400)}` : '',
     ...noteLines(task),
-    `調査範囲: 地域=${scope.regions.map(agentScopeLabel).join('・')} / ECプラットフォーム=${scope.ec.map(agentScopeLabel).join('・')} / SNS=${scope.sns.map(agentScopeLabel).join('・')}${scope.other.trim() ? ` / その他=${scope.other.trim()}` : ''}`,
+    `調査範囲: 地域=${scope.regions.map(agentScopeLabel).join('・')} / ECプラットフォーム=${scope.ec.map(agentScopeLabel).join('・')} / SNS=${scope.sns.map(agentScopeLabel).join('・')}${scope.other.trim() ? ` / その他=${scope.other.trim().slice(0, 500)}` : ''}`,
     'この調査範囲について、ウェブ検索で最新の情報（市場・気候、トレンド、各プラットフォームの売れ筋や価格帯、SNSで話題の着こなし、着用シーン）を集めてください。',
     '調べ終えたら「[調査結果]」の行のあとに、次の見出しを順に使い、各見出しの下は「- 」で始まる箇条書きで、数字や具体例を入れて書いてください（URLは書かない）:',
     '「## 市場と気候」「## トレンド」「## プラットフォームと競合の動き」「## ターゲットと着用シーン」「## 価格と販売ポテンシャル」「## 企画への示唆」。',
@@ -229,13 +243,13 @@ export function themePrompt(task: AgentTask): string {
   const previous = task.rounds.flatMap((round) => round.themes);
   return [
     `あなたはアパレル企業の企画担当アシスタントです。業務シーン: ${task.scene}（${task.subtype}）。目的: ${sceneGuide[task.scene]}。`,
-    task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile}` : '',
-    `依頼: ${task.prompt}`,
+    task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile.slice(0, 1000)}` : '',
+    `依頼: ${task.prompt.slice(0, 2000)}`,
     effectiveAgentRequirements(task) ? `確認済みの要件:\n${effectiveAgentRequirements(task).slice(0, 2000)}` : '',
     ...noteLines(task),
     researchContext(task),
     researchContext(task) ? 'テーマはウェブ調査の結果を根拠に考えてください。' : '',
-    previous.length ? `前回提案したテーマ（${previous.join(' / ')}）は採用されませんでした。方向性の違う新しいテーマを提案してください。` : '',
+    previous.length ? `前回提案したテーマ（${previous.join(' / ').slice(0, 1500)}）は採用されませんでした。方向性の違う新しいテーマを提案してください。` : '',
     '次の形式だけで、日本語で答えてください。',
     '[概要]',
     researchContext(task) ? 'ウェブ調査から読み取れる、4つのデザイン方向を考える上での要点を3〜5文で書く。出典やURLは書かない。'
@@ -252,12 +266,12 @@ export function themePrompt(task: AgentTask): string {
 export function planPrompt(task: AgentTask, theme: string): string {
   return [
     `あなたはアパレル企業の企画担当アシスタントです。業務シーン: ${task.scene}（${task.subtype}）。`,
-    task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile}` : '',
-    `依頼: ${task.prompt}`,
+    task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile.slice(0, 1000)}` : '',
+    `依頼: ${task.prompt.slice(0, 2000)}`,
     effectiveAgentRequirements(task) ? `確認済みの要件:\n${effectiveAgentRequirements(task).slice(0, 2000)}` : '',
     ...noteLines(task),
     researchContext(task),
-    `採用されたテーマ: ${theme}`,
+    `採用されたテーマ: ${theme.slice(0, 2000)}`,
     `このテーマで${task.subtype}の企画書を日本語で作成してください。`,
     '次の見出しを順に使い、各見出しの下は「- 」で始まる箇条書きで書いてください: 「## タイトル」（1行の企画名）「## コンセプト」「## カラーパレット」「## 推奨素材」「## 主要デザイン要素」「## 主力アイテム」「## コーディネート提案」。',
     '最後に「[画像プロンプト]」と書いた行の次に、この企画のムードボード画像を生成するための英語のプロンプトを1行だけ書いてください。画像プロンプトにはブランド名・人名・「style」という単語を使わないでください。',
