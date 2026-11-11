@@ -36,6 +36,9 @@ test('resume links reopen the tool route with the job, and only for Lightchain t
   // Light titles a spot print 「プリントイメージ‐ポイントプリントイメージ」; other modes keep the tool name.
   assert.equal(lightchainHistoryTitle('lightchain-printing-image', { coverageMode: 'spot' }), 'プリントイメージ‐ポイントプリントイメージ');
   assert.equal(lightchainHistoryTitle('lightchain-printing-image', { generationIntent: { coverageMode: 'spot' } }), 'プリントイメージ‐ポイントプリントイメージ');
+  // Saved results carry the screen's choice in canonicalInput.inputState.coverage (the shape stored in production, 2026-11-11).
+  assert.equal(lightchainHistoryTitle('lightchain-printing-image', { canonicalInput: { toolId: 'printing-image', inputState: { coverage: 'spot' } } }), 'プリントイメージ‐ポイントプリントイメージ');
+  assert.equal(lightchainHistoryTitle('lightchain-printing-image', { canonicalInput: { inputState: { coverage: 'full' } } }), 'プリントイメージ');
   assert.equal(lightchainHistoryTitle('lightchain-printing-image', { coverageMode: 'full' }), 'プリントイメージ');
   assert.equal(lightchainHistoryTitle('lightchain-printing-image'), 'プリントイメージ');
 });

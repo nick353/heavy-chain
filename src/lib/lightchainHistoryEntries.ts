@@ -32,7 +32,10 @@ const recordOf = (value: unknown): Record<string, unknown> => (value && typeof v
 const historyModeTitle = (id: string | null, metadata: unknown): string | null => {
   if (id !== 'printing-image') return null;
   const data = recordOf(metadata);
-  const coverage = data.coverageMode ?? recordOf(data.generationIntent).coverageMode ?? recordOf(data.compositionPreview).coverageMode;
+  // Saved print results carry the screen's choice in canonicalInput.inputState.coverage (2026-11-11: every saved row
+  // read none of the older keys and showed only 「プリントイメージ」 while Light shows ‐ポイントプリントイメージ).
+  const coverage = data.coverageMode ?? recordOf(data.generationIntent).coverageMode ?? recordOf(data.compositionPreview).coverageMode
+    ?? recordOf(recordOf(data.canonicalInput).inputState).coverage;
   return coverage === 'spot' ? 'ポイントプリントイメージ' : null;
 };
 
