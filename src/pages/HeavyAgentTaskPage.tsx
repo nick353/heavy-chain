@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowUp, Box, Check, ChevronRight, Code2, Download, Loader2, Paperclip, PanelRightClose, PanelRightOpen, RotateCcw, UserRound, X } from 'lucide-react';
+import { ArrowUp, Box, Check, ChevronRight, Code2, Download, Loader2, Paperclip, PanelRightClose, PanelRightOpen, X } from 'lucide-react';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { generateImage } from '../lib/imageApi';
 import { HEAVY_IMAGE_PROVIDER } from '../lib/heavyImageProvider';
@@ -9,11 +9,16 @@ import { isHeavyWorkspaceBrandName, isHeavyWorkspaceRuntime } from '../lib/heavy
 import { useAuthStore } from '../stores/authStore';
 import { AgentSidebar } from '../features/agent/AgentSidebar';
 import { AgentAttachMenu, AgentAttachmentChips } from '../features/agent/AgentAttachMenu';
+import { ErrorRow, GeneratedTile, StepList, StepSpinner, UserBubble } from '../features/agent/AgentParts';
+import { AgentDialogueView } from '../features/agent/AgentDialogueView';
+import type { AssistantQuestion } from '../features/designDetail/assistantQuestions';
 import {
   AGENT_SCOPE_REGIONS, DEFAULT_AGENT_SCOPE, agentConversationId, agentImagePrompt, agentMissingNames, agentNotePrompt,
   agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentScopeSummary, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
   loadAgentTask, parseAgentRequirements, parseAgentResearch, parsePlanResponse, parseThemeResponse, planPrompt, pruneAgentScope, themePrompt, updateAgentTask,
   agentBuildDesignImages, agentBuildDirectionImages, agentChosenCodes, agentDesignPrompt, agentDesignProgress, agentFinalPrompt, agentImageLabel, agentReferenceImages,
+  agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan, agentDialoguePrompt, agentDialogueSources,
+  parseAgentDialogueReply, AGENT_DIALOGUE_TURN_LIMIT, type AgentTurn,
   agentStructurePrompt, agentStyleImagePrompt, agentUsesMerchFlow, agentWording, buildAgentDesignHtml, buildAgentFinalHtml, buildAgentStructureHtml, parseAgentFinal, parseAgentStructure, AGENT_STYLE_COUNT,
   type AgentAssistantStep, type AgentAttachment, type AgentImageStep, type AgentNote, type AgentNoteStage, type AgentResearchScope, type AgentStyleImage, type AgentTask, type AgentTaskDocument,
 } from '../features/agent/agentTasks';
@@ -23,7 +28,7 @@ const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_no
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
-type AssistantKind = 'theme' | 'plan' | 'requirements' | 'research' | 'note' | 'structure' | 'design' | 'final';
+type AssistantKind = 'theme' | 'plan' | 'requirements' | 'research' | 'note' | 'structure' | 'design' | 'final' | 'dialogue';
 type AssistantMode = 'agent' | 'agent-research' | undefined;
 
 function readImageReceipt(receipt: Record<string, unknown>) {
@@ -35,43 +40,6 @@ function readImageReceipt(receipt: Record<string, unknown>) {
     jobId: text(receipt.jobId) ?? text(image.jobId),
     errorCode: text(receipt.errorCode) ?? text(receipt.error),
   };
-}
-
-function StepSpinner({ label }: { label: string }) {
-  return <p role="status" className="flex items-center gap-2 text-sm text-neutral-400"><Loader2 className="h-4 w-4 animate-spin" />{label}</p>;
-}
-
-/** Light posts the user's own words as a teal bubble on the right with the avatar beside it. */
-function UserBubble({ children, testId }: { children: ReactNode; testId?: string }) {
-  return (
-    <div className="flex items-start justify-end gap-3" data-testid={testId}>
-      <div className="max-w-[78%] whitespace-pre-wrap rounded-2xl bg-[#0bcabc] px-4 py-3 text-sm leading-6 text-neutral-950">{children}</div>
-      <span aria-hidden="true" className="flex size-8 flex-none items-center justify-center rounded-full bg-white/10 text-neutral-300"><UserRound className="h-4 w-4" /></span>
-    </div>
-  );
-}
-
-/** Light's step list: teal dots; the accessible name says 完了 / 進行中 like Light's. */
-function StepList({ items, testId }: { items: Array<{ label: string; status: '完了' | '進行中' | '待機中' }>; testId?: string }) {
-  return (
-    <ul className="space-y-2 text-sm text-neutral-200" data-testid={testId}>
-      {items.map((item) => (
-        <li key={item.label} aria-label={`${item.status} ${item.label}`} className="flex items-start gap-2">
-          <span aria-hidden="true" className={`mt-2 size-1.5 flex-none rounded-full ${item.status === '待機中' ? 'bg-neutral-600' : 'bg-[#0bcabc]'}`} />
-          <span>{item.label}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ErrorRow({ children, onRetry }: { children: ReactNode; onRetry?: () => void }) {
-  return (
-    <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
-      <span>{children}</span>
-      {onRetry && <button type="button" onClick={onRetry} className="flex flex-none items-center gap-1 rounded-lg border border-white/20 px-3 py-1 text-white hover:bg-white/10"><RotateCcw className="h-3.5 w-3.5" />再試行</button>}
-    </div>
-  );
 }
 
 function RequirementsView({ content }: { content: string }) {
@@ -210,20 +178,6 @@ function ReportCard({ title, note, testId, noteTestId, onOpen, onDownload }: { t
 }
 
 /** An image the task generates: a skeleton while it is made, the picture when done, a retry when it failed. */
-function GeneratedTile({ image, url, label, onRetry, className = '' }: { image?: AgentStyleImage; url?: string; label?: string; onRetry?: () => void; className?: string }) {
-  const failed = image?.state === 'failed' || image?.state === 'unknown';
-  return (
-    <span className={`relative block overflow-hidden rounded-lg bg-white/5 ${className}`}>
-      {url ? <img src={url} alt={label ?? image?.name ?? ''} className="h-full w-full object-cover" />
-        : failed ? (
-          <span className="flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center text-[11px] leading-4 text-amber-300">
-            生成に失敗しました{onRetry && <button type="button" onClick={(event) => { event.stopPropagation(); onRetry(); }} className="mt-1 flex items-center gap-1 rounded-md border border-white/20 px-2 py-0.5 text-white hover:bg-white/10"><RotateCcw className="h-3 w-3" />再生成</button>}
-          </span>
-        ) : image ? <span aria-label="生成中" className="block h-full w-full animate-pulse bg-white/10" /> : null}
-    </span>
-  );
-}
-
 /** Light's 「最終の…に使用するスタイル画像を選択」: four to a row, the code and name over the bottom, the check at the top left. */
 function StylePicker({ images, urls, chosen, disabled, title, hint, button, onConfirm }: {
   images: AgentStyleImage[]; urls: Record<string, string>; chosen: string[] | null; disabled: boolean; title: string; hint: string; button: string; onConfirm: (keys: string[]) => void;
@@ -411,9 +365,10 @@ export default function HeavyAgentTaskPage() {
   }, [brandId, taskId]);
 
   const conversationFor = useCallback((kind: AssistantKind, step: AgentAssistantStep) => agentConversationId(taskId,
-    ['theme', 'note', 'structure', 'design', 'final'].includes(kind) ? `${kind}-${step.requestId.slice(0, 8)}` : kind), [taskId]);
+    ['theme', 'note', 'structure', 'design', 'final', 'dialogue'].includes(kind) ? `${kind}-${step.requestId.slice(0, 8)}` : kind), [taskId]);
 
-  const runAssistant = useCallback(async (kind: AssistantKind, step: AgentAssistantStep, prompt: string | null, apply: (task: AgentTask, step: AgentAssistantStep) => AgentTask, mode?: AssistantMode) => {
+  const runAssistant = useCallback(async (kind: AssistantKind, step: AgentAssistantStep, prompt: string | null, apply: (task: AgentTask, step: AgentAssistantStep) => AgentTask, mode?: AssistantMode,
+    history: Array<{ role: 'user' | 'assistant'; content: string }> = []) => {
     if (inFlight.current.has(step.requestId) || !brandId) return;
     inFlight.current.add(step.requestId);
     const conversationId = conversationFor(kind, step);
@@ -422,7 +377,7 @@ export default function HeavyAgentTaskPage() {
       if (prompt) {
         // Light sends the attached images along with every step; Heavy sends the newest ones as references.
         const references = docRef.current ? agentReferenceImages(docRef.current.task) : [];
-        const receipt = await api().sendDesignAssistantRequest({ requestId: step.requestId, brandId, projectId: taskId, conversationId, prompt, history: [], references, ...(mode ? { mode } : {}) });
+        const receipt = await api().sendDesignAssistantRequest({ requestId: step.requestId, brandId, projectId: taskId, conversationId, prompt, history, references, ...(mode ? { mode } : {}) });
         result = assistantStepFrom(receipt, step.requestId);
       }
       if (result.state === 'running') result = await pollAssistant(result, conversationId);
@@ -518,8 +473,11 @@ export default function HeavyAgentTaskPage() {
     const auth = useAuthStore.getState();
     const ready = Boolean(auth.user?.id && auth.currentBrand?.id === brandId && (!isHeavyWorkspaceRuntime() || isHeavyWorkspaceBrandName(auth.currentBrand.name)));
     const send = async () => {
-      const receipt = await generateImage(agentStyleImagePrompt(image.prompt), brandId, { rightsConfirmed: ready, idempotencyKey: image.requestId, retainUntilAcknowledged: true,
-        featureType: 'lightchain-design-agent', generationProvider: HEAVY_IMAGE_PROVIDER, aspectRatio: '3:4',
+      // The インスピレーション / AIグラフィックデザイン chat draws garments or flat square prints; the planning flow draws garments.
+      const current = docRef.current?.task;
+      const dialogue = current?.flow === 'dialogue';
+      const receipt = await generateImage(dialogue ? agentDialogueImagePrompt(current!, image.prompt) : agentStyleImagePrompt(image.prompt), brandId, { rightsConfirmed: ready, idempotencyKey: image.requestId, retainUntilAcknowledged: true,
+        featureType: 'lightchain-design-agent', generationProvider: HEAVY_IMAGE_PROVIDER, aspectRatio: dialogue ? agentDialogueAspect(current!) : '3:4',
         assertContext: () => { if (useAuthStore.getState().currentBrand?.id !== brandId) throw new Error('agent_context_changed'); } });
       await settleStyleImage(image, { ...receipt, state: receipt.success === false ? 'failed' : (receipt as { state?: string }).state ?? 'completed' } as Record<string, unknown>);
     };
@@ -541,6 +499,30 @@ export default function HeavyAgentTaskPage() {
       await wait(5000);
     }
   }, [applyStyleImage, brandId, settleStyleImage]);
+
+  // Light's インスピレーション / AIグラフィックデザイン chat (2026-11-12): each user message gets one reply; earlier turns go as history.
+  const applyTurn = (turnId: string) => (task: AgentTask, result: AgentAssistantStep): AgentTask => ({ ...task, turns: (task.turns ?? []).map((turn) => turn.id === turnId ? { ...turn, step: result } : turn) });
+  /** Asks for the reply to the newest user turn (or to the request itself when there is none yet). */
+  const askDialogue = useCallback(async (saved: AgentTaskDocument, reply: AgentTurn) => {
+    const turns = saved.task.turns ?? [];
+    const index = turns.findIndex((turn) => turn.id === reply.id);
+    const latest = index > 0 && turns[index - 1].role === 'user' ? turns[index - 1] : null;
+    const before = { ...saved.task, turns: turns.slice(0, latest ? index - 1 : index) };
+    const prompt = agentDialoguePrompt(before, latest, reply.mode ?? 'agent');
+    const history = agentDialogueHistory(before);
+    await runAssistant('dialogue', reply.step!, prompt, applyTurn(reply.id), reply.mode ?? 'agent', history);
+  }, [runAssistant]);
+  const startDialogue = useCallback(async () => {
+    const reply: AgentTurn = { id: crypto.randomUUID(), role: 'assistant', at: new Date().toISOString(), mode: 'agent', step: { requestId: crypto.randomUUID(), state: 'running' } };
+    const saved = await commit((task) => ({ ...task, turns: [...(task.turns ?? []), reply] }));
+    await askDialogue(saved, reply);
+  }, [askDialogue, commit]);
+  /** Light's 「開始」 under the 執行書: one image per style, in the plan's order, two at a time. */
+  const startDialogueGeneration = useCallback((after: string) => commit((task) => {
+    const plan = agentDialoguePlan(task);
+    if (!plan || task.dialogueStart) return task;
+    return { ...task, dialogueStart: { after, plan: plan.turn.id, at: new Date().toISOString() }, designs: agentBuildDialogueImages(task, () => crypto.randomUUID()) };
+  }), [commit]);
 
   const finishImage = useCallback(async (step: AgentImageStep, receipt: Record<string, unknown>) => {
     const parsed = readImageReceipt(receipt);
@@ -592,6 +574,19 @@ export default function HeavyAgentTaskPage() {
   useEffect(() => {
     if (!doc || !brandId || status !== 'ready' || busy.current) return;
     const task = doc.task;
+    if (task.flow === 'dialogue') {
+      const turns = task.turns ?? [];
+      const last = turns.at(-1);
+      if (!last) { guard(startDialogue, 'タスクを開始できませんでした。', 'start'); return; }
+      if (last.role === 'assistant' && last.step?.state === 'running') { const step = last.step; guard(() => runAssistant('dialogue', step, null, applyTurn(last.id), last.mode ?? 'agent')); return; }
+      // The assistant read the user's approval as 「開始」: generate the 執行書's styles.
+      if (last.role === 'assistant' && last.step?.state === 'completed' && last.step.content && !task.dialogueStart && parseAgentDialogueReply(last.step.content).start && agentDialoguePlan(task)) {
+        guard(() => startDialogueGeneration(last.id), '生成を開始できませんでした。'); return;
+      }
+      const series = task.dialogueStart && task.designs?.length ? (() => { const plan = turns.find((turn) => turn.id === task.dialogueStart!.plan); return plan?.step?.content ? parseAgentDialogueReply(plan.step.content).series : ''; })() : '';
+      if (series && doc.title !== series && isAutomaticAgentTaskTitle(doc.title, task)) guard(() => commit((current) => current, { title: series }));
+      return;
+    }
     const pendingNote = (task.notes ?? []).find((note) => note.reply.state === 'running');
     if (pendingNote) { guard(() => runAssistant('note', pendingNote.reply, null, applyNote(pendingNote.id), textMode(task))); return; }
     if (task.flow === 'conversation') {
@@ -648,7 +643,7 @@ export default function HeavyAgentTaskPage() {
     if (parsed.title && doc.title !== parsed.title && isAutomaticAgentTaskTitle(doc.title, task)) { const title = parsed.title; guard(() => commit((current) => current, { title })); return; }
     if (!task.image) { const theme = task.choice.theme; guard(() => startImage(parsed.imagePrompt ?? `Apparel planning mood board for a womenswear collection, ${theme}, fabric swatches, color palette, editorial photo`)); return; }
     if (task.image.state === 'running') { const step = task.image; guard(() => reconcileImage(step)); }
-  }, [doc, brandId, status, tick, guard, startRequirements, startResearch, startThemeRound, startPlan, startImage, reconcileImage, runAssistant, commit, startStructure, startDesign, startFinal]);
+  }, [doc, brandId, status, tick, guard, startRequirements, startResearch, startThemeRound, startPlan, startImage, reconcileImage, runAssistant, commit, startStructure, startDesign, startFinal, startDialogue, startDialogueGeneration]);
 
   // The direction and style images run beside the text steps, two at a time.
   useEffect(() => {
@@ -735,10 +730,64 @@ export default function HeavyAgentTaskPage() {
     }, '送信できませんでした。');
   };
 
+  const dialogue = task?.flow === 'dialogue';
+  /** One message of the インスピレーション / AIグラフィックデザイン chat; typing 「開始」 under the 執行書 starts the generation at once. */
+  const sendTurn = (entry: { text: string; prompt?: string; attachments?: AgentAttachment[] }) => {
+    if (!doc) return false;
+    if (busy.current) { setNotice('ほかの処理が終わってから送信してください。'); return false; }
+    if ((doc.task.turns ?? []).length >= AGENT_DIALOGUE_TURN_LIMIT) { setNotice('この会話はこれ以上続けられません。新しいタスクを作成してください。'); return false; }
+    setNotice(null);
+    guard(async () => {
+      const current = docRef.current!.task;
+      const now = new Date().toISOString();
+      const added = entry.attachments ?? [];
+      const user: AgentTurn = { id: crypto.randomUUID(), role: 'user', at: now, text: entry.text.slice(0, 1200), ...(entry.prompt ? { prompt: entry.prompt.slice(0, 3000) } : {}),
+        ...(added.length ? { attachments: added.map((item) => item.id) } : {}) };
+      const withFiles = (task: AgentTask) => (added.length ? { attachments: [...(task.attachments ?? []), ...added].slice(-12) } : {});
+      const plan = agentDialoguePlan(current);
+      if (!entry.prompt && !current.dialogueStart && plan && (current.turns ?? []).at(-1)?.id === plan.turn.id && agentDialogueIsStart(entry.text)) {
+        await commit((task) => ({ ...task, ...withFiles(task), turns: [...(task.turns ?? []), user],
+          dialogueStart: { after: user.id, plan: plan.turn.id, at: now }, designs: agentBuildDialogueImages(task, () => crypto.randomUUID()) }));
+        return;
+      }
+      const reply: AgentTurn = { id: crypto.randomUUID(), role: 'assistant', at: now, mode: agentDialogueMode(current), step: { requestId: crypto.randomUUID(), state: 'running' } };
+      const saved = await commit((task) => ({ ...task, ...withFiles(task), turns: [...(task.turns ?? []), user, reply] }));
+      await askDialogue(saved, reply);
+    }, '送信できませんでした。');
+    return true;
+  };
+  /** Light posts the form's answers as the user's message, joined by 「，」. */
+  const answerDialogue = (questions: AssistantQuestion[], answers: string[][]) => {
+    const picked = answers.flat().map((value) => value.trim()).filter(Boolean);
+    sendTurn({ text: picked.join('，') || 'おまかせ', prompt: `【確認の回答】\n${questions.map((question, index) => `${question.title}: ${(answers[index] ?? []).filter(Boolean).join('、') || 'おまかせ'}`).join('\n')}` });
+  };
+  const pickDialogue = (picked: AgentAttachment[]) => {
+    sendTurn({ text: picked.length ? `参考画像を${picked.length}枚選択しました` : '参考画像を選択せずに進みます', attachments: picked,
+      prompt: `【参考画像の選択】\n${picked.length ? picked.map((item) => item.name).join('、') : '選択なし（検索結果の画像を選択しませんでした）'}` });
+  };
+  const retryDialogue = (turnId: string) => {
+    setNotice(null);
+    guard(async () => {
+      const step: AgentAssistantStep = { requestId: crypto.randomUUID(), state: 'running' };
+      const saved = await commit((task) => ({ ...task, turns: (task.turns ?? []).map((turn) => turn.id === turnId ? { ...turn, step } : turn) }));
+      const reply = (saved.task.turns ?? []).find((turn) => turn.id === turnId);
+      if (reply) await askDialogue(saved, reply);
+    }, '再試行できませんでした。');
+  };
+  const sendComposer = () => {
+    if (!dialogue) { sendNote(); return; }
+    const value = draft.trim();
+    if ((!value && !pendingAttachments.length) || attaching) return;
+    const attached = pendingAttachments;
+    if (sendTurn({ text: value || `添付：${attached.map((item) => item.name).join('、')}`, attachments: attached })) { setDraft(''); setPendingAttachments([]); }
+  };
+  const dialogueSources = task && dialogue ? agentDialogueSources(task) : null;
+
   const plan = task?.plan?.state === 'completed' && task.plan.content ? parsePlanResponse(task.plan.content) : null;
   const merch = Boolean(task && agentUsesMerchFlow(task));
   const wording = task ? agentWording(task) : null;
-  const done = Boolean(task && (merch ? task.final?.state === 'completed' : task.image?.state === 'completed'));
+  const done = Boolean(task && (dialogue ? task.dialogueStart && (task.designs ?? []).length > 0 && (task.designs ?? []).every((image) => image.state !== 'pending' && image.state !== 'running')
+    : merch ? task.final?.state === 'completed' : task.image?.state === 'completed'));
   const stepFailed = (state?: string) => state === 'failed' || state === 'unknown';
   const notes = task?.notes ?? [];
   const designs = task?.designs ?? [];
@@ -746,9 +795,11 @@ export default function HeavyAgentTaskPage() {
   const designsSettled = designs.length > 0 && !designsBusy;
   const working = Boolean(task && (task.requirements?.state === 'running' || task.research?.state === 'running' || task.plan?.state === 'running'
     || task.image?.state === 'running' || task.rounds.at(-1)?.step.state === 'running' || notes.some((note) => note.reply.state === 'running')
-    || task.structure?.state === 'running' || task.design?.state === 'running' || task.final?.state === 'running' || designsBusy));
+    || task.structure?.state === 'running' || task.design?.state === 'running' || task.final?.state === 'running' || designsBusy
+    || (task.turns ?? []).some((turn) => turn.step?.state === 'running')));
   const waitingOnUser = Boolean(conversation && task?.requirements?.state === 'completed' && (!task.aligned || !task.scope));
   const statusLabel = !task ? '' : done ? '完了'
+    : dialogue ? (working ? '作成中' : ['failed', 'unknown'].includes((task.turns ?? []).at(-1)?.step?.state ?? '') ? '失敗' : '確認待ち')
     : [task.plan?.state, task.image?.state, task.research?.state, task.requirements?.state, task.structure?.state, task.design?.state, task.final?.state].some(stepFailed) ? '失敗'
       : task.choice ? '作成中' : task.rounds.at(-1)?.step.state === 'completed' || waitingOnUser ? '確認待ち' : '調査中';
   const research = task?.research?.state === 'completed' && task.research.content ? parseAgentResearch(task.research.content) : null;
@@ -797,7 +848,11 @@ export default function HeavyAgentTaskPage() {
           {task && wording && (
             <div className="space-y-8 text-sm leading-6 text-neutral-200">
               <UserBubble testId="agent-task-prompt">{task.prompt}</UserBubble>
-              {(task.attachments ?? []).length > 0 && !notes.some((note) => note.attachments?.length) && <div className="flex justify-end"><AgentAttachmentChips items={task.attachments ?? []} /></div>}
+              {(task.attachments ?? []).length > 0 && !notes.some((note) => note.attachments?.length) && !(task.turns ?? []).some((turn) => turn.attachments?.length) && <div className="flex justify-end"><AgentAttachmentChips items={task.attachments ?? []} /></div>}
+              {dialogue && <AgentDialogueView task={task} brandId={brandId} working={working} urls={imageUrls} attachments={task.attachments ?? []}
+                onAnswer={answerDialogue} onPick={pickDialogue} onRetry={retryDialogue} onRetryImage={retryStyleImage} onError={(message) => setNotice(message)} />}
+              {!dialogue && (
+                <>
               {conversation && (
                 <>
                   <StepList items={intakeSteps} testId="agent-intake-steps" />
@@ -977,6 +1032,8 @@ export default function HeavyAgentTaskPage() {
                 </figure>
               )}
               <Notes notes={notes} stage="plan" />
+                </>
+              )}
               {notice && <p role="alert" className="text-sm text-amber-300">{notice}</p>}
             </div>
           )}
@@ -984,11 +1041,11 @@ export default function HeavyAgentTaskPage() {
         {task && (
           // Light's input under the conversation: extra conditions or questions at any step, with 添付を追加 (ファイル / 画像).
           <form className="sticky bottom-0 mx-auto w-full max-w-[752px] bg-gradient-to-t from-[#171b1c] via-[#171b1c] to-transparent px-4 pb-4 pt-6" data-testid="agent-followup-composer"
-            onSubmit={(event) => { event.preventDefault(); sendNote(); }}>
+            onSubmit={(event) => { event.preventDefault(); sendComposer(); }}>
             <div className="rounded-2xl border border-white/10 bg-[#262a2b] px-4 pb-3 pt-3 focus-within:border-cyan-300/50">
               <AgentAttachmentChips items={pendingAttachments} onRemove={(id) => setPendingAttachments((current) => current.filter((item) => item.id !== id))} />
               <textarea ref={composerRef} value={draft} disabled={working} onChange={(event) => setDraft(event.target.value)} rows={2}
-                onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendNote(); } }}
+                onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendComposer(); } }}
                 placeholder="条件を追加、または続けて質問…" aria-label="条件を追加、または続けて質問…"
                 className="block w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-neutral-500 disabled:cursor-not-allowed" />
               <div className="mt-2 flex items-center gap-3">
@@ -1025,8 +1082,21 @@ export default function HeavyAgentTaskPage() {
             </div>
           )}
           {conversation && referenceImages.length > 0 && <ImageShelf title="参考スタイル" testId="agent-reference-styles" stamp={stamp(task.directionImages?.images[0]?.at)} images={referenceImages} urls={imageUrls} />}
-          {conversation && generatedImages.length > 0 && <ImageShelf title="スタイルを生成" testId="agent-generated-styles" stamp={stamp(designs[0]?.at)} images={generatedImages} urls={imageUrls} />}
-          {!conversation && (
+          {(conversation || dialogue) && generatedImages.length > 0 && <ImageShelf title="スタイルを生成" testId="agent-generated-styles" stamp={stamp(designs[0]?.at)} images={generatedImages} urls={imageUrls} />}
+          {dialogue && dialogueSources && dialogueSources.sources.length > 0 && (
+            <div className="mt-5 border-t border-white/10 pt-5">
+              <h3 className="text-base font-medium text-white">参考資料</h3>
+              <ol className="mt-2" data-testid="agent-dialogue-sources">
+                {dialogueSources.sources.map((source) => (
+                  <li key={source.url} className="border-b border-white/10 py-3 text-xs leading-5 last:border-b-0">
+                    <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium text-cyan-300 hover:underline">{hostOf(source.url)}</a>
+                    <span className="block text-neutral-300">{source.quote ?? source.title}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {!conversation && !dialogue && (
             <div className={deliverables.length ? 'mt-5 border-t border-white/10 pt-5' : 'mt-5'}>
               <h3 className="text-base font-medium text-white">参考資料</h3>
               {!roundSources && <p className="mt-2 text-xs leading-5 text-neutral-500">{agentThemeSearches(task) ? 'テーマができると、ウェブ検索で参照した資料がここに表示されます。' : 'Heavy Chainはウェブ検索を行いません。概要とテーマはAIモデルの知識に基づいて作成しています。'}</p>}

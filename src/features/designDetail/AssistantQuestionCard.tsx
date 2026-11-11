@@ -3,8 +3,10 @@ import { Sparkles } from 'lucide-react';
 import type { AssistantQuestion } from './assistantQuestions';
 
 /** Light's confirmation form: one question at a time with n/N, 前へ／次へ, and 確認 on the last one. */
-export function AssistantQuestionCard({ questions, disabled, onConfirm }: {
+export function AssistantQuestionCard({ questions, disabled, onConfirm, intro = '最適な結果を得るため、いくつか確認させてください。' }: {
   questions: AssistantQuestion[]; disabled: boolean; onConfirm: (answers: string[][]) => void;
+  /** The line above the form; the planning agent's reply already says it, so it passes null. */
+  intro?: string | null;
 }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[][]>(() => questions.map(() => []));
@@ -14,8 +16,8 @@ export function AssistantQuestionCard({ questions, disabled, onConfirm }: {
   const canMove = !disabled && (question.kind !== 'single' || answer.length === 1);
   const set = (value: string[]) => setAnswers((current) => current.map((item, index) => index === step ? value : item));
   return <section data-testid="design-assistant-questions" className="mt-3">
-    <p className="flex items-start gap-2 text-sm leading-5 text-neutral-200"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5"><Sparkles className="h-4 w-4 text-[#0bcabc]" /></span>最適な結果を得るため、いくつか確認させてください。</p>
-    <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+    {intro && <p className="mb-3 flex items-start gap-2 text-sm leading-5 text-neutral-200"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5"><Sparkles className="h-4 w-4 text-[#0bcabc]" /></span>{intro}</p>}
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
       <span data-testid="design-question-step" className="inline-block rounded-full bg-[#0bcabc] px-3 py-0.5 text-xs font-medium text-neutral-950">{step + 1} / {questions.length}</span>
       <p className="mt-3 text-sm text-neutral-100">{question.kind === 'single' && <span className="mr-1 text-red-400">*</span>}{question.title}</p>
       {question.kind === 'text' ? <>
