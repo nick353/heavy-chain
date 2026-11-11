@@ -475,6 +475,8 @@ export default function HeavyAgentTaskPage() {
   const sendNote = () => {
     const value = draft.trim();
     if (!value || !doc) return;
+    // guard() skips work while another step is starting; keep the text instead of dropping it.
+    if (busy.current) { setNotice('ほかの処理が終わってから送信してください。'); return; }
     setDraft(''); setNotice(null);
     guard(async () => {
       const requestId = crypto.randomUUID();
