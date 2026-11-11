@@ -49,6 +49,8 @@ function fixture({pathname = '/tools/printing', rows, list} = {}) {
     cloudflareDataPlane: {origin: 'https://fixture.test', listGeneratedImages: async (...args) => {calls.lists.push(args); return list ? list(...args) : rows ?? [savedRow()];}},
     ...authExports, ...storageExports, persistPrintInputState: forbid('draft save'), restorePrintInputState: forbid('draft restore'),
     saveCanvas: forbid('global Canvas write'), fetch: forbid('media fetch'),
+    // The cloth model warm-up and garment analysis run in a worker; the handoff path never needs their result.
+    warmClothParts: () => {}, analyzeClothParts: async () => ({found: [], maskFor: forbid('cloth mask')}),
   };
   const renderComponent = evaluate(component.getText(ast), b);
   let button;
