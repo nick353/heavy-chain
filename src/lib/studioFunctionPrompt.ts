@@ -28,14 +28,20 @@ const underwearDirective = (hasModel: boolean) => hasModel
  * whole garment there takes the reference design. Heavy sends the stroke as a guide image (image 3) the same way.
  */
 const POINT_COLOR_NAMES = ['teal', 'magenta', 'orange'] as const;
+/**
+ * Light's 範囲指定 is a directional fusion (定向融合): only the marked part takes the reference's construction, and the
+ * garment keeps its own colour, fabric and hem. Light's sample turns the black top's neckline into spaghetti straps while
+ * the black linen and the white wave hem stay (2026-11-12 production: Heavy had swapped in the whole white camisole).
+ */
+const KEEP_OUTSIDE = 'Everything outside the marked area stays identical to image 1, including the facial features, hair, body, pose, the other clothing and the background.';
 const regionDirective = (hasReference: boolean, points = 1) => !hasReference
   ? 'Image 2 is image 1 with teal brush strokes marking the area to change. Change only the marked area and keep everything else identical. The output must not contain any teal marks.'
   : points <= 1
-    ? 'Image 2 is the reference garment. Image 3 is image 1 with teal brush strokes marking the garment to change. Replace only the marked garment in image 1 with the garment design shown in image 2 (garment type, neckline, straps, colors and fabric), fitted naturally to the body, pose and lighting. Keep the facial features, hair, body, pose, the other clothing and the background identical to image 1. The output must not contain any teal marks.'
+    ? `Image 2 is the reference garment. Image 3 is image 1 with teal brush strokes marking where to fuse it. Fuse the design of image 2 into the garment of image 1 only where the strokes are: adopt its construction there (for example straps, neckline, collar, sleeves or cut) while keeping the garment's own colours, fabric, print, trims and hem from image 1, fitted naturally to the body, pose and lighting. ${KEEP_OUTSIDE} The output must not contain any teal marks.`
     : (() => {
       const count = Math.min(3, points);
-      const pairs = POINT_COLOR_NAMES.slice(0, count).map((color, index) => `the ${color} marks take the garment design of image ${index + 2}`).join(', ');
-      return `Images 2 to ${count + 1} are reference garments. Image ${count + 2} is image 1 with coloured brush strokes marking the garments to change: ${pairs}. Replace only the marked garments in image 1 with those designs (garment type, neckline, straps, colors and fabric), fitted naturally to the body, pose and lighting. Keep the facial features, hair, body, pose, the unmarked clothing and the background identical to image 1. The output must not contain any coloured marks.`;
+      const pairs = POINT_COLOR_NAMES.slice(0, count).map((color, index) => `the ${color} marks take the construction of image ${index + 2}`).join(', ');
+      return `Images 2 to ${count + 1} are reference garments. Image ${count + 2} is image 1 with coloured brush strokes marking where to fuse them: ${pairs}. At each marked part adopt only that reference's construction (for example straps, neckline, collar, sleeves or cut) while keeping the garment's own colours, fabric, print, trims and hem from image 1, fitted naturally to the body, pose and lighting. ${KEEP_OUTSIDE} The output must not contain any coloured marks.`;
     })();
 
 /** Light's テキストで生成 keeps the garment from image 1 and returns a natural photograph (its sample: a film-like room shot). */

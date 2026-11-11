@@ -47,7 +47,10 @@ test('underwear tells the provider which image is the garment and which is the m
 
 test('region replaces the garment marked on the guide image with the reference design', () => {
   const sent = studioProviderPrompt('範囲指定で生成（融合ポイント1）', 'region', { hasReference: true });
-  assert.match(sent, /Image 2 is the reference garment\. Image 3 is image 1 with teal brush strokes/);
+  assert.match(sent, /Image 2 is the reference garment\. Image 3 is image 1 with teal brush strokes marking where to fuse it/);
+  // Light keeps the garment's own colour, fabric and hem; only the marked part takes the reference's construction.
+  assert.match(sent, /keeping the garment's own colours, fabric, print, trims and hem from image 1/);
+  assert.doesNotMatch(sent, /Replace only the marked garment/);
   assert.match(sent, /must not contain any teal marks/);
 });
 
@@ -60,7 +63,8 @@ test('a text-mode request that asks for 3D also gets the 3D directive', () => {
 test('multi-point region and multi-reference text name every image and still pass the server guard', () => {
   const region = studioProviderPrompt('範囲指定で生成（融合ポイント3）', 'region', { hasReference: true, points: 3 });
   assert.match(region, /Images 2 to 4 are reference garments\. Image 5 is image 1 with coloured brush strokes/);
-  assert.match(region, /the teal marks take the garment design of image 2, the magenta marks take the garment design of image 3, the orange marks take the garment design of image 4/);
+  assert.match(region, /the teal marks take the construction of image 2, the magenta marks take the construction of image 3, the orange marks take the construction of image 4/);
+  assert.match(region, /keeping the garment's own colours, fabric, print, trims and hem from image 1/);
   const text = studioProviderPrompt('この服で撮影', 'text', { referenceCount: 3 });
   assert.match(text, /Images 2 to 4 are reference images/);
   assert.match(studioProviderPrompt('この服で撮影', 'text', { referenceCount: 1 }), /Image 2 is a reference image/);
