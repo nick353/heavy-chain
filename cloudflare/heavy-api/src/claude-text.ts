@@ -176,7 +176,10 @@ export async function callClaudeResearch(
   const tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: options.maxUses ?? AGENT_RESEARCH_MAX_USES, allowed_callers: ['direct'] }];
   let messages: ClaudeMessage[] = options.messages.filter((message, index) => index > 0 || message.role === 'user');
   let searchEnabled = true;
+  // Every search hit is not a source (production 2026-11-12: a Japanese fashion search also returned Wikipedia pages on
+  // music and climbing). The pages Claude cited come first; hits only fill in when it cited fewer than three.
   const sources = new Map<string, string>();
+  const cited = new Map<string, string>();
   const searchErrors: string[] = [];
   const texts: string[] = [];
   let searched = false;
@@ -227,7 +230,7 @@ export async function callClaudeResearch(
       } else if (block.type === 'text' && typeof block.text === 'string') {
         texts.push(block.text);
         for (const citation of Array.isArray(block.citations) ? block.citations as Record<string, unknown>[] : []) {
-          if (httpUrl(citation?.url) && !sources.has(citation.url)) sources.set(citation.url, typeof citation.title === 'string' ? citation.title.slice(0, 200) : citation.url);
+          if (httpUrl(citation?.url) && !cited.has(citation.url)) cited.set(citation.url, typeof citation.title === 'string' ? citation.title.slice(0, 200) : citation.url);
         }
       }
     }
@@ -244,7 +247,9 @@ export async function callClaudeResearch(
   const text = (marker >= 0 ? joined.slice(marker + '[調査結果]'.length) : joined).trim();
   if (!text) throw new ClaudeTextError('claude_empty_response', 502);
   return {
-    text, sources: [...sources].slice(0, 20).map(([url, title]) => ({ url, title })), searchUsed: searchEnabled && searched,
+    text, sources: [...(cited.size >= 3 ? cited : new Map([...cited, ...[...sources].filter(([url]) => !cited.has(url))]))].slice(0, 20)
+      .map(([url, title]) => ({ url, title: sources.get(url) && /^https?:\/\//.test(title) ? sources.get(url)! : title })),
+    searchUsed: searchEnabled && searched,
     searchErrors: [...new Set(searchErrors)], model,
     usage: counted ? { prompt_tokens: inputTokens, completion_tokens: outputTokens, total_tokens: inputTokens + outputTokens } : null,
   };

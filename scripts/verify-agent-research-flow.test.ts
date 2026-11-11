@@ -30,9 +30,30 @@ test('research sends the web search tool with a cap and fallbacks, and collects 
   assert.equal(sent[0].fallbacks, 'default');
   assert.equal(sent[0].model, 'claude-sonnet-5-5');
   assert.equal(result.text, '## トレンド\n- リネン混が伸びている');
-  assert.deepEqual(result.sources.map(source => source.url), ['https://example.com/a', 'https://example.com/b', 'https://example.org/c']);
+  // Cited pages first; with fewer than three citations the search hits fill in after them.
+  assert.deepEqual(result.sources.map(source => source.url), ['https://example.org/c', 'https://example.com/a', 'https://example.com/b']);
   assert.equal(result.searchUsed, true);
   assert.deepEqual(result.usage, { prompt_tokens: 100, completion_tokens: 40, total_tokens: 140 });
+});
+
+// Production 2026-11-12: a Japanese fashion search also returned Wikipedia pages on music and climbing, and all of them
+// were listed under 参考資料. With three or more citations only the cited pages are listed.
+test('with three or more citations only the cited pages are sources, titled from the search results when the citation has none', async () => {
+  const result = await callClaudeResearch(env, { system: 'sys', messages: [{ role: 'user', content: '日本の秋' }] }, async () => reply([
+    search([{ url: 'https://zozo.example/a', title: 'ZOZOTOWN ベスト' }, { url: 'https://wiki.example/music', title: '2026 in Japanese music' }, { url: 'https://rakuten.example/b', title: '楽天 アウター' }, { url: 'https://weather.example/c', title: '秋の天気' }]),
+    { type: 'text', text: '[調査結果]\n## 価格\n- ベストは15,000円前後', citations: [
+      { type: 'web_search_result_location', url: 'https://zozo.example/a', title: 'ZOZOTOWN ベスト', cited_text: 'x' },
+      { type: 'web_search_result_location', url: 'https://rakuten.example/b', cited_text: 'y' },
+      { type: 'web_search_result_location', url: 'https://weather.example/c', title: '秋の天気', cited_text: 'z' },
+      { type: 'web_search_result_location', url: 'https://zozo.example/a', title: 'ZOZOTOWN ベスト', cited_text: 'again' },
+    ] },
+  ]));
+  assert.deepEqual(result.sources, [
+    { url: 'https://zozo.example/a', title: 'ZOZOTOWN ベスト' },
+    { url: 'https://rakuten.example/b', title: '楽天 アウター' },
+    { url: 'https://weather.example/c', title: '秋の天気' },
+  ]);
+  assert.equal(result.searchUsed, true);
 });
 
 test('pause_turn resumes by re-sending the assistant turn without an extra user message', async () => {
@@ -202,9 +223,13 @@ test('the task page follows Light\'s conversation and lists the research sources
   // Light 2026-11-12: two directions to a row, each line cut short, select circle top right, 全選択 at the bottom left,
   // and no summary paragraph between the report card and the form.
   assert.match(page, /className="grid gap-2 sm:grid-cols-2" data-testid="agent-directions"/);
-  assert.match(page, /line-clamp-1 block text-sm font-medium text-white">\{direction\.name\}/);
-  assert.match(page, /line-clamp-2 block text-xs leading-5 text-neutral-300">\{direction\.description\}/);
+  assert.match(page, /line-clamp-1 text-sm font-medium text-white">\{direction\.name\}/);
+  assert.match(page, /line-clamp-2 text-xs leading-5 text-neutral-300">\{direction\.description\}/);
   assert.match(page, /flex flex-wrap items-center justify-between gap-2/);
+  // `block` overrode the clamp's display (-webkit-box) in production, so no clamped line may carry it.
+  assert.doesNotMatch(page, /line-clamp-\d block/);
+  // An attempt that a retry replaced is not shown again; only the last round reports a failure.
+  assert.match(page, /\{last && \(round\.step\.state === 'failed' \|\| round\.step\.state === 'unknown'\) && \(/);
   assert.match(page, /\{round\.summary && !conversation && <div className="whitespace-pre-wrap" data-testid="agent-summary">/);
   const tasks = readFileSync(new URL('../src/features/agent/agentTasks.ts', import.meta.url), 'utf8');
   assert.match(tasks, /input\.subtype === '新商品企画' \? \{ flow: 'conversation' as const, requirements: null, notes: \[\], aligned: null, scope: null, research: null \}/);

@@ -76,3 +76,10 @@ test('the page keeps the form editable after a settled failure and offers 保存
   assert.match(source, /\{generationHeld && <button type="button" disabled=\{busy\} onClick=\{\(\) => void generate\(true\)\}>保存を再試行<\/button>\}/);
   assert.doesNotMatch(source, /\{activeGeneration\?\.status === 'failure' && <button/);
 });
+
+test('while a picture is being saved the form is busy from the first moment, so AI生成 is not pressable', () => {
+  const source = readFileSync(new URL('../src/pages/FashionStudioDetailPage.tsx', import.meta.url), 'utf8');
+  assert.match(source, /assertContext\(\); busyRef\.current = true; setUploadingScope\(capturedScopeKey\);/);
+  assert.match(source, /setUploadingScope\(current => current === capturedScopeKey \? '' : current\);/);
+  assert.match(source, /const inputsReady = !busy && uploadingScope !== scopeKey && !recoveryRequired && visible\?\.status === 'success';/);
+});

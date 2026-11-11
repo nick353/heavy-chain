@@ -198,6 +198,10 @@ export function FashionStudioDetailPage() {
   const [hydration, setHydration] = useState<FashionStudioDetailHydrationState | null>(null);
   const [promptDraft, setPromptDraft] = useState({ scopeKey: '', value: '' });
   const [upload, setUpload] = useState<(FashionStudioInputState & { scopeKey: string }) | null>(null);
+  // The upload holds busyRef from the first moment, before its own status says 保存中; the form shows it as busy too, so
+  // AI生成 never looks pressable while a click would be ignored (2026-11-12 production: a click 4s after adding a
+  // reference did nothing).
+  const [uploadingScope, setUploadingScope] = useState('');
   const [generation, setGeneration] = useState<(FashionStudioGenerationOutcome & { scopeKey: string }) | null>(null);
   const [activity, setActivity] = useState({ scopeKey: '', value: '' });
   const [loadedMain, setLoadedMain] = useState({ identity: '', url: '' });
@@ -453,12 +457,15 @@ export function FashionStudioDetailPage() {
     if (!file || !scope || busyRef.current || recoveryRequired) return;
     const capturedScopeKey = scopeKey;
     try {
-      assertContext(); busyRef.current = true;
+      assertContext(); busyRef.current = true; setUploadingScope(capturedScopeKey);
       if (!uploadControllerRef.current) throw new Error('fashion_studio_upload_unavailable');
       await uploadControllerRef.current.start(file, role, scope);
     } catch (error) {
       if (currentScopeRef.current === capturedScopeKey) { setUpload({ scopeKey, status: 'failure', role, error: error instanceof Error ? error.message : String(error) }); setActivity({ scopeKey, value: 'failure' }); }
-    } finally { if (currentScopeRef.current === capturedScopeKey) busyRef.current = false; }
+    } finally {
+      setUploadingScope(current => current === capturedScopeKey ? '' : current);
+      if (currentScopeRef.current === capturedScopeKey) busyRef.current = false;
+    }
   };
   const referenceIdentity = JSON.stringify([scopeKey, detail.roles.reference.objectId, detail.roles.reference.candidates]);
   const slotRole = (slot: number): FashionStudioInputRole => slot ? `reference-${slot}` : 'reference';
@@ -649,7 +656,7 @@ export function FashionStudioDetailPage() {
   if (hasProject) {
     const mainImage = detail.roles.main.candidates;
     const referenceShown = detail.roles.reference.status === 'available' && !settings.referenceOff;
-    const inputsReady = !busy && !recoveryRequired && visible?.status === 'success';
+    const inputsReady = !busy && uploadingScope !== scopeKey && !recoveryRequired && visible?.status === 'success';
     /** A file input bound to one reference slot, so the chosen file always lands in that slot (add a reference / point). */
     const slotFileInput = (slot: number, label: string) => <input type="file" className="sr-only" accept=".png,.jpg,.jpeg,.avif,.webp" aria-label={label}
       disabled={!inputsReady || !scope || slot < 0} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; setPointMenu(false); uploadReference(file, slotRole(slot)); }} />;
