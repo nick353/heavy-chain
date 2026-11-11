@@ -4,11 +4,16 @@ import {
   Boxes,
   ChevronDown,
   ChevronRight,
+  Download,
+  Keyboard,
   LayoutGrid,
   ChevronLeft,
   Hand,
   ImagePlus,
+  Magnet,
+  MapPinned,
   Maximize2,
+  Moon,
   MousePointer2,
   Plus,
   Redo2,
@@ -16,13 +21,13 @@ import {
   Save,
   Search,
   Sparkles,
+  Sun,
   Trash2,
   Undo2,
   X,
-  ZoomIn,
-  ZoomOut,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { studioProviderPrompt } from '../lib/studioFunctionPrompt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -39,12 +44,17 @@ import { createCanvasDocument, getCanvasDocument, updateCanvasDocument, type Can
 import { editImageWithPrompt, assertCompletedImageEditResult } from '../lib/imageApi';
 import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
 import { createStudioViewportInteraction, STUDIO_DEFAULT_VIEWPORT, STUDIO_INTERACTIVE_SELECTOR, studioWorldTransform, type StudioViewportState } from '../lib/studioViewport';
+import { arrangeStudioNodes, emptyStudioHistory, fitStudioArrangedView, pushStudioHistory, readStudioLayout, readStudioSnapEnabled, redoStudioHistory,
+  sameStudioPositions, steppedStudioZoom, studioEdgePath, studioNodePositions, studioSnap, undoStudioHistory, withStudioLayout, writeStudioSnapEnabled,
+  LIGHT_UNITS_PER_HEAVY, STUDIO_ZOOM_LIMITS, type StudioHistory, type StudioNodeSpec, type StudioPoint, type StudioPositions, type StudioRect,
+  type StudioSnapLine } from '../lib/studioCanvas';
 import { DEFAULT_STUDIO_SETTINGS, STUDIO_ASPECT_RATIOS, STUDIO_EXAMPLES, STUDIO_GARMENT_AREAS, STUDIO_MAX_REGION_POINTS, STUDIO_MAX_TEXT_REFERENCES, STUDIO_PERSPECTIVES, STUDIO_TEXT_SAMPLE_PROMPT,
   STUDIO_UNDERWEAR_NO_MODEL_PROMPT, STUDIO_UNDERWEAR_WITH_MODEL_PROMPT, loadStudioExampleFile, readStudioSettings, studioAspectRatioLabel,
   studioFunctionPromptText, writeStudioSettings, type StudioAspectRatio, type StudioFunctionId, type StudioGarmentArea, type StudioSettings } from '../lib/fashionStudioExamples';
 import { buildRegionGuideUrl, naturalImageSize, REGION_POINT_COLORS, regionMaskImageData, regionMaskToDataUrl } from '../lib/fashionStudioRegionGuide';
 import { MaskPaintDialog } from '../components/lightchain/MaskPaintDialog';
 import { StudioFunctionIcon } from '../components/lightchain/StudioFunctionIcon';
+import { StudioHelpDialog, StudioMinimap, StudioShortcutsPanel, StudioZoomControl } from '../components/lightchain/StudioCanvasControls';
 
 const FASHION_STUDIO_PROJECT_ICON = '/lightchain-assets/icons/fashion-studio.png';
 
@@ -70,20 +80,21 @@ const FLOW_TIP_ICON = '/lightchain-assets/static/flow_tip.png';
 const SAVED_PROMPTS_KEY = 'heavy-fashion-studio-saved-prompts';
 const STUDIO_EXAMPLE_LOADED = 'サンプルを読み込むと、ノードの構成を変更できます。';
 const STUDIO_EXAMPLE_FAILED = 'サンプルの読み込みに失敗しました。もう一度お試しください。';
-/** Light's flow (measured at its 45% fit, 2026-11-11): image nodes 448px wide (CSS), the form 310px, gaps 83px and 89px. */
-const FLOW_GAP_IN = 83;
-const FLOW_GAP_OUT = 89;
-/** Heavy's zoom 0.3 shows the flow at Light's fitted size, which Light labels 45%. */
-const zoomPercent = (zoom: number) => Math.round(zoom / 0.3 * 45);
-
-function FlowEdge({ width, from, to, height }: { width: number; from: number; to: number; height: number }) {
-  const mid = width / 2;
-  return (
-    <svg className="fashion-studio-flow-edge" width={width} height={Math.max(height, 1)} aria-hidden="true">
-      <path d={`M0 ${from} C ${mid} ${from}, ${mid} ${to}, ${width} ${to}`} fill="none" stroke="#5e6263" strokeWidth={1.5} />
-    </svg>
-  );
-}
+/** Light's flow (measured at its 45% fit, 2026-11-11): image nodes 448px wide (CSS), the form 310px; the gaps and the
+ * free positions live in src/lib/studioCanvas.ts. */
+const IMAGE_NODE_WIDTH = 448;
+const FORM_NODE_WIDTH = 310;
+/** Light's editor setting shared with the design editor (DesignEntryDetailPage): ライトモードに切り替え. */
+const EDITOR_THEME_KEY = 'heavy-editor-theme:v1';
+const readEditorTheme = (): 'dark' | 'light' => { try { return window.localStorage.getItem(EDITOR_THEME_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } };
+/** A press on these inside a node uses the control instead of dragging the node. */
+const NODE_DRAG_BLOCKER = 'input, textarea, select, button, a, label, [contenteditable="true"], [role="button"], [role="listbox"], [role="menu"], [role="option"], [data-studio-chrome]';
+const isTypingTarget = (target: EventTarget | null) => target instanceof HTMLElement
+  && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable);
+/** React Flow moves a selected node 5 units per arrow press (×4 with Shift); in Heavy units. */
+const ARROW_STEP = 5 / LIGHT_UNITS_PER_HEAVY;
+const resultNodeKey = (objectId: string | null, index: number) => objectId ? `result:${objectId}` : `result-index:${index}`;
+const STUDIO_NEW_PROJECT_FUNCTIONS: readonly StudioFunctionId[] = ['text', 'region', 'underwear', '3d'];
 
 function DetailRoleImage({ candidates, scopeKey, role, alt, className, assertContext, onReady }: {
   candidates: readonly string[]; scopeKey: string; role: string; alt: string; className: string; assertContext: () => void; onReady?: (url: string) => void;
@@ -137,7 +148,7 @@ function FashionStudioImageNode({
   label,
   staticUrl,
   onExpand,
-  flowNode,
+  onUrl,
 }: {
   candidates: readonly string[];
   scopeKey: string;
@@ -153,22 +164,22 @@ function FashionStudioImageNode({
   /** A bundled example image instead of a saved role. */
   staticUrl?: string;
   onExpand: (url: string) => void;
-  /** The flow measures one node per role; images inside the result row leave this off. */
-  flowNode?: string | null;
+  /** The shown image's URL, for the node toolbar (ダウンロード, 新しい機能). */
+  onUrl?: (url: string) => void;
 }) {
   const [url, setUrl] = useState('');
   const shown = staticUrl || url;
   return (
-    <div className="fashion-studio-flow-node" data-flow-node={flowNode === undefined ? role : flowNode ?? undefined}>
+    <>
       {label && <p className="fashion-studio-flow-node-label">{label}</p>}
       <figure className={`fashion-studio-source-image-node ${className}`} data-testid={testId} data-studio-object-id={objectId ?? undefined} data-selected={selected} onDragStart={event => event.preventDefault()}>
         {staticUrl ? <img src={staticUrl} alt={alt} className="block h-auto w-full" draggable={false} />
-          : <DetailRoleImage candidates={candidates} scopeKey={scopeKey} role={role} assertContext={assertContext} alt={alt} className="block h-auto min-h-[200px] w-full object-contain" onReady={setUrl} />}
+          : <DetailRoleImage candidates={candidates} scopeKey={scopeKey} role={role} assertContext={assertContext} alt={alt} className="block h-auto min-h-[200px] w-full object-contain" onReady={value => { setUrl(value); onUrl?.(value); }} />}
         <button type="button" className="fashion-studio-source-expand" aria-label="全画面表示です" title="全画面表示" disabled={!shown} onClick={() => shown && onExpand(shown)}>
           <Maximize2 className="h-5 w-5" />
         </button>
       </figure>
-    </div>
+    </>
   );
 }
 
@@ -239,6 +250,7 @@ export function FashionStudioDetailPage() {
       publish: state => setLocalViewport({ scopeKey: viewportScopeKey, state }),
       capture: id => viewport.setPointerCapture(id),
       release: id => { if (viewport.hasPointerCapture(id)) viewport.releasePointerCapture(id); },
+      zoomLimits: STUDIO_ZOOM_LIMITS,
     });
     viewportInteractionRef.current = interaction; interaction.reset();
     // Native non-passive wheel handling permits preventDefault only for canvas navigation.
@@ -308,6 +320,8 @@ export function FashionStudioDetailPage() {
   };
   /** The example chosen on the new-file screen; the project created by its upload picks it up. */
   const pendingExampleRef = useRef<StudioFunctionId | null>(null);
+  /** The function a node toolbar button chose; the new project its image creates opens on that function. */
+  const pendingFunctionRef = useRef<StudioFunctionId | null>(null);
   const [pendingExample, setPendingExample] = useState<{ projectCode: string; fn: StudioFunctionId } | null>(null);
   const exampleReferenceStartedRef = useRef('');
   const [exampleLoad, setExampleLoad] = useState<{ scopeKey: string; loading: StudioFunctionId | null; failed: StudioFunctionId | null }>({ scopeKey: '', loading: null, failed: null });
@@ -337,6 +351,17 @@ export function FashionStudioDetailPage() {
   });
   useEffect(() => {
     if (!projectCode) return;
+    const nodeFunction = pendingFunctionRef.current;
+    if (nodeFunction) {
+      pendingFunctionRef.current = null;
+      try { window.localStorage.setItem(studioFunctionKey(projectCode), nodeFunction); } catch { /* storage unavailable */ }
+      setStudioFunction(nodeFunction);
+      if (nodeFunction === 'underwear') {
+        setPromptDraft({ scopeKey, value: STUDIO_UNDERWEAR_NO_MODEL_PROMPT });
+        try { window.localStorage.setItem(`heavy-fashion-studio-draft:${projectCode}`, STUDIO_UNDERWEAR_NO_MODEL_PROMPT); } catch { /* storage unavailable */ }
+      }
+      return;
+    }
     const chosen = pendingExampleRef.current;
     if (chosen) {
       pendingExampleRef.current = null;
@@ -392,7 +417,8 @@ export function FashionStudioDetailPage() {
         const receipt = await cloudflareDataPlane.saveWorkspaceArtifact({ requestId: input.requestId, brandId: requested.brandId,
           featureType: `fashion-studio-detail-${input.role === 'main' ? 'main' : 'reference'}-input`, title: 'Fashion Studio', imageUrl: input.imageUrl, prompt: null,
           metadata: { inputOperationId: input.requestId, layerRole: input.role === 'main' ? 'original-base' : input.role === 'reference' ? 'material-reference' : 'material-reference-extra' },
-          canvasProjectId: requested.documentId || null, sourceStoragePath: null }, undefined, persistenceContext);
+          // A node's 新しい機能 opens a new project (documentId ''), so the input names the project it belongs to.
+          canvasProjectId: input.scope.documentId || null, sourceStoragePath: null }, undefined, persistenceContext);
         context.assertContext();
         if (!receipt.success) throw new Error('fashion_studio_upload_remote_unverified');
         return receipt.remote;
@@ -455,13 +481,20 @@ export function FashionStudioDetailPage() {
   const generationHeld = activeGeneration?.status === 'failure' && activeGeneration.settled !== true;
   const recoveryRequired = (activeUpload?.status === 'failure' && activeUpload.recoverable === true) || generationHeld;
   const mainIdentity = JSON.stringify([scopeKey, detail.roles.main.objectId, detail.roles.main.candidates]);
-  const uploadFile = async (file: File | undefined, role: FashionStudioInputRole) => {
+  /** Node positions are saved in the same document; an upload or generation waits for a save in flight so their
+   * revision checks never race it (src/lib/studioCanvas.ts withStudioLayout). */
+  const layoutSaveRef = useRef<{ timer?: ReturnType<typeof setTimeout>; flight?: Promise<void>;
+    pending?: { userId: string; brandId: string; documentId: string; positions: StudioPositions } }>({});
+  const waitForLayoutSave = async () => { try { await layoutSaveRef.current.flight; } catch { /* a failed layout save never blocks the work */ } };
+  const uploadFile = async (file: File | undefined, role: FashionStudioInputRole, newProject = false) => {
     if (!file || !scope || busyRef.current || recoveryRequired) return;
     const capturedScopeKey = scopeKey;
     try {
       assertContext(); busyRef.current = true; setUploadingScope(capturedScopeKey);
+      await waitForLayoutSave(); assertContext();
       if (!uploadControllerRef.current) throw new Error('fashion_studio_upload_unavailable');
-      await uploadControllerRef.current.start(file, role, scope);
+      // A node's テキストで生成 etc. starts a new project with that image as its main image (Heavy keeps one form per project).
+      await uploadControllerRef.current.start(file, role, newProject ? { ...scope, documentId: '' } : scope);
     } catch (error) {
       if (currentScopeRef.current === capturedScopeKey) { setUpload({ scopeKey, status: 'failure', role, error: error instanceof Error ? error.message : String(error) }); setActivity({ scopeKey, value: 'failure' }); }
     } finally {
@@ -489,7 +522,8 @@ export function FashionStudioDetailPage() {
     return url;
   };
   const generate = async (retry = false) => {
-    if (!scope || busyRef.current || !generationControllerRef.current) return;
+    const generationController = generationControllerRef.current;
+    if (!scope || busyRef.current || !generationController) return;
     const fn = studioFunctionRef.current;
     const referenceAvailable = detail.roles.reference.status === 'available' && !settings.referenceOff;
     if (!retry) {
@@ -504,8 +538,9 @@ export function FashionStudioDetailPage() {
     const capturedScopeKey = scopeKey;
     try {
       assertContext(); busyRef.current = true; setActivity({ scopeKey, value: retry ? 'recovering' : 'preparing' });
+      await waitForLayoutSave(); assertContext();
       let outcome: FashionStudioGenerationOutcome;
-      if (retry) outcome = await generationControllerRef.current.retry();
+      if (retry) outcome = await generationController.retry();
       else {
         if (!detail.roles.main.objectId || detail.roles.reference.status === 'ambiguous') throw new Error('fashion_studio_generation_input_unverified');
         const promptText = studioFunctionPromptText(fn, prompt.trim(), settings, regionPoints.length);
@@ -519,7 +554,7 @@ export function FashionStudioDetailPage() {
         const editOptions = fn !== 'region' && settings.aspectRatio !== 'auto' ? { aspectRatio: settings.aspectRatio } : undefined;
         const inputIdentity = JSON.stringify([scopeKey, mainIdentity, fn, promptText, references, editOptions ?? null]);
         if (logicalAttemptRef.current?.identity !== inputIdentity) logicalAttemptRef.current = { identity: inputIdentity, key: crypto.randomUUID() };
-        outcome = await generationControllerRef.current.start({ scope, logicalAttemptKey: logicalAttemptRef.current.key,
+        outcome = await generationController.start({ scope, logicalAttemptKey: logicalAttemptRef.current.key,
           main: { objectId: detail.roles.main.objectId, imageUrl: loadedMain.url, verified: true }, referenceImageUrls: references, prompt: promptText,
           ...(editOptions ? { editOptions } : {}),
           // OpenAI refuses every innerwear-on-model image (2026-11-12), so 下着 goes to the server's FLUX.2 [dev] route.
@@ -534,9 +569,10 @@ export function FashionStudioDetailPage() {
     } finally { if (currentScopeRef.current === capturedScopeKey) busyRef.current = false; }
   };
   const retryUpload = async () => {
-    if (busyRef.current || !uploadControllerRef.current) return;
+    const controller = uploadControllerRef.current;
+    if (busyRef.current || !controller) return;
     const captured = scopeKey; busyRef.current = true;
-    try { await uploadControllerRef.current.retry(); } finally { if (currentScopeRef.current === captured) busyRef.current = false; }
+    try { await waitForLayoutSave(); await controller.retry(); } finally { if (currentScopeRef.current === captured) busyRef.current = false; }
   };
   /** Light: choosing a function on the empty canvas loads its example and saves the project. */
   const loadExample = async (fn: StudioFunctionId) => {
@@ -546,11 +582,11 @@ export function FashionStudioDetailPage() {
     let file: File;
     try { file = await loadStudioExampleFile(STUDIO_EXAMPLES[fn].main); }
     catch { if (currentScopeRef.current === captured) setExampleLoad({ scopeKey: captured, loading: null, failed: fn }); return; }
-    pendingExampleRef.current = fn;
+    pendingExampleRef.current = fn; pendingFunctionRef.current = null;
     await uploadFile(file, 'main');
     setExampleLoad(current => current.scopeKey === captured ? { scopeKey: captured, loading: null, failed: null } : current);
   };
-  const uploadOwnMain = (file: File | undefined) => { pendingExampleRef.current = null; void uploadFile(file, 'main'); };
+  const uploadOwnMain = (file: File | undefined) => { pendingExampleRef.current = null; pendingFunctionRef.current = null; void uploadFile(file, 'main'); };
   const uploadReference = (file: File | undefined, role: FashionStudioInputRole = referenceTargetRef.current) => {
     if (!file) return;
     const slot = role === 'reference' ? 0 : Number(role.slice('reference-'.length));
@@ -609,43 +645,271 @@ export function FashionStudioDetailPage() {
     try { window.localStorage.setItem(SAVED_PROMPTS_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
     toast.success('プロンプトを保存しました');
   };
-  // Light's flow: main → form → result side by side, joined by curved edges, fitted into view.
+  // Light's canvas (2026-11-12): main → form → results as free nodes joined by curved edges. People drag nodes (Light's
+  // snapping on by default), undo / redo moves, キャンバスを整理 re-lays them out; positions are saved in the project.
   const flowRef = useRef<HTMLDivElement>(null);
-  const [flowSize, setFlowSize] = useState({ main: 0, form: 0, result: 0, width: 0, height: 0 });
+  const navigationRef = useRef<HTMLDivElement>(null);
   // Light keeps the sample (仕上がりのサンプル) and lines every result up to its right, oldest first.
   const showExampleResult = Boolean(settings.example);
   const resultItems = [...detail.history.filter(item => item.status === 'available'), ...(detail.roles.result.status === 'available' ? [detail.roles.result] : [])];
   const hasResultNode = resultItems.length > 0 || showExampleResult;
+  const resultKeys = resultItems.map((item, index) => resultNodeKey(item.objectId, index));
+  const resultNodeKeys = [...(showExampleResult ? ['sample'] : []), ...resultKeys];
+  const nodeKeySignature = resultNodeKeys.join('|');
+  const [nodeSizes, setNodeSizes] = useState<{ scopeKey: string; sizes: Record<string, { width: number; height: number }> }>({ scopeKey: '', sizes: {} });
+  const sizes = nodeSizes.scopeKey === viewportScopeKey ? nodeSizes.sizes : {};
   useEffect(() => {
     const flow = flowRef.current;
     if (!hasProject || !flow) return;
     const measure = () => {
-      const height = (role: string) => flow.querySelector<HTMLElement>(`[data-flow-node="${role}"]`)?.offsetHeight ?? 0;
-      const next = { main: height('main'), form: height('form'), result: height('result'), width: flow.offsetWidth, height: flow.offsetHeight };
-      setFlowSize(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+      const next: Record<string, { width: number; height: number }> = {};
+      flow.querySelectorAll<HTMLElement>('[data-studio-node]').forEach(node => { const key = node.dataset.studioNode; if (key) next[key] = { width: node.offsetWidth, height: node.offsetHeight }; });
+      setNodeSizes(previous => previous.scopeKey === viewportScopeKey && JSON.stringify(previous.sizes) === JSON.stringify(next) ? previous : { scopeKey: viewportScopeKey, sizes: next });
     };
     const observer = new ResizeObserver(measure);
-    observer.observe(flow); flow.querySelectorAll('[data-flow-node]').forEach(node => observer.observe(node));
+    flow.querySelectorAll('[data-studio-node]').forEach(node => observer.observe(node));
     measure();
     return () => observer.disconnect();
-  }, [hasProject, hasResultNode, resultItems.length, studioFunction, viewportScopeKey]);
+  }, [hasProject, nodeKeySignature, studioFunction, viewportScopeKey]);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!hasProject || !viewport) return;
+    const measure = () => setCanvasSize(previous => previous.width === viewport.clientWidth && previous.height === viewport.clientHeight ? previous : { width: viewport.clientWidth, height: viewport.clientHeight });
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport); measure();
+    return () => observer.disconnect();
+  }, [hasProject, viewportScopeKey]);
+  const [layoutState, setLayoutState] = useState<{ scopeKey: string; positions: StudioPositions | null; history: StudioHistory }>({ scopeKey: '', positions: null, history: emptyStudioHistory() });
+  const layoutCurrent = layoutState.scopeKey === viewportScopeKey ? layoutState : { scopeKey: viewportScopeKey, positions: null, history: emptyStudioHistory() };
+  const savedPositions = layoutCurrent.positions ?? detail.layout;
+  const nodeSpecs: StudioNodeSpec[] = [
+    { key: 'main', kind: 'main', width: sizes.main?.width || IMAGE_NODE_WIDTH },
+    { key: 'form', kind: 'form', width: sizes.form?.width || FORM_NODE_WIDTH },
+    ...resultNodeKeys.map(key => ({ key, kind: 'result' as const, width: sizes[key]?.width || IMAGE_NODE_WIDTH })),
+  ];
+  const nodeKeys = nodeSpecs.map(spec => spec.key);
+  const basePositions = studioNodePositions(nodeSpecs, savedPositions);
+  const [nodeDrag, setNodeDrag] = useState<{ scopeKey: string; key: string; point: StudioPoint } | null>(null);
+  const [snapLines, setSnapLines] = useState<StudioSnapLine[]>([]);
+  const nodeDragRef = useRef<{ pointerId: number; key: string; startX: number; startY: number; origin: StudioPoint; point: StudioPoint; moved: boolean } | null>(null);
+  const liveDrag = nodeDrag?.scopeKey === viewportScopeKey ? nodeDrag : null;
+  const shownPositions: StudioPositions = liveDrag ? { ...basePositions, [liveDrag.key]: liveDrag.point } : basePositions;
+  const rectOf = (key: string, positions: StudioPositions = shownPositions): StudioRect | null => {
+    const size = sizes[key], point = positions[key];
+    return size && size.height > 0 && point ? { id: key, x: point.x, y: point.y, width: size.width, height: size.height } : null;
+  };
+  const nodeRects = nodeKeys.map(key => rectOf(key)).filter((rect): rect is StudioRect => Boolean(rect));
+  const allMeasured = nodeKeys.every(key => (sizes[key]?.height ?? 0) > 0);
+  const flowEdges = [{ source: 'main', target: 'form' }, ...resultNodeKeys.map(target => ({ source: 'form', target }))];
+  const selectedKey = viewportState.selectedObjectId;
+  const [snapEnabled, setSnapEnabled] = useState(readStudioSnapEnabled);
+  const [minimapOpen, setMinimapOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  // Saving positions: debounced, never while an upload / generation runs or an unknown result is held (those compare
+  // the document's revision and proof), retried once on a conflict, and flushed when the project changes.
+  const recoveryRequiredRef = useRef(false);
+  recoveryRequiredRef.current = recoveryRequired;
+  const layoutAckPending = (job: { userId: string; brandId: string; documentId: string }) => {
+    try { return Boolean(createStudioAckStore(window.localStorage).read({ userId: job.userId, brandId: job.brandId, documentId: job.documentId })); } catch { return true; }
+  };
+  const runLayoutSave = async (): Promise<void> => {
+    const saver = layoutSaveRef.current;
+    const job = saver.pending;
+    if (saver.flight || !job || busyRef.current || recoveryRequiredRef.current || layoutAckPending(job)) return;
+    saver.pending = undefined;
+    const live = () => {
+      const state = useAuthStore.getState();
+      if (state.user?.id !== job.userId || state.currentBrand?.id !== job.brandId) throw new Error('fashion_studio_layout_scope_stale');
+    };
+    const context = { userId: job.userId, assertContext: live };
+    const flight = (async () => {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          live();
+          const document = await getCanvasDocument(job.documentId, job.brandId, context);
+          live();
+          if (document.id !== job.documentId || document.ownerId !== job.userId || document.brandId !== job.brandId) return;
+          if (sameStudioPositions(readStudioLayout(document.snapshot), job.positions)) return;
+          await updateCanvasDocument({ brandId: job.brandId, documentId: job.documentId, title: document.title,
+            snapshot: withStudioLayout(document.snapshot, job.positions), expectedRevision: document.revision }, context);
+          return;
+        } catch (error) {
+          // A conflict means another write landed first: read the document again once and put the positions on top.
+          if (error instanceof Error && error.message === 'fashion_studio_layout_scope_stale') return;
+        }
+      }
+    })();
+    saver.flight = flight;
+    try { await flight; } finally { if (saver.flight === flight) saver.flight = undefined; }
+    if (saver.pending) scheduleLayoutSave(0);
+  };
+  const scheduleLayoutSave = (delay = 600) => {
+    const saver = layoutSaveRef.current;
+    if (saver.timer) clearTimeout(saver.timer);
+    saver.timer = setTimeout(() => { saver.timer = undefined; void runLayoutSave(); }, delay);
+  };
+  const runLayoutSaveRef = useRef(runLayoutSave);
+  runLayoutSaveRef.current = runLayoutSave;
+  useEffect(() => { if (!busy && !recoveryRequired && layoutSaveRef.current.pending) scheduleLayoutSave(); }, [busy, recoveryRequired]);
+  useEffect(() => () => {
+    const saver = layoutSaveRef.current;
+    if (saver.timer) { clearTimeout(saver.timer); saver.timer = undefined; }
+    if (saver.pending) void runLayoutSaveRef.current();
+  }, [viewportScopeKey]);
+  const queueLayoutSave = (positions: StudioPositions) => {
+    if (!scope || !projectCode) return;
+    layoutSaveRef.current.pending = { userId: scope.userId, brandId: scope.brandId, documentId: projectCode, positions };
+    scheduleLayoutSave();
+  };
+  const commitPositions = (next: StudioPositions) => {
+    if (!scope || !projectCode || sameStudioPositions(next, basePositions)) return;
+    setLayoutState({ scopeKey: viewportScopeKey, positions: next, history: pushStudioHistory(layoutCurrent.history, basePositions) });
+    queueLayoutSave(next);
+  };
+  const stepLayoutHistory = (direction: 'undo' | 'redo') => {
+    const step = direction === 'undo' ? undoStudioHistory(layoutCurrent.history, basePositions) : redoStudioHistory(layoutCurrent.history, basePositions);
+    if (!step) return;
+    setLayoutState({ scopeKey: viewportScopeKey, positions: step.positions, history: step.history });
+    queueLayoutSave(step.positions);
+  };
+  const canUndo = layoutCurrent.history.past.length > 0;
+  const canRedo = layoutCurrent.history.future.length > 0;
+  // The first fit follows the nodes as their images load, until the person moves the view themselves.
   const fittedRef = useRef('');
+  const userViewRef = useRef('');
+  const markUserView = () => { userViewRef.current = viewportScopeKey; };
   const fitFlow = () => {
     const viewport = viewportRef.current; const interaction = viewportInteractionRef.current;
-    if (!viewport || !interaction || !flowSize.width || !flowSize.height) return false;
+    if (!viewport || !interaction || !nodeRects.length) return false;
     const bounds = viewport.getBoundingClientRect();
+    const minX = Math.min(...nodeRects.map(rect => rect.x)), minY = Math.min(...nodeRects.map(rect => rect.y));
+    const spanX = Math.max(1, Math.max(...nodeRects.map(rect => rect.x + rect.width)) - minX);
+    const spanY = Math.max(1, Math.max(...nodeRects.map(rect => rect.y + rect.height)) - minY);
     // Light's fitView keeps a margin around the nodes and never enlarges past its fitted size. The flow sits between the
     // node labels above and the canvas toolbar below (2026-11-11 production: the toolbar covered the AI生成 button).
     const top = 40, bottom = 104;
-    const scale = Math.min(1, (bounds.width * 0.92) / flowSize.width, (bounds.height - top - bottom) / flowSize.height);
-    interaction.set({ zoom: STUDIO_DEFAULT_VIEWPORT.zoom * scale, panX: (1 - scale) * bounds.width / 2, panY: (1 - scale) * bounds.height / 2 + (top - bottom) / 2 });
+    const scale = Math.min(1, (bounds.width * 0.92) / spanX, (bounds.height - top - bottom) / spanY);
+    interaction.set({ zoom: STUDIO_DEFAULT_VIEWPORT.zoom * scale, panX: bounds.width / 2 - scale * (minX + spanX / 2), panY: (bounds.height + top - bottom) / 2 - scale * (minY + spanY / 2) });
     return true;
   };
   useEffect(() => {
+    if (!allMeasured) return;
     const key = JSON.stringify([viewportScopeKey, hasResultNode, resultItems.length, studioFunction]);
-    if (fittedRef.current === key || !flowSize.width) return;
+    if (fittedRef.current === key && userViewRef.current === viewportScopeKey) return;
+    if (fittedRef.current !== key) userViewRef.current = '';
     if (fitFlow()) fittedRef.current = key;
-  }, [flowSize, viewportScopeKey, hasResultNode, resultItems.length, studioFunction]);
+  }, [sizes, viewportScopeKey, hasResultNode, resultItems.length, studioFunction, allMeasured]);
+  const arrangeCanvas = () => {
+    const viewport = viewportRef.current; const interaction = viewportInteractionRef.current;
+    if (!viewport || !interaction || !allMeasured) return;
+    const rects = nodeKeys.map(key => rectOf(key, basePositions)).filter((rect): rect is StudioRect => Boolean(rect));
+    const arranged = arrangeStudioNodes(rects, flowEdges);
+    commitPositions({ ...basePositions, ...arranged });
+    const bounds = viewport.getBoundingClientRect();
+    interaction.set(fitStudioArrangedView(rects.map(rect => ({ ...rect, ...arranged[rect.id] })), bounds.width, bounds.height));
+    markUserView();
+  };
+  const startNodeDrag = (event: ReactPointerEvent<HTMLElement>, key: string) => {
+    const point = basePositions[key];
+    if (!point) return;
+    event.preventDefault();
+    event.currentTarget.focus({ preventScroll: true });
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { return; }
+    viewportInteractionRef.current?.select(key);
+    nodeDragRef.current = { pointerId: event.pointerId, key, startX: event.clientX, startY: event.clientY, origin: point, point, moved: false };
+  };
+  const moveNodeDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const drag = nodeDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return false;
+    const dx = event.clientX - drag.startX, dy = event.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < 3) return true;
+    drag.moved = true;
+    const scale = viewportState.view.zoom / 0.3;
+    let point = { x: drag.origin.x + dx / scale, y: drag.origin.y + dy / scale };
+    let lines: StudioSnapLine[] = [];
+    const size = sizes[drag.key];
+    if (snapEnabled && !event.altKey && size) {
+      const others = nodeKeys.filter(key => key !== drag.key).map(key => rectOf(key, basePositions)).filter((rect): rect is StudioRect => Boolean(rect));
+      const snap = studioSnap([{ id: drag.key, ...point, ...size }], others, viewportState.view.zoom, drag.key);
+      point = { x: point.x + snap.delta.x, y: point.y + snap.delta.y }; lines = snap.lines;
+    }
+    drag.point = point;
+    setNodeDrag({ scopeKey: viewportScopeKey, key: drag.key, point }); setSnapLines(lines);
+    return true;
+  };
+  const endNodeDrag = (pointerId: number, commit: boolean) => {
+    const drag = nodeDragRef.current;
+    if (!drag || drag.pointerId !== pointerId) return false;
+    nodeDragRef.current = null;
+    const viewport = viewportRef.current;
+    if (viewport?.hasPointerCapture(pointerId)) viewport.releasePointerCapture(pointerId);
+    setNodeDrag(null); setSnapLines([]);
+    if (commit && drag.moved) { commitPositions({ ...basePositions, [drag.key]: drag.point }); markUserView(); }
+    return true;
+  };
+  const arrowRef = useRef(0);
+  const keyHandlerRef = useRef<(event: KeyboardEvent) => void>(() => undefined);
+  keyHandlerRef.current = (event: KeyboardEvent) => {
+    if (!hasProject || maskDialog || promptExpanded || lightbox || canvasPicker || shortcutsOpen || helpOpen || isTypingTarget(event.target)) return;
+    const mod = event.ctrlKey || event.metaKey;
+    if (mod && !event.altKey && event.key.toLowerCase() === 'z') { event.preventDefault(); stepLayoutHistory(event.shiftKey ? 'redo' : 'undo'); return; }
+    if (event.key === 'Escape') { viewportInteractionRef.current?.select(null); return; }
+    if (mod && event.key === 'Enter') { if (selectedKey === 'form') { event.preventDefault(); void generate(); } return; }
+    const arrow = ({ ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] } as Record<string, [number, number]>)[event.key];
+    const target = event.target as Node | null;
+    if (!arrow || !selectedKey || mod || event.altKey || !(target === document.body || viewportRef.current?.contains(target))) return;
+    const point = basePositions[selectedKey];
+    if (!point) return;
+    event.preventDefault();
+    const step = ARROW_STEP * (event.shiftKey ? 4 : 1);
+    const next = { ...basePositions, [selectedKey]: { x: point.x + arrow[0] * step, y: point.y + arrow[1] * step } };
+    // Presses in a row are one undo step.
+    const now = Date.now(), joined = now - arrowRef.current < 600 && canUndo; arrowRef.current = now;
+    if (joined) { setLayoutState({ scopeKey: viewportScopeKey, positions: next, history: layoutCurrent.history }); queueLayoutSave(next); }
+    else commitPositions(next);
+  };
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => keyHandlerRef.current(event);
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, []);
+  // Light's ライトモードに切り替え in the header (shared with the design editor's setting).
+  const [studioTheme, setStudioTheme] = useState(readEditorTheme);
+  const [themeSlot, setThemeSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { if (hasProject) setThemeSlot(document.getElementById('lightchain-header-context')); }, [hasProject]);
+  useEffect(() => {
+    if (!hasProject) return;
+    const root = document.documentElement;
+    // Only the header and this page turn light (the design editor's data-editor-theme rules would also restyle the dialogs).
+    if (studioTheme === 'light') root.dataset.studioTheme = 'light'; else delete root.dataset.studioTheme;
+    try { window.localStorage.setItem(EDITOR_THEME_KEY, studioTheme); } catch { /* storage unavailable */ }
+    return () => { delete root.dataset.studioTheme; };
+  }, [studioTheme, hasProject]);
+  // The selected image node's toolbar: a new project on one of the four functions with this image, and ダウンロード.
+  const nodeUrlsRef = useRef<Record<string, string>>({});
+  const nodeImageUrl = (key: string) => key === 'main' ? (loadedMain.identity === mainIdentity ? loadedMain.url : '')
+    : key === 'sample' ? (settings.example ? STUDIO_EXAMPLES[settings.example].result : '') : nodeUrlsRef.current[key] ?? '';
+  const imageExtension = (type: string) => type === 'image/jpeg' ? 'jpg' : type === 'image/webp' ? 'webp' : type === 'image/avif' ? 'avif' : 'png';
+  const downloadNodeImage = async (url: string) => {
+    if (!url) return;
+    try {
+      const file = await loadStudioExampleFile(url);
+      const href = URL.createObjectURL(file);
+      const anchor = document.createElement('a');
+      anchor.href = href; anchor.download = `heavy-chain-${Date.now()}.${imageExtension(file.type)}`; anchor.click();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+    } catch { window.open(url, '_blank', 'noopener'); }
+  };
+  const openNodeInNewProject = async (url: string, fn: StudioFunctionId) => {
+    if (!url || !scope || busyRef.current || recoveryRequired) return;
+    let file: File;
+    try { const loaded = await loadStudioExampleFile(url); file = new File([loaded], `Untitled.${imageExtension(loaded.type)}`, { type: loaded.type }); }
+    catch { toast.error('画像を読み込めませんでした'); return; }
+    pendingExampleRef.current = null; pendingFunctionRef.current = fn;
+    await uploadFile(file, 'main', true);
+  };
   const activityText = ({ preparing: '準備中', generating: '生成中', recovering: '復旧中', saving: '保存中', failure: '失敗', success: '完了' } as Record<string, string>)[activityValue] || 'タスク';
   const activityError = activeUpload?.error || activeGeneration?.error || '';
   useEffect(() => { if (activityError) toast.error(studioErrorMessage(activityError), { id: `studio-error:${activityError}` }); }, [activityError]);
@@ -662,6 +926,14 @@ export function FashionStudioDetailPage() {
     const mainImage = detail.roles.main.candidates;
     const referenceShown = detail.roles.reference.status === 'available' && !settings.referenceOff;
     const inputsReady = !busy && uploadingScope !== scopeKey && !recoveryRequired && visible?.status === 'success';
+    /** The selected image node on screen, for Light's toolbar above it and フィードバック bar below it. */
+    const selectedImageRect = (() => {
+      if (!selectedKey || selectedKey === 'form') return null;
+      const rect = rectOf(selectedKey);
+      if (!rect) return null;
+      const scale = viewportState.view.zoom / 0.3;
+      return { left: viewportState.view.panX + rect.x * scale, top: viewportState.view.panY + rect.y * scale, width: rect.width * scale, height: rect.height * scale };
+    })();
     /** A file input bound to one reference slot, so the chosen file always lands in that slot (add a reference / point). */
     const slotFileInput = (slot: number, label: string) => <input type="file" className="sr-only" accept=".png,.jpg,.jpeg,.avif,.webp" aria-label={label}
       disabled={!inputsReady || !scope || slot < 0} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; setPointMenu(false); uploadReference(file, slotRole(slot)); }} />;
@@ -797,7 +1069,7 @@ export function FashionStudioDetailPage() {
     );
 
     return (
-      <main className="fashion-studio-project-detail-parity dark relative min-h-[calc(100vh-50px)] overflow-clip bg-[#171b1c] text-white" data-testid="lightchain-fashion-studio-project-detail" data-lightchain-parity-shell="fashion-studio-project-detail">
+      <main className="fashion-studio-project-detail-parity dark relative min-h-[calc(100vh-50px)] overflow-clip bg-[#171b1c] text-white" data-testid="lightchain-fashion-studio-project-detail" data-lightchain-parity-shell="fashion-studio-project-detail" data-studio-theme={studioTheme}>
         {inputControls}
         <div className="fashion-studio-source-dots pointer-events-none absolute inset-0" />
         <aside className="fashion-studio-source-project-rail absolute left-4 top-6 z-30 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#262a2b] shadow-xl">
@@ -809,28 +1081,42 @@ export function FashionStudioDetailPage() {
           <button type="button" aria-label="アセット" className="flex size-12 cursor-pointer items-center justify-center rounded-lg bg-[#353a3b] text-neutral-200 hover:bg-white/10"><Boxes className="h-5 w-5" /></button>
         </aside>
 
-        <section ref={viewportRef} className="fashion-studio-viewport absolute inset-0 z-10" tabIndex={0} data-mode={viewportState.mode} data-panning={viewportState.panning} data-testid="lightchain-fashion-studio-canvas" aria-label="Fashion Studio Canvas"
+        <section ref={viewportRef} className="fashion-studio-viewport absolute inset-0 z-10" tabIndex={0} data-mode={viewportState.mode} data-panning={viewportState.panning} data-node-dragging={Boolean(liveDrag)} data-testid="lightchain-fashion-studio-canvas" aria-label="Fashion Studio Canvas"
           onPointerDown={event => {
             const target = event.target instanceof Element ? event.target : null;
-            const handled = viewportInteractionRef.current?.down({ pointerId: event.pointerId, button: event.button, x: event.clientX, y: event.clientY,
-              interactive: interactiveTarget(event.target), objectId: target?.closest<HTMLElement>('[data-studio-object-id]')?.dataset.studioObjectId });
-            if (handled) { event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); }
+            const interaction = viewportInteractionRef.current;
+            const nodeKey = target?.closest<HTMLElement>('[data-studio-node]')?.dataset.studioNode;
+            // Light drags a node with the select tool; Space / the hand tool / the middle button still pan.
+            if (nodeKey && interaction && event.button === 0 && !interaction.wouldPan(0) && !target?.closest(NODE_DRAG_BLOCKER)) { startNodeDrag(event, nodeKey); return; }
+            const handled = interaction?.down({ pointerId: event.pointerId, button: event.button, x: event.clientX, y: event.clientY,
+              interactive: interactiveTarget(event.target), objectId: nodeKey });
+            if (handled) { event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); if (interaction?.snapshot().panning) markUserView(); }
           }}
-          onPointerMove={event => { if (viewportInteractionRef.current?.move({ pointerId: event.pointerId, x: event.clientX, y: event.clientY })) event.preventDefault(); }}
-          onPointerUp={event => { viewportInteractionRef.current?.up(event.pointerId); }}
-          onPointerCancel={() => viewportInteractionRef.current?.cancel()}
-          onLostPointerCapture={event => { viewportInteractionRef.current?.up(event.pointerId); }}
+          onPointerMove={event => { if (moveNodeDrag(event) || viewportInteractionRef.current?.move({ pointerId: event.pointerId, x: event.clientX, y: event.clientY })) event.preventDefault(); }}
+          onPointerUp={event => { if (!endNodeDrag(event.pointerId, true)) viewportInteractionRef.current?.up(event.pointerId); }}
+          onPointerCancel={event => { if (!endNodeDrag(event.pointerId, false)) viewportInteractionRef.current?.cancel(); }}
+          onLostPointerCapture={event => { if (!endNodeDrag(event.pointerId, true)) viewportInteractionRef.current?.up(event.pointerId); }}
           onBlur={event => { if (event.target === event.currentTarget || !event.currentTarget.contains(event.relatedTarget)) viewportInteractionRef.current?.cancel(); }}
           onKeyDown={event => { if (viewportInteractionRef.current?.key({ key: event.key, down: true, interactive: interactiveTarget(event.target),
-            focused: event.target === event.currentTarget, anchor: viewportCenter() })) event.preventDefault(); }}
+            focused: event.target === event.currentTarget, anchor: viewportCenter() })) { event.preventDefault(); if (event.key !== ' ' && event.key !== 'Spacebar') markUserView(); } }}
           onKeyUp={event => { if (viewportInteractionRef.current?.key({ key: event.key, down: false, interactive: interactiveTarget(event.target),
             focused: event.target === event.currentTarget, anchor: viewportCenter() })) event.preventDefault(); }}>
           <div className="fashion-studio-nav-surface absolute inset-0" aria-hidden="true" />
           <div className="fashion-studio-world absolute inset-0" data-testid="fashion-studio-world" style={{ transform: studioWorldTransform(viewportState.view), transformOrigin: '0 0' }}>
             <div ref={flowRef} className="fashion-studio-flow" data-testid="fashion-studio-flow">
-              <FashionStudioImageNode candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} alt="メイン画像" testId="fashion-studio-saved-main-image" className="fashion-studio-source-main-node" objectId={detail.roles.main.objectId} selected={Boolean(detail.roles.main.objectId && viewportState.selectedObjectId === detail.roles.main.objectId)} onExpand={setLightbox} />
-              <FlowEdge width={FLOW_GAP_IN} from={flowSize.main / 2} to={flowSize.form / 2} height={flowSize.height} />
-              <section className="fashion-studio-source-generation-panel" data-flow-node="form" data-studio-composer data-testid="lightchain-fashion-studio-generation-panel">
+              <svg className="fashion-studio-edges" width={1} height={1} aria-hidden="true" data-testid="fashion-studio-edges">
+                {flowEdges.map(edge => {
+                  const source = rectOf(edge.source), target = rectOf(edge.target);
+                  if (!source || !target) return null;
+                  const active = selectedKey === edge.source || selectedKey === edge.target;
+                  return <path key={`${edge.source}-${edge.target}`} d={studioEdgePath(source, target)} className={active ? 'fashion-studio-edge is-active' : 'fashion-studio-edge'} />;
+                })}
+              </svg>
+              <div className="fashion-studio-node" data-studio-node="main" data-selected={selectedKey === 'main'} style={{ transform: `translate(${shownPositions.main?.x ?? 0}px, ${shownPositions.main?.y ?? 0}px)` }}>
+                <FashionStudioImageNode candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} alt="メイン画像" testId="fashion-studio-saved-main-image" className="fashion-studio-source-main-node" objectId={detail.roles.main.objectId} selected={selectedKey === 'main'} onExpand={setLightbox} />
+              </div>
+              <div className="fashion-studio-node" data-studio-node="form" data-selected={selectedKey === 'form'} style={{ transform: `translate(${shownPositions.form?.x ?? 0}px, ${shownPositions.form?.y ?? 0}px)` }}>
+              <section className="fashion-studio-source-generation-panel" data-studio-composer data-testid="lightchain-fashion-studio-generation-panel">
                 <div className="fashion-studio-source-generation-inner">
                   <div className="flex flex-col gap-[26px] p-8">
                     <div className="text-[30px] leading-[42px] text-neutral-400" data-testid="fashion-studio-function-title">{studioFunctionInfo.label}</div>
@@ -854,27 +1140,77 @@ export function FashionStudioDetailPage() {
                   </div>
                 </div>
               </section>
-              {hasResultNode && <FlowEdge width={FLOW_GAP_OUT} from={flowSize.form / 2} to={flowSize.result / 2} height={flowSize.height} />}
-              {hasResultNode && <div className="fashion-studio-flow-node fashion-studio-result-row" data-flow-node="result" data-testid="fashion-studio-result-row">
-                {showExampleResult && settings.example && <FashionStudioImageNode candidates={[]} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="仕上がりのサンプル" testId="fashion-studio-example-result-image" className="fashion-studio-source-result-node" objectId={null} selected={false} label="仕上がりのサンプルをご覧ください。" staticUrl={STUDIO_EXAMPLES[settings.example].result} onExpand={setLightbox} flowNode={null} />}
-                {resultItems.map((item, index) => <FashionStudioImageNode key={item.objectId ?? index} candidates={item.candidates} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="生成結果"
-                  testId={index === resultItems.length - 1 ? 'fashion-studio-saved-result-image' : 'fashion-studio-history-result-image'} className="fashion-studio-source-result-node" objectId={item.objectId}
-                  selected={Boolean(item.objectId && viewportState.selectedObjectId === item.objectId)} onExpand={setLightbox} flowNode={null} />)}
+              </div>
+              {showExampleResult && settings.example && <div className="fashion-studio-node" data-studio-node="sample" data-selected={selectedKey === 'sample'} style={{ transform: `translate(${shownPositions.sample?.x ?? 0}px, ${shownPositions.sample?.y ?? 0}px)` }}>
+                <FashionStudioImageNode candidates={[]} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="仕上がりのサンプル" testId="fashion-studio-example-result-image" className="fashion-studio-source-result-node" objectId={null} selected={selectedKey === 'sample'} label="仕上がりのサンプルをご覧ください。" staticUrl={STUDIO_EXAMPLES[settings.example].result} onExpand={setLightbox} />
               </div>}
+              {resultItems.map((item, index) => {
+                const key = resultKeys[index];
+                return <div key={key} className="fashion-studio-node" data-studio-node={key} data-selected={selectedKey === key} style={{ transform: `translate(${shownPositions[key]?.x ?? 0}px, ${shownPositions[key]?.y ?? 0}px)` }}>
+                  <FashionStudioImageNode candidates={item.candidates} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="生成結果"
+                    testId={index === resultItems.length - 1 ? 'fashion-studio-saved-result-image' : 'fashion-studio-history-result-image'} className="fashion-studio-source-result-node" objectId={item.objectId}
+                    selected={selectedKey === key} onExpand={setLightbox} onUrl={url => { nodeUrlsRef.current[key] = url; }} />
+                </div>;
+              })}
             </div>
           </div>
+          {/* Light's snap guides run across the canvas in #5FB7FB dashes. */}
+          {snapLines.length > 0 && <div className="pointer-events-none absolute inset-0 z-[5]" aria-hidden="true">
+            {snapLines.map(line => <div key={line.axis} data-testid={`canvas-snap-line-${line.axis}`} className={line.axis === 'x' ? 'fashion-studio-snap-line is-x' : 'fashion-studio-snap-line is-y'}
+              style={{ transform: line.axis === 'x' ? `translateX(${line.value * (viewportState.view.zoom / 0.3) + viewportState.view.panX}px)` : `translateY(${line.value * (viewportState.view.zoom / 0.3) + viewportState.view.panY}px)` }} />)}
+          </div>}
+          {selectedImageRect && !liveDrag && <>
+            <div className="fashion-studio-node-toolbar" data-studio-chrome data-testid="fashion-studio-node-toolbar" role="toolbar" aria-label="画像の操作"
+              style={{ left: selectedImageRect.left + selectedImageRect.width / 2, top: selectedImageRect.top - 14 }}>
+              {STUDIO_NEW_PROJECT_FUNCTIONS.map(fn => {
+                const info = STUDIO_FUNCTIONS.find(item => item.id === fn)!;
+                return <button key={fn} type="button" title={`この画像をメイン画像にして「${info.label}」の新しいプロジェクトを開きます`} disabled={!inputsReady || !scope}
+                  onClick={() => void openNodeInNewProject(nodeImageUrl(selectedKey!), fn)}><StudioFunctionIcon fn={fn} className="h-4 w-4" />{info.label}</button>;
+              })}
+              <span className="fashion-studio-node-toolbar-divider" aria-hidden="true" />
+              <button type="button" aria-label="ダウンロード" title="ダウンロード" onClick={() => void downloadNodeImage(nodeImageUrl(selectedKey!))}><Download className="h-4 w-4" /></button>
+            </div>
+            {resultKeys.includes(selectedKey!) && <div className="fashion-studio-node-feedback" data-studio-chrome data-testid="fashion-studio-node-feedback"
+              style={{ left: selectedImageRect.left + selectedImageRect.width / 2, top: selectedImageRect.top + selectedImageRect.height + 13 }}>
+              <button type="button" disabled={!inputsReady || detail.roles.main.status !== 'available' || loadedMain.identity !== mainIdentity} onClick={() => void generate()}>再生成</button>
+            </div>}
+          </>}
         </section>
 
         <div className="fashion-studio-source-task" data-studio-chrome aria-label="タスク">{activityContent}<span>{busy ? 1 : 0} <span className="mx-1">進行中</span>⌃</span></div>
         <div className="fashion-studio-source-canvas-toolbar" data-studio-chrome data-testid="lightchain-fashion-studio-canvas-toolbar">
-          <button type="button" aria-label="選択" aria-pressed={viewportState.mode === 'select'} className={viewportState.mode === 'select' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('select')}><MousePointer2 className="h-4 w-4" /></button>
-          <button type="button" aria-label="ドラッグ" aria-pressed={viewportState.mode === 'move'} className={viewportState.mode === 'move' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('move')}><Hand className="h-4 w-4" /></button>
-          <button type="button" aria-label="画像をアップロード" disabled={busy || recoveryRequired || !scope || visible?.status !== 'success'} onClick={() => mainInputRef.current?.click()}><ImagePlus className="h-4 w-4" /></button>
-          <button type="button" aria-label="取り消し(ctrl+z)" disabled title="履歴操作は未接続"><Undo2 className="h-4 w-4" /></button><button type="button" aria-label="やり直し(ctrl+shift+z)" disabled title="履歴操作は未接続"><Redo2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="選択" title="選択" aria-pressed={viewportState.mode === 'select'} className={viewportState.mode === 'select' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('select')}><MousePointer2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="ドラッグ" title="ドラッグ" aria-pressed={viewportState.mode === 'move'} className={viewportState.mode === 'move' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('move')}><Hand className="h-4 w-4" /></button>
+          <button type="button" aria-label="画像をアップロード" title="画像をアップロード" disabled={busy || recoveryRequired || !scope || visible?.status !== 'success'} onClick={() => mainInputRef.current?.click()}><ImagePlus className="h-4 w-4" /></button>
+          <button type="button" aria-label="取り消し(ctrl+z)" title="取り消し(ctrl+z)" disabled={!canUndo} onClick={() => stepLayoutHistory('undo')}><Undo2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="やり直し(ctrl+shift+z)" title="やり直し(ctrl+shift+z)" disabled={!canRedo} onClick={() => stepLayoutHistory('redo')}><Redo2 className="h-4 w-4" /></button>
         </div>
-        <div className="fashion-studio-source-zoom-controls" data-studio-chrome data-testid="lightchain-fashion-studio-zoom-controls"><button type="button" aria-label="キャンバスを縮小" disabled={viewportState.view.zoom <= 0.1} onClick={() => viewportInteractionRef.current?.zoom(-1, viewportCenter())}><ZoomOut className="h-4 w-4" /></button><span aria-label="キャンバスの拡大率">{zoomPercent(viewportState.view.zoom)}%</span><button type="button" aria-label="キャンバスを拡大" disabled={viewportState.view.zoom >= 2} onClick={() => viewportInteractionRef.current?.zoom(1, viewportCenter())}><ZoomIn className="h-4 w-4" /></button></div>
-        <button type="button" className="fashion-studio-source-panel-toggle" aria-label="キャンバスを整理" title="キャンバスを整理" onClick={() => { if (!fitFlow()) viewportInteractionRef.current?.reset(); }}><LayoutGrid className="h-5 w-5" /></button>
-        <button type="button" className="fashion-studio-source-handbook" aria-label="操作ガイド"><BookOpen className="h-5 w-5" /></button>
+        {/* Light's bottom right (2026-11-12): zoom pill, then キャンバスを整理 / ミニマップ / グリッドにスナップ under the minimap, then ヘルプ / ショートカット. */}
+        <div className="fashion-studio-source-zoom-controls" data-studio-chrome data-testid="lightchain-fashion-studio-zoom-controls">
+          <StudioZoomControl zoom={viewportState.view.zoom}
+            onStep={direction => { viewportInteractionRef.current?.zoomTo(steppedStudioZoom(viewportState.view.zoom, direction), viewportCenter()); markUserView(); }}
+            onZoom={zoom => { viewportInteractionRef.current?.zoomTo(zoom, viewportCenter()); markUserView(); }}
+            onFit={() => { fitFlow(); markUserView(); }} />
+        </div>
+        <div ref={navigationRef} className="fashion-studio-canvas-navigation" data-studio-chrome data-testid="canvas-navigation">
+          {minimapOpen && <StudioMinimap nodes={nodeRects} view={viewportState.view} size={canvasSize} canvasRef={viewportRef} navigationRef={navigationRef}
+            onView={view => { viewportInteractionRef.current?.set(view); markUserView(); }} />}
+          <div className="flex gap-2">
+            <button type="button" className="fashion-studio-round-button" aria-label="キャンバスを整理" title="キャンバスを整理" disabled={!allMeasured} onClick={arrangeCanvas}><LayoutGrid className="h-6 w-6" /></button>
+            <button type="button" className={`fashion-studio-round-button${minimapOpen ? ' is-on' : ''}`} aria-label="ミニマップ" title="ミニマップ" aria-pressed={minimapOpen} aria-expanded={minimapOpen} onClick={() => setMinimapOpen(open => !open)}><MapPinned className="h-6 w-6" /></button>
+            <button type="button" className={`fashion-studio-round-button${snapEnabled ? ' is-on' : ''}`} aria-label="グリッドにスナップ" title="グリッドにスナップ" aria-pressed={snapEnabled}
+              onClick={() => setSnapEnabled(enabled => { writeStudioSnapEnabled(!enabled); if (enabled) setSnapLines([]); return !enabled; })}><Magnet className="h-6 w-6" /></button>
+          </div>
+        </div>
+        <div className="fashion-studio-help-buttons" data-studio-chrome>
+          <button type="button" className="fashion-studio-round-button" aria-label="ヘルプ" title="ヘルプ" onClick={() => setHelpOpen(true)}><BookOpen className="h-5 w-5" /></button>
+          <button type="button" className={`fashion-studio-round-button${shortcutsOpen ? ' is-on' : ''}`} aria-label="ショートカット" title="ショートカット" aria-pressed={shortcutsOpen} onClick={() => setShortcutsOpen(open => !open)}><Keyboard className="h-5 w-5" /></button>
+        </div>
+        {shortcutsOpen && <StudioShortcutsPanel onClose={() => setShortcutsOpen(false)} />}
+        {helpOpen && <StudioHelpDialog onClose={() => setHelpOpen(false)} />}
+        {themeSlot && createPortal(<button type="button" data-testid="studio-theme-toggle" aria-label={studioTheme === 'light' ? 'ダークモードに切り替え' : 'ライトモードに切り替え'} title={studioTheme === 'light' ? 'ダークモードに切り替え' : 'ライトモードに切り替え'}
+          onClick={() => setStudioTheme(theme => theme === 'light' ? 'dark' : 'light')}
+          className="ml-4 flex size-8 items-center justify-center rounded-lg text-neutral-300 transition hover:bg-white/10 hover:text-white">{studioTheme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>, themeSlot)}
 
         <div className="fashion-studio-source-points" aria-label="ポイント"><Sparkles className="h-4 w-4" />{visible?.remainingUnits?.toLocaleString('en-US') ?? '未確認'}</div>
         <div className="fashion-studio-source-image-search" aria-label="画像検索"><Search className="h-4 w-4" />画像検索<span className="ml-auto">☷<span className="inline-block w-4" aria-hidden="true" />⇧⌄</span></div>
