@@ -77,6 +77,17 @@ export function printEditRegionMask(printAlpha: Uint8ClampedArray, width: number
   return mask;
 }
 
+/**
+ * The composite's size: the garment's own resolution, its long edge capped at OUTPUT_MAX_EDGE (Light-class 1696×2528, and
+ * inside the protected edit's 4096 px / 10 MB source limits), never smaller than the editor's working size. Exported for tests.
+ */
+export const OUTPUT_MAX_EDGE = 2528;
+export function outputSize(naturalWidth: number, naturalHeight: number, working: { width: number; height: number }) {
+  const scale = Math.min(1, OUTPUT_MAX_EDGE / Math.max(naturalWidth, naturalHeight));
+  const width = Math.round(naturalWidth * scale), height = Math.round(naturalHeight * scale);
+  return width >= working.width && height >= working.height ? { width, height } : { width: working.width, height: working.height };
+}
+
 /** Reorders the stack (index 0 is the bottom layer). Exported for tests. */
 export function movePlacementLayer(placements: PrintPlacement[], id: string, move: LayerMove): PrintPlacement[] {
   const index = placements.findIndex((item) => item.id === id);

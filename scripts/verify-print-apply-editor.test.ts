@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { cutoutDrawRect, fitPlacementToBounds, initialPlacementGeometry, maskBounds, movePlacementLayer, printEditRegionMask, regionAtPoint, type PrintPlacement } from '../src/components/lightchain/printPlacement.ts';
+import { cutoutDrawRect, fitPlacementToBounds, initialPlacementGeometry, maskBounds, movePlacementLayer, OUTPUT_MAX_EDGE, outputSize, printEditRegionMask, regionAtPoint, type PrintPlacement } from '../src/components/lightchain/printPlacement.ts';
 import { CLOTH_PARTS, clothPartMaskRgba, clothPartsClassMap, clothPartsInputTensorData, foundClothParts } from '../src/features/printing/selection/clothPartsMath.ts';
 
 const editor = readFileSync(new URL('../src/components/lightchain/PrintApplyEditor.tsx', import.meta.url), 'utf8');
@@ -59,6 +59,19 @@ test('AIマスク認識 answers in seconds like Light: the GPU session is warmed
   assert.match(client, /const RESULT_CACHE = 'heavy-cloth-parts-results-v1';/);
   assert.match(client, /const cached = await readCachedResult\(key\);/);
   assert.match(client, /void writeCachedResult\(key, fresh\);/);
+});
+
+test('the composite keeps the garment resolution (up to 2528 px), so results are no longer 859×1280 (2026-11-11)', () => {
+  assert.match(editor, /await composeAt\(outputSize\(garment\.naturalWidth, garment\.naturalHeight, size\)\)/);
+  assert.match(editor, /context\.drawImage\(drawPrintLayer\(printImages, hasMask \? mask : null, placements, out\), 0, 0\);/);
+  // A very busy photo over the protected edit's 10 MB source limit falls back to the working size.
+  assert.match(editor, /if \(blob\.size > COMPOSITE_MAX_BYTES\) \(\{ blob, editMaskDataUrl \} = await composeAt\(size\)\);/);
+  // The protected edit needs the mask at the source's size: the region is scaled to the composite.
+  assert.match(editor, /scaledContext\.drawImage\(regionCanvas, 0, 0, out\.width, out\.height\);/);
+  assert.equal(OUTPUT_MAX_EDGE, 2528);
+  assert.deepEqual(outputSize(1696, 2528, { width: 859, height: 1280 }), { width: 1696, height: 2528 });
+  assert.deepEqual(outputSize(3000, 4000, { width: 960, height: 1280 }), { width: 1896, height: 2528 });
+  assert.deepEqual(outputSize(800, 600, { width: 800, height: 600 }), { width: 800, height: 600 });
 });
 
 test('cloth parts math follows rembg u2net_cloth_seg: max-normalised ImageNet input, argmax classes, parts over 1%', () => {
