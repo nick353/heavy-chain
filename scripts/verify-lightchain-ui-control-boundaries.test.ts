@@ -253,10 +253,17 @@ test('Agent parity starts with the expanded project sidebar and exposes Lightcha
   assert.match(sidebar, /aria-label="ホームに戻る"/);
   assert.match(sidebar, /<PanelLeftClose className="h-4 w-4" \/>/);
   assert.match(sidebar, /<FolderPlus className="h-4 w-4" \/>/);
-  assert.match(source, /aria-label="添付を追加"/);
+  // Light's 添付を追加 (2026-11-12): a menu with ファイル and 画像, shared by the start input and the task's input.
+  const attach = await readFile(new URL('../src/features/agent/AgentAttachMenu.tsx', import.meta.url), 'utf8');
+  const attachments = await readFile(new URL('../src/features/agent/agentAttachments.ts', import.meta.url), 'utf8');
+  assert.match(source, /<AgentAttachMenu brandId=\{currentBrand\?\.id \?\? null\}/);
   assert.match(source, /data-testid=\{workspaceStyle\.kind === 'agent' \? 'lightchain-agent-quick-start' : undefined\}/);
-  assert.match(source, /aria-label="アップロードするファイルを選択"/);
-  assert.match(source, /aria-label="アップロードする画像を選択"/);
+  assert.match(attach, /aria-label="添付を追加"/);
+  assert.match(attach, /role="menuitem"[\s\S]*ファイル[\s\S]*role="menuitem"[\s\S]*画像/);
+  assert.match(attach, /aria-label="添付するファイルを選択"/);
+  assert.match(attach, /aria-label="添付する画像を選択"/);
+  assert.match(attachments, /AGENT_FILE_ACCEPT = '\.xlsx,\.pdf,\.ppt,\.pptx,\.doc,\.docx'/);
+  assert.match(attachments, /AGENT_IMAGE_ACCEPT = '\.jpg,\.jpeg,\.png,\.avif,\.webp'/);
   assert.match(source, /aria-label=\{workspaceStyle\.kind === 'agent' \? '送信' : 'AI生成'\}/);
 });
 

@@ -8,7 +8,8 @@ import { cloudflareDataPlane, type CloudflareCanvasDocument, type CloudflareDesi
  * same request instead of sending another one.
  */
 export * from './agentFlow';
-import { AGENT_TASK_CONVERSATION_PREFIX, AGENT_TASK_KIND, readAgentTask, type AgentAssistantStep, type AgentScene, type AgentTask, type AgentTaskDocument } from './agentFlow';
+import { AGENT_TASK_CONVERSATION_PREFIX, AGENT_TASK_KIND, readAgentTask, type AgentAssistantStep, type AgentAttachment, type AgentScene, type AgentTask, type AgentTaskDocument } from './agentFlow';
+export * from './agentMerch';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 
@@ -49,14 +50,17 @@ export async function loadAgentTask(taskId: string): Promise<AgentTaskDocument |
   return toAgentTaskDocument(await api().getCanvasDocument(taskId));
 }
 
-export async function createAgentTask(input: { brandId: string; scene: AgentScene; subtype: string; prompt: string; profile: string; project: string | null }): Promise<AgentTaskDocument> {
+export const AGENT_CONVERSATION_SUBTYPES: readonly string[] = ['新商品企画', '顧客提案'];
+export async function createAgentTask(input: { brandId: string; scene: AgentScene; subtype: string; prompt: string; profile: string; project: string | null; attachments?: AgentAttachment[] }): Promise<AgentTaskDocument> {
   const id = crypto.randomUUID();
   const title = promptAgentTaskTitle(input.prompt);
   const task: AgentTask = { kind: AGENT_TASK_KIND, version: 1, scene: input.scene, subtype: input.subtype, prompt: input.prompt.slice(0, 2400),
     profile: input.profile.slice(0, 800), project: input.project, createdAt: new Date().toISOString(), rounds: [], choice: null, plan: null, image: null,
-    // Light runs the conversation (requirements → research scope → research) for 新商品企画 (planMode=newProduct, 2026-11-11);
-    // its テーマ企画 (planMode=plan) goes straight to the themes, with web sources under 参考資料.
-    ...(input.subtype === '新商品企画' ? { flow: 'conversation' as const, requirements: null, notes: [], aligned: null, scope: null, research: null } : { notes: [] }) };
+    // Light runs the conversation (requirements → research scope → research → directions → 商品構成 → AI designs → plan) for
+    // 新商品企画 (planMode=newProduct) and 顧客提案 (planMode=clientProposal, 2026-11-12); its テーマ企画 (planMode=plan) goes
+    // straight to the themes, with web sources under 参考資料.
+    ...(AGENT_CONVERSATION_SUBTYPES.includes(input.subtype) ? { flow: 'conversation' as const, requirements: null, notes: [], aligned: null, scope: null, research: null } : { notes: [] }),
+    ...(input.attachments?.length ? { attachments: input.attachments.slice(0, 12) } : {}) };
   const created = await api().createCanvasDocument({ id, brand_id: input.brandId, title, snapshot: { version: 1, name: title, objects: [], agentTask: task } });
   const document = toAgentTaskDocument(created);
   if (!document) throw new Error('agent_task_create_failed');

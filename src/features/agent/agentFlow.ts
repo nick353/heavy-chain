@@ -16,14 +16,23 @@ export const AGENT_SUBTYPES: Record<AgentScene, readonly string[]> = {
 export const AGENT_TASK_CONVERSATION_PREFIX = 'heavy-agent-';
 
 export type AgentStepState = 'running' | 'completed' | 'failed' | 'unknown';
-export type AgentAssistantStep = { requestId: string; state: AgentStepState; content?: string; errorCode?: string };
+/** `at`: when the step was asked for; a 「修正・補足する」 note written after it asks for a revised one. */
+export type AgentAssistantStep = { requestId: string; state: AgentStepState; content?: string; errorCode?: string; at?: string };
 /** `at`: when the round was asked for; a 「修正・補足する」 note written after it asks for a revised round. */
 export type AgentRound = { step: AgentAssistantStep; summary: string; themes: string[]; at?: string };
 export type AgentImageStep = { requestId: string; state: AgentStepState; prompt: string; jobId?: string; imageId?: string; storagePath?: string; errorCode?: string };
 /** Where in the conversation a note was written; it is shown after that stage's block. */
-export type AgentNoteStage = 'requirements' | 'scope' | 'research' | 'themes' | 'plan';
-/** The bottom input (「条件を追加、または続けて質問…」): the user's text and the assistant's answer. */
-export type AgentNote = { id: string; text: string; at: string; stage: AgentNoteStage; reply: AgentAssistantStep };
+export type AgentNoteStage = 'requirements' | 'scope' | 'research' | 'themes' | 'plan' | 'structure' | 'designs' | 'final';
+/** The bottom input (「条件を追加、または続けて質問…」): the user's text and the assistant's answer; `attachments` are ids in `task.attachments`. */
+export type AgentNote = { id: string; text: string; at: string; stage: AgentNoteStage; reply: AgentAssistantStep; attachments?: string[] };
+/** An image the task generates with Heavy's own image service: one per direction (参考スタイル) or per style (スタイルを生成). `pending` is not sent yet. */
+export type AgentImageState = AgentStepState | 'pending';
+export type AgentStyleImage = {
+  key: string; code: string; name: string; category: string; prompt: string; requestId: string; state: AgentImageState;
+  jobId?: string; imageId?: string; storagePath?: string; errorCode?: string; at?: string;
+};
+/** Light's 添付を追加 (ファイル / 画像): a file keeps the text read from it, an image is stored and sent to the assistant as a reference. */
+export type AgentAttachment = { id: string; kind: 'file' | 'image'; name: string; size: number; at: string; text?: string; imageId?: string; storagePath?: string };
 /** Light's 「調査範囲を確認」: values are Light's (中国/日本/北美/欧洲/非洲 and platform names). */
 export type AgentResearchScope = { regions: string[]; ec: string[]; sns: string[]; other: string; at: string };
 export type AgentTask = {
@@ -50,6 +59,16 @@ export type AgentTask = {
   aligned?: { at: string } | null;
   scope?: AgentResearchScope | null;
   research?: AgentAssistantStep | null;
+  /** Light's steps after the directions (2026-11-12): 商品構成計画 (顧客提案: スタイルマッピング計画) → 「AIデザイン修正の生成へ進む」 →
+   * series language and per-style design → one AI image per style → 「最終の…に使用するスタイル画像を選択」 → the final plan. */
+  directionImages?: { round: string; images: AgentStyleImage[] } | null;
+  structure?: AgentAssistantStep | null;
+  proceed?: { at: string } | null;
+  design?: AgentAssistantStep | null;
+  designs?: AgentStyleImage[] | null;
+  styleChoice?: { keys: string[]; at: string } | null;
+  final?: AgentAssistantStep | null;
+  attachments?: AgentAttachment[];
 };
 export type AgentTaskDocument = { id: string; title: string; revision: number; updatedAt: string; task: AgentTask; snapshot: Record<string, unknown> };
 
@@ -128,10 +147,30 @@ export function agentResearchSteps(scope: Pick<AgentResearchScope, 'regions' | '
 
 /** Every planning request stays under the server's cap for agent requests (16,000 characters): each part is bounded. */
 export const AGENT_PROMPT_BUDGET = 15000;
+/** What the attached files say and which images are attached; the images themselves go with the request as references. */
+export function agentAttachmentLines(task: Pick<AgentTask, 'attachments'>, budget = 3000): string[] {
+  const list = task.attachments ?? [];
+  if (!list.length) return [];
+  // The newest files first, each with an equal share of the budget; the whole block never passes the budget.
+  const files = list.filter(item => item.kind === 'file' && item.text).slice(-4);
+  const each = files.length ? Math.floor(budget / files.length) - 60 : 0;
+  const images = list.filter(item => item.kind === 'image').map(item => item.name.slice(0, 60));
+  return [
+    ...files.map(item => `添付資料「${item.name.slice(0, 40)}」の内容（抜粋）:\n${item.text!.slice(0, Math.max(100, each))}`),
+    images.length ? `添付画像（参考として一緒に送っています）: ${images.slice(-AGENT_REFERENCE_IMAGES).join('、').slice(0, 260)}` : '',
+  ].filter(Boolean);
+}
+/** The newest attached images are sent with every request as references (the server allows up to 16). */
+export const AGENT_REFERENCE_IMAGES = 4;
+export function agentReferenceImages(task: Pick<AgentTask, 'attachments'>) {
+  return (task.attachments ?? []).filter(item => item.kind === 'image' && item.imageId && item.storagePath).slice(-AGENT_REFERENCE_IMAGES)
+    .map((item, order) => ({ order, kind: 'upload' as const, imageId: item.imageId!, storagePath: item.storagePath!, name: item.name.slice(0, 120) || '添付画像' }));
+}
 const contextLines = (task: AgentTask) => [
   `業務シーン: ${task.scene}（${task.subtype}）。目的: ${sceneGuide[task.scene]}。`,
   task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile.slice(0, 1000)}` : '',
   `依頼: ${task.prompt.slice(0, 2000)}`,
+  ...agentAttachmentLines(task, 1800),
 ];
 /**
  * A request the server turned away (bad or oversized input, a conflicting resend) or a request it never stored (404 on
@@ -162,8 +201,18 @@ const REQUIREMENT_FORMAT = [
   '[補足が必要]',
   '①… ②… ③…（企画の結果を大きく左右するのに依頼に書かれていない確認事項を最大3つ、1行で。例: 価格帯（通貨・上下限）、販売チャネル、総スタイル数・ローンチ時期）',
 ].join('\n');
+/** Light's 顧客提案 numbers the client's requirements (「顧客要件の整理と要件IDの付与」) and its directions cite them (R03). */
+const CLIENT_REQUIREMENT_FORMAT = [
+  '[要件]',
+  'シリーズ名：…（提案するコレクションの短い名前。例: 2027SSレディースコレクション）',
+  'R01 ブランドの位置づけ：…', 'R02 市場・ターゲット：…', 'R03 …：…',
+  '（クライアントの要望・重点アイテム・提案に含める項目を、R01から順に要件IDを付けて1行ずつ書く。要望が複数あれば1つずつ別の行にする。依頼にない項目は「未指定」、参考画像がなければ「参考画像：未アップロード（画像・参考資料なし）」と書く）',
+  '[補足が必要]',
+  '①… ②… ③…（提案の結果を大きく左右するのに依頼に書かれていない確認事項を最大3つ、1行で。例: 価格帯（通貨・上下限）、販売チャネル、総スタイル数・ローンチ時期）',
+].join('\n');
+const requirementFormat = (task: Pick<AgentTask, 'subtype'>) => task.subtype === '顧客提案' ? CLIENT_REQUIREMENT_FORMAT : REQUIREMENT_FORMAT;
 export function agentRequirementsPrompt(task: AgentTask): string {
-  return [...contextLines(task), 'この依頼を読み、企画の要件を整理してください。次の形式だけで答えてください。', REQUIREMENT_FORMAT].filter(Boolean).join('\n');
+  return [...contextLines(task), 'この依頼を読み、企画の要件を整理してください。次の形式だけで答えてください。', requirementFormat(task)].filter(Boolean).join('\n');
 }
 export function agentNotePrompt(task: AgentTask, note: Pick<AgentNote, 'text' | 'stage'>): string {
   const requirements = effectiveAgentRequirements(task);
@@ -172,9 +221,12 @@ export function agentNotePrompt(task: AgentTask, note: Pick<AgentNote, 'text' | 
     ...contextLines(task),
     requirements ? `現在の要件:\n${requirements.slice(0, 2400)}` : '',
     task.research?.state === 'completed' && task.research.content ? `ウェブ調査の結果（抜粋）:\n${parseAgentResearch(task.research.content).report.slice(0, 1500)}` : '',
+    task.choice ? `選択した方向性: ${task.choice.theme.slice(0, 400)}` : '',
+    task.structure?.state === 'completed' && task.structure.content && ['structure', 'designs', 'final'].includes(note.stage) ? `商品構成計画（抜粋）:\n${task.structure.content.slice(0, 2000)}` : '',
+    note.stage === 'structure' ? '（この書き込みのあと商品構成計画を作り直します。修正の依頼なら、どう反映するかを書いてください）' : '',
     `ユーザーの追加の書き込み: ${note.text.slice(0, 2000)}`,
     updating
-      ? `最初に「[返答]」の行のあとに、追加の内容を受け取ったことや質問への答えを1〜3文で書き、続けて要件を更新して次の形式で書いてください。\n${REQUIREMENT_FORMAT}`
+      ? `最初に「[返答]」の行のあとに、追加の内容を受け取ったことや質問への答えを1〜3文で書き、続けて要件を更新して次の形式で書いてください。\n${requirementFormat(task)}`
       : '「[返答]」の行のあとに、質問への答え、または追加の条件を以降の企画に反映することを1〜4文で書いてください。',
   ].filter(Boolean).join('\n');
 }
@@ -188,7 +240,7 @@ export function parseAgentRequirements(content: string): ParsedRequirements {
   const requirements = slice(reqAt, /\[要件\]|【要件】/, missAt);
   const missingText = slice(missAt, /\[補足が必要\]|【補足が必要】/, -1);
   const lines = requirements.split('\n').map(line => line.trim().replace(/^[-・*]\s*/, '')).filter(Boolean)
-    .map(line => { const match = /^([^：:]{1,12})[：:]\s*(.*)$/.exec(line); return match ? { label: match[1].trim(), value: match[2].trim() } : { label: '', value: line }; });
+    .map(line => { const match = /^([^：:]{1,20})[：:]\s*(.*)$/.exec(line); return match ? { label: match[1].trim(), value: match[2].trim() } : { label: '', value: line }; });
   const missing = missingText.split(/\n|(?=[①②③④⑤])/).map(item => item.trim().replace(/^[-・*]\s*/, '')).filter(Boolean).slice(0, 5);
   return { reply: reply || (reqAt < 0 && missAt < 0 ? text.trim() : ''), lines, missing };
 }
@@ -208,7 +260,9 @@ export function agentResearchPrompt(task: AgentTask): string {
     '「## 市場と気候」「## トレンド」「## プラットフォームと競合の動き」「## ターゲットと着用シーン」「## 価格と販売ポテンシャル」「## 企画への示唆」。',
   ].filter(Boolean).join('\n');
 }
-export type ParsedResearch = { report: string; sections: ParsedPlan['sections']; sources: Array<{ title: string; url: string }>; search: 'ok' | 'unavailable' | 'error' };
+/** `quote`: the sentence the report cited from the page (Light shows it under the source in 参考資料). */
+export type AgentSource = { title: string; url: string; quote?: string };
+export type ParsedResearch = { report: string; sections: ParsedPlan['sections']; sources: AgentSource[]; search: 'ok' | 'unavailable' | 'error' };
 export function parseAgentResearch(content: string): ParsedResearch {
   const text = content.replace(/\r/g, '');
   const sourcesAt = text.search(/^\[出典\]$/m);
@@ -217,8 +271,8 @@ export function parseAgentResearch(content: string): ParsedResearch {
   const sources: ParsedResearch['sources'] = [];
   if (sourcesAt >= 0) {
     for (const line of text.slice(sourcesAt).split('\n').slice(1)) {
-      const match = /^-\s*(.*?)\s*\|\s*(https?:\/\/\S+)\s*$/.exec(line.trim());
-      if (match) sources.push({ title: match[1] || match[2], url: match[2] });
+      const match = /^-\s*(.*?)\s*\|\s*(https?:\/\/\S+?)\s*(?:\|\s*(.*?))?\s*$/.exec(line.trim());
+      if (match) sources.push({ title: match[1] || match[2], url: match[2], ...(match[3] ? { quote: match[3] } : {}) });
       else if (/^\[検索\]/.test(line.trim())) break;
     }
   }
@@ -258,7 +312,9 @@ export function themePrompt(task: AgentTask): string {
         : '依頼に関係する市場・トレンド・着用シーンの要点を4〜6文で書く。あなたの知識に基づいて書き、出典やURLは書かない。',
     '[テーマ]',
     ...(task.flow === 'conversation'
-      ? ['- 方向性の名前（主なアイテム）｜特徴を2文で（素材・シルエット・色・ディテール）｜採用をすすめる理由を1文で（調査の根拠を入れる）', 'の形式でちょうど4行。区切りは全角の「｜」。']
+      ? ['- 方向性の名前（主なアイテム）｜特徴を2文で（素材・シルエット・色・ディテール）｜採用をすすめる理由を1文で（調査の根拠を入れる）｜この方向の代表的な商品1点の写真を作るための英語の短い説明（服の種類・色・素材・ディテール。人物・ブランド名・「style」という単語は使わない）',
+        'の形式でちょうど4行。区切りは全角の「｜」。',
+        task.subtype === '顧客提案' ? '特徴と理由では、対応する要件ID（例: 通勤実用性(R03)）を括弧で示す。' : '']
       : ['- テーマ名：一文の説明', 'の形式でちょうど4行。']),
   ].filter(Boolean).join('\n');
 }
@@ -298,12 +354,16 @@ export function parseThemeResponse(content: string): { summary: string; themes: 
   return { summary: summaryPart.slice(0, 2400), themes };
 }
 
-/** Light's direction card: name, what it is, why it is recommended (「名前｜説明｜推奨」, or the older 「名前：説明」). */
-export function parseAgentDirection(theme: string): { name: string; description: string; recommendation: string } {
+/**
+ * Light's direction card: name, what it is, why it is recommended and (since 2026-11-12) an English description of one
+ * product for its reference image (「名前｜説明｜推奨｜image」, the older 「名前｜説明｜推奨」 or 「名前：説明」).
+ */
+export function parseAgentDirection(theme: string): { name: string; description: string; recommendation: string; imagePrompt: string } {
   const parts = theme.split('｜').map(part => part.trim());
-  if (parts.length >= 2) return { name: parts[0], description: parts[1], recommendation: parts.slice(2).join(' ') };
+  if (parts.length >= 4) return { name: parts[0], description: parts[1], recommendation: parts[2], imagePrompt: parts.slice(3).join(' ') };
+  if (parts.length >= 2) return { name: parts[0], description: parts[1], recommendation: parts.slice(2).join(' '), imagePrompt: '' };
   const match = /^([^：:]{1,60})[：:]\s*(.+)$/.exec(theme.trim());
-  return match ? { name: match[1].trim(), description: match[2].trim(), recommendation: '' } : { name: theme.trim(), description: '', recommendation: '' };
+  return match ? { name: match[1].trim(), description: match[2].trim(), recommendation: '', imagePrompt: '' } : { name: theme.trim(), description: '', recommendation: '', imagePrompt: '' };
 }
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);

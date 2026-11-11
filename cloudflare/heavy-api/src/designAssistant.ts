@@ -12,7 +12,9 @@ export const DESIGN_ASSISTANT_DAILY_LIMIT = 1000;
 export const DESIGN_ASSISTANT_REFERENCE_LIMIT = 16;
 export const DESIGN_ASSISTANT_TIMEOUT_MS = 60_000;
 /** Planning documents are longer than chat replies. */
-export const AGENT_TEXT_TIMEOUT_MS = 90_000;
+/** The 商品構成計画 and the final plan are long answers, so agent text gets more time (and room) than the chat replies. */
+export const AGENT_TEXT_TIMEOUT_MS = 150_000;
+export const AGENT_TEXT_MAX_TOKENS = 9000;
 const MAX_BODY_BYTES = 256 * 1024;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_REFERENCE_BYTES = 32 * 1024 * 1024;
@@ -211,10 +213,10 @@ const AGENT_RESEARCH_SYSTEM_PROMPT = [
   `You can search at most ${AGENT_RESEARCH_MAX_USES} times, so make each query broad enough to cover one area of the scope. Base the report on what the results say, with the figures and examples they give. Never write that data could not be obtained when searches returned results; only when every search failed or found nothing, say so in one line and continue from general knowledge.`,
   'When the research is done, write the line "[調査結果]" and then only the final report in the requested format.',
 ].join('\n\n');
-/** `agent-research` content: the report, then `[出典]` lines "- title | url", then `[検索] ok|unavailable|error:<codes>`. */
-export function formatAgentResearchContent(result: { text: string; sources: { title: string; url: string }[]; searchUsed: boolean; searchErrors: string[] }) {
+/** `agent-research` content: the report, then `[出典]` lines "- title | url | cited sentence", then `[検索] ok|unavailable|error:<codes>`. */
+export function formatAgentResearchContent(result: { text: string; sources: { title: string; url: string; quote?: string }[]; searchUsed: boolean; searchErrors: string[] }) {
   const clean = (value: string) => value.replace(/[\r\n|]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const sources = result.sources.map(source => `- ${clean(source.title) || source.url} | ${source.url}`);
+  const sources = result.sources.map(source => `- ${clean(source.title) || source.url} | ${source.url}${source.quote && clean(source.quote) ? ` | ${clean(source.quote)}` : ''}`);
   const status = result.searchUsed ? 'ok' : result.searchErrors.includes('web_search_unavailable') || !result.searchErrors.length ? 'unavailable' : `error:${result.searchErrors.join(',')}`;
   return [result.text.trim(), '', '[出典]', ...sources, '', `[検索] ${status}`].join('\n');
 }
@@ -236,7 +238,7 @@ async function infer(env: Env, input: Input, parts: ContentPart[], provider: Ass
       const result = await callClaudeResearch(env, { system: AGENT_RESEARCH_SYSTEM_PROMPT, messages, model: provider.model, timeoutMs: AGENT_RESEARCH_TIMEOUT_MS });
       return { response: formatAgentResearchContent(result), usage: result.usage };
     }
-    const result = await callClaudeMessages(env, { system, messages, maxTokens: input.mode ? 6000 : 2560, model: provider.model, timeoutMs: input.mode ? AGENT_TEXT_TIMEOUT_MS : DESIGN_ASSISTANT_TIMEOUT_MS });
+    const result = await callClaudeMessages(env, { system, messages, maxTokens: input.mode ? AGENT_TEXT_MAX_TOKENS : 2560, model: provider.model, timeoutMs: input.mode ? AGENT_TEXT_TIMEOUT_MS : DESIGN_ASSISTANT_TIMEOUT_MS });
     return { response: result.text, usage: result.usage };
   }
   const providerInput: Ai_Cf_Meta_Llama_4_Scout_17B_16E_Instruct_Messages = {
