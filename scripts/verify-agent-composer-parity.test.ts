@@ -34,3 +34,8 @@ test('the task page retries its first automatic steps before showing a failure',
   assert.match(task, /guard\(\(\) => startPlan\(theme\), '企画書の作成を開始できませんでした。', 'plan'\)/);
   assert.match(task, /if \(used < 2 && retryKey\) \{[\s\S]*?loadAgentTask\(taskId\)/);
 });
+
+test('AIグラフィックデザイン leaves the settings panel empty before a reference, like Light', () => {
+  const graphic = readFileSync(new URL('../src/pages/LightchainGraphicDesignPage.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(graphic, /graphic-design-settings-empty/);
+});
