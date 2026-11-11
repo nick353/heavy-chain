@@ -13,11 +13,13 @@ const errorCodes: Record<OpenAIImageErrorCategory, string> = {
 };
 const SAFE_PROVIDER_ERROR_CODES = new Set([
   'invalid_api_key', 'invalid_request_error', 'insufficient_quota', 'rate_limit_exceeded',
-  'model_not_found', 'content_policy_violation', 'billing_hard_limit_reached',
+  'model_not_found', 'content_policy_violation', 'billing_hard_limit_reached', 'moderation_blocked',
 ]);
 
 const SAFE_PROVIDER_ERROR_TYPES = new Set([
   'invalid_request_error', 'authentication_error', 'permission_error', 'rate_limit_error', 'insufficient_quota', 'server_error', 'tokens', 'requests',
+  // The image safety system's refusal (code moderation_blocked); 2026-11-11 it was dropped and read as a lost connection.
+  'image_generation_user_error',
 ]);
 
 // Retain only fixed categories, HTTP status, allowlisted codes and a bounded
@@ -36,7 +38,9 @@ export class OpenAIImageError extends Error {
     // A per-minute/day limit is still a rejection (nothing ran), but the person should wait, not change the input;
     // an empty balance (10/29: type insufficient_quota, no code) needs someone to top it up.
     const emptyBalance = category === 'request_rejected' && (providerCode === 'insufficient_quota' || providerType === 'insufficient_quota');
-    this.errorCode = emptyBalance ? 'image_provider_quota_exhausted' : rateLimited ? 'image_provider_rate_limited' : errorCodes[category];
+    const moderationBlocked = category === 'request_rejected' && providerCode === 'moderation_blocked';
+    this.errorCode = emptyBalance ? 'image_provider_quota_exhausted' : rateLimited ? 'image_provider_rate_limited'
+      : moderationBlocked ? 'image_provider_moderation_blocked' : errorCodes[category];
     this.status = status;
     this.providerCode = typeof providerCode === 'string' && SAFE_PROVIDER_ERROR_CODES.has(providerCode) ? providerCode : undefined;
     this.providerRequestId = providerRequestId && /^req[-_][a-zA-Z0-9_-]{1,96}$/.test(providerRequestId) ? providerRequestId : undefined;
@@ -162,7 +166,7 @@ function safeProviderError(status: number, data: unknown, requestId: string | nu
   const record = asRecord(data);
   const providerError = asRecord(record?.error);
   const explicitRejection = [400, 401, 403, 404, 413, 415, 422, 429].includes(status) &&
-    ['invalid_request_error', 'authentication_error', 'permission_error', 'rate_limit_error', 'insufficient_quota']
+    ['invalid_request_error', 'authentication_error', 'permission_error', 'rate_limit_error', 'insufficient_quota', 'image_generation_user_error']
       .includes(String(providerError?.type ?? ''));
   // A server/gateway error, timeout response or opaque HTTP error does not
   // establish that the provider rejected the inference before executing it.
@@ -225,7 +229,7 @@ export async function runOpenAIImage(
     return observeResponse(fetchImpl, `${baseURL(env)}/images/generations`, {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model, prompt: promptFor(candidate), n: 1, size: imageSize(input.width, input.height, model) }),
+      body: JSON.stringify({ model, prompt: promptFor(candidate), n: 1, size: imageSize(input.width, input.height, model), moderation: 'low' }),
     });
   } else {
     const form = new FormData();
@@ -237,6 +241,10 @@ export async function runOpenAIImage(
     // Left on auto, a print or pattern came back with a transparent ground (10/29: white was asked, the PNG was
     // alpha 0 over dark green). Heavy never asks for transparency (the contract refuses it), so the ground is opaque.
     form.set('background', 'opaque');
+    // Apparel work routinely shows innerwear and swimwear on models (Light's 下着のフィッティング). On the default level the
+    // image safety system refused the studio's innerwear sample (2026-11-11, 400 moderation_blocked); `low` is the
+    // documented, less restrictive level for GPT image models and keeps OpenAI's usage policies in force.
+    form.set('moderation', 'low');
     // Small repeats (dots, seams, buttons) keep their scale only at high quality (Light parity 2026-10-29).
     if (HIGH_FIDELITY_EDIT_MODELS.has(model)) { form.set('input_fidelity', 'high'); form.set('quality', 'high'); }
     input.references.forEach((reference, index) => {

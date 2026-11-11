@@ -184,6 +184,10 @@ export function studioErrorMessage(error: string) {
   if (/rights_confirmation_required/.test(error)) return '画像の利用権限を確認できませんでした。もう一度お試しください。';
   if (/quota|insufficient|points?_/.test(error)) return 'ポイントが不足しています。';
   if (/timeout|timed_out/.test(error)) return '生成に時間がかかっています。しばらくしてから結果を確認してください。';
+  if (/moderation_blocked/.test(error)) return '画像のAIの安全確認で断られました。肌の多い画像は断られることがあります。画像や指示を変えてお試しください。';
+  if (/image_provider_transport_uncertain|transport/.test(error)) return '画像のAIとの通信が途中で切れました。もう一度「AI生成」を押してください。';
+  // Messages the pipeline already writes for people (e.g. 同じ入力の生成依頼が未照合です) are shown as they are.
+  if (/[ぁ-んァ-ヶ一-龠]/.test(error)) return error;
   return '処理に失敗しました。もう一度お試しください。';
 }
 
