@@ -3,7 +3,7 @@ import { BringToFront, Brush, ChevronDown, ChevronsDown, ChevronsUp, Contrast, C
 import toast from 'react-hot-toast';
 import { buildMaterialCutoutDataUrl } from '../../lib/workspaceMaterialReferences';
 import { analyzeClothParts, type ClothPartLabel, type ClothPartsAnalysis } from '../../features/printing/selection/clothParts';
-import { fitPlacementToBounds, initialPlacementGeometry, maskBounds, movePlacementLayer, placementAspect, printEditRegionMask, regionAtPoint, type LayerMove, type PrintPlacement } from './printPlacement';
+import { fitPlacementToBounds, initialPlacementGeometry, maskBounds, movePlacementLayer, outputSize, placementAspect, printEditRegionMask, regionAtPoint, type LayerMove, type PrintPlacement } from './printPlacement';
 import { ShortcutSheetButton } from './EditorImageTools';
 
 export type { PrintPlacement } from './printPlacement';
@@ -104,6 +104,9 @@ export function composePrintsOnGarment(
   context.drawImage(garment, 0, 0, size.width, size.height);
   context.drawImage(drawPrintLayer(prints, mask, placements, size), 0, 0);
 }
+
+/** The protected edit's source limit is 10 MB; keep a margin for the PNG re-encode. */
+const COMPOSITE_MAX_BYTES = 9 * 1024 * 1024;
 
 let placementSequence = 0;
 const newPlacementId = () => `placement-${Date.now().toString(36)}-${(placementSequence += 1)}`;
@@ -459,32 +462,52 @@ export function PrintApplyEditor({ garmentUrl, prints, initialPrintId, initialSt
     if (!garment || !size) return;
     setSaving(true);
     try {
-      const canvas = document.createElement('canvas');
-      canvas.width = size.width; canvas.height = size.height;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('print_apply_canvas_unavailable');
+      // The composite (and so the saved result) keeps the garment's own resolution, up to OUTPUT_MAX_EDGE. Before
+      // 2026-11-11 it used the editor's 1280 px working size and results came back 859×1280 instead of 1696×2528.
       const mask = maskRef.current;
       const maskData = readMask();
       const hasMask = Boolean(maskData && maskBounds(maskData));
-      context.drawImage(garment, 0, 0, size.width, size.height);
-      const layer = drawPrintLayer(printImages, hasMask ? mask : null, placements, size);
-      context.drawImage(layer, 0, 0);
-      let editMaskDataUrl: string | null = null;
+      // The editable region is worked out at the editor size (cheap), then scaled to the composite's size: the
+      // protected edit requires the mask and the source to have the same dimensions.
+      let region: ReturnType<typeof printEditRegionMask> | null = null;
       try {
-        const layerData = layer.getContext('2d')?.getImageData(0, 0, size.width, size.height);
+        const layerData = drawPrintLayer(printImages, hasMask ? mask : null, placements, size).getContext('2d')?.getImageData(0, 0, size.width, size.height);
         if (layerData) {
           const longEdge = Math.max(size.width, size.height);
-          const region = printEditRegionMask(layerData.data, size.width, size.height, {
+          region = printEditRegionMask(layerData.data, size.width, size.height, {
             grow: Math.max(4, Math.round(longEdge * 0.012)), feather: Math.max(2, Math.round(longEdge * 0.006)),
             garmentAlpha: hasMask ? maskData!.data : null,
           });
+        }
+      } catch { region = null; }
+      const composeAt = async (out: { width: number; height: number }) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = out.width; canvas.height = out.height;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('print_apply_canvas_unavailable');
+        context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+        context.drawImage(garment, 0, 0, out.width, out.height);
+        context.drawImage(drawPrintLayer(printImages, hasMask ? mask : null, placements, out), 0, 0);
+        let editMaskDataUrl: string | null = null;
+        if (region) {
           const regionCanvas = document.createElement('canvas');
           regionCanvas.width = size.width; regionCanvas.height = size.height;
           regionCanvas.getContext('2d')?.putImageData(new ImageData(region, size.width, size.height), 0, 0);
-          editMaskDataUrl = regionCanvas.toDataURL('image/png');
+          const scaled = document.createElement('canvas');
+          scaled.width = out.width; scaled.height = out.height;
+          const scaledContext = scaled.getContext('2d');
+          if (scaledContext) {
+            scaledContext.imageSmoothingEnabled = true; scaledContext.imageSmoothingQuality = 'high';
+            scaledContext.drawImage(regionCanvas, 0, 0, out.width, out.height);
+            editMaskDataUrl = scaled.toDataURL('image/png');
+          }
         }
-      } catch { editMaskDataUrl = null; }
-      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => (value ? resolve(value) : reject(new Error('print_apply_encode_failed'))), 'image/png'));
+        const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => (value ? resolve(value) : reject(new Error('print_apply_encode_failed'))), 'image/png'));
+        return { blob, editMaskDataUrl };
+      };
+      // The protected edit accepts a source PNG up to 10 MB; a very busy photo falls back to the working size.
+      let { blob, editMaskDataUrl } = await composeAt(outputSize(garment.naturalWidth, garment.naturalHeight, size));
+      if (blob.size > COMPOSITE_MAX_BYTES) ({ blob, editMaskDataUrl } = await composeAt(size));
       onConfirm(blob, { placements, mask: hasMask ? maskData : null, maskCandidate }, editMaskDataUrl);
     } catch {
       toast.error('プリントを合成できませんでした');
