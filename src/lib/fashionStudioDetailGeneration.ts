@@ -30,6 +30,9 @@ export type FashionStudioGenerationOutcome = {
   artifact?: WorkspaceArtifactBestEffortResult['artifact'];
   document?: CanvasDocumentRecord;
   imageUrl?: string;
+  /** The image service ended the request as failed (e.g. its safety check refused it): nothing is pending, so the person
+   * may change the prompt or images and generate again instead of being held to the same request. */
+  settled?: boolean;
 };
 export type FashionStudioGenerationHandoff = {
   input: FashionStudioGenerationInput;
@@ -76,6 +79,20 @@ type Attempt = {
   baseDocument?: CanvasDocumentRecord;
   outcome?: FashionStudioGenerationOutcome;
   flight?: Promise<FashionStudioGenerationOutcome>;
+  settled?: boolean;
+};
+/**
+ * The edit adapter returns every error as { success: false }, so only two shapes prove the request is over: the
+ * service's own receipt for this request in its terminal failed state, or a rejection before the job was admitted
+ * (the same codes the durable transport discards its pending ID for). A lost or still-running request stays unsettled.
+ * 2026-11-12 production: a refused text generation left only 保存を再試行, which resent the same refused request.
+ */
+export const isSettledImageEditFailure = (result: unknown, requestId: string) => {
+  const value = result && typeof result === 'object' ? result as Record<string, unknown> : {};
+  if (value.success !== false) return false;
+  if (value.state === 'failed' && value.requestId === requestId) return true;
+  const error = typeof value.error === 'string' ? value.error : '';
+  return /_(400|413|422|429)_/.test(error) || /_403_(rights_confirmation_required|legal_safety_prompt_blocked)$/.test(error);
 };
 const feature = 'fashion-studio-detail-generated-result';
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -137,6 +154,7 @@ export const createFashionStudioDetailGeneration = (adapters: FashionStudioGener
           ...(attempt.input.editOptions?.aspectRatio ? { aspectRatio: attempt.input.editOptions.aspectRatio } : {}),
         });
         assertContext(attempt);
+        if (isSettledImageEditFailure(result, attempt.requestId)) attempt.settled = true;
         adapters.assertCompletedImageEditResult(result);
         if (result.requestId !== attempt.requestId || !result.imageUrl?.trim()) throw new Error('fashion_studio_generation_provider_identity_mismatch');
         // Hold completed inference before any persistence; subsequent retries skip it.
@@ -229,7 +247,7 @@ export const createFashionStudioDetailGeneration = (adapters: FashionStudioGener
       try { assertContext(attempt); } catch { stale = true; }
       const outcome: FashionStudioGenerationOutcome = {
         status: stale ? 'stale' : 'failure', requestId: attempt.requestId,
-        stage: attempt.stage, error: message(error),
+        stage: attempt.stage, error: message(error), ...(attempt.settled && !attempt.provider ? { settled: true } : {}),
       };
       if (!stale) attempt.outcome = outcome;
       return outcome;
@@ -275,7 +293,9 @@ export const createFashionStudioDetailGeneration = (adapters: FashionStudioGener
         if (completedAttempt.identity !== identity) return Promise.reject(new Error('fashion_studio_generation_attempt_input_changed'));
         return Promise.resolve(completedAttempt.outcome);
       }
-      if (current && scopeKey(current.input.scope) === scopeKey(captured.scope)) {
+      // A settled failure holds nothing: pressing AI生成 again (same or changed input) starts a new request.
+      const settledFailure = current?.outcome?.status === 'failure' && current.outcome.settled === true;
+      if (current && !settledFailure && scopeKey(current.input.scope) === scopeKey(captured.scope)) {
         if (current.input.logicalAttemptKey === captured.logicalAttemptKey) {
           if (current.identity !== identity) return Promise.reject(new Error('fashion_studio_generation_attempt_input_changed'));
           return run(current);

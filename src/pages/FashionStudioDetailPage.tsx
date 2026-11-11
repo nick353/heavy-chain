@@ -445,7 +445,9 @@ export function FashionStudioDetailPage() {
   const activeGeneration = generation?.scopeKey === scopeKey ? generation : null;
   const activityValue = activity.scopeKey === scopeKey ? activity.value : '';
   const busy = ['preparing', 'generating', 'recovering', 'saving'].includes(activityValue);
-  const recoveryRequired = (activeUpload?.status === 'failure' && activeUpload.recoverable === true) || activeGeneration?.status === 'failure';
+  // A refused (settled) generation holds nothing, so the form stays editable like Light's; only an unknown result is held.
+  const generationHeld = activeGeneration?.status === 'failure' && activeGeneration.settled !== true;
+  const recoveryRequired = (activeUpload?.status === 'failure' && activeUpload.recoverable === true) || generationHeld;
   const mainIdentity = JSON.stringify([scopeKey, detail.roles.main.objectId, detail.roles.main.candidates]);
   const uploadFile = async (file: File | undefined, role: FashionStudioInputRole) => {
     if (!file || !scope || busyRef.current || recoveryRequired) return;
@@ -635,7 +637,7 @@ export function FashionStudioDetailPage() {
   const activityText = ({ preparing: '準備中', generating: '生成中', recovering: '復旧中', saving: '保存中', failure: '失敗', success: '完了' } as Record<string, string>)[activityValue] || 'タスク';
   const activityError = activeUpload?.error || activeGeneration?.error || '';
   useEffect(() => { if (activityError) toast.error(studioErrorMessage(activityError), { id: `studio-error:${activityError}` }); }, [activityError]);
-  const activityContent = <><span role="status">{activityText}</span>{activityError && <span role="alert" className="sr-only">{studioErrorMessage(activityError)}</span>}{activeUpload?.status === 'failure' && activeUpload.recoverable && <button type="button" disabled={busy} onClick={() => void retryUpload()}>保存を再試行</button>}{activeGeneration?.status === 'failure' && <button type="button" disabled={busy} onClick={() => void generate(true)}>保存を再試行</button>}</>;
+  const activityContent = <><span role="status">{activityText}</span>{activityError && <span role="alert" className="sr-only">{studioErrorMessage(activityError)}</span>}{activeUpload?.status === 'failure' && activeUpload.recoverable && <button type="button" disabled={busy} onClick={() => void retryUpload()}>保存を再試行</button>}{generationHeld && <button type="button" disabled={busy} onClick={() => void generate(true)}>保存を再試行</button>}</>;
   const inputControls = <><input ref={mainInputRef} className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" disabled={busy || recoveryRequired} aria-label="メイン画像ファイル" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void uploadFile(file, 'main'); }} /><input ref={referenceInputRef} className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" disabled={busy || recoveryRequired} aria-label="参考画像ファイル" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; uploadReference(file); }} /></>;
   const lightboxView = lightbox && (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-8" role="dialog" aria-label="全画面表示" onClick={() => setLightbox('')}>
