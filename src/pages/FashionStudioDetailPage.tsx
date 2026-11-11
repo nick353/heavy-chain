@@ -25,6 +25,7 @@ import {
   Trash2,
   Undo2,
   X,
+  Zap,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
@@ -48,11 +49,12 @@ import { arrangeStudioNodes, emptyStudioHistory, fitStudioArrangedView, pushStud
   sameStudioPositions, steppedStudioZoom, studioEdgePath, studioNodePositions, studioSnap, undoStudioHistory, withStudioLayout, writeStudioSnapEnabled,
   LIGHT_UNITS_PER_HEAVY, STUDIO_ZOOM_LIMITS, type StudioHistory, type StudioNodeSpec, type StudioPoint, type StudioPositions, type StudioRect,
   type StudioSnapLine } from '../lib/studioCanvas';
-import { DEFAULT_STUDIO_SETTINGS, STUDIO_ASPECT_RATIOS, STUDIO_EXAMPLES, STUDIO_GARMENT_AREAS, STUDIO_MAX_REGION_POINTS, STUDIO_MAX_TEXT_REFERENCES, STUDIO_PERSPECTIVES, STUDIO_TEXT_SAMPLE_PROMPT,
+import { DEFAULT_STUDIO_SETTINGS, STUDIO_ASPECT_RATIOS, STUDIO_EXAMPLES, STUDIO_FLUX_MAX_REFERENCES, STUDIO_QUALITIES, closestStudioAspectRatio, studioFluxRedrawPlan, STUDIO_GARMENT_AREAS, STUDIO_MAX_REGION_POINTS, STUDIO_MAX_TEXT_REFERENCES, STUDIO_PERSPECTIVES, STUDIO_TEXT_SAMPLE_PROMPT,
   STUDIO_UNDERWEAR_NO_MODEL_PROMPT, STUDIO_UNDERWEAR_WITH_MODEL_PROMPT, loadStudioExampleFile, readStudioSettings, studioAspectRatioLabel,
-  studioFunctionPromptText, writeStudioSettings, type StudioAspectRatio, type StudioFunctionId, type StudioGarmentArea, type StudioSettings } from '../lib/fashionStudioExamples';
-import { buildRegionGuideUrl, naturalImageSize, REGION_POINT_COLORS, regionMaskImageData, regionMaskToDataUrl } from '../lib/fashionStudioRegionGuide';
+  studioEditOptions, studioFunctionPromptText, writeStudioSettings, type StudioAspectRatio, type StudioFunctionId, type StudioGarmentArea, type StudioQuality, type StudioSettings } from '../lib/fashionStudioExamples';
+import { buildRegionGuideUrl, naturalImageSize, regionMaskImageData, regionMaskToDataUrl } from '../lib/fashionStudioRegionGuide';
 import { MaskPaintDialog } from '../components/lightchain/MaskPaintDialog';
+import { studioExampleHoldUrls, studioExamplePreviewRoles, withStudioExamplePreview, type StudioExamplePreview } from '../lib/fashionStudioExamplePreview';
 import { StudioFunctionIcon } from '../components/lightchain/StudioFunctionIcon';
 import { StudioHelpDialog, StudioMinimap, StudioShortcutsPanel, StudioZoomControl } from '../components/lightchain/StudioCanvasControls';
 
@@ -72,6 +74,17 @@ const readStudioFunction = (projectId: string): StudioFunctionId => {
     const value = projectId ? window.localStorage.getItem(studioFunctionKey(projectId)) : null;
     return STUDIO_FUNCTIONS.some((item) => item.id === value) ? value as StudioFunctionId : 'text';
   } catch { return 'text'; }
+};
+/** The example's function, settings, instruction and sample mask, written for the project its upload just created, so the
+ * first frame of that project already matches the example shown while it was being saved. */
+const primeExampleProject = (projectId: string, fn: StudioFunctionId) => {
+  try {
+    window.localStorage.setItem(studioFunctionKey(projectId), fn);
+    const sample = examplePrompt(fn); const draftKey = `heavy-fashion-studio-draft:${projectId}`;
+    if (sample && !window.localStorage.getItem(draftKey)) window.localStorage.setItem(draftKey, sample);
+    if (fn === 'region' && !window.localStorage.getItem(regionMaskKey(projectId, 0))) window.localStorage.setItem(regionMaskKey(projectId, 0), REGION_EXAMPLE_MASK);
+  } catch { /* storage unavailable */ }
+  writeStudioSettings(projectId, { ...readStudioSettings(projectId), example: fn });
 };
 const examplePrompt = (fn: StudioFunctionId) => fn === 'text' ? STUDIO_TEXT_SAMPLE_PROMPT : fn === 'underwear' ? STUDIO_UNDERWEAR_WITH_MODEL_PROMPT : '';
 const regionMaskKey = (projectId: string, slot = 0) => `heavy-fashion-studio-region-mask:${projectId}${slot ? `:slot${slot}` : ''}`;
@@ -96,8 +109,16 @@ const ARROW_STEP = 5 / LIGHT_UNITS_PER_HEAVY;
 const resultNodeKey = (objectId: string | null, index: number) => objectId ? `result:${objectId}` : `result-index:${index}`;
 const STUDIO_NEW_PROJECT_FUNCTIONS: readonly StudioFunctionId[] = ['text', 'region', 'underwear', '3d'];
 
-function DetailRoleImage({ candidates, scopeKey, role, alt, className, assertContext, onReady }: {
+/** Light's marks for 画質: a lightning bolt for 1K (快速), HD for 2K and 4K for 4K, each in the same rounded frame. */
+function StudioQualityMark({ quality }: { quality: StudioQuality }) {
+  const frame = 'flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[10px] border-[3px] border-current font-bold';
+  if (quality === '1k') return <span aria-hidden="true" data-quality-mark="quick" className={frame}><Zap className="h-6 w-6" strokeWidth={2.5} /></span>;
+  return <span aria-hidden="true" data-quality-mark={quality} className={`${frame} text-[18px]`}>{quality === '4k' ? '4K' : 'HD'}</span>;
+}
+function DetailRoleImage({ candidates, scopeKey, role, alt, className, assertContext, onReady, holdUrl }: {
   candidates: readonly string[]; scopeKey: string; role: string; alt: string; className: string; assertContext: () => void; onReady?: (url: string) => void;
+  /** Drawn while the saved copy's address is being resolved (the example image it replaces), so the switch does not blink. */
+  holdUrl?: string;
 }) {
   const imageScope = fashionStudioThumbnailScopeKey(null, `${scopeKey}:${role}`, candidates);
   const currentImageScopeRef = useRef(imageScope);
@@ -132,6 +153,7 @@ function DetailRoleImage({ candidates, scopeKey, role, alt, className, assertCon
   };
   return current?.url ? <img key={`${imageScope}:${current.attempt}`} src={current.url} alt={alt} loading="eager"
     className={className} data-image-status={current.status} onLoad={() => event('load')} onError={() => event('error')} />
+    : holdUrl ? <img src={holdUrl} alt={alt} className={className} data-image-status="example" />
     : <span className={`${className} inline-flex items-center justify-center text-neutral-400`} role="status">{alt}なし</span>;
 }
 
@@ -149,6 +171,7 @@ function FashionStudioImageNode({
   staticUrl,
   onExpand,
   onUrl,
+  holdUrl,
 }: {
   candidates: readonly string[];
   scopeKey: string;
@@ -166,6 +189,7 @@ function FashionStudioImageNode({
   onExpand: (url: string) => void;
   /** The shown image's URL, for the node toolbar (ダウンロード, 新しい機能). */
   onUrl?: (url: string) => void;
+  holdUrl?: string;
 }) {
   const [url, setUrl] = useState('');
   const shown = staticUrl || url;
@@ -174,7 +198,7 @@ function FashionStudioImageNode({
       {label && <p className="fashion-studio-flow-node-label">{label}</p>}
       <figure className={`fashion-studio-source-image-node ${className}`} data-testid={testId} data-studio-object-id={objectId ?? undefined} data-selected={selected} onDragStart={event => event.preventDefault()}>
         {staticUrl ? <img src={staticUrl} alt={alt} className="block h-auto w-full" draggable={false} />
-          : <DetailRoleImage candidates={candidates} scopeKey={scopeKey} role={role} assertContext={assertContext} alt={alt} className="block h-auto min-h-[200px] w-full object-contain" onReady={value => { setUrl(value); onUrl?.(value); }} />}
+          : <DetailRoleImage candidates={candidates} scopeKey={scopeKey} role={role} assertContext={assertContext} alt={alt} className="block h-auto min-h-[200px] w-full object-contain" holdUrl={holdUrl} onReady={value => { setUrl(value); onUrl?.(value); }} />}
         <button type="button" className="fashion-studio-source-expand" aria-label="全画面表示です" title="全画面表示" disabled={!shown} onClick={() => shown && onExpand(shown)}>
           <Maximize2 className="h-5 w-5" />
         </button>
@@ -189,6 +213,7 @@ function FashionStudioImageNode({
  * empty upload canvas for the new-file URL and render the observed project
  * shell when a board project code is present.
  */
+const STUDIO_FLUX_REDRAW_NOTICE = 'OpenAI の安全確認で断られたため、FLUX.2 で作り直しています';
 /** Readable messages for the task chip's failures (raw codes such as cloudflare_api_403_legal_safety_prompt_blocked). */
 export function studioErrorMessage(error: string) {
   if (/legal_safety_prompt_blocked/.test(error)) return '指示テキストに、人物の顔・有名人・ブランドの模倣と判断される言葉が含まれています。言い回しを変えてお試しください。';
@@ -215,6 +240,15 @@ export function FashionStudioDetailPage() {
   const [uploadingScope, setUploadingScope] = useState('');
   // 下着のフィッティング dresses a real person's photo: the brand declares it may use the photo and has the person's consent.
   const [innerwearConsent, setInnerwearConsent] = useState(false);
+  /** The FLUX.2 redraw of a refused テキストで生成 asks for the rights/consent declaration when it sends references. */
+  const [fluxConsent, setFluxConsent] = useState<{ trimmed: boolean; checked: boolean } | null>(null);
+  const fluxConsentResolveRef = useRef<((value: boolean) => void) | null>(null);
+  const askFluxConsent = (trimmed: boolean) => new Promise<boolean>(resolve => {
+    fluxConsentResolveRef.current?.(false);
+    fluxConsentResolveRef.current = resolve; setFluxConsent({ trimmed, checked: false });
+  });
+  const answerFluxConsent = (value: boolean) => { const resolve = fluxConsentResolveRef.current; fluxConsentResolveRef.current = null; setFluxConsent(null); resolve?.(value); };
+  useEffect(() => () => { fluxConsentResolveRef.current?.(false); fluxConsentResolveRef.current = null; }, []);
   const [generation, setGeneration] = useState<(FashionStudioGenerationOutcome & { scopeKey: string }) | null>(null);
   const [activity, setActivity] = useState({ scopeKey: '', value: '' });
   const [loadedMain, setLoadedMain] = useState({ identity: '', url: '' });
@@ -224,8 +258,13 @@ export function FashionStudioDetailPage() {
   const generationControllerRef = useRef<ReturnType<typeof createFashionStudioDetailGeneration> | null>(null);
   const busyRef = useRef(false);
   const logicalAttemptRef = useRef<{ identity: string; key: string } | null>(null);
-  const hasProject = Boolean(searchParams.get('boardProjectCode'));
   const projectCode = searchParams.get('boardProjectCode') ?? '';
+  /** The example being shown while its project is saved (see fashionStudioExamplePreview). */
+  const [examplePreview, setExamplePreview] = useState<StudioExamplePreview | null>(null);
+  const previewActive = examplePreview?.projectCode === projectCode;
+  const previewActiveRef = useRef(previewActive);
+  previewActiveRef.current = previewActive;
+  const hasProject = Boolean(projectCode) || previewActive;
   const scope: FashionStudioDetailScope | null = user?.id && currentBrand?.id
     && canSelectConfirmedBrand(brandState, user.id, currentBrand.id)
     ? { userId: user.id, brandId: currentBrand.id, documentId: projectCode, generation: brandState.requestGeneration } : null;
@@ -438,6 +477,8 @@ export function FashionStudioDetailPage() {
       committed: (document, inputScope) => {
         assertAttempt();
         if (!inputScope.documentId) {
+          const exampleFn = pendingExampleRef.current;
+          if (exampleFn) { primeExampleProject(document.id, exampleFn); setExamplePreview(current => current?.fn === exampleFn ? { fn: exampleFn, projectCode: document.id } : current); }
           const next = new URLSearchParams(searchParams); next.set('boardProjectCode', document.id);
           navigate({ pathname: window.location.pathname, search: next.toString() });
         } else publishDocument(document);
@@ -477,6 +518,8 @@ export function FashionStudioDetailPage() {
   const activeGeneration = generation?.scopeKey === scopeKey ? generation : null;
   const activityValue = activity.scopeKey === scopeKey ? activity.value : '';
   const busy = ['preparing', 'generating', 'recovering', 'saving'].includes(activityValue);
+  // While the example is still being saved, the form shows it but nothing can be changed or generated yet.
+  const formLocked = busy || previewActive;
   // A refused (settled) generation holds nothing, so the form stays editable like Light's; only an unknown result is held.
   const generationHeld = activeGeneration?.status === 'failure' && activeGeneration.settled !== true;
   const recoveryRequired = (activeUpload?.status === 'failure' && activeUpload.recoverable === true) || generationHeld;
@@ -486,27 +529,38 @@ export function FashionStudioDetailPage() {
   const layoutSaveRef = useRef<{ timer?: ReturnType<typeof setTimeout>; flight?: Promise<void>;
     pending?: { userId: string; brandId: string; documentId: string; positions: StudioPositions } }>({});
   const waitForLayoutSave = async () => { try { await layoutSaveRef.current.flight; } catch { /* a failed layout save never blocks the work */ } };
-  const uploadFile = async (file: File | undefined, role: FashionStudioInputRole, newProject = false) => {
-    if (!file || !scope || busyRef.current || recoveryRequired) return;
+  /** True when the input was saved; false when it was not started or failed (the failure is shown as usual). */
+  const uploadFile = async (file: File | undefined, role: FashionStudioInputRole, newProject = false): Promise<boolean> => {
+    if (!file || !scope || busyRef.current || recoveryRequired) return false;
     const capturedScopeKey = scopeKey;
     try {
       assertContext(); busyRef.current = true; setUploadingScope(capturedScopeKey);
       await waitForLayoutSave(); assertContext();
       if (!uploadControllerRef.current) throw new Error('fashion_studio_upload_unavailable');
       // A node's テキストで生成 etc. starts a new project with that image as its main image (Heavy keeps one form per project).
-      await uploadControllerRef.current.start(file, role, newProject ? { ...scope, documentId: '' } : scope);
+      const state = await uploadControllerRef.current.start(file, role, newProject ? { ...scope, documentId: '' } : scope);
+      return state.status === 'success';
     } catch (error) {
       if (currentScopeRef.current === capturedScopeKey) { setUpload({ scopeKey, status: 'failure', role, error: error instanceof Error ? error.message : String(error) }); setActivity({ scopeKey, value: 'failure' }); }
+      return false;
     } finally {
       setUploadingScope(current => current === capturedScopeKey ? '' : current);
       if (currentScopeRef.current === capturedScopeKey) busyRef.current = false;
     }
   };
   const referenceIdentity = JSON.stringify([scopeKey, detail.roles.reference.objectId, detail.roles.reference.candidates]);
+  /** Saved copies that have loaded once (hidden preloaders below), so a role leaves the example only when it can draw at once. */
+  const [previewLoaded, setPreviewLoaded] = useState({ main: '', reference: '' });
+  const previewRoles = previewActive && examplePreview
+    ? studioExamplePreviewRoles(detail, examplePreview.fn, { main: previewLoaded.main === mainIdentity, reference: previewLoaded.reference === referenceIdentity })
+    : { main: false, reference: false };
+  /** What the canvas draws. Saving, generating and every check keep reading the saved `detail`. */
+  const view = previewActive && examplePreview ? withStudioExamplePreview(detail, examplePreview.fn, previewRoles, window.location.origin) : detail;
+  const exampleHold = previewActive && examplePreview ? studioExampleHoldUrls(examplePreview.fn, window.location.origin) : { main: undefined, reference: undefined };
   const slotRole = (slot: number): FashionStudioInputRole => slot ? `reference-${slot}` : 'reference';
   /** References on the form in slot order (slot 0 = the reference role); removed ones stay saved but hidden. */
   const shownReferences = [
-    ...(detail.roles.reference.status === 'available' && !settings.referenceOff ? [{ slot: 0, candidates: detail.roles.reference.candidates, objectId: detail.roles.reference.objectId }] : []),
+    ...(view.roles.reference.status === 'available' && !settings.referenceOff ? [{ slot: 0, candidates: view.roles.reference.candidates, objectId: view.roles.reference.objectId }] : []),
     ...detail.extraReferences.filter(extra => extra.status === 'available' && !settings.extraOff.includes(extra.slot))
       .map(extra => ({ slot: extra.slot, candidates: extra.candidates, objectId: extra.objectId })),
   ];
@@ -523,7 +577,7 @@ export function FashionStudioDetailPage() {
   };
   const generate = async (retry = false) => {
     const generationController = generationControllerRef.current;
-    if (!scope || busyRef.current || !generationController) return;
+    if (!scope || busyRef.current || !generationController || previewActiveRef.current) return;
     const fn = studioFunctionRef.current;
     const referenceAvailable = detail.roles.reference.status === 'available' && !settings.referenceOff;
     if (!retry) {
@@ -551,14 +605,37 @@ export function FashionStudioDetailPage() {
         if (fn === 'region') references.push(await regionGuideUrl(loadedMain.url, regionPoints.map(point => regionMaskFor(point.slot))));
         assertContext();
         providerContextRef.current = { hasReference: chosen.length > 0, referenceCount: chosen.length, points: Math.max(1, regionPoints.length) };
-        const editOptions = fn !== 'region' && settings.aspectRatio !== 'auto' ? { aspectRatio: settings.aspectRatio } : undefined;
+        // 範囲指定 has no 生成設定 on Light's form, so it keeps the main image's frame at 2K.
+        const editOptions = fn === 'region' ? undefined : studioEditOptions(settings);
         const inputIdentity = JSON.stringify([scopeKey, mainIdentity, fn, promptText, references, editOptions ?? null]);
         if (logicalAttemptRef.current?.identity !== inputIdentity) logicalAttemptRef.current = { identity: inputIdentity, key: crypto.randomUUID() };
+        const main = { objectId: detail.roles.main.objectId, imageUrl: loadedMain.url, verified: true };
         outcome = await generationController.start({ scope, logicalAttemptKey: logicalAttemptRef.current.key,
-          main: { objectId: detail.roles.main.objectId, imageUrl: loadedMain.url, verified: true }, referenceImageUrls: references, prompt: promptText,
+          main, referenceImageUrls: references, prompt: promptText,
           ...(editOptions ? { editOptions } : {}),
           // OpenAI refuses every innerwear-on-model image (2026-11-12), so 下着 goes to the server's FLUX.2 [dev] route.
           ...(fn === 'underwear' ? { route: 'innerwear' as const, ...(chosen.length && innerwearConsent ? { rightsConfirmed: true } : {}) } : {}) });
+        // OpenAI's safety check refused テキストで生成 (a settled refusal, nothing pending): the same request is drawn again on
+        // FLUX.2 [dev], with at most three references and, when references go, the rights/consent declaration the server needs.
+        const redraw = studioFluxRedrawPlan(fn, outcome, references);
+        if (redraw) {
+          const fluxReferences = redraw.references;
+          const rightsConfirmed = redraw.needsConsent && await askFluxConsent(redraw.trimmed);
+          assertContext();
+          if (!redraw.needsConsent || rightsConfirmed) {
+            setActivity({ scopeKey, value: 'generating' }); toast(STUDIO_FLUX_REDRAW_NOTICE);
+            providerContextRef.current = { hasReference: fluxReferences.length > 0, referenceCount: fluxReferences.length, points: 1 };
+            // Without a ratio that route frames the result like its second image, so 自動 sends the main image's own frame.
+            const size = editOptions?.aspectRatio || !fluxReferences.length ? null : await naturalImageSize(loadedMain.url).catch(() => null);
+            assertContext();
+            const fluxOptions = { ...(editOptions ?? {}), ...(size ? { aspectRatio: closestStudioAspectRatio(size.width, size.height) } : {}) };
+            logicalAttemptRef.current = { identity: `${inputIdentity}:flux`, key: crypto.randomUUID() };
+            outcome = await generationController.start({ scope, logicalAttemptKey: logicalAttemptRef.current.key,
+              main, referenceImageUrls: fluxReferences, prompt: promptText,
+              ...(Object.keys(fluxOptions).length ? { editOptions: fluxOptions } : {}),
+              route: 'innerwear' as const, ...(rightsConfirmed ? { rightsConfirmed: true } : {}) });
+          }
+        }
       }
       assertContext();
       // Light makes a new image every time AI生成 is pressed: once this attempt has its image, the next press is a new
@@ -583,11 +660,18 @@ export function FashionStudioDetailPage() {
     if (!scope || busyRef.current || recoveryRequired || exampleState.loading) return;
     const captured = scopeKey;
     setExampleLoad({ scopeKey: captured, loading: fn, failed: null });
+    // Light shows the example at once; the project is created and saved behind it (fashionStudioExamplePreview).
+    setStudioFunction(fn); setSettingsState({ projectCode, value: { ...readStudioSettings(projectCode), example: fn } });
+    const sample = examplePrompt(fn); if (sample) setPromptDraft({ scopeKey, value: sample });
+    if (fn === 'region') setRegionMaskState({ projectCode, urls: { 0: REGION_EXAMPLE_MASK } });
+    setExamplePreview({ fn, projectCode }); setPreviewLoaded({ main: '', reference: '' });
+    const stopPreview = () => setExamplePreview(current => current?.fn === fn ? null : current);
     let file: File;
     try { file = await loadStudioExampleFile(STUDIO_EXAMPLES[fn].main); }
-    catch { if (currentScopeRef.current === captured) setExampleLoad({ scopeKey: captured, loading: null, failed: fn }); return; }
+    catch { stopPreview(); if (currentScopeRef.current === captured) setExampleLoad({ scopeKey: captured, loading: null, failed: fn }); return; }
     pendingExampleRef.current = fn; pendingFunctionRef.current = null;
-    await uploadFile(file, 'main');
+    // A failed save goes back to the new-file canvas with its error and 保存を再試行, as before.
+    if (!await uploadFile(file, 'main')) stopPreview();
     setExampleLoad(current => current.scopeKey === captured ? { scopeKey: captured, loading: null, failed: null } : current);
   };
   const uploadOwnMain = (file: File | undefined) => { pendingExampleRef.current = null; pendingFunctionRef.current = null; void uploadFile(file, 'main'); };
@@ -629,8 +713,17 @@ export function FashionStudioDetailPage() {
     if (!example.reference || detail.roles.reference.status === 'available') { setPendingExample(null); toast.success(STUDIO_EXAMPLE_LOADED); return; }
     if (exampleReferenceStartedRef.current === projectCode || busy) return;
     exampleReferenceStartedRef.current = projectCode;
-    void loadStudioExampleFile(example.reference).then(file => uploadFile(file, 'reference')).catch(() => { setPendingExample(null); toast.error(STUDIO_EXAMPLE_FAILED); });
+    void loadStudioExampleFile(example.reference).then(file => uploadFile(file, 'reference'))
+      .then(saved => { if (!saved) setExamplePreview(null); })
+      .catch(() => { setPendingExample(null); setExamplePreview(null); toast.error(STUDIO_EXAMPLE_FAILED); });
   }, [pendingExample, projectCode, visible?.status, detail.roles.main.status, detail.roles.reference.status, busy]);
+  // Another project opened before the example finished: the example belongs to its own project only.
+  useEffect(() => { setExamplePreview(current => current && current.projectCode !== projectCode ? null : current); }, [projectCode]);
+  // The example leaves the canvas once every role draws its saved copy (or the project could not be read).
+  useEffect(() => {
+    if (!previewActive) return;
+    if (visible?.status === 'failure' || (!previewRoles.main && !previewRoles.reference && !pendingExample)) setExamplePreview(null);
+  }, [previewActive, previewRoles.main, previewRoles.reference, pendingExample, visible?.status]);
   const openMaskDialog = async (slot = 0) => {
     if (!loadedMain.url) { toast.error('メイン画像を追加してください'); return; }
     let initial: ImageData | null = null;
@@ -907,7 +1000,7 @@ export function FashionStudioDetailPage() {
     } catch { window.open(url, '_blank', 'noopener'); }
   };
   const openNodeInNewProject = async (url: string, fn: StudioFunctionId) => {
-    if (!url || !scope || busyRef.current || recoveryRequired) return;
+    if (!url || !scope || busyRef.current || recoveryRequired || previewActiveRef.current) return;
     let file: File;
     try { const loaded = await loadStudioExampleFile(url); file = new File([loaded], `Untitled.${imageExtension(loaded.type)}`, { type: loaded.type }); }
     catch { toast.error('画像を読み込めませんでした'); return; }
@@ -918,7 +1011,7 @@ export function FashionStudioDetailPage() {
   const activityError = activeUpload?.error || activeGeneration?.error || '';
   useEffect(() => { if (activityError) toast.error(studioErrorMessage(activityError), { id: `studio-error:${activityError}` }); }, [activityError]);
   const activityContent = <><span role="status">{activityText}</span>{activityError && <span role="alert" className="sr-only">{studioErrorMessage(activityError)}</span>}{activeUpload?.status === 'failure' && activeUpload.recoverable && <button type="button" disabled={busy} onClick={() => void retryUpload()}>保存を再試行</button>}{generationHeld && <button type="button" disabled={busy} onClick={() => void generate(true)}>保存を再試行</button>}</>;
-  const inputControls = <><input ref={mainInputRef} className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" disabled={busy || recoveryRequired} aria-label="メイン画像ファイル" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void uploadFile(file, 'main'); }} /><input ref={referenceInputRef} className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" disabled={busy || recoveryRequired} aria-label="参考画像ファイル" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; uploadReference(file); }} /></>;
+  const inputControls = <><input ref={mainInputRef} className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" disabled={formLocked || recoveryRequired} aria-label="メイン画像ファイル" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void uploadFile(file, 'main'); }} /><input ref={referenceInputRef} className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" disabled={formLocked || recoveryRequired} aria-label="参考画像ファイル" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; uploadReference(file); }} /></>;
   const lightboxView = lightbox && (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-8" role="dialog" aria-label="全画面表示" onClick={() => setLightbox('')}>
       <img src={lightbox} alt="全画面表示" className="max-h-full max-w-full object-contain" />
@@ -927,9 +1020,9 @@ export function FashionStudioDetailPage() {
   );
 
   if (hasProject) {
-    const mainImage = detail.roles.main.candidates;
-    const referenceShown = detail.roles.reference.status === 'available' && !settings.referenceOff;
-    const inputsReady = !busy && uploadingScope !== scopeKey && !recoveryRequired && visible?.status === 'success';
+    const mainImage = view.roles.main.candidates;
+    const referenceShown = view.roles.reference.status === 'available' && !settings.referenceOff;
+    const inputsReady = !formLocked && uploadingScope !== scopeKey && !recoveryRequired && visible?.status === 'success';
     /** The selected image node on screen, for Light's toolbar above it and フィードバック bar below it. */
     const selectedImageRect = (() => {
       if (!selectedKey || selectedKey === 'form') return null;
@@ -946,7 +1039,7 @@ export function FashionStudioDetailPage() {
     const selectBox = 'flex h-[88px] w-full items-center rounded-2xl border border-[#3d4346] bg-[#353a3b] text-[30px] text-neutral-300';
     const referenceTile = referenceShown
       ? <div className="relative size-[120px] shrink-0 rounded-[20px] border border-[#3d4346] bg-[#353a3b]">
-          <DetailRoleImage candidates={detail.roles.reference.candidates} scopeKey={scopeKey} role="reference" assertContext={assertContext} alt={referenceLabel} className="h-full w-full rounded-[20px] object-cover" onReady={url => setLoadedReference({ identity: referenceIdentity, url })} />
+          <DetailRoleImage candidates={view.roles.reference.candidates} scopeKey={scopeKey} role="reference" holdUrl={exampleHold.reference} assertContext={assertContext} alt={referenceLabel} className="h-full w-full rounded-[20px] object-cover" onReady={url => setLoadedReference({ identity: referenceIdentity, url })} />
           <button type="button" aria-label={`${referenceLabel}を削除`} disabled={!inputsReady} onClick={removeReference} className="absolute -right-3 -top-3 flex size-10 items-center justify-center rounded-full bg-[#505c5e] text-white"><X className="h-6 w-6" /></button>
         </div>
       : <button type="button" aria-label={`${referenceLabel}を追加`} disabled={!inputsReady || !scope} onClick={() => pickReference(0)} className="flex size-[120px] shrink-0 items-center justify-center rounded-[20px] border border-[#3d4346] bg-[#353a3b] text-neutral-300"><ImagePlus className="h-10 w-10" /></button>;
@@ -967,13 +1060,13 @@ export function FashionStudioDetailPage() {
       <div className="w-full px-8">
         <label className={sectionLabel} htmlFor="fashion-studio-detail-prompt">{label}<span className="ml-1 text-[#f04438]">*</span></label>
         <div className="relative flex h-[420px] flex-col justify-between gap-5 rounded-[32px] border border-[#3d4346] bg-[#353a3b] p-5">
-          <textarea id="fashion-studio-detail-prompt" value={prompt} disabled={busy || recoveryRequired} onChange={(event) => setPrompt(event.target.value)} maxLength={2000} className="h-full resize-none border-none bg-transparent p-0 text-[30px] leading-[42px] text-white outline-none" aria-label="指令を入力してください。" />
+          <textarea id="fashion-studio-detail-prompt" value={prompt} disabled={formLocked || recoveryRequired} onChange={(event) => setPrompt(event.target.value)} maxLength={2000} className="h-full resize-none border-none bg-transparent p-0 text-[30px] leading-[42px] text-white outline-none" aria-label="指令を入力してください。" />
           <div className="flex items-center gap-4 text-neutral-300">
             <button type="button" aria-label="合成指示を全画面で編集" title="全画面で編集" onClick={() => setPromptExpanded(true)}><Maximize2 className="h-[34px] w-[34px]" /></button>
             <button type="button" aria-label="プロンプトを保存" title="プロンプトを保存" onClick={savePrompt}><Save className="h-[34px] w-[34px]" /></button>
             <button type="button" aria-label="プロンプトライブラリ" title="プロンプトライブラリ" aria-expanded={libraryOpen} onClick={() => setLibraryOpen(open => !open)}><BookMarked className="h-[34px] w-[34px]" /></button>
             <span className="ml-auto text-[30px] text-neutral-400"><span className="text-[#20d0c4]">{prompt.length}</span>/2000</span>
-            <button type="button" disabled={busy || recoveryRequired} onClick={() => setPrompt('')} className="rounded-xl bg-[#505c5e] px-5 py-2 text-[30px] text-white">全削除</button>
+            <button type="button" disabled={formLocked || recoveryRequired} onClick={() => setPrompt('')} className="rounded-xl bg-[#505c5e] px-5 py-2 text-[30px] text-white">全削除</button>
           </div>
           {libraryOpen && <div className="absolute inset-x-5 bottom-[84px] z-10 max-h-[360px] overflow-y-auto rounded-[24px] border border-[#3d4346] bg-[#262a2b] p-3 text-[28px] shadow-xl" role="listbox" aria-label="保存したプロンプト">
             {savedPrompts.length ? savedPrompts.map(item => <button key={item} type="button" role="option" aria-selected={item === prompt} onClick={() => { setPrompt(item); setLibraryOpen(false); }} className="block w-full truncate rounded-xl px-4 py-3 text-left text-neutral-200 hover:bg-white/10">{item}</button>)
@@ -990,16 +1083,17 @@ export function FashionStudioDetailPage() {
             <span aria-hidden="true" className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[10px] border-[3px] border-current text-[14px] font-semibold">Auto</span>
             <span className="truncate">{studioAspectRatioLabel(settings.aspectRatio)}</span>
             <ChevronDown aria-hidden="true" className="ml-auto h-10 w-10 shrink-0 opacity-50" />
-            <select aria-label="比率" value={settings.aspectRatio} disabled={busy || recoveryRequired} onChange={event => updateSettings({ aspectRatio: event.target.value as StudioAspectRatio })} className="absolute inset-0 cursor-pointer opacity-0">
+            <select aria-label="比率" value={settings.aspectRatio} disabled={formLocked || recoveryRequired} onChange={event => updateSettings({ aspectRatio: event.target.value as StudioAspectRatio })} className="absolute inset-0 cursor-pointer opacity-0">
               {STUDIO_ASPECT_RATIOS.map(value => <option key={value} value={value}>{studioAspectRatioLabel(value)}</option>)}
             </select>
           </label>
           <label className={`${selectBox} relative min-w-0 flex-1 gap-3 px-8`}>
-            <span aria-hidden="true" className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[10px] border-[3px] border-current text-[18px] font-bold">HD</span>
-            <span>2K</span>
+            <StudioQualityMark quality={settings.quality} />
+            <span>{STUDIO_QUALITIES.find(item => item.value === settings.quality)?.label}</span>
             <ChevronDown aria-hidden="true" className="ml-auto h-10 w-10 shrink-0 opacity-50" />
-            {/* Heavy stores every studio result at Light's 2K size (2048px class); 1K/4K are not offered. */}
-            <select aria-label="画質" value="2k" disabled={busy || recoveryRequired} onChange={() => undefined} className="absolute inset-0 cursor-pointer opacity-0"><option value="2k">2K</option></select>
+            <select aria-label="画質" value={settings.quality} disabled={formLocked || recoveryRequired} onChange={event => updateSettings({ quality: event.target.value as StudioQuality })} className="absolute inset-0 cursor-pointer opacity-0">
+              {STUDIO_QUALITIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
           </label>
         </div>
       </div>
@@ -1011,16 +1105,17 @@ export function FashionStudioDetailPage() {
           return (
             <div key={point.slot} className="rounded-[32px] border border-[#3d4346] bg-[#2f3436]" data-testid="fashion-studio-region-point">
               <div className="flex items-center justify-between border-b border-[#3d4346] px-6 py-5 text-[30px] text-neutral-200">
-                <span className="flex items-center gap-3">ポイント：{index + 1}{regionPoints.length > 1 && <span aria-hidden="true" className="size-5 rounded-full" style={{ background: REGION_POINT_COLORS[index].hex }} />}<button type="button" aria-label={`ポイント${index + 1}の参考画像を差し替え`} title="参考画像を差し替え" disabled={!inputsReady} onClick={() => pickReference(point.slot)}><RotateCw className="h-8 w-8" /></button></span>
+                <span className="flex items-center gap-3">ポイント：{index + 1}<button type="button" aria-label={`ポイント${index + 1}の参考画像を差し替え`} title="参考画像を差し替え" disabled={!inputsReady} onClick={() => pickReference(point.slot)}><RotateCw className="h-8 w-8" /></button></span>
                 <button type="button" aria-label={`ポイント${index + 1}を削除`} title="融合ポイントを削除" disabled={!inputsReady} onClick={() => { setRegionMask('', point.slot); removeReferenceSlot(point.slot); }}><Trash2 className="h-8 w-8" /></button>
               </div>
               <div className="flex items-center gap-5 p-6">
                 <button type="button" aria-label={`ポイント${index + 1}のマスク調整`} onClick={() => void openMaskDialog(point.slot)} className="relative h-[140px] w-[100px] shrink-0 overflow-hidden rounded-[16px] border border-[#3d4346] bg-[#353a3b]">
-                  <DetailRoleImage candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} alt="メイン画像" className="h-full w-full object-cover" />
-                  {mask && <img src={mask} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />}
+                  <DetailRoleImage candidates={mainImage} scopeKey={scopeKey} role="main" holdUrl={exampleHold.main} assertContext={assertContext} alt="メイン画像" className="h-full w-full object-cover" />
+                  {/* Light shows the painted mask over the main image at 60% (its baseMaskInBlue thumbnail, opacity-60). */}
+                  {mask && <img src={mask} alt="" aria-hidden="true" data-testid="fashion-studio-region-mask-thumb" className="absolute inset-0 h-full w-full object-cover opacity-60" />}
                 </button>
                 <button type="button" aria-label={`ポイント${index + 1}の参考画像を差し替え`} disabled={!inputsReady} onClick={() => pickReference(point.slot)} className="h-[140px] w-[100px] shrink-0 overflow-hidden rounded-[16px] border border-[#3d4346] bg-[#353a3b]">
-                  <DetailRoleImage candidates={point.candidates} scopeKey={scopeKey} role="reference" assertContext={assertContext} alt="参考画像" className="h-full w-full object-cover"
+                  <DetailRoleImage candidates={point.candidates} scopeKey={scopeKey} role="reference" holdUrl={point.slot === 0 ? exampleHold.reference : undefined} assertContext={assertContext} alt="参考画像" className="h-full w-full object-cover"
                     onReady={point.slot === 0 ? url => setLoadedReference({ identity: referenceIdentity, url }) : undefined} />
                 </button>
                 <button type="button" onClick={() => void openMaskDialog(point.slot)} className="ml-auto flex items-center gap-1 text-[30px] text-neutral-300">マスク調整<ChevronRight className="h-8 w-8" /></button>
@@ -1043,7 +1138,7 @@ export function FashionStudioDetailPage() {
           <label className={`${selectBox} relative px-10`}>
             <span className="truncate">{STUDIO_GARMENT_AREAS.find(area => area.value === settings.garment)?.label}</span>
             <ChevronDown aria-hidden="true" className="ml-auto h-10 w-10 shrink-0 opacity-50" />
-            <select aria-label="エリアを選択" value={settings.garment} disabled={busy || recoveryRequired} onChange={event => updateSettings({ garment: event.target.value as StudioGarmentArea })} className="absolute inset-0 cursor-pointer opacity-0">
+            <select aria-label="エリアを選択" value={settings.garment} disabled={formLocked || recoveryRequired} onChange={event => updateSettings({ garment: event.target.value as StudioGarmentArea })} className="absolute inset-0 cursor-pointer opacity-0">
               {STUDIO_GARMENT_AREAS.map(area => <option key={area.value} value={area.value}>{area.label}</option>)}
             </select>
           </label>
@@ -1051,7 +1146,7 @@ export function FashionStudioDetailPage() {
         <div className="w-full px-8">
           <div className={sectionLabel}>生成対象</div>
           <div className="flex gap-5" role="group" aria-label="生成対象">
-            {STUDIO_PERSPECTIVES.map(value => <button key={value} type="button" aria-pressed={settings.perspective === value} disabled={busy || recoveryRequired} onClick={() => updateSettings({ perspective: value })}
+            {STUDIO_PERSPECTIVES.map(value => <button key={value} type="button" aria-pressed={settings.perspective === value} disabled={formLocked || recoveryRequired} onClick={() => updateSettings({ perspective: value })}
               className={`flex h-16 min-w-16 items-center justify-center rounded-2xl px-6 py-2 text-[30px] transition-colors ${settings.perspective === value ? 'bg-[#20d0c4] text-[#111817]' : 'bg-[#353a3b] text-neutral-300 hover:bg-white/10 hover:text-white'}`}>{value}</button>)}
           </div>
         </div>
@@ -1063,7 +1158,7 @@ export function FashionStudioDetailPage() {
           <div className={`${sectionLabel} gap-4`}>{referenceLabel}{studioFunction === 'text' && <span className="text-[26px] text-neutral-500" data-testid="fashion-studio-reference-count">最大{STUDIO_MAX_TEXT_REFERENCES}枚、アップロード済み<span className="text-[#20d0c4]">{textReferences.length}</span>/{STUDIO_MAX_TEXT_REFERENCES}</span>}</div>
           <div className="flex flex-wrap items-center gap-5">{studioFunction === 'text' ? textReferenceTiles : referenceTile}</div>
           {studioFunction === 'underwear' && referenceShown && <label className="mt-5 flex items-start gap-4 text-[26px] leading-[36px] text-neutral-300" data-testid="fashion-studio-innerwear-consent">
-            <input type="checkbox" checked={innerwearConsent} disabled={busy || recoveryRequired} onChange={event => setInnerwearConsent(event.target.checked)} className="mt-1 size-8 shrink-0 accent-[#20d0c4]" />
+            <input type="checkbox" checked={innerwearConsent} disabled={formLocked || recoveryRequired} onChange={event => setInnerwearConsent(event.target.checked)} className="mt-1 size-8 shrink-0 accent-[#20d0c4]" />
             <span>モデル写真の使用許可と、写っている人の同意を得ています</span>
           </label>}
         </div>
@@ -1078,7 +1173,7 @@ export function FashionStudioDetailPage() {
         <div className="fashion-studio-source-dots pointer-events-none absolute inset-0" />
         <aside className="fashion-studio-source-project-rail absolute left-4 top-6 z-30 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#262a2b] shadow-xl">
           <div className="flex h-10 items-center gap-1.5 border-b border-white/10 px-2 text-sm text-neutral-400"><img src={FASHION_STUDIO_PROJECT_ICON} alt="" className="size-5 object-contain" /><span>ファッションスタジオ</span></div>
-          <div className="flex h-11 items-center gap-3 px-3 text-sm text-neutral-300"><Link to="/flow/integration" aria-label="ファッションスタジオへ戻る" className="text-neutral-400 hover:text-white"><ChevronLeft className="h-5 w-5" /></Link><span>{visible?.title || 'プロジェクト未確認'}</span></div>
+          <div className="flex h-11 items-center gap-3 px-3 text-sm text-neutral-300"><Link to="/flow/integration" aria-label="ファッションスタジオへ戻る" className="text-neutral-400 hover:text-white"><ChevronLeft className="h-5 w-5" /></Link><span>{visible?.title || (previewActive ? 'Untitled' : 'プロジェクト未確認')}</span></div>
         </aside>
 
         <aside className="fashion-studio-source-asset-trigger absolute left-4 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2 overflow-hidden rounded-xl border border-white/10 bg-[#262a2b] p-1 shadow-xl" aria-label="アセット">
@@ -1116,8 +1211,12 @@ export function FashionStudioDetailPage() {
                   return <path key={`${edge.source}-${edge.target}`} d={studioEdgePath(source, target)} className={active ? 'fashion-studio-edge is-active' : 'fashion-studio-edge'} />;
                 })}
               </svg>
+              {(previewRoles.main && detail.roles.main.status === 'available') || (previewRoles.reference && detail.roles.reference.status === 'available') ? <div hidden aria-hidden="true" data-testid="fashion-studio-example-preloader">
+                {previewRoles.main && detail.roles.main.status === 'available' && <DetailRoleImage candidates={detail.roles.main.candidates} scopeKey={scopeKey} role="main-preload" assertContext={assertContext} alt="" className="" onReady={() => setPreviewLoaded(current => ({ ...current, main: mainIdentity }))} />}
+                {previewRoles.reference && detail.roles.reference.status === 'available' && <DetailRoleImage candidates={detail.roles.reference.candidates} scopeKey={scopeKey} role="reference-preload" assertContext={assertContext} alt="" className="" onReady={() => setPreviewLoaded(current => ({ ...current, reference: referenceIdentity }))} />}
+              </div> : null}
               <div className="fashion-studio-node" data-studio-node="main" data-selected={selectedKey === 'main'} style={{ transform: `translate(${shownPositions.main?.x ?? 0}px, ${shownPositions.main?.y ?? 0}px)` }}>
-                <FashionStudioImageNode candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} alt="メイン画像" testId="fashion-studio-saved-main-image" className="fashion-studio-source-main-node" objectId={detail.roles.main.objectId} selected={selectedKey === 'main'} onExpand={setLightbox} />
+                <FashionStudioImageNode candidates={mainImage} scopeKey={scopeKey} role="main" holdUrl={exampleHold.main} assertContext={assertContext} alt="メイン画像" testId="fashion-studio-saved-main-image" className="fashion-studio-source-main-node" objectId={detail.roles.main.objectId} selected={selectedKey === 'main'} onExpand={setLightbox} />
               </div>
               <div className="fashion-studio-node" data-studio-node="form" data-selected={selectedKey === 'form'} style={{ transform: `translate(${shownPositions.form?.x ?? 0}px, ${shownPositions.form?.y ?? 0}px)` }}>
               <section className="fashion-studio-source-generation-panel" data-studio-composer data-testid="lightchain-fashion-studio-generation-panel">
@@ -1129,10 +1228,10 @@ export function FashionStudioDetailPage() {
                   <div className="px-8">
                     <div className="flex items-center justify-between rounded-[32px] border border-[#3d4346] bg-[#2f3436] p-5 text-[30px]">
                       <div className="flex items-center gap-5">
-                        <div className="size-[100px] overflow-hidden rounded-[20px] border border-[#3d4346] bg-[#353a3b]"><DetailRoleImage candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} onReady={url => setLoadedMain({ identity: mainIdentity, url })} alt="メイン画像" className="h-full w-full object-contain" /></div>
+                        <div className="size-[100px] overflow-hidden rounded-[20px] border border-[#3d4346] bg-[#353a3b]"><DetailRoleImage candidates={mainImage} scopeKey={scopeKey} role="main" holdUrl={exampleHold.main} assertContext={assertContext} onReady={url => setLoadedMain({ identity: mainIdentity, url })} alt="メイン画像" className="h-full w-full object-contain" /></div>
                         <span>{studioFunction === 'underwear' ? '衣服の画像' : 'メイン画像'}</span>
                       </div>
-                      <button type="button" aria-label="メイン画像を差し替え" title="メイン画像を差し替え" disabled={busy || recoveryRequired || !scope || visible?.status !== 'success'} onClick={() => mainInputRef.current?.click()} className="flex size-[72px] items-center justify-center rounded-full border border-white/25 text-neutral-200"><ImagePlus className="h-8 w-8" /></button>
+                      <button type="button" aria-label="メイン画像を差し替え" title="メイン画像を差し替え" disabled={formLocked || recoveryRequired || !scope || visible?.status !== 'success'} onClick={() => mainInputRef.current?.click()} className="flex size-[72px] items-center justify-center rounded-full border border-white/25 text-neutral-200"><ImagePlus className="h-8 w-8" /></button>
                     </div>
                   </div>
                   <div className="my-6 h-px w-full bg-[#3d4346]" />
@@ -1185,7 +1284,7 @@ export function FashionStudioDetailPage() {
         <div className="fashion-studio-source-canvas-toolbar" data-studio-chrome data-testid="lightchain-fashion-studio-canvas-toolbar">
           <button type="button" aria-label="選択" title="選択" aria-pressed={viewportState.mode === 'select'} className={viewportState.mode === 'select' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('select')}><MousePointer2 className="h-4 w-4" /></button>
           <button type="button" aria-label="ドラッグ" title="ドラッグ" aria-pressed={viewportState.mode === 'move'} className={viewportState.mode === 'move' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('move')}><Hand className="h-4 w-4" /></button>
-          <button type="button" aria-label="画像をアップロード" title="画像をアップロード" disabled={busy || recoveryRequired || !scope || visible?.status !== 'success'} onClick={() => mainInputRef.current?.click()}><ImagePlus className="h-4 w-4" /></button>
+          <button type="button" aria-label="画像をアップロード" title="画像をアップロード" disabled={formLocked || recoveryRequired || !scope || visible?.status !== 'success'} onClick={() => mainInputRef.current?.click()}><ImagePlus className="h-4 w-4" /></button>
           <button type="button" aria-label="取り消し(ctrl+z)" title="取り消し(ctrl+z)" disabled={!canUndo} onClick={() => stepLayoutHistory('undo')}><Undo2 className="h-4 w-4" /></button>
           <button type="button" aria-label="やり直し(ctrl+shift+z)" title="やり直し(ctrl+shift+z)" disabled={!canRedo} onClick={() => stepLayoutHistory('redo')}><Redo2 className="h-4 w-4" /></button>
         </div>
@@ -1221,8 +1320,23 @@ export function FashionStudioDetailPage() {
         {promptExpanded && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-8" role="dialog" aria-label="合成指示を全画面で編集">
           <div className="flex h-[70vh] w-[min(880px,100%)] flex-col gap-4 rounded-2xl border border-[#3d4346] bg-[#262a2b] p-6">
             <div className="flex items-center justify-between text-base text-neutral-200">合成指示<button type="button" aria-label="閉じる" onClick={() => setPromptExpanded(false)}><X className="h-5 w-5" /></button></div>
-            <textarea value={prompt} maxLength={2000} disabled={busy || recoveryRequired} onChange={event => setPrompt(event.target.value)} className="min-h-0 flex-1 resize-none rounded-xl border border-[#3d4346] bg-[#353a3b] p-4 text-base leading-7 text-white outline-none" aria-label="合成指示" />
+            <textarea value={prompt} maxLength={2000} disabled={formLocked || recoveryRequired} onChange={event => setPrompt(event.target.value)} className="min-h-0 flex-1 resize-none rounded-xl border border-[#3d4346] bg-[#353a3b] p-4 text-base leading-7 text-white outline-none" aria-label="合成指示" />
             <div className="flex items-center justify-between text-sm text-neutral-400"><span><span className="text-[#20d0c4]">{prompt.length}</span>/2000</span><button type="button" onClick={() => setPromptExpanded(false)} className="rounded-lg bg-[#20d0c4] px-5 py-2 text-sm font-medium text-[#111817]">決定</button></div>
+          </div>
+        </div>}
+        {fluxConsent && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="fashion-studio-flux-consent-title" data-testid="fashion-studio-flux-consent" className="w-full max-w-[440px] rounded-2xl border border-white/10 bg-[#262a2b] p-6 text-sm text-neutral-200 shadow-2xl">
+            <h2 id="fashion-studio-flux-consent-title" className="text-base font-semibold text-white">別のモデルで作り直しますか？</h2>
+            <p className="mt-3 leading-6 text-neutral-300">OpenAI の安全確認で断られました。FLUX.2 で同じ指示から作り直せます。参考画像も送るため、画像の使用許可と、写っている人の同意が必要です。</p>
+            {fluxConsent.trimmed && <p className="mt-2 leading-6 text-neutral-400">FLUX.2 に送れる参考画像は{STUDIO_FLUX_MAX_REFERENCES}枚までのため、最初の{STUDIO_FLUX_MAX_REFERENCES}枚を使います。</p>}
+            <label className="mt-4 flex items-start gap-3 leading-6">
+              <input type="checkbox" checked={fluxConsent.checked} onChange={event => setFluxConsent(current => current && { ...current, checked: event.target.checked })} className="mt-1 size-4 shrink-0 accent-[#20d0c4]" />
+              <span>参考画像の使用許可と、写っている人の同意を得ています</span>
+            </label>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => answerFluxConsent(false)} className="h-9 rounded-lg px-4 text-neutral-300 hover:bg-white/10">やめる</button>
+              <button type="button" disabled={!fluxConsent.checked} onClick={() => answerFluxConsent(true)} className="h-9 rounded-lg bg-[#20d0c4] px-4 font-medium text-[#111817] disabled:opacity-40">作り直す</button>
+            </div>
           </div>
         </div>}
         {maskDialog && loadedMain.url && <MaskPaintDialog imageUrl={loadedMain.url} hint={regionPoints.length > 1 ? `範囲指定で生成（ポイント${Math.max(1, regionPoints.findIndex(point => point.slot === maskDialog.slot) + 1)}）` : '範囲指定で生成'} paneTitle="参考画像の服を合わせたい部分をマスクで選択してください" initialMask={maskDialog.initial} onCancel={() => setMaskDialog(null)} onConfirm={confirmMask} />}
@@ -1248,7 +1362,7 @@ export function FashionStudioDetailPage() {
       <section aria-label="サンプル" className="absolute left-1/2 top-1/2 z-[4] flex w-max max-w-[calc(100%-32px)] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-8 text-center">
         <p className="text-lg font-medium leading-6 text-neutral-400">下から機能を選んでサンプルを見るか、「画像を追加」をクリックしてください。</p>
         <div className="flex flex-wrap justify-center gap-4" data-testid="fashion-studio-functions">
-          {STUDIO_FUNCTIONS.map((item) => <button key={item.id} type="button" disabled={busy || recoveryRequired || !scope || Boolean(exampleState.loading)} onClick={() => void loadExample(item.id)}
+          {STUDIO_FUNCTIONS.map((item) => <button key={item.id} type="button" disabled={formLocked || recoveryRequired || !scope || Boolean(exampleState.loading)} onClick={() => void loadExample(item.id)}
             className="relative flex h-12 w-auto shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-[#25292b] px-4 text-base text-neutral-300 transition-colors hover:bg-[#2f3436] hover:text-white disabled:cursor-wait disabled:opacity-60">
             <StudioFunctionIcon fn={item.id} className="h-6 w-6" />{item.label}
             {item.badge && <span className="absolute -right-2 -top-2.5 rounded-full bg-[linear-gradient(90deg,#8fe9ff,#d9c2ff)] px-2 text-xs leading-5 text-neutral-900">{item.badge}</span>}
@@ -1258,7 +1372,7 @@ export function FashionStudioDetailPage() {
           <ImagePlus aria-hidden="true" className="size-8 text-neutral-300" />
           <span className="text-base font-medium text-neutral-400">ここをクリックまたはドラッグして画像を追加</span>
           <span className="text-sm text-neutral-500">jpg、jpeg、png、webp形式の画像（最大20M）に対応</span>
-          <input className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" aria-label="画像を追加" disabled={busy || recoveryRequired || !scope} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; uploadOwnMain(file); }} />
+          <input className="sr-only" type="file" accept=".png,.jpg,.jpeg,.avif,.webp" aria-label="画像を追加" disabled={formLocked || recoveryRequired || !scope} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; uploadOwnMain(file); }} />
           {activeUpload?.preview && busy && <img src={activeUpload.preview} alt="アップロード準備中" className="h-32 w-32 object-contain" />}
         </label>
         <div className="absolute top-full mt-3 min-h-6 text-sm text-neutral-400" role="status" aria-live="polite">

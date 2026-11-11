@@ -81,5 +81,7 @@ test('while a picture is being saved the form is busy from the first moment, so 
   const source = readFileSync(new URL('../src/pages/FashionStudioDetailPage.tsx', import.meta.url), 'utf8');
   assert.match(source, /assertContext\(\); busyRef\.current = true; setUploadingScope\(capturedScopeKey\);/);
   assert.match(source, /setUploadingScope\(current => current === capturedScopeKey \? '' : current\);/);
-  assert.match(source, /const inputsReady = !busy && uploadingScope !== scopeKey && !recoveryRequired && visible\?\.status === 'success';/);
+  // formLocked is busy, or an example still being saved behind the canvas.
+  assert.match(source, /const formLocked = busy \|\| previewActive;/);
+  assert.match(source, /const inputsReady = !formLocked && uploadingScope !== scopeKey && !recoveryRequired && visible\?\.status === 'success';/);
 });

@@ -3,7 +3,7 @@ import { principal } from './domain.ts';
 import { requireBrandRole, handleMediaReadGateway, userHasBrandRole } from './core.ts';
 import { IMAGE_MODEL, INNERWEAR_IMAGE_MODEL, INNERWEAR_ROUTE, IMAGE_ACTIONS, ImageInputError, boundedImageJSON, decodeImage, imageEstimate,
   isRecord, modelMultipart, normalizedImageRequestDigest, parseImageInput, raster, sha256, type AuthorizedSourceAsset,
-  type ImageAction, type ImageInput, type Json, type Raster } from './image-ai-contracts.ts';
+  type ImageAction, type ImageInput, type ImageResolution, type Json, type Raster } from './image-ai-contracts.ts';
 import { CLAUDE_TEXT_ACTIONS, ClaudeTextError, claudeConfigured, runClaudeTextAction, type ClaudeTextAction } from './claude-text.ts';
 import { MAX_OPENAI_IMAGE_TIMEOUT_MS, OpenAIImageError, OPENAI_IMAGE_BACKEND, OPENAI_IMAGE_EDIT_MODELS, OPENAI_IMAGE_MODEL_LABELS, OPENAI_IMAGE_MODELS, OPENAI_IMAGE_PROVIDER, openAIExpectedDimensions, openAIModelForEndpoint, resolveOpenAIModel, runOpenAIImage } from './openai-image.ts';
 import { CLAUDE_TEXT_MODELS, defaultClaudeModel } from './claude-text.ts';
@@ -445,6 +445,35 @@ export async function enlargeLikeLight(env: Pick<Env,'IMAGES'>, image: Raster, s
   } catch { return image; }
 }
 
+/** Light's 画質 (Fashion Studio 生成設定, 2026-11-12): 1K and 4K set the long edge; 2K keeps the enlargement above. */
+export const LIGHT_LONG_EDGES: Readonly<Record<ImageResolution, number>> = { '1k': 1024, '4k': 4096 };
+/** Below the media limit (10 MB) and the browser's 12 MB reference read, so a 4K result can be shown, downloaded and reused. */
+export const LIGHT_MAX_OUTPUT_BYTES = 9 * 1024 * 1024;
+/**
+ * The result at the chosen 画質's long edge. PNG first (full colour, like the 2K enlargement); a 4K photo is usually over
+ * 9 MB as PNG, so it is written as JPEG (quality 95, then 85). Null when it cannot be made within 9 MB; the caller then
+ * keeps the 2K result instead of failing a paid generation.
+ */
+export async function sizeForResolution(env: Pick<Env,'IMAGES'>, image: Raster, resolution: ImageResolution): Promise<Raster | null> {
+  const scale = LIGHT_LONG_EDGES[resolution] / Math.max(image.width, image.height);
+  const width = Math.max(1, Math.round(image.width * scale)); const height = Math.max(1, Math.round(image.height * scale));
+  if (width === image.width && height === image.height) return image.bytes.length <= LIGHT_MAX_OUTPUT_BYTES ? image : null;
+  if (!env.IMAGES) return null;
+  const formats = [...(image.contentType === 'image/jpeg' ? [] : [{ format: 'image/png' as const }]),
+    { format: 'image/jpeg' as const, quality: 95 }, { format: 'image/jpeg' as const, quality: 85 }];
+  for (const format of formats) {
+    try {
+      const source = new Response(image.bytes as BufferSource).body;
+      if (!source) return null;
+      const output = await env.IMAGES.input(source).transform({ width, height, fit: 'cover' }).output(format);
+      const sized = raster(new Uint8Array(await output.response().arrayBuffer()));
+      if (!sized || sized.width !== width || sized.height !== height) return null;
+      if (sized.bytes.length <= LIGHT_MAX_OUTPUT_BYTES) return sized;
+    } catch { return null; }
+  }
+  return null;
+}
+
 export async function handleImageAIAction(request: Request, env: Env, action: string): Promise<Response> {
   if (!IMAGE_ACTIONS.has(action)) return fail('image_action_not_implemented',503);
   if (CLAUDE_TEXT_ACTIONS.has(action)) return handleClaudeTextAction(request,env,action as ClaudeTextAction);
@@ -609,9 +638,13 @@ async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageIn
       image = decodeImage(output.image,false);
       const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height,typeof output.providerModel === 'string' ? output.providerModel : undefined) : [input.width,input.height];
       if (image.width !== expected[0] || image.height !== expected[1]) throw new Error('dimensions');
-      if (provider.provider === 'openai') image = await enlargeLikeLight(env,image);
+      const drawn = image;
+      // 画質 1K / 4K: the long edge Light uses; when that cannot be made the 2K result below is kept.
+      const sized = input.resolution ? await sizeForResolution(env,drawn,input.resolution) : null;
+      if (sized) image = sized;
+      else if (provider.provider === 'openai') image = await enlargeLikeLight(env,drawn);
       // FLUX.2 [dev] draws 768x1024; Light's innerwear result is about 1152x1552, so enlarge it 1.5x the same way.
-      else if (provider.model === INNERWEAR_IMAGE_MODEL) image = await enlargeLikeLight(env,image,{ [`${image.width}x${image.height}`]: [image.width * 3 / 2, image.height * 3 / 2] });
+      else if (provider.model === INNERWEAR_IMAGE_MODEL) image = await enlargeLikeLight(env,drawn,{ [`${drawn.width}x${drawn.height}`]: [drawn.width * 3 / 2, drawn.height * 3 / 2] });
     } catch {
       const beforeInvalid = await canContinue(auth,env,row,true); if (beforeInvalid) { await reconcile(env,row,true); return beforeInvalid; }
       const providerError = provider.provider === 'openai' ? new OpenAIImageError('unusable_response',200,undefined,
