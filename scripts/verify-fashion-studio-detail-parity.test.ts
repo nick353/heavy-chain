@@ -87,6 +87,10 @@ test('studio takes nine references, three fusion points, and lines results up be
   for (const marker of ['画像をアップロード', 'キャンバスから選択', 'data-testid="fashion-studio-region-point"', 'data-testid="fashion-studio-result-row"',
     "'fashion-studio-history-result-image'", 'const showExampleResult = Boolean(settings.example);']) assert.ok(source.includes(marker), `missing marker: ${marker}`);
   assert.doesNotMatch(source, /融合ポイントは1か所まで追加できます/);
+  // The add tile and 画像をアップロード carry their own file input bound to the free slot, so a file set on the input
+  // directly (no click first) still adds a reference instead of replacing the first one.
+  assert.match(source, /slotFileInput\(freeReferenceSlot\(STUDIO_MAX_TEXT_REFERENCES\), '参考画像ファイル（追加）'\)/);
+  assert.match(source, /slotFileInput\(freeReferenceSlot\(STUDIO_MAX_REGION_POINTS\), '融合ポイントの参考画像ファイル'\)/);
   assert.match(styleSource, /\.fashion-studio-result-row \{\n  display: flex;/);
   const examples = readFileSync(new URL('../src/lib/fashionStudioExamples.ts', import.meta.url), 'utf8');
   assert.match(examples, /STUDIO_MAX_TEXT_REFERENCES = 9;/);

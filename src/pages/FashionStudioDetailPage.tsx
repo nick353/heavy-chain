@@ -648,6 +648,9 @@ export function FashionStudioDetailPage() {
     const mainImage = detail.roles.main.candidates;
     const referenceShown = detail.roles.reference.status === 'available' && !settings.referenceOff;
     const inputsReady = !busy && !recoveryRequired && visible?.status === 'success';
+    /** A file input bound to one reference slot, so the chosen file always lands in that slot (add a reference / point). */
+    const slotFileInput = (slot: number, label: string) => <input type="file" className="sr-only" accept=".png,.jpg,.jpeg,.avif,.webp" aria-label={label}
+      disabled={!inputsReady || !scope || slot < 0} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; setPointMenu(false); uploadReference(file, slotRole(slot)); }} />;
     const referenceLabel = studioFunction === 'underwear' ? 'モデル図' : '参考画像';
     const sectionLabel = 'mb-5 flex items-center text-[36px] leading-[48px] text-neutral-400';
     const selectBox = 'flex h-[88px] w-full items-center rounded-2xl border border-[#3d4346] bg-[#353a3b] text-[30px] text-neutral-300';
@@ -666,7 +669,9 @@ export function FashionStudioDetailPage() {
           <button type="button" aria-label={`参考画像${textReferences.indexOf(item) + 1}を削除`} disabled={!inputsReady} onClick={() => removeReferenceSlot(item.slot)} className="absolute -right-3 -top-3 flex size-10 items-center justify-center rounded-full bg-[#505c5e] text-white"><X className="h-6 w-6" /></button>
         </div>
       ))}
-      {textReferences.length < STUDIO_MAX_TEXT_REFERENCES && <button type="button" aria-label="参考画像を追加" disabled={!inputsReady || !scope} onClick={() => pickReference(freeReferenceSlot(STUDIO_MAX_TEXT_REFERENCES))} className="flex size-[120px] shrink-0 items-center justify-center rounded-[20px] border border-[#3d4346] bg-[#353a3b] text-neutral-300"><ImagePlus className="h-10 w-10" /></button>}
+      {textReferences.length < STUDIO_MAX_TEXT_REFERENCES && <label aria-label="参考画像を追加" className={`flex size-[120px] shrink-0 items-center justify-center rounded-[20px] border border-[#3d4346] bg-[#353a3b] text-neutral-300 ${inputsReady && scope ? 'cursor-pointer hover:bg-white/10' : 'opacity-60'}`}>
+        <ImagePlus className="h-10 w-10" />{slotFileInput(freeReferenceSlot(STUDIO_MAX_TEXT_REFERENCES), '参考画像ファイル（追加）')}
+      </label>}
     </>;
     const promptField = (label: string) => (
       <div className="w-full px-8">
@@ -736,7 +741,7 @@ export function FashionStudioDetailPage() {
         {regionPoints.length < STUDIO_MAX_REGION_POINTS && <div className="relative">
           <button type="button" aria-label="融合ポイントを追加" aria-expanded={pointMenu} disabled={!inputsReady || !scope} onClick={() => setPointMenu(open => !open)} className="flex h-[120px] w-full items-center justify-center gap-2 rounded-[32px] border border-[#3d4346] bg-[#2f3436] text-[30px] text-neutral-200 hover:bg-[#353a3b] disabled:text-neutral-500"><Plus className="h-8 w-8" />融合ポイントを追加</button>
           {pointMenu && <div role="menu" aria-label="融合ポイントを追加" className="absolute left-full top-0 z-20 ml-4 w-[400px] overflow-hidden rounded-[28px] border border-[#3d4346] bg-[#262a2b] py-3 text-[34px] text-neutral-100 shadow-xl">
-            <button type="button" role="menuitem" className="block w-full px-8 py-4 text-left hover:bg-white/10" onClick={() => { setPointMenu(false); pickReference(freeReferenceSlot(STUDIO_MAX_REGION_POINTS)); }}>画像をアップロード</button>
+            <label role="menuitem" className="block w-full cursor-pointer px-8 py-4 text-left hover:bg-white/10">画像をアップロード{slotFileInput(freeReferenceSlot(STUDIO_MAX_REGION_POINTS), '融合ポイントの参考画像ファイル')}</label>
             <button type="button" role="menuitem" className="block w-full px-8 py-4 text-left hover:bg-white/10" onClick={() => { setPointMenu(false); void openCanvasPicker(freeReferenceSlot(STUDIO_MAX_REGION_POINTS)); }}>キャンバスから選択</button>
           </div>}
         </div>}
