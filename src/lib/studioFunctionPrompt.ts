@@ -1,12 +1,45 @@
-/** Extra provider instruction per Fashion Studio function; the saved prompt stays the user's own text. */
-const STUDIO_FUNCTION_DIRECTIVES: Record<string, string> = {
-  '3d': 'Output style: re-render the garment as a clean 3D CGI product render (like a Blender or Octane render), not a photograph. Show it as a free-standing ghost-mannequin form with clear volume and depth, rendered fabric material, soft studio lighting with ambient occlusion and a subtle contact shadow on a plain neutral background. Keep the exact colors, prints, logos and construction of the garment.',
+import type { StudioGarmentArea, StudioPerspective } from './fashionStudioExamples.ts';
+
+const AREA_TEXT: Record<StudioGarmentArea, string> = {
+  上装: 'the top (upper-body garment)',
+  下装: 'the bottoms (lower-body garment)',
+  连身装: 'the one-piece dress or full outfit',
 };
+
+/**
+ * Light's 3D画像に変換 returns a photo-real flat product shot of the chosen garment area: the garment alone with its
+ * worn volume (ghost mannequin), centred on pure white (its sample: a striped shirt dress lifted off the model).
+ */
+const flatDirective = (garment: StudioGarmentArea, perspective: StudioPerspective) => [
+  `Output: a photorealistic e-commerce product photo of ${AREA_TEXT[garment]} worn in the image, shown alone as a 3D ghost-mannequin (invisible mannequin) form with natural volume, centred and filling most of the frame.`,
+  perspective === '背面' ? 'Show the BACK view of the garment, inferring the back construction consistently with the front.' : 'Show the FRONT view of the garment.',
+  'Pure white (#FFFFFF) background from edge to edge with at most a soft contact shadow; no model, no body parts, no hanger, no props.',
+  'Keep the exact colors, print, fabric texture, collar, buttons, sleeves, belt and construction of the garment.',
+].join(' ');
+
+const underwearDirective = (hasModel: boolean) => hasModel
+  ? 'Image 1 is the innerwear garment. Image 2 is the model photo: keep that model\'s face, hair, body, pose, framing and background unchanged and dress the model in the garment from image 1 instead of their current clothing. Reproduce the garment\'s colors, lace, straps, seams and construction exactly.'
+  : 'Image 1 is the innerwear garment. Show a model wearing exactly this garment, reproducing its colors, lace, straps, seams and construction.';
+
+/**
+ * Light's 範囲指定で生成 marks the spot with a brush stroke (its sample mask is one stroke across the chest) and the
+ * whole garment there takes the reference design. Heavy sends the stroke as a guide image (image 3) the same way.
+ */
+const regionDirective = (hasReference: boolean) => hasReference
+  ? 'Image 2 is the reference garment. Image 3 is image 1 with teal brush strokes marking the garment to change. Replace only the marked garment in image 1 with the garment design shown in image 2 (garment type, neckline, straps, colors and fabric), fitted naturally to the person\'s body, pose and lighting. Keep the person\'s face, hair, body, pose, the other clothing and the background identical to image 1. The output must not contain any teal marks.'
+  : 'Image 2 is image 1 with teal brush strokes marking the area to change. Change only the marked area and keep everything else identical. The output must not contain any teal marks.';
 
 // A project keeps the function it was created with, so a request that asks for 3D in words gets the 3D directive too.
 const asksFor3d = (prompt: string) => /[3３]\s*[DdＤｄ]/u.test(prompt);
 
-export const studioProviderPrompt = (prompt: string, studioFunction: string) => {
-  const directive = STUDIO_FUNCTION_DIRECTIVES[asksFor3d(prompt) ? '3d' : studioFunction];
+/** The provider prompt per Fashion Studio function; the saved prompt stays the user's own text. */
+export const studioProviderPrompt = (prompt: string, studioFunction: string, options: {
+  garment?: StudioGarmentArea; perspective?: StudioPerspective; hasReference?: boolean;
+} = {}) => {
+  const fn = studioFunction === 'text' && asksFor3d(prompt) ? '3d' : studioFunction;
+  const directive = fn === '3d' ? flatDirective(options.garment ?? '连身装', options.perspective ?? '正面')
+    : fn === 'underwear' ? underwearDirective(Boolean(options.hasReference))
+      : fn === 'region' ? regionDirective(Boolean(options.hasReference))
+        : '';
   return directive ? `${prompt}\n${directive}` : prompt;
 };

@@ -19,6 +19,8 @@ export type FashionStudioGenerationInput = {
   main: { objectId: string; imageUrl: string; verified: boolean };
   referenceImageUrls?: readonly string[];
   prompt: string;
+  /** 生成設定 → 比率; omitted keeps the main image's frame. */
+  editOptions?: { aspectRatio?: string };
 };
 export type FashionStudioGenerationStage = 'provider' | 'persistence' | 'canvas' | 'acknowledgement' | 'completed';
 export type FashionStudioGenerationOutcome = {
@@ -46,6 +48,7 @@ export type FashionStudioGenerationAdapters = {
   editImageWithPrompt(imageUrl: string, prompt: string, brandId: string, options: {
     idempotencyKey: string; assertContext: () => void; canvasProjectId: string;
     parentObjectId: string; referenceImageUrls: string[]; featureType: string;
+    aspectRatio?: string;
   }): Promise<ImageEditResult>;
   assertCompletedImageEditResult(result: ImageEditResult): void;
   /** Adapters must also fence their internal async mutations using context. */
@@ -132,6 +135,7 @@ export const createFashionStudioDetailGeneration = (adapters: FashionStudioGener
           idempotencyKey: attempt.requestId, assertContext: () => assertContext(attempt),
           canvasProjectId: attempt.input.scope.documentId, parentObjectId: attempt.input.main.objectId,
           referenceImageUrls: [...(attempt.input.referenceImageUrls ?? [])], featureType: feature,
+          ...(attempt.input.editOptions?.aspectRatio ? { aspectRatio: attempt.input.editOptions.aspectRatio } : {}),
         });
         assertContext(attempt);
         adapters.assertCompletedImageEditResult(result);
@@ -263,6 +267,7 @@ export const createFashionStudioDetailGeneration = (adapters: FashionStudioGener
       const captured: FashionStudioGenerationInput = {
         ...input, scope: { ...input.scope }, main: { ...input.main }, prompt: input.prompt.trim(),
         referenceImageUrls: [...(input.referenceImageUrls ?? [])],
+        ...(input.editOptions ? { editOptions: { ...input.editOptions } } : {}),
       };
       const identity = JSON.stringify(captured);
       const completedAttempt = completed.get(JSON.stringify([scopeKey(captured.scope), captured.logicalAttemptKey]));

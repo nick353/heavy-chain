@@ -70,6 +70,8 @@ export const createStudioViewportInteraction = (ports: {
       return false;
     },
     reset() { if (!disposed) { cancel(); emit({ view: { ...STUDIO_DEFAULT_VIEWPORT }, mode: 'select', selectedObjectId: null }); } },
+    /** Light fits the nodes into view (fitView); the page passes the fitted view here. */
+    set(view: StudioViewport) { if (!disposed) emit({ view: { zoom: clampStudioZoom(view.zoom), panX: Number.isFinite(view.panX) ? view.panX : 0, panY: Number.isFinite(view.panY) ? view.panY : 0 } }); },
     dispose() { cancel(); disposed = true; },
   };
 };
