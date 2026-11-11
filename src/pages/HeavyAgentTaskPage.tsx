@@ -198,29 +198,36 @@ function DirectionPicker({ themes, chosen, disabled, onRevise, onConfirm }: { th
         <span className={`rounded-md border px-2 py-0.5 text-xs ${chosen ? 'border-emerald-400/60 text-emerald-300' : 'border-amber-400/70 text-amber-300'}`}>{chosen ? '確認済み' : '確認待ち'}</span>
       </div>
       <p className="text-xs text-neutral-400">商品構成計画に進む方向性を1つ以上選択してください</p>
-      <div className="space-y-2">
+      {/* Light lays the directions out two to a row, each line cut short, with the select circle at the top right. */}
+      <div className="grid gap-2 sm:grid-cols-2" data-testid="agent-directions">
         {themes.map((theme) => {
           const direction = parseAgentDirection(theme);
           const on = value.includes(theme);
           return (
-            <button key={theme} type="button" role="checkbox" aria-checked={on} disabled={!editable} onClick={() => setPicked((current) => current.includes(theme) ? current.filter((entry) => entry !== theme) : [...current, theme])}
-              className={`flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left transition ${on ? 'border-cyan-300/70 bg-cyan-300/10' : 'border-white/10 hover:bg-white/5'} disabled:cursor-default`}>
-              <span aria-hidden="true" className={`mt-0.5 flex size-4 flex-none items-center justify-center rounded border ${on ? 'border-cyan-300 bg-cyan-300 text-neutral-900' : 'border-white/40'}`}>{on && <Check className="h-3 w-3" />}</span>
-              <span className="min-w-0 space-y-1">
-                <span className="block text-sm font-medium text-white">{direction.name}</span>
-                {direction.description && <span className="block text-xs leading-5 text-neutral-300">{direction.description}</span>}
-                {direction.recommendation && <span className="block text-xs leading-5 text-cyan-200/80">{direction.recommendation}</span>}
+            <button key={theme} type="button" role="checkbox" aria-checked={on} disabled={!editable} title={[direction.name, direction.description, direction.recommendation].filter(Boolean).join('\n')}
+              onClick={() => setPicked((current) => current.includes(theme) ? current.filter((entry) => entry !== theme) : [...current, theme])}
+              className={`flex min-w-0 items-start gap-2 rounded-xl border px-3 py-3 text-left transition ${on ? 'border-cyan-300/70 bg-cyan-300/10' : 'border-white/10 hover:bg-white/5'} disabled:cursor-default`}>
+              <span className="min-w-0 flex-1 space-y-1">
+                <span className="line-clamp-1 block text-sm font-medium text-white">{direction.name}</span>
+                {direction.description && <span className="line-clamp-2 block text-xs leading-5 text-neutral-300">{direction.description}</span>}
+                {direction.recommendation && <span className="line-clamp-2 block text-xs leading-5 text-neutral-500">{direction.recommendation}</span>}
               </span>
+              <span aria-hidden="true" className={`mt-0.5 flex size-[18px] flex-none items-center justify-center rounded-full border ${on ? 'border-cyan-300 bg-cyan-300 text-neutral-900' : 'border-white/40'}`}>{on && <Check className="h-3 w-3" />}</span>
             </button>
           );
         })}
       </div>
       {!chosen && (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <button type="button" disabled={!editable} onClick={() => setPicked(themes)} className="h-8 rounded-lg border border-white/15 px-3 text-sm text-neutral-200 hover:bg-white/10">全選択</button>
-          <button type="button" disabled={disabled} onClick={onRevise} className="h-8 rounded-lg border border-white/15 px-3 text-sm text-neutral-200 hover:bg-white/10">修正・補足する</button>
-          <button type="button" disabled={!editable || value.length === 0} onClick={() => onConfirm(value)}
-            className="h-8 rounded-lg bg-cyan-300 px-4 text-sm font-medium text-neutral-950 disabled:cursor-not-allowed disabled:bg-[#2c5e5b] disabled:text-neutral-400">確認して続行</button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <button type="button" role="checkbox" aria-checked={value.length === themes.length} disabled={!editable} onClick={() => setPicked(value.length === themes.length ? [] : themes)}
+            className="flex items-center gap-1.5 text-sm text-neutral-300 hover:text-white disabled:cursor-default">
+            <span aria-hidden="true" className={`flex size-[18px] items-center justify-center rounded-full border ${value.length === themes.length ? 'border-cyan-300 bg-cyan-300 text-neutral-900' : 'border-white/40'}`}>{value.length === themes.length && <Check className="h-3 w-3" />}</span>全選択
+          </button>
+          <span className="flex items-center gap-2">
+            <button type="button" disabled={disabled} onClick={onRevise} className="h-8 rounded-lg border border-white/15 px-3 text-sm text-neutral-200 hover:bg-white/10">修正・補足する</button>
+            <button type="button" disabled={!editable || value.length === 0} onClick={() => onConfirm(value)}
+              className="h-8 rounded-lg bg-cyan-300 px-4 text-sm font-medium text-neutral-950 disabled:cursor-not-allowed disabled:bg-[#2c5e5b] disabled:text-neutral-400">確認して続行</button>
+          </span>
         </div>
       )}
     </section>
@@ -566,7 +573,8 @@ export default function HeavyAgentTaskPage() {
                     {(round.step.state === 'failed' || round.step.state === 'unknown') && (
                       <ErrorRow onRetry={last && !task.choice ? () => void retryThemes() : undefined}>テーマの提案に失敗しました（{round.step.errorCode ?? round.step.state}）。</ErrorRow>
                     )}
-                    {round.summary && <div className="whitespace-pre-wrap" data-testid="agent-summary">{round.summary}</div>}
+                    {/* Light goes straight from the report card to the direction form; the research itself is in the report. */}
+                    {round.summary && !conversation && <div className="whitespace-pre-wrap" data-testid="agent-summary">{round.summary}</div>}
                     {round.step.state === 'completed' && round.themes.length > 0 && conversation && (
                       <DirectionPicker themes={round.themes} chosen={confirmed ? (last ? task.choice?.themes ?? [task.choice?.theme ?? ''] : []) : null} disabled={working}
                         onRevise={() => composerRef.current?.focus()} onConfirm={confirmDirections} />

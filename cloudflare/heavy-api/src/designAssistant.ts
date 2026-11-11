@@ -1,6 +1,6 @@
 import type { Env } from './index.ts';
 import { requireBrandRole } from './core.ts';
-import { AGENT_RESEARCH_TIMEOUT_MS, callClaudeMessages, callClaudeResearch, ClaudeTextError, claudeConfigured, claudeModel, type ClaudeMessage } from './claude-text.ts';
+import { AGENT_RESEARCH_MAX_USES, AGENT_RESEARCH_TIMEOUT_MS, callClaudeMessages, callClaudeResearch, ClaudeTextError, claudeConfigured, claudeModel, type ClaudeMessage } from './claude-text.ts';
 
 // Claude answers when ANTHROPIC_API_KEY is set (the production setup); Workers AI Llama is the fallback only.
 export const DESIGN_ASSISTANT_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
@@ -203,6 +203,7 @@ const AGENT_SYSTEM_PROMPT = [
 const AGENT_RESEARCH_SYSTEM_PROMPT = [
   AGENT_SYSTEM_PROMPT,
   'Use the web_search tool to collect current, concrete evidence for the research scope given in the request (markets, platforms, trends, prices, weather, wearing scenes). Prefer recent sources. Do not write URLs in the report itself; the app lists the sources separately.',
+  `You can search at most ${AGENT_RESEARCH_MAX_USES} times, so make each query broad enough to cover one area of the scope. Base the report on what the results say, with the figures and examples they give. Never write that data could not be obtained when searches returned results; only when every search failed or found nothing, say so in one line and continue from general knowledge.`,
   'When the research is done, write the line "[調査結果]" and then only the final report in the requested format.',
 ].join('\n\n');
 /** `agent-research` content: the report, then `[出典]` lines "- title | url", then `[検索] ok|unavailable|error:<codes>`. */
