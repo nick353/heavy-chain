@@ -52,7 +52,7 @@ const FASHION_STUDIO_PROJECT_ICON = '/lightchain-assets/icons/fashion-studio.png
 const STUDIO_FUNCTIONS: readonly { id: StudioFunctionId; label: string; badge?: string; banner: string }[] = [
   { id: 'text', label: 'テキストで生成', banner: '指令と参考画像を使ってワンクリック生成' },
   // Light allows up to three fusion points per main image; Heavy's project keeps one reference image, so one point.
-  { id: 'region', label: '範囲指定で生成', banner: 'メイン画像1枚につき、1か所の定向融合が可能です' },
+  { id: 'region', label: '範囲指定で生成', banner: 'メイン画像1枚につき、最大3か所の定向融合が可能です' },
   { id: 'underwear', label: '下着のフィッティング', badge: 'NEW', banner: 'インナーフィッティング専用ツール' },
   { id: '3d', label: '3D画像に変換', banner: '指定した領域を3D画像に変換する' },
 ];
