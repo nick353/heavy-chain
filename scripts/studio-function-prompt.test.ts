@@ -51,6 +51,9 @@ test('region replaces the garment marked on the guide image with the reference d
   // Light keeps the garment's own colour, fabric and hem; only the marked part takes the reference's construction.
   assert.match(sent, /keeping the garment's own colours, fabric, print, trims and hem from image 1/);
   assert.doesNotMatch(sent, /Replace only the marked garment/);
+  // 2026-11-12 production: the marked chest still came out in the reference's white until this sentence was added.
+  assert.match(sent, /Take only the shape from the reference, never its colour, fabric or print/);
+  assert.match(sent, /no colour from the reference appears on the garment/);
   assert.match(sent, /must not contain any teal marks/);
 });
 
@@ -65,6 +68,7 @@ test('multi-point region and multi-reference text name every image and still pas
   assert.match(region, /Images 2 to 4 are reference garments\. Image 5 is image 1 with coloured brush strokes/);
   assert.match(region, /the teal marks take the construction of image 2, the magenta marks take the construction of image 3, the orange marks take the construction of image 4/);
   assert.match(region, /keeping the garment's own colours, fabric, print, trims and hem from image 1/);
+  assert.match(region, /Take only the shape from each reference, never its colour, fabric or print/);
   const text = studioProviderPrompt('この服で撮影', 'text', { referenceCount: 3 });
   assert.match(text, /Images 2 to 4 are reference images/);
   assert.match(studioProviderPrompt('この服で撮影', 'text', { referenceCount: 1 }), /Image 2 is a reference image/);
