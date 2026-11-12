@@ -274,6 +274,12 @@ export function agentResearchPrompt(task: AgentTask): string {
 }
 /** `quote`: the sentence the report cited from the page (Light shows it under the source in 参考資料). */
 export type AgentSource = { title: string; url: string; quote?: string };
+/**
+ * The cited sentence as Light shows it: the search tool returns a page's text as Markdown, so its emphasis (**) and heading
+ * marks (# ) would show as symbols (production 2026-11-12: 「** The key directions…」「# 9 Trends … ## Spring/Summer 2027」).
+ * Hashtags (#リネン, no space after #) stay.
+ */
+export const cleanAgentQuote = (value: string) => value.replace(/\*\*|__/g, '').replace(/(^|\s)#{1,6}(?=\s|$)/g, '$1').replace(/\s+/g, ' ').trim();
 export type ParsedResearch = { report: string; sections: ParsedPlan['sections']; sources: AgentSource[]; search: 'ok' | 'unavailable' | 'error' };
 export function parseAgentResearch(content: string): ParsedResearch {
   const text = content.replace(/\r/g, '');
@@ -284,7 +290,7 @@ export function parseAgentResearch(content: string): ParsedResearch {
   if (sourcesAt >= 0) {
     for (const line of text.slice(sourcesAt).split('\n').slice(1)) {
       const match = /^-\s*(.*?)\s*\|\s*(https?:\/\/\S+?)\s*(?:\|\s*(.*?))?\s*$/.exec(line.trim());
-      if (match) sources.push({ title: match[1] || match[2], url: match[2], ...(match[3] ? { quote: match[3] } : {}) });
+      if (match) sources.push({ title: match[1] || match[2], url: match[2], ...(match[3] && cleanAgentQuote(match[3]) ? { quote: cleanAgentQuote(match[3]) } : {}) });
       else if (/^\[検索\]/.test(line.trim())) break;
     }
   }
