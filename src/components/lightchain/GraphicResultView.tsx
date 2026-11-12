@@ -196,10 +196,12 @@ function GraphicSvgStage({ candidate, index, onClose }: { candidate: GraphicCand
   const ready = state.status === 'ready' ? state : null;
   return (
     <>
+      {/* Zoomed, the picture must keep its own height: as a stretched flex item it stayed 514px tall and the SVG fitted
+          itself back to the same size (production 2026-11-12, the button changed but nothing grew). */}
       <div className={`flex min-w-0 flex-1 overflow-auto rounded-lg bg-white ${zoomed ? '' : 'items-center justify-center'}`} data-testid="graphic-tool-stage-svg" data-svg-status={state.status}>
         {state.status === 'error' ? <p role="alert" className="m-auto text-sm text-rose-600">SVGに変換できませんでした</p>
           : !ready ? <span role="status" className="m-auto flex items-center gap-2 text-sm text-neutral-500"><Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />線をなぞっています…</span>
-          : <img src={ready.url} alt="SVGにした案" data-testid="graphic-svg-preview" className={zoomed ? 'max-w-none' : 'max-h-full max-w-full object-contain'} style={zoomed ? { width: `${ready.result.traceWidth * 4}px` } : undefined} />}
+          : <img src={ready.url} alt="SVGにした案" data-testid="graphic-svg-preview" className={zoomed ? 'h-auto max-w-none shrink-0 self-start' : 'max-h-full max-w-full object-contain'} style={zoomed ? { width: `${ready.result.traceWidth * 4}px` } : undefined} />}
       </div>
       <aside className="flex w-60 shrink-0 flex-col gap-3 overflow-y-auto rounded-lg bg-[#171b1c] p-4 text-sm" aria-label="SVGにする" data-testid="graphic-tool-svg">
         <div className="flex items-center justify-between"><h3 className="text-sm font-medium text-white">SVGにする</h3><button type="button" aria-label="閉じる" onClick={onClose} className="text-neutral-400 hover:text-white"><X aria-hidden="true" className="h-4 w-4" /></button></div>
