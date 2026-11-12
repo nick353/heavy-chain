@@ -19,6 +19,7 @@ import { defaultModelToolSettings, isModelToolFeature, isModelDescriptionFeature
 import { normalizeGenerationSourceReferences } from '../lib/generationSourceReferences';
 import { isModelLibraryFeature, readModelLibrarySettings, readLegacyModelLibrarySettings, modelLibrarySettingsPrompt, modelLibraryBodyPreview, MODEL_LIBRARY_BODY_CATALOG_SHA256 } from '../lib/modelLibrarySettings';
 import { ERROR_MESSAGES } from '../lib/errorMessages';
+import { candidatePlan } from '../lib/imageCandidatePlan';
 
 type SlotKey = 'primary' | 'secondary';
 type Source = { name: string; kind: string; imageUrl: string; sourceImageId?: string | null; sourceStoragePath?: string | null; sourceMediaPath?: string | null;
@@ -28,7 +29,7 @@ type LibrarySettingsKind = 'absent' | 'null' | 'invalid' | 'valid';
 type LibraryInputReadback = { source: 'local' | 'remote' | 'request' | 'none'; remoteLookup: 'not-needed' | 'matched' | 'no-match' | 'unavailable'; modernSettings:LibrarySettingsKind; legacySettings:LibrarySettingsKind; requestLookup:'not-needed'|'matched'|'identity-mismatch'|'unavailable'; requestModernSettings:LibrarySettingsKind|'not-read'; requestLegacySettings:LibrarySettingsKind|'not-read' };
 export type CanonicalWorkspaceFeature = 'lab' | 'print-design-project' | 'wear-design-lab' | 'wear-design-detail' | 'printing-image' | 'line-to-real' | 'line-generation' | 'svg-convert' | 'image-repair' | 'pattern-arrange' | 'pattern-print-design' | 'change-color' | 'pattern-vector' | 'pattern-vector-pro' | 'model-face' | 'model-change' | 'body-shape' | 'clothing-size' | 'pose-change' | 'background-change' | 'angle-change' | 'model-library' | 'model-custom';
 export type CanonicalModelCandidate = {imageId:string;storagePath:string;jobId:string;bodyType:string;ageGroup:string;provider:string};
-type WorkspaceConfig = {prepareSourceImage?:(url:string)=>Promise<string>;/** The area the model may change in the primary image (protected-edit PNG, alpha 0 = editable); outside it the source pixels are restored before saving. */protectedEditMask?:()=>string|null;/** false keeps the secondary slot out of what the provider sees (it is still stored). */sendSecondary?:boolean;providerModel?:string;modelLibraryCreation?:boolean;initialInputState?:Record<string,Json>;requiredSources?:number;title?:string;/** Overrides title as the first prompt line, when the display name would steer the image. */promptTitle?:string;promptContext?:string;identityConflict?:boolean;/** Proposals per edit (AIグラフィックデザイン draws 4, like Light's demo); the server plans 1 to 4. */candidateCount?:number};
+type WorkspaceConfig = {prepareSourceImage?:(url:string)=>Promise<string>;/** The area the model may change in the primary image (protected-edit PNG, alpha 0 = editable); outside it the source pixels are restored before saving. */protectedEditMask?:()=>string|null;/** false keeps the secondary slot out of what the provider sees (it is still stored). */sendSecondary?:boolean;providerModel?:string;modelLibraryCreation?:boolean;initialInputState?:Record<string,Json>;requiredSources?:number;title?:string;/** Overrides title as the first prompt line, when the display name would steer the image. */promptTitle?:string;promptContext?:string;identityConflict?:boolean;/** Proposals per edit (AIグラフィックデザイン draws 4, like Light's demo); the server plans 1 to 4. */candidateCount?:number;/** One direction per proposal (sent only when there is one for each), so the proposals differ. */candidateDirections?:readonly string[]};
 const record = (value:unknown): value is Record<string,Json> => Boolean(value) && typeof value==='object' && !Array.isArray(value);
 const readCandidates = (metadata: Record<string,Json | undefined>,currentJobId:string): CanonicalModelCandidate[] => {
  const raw=metadata.modelCandidates;if(!Array.isArray(raw))return [];
@@ -560,7 +561,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
           assertCurrent(); rememberPending(request); invocationAttempted = true;
           setState(s=>({...s,pendingId:request.requestId}));
           const protectedMask = action === 'edit-result' ? null : configRef.current.protectedEditMask?.() ?? null;
-          receipt = await editImageWithPrompt(target,prompt,fence.brandId,{...options,referenceImageUrls:references,...(protectedMask?{maskDataUrl:protectedMask}:{}),...(configRef.current.candidateCount&&configRef.current.candidateCount>1?{count:Math.min(4,configRef.current.candidateCount)}:{})});
+          receipt = await editImageWithPrompt(target,prompt,fence.brandId,{...options,referenceImageUrls:references,...(protectedMask?{maskDataUrl:protectedMask}:{}),...candidatePlan(configRef.current)});
         }
       }
       assertCurrent();

@@ -9,7 +9,7 @@ import { useAuthStore } from '../stores/authStore';
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
 import { assistGroups, assistPromptLines, assistReferenceKey, selectedAssistTags, toggleAssistTag } from '../features/graphicDesign/graphicAssist';
 import { analyzeGraphicReferences } from '../features/graphicDesign/graphicAssistApi';
-import { GRAPHIC_CANDIDATE_COUNT, graphicFollowUpBrief } from '../features/graphicDesign/graphicTools';
+import { GRAPHIC_CANDIDATE_COUNT, GRAPHIC_CANDIDATE_DIRECTIONS, graphicFollowUpBrief } from '../features/graphicDesign/graphicTools';
 import { GraphicResultView } from '../components/lightchain/GraphicResultView';
 import type { GraphicCandidate } from '../features/graphicDesign/graphicResultActions';
 
@@ -67,6 +67,7 @@ function LightchainGraphicDesignWorkspace() {
     initialInputState: { referenceStrengths: [DEFAULT_STRENGTH, DEFAULT_STRENGTH], assist: false },
     // 独自: 本家の説明動画の生成後の画面は1回で4案（本家はこのアカウントで生成できない）。
     candidateCount: GRAPHIC_CANDIDATE_COUNT,
+    candidateDirections: GRAPHIC_CANDIDATE_DIRECTIONS,
   });
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [selected, setSelected] = useState<0 | 1>(0);
