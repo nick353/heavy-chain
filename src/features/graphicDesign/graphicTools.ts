@@ -96,32 +96,92 @@ export function recolorPixels(data: Uint8ClampedArray, palette: readonly Rgb[], 
   return out;
 }
 
-const smoothstep = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+/** Half the width of the soft edge along a cut (px). */
+const SEAM_FEATHER = 2;
 
 /**
- * つなぎ目をなじませる: makes the tile repeat without a visible seam. Pass 1 blends each row with the copy shifted by half
- * the width, only in a band near the left and right edges; pass 2 does the same with columns. At an edge the pixel comes
- * from the half-shifted copy, whose neighbours across the tile boundary are neighbours in the image, so the repeat is
- * continuous; the copy's own seam sits in the middle, where the original is kept. band is the share of each side that
- * is blended (0.25 = the outer quarter).
+ * The cheapest connected cut through a band: one position per line (positions of neighbouring lines differ by at most
+ * one), minimizing the summed cost. The first and last lines are neighbours across the tile's other edge, so a second
+ * pass starts where the free path ended and must end within one pixel of it.
+ */
+function cheapestCut(cost: Float64Array, lines: number, span: number): Int32Array {
+  const run = (start: number) => {
+    const total = new Float64Array(lines * span); const from = new Int32Array(lines * span);
+    for (let p = 0; p < span; p++) total[p] = start < 0 || p === start ? cost[p] : Infinity;
+    for (let t = 1; t < lines; t++) {
+      const row = t * span; const prev = row - span;
+      for (let p = 0; p < span; p++) {
+        let best = total[prev + p]; let at = p;
+        if (p > 0 && total[prev + p - 1] < best) { best = total[prev + p - 1]; at = p - 1; }
+        if (p + 1 < span && total[prev + p + 1] < best) { best = total[prev + p + 1]; at = p + 1; }
+        total[row + p] = best + cost[row + p]; from[row + p] = at;
+      }
+    }
+    return { total, from };
+  };
+  const last = (lines - 1) * span;
+  const free = run(-1);
+  let end = 0;
+  for (let p = 1; p < span; p++) if (free.total[last + p] < free.total[last + end]) end = p;
+  const loop = run(end);
+  let finish = end;
+  for (const p of [end - 1, end + 1]) if (p >= 0 && p < span && loop.total[last + p] < loop.total[last + finish]) finish = p;
+  const cut = new Int32Array(lines);
+  for (let t = lines - 1, p = finish; t >= 0; t--) { cut[t] = p; p = loop.from[t * span + p]; }
+  return cut;
+}
+
+/**
+ * つなぎ目をなじませる: makes the tile repeat without a visible seam. Pass 1 replaces a strip at the left and right edges
+ * with the copy shifted by half the width; pass 2 does the same at the top and bottom. At an edge the pixel comes from
+ * the shifted copy, whose neighbours across the tile boundary are neighbours in the image, so the repeat is continuous;
+ * the copy's own seam sits in the middle, where the original is kept. Where the strip ends, each line switches at the
+ * place the two images differ least (a minimum-error cut, as in image quilting), with only a 4px soft edge: on a print
+ * the cut runs through the ground between motifs, so no motif is faded into a half-transparent double, which a
+ * crossfade over the whole band leaves (seen on production 2026-11-12). band is the share of each side the cut may
+ * use (0.25 = the outer quarter).
  */
 export function makeSeamless(data: Uint8ClampedArray, width: number, height: number, band = 0.25): Uint8ClampedArray {
-  const blendAxis = (source: Uint8ClampedArray, horizontal: boolean) => {
-    const out = new Uint8ClampedArray(source.length);
-    const size = horizontal ? width : height; const half = Math.floor(size / 2); const edge = Math.max(1, size * band);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const along = horizontal ? x : y;
-        // Weight of the original: 1 inside, falling to 0 at the tile's edge.
-        const keep = smoothstep(Math.min(along + 0.5, size - along - 0.5) / edge);
-        const sx = horizontal ? (x + half) % width : x; const sy = horizontal ? y : (y + half) % height;
-        const i = (y * width + x) * 4; const j = (sy * width + sx) * 4;
-        for (let c = 0; c < 4; c++) out[i + c] = Math.round(source[i + c] * keep + source[j + c] * (1 - keep));
+  const F = SEAM_FEATHER;
+  const cutAxis = (source: Uint8ClampedArray, horizontal: boolean) => {
+    const size = horizontal ? width : height; const lines = horizontal ? height : width;
+    const half = Math.floor(size / 2); const edge = Math.floor(size * band);
+    if (edge < 2 * F + 3 || lines < 1) return source;
+    const at = (line: number, along: number) => (horizontal ? line * width + along : along * width + line) * 4;
+    const shifted = (line: number, along: number) => at(line, (along + half) % size);
+    const diff = (line: number, along: number) => {
+      const i = at(line, along); const j = shifted(line, along);
+      return Math.abs(source[i] - source[j]) + Math.abs(source[i + 1] - source[j + 1]) + Math.abs(source[i + 2] - source[j + 2]) + Math.abs(source[i + 3] - source[j + 3]);
+    };
+    // The cut's cost is the difference over its soft edge, so a cut never fades a motif in it.
+    const bandCut = (lo: number, hi: number) => {
+      const span = hi - lo + 1; const cost = new Float64Array(lines * span);
+      for (let line = 0; line < lines; line++) {
+        for (let p = 0; p < span; p++) {
+          let sum = 0;
+          for (let k = -F; k <= F; k++) sum += diff(line, lo + p + k);
+          cost[line * span + p] = sum;
+        }
+      }
+      return cheapestCut(cost, lines, span).map((p) => p + lo);
+    };
+    // Left: the shifted copy left of the cut (x = 0 always). Right: the shifted copy right of the cut (x = size - 1 always).
+    const left = bandCut(F + 1, edge - F - 1);
+    const right = bandCut(size - edge + F, size - F - 2);
+    const out = new Uint8ClampedArray(source);
+    for (let line = 0; line < lines; line++) {
+      for (let along = 0; along < size; along++) {
+        if (along === edge) along = size - edge;
+        const toCut = along < edge ? left[line] - along : along - right[line];
+        const weight = Math.min(1, Math.max(0, toCut / (2 * F) + 0.5));
+        if (weight === 0) continue;
+        const i = at(line, along); const j = shifted(line, along);
+        for (let c = 0; c < 4; c++) out[i + c] = Math.round(source[i + c] * (1 - weight) + source[j + c] * weight);
       }
     }
     return out;
   };
-  return blendAxis(blendAxis(data, true), false);
+  return cutAxis(cutAxis(data, true), false);
 }
 
 /** How far a repeat jumps at the tile's edges: the mean color difference across the right/left and bottom/top edges. */
