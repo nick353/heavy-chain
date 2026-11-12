@@ -32,11 +32,13 @@ const formatDate = (iso: string) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
+// Canvas は生成画像の番号でそのまま開く（その画像が載ったプロジェクトになる）。ライブラリーに入れて sourceArtifactId で
+// 渡すと、空の始まりの画面に参考として付くだけで、畳まれた欄の中に隠れていた（2026-11-12 本番）。
 const SEND_TARGETS = [
-  { label: 'Canvasで編集', href: (id: string) => `/canvas/new?sourceArtifactId=${encodeURIComponent(id)}` },
-  { label: 'AIフィッティング', href: (id: string) => `/model?libraryArtifactId=${encodeURIComponent(id)}` },
-  { label: '生地イメージ', href: (id: string) => `/tools/fabric?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=fabric-design` },
-  { label: 'プリントイメージ', href: (id: string) => `/tools/printing?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=printing-design` },
+  { label: 'Canvasで編集', source: 'image', href: (imageId: string) => `/canvas/new?galleryImageId=${encodeURIComponent(imageId)}` },
+  { label: 'AIフィッティング', source: 'library', href: (id: string) => `/model?libraryArtifactId=${encodeURIComponent(id)}` },
+  { label: '生地イメージ', source: 'library', href: (id: string) => `/tools/fabric?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=fabric-design` },
+  { label: 'プリントイメージ', source: 'library', href: (id: string) => `/tools/printing?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=printing-design` },
 ] as const;
 
 const tileButton = 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-white/80 transition hover:text-white disabled:opacity-40';
@@ -224,7 +226,7 @@ export function LightchainHistoryPanel({ onClose, locked = false, toolIds, pendi
                     {sendMenuFor === image.id && (
                       <div role="menu" className="absolute bottom-12 left-2 z-10 w-40 rounded-lg border border-white/10 bg-[#171b1c] p-1 shadow-xl">
                         {SEND_TARGETS.map((target) => (
-                          <button key={target.label} type="button" role="menuitem" onClick={() => { setSendMenuFor(null); void registerInLibrary(image, target.href); }} className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10">{target.label}</button>
+                          <button key={target.label} type="button" role="menuitem" onClick={() => { setSendMenuFor(null); if (target.source === 'image') { onClose(); navigate(target.href(image.id)); } else void registerInLibrary(image, target.href); }} className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10">{target.label}</button>
                         ))}
                       </div>
                     )}

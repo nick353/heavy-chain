@@ -51,3 +51,10 @@ test('the panel mirrors the measured Light layout and pages older results on scr
   assert.match(panel, /scrollHeight - target\.scrollTop - target\.clientHeight < 600/);
   assert.match(panel, /window\.confirm\(/);
 });
+
+test('生成履歴の「Canvasで編集」は生成画像の番号で開く（ライブラリー経由だと空の画面に参考として隠れていた）', () => {
+  const panel = readFileSync(new URL('../src/components/lightchain/LightchainHistoryPanel.tsx', import.meta.url), 'utf8');
+  assert.match(panel, /label: 'Canvasで編集', source: 'image', href: \(imageId: string\) => `\/canvas\/new\?galleryImageId=\$\{encodeURIComponent\(imageId\)\}`/);
+  assert.doesNotMatch(panel, /canvas\/new\?sourceArtifactId=/);
+  assert.match(panel, /if \(target\.source === 'image'\) \{ onClose\(\); navigate\(target\.href\(image\.id\)\); \} else void registerInLibrary\(image, target\.href\);/);
+});
