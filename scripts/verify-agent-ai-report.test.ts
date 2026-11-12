@@ -139,7 +139,7 @@ test('the request carries every fact the slides may use, the table Light uses fo
 test('the server writes the slides with its own instructions, room for a whole deck, and refuses a cut-off reply', async () => {
   assert.match(AGENT_REPORT_SYSTEM_PROMPT, /one <style> element, then one <main class="report"> element/);
   assert.match(AGENT_REPORT_SYSTEM_PROMPT, /Never add figures, prices, brands, products, dates or sources that are not there\. Link only the URLs listed, exactly as written\./);
-  assert.match(AGENT_REPORT_SYSTEM_PROMPT, /never add an <img>/);
+  assert.match(AGENT_REPORT_SYSTEM_PROMPT, /When the request lists real products \(P01…\)[^']*<img src="its image URL" alt="its name">[^']*Never add any other <img>\./);
   assert.equal(AGENT_REPORT_MAX_TOKENS >= 24000, true);
   assert.equal(AGENT_REPORT_MAX_CHARS > 65536, true);
   let sent: Record<string, unknown> = {};

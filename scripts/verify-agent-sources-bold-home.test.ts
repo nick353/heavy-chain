@@ -121,7 +121,8 @@ test('テーマ企画 links go to the site\'s entrance, as in Light', () => {
 
 test('the task page draws the bold as <strong> elements (no HTML string) and links テーマ企画 sites to their entrance', () => {
   assert.match(page, /const SourceQuote = \(\{ text \}: \{ text: string \}\) => \(\n\s+<>\{agentQuoteParts\(text\)\.map\(\(part, index\) => \(part\.bold \? <strong key=\{index\} className="font-semibold text-white">\{part\.text\}<\/strong> : <Fragment key=\{index\}>\{part\.text\}<\/Fragment>\)\)\}<\/>/);
-  assert.doesNotMatch(page, /dangerouslySetInnerHTML/);
+  // The one HTML string is Yahoo!'s fixed credit, which its terms require unchanged (with its comments).
+  assert.doesNotMatch(page.replace('dangerouslySetInnerHTML={{ __html: YAHOO_ATTRIBUTION_HTML }}', ''), /dangerouslySetInnerHTML/);
   // テーマ企画's list shows the sentence through it (インスピレーション / AIグラフィック have no list: Light has none, 9th pass).
   assert.equal(page.split('{source.quote ? <SourceQuote text={source.quote} /> : source.title}').length - 1, 1);
   assert.doesNotMatch(page, /\{source\.quote \?\? source\.title\}/);

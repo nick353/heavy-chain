@@ -41,4 +41,6 @@
   }
   // Set the server-only browser media capability key separately:
   // npx wrangler secret put MEDIA_READ_SECRET
+  // Optional: Yahoo!ショッピング 商品検索 v3 Client ID for the planning agent's real products:
+  // npx wrangler secret put YAHOO_SHOPPING_APP_ID
 }

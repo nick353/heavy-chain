@@ -1169,6 +1169,21 @@ class CloudflareDataPlaneClient {
     }) as CloudflareDesignAssistantReceipt;
   }
 
+  /**
+   * Real products for the planning agent's direction cards (Yahoo!ショッピング, one search per direction). The server answers
+   * `available: false` while it has no key; images stay on Yahoo!'s addresses.
+   */
+  async searchAgentProducts(
+    input: { brandId: string; projectId: string; searches: Array<{ query: string; fallback?: string }> },
+    context?: { userId: string; assertContext: () => void | Promise<void> },
+  ): Promise<{ available: boolean; results: Array<{ query: string; products: unknown[] }> }> {
+    const { userId, call } = await this.captureRequestContext(context?.assertContext);
+    if (context && context.userId !== userId) throw new Error('cloudflare_session_changed');
+    return await call('/v1/design-assistant/products', {
+      method: 'POST', body: JSON.stringify(input), headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(30_000),
+    }) as { available: boolean; results: Array<{ query: string; products: unknown[] }> };
+  }
+
   async readDesignAssistantRequest(
     input: Pick<CloudflareDesignAssistantRequestInput, 'requestId' | 'brandId' | 'projectId' | 'conversationId'>,
     context?: { userId: string; assertContext: () => void | Promise<void> },

@@ -1,5 +1,6 @@
 import type { Env } from './index.ts';
 import { requireBrandRole } from './core.ts';
+import { searchYahooProducts, yahooShoppingConfigured, type ShopProduct, type ShopSearch } from './yahooShopping.ts';
 import { AGENT_RESEARCH_MAX_USES, AGENT_RESEARCH_TIMEOUT_MS, AGENT_THEME_SOURCES_MAX, callClaudeMessages, callClaudeResearch, ClaudeTextError, claudeConfigured, claudeModel, type ClaudeMessage, type ResearchResult } from './claude-text.ts';
 
 // Claude answers when ANTHROPIC_API_KEY is set (the production setup); Workers AI Llama is the fallback only.
@@ -230,7 +231,38 @@ export const AGENT_SHOP_MAX_CLAIMS = 8;
 const AGENT_RESEARCH_MAX_SOURCES = 20;
 const AGENT_SHOP_LINE = /^通販サイトの検索先:[^\S\n]*(.*)$/m;
 const DOMAIN = /^(?=.{4,100}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
-const AGENT_SHOP_USAGE_KEYS = ['web_search_requests', 'shop_prompt_tokens', 'shop_completion_tokens', 'shop_web_search_requests'];
+const AGENT_SHOP_USAGE_KEYS = ['web_search_requests', 'shop_prompt_tokens', 'shop_completion_tokens', 'shop_web_search_requests', 'yahoo_queries'];
+/** The research request's line for plans of the Japanese market: Yahoo!ショッピング's products are added when the key is set. */
+const AGENT_PRODUCT_LINE = /^実商品の検索:[^\S\n]*日本[^\S\n]*$/m;
+const AGENT_PRODUCT_KEYWORDS = /^\[商品検索\][^\S\n]*(.+)$/m;
+export const AGENT_RESEARCH_MAX_PRODUCTS = 8;
+/** The shop search's last line, for Yahoo!ショッピング: at most 3 short phrases. */
+export function agentProductKeywords(text: string): string[] {
+  const line = AGENT_PRODUCT_KEYWORDS.exec(text)?.[1] ?? '';
+  return [...new Set(line.split(/[|｜]/).map(value => value.replace(/["「」]/g, '').replace(/\s+/g, ' ').trim()).filter(value => value.length >= 2 && value.length <= 40))].slice(0, 3);
+}
+const yen = (price: number) => `¥${String(price).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+export type AgentResearchResult = ResearchResult & { products?: ShopProduct[]; yahooQueries?: number };
+/**
+ * Yahoo!ショッピング's products in the research: taken in turn from each search (at most 8, each page once), listed as sources
+ * (「名前（店）」 and the price, after the web pages) and in the `[商品]` block with their image for the report's cards.
+ */
+export function withAgentProducts(result: AgentResearchResult, found: Array<{ query: string; products: ShopProduct[] }>): AgentResearchResult {
+  const products: ShopProduct[] = [];
+  for (let index = 0; products.length < AGENT_RESEARCH_MAX_PRODUCTS && found.some(entry => entry.products[index]); index += 1) {
+    for (const entry of found) {
+      const product = entry.products[index];
+      if (product && products.length < AGENT_RESEARCH_MAX_PRODUCTS && !products.some(item => item.url === product.url) && !result.sources.some(source => source.url === product.url)) products.push(product);
+    }
+  }
+  const usage = result.usage ? { ...result.usage, yahoo_queries: found.length } : result.usage;
+  if (!products.length) return { ...result, usage };
+  return {
+    ...result, usage, products,
+    sources: [...result.sources, ...products.map(product => ({ title: `${product.name}${product.store ? `（${product.store}）` : ''}`, url: product.url,
+      quote: [product.name, product.price === null ? '' : yen(product.price), product.store ? `（${product.store}）` : ''].filter(Boolean).join(' ') }))],
+  };
+}
 /** The shops to search, from the request's own line (at most 8 domains, nothing else). */
 export function agentShopDomains(prompt: string): string[] {
   const line = AGENT_SHOP_LINE.exec(prompt)?.[1] ?? '';
@@ -242,6 +274,7 @@ const AGENT_SHOP_SYSTEM_PROMPT = [
   `You can search at most ${AGENT_SHOP_MAX_USES} times.`,
   'When the search is done, write the line "[調査結果]", then the heading "## 通販の実商品" and 4 to 8 bullets starting with "- ", one product each: the brand and product name, the shop, the price exactly as the page states it (leave it out when the page does not), and what it shows for the plan (material, color, shape, ranking, reviews). Only products from the search results; no URLs.',
 ].join('\n\n');
+const AGENT_SHOP_KEYWORDS_PROMPT = 'Then write one last line: "[商品検索] " followed by up to 3 short Japanese search phrases for a shopping site search (the customers\' gender and one item, plus a material or color when the request names one), separated by " | ".';
 const shopUsage = (main: Record<string, number> | null, shop: Record<string, number> | null) => {
   if (!shop) return main;
   const n = (usage: Record<string, number> | null, key: string) => usage?.[key] ?? 0;
@@ -277,16 +310,43 @@ export function mergeShopResearch(main: ResearchResult, shop: ResearchResult | n
 const textBlocks = (messages: ClaudeMessage[], change: (blocks: Array<Record<string, unknown>>) => Array<Record<string, unknown>>) =>
   messages.map((message, index) => index === messages.length - 1 && Array.isArray(message.content) ? { ...message, content: change(message.content as Array<Record<string, unknown>>) } : message);
 /** The research step: the broad search and, beside it, the shop search (both at once, within the same time limit). */
-export async function runAgentResearch(env: Env, prompt: string, messages: ClaudeMessage[], model: unknown, fetchImpl: typeof fetch = fetch): Promise<ResearchResult> {
+export async function runAgentResearch(env: Env, prompt: string, messages: ClaudeMessage[], model: unknown, fetchImpl: typeof fetch = fetch,
+  sleep?: (ms: number) => Promise<unknown>): Promise<AgentResearchResult> {
   const domains = agentShopDomains(prompt);
-  // The broad search does not see the shop line; the shop search gets its job after the request.
-  const broad = textBlocks(messages, blocks => blocks.map(block => block.type === 'text' && typeof block.text === 'string' ? { ...block, text: block.text.replace(AGENT_SHOP_LINE, '').trim() } : block));
+  const realProducts = yahooShoppingConfigured(env) && AGENT_PRODUCT_LINE.test(prompt);
+  // The broad search does not see the shop lines; the shop search gets its job after the request.
+  const broad = textBlocks(messages, blocks => blocks.map(block => block.type === 'text' && typeof block.text === 'string' ? { ...block, text: block.text.replace(AGENT_SHOP_LINE, '').replace(AGENT_PRODUCT_LINE, '').trim() } : block));
   const shopping = domains.length ? callClaudeResearch(env, {
-    system: AGENT_SHOP_SYSTEM_PROMPT, model, timeoutMs: AGENT_RESEARCH_TIMEOUT_MS, maxUses: AGENT_SHOP_MAX_USES, allowedDomains: domains, fallbackWithoutSearch: false,
+    system: realProducts ? `${AGENT_SHOP_SYSTEM_PROMPT}\n\n${AGENT_SHOP_KEYWORDS_PROMPT}` : AGENT_SHOP_SYSTEM_PROMPT, model, timeoutMs: AGENT_RESEARCH_TIMEOUT_MS, maxUses: AGENT_SHOP_MAX_USES, allowedDomains: domains, fallbackWithoutSearch: false,
     messages: textBlocks(broad, blocks => [...blocks, { type: 'text', text: `（この回の役目）上の依頼のうち、${domains.join('・')} で売られている実商品だけを調べる。書き方はシステムの指示に従う。` }]),
   }, fetchImpl).catch((reason: unknown) => { console.warn('claude_shop_research_failed', reason instanceof ClaudeTextError ? reason.code : 'unknown'); return null; }) : Promise.resolve(null);
   const [main, shop] = await Promise.all([callClaudeResearch(env, { system: AGENT_RESEARCH_SYSTEM_PROMPT, messages: broad, model, timeoutMs: AGENT_RESEARCH_TIMEOUT_MS }, fetchImpl), shopping]);
-  return mergeShopResearch(main, shop);
+  const merged = mergeShopResearch(main, shop);
+  const searches: ShopSearch[] = realProducts && shop ? agentProductKeywords(shop.text).map(query => ({ query })) : [];
+  if (!searches.length) return merged;
+  return withAgentProducts(merged, await searchYahooProducts(env, searches, { fetchImpl, ...(sleep ? { sleep } : {}) }));
+}
+const AGENT_PRODUCT_SEARCHES_MAX = 4;
+/**
+ * The direction cards' real products (one search per direction): `{ available: false }` without the key, so the page
+ * generates its pictures as before. Never stores the images.
+ */
+export async function agentProductsResponse(env: Env, body: unknown, fetchImpl: typeof fetch = fetch, sleep?: (ms: number) => Promise<unknown>): Promise<Response> {
+  const searches = record(body) && Array.isArray(body.searches) ? body.searches : null;
+  if (!searches || !searches.length || searches.length > AGENT_PRODUCT_SEARCHES_MAX || !searches.every(entry => record(entry) && keys(entry, ['query', 'fallback'])
+    && text(entry.query, 60) && (entry.fallback === undefined || text(entry.fallback, 60)))) return error('invalid_agent_products_request', 400);
+  if (!yahooShoppingConfigured(env)) return json({ available: false, results: [] });
+  const results = await searchYahooProducts(env, searches as ShopSearch[], { fetchImpl, ...(sleep ? { sleep } : {}) });
+  return json({ available: true, results });
+}
+async function products(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'POST') return error('method_not_allowed', 405);
+  const body = await readBody(request);
+  if (body instanceof Response) return body;
+  if (!record(body) || !keys(body, ['brandId', 'projectId', 'searches']) || !id(body.brandId) || !id(body.projectId)) return error('invalid_agent_products_request', 400);
+  const owner = await authorize(request, env, { requestId: 'products', brandId: body.brandId, projectId: body.projectId, conversationId: 'products' });
+  if (owner instanceof Response) return owner;
+  return agentProductsResponse(env, body);
 }
 /**
  * Light's research report (read 2026-11-12 from its 新商品企画 and 顧客提案 reports) is written by its AI each time as 1600x900
@@ -303,7 +363,7 @@ export const AGENT_REPORT_SYSTEM_PROMPT = [
   'In <style>, set only :root color variables for a palette that suits the collection (--page-bg, --color-base, --color-surface, --color-ink, --color-muted, --color-line, --color-accent, --color-on-accent; muted, refined, readable on screen), plus at most 10 short rules of your own that use the classes below.',
   'Every page: <section class="report-page" data-page-id="page-NN"> (add class "surface" for a lighter page) with <header class="page-header"><h2>page title</h2><span class="kicker">English label</span></header>, <div class="page-body">…</div>, and <footer class="page-footer"><span>the band text given in the request</span><span>NN</span></footer>. The cover is <section class="report-page cover" data-page-id="page-01"> with a small English line, <div class="rule"></div>, <h1>, <p class="sub"> and <div class="meta">, without header or footer. Each page is a fixed 1600x900 slide: keep its content inside it (at most two cards per column, about six short bullets per card).',
   'Classes the app styles: two-col, three-col, card, kicker-pill, stat and stat-sub (a big figure with its note), quote, tag, tag outline, note-box, small, muted, lead, table (th/td are styled), media-grid (style="--columns: 4; --rows: 1;"), media-item, media-frame media-link, media-empty, src, dir-hero (direction page: text on the left, evidence on the right), dir-badge.',
-  'Evidence card (one per source, as Light shows its products): <figure class="media-item"><a class="media-frame media-link" href="the exact URL" target="_blank" aria-label="ソースを見る"><span class="media-empty">the site name</span></a><figcaption><b>the product, brand or page name</b> the price only when the source text states it<br><span class="src">the site / 収集 the date</span></figcaption></figure>. There are no product images yet: never add an <img>.',
+  'Evidence card (one per source, as Light shows its products): <figure class="media-item"><a class="media-frame media-link" href="the exact URL" target="_blank" aria-label="ソースを見る"><span class="media-empty">the site name</span></a><figcaption><b>the product, brand or page name</b> the price only when the source text states it<br><span class="src">the site / 収集 the date</span></figcaption></figure>. When the request lists real products (P01…), show them first as evidence cards: inside the media-frame link to the product page put <img src="its image URL" alt="its name"> instead of the span, and give its price and shop as listed. Never add any other <img>.',
   'Pages, in order: the cover; the brief and the research scope (for 顧客提案 a table of the requirement IDs R01…); the market and the findings by source; the trends (color, material, silhouette, details); one or two evidence pages of cards; one page per direction (its code D1… or D01…, concept, fit with the evidence and requirements, colors and materials, risks to check, and its evidence cards); a comparison table of the directions with the next step; and the last page with the sources table the request describes. Nine to twelve pages.',
   'Facts: use only what the request gives (the request, the requirements, the research report, the numbered sources with their text, the directions). Never add figures, prices, brands, products, dates or sources that are not there. Link only the URLs listed, exactly as written. When the research lacks something (a region, a category, social posts, prices), say so in a note-box, as a disclosure, instead of filling it in.',
 ].join('\n\n');
@@ -313,12 +373,14 @@ export const AGENT_REPORT_SYSTEM_PROMPT = [
  * after `[検索]` so the readers that stop there (the report, 新商品企画, the chat, its history) never see it.
  */
 type FormattedSource = { title: string; url: string; quote?: string };
-export function formatAgentResearchContent(result: { text: string; sources: FormattedSource[]; claims?: FormattedSource[]; searchUsed: boolean; searchErrors: string[] }) {
+/** `[商品]` (Yahoo!ショッピング's products, research since 2026-11-12): one JSON object per line, last, so no reader takes it for a source. */
+export function formatAgentResearchContent(result: { text: string; sources: FormattedSource[]; claims?: FormattedSource[]; products?: ShopProduct[]; searchUsed: boolean; searchErrors: string[] }) {
   const clean = (value: string) => value.replace(/[\r\n|]+/g, ' ').replace(/\s+/g, ' ').trim();
   const line = (source: FormattedSource) => `- ${clean(source.title) || source.url} | ${source.url}${source.quote && clean(source.quote) ? ` | ${clean(source.quote)}` : ''}`;
   const status = result.searchUsed ? 'ok' : result.searchErrors.includes('web_search_unavailable') || !result.searchErrors.length ? 'unavailable' : `error:${result.searchErrors.join(',')}`;
   return [result.text.trim(), '', '[出典]', ...result.sources.map(line), '', `[検索] ${status}`,
-    ...(result.claims ? ['', '[引用]', ...result.claims.map(line)] : [])].join('\n');
+    ...(result.claims ? ['', '[引用]', ...result.claims.map(line)] : []),
+    ...(result.products?.length ? ['', '[商品]', ...result.products.map(product => JSON.stringify(product))] : [])].join('\n');
 }
 
 /** Workers AI image parts become Claude base64 image blocks. */
@@ -480,6 +542,9 @@ export const DESIGN_ASSISTANT_ABANDONED_MS = 10 * 60 * 1000;
 export async function handleDesignAssistantRequest(request: Request, env: Env, ctx?: Pick<ExecutionContext, 'waitUntil'>): Promise<Response | null> {
   const url = new URL(request.url);
   const match = /^\/v1\/design-assistant\/requests\/([^/]+)$/.exec(url.pathname);
+  if (url.pathname === '/v1/design-assistant/products') {
+    try { return await products(request, env); } catch (reason) { console.warn('agent_products_failed', reason instanceof Error ? reason.message : 'unknown'); return error('agent_products_failed', 502); }
+  }
   if (!match && url.pathname !== '/v1/design-assistant/requests') return null;
   try {
     if (!match && request.method === 'POST') return await send(request, env, ctx);
