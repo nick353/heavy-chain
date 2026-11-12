@@ -486,6 +486,49 @@ export function parseAgentDirection(theme: string): { name: string; description:
 }
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
+
+/**
+ * Light's 新商品企画 / 顧客提案 show their sources only inside the research report (read 2026-11-12, tasks of 2026-11-12): no
+ * list in the chat or in 概要. The report ends with a source index table (顧客提案: 「ソース一覧」 SOURCE INDEX, columns
+ * ID / ソース / 内容 / 区分, rows S01–S11, the first 区分 「EC実商品(収集 2026-11-11)」) and each evidence card has
+ * 「ソースを見る」 to the page itself (target="_blank" rel="noopener noreferrer"; 15 links, 6 in the 新商品企画 report). Heavy
+ * has no product cards, so the link sits in the row. At most 15 rows: the most links seen in Light's reports.
+ */
+export const AGENT_REPORT_SOURCES_MAX = 15;
+const EC_SITES = new Set(['rakuten.co.jp', 'amazon.co.jp', 'amazon.com', 'zozo.jp', 'tmall.com', 'taobao.com', 'jd.com', 'vip.com', 'shein.com', 'temu.com',
+  'nordstrom.com', 'macys.com', 'poshmark.com', 'depop.com', 'thredup.com', 'ebay.com', 'walmart.com', 'etsy.com', 'minne.com', 'creema.jp', 'qoo10.jp',
+  'mercari.com', 'buyma.com', 'magaseek.com', 'locondo.jp', 'asos.com', 'farfetch.com', 'net-a-porter.com', 'mytheresa.com', 'ssense.com', 'revolve.com',
+  'dhgate.com', 'aliexpress.com', 'kakaku.com', 'brandear.jp', 'thebase.in', 'tsuku2.jp', 'modaoperandi.com']);
+const SNS_SITES = new Set(['instagram.com', 'tiktok.com', 'x.com', 'twitter.com', 'pinterest.com', 'pinterest.jp', 'threads.net', 'threads.com', 'facebook.com',
+  'reddit.com', 'youtube.com', 'youtu.be', 'xiaohongshu.com', 'weibo.com', 'douyin.com', 'kuaishou.com', 'wear.jp', 'lemon8-app.com']);
+/** The 区分 of a source in the report's index, from its site (Light: EC実商品 / SNS / トレンド予測 …; Heavy's research is a web search). */
+export function agentSourceKind(url: string): 'EC' | 'SNS' | 'ウェブ' {
+  const site = agentSourceSite(url);
+  return EC_SITES.has(site) ? 'EC' : SNS_SITES.has(site) ? 'SNS' : 'ウェブ';
+}
+const localDate = (value?: string) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+const cut = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
+function reportSourceIndex(research: ParsedResearch | null, collectedAt?: string): string {
+  const head = '<div class="index-head"><h2>ソース一覧</h2><span class="index-label">SOURCE INDEX</span></div>';
+  if (!research?.sources.length) return `<section class="index">${head}<p class="muted">${research?.search === 'ok' ? '参照した資料はありません。' : 'ウェブ検索を使えませんでした。この調査結果はAIモデルの知識に基づいています。'}</p></section>`;
+  const collected = localDate(collectedAt);
+  const rows = research.sources.slice(0, AGENT_REPORT_SOURCES_MAX).map((source, index) => {
+    const site = agentSourceSite(source.url);
+    const title = source.title && source.title !== source.url ? ` ${cut(source.title, 60)}` : '';
+    const content = source.quote ? cleanAgentQuote(source.quote).replace(/\*\*/g, '') : source.title !== source.url ? source.title : '';
+    const kind = `${agentSourceKind(source.url)}${index === 0 && collected ? `(収集 ${collected})` : ''}`;
+    return `<tr><td>S${String(index + 1).padStart(2, '0')}</td><td>${escapeHtml(`${site}${title}`)}<br><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">ソースを見る</a></td>`
+      + `<td>${escapeHtml(cut(content, 160))}</td><td>${escapeHtml(kind)}</td></tr>`;
+  }).join('');
+  return `<section class="index">${head}<table><thead><tr><th>ID</th><th>ソース</th><th>内容</th><th>区分</th></tr></thead><tbody>${rows}</tbody></table>`
+    + `${collected ? '<p class="muted">※ 収集日はウェブ検索でページを集めた日であり、各ページの公開日ではありません。</p>' : ''}</section>`;
+}
+
 /** Light's 「調査とビジュアル方向」 HTML report (オンラインで表示 / ダウンロード): built from the stored research, every value escaped. */
 export function buildAgentResearchReportHtml(task: AgentTask): string {
   const research = task.research?.state === 'completed' && task.research.content ? parseAgentResearch(task.research.content) : null;
@@ -495,11 +538,11 @@ export function buildAgentResearchReportHtml(task: AgentTask): string {
     .map(section => `<section><h2>${escapeHtml(section.heading)}</h2><ul>${section.items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></section>`).join('');
   const directions = round ? `<section><h2>ビジュアル方向性の候補</h2>${round.themes.map(theme => { const d = parseAgentDirection(theme);
     return `<div class="card"><h3>${escapeHtml(d.name)}</h3>${d.description ? `<p>${escapeHtml(d.description)}</p>` : ''}${d.recommendation ? `<p class="muted">${escapeHtml(d.recommendation)}</p>` : ''}</div>`; }).join('')}</section>` : '';
-  const sources = research?.sources.length ? `<section><h2>参考資料</h2><ol>${research.sources.map(source => `<li><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title)}</a></li>`).join('')}</ol></section>`
-    : `<section><h2>参考資料</h2><p class="muted">${research?.search === 'ok' ? '参照した資料はありません。' : 'ウェブ検索を使えませんでした。この調査結果はAIモデルの知識に基づいています。'}</p></section>`;
+  // The research runs as soon as the scope is confirmed; its step keeps no time of its own.
+  const sources = reportSourceIndex(research, task.research?.at ?? task.scope?.at);
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>調査とビジュアル方向レポート</title>
 <style>:root{color-scheme:light dark;--bg:#ffffff;--fg:#1d2324;--muted:#5d6869;--line:#dfe5e5;--accent:#078e85}@media (prefers-color-scheme:dark){:root{--bg:#171b1c;--fg:#e8eeee;--muted:#9aa6a7;--line:#2f3537;--accent:#5fe3d8}}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}main{max-width:760px;margin:0 auto;padding:32px 16px 64px}h1{font-size:24px;margin:0 0 8px}h2{font-size:17px;color:var(--accent);margin:28px 0 8px}h3{font-size:15px;margin:0 0 4px}.muted{color:var(--muted)}.card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}a{color:var(--accent)}ul,ol{padding-left:20px}</style></head>
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}main{max-width:760px;margin:0 auto;padding:32px 16px 64px}h1{font-size:24px;margin:0 0 8px}h2{font-size:17px;color:var(--accent);margin:28px 0 8px}h3{font-size:15px;margin:0 0 4px}.muted{color:var(--muted)}.card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}a{color:var(--accent)}ul,ol{padding-left:20px}.index-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:2px solid var(--accent);margin:28px 0 12px;padding-bottom:6px}.index-head h2{margin:0}.index-label{font-size:12px;letter-spacing:.12em;color:var(--accent)}table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.6}th{background:var(--accent);color:var(--bg);text-align:left;font-weight:600}th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top}td:first-child{white-space:nowrap}</style></head>
 <body><main><h1>調査とビジュアル方向レポート</h1><p class="muted">${escapeHtml(task.prompt)}</p>${scope ? `<p class="muted">調査範囲：${escapeHtml(scope)}</p>` : ''}${sections}${directions}${sources}</main></body></html>`;
 }
 

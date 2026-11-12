@@ -5,7 +5,7 @@ import { formatAgentResearchContent } from '../cloudflare/heavy-api/src/designAs
 import { AGENT_PROMPT_BUDGET, type AgentTask, type AgentTurn } from '../src/features/agent/agentFlow.ts';
 import {
   agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan,
-  agentDialogueProgress, agentDialoguePrompt, agentDialogueResultLead, agentDialogueSources, agentDialogueWaiting, parseAgentDialogueReply,
+  agentDialogueProgress, agentDialoguePrompt, agentDialogueResultLead, agentDialogueWaiting, parseAgentDialogueReply,
 } from '../src/features/agent/agentDialogue.ts';
 
 const base = (extra: Partial<AgentTask> = {}): AgentTask => ({
@@ -139,7 +139,10 @@ test('a print is drawn flat and square, an inspiration style as one garment; the
   assert.match(agentDialogueWaiting(base({ turns: [reply('a0', FORM), user('u', 'x'), research] }), research), /トレンドを検索しています/);
   const after: AgentTurn = { ...running, id: 'a3' };
   assert.match(agentDialogueWaiting(base({ turns: [reply('a0', 'x'), user('u', '参考画像を2枚選択しました', '【参考画像の選択】\nA、B'), after] }), after), /選定し、デザイン要素を解析/);
-  assert.equal(agentDialogueSources(base({ turns: [reply('a1', formatAgentResearchContent({ text: '[調査結果]\nx', sources: [{ title: 't', url: 'https://e.com' }], searchUsed: true, searchErrors: [] }), 'agent-research')] }))?.sources.length, 1);
+  // The research reply keeps its pages apart from the text (Light shows no source list in this chat: 9th pass, 2026-11-12).
+  const searched = parseAgentDialogueReply(formatAgentResearchContent({ text: '[調査結果]\nx', sources: [{ title: 't', url: 'https://e.com' }], searchUsed: true, searchErrors: [] }));
+  assert.equal(searched.sources.length, 1);
+  assert.equal(searched.body, 'x');
 });
 
 test('new インスピレーション / AIグラフィックデザイン tasks open the chat; the page draws it and generates its styles', () => {

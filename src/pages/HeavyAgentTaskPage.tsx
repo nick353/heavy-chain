@@ -17,7 +17,7 @@ import {
   agentQuoteParts, agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentSourceHome, agentSourceSite, agentScopeSummary, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
   loadAgentTask, parseAgentRequirements, parseAgentResearch, parsePlanResponse, parseThemeResponse, planPrompt, pruneAgentScope, themePrompt, updateAgentTask,
   agentBuildDesignImages, agentBuildDirectionImages, agentChosenCodes, agentDesignPrompt, agentDesignProgress, agentFinalPrompt, agentImageLabel, agentReferenceImages,
-  agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan, agentDialoguePrompt, agentDialogueSources,
+  agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan, agentDialoguePrompt,
   parseAgentDialogueReply, AGENT_DIALOGUE_TURN_LIMIT, type AgentTurn,
   agentStructurePrompt, agentStyleImagePrompt, agentUsesMerchFlow, agentWording, buildAgentDesignHtml, buildAgentFinalHtml, buildAgentStructureHtml, parseAgentFinal, parseAgentStructure, AGENT_STYLE_COUNT,
   type AgentAssistantStep, type AgentAttachment, type AgentImageStep, type AgentNote, type AgentNoteStage, type AgentResearchScope, type AgentStyleImage, type AgentTask, type AgentTaskDocument,
@@ -163,13 +163,13 @@ function ReportModal({ report, onClose }: { report: ReportDoc; onClose: () => vo
   );
 }
 
-function ReportCard({ title, note, testId, noteTestId, onOpen, onDownload }: { title: string; note: string; testId: string; noteTestId?: string; onOpen: () => void; onDownload: () => void }) {
+function ReportCard({ title, note, testId, onOpen, onDownload }: { title: string; note: string; testId: string; onOpen: () => void; onDownload: () => void }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#202426] px-4 py-3" data-testid={testId}>
       <span aria-hidden="true" className="flex size-8 flex-none items-center justify-center rounded-lg bg-[#f2683c] text-white"><Code2 className="h-4 w-4" /></span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-white">{title}</p>
-        {note && <p className="truncate text-xs text-neutral-400" data-testid={noteTestId}>{note}</p>}
+        {note && <p className="truncate text-xs text-neutral-400">{note}</p>}
       </div>
       <button type="button" onClick={onOpen} className="flex-none text-sm text-cyan-300 hover:underline">オンラインで表示</button>
       <button type="button" onClick={onDownload} className="flex-none text-sm text-cyan-300 hover:underline">ダウンロード</button>
@@ -276,7 +276,6 @@ function DirectionPicker({ themes, chosen, disabled, hint, images, urls, onRevis
   );
 }
 
-const hostOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
 // 参考資料's cited sentence: Light renders it as Markdown, its **…** in a brighter, semibold run (font-semibold text-text-primary).
 const SourceQuote = ({ text }: { text: string }) => (
   <>{agentQuoteParts(text).map((part, index) => (part.bold ? <strong key={index} className="font-semibold text-white">{part.text}</strong> : <Fragment key={index}>{part.text}</Fragment>))}</>
@@ -792,7 +791,6 @@ export default function HeavyAgentTaskPage() {
     const attached = pendingAttachments;
     if (sendTurn({ text: value || `添付：${attached.map((item) => item.name).join('、')}`, attachments: attached })) { setDraft(''); setPendingAttachments([]); }
   };
-  const dialogueSources = task && dialogue ? agentDialogueSources(task) : null;
 
   const plan = task?.plan?.state === 'completed' && task.plan.content ? parsePlanResponse(task.plan.content) : null;
   const merch = Boolean(task && agentUsesMerchFlow(task));
@@ -888,8 +886,8 @@ export default function HeavyAgentTaskPage() {
                   {task.research?.state === 'completed' && task.research.content && (
                     <>
                       <p>{wording.researchDone}</p>
-                      <ReportCard testId="agent-research-report" noteTestId="agent-research-source-count" title={wording.researchReport.title}
-                        note={research?.search === 'ok' ? `${wording.researchReport.note} · 資料${research.sources.length}件` : 'ウェブ検索を使えませんでした · AIモデルの知識に基づく整理'}
+                      {/* Light's card says only 「確認待ちの複数方向 · 情報源別のエビデンス充足度とデータ不足」; its sources are inside the report. */}
+                      <ReportCard testId="agent-research-report" title={wording.researchReport.title} note={wording.researchReport.note}
                         onOpen={() => showDeliverable('research')} onDownload={() => saveDeliverable('research')} />
                     </>
                   )}
@@ -1074,9 +1072,11 @@ export default function HeavyAgentTaskPage() {
           </form>
         )}
       </section>
-      {task && (panelOpen ? (
+      {task && !dialogue && (panelOpen ? (
         // Light floats 概要 as a rounded card 12px from the window edges. It lists only the task's results: タスク成果物,
-        // 参考スタイル and スタイルを生成 (conversation tasks), or 参考資料 with the cited sentence (テーマ企画).
+        // 参考スタイル and スタイルを生成 (新商品企画 / 顧客提案, with no source list: their sources are inside the research
+        // report), or 参考資料 with the cited sentence (テーマ企画). インスピレーション and AIグラフィックデザイン have no 概要 at all
+        // (read 2026-11-12: Light's own AIグラフィックデザイン tasks and its インスピレーション case show the chat alone).
         <aside aria-label="概要" className="hidden w-[337px] shrink-0 p-3 lg:block" data-testid="agent-summary-panel">
           <div className="relative h-full overflow-y-auto rounded-2xl border border-white/10 bg-[#262a2b] p-4 text-sm text-neutral-300">
           <button type="button" aria-label="概要を閉じる" onClick={() => setPanelOpen(false)} className="absolute right-3 top-3 rounded-md p-1.5 text-neutral-400 hover:bg-white/10"><PanelRightClose className="h-4 w-4" /></button>
@@ -1096,21 +1096,8 @@ export default function HeavyAgentTaskPage() {
             </div>
           )}
           {conversation && referenceImages.length > 0 && <ImageShelf title="参考スタイル" testId="agent-reference-styles" stamp={stamp(task.directionImages?.images[0]?.at)} images={referenceImages} urls={imageUrls} />}
-          {(conversation || dialogue) && generatedImages.length > 0 && <ImageShelf title="スタイルを生成" testId="agent-generated-styles" stamp={stamp(designs[0]?.at)} images={generatedImages} urls={imageUrls} />}
-          {dialogue && dialogueSources && dialogueSources.sources.length > 0 && (
-            <div className="mt-5 border-t border-white/10 pt-5">
-              <h3 className="text-base font-medium text-white">参考資料</h3>
-              <ol className="mt-2" data-testid="agent-dialogue-sources">
-                {dialogueSources.sources.map((source) => (
-                  <li key={source.url} className="border-b border-white/10 py-3 text-xs leading-5 last:border-b-0">
-                    <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium text-cyan-300 hover:underline">{hostOf(source.url)}</a>
-                    <span className="block text-neutral-300">{source.quote ? <SourceQuote text={source.quote} /> : source.title}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-          {!conversation && !dialogue && (
+          {conversation && generatedImages.length > 0 && <ImageShelf title="スタイルを生成" testId="agent-generated-styles" stamp={stamp(designs[0]?.at)} images={generatedImages} urls={imageUrls} />}
+          {!conversation && (
             <div className={deliverables.length ? 'mt-5 border-t border-white/10 pt-5' : 'mt-5'}>
               <h3 className="text-base font-medium text-white">参考資料</h3>
               {!roundSources && <p className="mt-2 text-xs leading-5 text-neutral-500">{agentThemeSearches(task) ? 'テーマができると、ウェブ検索で参照した資料がここに表示されます。' : 'Heavy Chainはウェブ検索を行いません。概要とテーマはAIモデルの知識に基づいて作成しています。'}</p>}
