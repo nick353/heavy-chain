@@ -102,8 +102,16 @@ export async function deleteAgentTask(taskId: string): Promise<void> {
   await api().deleteCanvasDocument(taskId);
 }
 
-export function assistantStepFrom(receipt: CloudflareDesignAssistantReceipt, requestId: string): AgentAssistantStep {
-  return { requestId, state: receipt.state, ...(receipt.content ? { content: receipt.content.slice(0, 12000) } : {}), ...(receipt.errorCode ? { errorCode: receipt.errorCode } : {}) };
+/**
+ * How much of a reply the task keeps. The research (report, sources, cited sentences, shop products) and the AI's slides
+ * are longer than the other replies: production 2026-11-12 kept the first 12,000 characters of 13,467- and 16,952-character
+ * slides, so they lost their last pages and the page showed the fixed report; the research's `[引用]` block at its end was
+ * at risk the same way. The task document holds up to 512 KB.
+ */
+export const AGENT_STEP_CONTENT_MAX = 12000;
+export const agentStepContentMax = (kind: string) => (kind === 'report' ? 120_000 : kind === 'research' ? 40_000 : AGENT_STEP_CONTENT_MAX);
+export function assistantStepFrom(receipt: CloudflareDesignAssistantReceipt, requestId: string, maxChars = AGENT_STEP_CONTENT_MAX): AgentAssistantStep {
+  return { requestId, state: receipt.state, ...(receipt.content ? { content: receipt.content.slice(0, maxChars) } : {}), ...(receipt.errorCode ? { errorCode: receipt.errorCode } : {}) };
 }
 
 export const agentConversationId = (taskId: string, step: string) => `${AGENT_TASK_CONVERSATION_PREFIX}${taskId.slice(0, 36)}-${step}`;
