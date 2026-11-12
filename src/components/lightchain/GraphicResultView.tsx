@@ -21,6 +21,8 @@ import {
  */
 type Tool = 'recolor' | 'repeat' | 'cutout' | 'svg';
 const PREVIEW_EDGE = 1024;
+/** 2倍の大きさ: room for a 1696×2528 proposal to double (3392×5056), well inside the browser's canvas limit. */
+const GRAPHIC_UPSCALE_EDGE = 6144;
 const TITLE = 'AIグラフィックデザイン';
 
 const barButton = 'inline-flex h-8 items-center justify-center gap-1.5 rounded-full text-xs text-white transition hover:bg-white/15 disabled:opacity-40';
@@ -83,7 +85,7 @@ export function GraphicResultView({ brandId, userId, jobId, fallbackUrl, locked,
   }, 'デザインドキュメントを作成できませんでした');
 
   const downloadSelected = (scale: 1 | 2) => selected && void run(`download-${scale}`, async () => {
-    const url = scale === 1 ? selected.image_url : await upscaleImage(selected.image_url, { scale: 2, sharpness: 40, denoiseLevel: 0 });
+    const url = scale === 1 ? selected.image_url : await upscaleImage(selected.image_url, { scale: 2, sharpness: 40, denoiseLevel: 0, maxEdge: GRAPHIC_UPSCALE_EDGE });
     await downloadValidatedImage(url, graphicFileName(selectedIndex, scale === 2 ? '2倍' : ''), 'graphic_result_download');
   }, 'ダウンロードに失敗しました');
 
