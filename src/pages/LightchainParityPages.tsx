@@ -104,6 +104,7 @@ import {
   type DesignProjectArtifactLoadState,
 } from '../lib/designProjectLoader';
 import { cardButton } from '../lib/cardButton';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 const darkPanel = 'rounded-2xl border border-white/10 bg-[#151a1c]';
 const mutedButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-300 transition hover:border-cyan-200/50 hover:bg-white/[0.08] hover:text-white';
@@ -913,7 +914,10 @@ export function LightchainVectorSpecialPage() {
   },[workspace.result]);
   // Light shows a アップロード中 card in the result panel while the source uploads (measured 2026-10-28).
   const [vectorUploading,setVectorUploading]=useState(false);
-  const handleReferenceImage=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;setVectorUploading(true);void Promise.resolve(workspace.upload('primary',file)).finally(()=>setVectorUploading(false));};
+  const acceptReferenceImage=(file:File)=>{setVectorUploading(true);return Promise.resolve(workspace.upload('primary',file)).finally(()=>setVectorUploading(false));};
+  const handleReferenceImage=(event:ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;void acceptReferenceImage(file);};
+  // 「送る」（?imgUrl=）で送られた画像も、同じ入り口から参考画像に入れる。
+  useIncomingImageFile(acceptReferenceImage,{ready:workspace.inputsSettled});
   const toggleLayerMode=(mode:'stack'|'split')=>{if(locked)return;workspace.setInputState({...workspace.inputState,layerModes:layerModes.includes(mode)?(layerModes.length>1?layerModes.filter(value=>value!==mode):layerModes):[...layerModes,mode]});};
   const generate=()=>workspace.generate({brief:workspace.brief||(isSvgConvert?svgConvertBrief():vectorBrief(isProfessionalFlow,layerModes))});
 
@@ -2887,6 +2891,8 @@ export function LightchainOrientedDesignDetailPage() {
   const imageUrl = workspace.result?.imageUrl ?? workspace.slots.primary?.imageUrl;
   const navigate = useNavigate();
   const referenceCase = orientedDesignReferenceCase(location.search);
+  // 「送る」（?imgUrl=）で送られた画像も、下の入力と同じく主素材に入れる。
+  useIncomingImageFile((file) => workspace.upload('primary', file), { ready: workspace.inputsSettled && !referenceCase });
 
   if (referenceCase) return <OrientedDesignReferenceCaseBoard referenceCase={referenceCase} />;
 

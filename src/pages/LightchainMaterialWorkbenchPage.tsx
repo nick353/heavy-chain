@@ -203,6 +203,7 @@ import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { CLOUDFLARE_PROTECTED_EDIT_NOTICE } from '../lib/cloudflareProtectedImageEdit';
 import { CLOUDFLARE_PRINT_INPUT_NOTICE, printProviderPrompt, renderPrintProviderInput } from '../lib/printProviderInput';
 import { downloadValidatedImage } from '../lib/imageDownload';
+import { incomingFileDataUrl, useIncomingImageFile } from '../lib/incomingImage';
 import type { GeneratedImage, Json } from '../types/database';
 
 type WorkbenchMode = 'fabric' | 'printing';
@@ -4380,6 +4381,12 @@ function LightchainMaterialWorkbenchSession() {
     restoredPrintGarmentArtifactsRef.current = restoredArtifact?.processedUrl ? restoredArtifact : null;
     setPrintGarment(image);
   };
+  // 「送る」（?imgUrl=）で送られた画像は、1枚目の入り口（生地: モデル／デザイン画像、プリント: 衣服）へ、画像選びの部品と同じ形で入れる。
+  useIncomingImageFile(async (file) => {
+    if (file.size > 10 * 1024 * 1024) { toast.error('画像ファイル（PNG / JPG / WebP、10MB以下）を選択してください。'); return; }
+    const image: SelectedImage = { url: await incomingFileDataUrl(file), file, referenceType: 'base' };
+    if (isPrinting) selectPrintGarment(image); else setFabricDesign(image);
+  }, { ready: Boolean(user?.id) && isAuthInitialized && !isAuthLoading });
 
   useEffect(() => {
     if (

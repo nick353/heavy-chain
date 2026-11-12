@@ -91,6 +91,9 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
   const boardProjectCode = new URLSearchParams(location.search).get('boardProjectCode') ?? '';
   const draftKey = `heavy:canonical-draft:v1:${user?.id ?? ''}:${currentBrand?.id ?? ''}:${toolId}:${location.pathname}${boardProjectCode ? `:${boardProjectCode}` : ''}`;
   const draftReady = useRef<string | null>(null);
+  // The scope whose un-generated draft has been restored (or that has none): an image handed over by ?imgUrl=
+  // (useIncomingImageFile) waits for it, so the restored draft cannot overwrite the handed-over image.
+  const [settledScope, setSettledScope] = useState<string | null>(null);
   const draftEnabled = toolId !== 'printing-image'; // プリントイメージ keeps its own reviewed draft store.
   const restoredArtifact=useRef<{scope:string;artifact:WorkspaceArtifact}|null>(null);
   const releaseAll = () => { Object.values(releases.current).forEach(value => value?.release()); releases.current = {}; };
@@ -319,7 +322,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
     // Runs after the initializer above (same dependencies): restore a fresh page's un-generated draft.
     draftReady.current = null;
     // Inputs are restored even with a retained request, so the upload is still there once that request is resolved.
-    if (!draftEnabled || jobId || libraryArtifactId || configRef.current.identityConflict || !authSnapshot()) return;
+    if (!draftEnabled || jobId || libraryArtifactId || configRef.current.identityConflict || !authSnapshot()) { if (authSnapshot()) setSettledScope(scope); return; }
     const token = sequence.current;
     let cancelled = false;
     const current = () => !cancelled && mounted.current && scopeRef.current === scope && sequence.current === token;
@@ -352,6 +355,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
           inputsAvailable: hasInputs || s.inputsAvailable, status: slots.primary || slots.secondary ? 'ready' : s.status }));
       }
       draftReady.current = scope;
+      setSettledScope(scope);
     })();
     return () => { cancelled = true; };
   }, [scope, jobId, pendingKey, brandState.status, config.identityConflict, draftKey, draftEnabled]);
@@ -653,7 +657,7 @@ export function useCanonicalImageWorkspace(toolId: CanonicalWorkspaceFeature, co
   };
   const wearFamily=toolId==='wear-design-lab'||toolId==='wear-design-detail';
   const continueParams=new URLSearchParams(location.search);if(wearFamily)continueParams.set('workspaceFeature',toolId);
-  return {...state,jobId,toolId,backendAction,upload,clearSource,selectModelReference,sourceSelectionScope:scope,setInputState,selectCandidate,setBrief:(value:string)=>setText('brief',value),setReferenceNote:(value:string)=>setText('referenceNote',value),
+  return {...state,jobId,toolId,backendAction,upload,inputsSettled:settledScope===scope&&state.status!=='loading',clearSource,selectModelReference,sourceSelectionScope:scope,setInputState,selectCandidate,setBrief:(value:string)=>setText('brief',value),setReferenceNote:(value:string)=>setText('referenceNote',value),
     generate:(override?:{brief?:string;inputState?:Record<string,Json>})=>run('generate',override),editSource:()=>run('edit-source'),editResult:(override?:RunOverride)=>run('edit-result',override),reconcile:()=>run('reconcile'),
     continueHref:wearFamily?`/flow/orientedDesign/detail?${continueParams.toString()}${location.hash}`:`/flow/laboratory/detail${location.search}${location.hash}`};
 }

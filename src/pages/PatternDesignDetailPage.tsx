@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useBoardDraftProject } from '../features/boardDraftProjects';
 import { watermarkImageBlobIfOn } from '../lib/imageDownload';
 import { projectNameFromFile } from '../lib/projectNames';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 /**
  * Light `/editor/pattern/detail` = "デザインアレンジ" editor, measured at 1440×900 on 2026-10-07:
@@ -89,13 +90,18 @@ function PatternDesignDetailWorkspace() {
   const setMode = (next: ArrangeMode) => updateInput({ arrangeMode: next });
   const setRatio = (next: string) => updateInput({ arrangeRatio: next });
 
+  const acceptFile = (slot: 'primary' | 'secondary', file: File) => {
+    if (file.size > 20 * 1024 * 1024) return;
+    return workspace.upload(slot, file);
+  };
   const pick = (slot: 'primary' | 'secondary') => (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (file.size > 20 * 1024 * 1024) return;
-    void workspace.upload(slot, file);
+    void acceptFile(slot, file);
   };
+  // 「送る」（?imgUrl=）で送られた画像も、同じ入り口から主素材に入れる。
+  useIncomingImageFile((file) => acceptFile('primary', file), { ready: workspace.inputsSettled });
 
   const generate = () => {
     if (!canGenerate) return;

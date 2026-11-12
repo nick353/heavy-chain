@@ -7,6 +7,7 @@ import { withSignedImageUrls } from '../lib/storage';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { useAuthStore } from '../stores/authStore';
 import { LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 /**
  * Light `/tools/line-draft-to-tile` (線画の実写化) and `/tools/line` (平絵生成), measured at 1440×900 on 2026-10-07.
@@ -83,11 +84,14 @@ function LightchainLineToolWorkspace({ mode }: { mode: LineToolMode }) {
   }, [workspace.result]);
 
   const setInput = (patch: Record<string, string>) => workspace.setInputState({ ...workspace.inputState, ...patch });
+  const acceptFile = (file: File) => workspace.upload('primary', file);
   const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (file) void workspace.upload('primary', file);
+    if (file) void acceptFile(file);
   };
+  // 「送る」（?imgUrl=）で送られた画像も、同じ入り口から主素材に入れる。
+  useIncomingImageFile(acceptFile, { ready: workspace.inputsSettled });
   const reset = () => {
     if (locked) return;
     workspace.clearSource('primary');

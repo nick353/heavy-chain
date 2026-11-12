@@ -52,6 +52,8 @@ for (const statement of parsed.statements) {
 mocks['../hooks/useCanonicalImageWorkspace'] = `export function useCanonicalImageWorkspace(toolId,options){const f=globalThis.__wearRouting;f.workspaceCalls.push({toolId,identityConflict:options?.identityConflict===true});return {toolId,status:options?.identityConflict?'failed':'ready',pendingId:null,jobId:f.jobId,result:f.jobId?{jobId:f.jobId,imageUrl:'fixture-image'}:null,slots:f.primary?{primary:f.primary}:{},error:options?.identityConflict?'workspace_identity_conflict':null,originalInputsAvailable:true,inputsAvailable:true,continueHref:f.continueHref,generate(){f.effects.generation++;throw new Error('generation_forbidden');},upload(){f.effects.upload++;throw new Error('upload_forbidden');},setInputState(){f.effects.inputWrites++;throw new Error('input_write_forbidden');}};}`;
 // The detail header names the project from its first file; with no file it reads Untitled.
 mocks['../lib/projectNames'] = `export const projectNameFromFile=name=>name?String(name).replace(/\\.[^.]+$/,''):'Untitled';`;
+// 「送る」（?imgUrl=）の受け取り口。この道の試験では送られた画像が無いので、何もしない。
+mocks['../lib/incomingImage'] = `export const useIncomingImageFile=()=>{};`;
 // Card covers pass their URL through the grid-thumbnail helper, which is pure.
 mocks['../lib/mediaThumbnail'] = `export const thumbnailImageUrl=url=>url??undefined;`;
 // Cards are keyboard buttons through this pure helper; it keeps the card's own click handler.
