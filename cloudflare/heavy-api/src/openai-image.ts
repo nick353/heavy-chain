@@ -88,13 +88,6 @@ export type OpenAIImageOutput = {
   providerTaskId: string;
   inputFidelity?: 'low' | 'high';
   quality?: 'low' | 'medium' | 'high' | 'auto';
-  /** Studio 画質 4K: how the direct draw went (kept on the candidate so the size, time and tokens can be checked). */
-  direct4K?: Direct4KRecord;
-};
-export type Direct4KRecord = {
-  model: string; size: string; outcome: 'drawn' | 'rejected';
-  status?: number; providerCode?: string; providerType?: string;
-  usage?: { inputTokens?: number; outputTokens?: number; imageInputTokens?: number; textInputTokens?: number };
 };
 
 type OpenAIImageCandidate = { base64: string; mimeType: string; candidateIndex: number };
@@ -103,8 +96,6 @@ const normalizeMimeType = (value: unknown) => {
   const mime = String(value ?? '').split(';')[0].trim().toLowerCase();
   return mime.startsWith('image/') ? mime : 'image/png';
 };
-/** The reply carries no mime_type for every model; a JPEG asked for by output_format starts with /9j/ in base64. */
-const imageMimeType = (value: unknown, base64: string) => value ? normalizeMimeType(value) : base64.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
 
 const extensionFromMimeType = (value: string) => normalizeMimeType(value) === 'image/jpeg' ? 'jpg' : 'png';
 
@@ -122,23 +113,7 @@ const baseImageSize = (width?: number, height?: number) => {
   return '1024x1024';
 };
 
-/**
- * Studio 画質 4K draws with OpenAI's newest image model at its largest size and only the shortfall to Light's 4096 long
- * edge is enlarged (2026-11-12). The image guide's custom-size rules: both edges multiples of 16, neither edge above 3840,
- * 655,360 to 8,294,400 pixels in all, aspect 1:3 to 3:1. So 16:9 and 9:16 reach 3840; 3:4 stops at 2480x3312.
- */
-export const DIRECT_4K_MODEL = 'gpt-image-2.6-sunburst';
-const DIRECT_4K_MAX_EDGE = 3840;
-const DIRECT_4K_MAX_PIXELS = 8_294_400;
-const floor16 = (value: number) => Math.floor(value / 16) * 16;
-export function direct4KSize(width?: number, height?: number): [number, number] {
-  const ratio = width && height ? Math.min(3, Math.max(1 / 3, width / height)) : 1;
-  const tall = Math.min(DIRECT_4K_MAX_EDGE, DIRECT_4K_MAX_EDGE / ratio, Math.sqrt(DIRECT_4K_MAX_PIXELS / ratio));
-  return [floor16(tall * ratio), floor16(tall)];
-}
-
 export function openAIExpectedDimensions(width: number, height: number, model?: string): [number, number] {
-  if (model === DIRECT_4K_MODEL) return direct4KSize(width, height);
   const value = imageSize(width, height, model);
   const [w, h] = value.split('x').map(Number);
   return [w, h];
@@ -182,7 +157,7 @@ function extractImages(value: unknown): OpenAIImageCandidate[] {
     const image = asRecord(item);
     const base64 = image?.b64_json;
     return typeof base64 === 'string' && base64.trim()
-      ? [{ base64: base64.trim(), mimeType: imageMimeType(image?.mime_type, base64.trim()), candidateIndex }]
+      ? [{ base64: base64.trim(), mimeType: normalizeMimeType(image?.mime_type), candidateIndex }]
       : [];
   });
 }
@@ -246,25 +221,23 @@ export async function runOpenAIImage(
   // Keeping the endpoint and model resolution aligned prevents a prompt-only
   // model-matrix request from being sent as an image edit with no image.
   const edit = action === 'edit-image' || input.references.length > 0;
+  const modelAction: ImageAction = edit ? 'edit-image' : 'generate-image';
+  void modelAction;
   const model = openAIModelForEndpoint(env, edit, chosenModel);
-  const draw = async (model: string, size: string, direct: boolean) => {
   const send = async (): Promise<Response> => {
   if (!edit) {
     return observeResponse(fetchImpl, `${baseURL(env)}/images/generations`, {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model, prompt: promptFor(candidate), n: 1, size, moderation: 'low',
-        ...(direct ? { quality: 'high', output_format: 'jpeg', output_compression: 95 } : {}) }),
+      body: JSON.stringify({ model, prompt: promptFor(candidate), n: 1, size: imageSize(input.width, input.height, model), moderation: 'low' }),
     });
   } else {
     const form = new FormData();
     form.set('model', model);
     form.set('prompt', promptFor(candidate));
     form.set('n', '1');
-    form.set('size', size);
-    // A 4K photo as PNG is over the 10 MB a result may be, so the direct 4K draw comes back as JPEG (quality 95).
-    form.set('output_format', direct ? 'jpeg' : 'png');
-    if (direct) form.set('output_compression', '95');
+    form.set('size', imageSize(input.width, input.height));
+    form.set('output_format', 'png');
     // Left on auto, a print or pattern came back with a transparent ground (10/29: white was asked, the PNG was
     // alpha 0 over dark green). Heavy never asks for transparency (the contract refuses it), so the ground is opaque.
     form.set('background', 'opaque');
@@ -274,8 +247,6 @@ export async function runOpenAIImage(
     form.set('moderation', 'low');
     // Small repeats (dots, seams, buttons) keep their scale only at high quality (Light parity 2026-10-29).
     if (HIGH_FIDELITY_EDIT_MODELS.has(model)) { form.set('input_fidelity', 'high'); form.set('quality', 'high'); }
-    // The GPT Image 2 family reads every input image at high fidelity and refuses input_fidelity; quality stays high.
-    else if (direct) form.set('quality', 'high');
     input.references.forEach((reference, index) => {
       const contentType = normalizeMimeType(reference.contentType);
       form.append('image[]', referenceBlob(reference.bytes, contentType), `reference-${index + 1}.${extensionFromMimeType(contentType)}`);
@@ -304,38 +275,11 @@ export async function runOpenAIImage(
   if (!response.ok) throw safeProviderError(response.status, data, requestId);
   const image = extractImages(data)[0];
   if (!image?.base64) throw new OpenAIImageError('unusable_response', response.status, undefined, requestId);
-  const output: OpenAIImageOutput = {
+  return {
     image: `data:${image.mimeType};base64,${image.base64}`,
     provider: OPENAI_IMAGE_PROVIDER,
     backendProvider: OPENAI_IMAGE_BACKEND,
     providerModel: model,
     providerTaskId: response.headers.get('x-request-id') || `openai-${crypto.randomUUID()}`,
   };
-  return direct ? { ...output, direct4K: { model, size, outcome: 'drawn' as const, usage: tokenUsage(data) } } : output;
-  };
-  // 画質 4K: the newest model draws the largest size it takes. A refusal before anything ran (an unknown model, a size
-  // it does not take, a safety refusal) falls back to the usual draw and enlargement; an empty balance or a passing
-  // limit would refuse that too, and an uncertain outcome may already have been paid for, so those are not retried.
-  let rejected: Direct4KRecord | undefined;
-  if (input.resolution === '4k') {
-    const size = direct4KSize(input.width, input.height).join('x');
-    try { return await draw(DIRECT_4K_MODEL, size, true); }
-    catch (error) {
-      if (!(error instanceof OpenAIImageError) || error.category !== 'request_rejected'
-        || error.errorCode === 'image_provider_quota_exhausted' || error.errorCode === 'image_provider_rate_limited') throw error;
-      rejected = { model: DIRECT_4K_MODEL, size, outcome: 'rejected', status: error.status, providerCode: error.providerCode, providerType: error.providerType };
-    }
-  }
-  const output = await draw(model, edit ? imageSize(input.width, input.height) : imageSize(input.width, input.height, model), false);
-  return rejected ? { ...output, direct4K: rejected } : output;
-}
-
-/** Token counts from the reply (numbers only), for the cost of a direct 4K draw. */
-function tokenUsage(value: unknown): Direct4KRecord['usage'] {
-  const usage = asRecord(asRecord(value)?.usage);
-  const details = asRecord(usage?.input_tokens_details);
-  const count = (raw: unknown) => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0 ? raw : undefined;
-  const result = { inputTokens: count(usage?.input_tokens), outputTokens: count(usage?.output_tokens),
-    imageInputTokens: count(details?.image_tokens), textInputTokens: count(details?.text_tokens) };
-  return Object.values(result).some((item) => item !== undefined) ? result : undefined;
 }
