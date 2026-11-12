@@ -6,9 +6,10 @@
  */
 import {
   agentImagePrompt, agentScopeLabel, effectiveAgentRequirements, parseAgentDirection, parseAgentRequirements, parseAgentResearch, parsePlanResponse,
-  agentAttachmentLines, agentPaletteColors, agentRoundSources, agentSourceSite, parsePlanItemImages, AGENT_PLAN_ITEM_IMAGES, type AgentResearchScope, type AgentStyleImage, type AgentTask,
+  agentAttachmentLines, agentClipTitle, agentPaletteColors, agentRoundSources, agentSourceSite, parsePlanItemImages, AGENT_PLAN_ITEM_IMAGES, type AgentResearchScope, type AgentStyleImage, type AgentTask,
 } from './agentFlow.ts';
 import type { AgentProduct } from './agentProducts.ts';
+import { agentDialoguePlan, parseAgentDialogueReply } from './agentDialogue.ts';
 
 /** Light's 商品構成 defaults to 10 styles (「総スタイル数 10（規定値・変更可）」). */
 export const AGENT_STYLE_COUNT = 10;
@@ -316,7 +317,7 @@ export function parseAgentFinal(content: string): ParsedAgentFinal {
     : (summaryAt >= 0 ? text.slice(0, summaryAt) : text).replace(/(\[企画名\]|【企画名】)[^\n]*\n?[^\n]*/, '');
   const summary = summaryAt >= 0 ? text.slice(summaryAt).replace(/^(\[要点\]|【要点】)/, '').split('\n').map(line => line.replace(/^[-・*#]+\s*/, '').replace(/\*\*/g, '').trim()).filter(Boolean) : [];
   const plan = parsePlanResponse(doc);
-  return { title: titleMatch?.[1].trim().slice(0, 60) ?? plan.title, sections: plan.sections, summary };
+  return { title: titleMatch?.[1].trim() ? agentClipTitle(titleMatch[1].trim()) : plan.title, sections: plan.sections, summary };
 }
 
 // ---------------------------------------------------------------------------
@@ -405,6 +406,45 @@ export function buildAgentThemePlanHtml(task: AgentTask, title: string, visual: 
   const references = sources.length ? section(String(next + (visual ? 1 : 0)).padStart(2, '0'), 'REFERENCES', '参考資料',
     table(['サイト', '内容'], sources.map(source => [agentSourceSite(source.url), (source.quote ?? source.title).replace(/\*\*/g, '')]))) : '';
   return shell('テーマ企画書', 'THEME PLAN', plan.title ?? title, theme ? `採用テーマ：${theme}` : '', sections.join('') + board + references
+    + '<section><p class="muted">AI画像はデザインの参考案であり、生産仕様の事実ではありません。</p></section>');
+}
+
+/** The インスピレーション / AIグラフィックデザイン deliverable's name (Heavy's own: Light's chat for these has no 概要 or report). */
+export const agentDialogueBriefTitle = (task: Pick<AgentTask, 'scene'>) => (task.scene === 'AIグラフィックデザイン' ? '図案執行書' : 'デザイン執行書');
+
+/**
+ * デザイン執行書 / 図案執行書 (Heavy's own deliverable after 「開始」): the 執行書 the user approved, every generated style with
+ * its code, wave and design logic, and the trend sources of the directions, on one page to show or download. Light's own
+ * インスピレーション shows only the chat, which a team cannot pass round. `urls`: the styles' signed addresses by key.
+ */
+export function buildAgentDialogueBriefHtml(task: AgentTask, urls: Record<string, string>): string {
+  const title = agentDialogueBriefTitle(task);
+  const graphic = task.scene === 'AIグラフィックデザイン';
+  const turns = task.turns ?? [];
+  const planTurn = (task.dialogueStart && turns.find(turn => turn.id === task.dialogueStart!.plan)) || agentDialoguePlan(task)?.turn;
+  const reply = planTurn?.step?.content ? parseAgentDialogueReply(planTurn.step.content) : null;
+  const images = task.designs ?? [];
+  const lines = (reply?.body ?? '').split('\n').map(line => line.trim()).filter(line => line && !/^【.*執行書[：:]/.test(line) && !/問題ございませんか|生成を開始いたします/.test(line));
+  const brief = lines.length ? section('01', graphic ? 'PRINT BRIEF' : 'DESIGN BRIEF', '執行書', lines.map(line => /^\d+\.\s/.test(line) ? `<h3>${escapeHtml(line)}</h3>` : `<p>${escapeHtml(line)}</p>`).join('')) : '';
+  const groups: Array<{ name: string; images: AgentStyleImage[] }> = [];
+  for (const image of images) {
+    const last = groups[groups.length - 1];
+    if (last && last.name === image.category) last.images.push(image); else groups.push({ name: image.category, images: [image] });
+  }
+  const logicOf = (image: AgentStyleImage) => reply?.skus.find(sku => sku.code === image.code)?.logic ?? '';
+  const label = (image: AgentStyleImage) => `${/^[A-Z]-/.test(image.code) ? image.code : `SKU #${image.code}`}：${image.name}`;
+  const fit = graphic ? ' style="aspect-ratio:1/1"' : '';
+  const results = images.length ? section(brief ? '02' : '01', 'RESULTS', `${graphic ? '図案' : 'デザイン'} 全${images.length}${graphic ? '枚' : '款'}`, groups.map(group =>
+    (group.name ? `<h3>【${escapeHtml(group.name)}】</h3>` : '')
+    + `<div class="grid">${group.images.map(image => `<figure>${urls[image.key] ? `<img src="${escapeHtml(urls[image.key])}" alt="${escapeHtml(label(image))}"${fit}>` : ''}<figcaption><b>${escapeHtml(label(image))}</b>${logicOf(image) ? `<br><span class="muted">${escapeHtml(logicOf(image))}</span>` : ''}</figcaption></figure>`).join('')}</div>`).join('')) : '';
+  const seen = new Set<string>();
+  const sources = turns.filter(turn => turn.role === 'assistant' && turn.mode === 'agent-research' && turn.step?.state === 'completed' && turn.step.content)
+    .flatMap(turn => parseAgentDialogueReply(turn.step!.content!).sources)
+    .filter(source => { const key = `${source.url}\n${source.quote ?? ''}`; if (seen.has(key)) return false; seen.add(key); return true; });
+  const number = String((brief ? 1 : 0) + (results ? 1 : 0) + 1).padStart(2, '0');
+  const references = sources.length ? section(number, 'REFERENCES', '参考資料（トレンド検索）',
+    table(['サイト', '内容'], sources.map(source => [agentSourceSite(source.url), (source.quote ?? source.title).replace(/\*\*/g, '')]))) : '';
+  return shell(title, graphic ? 'PRINT BRIEF' : 'DESIGN BRIEF', reply?.series || title, `依頼：${task.prompt.slice(0, 200)}`, brief + results + references
     + '<section><p class="muted">AI画像はデザインの参考案であり、生産仕様の事実ではありません。</p></section>');
 }
 
