@@ -173,3 +173,12 @@ test('2倍の大きさ really doubles a 1696×2528 proposal (it came out 2748×4
   assert.match(view, /upscaleImage\(selected\.image_url, \{ scale: 2, sharpness: 40, denoiseLevel: 0, maxEdge: GRAPHIC_UPSCALE_EDGE \}\)/);
   assert.match(view, /const GRAPHIC_UPSCALE_EDGE = 6144;/);
 });
+
+test('a tool\'s spinner sits on the button that is working (参考画像にして作り直す spun 1枚分をダウンロード)', () => {
+  // Production 2026-11-12: the reference took about 8 s and only the download button above it spun.
+  const view = readFileSync('src/components/lightchain/GraphicResultView.tsx', 'utf8');
+  assert.equal((view.match(/\{spin\('reference'\)\}参考画像にして作り直す/g) ?? []).length, 2);
+  for (const key of ['recolor', 'tile', 'sheet', 'cutout']) assert.match(view, new RegExp(`act\\('${key}', async`));
+  assert.doesNotMatch(view, /\{working \? <Loader2/);
+  assert.match(view, /const makeReference = \(suffix: string\) => act\('reference',/);
+});
