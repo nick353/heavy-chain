@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowUp, Box, Check, ChevronRight, Code2, Download, Loader2, Paperclip, PanelRightClose, PanelRightOpen, X } from 'lucide-react';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
@@ -14,7 +14,7 @@ import { AgentDialogueView } from '../features/agent/AgentDialogueView';
 import type { AssistantQuestion } from '../features/designDetail/assistantQuestions';
 import {
   AGENT_SCOPE_REGIONS, DEFAULT_AGENT_SCOPE, agentConversationId, agentImagePrompt, agentMissingNames, agentNotePrompt,
-  agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentSourceSite, agentScopeSummary, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
+  agentQuoteParts, agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentSourceHome, agentSourceSite, agentScopeSummary, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
   loadAgentTask, parseAgentRequirements, parseAgentResearch, parsePlanResponse, parseThemeResponse, planPrompt, pruneAgentScope, themePrompt, updateAgentTask,
   agentBuildDesignImages, agentBuildDirectionImages, agentChosenCodes, agentDesignPrompt, agentDesignProgress, agentFinalPrompt, agentImageLabel, agentReferenceImages,
   agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan, agentDialoguePrompt, agentDialogueSources,
@@ -277,6 +277,10 @@ function DirectionPicker({ themes, chosen, disabled, hint, images, urls, onRevis
 }
 
 const hostOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
+// 参考資料's cited sentence: Light renders it as Markdown, its **…** in a brighter, semibold run (font-semibold text-text-primary).
+const SourceQuote = ({ text }: { text: string }) => (
+  <>{agentQuoteParts(text).map((part, index) => (part.bold ? <strong key={index} className="font-semibold text-white">{part.text}</strong> : <Fragment key={index}>{part.text}</Fragment>))}</>
+);
 
 /**
  * /agent/:taskId — one planning task. Steps advance automatically; every request identity is stored on the task
@@ -1100,7 +1104,7 @@ export default function HeavyAgentTaskPage() {
                 {dialogueSources.sources.map((source) => (
                   <li key={source.url} className="border-b border-white/10 py-3 text-xs leading-5 last:border-b-0">
                     <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium text-cyan-300 hover:underline">{hostOf(source.url)}</a>
-                    <span className="block text-neutral-300">{source.quote ?? source.title}</span>
+                    <span className="block text-neutral-300">{source.quote ? <SourceQuote text={source.quote} /> : source.title}</span>
                   </li>
                 ))}
               </ol>
@@ -1114,10 +1118,11 @@ export default function HeavyAgentTaskPage() {
                 <ol className="mt-2" data-testid="agent-research-sources">
                   {roundSources.sources.map((source, index) => (
                     // Light: the site (its registered domain), then the sentence it was cited for, a line between sources.
-                    // One entry per cited sentence, so the same page can come again for another sentence.
+                    // One entry per cited sentence, so the same page can come again for another sentence. The site goes to
+                    // its entrance (https://<site>) in a new tab, as Light's does.
                     <li key={`${index}:${source.url}`} className="border-b border-white/10 py-3 text-xs leading-5 last:border-b-0">
-                      <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium text-cyan-300 hover:underline">{agentSourceSite(source.url)}</a>
-                      <span className="block text-neutral-300">{source.quote ?? source.title}</span>
+                      <a href={agentSourceHome(source.url)} target="_blank" rel="noopener noreferrer" className="font-medium text-cyan-300 hover:underline">{agentSourceSite(source.url)}</a>
+                      <span className="block text-neutral-300">{source.quote ? <SourceQuote text={source.quote} /> : source.title}</span>
                     </li>
                   ))}
                 </ol>

@@ -274,12 +274,51 @@ export function agentResearchPrompt(task: AgentTask): string {
 }
 /** `quote`: the sentence the report cited from the page (Light shows it under the source in 参考資料). */
 export type AgentSource = { title: string; url: string; quote?: string };
+/** A run of the cited sentence: `bold` is a `**…**` pair, shown in bold. */
+export type AgentQuotePart = { text: string; bold: boolean };
 /**
- * The cited sentence as Light shows it: the search tool returns a page's text as Markdown, so its emphasis (**) and heading
- * marks (# ) would show as symbols (production 2026-11-12: 「** The key directions…」「# 9 Trends … ## Spring/Summer 2027」).
- * Hashtags (#リネン, no space after #) stay.
+ * The cited sentence as Light shows it, in runs. Light renders 参考資料 as Markdown (read 2026-11-12 from its テーマ企画
+ * 「Okinawa風 2024年」: each sentence is a <blockquote>, and 「**気候適応と快適性の追求:** 沖縄の…」 has the label in
+ * <strong class="font-semibold text-text-primary">), so a `**` pair is a bold run. Like Markdown, an opening `**` is not
+ * followed by a space and a closing one does not follow a space; a `**` with no partner (the search tool's Markdown cut
+ * mid-way: 「** The key directions…」) is dropped, as are `__` and heading marks (# ) (production 2026-11-12:
+ * 「# 9 Trends … ## Spring/Summer 2027」). `***` counts as `**`. Hashtags (#リネン, no space after #) stay.
  */
-export const cleanAgentQuote = (value: string) => value.replace(/\*\*|__/g, '').replace(/(^|\s)#{1,6}(?=\s|$)/g, '$1').replace(/\s+/g, ' ').trim();
+export function agentQuoteParts(value: string): AgentQuotePart[] {
+  const pieces = value.replace(/__/g, '').replace(/(^|\s)#{1,6}(?=\s|$)/g, '$1').replace(/\s+/g, ' ').trim()
+    .replace(/\*{3,}/g, '**').split('**');
+  // Marker i sits between pieces[i] and pieces[i + 1]; pairs nest, so a stack matches each closer with the last opener.
+  const open: number[] = [];
+  const pairs: [number, number][] = [];
+  for (let index = 0; index < pieces.length - 1; index += 1) {
+    const before = pieces[index].slice(-1), after = pieces[index + 1].charAt(0);
+    if (before && !/\s/.test(before) && open.length) pairs.push([open.pop()!, index]);
+    else if (after && !/\s/.test(after)) open.push(index);
+  }
+  const join = (into: AgentQuotePart[], text: string, bold: boolean) => {
+    if (!text) return;
+    const last = into[into.length - 1];
+    if (last && last.bold === bold) last.text += text; else into.push({ text, bold });
+  };
+  const runs: AgentQuotePart[] = [];
+  pieces.forEach((piece, index) => join(runs, piece, pairs.some(([start, end]) => start < index && index <= end)));
+  const parts: AgentQuotePart[] = [];
+  for (const run of runs) {
+    if (!run.bold) { join(parts, run.text, false); continue; }
+    // A bold run starts and ends with a letter, so its spaces stay outside it.
+    const core = run.text.trim();
+    join(parts, run.text.slice(0, run.text.length - run.text.trimStart().length), false);
+    join(parts, core, true);
+    join(parts, core ? run.text.slice(run.text.trimEnd().length) : '', false);
+  }
+  for (const part of parts) if (!part.bold) part.text = part.text.replace(/\s+/g, ' ');
+  if (parts[0] && !parts[0].bold) parts[0].text = parts[0].text.trimStart();
+  const last = parts[parts.length - 1];
+  if (last && !last.bold) last.text = last.text.trimEnd();
+  return parts.filter(part => part.text);
+}
+/** The cited sentence kept as text: only the `**` pairs that {@link agentQuoteParts} shows in bold are left. */
+export const cleanAgentQuote = (value: string) => agentQuoteParts(value).map(part => (part.bold ? `**${part.text}**` : part.text)).join('');
 /**
  * `claims`: the `[引用]` block (research made since 2026-11-12): the report's cited sentences, each with its first source.
  * Light's テーマ企画 lists these (its sentence, not the page's text; a site again for another sentence). `null` when the
@@ -324,6 +363,15 @@ export function agentSourceSite(url: string): string {
   const [second, top] = labels.slice(-2);
   const keep = top.length === 2 && (COUNTRY_SECOND_LEVEL.has(second) || (top === 'jp' && JP_PREFECTURES.has(second))) ? 3 : 2;
   return labels.slice(-keep).join('.');
+}
+/**
+ * Where テーマ企画's 参考資料 links go, as in Light: the site's entrance, `https://` and the site name, with no www, path or
+ * trailing slash (read 2026-11-12 from its テーマ企画: https://wikipedia.org, https://pref.okinawa.jp, https://cao.go.jp,
+ * https://youtube.com, opened in a new tab). An address that has no site name of that kind keeps its own URL.
+ */
+export function agentSourceHome(url: string): string {
+  const site = agentSourceSite(url);
+  return /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(site) ? `https://${site}` : url;
 }
 const researchContext = (task: AgentTask) => task.research?.state === 'completed' && task.research.content
   ? `ウェブ調査の結果:\n${parseAgentResearch(task.research.content).report.slice(0, 3500)}` : '';

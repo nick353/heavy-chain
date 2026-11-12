@@ -53,7 +53,7 @@ test('テーマ企画 lists one entry per cited sentence of the report, under th
   const result = await run(report);
   assert.deepEqual(result.claims, [
     { url: 'https://www.whowhatwear.com/trends-ss27', title: '9 Spring/Summer 2027 Trends', quote: '2027年春夏は手仕事の跡を見せるデザインが広がる' },
-    { url: 'https://item.rakuten.co.jp/likefashion/pocp0007/', title: '【楽天市場】リネン ワンピース', quote: '楽天では半袖のリネンワンピースがマキシ丈で売れている' },
+    { url: 'https://item.rakuten.co.jp/likefashion/pocp0007/', title: '【楽天市場】リネン ワンピース', quote: '楽天では**半袖のリネンワンピース**がマキシ丈で売れている' },
     { url: 'https://item.rakuten.co.jp/likefashion/pocp0007/', title: '【楽天市場】リネン ワンピース', quote: 'リネン混の価格は5,000〜8,000円が中心' },
     { url: 'https://search.kakaku.com/%E3%83%AA%E3%83%8D%E3%83%B3%20%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B9/', title: '「リネン ブラウス」の人気商品一覧', quote: '価格.comのリネンブラウスは花柄と刺繍が上位に並ぶ' },
   ]);
@@ -68,7 +68,8 @@ test('テーマ企画 lists one entry per cited sentence of the report, under th
 
 test('a cited block that carries the marker or a heading keeps only its sentence', async () => {
   assert.equal(researchClaimText('[調査結果]\n## トレンド\n- ディープグリーンが主要カラー'), 'ディープグリーンが主要カラー');
-  assert.equal(researchClaimText('1. **ブラウン**とオフホワイト\n・ミントグリーン'), 'ブラウンとオフホワイト ミントグリーン');
+  // The bold stays (Light shows it in bold, 2026-11-12); list marks go.
+  assert.equal(researchClaimText('1. **ブラウン**とオフホワイト\n・ミントグリーン'), '**ブラウン**とオフホワイト ミントグリーン');
   const result = await run([{ type: 'text', text: '[調査結果]\n## トレンド\n- ディープグリーンが主要カラー', citations: [cite('ftp://x', 'a'), cite('https://fashionunited.jp/news/x', 'Deep Green', 'WGSN')] }]);
   assert.deepEqual(result.claims, [{ url: 'https://fashionunited.jp/news/x', title: 'WGSN', quote: 'ディープグリーンが主要カラー' }]);
   // No citation lists nothing (Light shows no 参考資料 when its answer did not search).
@@ -142,6 +143,6 @@ test('the site is named as Light names it: the registered domain', () => {
 
 test('the task page names テーマ企画 sources by their site and lets a page come again; the chat list is unchanged', () => {
   const page = readFileSync(new URL('../src/pages/HeavyAgentTaskPage.tsx', import.meta.url), 'utf8');
-  assert.match(page, /roundSources\.sources\.map\(\(source, index\) => \([\s\S]{0,300}<li key=\{`\$\{index\}:\$\{source\.url\}`\}[\s\S]{0,400}\{agentSourceSite\(source\.url\)\}<\/a>/);
+  assert.match(page, /roundSources\.sources\.map\(\(source, index\) => \([\s\S]{0,500}<li key=\{`\$\{index\}:\$\{source\.url\}`\}[\s\S]{0,400}\{agentSourceSite\(source\.url\)\}<\/a>/);
   assert.match(page, /dialogueSources\.sources\.map\(\(source\) => \(\n\s+<li key=\{source\.url\}[\s\S]{0,400}\{hostOf\(source\.url\)\}<\/a>/);
 });

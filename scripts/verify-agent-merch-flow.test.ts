@@ -203,7 +203,7 @@ test('the task page runs Light\'s steps after the directions with Heavy\'s own i
   for (const text of ['タスク成果物', '参考スタイル', 'スタイルを生成', 'すべて表示', 'data-testid="agent-style-picker"', 'data-testid="agent-design-images"', 'data-testid="agent-final-summary"', '企画の要点'])
     assert.ok(page.includes(text), text);
   assert.doesNotMatch(page, /<dt className="text-xs text-neutral-500">業務シーン<\/dt>/);
-  assert.match(page, /\{source\.quote \?\? source\.title\}/);
+  assert.match(page, /\{source\.quote \? <SourceQuote text=\{source\.quote\} \/> : source\.title\}/);
   // Attached images go with every step as references.
   assert.match(page, /const references = docRef\.current \? agentReferenceImages\(docRef\.current\.task\) : \[\];/);
 });
