@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
-import { traceImageUrlToSvg } from '../../lib/rasterToSvg';
+import { saveSvgFile, traceImageUrlToVector } from '../../lib/vectorTraceClient';
 
 /**
- * Converts the saved raster result into an editable SVG in the browser (colour regions → filled paths) and
- * offers it as a download next to the result. The SVG is derived from the saved image, so it is rebuilt the
- * same way after a reload.
+ * Converts the saved raster result into an editable SVG in the browser and offers it as a download next to the
+ * result. The outlines are traced with curves by VTracer (lib/vectorTrace; a 平絵 is split into ink and paper first).
+ * Before 2026-11-12 this traced 640px pixel edges into straight polygons, so a print's stems came out as steps.
+ * The SVG is derived from the saved image, so it is rebuilt the same way after a reload.
  */
 export function SvgExportPanel({ imageUrl, fileName, colors = 8 }: { imageUrl: string; fileName: string; colors?: number }) {
   const [state, setState] = useState<{ status: 'tracing' } | { status: 'ready'; svg: string; pathCount: number; colorCount: number } | { status: 'error' }>({ status: 'tracing' });
@@ -13,7 +14,7 @@ export function SvgExportPanel({ imageUrl, fileName, colors = 8 }: { imageUrl: s
   useEffect(() => {
     let cancelled = false;
     setState({ status: 'tracing' });
-    traceImageUrlToSvg(imageUrl, { colors })
+    traceImageUrlToVector(imageUrl, { colors, detail: 'normal' })
       .then(({ svg, pathCount, colors: palette }) => { if (!cancelled) setState({ status: 'ready', svg, pathCount, colorCount: palette.length }); })
       .catch(() => { if (!cancelled) setState({ status: 'error' }); });
     return () => { cancelled = true; };
@@ -21,12 +22,7 @@ export function SvgExportPanel({ imageUrl, fileName, colors = 8 }: { imageUrl: s
 
   const download = () => {
     if (state.status !== 'ready') return;
-    const url = URL.createObjectURL(new Blob([state.svg], { type: 'image/svg+xml' }));
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName.endsWith('.svg') ? fileName : `${fileName}.svg`;
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    saveSvgFile(state.svg, fileName);
   };
 
   return (

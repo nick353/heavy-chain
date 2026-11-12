@@ -82,6 +82,9 @@ test('line art is flattened to one ink colour on paper, so strokes trace whole',
 
 test('the result view traces in a worker and saves the SVG as vector data (the image download would turn it into a PNG)', () => {
   const view = readFileSync('src/components/lightchain/GraphicResultView.tsx', 'utf8');
+  // 4倍に拡大: the zoomed picture neither shrinks nor stretches to the stage's height (it did not grow on production).
+  assert.match(view, /zoomed \? 'h-auto max-w-none shrink-0 self-start'/);
+  assert.match(view, /style=\{zoomed \? \{ width: `\$\{ready\.result\.traceWidth \* 4\}px` \} : undefined\}/);
   for (const text of ['SVGにする', 'traceImageUrlToVector(candidate.image_url, { colors, detail, lineArt: false })', "saveSvgFile(ready.result.svg, graphicFileName(index, 'ベクター', 'svg'))", '4倍に拡大して見る', 'aria-label="色数"', 'aria-label="細かさ"'])
     assert.ok(view.includes(text), text);
   const client = readFileSync('src/lib/vectorTraceClient.ts', 'utf8');
