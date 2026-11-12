@@ -280,23 +280,50 @@ export type AgentSource = { title: string; url: string; quote?: string };
  * Hashtags (#リネン, no space after #) stay.
  */
 export const cleanAgentQuote = (value: string) => value.replace(/\*\*|__/g, '').replace(/(^|\s)#{1,6}(?=\s|$)/g, '$1').replace(/\s+/g, ' ').trim();
-export type ParsedResearch = { report: string; sections: ParsedPlan['sections']; sources: AgentSource[]; search: 'ok' | 'unavailable' | 'error' };
+/**
+ * `claims`: the `[引用]` block (research made since 2026-11-12): the report's cited sentences, each with its first source.
+ * Light's テーマ企画 lists these (its sentence, not the page's text; a site again for another sentence). `null` when the
+ * content has no such block (older research), which keeps the `[出典]` list.
+ */
+export type ParsedResearch = { report: string; sections: ParsedPlan['sections']; sources: AgentSource[]; claims: AgentSource[] | null; search: 'ok' | 'unavailable' | 'error' };
+const sourceLines = (block: string, stop: RegExp): AgentSource[] => {
+  const sources: AgentSource[] = [];
+  for (const line of block.split('\n').slice(1)) {
+    const match = /^-\s*(.*?)\s*\|\s*(https?:\/\/\S+?)\s*(?:\|\s*(.*?))?\s*$/.exec(line.trim());
+    if (match) sources.push({ title: match[1] || match[2], url: match[2], ...(match[3] && cleanAgentQuote(match[3]) ? { quote: cleanAgentQuote(match[3]) } : {}) });
+    else if (stop.test(line.trim())) break;
+  }
+  return sources;
+};
 export function parseAgentResearch(content: string): ParsedResearch {
   const text = content.replace(/\r/g, '');
   const sourcesAt = text.search(/^\[出典\]$/m);
+  const claimsAt = text.search(/^\[引用\]$/m);
   const statusMatch = /^\[検索\]\s*(\S+)\s*$/m.exec(text);
   const report = (sourcesAt >= 0 ? text.slice(0, sourcesAt) : statusMatch ? text.slice(0, statusMatch.index) : text).trim();
-  const sources: ParsedResearch['sources'] = [];
-  if (sourcesAt >= 0) {
-    for (const line of text.slice(sourcesAt).split('\n').slice(1)) {
-      const match = /^-\s*(.*?)\s*\|\s*(https?:\/\/\S+?)\s*(?:\|\s*(.*?))?\s*$/.exec(line.trim());
-      if (match) sources.push({ title: match[1] || match[2], url: match[2], ...(match[3] && cleanAgentQuote(match[3]) ? { quote: cleanAgentQuote(match[3]) } : {}) });
-      else if (/^\[検索\]/.test(line.trim())) break;
-    }
-  }
+  const sources = sourcesAt >= 0 ? sourceLines(text.slice(sourcesAt), /^\[(検索|引用)\]/) : [];
+  const claims = claimsAt >= 0 ? sourceLines(text.slice(claimsAt), /^\[(検索|出典)\]/) : null;
   const status = statusMatch?.[1] ?? 'unavailable';
   const search = status === 'ok' ? 'ok' : status.startsWith('error') ? 'error' : 'unavailable';
-  return { report, sections: parsePlanResponse(report).sections, sources, search };
+  return { report, sections: parsePlanResponse(report).sections, sources, claims, search };
+}
+
+// Second-level labels under a country code that are not a site of their own (rakuten.co.jp, cao.go.jp, rollingstone.co.uk),
+// and Japan's prefecture labels (pref.okinawa.jp). Light shows the site this way: wikipedia.org for ja.wikipedia.org.
+const COUNTRY_SECOND_LEVEL = new Set(['co', 'com', 'net', 'org', 'or', 'ne', 'go', 'gov', 'govt', 'gob', 'ac', 'edu', 'ed', 'ad', 'gr', 'lg', 'ltd', 'plc', 'sch', 'idv', 'nic', 'mil']);
+const JP_PREFECTURES = new Set(('hokkaido aomori iwate miyagi akita yamagata fukushima ibaraki tochigi gunma saitama chiba tokyo kanagawa niigata toyama '
+  + 'ishikawa fukui yamanashi nagano gifu shizuoka aichi mie shiga kyoto osaka hyogo nara wakayama tottori shimane okayama hiroshima '
+  + 'yamaguchi tokushima kagawa ehime kochi fukuoka saga nagasaki kumamoto oita miyazaki kagoshima okinawa').split(' '));
+/** The site of a source as Light names it in テーマ企画's 参考資料: the registered domain (item.rakuten.co.jp → rakuten.co.jp). */
+export function agentSourceSite(url: string): string {
+  let host: string;
+  try { host = new URL(url).hostname.toLowerCase().replace(/\.$/, ''); } catch { return url; }
+  if (/^[\d.]+$/.test(host) || host.includes(':')) return host;
+  const labels = host.split('.');
+  if (labels.length <= 2) return labels.join('.').replace(/^www\./, '');
+  const [second, top] = labels.slice(-2);
+  const keep = top.length === 2 && (COUNTRY_SECOND_LEVEL.has(second) || (top === 'jp' && JP_PREFECTURES.has(second))) ? 3 : 2;
+  return labels.slice(-keep).join('.');
 }
 const researchContext = (task: AgentTask) => task.research?.state === 'completed' && task.research.content
   ? `ウェブ調査の結果:\n${parseAgentResearch(task.research.content).report.slice(0, 3500)}` : '';
@@ -322,10 +349,12 @@ function agentThemeResearchPrompt(task: AgentTask): string {
  * made before the research step) or else the task's research.
  */
 export function agentRoundSources(task: AgentTask) {
+  // Light lists one entry per cited sentence (the `[引用]` block, at most 25); research written before it keeps `[出典]`.
+  const listed = (parsed: ParsedResearch): ParsedResearch => parsed.claims ? { ...parsed, sources: parsed.claims } : parsed;
   for (const round of [...task.rounds].reverse()) {
-    if (round.step.state === 'completed' && round.step.content && /^\[検索\]/m.test(round.step.content)) return parseAgentResearch(round.step.content);
+    if (round.step.state === 'completed' && round.step.content && /^\[検索\]/m.test(round.step.content)) return listed(parseAgentResearch(round.step.content));
   }
-  return agentThemeSearches(task) && task.research?.state === 'completed' && task.research.content ? parseAgentResearch(task.research.content) : null;
+  return agentThemeSearches(task) && task.research?.state === 'completed' && task.research.content ? listed(parseAgentResearch(task.research.content)) : null;
 }
 /** A テーマ企画 round searches the web itself only when the task has no research to write from (tasks made before it). */
 export const agentThemeRoundSearches = (task: AgentTask) => agentThemeSearches(task) && task.research?.state !== 'completed';

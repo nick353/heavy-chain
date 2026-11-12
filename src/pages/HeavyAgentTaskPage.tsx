@@ -14,7 +14,7 @@ import { AgentDialogueView } from '../features/agent/AgentDialogueView';
 import type { AssistantQuestion } from '../features/designDetail/assistantQuestions';
 import {
   AGENT_SCOPE_REGIONS, DEFAULT_AGENT_SCOPE, agentConversationId, agentImagePrompt, agentMissingNames, agentNotePrompt,
-  agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentScopeSummary, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
+  agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentSourceSite, agentScopeSummary, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
   loadAgentTask, parseAgentRequirements, parseAgentResearch, parsePlanResponse, parseThemeResponse, planPrompt, pruneAgentScope, themePrompt, updateAgentTask,
   agentBuildDesignImages, agentBuildDirectionImages, agentChosenCodes, agentDesignPrompt, agentDesignProgress, agentFinalPrompt, agentImageLabel, agentReferenceImages,
   agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan, agentDialoguePrompt, agentDialogueSources,
@@ -1112,10 +1112,11 @@ export default function HeavyAgentTaskPage() {
               {!roundSources && <p className="mt-2 text-xs leading-5 text-neutral-500">{agentThemeSearches(task) ? 'テーマができると、ウェブ検索で参照した資料がここに表示されます。' : 'Heavy Chainはウェブ検索を行いません。概要とテーマはAIモデルの知識に基づいて作成しています。'}</p>}
               {roundSources && roundSources.sources.length > 0 && (
                 <ol className="mt-2" data-testid="agent-research-sources">
-                  {roundSources.sources.map((source) => (
-                    // Light: the site, then the sentence it was cited for, a line between sources.
-                    <li key={source.url} className="border-b border-white/10 py-3 text-xs leading-5 last:border-b-0">
-                      <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium text-cyan-300 hover:underline">{hostOf(source.url)}</a>
+                  {roundSources.sources.map((source, index) => (
+                    // Light: the site (its registered domain), then the sentence it was cited for, a line between sources.
+                    // One entry per cited sentence, so the same page can come again for another sentence.
+                    <li key={`${index}:${source.url}`} className="border-b border-white/10 py-3 text-xs leading-5 last:border-b-0">
+                      <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium text-cyan-300 hover:underline">{agentSourceSite(source.url)}</a>
                       <span className="block text-neutral-300">{source.quote ?? source.title}</span>
                     </li>
                   ))}
