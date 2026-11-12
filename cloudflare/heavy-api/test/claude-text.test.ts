@@ -250,3 +250,52 @@ test('profile-extract with purpose planning-material returns what the materials 
   assert.deepEqual(Object.keys(box.body?.output_config.format.schema.properties), ['text']);
   assert.equal((box.body?.messages[0].content as Json[])[0].type, 'document');
 });
+
+// Light's スタジオの「画像検索」(2026-11-12): one outfit image → accessories as short English search words for the open image indexes.
+const outfit = [{ name: 'outfit.jpg', kind: 'image', mediaType: 'image/jpeg', data: 'AAAA' }];
+test('profile-extract with purpose accessory-search names accessories as clean English search words', async () => {
+  const { runClaudeTextAction } = await import('../src/claude-text.ts');
+  const box: { body?: Json } = {};
+  const result = await runClaudeTextAction(env(), 'profile-extract', { brandId: 'brand', purpose: 'accessory-search', files: outfit, exclude: ['Gold Bangle'] },
+    async (_url, init) => { box.body = JSON.parse(String(init?.body)); return claudeReply({ items: [
+      { query: 'Black Leather Sandals!', label: '黒いレザーサンダル' },
+      { query: 'gold bangle', label: '金のバングル' },
+      { query: 'straw  tote bag', label: '' },
+      { query: 'black leather sandals', label: '重なり' },
+      { query: 'a very long query with far too many words', label: '長すぎ' },
+      { query: '', label: '空' },
+    ] }); });
+  assert.deepEqual(result, { success: true, queries: [
+    { query: 'black leather sandals', label: '黒いレザーサンダル' },
+    { query: 'straw tote bag', label: 'straw tote bag' },
+  ] });
+  assert.match(box.body?.system, /choose accessories that would go well with it/);
+  assert.deepEqual(Object.keys(box.body?.output_config.format.schema.properties.items.items.properties), ['query', 'label']);
+  const content = box.body?.messages[0].content as Json[];
+  assert.equal(content.filter(block => block.type === 'image').length, 1);
+  assert.match(content.at(-1)?.text, /Number of accessories: 8/);
+  assert.match(content.at(-1)?.text, /Already shown, give other items: \["Gold Bangle"\]/);
+  assert.doesNotMatch(content.at(-1)?.text, /Only bags/);
+});
+
+test('accessory-search 高精度検索 sends the category and the description; the description is required with a category', async () => {
+  const { runClaudeTextAction, ClaudeTextError: TextError } = await import('../src/claude-text.ts');
+  const box: { body?: Json } = {};
+  await runClaudeTextAction(env(), 'profile-extract', { brandId: 'brand', purpose: 'accessory-search', files: outfit, category: 'bag', note: '赤いレザーハンドバッグ', count: 4 },
+    async (_url, init) => { box.body = JSON.parse(String(init?.body)); return claudeReply({ items: [{ query: 'red leather handbag', label: '赤いハンドバッグ' }] }); });
+  const text = (box.body?.messages[0].content as Json[]).at(-1)?.text as string;
+  assert.match(text, /Number of accessories: 4/);
+  assert.match(text, /Only bags/);
+  assert.match(text, /<description>\n赤いレザーハンドバッグ\n<\/description>/);
+  const never = async () => { throw new Error('Claude must not be called'); };
+  await assert.rejects(runClaudeTextAction(env(), 'profile-extract', { brandId: 'b', purpose: 'accessory-search', files: outfit, category: 'shoes' }, never),
+    (error: InstanceType<typeof TextError>) => error.code === 'accessory_note_required');
+  await assert.rejects(runClaudeTextAction(env(), 'profile-extract', { brandId: 'b', purpose: 'accessory-search', files: outfit, category: 'hat', note: 'x' }, never),
+    (error: InstanceType<typeof TextError>) => error.code === 'accessory_category_invalid');
+  await assert.rejects(runClaudeTextAction(env(), 'profile-extract', { brandId: 'b', purpose: 'accessory-search', files: outfit, note: 'あ'.repeat(51) }, never),
+    (error: InstanceType<typeof TextError>) => error.code === 'accessory_note_too_long');
+  await assert.rejects(runClaudeTextAction(env(), 'profile-extract', { brandId: 'b', purpose: 'accessory-search', files: [...outfit, ...outfit] }, never),
+    (error: InstanceType<typeof TextError>) => error.code === 'accessory_image_required');
+  await assert.rejects(runClaudeTextAction(env(), 'profile-extract', { brandId: 'b', purpose: 'accessory-search', files: outfit },
+    async () => claudeReply({ items: [{ query: '!!!', label: 'x' }] })), (error: InstanceType<typeof TextError>) => error.code === 'accessory_queries_empty');
+});
