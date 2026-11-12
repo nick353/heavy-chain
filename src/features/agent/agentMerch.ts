@@ -6,7 +6,7 @@
  */
 import {
   agentImagePrompt, agentScopeLabel, effectiveAgentRequirements, parseAgentDirection, parseAgentRequirements, parseAgentResearch, parsePlanResponse,
-  agentAttachmentLines, type AgentResearchScope, type AgentStyleImage, type AgentTask,
+  agentAttachmentLines, agentPaletteColors, agentRoundSources, agentSourceSite, parsePlanItemImages, type AgentResearchScope, type AgentStyleImage, type AgentTask,
 } from './agentFlow.ts';
 import type { AgentProduct } from './agentProducts.ts';
 
@@ -240,6 +240,14 @@ export function agentBuildDirectionImages(task: AgentTask, themes: string[], new
   });
 }
 export const agentImageLabel = (image: Pick<AgentStyleImage, 'code' | 'name'>) => `${image.code} · ${image.name}`;
+/**
+ * テーマ企画's main items, one design picture each (Heavy's own continuation: Light's テーマ企画 cannot be run past the themes
+ * on this account, and its 新商品企画 draws one picture per style). Codes I1… so they never meet a style code.
+ */
+export function agentBuildPlanItemImages(task: AgentTask, newId: () => string): AgentStyleImage[] {
+  const items = task.plan?.state === 'completed' && task.plan.content ? parsePlanItemImages(task.plan.content) : [];
+  return items.map((item, index) => ({ key: `I${index + 1}`, code: `I${index + 1}`, name: item.name, category: '', prompt: item.prompt.slice(0, 700), requestId: newId(), state: 'pending' as const }));
+}
 
 /** Light reports progress category by category: 「ジャンプスーツ4型の生成に成功しました。続いてワンピース3型を生成します。」 */
 export function agentDesignProgress(images: AgentStyleImage[]): string[] {
@@ -368,6 +376,30 @@ export function buildAgentDesignHtml(task: AgentTask, urls: Record<string, strin
     + `<div class="grid">${images.map(image => `<figure>${urls[image.key] ? `<img src="${escapeHtml(urls[image.key])}" alt="${escapeHtml(agentImageLabel(image))}">` : ''}<figcaption><b>${escapeHtml(agentImageLabel(image))}</b><br><span class="muted">${escapeHtml(design?.styles[image.code]?.point ?? image.category)}</span></figcaption></figure>`).join('')}</div>`
     + '<p class="muted">AI画像はデザインの参考案であり、生産仕様の事実ではありません。</p>');
   return shell(wording.designReport.title, 'AI DESIGN', wording.designReport.title, wording.designReport.note, body);
+}
+
+/**
+ * テーマ企画書 (Heavy's own deliverable after the plan): the plan, its colors as swatches, the mood board, the main items'
+ * designs and 参考資料 on one page to show or download. `visual`: the mood board's signed address; `urls`: the items' by key.
+ */
+export function buildAgentThemePlanHtml(task: AgentTask, title: string, visual: string | null, urls: Record<string, string>): string {
+  const plan = task.plan?.state === 'completed' && task.plan.content ? parsePlanResponse(task.plan.content) : null;
+  const theme = task.choice?.theme ?? '';
+  if (!plan) return shell('テーマ企画書', 'THEME PLAN', title, theme, '');
+  const items = (task.designs ?? []).filter(image => image.code.startsWith('I'));
+  const sections = plan.sections.map((entry, index) => {
+    const colors = /カラー/.test(entry.heading) ? entry.items.flatMap(agentPaletteColors) : [];
+    const pictures = /主力アイテム/.test(entry.heading) && items.some(image => urls[image.key])
+      ? `<div class="grid">${items.filter(image => urls[image.key]).map(image => `<figure><img src="${escapeHtml(urls[image.key])}" alt="${escapeHtml(image.name)}"><figcaption>${escapeHtml(image.name)}</figcaption></figure>`).join('')}</div>` : '';
+    return section(String(index + 1).padStart(2, '0'), 'PLAN', entry.heading, swatches(colors) + list(entry.items) + pictures);
+  });
+  const next = plan.sections.length + 1;
+  const board = visual ? section(String(next).padStart(2, '0'), 'MOOD BOARD', '企画ビジュアル', `<div class="grid" style="grid-template-columns:1fr"><figure><img src="${escapeHtml(visual)}" alt="企画ビジュアル" style="aspect-ratio:auto"></figure></div>`) : '';
+  const sources = agentRoundSources(task)?.sources ?? [];
+  const references = sources.length ? section(String(next + (visual ? 1 : 0)).padStart(2, '0'), 'REFERENCES', '参考資料',
+    table(['サイト', '内容'], sources.map(source => [agentSourceSite(source.url), (source.quote ?? source.title).replace(/\*\*/g, '')]))) : '';
+  return shell('テーマ企画書', 'THEME PLAN', plan.title ?? title, theme ? `採用テーマ：${theme}` : '', sections.join('') + board + references
+    + '<section><p class="muted">AI画像はデザインの参考案であり、生産仕様の事実ではありません。</p></section>');
 }
 
 export function buildAgentFinalHtml(task: AgentTask, urls: Record<string, string>): string {
