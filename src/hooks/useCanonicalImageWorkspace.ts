@@ -37,7 +37,9 @@ const readCandidates = (metadata: Record<string,Json | undefined>,currentJobId:s
 };
 const sanitizeInputState=(value:unknown):Record<string,Json>=>{
  if(!record(value))return {};const out:Record<string,Json>={};
- for(const key of ['gender','half','age','nationality','skinColor','bodyType','bodyTypes','ageGroups','coverage','layerModes','assist','sourceType','styleNote','arrangeMode','arrangeRatio','arrangePrompt','printMode','printRatio','printResolution','printTile','printPrompt','printAdjustSource','printAdjustResult','colorTarget','colorArea','colorRatio']){
+ for(const key of ['gender','half','age','nationality','skinColor','bodyType','bodyTypes','ageGroups','coverage','layerModes','assist','sourceType','styleNote','arrangeMode','arrangeRatio','arrangePrompt','printMode','printRatio','printResolution','printTile','printPrompt','printAdjustSource','printAdjustResult','colorTarget','colorArea','colorRatio',
+  // AIグラフィックデザインのアシスト: 解析で出た札・選んだ札（「見出し:札」）と、どの参考画像の解析か。
+  'assistOptions','assistTags','assistFor']){
   // Prompts follow their form limits (プリントデザイン 1000 chars); other settings stay short.
   const limit=/Prompt$/.test(key)?1000:256;
   const item=value[key];const safe=(v:unknown):v is string=>typeof v==='string'&&v.length<=limit&&!/(?:https?:|data:|blob:|bearer\s)/i.test(v);
