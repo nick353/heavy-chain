@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ANSWER_MARK, answerPrompt, hasAssistantQuestions, parseAssistantReply, searchAnswerPrompt, variationDirections } from '../src/features/designDetail/assistantQuestions.ts';
-import { foundImageFile, searchReferenceImages } from '../src/features/designDetail/referenceImageSearch.ts';
+import { foundImageFile, searchReferenceImages, wikimediaSource } from '../src/features/designDetail/referenceImageSearch.ts';
 import { imagePrompt } from '../src/features/designDetail/imagePrompt.ts';
 
 const reply = [
@@ -99,7 +99,7 @@ test('reference images come from Wikimedia Commons bitmaps and become ordinary u
     } } }));
     return new Response(new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' }));
   }) as typeof fetch;
-  const found = await searchReferenceImages('hydrangea watercolor blue', { fetcher });
+  const found = await searchReferenceImages('hydrangea watercolor blue', { fetcher, sources: [wikimediaSource] });
   assert.deepEqual(found.map((image) => image.title), ['A flower', 'B']);
   assert.equal(found[0].license, 'CC BY-SA 4.0');
   assert.deepEqual(calls.filter((url) => url.startsWith('https://commons.')).map((url) => new URL(url).searchParams.get('gsrsearch')),
