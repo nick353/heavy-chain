@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import {
   ArrowUp, Brush, BrushCleaning, Check, ChevronDown, ChevronRight, Crop, Eraser, Expand, ImageUpscale, Lasso, Minus, PenLine, Plus, Redo2, ScanSearch, Scissors,
@@ -181,11 +182,14 @@ export function StudioImageEditMenu({
           })}
         </div>
       )}
-      {dialog === 'partial' && <BrushEditDialog kind="partial" imageUrl={imageUrl} aspect={aspect} name={name} onClose={closeDialog} onClientResult={onClientResult} onServerEdit={onServerEdit} />}
-      {dialog === 'clipping' && <BrushEditDialog kind="clipping" imageUrl={imageUrl} aspect={aspect} name={name} onClose={closeDialog} onClientResult={onClientResult} onServerEdit={onServerEdit} />}
-      {dialog === 'erase' && <BrushEditDialog kind="erase" imageUrl={imageUrl} aspect={aspect} name={name} onClose={closeDialog} onClientResult={onClientResult} onServerEdit={onServerEdit} />}
-      {dialog === 'crop' && <CropDialog imageUrl={imageUrl} name={name} onClose={closeDialog} onClientResult={onClientResult} />}
-      {dialog === 'expand' && <ExpandDialog imageUrl={imageUrl} name={name} onClose={closeDialog} onServerEdit={onServerEdit} />}
+      {/* The windows open over the whole page (the menu may sit in a moved toolbar, which would carry a fixed window along). */}
+      {dialog && typeof document !== 'undefined' && createPortal(<div data-studio-chrome="">
+        {dialog === 'partial' && <BrushEditDialog kind="partial" imageUrl={imageUrl} aspect={aspect} name={name} onClose={closeDialog} onClientResult={onClientResult} onServerEdit={onServerEdit} />}
+        {dialog === 'clipping' && <BrushEditDialog kind="clipping" imageUrl={imageUrl} aspect={aspect} name={name} onClose={closeDialog} onClientResult={onClientResult} onServerEdit={onServerEdit} />}
+        {dialog === 'erase' && <BrushEditDialog kind="erase" imageUrl={imageUrl} aspect={aspect} name={name} onClose={closeDialog} onClientResult={onClientResult} onServerEdit={onServerEdit} />}
+        {dialog === 'crop' && <CropDialog imageUrl={imageUrl} name={name} onClose={closeDialog} onClientResult={onClientResult} />}
+        {dialog === 'expand' && <ExpandDialog imageUrl={imageUrl} name={name} onClose={closeDialog} onServerEdit={onServerEdit} />}
+      </div>, document.body)}
     </div>
   );
 }

@@ -30,7 +30,8 @@ test('the request sends 比率 and 画質 only when they differ from the server 
   assert.equal(studioEditOptions({ aspectRatio: 'auto', quality: '2k' }), undefined);
   assert.deepEqual(studioEditOptions({ aspectRatio: 'auto', quality: '1k' }), { resolution: '1k' });
   assert.deepEqual(studioEditOptions({ aspectRatio: '1:1', quality: '4k' }), { aspectRatio: '1:1', resolution: '4k' });
-  assert.match(page, /const editOptions = fn === 'region' \? undefined : studioEditOptions\(settings\);/);
+  // A 画像編集 form on the canvas sends the options its tool chose instead.
+  assert.match(page, /const editOptions = edit \? edit\.editOptions : fn === 'region' \? undefined : studioEditOptions\(settings\);/);
   assert.match(source('../src/lib/imageApi.ts'), /\.\.\.\(options\?\.resolution \? \{ resolution: options\.resolution \} : \{\}\),/);
   const seen: Record<string, unknown>[] = [];
   const notReached = () => { throw new Error('not_reached_in_this_test'); };
@@ -86,7 +87,7 @@ test('a chosen example shows its bundled images at once; each role switches to t
 
 test('the page shows the example before saving, locks the form until the save ends, and leaves on failure', () => {
   assert.match(page, /setExamplePreview\(\{ fn, projectCode \}\);/);
-  assert.match(page, /const hasProject = Boolean\(projectCode\) \|\| previewActive;/);
+  assert.match(page, /const hasProject = !embedded && \(Boolean\(projectCode\) \|\| previewActive\);/);
   assert.match(page, /const formLocked = busy \|\| previewActive;/);
   assert.match(page, /const inputsReady = !formLocked && uploadingScope !== scopeKey/);
   assert.match(page, /if \(!scope \|\| busyRef\.current \|\| !generationController \|\| previewActiveRef\.current\) return;/);

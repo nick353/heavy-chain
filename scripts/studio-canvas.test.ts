@@ -150,8 +150,8 @@ test('the page wires Light\'s canvas controls with Light\'s labels', () => {
 });
 
 test('a layout save never races an upload or generation, and waits while a result is unconfirmed', () => {
-  // Uploads, retries and generation wait for a save in flight before they read the document.
-  assert.equal((page.match(/await waitForLayoutSave\(\)/g) ?? []).length, 3);
+  // Uploads, retries, generation and adding nodes to the canvas wait for a save in flight before they read the document.
+  assert.equal((page.match(/await waitForLayoutSave\(\)/g) ?? []).length, 4);
   assert.match(page, /if \(saver\.flight \|\| !job \|\| busyRef\.current \|\| recoveryRequiredRef\.current \|\| layoutAckPending\(job\)\) return;/);
   assert.match(page, /snapshot: withStudioLayout\(document\.snapshot, job\.positions\), expectedRevision: document\.revision/);
   // The image toolbar opens a new project instead of replacing this project's main image.

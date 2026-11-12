@@ -32,7 +32,9 @@ test('the project canvas is Light\'s main → form → result row with the refer
   assert.doesNotMatch(source, /fashion-studio-source-reference-node/);
   assert.match(source, /aria-label=\{`\$\{referenceLabel\}を追加`\}/);
   assert.match(source, /data-studio-node="main"/);
-  assert.match(source, /data-studio-node="form"/);
+  // The project's own form keeps the key "form"; a form added to its canvas keys its nodes "<formId>/...".
+  assert.match(source, /const formKey = nodeKeyOf\('form'\);/);
+  assert.match(source, /data-studio-node=\{formKey\}/);
   assert.match(source, /d=\{studioEdgePath\(source, target\)\}/);
 });
 

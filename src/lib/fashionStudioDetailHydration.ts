@@ -1,5 +1,6 @@
 import { extractFashionStudioThumbnailCandidates } from './fashionStudioThumbnails.ts';
 import { readStudioLayout, type StudioPositions } from './studioCanvas.ts';
+import { readStudioCanvasImages, readStudioForms, readStudioParent, type StudioCanvasImage, type StudioChildForm, type StudioParentLink } from './studioCanvasNodes.ts';
 
 export type FashionStudioDetailRole = 'main' | 'reference' | 'result';
 export type FashionStudioDetailAsset = {
@@ -26,6 +27,12 @@ export type FashionStudioSavedDetail = {
   history: FashionStudioDetailAsset[];
   /** Node positions the person dragged on the canvas (snapshot.studioLayout); missing nodes use the default flow. */
   layout: StudioPositions;
+  /** Free image nodes on the canvas (studioCanvasNodes.ts); none in a project saved before them. */
+  canvasImages: StudioCanvasImage[];
+  /** More forms on the canvas, each its own document (studioCanvasNodes.ts); none in a project saved before them. */
+  forms: StudioChildForm[];
+  /** Set when this document is a form on another project's canvas. */
+  parent: StudioParentLink | null;
 };
 const record = (value: unknown): Record<string, unknown> => (
   value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
@@ -33,6 +40,7 @@ const record = (value: unknown): Record<string, unknown> => (
 const emptyAsset = (): FashionStudioDetailAsset => ({ status: 'missing', objectId: null, candidates: [] });
 export const emptyFashionStudioDetail = (): FashionStudioSavedDetail => ({
   roles: { main: emptyAsset(), reference: emptyAsset(), result: emptyAsset() }, prompt: '', extraReferences: [], history: [], layout: {},
+  canvasImages: [], forms: [], parent: null,
 });
 const assetOf = (image: Record<string, unknown>): FashionStudioDetailAsset => {
   const candidates = extractFashionStudioThumbnailCandidates({ objects: [image] });
@@ -64,6 +72,9 @@ const explicitRoles = (image: Record<string, unknown>): FashionStudioDetailRole[
 export const extractFashionStudioSavedDetail = (snapshot: unknown): FashionStudioSavedDetail => {
   const detail = emptyFashionStudioDetail();
   detail.layout = readStudioLayout(snapshot);
+  detail.forms = readStudioForms(snapshot);
+  detail.parent = readStudioParent(snapshot);
+  detail.canvasImages = readStudioCanvasImages(snapshot);
   const objects = record(snapshot).objects;
   if (!Array.isArray(objects)) return detail;
   const matches: Record<FashionStudioDetailRole, Record<string, unknown>[]> = { main: [], reference: [], result: [] };
