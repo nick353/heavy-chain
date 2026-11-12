@@ -231,7 +231,7 @@ export const AGENT_SHOP_MAX_CLAIMS = 8;
 const AGENT_RESEARCH_MAX_SOURCES = 20;
 const AGENT_SHOP_LINE = /^通販サイトの検索先:[^\S\n]*(.*)$/m;
 const DOMAIN = /^(?=.{4,100}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
-const AGENT_SHOP_USAGE_KEYS = ['web_search_requests', 'shop_prompt_tokens', 'shop_completion_tokens', 'shop_web_search_requests', 'yahoo_queries'];
+const AGENT_SHOP_USAGE_KEYS = ['web_search_requests', 'shop_prompt_tokens', 'shop_completion_tokens', 'shop_web_search_requests', 'shop_claims', 'yahoo_queries'];
 /** The research request's line for plans of the Japanese market: Yahoo!ショッピング's products are added when the key is set. */
 const AGENT_PRODUCT_LINE = /^実商品の検索:[^\S\n]*日本[^\S\n]*$/m;
 const AGENT_PRODUCT_KEYWORDS = /^\[商品検索\][^\S\n]*(.+)$/m;
@@ -273,6 +273,9 @@ const AGENT_SHOP_SYSTEM_PROMPT = [
   'This time you only look for real products sold on the online shops the web_search tool is limited to. The request below was written for a full research report; ignore its report format and research the products it is about instead: the items, materials, colors and silhouettes it asks for, this season, best sellers and rankings. Prefer single product pages and ranking pages that show prices.',
   `You can search at most ${AGENT_SHOP_MAX_USES} times.`,
   'When the search is done, write the line "[調査結果]", then the heading "## 通販の実商品" and 4 to 8 bullets starting with "- ", one product each: the brand and product name, the shop, the price exactly as the page states it (leave it out when the page does not), and what it shows for the plan (material, color, shape, ranking, reviews). Only products from the search results; no URLs.',
+  // Production 2026-11-12 (テーマ企画 0a21c43f): 3 shop searches and 46k tokens, and not one cited bullet, so nothing reached
+  // the report. Only a cited bullet is kept (it links its page), so the citation is the job, not a detail.
+  'Each bullet is one sentence that cites the search result of that product (the product page or the ranking page that lists it). A product you cannot cite from a search result is left out.',
 ].join('\n\n');
 const AGENT_SHOP_KEYWORDS_PROMPT = 'Then write one last line: "[商品検索] " followed by up to 3 short Japanese search phrases for a shopping site search (the customers\' gender and one item, plus a material or color when the request names one), separated by " | ".';
 const shopUsage = (main: Record<string, number> | null, shop: Record<string, number> | null) => {
@@ -291,10 +294,12 @@ const shopUsage = (main: Record<string, number> | null, shop: Record<string, num
  */
 export function mergeShopResearch(main: ResearchResult, shop: ResearchResult | null): ResearchResult {
   if (!shop) return main;
-  const usage = shopUsage(main.usage, shop.usage);
   const plain = (value?: string) => (value ?? '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
   const seen = new Set(main.claims.map(claim => plain(claim.quote)));
   const claims = shop.claims.filter(claim => plain(claim.quote) && !/^#|通販の実商品$/.test(plain(claim.quote)) && !seen.has(plain(claim.quote))).slice(0, AGENT_SHOP_MAX_CLAIMS);
+  // The receipt says how many cited products the shop search added (0: it cost its tokens and added nothing).
+  const both = shopUsage(main.usage, shop.usage);
+  const usage = both ? { ...both, shop_claims: claims.length } : both;
   if (!claims.length) return { ...main, usage };
   const pages = new Set(claims.map(claim => claim.url));
   const shopSources = shop.sources.filter(source => pages.has(source.url) && !main.sources.some(page => page.url === source.url)).slice(0, AGENT_SHOP_MAX_SOURCES);
@@ -322,6 +327,7 @@ export async function runAgentResearch(env: Env, prompt: string, messages: Claud
   }, fetchImpl).catch((reason: unknown) => { console.warn('claude_shop_research_failed', reason instanceof ClaudeTextError ? reason.code : 'unknown'); return null; }) : Promise.resolve(null);
   const [main, shop] = await Promise.all([callClaudeResearch(env, { system: AGENT_RESEARCH_SYSTEM_PROMPT, messages: broad, model, timeoutMs: AGENT_RESEARCH_TIMEOUT_MS }, fetchImpl), shopping]);
   const merged = mergeShopResearch(main, shop);
+  if (shop) console.log('claude_shop_research', JSON.stringify({ chars: shop.text.length, cited: shop.sources.length, claims: shop.claims.length, kept: merged.usage?.shop_claims ?? 0, errors: shop.searchErrors }));
   const searches: ShopSearch[] = realProducts && shop ? agentProductKeywords(shop.text).map(query => ({ query })) : [];
   if (!searches.length) return merged;
   return withAgentProducts(merged, await searchYahooProducts(env, searches, { fetchImpl, ...(sleep ? { sleep } : {}) }));
