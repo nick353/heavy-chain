@@ -194,3 +194,12 @@ test('Canvasで一部を修正 opens the proposal itself on the canvas (it arriv
   assert.match(view, /navigate\(target\.href\(target\.source === 'image' \? selected\.id : await registerCandidate\(brandId, userId, selected, TITLE\)\)\)/);
   assert.equal(designDetailHrefForLegacyCanvas('new', '?galleryImageId=ai-70af0b9a-9fef-4be9-9a38-367e192cdc6e-0'), '/designProduction/detail?openImageId=ai-70af0b9a-9fef-4be9-9a38-367e192cdc6e-0');
 });
+
+test('生地イメージ takes the proposal as the 生地画像 (it landed in モデル/デザイン画像)', () => {
+  // The fabric page puts librarySlot=fabric-base in 生地画像 and anything else in モデル/デザイン画像.
+  const actions = readFileSync('src/features/graphicDesign/graphicResultActions.ts', 'utf8');
+  assert.match(actions, /id: 'fabric', label: '生地イメージで服の生地にする', source: 'library', href: \(id: string\) => `\/tools\/fabric\?libraryArtifactId=\$\{encodeURIComponent\(id\)\}&librarySlot=fabric-base`/);
+  const fabric = readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+  assert.match(fabric, /\} else if \(libraryHandoff\.slot === 'fabric-base'\) \{\n\s+setFabricBase\(selectedImage\);/);
+  assert.match(fabric, /secondaryName: fabricBase\?\.file\?\.name \?\? '生地画像'/);
+});

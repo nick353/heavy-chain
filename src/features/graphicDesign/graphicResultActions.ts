@@ -34,7 +34,9 @@ export const GRAPHIC_SEND_TARGETS: readonly GraphicSendTarget[] = [
   { id: 'canvas', label: 'Canvasで一部を修正', source: 'image', href: (imageId: string) => `/canvas/new?galleryImageId=${encodeURIComponent(imageId)}` },
   // SVGにする (the tool row) traces the proposal as it is; this one first has AI redraw it flat, then traces that.
   { id: 'vector', label: 'ベクター化（AIで平らに描き直す）', source: 'library', href: (id: string) => `/tools/vector-special?libraryArtifactId=${encodeURIComponent(id)}` },
-  { id: 'fabric', label: '生地イメージ', source: 'library', href: (id: string) => `/tools/fabric?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=fabric-design` },
+  // A proposal is a pattern, so it goes in as the 生地画像 (fabric-base); fabric-design is the モデル/デザイン画像 slot it
+  // landed in before (production 2026-11-12), which left the user to find a fabric for their own pattern.
+  { id: 'fabric', label: '生地イメージで服の生地にする', source: 'library', href: (id: string) => `/tools/fabric?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=fabric-base` },
 ];
 
 /** Registers the proposal in the library (the same record the 生成履歴 panel writes) and returns its artifact id. */
