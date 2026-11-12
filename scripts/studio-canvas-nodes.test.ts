@@ -226,10 +226,16 @@ test('簡易エディター is Light\'s floating bar over a dark page: the chose
   assert.match(maskEditor, /style=\{\{ left: subLeft \}\} role="toolbar"/);
   assert.match(maskEditor, /\{tool === 'ai-mask' \? \(\n\s*<div role="radiogroup"/);
   assert.match(maskEditor, /role="radio" aria-checked=\{aiPick === candidate\} disabled=\{busy !== null\} onClick=\{\(\) => void recognize\(candidate\)\}/);
+  // Light's radio bar is low (34px, 12px words); the other tools' bar is 48px.
+  assert.match(maskEditor, /\$\{tool === 'ai-mask' \? 'h-\[34px\]' : 'h-12'\}`\} style=\{\{ left: subLeft \}\}/);
+  assert.match(maskEditor, /onClick=\{\(\) => void recognize\(candidate\)\} className="flex h-7 items-center gap-1\.5 rounded-md px-2\.5 text-xs /);
   assert.doesNotMatch(maskEditor, /role="menu"/);
   assert.doesNotMatch(maskEditor, /ChevronDown/);
   // Panes: 520×515, teal border and title on the chosen one; the other is dimmed with Light's hint.
   assert.match(maskEditor, /h-\[min\(515px,calc\(87vh-180px\)\)\] min-h-\[320px\] w-\[520px\]/);
+  // The image sits 24px inside the pane like Light's (only the surface's own margin; the pane body adds none).
+  assert.match(maskEditor, /<div className="relative min-h-0 flex-1">\n\s*<StudioMaskSurface/);
+  assert.match(read('../src/components/lightchain/StudioMaskSurface.tsx'), /const pad = 24;/);
   assert.match(maskEditor, /activePane === id \? 'border-\[#20d0c4\]' : 'border-\[#4b5053\]'/);
   assert.match(maskEditor, /'参考にしたい領域を描画してください' : '調整したい領域を描画してください'/);
   assert.match(maskEditor, /\{panes\.length > 1 && activePane !== id && \(\n\s*<div className="pointer-events-none absolute inset-0/);
