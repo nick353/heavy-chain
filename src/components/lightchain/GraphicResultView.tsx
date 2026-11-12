@@ -40,6 +40,7 @@ export function GraphicResultView({ brandId, userId, jobId, fallbackUrl, locked,
   const [menu, setMenu] = useState<'send' | 'download' | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool | null>(null);
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,8 +131,12 @@ export function GraphicResultView({ brandId, userId, jobId, fallbackUrl, locked,
         {tool && selected ? (
           <GraphicToolStage key={`${tool}-${selected.id}`} tool={tool} candidate={selected} index={selectedIndex} locked={locked} onClose={() => setTool(null)} onUseAsReference={onUseAsReference} />
         ) : (
-          <div className="flex min-w-0 flex-1 items-center justify-center">
-            {shownUrl && <img src={shownUrl} alt="生成結果" data-testid="graphic-design-result" className="max-h-full max-w-full rounded-lg object-contain" />}
+          <div className="relative flex min-w-0 flex-1 items-center justify-center">
+            {/* A new img per proposal: changing src kept the previous proposal on screen for seconds while the 2MB image
+                loaded (production 2026-11-12), so a click on a thumbnail looked ignored. */}
+            {shownUrl && <img key={shownUrl} src={shownUrl} alt="生成結果" data-testid="graphic-design-result" onLoad={() => setLoadedUrl(shownUrl)} onError={() => setLoadedUrl(shownUrl)}
+              className={`max-h-full max-w-full rounded-lg object-contain transition-opacity ${loadedUrl === shownUrl ? 'opacity-100' : 'opacity-0'}`} />}
+            {shownUrl && loadedUrl !== shownUrl && <Loader2 aria-label="画像を読み込み中" className="absolute h-6 w-6 animate-spin text-neutral-400" />}
           </div>
         )}
       </div>

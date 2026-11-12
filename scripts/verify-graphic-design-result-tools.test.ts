@@ -115,6 +115,10 @@ test('the result view has Light\'s demo layout and the designer tools; a run dra
     '似た案を増やす', '総柄にする', '配色を替える', 'リピートで確認', '背景を消す', 'つなぎ目をなじませる', 'REPEAT_LAYOUTS',
     '透過PNGでダウンロード', 'この配色でダウンロード', '参考画像にして作り直す', '並べた画像（3×3）をダウンロード'])
     assert.ok(view.includes(text), text);
+  // Choosing a thumbnail swaps the large image at once: a new img per proposal, hidden with a spinner until it loads
+  // (changing src alone kept the previous proposal on screen for seconds on production, 2026-11-12).
+  assert.match(view, /<img key=\{shownUrl\} src=\{shownUrl\}/);
+  assert.match(view, /loadedUrl !== shownUrl && <Loader2 aria-label="画像を読み込み中"/);
   const actions = readFileSync('src/features/graphicDesign/graphicResultActions.ts', 'utf8');
   for (const text of ['プリントイメージで服に当てる', 'Canvasで一部を修正', 'ベクター化', "listGeneratedImages(brandId, { jobId, order: 'oldest', limit: 8 })", 'setGeneratedImageFavorite', 'createCanvasDocument'])
     assert.ok(actions.includes(text), text);
