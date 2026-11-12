@@ -149,10 +149,27 @@ const AGENT_RESEARCH_MAX_TOKENS = 16_000;
 const AGENT_RESEARCH_MAX_RESUMES = 2;
 /** `quote`: the first sentence Claude cited from the page (Light shows it under the source in 参考資料). */
 export type ResearchSource = { title: string; url: string; quote?: string };
+/**
+ * Light's テーマ企画 参考資料 (read 2026-11-12 from its 23 テーマ企画 tasks): one entry per sentence of its answer that a
+ * source backs, in the answer's order, with the site, under that sentence of its own (2 to 136 characters, never the
+ * page's text); a site appears again for another sentence; online shops (rakuten.co.jp, dhgate.com, net-a-porter.com,
+ * minne.com…) are listed like any site; 0 to 25 entries (no list was longer than 25).
+ */
+export const AGENT_THEME_SOURCES_MAX = 25;
 export type ResearchResult = {
-  text: string; sources: ResearchSource[]; searchUsed: boolean; searchErrors: string[];
+  text: string; sources: ResearchSource[];
+  /** The report's cited sentences, each with its first source (`quote` is the report's sentence): Light's テーマ企画 list. */
+  claims: ResearchSource[];
+  searchUsed: boolean; searchErrors: string[];
   usage: Record<string, number> | null; model: string;
 };
+/** A cited span of the report as one line: no `[調査結果]` marker, heading lines, list marks or Markdown emphasis. */
+export function researchClaimText(value: string): string {
+  const marker = value.lastIndexOf('[調査結果]');
+  return (marker >= 0 ? value.slice(marker + '[調査結果]'.length) : value).split('\n')
+    .map(line => line.replace(/^\s*#{1,6}\s.*$/, '').replace(/^\s*(?:[・•]\s*|(?:[-*]|\d+[.)．])\s+)/, '').trim())
+    .filter(Boolean).join(' ').replace(/\*\*|__/g, '').replace(/\s+/g, ' ').trim();
+}
 type ContentBlock = Record<string, unknown> & { type: string };
 const httpUrl = (value: unknown): value is string => typeof value === 'string' && /^https?:\/\//i.test(value) && value.length <= 2048;
 
@@ -183,8 +200,11 @@ export async function callClaudeResearch(
   const sources = new Map<string, string>();
   const cited = new Map<string, string>();
   const quotes = new Map<string, string>();
+  // Each cited text block with where it ends in the joined text: the sentences before the `[調査結果]` line are not report.
+  const claimed: { end: number; text: string; url: string; title: string }[] = [];
   const searchErrors: string[] = [];
   const texts: string[] = [];
+  let joinedLength = 0;
   let searched = false;
   let inputTokens = 0, outputTokens = 0, counted = false, resumes = 0;
   for (let call = 0; call <= AGENT_RESEARCH_MAX_RESUMES + 1; call += 1) {
@@ -232,7 +252,11 @@ export async function callClaudeResearch(
         }
       } else if (block.type === 'text' && typeof block.text === 'string') {
         texts.push(block.text);
-        for (const citation of Array.isArray(block.citations) ? block.citations as Record<string, unknown>[] : []) {
+        joinedLength += block.text.length;
+        const blockCitations = Array.isArray(block.citations) ? block.citations as Record<string, unknown>[] : [];
+        const first = blockCitations.find(citation => httpUrl(citation?.url));
+        if (first) claimed.push({ end: joinedLength, text: block.text, url: first.url as string, title: typeof first.title === 'string' ? first.title.slice(0, 200) : first.url as string });
+        for (const citation of blockCitations) {
           if (httpUrl(citation?.url) && !cited.has(citation.url)) cited.set(citation.url, typeof citation.title === 'string' ? citation.title.slice(0, 200) : citation.url);
           const quote = typeof citation?.cited_text === 'string' ? citation.cited_text.replace(/\s+/g, ' ').trim() : '';
           if (httpUrl(citation?.url) && quote && !quotes.has(citation.url)) quotes.set(citation.url, quote.length > 160 ? `${quote.slice(0, 159)}…` : quote);
@@ -251,9 +275,21 @@ export async function callClaudeResearch(
   const marker = joined.lastIndexOf('[調査結果]');
   const text = (marker >= 0 ? joined.slice(marker + '[調査結果]'.length) : joined).trim();
   if (!text) throw new ClaudeTextError('claude_empty_response', 502);
+  const titled = (url: string, title: string) => sources.get(url) && /^https?:\/\//.test(title) ? sources.get(url)! : title;
+  const claims: ResearchSource[] = [];
+  const seen = new Set<string>();
+  for (const claim of claimed) {
+    // A block that ends before the marker starts is Claude's narration before the report.
+    if (marker >= 0 && claim.end <= marker) continue;
+    const sentence = researchClaimText(claim.text);
+    if (!sentence || seen.has(sentence)) continue;
+    seen.add(sentence);
+    claims.push({ url: claim.url, title: titled(claim.url, claim.title), quote: sentence.length > 160 ? `${sentence.slice(0, 159)}…` : sentence });
+    if (claims.length >= AGENT_THEME_SOURCES_MAX) break;
+  }
   return {
-    text, sources: [...cited].slice(0, 20)
-      .map(([url, title]) => ({ url, title: sources.get(url) && /^https?:\/\//.test(title) ? sources.get(url)! : title, ...(quotes.has(url) ? { quote: quotes.get(url)! } : {}) })),
+    text, claims, sources: [...cited].slice(0, 20)
+      .map(([url, title]) => ({ url, title: titled(url, title), ...(quotes.has(url) ? { quote: quotes.get(url)! } : {}) })),
     searchUsed: searchEnabled && searched,
     searchErrors: [...new Set(searchErrors)], model,
     usage: counted ? { prompt_tokens: inputTokens, completion_tokens: outputTokens, total_tokens: inputTokens + outputTokens } : null,

@@ -213,12 +213,18 @@ const AGENT_RESEARCH_SYSTEM_PROMPT = [
   `You can search at most ${AGENT_RESEARCH_MAX_USES} times, so make each query broad enough to cover one area of the scope. Base the report on what the results say, with the figures and examples they give. Never write that data could not be obtained when searches returned results; only when every search failed or found nothing, say so in one line and continue from general knowledge.`,
   'When the research is done, write the line "[調査結果]" and then only the final report in the requested format.',
 ].join('\n\n');
-/** `agent-research` content: the report, then `[出典]` lines "- title | url | cited sentence", then `[検索] ok|unavailable|error:<codes>`. */
-export function formatAgentResearchContent(result: { text: string; sources: { title: string; url: string; quote?: string }[]; searchUsed: boolean; searchErrors: string[] }) {
+/**
+ * `agent-research` content: the report, then `[出典]` lines "- title | url | cited sentence", then `[検索] ok|unavailable|error:<codes>`,
+ * then (Claude's research) `[引用]` lines "- title | url | the report's cited sentence" for テーマ企画's 参考資料. `[引用]` comes
+ * after `[検索]` so the readers that stop there (the report, 新商品企画, the chat, its history) never see it.
+ */
+type FormattedSource = { title: string; url: string; quote?: string };
+export function formatAgentResearchContent(result: { text: string; sources: FormattedSource[]; claims?: FormattedSource[]; searchUsed: boolean; searchErrors: string[] }) {
   const clean = (value: string) => value.replace(/[\r\n|]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const sources = result.sources.map(source => `- ${clean(source.title) || source.url} | ${source.url}${source.quote && clean(source.quote) ? ` | ${clean(source.quote)}` : ''}`);
+  const line = (source: FormattedSource) => `- ${clean(source.title) || source.url} | ${source.url}${source.quote && clean(source.quote) ? ` | ${clean(source.quote)}` : ''}`;
   const status = result.searchUsed ? 'ok' : result.searchErrors.includes('web_search_unavailable') || !result.searchErrors.length ? 'unavailable' : `error:${result.searchErrors.join(',')}`;
-  return [result.text.trim(), '', '[出典]', ...sources, '', `[検索] ${status}`].join('\n');
+  return [result.text.trim(), '', '[出典]', ...result.sources.map(line), '', `[検索] ${status}`,
+    ...(result.claims ? ['', '[引用]', ...result.claims.map(line)] : [])].join('\n');
 }
 
 /** Workers AI image parts become Claude base64 image blocks. */
