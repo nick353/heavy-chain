@@ -178,7 +178,8 @@ export async function callClaudeResearch(
   let messages: ClaudeMessage[] = options.messages.filter((message, index) => index > 0 || message.role === 'user');
   let searchEnabled = true;
   // Every search hit is not a source (production 2026-11-12: a Japanese fashion search also returned Wikipedia pages on
-  // music and climbing). The pages Claude cited come first; hits only fill in when it cited fewer than three.
+  // music and climbing, and filling in with hits listed walmart products and an anime under テーマ企画's 参考資料). Light lists
+  // only the pages a sentence was cited from, each with that sentence; the hits are kept for their titles.
   const sources = new Map<string, string>();
   const cited = new Map<string, string>();
   const quotes = new Map<string, string>();
@@ -251,7 +252,7 @@ export async function callClaudeResearch(
   const text = (marker >= 0 ? joined.slice(marker + '[調査結果]'.length) : joined).trim();
   if (!text) throw new ClaudeTextError('claude_empty_response', 502);
   return {
-    text, sources: [...(cited.size >= 3 ? cited : new Map([...cited, ...[...sources].filter(([url]) => !cited.has(url))]))].slice(0, 20)
+    text, sources: [...cited].slice(0, 20)
       .map(([url, title]) => ({ url, title: sources.get(url) && /^https?:\/\//.test(title) ? sources.get(url)! : title, ...(quotes.has(url) ? { quote: quotes.get(url)! } : {}) })),
     searchUsed: searchEnabled && searched,
     searchErrors: [...new Set(searchErrors)], model,

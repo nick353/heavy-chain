@@ -14,7 +14,7 @@ import { AgentDialogueView } from '../features/agent/AgentDialogueView';
 import type { AssistantQuestion } from '../features/designDetail/assistantQuestions';
 import {
   AGENT_SCOPE_REGIONS, DEFAULT_AGENT_SCOPE, agentConversationId, agentImagePrompt, agentMissingNames, agentNotePrompt,
-  agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentScopeSummary, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
+  agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentScopeSummary, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
   loadAgentTask, parseAgentRequirements, parseAgentResearch, parsePlanResponse, parseThemeResponse, planPrompt, pruneAgentScope, themePrompt, updateAgentTask,
   agentBuildDesignImages, agentBuildDirectionImages, agentChosenCodes, agentDesignPrompt, agentDesignProgress, agentFinalPrompt, agentImageLabel, agentReferenceImages,
   agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan, agentDialoguePrompt, agentDialogueSources,
@@ -397,8 +397,9 @@ export default function HeavyAgentTaskPage() {
   }, [brandId, commit, conversationFor, pollAssistant, taskId]);
 
   const textMode = (task: AgentTask): AssistantMode => (task.flow === 'conversation' ? 'agent' : undefined);
-  /** Light's テーマ企画 searches the web for its themes; its theme request runs as research. */
-  const themeMode = (task: AgentTask): AssistantMode => (agentThemeSearches(task) ? 'agent-research' : textMode(task));
+  /** Light's テーマ企画 searches the web for its themes: the research step searches and the themes are written from it
+   * (`agent`); a round of a task made before the research step searches itself. */
+  const themeMode = (task: AgentTask): AssistantMode => (agentThemeRoundSearches(task) ? 'agent-research' : agentThemeSearches(task) ? 'agent' : textMode(task));
   const applyRound = (requestId: string) => (task: AgentTask, result: AgentAssistantStep): AgentTask => ({ ...task, rounds: task.rounds.map((round) => round.step.requestId !== requestId ? round
     : { ...round, step: result, ...(result.state === 'completed' && result.content ? parseThemeResponse(result.content) : { summary: '', themes: [] }) }) });
   const applyNote = (noteId: string) => (task: AgentTask, result: AgentAssistantStep): AgentTask => ({ ...task, notes: (task.notes ?? []).map((note) => note.id === noteId ? { ...note, reply: result } : note) });
@@ -594,6 +595,12 @@ export default function HeavyAgentTaskPage() {
       if (!requirements) { guard(startRequirements, 'タスクを開始できませんでした。', 'start'); return; }
       if (requirements.state === 'running') { guard(() => runAssistant('requirements', requirements, null, (current, result) => ({ ...current, requirements: result }), 'agent')); return; }
       if (requirements.state !== 'completed' || !task.aligned || !task.scope) return;
+      if (!task.research) { guard(startResearch, '調査を開始できませんでした。', 'research'); return; }
+      if (task.research.state === 'running') { const step = task.research; guard(() => runAssistant('research', step, null, (current, result) => ({ ...current, research: result }), 'agent-research')); return; }
+      if (task.research.state !== 'completed') return;
+    }
+    // Light's テーマ企画 searches the web before its first themes; Heavy runs that search as the task's research step.
+    if (agentThemeSearches(task) && !task.rounds.length) {
       if (!task.research) { guard(startResearch, '調査を開始できませんでした。', 'research'); return; }
       if (task.research.state === 'running') { const step = task.research; guard(() => runAssistant('research', step, null, (current, result) => ({ ...current, research: result }), 'agent-research')); return; }
       if (task.research.state !== 'completed') return;
@@ -825,7 +832,8 @@ export default function HeavyAgentTaskPage() {
     ...(merch && final ? [{ key: 'final', title: wording.finalReport.title, html: () => buildAgentFinalHtml(task, urlsByKey) }] : []),
     ...(merch && designsSettled ? [{ key: 'design', title: wording.designReport.title, html: () => buildAgentDesignHtml(task, urlsByKey) }] : []),
     ...(merch && task.structure?.state === 'completed' ? [{ key: 'structure', title: wording.structureReport.title, html: () => buildAgentStructureHtml(task) }] : []),
-    ...(research ? [{ key: 'research', title: conversation ? wording.researchReport.title : '調査とビジュアル方向レポート', html: () => buildAgentResearchReportHtml(task) }] : []),
+    // Light's テーマ企画 lists only 参考資料 (its search is not a report of its own).
+    ...(research && !agentThemeSearches(task) ? [{ key: 'research', title: conversation ? wording.researchReport.title : '調査とビジュアル方向レポート', html: () => buildAgentResearchReportHtml(task) }] : []),
   ] : [];
   const showDeliverable = (key: string) => { const entry = deliverables.find((item) => item.key === key); if (entry) openReport({ title: entry.title, html: entry.html() }); };
   const saveDeliverable = (key: string) => { const entry = deliverables.find((item) => item.key === key); if (entry) downloadReport({ title: entry.title, html: entry.html() }); };
@@ -885,13 +893,15 @@ export default function HeavyAgentTaskPage() {
                 </>
               )}
               {/* The first round only appears once the request is admitted; show progress before that too. */}
-              {(!conversation || task.research?.state === 'completed') && task.rounds.length === 0 && !done && !notice && <StepSpinner label="市場とトレンドを整理し、テーマを考えています…" />}
+              {!conversation && agentThemeSearches(task) && task.rounds.length === 0 && stepFailed(task.research?.state) && <ErrorRow onRetry={retryResearch}>調査に失敗しました（{task.research?.errorCode ?? task.research?.state}）。</ErrorRow>}
+              {(!conversation || task.research?.state === 'completed') && task.rounds.length === 0 && !done && !notice && !stepFailed(task.research?.state)
+                && <StepSpinner label={agentThemeSearches(task) ? '市場とトレンドを調べ、テーマを考えています…（ウェブ検索で資料を集めています。1〜3分かかります）' : '市場とトレンドを整理し、テーマを考えています…'} />}
               {task.rounds.map((round, index) => {
                 const last = index === task.rounds.length - 1;
                 const confirmed = !last || Boolean(task.choice);
                 return (
                   <article key={round.step.requestId} className="space-y-4" data-testid="agent-theme-round">
-                    {round.step.state === 'running' && <StepSpinner label={agentThemeSearches(task) ? '市場とトレンドを調べ、テーマを考えています…（ウェブ検索で資料を集めています。1〜3分かかります）' : '市場とトレンドを整理し、テーマを考えています…'} />}
+                    {round.step.state === 'running' && <StepSpinner label={agentThemeRoundSearches(task) ? '市場とトレンドを調べ、テーマを考えています…（ウェブ検索で資料を集めています。1〜3分かかります）' : '市場とトレンドを整理し、テーマを考えています…'} />}
                     {/* An attempt a retry already replaced has nothing to show: only the last round reports its failure. */}
                     {last && (round.step.state === 'failed' || round.step.state === 'unknown') && (
                       <ErrorRow onRetry={last && !task.choice ? () => void retryThemes() : undefined}>テーマの提案に失敗しました（{round.step.errorCode ?? round.step.state}）。</ErrorRow>
