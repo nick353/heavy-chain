@@ -7,6 +7,7 @@ import {
 } from '../src/features/graphicDesign/graphicTools.ts';
 import { candidatePlan } from '../src/lib/imageCandidatePlan.ts';
 import { candidateGrid, graphicFileName } from '../src/features/graphicDesign/graphicResult.ts';
+import { upscaleLimit } from '../src/lib/clientImageOps.ts';
 
 // 独自（本家で流せないため想像で作った）: Light's AIグラフィックデザイン answers 「権限がありません」 on this account, so its
 // result screen cannot be compared. Light's own demo video of the tool (graphic-design.mp4) shows four proposals per run,
@@ -160,4 +161,24 @@ test('the follow-up requests, the design document grid and the file names', () =
   assert.ok(cells[1].x > cells[0].x && cells[2].y > cells[0].y);
   assert.equal(graphicFileName(1, '背景なし'), 'AIグラフィックデザイン-案2-背景なし.png');
   assert.equal(graphicFileName(0), 'AIグラフィックデザイン-案1.png');
+});
+
+test('2倍の大きさ really doubles a 1696×2528 proposal (it came out 2748×4096 under a 2倍 file name)', () => {
+  // Measured 2026-11-12 by running the button's own functions in Chromium with the download intercepted.
+  assert.equal(upscaleLimit(1696, 2528, 2), 4096 / 2528); // the upscale tool's 4096 edge stays as it was
+  assert.equal(upscaleLimit(1696, 2528, 2, 6144), 2);
+  assert.equal(upscaleLimit(2048, 2048, 2, 6144), 2);
+  assert.equal(upscaleLimit(4096, 4096, 2, 6144), 1.5);
+  const view = readFileSync('src/components/lightchain/GraphicResultView.tsx', 'utf8');
+  assert.match(view, /upscaleImage\(selected\.image_url, \{ scale: 2, sharpness: 40, denoiseLevel: 0, maxEdge: GRAPHIC_UPSCALE_EDGE \}\)/);
+  assert.match(view, /const GRAPHIC_UPSCALE_EDGE = 6144;/);
+});
+
+test('a tool\'s spinner sits on the button that is working (参考画像にして作り直す spun 1枚分をダウンロード)', () => {
+  // Production 2026-11-12: the reference took about 8 s and only the download button above it spun.
+  const view = readFileSync('src/components/lightchain/GraphicResultView.tsx', 'utf8');
+  assert.equal((view.match(/\{spin\('reference'\)\}参考画像にして作り直す/g) ?? []).length, 2);
+  for (const key of ['recolor', 'tile', 'sheet', 'cutout']) assert.match(view, new RegExp(`act\\('${key}', async`));
+  assert.doesNotMatch(view, /\{working \? <Loader2/);
+  assert.match(view, /const makeReference = \(suffix: string\) => act\('reference',/);
 });
