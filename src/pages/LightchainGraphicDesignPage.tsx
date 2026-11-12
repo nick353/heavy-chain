@@ -9,6 +9,9 @@ import { useAuthStore } from '../stores/authStore';
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
 import { assistGroups, assistPromptLines, assistReferenceKey, selectedAssistTags, toggleAssistTag } from '../features/graphicDesign/graphicAssist';
 import { analyzeGraphicReferences } from '../features/graphicDesign/graphicAssistApi';
+import { GRAPHIC_CANDIDATE_COUNT, graphicFollowUpBrief } from '../features/graphicDesign/graphicTools';
+import { GraphicResultView } from '../components/lightchain/GraphicResultView';
+import type { GraphicCandidate } from '../features/graphicDesign/graphicResultActions';
 
 /**
  * Light `/printing` = "AIグラフィックデザイン" (GeneratePrinting / ModifyPrinting).
@@ -52,6 +55,7 @@ const assistChip = 'inline-flex h-8 items-center rounded-3xl border px-3 text-xs
 
 function LightchainGraphicDesignWorkspace() {
   const currentBrand = useAuthStore((state) => state.currentBrand);
+  const user = useAuthStore((state) => state.user);
   const workspace = useCanonicalImageWorkspace('print-design-project', {
     prepareSourceImage: whitenDarkBackground,
     // gpt-image-1-mini turns these references into dark neon art despite the prompt.
@@ -61,11 +65,15 @@ function LightchainGraphicDesignWorkspace() {
     // With 「AI」 in the prompt the model drew AI badges and circuit glow into the graphic.
     promptTitle: 'グラフィックデザイン',
     initialInputState: { referenceStrengths: [DEFAULT_STRENGTH, DEFAULT_STRENGTH], assist: false },
+    // 独自: 本家の説明動画の生成後の画面は1回で4案（本家はこのアカウントで生成できない）。
+    candidateCount: GRAPHIC_CANDIDATE_COUNT,
   });
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [selected, setSelected] = useState<0 | 1>(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  /** ‹ 戻る: back to the input screen; the run stays in 生成履歴 and a new generation shows its result again. */
+  const [showIntro, setShowIntro] = useState(false);
   /** Light's 素材を選択: adding opens it on 履歴アップロード; `replace` is the slot 差し替え changes. */
   const [library, setLibrary] = useState<{ replace: 'primary' | 'secondary' | null } | null>(null);
   const references = [workspace.slots.primary, workspace.slots.secondary].filter((slot): slot is NonNullable<typeof slot> => Boolean(slot));
@@ -152,8 +160,22 @@ function LightchainGraphicDesignWorkspace() {
   };
   const generate = () => {
     if (locked || references.length === 0) return;
+    setShowIntro(false);
     void workspace.generate({ brief: graphicDesignBrief(references.length, strengths, assist, assistTags) });
   };
+  /** 似た案を増やす / 総柄にする: the chosen proposal is image 0, the references follow; the run draws 4 new proposals. */
+  const followUp = (kind: 'variations' | 'repeat', candidate: GraphicCandidate) => {
+    if (locked || !workspace.result) return;
+    setShowIntro(false);
+    void workspace.editResult({ brief: graphicFollowUpBrief(kind, graphicDesignBrief(references.length, strengths, assist, assistTags)),
+      result: { ...workspace.result, imageId: candidate.id, storagePath: candidate.storage_path } });
+  };
+  /** A tool's output (a new colorway, a repeat tile) becomes a reference for the next generation. */
+  const useAsReference = (file: File) => {
+    if (locked) return;
+    addFiles([file], references.length < MAX_REFERENCES ? null : (selected === 1 && workspace.slots.secondary ? 'secondary' : 'primary'));
+  };
+  const resultView = Boolean(resultUrl) && !showIntro;
 
   return (
     <div className="lightchain-graphic-design flex h-[calc(100vh-50px)] min-h-[700px] gap-4 overflow-hidden bg-[#171b1c] p-4 text-white" data-testid="graphic-design-page" data-workspace-feature={workspace.toolId} data-resume-job={workspace.jobId ?? ''} data-resume-state={workspace.status}>
@@ -244,23 +266,32 @@ function LightchainGraphicDesignWorkspace() {
 
       <div className="flex min-w-[596px] flex-1 p-4">
       <main className="relative flex min-w-0 flex-1 rounded-lg bg-[#262a2b] p-4" aria-label="AIグラフィックデザイン">
-        <button type="button" onClick={() => setHistoryOpen(true)} className="absolute right-4 top-4 z-10 flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] pl-2.5 pr-3 text-xs font-medium text-white">
-          <History aria-hidden="true" className="h-4 w-4" />生成履歴
-        </button>
+        {!resultView && (
+          <button type="button" onClick={() => setHistoryOpen(true)} className="absolute right-4 top-4 z-10 flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] pl-2.5 pr-3 text-xs font-medium text-white">
+            <History aria-hidden="true" className="h-4 w-4" />生成履歴
+          </button>
+        )}
+        {resultView ? (
+          <>
+            <GraphicResultView brandId={currentBrand?.id} userId={user?.id} jobId={workspace.jobId} fallbackUrl={resultUrl} locked={locked}
+              onBack={() => setShowIntro(true)} onOpenHistory={() => setHistoryOpen(true)} onFollowUp={followUp} onUseAsReference={useAsReference} />
+            {(workspace.status === 'running' || workspace.error) && (
+              <div className="absolute left-1/2 top-16 z-20 -translate-x-1/2 rounded-full bg-black/75 px-4 py-2 text-sm">
+                {workspace.status === 'running' ? <span role="status" className="text-neutral-200">生成中です…（{GRAPHIC_CANDIDATE_COUNT}案を順に作っています。2〜3分かかります）</span>
+                  : <span role="alert" className="text-rose-300">{workspace.error}</span>}
+              </div>
+            )}
+          </>
+        ) : (
         <div className="flex size-full flex-col items-center justify-center px-10">
-          {resultUrl ? (
-            <img src={resultUrl} alt="生成結果" data-testid="graphic-design-result" className="max-h-[70%] max-w-full rounded-lg object-contain" />
-          ) : (
-            <>
-              <h5 className="text-xl font-bold text-[#20d0c4]">AIグラフィックデザイン</h5>
-              <p className="mt-2 w-[328px] text-center text-sm text-neutral-400">AIでグラフィックを作成</p>
-              <div className="mt-4 h-[340px] w-full"><video src={GRAPHIC_VIDEO} className="size-full" autoPlay controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture muted playsInline aria-label="AIグラフィックデザイン動画" /></div>
-            </>
-          )}
-          {workspace.status === 'running' && <p role="status" className="mt-4 text-sm text-neutral-300">生成中です…</p>}
+          <h5 className="text-xl font-bold text-[#20d0c4]">AIグラフィックデザイン</h5>
+          <p className="mt-2 w-[328px] text-center text-sm text-neutral-400">AIでグラフィックを作成</p>
+          <div className="mt-4 h-[340px] w-full"><video src={GRAPHIC_VIDEO} className="size-full" autoPlay controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture muted playsInline aria-label="AIグラフィックデザイン動画" /></div>
+          {workspace.status === 'running' && <p role="status" className="mt-4 text-sm text-neutral-300">生成中です…（{GRAPHIC_CANDIDATE_COUNT}案を順に作っています。2〜3分かかります）</p>}
           {heavyBrand.failed && <p role="alert" className="mt-4 text-sm text-rose-300">ワークスペースを準備できません。ページを再読み込みしてください。</p>}
           {workspace.error && <p role="alert" className="mt-4 text-sm text-rose-300">{workspace.error}</p>}
         </div>
+        )}
         {historyOpen && <LightchainHistoryPanel locked={locked} toolIds={['print-design-project']} onClose={() => setHistoryOpen(false)} />}
       </main>
       </div>
