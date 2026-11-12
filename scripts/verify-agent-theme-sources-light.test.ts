@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { AGENT_THEME_SOURCES_MAX, callClaudeResearch, researchClaimText } from '../cloudflare/heavy-api/src/claude-text.ts';
 import { formatAgentResearchContent } from '../cloudflare/heavy-api/src/designAssistant.ts';
 import { agentRoundSources, agentSourceSite, parseAgentResearch, parseThemeResponse, type AgentTask } from '../src/features/agent/agentFlow.ts';
-import { agentDialogueHistory, agentDialogueSources, parseAgentDialogueReply } from '../src/features/agent/agentDialogue.ts';
+import { agentDialogueHistory, parseAgentDialogueReply } from '../src/features/agent/agentDialogue.ts';
 
 // Light's テーマ企画 参考資料, read on 2026-11-12 from its 23 テーマ企画 tasks (jp.linkaigc.com/agent, planMode=plan):
 // 0 to 25 entries (median 6); each entry is the site's registered domain and one sentence of Light's own answer that the
@@ -96,14 +96,13 @@ test('the sentences go after [検索], so the report, 新商品企画, the chat 
   // The per-page list (新商品企画's report) is exactly the [出典] block.
   assert.deepEqual(parsed.sources.map(source => source.url), result.sources.map(source => source.url));
   assert.deepEqual(parsed.claims?.map(claim => claim.quote), result.claims.map(claim => claim.quote));
-  // インスピレーション / AIグラフィックデザイン: the chat's 参考資料 and the history are unchanged.
+  // インスピレーション / AIグラフィックデザイン: the chat keeps the [出典] block apart from its text and history (Light shows no list for it).
   const chat = parseAgentDialogueReply(content);
   assert.deepEqual(chat.sources.map(source => source.url), result.sources.map(source => source.url));
   assert.doesNotMatch(chat.body, /\[引用\]|手仕事の跡を見せるデザインが広がる \|/);
   const dialogueTask = { ...themeTask(), scene: 'インスピレーション', subtype: 'インスピレーション', flow: 'dialogue', dialogueStart: null,
     turns: [{ id: 'a1', role: 'assistant', at: '2026-11-12T00:00:00.000Z', step: { requestId: 'r1', state: 'completed', content }, mode: 'agent-research' }, { id: 'u2', role: 'user', at: '2026-11-12T00:01:00.000Z', text: 'A' }] } as unknown as AgentTask;
   assert.doesNotMatch(JSON.stringify(agentDialogueHistory(dialogueTask)), /\[引用\]/);
-  assert.deepEqual(agentDialogueSources(dialogueTask)?.sources.map(source => source.url), result.sources.map(source => source.url));
   // A theme round's text stops at [出典] as before.
   assert.doesNotMatch(parseThemeResponse(`[概要]\nx\n[テーマ]\n- A：a\n\n${content.slice(content.indexOf('[出典]'))}`).summary, /\[引用\]/);
 });
@@ -141,8 +140,8 @@ test('the site is named as Light names it: the registered domain', () => {
   for (const [url, site] of cases) assert.equal(agentSourceSite(url), site, url);
 });
 
-test('the task page names テーマ企画 sources by their site and lets a page come again; the chat list is unchanged', () => {
+test('the task page names テーマ企画 sources by their site and lets a page come again; the chat has no list', () => {
   const page = readFileSync(new URL('../src/pages/HeavyAgentTaskPage.tsx', import.meta.url), 'utf8');
   assert.match(page, /roundSources\.sources\.map\(\(source, index\) => \([\s\S]{0,500}<li key=\{`\$\{index\}:\$\{source\.url\}`\}[\s\S]{0,400}\{agentSourceSite\(source\.url\)\}<\/a>/);
-  assert.match(page, /dialogueSources\.sources\.map\(\(source\) => \(\n\s+<li key=\{source\.url\}[\s\S]{0,400}\{hostOf\(source\.url\)\}<\/a>/);
+  assert.doesNotMatch(page, /dialogueSources|agent-dialogue-sources/);
 });

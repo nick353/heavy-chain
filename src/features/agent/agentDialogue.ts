@@ -183,13 +183,6 @@ export function agentDialoguePlan(task: AgentTask): { turn: AgentTurn; reply: Ag
   }
   return null;
 }
-/** The newest research reply's sources (Light's 参考資料). */
-export function agentDialogueSources(task: AgentTask) {
-  for (const turn of [...(task.turns ?? [])].reverse()) {
-    if (turn.role === 'assistant' && turn.mode === 'agent-research' && turn.step?.state === 'completed' && turn.step.content) return parseAgentDialogueReply(turn.step.content);
-  }
-  return null;
-}
 /** Typing 「開始」 (or a short yes) under the 執行書 starts the generation at once, as Light does. */
 export function agentDialogueIsStart(text: string) {
   const value = text.trim().replace(/[。！!、\s]/g, '');

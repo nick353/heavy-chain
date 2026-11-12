@@ -122,10 +122,9 @@ test('テーマ企画 links go to the site\'s entrance, as in Light', () => {
 test('the task page draws the bold as <strong> elements (no HTML string) and links テーマ企画 sites to their entrance', () => {
   assert.match(page, /const SourceQuote = \(\{ text \}: \{ text: string \}\) => \(\n\s+<>\{agentQuoteParts\(text\)\.map\(\(part, index\) => \(part\.bold \? <strong key=\{index\} className="font-semibold text-white">\{part\.text\}<\/strong> : <Fragment key=\{index\}>\{part\.text\}<\/Fragment>\)\)\}<\/>/);
   assert.doesNotMatch(page, /dangerouslySetInnerHTML/);
-  // Both lists show the sentence through it.
-  assert.equal(page.split('{source.quote ? <SourceQuote text={source.quote} /> : source.title}').length - 1, 2);
+  // テーマ企画's list shows the sentence through it (インスピレーション / AIグラフィック have no list: Light has none, 9th pass).
+  assert.equal(page.split('{source.quote ? <SourceQuote text={source.quote} /> : source.title}').length - 1, 1);
   assert.doesNotMatch(page, /\{source\.quote \?\? source\.title\}/);
-  // テーマ企画: the entrance, in a new tab. インスピレーション / AIグラフィック (no such list in Light): the page itself, as before.
+  // テーマ企画: the entrance, in a new tab.
   assert.match(page, /roundSources\.sources\.map\(\(source, index\) => \([\s\S]{0,700}<a href=\{agentSourceHome\(source\.url\)\} target="_blank" rel="noopener noreferrer"[^>]*>\{agentSourceSite\(source\.url\)\}<\/a>/);
-  assert.match(page, /dialogueSources\.sources\.map\(\(source\) => \([\s\S]{0,300}<a href=\{source\.url\} target="_blank" rel="noopener noreferrer"[^>]*>\{hostOf\(source\.url\)\}<\/a>/);
 });
