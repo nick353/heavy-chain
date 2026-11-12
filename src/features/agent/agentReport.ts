@@ -12,10 +12,11 @@
  * imports, so tests read it directly.
  */
 import {
-  AGENT_PROMPT_BUDGET, agentReportSourceList, agentScopeSummary, agentSourceKind, agentSourceLabel, agentSourceSite, cleanAgentQuote,
+  AGENT_PROMPT_BUDGET, agentReportRowKind, agentReportSourceList, agentScopeSummary, agentSourceKind, agentSourceLabel, agentSourceSite, cleanAgentQuote,
   effectiveAgentRequirements, parseAgentDirection, parseAgentResearch, type AgentAssistantStep, type AgentTask,
 } from './agentFlow.ts';
 import { agentDirectionCode, agentSeriesName } from './agentMerch.ts';
+import { YAHOO_ATTRIBUTION_HTML, agentProductImage, agentYen, type AgentProduct } from './agentProducts.ts';
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const cut = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
@@ -46,11 +47,17 @@ const localDate = (value?: string) => {
 /** The sources the slides may cite and link: the research's cited pages, numbered S01… in the research's order. */
 export function agentReportSources(task: AgentTask) {
   const research = task.research?.state === 'completed' && task.research.content ? parseAgentResearch(task.research.content) : null;
-  return agentReportSourceList((research?.sources ?? []).filter(source => /^https?:\/\//i.test(source.url))).map((source, index) => ({
-    id: `S${String(index + 1).padStart(2, '0')}`, url: source.url, site: agentSourceSite(source.url), label: agentSourceLabel(source.url), kind: agentSourceKind(source.url),
+  return agentReportSourceList((research?.sources ?? []).filter(source => /^https?:\/\//i.test(source.url)), research?.products).map((source, index) => ({
+    id: `S${String(index + 1).padStart(2, '0')}`, url: source.url, site: agentSourceSite(source.url), label: agentSourceLabel(source.url),
+    kind: research?.products?.some(product => product.url === source.url) ? agentReportRowKind(source.url, research.products) : agentSourceKind(source.url),
     title: source.title !== source.url ? source.title : '',
     text: source.quote ? cleanAgentQuote(source.quote).replace(/\*\*/g, '').replace(/\\([\\`*_{}[\]()#+\-.!|~<>])/g, '$1') : '',
   }));
+}
+/** Yahoo!ショッピング's products the slides may show as evidence cards (the research's `[商品]` block). */
+export function agentReportProducts(task: AgentTask): AgentProduct[] {
+  const research = task.research?.state === 'completed' && task.research.content ? parseAgentResearch(task.research.content) : null;
+  return research?.products ?? [];
 }
 /** The footer band and the cover title, as Light writes them (「2027SS レディースコレクション提案 — 調査・方向性レポート」). */
 function reportName(task: AgentTask): string {
@@ -64,6 +71,7 @@ export function agentReportPrompt(task: AgentTask): string {
   const round = [...task.rounds].reverse().find(entry => entry.step.state === 'completed' && entry.themes.length);
   const requirements = effectiveAgentRequirements(task);
   const sources = agentReportSources(task);
+  const products = agentReportProducts(task);
   const collected = localDate(task.research?.at ?? task.scope?.at);
   const client = task.subtype === '顧客提案';
   const directions = (round?.themes ?? []).map((theme, index) => {
@@ -81,6 +89,10 @@ export function agentReportPrompt(task: AgentTask): string {
       ? `調査の出典（ID | サイト | 区分 | ページの題名 | ページの文 | URL。リンクはこのURLだけ、書かれたとおりに使う。価格はページの文に書かれているときだけ書く）:\n${sources.map(source =>
         `${source.id} | ${source.site} | ${source.kind} | ${cut(source.title, 70) || '—'} | ${cut(source.text, 150) || '—'} | ${source.url}`).join('\n')}`
       : '調査の出典: なし（出典のない事実は書かない。ソースの表には「参照した資料はありません」と書く）',
+    products.length
+      ? `実在の商品（Yahoo!ショッピング。ID | 商品名 | 価格 | 店 | 画像URL | 商品ページURL | 収集日）。根拠のカードにはこの商品を先に使い、画像は <img src="画像URL" alt="商品名"> を media-frame の中に書く（画像URLと商品ページURLは書かれたとおり、価格はこの表の値だけ）。出典の表では区分を「EC実商品(収集 日付)」にする:\n${products.map((product, index) =>
+        `P${String(index + 1).padStart(2, '0')} | ${cut(product.name, 80)} | ${agentYen(product.price) || '—'} | ${cut(product.store, 40) || '—'} | ${product.image} | ${product.url} | ${product.at || '—'}`).join('\n')}`
+      : '',
     directions.length ? `提示した方向性（名前｜特徴｜採用をすすめる理由）:\n${directions.join('\n')}` : '',
     `帯の文: 「${reportName(task)} — 調査・方向性レポート」（各ページの footer の左。右はページ番号の2桁）`,
     `表紙の題: ${client ? '顧客要件調査・ビジュアル方向性レポート' : '市場調査・ビジュアル方向レポート'}`,
@@ -133,8 +145,10 @@ export type SanitizedAgentReport = { style: string; body: string };
  * escapes. Everything else (script, style elements in the body, img, iframe, svg, forms, event attributes, base, meta)
  * is dropped. The <style> elements' CSS is returned apart.
  */
-export function sanitizeAgentReportHtml(html: string, allowedUrls: Iterable<string>): SanitizedAgentReport {
+export function sanitizeAgentReportHtml(html: string, allowedUrls: Iterable<string>, allowedImages: Iterable<string> = []): SanitizedAgentReport {
   const allowed = new Set([...allowedUrls].map(url => url.trim()));
+  // Only the real products' images (Yahoo!ショッピング's own addresses), exactly as listed; any other image is dropped.
+  const images = new Set([...allowedImages].filter(agentProductImage));
   const styles: string[] = [];
   let out = '';
   let skip: { tag: string; depth: number } | null = null;
@@ -165,6 +179,16 @@ export function sanitizeAgentReportHtml(html: string, allowedUrls: Iterable<stri
     }
     if (NESTED_DROP.has(name)) {
       if (!closing && !match[3].trim().endsWith('/')) skip = { tag: name, depth: 1 };
+      continue;
+    }
+    if (name === 'img' && !closing) {
+      let src = '', alt = '';
+      ATTR.lastIndex = 0;
+      for (let attr = ATTR.exec(match[3]); attr; attr = ATTR.exec(match[3])) {
+        const key = attr[1].toLowerCase(), raw = decodeEntities(attr[2] ?? attr[3] ?? attr[4] ?? '').trim();
+        if (key === 'src') src = raw; else if (key === 'alt') alt = raw.slice(0, 200);
+      }
+      if (images.has(src)) out += `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" referrerpolicy="no-referrer">`;
       continue;
     }
     if (TRANSPARENT.has(name) || !ALLOWED_TAGS.has(name)) continue;
@@ -228,6 +252,7 @@ th{background:var(--color-accent);color:var(--color-on-accent);font-weight:600;f
 .media-item{margin:0;min-width:0;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px;background:var(--color-surface);border:1px solid var(--color-line);border-radius:var(--radius-lg);padding:12px}
 .media-frame{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:120px;background:var(--color-base);border:1px solid var(--color-line);border-radius:var(--radius-sm);overflow:hidden}
 .media-frame>img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain}
+.report-credit{width:var(--page-width);margin:0 auto;padding:16px 0 32px}
 .media-empty{font-family:var(--font-display);font-size:18px;color:var(--color-muted);text-align:center;padding:12px;overflow-wrap:anywhere}
 .media-link{color:inherit;text-decoration:none}.media-link:focus-visible{outline:2px solid var(--color-accent);outline-offset:4px}
 .media-item>figcaption{margin:0;overflow-wrap:anywhere;font-size:11.5px;line-height:1.55;color:var(--color-ink)}.media-item>figcaption b,.media-item>figcaption strong{color:var(--color-ink)}
@@ -240,6 +265,11 @@ th{background:var(--color-accent);color:var(--color-on-accent);font-weight:600;f
 .cover{background:linear-gradient(160deg,color-mix(in srgb,var(--color-accent) 30%,#1d1716) 0%,var(--color-accent) 100%);color:var(--color-on-accent);padding:72px 88px;grid-template-rows:auto 1fr auto}
 .cover h1{font-size:52px;line-height:1.35}.cover .sub{font-size:17px;line-height:1.9;margin-top:20px;opacity:.9}.cover .meta{font-size:13px;line-height:2;opacity:.85}.cover .rule{width:72px;height:3px;background:currentColor;opacity:.6;margin:28px 0}`;
 export const AGENT_REPORT_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; base-uri 'none'; form-action 'none'";
+/** The policy with the real products' image origins (Yahoo!'s image hosts) added to img-src. */
+export function agentReportCsp(images: readonly string[]): string {
+  const origins = [...new Set(images.filter(agentProductImage).map(image => new URL(image).origin))];
+  return origins.length ? AGENT_REPORT_CSP.replace('img-src data:', `img-src data: ${origins.join(' ')}`) : AGENT_REPORT_CSP;
+}
 
 /** The slides read as a report only with several pages and the source table at the end. */
 export function agentReportLooksRight(body: string): boolean {
@@ -253,8 +283,12 @@ const unfenced = (value: string) => value.replace(/^\s*```(?:html)?\s*\n?/i, '')
 export function buildAgentAiReportHtml(task: AgentTask, title: string): string | null {
   const report = readAgentReport(task);
   if (!report || report.round !== agentReportRound(task) || report.step.state !== 'completed' || !report.step.content) return null;
-  const { style, body } = sanitizeAgentReportHtml(unfenced(report.step.content), agentReportSources(task).map(source => source.url));
+  const products = agentReportProducts(task);
+  const images = products.map(product => product.image);
+  const { style, body } = sanitizeAgentReportHtml(unfenced(report.step.content), [...agentReportSources(task).map(source => source.url), ...products.map(product => product.url)], images);
   if (!agentReportLooksRight(body)) return null;
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${AGENT_REPORT_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">`
-    + `<title>${escapeHtml(title)}</title><style>${AGENT_REPORT_BASE_CSS}</style>${style ? `<style>${style}</style>` : ''}</head><body>${body}</body></html>`;
+  // Yahoo!'s credit, unchanged, at the bottom whenever its products are in the research (its terms).
+  const credit = products.length ? `<footer class="report-credit">${YAHOO_ATTRIBUTION_HTML}</footer>` : '';
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${agentReportCsp(images)}"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><base target="_blank">`
+    + `<title>${escapeHtml(title)}</title><style>${AGENT_REPORT_BASE_CSS}</style>${style ? `<style>${style}</style>` : ''}</head><body>${body}${credit}</body></html>`;
 }

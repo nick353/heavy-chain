@@ -49,4 +49,6 @@
     "PUBLIC_SHARE_ENABLED": "true",
     "PUBLIC_APP_ORIGIN": "https://heavychain.app"
   }
+  // Yahoo!ショッピング 商品検索 v3 の Client ID（企画エージェントの実在の商品）。鍵が無い間は使わない。オーナーが入れる:
+  // npx wrangler secret put YAHOO_SHOPPING_APP_ID --config wrangler.production.jsonc
 }

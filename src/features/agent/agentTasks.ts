@@ -13,6 +13,7 @@ import { AGENT_TASK_CONVERSATION_PREFIX, AGENT_TASK_KIND, readAgentTask, type Ag
 export * from './agentMerch';
 export * from './agentDialogue';
 export * from './agentReport';
+export * from './agentProducts';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 

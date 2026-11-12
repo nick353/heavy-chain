@@ -19,7 +19,8 @@ const task = (extra: Partial<AgentTask> = {}): AgentTask => ({
 test('the research request names the shops of the scope as domains, the region\'s large shops when none is chosen', () => {
   assert.deepEqual(agentShopDomains(task()), ['zozo.jp', 'rakuten.co.jp']);
   const prompt = agentResearchPrompt(task());
-  assert.match(prompt, /\n通販サイトの検索先: zozo\.jp, rakuten\.co\.jp$/);
+  // A plan of the Japanese market also lets the server add Yahoo!ショッピング's products (when it has the key).
+  assert.match(prompt, /\n通販サイトの検索先: zozo\.jp, rakuten\.co\.jp\n実商品の検索: 日本$/);
   // The broad research keeps its own instructions and headings.
   assert.match(prompt, /ウェブ検索で最新の情報（市場・気候、トレンド/);
   assert.match(prompt, /「## 市場と気候」「## トレンド」/);

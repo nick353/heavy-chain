@@ -2,6 +2,8 @@
  * The planning agent's task model, Light's conversation (scope options, prompts) and the reply parsers. Pure: no
  * runtime imports, so tests read it directly. `agentTasks.ts` re-exports everything here.
  */
+import { AGENT_PRODUCT_LINE, YAHOO_ATTRIBUTION_HTML, agentJapanMarket, agentYen, parseAgentProducts, type AgentProduct } from './agentProducts.ts';
+
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
 export const AGENT_TASK_KIND = 'heavy-agent-task';
@@ -34,6 +36,8 @@ export type AgentImageState = AgentStepState | 'pending';
 export type AgentStyleImage = {
   key: string; code: string; name: string; category: string; prompt: string; requestId: string; state: AgentImageState;
   jobId?: string; imageId?: string; storagePath?: string; errorCode?: string; at?: string;
+  /** A real product shown instead of a generated picture (Yahoo!ショッピング, plans of the Japanese market): never generated or stored. */
+  product?: AgentProduct;
 };
 /** Light's 添付を追加 (ファイル / 画像): a file keeps the text read from it, an image is stored and sent to the assistant as a reference. */
 export type AgentAttachment = { id: string; kind: 'file' | 'image'; name: string; size: number; at: string; text?: string; imageId?: string; storagePath?: string };
@@ -310,6 +314,7 @@ export function agentResearchPrompt(task: AgentTask): string {
     '調べ終えたら「[調査結果]」の行のあとに、次の見出しを順に使い、各見出しの下は「- 」で始まる箇条書きで、数字や具体例を入れて書いてください（URLは書かない）:',
     '「## 市場と気候」「## トレンド」「## プラットフォームと競合の動き」「## ターゲットと着用シーン」「## 価格と販売ポテンシャル」「## 企画への示唆」。',
     shopLine(task),
+    agentJapanMarket(task) ? AGENT_PRODUCT_LINE : '',
   ].filter(Boolean).join('\n');
 }
 /** `quote`: the sentence the report cited from the page (Light shows it under the source in 参考資料). */
@@ -364,7 +369,11 @@ export const cleanAgentQuote = (value: string) => agentQuoteParts(value).map(par
  * Light's テーマ企画 lists these (its sentence, not the page's text; a site again for another sentence). `null` when the
  * content has no such block (older research), which keeps the `[出典]` list.
  */
-export type ParsedResearch = { report: string; sections: ParsedPlan['sections']; sources: AgentSource[]; claims: AgentSource[] | null; search: 'ok' | 'unavailable' | 'error' };
+export type ParsedResearch = {
+  report: string; sections: ParsedPlan['sections']; sources: AgentSource[]; claims: AgentSource[] | null; search: 'ok' | 'unavailable' | 'error';
+  /** Yahoo!ショッピング's products (the `[商品]` block), with their images, for the report's evidence cards. */
+  products?: AgentProduct[];
+};
 const sourceLines = (block: string, stop: RegExp): AgentSource[] => {
   const sources: AgentSource[] = [];
   for (const line of block.split('\n').slice(1)) {
@@ -380,11 +389,12 @@ export function parseAgentResearch(content: string): ParsedResearch {
   const claimsAt = text.search(/^\[引用\]$/m);
   const statusMatch = /^\[検索\]\s*(\S+)\s*$/m.exec(text);
   const report = (sourcesAt >= 0 ? text.slice(0, sourcesAt) : statusMatch ? text.slice(0, statusMatch.index) : text).trim();
-  const sources = sourcesAt >= 0 ? sourceLines(text.slice(sourcesAt), /^\[(検索|引用)\]/) : [];
-  const claims = claimsAt >= 0 ? sourceLines(text.slice(claimsAt), /^\[(検索|出典)\]/) : null;
+  const sources = sourcesAt >= 0 ? sourceLines(text.slice(sourcesAt), /^\[(検索|引用|商品)\]/) : [];
+  const claims = claimsAt >= 0 ? sourceLines(text.slice(claimsAt), /^\[(検索|出典|商品)\]/) : null;
+  const products = parseAgentProducts(text);
   const status = statusMatch?.[1] ?? 'unavailable';
   const search = status === 'ok' ? 'ok' : status.startsWith('error') ? 'error' : 'unavailable';
-  return { report, sections: parsePlanResponse(report).sections, sources, claims, search };
+  return { report, sections: parsePlanResponse(report).sections, sources, claims, search, ...(products.length ? { products } : {}) };
 }
 
 // Second-level labels under a country code that are not a site of their own (rakuten.co.jp, cao.go.jp, rollingstone.co.uk),
@@ -607,10 +617,18 @@ export const AGENT_REPORT_SHOP_ROWS = 6;
  * The report's rows: the research's shop search adds its product pages after the broad search's pages, so up to 6 shop
  * pages keep their place among the 15 rows (the evidence can show real products, as Light's does), in the research's order.
  */
-export function agentReportSourceList<T extends { url: string }>(sources: readonly T[]): T[] {
-  const shops = sources.filter(source => agentSourceKind(source.url) === 'EC').slice(0, AGENT_REPORT_SHOP_ROWS);
-  const chosen = new Set([...shops, ...sources.filter(source => !shops.includes(source))].slice(0, AGENT_REPORT_SOURCES_MAX));
-  return sources.filter(source => chosen.has(source));
+export function agentReportSourceList<T extends { url: string }>(sources: readonly T[], products: readonly { url: string }[] = []): T[] {
+  // Yahoo!ショッピング's products come first, as Light's index starts with its real products (「EC実商品」); then the shop pages.
+  const real = new Set(products.map(product => product.url));
+  const listed = sources.filter(source => real.has(source.url)).slice(0, AGENT_REPORT_SHOP_ROWS);
+  const shops = sources.filter(source => !real.has(source.url) && agentSourceKind(source.url) === 'EC').slice(0, listed.length ? Math.ceil(AGENT_REPORT_SHOP_ROWS / 2) : AGENT_REPORT_SHOP_ROWS);
+  const rest = sources.filter(source => !real.has(source.url) && !shops.includes(source));
+  return [...listed, ...[...shops, ...rest].slice(0, AGENT_REPORT_SOURCES_MAX - listed.length).sort((a, b) => sources.indexOf(a) - sources.indexOf(b))];
+}
+/** The 区分 of a row: 「EC実商品(収集 YYYY-MM-DD)」 for Yahoo!ショッピング's products, as Light writes its own, else the site's kind. */
+export function agentReportRowKind(url: string, products: readonly AgentProduct[] = []): string {
+  const product = products.find(item => item.url === url);
+  return product ? `EC実商品${product.at ? `(収集 ${product.at})` : ''}` : agentSourceKind(url);
 }
 const EC_SITES = new Set(['rakuten.co.jp', 'amazon.co.jp', 'amazon.com', 'zozo.jp', 'tmall.com', 'taobao.com', 'jd.com', 'vip.com', 'shein.com', 'temu.com',
   'nordstrom.com', 'macys.com', 'poshmark.com', 'depop.com', 'thredup.com', 'ebay.com', 'walmart.com', 'etsy.com', 'minne.com', 'creema.jp', 'qoo10.jp',
@@ -652,12 +670,13 @@ function reportSourceIndex(research: ParsedResearch | null, collectedAt?: string
   const head = '<div class="index-head"><h2>ソース一覧</h2><span class="index-label">SOURCE INDEX</span></div>';
   if (!research?.sources.length) return `<section class="index">${head}<p class="muted">${research?.search === 'ok' ? '参照した資料はありません。' : 'ウェブ検索を使えませんでした。この調査結果はAIモデルの知識に基づいています。'}</p></section>`;
   const collected = localDate(collectedAt);
-  const rows = agentReportSourceList(research.sources).map((source, index) => {
+  const rows = agentReportSourceList(research.sources, research.products).map((source, index) => {
     // 内容: the sentence the research cited from the page (the search tool's Markdown, so its escapes such as \\ are undone),
     // or else the page's title.
     const content = source.quote ? cleanAgentQuote(source.quote).replace(/\*\*/g, '').replace(/\\([\\`*_{}[\]()#+\-.!|~<>])/g, '$1')
       : source.title !== source.url ? source.title : '';
-    const kind = `${agentSourceKind(source.url)}${index === 0 && collected ? `(収集 ${collected})` : ''}`;
+    const product = research.products?.some(item => item.url === source.url);
+    const kind = product ? agentReportRowKind(source.url, research.products) : `${agentSourceKind(source.url)}${index === 0 && collected ? `(収集 ${collected})` : ''}`;
     return `<tr><td>S${String(index + 1).padStart(2, '0')}</td><td>${escapeHtml(agentSourceLabel(source.url))}<br><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">ソースを見る</a></td>`
       + `<td>${escapeHtml(cut(content, 160))}</td><td>${escapeHtml(kind)}</td></tr>`;
   }).join('');
@@ -676,10 +695,17 @@ export function buildAgentResearchReportHtml(task: AgentTask): string {
     return `<div class="card"><h3>${escapeHtml(d.name)}</h3>${d.description ? `<p>${escapeHtml(d.description)}</p>` : ''}${d.recommendation ? `<p class="muted">${escapeHtml(d.recommendation)}</p>` : ''}</div>`; }).join('')}</section>` : '';
   // The research runs as soon as the scope is confirmed; its step keeps no time of its own.
   const sources = reportSourceIndex(research, task.research?.at ?? task.scope?.at);
+  // Yahoo!ショッピング's products as Light's evidence cards: the image on Yahoo!'s address, the price, 「ソースを見る」 to the page,
+  // and Yahoo!'s credit unchanged at the bottom.
+  const products = research?.products?.length ? `<section><h2>EC実商品</h2><div class="products">${research.products.map(product =>
+    `<figure class="product"><a href="${escapeHtml(product.url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy"></a>`
+    + `<figcaption><b>${escapeHtml(product.name)}</b>${product.price !== null ? `<br>${escapeHtml(agentYen(product.price))}` : ''}<br><span class="muted">${escapeHtml([product.store, product.at ? `収集 ${product.at}` : ''].filter(Boolean).join(' / '))}</span>`
+    + `<br><a href="${escapeHtml(product.url)}" target="_blank" rel="noopener noreferrer">ソースを見る</a></figcaption></figure>`).join('')}</div></section>` : '';
+  const credit = research?.products?.length ? `<footer class="credit">${YAHOO_ATTRIBUTION_HTML}</footer>` : '';
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>調査とビジュアル方向レポート</title>
 <style>:root{color-scheme:light dark;--bg:#ffffff;--fg:#1d2324;--muted:#5d6869;--line:#dfe5e5;--accent:#078e85}@media (prefers-color-scheme:dark){:root{--bg:#171b1c;--fg:#e8eeee;--muted:#9aa6a7;--line:#2f3537;--accent:#5fe3d8}}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}main{max-width:760px;margin:0 auto;padding:32px 16px 64px}h1{font-size:24px;margin:0 0 8px}h2{font-size:17px;color:var(--accent);margin:28px 0 8px}h3{font-size:15px;margin:0 0 4px}.muted{color:var(--muted)}.card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}a{color:var(--accent)}ul,ol{padding-left:20px}.index-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:2px solid var(--accent);margin:28px 0 12px;padding-bottom:6px}.index-head h2{margin:0}.index-label{font-size:12px;letter-spacing:.12em;color:var(--accent)}table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;line-height:1.6}th{background:var(--accent);color:var(--bg);text-align:left;font-weight:600}th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;overflow-wrap:anywhere}td:first-child{white-space:nowrap}th:nth-child(1){width:7%}th:nth-child(2){width:31%}th:nth-child(3){width:42%}th:nth-child(4){width:20%}</style></head>
-<body><main><h1>調査とビジュアル方向レポート</h1><p class="muted">${escapeHtml(task.prompt)}</p>${scope ? `<p class="muted">調査範囲：${escapeHtml(scope)}</p>` : ''}${sections}${directions}${sources}</main></body></html>`;
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}main{max-width:760px;margin:0 auto;padding:32px 16px 64px}h1{font-size:24px;margin:0 0 8px}h2{font-size:17px;color:var(--accent);margin:28px 0 8px}h3{font-size:15px;margin:0 0 4px}.muted{color:var(--muted)}.card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}a{color:var(--accent)}ul,ol{padding-left:20px}.index-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:2px solid var(--accent);margin:28px 0 12px;padding-bottom:6px}.index-head h2{margin:0}.index-label{font-size:12px;letter-spacing:.12em;color:var(--accent)}table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;line-height:1.6}th{background:var(--accent);color:var(--bg);text-align:left;font-weight:600}th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;overflow-wrap:anywhere}td:first-child{white-space:nowrap}th:nth-child(1){width:7%}th:nth-child(2){width:31%}th:nth-child(3){width:42%}th:nth-child(4){width:20%}.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.product{margin:0;font-size:13px;line-height:1.6}.product img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;background:#fff}.credit{margin-top:32px}</style></head>
+<body><main><h1>調査とビジュアル方向レポート</h1><p class="muted">${escapeHtml(task.prompt)}</p>${scope ? `<p class="muted">調査範囲：${escapeHtml(scope)}</p>` : ''}${sections}${products}${directions}${sources}${credit}</main></body></html>`;
 }
 
 export type ParsedPlan = { title: string | null; sections: { heading: string; items: string[] }[]; imagePrompt: string | null };
