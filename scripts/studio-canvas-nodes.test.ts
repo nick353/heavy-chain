@@ -196,3 +196,85 @@ test('範囲指定のマスク調整 is Light\'s two-pane 簡易エディター 
   assert.match(page, /if \(!host\?\.edit \|\| !host\.autoRun \|\| editRunRef\.current/);
   assert.match(page, /editImageWithPrompt\(imageUrl, embeddedRef\.current\?\.edit \? prompt : studioProviderPrompt\(/);
 });
+
+// 2026-11-12 本番で押して見つけた4件（クリッピングの窓の上が帯に隠れる・AIマスク認識の一覧が切れる・ポイントが減らない・回しても新しいノードで全体に戻る）。
+const maskEditor = read('../src/components/lightchain/StudioMaskEditor.tsx');
+
+test('the windows the page opens (クリッピング, お気に入り, 範囲指定の簡易エディター, キャンバスから選択) sit over the whole page, header included', () => {
+  const parentReturn = page.slice(page.indexOf('<main ref={pageRef}'));
+  const portal = parentReturn.slice(parentReturn.indexOf('{typeof document !== \'undefined\' && createPortal(<div data-studio-chrome="">'));
+  const portalBody = portal.slice(0, portal.indexOf('</div>, document.body)}'));
+  assert.ok(portalBody.length > 0, 'the page portals its windows to the body');
+  for (const piece of ['{clipTarget && <StudioClippingDialog', '{collectTarget && <StudioCollectDialog', '{dialogs}']) assert.ok(portalBody.includes(piece), piece);
+  // Nothing of them is left inside <main>, under the site header's layer.
+  const inline = parentReturn.replace(portalBody, '');
+  assert.doesNotMatch(inline, /\{clipTarget && <StudioClippingDialog/);
+  assert.doesNotMatch(inline, /^\s*\{dialogs\}\s*$/m);
+});
+
+test('簡易エディター is Light\'s floating bar over a dark page: the chosen tool\'s small bar under it, 520×515 panes below', () => {
+  // No box around it and no sideways-scrolling row (2026-11-12 production: the AIマスク認識 list was cut off inside that row).
+  assert.match(maskEditor, /<div className="fixed inset-0 z-50 overflow-auto bg-black\/70" role="dialog"/);
+  assert.doesNotMatch(maskEditor, /overflow-x-auto/);
+  assert.match(maskEditor, /<div className="flex h-\[45px\] items-center gap-1 rounded-lg border border-white\/\[0\.08\] bg-\[#26292b\] px-2 shadow-2xl" role="toolbar"/);
+  // The chosen tool: teal outline and text; キャンセル is grey.
+  assert.match(maskEditor, /active \? 'border-\[#20d0c4\] text-\[#20d0c4\]' : 'border-transparent text-white\/90/);
+  assert.match(maskEditor, /className="h-9 rounded-md bg-\[#5b6164\] px-4 text-sm text-white/);
+  // The small bar follows the chosen tool's button; AIマスク認識 shows its parts as a row of radios, not a dropdown.
+  assert.match(maskEditor, /useLayoutEffect\(\(\) => \{ setSubLeft\(toolRefs\.current\[tool\]\?\.offsetLeft \?\? 0\); \}, \[tool\]\);/);
+  assert.match(maskEditor, /style=\{\{ left: subLeft \}\} role="toolbar"/);
+  assert.match(maskEditor, /\{tool === 'ai-mask' \? \(\n\s*<div role="radiogroup"/);
+  assert.match(maskEditor, /role="radio" aria-checked=\{aiPick === candidate\} disabled=\{busy !== null\} onClick=\{\(\) => void recognize\(candidate\)\}/);
+  assert.doesNotMatch(maskEditor, /role="menu"/);
+  assert.doesNotMatch(maskEditor, /ChevronDown/);
+  // Panes: 520×515, teal border and title on the chosen one; the other is dimmed with Light's hint.
+  assert.match(maskEditor, /h-\[min\(515px,calc\(87vh-180px\)\)\] min-h-\[320px\] w-\[520px\]/);
+  assert.match(maskEditor, /activePane === id \? 'border-\[#20d0c4\]' : 'border-\[#4b5053\]'/);
+  assert.match(maskEditor, /'参考にしたい領域を描画してください' : '調整したい領域を描画してください'/);
+  assert.match(maskEditor, /\{panes\.length > 1 && activePane !== id && \(\n\s*<div className="pointer-events-none absolute inset-0/);
+  // 抽出・お気に入り・保存 are teal fills like Light.
+  const clipping = read('../src/components/lightchain/StudioClippingDialog.tsx');
+  assert.equal(clipping.match(/className="h-9 rounded-md bg-\[#20d0c4\] px-4 text-sm text-\[#0f1718\]/g)?.length, 2);
+  assert.match(page, /data-testid="fashion-studio-region-mask-save" disabled=\{api\.busy\} className="h-9 rounded-md bg-\[#20d0c4\]/);
+});
+
+test('the points pill is read again when a generation here or in a form on the canvas ends', () => {
+  assert.match(page, /const runningTasks = \(busy \? 1 : 0\) \+ Object\.values\(childReports\)\.filter\(report => report\.busy\)\.length;/);
+  assert.match(page, /if \(embedded \|\| runningTasks >= before \|\| !scope \|\| !cloudflareDataPlane\) return;\n\s*const captured = scopeKey;\n\s*void cloudflareDataPlane\.getImageUsage\(scope\.brandId\)\.then\(usage => \{\n\s*const units = fashionStudioRemainingUnits\(usage\);\n\s*if \(units !== null\) setHydration\(previous => previous\?\.scopeKey === captured \? \{ \.\.\.previous, remainingUnits: units \} : previous\);/);
+  assert.match(page, /\}, \[runningTasks\]\);/);
+  assert.match(page, /\{activityContent\}<span>\{runningTasks\} <span className="mx-1">進行中<\/span>/);
+});
+
+test('scrolling or zooming with the wheel keeps the view where the person put it when nodes are added', () => {
+  assert.match(page, /pageHeight: bounds\.height \}\)\) \{\n\s*event\.preventDefault\(\);\n(?:\s*\/\/.*\n)*\s*userViewRef\.current = viewportScopeKey;\n\s*\}/);
+  // The first fit still follows the nodes until the person moves the view.
+  assert.match(page, /if \(fittedRef\.current === key && userViewRef\.current === viewportScopeKey\) return;/);
+});
+
+const collectDialog = read('../src/components/lightchain/StudioCollectDialog.tsx');
+const sendMenu = read('../src/components/lightchain/StudioSendMenu.tsx');
+
+test('お気に入りに追加 looks like Light\'s window: round space switch, no ×, teal folders, a grey キャンセル', () => {
+  assert.match(collectDialog, /w-\[min\(520px,calc\(100vw-32px\)\)\] flex-col rounded-xl bg-\[#26292b\]/);
+  assert.match(collectDialog, /<div className="ml-auto flex items-center rounded-full bg-\[#1c1f21\] p-1" role="tablist"/);
+  assert.match(collectDialog, /active \? 'bg-\[#20d0c4\]\/15 font-semibold text-\[#20d0c4\]'/);
+  assert.doesNotMatch(collectDialog, /aria-label="閉じる"/);
+  assert.match(collectDialog, /<Folder aria-hidden="true" className="h-4 w-4 shrink-0 fill-\[#20d0c4\] text-\[#20d0c4\]" \/>/);
+  assert.match(collectDialog, /<li key=\{folder\.id\} className="flex items-center border-b border-white\/10">/);
+  assert.match(collectDialog, /<div className="flex items-center gap-4 border-t border-white\/10 px-6 py-4">/);
+  assert.match(collectDialog, /className="ml-auto h-8 rounded-md bg-\[#5b6164\] px-4 text-sm text-white/);
+  assert.match(collectDialog, /disabled:bg-\[#3b4043\] disabled:text-white\/30/);
+});
+
+test('送る opens its list beside the toolbar, centred on the button like Light', () => {
+  assert.match(sendMenu, /<div role="menu" aria-label="送る" className="absolute left-full top-1\/2 z-40 ml-2 w-max min-w-\[180px\] -translate-y-1\/2/);
+  assert.match(sendMenu, /const itemClass = 'flex w-full items-center gap-2 rounded-lg px-2 py-3\.5 /);
+});
+
+test('the toolbar icons are Light\'s: クリッピング with a pointer, 画像検索 with AI, お気に入り folder with a star, a level 送る plane, 画像編集 without an arrow', () => {
+  assert.match(page, /<SquareDashedMousePointer className="h-4 w-4" \/>クリッピング<\/button>/);
+  assert.match(page, /setSearchOpen\(true\); \}\}><StudioAiSearchIcon className="h-4 w-4" \/><\/button>/);
+  assert.match(page, /onClick=\{\(\) => setCollectTarget\(\{ url \}\)\}><StudioFolderStarIcon className="h-4 w-4" \/><\/button>/);
+  assert.match(sendMenu, /<SendHorizontal aria-hidden="true" className="h-4 w-4" \/>/);
+  assert.match(editMenu, /<WandSparkles aria-hidden="true" className="h-4 w-4" \/>\{label\}\n\s*<\/button>/);
+});

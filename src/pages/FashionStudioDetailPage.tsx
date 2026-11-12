@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronRight,
   Download,
-  FolderInput,
   Keyboard,
   Loader2,
   LayoutGrid,
@@ -21,9 +20,8 @@ import {
   Redo2,
   RotateCw,
   Save,
-  ScanSearch,
   Sparkles,
-  SquareDashed,
+  SquareDashedMousePointer,
   Sun,
   Trash2,
   Undo2,
@@ -40,7 +38,7 @@ import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { canSelectConfirmedBrand } from '../lib/authBrandSelection';
 import { createFashionStudioThumbnailController, fashionStudioThumbnailScopeKey, type FashionStudioThumbnailState } from '../lib/fashionStudioThumbnails';
-import { createFashionStudioDetailHydration, emptyFashionStudioDetail, extractFashionStudioSavedDetail, fashionStudioDetailScopeKey, type FashionStudioDetailHydrationState, type FashionStudioDetailScope } from '../lib/fashionStudioDetailHydration';
+import { createFashionStudioDetailHydration, emptyFashionStudioDetail, extractFashionStudioSavedDetail, fashionStudioDetailScopeKey, fashionStudioRemainingUnits, type FashionStudioDetailHydrationState, type FashionStudioDetailScope } from '../lib/fashionStudioDetailHydration';
 import { createFashionStudioInputController, createFashionStudioGenerationAdapters, readFashionStudioUpload, validateFashionStudioUpload, type FashionStudioInputRole, type FashionStudioInputState } from '../lib/fashionStudioDetailAdapter';
 import { createFashionStudioDetailGeneration, type FashionStudioGenerationOutcome } from '../lib/fashionStudioDetailGeneration';
 import { createStudioAckStore } from '../lib/fashionStudioPendingAck';
@@ -156,6 +154,23 @@ const primeChildForm = (documentId: string, fn: StudioFunctionId) => {
   writeStudioSettings(documentId, { ...DEFAULT_STUDIO_SETTINGS, quality: fn === 'underwear' ? '2k' : '1k', ...(fn === '3d' ? { garment: '上装' as StudioGarmentArea } : {}) });
 };
 /** Images sent here with ?imgUrl= (送る from another tool): a new project without one, a new image node with one. */
+/** Light's toolbar 画像検索: a magnifier with "AI" in it, in the toolbar's own colour (2026-11-12 Light production). */
+function StudioAiSearchIcon({ className }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="10.5" cy="10.5" r="7.5" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M16.2 16.2 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <text x="10.5" y="13.3" textAnchor="middle" fontSize="7.4" fontWeight="700" fontFamily="system-ui, sans-serif" fill="currentColor">AI</text>
+  </svg>;
+}
+
+/** Light's toolbar お気に入り: a folder with a star on its corner (2026-11-12 Light production). */
+function StudioFolderStarIcon({ className }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M11 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v3" />
+    <path d="m18 13 1.4 2.8 3.1.5-2.25 2.2.53 3.1L18 20.15l-2.78 1.45.53-3.1-2.25-2.2 3.1-.5Z" />
+  </svg>;
+}
+
 function StudioIncomingImage({ onFile, ready }: { onFile: (file: File) => unknown; ready: boolean }) {
   useIncomingImageFile(onFile, { ready });
   return null;
@@ -354,7 +369,12 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
       const bounds = viewport.getBoundingClientRect();
       if (interaction.wheel({ ...event, deltaX: event.deltaX, deltaY: event.deltaY, deltaMode: event.deltaMode,
         ctrlKey: event.ctrlKey, metaKey: event.metaKey, interactive: interactiveTarget(event.target),
-        anchor: { x: event.clientX - bounds.left, y: event.clientY - bounds.top }, pageHeight: bounds.height })) event.preventDefault();
+        anchor: { x: event.clientX - bounds.left, y: event.clientY - bounds.top }, pageHeight: bounds.height })) {
+        event.preventDefault();
+        // Scrolling or zooming with the wheel is the person moving the view: a node added later must not refit it away
+        // (2026-11-12 production: each new node pulled the view back to the whole canvas).
+        userViewRef.current = viewportScopeKey;
+      }
     };
     const blur = () => interaction.cancel();
     viewport.addEventListener('wheel', wheel, { passive: false }); window.addEventListener('blur', blur);
@@ -844,6 +864,21 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     if (!report) { if (!(formId in current)) return current; const next = { ...current }; delete next[formId]; return next; }
     return JSON.stringify(current[formId]) === JSON.stringify(report) ? current : { ...current, [formId]: report };
   });
+  /** Light lowers its points pill as soon as a generation ends. Read the points again whenever a running task finishes,
+   * here or in a form on the canvas (2026-11-12 production: the pill kept 29,875 after two generations until a reload). */
+  const runningTasks = (busy ? 1 : 0) + Object.values(childReports).filter(report => report.busy).length;
+  const runningTasksRef = useRef(runningTasks);
+  useEffect(() => {
+    const before = runningTasksRef.current;
+    runningTasksRef.current = runningTasks;
+    if (embedded || runningTasks >= before || !scope || !cloudflareDataPlane) return;
+    const captured = scopeKey;
+    void cloudflareDataPlane.getImageUsage(scope.brandId).then(usage => {
+      const units = fashionStudioRemainingUnits(usage);
+      if (units !== null) setHydration(previous => previous?.scopeKey === captured ? { ...previous, remainingUnits: units } : previous);
+    }).catch(() => undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runningTasks]);
   const [clipTarget, setClipTarget] = useState<{ key: string; url: string } | null>(null);
   const [collectTarget, setCollectTarget] = useState<{ url: string } | null>(null);
   const [searchRequest, setSearchRequest] = useState<(StudioImageSearchRequest & { key: string }) | null>(null);
@@ -1510,7 +1545,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
         {maskDialog && loadedMain.url && <StudioMaskEditor ariaLabel={regionPoints.length > 1 ? `範囲指定で生成（ポイント${Math.max(1, regionPoints.findIndex(point => point.slot === maskDialog.slot) + 1)}）` : '範囲指定で生成'}
           testId="fashion-studio-region-mask-editor" base={{ imageUrl: loadedMain.url, initialMask: maskDialog.initial }} reference={maskDialog.referenceUrl ? { imageUrl: maskDialog.referenceUrl } : null}
           onCancel={() => setMaskDialog(null)}
-          actions={api => <button type="button" data-testid="fashion-studio-region-mask-save" disabled={api.busy} className="h-8 rounded-lg bg-[#5fd0c8] px-4 text-sm text-slate-950 disabled:opacity-40"
+          actions={api => <button type="button" data-testid="fashion-studio-region-mask-save" disabled={api.busy} className="h-9 rounded-md bg-[#20d0c4] px-4 text-sm text-[#0f1718] hover:bg-[#3ad8cd] disabled:opacity-40"
             onClick={() => void api.run(async () => {
               if (api.isEmpty('base')) { api.notifyEmpty(); return; }
               const referencePart = maskDialog.referenceUrl && !api.isEmpty('reference') ? await api.getClip('reference') : null;
@@ -1636,7 +1671,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
               {/* Light's image toolbar: クリッピング | テキストで生成・範囲指定で生成・下着のフィッティング・3D画像に変換・画像編集 | 画像検索・お気に入り・ダウンロード・送る. */}
               <div className="fashion-studio-node-toolbar" data-studio-chrome data-testid="fashion-studio-node-toolbar" role="toolbar" aria-label="画像の操作"
                 style={{ left: selectedImageRect.left + selectedImageRect.width / 2, top: selectedImageRect.top - 14 }}>
-                <button type="button" disabled={!toolsReady} onClick={() => setClipTarget({ key, url })}><SquareDashed className="h-4 w-4" />クリッピング</button>
+                <button type="button" disabled={!toolsReady} onClick={() => setClipTarget({ key, url })}><SquareDashedMousePointer className="h-4 w-4" />クリッピング</button>
                 <span className="fashion-studio-node-toolbar-divider" aria-hidden="true" />
                 {STUDIO_TOOLBAR_FUNCTIONS.map(fn => {
                   const info = STUDIO_FUNCTIONS.find(item => item.id === fn)!;
@@ -1646,8 +1681,8 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
                   onClientResult={async (tool, file) => { await addCanvasImage(file, { kind: 'edit', sourceKey: key, tool }); }}
                   onServerEdit={(tool, request: StudioServerEditRequest) => addChildForm(key, url, 'text', { tool, prompt: request.prompt, ...(request.editOptions ? { editOptions: request.editOptions } : {}) }, request.guideFile, request.mainFile)} />
                 <span className="fashion-studio-node-toolbar-divider" aria-hidden="true" />
-                <button type="button" aria-label="画像検索" title="画像検索" disabled={!url} onClick={() => { setSearchRequest({ id: crypto.randomUUID(), imageUrl: url, key }); setSearchOpen(true); }}><ScanSearch className="h-4 w-4" /></button>
-                <button type="button" aria-label="お気に入り" title="お気に入り" disabled={!url} onClick={() => setCollectTarget({ url })}><FolderInput className="h-4 w-4" /></button>
+                <button type="button" aria-label="画像検索" title="画像検索" disabled={!url} onClick={() => { setSearchRequest({ id: crypto.randomUUID(), imageUrl: url, key }); setSearchOpen(true); }}><StudioAiSearchIcon className="h-4 w-4" /></button>
+                <button type="button" aria-label="お気に入り" title="お気に入り" disabled={!url} onClick={() => setCollectTarget({ url })}><StudioFolderStarIcon className="h-4 w-4" /></button>
                 <button type="button" aria-label="ダウンロード" title="ダウンロード" onClick={() => void downloadNodeImage(url)}><Download className="h-4 w-4" /></button>
                 <StudioSendMenu imageUrl={url} className="fashion-studio-node-toolbar-trigger" />
               </div>
@@ -1668,7 +1703,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
           })()}
         </section>
 
-        <div className="fashion-studio-source-task" data-studio-chrome aria-label="タスク">{activityContent}<span>{(busy ? 1 : 0) + Object.values(childReports).filter(report => report.busy).length} <span className="mx-1">進行中</span>⌃</span></div>
+        <div className="fashion-studio-source-task" data-studio-chrome aria-label="タスク">{activityContent}<span>{runningTasks} <span className="mx-1">進行中</span>⌃</span></div>
         <div className="fashion-studio-source-canvas-toolbar" data-studio-chrome data-testid="lightchain-fashion-studio-canvas-toolbar">
           <button type="button" aria-label="選択" title="選択" aria-pressed={viewportState.mode === 'select'} className={viewportState.mode === 'select' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('select')}><MousePointer2 className="h-4 w-4" /></button>
           <button type="button" aria-label="ドラッグ" title="ドラッグ" aria-pressed={viewportState.mode === 'move'} className={viewportState.mode === 'move' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('move')}><Hand className="h-4 w-4" /></button>
@@ -1712,11 +1747,15 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
           }}
           onSelectFromCanvas={selectFromCanvas}
           pointsSlot={<div className="fashion-studio-points-pill" aria-label="ポイント"><Sparkles className="h-4 w-4" />{visible?.remainingUnits?.toLocaleString('en-US') ?? '未確認'}</div>} />}
-        {clipTarget && <StudioClippingDialog imageUrl={clipTarget.url} fileBaseName="heavy-chain" onClose={() => setClipTarget(null)}
-          onExtract={async file => { if (await addCanvasImage(file, { kind: 'clip', nearKey: clipTarget.key })) setClipTarget(null); }}
-          onCollect={async file => setCollectTarget({ url: await incomingFileDataUrl(file) })} />}
-        {collectTarget && <StudioCollectDialog imageUrl={collectTarget.url} title="Fashion Studio" onClose={() => setCollectTarget(null)} />}
-        {dialogs}
+        {/* Light's windows sit over the whole page, its header included (2026-11-12 production: inside the page the site
+            header covered the top of クリッピング and its dimmed backdrop stopped below the header). */}
+        {typeof document !== 'undefined' && createPortal(<div data-studio-chrome="">
+          {clipTarget && <StudioClippingDialog imageUrl={clipTarget.url} fileBaseName="heavy-chain" onClose={() => setClipTarget(null)}
+            onExtract={async file => { if (await addCanvasImage(file, { kind: 'clip', nearKey: clipTarget.key })) setClipTarget(null); }}
+            onCollect={async file => setCollectTarget({ url: await incomingFileDataUrl(file) })} />}
+          {collectTarget && <StudioCollectDialog imageUrl={collectTarget.url} title="Fashion Studio" onClose={() => setCollectTarget(null)} />}
+          {dialogs}
+        </div>, document.body)}
         {lightboxView}
       </main>
     );
