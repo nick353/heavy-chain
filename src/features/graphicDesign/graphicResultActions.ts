@@ -21,14 +21,23 @@ export async function setCandidateFavorite(id: string, favorite: boolean): Promi
   return Boolean(saved.is_favorite);
 }
 
-/** Tools the chosen proposal can be sent to (each opens with it as the first image, like the 生成履歴 send menu). */
-export const GRAPHIC_SEND_TARGETS = [
-  { id: 'printing', label: 'プリントイメージで服に当てる', href: (id: string) => `/tools/printing?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=printing-design` },
-  { id: 'canvas', label: 'Canvasで一部を修正', href: (id: string) => `/canvas/new?sourceArtifactId=${encodeURIComponent(id)}` },
+/**
+ * Tools the chosen proposal can be sent to. The tools that take a library image open with it as the first image (like
+ * the 生成履歴 send menu); Canvas opens the saved proposal itself as a Canvas project, the way インスピレーション's
+ * 「キャンバスで編集」 does, so it is on the canvas and selected for the first edit. Sent as a library artifact
+ * (sourceArtifactId), it only became 「画像1」 in the collapsed assistant panel: the user saw an empty 「Hello！」 start
+ * screen (production 2026-11-12).
+ */
+export type GraphicSendTarget = { id: string; label: string; source: 'library' | 'image'; href: (id: string) => string };
+export const GRAPHIC_SEND_TARGETS: readonly GraphicSendTarget[] = [
+  { id: 'printing', label: 'プリントイメージで服に当てる', source: 'library', href: (id: string) => `/tools/printing?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=printing-design` },
+  { id: 'canvas', label: 'Canvasで一部を修正', source: 'image', href: (imageId: string) => `/canvas/new?galleryImageId=${encodeURIComponent(imageId)}` },
   // SVGにする (the tool row) traces the proposal as it is; this one first has AI redraw it flat, then traces that.
-  { id: 'vector', label: 'ベクター化（AIで平らに描き直す）', href: (id: string) => `/tools/vector-special?libraryArtifactId=${encodeURIComponent(id)}` },
-  { id: 'fabric', label: '生地イメージ', href: (id: string) => `/tools/fabric?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=fabric-design` },
-] as const;
+  { id: 'vector', label: 'ベクター化（AIで平らに描き直す）', source: 'library', href: (id: string) => `/tools/vector-special?libraryArtifactId=${encodeURIComponent(id)}` },
+  // A proposal is a pattern, so it goes in as the 生地画像 (fabric-base); fabric-design is the モデル/デザイン画像 slot it
+  // landed in before (production 2026-11-12), which left the user to find a fabric for their own pattern.
+  { id: 'fabric', label: '生地イメージで服の生地にする', source: 'library', href: (id: string) => `/tools/fabric?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=fabric-base` },
+];
 
 /** Registers the proposal in the library (the same record the 生成履歴 panel writes) and returns its artifact id. */
 export async function registerCandidate(brandId: string, userId: string | undefined, image: GraphicCandidate, title: string): Promise<string> {
