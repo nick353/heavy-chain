@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { History, ImagePlus, ImageUp, Plus, Sparkles, Trash2, WandSparkles } from 'lucide-react';
+import { History, ImagePlus, ImageUp, Loader2, Plus, Sparkles, Trash2, WandSparkles, X } from 'lucide-react';
 import { GallerySelector } from '../components/GallerySelector';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { whitenDarkBackground } from '../lib/whitenDarkBackground';
@@ -7,6 +7,8 @@ import { useHeavyWorkspaceBrandGate } from '../hooks/useHeavyWorkspaceBrandGate'
 import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
+import { assistGroups, assistPromptLines, assistReferenceKey, selectedAssistTags, toggleAssistTag } from '../features/graphicDesign/graphicAssist';
+import { analyzeGraphicReferences } from '../features/graphicDesign/graphicAssistApi';
 
 /**
  * Light `/printing` = "AIグラフィックデザイン" (GeneratePrinting / ModifyPrinting).
@@ -30,14 +32,14 @@ const readStrengths = (value: unknown): [StrengthIndex, StrengthIndex] => {
   return [at(0), at(1)];
 };
 
-export function graphicDesignBrief(referenceCount: number, strengths: readonly StrengthIndex[], assist: boolean): string {
+export function graphicDesignBrief(referenceCount: number, strengths: readonly StrengthIndex[], assist: boolean, assistTags: readonly string[] = []): string {
   return [
     'グラフィックデザイン: 参考画像から、アパレル向けのオリジナル柄・プリントグラフィックを作成してください。',
     '出力はプリント用のグラフィック単体とし、衣服・人物・モックアップは描かないでください。',
     '参考画像にない文字・ロゴ・ラベル（「AI」などの文字を含む）や、電子回路・デジタル風の装飾は加えないでください。',
     '背景は純白（#FFFFFF）の均一な無地で塗りつぶしてください。参考画像の背景が黒や暗い色でもその背景色は引き継がず、モチーフの周りに光彩・発光・にじみ・グラデーション・周辺を暗くする効果（ビネット）は入れないでください。モチーフはくっきりした輪郭の塗りで描いてください。',
     ...Array.from({ length: referenceCount }, (_, index) => `参考画像${index + 1}の参照強度: ${GRAPHIC_STRENGTH_LEVELS[strengths[index] ?? DEFAULT_STRENGTH]}`),
-    assist ? 'アシスト: 参考画像のデザイン要素（モチーフ・配色・構図）を解析して反映してください。' : '',
+    ...assistPromptLines(assist, assistTags),
   ].filter(Boolean).join('\n');
 }
 
@@ -46,7 +48,10 @@ export function LightchainGraphicDesignPage() {
   return <LightchainGraphicDesignWorkspace key={JSON.stringify([currentBrand?.id, user?.id])} />;
 }
 
+const assistChip = 'inline-flex h-8 items-center rounded-3xl border px-3 text-xs transition';
+
 function LightchainGraphicDesignWorkspace() {
+  const currentBrand = useAuthStore((state) => state.currentBrand);
   const workspace = useCanonicalImageWorkspace('print-design-project', {
     prepareSourceImage: whitenDarkBackground,
     // gpt-image-1-mini turns these references into dark neon art despite the prompt.
@@ -69,6 +74,30 @@ function LightchainGraphicDesignWorkspace() {
   const heavyBrand = useHeavyWorkspaceBrandGate();
   const locked = heavyBrand.pending || workspace.status === 'running' || workspace.status === 'loading' || Boolean(workspace.pendingId);
   const preview = references[Math.min(selected, references.length - 1)] ?? null;
+  // アシスト: the analysis belongs to the references it read; replacing one reads them again (Light re-analyses too).
+  const referenceKey = assistReferenceKey(references);
+  const analysedFor = typeof workspace.inputState.assistFor === 'string' ? workspace.inputState.assistFor : '';
+  const assistOptions = analysedFor === referenceKey ? workspace.inputState.assistOptions : [];
+  const assistTags = selectedAssistTags(assistOptions, workspace.inputState.assistTags);
+  const optionGroups = assistGroups(assistOptions);
+  const optionCount = optionGroups.reduce((sum, group) => sum + group.tags.length, 0);
+  const [analysis, setAnalysis] = useState<{ key: string; state: 'running' | 'failed' } | null>(null);
+  const latest = useRef({ inputState: workspace.inputState, referenceKey });
+  latest.current = { inputState: workspace.inputState, referenceKey };
+  useEffect(() => {
+    if (!assist || references.length === 0 || optionCount > 0 || locked || !currentBrand?.id || analysis?.key === referenceKey) return;
+    const key = referenceKey;
+    setAnalysis({ key, state: 'running' });
+    analyzeGraphicReferences(currentBrand.id, references).then((options) => {
+      // A result for references that were replaced meanwhile is dropped; the new ones are read next.
+      if (latest.current.referenceKey !== key) return;
+      const now = latest.current.inputState;
+      workspace.setInputState({ ...now, assistOptions: options, assistTags: selectedAssistTags(options, now.assistTags), assistFor: key } as typeof now);
+      setAnalysis(null);
+    }).catch(() => setAnalysis((current) => (current?.key === key ? { key, state: 'failed' } : current)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assist, referenceKey, optionCount, locked, currentBrand?.id, analysis?.key]);
+  const pickAssistTag = (value: string) => { if (!locked) setInput({ assistTags: toggleAssistTag(assistOptions, assistTags, value) }); };
 
   useEffect(() => {
     const result = workspace.result;
@@ -123,7 +152,7 @@ function LightchainGraphicDesignWorkspace() {
   };
   const generate = () => {
     if (locked || references.length === 0) return;
-    void workspace.generate({ brief: graphicDesignBrief(references.length, strengths, assist) });
+    void workspace.generate({ brief: graphicDesignBrief(references.length, strengths, assist, assistTags) });
   };
 
   return (
@@ -132,7 +161,7 @@ function LightchainGraphicDesignWorkspace() {
       <GallerySelector isOpen={Boolean(library) && !locked} title="素材を選択" onClose={() => setLibrary(null)}
         onSelect={(imageUrl, _imageId, _storagePath, imageElement) => pickLibraryImage(imageUrl, imageElement?.alt?.trim() || '参考画像')}
         uploadTile={{ accept: 'image/jpeg,image/png,image/webp', multiple: !library?.replace, onFiles: (files) => { const replace = library?.replace ?? null; setLibrary(null); addFiles(files, replace); } }} />
-      <section className="flex w-80 shrink-0 flex-col rounded-lg bg-[#262a2b] p-4" aria-label="画像をアップロード">
+      <section className="flex w-80 shrink-0 flex-col overflow-y-auto rounded-lg bg-[#262a2b] p-4" aria-label="画像をアップロード">
         <h6 className="flex h-8 items-center text-base font-normal text-white">画像をアップロード</h6>
         {references.length === 0 ? (
           <button type="button" data-testid="graphic-design-upload" onClick={() => openLibrary()} disabled={locked} className="mt-4 flex h-72 w-full shrink-0 flex-col items-center justify-center rounded border border-dashed border-transparent bg-[#333839] p-4 text-neutral-400 transition hover:border-[#20d0c4]">
@@ -180,7 +209,35 @@ function LightchainGraphicDesignWorkspace() {
                 <span className={`absolute top-0.5 size-4 rounded-full bg-white transition ${assist ? 'left-[26px]' : 'left-0.5'}`} />
               </button>
             </label>
-            <p className="mt-4 flex items-start gap-2 rounded-2xl bg-white/[0.04] px-4 py-2 text-xs leading-[17px] text-neutral-400"><Sparkles aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-300" />アシスト機能をオンにして、デザイン要素を解析します</p>
+            {!assist ? (
+              <p className="mt-4 flex items-start gap-2 rounded-2xl bg-white/[0.04] px-4 py-2 text-xs leading-[17px] text-neutral-400"><Sparkles aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-300" />アシスト機能をオンにして、デザイン要素を解析します</p>
+            ) : optionCount > 0 ? (
+              <div className="mt-6" data-testid="graphic-design-assist-tags">
+                <div className="flex items-center justify-between text-sm text-neutral-200"><span>参考テキストを選びます</span><span className="text-xs text-neutral-400">選択済み {assistTags.length} / {optionCount}</span></div>
+                {optionGroups.map((group) => (
+                  <div key={group.label} className="mt-3">
+                    <div className="text-xs text-neutral-400">{group.label}</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {group.tags.map((tag) => {
+                        const value = `${group.label}:${tag}`;
+                        const on = assistTags.includes(value);
+                        return <button key={value} type="button" aria-pressed={on} disabled={locked} onClick={() => pickAssistTag(value)}
+                          className={`${assistChip} ${on ? 'border-[#20d0c4] bg-[#434c4b] text-[#20d0c4]' : 'border-white/10 text-neutral-300 hover:border-white/25'}`}>{tag}</button>;
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : analysis?.state === 'failed' ? (
+              <div role="alert" className="mt-4 flex items-center justify-between gap-2 rounded-lg bg-white/[0.04] px-4 py-2 text-xs text-rose-300">
+                デザイン要素を解析できませんでした
+                <button type="button" onClick={() => setAnalysis(null)} className="shrink-0 rounded border border-white/15 px-2 py-1 text-neutral-200 hover:border-[#20d0c4]">再解析</button>
+              </div>
+            ) : (
+              <div role="status" className="mt-4 flex h-10 items-center justify-center gap-2 rounded-lg bg-[#3a3f41] text-sm text-[#20d0c4]/70" data-testid="graphic-design-assist-analysing">
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />デザイン要素解析中...
+              </div>
+            )}
           </>
         )}
       </section>
@@ -227,7 +284,25 @@ function LightchainGraphicDesignWorkspace() {
               </div>
             ))}
             <h6 className="mt-6 text-base font-normal">デザイン要素の内容</h6>
-            <p className="mt-3 flex items-start gap-2 rounded-2xl bg-white/[0.04] px-4 py-2 text-xs leading-[17px] text-neutral-400"><Sparkles aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-300" />AI生成のアシストの為、画像参考強度を選択してください</p>
+            {assist && assistTags.length > 0 ? (
+              <div data-testid="graphic-design-assist-selected">
+                {assistGroups(assistTags).map((group) => (
+                  <div key={group.label} className="mt-3">
+                    <div className="text-xs text-neutral-400">{group.label}</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {group.tags.map((tag) => (
+                        <span key={tag} title={tag} className="inline-flex h-8 items-center gap-1.5 rounded-3xl bg-[#3c4043] pl-4 pr-2.5 text-xs text-neutral-200">
+                          {tag}
+                          <button type="button" aria-label={`${tag}を外す`} disabled={locked} onClick={() => pickAssistTag(`${group.label}:${tag}`)} className="text-neutral-400 hover:text-white"><X aria-hidden="true" className="h-3.5 w-3.5" /></button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 flex items-start gap-2 rounded-2xl bg-white/[0.04] px-4 py-2 text-xs leading-[17px] text-neutral-400"><Sparkles aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-300" />AI生成のアシストの為、画像参考強度を選択してください</p>
+            )}
             <button type="button" data-testid="graphic-design-generate" onClick={generate} disabled={locked} className="mt-auto flex h-10 w-full shrink-0 items-center justify-center gap-1 rounded-lg bg-[#20d0c4] text-sm font-medium text-neutral-950 disabled:opacity-50">
               AI生成<WandSparkles aria-hidden="true" className="h-4 w-4" />
             </button>
