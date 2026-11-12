@@ -536,8 +536,10 @@ function reportSourceIndex(research: ParsedResearch | null, collectedAt?: string
   if (!research?.sources.length) return `<section class="index">${head}<p class="muted">${research?.search === 'ok' ? '参照した資料はありません。' : 'ウェブ検索を使えませんでした。この調査結果はAIモデルの知識に基づいています。'}</p></section>`;
   const collected = localDate(collectedAt);
   const rows = research.sources.slice(0, AGENT_REPORT_SOURCES_MAX).map((source, index) => {
-    // 内容: the sentence the research cited from the page, or else the page's title.
-    const content = source.quote ? cleanAgentQuote(source.quote).replace(/\*\*/g, '') : source.title !== source.url ? source.title : '';
+    // 内容: the sentence the research cited from the page (the search tool's Markdown, so its escapes such as \\ are undone),
+    // or else the page's title.
+    const content = source.quote ? cleanAgentQuote(source.quote).replace(/\*\*/g, '').replace(/\\([\\`*_{}[\]()#+\-.!|~<>])/g, '$1')
+      : source.title !== source.url ? source.title : '';
     const kind = `${agentSourceKind(source.url)}${index === 0 && collected ? `(収集 ${collected})` : ''}`;
     return `<tr><td>S${String(index + 1).padStart(2, '0')}</td><td>${escapeHtml(agentSourceLabel(source.url))}<br><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">ソースを見る</a></td>`
       + `<td>${escapeHtml(cut(content, 160))}</td><td>${escapeHtml(kind)}</td></tr>`;
@@ -559,7 +561,7 @@ export function buildAgentResearchReportHtml(task: AgentTask): string {
   const sources = reportSourceIndex(research, task.research?.at ?? task.scope?.at);
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>調査とビジュアル方向レポート</title>
 <style>:root{color-scheme:light dark;--bg:#ffffff;--fg:#1d2324;--muted:#5d6869;--line:#dfe5e5;--accent:#078e85}@media (prefers-color-scheme:dark){:root{--bg:#171b1c;--fg:#e8eeee;--muted:#9aa6a7;--line:#2f3537;--accent:#5fe3d8}}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}main{max-width:760px;margin:0 auto;padding:32px 16px 64px}h1{font-size:24px;margin:0 0 8px}h2{font-size:17px;color:var(--accent);margin:28px 0 8px}h3{font-size:15px;margin:0 0 4px}.muted{color:var(--muted)}.card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}a{color:var(--accent)}ul,ol{padding-left:20px}.index-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:2px solid var(--accent);margin:28px 0 12px;padding-bottom:6px}.index-head h2{margin:0}.index-label{font-size:12px;letter-spacing:.12em;color:var(--accent)}table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.6}th{background:var(--accent);color:var(--bg);text-align:left;font-weight:600}th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top}td:first-child{white-space:nowrap}</style></head>
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}main{max-width:760px;margin:0 auto;padding:32px 16px 64px}h1{font-size:24px;margin:0 0 8px}h2{font-size:17px;color:var(--accent);margin:28px 0 8px}h3{font-size:15px;margin:0 0 4px}.muted{color:var(--muted)}.card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}a{color:var(--accent)}ul,ol{padding-left:20px}.index-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:2px solid var(--accent);margin:28px 0 12px;padding-bottom:6px}.index-head h2{margin:0}.index-label{font-size:12px;letter-spacing:.12em;color:var(--accent)}table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.6}th{background:var(--accent);color:var(--bg);text-align:left;font-weight:600}th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top}td:first-child{white-space:nowrap}th:nth-child(1){width:7%}th:nth-child(2){width:31%}th:nth-child(3){width:42%}th:nth-child(4){width:20%}</style></head>
 <body><main><h1>調査とビジュアル方向レポート</h1><p class="muted">${escapeHtml(task.prompt)}</p>${scope ? `<p class="muted">調査範囲：${escapeHtml(scope)}</p>` : ''}${sections}${directions}${sources}</main></body></html>`;
 }
 
