@@ -1,8 +1,8 @@
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import {
-  ArrowUp, Brush, BrushCleaning, Check, ChevronDown, ChevronRight, Crop, Eraser, Expand, ImageUpscale, Lasso, Minus, PenLine, Plus, Redo2, ScanSearch, Scissors,
-  SquareDashed, SquareDashedMousePointer, Undo2, WandSparkles, X, Zap, ZoomIn, ZoomOut,
+  ArrowUp, Brush, BrushCleaning, Check, ChevronDown, ChevronRight, Crop, Eraser, Lasso, Minus, PenLine, Plus, Redo2, Scaling, ScanSearch,
+  SquareDashedMousePointer, Undo2, WandSparkles, X, Zap, ZoomIn, ZoomOut,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { upscaleImage } from '../../lib/clientImageOps';
@@ -31,8 +31,37 @@ export type StudioServerEditRequest = {
 export type { StudioClientEditTool, StudioServerEditTool } from '../../lib/studioImageEdit';
 
 type Size = { width: number; height: number };
-const TOOL_ICON: Record<StudioEditToolId, ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' }>> = {
-  repair: WandSparkles, partial: PenLine, upscale: ImageUpscale, 'remove-background': Scissors, clipping: SquareDashed, crop: Crop, expand: Expand, erase: Eraser,
+type StudioEditIcon = ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' }>;
+const iconSvg = (className: string | undefined, children: ReactNode) => (
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+);
+// 本家の一覧の印（2026-11-12 本家の本番で開いて拡大して見た）: 画像修復は斜めに重ねた2本の帯、部分編集は点線の丸と筆、
+// 高画質化は角の丸い四角と対角の矢印、背景削除は上半分が市松の画像、クリッピングは右下が市松の四角。AIトリミング・AI削除は lucide と同じ形。
+const StudioRepairIcon: StudioEditIcon = ({ className }) => iconSvg(className, <>
+  <rect x="2.5" y="8.5" width="19" height="7" rx="3.5" transform="rotate(45 12 12)" />
+  <rect x="2.5" y="8.5" width="19" height="7" rx="3.5" transform="rotate(-45 12 12)" />
+</>);
+const StudioPartialEditIcon: StudioEditIcon = ({ className }) => iconSvg(className, <>
+  <path d="M15.5 4.6A8 8 0 1 0 18 16" strokeDasharray="2.6 2.6" />
+  <path d="m21 5-7.4 8.6" />
+  <path d="M13.6 13.6c-1.3-.2-2.5.7-2.8 2l-.6 2.6 2.6-.6c1.3-.3 2.2-1.5 2-2.8" />
+</>);
+const StudioUpscaleIcon: StudioEditIcon = ({ className }) => iconSvg(className, <>
+  <path d="M21 11V7a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h4" />
+  <path d="M14 7h3v3" /><path d="m17 7-4 4" /><path d="M10 17H7v-3" /><path d="m7 17 4-4" />
+  <path d="M18 14.5v5M15.5 17h5" strokeWidth={1.6} />
+</>);
+const StudioRemoveBackgroundIcon: StudioEditIcon = ({ className }) => iconSvg(className, <>
+  <rect x="3" y="3" width="18" height="18" rx="4" />
+  <path d="M3 16c2.6-2.4 4.6-2.4 7 0s4.6 2.4 7 0l4-3" />
+  <g fill="currentColor" stroke="none"><rect x="6" y="6" width="2.4" height="2.4" /><rect x="10.8" y="6" width="2.4" height="2.4" /><rect x="15.6" y="6" width="2.4" height="2.4" /><rect x="8.4" y="8.4" width="2.4" height="2.4" /><rect x="13.2" y="8.4" width="2.4" height="2.4" /><rect x="6" y="10.8" width="2.4" height="2.4" /><rect x="10.8" y="10.8" width="2.4" height="2.4" /><rect x="15.6" y="10.8" width="2.4" height="2.4" /></g>
+</>);
+const StudioClippingIcon: StudioEditIcon = ({ className }) => iconSvg(className, <>
+  <path d="M21 11V7a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h4" />
+  <g fill="currentColor" stroke="none"><rect x="15" y="12" width="3" height="3" /><rect x="12" y="15" width="3" height="3" /><rect x="18" y="15" width="3" height="3" /><rect x="15" y="18" width="3" height="3" /></g>
+</>);
+const TOOL_ICON: Record<StudioEditToolId, StudioEditIcon> = {
+  repair: StudioRepairIcon, partial: StudioPartialEditIcon, upscale: StudioUpscaleIcon, 'remove-background': StudioRemoveBackgroundIcon, clipping: StudioClippingIcon, crop: Crop, expand: Scaling, erase: Eraser,
 };
 const loadImage = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
   const image = new Image();
@@ -141,7 +170,8 @@ export function StudioImageEditMenu({
   };
   const closeDialog = () => { setDialog(null); onClose?.(); };
 
-  const itemClass = 'flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm text-white/90 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40';
+  // 本家の一覧は幅190・地 #303538・1行37px・文字12px（2026-11-12 本家の本番で開いて画素で測った）。
+  const itemClass = 'flex h-[37px] w-full items-center gap-2 rounded-lg px-3.5 text-left text-xs text-white/95 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40';
   return (
     <div ref={rootRef} className="relative inline-flex" data-testid="studio-image-edit-menu">
       <button
@@ -156,7 +186,7 @@ export function StudioImageEditMenu({
         <WandSparkles aria-hidden="true" className="h-4 w-4" />{label}
       </button>
       {menuOpen && (
-        <div role="menu" aria-label={label} className={`absolute top-full z-40 mt-2 w-[240px] rounded-xl border border-white/10 bg-[#1d2224] p-1.5 shadow-2xl ${align === 'end' ? 'right-0' : 'left-0'}`}>
+        <div role="menu" aria-label={label} className={`absolute top-full z-40 mt-1.5 w-[190px] rounded-xl border border-white/10 bg-[#303538] p-1 shadow-2xl ${align === 'end' ? 'right-0' : 'left-0'}`}>
           {STUDIO_EDIT_MENU.map(item => {
             const Icon = TOOL_ICON[item.id];
             const off = disabledTools.includes(item.id);
@@ -165,12 +195,12 @@ export function StudioImageEditMenu({
                 <button type="button" role="menuitem" aria-haspopup={item.submenu ? 'menu' : undefined} aria-expanded={item.submenu ? upscaleOpen : undefined} disabled={off} onClick={() => choose(item.id)} className={itemClass}>
                   <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  {item.badge && <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none text-slate-950" style={{ backgroundImage: 'linear-gradient(24.94deg, #7ef2e2 0%, #c9a7ff 100%)' }}>{item.badge}</span>}
+                  {item.badge && <span className="rounded-full px-2 py-0.5 text-xs font-medium leading-4 text-[#0b2a33]" style={{ backgroundImage: 'linear-gradient(24.94deg, #7ef2e2 0%, #c9a7ff 100%)' }}>{item.badge}</span>}
                   {item.id === 'repair' && repairCost && <span className="text-xs text-white/50">{repairCost}</span>}
                   {item.submenu && <ChevronRight aria-hidden="true" className="h-4 w-4 text-white/60" />}
                 </button>
                 {item.submenu && upscaleOpen && (
-                  <div role="menu" aria-label={item.label} className="absolute left-full top-0 z-50 ml-2 w-[140px] rounded-xl border border-white/10 bg-[#1d2224] p-1.5 shadow-2xl">
+                  <div role="menu" aria-label={item.label} className="absolute left-full top-0 z-50 ml-2 w-[140px] rounded-xl border border-white/10 bg-[#303538] p-1 shadow-2xl">
                     {(['2k', '4k'] as const).map(target => (
                       <button key={target} type="button" role="menuitem" disabled={!upscale?.[target].enabled} title={upscale && !upscale[target].enabled ? STUDIO_UPSCALE_TOO_LARGE : undefined} onClick={() => runUpscale(target)} className={itemClass}>
                         {target.toUpperCase()}
@@ -260,8 +290,9 @@ function useFitScale(width: number, height: number, reserve = 64) {
 // ---- 部分編集・クリッピング・AI削除（下に道具の帯） ----------------------------------------------------------------
 type BrushKind = 'partial' | 'clipping' | 'erase';
 const BRUSH_TEXT: Record<BrushKind, { title: string; icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' }>; testId: string }> = {
-  partial: { title: '部分編集', icon: PenLine, testId: 'studio-edit-partial' },
-  clipping: { title: 'クリッピング', icon: SquareDashed, testId: 'studio-edit-clipping' },
+  // 窓の左上の印は一覧と同じ（本家の窓で見た）。
+  partial: { title: '部分編集', icon: StudioPartialEditIcon, testId: 'studio-edit-partial' },
+  clipping: { title: 'クリッピング', icon: StudioClippingIcon, testId: 'studio-edit-clipping' },
   erase: { title: 'AI削除', icon: Eraser, testId: 'studio-edit-erase' },
 };
 export const PARTIAL_EDIT_PLACEHOLDER = '編集内容を入力（例：赤枠内のネクタイをスカーフに変更）';
@@ -590,7 +621,7 @@ function ExpandDialog({ imageUrl, name, onClose, onServerEdit }: {
   };
 
   return (
-    <EditDialogFrame icon={Expand} title="AI拡張" testId="studio-edit-expand" onClose={onClose} busy={busy} zoom={view}
+    <EditDialogFrame icon={Scaling} title="AI拡張" testId="studio-edit-expand" onClose={onClose} busy={busy} zoom={view}
       sidebar={(
         <>
           <div className="min-h-0 flex-1 overflow-y-auto">

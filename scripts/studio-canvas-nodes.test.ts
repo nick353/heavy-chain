@@ -214,7 +214,8 @@ test('the windows the page opens (クリッピング, お気に入り, 範囲指
 
 test('簡易エディター is Light\'s floating bar over a dark page: the chosen tool\'s small bar under it, 520×515 panes below', () => {
   // No box around it and no sideways-scrolling row (2026-11-12 production: the AIマスク認識 list was cut off inside that row).
-  assert.match(maskEditor, /<div className="fixed inset-0 z-50 overflow-auto bg-black\/70" role="dialog"/);
+  // The page behind is darkened about 80% like Light (2026-11-12: Light's pixels before and after it opens).
+  assert.match(maskEditor, /<div className="fixed inset-0 z-50 overflow-auto bg-black\/80" role="dialog"/);
   assert.doesNotMatch(maskEditor, /overflow-x-auto/);
   assert.match(maskEditor, /<div className="flex h-\[45px\] items-center gap-1 rounded-lg border border-white\/\[0\.08\] bg-\[#26292b\] px-2 shadow-2xl" role="toolbar"/);
   // The chosen tool: teal outline and text; キャンセル is grey.
@@ -225,10 +226,16 @@ test('簡易エディター is Light\'s floating bar over a dark page: the chose
   assert.match(maskEditor, /style=\{\{ left: subLeft \}\} role="toolbar"/);
   assert.match(maskEditor, /\{tool === 'ai-mask' \? \(\n\s*<div role="radiogroup"/);
   assert.match(maskEditor, /role="radio" aria-checked=\{aiPick === candidate\} disabled=\{busy !== null\} onClick=\{\(\) => void recognize\(candidate\)\}/);
+  // Light's radio bar is low (34px, 12px words); the other tools' bar is 48px.
+  assert.match(maskEditor, /\$\{tool === 'ai-mask' \? 'h-\[34px\]' : 'h-12'\}`\} style=\{\{ left: subLeft \}\}/);
+  assert.match(maskEditor, /onClick=\{\(\) => void recognize\(candidate\)\} className="flex h-7 items-center gap-1\.5 rounded-md px-2\.5 text-xs /);
   assert.doesNotMatch(maskEditor, /role="menu"/);
   assert.doesNotMatch(maskEditor, /ChevronDown/);
   // Panes: 520×515, teal border and title on the chosen one; the other is dimmed with Light's hint.
   assert.match(maskEditor, /h-\[min\(515px,calc\(87vh-180px\)\)\] min-h-\[320px\] w-\[520px\]/);
+  // The image sits 24px inside the pane like Light's (only the surface's own margin; the pane body adds none).
+  assert.match(maskEditor, /<div className="relative min-h-0 flex-1">\n\s*<StudioMaskSurface/);
+  assert.match(read('../src/components/lightchain/StudioMaskSurface.tsx'), /const pad = 24;/);
   assert.match(maskEditor, /activePane === id \? 'border-\[#20d0c4\]' : 'border-\[#4b5053\]'/);
   assert.match(maskEditor, /'参考にしたい領域を描画してください' : '調整したい領域を描画してください'/);
   assert.match(maskEditor, /\{panes\.length > 1 && activePane !== id && \(\n\s*<div className="pointer-events-none absolute inset-0/);
@@ -254,16 +261,25 @@ test('scrolling or zooming with the wheel keeps the view where the person put it
 const collectDialog = read('../src/components/lightchain/StudioCollectDialog.tsx');
 const sendMenu = read('../src/components/lightchain/StudioSendMenu.tsx');
 
-test('お気に入りに追加 looks like Light\'s window: round space switch, no ×, teal folders, a grey キャンセル', () => {
+test('お気に入りに追加 looks like Light\'s window: round space switch, no ×, open teal folders, a grey キャンセル, Light\'s measured sizes', () => {
+  // Measured on Light's production window on 2026-11-12: page darkened ~75%, title 14px, tabs and buttons 12px, tabs not bold.
+  assert.match(collectDialog, /bg-black\/75" role="dialog" aria-modal="true" aria-label=\{TEXT\.title\} data-testid="studio-collect-dialog"/);
   assert.match(collectDialog, /w-\[min\(520px,calc\(100vw-32px\)\)\] flex-col rounded-xl bg-\[#26292b\]/);
-  assert.match(collectDialog, /<div className="ml-auto flex items-center rounded-full bg-\[#1c1f21\] p-1" role="tablist"/);
-  assert.match(collectDialog, /active \? 'bg-\[#20d0c4\]\/15 font-semibold text-\[#20d0c4\]'/);
+  assert.match(collectDialog, /<h2 className="text-sm font-normal text-white\/90">/);
+  assert.match(collectDialog, /<div className="ml-auto flex items-center rounded-full bg-\[#313538\] p-1" role="tablist"/);
+  assert.match(collectDialog, /`h-7 rounded-full px-4 text-xs transition \$\{active \? 'bg-\[#20d0c4\]\/15 text-\[#20d0c4\]' : 'text-white\/60 hover:text-white'\}`/);
+  assert.doesNotMatch(collectDialog, /font-semibold/);
   assert.doesNotMatch(collectDialog, /aria-label="閉じる"/);
-  assert.match(collectDialog, /<Folder aria-hidden="true" className="h-4 w-4 shrink-0 fill-\[#20d0c4\] text-\[#20d0c4\]" \/>/);
-  assert.match(collectDialog, /<li key=\{folder\.id\} className="flex items-center border-b border-white\/10">/);
+  assert.match(collectDialog, /px-6 pb-1 text-xs text-white\/35">/);
+  // Folders: Light's open-folder mark, a faint line under each row; the list grows with up to four rows like Light's.
+  assert.match(collectDialog, /<StudioFolderOpenIcon \/><span className="truncate">\{folder\.name\}<\/span>/);
+  assert.match(collectDialog, /data-icon="folder-open-filled"/);
+  assert.match(collectDialog, /<li key=\{folder\.id\} className="flex items-center border-b border-white\/\[0\.06\]">/);
+  assert.match(collectDialog, /<div className="mx-6 mb-7 mt-3 min-h-\[176px\] flex-1 overflow-y-auto" data-testid="studio-collect-folders">/);
   assert.match(collectDialog, /<div className="flex items-center gap-4 border-t border-white\/10 px-6 py-4">/);
-  assert.match(collectDialog, /className="ml-auto h-8 rounded-md bg-\[#5b6164\] px-4 text-sm text-white/);
-  assert.match(collectDialog, /disabled:bg-\[#3b4043\] disabled:text-white\/30/);
+  assert.match(collectDialog, /className="h-8 rounded-md bg-\[#20d0c4\] px-4 text-xs text-\[#0f1718\] disabled:opacity-40">\{TEXT\.newGroup\}/);
+  assert.match(collectDialog, /className="ml-auto h-8 rounded-md bg-\[#545d62\] px-4 text-xs text-white/);
+  assert.match(collectDialog, /px-4 text-xs text-\[#0f1718\] disabled:bg-\[#454a4d\] disabled:text-white\/30/);
 });
 
 test('送る opens its list beside the toolbar, centred on the button like Light', () => {
@@ -277,4 +293,24 @@ test('the toolbar icons are Light\'s: クリッピング with a pointer, 画像�
   assert.match(page, /onClick=\{\(\) => setCollectTarget\(\{ url \}\)\}><StudioFolderStarIcon className="h-4 w-4" \/><\/button>/);
   assert.match(sendMenu, /<SendHorizontal aria-hidden="true" className="h-4 w-4" \/>/);
   assert.match(editMenu, /<WandSparkles aria-hidden="true" className="h-4 w-4" \/>\{label\}\n\s*<\/button>/);
+});
+
+test('画像編集 and 送る light up while their list is open, like Light (a lighter ground, teal mark and words)', () => {
+  assert.match(css, /\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger\[aria-expanded="true"\] \{\n\s*background: rgb\(255 255 255 \/ 10%\);\n\s*color: #20d0c4;\n\}/);
+  assert.match(css, /\[data-studio-theme="light"\] \.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger\[aria-expanded="true"\] \{ background: rgba\(0, 0, 0, 0\.06\); color: #0fa89e; \}/);
+  assert.match(editMenu, /aria-haspopup="menu"\n\s*aria-expanded=\{menuOpen\}/);
+  assert.match(sendMenu, /aria-haspopup="menu"\n\s*aria-expanded=\{open\}/);
+  assert.match(page, /<StudioImageEditMenu [^>]*triggerClassName="fashion-studio-node-toolbar-trigger"/);
+  assert.match(page, /<StudioSendMenu imageUrl=\{url\} className="fashion-studio-node-toolbar-trigger" \/>/);
+});
+
+test('the 画像編集 list is Light\'s size and look: 190 wide on #303538, 37px rows of 12px words, a round NEW, Light\'s marks', () => {
+  assert.match(editMenu, /className=\{`absolute top-full z-40 mt-1\.5 w-\[190px\] rounded-xl border border-white\/10 bg-\[#303538\] p-1 shadow-2xl/);
+  assert.match(editMenu, /const itemClass = 'flex h-\[37px\] w-full items-center gap-2 rounded-lg px-3\.5 text-left text-xs /);
+  assert.match(editMenu, /\{item\.badge && <span className="rounded-full px-2 py-0\.5 text-xs font-medium leading-4 text-\[#0b2a33\]"/);
+  assert.match(editMenu, /repair: StudioRepairIcon, partial: StudioPartialEditIcon, upscale: StudioUpscaleIcon, 'remove-background': StudioRemoveBackgroundIcon, clipping: StudioClippingIcon, crop: Crop, expand: Scaling, erase: Eraser,/);
+  // The windows show the same mark at their top left as the list (Light's windows do).
+  assert.match(editMenu, /partial: \{ title: '部分編集', icon: StudioPartialEditIcon,/);
+  assert.match(editMenu, /clipping: \{ title: 'クリッピング', icon: StudioClippingIcon,/);
+  assert.match(editMenu, /<EditDialogFrame icon=\{Scaling\} title="AI拡張"/);
 });

@@ -159,8 +159,9 @@ export function StudioMaskEditor({
   const icon = { 'ai-mask': ScanSearch, brush: Brush, lasso: Lasso, rect: SquareDashedMousePointer, pen: PenTool } as const;
   const paneHint = (id: StudioMaskPaneId) => (id === 'reference' ? '参考にしたい領域を描画してください' : '調整したい領域を描画してください');
 
+  // 後ろは本家と同じく画面全体を約80%暗くする（2026-11-12 本家の本番で、開く前と後の画素を比べて測った）。
   return (
-    <div className="fixed inset-0 z-50 overflow-auto bg-black/70" role="dialog" aria-modal="true" aria-label={ariaLabel} data-testid={testId}>
+    <div className="fixed inset-0 z-50 overflow-auto bg-black/80" role="dialog" aria-modal="true" aria-label={ariaLabel} data-testid={testId}>
       <h2 className="sr-only">{STUDIO_MASK_EDITOR_TEXT.title}</h2>
       <div className="mx-auto flex min-h-full w-max flex-col items-center px-3 pb-6 pt-[13vh] text-white">
         <div className="relative">
@@ -181,12 +182,13 @@ export function StudioMaskEditor({
               {actions?.(api)}
             </div>
           </div>
-          <div className="absolute top-[calc(100%+9px)] flex h-12 items-center gap-1 rounded-lg border border-white/[0.08] bg-[#26292b] px-1.5 shadow-2xl" style={{ left: subLeft }} role="toolbar" aria-label={`${iconLabel(tool)}の設定`}>
+          {/* AIマスク認識の丸は本家と同じく低い帯（高さ34px・文字12px・丸15px）。ほかの道具は48pxの帯（2026-11-12 本家の本番で並べて測った）。 */}
+          <div className={`absolute top-[calc(100%+9px)] flex items-center gap-1 rounded-lg border border-white/[0.08] bg-[#26292b] px-1.5 shadow-2xl ${tool === 'ai-mask' ? 'h-[34px]' : 'h-12'}`} style={{ left: subLeft }} role="toolbar" aria-label={`${iconLabel(tool)}の設定`}>
             {tool === 'ai-mask' ? (
               <div role="radiogroup" aria-label={iconLabel(tool)} className="flex items-center gap-1">
                 {STUDIO_MASK_CANDIDATES.map(candidate => (
-                  <button key={candidate} type="button" role="radio" aria-checked={aiPick === candidate} disabled={busy !== null} onClick={() => void recognize(candidate)} className={subButton(false)}>
-                    <span aria-hidden="true" className={`inline-block h-4 w-4 rounded-full border ${aiPick === candidate ? 'border-[#20d0c4] bg-[radial-gradient(circle,#20d0c4_45%,transparent_50%)]' : 'border-white/50'}`} />{candidate}
+                  <button key={candidate} type="button" role="radio" aria-checked={aiPick === candidate} disabled={busy !== null} onClick={() => void recognize(candidate)} className="flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs text-white/90 hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50">
+                    <span aria-hidden="true" className={`inline-block h-[15px] w-[15px] rounded-full border ${aiPick === candidate ? 'border-[#20d0c4] bg-[radial-gradient(circle,#20d0c4_45%,transparent_50%)]' : 'border-white/50'}`} />{candidate}
                   </button>
                 ))}
               </div>
@@ -209,7 +211,8 @@ export function StudioMaskEditor({
             <section key={id} aria-label={title}
               className={`relative flex h-[min(515px,calc(87vh-180px))] min-h-[320px] w-[520px] flex-col overflow-hidden rounded-xl border-2 bg-[#222628] ${panes.length > 1 ? 'max-w-[calc(50vw-32px)]' : 'max-w-[calc(100vw-24px)]'} ${activePane === id ? 'border-[#20d0c4]' : 'border-[#4b5053]'}`}>
               <h3 className={`h-[46px] shrink-0 border-b border-white/10 text-center text-sm leading-[44px] ${activePane === id ? 'text-[#20d0c4]' : 'text-white/40'}`}>{title}</h3>
-              <div className="relative min-h-0 flex-1 p-6">
+              {/* 余白は面の中の24pxだけ（本家の窓は画像の上下左右が約24px。2026-11-12 本番で並べて測った。ここにも余白を付けると画像が一回り小さくなっていた）。 */}
+              <div className="relative min-h-0 flex-1">
                 <StudioMaskSurface
                   ref={handle => { surfaces.current[id] = handle; }}
                   imageUrl={pane.imageUrl}
