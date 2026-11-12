@@ -3,6 +3,7 @@ import { Check, Copy, ImagePlus, Images, Loader2, NotebookText, Pencil, Search, 
 import { useAuthStore } from '../stores/authStore';
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { isHeavyWorkspaceBrandName, isHeavyWorkspaceRuntime } from '../lib/heavyWorkspace';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 /**
  * Source "カスタムスタイル" (/model-base/style): learning images are uploaded, analysed by the
@@ -222,6 +223,8 @@ export function LightchainCustomStylePage() {
       if (style && style.settings.status !== 'analyzing') await save(style, { settings: { ...style.settings, status: 'failed', error: 'upload_failed' } }).catch(() => null);
     } finally { setBusy(false); if (fileInput.current) fileInput.current.value = ''; }
   };
+  // 「送る」（?imgUrl=）で送られた画像も、ラーニング素材のアップロードと同じ入り口へ（一覧を読み終えてから）。
+  useIncomingImageFile((file) => startUpload([file]), { ready: Boolean(brandId) && styles !== null && !busy });
 
   const visible = useMemo(() => (styles ?? []).filter(style => style.settings.space === space && style.name.includes(search.trim())), [styles, space, search]);
   const selected = selectedId ? (styles ?? []).find(style => style.id === selectedId) ?? null : null;

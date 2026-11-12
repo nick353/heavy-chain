@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeft, Copy, Download, Eraser, FileText, Grid3x3, History, LayoutGrid, Loader2, Palette, PenTool, RotateCcw, Send, Star, X, ZoomIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -196,10 +196,12 @@ function GraphicSvgStage({ candidate, index, onClose }: { candidate: GraphicCand
   const ready = state.status === 'ready' ? state : null;
   return (
     <>
+      {/* Zoomed, the picture must keep its own height: as a stretched flex item it stayed 514px tall and the SVG fitted
+          itself back to the same size (production 2026-11-12, the button changed but nothing grew). */}
       <div className={`flex min-w-0 flex-1 overflow-auto rounded-lg bg-white ${zoomed ? '' : 'items-center justify-center'}`} data-testid="graphic-tool-stage-svg" data-svg-status={state.status}>
         {state.status === 'error' ? <p role="alert" className="m-auto text-sm text-rose-600">SVGに変換できませんでした</p>
           : !ready ? <span role="status" className="m-auto flex items-center gap-2 text-sm text-neutral-500"><Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />線をなぞっています…</span>
-          : <img src={ready.url} alt="SVGにした案" data-testid="graphic-svg-preview" className={zoomed ? 'max-w-none' : 'max-h-full max-w-full object-contain'} style={zoomed ? { width: `${ready.result.traceWidth * 4}px` } : undefined} />}
+          : <img src={ready.url} alt="SVGにした案" data-testid="graphic-svg-preview" className={zoomed ? 'h-auto max-w-none shrink-0 self-start' : 'max-h-full max-w-full object-contain'} style={zoomed ? { width: `${ready.result.traceWidth * 4}px` } : undefined} />}
       </div>
       <aside className="flex w-60 shrink-0 flex-col gap-3 overflow-y-auto rounded-lg bg-[#171b1c] p-4 text-sm" aria-label="SVGにする" data-testid="graphic-tool-svg">
         <div className="flex items-center justify-between"><h3 className="text-sm font-medium text-white">SVGにする</h3><button type="button" aria-label="閉じる" onClick={onClose} className="text-neutral-400 hover:text-white"><X aria-hidden="true" className="h-4 w-4" /></button></div>
@@ -234,7 +236,8 @@ function GraphicToolStage({ tool, candidate, index, locked, onClose, onUseAsRefe
 }) {
   const [source, setSource] = useState<Pixels | null>(null);
   const [failed, setFailed] = useState(false);
-  const [working, setWorking] = useState(false);
+  /** Which button's work is running: its own button spins (2026-11-12 the spinner sat on 1枚分をダウンロード while 参考画像にして作り直す worked). */
+  const [working, setWorking] = useState<string | null>(null);
   const [replacements, setReplacements] = useState<Array<Rgb | null>>([]);
   const [layout, setLayout] = useState<RepeatLayout>('straight');
   const [seamless, setSeamless] = useState(true);
@@ -278,16 +281,18 @@ function GraphicToolStage({ tool, candidate, index, locked, onClose, onUseAsRefe
 
   /** The full-size result of the open tool (the preview works on a 1024px copy). */
   const fullSize = async (): Promise<Pixels> => apply(await readPixels(candidate.image_url));
-  const act = async (task: () => Promise<void>) => {
+  const act = async (key: string, task: () => Promise<void>) => {
     if (working) return;
-    setWorking(true);
-    try { await task(); } catch { toast.error('画像を書き出せませんでした'); } finally { setWorking(false); }
+    setWorking(key);
+    try { await task(); } catch { toast.error('画像を書き出せませんでした'); } finally { setWorking(null); }
   };
+  const spin = (key: string, icon: ReactNode = null) => (working === key ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" /> : icon);
+  const downloadIcon = <Download aria-hidden="true" className="h-3.5 w-3.5" />;
   const download = (blob: Blob, suffix: string) => {
     const url = URL.createObjectURL(blob);
     return downloadValidatedImage(url, graphicFileName(index, suffix), 'graphic_tool_download').finally(() => window.setTimeout(() => URL.revokeObjectURL(url), 5000));
   };
-  const useAsReference = (suffix: string) => act(async () => { onUseAsReference(blobToFile(await pixelsToBlob(await fullSize()), graphicFileName(index, suffix))); toast.success('参考画像にしました'); });
+  const makeReference = (suffix: string) => act('reference', async () => { onUseAsReference(blobToFile(await pixelsToBlob(await fullSize()), graphicFileName(index, suffix))); toast.success('参考画像にしました'); });
   const changed = replacements.some(Boolean);
   const title = tool === 'recolor' ? '配色を替える' : tool === 'repeat' ? 'リピートで確認' : '背景を消す';
 
@@ -320,8 +325,8 @@ function GraphicToolStage({ tool, candidate, index, locked, onClose, onUseAsRefe
               })}
             </div>
             <button type="button" disabled={!changed} onClick={() => setReplacements([])} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-white/30`}><RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />元の配色に戻す</button>
-            <button type="button" disabled={!changed || working} onClick={() => act(async () => { await download(await pixelsToBlob(await fullSize()), '配色替え'); })} className={`${panelButton} bg-[#20d0c4] font-medium text-neutral-950`}>{working ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" /> : <Download aria-hidden="true" className="h-3.5 w-3.5" />}この配色でダウンロード</button>
-            <button type="button" disabled={!changed || working || locked} onClick={() => useAsReference('配色替え')} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-[#20d0c4]`}>参考画像にして作り直す</button>
+            <button type="button" disabled={!changed || Boolean(working)} onClick={() => act('recolor', async () => { await download(await pixelsToBlob(await fullSize()), '配色替え'); })} className={`${panelButton} bg-[#20d0c4] font-medium text-neutral-950`}>{spin('recolor', downloadIcon)}この配色でダウンロード</button>
+            <button type="button" disabled={!changed || Boolean(working) || locked} onClick={() => makeReference('配色替え')} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-[#20d0c4]`}>{spin('reference')}参考画像にして作り直す</button>
           </>
         )}
         {tool === 'repeat' && (
@@ -344,9 +349,9 @@ function GraphicToolStage({ tool, candidate, index, locked, onClose, onUseAsRefe
               <input type="range" min={64} max={400} step={8} value={tileSize} onChange={(event) => setTileSize(Number(event.target.value))} className="mt-2 w-full accent-[#20d0c4]" aria-label="1枚の大きさ" />
             </label>
             <p className="text-xs leading-5 text-neutral-500">端の4分の1を反対側の続きに替え、柄の少ない所を通る線でつなぐので、並べても継ぎ目が出ず、柄も薄く重なりません。ミラーは反転して並べるので継ぎ目が出ません。</p>
-            <button type="button" disabled={working || !source} onClick={() => act(async () => { await download(await pixelsToBlob(await fullSize()), seamless ? 'リピート用' : 'タイル'); })} className={`${panelButton} bg-[#20d0c4] font-medium text-neutral-950`}>{working ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" /> : <Download aria-hidden="true" className="h-3.5 w-3.5" />}1枚分をダウンロード</button>
-            <button type="button" disabled={working || !source} onClick={() => act(async () => { await download(await repeatSheetBlob(pixelsToCanvas(await fullSize()), layout, 3), `${REPEAT_LAYOUTS.find((item) => item.id === layout)?.label}3x3`); })} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-white/30`}>並べた画像（3×3）をダウンロード</button>
-            <button type="button" disabled={working || locked || !source} onClick={() => useAsReference('リピート用')} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-[#20d0c4]`}>参考画像にして作り直す</button>
+            <button type="button" disabled={Boolean(working) || !source} onClick={() => act('tile', async () => { await download(await pixelsToBlob(await fullSize()), seamless ? 'リピート用' : 'タイル'); })} className={`${panelButton} bg-[#20d0c4] font-medium text-neutral-950`}>{spin('tile', downloadIcon)}1枚分をダウンロード</button>
+            <button type="button" disabled={Boolean(working) || !source} onClick={() => act('sheet', async () => { await download(await repeatSheetBlob(pixelsToCanvas(await fullSize()), layout, 3), `${REPEAT_LAYOUTS.find((item) => item.id === layout)?.label}3x3`); })} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-white/30`}>{spin('sheet')}並べた画像（3×3）をダウンロード</button>
+            <button type="button" disabled={Boolean(working) || locked || !source} onClick={() => makeReference('リピート用')} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-[#20d0c4]`}>{spin('reference')}参考画像にして作り直す</button>
           </>
         )}
         {tool === 'cutout' && (
@@ -356,7 +361,7 @@ function GraphicToolStage({ tool, candidate, index, locked, onClose, onUseAsRefe
               <input type="range" min={16} max={120} step={4} value={tolerance} onChange={(event) => setTolerance(Number(event.target.value))} className="mt-2 w-full accent-[#20d0c4]" aria-label="背景とみなす色の幅" />
             </label>
             {cutout && !cutout.ground && <p role="alert" className="text-xs text-rose-300">背景が一色ではないため、消せませんでした</p>}
-            <button type="button" disabled={working || !cutout?.ground} onClick={() => act(async () => { await download(await pixelsToBlob(await fullSize()), '背景なし'); })} className={`${panelButton} bg-[#20d0c4] font-medium text-neutral-950`}>{working ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" /> : <Download aria-hidden="true" className="h-3.5 w-3.5" />}透過PNGでダウンロード</button>
+            <button type="button" disabled={Boolean(working) || !cutout?.ground} onClick={() => act('cutout', async () => { await download(await pixelsToBlob(await fullSize()), '背景なし'); })} className={`${panelButton} bg-[#20d0c4] font-medium text-neutral-950`}>{spin('cutout', downloadIcon)}透過PNGでダウンロード</button>
           </>
         )}
       </aside>

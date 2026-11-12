@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCanonicalImageWorkspace } from '../hooks/useCanonicalImageWorkspace';
 import { CanonicalImageWorkspaceControls } from '../components/CanonicalImageWorkspaceControls';
 import { projectNameFromFile } from '../lib/projectNames';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 const LIGHTCHAIN_LAB_PROJECT_ICON = '/lightchain-assets/icons/laboratory.png';
 
@@ -14,6 +15,8 @@ const LIGHTCHAIN_LAB_PROJECT_ICON = '/lightchain-assets/icons/laboratory.png';
 export function LightchainLabDetailPage() {
   const workspace = useCanonicalImageWorkspace('lab');
   const imageUrl = workspace.result?.imageUrl ?? workspace.slots.primary?.imageUrl;
+  // 「送る」（?imgUrl=）で送られた画像も、下の入力と同じく主素材に入れる。
+  useIncomingImageFile((file) => workspace.upload('primary', file), { ready: workspace.inputsSettled });
 
   return (
     <main
