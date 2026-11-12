@@ -14,11 +14,12 @@ import { AgentDialogueView } from '../features/agent/AgentDialogueView';
 import type { AssistantQuestion } from '../features/designDetail/assistantQuestions';
 import {
   AGENT_SCOPE_REGIONS, DEFAULT_AGENT_SCOPE, agentConversationId, agentImagePrompt, agentMissingNames, agentNotePrompt,
-  agentQuoteParts, agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentSourceHome, agentSourceSite, agentScopeSummary, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
+  agentQuoteParts, agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentSourceHome, agentSourceSite, agentScopeSummary, agentThemeEvidence, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
   loadAgentTask, parseAgentRequirements, parseAgentResearch, parsePlanResponse, parseThemeResponse, planPrompt, pruneAgentScope, themePrompt, updateAgentTask,
   agentBuildDesignImages, agentBuildDirectionImages, agentChosenCodes, agentDesignPrompt, agentDesignProgress, agentFinalPrompt, agentImageLabel, agentReferenceImages,
   agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan, agentDialoguePrompt,
   parseAgentDialogueReply, AGENT_DIALOGUE_TURN_LIMIT, type AgentTurn,
+  agentReportPrompt, agentReportRound, buildAgentAiReportHtml, readAgentReport,
   agentStructurePrompt, agentStyleImagePrompt, agentUsesMerchFlow, agentWording, buildAgentDesignHtml, buildAgentFinalHtml, buildAgentStructureHtml, parseAgentFinal, parseAgentStructure, AGENT_STYLE_COUNT,
   type AgentAssistantStep, type AgentAttachment, type AgentImageStep, type AgentNote, type AgentNoteStage, type AgentResearchScope, type AgentStyleImage, type AgentTask, type AgentTaskDocument,
 } from '../features/agent/agentTasks';
@@ -28,8 +29,8 @@ const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_no
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
-type AssistantKind = 'theme' | 'plan' | 'requirements' | 'research' | 'note' | 'structure' | 'design' | 'final' | 'dialogue';
-type AssistantMode = 'agent' | 'agent-research' | undefined;
+type AssistantKind = 'theme' | 'plan' | 'requirements' | 'research' | 'note' | 'structure' | 'design' | 'final' | 'dialogue' | 'report';
+type AssistantMode = 'agent' | 'agent-research' | 'agent-report' | undefined;
 
 function readImageReceipt(receipt: Record<string, unknown>) {
   const image = Array.isArray(receipt.images) && record(receipt.images[0]) ? receipt.images[0] : {};
@@ -130,7 +131,30 @@ function ScopeForm({ confirmed, disabled, regionTitle, onConfirm }: { confirmed:
   );
 }
 
-type ReportDoc = { title: string; html: string };
+/** `slides`: the AI's 1600px-wide slides (Light's report), shown at full width and scaled down to fit a narrower window. */
+type ReportDoc = { title: string; html: string; slides?: boolean };
+/** The slides' natural width: a 1600px page and its 32px margins on each side, plus room for the frame's scrollbar. */
+const SLIDE_FRAME_WIDTH = 1680;
+function SlideFrame({ report }: { report: ReportDoc }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: SLIDE_FRAME_WIDTH, height: 800 });
+  useEffect(() => {
+    const element = box.current;
+    if (!element) return;
+    const measure = () => setSize({ width: element.clientWidth || SLIDE_FRAME_WIDTH, height: element.clientHeight || 800 });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const scale = Math.min(1, size.width / SLIDE_FRAME_WIDTH);
+  return (
+    <div ref={box} className="absolute inset-0 overflow-hidden" data-testid="agent-report-slides">
+      <iframe title={report.title} srcDoc={report.html} sandbox="allow-popups allow-popups-to-escape-sandbox" className="border-0"
+        style={{ width: SLIDE_FRAME_WIDTH, height: size.height / scale, transform: `scale(${scale})`, transformOrigin: 'top left' }} />
+    </div>
+  );
+}
 /** Light's ダウンロード saves the report as an HTML file named after it. */
 function downloadReport(report: ReportDoc) {
   const url = URL.createObjectURL(new Blob([report.html], { type: 'text/html;charset=utf-8' }));
@@ -148,7 +172,7 @@ function ReportModal({ report, onClose }: { report: ReportDoc; onClose: () => vo
   return (
     <div role="dialog" aria-modal="true" aria-label={report.title} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" data-testid="agent-report-viewer"
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className="flex h-[88vh] w-full max-w-[1100px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#202426] shadow-2xl">
+      <div className={`flex h-[88vh] w-full ${report.slides ? 'max-w-[1760px]' : 'max-w-[1100px]'} flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#202426] shadow-2xl`}>
         <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
           <span aria-hidden="true" className="flex size-7 flex-none items-center justify-center rounded-lg bg-[#f2683c] text-white"><Code2 className="h-4 w-4" /></span>
           <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">{report.title}</p>
@@ -156,20 +180,22 @@ function ReportModal({ report, onClose }: { report: ReportDoc; onClose: () => vo
           <button type="button" aria-label="閉じる" onClick={onClose} className="rounded-lg p-1.5 text-neutral-300 hover:bg-white/10"><X className="h-4 w-4" /></button>
         </div>
         <div className="relative flex-1 bg-white">
-          <iframe title={report.title} srcDoc={report.html} sandbox="allow-popups allow-popups-to-escape-sandbox" className="absolute inset-0 h-full w-full border-0" />
+          {report.slides ? <SlideFrame report={report} />
+            : <iframe title={report.title} srcDoc={report.html} sandbox="allow-popups allow-popups-to-escape-sandbox" className="absolute inset-0 h-full w-full border-0" />}
         </div>
       </div>
     </div>
   );
 }
 
-function ReportCard({ title, note, testId, onOpen, onDownload }: { title: string; note: string; testId: string; onOpen: () => void; onDownload: () => void }) {
+function ReportCard({ title, note, testId, writing, onOpen, onDownload }: { title: string; note: string; testId: string; writing?: boolean; onOpen: () => void; onDownload: () => void }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#202426] px-4 py-3" data-testid={testId}>
-      <span aria-hidden="true" className="flex size-8 flex-none items-center justify-center rounded-lg bg-[#f2683c] text-white"><Code2 className="h-4 w-4" /></span>
+    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#202426] px-4 py-3" data-testid={testId} data-report-writing={writing ? 'true' : undefined}>
+      <span aria-hidden="true" className="flex size-8 flex-none items-center justify-center rounded-lg bg-[#f2683c] text-white">{writing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Code2 className="h-4 w-4" />}</span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-white">{title}</p>
-        {note && <p className="truncate text-xs text-neutral-400">{note}</p>}
+        {/* Light writes the report as slides; until Heavy's are written the fixed report opens. */}
+        {writing ? <p className="truncate text-xs text-neutral-400">スライドを作成しています…（1〜3分。作成中は簡易版を表示します）</p> : note && <p className="truncate text-xs text-neutral-400">{note}</p>}
       </div>
       <button type="button" onClick={onOpen} className="flex-none text-sm text-cyan-300 hover:underline">オンラインで表示</button>
       <button type="button" onClick={onDownload} className="flex-none text-sm text-cyan-300 hover:underline">ダウンロード</button>
@@ -379,7 +405,7 @@ export default function HeavyAgentTaskPage() {
       let result = step;
       if (prompt) {
         // Light sends the attached images along with every step; Heavy sends the newest ones as references.
-        const references = docRef.current ? agentReferenceImages(docRef.current.task) : [];
+        const references = docRef.current && kind !== 'report' ? agentReferenceImages(docRef.current.task) : [];
         const receipt = await api().sendDesignAssistantRequest({ requestId: step.requestId, brandId, projectId: taskId, conversationId, prompt, history, references, ...(mode ? { mode } : {}) });
         result = assistantStepFrom(receipt, step.requestId);
       }
@@ -422,7 +448,11 @@ export default function HeavyAgentTaskPage() {
   const startThemeRound = useCallback(async () => {
     const requestId = crypto.randomUUID();
     const step: AgentAssistantStep = { requestId, state: 'running' };
-    const saved = await commit((task) => ({ ...task, rounds: [...task.rounds, { step, summary: '', themes: [], at: new Date().toISOString() }] }));
+    // テーマ企画 numbers the research for the answer to mark its sentences; the round keeps that order for 参考資料.
+    const saved = await commit((task) => {
+      const evidence = agentThemeEvidence(task).map((source) => source.url);
+      return { ...task, rounds: [...task.rounds, { step, summary: '', themes: [], at: new Date().toISOString(), ...(evidence.length ? { evidence } : {}) }] };
+    });
     const prompt = themePrompt({ ...saved.task, rounds: saved.task.rounds.slice(0, -1) });
     await runAssistant('theme', step, prompt, applyRound(requestId), themeMode(saved.task));
   }, [commit, runAssistant]);
@@ -667,6 +697,30 @@ export default function HeavyAgentTaskPage() {
     }
   }, [doc, brandId, status, tick, runStyleImage]);
 
+  // Light's research report is slides its AI writes with the directions in them: once the directions arrive Heavy asks the
+  // server's Claude for them beside the other steps (the page never waits on it; the fixed report opens until they come).
+  const reportStarting = useRef<string | null>(null);
+  useEffect(() => {
+    if (!doc || !brandId || status !== 'ready') return;
+    const round = agentReportRound(doc.task);
+    if (!round) return;
+    const current = readAgentReport(doc.task);
+    const applyReport = (task: AgentTask, result: AgentAssistantStep): AgentTask => {
+      const saved = readAgentReport(task);
+      return saved?.round === round && saved.step.requestId === result.requestId ? { ...task, report: { round, step: { ...result, at: saved.step.at } } } : task;
+    };
+    if (current?.round === round) {
+      if (current.step.state === 'running' && !inFlight.current.has(current.step.requestId)) void runAssistant('report', current.step, null, applyReport, 'agent-report');
+      return;
+    }
+    if (reportStarting.current === round) return;
+    reportStarting.current = round;
+    const step: AgentAssistantStep = { requestId: crypto.randomUUID(), state: 'running', at: new Date().toISOString() };
+    void commit((task) => (agentReportRound(task) === round && readAgentReport(task)?.round !== round ? { ...task, report: { round, step } } : task))
+      .then((saved) => (readAgentReport(saved.task)?.step.requestId === step.requestId ? runAssistant('report', step, agentReportPrompt(saved.task), applyReport, 'agent-report') : undefined))
+      .catch(() => { reportStarting.current = null; });
+  }, [doc, brandId, status, tick, commit, runAssistant]);
+
   // Signed addresses for the generated images (cards, the picker, the side panel and the reports).
   useEffect(() => {
     const images = [...(doc?.task.directionImages?.images ?? []), ...(doc?.task.designs ?? [])].filter((image) => image.state === 'completed' && image.storagePath && !imageUrls[image.requestId]);
@@ -818,8 +872,10 @@ export default function HeavyAgentTaskPage() {
     { label, status: finished[index] ? '完了' as const : finished.findIndex((value) => !value) === index ? '進行中' as const : '待機中' as const }));
   const intakeSteps = task && wording ? stepItems(wording.intakeSteps, [task.requirements?.state === 'completed', Boolean(task.aligned), Boolean(task.scope)]) : [];
   const researchDone = task?.research?.state === 'completed';
+  // Light's second step is the report (with the directions in it): done once Heavy's slides are written or have failed.
+  const slidesSettled = Boolean(task && agentReportRound(task) && readAgentReport(task)?.round === agentReportRound(task) && readAgentReport(task)?.step.state !== 'running');
   const researchSteps = task?.scope && wording ? stepItems(wording.researchSteps(task.scope), task.subtype === '顧客提案'
-    ? [researchDone, Boolean(researchDone && lastRound?.step.state === 'completed')] : [researchDone, researchDone, Boolean(task.choice)]) : [];
+    ? [researchDone, Boolean(researchDone && lastRound?.step.state === 'completed' && slidesSettled)] : [researchDone, researchDone && slidesSettled, Boolean(task.choice)]) : [];
   const structureSteps = task && wording && merch && task.choice
     ? stepItems(wording.structureSteps(agentChosenCodes(task)), [task.structure?.state === 'completed', task.structure?.state === 'completed', Boolean(task.proceed)]) : [];
   const designCount = designs.length || (task?.structure?.state === 'completed' && task.structure.content ? parseAgentStructure(task.structure.content).styles.length : 0) || AGENT_STYLE_COUNT;
@@ -830,15 +886,23 @@ export default function HeavyAgentTaskPage() {
   const urlsByKey = Object.fromEntries(designs.filter((image) => imageUrls[image.requestId]).map((image) => [image.key, imageUrls[image.requestId]]));
   const final = task?.final?.state === 'completed' && task.final.content ? parseAgentFinal(task.final.content) : null;
   /** The task's reports, newest first (Light's タスク成果物). */
-  const deliverables: Array<{ key: string; title: string; html: () => string }> = task && wording ? [
+  const deliverables: Array<{ key: string; title: string; html: () => string | { html: string; slides: boolean } }> = task && wording ? [
     ...(merch && final ? [{ key: 'final', title: wording.finalReport.title, html: () => buildAgentFinalHtml(task, urlsByKey) }] : []),
     ...(merch && designsSettled ? [{ key: 'design', title: wording.designReport.title, html: () => buildAgentDesignHtml(task, urlsByKey) }] : []),
     ...(merch && task.structure?.state === 'completed' ? [{ key: 'structure', title: wording.structureReport.title, html: () => buildAgentStructureHtml(task) }] : []),
     // Light's テーマ企画 lists only 参考資料 (its search is not a report of its own).
-    ...(research && !agentThemeSearches(task) ? [{ key: 'research', title: conversation ? wording.researchReport.title : '調査とビジュアル方向レポート', html: () => buildAgentResearchReportHtml(task) }] : []),
+    // The AI's slides when they are written and well formed (Light's report), else the fixed report.
+    ...(research && !agentThemeSearches(task) ? [{ key: 'research', title: conversation ? wording.researchReport.title : '調査とビジュアル方向レポート', html: () => {
+      const slides = buildAgentAiReportHtml(task, conversation ? wording.researchReport.title : '調査とビジュアル方向レポート');
+      return slides ? { html: slides, slides: true } : buildAgentResearchReportHtml(task);
+    } }] : []),
   ] : [];
-  const showDeliverable = (key: string) => { const entry = deliverables.find((item) => item.key === key); if (entry) openReport({ title: entry.title, html: entry.html() }); };
-  const saveDeliverable = (key: string) => { const entry = deliverables.find((item) => item.key === key); if (entry) downloadReport({ title: entry.title, html: entry.html() }); };
+  const reportDoc = (entry: { title: string; html: () => string | { html: string; slides: boolean } }): ReportDoc => { const built = entry.html(); return typeof built === 'string' ? { title: entry.title, html: built } : { title: entry.title, ...built }; };
+  const showDeliverable = (key: string) => { const entry = deliverables.find((item) => item.key === key); if (entry) openReport(reportDoc(entry)); };
+  const saveDeliverable = (key: string) => { const entry = deliverables.find((item) => item.key === key); if (entry) downloadReport(reportDoc(entry)); };
+  const reportRound = task ? agentReportRound(task) : null;
+  const reportState = task ? readAgentReport(task) : null;
+  const reportWriting = Boolean(reportRound && (reportState?.round !== reportRound || reportState.step.state === 'running'));
   const referenceImages = (task?.directionImages?.images ?? []).filter((image) => image.state === 'completed' && imageUrls[image.requestId]);
   const generatedImages = designs.filter((image) => image.state === 'completed' && imageUrls[image.requestId]);
   const stamp = (value?: string) => { if (!value) return ''; const date = new Date(value); const pad = (n: number) => String(n).padStart(2, '0'); return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`; };
@@ -887,7 +951,7 @@ export default function HeavyAgentTaskPage() {
                     <>
                       <p>{wording.researchDone}</p>
                       {/* Light's card says only 「確認待ちの複数方向 · 情報源別のエビデンス充足度とデータ不足」; its sources are inside the report. */}
-                      <ReportCard testId="agent-research-report" title={wording.researchReport.title} note={wording.researchReport.note}
+                      <ReportCard testId="agent-research-report" title={wording.researchReport.title} note={wording.researchReport.note} writing={reportWriting}
                         onOpen={() => showDeliverable('research')} onDownload={() => saveDeliverable('research')} />
                     </>
                   )}

@@ -27,7 +27,7 @@ export type CloudflareDesignAssistantRequestInput = {
   history: { role: 'user' | 'assistant'; content: string }[];
   references: DesignDialogueManifestReference[];
   /** The planning agent: `agent` writes planning text, `agent-research` also searches the web. */
-  mode?: 'agent' | 'agent-research';
+  mode?: 'agent' | 'agent-research' | 'agent-report';
 };
 export type CloudflareDesignAssistantReceipt = {
   requestId: string;

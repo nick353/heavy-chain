@@ -102,7 +102,7 @@ export type ClaudeMessage = { role: 'user' | 'assistant'; content: string | Arra
 /** Free-text Messages API call (e.g. the design consultation chat). Roles are normalised to start with user and alternate. */
 export async function callClaudeMessages(
   env: Env,
-  options: { system: string; messages: ClaudeMessage[]; maxTokens?: number; model?: unknown; timeoutMs?: number },
+  options: { system: string; messages: ClaudeMessage[]; maxTokens?: number; model?: unknown; timeoutMs?: number; effort?: 'low' | 'medium' | 'high' },
   fetchImpl: Fetch = fetch,
 ): Promise<{ text: string; usage: Record<string, number> | null; model: string }> {
   const key = env.ANTHROPIC_API_KEY?.trim();
@@ -122,7 +122,7 @@ export async function callClaudeMessages(
     response = await fetchImpl(`${claudeBaseURL(env)}/v1/messages`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': ANTHROPIC_VERSION },
-      body: JSON.stringify({ model, max_tokens: options.maxTokens ?? 1536, system: options.system, messages }),
+      body: JSON.stringify({ model, max_tokens: options.maxTokens ?? 1536, system: options.system, messages, ...(options.effort ? { output_config: { effort: options.effort } } : {}) }),
       signal: AbortSignal.timeout(options.timeoutMs ?? REQUEST_TIMEOUT_MS),
     });
   } catch {
@@ -131,6 +131,8 @@ export async function callClaudeMessages(
   if (!response.ok) throw new ClaudeTextError(`claude_upstream_${response.status}`, response.status === 429 || response.status === 529 ? 429 : 502);
   const data = await response.json() as { stop_reason?: string; content?: Array<{ type: string; text?: string }>; usage?: { input_tokens?: number; output_tokens?: number } };
   if (data.stop_reason === 'refusal') throw new ClaudeTextError('claude_request_refused', 422);
+  // A cut-off answer is not an answer (the agent's HTML report would end mid-slide).
+  if (options.effort && data.stop_reason === 'max_tokens') throw new ClaudeTextError('claude_output_truncated', 502);
   const text = (data.content ?? []).filter(block => block.type === 'text' && block.text).map(block => block.text).join('');
   if (!text.trim()) throw new ClaudeTextError('claude_empty_response', 502);
   const input = data.usage?.input_tokens, output = data.usage?.output_tokens;
@@ -184,7 +186,7 @@ const httpUrl = (value: unknown): value is string => typeof value === 'string' &
  */
 export async function callClaudeResearch(
   env: Env,
-  options: { system: string; messages: ClaudeMessage[]; model?: unknown; timeoutMs?: number; maxUses?: number },
+  options: { system: string; messages: ClaudeMessage[]; model?: unknown; timeoutMs?: number; maxUses?: number; allowedDomains?: string[]; fallbackWithoutSearch?: boolean },
   fetchImpl: Fetch = fetch,
 ): Promise<ResearchResult> {
   const key = env.ANTHROPIC_API_KEY?.trim();
@@ -195,7 +197,8 @@ export async function callClaudeResearch(
   // max_uses ends the whole code run with an error, so Claude sees none of the results it already fetched (production
   // 2026-11-12: 20 sources returned, report said the search limit left it without data). Directly, only the extra
   // search gets a max_uses_exceeded result and every earlier result stays in Claude's context.
-  const tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: options.maxUses ?? AGENT_RESEARCH_MAX_USES, allowed_callers: ['direct'] }];
+  const tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: options.maxUses ?? AGENT_RESEARCH_MAX_USES, allowed_callers: ['direct'],
+    ...(options.allowedDomains?.length ? { allowed_domains: options.allowedDomains } : {}) }];
   let messages: ClaudeMessage[] = options.messages.filter((message, index) => index > 0 || message.role === 'user');
   let searchEnabled = true;
   // Every search hit is not a source (production 2026-11-12: a Japanese fashion search also returned Wikipedia pages on
@@ -210,7 +213,7 @@ export async function callClaudeResearch(
   const texts: string[] = [];
   let joinedLength = 0;
   let searched = false;
-  let inputTokens = 0, outputTokens = 0, counted = false, resumes = 0;
+  let inputTokens = 0, outputTokens = 0, counted = false, resumes = 0, searchRequests = 0;
   for (let call = 0; call <= AGENT_RESEARCH_MAX_RESUMES + 1; call += 1) {
     const remaining = deadline - Date.now();
     if (remaining <= 1000) throw new ClaudeTextError('claude_request_failed', 502);
@@ -230,14 +233,17 @@ export async function callClaudeResearch(
     }
     if (!response.ok) {
       console.warn('claude_research_upstream_error', response.status, (await response.text().catch(() => '')).slice(0, 500));
-      if (response.status === 400 && searchEnabled && call === 0) { searchEnabled = false; searchErrors.push('web_search_unavailable'); continue; }
+      // A search that only adds to another one (the shop search) is not worth a reply written without searching.
+      if (response.status === 400 && searchEnabled && call === 0 && options.fallbackWithoutSearch !== false) { searchEnabled = false; searchErrors.push('web_search_unavailable'); continue; }
       throw new ClaudeTextError(`claude_upstream_${response.status}`, response.status === 429 || response.status === 529 ? 429 : 502);
     }
-    const data = await response.json() as { stop_reason?: string; content?: ContentBlock[]; usage?: { input_tokens?: number; output_tokens?: number } };
+    const data = await response.json() as { stop_reason?: string; content?: ContentBlock[]; usage?: { input_tokens?: number; output_tokens?: number; server_tool_use?: { web_search_requests?: number } } };
     if (data.stop_reason === 'refusal') throw new ClaudeTextError('claude_request_refused', 422);
     if (Number.isSafeInteger(data.usage?.input_tokens) && Number.isSafeInteger(data.usage?.output_tokens)) {
       inputTokens += data.usage!.input_tokens!; outputTokens += data.usage!.output_tokens!; counted = true;
     }
+    // Searches are billed apart from tokens ($10 per 1,000), so the receipt keeps their count.
+    if (Number.isSafeInteger(data.usage?.server_tool_use?.web_search_requests)) searchRequests += data.usage!.server_tool_use!.web_search_requests!;
     const content = Array.isArray(data.content) ? data.content : [];
     console.log('claude_research_call', JSON.stringify({ call, stop: data.stop_reason ?? null,
       searches: content.filter(block => block.type === 'web_search_tool_result').length,
@@ -300,7 +306,7 @@ export async function callClaudeResearch(
       .map(([url, title]) => ({ url, title: titled(url, title), ...(quotes.has(url) ? { quote: quotes.get(url)! } : {}) })),
     searchUsed: searchEnabled && searched,
     searchErrors: [...new Set(searchErrors)], model,
-    usage: counted ? { prompt_tokens: inputTokens, completion_tokens: outputTokens, total_tokens: inputTokens + outputTokens } : null,
+    usage: counted ? { prompt_tokens: inputTokens, completion_tokens: outputTokens, total_tokens: inputTokens + outputTokens, ...(searchRequests ? { web_search_requests: searchRequests } : {}) } : null,
   };
 }
 

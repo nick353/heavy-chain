@@ -1,6 +1,6 @@
 import type { Env } from './index.ts';
 import { requireBrandRole } from './core.ts';
-import { AGENT_RESEARCH_MAX_USES, AGENT_RESEARCH_TIMEOUT_MS, callClaudeMessages, callClaudeResearch, ClaudeTextError, claudeConfigured, claudeModel, type ClaudeMessage } from './claude-text.ts';
+import { AGENT_RESEARCH_MAX_USES, AGENT_RESEARCH_TIMEOUT_MS, AGENT_THEME_SOURCES_MAX, callClaudeMessages, callClaudeResearch, ClaudeTextError, claudeConfigured, claudeModel, type ClaudeMessage, type ResearchResult } from './claude-text.ts';
 
 // Claude answers when ANTHROPIC_API_KEY is set (the production setup); Workers AI Llama is the fallback only.
 export const DESIGN_ASSISTANT_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
@@ -25,8 +25,12 @@ type Reference = {
   storagePath: string; name: string; sceneAssetKey?: string;
 };
 type Scope = { requestId: string; brandId: string; projectId: string; conversationId: string };
-/** The planning agent (/agent) shares this receipt table: `agent` writes plain planning text, `agent-research` also searches the web. */
-export type DesignAssistantMode = 'agent' | 'agent-research';
+/**
+ * The planning agent (/agent) shares this receipt table: `agent` writes plain planning text, `agent-research` also searches
+ * the web, `agent-report` writes the research report as HTML slides (Light's 「オンラインで表示」 report).
+ */
+export type DesignAssistantMode = 'agent' | 'agent-research' | 'agent-report';
+const AGENT_MODES = new Set<unknown>(['agent', 'agent-research', 'agent-report']);
 type Input = Scope & {
   prompt: string;
   mode?: DesignAssistantMode;
@@ -63,7 +67,7 @@ function scope(v: Record<string, unknown>): v is Record<string, unknown> & Scope
 export const AGENT_PROMPT_MAX_CHARS = 16000;
 function validate(v: unknown): Input | null {
   if (!record(v) || !scope(v) || !keys(v, ['requestId', 'brandId', 'projectId', 'conversationId', 'prompt', 'history', 'references', 'textModel', 'mode']) ||
-    (v.mode !== undefined && v.mode !== 'agent' && v.mode !== 'agent-research') ||
+    (v.mode !== undefined && !AGENT_MODES.has(v.mode)) ||
     !text(v.prompt, v.mode === undefined ? 4000 : AGENT_PROMPT_MAX_CHARS) || !v.prompt.trim() || !Array.isArray(v.history) || v.history.length > 8 ||
     !Array.isArray(v.references) || v.references.length > DESIGN_ASSISTANT_REFERENCE_LIMIT) return null;
   let historyChars = 0;
@@ -88,7 +92,7 @@ function validate(v: unknown): Input | null {
   if (v.textModel !== undefined && !id(v.textModel)) return null;
   return { requestId: v.requestId, brandId: v.brandId, projectId: v.projectId, conversationId: v.conversationId,
     prompt: v.prompt, history, references, ...(typeof v.textModel === 'string' ? { textModel: v.textModel } : {}),
-    ...(v.mode === 'agent' || v.mode === 'agent-research' ? { mode: v.mode } : {}) };
+    ...(AGENT_MODES.has(v.mode) ? { mode: v.mode as DesignAssistantMode } : {}) };
 }
 
 async function readBody(request: Request): Promise<unknown | Response> {
@@ -175,7 +179,7 @@ async function referenceParts(env: Env, owner: string, input: Input): Promise<Co
 function usageFrom(value: unknown): Record<string, number> | null {
   if (!record(value)) return null;
   const usage: Record<string, number> = {};
-  for (const key of ['prompt_tokens', 'completion_tokens', 'total_tokens']) {
+  for (const key of ['prompt_tokens', 'completion_tokens', 'total_tokens', ...AGENT_SHOP_USAGE_KEYS]) {
     if (typeof value[key] === 'number' && Number.isSafeInteger(value[key]) && value[key] >= 0) usage[key] = value[key];
   }
   return Object.keys(usage).length ? usage : null;
@@ -214,6 +218,96 @@ const AGENT_RESEARCH_SYSTEM_PROMPT = [
   'When the research is done, write the line "[調査結果]" and then only the final report in the requested format.',
 ].join('\n\n');
 /**
+ * Light's sources are mostly real products (its 顧客提案 source index starts with 「EC実商品」). Heavy's broad research found few
+ * shop pages (production 2026-11-12: 14% of its sources, 8% with a price, 3 single product pages), so a second search runs
+ * beside it only on the shops of the scope (the request's 「通販サイトの検索先:」 line, src/features/agent/agentFlow.ts). The
+ * broad search is unchanged; the shop search adds its cited products to the report (「## 通販の実商品」), the sources and the
+ * cited sentences. A shop search that fails or cites nothing leaves the research as it was.
+ */
+export const AGENT_SHOP_MAX_USES = 3;
+export const AGENT_SHOP_MAX_SOURCES = 6;
+export const AGENT_SHOP_MAX_CLAIMS = 8;
+const AGENT_RESEARCH_MAX_SOURCES = 20;
+const AGENT_SHOP_LINE = /^通販サイトの検索先:[^\S\n]*(.*)$/m;
+const DOMAIN = /^(?=.{4,100}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+const AGENT_SHOP_USAGE_KEYS = ['web_search_requests', 'shop_prompt_tokens', 'shop_completion_tokens', 'shop_web_search_requests'];
+/** The shops to search, from the request's own line (at most 8 domains, nothing else). */
+export function agentShopDomains(prompt: string): string[] {
+  const line = AGENT_SHOP_LINE.exec(prompt)?.[1] ?? '';
+  return [...new Set(line.split(/[,、\s]+/).map(value => value.trim().toLowerCase()).filter(value => DOMAIN.test(value)))].slice(0, 8);
+}
+const AGENT_SHOP_SYSTEM_PROMPT = [
+  AGENT_SYSTEM_PROMPT,
+  'This time you only look for real products sold on the online shops the web_search tool is limited to. The request below was written for a full research report; ignore its report format and research the products it is about instead: the items, materials, colors and silhouettes it asks for, this season, best sellers and rankings. Prefer single product pages and ranking pages that show prices.',
+  `You can search at most ${AGENT_SHOP_MAX_USES} times.`,
+  'When the search is done, write the line "[調査結果]", then the heading "## 通販の実商品" and 4 to 8 bullets starting with "- ", one product each: the brand and product name, the shop, the price exactly as the page states it (leave it out when the page does not), and what it shows for the plan (material, color, shape, ranking, reviews). Only products from the search results; no URLs.',
+].join('\n\n');
+const shopUsage = (main: Record<string, number> | null, shop: Record<string, number> | null) => {
+  if (!shop) return main;
+  const n = (usage: Record<string, number> | null, key: string) => usage?.[key] ?? 0;
+  return {
+    prompt_tokens: n(main, 'prompt_tokens') + n(shop, 'prompt_tokens'), completion_tokens: n(main, 'completion_tokens') + n(shop, 'completion_tokens'),
+    total_tokens: n(main, 'total_tokens') + n(shop, 'total_tokens'), web_search_requests: n(main, 'web_search_requests') + n(shop, 'web_search_requests'),
+    shop_prompt_tokens: n(shop, 'prompt_tokens'), shop_completion_tokens: n(shop, 'completion_tokens'), shop_web_search_requests: n(shop, 'web_search_requests'),
+  };
+};
+/**
+ * The broad research with the shop search's products: each product is one of its cited sentences (an uncited line is not
+ * kept, so every product in the report has its page), after the broad report; the shop pages after the broad search's
+ * pages (20 in all); the cited sentences after the report's (25 in all, so テーマ企画 can cite the products too).
+ */
+export function mergeShopResearch(main: ResearchResult, shop: ResearchResult | null): ResearchResult {
+  if (!shop) return main;
+  const usage = shopUsage(main.usage, shop.usage);
+  const plain = (value?: string) => (value ?? '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+  const seen = new Set(main.claims.map(claim => plain(claim.quote)));
+  const claims = shop.claims.filter(claim => plain(claim.quote) && !/^#|通販の実商品$/.test(plain(claim.quote)) && !seen.has(plain(claim.quote))).slice(0, AGENT_SHOP_MAX_CLAIMS);
+  if (!claims.length) return { ...main, usage };
+  const pages = new Set(claims.map(claim => claim.url));
+  const shopSources = shop.sources.filter(source => pages.has(source.url) && !main.sources.some(page => page.url === source.url)).slice(0, AGENT_SHOP_MAX_SOURCES);
+  return {
+    ...main,
+    text: `${main.text.trim()}\n\n## 通販の実商品\n${claims.map(claim => `- ${claim.quote}`).join('\n')}`,
+    sources: [...main.sources.slice(0, AGENT_RESEARCH_MAX_SOURCES - shopSources.length), ...shopSources],
+    claims: [...main.claims.slice(0, AGENT_THEME_SOURCES_MAX - claims.length), ...claims],
+    searchUsed: main.searchUsed || shop.searchUsed,
+    usage,
+  };
+}
+const textBlocks = (messages: ClaudeMessage[], change: (blocks: Array<Record<string, unknown>>) => Array<Record<string, unknown>>) =>
+  messages.map((message, index) => index === messages.length - 1 && Array.isArray(message.content) ? { ...message, content: change(message.content as Array<Record<string, unknown>>) } : message);
+/** The research step: the broad search and, beside it, the shop search (both at once, within the same time limit). */
+export async function runAgentResearch(env: Env, prompt: string, messages: ClaudeMessage[], model: unknown, fetchImpl: typeof fetch = fetch): Promise<ResearchResult> {
+  const domains = agentShopDomains(prompt);
+  // The broad search does not see the shop line; the shop search gets its job after the request.
+  const broad = textBlocks(messages, blocks => blocks.map(block => block.type === 'text' && typeof block.text === 'string' ? { ...block, text: block.text.replace(AGENT_SHOP_LINE, '').trim() } : block));
+  const shopping = domains.length ? callClaudeResearch(env, {
+    system: AGENT_SHOP_SYSTEM_PROMPT, model, timeoutMs: AGENT_RESEARCH_TIMEOUT_MS, maxUses: AGENT_SHOP_MAX_USES, allowedDomains: domains, fallbackWithoutSearch: false,
+    messages: textBlocks(broad, blocks => [...blocks, { type: 'text', text: `（この回の役目）上の依頼のうち、${domains.join('・')} で売られている実商品だけを調べる。書き方はシステムの指示に従う。` }]),
+  }, fetchImpl).catch((reason: unknown) => { console.warn('claude_shop_research_failed', reason instanceof ClaudeTextError ? reason.code : 'unknown'); return null; }) : Promise.resolve(null);
+  const [main, shop] = await Promise.all([callClaudeResearch(env, { system: AGENT_RESEARCH_SYSTEM_PROMPT, messages: broad, model, timeoutMs: AGENT_RESEARCH_TIMEOUT_MS }, fetchImpl), shopping]);
+  return mergeShopResearch(main, shop);
+}
+/**
+ * Light's research report (read 2026-11-12 from its 新商品企画 and 顧客提案 reports) is written by its AI each time as 1600x900
+ * HTML slides. The app supplies the slide stylesheet and keeps only safe markup (src/features/agent/agentReport.ts); the AI
+ * writes the palette and the pages, from the facts in the request only.
+ */
+export const AGENT_REPORT_TIMEOUT_MS = 300_000;
+export const AGENT_REPORT_MAX_TOKENS = 32_000;
+/** Light's two reports were 36,119 and 37,792 characters. */
+export const AGENT_REPORT_MAX_CHARS = 120_000;
+export const AGENT_REPORT_SYSTEM_PROMPT = [
+  'You write the research and visual-direction report of an apparel planning task inside Heavy Chain, as HTML slides in Japanese, like a strategy deck an apparel planner hands to a client.',
+  'Reply with exactly two elements and nothing before or after them: one <style> element, then one <main class="report"> element. No <html>, <head>, <body>, <script>, <img>, <iframe>, <svg>, <link>, forms, event attributes (onclick and the like), url(), @import or any external resource; the app drops them.',
+  'In <style>, set only :root color variables for a palette that suits the collection (--page-bg, --color-base, --color-surface, --color-ink, --color-muted, --color-line, --color-accent, --color-on-accent; muted, refined, readable on screen), plus at most 10 short rules of your own that use the classes below.',
+  'Every page: <section class="report-page" data-page-id="page-NN"> (add class "surface" for a lighter page) with <header class="page-header"><h2>page title</h2><span class="kicker">English label</span></header>, <div class="page-body">…</div>, and <footer class="page-footer"><span>the band text given in the request</span><span>NN</span></footer>. The cover is <section class="report-page cover" data-page-id="page-01"> with a small English line, <div class="rule"></div>, <h1>, <p class="sub"> and <div class="meta">, without header or footer. Each page is a fixed 1600x900 slide: keep its content inside it (at most two cards per column, about six short bullets per card).',
+  'Classes the app styles: two-col, three-col, card, kicker-pill, stat and stat-sub (a big figure with its note), quote, tag, tag outline, note-box, small, muted, lead, table (th/td are styled), media-grid (style="--columns: 4; --rows: 1;"), media-item, media-frame media-link, media-empty, src, dir-hero (direction page: text on the left, evidence on the right), dir-badge.',
+  'Evidence card (one per source, as Light shows its products): <figure class="media-item"><a class="media-frame media-link" href="the exact URL" target="_blank" aria-label="ソースを見る"><span class="media-empty">the site name</span></a><figcaption><b>the product, brand or page name</b> the price only when the source text states it<br><span class="src">the site / 収集 the date</span></figcaption></figure>. There are no product images yet: never add an <img>.',
+  'Pages, in order: the cover; the brief and the research scope (for 顧客提案 a table of the requirement IDs R01…); the market and the findings by source; the trends (color, material, silhouette, details); one or two evidence pages of cards; one page per direction (its code D1… or D01…, concept, fit with the evidence and requirements, colors and materials, risks to check, and its evidence cards); a comparison table of the directions with the next step; and the last page with the sources table the request describes. Nine to twelve pages.',
+  'Facts: use only what the request gives (the request, the requirements, the research report, the numbered sources with their text, the directions). Never add figures, prices, brands, products, dates or sources that are not there. Link only the URLs listed, exactly as written. When the research lacks something (a region, a category, social posts, prices), say so in a note-box, as a disclosure, instead of filling it in.',
+].join('\n\n');
+/**
  * `agent-research` content: the report, then `[出典]` lines "- title | url | cited sentence", then `[検索] ok|unavailable|error:<codes>`,
  * then (Claude's research) `[引用]` lines "- title | url | the report's cited sentence" for テーマ企画's 参考資料. `[引用]` comes
  * after `[検索]` so the readers that stop there (the report, 新商品企画, the chat, its history) never see it.
@@ -241,8 +335,12 @@ async function infer(env: Env, input: Input, parts: ContentPart[], provider: Ass
   if (provider.provider === 'anthropic') {
     const messages: ClaudeMessage[] = [...input.history, { role: 'user', content: claudeBlocks(parts) }];
     if (input.mode === 'agent-research') {
-      const result = await callClaudeResearch(env, { system: AGENT_RESEARCH_SYSTEM_PROMPT, messages, model: provider.model, timeoutMs: AGENT_RESEARCH_TIMEOUT_MS });
+      const result = await runAgentResearch(env, input.prompt, messages, provider.model);
       return { response: formatAgentResearchContent(result), usage: result.usage };
+    }
+    if (input.mode === 'agent-report') {
+      const result = await callClaudeMessages(env, { system: AGENT_REPORT_SYSTEM_PROMPT, messages, maxTokens: AGENT_REPORT_MAX_TOKENS, model: provider.model, timeoutMs: AGENT_REPORT_TIMEOUT_MS, effort: 'medium' });
+      return { response: result.text, usage: result.usage };
     }
     const result = await callClaudeMessages(env, { system, messages, maxTokens: input.mode ? AGENT_TEXT_MAX_TOKENS : 2560, model: provider.model, timeoutMs: input.mode ? AGENT_TEXT_TIMEOUT_MS : DESIGN_ASSISTANT_TIMEOUT_MS });
     return { response: result.text, usage: result.usage };
@@ -349,7 +447,7 @@ async function complete(env: Env, input: Input, parts: ContentPart[], provider: 
   let errorCode: string | null = 'design_assistant_provider_unknown';
   try {
     const result = await inferAgent(env, input, parts, provider);
-    if (record(result) && typeof result.response === 'string' && result.response.trim().length > 0 && result.response.length <= 65536) {
+    if (record(result) && typeof result.response === 'string' && result.response.trim().length > 0 && result.response.length <= (input.mode === 'agent-report' ? AGENT_REPORT_MAX_CHARS : 65536)) {
       content = result.response; usage = usageFrom(result.usage); state = 'completed'; errorCode = null;
     }
   } catch (caught) {

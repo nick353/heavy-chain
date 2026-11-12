@@ -12,6 +12,7 @@ import { AGENT_DIALOGUE_SCENES } from './agentDialogue';
 import { AGENT_TASK_CONVERSATION_PREFIX, AGENT_TASK_KIND, readAgentTask, type AgentAssistantStep, type AgentAttachment, type AgentScene, type AgentTask, type AgentTaskDocument } from './agentFlow';
 export * from './agentMerch';
 export * from './agentDialogue';
+export * from './agentReport';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 

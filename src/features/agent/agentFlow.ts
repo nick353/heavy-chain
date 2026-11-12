@@ -18,8 +18,12 @@ export const AGENT_TASK_CONVERSATION_PREFIX = 'heavy-agent-';
 export type AgentStepState = 'running' | 'completed' | 'failed' | 'unknown';
 /** `at`: when the step was asked for; a 「修正・補足する」 note written after it asks for a revised one. */
 export type AgentAssistantStep = { requestId: string; state: AgentStepState; content?: string; errorCode?: string; at?: string };
-/** `at`: when the round was asked for; a 「修正・補足する」 note written after it asks for a revised round. */
-export type AgentRound = { step: AgentAssistantStep; summary: string; themes: string[]; at?: string };
+/**
+ * `at`: when the round was asked for; a 「修正・補足する」 note written after it asks for a revised round. `evidence`: the
+ * research sources the round's prompt numbered 〔1〕〔2〕… (テーマ企画 since 2026-11-12), in that order; the answer marks its
+ * sentences with those numbers and 参考資料 lists each marked sentence under its source (Light: its answer's sentence).
+ */
+export type AgentRound = { step: AgentAssistantStep; summary: string; themes: string[]; at?: string; evidence?: string[] };
 export type AgentImageStep = { requestId: string; state: AgentStepState; prompt: string; jobId?: string; imageId?: string; storagePath?: string; errorCode?: string };
 /** Where in the conversation a note was written; it is shown after that stage's block. */
 export type AgentNoteStage = 'requirements' | 'scope' | 'research' | 'themes' | 'plan' | 'structure' | 'designs' | 'final';
@@ -80,6 +84,8 @@ export type AgentTask = {
    * (`after`: the turn it follows, `plan`: the 執行書 turn whose styles are generated into `designs`). */
   turns?: AgentTurn[];
   dialogueStart?: { after: string; plan: string; at: string } | null;
+  /** Light's research report as slides its AI writes (2026-11-12): one per directions round (`round` is its request). */
+  report?: { round: string; step: AgentAssistantStep } | null;
 };
 export type AgentTaskDocument = { id: string; title: string; revision: number; updatedAt: string; task: AgentTask; snapshot: Record<string, unknown> };
 
@@ -130,6 +136,39 @@ export function agentScopeOptions(regions: readonly string[], kind: 'ec' | 'sns'
 }
 /** Light pre-selects 中国 and nothing else. */
 export const DEFAULT_AGENT_SCOPE = { regions: ['中国'], ec: [] as string[], sns: [] as string[], other: '' };
+/**
+ * Light's sources are mostly real products (its 顧客提案 index starts with 「EC実商品」; 6 of its 新商品企画 report's links are
+ * product pages). Heavy's research came from one broad web search: in production 2026-11-12 only 14% of its sources were
+ * shop pages, 8% had a price, and 3 were single product pages. So the research also searches the shops of the scope (the
+ * server runs that search only on these domains, beside the broad one). Shops whose pages a web search cannot reach
+ * (TikTok Shop, Shopee's seller pages) have none.
+ */
+const AGENT_SHOP_DOMAINS: Record<string, string[]> = {
+  淘宝: ['taobao.com'], 天猫: ['tmall.com'], 京东: ['jd.com'], 唯品会: ['vip.com'], 小红书: ['xiaohongshu.com'],
+  ZOZOTOWN: ['zozo.jp'], 'Rakuten Fashion': ['rakuten.co.jp'], 'Amazon Japan': ['amazon.co.jp'], Mercari: ['mercari.com'], 'Yahoo! Shopping': ['shopping.yahoo.co.jp'],
+  MAGASEEK: ['magaseek.com'], SHOPLIST: ['shop-list.com'],
+  'Amazon Fashion': ['amazon.com'], Walmart: ['walmart.com'], SHEIN: ['shein.com'], Temu: ['temu.com'], Nordstrom: ['nordstrom.com'], 'Macy’s': ['macys.com'],
+  Poshmark: ['poshmark.com'], Depop: ['depop.com'], ThredUp: ['thredup.com'], eBay: ['ebay.com'],
+  Zalando: ['zalando.co.uk'], Vinted: ['vinted.com'], ASOS: ['asos.com'], 'ABOUT YOU': ['aboutyou.com'], Farfetch: ['farfetch.com'],
+  Jumia: ['jumia.com.ng'], Takealot: ['takealot.com'], Konga: ['konga.com'], Superbalist: ['superbalist.com'], Jiji: ['jiji.ng'],
+};
+/** No shop chosen: the region's large fashion shops. */
+const AGENT_REGION_SHOPS: Record<string, string[]> = {
+  中国: ['tmall.com', 'taobao.com', 'jd.com'], 日本: ['zozo.jp', 'rakuten.co.jp', 'shopping.yahoo.co.jp', 'amazon.co.jp'],
+  北美: ['nordstrom.com', 'amazon.com', 'shein.com'], 欧洲: ['zalando.co.uk', 'asos.com', 'farfetch.com'], 非洲: ['jumia.com.ng', 'takealot.com'],
+};
+/** テーマ企画 has no scope: the shops Light's テーマ企画 参考資料 listed (rakuten.co.jp, net-a-porter.com, minne.com…) and the large Japanese ones. */
+const AGENT_THEME_SHOPS = ['zozo.jp', 'rakuten.co.jp', 'shopping.yahoo.co.jp', 'minne.com', 'net-a-porter.com', 'ssense.com'];
+export const AGENT_SHOP_DOMAINS_MAX = 8;
+/** The shops the research also searches, as domains (the server reads them from the 「通販サイトの検索先:」 line). */
+export function agentShopDomains(task: Pick<AgentTask, 'flow' | 'subtype' | 'scope'>): string[] {
+  if (agentThemeSearches(task)) return AGENT_THEME_SHOPS.slice(0, AGENT_SHOP_DOMAINS_MAX);
+  if (!task.scope) return [];
+  const chosen = task.scope.ec.flatMap(value => AGENT_SHOP_DOMAINS[value] ?? []);
+  const domains = chosen.length ? chosen : task.scope.regions.flatMap(region => AGENT_REGION_SHOPS[region] ?? []);
+  return [...new Set(domains)].slice(0, AGENT_SHOP_DOMAINS_MAX);
+}
+const shopLine = (task: AgentTask) => { const domains = agentShopDomains(task); return domains.length ? `通販サイトの検索先: ${domains.join(', ')}` : ''; };
 /** Dropping a region also drops the platforms only it offered. */
 export function pruneAgentScope<T extends { regions: string[]; ec: string[]; sns: string[] }>(scope: T): T {
   const ec = agentScopeOptions(scope.regions, 'ec').map(option => option.value);
@@ -270,6 +309,7 @@ export function agentResearchPrompt(task: AgentTask): string {
     'この調査範囲について、ウェブ検索で最新の情報（市場・気候、トレンド、各プラットフォームの売れ筋や価格帯、SNSで話題の着こなし、着用シーン）を集めてください。',
     '調べ終えたら「[調査結果]」の行のあとに、次の見出しを順に使い、各見出しの下は「- 」で始まる箇条書きで、数字や具体例を入れて書いてください（URLは書かない）:',
     '「## 市場と気候」「## トレンド」「## プラットフォームと競合の動き」「## ターゲットと着用シーン」「## 価格と販売ポテンシャル」「## 企画への示唆」。',
+    shopLine(task),
   ].filter(Boolean).join('\n');
 }
 /** `quote`: the sentence the report cited from the page (Light shows it under the source in 参考資料). */
@@ -390,6 +430,7 @@ function agentThemeResearchPrompt(task: AgentTask): string {
     'この依頼のテーマを考えるために、ウェブ検索で最新の情報（シーズンのトレンド、色・素材・柄、注目のアイテムとディテール、コレクションや店頭の事例、SNSで話題の着こなし）を集めてください。',
     '調べ終えたら「[調査結果]」の行のあとに、次の見出しを順に使い、各見出しの下は「- 」で始まる箇条書きで、数字や具体例を入れて書いてください（URLは書かない）:',
     '「## トレンド」「## 色と素材」「## アイテムとディテール」「## 事例と着用シーン」「## テーマへの示唆」。',
+    shopLine(task),
   ].filter(Boolean).join('\n');
 }
 /**
@@ -402,13 +443,72 @@ export function agentRoundSources(task: AgentTask) {
   for (const round of [...task.rounds].reverse()) {
     if (round.step.state === 'completed' && round.step.content && /^\[検索\]/m.test(round.step.content)) return listed(parseAgentResearch(round.step.content));
   }
-  return agentThemeSearches(task) && task.research?.state === 'completed' && task.research.content ? listed(parseAgentResearch(task.research.content)) : null;
+  const research = agentThemeSearches(task) && task.research?.state === 'completed' && task.research.content ? parseAgentResearch(task.research.content) : null;
+  if (!research) return null;
+  // A round written with numbered evidence lists the answer's own sentences (Light: the sentence on screen, its source's
+  // site): an unmarked sentence is not listed, so an answer that marked none lists none.
+  const cited = [...task.rounds].reverse().find(round => round.step.state === 'completed' && round.step.content);
+  if (cited?.evidence) return { ...research, sources: agentAnswerSources(cited.step.content!, cited.evidence, research) };
+  return listed(research);
 }
 /** A テーマ企画 round searches the web itself only when the task has no research to write from (tasks made before it). */
 export const agentThemeRoundSearches = (task: AgentTask) => agentThemeSearches(task) && task.research?.state !== 'completed';
 
+/**
+ * The research a テーマ企画 answer may cite, numbered for its prompt: the report's cited sentences with their source (`[引用]`,
+ * at most 25) or, for research written before them, the cited pages (`[出典]`). Each has a site, so 参考資料 can name it.
+ */
+export const AGENT_THEME_EVIDENCE_MAX = 25;
+export function agentThemeEvidence(task: AgentTask): AgentSource[] {
+  if (!agentThemeSearches(task) || task.research?.state !== 'completed' || !task.research.content) return [];
+  const research = parseAgentResearch(task.research.content);
+  return (research.claims ?? research.sources).filter(source => /^https?:\/\//i.test(source.url)).slice(0, AGENT_THEME_EVIDENCE_MAX);
+}
+/** 〔3〕 or 〔1〕〔3〕 or 〔1、3〕: the evidence numbers the theme answer puts after a sentence (never shown on screen). */
+const CITE_MARKS = /(?:\s*〔\s*\d{1,2}(?:\s*[,，、・]\s*\d{1,2})*\s*〕)+/g;
+export const stripAgentCiteMarks = (value: string) => value.replace(CITE_MARKS, '');
+/**
+ * Light's テーマ企画 参考資料 (read 2026-11-12, 23 tasks): one entry per sentence of its answer that a source backs, under
+ * that sentence, in the answer's order, the same site again for another sentence, never one sentence twice, at most 25.
+ * The answer marks a sentence with the evidence numbers; the entry is the sentence without its marks, under the first
+ * number's source. A sentence with no valid number is not listed (no sentence is made up).
+ */
+export function agentAnswerSources(content: string, evidence: string[], research: Pick<ParsedResearch, 'sources' | 'claims'>): AgentSource[] {
+  const raw = content.replace(/\r/g, '');
+  const tail = raw.search(/^\[出典\]$|^\[検索\]/m);
+  const body = tail >= 0 ? raw.slice(0, tail) : raw;
+  const themeAt = body.search(/\[テーマ\]|【テーマ】/);
+  const summary = (themeAt >= 0 ? body.slice(0, themeAt) : body).replace(/\[概要\]|【概要】/g, '');
+  const titles = new Map([...(research.claims ?? []), ...research.sources].map(source => [source.url, source.title]));
+  const entries: AgentSource[] = [];
+  const seen = new Set<string>();
+  let from = 0;
+  for (const match of summary.matchAll(CITE_MARKS)) {
+    const at = match.index!;
+    const before = summary.slice(from, at);
+    from = at + match[0].length;
+    // The sentence runs from the last end of a sentence (or line) before it; its own closing 。 stays with it.
+    const trimmed = before.replace(/\s+$/, '');
+    const closing = /[。！？!?]$/.test(trimmed) ? 1 : 0;
+    const head = trimmed.slice(0, trimmed.length - closing);
+    const start = Math.max(head.lastIndexOf('。'), head.lastIndexOf('！'), head.lastIndexOf('？'), head.lastIndexOf('\n')) + 1;
+    const sentence = trimmed.slice(start).replace(/^\s*(?:[-・*•]\s*|\d+[.)．]\s+)/, '').replace(/\s+/g, ' ').trim();
+    const numbers = [...match[0].matchAll(/\d{1,2}/g)].map(number => Number(number[0]));
+    const url = numbers.map(number => evidence[number - 1]).find(Boolean);
+    const plain = sentence.replace(/\*\*/g, '').trim();
+    if (!url || !plain || seen.has(plain)) continue;
+    seen.add(plain);
+    const quote = sentence.length > 160 ? `${sentence.slice(0, 159).replace(/(^|[^*])\*$/, '$1')}…` : sentence;
+    entries.push({ title: titles.get(url) ?? url, url, quote: cleanAgentQuote(quote) });
+    if (entries.length >= AGENT_THEME_SOURCES_LIMIT) break;
+  }
+  return entries;
+}
+const AGENT_THEME_SOURCES_LIMIT = 25;
+
 export function themePrompt(task: AgentTask): string {
   const previous = task.rounds.flatMap((round) => round.themes);
+  const evidence = researchContext(task) ? agentThemeEvidence(task) : [];
   return [
     `あなたはアパレル企業の企画担当アシスタントです。業務シーン: ${task.scene}（${task.subtype}）。目的: ${sceneGuide[task.scene]}。`,
     task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile.slice(0, 1000)}` : '',
@@ -417,6 +517,11 @@ export function themePrompt(task: AgentTask): string {
     ...noteLines(task),
     researchContext(task),
     researchContext(task) ? 'テーマはウェブ調査の結果を根拠に考えてください。' : '',
+    // Light's 参考資料 quotes its answer's own sentences: the answer marks each sentence with the evidence it rests on.
+    ...(evidence.length ? [
+      `調査の根拠（〔番号〕サイト：調査で分かったこと）:\n${evidence.map((source, index) => `〔${index + 1}〕${agentSourceSite(source.url)}：${cut(stripAgentCiteMarks(source.quote ?? source.title).replace(/\*\*/g, ''), 110)}`).join('\n')}`,
+      '[概要] の文のうち、上の「調査の根拠」に基づく文には、文の終わり（句点の直後）にその根拠の番号を〔1〕のように付ける（2つ以上なら〔1〕〔3〕）。一覧に無い内容の文と、[テーマ] の行には番号を付けない。番号は一覧にあるものだけを使う。',
+    ] : []),
     previous.length ? `前回提案したテーマ（${previous.join(' / ').slice(0, 1500)}）は採用されませんでした。方向性の違う新しいテーマを提案してください。` : '',
     '次の形式だけで、日本語で答えてください。',
     '[概要]',
@@ -464,7 +569,8 @@ export function agentImagePrompt(prompt: string): string {
 export function parseThemeResponse(content: string): { summary: string; themes: string[] } {
   const raw = content.replace(/\r/g, '');
   const tail = raw.search(/^\[出典\]$/m);
-  const normalized = (tail >= 0 ? raw.slice(0, tail) : raw.replace(/^\[検索\].*$/m, '')).trim();
+  // The evidence numbers (〔1〕) only tie the sentences to 参考資料; the screen shows the answer without them.
+  const normalized = stripAgentCiteMarks(tail >= 0 ? raw.slice(0, tail) : raw.replace(/^\[検索\].*$/m, '')).trim();
   const themeIndex = normalized.search(/\[テーマ\]|【テーマ】/);
   const summaryPart = (themeIndex >= 0 ? normalized.slice(0, themeIndex) : normalized).replace(/\[概要\]|【概要】/g, '').trim();
   const themePart = themeIndex >= 0 ? normalized.slice(themeIndex) : normalized;
@@ -495,6 +601,17 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': 
  * has no product cards, so the link sits in the row. At most 15 rows: the most links seen in Light's reports.
  */
 export const AGENT_REPORT_SOURCES_MAX = 15;
+/** Light's 新商品企画 report linked 6 product pages; at most that many of the 15 rows are kept for shop pages. */
+export const AGENT_REPORT_SHOP_ROWS = 6;
+/**
+ * The report's rows: the research's shop search adds its product pages after the broad search's pages, so up to 6 shop
+ * pages keep their place among the 15 rows (the evidence can show real products, as Light's does), in the research's order.
+ */
+export function agentReportSourceList<T extends { url: string }>(sources: readonly T[]): T[] {
+  const shops = sources.filter(source => agentSourceKind(source.url) === 'EC').slice(0, AGENT_REPORT_SHOP_ROWS);
+  const chosen = new Set([...shops, ...sources.filter(source => !shops.includes(source))].slice(0, AGENT_REPORT_SOURCES_MAX));
+  return sources.filter(source => chosen.has(source));
+}
 const EC_SITES = new Set(['rakuten.co.jp', 'amazon.co.jp', 'amazon.com', 'zozo.jp', 'tmall.com', 'taobao.com', 'jd.com', 'vip.com', 'shein.com', 'temu.com',
   'nordstrom.com', 'macys.com', 'poshmark.com', 'depop.com', 'thredup.com', 'ebay.com', 'walmart.com', 'etsy.com', 'minne.com', 'creema.jp', 'qoo10.jp',
   'mercari.com', 'buyma.com', 'magaseek.com', 'locondo.jp', 'asos.com', 'farfetch.com', 'net-a-porter.com', 'mytheresa.com', 'ssense.com', 'revolve.com',
@@ -535,7 +652,7 @@ function reportSourceIndex(research: ParsedResearch | null, collectedAt?: string
   const head = '<div class="index-head"><h2>ソース一覧</h2><span class="index-label">SOURCE INDEX</span></div>';
   if (!research?.sources.length) return `<section class="index">${head}<p class="muted">${research?.search === 'ok' ? '参照した資料はありません。' : 'ウェブ検索を使えませんでした。この調査結果はAIモデルの知識に基づいています。'}</p></section>`;
   const collected = localDate(collectedAt);
-  const rows = research.sources.slice(0, AGENT_REPORT_SOURCES_MAX).map((source, index) => {
+  const rows = agentReportSourceList(research.sources).map((source, index) => {
     // 内容: the sentence the research cited from the page (the search tool's Markdown, so its escapes such as \\ are undone),
     // or else the page's title.
     const content = source.quote ? cleanAgentQuote(source.quote).replace(/\*\*/g, '').replace(/\\([\\`*_{}[\]()#+\-.!|~<>])/g, '$1')

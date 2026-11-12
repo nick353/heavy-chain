@@ -204,6 +204,6 @@ test('the task page runs Light\'s steps after the directions with Heavy\'s own i
     assert.ok(page.includes(text), text);
   assert.doesNotMatch(page, /<dt className="text-xs text-neutral-500">業務シーン<\/dt>/);
   assert.match(page, /\{source\.quote \? <SourceQuote text=\{source\.quote\} \/> : source\.title\}/);
-  // Attached images go with every step as references.
-  assert.match(page, /const references = docRef\.current \? agentReferenceImages\(docRef\.current\.task\) : \[\];/);
+  // Attached images go with every step as references, except the slides, which are written from the research's text only.
+  assert.match(page, /const references = docRef\.current && kind !== 'report' \? agentReferenceImages\(docRef\.current\.task\) : \[\];/);
 });
