@@ -14,6 +14,7 @@ export * from './agentMerch';
 export * from './agentDialogue';
 export * from './agentReport';
 export * from './agentProducts';
+export * from './agentHearing';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 
@@ -65,7 +66,9 @@ export async function createAgentTask(input: { brandId: string; scene: AgentScen
     // straight to the themes, with web sources under 参考資料.
     // Its インスピレーション and AIグラフィックデザイン are one chat (questions → directions → reference images → 執行書 → 開始).
     ...(AGENT_CONVERSATION_SUBTYPES.includes(input.subtype) ? { flow: 'conversation' as const, requirements: null, notes: [], aligned: null, scope: null, research: null }
-      : AGENT_DIALOGUE_SCENES.includes(input.scene) ? { flow: 'dialogue' as const, turns: [], dialogueStart: null, notes: [] } : { notes: [] }),
+      : AGENT_DIALOGUE_SCENES.includes(input.scene) ? { flow: 'dialogue' as const, turns: [], dialogueStart: null, notes: [] }
+        // Light's テーマ企画 first asks for what its plan needs (category, field, brand, season), then searches.
+        : { notes: [], ...(input.subtype === 'テーマ企画' ? { hearing: { steps: [], answers: [] } } : {}) }),
     ...(input.attachments?.length ? { attachments: input.attachments.slice(0, 12) } : {}) };
   const created = await api().createCanvasDocument({ id, brand_id: input.brandId, title, snapshot: { version: 1, name: title, objects: [], agentTask: task } });
   const document = toAgentTaskDocument(created);
