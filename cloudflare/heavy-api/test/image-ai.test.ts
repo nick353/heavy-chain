@@ -896,3 +896,24 @@ test('the innerwear fitting keeps the model photo frame, not the garment photo f
   const fitted=parseImageInput('edit-image',{...input,generationRoute:'innerwear',imageUrls:[ref(512,288),ref(288,384)]} as never,{ provider:'workers_ai', model:INNERWEAR_IMAGE_MODEL } as never);
   assert.deepEqual([fitted.width,fitted.height],[768,1024]);
 });
+
+test('画質 4K through the image route: the newest model draws 2480x3312, only the rest to 4096 is enlarged, and the candidate keeps how',async t=>{
+  const s=imageSetup(); const originalFetch=globalThis.fetch;
+  t.after(()=>{ globalThis.fetch=originalFetch; s.db.sql.close(); });
+  s.env.AI_IMAGE_PROVIDER='openai'; s.env.OPENAI_IMAGE_API_KEY='local-direct-4k-key'; s.env.AI_IMAGE_TIMEOUT_MS='180000';
+  const jpeg=(width:number,height:number)=>{ const bytes=new Uint8Array([255,216,255,192,0,17,8,0,0,0,0,3,1,34,0,2,17,1,3,17,1,255,218,255,217]);
+    new DataView(bytes.buffer).setUint16(7,height); new DataView(bytes.buffer).setUint16(9,width); return bytes; };
+  const sizes: unknown[]=[];
+  (s.env as unknown as Record<string,unknown>).IMAGES={ input:()=>({ transform:(size:{width:number;height:number})=>{ sizes.push(size); return {
+    output:async()=>({ response:()=>new Response(jpeg(size.width,size.height) as BufferSource) }) }; } }) };
+  const models: unknown[]=[];
+  globalThis.fetch=async(_input: RequestInfo|URL, init?: RequestInit)=>{ const form=init?.body as FormData; models.push(form.get('model'));
+    return Response.json({data:[{b64_json:Buffer.from(jpeg(2480,3312)).toString('base64')}],usage:{input_tokens:900,output_tokens:6000}},{headers:{'x-request-id':'req_direct_4k_route'}}); };
+  const id=crypto.randomUUID(); const { width, height, ...body }=s.input() as Record<string, unknown>; void width; void height;
+  const result=await json(await s.call(url+'edit-image','alice',{...body,aspectRatio:'3:4',resolution:'4k',imageUrls:[referenceDataUrl(fiveOrderedReferences()[0])]},id));
+  assert.equal(result.success,true); assert.deepEqual(models,['gpt-image-2.6-sunburst']);
+  assert.deepEqual(sizes,[{ width:3067, height:4096, fit:'cover' }]);
+  const row=s.db.sql.prepare('SELECT width,height,content_type,descriptor FROM heavy_ai_candidates WHERE request_id=?').get(id) as { width:number; height:number; content_type:string; descriptor:string };
+  assert.deepEqual([row.width,row.height,row.content_type],[3067,4096,'image/jpeg']);
+  assert.deepEqual(JSON.parse(row.descriptor).direct4K,{ model:'gpt-image-2.6-sunburst', size:'2480x3312', outcome:'drawn', drawnSize:'2480x3312', usage:{ inputTokens:900, outputTokens:6000 } });
+});

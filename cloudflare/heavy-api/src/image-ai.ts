@@ -632,13 +632,13 @@ async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageIn
       break;
     }
     const latency = Date.now()-started;
-    let image;
+    let image; let drawnSize: string | undefined;
     try {
       if (!isRecord(output) || typeof output.image !== 'string') throw new Error('invalid');
       image = decodeImage(output.image,false);
       const expected = provider.provider === 'openai' ? openAIExpectedDimensions(input.width,input.height,typeof output.providerModel === 'string' ? output.providerModel : undefined) : [input.width,input.height];
       if (image.width !== expected[0] || image.height !== expected[1]) throw new Error('dimensions');
-      const drawn = image;
+      const drawn = image; drawnSize = `${drawn.width}x${drawn.height}`;
       // 画質 1K / 4K: the long edge Light uses; when that cannot be made the 2K result below is kept.
       const sized = input.resolution ? await sizeForResolution(env,drawn,input.resolution) : null;
       if (sized) image = sized;
@@ -658,8 +658,10 @@ async function executeAdmitted(env: Env, auth: JobAuth, row: Row, input: ImageIn
     }
     const estimate = imageEstimate(input); const checksum = await sha256(image.bytes); const imageId = `${jobId}-${index}`;
     const providerTaskId = isRecord(output) && typeof output.providerTaskId === 'string' ? output.providerTaskId : null;
+    // 画質 4K: which model drew it, at what size, and its tokens (the stored copy may be enlarged to 4096 afterwards).
+    const direct4K = isRecord(output) && isRecord(output.direct4K) ? { ...output.direct4K, drawnSize } : null;
     const descriptor = isRecord(input.candidates[index].descriptor)
-      ? { ...input.candidates[index].descriptor, ...(providerTaskId ? { providerTaskId } : {}) }
+      ? { ...input.candidates[index].descriptor, ...(providerTaskId ? { providerTaskId } : {}), ...(direct4K ? { direct4K } : {}) }
       : input.candidates[index].descriptor;
     // Record immutable output identity BEFORE writing R2, so a lost R2 or D1
     // response can finish this save without paying for another inference.
