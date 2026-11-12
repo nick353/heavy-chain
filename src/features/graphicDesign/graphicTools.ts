@@ -262,6 +262,19 @@ export function removeBackground(data: Uint8ClampedArray, width: number, height:
 /** Light's demo draws four proposals per run; the server plans at most 4 candidates per request. */
 export const GRAPHIC_CANDIDATE_COUNT = 4;
 
+/**
+ * One direction per proposal (the server adds 「variation n of 4; follow this direction」 to that candidate). Without them
+ * the four candidates got the same prompt, and on production two of the four came back with nearly the same layout
+ * (run b40fce55, 2026-11-12). The directions change only the layout, so the reference strength and the chosen design
+ * elements still decide the look.
+ */
+export const GRAPHIC_CANDIDATE_DIRECTIONS: readonly string[] = [
+  '依頼どおりの、いちばん素直な構成にしてください。',
+  'モチーフを小さめにして数を増やし、密に散らした構成にしてください。',
+  'モチーフを大きめにして、余白を広くとった構成にしてください。',
+  'モチーフの向きと組み合わせを変えた、別の構成にしてください。',
+];
+
 /** The request text for the two AI tools: they redraw the chosen proposal (image 0) with the original references. */
 export function graphicFollowUpBrief(kind: 'variations' | 'repeat', base: string): string {
   const lead = kind === 'variations'

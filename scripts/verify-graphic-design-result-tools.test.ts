@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   REPEAT_LAYOUTS, extractPalette, graphicFollowUpBrief, hexToRgb, makeSeamless, recolorPixels, removeBackground, repeatUnit, rgbToHex, seamScore,
-  GRAPHIC_CANDIDATE_COUNT, type Rgb,
+  GRAPHIC_CANDIDATE_COUNT, GRAPHIC_CANDIDATE_DIRECTIONS, type Rgb,
 } from '../src/features/graphicDesign/graphicTools.ts';
+import { candidatePlan } from '../src/lib/imageCandidatePlan.ts';
 import { candidateGrid, graphicFileName } from '../src/features/graphicDesign/graphicResult.ts';
 
 // 独自（本家で流せないため想像で作った）: Light's AIグラフィックデザイン answers 「権限がありません」 on this account, so its
@@ -119,11 +120,31 @@ test('the result view has Light\'s demo layout and the designer tools; a run dra
     assert.ok(actions.includes(text), text);
   const page = readFileSync('src/pages/LightchainGraphicDesignPage.tsx', 'utf8');
   assert.match(page, /candidateCount: GRAPHIC_CANDIDATE_COUNT/);
+  assert.match(page, /candidateDirections: GRAPHIC_CANDIDATE_DIRECTIONS/);
   assert.match(page, /workspace\.editResult\(\{ brief: graphicFollowUpBrief\(kind,/);
   assert.match(page, /result: \{ \.\.\.workspace\.result, imageId: candidate\.id, storagePath: candidate\.storage_path \}/);
   const hook = readFileSync('src/hooks/useCanonicalImageWorkspace.ts', 'utf8');
-  assert.match(hook, /count:Math\.min\(4,configRef\.current\.candidateCount\)/);
+  assert.match(hook, /\.\.\.candidatePlan\(configRef\.current\)\}\);/);
   assert.match(hook, /editResult:\(override\?:RunOverride\)=>run\('edit-result',override\)/);
+});
+
+test('the four proposals each get their own layout direction, so they are not near-duplicates', () => {
+  // 独自: with one prompt for all four, two of the four production proposals came back with nearly the same layout
+  // (run b40fce55, 2026-11-12). The server already takes one direction per candidate (variations).
+  assert.equal(GRAPHIC_CANDIDATE_DIRECTIONS.length, GRAPHIC_CANDIDATE_COUNT);
+  assert.equal(new Set(GRAPHIC_CANDIDATE_DIRECTIONS).size, GRAPHIC_CANDIDATE_COUNT);
+  for (const direction of GRAPHIC_CANDIDATE_DIRECTIONS) assert.ok(direction.length <= 600 && /構成/.test(direction), direction);
+  assert.deepEqual(candidatePlan({ candidateCount: 4, candidateDirections: GRAPHIC_CANDIDATE_DIRECTIONS }), { count: 4, variations: [...GRAPHIC_CANDIDATE_DIRECTIONS] });
+  // Other tools: one image, or a count without directions, stay as before; a short or blank list is not sent (the server
+  // refuses a list whose length differs from the count).
+  assert.deepEqual(candidatePlan({}), {});
+  assert.deepEqual(candidatePlan({ candidateCount: 1, candidateDirections: ['a'] }), {});
+  assert.deepEqual(candidatePlan({ candidateCount: 4 }), { count: 4 });
+  assert.deepEqual(candidatePlan({ candidateCount: 4, candidateDirections: ['a', 'b'] }), { count: 4 });
+  assert.deepEqual(candidatePlan({ candidateCount: 2, candidateDirections: ['a', ' '] }), { count: 2 });
+  assert.deepEqual(candidatePlan({ candidateCount: 9, candidateDirections: ['a', 'b', 'c', 'd', 'e'] }), { count: 4, variations: ['a', 'b', 'c', 'd'] });
+  const api = readFileSync('src/lib/imageApi.ts', 'utf8');
+  assert.match(api, /variations: options\?\.variations/);
 });
 
 test('the follow-up requests, the design document grid and the file names', () => {
