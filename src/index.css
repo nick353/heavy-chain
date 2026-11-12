@@ -770,7 +770,9 @@
   transform: translateX(-50%);
 }
 
-.fashion-studio-node-toolbar button,
+/* Only the toolbar's own buttons (画像編集 and 送る open menus inside it whose items keep their own look). */
+.fashion-studio-node-toolbar > button,
+.fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger,
 .fashion-studio-node-feedback button {
   display: flex;
   height: 30px;
@@ -780,15 +782,69 @@
   border-radius: 8px;
 }
 
-.fashion-studio-node-toolbar button:hover:not(:disabled),
+.fashion-studio-node-toolbar > button:hover:not(:disabled),
+.fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger:hover:not(:disabled),
 .fashion-studio-node-feedback button:hover:not(:disabled) {
   background: rgb(255 255 255 / 10%);
 }
 
-.fashion-studio-node-toolbar button:disabled,
+.fashion-studio-node-toolbar > button:disabled,
+.fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger:disabled,
 .fashion-studio-node-feedback button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+/* A 画像編集 result on the generation route while it is drawn (Light's loading image node). */
+.fashion-studio-pending-node {
+  display: flex;
+  width: 448px;
+  aspect-ratio: 3 / 4;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  box-sizing: border-box;
+  padding: 32px;
+  border: 1px solid #3d4346;
+  border-radius: 12px;
+  background: #262a2b;
+  color: #a8b0b3;
+  font-size: 22px;
+  text-align: center;
+}
+
+.fashion-studio-pending-node button {
+  padding: 8px 20px;
+  border-radius: 10px;
+  background: #20d0c4;
+  color: #111817;
+}
+
+.fashion-studio-pending-node button:disabled {
+  opacity: 0.45;
+}
+
+/* An image found by 画像検索 keeps its author and licence under it. */
+.fashion-studio-canvas-credit {
+  width: 448px;
+  padding: 2px 4px 0;
+}
+
+/* Light shows the points to the left of the 画像検索 panel. */
+.fashion-studio-points-pill {
+  display: flex;
+  height: 38px;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #3d4346;
+  border-radius: 12px;
+  background: #262a2b;
+  color: #e3e8e8;
+  font-size: 12px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
 }
 
 .fashion-studio-node-toolbar-divider {
@@ -1295,15 +1351,15 @@ html[data-studio-theme="light"] header button:hover { background: rgba(0, 0, 0, 
 .fashion-studio-project-detail-parity[data-studio-theme="light"] { background: #f2f3f4; color: #1c1f21; }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-source-dots { background-color: #f2f3f4; background-image: radial-gradient(#c3c8cc 1px, transparent 1px); }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-project-rail, .fashion-studio-source-asset-trigger, .fashion-studio-source-task,
-  .fashion-studio-source-canvas-toolbar, .fashion-studio-source-zoom-controls, .fashion-studio-source-points, .fashion-studio-source-image-search,
+  .fashion-studio-source-canvas-toolbar, .fashion-studio-source-zoom-controls, .fashion-studio-source-points, .fashion-studio-source-image-search, .fashion-studio-points-pill, .fashion-studio-pending-node,
   .fashion-studio-round-button, .fashion-studio-minimap, .fashion-studio-node-toolbar, .fashion-studio-node-feedback, .fashion-studio-zoom-menu,
   .fashion-studio-shortcuts, .fashion-studio-help, .fashion-studio-source-generation-panel, .fashion-studio-source-image-node) {
   border-color: rgba(0, 0, 0, 0.08); background: #ffffff; color: #1c1f21; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
-.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-canvas-toolbar button, .fashion-studio-zoom-inner > button, .fashion-studio-node-toolbar button,
-  .fashion-studio-node-feedback button) { color: #1c1f21; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-canvas-toolbar button, .fashion-studio-zoom-inner > button, .fashion-studio-node-toolbar > button,
+  .fashion-studio-node-toolbar-trigger, .fashion-studio-node-feedback button) { color: #1c1f21; }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-canvas-toolbar button:hover, .fashion-studio-source-canvas-toolbar button.is-active,
-  .fashion-studio-zoom-inner > button:hover:not(:disabled), .fashion-studio-node-toolbar button:hover:not(:disabled), .fashion-studio-node-feedback button:hover:not(:disabled),
+  .fashion-studio-zoom-inner > button:hover:not(:disabled), .fashion-studio-node-toolbar > button:hover:not(:disabled), .fashion-studio-node-toolbar-trigger:hover:not(:disabled), .fashion-studio-node-feedback button:hover:not(:disabled),
   .fashion-studio-zoom-menu button:hover, .fashion-studio-zoom-menu button.is-checked) { background: rgba(0, 0, 0, 0.06); }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-feedback-popover { border-color: rgba(0, 0, 0, 0.08); background: #ffffff; color: #1c1f21; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-reason { border-color: rgba(0, 0, 0, 0.12); color: #6b7175; }

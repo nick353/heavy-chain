@@ -35,6 +35,7 @@ import {
   getLightchainUnifiedFeatureWorkflowContract,
   UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
 } from '../features/lightchain/unifiedFeatureWorkflowContract';
+import { isStudioChildDocument } from '../lib/studioCanvasNodes';
 
 const fashionStudioWorkflowContract = getLightchainUnifiedFeatureWorkflowContract('fashion-studio');
 
@@ -277,6 +278,8 @@ const buildStudioPreviewSvg = ({
 
 const isFashionStudioDocument = (document: CanvasDocumentLike) => {
   const objects = (document.snapshot as { objects?: unknown } | null)?.objects;
+  // A form added to a project's canvas is its own document; the board lists only the project (Light: one project, one card).
+  if (isStudioChildDocument(document.snapshot)) return false;
   return Array.isArray(objects) && objects.some((object) => {
     const metadata = object && typeof object === 'object' ? (object as { metadata?: unknown }).metadata : null;
     const feature = metadata && typeof metadata === 'object' ? (metadata as { feature?: unknown }).feature : null;
