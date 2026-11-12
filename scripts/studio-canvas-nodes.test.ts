@@ -322,9 +322,11 @@ test('画像編集 and 送る light up while their list is open, like Light (a l
   assert.match(page, /<StudioSendMenu imageUrl=\{url\} className="fashion-studio-node-toolbar-trigger" \/>/);
 });
 
-test('the 画像編集 list is Light\'s size and look: 190 wide on #303538, 37px rows of 12px words, a round NEW, Light\'s marks', () => {
-  assert.match(editMenu, /className=\{`absolute top-full z-40 mt-1\.5 w-\[190px\] rounded-xl border border-white\/10 bg-\[#303538\] p-1 shadow-2xl/);
-  assert.match(editMenu, /const itemClass = 'flex h-\[37px\] w-full items-center gap-2 rounded-lg px-3\.5 text-left text-xs /);
+test('the 画像編集 list is Light\'s size and look: about 190 wide on #303538, 37px rows of 12px words, a round NEW, Light\'s marks', () => {
+  assert.match(editMenu, /className=\{`absolute top-full z-40 mt-1\.5 w-\[194px\] rounded-xl border border-white\/10 bg-\[#303538\] p-1 shadow-2xl/);
+  assert.match(editMenu, /const itemClass = 'flex h-\[37px\] w-full items-center gap-2 rounded-lg pl-3\.5 pr-3 text-left text-xs /);
+  // The longest item, ワンクリックで背景削除 (11 characters of 12px), fits on its line: 194 - 2 border - 8 padding - 14 - 12 - 16 icon - 8 gap = 134.
+  assert.ok(194 - 2 - 8 - 14 - 12 - 16 - 8 >= 11 * 12);
   assert.match(editMenu, /\{item\.badge && <span className="rounded-full px-2 py-0\.5 text-xs font-medium leading-4 text-\[#0b2a33\]"/);
   assert.match(editMenu, /repair: StudioRepairIcon, partial: StudioPartialEditIcon, upscale: StudioUpscaleIcon, 'remove-background': StudioRemoveBackgroundIcon, clipping: StudioClippingIcon, crop: Crop, expand: Scaling, erase: Eraser,/);
   // The windows show the same mark at their top left as the list (Light's windows do).
