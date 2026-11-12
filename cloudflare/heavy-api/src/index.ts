@@ -83,6 +83,8 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   ANTHROPIC_TEXT_MODEL?: string;
   ANTHROPIC_BASE_URL?: string;
+  /** Server-only Yahoo!ショッピング 商品検索 v3 Client ID (wrangler secret). Without it the planning agent shows no real products. */
+  YAHOO_SHOPPING_APP_ID?: string;
 }
 
 interface MediaAsset {

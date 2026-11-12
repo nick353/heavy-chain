@@ -20,6 +20,7 @@ import {
   agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan, agentDialoguePrompt,
   parseAgentDialogueReply, AGENT_DIALOGUE_TURN_LIMIT, type AgentTurn,
   agentReportPrompt, agentReportRound, buildAgentAiReportHtml, readAgentReport,
+  YAHOO_ATTRIBUTION_HTML, agentDirectionSearches, agentJapanMarket, agentProduct, agentYen, type AgentProduct,
   agentStructurePrompt, agentStyleImagePrompt, agentUsesMerchFlow, agentWording, buildAgentDesignHtml, buildAgentFinalHtml, buildAgentStructureHtml, parseAgentFinal, parseAgentStructure, AGENT_STYLE_COUNT,
   type AgentAssistantStep, type AgentAttachment, type AgentImageStep, type AgentNote, type AgentNoteStage, type AgentResearchScope, type AgentStyleImage, type AgentTask, type AgentTaskDocument,
 } from '../features/agent/agentTasks';
@@ -250,8 +251,9 @@ function StylePicker({ images, urls, chosen, disabled, title, hint, button, onCo
 }
 
 /** Light's 「ビジュアル方向性を選択」: one or more directions, each with what it is and why it is recommended. */
-function DirectionPicker({ themes, chosen, disabled, hint, images, urls, onRevise, onConfirm }: {
-  themes: string[]; chosen: string[] | null; disabled: boolean; hint: string; images: AgentStyleImage[]; urls: Record<string, string>; onRevise: () => void; onConfirm: (themes: string[]) => void;
+function DirectionPicker({ themes, chosen, disabled, hint, images, urls, products = {}, onRevise, onConfirm }: {
+  themes: string[]; chosen: string[] | null; disabled: boolean; hint: string; images: AgentStyleImage[]; urls: Record<string, string>; products?: Record<string, AgentProduct>;
+  onRevise: () => void; onConfirm: (themes: string[]) => void;
 }) {
   const [picked, setPicked] = useState<string[]>([]);
   const value = chosen ?? picked;
@@ -268,10 +270,12 @@ function DirectionPicker({ themes, chosen, disabled, hint, images, urls, onRevis
         {themes.map((theme, index) => {
           const direction = parseAgentDirection(theme);
           const on = value.includes(theme);
-          // Light shows a product picture of each direction on the card's left; Heavy makes one with its own image service.
+          // Light shows a product picture of each direction on the card's left: a real product (Japanese market) or Heavy's own.
           const image = images.find((entry) => entry.key === `d${index + 1}`);
+          const product = image ? products[image.requestId] : undefined;
           return (
-            <button key={theme} type="button" role="checkbox" aria-checked={on} disabled={!editable} title={[direction.name, direction.description, direction.recommendation].filter(Boolean).join('\n')}
+            <div key={theme} className="min-w-0 space-y-1">
+            <button type="button" role="checkbox" aria-checked={on} disabled={!editable} title={[direction.name, direction.description, direction.recommendation].filter(Boolean).join('\n')}
               onClick={() => setPicked((current) => current.includes(theme) ? current.filter((entry) => entry !== theme) : [...current, theme])}
               className={`flex min-w-0 items-start gap-2 rounded-xl border px-2 py-2 text-left transition ${on ? 'border-cyan-300/70 bg-cyan-300/10' : 'border-white/10 hover:bg-white/5'} disabled:cursor-default`}>
               {image && <GeneratedTile image={image} url={urls[image.requestId]} label={direction.name} className="h-[110px] w-20 flex-none" />}
@@ -282,6 +286,12 @@ function DirectionPicker({ themes, chosen, disabled, hint, images, urls, onRevis
               </span>
               <span aria-hidden="true" className={`mt-0.5 flex size-[18px] flex-none items-center justify-center rounded-full border ${on ? 'border-cyan-300 bg-cyan-300 text-neutral-900' : 'border-white/40'}`}>{on && <Check className="h-3 w-3" />}</span>
             </button>
+            {product && (
+              <a href={product.url} target="_blank" rel="noopener noreferrer" data-testid="agent-direction-product" className="block truncate px-2 text-[11px] text-neutral-400 hover:text-cyan-200">
+                {[product.store, agentYen(product.price)].filter(Boolean).join(' ')} · ソースを見る
+              </a>
+            )}
+            </div>
           );
         })}
       </div>
@@ -329,6 +339,7 @@ export default function HeavyAgentTaskPage() {
   const [pendingAttachments, setPendingAttachments] = useState<AgentAttachment[]>([]);
   const [attaching, setAttaching] = useState(false);
   const imageSlots = useRef(new Set<string>());
+  const productSearch = useRef<string | null>(null);
   const commitChain = useRef<Promise<unknown>>(Promise.resolve());
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const docRef = useRef<AgentTaskDocument | null>(null);
@@ -645,10 +656,23 @@ export default function HeavyAgentTaskPage() {
     if (!task.choice && task.flow === 'conversation' && lastRound.at && (task.notes ?? []).some((note) => note.stage === 'themes' && note.reply.state === 'completed' && note.at > lastRound.at!)) {
       guard(startThemeRound, '方向性の出し直しを開始できませんでした。'); return;
     }
-    // Light shows a product picture on each direction card; Heavy generates one per direction once the directions arrive.
+    // Light shows a product picture on each direction card. For the Japanese market Heavy shows a real product from
+    // Yahoo!ショッピング (one search per direction; nothing without the server's key); otherwise, and for a direction
+    // without a product, it generates one with its own image service.
     if (task.flow === 'conversation' && lastRound.step.state === 'completed' && lastRound.themes.length && task.directionImages?.round !== lastRound.step.requestId && !task.choice) {
       const round = lastRound.step.requestId; const themes = lastRound.themes;
-      guard(() => commit((current) => ({ ...current, directionImages: { round, images: agentBuildDirectionImages(current, themes, () => crypto.randomUUID()) } })));
+      const build = (found: Array<{ products: AgentProduct[] } | undefined> = []) => commit((current) => (current.directionImages?.round === round ? current
+        : { ...current, directionImages: { round, images: agentBuildDirectionImages(current, themes, () => crypto.randomUUID(), found) } }));
+      if (!agentJapanMarket(task)) { guard(() => build()); return; }
+      if (productSearch.current === round) return;
+      productSearch.current = round;
+      const searches = agentDirectionSearches(task, themes.map((theme) => parseAgentDirection(theme)));
+      void api().searchAgentProducts({ brandId, projectId: taskId, searches })
+        .then((answer) => (answer.available ? answer.results.map((result) => ({ products: (result.products ?? []).map(agentProduct).filter((item): item is AgentProduct => !!item) })) : []))
+        .catch(() => [])
+        .then((found) => build(found))
+        .catch(() => { productSearch.current = null; })
+        .finally(() => { if (mounted.current) setTick((value) => value + 1); });
       return;
     }
     if (!task.choice) return;
@@ -903,7 +927,11 @@ export default function HeavyAgentTaskPage() {
   const reportRound = task ? agentReportRound(task) : null;
   const reportState = task ? readAgentReport(task) : null;
   const reportWriting = Boolean(reportRound && (reportState?.round !== reportRound || reportState.step.state === 'running'));
-  const referenceImages = (task?.directionImages?.images ?? []).filter((image) => image.state === 'completed' && imageUrls[image.requestId]);
+  // Real products show their image from Yahoo!'s own address (never stored); generated pictures use their signed address.
+  const productImages = (task?.directionImages?.images ?? []).flatMap((image) => { const product = image.product ? agentProduct(image.product) : null; return product ? [[image.requestId, product] as const] : []; });
+  const shownUrls = { ...imageUrls, ...Object.fromEntries(productImages.map(([id, product]) => [id, product.image])) };
+  const shownProducts = Object.fromEntries(productImages);
+  const referenceImages = (task?.directionImages?.images ?? []).filter((image) => image.state === 'completed' && shownUrls[image.requestId]);
   const generatedImages = designs.filter((image) => image.state === 'completed' && imageUrls[image.requestId]);
   const stamp = (value?: string) => { if (!value) return ''; const date = new Date(value); const pad = (n: number) => String(n).padStart(2, '0'); return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`; };
   const confirmDirections = (themes: string[]) => {
@@ -976,7 +1004,7 @@ export default function HeavyAgentTaskPage() {
                     {round.summary && !conversation && <div className="whitespace-pre-wrap" data-testid="agent-summary">{round.summary}</div>}
                     {round.step.state === 'completed' && round.themes.length > 0 && conversation && (
                       <DirectionPicker themes={round.themes} chosen={confirmed ? (last ? task.choice?.themes ?? [task.choice?.theme ?? ''] : []) : null} disabled={working}
-                        hint={wording.directionHint} images={task.directionImages?.round === round.step.requestId ? task.directionImages.images : []} urls={imageUrls}
+                        hint={wording.directionHint} images={task.directionImages?.round === round.step.requestId ? task.directionImages.images : []} urls={shownUrls} products={shownProducts}
                         onRevise={() => composerRef.current?.focus()} onConfirm={confirmDirections} />
                     )}
                     {round.step.state === 'completed' && round.themes.length > 0 && !conversation && (
@@ -1111,6 +1139,8 @@ export default function HeavyAgentTaskPage() {
                 </>
               )}
               {notice && <p role="alert" className="text-sm text-amber-300">{notice}</p>}
+              {/* Yahoo!'s credit, unchanged, below the real products it supplied (its terms). */}
+              {productImages.length > 0 && <div className="pt-2 text-sm text-neutral-400" data-testid="agent-yahoo-credit" dangerouslySetInnerHTML={{ __html: YAHOO_ATTRIBUTION_HTML }} />}
             </div>
           )}
         </div>
@@ -1159,7 +1189,7 @@ export default function HeavyAgentTaskPage() {
               </ul>
             </div>
           )}
-          {conversation && referenceImages.length > 0 && <ImageShelf title="参考スタイル" testId="agent-reference-styles" stamp={stamp(task.directionImages?.images[0]?.at)} images={referenceImages} urls={imageUrls} />}
+          {conversation && referenceImages.length > 0 && <ImageShelf title="参考スタイル" testId="agent-reference-styles" stamp={stamp(task.directionImages?.images[0]?.at)} images={referenceImages} urls={shownUrls} products={shownProducts} />}
           {conversation && generatedImages.length > 0 && <ImageShelf title="スタイルを生成" testId="agent-generated-styles" stamp={stamp(designs[0]?.at)} images={generatedImages} urls={imageUrls} />}
           {!conversation && (
             <div className={deliverables.length ? 'mt-5 border-t border-white/10 pt-5' : 'mt-5'}>
@@ -1194,7 +1224,7 @@ export default function HeavyAgentTaskPage() {
 }
 
 /** Light's 参考スタイル / スタイルを生成 in 概要: the time, four thumbnails to a row, 「すべて表示」 to see every one. */
-function ImageShelf({ title, testId, stamp, images, urls }: { title: string; testId: string; stamp: string; images: AgentStyleImage[]; urls: Record<string, string> }) {
+function ImageShelf({ title, testId, stamp, images, urls, products = {} }: { title: string; testId: string; stamp: string; images: AgentStyleImage[]; urls: Record<string, string>; products?: Record<string, AgentProduct> }) {
   const [all, setAll] = useState(false);
   const shown = all ? images : images.slice(0, 8);
   return (
@@ -1205,7 +1235,12 @@ function ImageShelf({ title, testId, stamp, images, urls }: { title: string; tes
       </div>
       {stamp && <p className="mt-2 text-xs text-neutral-400">{stamp}</p>}
       <div className="mt-2 grid grid-cols-4 gap-1.5">
-        {shown.map((image) => <img key={image.requestId} src={urls[image.requestId]} alt={agentImageLabel(image)} title={agentImageLabel(image)} className="aspect-[3/4] w-full rounded-md object-cover" />)}
+        {shown.map((image) => {
+          const picture = <img src={urls[image.requestId]} alt={agentImageLabel(image)} title={agentImageLabel(image)} className="aspect-[3/4] w-full rounded-md object-cover" />;
+          const product = products[image.requestId];
+          // A real product links to its page (「ソースを見る」), as the terms ask.
+          return product ? <a key={image.requestId} href={product.url} target="_blank" rel="noopener noreferrer" title={`${product.name} ${agentYen(product.price)}`.trim()}>{picture}</a> : <Fragment key={image.requestId}>{picture}</Fragment>;
+        })}
       </div>
     </div>
   );

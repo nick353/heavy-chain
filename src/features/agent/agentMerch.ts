@@ -8,6 +8,7 @@ import {
   agentImagePrompt, agentScopeLabel, effectiveAgentRequirements, parseAgentDirection, parseAgentRequirements, parseAgentResearch, parsePlanResponse,
   agentAttachmentLines, type AgentResearchScope, type AgentStyleImage, type AgentTask,
 } from './agentFlow.ts';
+import type { AgentProduct } from './agentProducts.ts';
 
 /** Light's 商品構成 defaults to 10 styles (「総スタイル数 10（規定値・変更可）」). */
 export const AGENT_STYLE_COUNT = 10;
@@ -224,12 +225,18 @@ export function agentBuildDesignImages(task: AgentTask, newId: () => string): Ag
     return { key: style.code || `S${index + 1}`, code: style.code || `S${index + 1}`, name: style.name, category: style.category, prompt: prompt.slice(0, 700), requestId: newId(), state: 'pending' as const };
   });
 }
-/** One reference product image per direction (参考スタイル), from the direction's English description. */
-export function agentBuildDirectionImages(task: AgentTask, themes: string[], newId: () => string): AgentStyleImage[] {
+/**
+ * One reference product image per direction (参考スタイル), from the direction's English description. With real products
+ * (Yahoo!ショッピング, plans of the Japanese market: `found[i]` for the i-th direction) the direction shows its first product
+ * instead, as Light shows real products; a direction without one is generated as before.
+ */
+export function agentBuildDirectionImages(task: AgentTask, themes: string[], newId: () => string, found: Array<{ products: AgentProduct[] } | undefined> = []): AgentStyleImage[] {
   return themes.map((theme, index) => {
     const direction = parseAgentDirection(theme);
-    return { key: `d${index + 1}`, code: agentDirectionCode(task, index), name: direction.name, category: '', requestId: newId(), state: 'pending' as const,
+    const base = { key: `d${index + 1}`, code: agentDirectionCode(task, index), name: direction.name, category: '', requestId: newId(),
       prompt: (direction.imagePrompt || `${direction.name}. ${direction.description}`).slice(0, 700) };
+    const product = found[index]?.products[0];
+    return product ? { ...base, state: 'completed' as const, product, at: new Date().toISOString() } : { ...base, state: 'pending' as const };
   });
 }
 export const agentImageLabel = (image: Pick<AgentStyleImage, 'code' | 'name'>) => `${image.code} · ${image.name}`;
