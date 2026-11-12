@@ -40,7 +40,7 @@ import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { canSelectConfirmedBrand } from '../lib/authBrandSelection';
 import { createFashionStudioThumbnailController, fashionStudioThumbnailScopeKey, type FashionStudioThumbnailState } from '../lib/fashionStudioThumbnails';
-import { createFashionStudioDetailHydration, emptyFashionStudioDetail, extractFashionStudioSavedDetail, fashionStudioDetailScopeKey, type FashionStudioDetailHydrationState, type FashionStudioDetailScope } from '../lib/fashionStudioDetailHydration';
+import { createFashionStudioDetailHydration, emptyFashionStudioDetail, extractFashionStudioSavedDetail, fashionStudioDetailScopeKey, fashionStudioRemainingUnits, type FashionStudioDetailHydrationState, type FashionStudioDetailScope } from '../lib/fashionStudioDetailHydration';
 import { createFashionStudioInputController, createFashionStudioGenerationAdapters, readFashionStudioUpload, validateFashionStudioUpload, type FashionStudioInputRole, type FashionStudioInputState } from '../lib/fashionStudioDetailAdapter';
 import { createFashionStudioDetailGeneration, type FashionStudioGenerationOutcome } from '../lib/fashionStudioDetailGeneration';
 import { createStudioAckStore } from '../lib/fashionStudioPendingAck';
@@ -354,7 +354,12 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
       const bounds = viewport.getBoundingClientRect();
       if (interaction.wheel({ ...event, deltaX: event.deltaX, deltaY: event.deltaY, deltaMode: event.deltaMode,
         ctrlKey: event.ctrlKey, metaKey: event.metaKey, interactive: interactiveTarget(event.target),
-        anchor: { x: event.clientX - bounds.left, y: event.clientY - bounds.top }, pageHeight: bounds.height })) event.preventDefault();
+        anchor: { x: event.clientX - bounds.left, y: event.clientY - bounds.top }, pageHeight: bounds.height })) {
+        event.preventDefault();
+        // Scrolling or zooming with the wheel is the person moving the view: a node added later must not refit it away
+        // (2026-11-12 production: each new node pulled the view back to the whole canvas).
+        userViewRef.current = viewportScopeKey;
+      }
     };
     const blur = () => interaction.cancel();
     viewport.addEventListener('wheel', wheel, { passive: false }); window.addEventListener('blur', blur);
@@ -844,6 +849,21 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     if (!report) { if (!(formId in current)) return current; const next = { ...current }; delete next[formId]; return next; }
     return JSON.stringify(current[formId]) === JSON.stringify(report) ? current : { ...current, [formId]: report };
   });
+  /** Light lowers its points pill as soon as a generation ends. Read the points again whenever a running task finishes,
+   * here or in a form on the canvas (2026-11-12 production: the pill kept 29,875 after two generations until a reload). */
+  const runningTasks = (busy ? 1 : 0) + Object.values(childReports).filter(report => report.busy).length;
+  const runningTasksRef = useRef(runningTasks);
+  useEffect(() => {
+    const before = runningTasksRef.current;
+    runningTasksRef.current = runningTasks;
+    if (embedded || runningTasks >= before || !scope || !cloudflareDataPlane) return;
+    const captured = scopeKey;
+    void cloudflareDataPlane.getImageUsage(scope.brandId).then(usage => {
+      const units = fashionStudioRemainingUnits(usage);
+      if (units !== null) setHydration(previous => previous?.scopeKey === captured ? { ...previous, remainingUnits: units } : previous);
+    }).catch(() => undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runningTasks]);
   const [clipTarget, setClipTarget] = useState<{ key: string; url: string } | null>(null);
   const [collectTarget, setCollectTarget] = useState<{ url: string } | null>(null);
   const [searchRequest, setSearchRequest] = useState<(StudioImageSearchRequest & { key: string }) | null>(null);
@@ -1668,7 +1688,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
           })()}
         </section>
 
-        <div className="fashion-studio-source-task" data-studio-chrome aria-label="タスク">{activityContent}<span>{(busy ? 1 : 0) + Object.values(childReports).filter(report => report.busy).length} <span className="mx-1">進行中</span>⌃</span></div>
+        <div className="fashion-studio-source-task" data-studio-chrome aria-label="タスク">{activityContent}<span>{runningTasks} <span className="mx-1">進行中</span>⌃</span></div>
         <div className="fashion-studio-source-canvas-toolbar" data-studio-chrome data-testid="lightchain-fashion-studio-canvas-toolbar">
           <button type="button" aria-label="選択" title="選択" aria-pressed={viewportState.mode === 'select'} className={viewportState.mode === 'select' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('select')}><MousePointer2 className="h-4 w-4" /></button>
           <button type="button" aria-label="ドラッグ" title="ドラッグ" aria-pressed={viewportState.mode === 'move'} className={viewportState.mode === 'move' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('move')}><Hand className="h-4 w-4" /></button>
@@ -1712,11 +1732,15 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
           }}
           onSelectFromCanvas={selectFromCanvas}
           pointsSlot={<div className="fashion-studio-points-pill" aria-label="ポイント"><Sparkles className="h-4 w-4" />{visible?.remainingUnits?.toLocaleString('en-US') ?? '未確認'}</div>} />}
-        {clipTarget && <StudioClippingDialog imageUrl={clipTarget.url} fileBaseName="heavy-chain" onClose={() => setClipTarget(null)}
-          onExtract={async file => { if (await addCanvasImage(file, { kind: 'clip', nearKey: clipTarget.key })) setClipTarget(null); }}
-          onCollect={async file => setCollectTarget({ url: await incomingFileDataUrl(file) })} />}
-        {collectTarget && <StudioCollectDialog imageUrl={collectTarget.url} title="Fashion Studio" onClose={() => setCollectTarget(null)} />}
-        {dialogs}
+        {/* Light's windows sit over the whole page, its header included (2026-11-12 production: inside the page the site
+            header covered the top of クリッピング and its dimmed backdrop stopped below the header). */}
+        {typeof document !== 'undefined' && createPortal(<div data-studio-chrome="">
+          {clipTarget && <StudioClippingDialog imageUrl={clipTarget.url} fileBaseName="heavy-chain" onClose={() => setClipTarget(null)}
+            onExtract={async file => { if (await addCanvasImage(file, { kind: 'clip', nearKey: clipTarget.key })) setClipTarget(null); }}
+            onCollect={async file => setCollectTarget({ url: await incomingFileDataUrl(file) })} />}
+          {collectTarget && <StudioCollectDialog imageUrl={collectTarget.url} title="Fashion Studio" onClose={() => setCollectTarget(null)} />}
+          {dialogs}
+        </div>, document.body)}
         {lightboxView}
       </main>
     );

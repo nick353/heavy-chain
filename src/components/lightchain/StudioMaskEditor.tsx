@@ -81,6 +81,9 @@ export function StudioMaskEditor({
   const [mode, setMode] = useState<StudioMaskMode>('add');
   const [brushSize, setBrushSize] = useState(40);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  /** Where the AIマスク認識 list opens. It is fixed to the window: inside the tool row (which scrolls sideways) it was cut
+   * off below the button, and choosing a part scrolled the row away (2026-11-12 production). */
+  const [aiMenuAt, setAiMenuAt] = useState<{ left: number; top: number } | null>(null);
   const [activePane, setActivePane] = useState<StudioMaskPaneId>('base');
   const [busy, setBusy] = useState<string | null>(null);
   const [, setRevision] = useState(0);
@@ -153,7 +156,7 @@ export function StudioMaskEditor({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" role="dialog" aria-modal="true" aria-label={ariaLabel} data-testid={testId}>
       <div className="relative flex h-[773px] max-h-[calc(100vh-24px)] w-[1296px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg bg-[#232728] text-white shadow-2xl">
         <h2 className="sr-only">{STUDIO_MASK_EDITOR_TEXT.title}</h2>
-        <div className="flex h-14 items-center gap-1 overflow-x-auto border-b border-white/[0.06] bg-[#1b1f20] px-4" role="toolbar" aria-label={STUDIO_MASK_EDITOR_TEXT.adjust}>
+        <div className="flex h-14 items-center gap-1 overflow-x-auto border-b border-white/[0.06] bg-[#1b1f20] px-4" role="toolbar" aria-label={STUDIO_MASK_EDITOR_TEXT.adjust} onScroll={() => setAiMenuOpen(false)}>
           <span className="mr-2 inline-flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-white"><SlidersHorizontal aria-hidden="true" className="h-4 w-4" />{STUDIO_MASK_EDITOR_TEXT.adjust}</span>
           <span className="mx-1 h-5 w-px shrink-0 bg-white/10" aria-hidden="true" />
           {STUDIO_MASK_EDITOR_TOOLS.filter(item => tools.includes(item.id)).map(item => {
@@ -161,11 +164,11 @@ export function StudioMaskEditor({
             if (item.id === 'ai-mask') {
               return (
                 <div key={item.id} className="relative shrink-0">
-                  <button type="button" onClick={() => { setTool('ai-mask'); setAiMenuOpen(open => !open); }} disabled={busy !== null} aria-expanded={aiMenuOpen} aria-pressed={tool === 'ai-mask'} className={toolButton(tool === 'ai-mask')}>
+                  <button type="button" onClick={event => { const box = event.currentTarget.getBoundingClientRect(); setAiMenuAt({ left: box.left, top: box.bottom + 4 }); setTool('ai-mask'); setAiMenuOpen(open => !open); }} disabled={busy !== null} aria-expanded={aiMenuOpen} aria-pressed={tool === 'ai-mask'} className={toolButton(tool === 'ai-mask')}>
                     <Icon aria-hidden="true" className="h-4 w-4" />{item.label}<ChevronDown aria-hidden="true" className="h-3 w-3" />
                   </button>
-                  {aiMenuOpen && (
-                    <div role="menu" className="absolute left-0 top-11 z-20 w-40 rounded-lg bg-black p-1.5 shadow-xl">
+                  {aiMenuOpen && aiMenuAt && (
+                    <div role="menu" className="fixed z-[60] w-40 rounded-lg bg-black p-1.5 shadow-xl" style={{ left: aiMenuAt.left, top: aiMenuAt.top }}>
                       {STUDIO_MASK_CANDIDATES.map(candidate => (
                         <button key={candidate} type="button" role="menuitem" onClick={() => void recognize(candidate)} className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm hover:bg-white/10">
                           <span className="inline-block h-4 w-4 rounded-full border border-white/40" />{candidate}

@@ -196,3 +196,38 @@ test('範囲指定のマスク調整 is Light\'s two-pane 簡易エディター 
   assert.match(page, /if \(!host\?\.edit \|\| !host\.autoRun \|\| editRunRef\.current/);
   assert.match(page, /editImageWithPrompt\(imageUrl, embeddedRef\.current\?\.edit \? prompt : studioProviderPrompt\(/);
 });
+
+// 2026-11-12 本番で押して見つけた4件（クリッピングの窓の上が帯に隠れる・AIマスク認識の一覧が切れる・ポイントが減らない・回しても新しいノードで全体に戻る）。
+const maskEditor = read('../src/components/lightchain/StudioMaskEditor.tsx');
+
+test('the windows the page opens (クリッピング, お気に入り, 範囲指定の簡易エディター, キャンバスから選択) sit over the whole page, header included', () => {
+  const parentReturn = page.slice(page.indexOf('<main ref={pageRef}'));
+  const portal = parentReturn.slice(parentReturn.indexOf('{typeof document !== \'undefined\' && createPortal(<div data-studio-chrome="">'));
+  const portalBody = portal.slice(0, portal.indexOf('</div>, document.body)}'));
+  assert.ok(portalBody.length > 0, 'the page portals its windows to the body');
+  for (const piece of ['{clipTarget && <StudioClippingDialog', '{collectTarget && <StudioCollectDialog', '{dialogs}']) assert.ok(portalBody.includes(piece), piece);
+  // Nothing of them is left inside <main>, under the site header's layer.
+  const inline = parentReturn.replace(portalBody, '');
+  assert.doesNotMatch(inline, /\{clipTarget && <StudioClippingDialog/);
+  assert.doesNotMatch(inline, /^\s*\{dialogs\}\s*$/m);
+});
+
+test('AIマスク認識 opens its list fixed to the window, not inside the tool row that scrolls sideways', () => {
+  assert.match(maskEditor, /<div className="flex h-14 items-center gap-1 overflow-x-auto[^"]*" role="toolbar"[^>]*onScroll=\{\(\) => setAiMenuOpen\(false\)\}>/);
+  assert.match(maskEditor, /const box = event\.currentTarget\.getBoundingClientRect\(\); setAiMenuAt\(\{ left: box\.left, top: box\.bottom \+ 4 \}\)/);
+  assert.match(maskEditor, /<div role="menu" className="fixed z-\[60\][^"]*" style=\{\{ left: aiMenuAt\.left, top: aiMenuAt\.top \}\}>/);
+  assert.doesNotMatch(maskEditor, /role="menu" className="absolute left-0 top-11/);
+});
+
+test('the points pill is read again when a generation here or in a form on the canvas ends', () => {
+  assert.match(page, /const runningTasks = \(busy \? 1 : 0\) \+ Object\.values\(childReports\)\.filter\(report => report\.busy\)\.length;/);
+  assert.match(page, /if \(embedded \|\| runningTasks >= before \|\| !scope \|\| !cloudflareDataPlane\) return;\n\s*const captured = scopeKey;\n\s*void cloudflareDataPlane\.getImageUsage\(scope\.brandId\)\.then\(usage => \{\n\s*const units = fashionStudioRemainingUnits\(usage\);\n\s*if \(units !== null\) setHydration\(previous => previous\?\.scopeKey === captured \? \{ \.\.\.previous, remainingUnits: units \} : previous\);/);
+  assert.match(page, /\}, \[runningTasks\]\);/);
+  assert.match(page, /\{activityContent\}<span>\{runningTasks\} <span className="mx-1">進行中<\/span>/);
+});
+
+test('scrolling or zooming with the wheel keeps the view where the person put it when nodes are added', () => {
+  assert.match(page, /pageHeight: bounds\.height \}\)\) \{\n\s*event\.preventDefault\(\);\n(?:\s*\/\/.*\n)*\s*userViewRef\.current = viewportScopeKey;\n\s*\}/);
+  // The first fit still follows the nodes until the person moves the view.
+  assert.match(page, /if \(fittedRef\.current === key && userViewRef\.current === viewportScopeKey\) return;/);
+});
