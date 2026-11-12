@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { callClaudeResearch } from '../cloudflare/heavy-api/src/claude-text.ts';
 import { formatAgentResearchContent } from '../cloudflare/heavy-api/src/designAssistant.ts';
-import { agentResearchPrompt, agentRoundSources, agentThemeRoundSearches, agentThemeSearches, themePrompt, type AgentTask } from '../src/features/agent/agentFlow.ts';
+import { agentResearchPrompt, agentRoundSources, agentThemeRoundSearches, agentThemeSearches, cleanAgentQuote, parseAgentResearch, themePrompt, type AgentTask } from '../src/features/agent/agentFlow.ts';
+import { parseAgentDialogueReply } from '../src/features/agent/agentDialogue.ts';
 
 const flow = readFileSync(new URL('../src/features/agent/agentFlow.ts', import.meta.url), 'utf8');
 const page = readFileSync(new URL('../src/pages/HeavyAgentTaskPage.tsx', import.meta.url), 'utf8');
@@ -91,4 +92,22 @@ test('the task page runs テーマ企画\'s research before its first round and 
   // 参考資料 shows the site, then the cited sentence (the title only when there is none).
   assert.match(page, /\{source\.quote \?\? source\.title\}/);
   assert.match(flow, /if \(agentThemeSearches\(task\)\) return agentThemeResearchPrompt\(task\);/);
+});
+
+// Production 2026-11-12 (research 498af21f): the cited text comes as the page's Markdown, so 参考資料 showed
+// 「** The key directions…」 and 「# 9 Trends … ## Spring/Summer 2027 Trends ### By Hand」. Light shows plain sentences.
+test('the cited sentence is shown without Markdown emphasis or heading marks, in テーマ企画 and in the chat', () => {
+  assert.equal(cleanAgentQuote('** The key directions for Spring Summer 2027 are nature-inspired textures'), 'The key directions for Spring Summer 2027 are nature-inspired textures');
+  assert.equal(cleanAgentQuote('# 9 Trends Set to Define Spring 2027 Fashion ## Spring/Summer 2027 Trends ### By Hand Today, designers'), '9 Trends Set to Define Spring 2027 Fashion Spring/Summer 2027 Trends By Hand Today, designers');
+  assert.equal(cleanAgentQuote('Light — washed and airy **Key Shades:** The light palette'), 'Light — washed and airy Key Shades: The light palette');
+  // A hashtag is the page's own word and stays.
+  assert.equal(cleanAgentQuote('夏の定番 #リネン ワンピース'), '夏の定番 #リネン ワンピース');
+  const content = '## トレンド\n- 自然由来\n\n[出典]\n- Trendalytics | https://trendalytics.co/x | ** The key directions for Spring Summer 2027\n- 見出しだけ | https://example.com/h | ##\n\n[検索] ok';
+  assert.deepEqual(parseAgentResearch(content).sources, [
+    { title: 'Trendalytics', url: 'https://trendalytics.co/x', quote: 'The key directions for Spring Summer 2027' },
+    // Nothing left after the marks: the title is shown instead.
+    { title: '見出しだけ', url: 'https://example.com/h' },
+  ]);
+  assert.deepEqual(parseAgentDialogueReply(`[調査結果]\n方案A\n\n[出典]\n- WWW | https://www.whowhatwear.com/x | # 9 Trends ## By Hand\n\n[検索] ok`).sources,
+    [{ title: 'WWW', url: 'https://www.whowhatwear.com/x', quote: '9 Trends By Hand' }]);
 });

@@ -5,7 +5,7 @@
  * task, sends the earlier turns as the chat history and generates the styles with its own image service. Pure: no
  * runtime imports, so tests read it directly.
  */
-import { agentAttachmentLines, agentImagePrompt, AGENT_PROMPT_BUDGET, type AgentSource, type AgentStyleImage, type AgentTask, type AgentTurn } from './agentFlow.ts';
+import { agentAttachmentLines, agentImagePrompt, AGENT_PROMPT_BUDGET, cleanAgentQuote, type AgentSource, type AgentStyleImage, type AgentTask, type AgentTurn } from './agentFlow.ts';
 import type { AssistantQuestion } from '../designDetail/assistantQuestions';
 
 export type { AgentTurn } from './agentFlow.ts';
@@ -135,7 +135,7 @@ export function parseAgentDialogueReply(content: string): AgentDialogueReply {
   if (sourcesAt >= 0) {
     for (const line of raw.slice(sourcesAt).split('\n').slice(1)) {
       const match = /^-\s*(.*?)\s*\|\s*(https?:\/\/\S+?)\s*(?:\|\s*(.*?))?\s*$/.exec(line.trim());
-      if (match) sources.push({ title: match[1] || match[2], url: match[2], ...(match[3] ? { quote: match[3] } : {}) });
+      if (match) sources.push({ title: match[1] || match[2], url: match[2], ...(match[3] && cleanAgentQuote(match[3]) ? { quote: cleanAgentQuote(match[3]) } : {}) });
       else if (/^\[検索\]/.test(line.trim())) break;
     }
   }
