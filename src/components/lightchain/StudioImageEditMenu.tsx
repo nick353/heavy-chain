@@ -90,7 +90,7 @@ const legalBlocked = (...values: string[]) => {
 
 // ---- メニュー ------------------------------------------------------------------------------------------------
 export function StudioImageEditMenu({
-  imageUrl, fileBaseName, disabled = false, disabledTools = [], repairCost, onClientResult, onServerEdit, onClose, label = '画像編集', triggerClassName, align = 'start',
+  imageUrl, fileBaseName, disabled = false, disabledTools = [], repairCost, onClientResult, onServerEdit, onClose, label = '画像編集', triggerClassName, triggerIcon, align = 'start',
 }: {
   imageUrl: string;
   /** 結果のファイル名の元（拡張子はあってもよい）。 */
@@ -106,6 +106,8 @@ export function StudioImageEditMenu({
   onClose?: () => void;
   label?: string;
   triggerClassName?: string;
+  /** ボタンの印（スタジオの帯は本家の帯の印を渡す）。 */
+  triggerIcon?: ReactNode;
   align?: 'start' | 'end';
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -189,7 +191,7 @@ export function StudioImageEditMenu({
         className={triggerClassName ?? 'inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm text-white/90 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40'}
       >
         {/* 本家の帯の「画像編集」は印と文字だけ（下向きの矢印は無い。2026-11-12 本家の本番で並べた）。 */}
-        <WandSparkles aria-hidden="true" className="h-4 w-4" />{label}
+        {triggerIcon ?? <WandSparkles aria-hidden="true" className="h-4 w-4" />}{label}
       </button>
       {menuOpen && (
         <div role="menu" aria-label={label} className={`absolute top-full z-40 mt-1.5 w-[194px] rounded-xl border border-white/10 bg-[#303538] p-1 shadow-2xl ${align === 'end' ? 'right-0' : 'left-0'}`}>

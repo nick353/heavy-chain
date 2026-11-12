@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronRight, SendHorizontal } from 'lucide-react';
 import { STUDIO_SEND_GROUPS, studioSendHref } from '../../lib/studioSendMenu';
 import { refreshSignedImageUrl } from '../../lib/storage';
@@ -8,7 +8,7 @@ import { refreshSignedImageUrl } from '../../lib/storage';
  * （modal なし）、3つの束の小メニューから行き先を選ぶと、新しいタブで `<行き先>?imgUrl=<画像の住所>` を開く。
  * 受け取り側は各画面の useIncomingImageFile（src/lib/incomingImage.ts）。
  */
-export function StudioSendMenu({ imageUrl, disabled = false, className }: { imageUrl: string; disabled?: boolean; className?: string }) {
+export function StudioSendMenu({ imageUrl, disabled = false, className, icon }: { imageUrl: string; disabled?: boolean; className?: string; icon?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [group, setGroup] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -49,7 +49,7 @@ export function StudioSendMenu({ imageUrl, disabled = false, className }: { imag
         onClick={() => (open ? close() : setOpen(true))}
         className={className}
       >
-        <SendHorizontal aria-hidden="true" className="h-4 w-4" />
+        {icon ?? <SendHorizontal aria-hidden="true" className="h-4 w-4" />}
       </button>
       {open && (
         // 本家は送るの一覧を帯の右に、ボタンの高さの真ん中にそろえて開く（2026-11-12 本家の本番で並べた。1行48px）。

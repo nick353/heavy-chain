@@ -56,7 +56,7 @@ test('選ぶと新しいタブで <行き先>?imgUrl=<画像の住所>（本家�
   assert.match(sendMenuSource, /data-track-id="send-menu"/);
   // 本家は modal なしで右に開く。
   assert.match(sendMenuSource, /role="menu" aria-label="送る" className="absolute left-full/);
-  assert.match(sendMenuSource, /export function StudioSendMenu\(\{ imageUrl, disabled = false, className \}: \{ imageUrl: string; disabled\?: boolean; className\?: string \}\)/);
+  assert.match(sendMenuSource, /export function StudioSendMenu\(\{ imageUrl, disabled = false, className, icon \}: \{ imageUrl: string; disabled\?: boolean; className\?: string; icon\?: ReactNode \}\)/);
 });
 
 // ---- 受け取り（?imgUrl=） ---------------------------------------------------------------------------------

@@ -4,7 +4,6 @@ import {
   Boxes,
   ChevronDown,
   ChevronRight,
-  Download,
   Keyboard,
   Loader2,
   LayoutGrid,
@@ -21,7 +20,6 @@ import {
   RotateCw,
   Save,
   Sparkles,
-  SquareDashedMousePointer,
   Sun,
   Trash2,
   Undo2,
@@ -57,6 +55,7 @@ import { buildRegionGuideUrl, naturalImageSize, regionMaskImageData, regionMaskT
 import { StudioMaskEditor } from '../components/lightchain/StudioMaskEditor';
 import { studioExampleHoldUrls, studioExamplePreviewRoles, withStudioExamplePreview, type StudioExamplePreview } from '../lib/fashionStudioExamplePreview';
 import { StudioFunctionIcon } from '../components/lightchain/StudioFunctionIcon';
+import { StudioToolbarIcon } from '../components/lightchain/StudioToolbarIcon';
 import { StudioHelpDialog, StudioMinimap, StudioShortcutsPanel, StudioZoomControl } from '../components/lightchain/StudioCanvasControls';
 import { StudioFeedbackBar } from '../components/lightchain/StudioFeedbackBar';
 import { StudioClippingDialog } from '../components/lightchain/StudioClippingDialog';
@@ -122,7 +121,7 @@ const ARROW_STEP = 5 / LIGHT_UNITS_PER_HEAVY;
 const resultNodeKey = (objectId: string | null, index: number) => objectId ? `result:${objectId}` : `result-index:${index}`;
 /** Light's image toolbar (2026-11-12): クリッピング | the four functions and 画像編集 | 画像検索・お気に入り・ダウンロード・送る.
  * A function adds its form to this canvas, joined to the image (Light's addFormEdgeNode). */
-const STUDIO_TOOLBAR_FUNCTIONS: readonly StudioFunctionId[] = ['text', 'region', 'underwear', '3d'];
+const STUDIO_TOOLBAR_FUNCTIONS = ['text', 'region', 'underwear', '3d'] as const satisfies readonly StudioFunctionId[];
 /** What a form on the project's canvas tells the project: its result nodes (for positions, edges and the toolbar) and
  * whether it is working (the task count). */
 type StudioChildReport = { resultKeys: string[]; results: { key: string; objectId: string | null }[]; busy: boolean };
@@ -154,23 +153,6 @@ const primeChildForm = (documentId: string, fn: StudioFunctionId) => {
   writeStudioSettings(documentId, { ...DEFAULT_STUDIO_SETTINGS, quality: fn === 'underwear' ? '2k' : '1k', ...(fn === '3d' ? { garment: '上装' as StudioGarmentArea } : {}) });
 };
 /** Images sent here with ?imgUrl= (送る from another tool): a new project without one, a new image node with one. */
-/** Light's toolbar 画像検索: a magnifier with "AI" in it, in the toolbar's own colour (2026-11-12 Light production). */
-function StudioAiSearchIcon({ className }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <circle cx="10.5" cy="10.5" r="7.5" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M16.2 16.2 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <text x="10.5" y="13.3" textAnchor="middle" fontSize="7.4" fontWeight="700" fontFamily="system-ui, sans-serif" fill="currentColor">AI</text>
-  </svg>;
-}
-
-/** Light's toolbar お気に入り: a folder with a star on its corner (2026-11-12 Light production). */
-function StudioFolderStarIcon({ className }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M11 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v3" />
-    <path d="m18 13 1.4 2.8 3.1.5-2.25 2.2.53 3.1L18 20.15l-2.78 1.45.53-3.1-2.25-2.2 3.1-.5Z" />
-  </svg>;
-}
-
 function StudioIncomingImage({ onFile, ready }: { onFile: (file: File) => unknown; ready: boolean }) {
   useIncomingImageFile(onFile, { ready });
   return null;
@@ -1680,20 +1662,20 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
               {/* Light's image toolbar: クリッピング | テキストで生成・範囲指定で生成・下着のフィッティング・3D画像に変換・画像編集 | 画像検索・お気に入り・ダウンロード・送る. */}
               <div className="fashion-studio-node-toolbar" data-studio-chrome data-testid="fashion-studio-node-toolbar" role="toolbar" aria-label="画像の操作"
                 style={{ left: selectedImageRect.left + selectedImageRect.width / 2, top: selectedImageRect.top - 14 }}>
-                <button type="button" disabled={!toolsReady} onClick={() => setClipTarget({ key, url })}><SquareDashedMousePointer className="h-4 w-4" />クリッピング</button>
+                <button type="button" disabled={!toolsReady} onClick={() => setClipTarget({ key, url })}><StudioToolbarIcon name="clipping" />クリッピング</button>
                 <span className="fashion-studio-node-toolbar-divider" aria-hidden="true" />
                 {STUDIO_TOOLBAR_FUNCTIONS.map(fn => {
                   const info = STUDIO_FUNCTIONS.find(item => item.id === fn)!;
-                  return <button key={fn} type="button" disabled={!toolsReady} onClick={() => void addChildForm(key, url, fn)}><StudioFunctionIcon fn={fn} className="h-4 w-4" />{info.label}</button>;
+                  return <button key={fn} type="button" disabled={!toolsReady} onClick={() => void addChildForm(key, url, fn)}><StudioToolbarIcon name={fn} />{info.label}</button>;
                 })}
-                <StudioImageEditMenu imageUrl={url} disabled={!toolsReady} fileBaseName="heavy-chain" triggerClassName="fashion-studio-node-toolbar-trigger"
+                <StudioImageEditMenu imageUrl={url} disabled={!toolsReady} fileBaseName="heavy-chain" triggerClassName="fashion-studio-node-toolbar-trigger" triggerIcon={<StudioToolbarIcon name="edit" />}
                   onClientResult={async (tool, file) => { await addCanvasImage(file, { kind: 'edit', sourceKey: key, tool }); }}
                   onServerEdit={(tool, request: StudioServerEditRequest) => addChildForm(key, url, 'text', { tool, prompt: request.prompt, ...(request.editOptions ? { editOptions: request.editOptions } : {}) }, request.guideFile, request.mainFile)} />
                 <span className="fashion-studio-node-toolbar-divider" aria-hidden="true" />
-                <button type="button" aria-label="画像検索" title="画像検索" disabled={!url} onClick={() => { setSearchRequest({ id: crypto.randomUUID(), imageUrl: url, key }); setSearchOpen(true); }}><StudioAiSearchIcon className="h-4 w-4" /></button>
-                <button type="button" aria-label="お気に入り" title="お気に入り" disabled={!url} onClick={() => setCollectTarget({ url })}><StudioFolderStarIcon className="h-4 w-4" /></button>
-                <button type="button" aria-label="ダウンロード" title="ダウンロード" onClick={() => void downloadNodeImage(url)}><Download className="h-4 w-4" /></button>
-                <StudioSendMenu imageUrl={url} className="fashion-studio-node-toolbar-trigger" />
+                <button type="button" aria-label="画像検索" title="画像検索" disabled={!url} onClick={() => { setSearchRequest({ id: crypto.randomUUID(), imageUrl: url, key }); setSearchOpen(true); }}><StudioToolbarIcon name="search" /></button>
+                <button type="button" aria-label="お気に入り" title="お気に入り" disabled={!url} onClick={() => setCollectTarget({ url })}><StudioToolbarIcon name="collect" /></button>
+                <button type="button" aria-label="ダウンロード" title="ダウンロード" onClick={() => void downloadNodeImage(url)}><StudioToolbarIcon name="download" /></button>
+                <StudioSendMenu imageUrl={url} className="fashion-studio-node-toolbar-trigger" icon={<StudioToolbarIcon name="send" />} />
               </div>
               {resultKeys.includes(key) && <div className="fashion-studio-node-feedback" data-studio-chrome data-testid="fashion-studio-node-feedback" style={feedbackStyle}>
                 <StudioFeedbackBar documentId={projectCode} objectId={resultItems[resultKeys.indexOf(key)]?.objectId ?? ''} fn={studioFunction}

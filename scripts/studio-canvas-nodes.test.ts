@@ -305,21 +305,45 @@ test('送る opens its list beside the toolbar, centred on the button like Light
   assert.match(sendMenu, /const itemClass = 'flex w-full items-center gap-2 rounded-lg px-2 py-3\.5 /);
 });
 
-test('the toolbar icons are Light\'s: クリッピング with a pointer, 画像検索 with AI, お気に入り folder with a star, a level 送る plane, 画像編集 without an arrow', () => {
-  assert.match(page, /<SquareDashedMousePointer className="h-4 w-4" \/>クリッピング<\/button>/);
-  assert.match(page, /setSearchOpen\(true\); \}\}><StudioAiSearchIcon className="h-4 w-4" \/><\/button>/);
-  assert.match(page, /onClick=\{\(\) => setCollectTarget\(\{ url \}\)\}><StudioFolderStarIcon className="h-4 w-4" \/><\/button>/);
-  assert.match(sendMenu, /<SendHorizontal aria-hidden="true" className="h-4 w-4" \/>/);
-  assert.match(editMenu, /<WandSparkles aria-hidden="true" className="h-4 w-4" \/>\{label\}\n\s*<\/button>/);
+test('the toolbar icons are Light\'s own 20×20 toolbar icons, the same ten as Light\'s toolbar', () => {
+  const icons = read('../src/components/lightchain/StudioToolbarIcon.tsx');
+  assert.match(icons, /<svg viewBox="0 0 20 20" width="1em" height="1em" fill="none" aria-hidden="true" data-toolbar-icon=\{name\}/);
+  for (const name of ['clipping', 'text', 'region', 'underwear', '3d', 'edit', 'search', 'collect', 'download', 'send']) assert.match(icons, new RegExp(`\\n  '${name}': \\[\\n    \\{ d: 'M`));
+  const toolbar = page.slice(page.indexOf('data-testid="fashion-studio-node-toolbar"'), page.indexOf('data-testid="fashion-studio-node-feedback"'));
+  assert.match(toolbar, /<StudioToolbarIcon name="clipping" \/>クリッピング<\/button>/);
+  assert.match(toolbar, /<StudioToolbarIcon name=\{fn\} \/>\{info\.label\}<\/button>/);
+  assert.match(toolbar, /triggerIcon=\{<StudioToolbarIcon name="edit" \/>\}/);
+  assert.match(toolbar, /setSearchOpen\(true\); \}\}><StudioToolbarIcon name="search" \/><\/button>/);
+  assert.match(toolbar, /onClick=\{\(\) => setCollectTarget\(\{ url \}\)\}><StudioToolbarIcon name="collect" \/><\/button>/);
+  assert.match(toolbar, /onClick=\{\(\) => void downloadNodeImage\(url\)\}><StudioToolbarIcon name="download" \/><\/button>/);
+  assert.match(toolbar, /icon=\{<StudioToolbarIcon name="send" \/>\}/);
+  assert.doesNotMatch(toolbar, /className="h-4 w-4"/);
+  // Other places keep their own marks: 画像編集 and 送る fall back to theirs.
+  assert.match(sendMenu, /\{icon \?\? <SendHorizontal aria-hidden="true" className="h-4 w-4" \/>\}/);
+  assert.match(editMenu, /\{triggerIcon \?\? <WandSparkles aria-hidden="true" className="h-4 w-4" \/>\}\{label\}\n\s*<\/button>/);
+});
+
+test('the toolbar is Light\'s size: 42 high, 32px buttons with 20px marks and 14px white words of weight 500, 32px dividers, teal on hover', () => {
+  assert.match(css, /\.fashion-studio-node-toolbar \{\n(?:\s*\/\*[^]*?\*\/\n)?\s*height: 42px;\n\s*gap: 4px;\n\s*border-color: rgb\(255 255 255 \/ 10%\);\n\s*border-radius: 12px;\n\s*color: #fff;\n\s*font-size: 14px;\n\s*font-weight: 500;\n\s*line-height: 16px;/);
+  assert.match(css, /\.fashion-studio-node-toolbar > button,\n\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger \{\n\s*height: 32px;\n\s*gap: 4px;\n\s*padding: 0 8px;\n\}/);
+  assert.match(css, /\.fashion-studio-node-toolbar > button > svg,\n\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger > svg \{\n\s*width: 20px;\n\s*height: 20px;/);
+  assert.match(css, /\.fashion-studio-node-toolbar > button:hover:not\(:disabled\),\n\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger:hover:not\(:disabled\) \{\n\s*color: #20d0c4;\n\}/);
+  assert.match(css, /\.fashion-studio-node-toolbar > \.fashion-studio-node-toolbar-divider \{\n\s*height: 32px;\n\s*margin: 0;/);
+  // 4 + 32 + 4 inside, 1px lines: 42.
+  assert.equal(4 + 32 + 4 + 2, 42);
+  // Light draws the studio in its body font, so Japanese comes out in PingFang SC.
+  assert.match(css, /\.fashion-studio-project-detail-parity \{\n[^}]*font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",/);
+  assert.doesNotMatch(css, /\.fashion-studio-project-detail-parity \{\n[^}]*font-family: Inter/);
 });
 
 test('画像編集 and 送る light up while their list is open, like Light (a lighter ground, teal mark and words)', () => {
   assert.match(css, /\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger\[aria-expanded="true"\] \{\n\s*background: rgb\(255 255 255 \/ 10%\);\n\s*color: #20d0c4;\n\}/);
-  assert.match(css, /\[data-studio-theme="light"\] \.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger\[aria-expanded="true"\] \{ background: rgba\(0, 0, 0, 0\.06\); color: #0fa89e; \}/);
+  // The light look uses Light's light colours: a black 8% ground and #022f31.
+  assert.match(css, /\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger\[aria-expanded="true"\]\) \{ background: rgba\(0, 0, 0, 0\.08\); color: #022f31; \}/);
   assert.match(editMenu, /aria-haspopup="menu"\n\s*aria-expanded=\{menuOpen\}/);
   assert.match(sendMenu, /aria-haspopup="menu"\n\s*aria-expanded=\{open\}/);
   assert.match(page, /<StudioImageEditMenu [^>]*triggerClassName="fashion-studio-node-toolbar-trigger"/);
-  assert.match(page, /<StudioSendMenu imageUrl=\{url\} className="fashion-studio-node-toolbar-trigger" \/>/);
+  assert.match(page, /<StudioSendMenu imageUrl=\{url\} className="fashion-studio-node-toolbar-trigger" icon=\{<StudioToolbarIcon name="send" \/>\} \/>/);
 });
 
 test('the 画像編集 list is Light\'s size and look: about 190 wide on #303538, 37px rows of 12px words, a round NEW, Light\'s marks', () => {
