@@ -195,7 +195,10 @@ function GraphicToolStage({ tool, candidate, index, locked, onClose, onUseAsRefe
       const canvas = tool === 'repeat' ? drawRepeatUnit(pixelsToCanvas(processed), layout) : pixelsToCanvas(processed);
       canvas.toBlob((blob) => {
         if (cancelled || !blob) return;
-        const url = URL.createObjectURL(blob); urls.current.push(url); setPreviewUrl(url);
+        // Only the shown preview is kept; the one it replaces is released.
+        const url = URL.createObjectURL(blob);
+        urls.current.forEach((old) => URL.revokeObjectURL(old));
+        urls.current = [url]; setPreviewUrl(url);
       }, 'image/png');
     }, 120);
     return () => { cancelled = true; window.clearTimeout(timer); };
