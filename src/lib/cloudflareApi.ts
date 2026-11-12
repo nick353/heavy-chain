@@ -151,6 +151,17 @@ interface CloudflareBrand {
 }
 
 export type CloudflareCanvasDocument = CanvasDocument;
+/** One generated result's feedback in a Fashion Studio project (GET/PUT /v1/canvas-documents/:id/studio-feedback). */
+export type CloudflareStudioFeedback = {
+  object_id: string;
+  studio_function: 'text' | 'region' | 'underwear' | '3d' | null;
+  direction: 0 | 1 | null;
+  reasons: string[];
+  remark: string;
+  improve: string;
+  updated_at: string;
+};
+export type CloudflareStudioFeedbackInput = Pick<CloudflareStudioFeedback, 'studio_function' | 'direction' | 'reasons' | 'remark' | 'improve'>;
 type CloudflareGenerationJob = import('../types/database').GenerationJob;
 type CloudflareGeneratedImage = import('../types/database').GeneratedImage;
 type CloudflareImageFolder = { image_id: string; folder_id: string };
@@ -1218,6 +1229,19 @@ class CloudflareDataPlaneClient {
       }),
       headers: { 'content-type': 'application/json' },
     },context);
+  }
+
+  /** ファッションスタジオの生成結果ごとの 👍👎・理由・要望（本家の「フィードバックする」）。 */
+  async listStudioFeedback(documentId: string): Promise<{ feedback: CloudflareStudioFeedback[] }> {
+    return this.request(`/v1/canvas-documents/${encodeURIComponent(documentId)}/studio-feedback`);
+  }
+
+  async saveStudioFeedback(documentId: string, objectId: string, input: CloudflareStudioFeedbackInput): Promise<CloudflareStudioFeedback> {
+    return this.request(`/v1/canvas-documents/${encodeURIComponent(documentId)}/studio-feedback/${encodeURIComponent(objectId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+      headers: { 'content-type': 'application/json' },
+    });
   }
 
   async deleteCanvasDocument(documentId: string): Promise<void> {

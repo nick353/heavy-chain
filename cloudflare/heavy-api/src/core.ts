@@ -1636,6 +1636,112 @@ async function deleteCanvasDocument(request: Request, env: CoreEnv, documentID: 
   return result.meta.changes > 0 ? new Response(null, { status: 204 }) : errorResponse("not_found", 404);
 }
 
+// ── ファッションスタジオの生成結果のフィードバック（本家の 👍👎「フィードバックする」） ─────────────────────────────
+/** 結果の画像1枚につき1行（document_id, object_id）。押せるのはそのプロジェクトを見られる人（閲覧者以上）。 */
+const STUDIO_FEEDBACK_FUNCTIONS = new Set(["text", "region", "underwear", "3d"]);
+export const STUDIO_FEEDBACK_LIMITS = { reasons: 20, reasonLength: 40, remark: 50, improve: 1000, imagePath: 2048 } as const;
+type StudioFeedbackRow = {
+  object_id: string; studio_function: string | null; direction: number | null; reasons: string; remark: string; improve: string;
+  user_id: string; created_at: string; updated_at: string;
+};
+const studioFeedbackPayload = (row: StudioFeedbackRow) => {
+  const reasons = parseStored(row.reasons, []);
+  return {
+    object_id: row.object_id, studio_function: row.studio_function,
+    direction: row.direction === 0 || row.direction === 1 ? row.direction : null,
+    reasons: Array.isArray(reasons) ? reasons.filter((value): value is string => typeof value === "string") : [],
+    remark: row.remark, improve: row.improve, updated_at: row.updated_at,
+  };
+};
+/** 見られるプロジェクトだけ。無い・見られないは同じ 404（ほかのブランドのプロジェクトがあるかを漏らさない）。 */
+async function studioFeedbackDocument(request: Request, env: CoreEnv, documentID: string): Promise<{ userID: string; brandID: string; snapshot: string } | Response> {
+  if (!validID(documentID)) return errorResponse("not_found", 404);
+  const userID = await principal(request, env);
+  if (userID instanceof Response) return userID;
+  const row = await env.DB.prepare(`SELECT brand_id, snapshot FROM canvas_documents WHERE id = ? LIMIT 1`)
+    .bind(documentID).first<{ brand_id: string; snapshot: string }>();
+  if (!row || !roleAtLeast(await brandRole(env, userID, row.brand_id), "viewer")) return errorResponse("not_found", 404);
+  return { userID, brandID: row.brand_id, snapshot: row.snapshot };
+}
+/** プロジェクトの中の画像だけに付けられる。画像の住所はクライアントの申告ではなく保存されたプロジェクトから取る。 */
+export function studioFeedbackImagePath(snapshot: unknown, objectID: string): string | null | undefined {
+  const objects = snapshot && typeof snapshot === "object" ? (snapshot as { objects?: unknown }).objects : undefined;
+  if (!Array.isArray(objects)) return undefined;
+  const image = objects.find((value) => value && typeof value === "object" && (value as { id?: unknown }).id === objectID
+    && (value as { type?: unknown }).type === "image") as { src?: unknown; metadata?: { storagePath?: unknown } } | undefined;
+  if (!image) return undefined;
+  const path = typeof image.src === "string" && image.src ? image.src
+    : typeof image.metadata?.storagePath === "string" ? image.metadata.storagePath : null;
+  return path && path.length <= STUDIO_FEEDBACK_LIMITS.imagePath && !/^(?:data|blob):/i.test(path) ? path : null;
+}
+/** 送られた内容の点検。理由は重ならないように並べ、長さを超えるもの・制御文字のあるものは 400。 */
+export function studioFeedbackInput(input: JsonRecord | null): {
+  studioFunction: string | null; direction: 0 | 1 | null; reasons: string[]; remark: string; improve: string;
+} | null {
+  if (!input) return null;
+  const direction = input.direction === undefined || input.direction === null ? null : input.direction;
+  if (direction !== null && direction !== 0 && direction !== 1) return null;
+  const studioFunction = input.studio_function === undefined || input.studio_function === null ? null : input.studio_function;
+  if (studioFunction !== null && (typeof studioFunction !== "string" || !STUDIO_FEEDBACK_FUNCTIONS.has(studioFunction))) return null;
+  const rawReasons = input.reasons === undefined ? [] : input.reasons;
+  if (!Array.isArray(rawReasons) || rawReasons.length > STUDIO_FEEDBACK_LIMITS.reasons) return null;
+  const reasons: string[] = [];
+  for (const value of rawReasons) {
+    const text = boundedText(value, STUDIO_FEEDBACK_LIMITS.reasonLength);
+    if (typeof text !== "string" || text === "invalid" || !text.trim()) return null;
+    if (!reasons.includes(text.trim())) reasons.push(text.trim());
+  }
+  const remark = boundedText(input.remark ?? "", STUDIO_FEEDBACK_LIMITS.remark);
+  // 要望の文は改行を許す（本家の欄は複数行）。ほかの制御文字は断る。
+  const improveValue = input.improve ?? "";
+  // eslint-disable-next-line no-control-regex -- control characters other than line breaks are rejected from persisted text.
+  const improve = typeof improveValue === "string" && improveValue.length <= STUDIO_FEEDBACK_LIMITS.improve && !/[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f]/.test(improveValue) ? improveValue : "invalid";
+  if (remark === "invalid" || remark === null || improve === "invalid") return null;
+  return { studioFunction, direction, reasons, remark, improve };
+}
+async function listStudioFeedback(request: Request, env: CoreEnv, documentID: string): Promise<Response> {
+  const document = await studioFeedbackDocument(request, env, documentID);
+  if (document instanceof Response) return document;
+  const result = await env.DB.prepare(
+    `SELECT object_id, studio_function, direction, reasons, remark, improve, user_id, created_at, updated_at
+     FROM studio_result_feedback WHERE document_id = ? ORDER BY updated_at DESC LIMIT 500`,
+  ).bind(documentID).all<StudioFeedbackRow>();
+  return jsonResponse({ feedback: (result.results ?? []).map(studioFeedbackPayload) });
+}
+async function saveStudioFeedback(request: Request, env: CoreEnv, documentID: string, objectID: string): Promise<Response> {
+  const document = await studioFeedbackDocument(request, env, documentID);
+  if (document instanceof Response) return document;
+  if (!validID(objectID)) return errorResponse("studio_result_not_found", 404);
+  const input = studioFeedbackInput(await readJson(request));
+  if (!input) return errorResponse("invalid_studio_feedback", 400);
+  const imagePath = studioFeedbackImagePath(parseStored(document.snapshot, null), objectID);
+  if (imagePath === undefined) return errorResponse("studio_result_not_found", 404);
+  const now = new Date().toISOString();
+  const { userID, brandID } = document;
+  try {
+    // 書く瞬間にもプロジェクトが同じブランドにあり、まだそのブランドの人であることを同じ文で確かめる。
+    await env.DB.prepare(
+      `INSERT INTO studio_result_feedback
+       (document_id, object_id, brand_id, user_id, image_path, studio_function, direction, reasons, remark, improve, created_at, updated_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE EXISTS (SELECT 1 FROM canvas_documents d WHERE d.id = ? AND d.brand_id = ?)
+         AND EXISTS (SELECT 1 FROM brands b LEFT JOIN brand_members bm ON bm.brand_id = b.id AND bm.user_id = ? AND bm.joined_at IS NOT NULL
+                     WHERE b.id = ? AND (b.owner_id = ? OR bm.user_id = ?))
+       ON CONFLICT(document_id, object_id) DO UPDATE SET
+         user_id = excluded.user_id, image_path = excluded.image_path, studio_function = excluded.studio_function,
+         direction = excluded.direction, reasons = excluded.reasons, remark = excluded.remark, improve = excluded.improve,
+         updated_at = excluded.updated_at`,
+    ).bind(documentID, objectID, brandID, userID, imagePath, input.studioFunction, input.direction, JSON.stringify(input.reasons),
+      input.remark, input.improve, now, now, documentID, brandID, userID, brandID, userID, userID).run();
+  } catch { return errorResponse("studio_feedback_unavailable", 503); }
+  const row = await env.DB.prepare(
+    `SELECT object_id, studio_function, direction, reasons, remark, improve, user_id, created_at, updated_at
+     FROM studio_result_feedback WHERE document_id = ? AND object_id = ? LIMIT 1`,
+  ).bind(documentID, objectID).first<StudioFeedbackRow>();
+  if (!row || row.user_id !== userID || row.updated_at !== now) return errorResponse("not_found", 404);
+  return jsonResponse(studioFeedbackPayload(row));
+}
+
 /** Returns null when the request belongs to another Worker surface. */
 export async function handleCoreRequest(request: Request, env: CoreEnv): Promise<Response | null> {
   const url = new URL(request.url);
@@ -1695,6 +1801,10 @@ export async function handleCoreRequest(request: Request, env: CoreEnv): Promise
   if (image && request.method === "DELETE") return deleteGeneratedImage(request, env, decodeURIComponent(image[1]));
   if (url.pathname === "/v1/canvas-documents" && request.method === "GET") return listCanvasDocuments(request, env, url);
   if (url.pathname === "/v1/canvas-documents" && request.method === "POST") return createCanvasDocument(request, env);
+  const studioFeedbackList = url.pathname.match(/^\/v1\/canvas-documents\/([^/]+)\/studio-feedback$/);
+  if (studioFeedbackList && request.method === "GET") return listStudioFeedback(request, env, decodeURIComponent(studioFeedbackList[1]));
+  const studioFeedback = url.pathname.match(/^\/v1\/canvas-documents\/([^/]+)\/studio-feedback\/([^/]+)$/);
+  if (studioFeedback && request.method === "PUT") return saveStudioFeedback(request, env, decodeURIComponent(studioFeedback[1]), decodeURIComponent(studioFeedback[2]));
   const canvas = url.pathname.match(/^\/v1\/canvas-documents\/([^/]+)$/);
   if (canvas && request.method === "GET") return readCanvasDocument(request, env, decodeURIComponent(canvas[1]));
   if (canvas && request.method === "PATCH") return updateCanvasDocument(request, env, decodeURIComponent(canvas[1]));
