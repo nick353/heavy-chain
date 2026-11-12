@@ -3,6 +3,7 @@ import { Box, Check, Loader2, RefreshCw } from 'lucide-react';
 import { AssistantQuestionCard } from '../designDetail/AssistantQuestionCard';
 import type { AssistantQuestion } from '../designDetail/assistantQuestions';
 import { foundImageFile, searchReferenceImages, type FoundImage } from '../designDetail/referenceImageSearch';
+import { FOUND_IMAGE_SOURCES_NOTE, FoundImageCredit } from '../designDetail/FoundImageCredit';
 import { AGENT_IMAGE_ACCEPT, AgentAttachmentError, uploadAgentImage } from './agentAttachments';
 import { AgentAttachmentChips } from './AgentAttachMenu';
 import { ErrorRow, GeneratedTile, StepList, StepSpinner, UserBubble } from './AgentParts';
@@ -15,7 +16,7 @@ const PICK_LIMIT = 8;
 const settled = (image: AgentStyleImage) => image.state !== 'pending' && image.state !== 'running';
 
 /**
- * Light's 「デザイン依頼」 picker under a reference image search: each topic's found images (Wikimedia Commons, freely
+ * Light's 「デザイン依頼」 picker under a reference image search: each topic's found images (Openverse / Wikimedia Commons, freely
  * licensed), 全選択, 素材を追加選択 (the user's own images) and 企画を生成 / 次へ. Going on without a pick is allowed; the
  * assistant then asks how to continue, as Light does.
  */
@@ -84,11 +85,14 @@ function AgentImagePicker({ searches, active, button, brandId, onConfirm, onErro
               : <div className="mt-2 grid grid-cols-4 gap-2">{list.map((image) => {
                 const checked = chosen.some((item) => item.id === image.id);
                 return (
-                  <button key={image.id} type="button" disabled={busy} data-testid="agent-dialogue-search-image" aria-pressed={checked} title={`${image.title}${image.license ? `（${image.license}）` : ''}`}
-                    onClick={() => toggle(image)} className={`relative aspect-square overflow-hidden rounded-lg border-2 ${checked ? 'border-[#0bcabc]' : 'border-transparent'} bg-white/5`}>
-                    <img src={image.thumbUrl} alt={image.title} loading="lazy" className="h-full w-full object-cover" />
-                    {checked && <span className="absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#0bcabc]"><Check className="h-3 w-3 text-neutral-950" /></span>}
-                  </button>
+                  <div key={image.id} className="min-w-0">
+                    <button type="button" disabled={busy} data-testid="agent-dialogue-search-image" aria-pressed={checked} title={`${image.title}${image.license ? `（${image.license}）` : ''}`}
+                      onClick={() => toggle(image)} className={`relative block aspect-square w-full overflow-hidden rounded-lg border-2 ${checked ? 'border-[#0bcabc]' : 'border-transparent'} bg-white/5`}>
+                      <img src={image.thumbUrl} alt={image.title} loading="lazy" className="h-full w-full object-cover" />
+                      {checked && <span className="absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#0bcabc]"><Check className="h-3 w-3 text-neutral-950" /></span>}
+                    </button>
+                    <FoundImageCredit image={image} />
+                  </div>
                 );
               })}</div>}
           </div>
@@ -97,7 +101,7 @@ function AgentImagePicker({ searches, active, button, brandId, onConfirm, onErro
       {active && (
         <>
           {own.length > 0 && <div className="mt-3"><AgentAttachmentChips items={own} onRemove={(id) => setOwn((current) => current.filter((item) => item.id !== id))} /></div>}
-          <p className="mt-3 text-[10px] text-neutral-500">画像: Wikimedia Commons（各画像のライセンスに従います）</p>
+          <p className="mt-3 text-[10px] text-neutral-500">{FOUND_IMAGE_SOURCES_NOTE}</p>
           <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
             <button type="button" disabled={busy || !found.length} onClick={() => setChosen(allChosen ? [] : found.slice(0, room))}
               className="h-8 rounded-lg border border-white/15 px-3 text-xs text-neutral-200 hover:bg-white/10 disabled:opacity-50">{allChosen ? '選択を解除' : '全選択'}</button>
