@@ -23,7 +23,7 @@ import {
   YAHOO_ATTRIBUTION_HTML, agentDirectionSearches, agentJapanMarket, agentProduct, agentYen, type AgentProduct,
   agentStructurePrompt, agentStyleImagePrompt, agentUsesMerchFlow, agentWording, buildAgentDesignHtml, buildAgentFinalHtml, buildAgentStructureHtml, parseAgentFinal, parseAgentStructure, AGENT_STYLE_COUNT,
   AGENT_HEARING_AGAIN, AGENT_HEARING_FIRST, AGENT_HEARING_ITEMS, agentHearingPrompt, agentHearingState, agentHearingTitle, parseAgentHearing,
-  agentBuildPlanItemImages, agentPaletteColors, buildAgentThemePlanHtml,
+  agentBuildPlanItemImages, agentDialogueBriefTitle, agentPaletteColors, buildAgentDialogueBriefHtml, buildAgentThemePlanHtml,
   type AgentAssistantStep, type AgentAttachment, type AgentImageStep, type AgentNote, type AgentNoteStage, type AgentResearchScope, type AgentStyleImage, type AgentTask, type AgentTaskDocument,
 } from '../features/agent/agentTasks';
 
@@ -968,6 +968,8 @@ export default function HeavyAgentTaskPage() {
   /** The task's reports, newest first (Light's タスク成果物). */
   const deliverables: Array<{ key: string; title: string; html: () => string | { html: string; slides: boolean } }> = task && wording ? [
     ...(!merch && agentThemeSearches(task) && plan ? [{ key: 'theme-plan', title: 'テーマ企画書', html: () => buildAgentThemePlanHtml(task, doc?.title ?? 'テーマ企画書', imageUrl, urlsByKey) }] : []),
+    // Heavy's own: the approved 執行書 and every generated style in one document, once they have all settled.
+    ...(dialogue && designsSettled && designs.some((image) => image.state === 'completed') ? [{ key: 'brief', title: agentDialogueBriefTitle(task), html: () => buildAgentDialogueBriefHtml(task, urlsByKey) }] : []),
     ...(merch && final ? [{ key: 'final', title: wording.finalReport.title, html: () => buildAgentFinalHtml(task, urlsByKey) }] : []),
     ...(merch && designsSettled ? [{ key: 'design', title: wording.designReport.title, html: () => buildAgentDesignHtml(task, urlsByKey) }] : []),
     ...(merch && task.structure?.state === 'completed' ? [{ key: 'structure', title: wording.structureReport.title, html: () => buildAgentStructureHtml(task) }] : []),
@@ -1010,6 +1012,12 @@ export default function HeavyAgentTaskPage() {
               {(task.attachments ?? []).length > 0 && !notes.some((note) => note.attachments?.length) && !(task.turns ?? []).some((turn) => turn.attachments?.length) && <div className="flex justify-end"><AgentAttachmentChips items={task.attachments ?? []} /></div>}
               {dialogue && <AgentDialogueView task={task} brandId={brandId} working={working} urls={imageUrls} attachments={task.attachments ?? []}
                 onAnswer={answerDialogue} onPick={pickDialogue} onRetry={retryDialogue} onRetryImage={retryStyleImage} onError={(message) => setNotice(message)} />}
+              {/* Heavy's own (Light's chat has no 概要 or report for these scenes): the 執行書 and the results to show or pass round. */}
+              {dialogue && deliverables.some((entry) => entry.key === 'brief') && (
+                <ReportCard testId="agent-dialogue-brief-report" title={agentDialogueBriefTitle(task)} note={task.scene === 'AIグラフィックデザイン'
+                  ? '執行書・全図案と設計ポイント・トレンド検索の参考資料を1つにまとめた資料です。' : '執行書・全スタイルと設計ロジック・トレンド検索の参考資料を1つにまとめた資料です。'}
+                  onOpen={() => showDeliverable('brief')} onDownload={() => saveDeliverable('brief')} />
+              )}
               {!dialogue && (
                 <>
               {conversation && (

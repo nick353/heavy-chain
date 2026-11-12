@@ -738,6 +738,12 @@ body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 system-ui,-appl
 <body><main><h1>調査とビジュアル方向レポート</h1><p class="muted">${escapeHtml(task.prompt)}</p>${scope ? `<p class="muted">調査範囲：${escapeHtml(scope)}</p>` : ''}${sections}${products}${directions}${sources}${credit}</main></body></html>`;
 }
 
+/**
+ * A plan's name as the task's title and the plan's heading: whole up to 100 characters, else cut with 「…」. The plan asks
+ * for one line, but names run to about 70 characters (「…着回せる SS2027 ウィメンズ企画」), and a bare cut at 60 showed
+ * 「…着回せる SS2」 (2026-11-12, テーマ企画 5f5f71f6 and the 新商品企画 「…シャツ×スカートで過ごす街歩」).
+ */
+export const agentClipTitle = (value: string, limit = 100) => (value.length > limit ? `${value.slice(0, limit - 1)}…` : value);
 export type ParsedPlan = { title: string | null; sections: { heading: string; items: string[] }[]; imagePrompt: string | null };
 export function parsePlanResponse(content: string): ParsedPlan {
   const normalized = content.replace(/\r/g, '');
@@ -757,6 +763,6 @@ export function parsePlanResponse(content: string): ParsedPlan {
     sections[sections.length - 1].items.push(item);
   }
   const titleSection = sections.find((section) => section.heading === 'タイトル');
-  if (titleSection) title = titleSection.items[0]?.slice(0, 60) ?? null;
+  if (titleSection?.items[0]) title = agentClipTitle(titleSection.items[0]);
   return { title, sections: sections.filter((section) => section.heading !== 'タイトル' && section.items.length), imagePrompt: imagePrompt?.slice(0, 600) ?? null };
 }
