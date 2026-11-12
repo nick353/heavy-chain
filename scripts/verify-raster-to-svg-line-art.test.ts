@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isLineArt, tracePixelsToSvg } from '../src/lib/rasterToSvg.ts';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { initSync, to_svg } from 'vtracer-wasm';
+import { isLineArt } from '../src/lib/rasterToSvg.ts';
+import { traceWithVtracer } from '../src/lib/vectorTrace.ts';
+
+const require = createRequire(import.meta.url);
+initSync({ module: readFileSync(require.resolve('vtracer-wasm/vtracer.wasm')) });
 
 /** A white sheet with grey anti-aliased strokes, like a 平絵 the AI returns. */
 const sheet = (width: number, height: number, paint: (x: number, y: number) => [number, number, number]) => {
@@ -23,9 +30,10 @@ const stroke = (x: number, y: number) => {
 test('grey line art is traced as one ink colour so strokes stay whole', () => {
   const art = sheet(100, 100, stroke);
   assert.equal(isLineArt(art), true);
-  const traced = tracePixelsToSvg(art, { colors: 6 });
-  assert.equal(traced.colors.length, 1);
-  assert.equal(traced.pathCount, 1);
+  const traced = traceWithVtracer(to_svg, art, { colors: 6, detail: 'normal', lineArt: true });
+  // Paper and one ink: k-means would split each soft stroke into several greys and break the outline into dashes.
+  assert.equal(traced.colors.length, 2);
+  assert.ok(traced.colors.includes('#ffffff'));
 });
 
 test('colour artwork and pale fabric keep the colour tracer', () => {
@@ -33,5 +41,14 @@ test('colour artwork and pale fabric keep the colour tracer', () => {
   assert.equal(isLineArt(print), false);
   const cream = sheet(100, 100, (x, y) => ((x * 7 + y) % 50 === 0 ? [30, 30, 30] : [236, 228, 216]));
   assert.equal(isLineArt(cream), false);
-  assert.ok(tracePixelsToSvg(print, { colors: 4 }).colors.length >= 1);
+  assert.ok(traceWithVtracer(to_svg, print, { colors: 4, detail: 'normal', lineArt: false }).colors.length >= 2);
+});
+
+test('the ベクター化 tools\' SVG download uses the curve tracer and decides 平絵 from the image', () => {
+  const panel = readFileSync('src/components/lightchain/SvgExportPanel.tsx', 'utf8');
+  assert.match(panel, /traceImageUrlToVector\(imageUrl, \{ colors, detail: 'normal' \}\)/);
+  assert.match(panel, /saveSvgFile\(state\.svg, fileName\)/);
+  assert.doesNotMatch(panel, /traceImageUrlToSvg/);
+  const client = readFileSync('src/lib/vectorTraceClient.ts', 'utf8');
+  assert.match(client, /const lineArt = options\.lineArt \?\? isLineArt\(read\.image\);/);
 });

@@ -25,7 +25,8 @@ export async function setCandidateFavorite(id: string, favorite: boolean): Promi
 export const GRAPHIC_SEND_TARGETS = [
   { id: 'printing', label: 'プリントイメージで服に当てる', href: (id: string) => `/tools/printing?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=printing-design` },
   { id: 'canvas', label: 'Canvasで一部を修正', href: (id: string) => `/canvas/new?sourceArtifactId=${encodeURIComponent(id)}` },
-  { id: 'vector', label: 'ベクター化', href: (id: string) => `/tools/vector-special?libraryArtifactId=${encodeURIComponent(id)}` },
+  // SVGにする (the tool row) traces the proposal as it is; this one first has AI redraw it flat, then traces that.
+  { id: 'vector', label: 'ベクター化（AIで平らに描き直す）', href: (id: string) => `/tools/vector-special?libraryArtifactId=${encodeURIComponent(id)}` },
   { id: 'fabric', label: '生地イメージ', href: (id: string) => `/tools/fabric?libraryArtifactId=${encodeURIComponent(id)}&librarySlot=fabric-design` },
 ] as const;
 

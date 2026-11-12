@@ -29,14 +29,23 @@ export function unsharpMask(data: Uint8ClampedArray, width: number, height: numb
 }
 
 /**
+ * How far an image may be enlarged: the requested scale, unless the long edge would pass maxEdge. The upscale tool keeps
+ * 4096; AIグラフィックデザイン's 「2倍の大きさ」 passes a larger edge so its 1696×2528 proposals really double (they came
+ * out 2748×4096, 1.62×, under a file name saying 2倍 — 2026-11-12).
+ */
+export function upscaleLimit(width: number, height: number, scale: number, maxEdge = MAX_UPSCALE_EDGE): number {
+  return Math.min(scale, maxEdge / Math.max(width, height));
+}
+
+/**
  * Enlarge in 2x steps with high-quality smoothing, then sharpen. This is
  * resampling, not generative super-resolution: it adds pixels, not detail.
  */
-export async function upscaleImage(imageUrl: string, options: { scale: number; sharpness: number; denoiseLevel: number }): Promise<string> {
+export async function upscaleImage(imageUrl: string, options: { scale: number; sharpness: number; denoiseLevel: number; maxEdge?: number }): Promise<string> {
   const image = await loadImage(imageUrl);
   let width = image.naturalWidth; let height = image.naturalHeight;
   if (!width || !height) throw new Error('image_dimensions_invalid');
-  const limit = Math.min(options.scale, MAX_UPSCALE_EDGE / Math.max(width, height));
+  const limit = upscaleLimit(width, height, options.scale, options.maxEdge);
   if (limit <= 1) throw new Error('image_already_at_max_size');
   let canvas: HTMLCanvasElement | HTMLImageElement = image;
   let reached = 1;
