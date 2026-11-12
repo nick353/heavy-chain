@@ -484,7 +484,9 @@ export default function HeavyAgentTaskPage() {
     const requestId = crypto.randomUUID();
     const step: AgentAssistantStep = { requestId, state: 'running' };
     const saved = await commit((task) => ({ ...task, plan: step }));
-    await runAssistant('plan', step, planPrompt(saved.task, theme), (task, result) => ({ ...task, plan: result }), textMode(saved.task));
+    // テーマ企画's plan carries the swatch codes, the mood board and one line per main item: the plain mode stops at 2,560
+    // tokens and cut it before them (production 2026-11-12, 8d3316ef: 1,542 characters, no [画像プロンプト]).
+    await runAssistant('plan', step, planPrompt(saved.task, theme), (task, result) => ({ ...task, plan: result }), agentThemeSearches(saved.task) ? 'agent' : textMode(saved.task));
   }, [commit, runAssistant]);
 
   // Light's steps after the directions (2026-11-12): 商品構成計画 → AI designs → the final plan.

@@ -6,7 +6,7 @@
  */
 import {
   agentImagePrompt, agentScopeLabel, effectiveAgentRequirements, parseAgentDirection, parseAgentRequirements, parseAgentResearch, parsePlanResponse,
-  agentAttachmentLines, agentPaletteColors, agentRoundSources, agentSourceSite, parsePlanItemImages, type AgentResearchScope, type AgentStyleImage, type AgentTask,
+  agentAttachmentLines, agentPaletteColors, agentRoundSources, agentSourceSite, parsePlanItemImages, AGENT_PLAN_ITEM_IMAGES, type AgentResearchScope, type AgentStyleImage, type AgentTask,
 } from './agentFlow.ts';
 import type { AgentProduct } from './agentProducts.ts';
 
@@ -245,7 +245,13 @@ export const agentImageLabel = (image: Pick<AgentStyleImage, 'code' | 'name'>) =
  * on this account, and its 新商品企画 draws one picture per style). Codes I1… so they never meet a style code.
  */
 export function agentBuildPlanItemImages(task: AgentTask, newId: () => string): AgentStyleImage[] {
-  const items = task.plan?.state === 'completed' && task.plan.content ? parsePlanItemImages(task.plan.content) : [];
+  const content = task.plan?.state === 'completed' && task.plan.content ? task.plan.content : '';
+  let items = content ? parsePlanItemImages(content) : [];
+  // A plan without the item lines still lists its main items: each is drawn from its own words.
+  if (!items.length && content) {
+    items = (parsePlanResponse(content).sections.find(section => /主力アイテム/.test(section.heading))?.items ?? []).slice(0, AGENT_PLAN_ITEM_IMAGES)
+      .map(item => ({ name: (item.split(/[（(:：]/)[0] || item).trim().slice(0, 40), prompt: agentImagePrompt(item) }));
+  }
   return items.map((item, index) => ({ key: `I${index + 1}`, code: `I${index + 1}`, name: item.name, category: '', prompt: item.prompt.slice(0, 700), requestId: newId(), state: 'pending' as const }));
 }
 
