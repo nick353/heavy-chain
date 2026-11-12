@@ -103,6 +103,10 @@ test('the main items become pending pictures, and テーマ企画書 holds the p
   assert.deepEqual(images.map(image => [image.key, image.code, image.name, image.state, image.requestId]),
     [['I1', 'I1', 'ベルト付きリネン混ロングスカート', 'pending', 'id-1'], ['I2', 'I2', 'ジャケット', 'pending', 'id-2']]);
   assert.deepEqual(agentBuildPlanItemImages(themeTask(), () => 'x'), []);
+  // A plan without the item lines draws its 主力アイテム from their own words.
+  const noLines = themeTask({ plan: done(planContent.slice(0, planContent.indexOf('[画像プロンプト]'))) });
+  assert.deepEqual(agentBuildPlanItemImages(noLines, () => 'y').map(image => [image.code, image.name, image.prompt]),
+    [['I1', 'ベルト付きリネン混ロングスカート', 'ベルト付きリネン混ロングスカート'], ['I2', 'ハーフスリーブのリネンジャケット', 'ハーフスリーブのリネンジャケット']]);
   const html = buildAgentThemePlanHtml({ ...task, designs: images.map(image => ({ ...image, state: 'completed' })) }, 'タスク名', 'https://img.example/board.png?sig=1&x=<2>',
     { I1: 'https://img.example/i1.png' });
   assert.match(html, /<title>テーマ企画書<\/title>/);
@@ -129,4 +133,6 @@ test('the page asks before searching, takes the answer from the card or the inpu
   assert.match(page, /key: 'theme-plan', title: 'テーマ企画書'/);
   assert.match(page, /data-testid="agent-plan-designs"/);
   assert.match(page, /data-testid="agent-plan-swatches"/);
+  // テーマ企画's plan is sent in the agent mode (9,000 tokens), not the plain one that stops at 2,560.
+  assert.match(page, /planPrompt\(saved\.task, theme\), \(task, result\) => \(\{ \.\.\.task, plan: result \}\), agentThemeSearches\(saved\.task\) \? 'agent' : textMode\(saved\.task\)\)/);
 });
