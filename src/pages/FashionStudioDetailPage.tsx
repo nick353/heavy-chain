@@ -1545,7 +1545,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
         {maskDialog && loadedMain.url && <StudioMaskEditor ariaLabel={regionPoints.length > 1 ? `範囲指定で生成（ポイント${Math.max(1, regionPoints.findIndex(point => point.slot === maskDialog.slot) + 1)}）` : '範囲指定で生成'}
           testId="fashion-studio-region-mask-editor" base={{ imageUrl: loadedMain.url, initialMask: maskDialog.initial }} reference={maskDialog.referenceUrl ? { imageUrl: maskDialog.referenceUrl } : null}
           onCancel={() => setMaskDialog(null)}
-          actions={api => <button type="button" data-testid="fashion-studio-region-mask-save" disabled={api.busy} className="h-8 rounded-lg bg-[#5fd0c8] px-4 text-sm text-slate-950 disabled:opacity-40"
+          actions={api => <button type="button" data-testid="fashion-studio-region-mask-save" disabled={api.busy} className="h-9 rounded-md bg-[#20d0c4] px-4 text-sm text-[#0f1718] hover:bg-[#3ad8cd] disabled:opacity-40"
             onClick={() => void api.run(async () => {
               if (api.isEmpty('base')) { api.notifyEmpty(); return; }
               const referencePart = maskDialog.referenceUrl && !api.isEmpty('reference') ? await api.getClip('reference') : null;

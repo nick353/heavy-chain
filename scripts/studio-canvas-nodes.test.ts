@@ -212,11 +212,30 @@ test('the windows the page opens (クリッピング, お気に入り, 範囲指
   assert.doesNotMatch(inline, /^\s*\{dialogs\}\s*$/m);
 });
 
-test('AIマスク認識 opens its list fixed to the window, not inside the tool row that scrolls sideways', () => {
-  assert.match(maskEditor, /<div className="flex h-14 items-center gap-1 overflow-x-auto[^"]*" role="toolbar"[^>]*onScroll=\{\(\) => setAiMenuOpen\(false\)\}>/);
-  assert.match(maskEditor, /const box = event\.currentTarget\.getBoundingClientRect\(\); setAiMenuAt\(\{ left: box\.left, top: box\.bottom \+ 4 \}\)/);
-  assert.match(maskEditor, /<div role="menu" className="fixed z-\[60\][^"]*" style=\{\{ left: aiMenuAt\.left, top: aiMenuAt\.top \}\}>/);
-  assert.doesNotMatch(maskEditor, /role="menu" className="absolute left-0 top-11/);
+test('簡易エディター is Light\'s floating bar over a dark page: the chosen tool\'s small bar under it, 520×515 panes below', () => {
+  // No box around it and no sideways-scrolling row (2026-11-12 production: the AIマスク認識 list was cut off inside that row).
+  assert.match(maskEditor, /<div className="fixed inset-0 z-50 overflow-auto bg-black\/70" role="dialog"/);
+  assert.doesNotMatch(maskEditor, /overflow-x-auto/);
+  assert.match(maskEditor, /<div className="flex h-\[45px\] items-center gap-1 rounded-lg border border-white\/\[0\.08\] bg-\[#26292b\] px-2 shadow-2xl" role="toolbar"/);
+  // The chosen tool: teal outline and text; キャンセル is grey.
+  assert.match(maskEditor, /active \? 'border-\[#20d0c4\] text-\[#20d0c4\]' : 'border-transparent text-white\/90/);
+  assert.match(maskEditor, /className="h-9 rounded-md bg-\[#5b6164\] px-4 text-sm text-white/);
+  // The small bar follows the chosen tool's button; AIマスク認識 shows its parts as a row of radios, not a dropdown.
+  assert.match(maskEditor, /useLayoutEffect\(\(\) => \{ setSubLeft\(toolRefs\.current\[tool\]\?\.offsetLeft \?\? 0\); \}, \[tool\]\);/);
+  assert.match(maskEditor, /style=\{\{ left: subLeft \}\} role="toolbar"/);
+  assert.match(maskEditor, /\{tool === 'ai-mask' \? \(\n\s*<div role="radiogroup"/);
+  assert.match(maskEditor, /role="radio" aria-checked=\{aiPick === candidate\} disabled=\{busy !== null\} onClick=\{\(\) => void recognize\(candidate\)\}/);
+  assert.doesNotMatch(maskEditor, /role="menu"/);
+  assert.doesNotMatch(maskEditor, /ChevronDown/);
+  // Panes: 520×515, teal border and title on the chosen one; the other is dimmed with Light's hint.
+  assert.match(maskEditor, /h-\[min\(515px,calc\(87vh-180px\)\)\] min-h-\[320px\] w-\[520px\]/);
+  assert.match(maskEditor, /activePane === id \? 'border-\[#20d0c4\]' : 'border-\[#4b5053\]'/);
+  assert.match(maskEditor, /'参考にしたい領域を描画してください' : '調整したい領域を描画してください'/);
+  assert.match(maskEditor, /\{panes\.length > 1 && activePane !== id && \(\n\s*<div className="pointer-events-none absolute inset-0/);
+  // 抽出・お気に入り・保存 are teal fills like Light.
+  const clipping = read('../src/components/lightchain/StudioClippingDialog.tsx');
+  assert.equal(clipping.match(/className="h-9 rounded-md bg-\[#20d0c4\] px-4 text-sm text-\[#0f1718\]/g)?.length, 2);
+  assert.match(page, /data-testid="fashion-studio-region-mask-save" disabled=\{api\.busy\} className="h-9 rounded-md bg-\[#20d0c4\]/);
 });
 
 test('the points pill is read again when a generation here or in a form on the canvas ends', () => {

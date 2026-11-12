@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { BrushCleaning, Brush, ChevronDown, Lasso, Minus, PenTool, Plus, Redo2, ScanSearch, SlidersHorizontal, SquareDashed, Undo2 } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { BrushCleaning, Brush, CircleMinus, CirclePlus, Lasso, Minus, PenTool, Plus, Redo2, ScanSearch, SquareDashedMousePointer, Undo2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { STUDIO_MASK_CANDIDATES, StudioMaskSurface, type StudioMaskCandidate, type StudioMaskMode, type StudioMaskSurfaceHandle, type StudioMaskTool } from './StudioMaskSurface';
 
 /**
- * 本家の簡易エディター（sr-only の題「簡易エディター」）。上の帯に
+ * 本家の簡易エディター（sr-only の題「簡易エディター」）。画面全体を暗くし、上に浮いた帯
  * マスク調整｜AIマスク認識｜ブラシ｜投げ縄ツール｜矩形選択｜パスツール｜選択範囲をクリア｜↶↷｜キャンセル｜(呼び出し側のボタン)、
- * その下に選んだ道具の帯（追加選択｜選択解除｜ブラシなら − 太さ ＋）、真ん中に題つきの面。
+ * 選んだ道具の真下に小さな帯（AIマスク認識なら ○トップス ○ボトムス ○全身、ほかは 追加選択｜選択解除｜ブラシなら − 太さ ＋）、
+ * その下に 520×515 の題つきの面（選んでいる面は青緑の枠と題、ほかは暗くして案内の文字）。2026-11-12 本家の本番で
+ * 帯のクリッピングと範囲指定のマスク調整を開いて並べた形。
  * 本家の baseCanvasProps / referenceCanvasProps と同じく、元画像と参考画像の2面にもできる（範囲指定の窓）。
  * 呼び出し側は actions(api) でボタンを差し込み、api.getMask() / getCutout() などで結果を受け取る。
  */
@@ -80,10 +82,12 @@ export function StudioMaskEditor({
   const [tool, setTool] = useState<StudioMaskEditorTool>(tools.includes('brush') ? 'brush' : tools[0] ?? 'brush');
   const [mode, setMode] = useState<StudioMaskMode>('add');
   const [brushSize, setBrushSize] = useState(40);
-  const [aiMenuOpen, setAiMenuOpen] = useState(false);
-  /** Where the AIマスク認識 list opens. It is fixed to the window: inside the tool row (which scrolls sideways) it was cut
-   * off below the button, and choosing a part scrolled the row away (2026-11-12 production). */
-  const [aiMenuAt, setAiMenuAt] = useState<{ left: number; top: number } | null>(null);
+  /** The part last chosen under AIマスク認識 (its radio is filled, like Light's). */
+  const [aiPick, setAiPick] = useState<StudioMaskCandidate | null>(null);
+  /** The small bar of the chosen tool opens right under that tool's button (Light); its left edge follows the button. */
+  const toolRefs = useRef<Partial<Record<StudioMaskEditorTool, HTMLButtonElement | null>>>({});
+  const [subLeft, setSubLeft] = useState(0);
+  useLayoutEffect(() => { setSubLeft(toolRefs.current[tool]?.offsetLeft ?? 0); }, [tool]);
   const [activePane, setActivePane] = useState<StudioMaskPaneId>('base');
   const [busy, setBusy] = useState<string | null>(null);
   const [, setRevision] = useState(0);
@@ -128,7 +132,7 @@ export function StudioMaskEditor({
   };
 
   const recognize = async (candidate: StudioMaskCandidate) => {
-    setAiMenuOpen(false);
+    setAiPick(candidate);
     const surface = surfaces.current[activePane];
     if (!surface || busy) return;
     try { await surface.recognize(candidate, mode); } catch { toast.error(STUDIO_MASK_EDITOR_TEXT.recognizeFailed); }
@@ -142,7 +146,9 @@ export function StudioMaskEditor({
 
   const surfaceTool: StudioMaskTool = tool === 'ai-mask' ? 'none' : tool;
   const iconLabel = (id: StudioMaskEditorTool) => STUDIO_MASK_EDITOR_TOOLS.find(item => item.id === id)?.label ?? id;
-  const toolButton = (active: boolean) => `inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] transition ${active ? 'bg-[#5fd0c8]/20 text-[#5fd0c8]' : 'text-white/85 hover:bg-white/[0.06]'} disabled:cursor-not-allowed disabled:opacity-40`;
+  // Light's bar: a tool is a 36px button; the chosen one has a teal outline and teal text (no fill).
+  const toolButton = (active: boolean) => `inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border px-3 text-[13px] transition ${active ? 'border-[#20d0c4] text-[#20d0c4]' : 'border-transparent text-white/90 hover:bg-white/[0.06]'} disabled:cursor-not-allowed disabled:opacity-40`;
+  const subButton = (active: boolean) => `inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-3 text-[13px] transition ${active ? 'bg-white/[0.1] text-white' : 'text-white/80 hover:bg-white/[0.06]'}`;
   const iconButton = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded text-white/80 hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-30';
   const anyUndo = (['base', 'reference'] as const).some(pane => surfaces.current[pane]?.canUndo());
   const anyRedo = (['base', 'reference'] as const).some(pane => surfaces.current[pane]?.canRedo());
@@ -150,63 +156,60 @@ export function StudioMaskEditor({
     { id: 'base', pane: base, title: base.title ?? STUDIO_MASK_EDITOR_TEXT.baseTitle },
     ...(reference ? [{ id: 'reference' as const, pane: reference, title: reference.title ?? STUDIO_MASK_EDITOR_TEXT.referenceTitle }] : []),
   ];
-  const icon = { 'ai-mask': ScanSearch, brush: Brush, lasso: Lasso, rect: SquareDashed, pen: PenTool } as const;
+  const icon = { 'ai-mask': ScanSearch, brush: Brush, lasso: Lasso, rect: SquareDashedMousePointer, pen: PenTool } as const;
+  const paneHint = (id: StudioMaskPaneId) => (id === 'reference' ? '参考にしたい領域を描画してください' : '調整したい領域を描画してください');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" role="dialog" aria-modal="true" aria-label={ariaLabel} data-testid={testId}>
-      <div className="relative flex h-[773px] max-h-[calc(100vh-24px)] w-[1296px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg bg-[#232728] text-white shadow-2xl">
-        <h2 className="sr-only">{STUDIO_MASK_EDITOR_TEXT.title}</h2>
-        <div className="flex h-14 items-center gap-1 overflow-x-auto border-b border-white/[0.06] bg-[#1b1f20] px-4" role="toolbar" aria-label={STUDIO_MASK_EDITOR_TEXT.adjust} onScroll={() => setAiMenuOpen(false)}>
-          <span className="mr-2 inline-flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-white"><SlidersHorizontal aria-hidden="true" className="h-4 w-4" />{STUDIO_MASK_EDITOR_TEXT.adjust}</span>
-          <span className="mx-1 h-5 w-px shrink-0 bg-white/10" aria-hidden="true" />
-          {STUDIO_MASK_EDITOR_TOOLS.filter(item => tools.includes(item.id)).map(item => {
-            const Icon = icon[item.id];
-            if (item.id === 'ai-mask') {
-              return (
-                <div key={item.id} className="relative shrink-0">
-                  <button type="button" onClick={event => { const box = event.currentTarget.getBoundingClientRect(); setAiMenuAt({ left: box.left, top: box.bottom + 4 }); setTool('ai-mask'); setAiMenuOpen(open => !open); }} disabled={busy !== null} aria-expanded={aiMenuOpen} aria-pressed={tool === 'ai-mask'} className={toolButton(tool === 'ai-mask')}>
-                    <Icon aria-hidden="true" className="h-4 w-4" />{item.label}<ChevronDown aria-hidden="true" className="h-3 w-3" />
+    <div className="fixed inset-0 z-50 overflow-auto bg-black/70" role="dialog" aria-modal="true" aria-label={ariaLabel} data-testid={testId}>
+      <h2 className="sr-only">{STUDIO_MASK_EDITOR_TEXT.title}</h2>
+      <div className="mx-auto flex min-h-full w-max flex-col items-center px-3 pb-6 pt-[13vh] text-white">
+        <div className="relative">
+          <div className="flex h-[45px] items-center gap-1 rounded-lg border border-white/[0.08] bg-[#26292b] px-2 shadow-2xl" role="toolbar" aria-label={STUDIO_MASK_EDITOR_TEXT.adjust}>
+            <span className="shrink-0 px-2 text-base text-white/70">{STUDIO_MASK_EDITOR_TEXT.adjust}</span>
+            <span className="mx-1 h-5 w-px shrink-0 bg-white/10" aria-hidden="true" />
+            {STUDIO_MASK_EDITOR_TOOLS.filter(item => tools.includes(item.id)).map(item => {
+              const Icon = icon[item.id];
+              return <button key={item.id} ref={element => { toolRefs.current[item.id] = element; }} type="button" onClick={() => setTool(item.id)} disabled={busy !== null} aria-pressed={tool === item.id} className={toolButton(tool === item.id)}><Icon aria-hidden="true" className="h-4 w-4" />{item.label}</button>;
+            })}
+            <button type="button" onClick={clearAll} disabled={busy !== null} className={toolButton(false)}><BrushCleaning aria-hidden="true" className="h-4 w-4" />{STUDIO_MASK_EDITOR_TEXT.clear}</button>
+            <span className="mx-1 h-5 w-px shrink-0 bg-white/10" aria-hidden="true" />
+            <button type="button" aria-label="元に戻す" title="元に戻す" onClick={() => step('undo')} disabled={!anyUndo || busy !== null} className={iconButton}><Undo2 aria-hidden="true" className="h-4 w-4" /></button>
+            <button type="button" aria-label="やり直し" title="やり直し" onClick={() => step('redo')} disabled={!anyRedo || busy !== null} className={iconButton}><Redo2 aria-hidden="true" className="h-4 w-4" /></button>
+            <span className="mx-1 h-5 w-px shrink-0 bg-white/10" aria-hidden="true" />
+            <div className="flex shrink-0 items-center gap-2 pl-1">
+              <button type="button" onClick={onCancel} disabled={busy !== null} className="h-9 rounded-md bg-[#5b6164] px-4 text-sm text-white hover:bg-[#666c6f] disabled:opacity-40">{STUDIO_MASK_EDITOR_TEXT.cancel}</button>
+              {actions?.(api)}
+            </div>
+          </div>
+          <div className="absolute top-[calc(100%+9px)] flex h-12 items-center gap-1 rounded-lg border border-white/[0.08] bg-[#26292b] px-1.5 shadow-2xl" style={{ left: subLeft }} role="toolbar" aria-label={`${iconLabel(tool)}の設定`}>
+            {tool === 'ai-mask' ? (
+              <div role="radiogroup" aria-label={iconLabel(tool)} className="flex items-center gap-1">
+                {STUDIO_MASK_CANDIDATES.map(candidate => (
+                  <button key={candidate} type="button" role="radio" aria-checked={aiPick === candidate} disabled={busy !== null} onClick={() => void recognize(candidate)} className={subButton(false)}>
+                    <span aria-hidden="true" className={`inline-block h-4 w-4 rounded-full border ${aiPick === candidate ? 'border-[#20d0c4] bg-[radial-gradient(circle,#20d0c4_45%,transparent_50%)]' : 'border-white/50'}`} />{candidate}
                   </button>
-                  {aiMenuOpen && aiMenuAt && (
-                    <div role="menu" className="fixed z-[60] w-40 rounded-lg bg-black p-1.5 shadow-xl" style={{ left: aiMenuAt.left, top: aiMenuAt.top }}>
-                      {STUDIO_MASK_CANDIDATES.map(candidate => (
-                        <button key={candidate} type="button" role="menuitem" onClick={() => void recognize(candidate)} className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm hover:bg-white/10">
-                          <span className="inline-block h-4 w-4 rounded-full border border-white/40" />{candidate}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                ))}
+              </div>
+            ) : <>
+              <button type="button" onClick={() => setMode('add')} aria-pressed={mode === 'add'} className={subButton(mode === 'add')}><CirclePlus aria-hidden="true" className="h-4 w-4" />{STUDIO_MASK_EDITOR_TEXT.add}</button>
+              <button type="button" onClick={() => setMode('remove')} aria-pressed={mode === 'remove'} className={subButton(mode === 'remove')}><CircleMinus aria-hidden="true" className="h-4 w-4" />{STUDIO_MASK_EDITOR_TEXT.remove}</button>
+              {tool === 'brush' && (
+                <div className="ml-1 flex items-center gap-1 border-l border-white/10 pl-2 text-white/70">
+                  <button type="button" aria-label="ブラシを細く" onClick={() => setBrushSize(value => Math.max(BRUSH_MIN, value - BRUSH_STEP))} className={iconButton}><Minus aria-hidden="true" className="h-3.5 w-3.5" /></button>
+                  <input type="range" aria-label="ブラシの太さ" min={BRUSH_MIN} max={BRUSH_MAX} step={1} value={brushSize} onChange={event => setBrushSize(Number(event.target.value))} className="w-20 accent-[#20d0c4]" />
+                  <button type="button" aria-label="ブラシを太く" onClick={() => setBrushSize(value => Math.min(BRUSH_MAX, value + BRUSH_STEP))} className={iconButton}><Plus aria-hidden="true" className="h-3.5 w-3.5" /></button>
                 </div>
-              );
-            }
-            return <button key={item.id} type="button" onClick={() => { setTool(item.id); setAiMenuOpen(false); }} disabled={busy !== null} aria-pressed={tool === item.id} className={toolButton(tool === item.id)}><Icon aria-hidden="true" className="h-4 w-4" />{item.label}</button>;
-          })}
-          <button type="button" onClick={clearAll} disabled={busy !== null} className={toolButton(false)}><BrushCleaning aria-hidden="true" className="h-4 w-4" />{STUDIO_MASK_EDITOR_TEXT.clear}</button>
-          <span className="mx-1 h-5 w-px shrink-0 bg-white/10" aria-hidden="true" />
-          <button type="button" aria-label="元に戻す" title="元に戻す" onClick={() => step('undo')} disabled={!anyUndo || busy !== null} className={iconButton}><Undo2 aria-hidden="true" className="h-4 w-4" /></button>
-          <button type="button" aria-label="やり直し" title="やり直し" onClick={() => step('redo')} disabled={!anyRedo || busy !== null} className={iconButton}><Redo2 aria-hidden="true" className="h-4 w-4" /></button>
-          <div className="ml-auto flex shrink-0 items-center gap-3 pl-4">
-            <button type="button" onClick={onCancel} disabled={busy !== null} className="h-8 rounded-lg border border-white/15 px-4 text-sm text-white/85 hover:bg-white/[0.06] disabled:opacity-40">{STUDIO_MASK_EDITOR_TEXT.cancel}</button>
-            {actions?.(api)}
+              )}
+              {tool === 'pen' && <span className="ml-2 whitespace-nowrap pr-2 text-xs text-white/50">クリックで点を置き、最初の点を押すかダブルクリック・Enter で閉じます</span>}
+            </>}
           </div>
         </div>
-        <div className="flex h-11 items-center gap-1 bg-[#1b1f20]/60 px-4" role="toolbar" aria-label={`${iconLabel(tool)}の設定`}>
-          <button type="button" onClick={() => setMode('add')} aria-pressed={mode === 'add'} className={toolButton(mode === 'add')}><Plus aria-hidden="true" className="h-3.5 w-3.5" />{STUDIO_MASK_EDITOR_TEXT.add}</button>
-          <button type="button" onClick={() => setMode('remove')} aria-pressed={mode === 'remove'} className={toolButton(mode === 'remove')}><Minus aria-hidden="true" className="h-3.5 w-3.5" />{STUDIO_MASK_EDITOR_TEXT.remove}</button>
-          {tool === 'brush' && (
-            <div className="ml-3 flex items-center gap-2 text-white/70">
-              <button type="button" aria-label="ブラシを細く" onClick={() => setBrushSize(value => Math.max(BRUSH_MIN, value - BRUSH_STEP))} className={iconButton}><Minus aria-hidden="true" className="h-3.5 w-3.5" /></button>
-              <input type="range" aria-label="ブラシの太さ" min={BRUSH_MIN} max={BRUSH_MAX} step={1} value={brushSize} onChange={event => setBrushSize(Number(event.target.value))} className="w-28 accent-[#5fd0c8]" />
-              <button type="button" aria-label="ブラシを太く" onClick={() => setBrushSize(value => Math.min(BRUSH_MAX, value + BRUSH_STEP))} className={iconButton}><Plus aria-hidden="true" className="h-3.5 w-3.5" /></button>
-            </div>
-          )}
-          {tool === 'pen' && <span className="ml-3 text-xs text-white/50">クリックで点を置き、最初の点を押すかダブルクリック・Enter で閉じます</span>}
-        </div>
-        <div className={`grid min-h-0 flex-1 gap-4 p-4 ${panes.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <div className="mt-[102px] flex gap-10">
           {panes.map(({ id, pane, title }) => (
-            <section key={id} className="flex min-h-0 flex-col" aria-label={title}>
-              <h3 className="mb-2 text-center text-sm text-white/90">{title}</h3>
-              <div className={`relative min-h-0 flex-1 rounded-lg border bg-[#0b1113] ${activePane === id ? 'border-[#5fd0c8]' : 'border-white/10'}`}>
+            <section key={id} aria-label={title}
+              className={`relative flex h-[min(515px,calc(87vh-180px))] min-h-[320px] w-[520px] flex-col overflow-hidden rounded-xl border-2 bg-[#222628] ${panes.length > 1 ? 'max-w-[calc(50vw-32px)]' : 'max-w-[calc(100vw-24px)]'} ${activePane === id ? 'border-[#20d0c4]' : 'border-[#4b5053]'}`}>
+              <h3 className={`h-[46px] shrink-0 border-b border-white/10 text-center text-sm leading-[44px] ${activePane === id ? 'text-[#20d0c4]' : 'text-white/40'}`}>{title}</h3>
+              <div className="relative min-h-0 flex-1 p-6">
                 <StudioMaskSurface
                   ref={handle => { surfaces.current[id] = handle; }}
                   imageUrl={pane.imageUrl}
@@ -222,8 +225,11 @@ export function StudioMaskEditor({
                   onBusyChange={setBusy}
                   testId={`${testId}-${id}`}
                 />
+                {panes.length > 1 && activePane !== id && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/45 text-sm text-white">{paneHint(id)}</div>
+                )}
                 {busy && (
-                  <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 text-sm text-white" role="status">{busy}</div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm text-white" role="status">{busy}</div>
                 )}
               </div>
             </section>
