@@ -57,6 +57,14 @@ test('the index keeps at most 15 rows, in the research\'s order, and escapes wha
   assert.doesNotMatch(html, /Page <1>/);
 });
 
+test('the 内容 undoes the search tool\'s Markdown escapes, and the 区分 column is wide enough for the date', () => {
+  // Production task 7345ee51 (顧客提案, research of 2026-11-12): ZOZOTOWN's page came back as 「\\3,699」.
+  const sources = [{ title: 'ワンピースの人気ランキング', url: 'https://zozo.jp/ranking/x.html', quote: '前後2wayVネックワンピース \\\\3,699 \\* 2色 \\[新作\\]' }];
+  const html = buildAgentResearchReportHtml(researchTask(formatAgentResearchContent({ text: '[調査結果]\n## a\n- b', sources, searchUsed: true, searchErrors: [] })));
+  assert.match(html, /<td>前後2wayVネックワンピース \\3,699 \* 2色 \[新作\]<\/td>/);
+  assert.match(html, /th:nth-child\(1\)\{width:7%\}th:nth-child\(2\)\{width:31%\}th:nth-child\(3\)\{width:42%\}th:nth-child\(4\)\{width:20%\}/);
+});
+
 test('with no page, the index says so; a failed search says it was not used', () => {
   const none = buildAgentResearchReportHtml(researchTask(formatAgentResearchContent({ text: '[調査結果]\n## a\n- b', sources: [], searchUsed: true, searchErrors: [] })));
   assert.match(none, /<h2>ソース一覧<\/h2>[\s\S]*参照した資料はありません。/);
