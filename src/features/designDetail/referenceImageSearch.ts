@@ -25,7 +25,7 @@ export type FoundImage = {
   creator?: string;
   /** Which index found it (openverse / wikimedia). */
   source?: string;
-  /** The index's own tags (Openverse) or categories and description (Commons). Only used to rank the images here;
+  /** The index's own tags (Openverse) or categories (Commons). Only used to rank the images here;
    * searchReferenceImages removes them before returning (the studio keeps found images on this device). */
   keywords?: string[];
 };
@@ -81,19 +81,19 @@ const WIKIMEDIA_IMAGE = /^https:\/\/(?:thumb|upload)\.wikimedia\.org\//;
 const plainText = (html = '') => html.replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 async function commonsOnce(query: string, options: SearchOptions): Promise<FoundImage[]> {
   const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: `${query} filetype:bitmap`, gsrnamespace: '6',
-    gsrlimit: '12', prop: 'imageinfo', iiprop: 'url|mime|extmetadata', iiextmetadatafilter: 'LicenseShortName|LicenseUrl|Artist|Categories|ImageDescription',
+    gsrlimit: '12', prop: 'imageinfo', iiprop: 'url|mime|extmetadata', iiextmetadatafilter: 'LicenseShortName|LicenseUrl|Artist|Categories',
     iiurlwidth: '1024', format: 'json', origin: '*' });
   const response = await (options.fetcher ?? fetch)(`${COMMONS_API}?${params}`, { signal: timeout(options, 10_000), credentials: 'omit' });
   if (!response.ok) throw new ReferenceSourceError('wikimedia', response.status);
   const data = await response.json() as { query?: { pages?: Record<string, { pageid: number; index?: number; title: string;
     imageinfo?: Array<{ thumburl?: string; descriptionurl?: string; mime?: string; extmetadata?: { LicenseShortName?: { value?: string }; LicenseUrl?: { value?: string }; Artist?: { value?: string };
-      Categories?: { value?: string }; ImageDescription?: { value?: string } } }> }> } };
+      Categories?: { value?: string } } }> }> } };
   return Object.values(data.query?.pages ?? {}).sort((a, b) => (a.index ?? 0) - (b.index ?? 0)).flatMap((page) => {
     const info = page.imageinfo?.[0];
     if (!info?.thumburl || !info.mime || !BITMAP.test(info.mime) || !WIKIMEDIA_IMAGE.test(info.thumburl)) return [];
     const creator = plainText(info.extmetadata?.Artist?.value).slice(0, 120);
-    const description = plainText(info.extmetadata?.ImageDescription?.value).slice(0, 300);
-    const keywords = [...String(info.extmetadata?.Categories?.value ?? '').split('|').map((name) => name.trim()).filter(Boolean).slice(0, 30), ...(description ? [description] : [])];
+    // The categories only: a description repeats the title ("Reencuentro del grupo Jeans"), so it cannot tell a pop group from jeans.
+    const keywords = String(info.extmetadata?.Categories?.value ?? '').split('|').map((name) => name.trim()).filter(Boolean).slice(0, 30);
     return [{ id: String(page.pageid), title: page.title.replace(/^File:/, '').replace(/\.[a-z]+$/i, ''), thumbUrl: info.thumburl,
       pageUrl: info.descriptionurl ?? '', license: info.extmetadata?.LicenseShortName?.value ?? '',
       ...(info.extmetadata?.LicenseUrl?.value ? { licenseUrl: info.extmetadata.LicenseUrl.value } : {}), ...(creator ? { creator } : {}), source: 'wikimedia',
@@ -185,11 +185,12 @@ const LOOSE_WORN_WORDS = new Set(['smock', 'cape', 'cap', 'boot', 'belt', 'suit'
 const CLOTH_WORDS = ['clothing', 'clothes', 'garment', 'apparel', 'fashion', 'wear', 'knitwear', 'menswear', 'womenswear', 'streetwear', 'sportswear', 'outerwear',
   'ootd', 'lookbook', 'runway', 'catwalk', 'model', 'wardrobe', 'sewing', 'sewn', 'handsewn', 'tailor', 'tailoring', 'dressmaking', 'knit', 'knitted', 'knitting',
   'crochet', 'crocheted', 'embroidery', 'embroidered', 'textile', 'fabric', 'cloth', 'lace', 'weave', 'woven', 'denim', 'linen', 'cotton', 'silk', 'wool', 'leather'];
-/** Plainly other subjects: music on a stage, furniture and rooms, buildings and roads, logos and charts. */
+/** Plainly other subjects: music on a stage, furniture and rooms, buildings, roads and places ("Smock PA Historic District"), logos and charts. */
 const OFF_TOPIC_WORDS = ['concert', 'festival', 'gig', 'band', 'stage', 'singer', 'guitar', 'guitarist', 'drummer', 'drums', 'bassist', 'musician', 'orchestra',
   'choir', 'rapper', 'dj', 'microphone', 'sofa', 'couch', 'armchair', 'chair', 'rug', 'carpet', 'curtain', 'cushion', 'pillow', 'bedskirt', 'quilt', 'duvet',
   'bedding', 'mattress', 'upholstery', 'furniture', 'interior', 'bedroom', 'livingroom', 'tablecloth', 'building', 'architecture', 'church', 'cathedral', 'tower',
   'bridge', 'skyscraper', 'windmill', 'mill', 'station', 'railway', 'train', 'tram', 'bus', 'car', 'truck', 'motorway', 'highway', 'road', 'airport', 'ferris',
+  'district', 'village', 'township', 'county', 'cemetery',
   'logo', 'icon', 'screenshot', 'website', 'web', 'www', 'diagram', 'chart', 'map', 'visualization', 'infographic', 'clock'];
 
 const plain = (text: string) => text.toLowerCase().replace(/[_-]+/g, ' ');

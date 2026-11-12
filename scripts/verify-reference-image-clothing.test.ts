@@ -61,7 +61,8 @@ test('when too few jeans are found, the festival and the logo are still left out
 
 test('a title naming the garment whose Commons categories never mention clothes (the pop group "Jeans") comes after the garments', async () => {
   const { fetcher } = indexes([], {
-    'wide jeans': [{ title: 'Grupo Jeans Reencuentro', categories: ['JNS', '4 women', 'Still images of YouTube videos'] }, { title: 'Jeans 2009', categories: ['Jeans', 'Clothing shops in 2009'] }],
+    'wide jeans': [{ title: 'Grupo Jeans Reencuentro', categories: ['JNS', '4 women', 'Still images of YouTube videos'], description: 'Reencuentro del grupo Jeans: Karla, Melissa, Angie y Regina.' },
+      { title: 'Jeans 2009', categories: ['Jeans', 'Clothing shops in 2009'] }],
     jeans: [{ title: 'Jeans mexicanos', categories: ['Jeans'] }, { title: 'Max Giesinger - 2021-09-12 - Mannheim', categories: ['Men with handheld microphones in Germany', 'Festivalsommer 2021'] }],
   });
   const found = await searchReferenceImages('wide jeans', { fetcher, limit: 4, sources: [wikimediaSource] });
@@ -133,6 +134,8 @@ test('how a title fits: the garment itself, not a shared adjective; a garment wo
   assert.equal(referenceImageFit({ title: 'The Murder Capital at the Wide Awake Festival' }, 'wide jeans'), 'off');
   assert.equal(referenceImageFit({ title: 'Kurt Cobain\'s cardigan from MTV Unplugged' }, 'knit cardigan'), 'named');
   assert.equal(referenceImageFit({ title: 'Smock mill at Sint-Annaland' }, 'smocked blouse'), 'off');
+  assert.equal(referenceImageFit({ title: 'Smock PA Historic District' }, 'smocked puff sleeve'), 'off');
+  assert.equal(referenceImageFit({ title: 'A traditional smock', keywords: ['Self-published work', 'Smock'], source: 'wikimedia' }, 'smocked puff sleeve'), 'named');
   assert.equal(referenceImageFit({ title: 'Stage costume, 1920s' }, 'smocked blouse'), 'worn');
   assert.equal(referenceImageFit({ title: 'Wide leg trousers' }, 'wide jeans'), 'named');
   assert.equal(referenceImageFit({ title: 'Draped silk blouse' }, 'draped top'), 'named');
