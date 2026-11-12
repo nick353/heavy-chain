@@ -47,6 +47,7 @@ import { withSignedImageUrls } from '../lib/storage';
 import { designImageProjectHref } from '../lib/legacyCanvasRoute';
 import { compactVideoMetadataImage, isRasterDataUrl, matchesVideoProjectArtifact, rasterSourceDataUrl, shouldHydrateVideoSourceImage } from '../lib/videoWorkspacePersistence';
 import { projectNameFromFile } from '../lib/projectNames';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 /** Shown to users while no video provider is connected; it never falls back to image generation. */
 const VIDEO_GENERATION_UNAVAILABLE = '動画の生成は準備中です。今は下書きの保存とCanvasへの受け渡しが使えます。';
@@ -807,7 +808,9 @@ export function VideoWorkstationPage() {
 
   const handleInitialImage = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (file) acceptInitialImageFile(file);
+  };
+  const acceptInitialImageFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
       const imageUrl = typeof reader.result === 'string' ? reader.result : '';
@@ -820,6 +823,8 @@ export function VideoWorkstationPage() {
     };
     reader.readAsDataURL(file);
   };
+  // 「送る」（?imgUrl=）で送られた画像も、最初の画像の入り口と同じく素材の画像に入れる。
+  useIncomingImageFile(acceptInitialImageFile);
 
   if (showVideoGuide) {
     return (

@@ -13,6 +13,7 @@ import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts'
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { watermarkImageBlobIfOn } from '../lib/imageDownload';
 import { projectNameFromFile } from '../lib/projectNames';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 /**
  * Light `/editor/patternDesign/detail` = "プリントデザイン", measured at 1440×900 on 2026-10-07: empty project →
@@ -122,12 +123,17 @@ function PrintDesignWorkspace() {
   useEffect(() => { if (resultUrl) { setShowResult(true); setSelected('result'); } }, [resultUrl]);
 
   const update = (patch: Record<string, string>) => workspace.setInputState({ ...workspace.inputState, printMode: mode, printRatio: ratio, printResolution: resolution, printTile: tile.toFixed(1), printPrompt: prompt, ...patch });
+  const acceptFile = (slot: 'primary' | 'secondary', file: File) => {
+    if (file.size > 20 * 1024 * 1024) return;
+    return workspace.upload(slot, file);
+  };
   const pick = (slot: 'primary' | 'secondary') => (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file || file.size > 20 * 1024 * 1024) return;
-    void workspace.upload(slot, file);
+    if (file) void acceptFile(slot, file);
   };
+  // 「送る」（?imgUrl=）で送られた画像も、同じ入り口から主素材に入れる。
+  useIncomingImageFile((file) => acceptFile('primary', file), { ready: workspace.inputsSettled });
   const run = (runMode: PrintMode) => {
     if (!source || locked) return;
     if (runMode === 'compose' && !styleMap) return;

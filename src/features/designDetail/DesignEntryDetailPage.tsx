@@ -40,6 +40,7 @@ import { AssistantImageSearchCard } from './AssistantImageSearchCard';
 import type { DialogueAttempt } from './dialogueStore';
 import { foundImageFile, type FoundImage } from './referenceImageSearch';
 import { requestedAspectRatio } from './requestedAspectRatio';
+import { useIncomingImageFile } from '../../lib/incomingImage';
 
 const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured'); return cloudflareDataPlane; };
 export const createDesignDialogueClient = (featureType: string): DesignDialogueClient => ({
@@ -588,6 +589,8 @@ export default function DesignEntryDetailPage({ client = designEntryClient, dial
     if (isNewFile && images.length === 1) { void openUploadedImageProject(images[0]); return; }
     setPanelOpen(true); void references.addFiles(images);
   };
+  // 「送る」（?imgUrl=）で送られた画像も、アップロードと同じ入り口へ（新しいファイルなら1枚でそのままプロジェクトになる）。
+  useIncomingImageFile((file) => addFiles([file]), { ready: brandReady });
   const sceneRun = useRef(0);
   const applyScene = async (scene: CanvasScene) => {
     const run = ++sceneRun.current;

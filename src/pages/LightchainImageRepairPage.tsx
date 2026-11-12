@@ -7,6 +7,7 @@ import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { LIGHTCHAIN_IMAGE_REPAIR_TABS, LightchainDesignToolFrame } from '../components/lightchain/LightchainDesignToolFrame';
 import { MaskPaintDialog } from '../components/lightchain/MaskPaintDialog';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 /**
  * Light `/tools/reactor` = "画像修正", measured at 1440×900 on 2026-10-07: single 画像修正 tab, no deprecation notice,
@@ -92,13 +93,18 @@ function LightchainImageRepairWorkspace() {
     if (maskReference) workspace.clearSource('secondary');
   };
 
+  const acceptFile = (file: File) => {
+    clearMask();
+    return workspace.upload('primary', file);
+  };
   const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    clearMask();
-    void workspace.upload('primary', file);
+    void acceptFile(file);
   };
+  // 「送る」（?imgUrl=）で送られた画像も、同じ入り口から元画像に入れる。
+  useIncomingImageFile(acceptFile, { ready: workspace.inputsSettled });
 
   const generate = () => {
     if (locked || !source) return;

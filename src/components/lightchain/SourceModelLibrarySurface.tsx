@@ -20,6 +20,7 @@ import { GallerySelector } from '../GallerySelector';
 import { MODEL_BODY_MEASUREMENTS, MODEL_BODY_PROFILES, validModelBodyMeasurement, type ModelBodyMeasurement } from '../../lib/modelToolSettings';
 import { MODEL_LIBRARY_LABEL_OPTIONS, MODEL_LIBRARY_SIMILARITIES, defaultModelLibrarySettings, readModelLibrarySettings, chooseModelLibraryMode, changeModelLibraryGender, changeModelLibraryHeight, modelLibraryBodyProfile, modelLibraryBodyPreview, type ModelLibraryMode } from '../../lib/modelLibrarySettings';
 import { LightchainHistoryPanel } from './LightchainHistoryPanel';
+import { useIncomingImageFile } from '../../lib/incomingImage';
 
 type SourceModelField = 'age' | 'nationality' | 'skinColor' | 'bodyType';
 
@@ -142,6 +143,8 @@ export function SourceModelLibrarySurface() {
   const bodyProfile=modelLibraryBodyProfile(String(settings?.customGender),String(settings?.height));
   const bodyPreview=modelLibraryBodyPreview(settings);
   const chooseMode=(mode:ModelLibraryMode)=>{if(!locked)workspace.setInputState(chooseModelLibraryMode(settings??defaultModelLibrarySettings(),mode));};
+  // 「送る」（?imgUrl=）で送られた画像は、この画面の画像の入り口「顔の参考図」（カスタム）に入れる。
+  useIncomingImageFile((file)=>{if(locked)return;if(settings?.inputMode!=='custom')chooseMode('custom');return workspace.upload('secondary',file);},{ready:workspace.inputsSettled&&!conflict});
   const update=(key:string,value:string|boolean)=>{if(!locked&&settings)workspace.setInputState({...settings,[key]:value});};
   useEffect(()=>{setOpenField(null);setReferenceLibraryOpen(false);setBodyDrafts({});},[workspace.sourceSelectionScope,locked,activeTab,settings?.customGender,settings?.height]);
   const gender=typeof workspace.inputState.gender==='string'?workspace.inputState.gender:'未設定',half=workspace.inputState.half===true;
