@@ -231,3 +231,31 @@ test('scrolling or zooming with the wheel keeps the view where the person put it
   // The first fit still follows the nodes until the person moves the view.
   assert.match(page, /if \(fittedRef\.current === key && userViewRef\.current === viewportScopeKey\) return;/);
 });
+
+const collectDialog = read('../src/components/lightchain/StudioCollectDialog.tsx');
+const sendMenu = read('../src/components/lightchain/StudioSendMenu.tsx');
+
+test('お気に入りに追加 looks like Light\'s window: round space switch, no ×, teal folders, a grey キャンセル', () => {
+  assert.match(collectDialog, /w-\[min\(520px,calc\(100vw-32px\)\)\] flex-col rounded-xl bg-\[#26292b\]/);
+  assert.match(collectDialog, /<div className="ml-auto flex items-center rounded-full bg-\[#1c1f21\] p-1" role="tablist"/);
+  assert.match(collectDialog, /active \? 'bg-\[#20d0c4\]\/15 font-semibold text-\[#20d0c4\]'/);
+  assert.doesNotMatch(collectDialog, /aria-label="閉じる"/);
+  assert.match(collectDialog, /<Folder aria-hidden="true" className="h-4 w-4 shrink-0 fill-\[#20d0c4\] text-\[#20d0c4\]" \/>/);
+  assert.match(collectDialog, /<li key=\{folder\.id\} className="flex items-center border-b border-white\/10">/);
+  assert.match(collectDialog, /<div className="flex items-center gap-4 border-t border-white\/10 px-6 py-4">/);
+  assert.match(collectDialog, /className="ml-auto h-8 rounded-md bg-\[#5b6164\] px-4 text-sm text-white/);
+  assert.match(collectDialog, /disabled:bg-\[#3b4043\] disabled:text-white\/30/);
+});
+
+test('送る opens its list beside the toolbar, centred on the button like Light', () => {
+  assert.match(sendMenu, /<div role="menu" aria-label="送る" className="absolute left-full top-1\/2 z-40 ml-2 w-max min-w-\[180px\] -translate-y-1\/2/);
+  assert.match(sendMenu, /const itemClass = 'flex w-full items-center gap-2 rounded-lg px-2 py-3\.5 /);
+});
+
+test('the toolbar icons are Light\'s: クリッピング with a pointer, 画像検索 with AI, お気に入り folder with a star, a level 送る plane, 画像編集 without an arrow', () => {
+  assert.match(page, /<SquareDashedMousePointer className="h-4 w-4" \/>クリッピング<\/button>/);
+  assert.match(page, /setSearchOpen\(true\); \}\}><StudioAiSearchIcon className="h-4 w-4" \/><\/button>/);
+  assert.match(page, /onClick=\{\(\) => setCollectTarget\(\{ url \}\)\}><StudioFolderStarIcon className="h-4 w-4" \/><\/button>/);
+  assert.match(sendMenu, /<SendHorizontal aria-hidden="true" className="h-4 w-4" \/>/);
+  assert.match(editMenu, /<WandSparkles aria-hidden="true" className="h-4 w-4" \/>\{label\}\n\s*<\/button>/);
+});

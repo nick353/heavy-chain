@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Folder, Loader2, X } from 'lucide-react';
+import { ChevronRight, Folder, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
 import { saveWorkspaceArtifactBestEffort } from '../../lib/localWorkspaceArtifacts';
@@ -104,41 +104,41 @@ export function StudioCollectDialog({ imageUrl, title, sourceStoragePath, onClos
     }
   };
 
-  const tabClass = (active: boolean) => `px-1 text-sm transition ${active ? 'text-white' : 'text-white/45 hover:text-white/80'}`;
+  // 本家の見た目（2026-11-12 本家の本番で開いて並べた）: 幅520・角丸・枠なし、題は太字にしない、スペースは丸い切り替え（選んだ側が青緑）、
+  // ×は無い、「ホーム」は薄い文字、フォルダは青緑の塗りの印で各行の下に線、下の段は上に線、キャンセルは灰色の塗り、決定は選ぶまで灰色。
+  const tabClass = (active: boolean) => `h-7 rounded-full px-4 text-sm transition ${active ? 'bg-[#20d0c4]/15 font-semibold text-[#20d0c4]' : 'text-white/70 hover:text-white'}`;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" role="dialog" aria-modal="true" aria-label={TEXT.title} data-testid="studio-collect-dialog"
       onPointerDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
-      <div className="flex max-h-[80vh] w-[min(560px,calc(100vw-32px))] flex-col rounded-2xl border border-white/10 bg-[#1d2224] text-white shadow-2xl">
+      <div className="flex max-h-[80vh] w-[min(520px,calc(100vw-32px))] flex-col rounded-xl bg-[#26292b] text-white shadow-2xl">
         <div className="flex items-center gap-3 px-6 pb-3 pt-5">
-          <h2 className="text-base font-semibold">{TEXT.title}</h2>
-          <div className="ml-auto flex items-center gap-2" role="tablist" aria-label="保存スペース">
+          <h2 className="text-[15px] font-normal text-white/90">{TEXT.title}</h2>
+          <div className="ml-auto flex items-center rounded-full bg-[#1c1f21] p-1" role="tablist" aria-label="保存スペース">
             <button type="button" role="tab" aria-selected={space === 'personal'} className={tabClass(space === 'personal')} onClick={() => { setSpace('personal'); setSelectedId(null); }}>{TEXT.personal}</button>
-            <span aria-hidden="true" className="h-3.5 w-px bg-white/20" />
             <button type="button" role="tab" aria-selected={space === 'team'} className={tabClass(space === 'team')} onClick={() => { setSpace('team'); setSelectedId(null); closeCreate(); }}>{TEXT.team}</button>
           </div>
-          <button type="button" aria-label="閉じる" disabled={busy !== null} onClick={onClose} className="ml-2 rounded p-1 text-white/60 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button>
         </div>
-        <nav aria-label="フォルダの場所" className="flex flex-wrap items-center gap-1 px-6 pb-2 text-sm text-white/60">
-          <button type="button" className={trail.length ? 'hover:text-white' : 'text-white'} onClick={() => openFolder(null)}>{TEXT.home}</button>
+        <nav aria-label="フォルダの場所" className="flex flex-wrap items-center gap-1 px-6 pb-1 text-[13px] text-white/35">
+          <button type="button" className="hover:text-white/70" onClick={() => openFolder(null)}>{TEXT.home}</button>
           {trail.map((folder, index) => (
             <span key={folder.id} className="flex items-center gap-1">
               <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
-              <button type="button" className={index === trail.length - 1 ? 'text-white' : 'hover:text-white'} onClick={() => openFolder(folder.id)}>{folder.name}</button>
+              <button type="button" className={index === trail.length - 1 ? 'text-white/80' : 'hover:text-white/70'} onClick={() => openFolder(folder.id)}>{folder.name}</button>
             </span>
           ))}
         </nav>
-        <div className="mx-6 min-h-[220px] flex-1 overflow-y-auto border-t border-white/10" data-testid="studio-collect-folders">
+        <div className="mx-6 mb-4 mt-3 min-h-[220px] flex-1 overflow-y-auto" data-testid="studio-collect-folders">
           {space === 'team' ? (
             <p className="py-10 text-center text-sm text-white/50">{TEXT.teamEmpty}</p>
           ) : folders === null ? (
             <p className="flex items-center justify-center gap-2 py-10 text-sm text-white/50"><Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />読み込み中…</p>
           ) : (
-            <ul role="listbox" aria-label="フォルダ" className="divide-y divide-white/10">
+            <ul role="listbox" aria-label="フォルダ">
               {shown.map(folder => (
-                <li key={folder.id} className="flex items-center">
+                <li key={folder.id} className="flex items-center border-b border-white/10">
                   <button type="button" role="option" aria-selected={selectedId === folder.id} onClick={() => setSelectedId(folder.id)}
-                    className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-3 text-left text-sm transition ${selectedId === folder.id ? 'bg-[#5fd0c8]/15 text-[#5fd0c8]' : 'text-white/90 hover:bg-white/[0.05]'}`}>
-                    <Folder aria-hidden="true" className="h-4 w-4 shrink-0" /><span className="truncate">{folder.name}</span>
+                    className={`flex min-w-0 flex-1 items-center gap-2 px-6 py-3 text-left text-sm transition ${selectedId === folder.id ? 'bg-[#20d0c4]/10 text-[#20d0c4]' : 'text-white/90 hover:bg-white/[0.05]'}`}>
+                    <Folder aria-hidden="true" className="h-4 w-4 shrink-0 fill-[#20d0c4] text-[#20d0c4]" /><span className="truncate">{folder.name}</span>
                   </button>
                   {hasChildren(folder.id) && <button type="button" aria-label={`${folder.name}を開く`} onClick={() => openFolder(folder.id)} className="px-2 py-3 text-white/50 hover:text-white"><ChevronRight className="h-4 w-4" /></button>}
                 </li>
@@ -156,12 +156,12 @@ export function StudioCollectDialog({ imageUrl, title, sourceStoragePath, onClos
             </form>
           )}
         </div>
-        <div className="flex items-center gap-3 px-6 pb-5 pt-4">
+        <div className="flex items-center gap-4 border-t border-white/10 px-6 py-4">
           <button type="button" disabled={space !== 'personal' || creating || busy !== null || !brandId || !cloudflareDataPlane} onClick={() => setCreating(true)}
-            className="h-9 rounded-lg bg-[#5fd0c8] px-4 text-sm text-slate-950 disabled:opacity-40">{TEXT.newGroup}</button>
-          <button type="button" disabled={busy !== null} onClick={onClose} className="ml-auto h-9 rounded-lg border border-white/15 px-4 text-sm text-white/80 hover:bg-white/10 disabled:opacity-40">{TEXT.cancel}</button>
+            className="h-8 rounded-md bg-[#20d0c4] px-4 text-sm text-[#0f1718] disabled:opacity-40">{TEXT.newGroup}</button>
+          <button type="button" disabled={busy !== null} onClick={onClose} className="ml-auto h-8 rounded-md bg-[#5b6164] px-4 text-sm text-white hover:bg-[#666c6f] disabled:opacity-40">{TEXT.cancel}</button>
           <button type="button" disabled={!selected || busy !== null} onClick={() => void confirm()}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#5fd0c8] px-4 text-sm text-slate-950 disabled:opacity-40">{busy === 'save' && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}{TEXT.confirm}</button>
+            className="inline-flex h-8 items-center gap-2 rounded-md bg-[#20d0c4] px-4 text-sm text-[#0f1718] disabled:bg-[#3b4043] disabled:text-white/30">{busy === 'save' && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}{TEXT.confirm}</button>
         </div>
       </div>
     </div>

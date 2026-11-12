@@ -152,7 +152,8 @@ export function StudioImageEditMenu({
         onClick={() => (menuOpen ? closeMenu(true) : setMenuOpen(true))}
         className={triggerClassName ?? 'inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm text-white/90 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40'}
       >
-        <WandSparkles aria-hidden="true" className="h-4 w-4" />{label}<ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />
+        {/* 本家の帯の「画像編集」は印と文字だけ（下向きの矢印は無い。2026-11-12 本家の本番で並べた）。 */}
+        <WandSparkles aria-hidden="true" className="h-4 w-4" />{label}
       </button>
       {menuOpen && (
         <div role="menu" aria-label={label} className={`absolute top-full z-40 mt-2 w-[240px] rounded-xl border border-white/10 bg-[#1d2224] p-1.5 shadow-2xl ${align === 'end' ? 'right-0' : 'left-0'}`}>

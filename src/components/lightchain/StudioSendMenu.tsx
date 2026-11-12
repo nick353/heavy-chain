@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronRight, Send } from 'lucide-react';
+import { ChevronRight, SendHorizontal } from 'lucide-react';
 import { STUDIO_SEND_GROUPS, studioSendHref } from '../../lib/studioSendMenu';
 
 /**
@@ -28,7 +28,7 @@ export function StudioSendMenu({ imageUrl, disabled = false, className }: { imag
     window.open(studioSendHref(path, imageUrl), '_blank');
   };
 
-  const itemClass = 'flex w-full items-center gap-2 rounded-lg px-2 py-3 text-left text-sm text-white/90 hover:bg-white/[0.08]';
+  const itemClass = 'flex w-full items-center gap-2 rounded-lg px-2 py-3.5 text-left text-sm text-white/90 hover:bg-white/[0.08]';
   return (
     <div ref={rootRef} className="relative inline-flex" data-testid="studio-send-menu">
       <button
@@ -42,10 +42,11 @@ export function StudioSendMenu({ imageUrl, disabled = false, className }: { imag
         onClick={() => (open ? close() : setOpen(true))}
         className={className}
       >
-        <Send aria-hidden="true" className="h-4 w-4" />
+        <SendHorizontal aria-hidden="true" className="h-4 w-4" />
       </button>
       {open && (
-        <div role="menu" aria-label="送る" className="absolute left-full top-0 z-40 ml-2 w-max min-w-[180px] rounded-xl border border-white/10 bg-[#1d2224] p-1.5 shadow-2xl">
+        // 本家は送るの一覧を帯の右に、ボタンの高さの真ん中にそろえて開く（2026-11-12 本家の本番で並べた。1行48px）。
+        <div role="menu" aria-label="送る" className="absolute left-full top-1/2 z-40 ml-2 w-max min-w-[180px] -translate-y-1/2 rounded-xl border border-white/10 bg-[#1d2224] p-1.5 shadow-2xl">
           {STUDIO_SEND_GROUPS.map((entry, index) => (
             <div key={entry.label} className="relative" onPointerEnter={() => setGroup(index)}>
               <button
