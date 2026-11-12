@@ -62,6 +62,9 @@ test('the 内容 undoes the search tool\'s Markdown escapes, and the 区分 colu
   const sources = [{ title: 'ワンピースの人気ランキング', url: 'https://zozo.jp/ranking/x.html', quote: '前後2wayVネックワンピース \\\\3,699 \\* 2色 \\[新作\\]' }];
   const html = buildAgentResearchReportHtml(researchTask(formatAgentResearchContent({ text: '[調査結果]\n## a\n- b', sources, searchUsed: true, searchErrors: [] })));
   assert.match(html, /<td>前後2wayVネックワンピース \\3,699 \* 2色 \[新作\]<\/td>/);
+  // The widths hold only in a fixed layout (production 7345ee51: a long path made ソース 343px and 区分 120px).
+  assert.match(html, /table\{width:100%;table-layout:fixed;/);
+  assert.match(html, /th,td\{[^}]*overflow-wrap:anywhere\}/);
   assert.match(html, /th:nth-child\(1\)\{width:7%\}th:nth-child\(2\)\{width:31%\}th:nth-child\(3\)\{width:42%\}th:nth-child\(4\)\{width:20%\}/);
 });
 
