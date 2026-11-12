@@ -83,6 +83,8 @@ test('the research runs the broad search and the shop search at once and adds th
   // The shop search: only the scope's shops, at most 3 searches, its job after the request.
   assert.deepEqual(shop.tools, [{ type: 'web_search_20260209', name: 'web_search', max_uses: AGENT_SHOP_MAX_USES, allowed_callers: ['direct'], allowed_domains: ['zozo.jp', 'rakuten.co.jp'] }]);
   assert.match(shop.system, /only look for real products sold on the online shops/);
+  // Only a cited bullet reaches the report, so the shop search is told to cite each product (production: 0 cited of 3 searches).
+  assert.match(shop.system, /Each bullet is one sentence that cites the search result of that product/);
   assert.match(shop.messages[0].content.at(-1).text, /zozo\.jp・rakuten\.co\.jp で売られている実商品だけを調べる/);
   // Only cited product lines are added, after the broad report.
   assert.match(result.text, /- リネンの需要が伸びている\n\n## 通販の実商品\n- ブランドAのリネンシャツ（ZOZOTOWN）¥7,990、ランキング3位\n- 楽天のリネンBは洗えるリネンで高評価$/);
@@ -90,7 +92,7 @@ test('the research runs the broad search and the shop search at once and adds th
   assert.deepEqual(result.sources.map(source => source.url), ['https://www.wwdjapan.com/articles/1', 'https://zozo.jp/shop/a/goods/1/', 'https://item.rakuten.co.jp/b/2/']);
   assert.deepEqual(result.claims.map(claim => claim.url), ['https://www.wwdjapan.com/articles/1', 'https://zozo.jp/shop/a/goods/1/', 'https://item.rakuten.co.jp/b/2/']);
   // The receipt keeps both searches' cost and the shop search's own share.
-  assert.deepEqual(result.usage, { prompt_tokens: 2000, completion_tokens: 200, total_tokens: 2200, web_search_requests: 6, shop_prompt_tokens: 1000, shop_completion_tokens: 100, shop_web_search_requests: 2 });
+  assert.deepEqual(result.usage, { prompt_tokens: 2000, completion_tokens: 200, total_tokens: 2200, web_search_requests: 6, shop_prompt_tokens: 1000, shop_completion_tokens: 100, shop_web_search_requests: 2, shop_claims: 2 });
 });
 
 test('a failed shop search leaves the research as it was, and is never retried without searching', async () => {
@@ -134,5 +136,8 @@ test('merging keeps 20 pages and 25 sentences, the shop ones included; a shop se
   assert.equal(empty.text, main.text);
   assert.deepEqual(empty.sources, main.sources);
   assert.equal(empty.usage?.shop_prompt_tokens, 10);
+  // The receipt says the shop search added nothing (its cost without effect is measurable).
+  assert.equal(empty.usage?.shop_claims, 0);
+  assert.equal(merged.usage?.shop_claims, 8);
   assert.equal(mergeShopResearch(main, null), main);
 });
