@@ -259,6 +259,7 @@ export function parseAgentRequirements(content: string): ParsedRequirements {
 export const agentMissingNames = (missing: string[]) => missing.map(item => item.replace(/^[①②③④⑤\d.、)\s]+/, '').replace(/[（(].*$/, '').trim()).filter(Boolean).join('／');
 
 export function agentResearchPrompt(task: AgentTask): string {
+  if (agentThemeSearches(task)) return agentThemeResearchPrompt(task);
   const scope = task.scope!;
   const requirements = effectiveAgentRequirements(task);
   return [
@@ -294,15 +295,34 @@ export function parseAgentResearch(content: string): ParsedResearch {
 const researchContext = (task: AgentTask) => task.research?.state === 'completed' && task.research.content
   ? `ウェブ調査の結果:\n${parseAgentResearch(task.research.content).report.slice(0, 3500)}` : '';
 
-/** Light's テーマ企画 researches the web for its themes (its 参考資料 lists the sites); Heavy searches in the theme request. */
+/** Light's テーマ企画 researches the web for its themes (its 参考資料 lists the sites with the sentence each was cited for). */
 export const agentThemeSearches = (task: Pick<AgentTask, 'flow' | 'subtype'>) => task.flow !== 'conversation' && task.subtype === 'テーマ企画';
-/** Sources a web-searching theme round returned (its content carries the research `[出典]` block). */
+/**
+ * Heavy runs テーマ企画's web search as its own research step (like 新商品企画's) and writes the themes from the report.
+ * Claude cites a page only in report sentences: searching inside the short theme format came back with no citation at all
+ * twice in production (2026-11-12, even when its lines stated the pages' facts), while every research report carried them.
+ */
+function agentThemeResearchPrompt(task: AgentTask): string {
+  return [
+    ...contextLines(task),
+    ...noteLines(task),
+    'この依頼のテーマを考えるために、ウェブ検索で最新の情報（シーズンのトレンド、色・素材・柄、注目のアイテムとディテール、コレクションや店頭の事例、SNSで話題の着こなし）を集めてください。',
+    '調べ終えたら「[調査結果]」の行のあとに、次の見出しを順に使い、各見出しの下は「- 」で始まる箇条書きで、数字や具体例を入れて書いてください（URLは書かない）:',
+    '「## トレンド」「## 色と素材」「## アイテムとディテール」「## 事例と着用シーン」「## テーマへの示唆」。',
+  ].filter(Boolean).join('\n');
+}
+/**
+ * The sources of a web-searching テーマ企画: a round that searched itself (its content carries the `[出典]` block; rounds
+ * made before the research step) or else the task's research.
+ */
 export function agentRoundSources(task: AgentTask) {
   for (const round of [...task.rounds].reverse()) {
     if (round.step.state === 'completed' && round.step.content && /^\[検索\]/m.test(round.step.content)) return parseAgentResearch(round.step.content);
   }
-  return null;
+  return agentThemeSearches(task) && task.research?.state === 'completed' && task.research.content ? parseAgentResearch(task.research.content) : null;
 }
+/** A テーマ企画 round searches the web itself only when the task has no research to write from (tasks made before it). */
+export const agentThemeRoundSearches = (task: AgentTask) => agentThemeSearches(task) && task.research?.state !== 'completed';
 
 export function themePrompt(task: AgentTask): string {
   const previous = task.rounds.flatMap((round) => round.themes);
@@ -317,13 +337,15 @@ export function themePrompt(task: AgentTask): string {
     previous.length ? `前回提案したテーマ（${previous.join(' / ').slice(0, 1500)}）は採用されませんでした。方向性の違う新しいテーマを提案してください。` : '',
     '次の形式だけで、日本語で答えてください。',
     '[概要]',
-    researchContext(task) ? 'ウェブ調査から読み取れる、4つのデザイン方向を考える上での要点を3〜5文で書く。出典やURLは書かない。'
-      : agentThemeSearches(task)
-        // Light lists each source with the sentence it was cited for. Claude cites only the sentences it bases on a result, so
-        // the trend sentences and each インスピレーション line are asked to state a page's concrete fact (2026-11-12: a theme round
-        // that wrote general lines came back with no citation at all, and 参考資料 showed bare titles and unrelated pages).
-        ? 'ウェブ検索で分かった傾向を2〜3文で書き、続けて4つのテーマそれぞれについて、テーマ名の行と「キーエレメント：…」「インスピレーション：…」「カラーパレット：…」の3行を書く。傾向の文と各テーマの「インスピレーション：」の行は、検索結果のページに書かれた具体的な事実（色名・アイテム・数字・事例）を1つずつ根拠にして書く。出典やURLは書かない。'
-        : '依頼に関係する市場・トレンド・着用シーンの要点を4〜6文で書く。あなたの知識に基づいて書き、出典やURLは書かない。',
+    // Light's テーマ企画 answer: what the search found, then the four themes with キーエレメント / インスピレーション / カラーパレット.
+    researchContext(task) && agentThemeSearches(task)
+      ? 'ウェブ調査で分かった傾向を2〜3文で書き、続けて4つのテーマそれぞれについて、テーマ名の行と「キーエレメント：…」「インスピレーション：…」「カラーパレット：…」の3行を書く。傾向の文と各テーマの「インスピレーション：」の行は、調査結果の具体的な事実（色名・アイテム・数字・事例）を根拠にして書く。URLは書かない。'
+      : researchContext(task) ? 'ウェブ調査から読み取れる、4つのデザイン方向を考える上での要点を3〜5文で書く。出典やURLは書かない。'
+        : agentThemeSearches(task)
+          // A round that searches itself (tasks made before the research step). "出典" is not forbidden here: the citations
+          // are what 参考資料 lists.
+          ? 'ウェブ検索で分かった傾向を2〜3文で書き、続けて4つのテーマそれぞれについて、テーマ名の行と「キーエレメント：…」「インスピレーション：…」「カラーパレット：…」の3行を書く。傾向の文と各テーマの「インスピレーション：」の行は、検索結果のページに書かれた具体的な事実（色名・アイテム・数字・事例）を1つずつ根拠にして書く。URLは書かない。'
+          : '依頼に関係する市場・トレンド・着用シーンの要点を4〜6文で書く。あなたの知識に基づいて書き、出典やURLは書かない。',
     '[テーマ]',
     ...(task.flow === 'conversation'
       ? ['- 方向性の名前（主なアイテム）｜特徴を2文で（素材・シルエット・色・ディテール）｜採用をすすめる理由を1文で（調査の根拠を入れる）｜この方向の代表的な商品1点の写真を作るための英語の短い説明（服の種類・色・素材・ディテール。人物・ブランド名・「style」という単語は使わない）',

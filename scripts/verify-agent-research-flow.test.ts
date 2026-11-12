@@ -30,8 +30,8 @@ test('research sends the web search tool with a cap and fallbacks, and collects 
   assert.equal(sent[0].fallbacks, 'default');
   assert.equal(sent[0].model, 'claude-sonnet-5-5');
   assert.equal(result.text, '## トレンド\n- リネン混が伸びている');
-  // Cited pages first; with fewer than three citations the search hits fill in after them.
-  assert.deepEqual(result.sources.map(source => source.url), ['https://example.org/c', 'https://example.com/a', 'https://example.com/b']);
+  // Only cited pages are sources (Light lists each with its cited sentence); uncited hits never fill in.
+  assert.deepEqual(result.sources, [{ url: 'https://example.org/c', title: 'Cited C', quote: 'x' }]);
   assert.equal(result.searchUsed, true);
   assert.deepEqual(result.usage, { prompt_tokens: 100, completion_tokens: 40, total_tokens: 140 });
 });
@@ -69,7 +69,7 @@ test('pause_turn resumes by re-sending the assistant turn without an extra user 
   assert.deepEqual(sent[1].messages.map((message: Json) => message.role), ['user', 'assistant']);
   assert.equal(sent[1].messages[1].content[0].type, 'server_tool_use');
   assert.equal(result.text, '## 市場と気候\n- 寒暖差');
-  assert.deepEqual(result.sources, [{ url: 'https://example.com/p', title: 'P' }]);
+  assert.deepEqual(result.sources, []);
 });
 
 // Production 2026-11-12: with dynamic filtering one search over max_uses ended the whole code run, Claude saw none of the
@@ -83,7 +83,7 @@ test('a search over the cap keeps the earlier results, the sources and an ok sta
     { type: 'text', text: '[調査結果]\n## トレンド\n- PantoneのSS27はバターイエロー' },
   ]));
   assert.equal(result.searchUsed, true);
-  assert.deepEqual(result.sources, [{ url: 'https://example.com/pantone', title: 'Pantone SS27' }]);
+  assert.deepEqual(result.sources, []);
   assert.deepEqual(result.searchErrors, ['max_uses_exceeded']);
   const parsed = parseAgentResearch(formatAgentResearchContent(result));
   assert.equal(parsed.search, 'ok');
