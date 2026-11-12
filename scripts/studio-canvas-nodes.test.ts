@@ -359,11 +359,18 @@ test('the 画像編集 list is Light\'s size and look: about 190 wide on #303538
   // The longest item, ワンクリックで背景削除 (11 characters of 12px), fits on its line: 194 - 2 border - 8 padding - 14 - 12 - 16 icon - 8 gap = 134.
   assert.ok(194 - 2 - 8 - 14 - 12 - 16 - 8 >= 11 * 12);
   assert.match(editMenu, /\{item\.badge && <span className="rounded-full px-2 py-0\.5 text-xs font-medium leading-4 text-\[#0b2a33\]"/);
-  assert.match(editMenu, /repair: StudioRepairIcon, partial: StudioPartialEditIcon, upscale: StudioUpscaleIcon, 'remove-background': StudioRemoveBackgroundIcon, clipping: StudioClippingIcon, crop: Crop, expand: Scaling, erase: Eraser,/);
+  // Light's own eight list icons, copied from the list opened in Light's production studio.
+  const menuIcons = read('../src/components/lightchain/StudioEditMenuIcon.tsx');
+  const boxes = [['repair', 20], ['partial', 16], ['upscale', 16], ['remove-background', 16], ['clipping', 16], ['crop', 16], ['expand', 16], ['erase', 16]] as const;
+  boxes.forEach(([name, box]) => assert.match(menuIcons, new RegExp(`\\n  '${name}': \\{ box: ${box}, paths: \\[\\n    \\{ d: 'M`)));
+  assert.match(editMenu, /repair: menuIcon\('repair'\), partial: menuIcon\('partial'\), upscale: menuIcon\('upscale'\), 'remove-background': menuIcon\('remove-background'\),\n\s*clipping: menuIcon\('clipping'\), crop: menuIcon\('crop'\), expand: menuIcon\('expand'\), erase: menuIcon\('erase'\),/);
+  assert.doesNotMatch(editMenu, /const StudioRepairIcon|crop: Crop|expand: Scaling/);
   // The windows show the same mark at their top left as the list (Light's windows do).
-  assert.match(editMenu, /partial: \{ title: '部分編集', icon: StudioPartialEditIcon,/);
-  assert.match(editMenu, /clipping: \{ title: 'クリッピング', icon: StudioClippingIcon,/);
-  assert.match(editMenu, /<EditDialogFrame icon=\{Scaling\} title="AI拡張"/);
+  assert.match(editMenu, /partial: \{ title: '部分編集', icon: TOOL_ICON\.partial,/);
+  assert.match(editMenu, /clipping: \{ title: 'クリッピング', icon: TOOL_ICON\.clipping,/);
+  assert.match(editMenu, /erase: \{ title: 'AI削除', icon: TOOL_ICON\.erase,/);
+  assert.match(editMenu, /<EditDialogFrame icon=\{TOOL_ICON\.crop\} title="AIトリミング"/);
+  assert.match(editMenu, /<EditDialogFrame icon=\{TOOL_ICON\.expand\} title="AI拡張"/);
 });
 
 test('a signed image URL kept while the page is open is signed again before the studio reads the image once more', () => {
