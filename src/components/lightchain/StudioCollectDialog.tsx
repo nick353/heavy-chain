@@ -104,21 +104,23 @@ export function StudioCollectDialog({ imageUrl, title, sourceStoragePath, onClos
     }
   };
 
-  // 本家の見た目（2026-11-12 本家の本番で開いて並べた）: 幅520・角丸・枠なし、題は太字にしない、スペースは丸い切り替え（選んだ側が青緑）、
-  // ×は無い、「ホーム」は薄い文字、フォルダは青緑の塗りの印で各行の下に線、下の段は上に線、キャンセルは灰色の塗り、決定は選ぶまで灰色。
-  const tabClass = (active: boolean) => `h-7 rounded-full px-4 text-sm transition ${active ? 'bg-[#20d0c4]/15 font-semibold text-[#20d0c4]' : 'text-white/70 hover:text-white'}`;
+  // 本家の見た目（2026-11-12 本家の本番で開いて並べ、画素で測った）: 幅520・角丸・枠なし、後ろは画面全体を約75%暗くする、題は14pxで太字にしない、
+  // スペースは丸い切り替え（地は窓より明るい灰色・文字12px・選んだ側は薄い青緑の地に青緑の文字で太字にしない）、×は無い、「ホーム」は12pxの薄い文字、
+  // フォルダは開いたフォルダの青緑の印で各行の下にごく薄い線、4行ぶんまでは窓が伸び縮みする、下の段は上に線、ボタンの文字は12px、
+  // キャンセルは灰色の塗り（#545d62）、決定は選ぶまで灰色（#454a4d）。
+  const tabClass = (active: boolean) => `h-7 rounded-full px-4 text-xs transition ${active ? 'bg-[#20d0c4]/15 text-[#20d0c4]' : 'text-white/60 hover:text-white'}`;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" role="dialog" aria-modal="true" aria-label={TEXT.title} data-testid="studio-collect-dialog"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" role="dialog" aria-modal="true" aria-label={TEXT.title} data-testid="studio-collect-dialog"
       onPointerDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
       <div className="flex max-h-[80vh] w-[min(520px,calc(100vw-32px))] flex-col rounded-xl bg-[#26292b] text-white shadow-2xl">
         <div className="flex items-center gap-3 px-6 pb-3 pt-5">
-          <h2 className="text-[15px] font-normal text-white/90">{TEXT.title}</h2>
-          <div className="ml-auto flex items-center rounded-full bg-[#1c1f21] p-1" role="tablist" aria-label="保存スペース">
+          <h2 className="text-sm font-normal text-white/90">{TEXT.title}</h2>
+          <div className="ml-auto flex items-center rounded-full bg-[#313538] p-1" role="tablist" aria-label="保存スペース">
             <button type="button" role="tab" aria-selected={space === 'personal'} className={tabClass(space === 'personal')} onClick={() => { setSpace('personal'); setSelectedId(null); }}>{TEXT.personal}</button>
             <button type="button" role="tab" aria-selected={space === 'team'} className={tabClass(space === 'team')} onClick={() => { setSpace('team'); setSelectedId(null); closeCreate(); }}>{TEXT.team}</button>
           </div>
         </div>
-        <nav aria-label="フォルダの場所" className="flex flex-wrap items-center gap-1 px-6 pb-1 text-[13px] text-white/35">
+        <nav aria-label="フォルダの場所" className="flex flex-wrap items-center gap-1 px-6 pb-1 text-xs text-white/35">
           <button type="button" className="hover:text-white/70" onClick={() => openFolder(null)}>{TEXT.home}</button>
           {trail.map((folder, index) => (
             <span key={folder.id} className="flex items-center gap-1">
@@ -127,7 +129,7 @@ export function StudioCollectDialog({ imageUrl, title, sourceStoragePath, onClos
             </span>
           ))}
         </nav>
-        <div className="mx-6 mb-4 mt-3 min-h-[220px] flex-1 overflow-y-auto" data-testid="studio-collect-folders">
+        <div className="mx-6 mb-7 mt-3 min-h-[176px] flex-1 overflow-y-auto" data-testid="studio-collect-folders">
           {space === 'team' ? (
             <p className="py-10 text-center text-sm text-white/50">{TEXT.teamEmpty}</p>
           ) : folders === null ? (
@@ -135,10 +137,10 @@ export function StudioCollectDialog({ imageUrl, title, sourceStoragePath, onClos
           ) : (
             <ul role="listbox" aria-label="フォルダ">
               {shown.map(folder => (
-                <li key={folder.id} className="flex items-center border-b border-white/10">
+                <li key={folder.id} className="flex items-center border-b border-white/[0.06]">
                   <button type="button" role="option" aria-selected={selectedId === folder.id} onClick={() => setSelectedId(folder.id)}
                     className={`flex min-w-0 flex-1 items-center gap-2 px-6 py-3 text-left text-sm transition ${selectedId === folder.id ? 'bg-[#20d0c4]/10 text-[#20d0c4]' : 'text-white/90 hover:bg-white/[0.05]'}`}>
-                    <Folder aria-hidden="true" className="h-4 w-4 shrink-0 fill-[#20d0c4] text-[#20d0c4]" /><span className="truncate">{folder.name}</span>
+                    <StudioFolderOpenIcon /><span className="truncate">{folder.name}</span>
                   </button>
                   {hasChildren(folder.id) && <button type="button" aria-label={`${folder.name}を開く`} onClick={() => openFolder(folder.id)} className="px-2 py-3 text-white/50 hover:text-white"><ChevronRight className="h-4 w-4" /></button>}
                 </li>
@@ -158,12 +160,22 @@ export function StudioCollectDialog({ imageUrl, title, sourceStoragePath, onClos
         </div>
         <div className="flex items-center gap-4 border-t border-white/10 px-6 py-4">
           <button type="button" disabled={space !== 'personal' || creating || busy !== null || !brandId || !cloudflareDataPlane} onClick={() => setCreating(true)}
-            className="h-8 rounded-md bg-[#20d0c4] px-4 text-sm text-[#0f1718] disabled:opacity-40">{TEXT.newGroup}</button>
-          <button type="button" disabled={busy !== null} onClick={onClose} className="ml-auto h-8 rounded-md bg-[#5b6164] px-4 text-sm text-white hover:bg-[#666c6f] disabled:opacity-40">{TEXT.cancel}</button>
+            className="h-8 rounded-md bg-[#20d0c4] px-4 text-xs text-[#0f1718] disabled:opacity-40">{TEXT.newGroup}</button>
+          <button type="button" disabled={busy !== null} onClick={onClose} className="ml-auto h-8 rounded-md bg-[#545d62] px-4 text-xs text-white hover:bg-[#5f686d] disabled:opacity-40">{TEXT.cancel}</button>
           <button type="button" disabled={!selected || busy !== null} onClick={() => void confirm()}
-            className="inline-flex h-8 items-center gap-2 rounded-md bg-[#20d0c4] px-4 text-sm text-[#0f1718] disabled:bg-[#3b4043] disabled:text-white/30">{busy === 'save' && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}{TEXT.confirm}</button>
+            className="inline-flex h-8 items-center gap-2 rounded-md bg-[#20d0c4] px-4 text-xs text-[#0f1718] disabled:bg-[#454a4d] disabled:text-white/30">{busy === 'save' && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}{TEXT.confirm}</button>
         </div>
       </div>
     </div>
+  );
+}
+
+/** 本家のフォルダの印（開いたフォルダ。奥の面は少し暗い青緑、手前の面は青緑の塗り。2026-11-12 本家の本番で拡大して見た）。 */
+function StudioFolderOpenIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[#20d0c4]" data-icon="folder-open-filled">
+      <path fill="currentColor" opacity="0.6" d="M2 6.5A2.5 2.5 0 0 1 4.5 4h4.2l2 2.2h7.8A2.5 2.5 0 0 1 21 8.7V10H7.6a2.5 2.5 0 0 0-2.3 1.6L2 18.5z" />
+      <path fill="currentColor" d="M7.6 11.6h14.2a1 1 0 0 1 .95 1.3l-2.3 6.6a2 2 0 0 1-1.9 1.4H3.4a1 1 0 0 1-.95-1.3l2.6-6.6a2.5 2.5 0 0 1 2.5-1.4z" />
+    </svg>
   );
 }

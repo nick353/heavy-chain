@@ -788,6 +788,12 @@
   background: rgb(255 255 255 / 10%);
 }
 
+/* 本家は「画像編集」「送る」の一覧を開いている間、そのボタンを明るい地に青緑の印と文字にする（2026-11-12 本家の本番で開いて見た）。 */
+.fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger[aria-expanded="true"] {
+  background: rgb(255 255 255 / 10%);
+  color: #20d0c4;
+}
+
 .fashion-studio-node-toolbar > button:disabled,
 .fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger:disabled,
 .fashion-studio-node-feedback button:disabled {
@@ -1361,6 +1367,7 @@ html[data-studio-theme="light"] header button:hover { background: rgba(0, 0, 0, 
 .fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-canvas-toolbar button:hover, .fashion-studio-source-canvas-toolbar button.is-active,
   .fashion-studio-zoom-inner > button:hover:not(:disabled), .fashion-studio-node-toolbar > button:hover:not(:disabled), .fashion-studio-node-toolbar-trigger:hover:not(:disabled), .fashion-studio-node-feedback button:hover:not(:disabled),
   .fashion-studio-zoom-menu button:hover, .fashion-studio-zoom-menu button.is-checked) { background: rgba(0, 0, 0, 0.06); }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger[aria-expanded="true"] { background: rgba(0, 0, 0, 0.06); color: #0fa89e; }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-feedback-popover { border-color: rgba(0, 0, 0, 0.08); background: #ffffff; color: #1c1f21; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-reason { border-color: rgba(0, 0, 0, 0.12); color: #6b7175; }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-reason.is-selected { border-color: #0fa89e; color: #0b7fbf; }

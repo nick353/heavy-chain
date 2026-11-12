@@ -159,8 +159,9 @@ export function StudioMaskEditor({
   const icon = { 'ai-mask': ScanSearch, brush: Brush, lasso: Lasso, rect: SquareDashedMousePointer, pen: PenTool } as const;
   const paneHint = (id: StudioMaskPaneId) => (id === 'reference' ? '参考にしたい領域を描画してください' : '調整したい領域を描画してください');
 
+  // 後ろは本家と同じく画面全体を約80%暗くする（2026-11-12 本家の本番で、開く前と後の画素を比べて測った）。
   return (
-    <div className="fixed inset-0 z-50 overflow-auto bg-black/70" role="dialog" aria-modal="true" aria-label={ariaLabel} data-testid={testId}>
+    <div className="fixed inset-0 z-50 overflow-auto bg-black/80" role="dialog" aria-modal="true" aria-label={ariaLabel} data-testid={testId}>
       <h2 className="sr-only">{STUDIO_MASK_EDITOR_TEXT.title}</h2>
       <div className="mx-auto flex min-h-full w-max flex-col items-center px-3 pb-6 pt-[13vh] text-white">
         <div className="relative">
