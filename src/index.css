@@ -622,7 +622,9 @@
   height: calc(100dvh - 50px);
   min-height: 0;
   overflow: hidden;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* 本家のスタジオは body の書体のまま（-apple-system から PingFang SC。日本語は PingFang SC で描かれる。2026-11-12 本家の本番の見た目の決まりで確かめた）。 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .fashion-studio-viewport {
@@ -763,6 +765,17 @@
 }
 
 .fashion-studio-node-toolbar {
+  /* 本家の帯（2026-11-12 本家の本番の帯の作りと画素で測った）: 枠は角12px・白10%の線、中は4px の余白と4px の間、
+     ボタンは高さ32px・左右8px・印20px・文字14px（行16px・太さ500・白）、区切りは高さ32px。合わせて高さ42px。 */
+  height: 42px;
+  gap: 4px;
+  border-color: rgb(255 255 255 / 10%);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 16px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
   transform: translate(-50%, -100%);
 }
 
@@ -788,6 +801,26 @@
   background: rgb(255 255 255 / 10%);
 }
 
+.fashion-studio-node-toolbar > button,
+.fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger {
+  height: 32px;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.fashion-studio-node-toolbar > button > svg,
+.fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger > svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* 本家は帯のボタンに乗ると、地を明るくして印と文字を青緑にする。 */
+.fashion-studio-node-toolbar > button:hover:not(:disabled),
+.fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger:hover:not(:disabled) {
+  color: #20d0c4;
+}
+
 /* 本家は「画像編集」「送る」の一覧を開いている間、そのボタンを明るい地に青緑の印と文字にする（2026-11-12 本家の本番で開いて見た）。 */
 .fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger[aria-expanded="true"] {
   background: rgb(255 255 255 / 10%);
@@ -799,6 +832,13 @@
 .fashion-studio-node-feedback button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+/* 本家の帯の押せないボタンは、文字を白30%にしたうえで半分の濃さにする。 */
+.fashion-studio-node-toolbar > button:disabled,
+.fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger:disabled {
+  color: rgb(255 255 255 / 30%);
+  opacity: 0.5;
 }
 
 /* A 画像編集 result on the generation route while it is drawn (Light's loading image node). */
@@ -858,6 +898,13 @@
   height: 20px;
   margin: 0 4px;
   background: #3d4346;
+}
+
+/* 本家の帯の区切りは帯の中の高さいっぱい（32px）で、左右の間は帯の4px だけ。色は線と同じ白10%。 */
+.fashion-studio-node-toolbar > .fashion-studio-node-toolbar-divider {
+  height: 32px;
+  margin: 0;
+  background: rgb(255 255 255 / 10%);
 }
 
 /* 生成結果の 👍👎「フィードバックする」（本家の feedback 部品: 印は 32px の正方形、窓は 理由 368px・要望 280px） */
@@ -1367,7 +1414,13 @@ html[data-studio-theme="light"] header button:hover { background: rgba(0, 0, 0, 
 .fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-source-canvas-toolbar button:hover, .fashion-studio-source-canvas-toolbar button.is-active,
   .fashion-studio-zoom-inner > button:hover:not(:disabled), .fashion-studio-node-toolbar > button:hover:not(:disabled), .fashion-studio-node-toolbar-trigger:hover:not(:disabled), .fashion-studio-node-feedback button:hover:not(:disabled),
   .fashion-studio-zoom-menu button:hover, .fashion-studio-zoom-menu button.is-checked) { background: rgba(0, 0, 0, 0.06); }
-.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger[aria-expanded="true"] { background: rgba(0, 0, 0, 0.06); color: #0fa89e; }
+/* 本家の明るい見た目の帯（本家の明るい側の色: 線 黒5%・文字 #111817・乗ったときと開いている間は黒8%の地に #022f31・押せない文字は黒20%）。 */
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-toolbar { border-color: rgba(0, 0, 0, 0.05); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05); }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-node-toolbar > button, .fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger) { color: #111817; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-node-toolbar > button:hover:not(:disabled), .fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger:hover:not(:disabled),
+  .fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger[aria-expanded="true"]) { background: rgba(0, 0, 0, 0.08); color: #022f31; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] :is(.fashion-studio-node-toolbar > button:disabled, .fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger:disabled) { color: rgba(0, 0, 0, 0.2); }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-toolbar > .fashion-studio-node-toolbar-divider { background: rgba(0, 0, 0, 0.05); }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-feedback-popover { border-color: rgba(0, 0, 0, 0.08); background: #ffffff; color: #1c1f21; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-reason { border-color: rgba(0, 0, 0, 0.12); color: #6b7175; }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-reason.is-selected { border-color: #0fa89e; color: #0b7fbf; }
