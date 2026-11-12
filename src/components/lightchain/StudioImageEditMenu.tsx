@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { upscaleImage } from '../../lib/clientImageOps';
+import { refreshSignedImageUrl } from '../../lib/storage';
 import { BRAND_LIKENESS_BLOCK_COPY, validateLegalSafetyInput } from '../../lib/legalSafetyGuard';
 import {
   CROP_CUSTOM, CROP_PRESET_GROUPS, EXPAND_ERRORS, EXPAND_ORIGINAL, EXPAND_PRESET_GROUPS, EXPAND_SCALES, PARTIAL_EDIT_COLORS, STUDIO_EDIT_MENU, STUDIO_ERASE_PROMPT,
@@ -63,13 +64,17 @@ const StudioClippingIcon: StudioEditIcon = ({ className }) => iconSvg(className,
 const TOOL_ICON: Record<StudioEditToolId, StudioEditIcon> = {
   repair: StudioRepairIcon, partial: StudioPartialEditIcon, upscale: StudioUpscaleIcon, 'remove-background': StudioRemoveBackgroundIcon, clipping: StudioClippingIcon, crop: Crop, expand: Scaling, erase: Eraser,
 };
-const loadImage = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-  const image = new Image();
-  image.crossOrigin = 'anonymous';
-  image.onload = () => resolve(image);
-  image.onerror = () => reject(new Error('studio_edit_image_load_failed'));
-  image.src = url;
-});
+// A node's signed URL may have expired while the page was open: sign it again before reading (refreshSignedImageUrl).
+const loadImage = async (url: string) => {
+  const source = await refreshSignedImageUrl(url);
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('studio_edit_image_load_failed'));
+    image.src = source;
+  });
+};
 const toPng = async (canvas: HTMLCanvasElement, name: string) => {
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
   if (!blob) throw new Error('studio_edit_encode_failed');
@@ -547,7 +552,7 @@ function CropDialog({ imageUrl, name, onClose, onClientResult }: {
       <div ref={view.ref} className="absolute inset-0 flex items-center justify-center overflow-hidden" onPointerMove={onMove} onPointerUp={() => { drag.current = null; }}>
         {image && rect && (
           <div className="relative shrink-0" style={{ width: width * view.scale, height: height * view.scale }}>
-            <img src={imageUrl} alt="トリミングする画像" className="absolute inset-0 size-full select-none" draggable={false} />
+            <img src={image ? image.src : imageUrl} alt="トリミングする画像" className="absolute inset-0 size-full select-none" draggable={false} />
             <div className="absolute inset-0 overflow-hidden">
               <div
                 className="absolute cursor-move border border-[#14c4bb]"
@@ -652,7 +657,7 @@ function ExpandDialog({ imageUrl, name, onClose, onServerEdit }: {
         {image && (
           <div className="relative shrink-0" style={{ width: target.width * view.scale, height: target.height * view.scale }} data-testid="studio-edit-expand-frame">
             <div aria-hidden="true" className="absolute inset-0" style={{ backgroundImage: 'repeating-conic-gradient(#2a2f31 0% 25%, #1d2224 0% 50%)', backgroundSize: '16px 16px' }} />
-            <img src={imageUrl} alt="拡張する画像" className="absolute select-none" draggable={false} style={{ left: offset.x * view.scale, top: offset.y * view.scale, width: width * view.scale, height: height * view.scale }} />
+            <img src={image ? image.src : imageUrl} alt="拡張する画像" className="absolute select-none" draggable={false} style={{ left: offset.x * view.scale, top: offset.y * view.scale, width: width * view.scale, height: height * view.scale }} />
             <div className="pointer-events-none absolute inset-0 border border-dashed border-[#14c4bb]"><FrameHandles /></div>
             <span className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-1.5 py-0.5 text-xs text-white/90">{target.width} x {target.height}</span>
           </div>

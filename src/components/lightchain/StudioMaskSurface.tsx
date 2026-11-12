@@ -2,6 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { buildHighPrecisionMaterialCutoutDataUrl, buildMaterialCutoutDataUrl, buildPrintGarmentCutoutDataUrl, type MaterialCutoutResult } from '../../lib/workspaceMaterialReferences';
 import type { GarmentSegmentationTarget } from '../../features/printing/selection/garmentSegmentationPolicy';
 import { cutoutDrawRect } from './printPlacement';
+import { refreshSignedImageUrl } from '../../lib/storage';
 import {
   ERASE_GUIDE_COLOR, studioAlphaBounds, studioApplyMaskAlpha, studioAutoClip, studioDataUrlToFile, studioFillRectAlpha, studioRectFromDrag, studioScaleRect,
   type StudioRect, type StudioRgba,
@@ -53,13 +54,17 @@ export type StudioMaskSurfaceHandle = {
   fit: () => void;
 };
 
-const loadImage = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-  const image = new Image();
-  image.crossOrigin = 'anonymous';
-  image.onload = () => resolve(image);
-  image.onerror = () => reject(new Error('studio_mask_image_load_failed'));
-  image.src = url;
-});
+// A node's signed URL may have expired while the page was open: sign it again before reading (refreshSignedImageUrl).
+const loadImage = async (url: string) => {
+  const source = await refreshSignedImageUrl(url);
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('studio_mask_image_load_failed'));
+    image.src = source;
+  });
+};
 const canvasOf = (width: number, height: number) => {
   const canvas = document.createElement('canvas');
   canvas.width = width; canvas.height = height;
@@ -522,7 +527,7 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
       {loadFailed && <p className="absolute inset-0 flex items-center justify-center text-sm text-white/60">画像を読み込めませんでした</p>}
       {image && size ? (
         <div className="absolute left-0 top-0" style={{ width: image.naturalWidth * view.scale, height: image.naturalHeight * view.scale, transform: `translate(${view.x}px, ${view.y}px)` }}>
-          <img src={imageUrl} alt="編集する画像" className="absolute inset-0 size-full" draggable={false} />
+          <img src={image.src} alt="編集する画像" className="absolute inset-0 size-full" draggable={false} />
           <canvas ref={overlayRef} data-testid={`${testId}-mask`} className="absolute inset-0 size-full" />
           <svg className="pointer-events-none absolute inset-0 size-full" viewBox={`0 0 ${size.width} ${size.height}`} preserveAspectRatio="none" aria-hidden="true">
             {draft?.kind === 'rect' && <rect x={draft.rect.x} y={draft.rect.y} width={draft.rect.width} height={draft.rect.height} fill="rgba(101,211,207,0.18)" stroke="#5fd0c8" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeDasharray="6 4" />}
@@ -543,7 +548,7 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
 export async function studioImageUrlToFile(url: string, name: string): Promise<File> {
   if (url.startsWith('data:')) return studioDataUrlToFile(url, name);
   try {
-    const response = await fetch(url);
+    const response = await fetch(await refreshSignedImageUrl(url));
     if (response.ok) {
       const blob = await response.blob();
       if (blob.type.startsWith('image/')) return new File([blob], name, { type: blob.type });

@@ -47,7 +47,9 @@ test('選ぶと新しいタブで <行き先>?imgUrl=<画像の住所>（本家�
   const href = studioSendHref('/tools/reactor', image);
   assert.equal(href, `/tools/reactor?imgUrl=${encodeURIComponent(image)}`);
   assert.equal(new URL(href, ORIGIN).searchParams.get('imgUrl'), image);
-  assert.match(sendMenuSource, /window\.open\(studioSendHref\(path, imageUrl\), '_blank'\)/);
+  // The tab opens inside the click; it goes to studioSendHref(path, <the image's URL, signed again if it had expired>).
+  assert.match(sendMenuSource, /const tab = window\.open\('', '_blank'\);/);
+  assert.match(sendMenuSource, /const href = studioSendHref\(path, url\);\n\s*if \(tab\) tab\.location\.href = href; else window\.open\(href, '_blank'\);/);
   assert.match(sendMenuSource, /STUDIO_SEND_GROUPS\.map\(/);
   assert.match(sendMenuSource, /aria-label="送る"/);
   assert.match(sendMenuSource, /title="送る"/);

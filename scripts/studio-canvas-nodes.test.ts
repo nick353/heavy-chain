@@ -334,3 +334,32 @@ test('the 画像編集 list is Light\'s size and look: about 190 wide on #303538
   assert.match(editMenu, /clipping: \{ title: 'クリッピング', icon: StudioClippingIcon,/);
   assert.match(editMenu, /<EditDialogFrame icon=\{Scaling\} title="AI拡張"/);
 });
+
+test('a signed image URL kept while the page is open is signed again before the studio reads the image once more', () => {
+  // 2026-11-12 production: クリッピング showed 画像を読み込めませんでした 11 minutes after a reload, because the node's URL had
+  // been reused from the cache 5 minutes before it expired (the media read answered 401).
+  const storage = read('../src/lib/storage.ts');
+  assert.match(storage, /const signedUrlPaths = new Map<string, string>\(\);/);
+  assert.match(storage, /if \(cached && cached\.reuseUntil > Date\.now\(\)\) \{ signedUrlPaths\.set\(cached\.url, path\); return cached\.url; \}/);
+  assert.match(storage, /if \(!result\.ok\) return null;\n\s*signedUrlPaths\.set\(result\.url, path\);/);
+  assert.match(storage, /export async function refreshSignedImageUrl\(url: string\): Promise<string> \{\n\s*const path = signedUrlPaths\.get\(url\);\n\s*if \(!path\) return url;\n\s*try \{\n\s*return \(await createSignedMediaUrl\(path\)\) \?\? url;/);
+  // Every place that reads the image again goes through it.
+  const surface = read('../src/components/lightchain/StudioMaskSurface.tsx');
+  assert.match(surface, /const loadImage = async \(url: string\) => \{\n\s*const source = await refreshSignedImageUrl\(url\);/);
+  assert.match(surface, /const response = await fetch\(await refreshSignedImageUrl\(url\)\);/);
+  assert.match(surface, /<img src=\{image\.src\} alt="編集する画像"/);
+  assert.match(editMenu, /const loadImage = async \(url: string\) => \{\n\s*const source = await refreshSignedImageUrl\(url\);/);
+  assert.match(editMenu, /<img src=\{image \? image\.src : imageUrl\} alt="トリミングする画像"/);
+  assert.match(editMenu, /<img src=\{image \? image\.src : imageUrl\} alt="拡張する画像"/);
+  assert.match(collectDialog, /studioCollectImageDataUrl\(await refreshSignedImageUrl\(imageUrl\)\)/);
+  // 送る opens the tab inside the click (so it is not blocked) and sends it on once the URL is signed again.
+  assert.match(sendMenu, /const tab = window\.open\('', '_blank'\);\n\s*void refreshSignedImageUrl\(imageUrl\)\.then\(url => \{\n\s*const href = studioSendHref\(path, url\);\n\s*if \(tab\) tab\.location\.href = href; else window\.open\(href, '_blank'\);/);
+  // Generation, the mask editor's size, ダウンロード and 全画面表示.
+  assert.match(page, /const mainUrl = await refreshSignedImageUrl\(loadedMain\.url\);/);
+  assert.match(page, /const references = await Promise\.all\(chosen\.map\(item => refreshSignedImageUrl\(sourceOf\(item\)\)\)\);/);
+  assert.match(page, /const main = \{ objectId: detail\.roles\.main\.objectId, imageUrl: mainUrl, verified: true \};/);
+  assert.match(page, /naturalImageSize\(await refreshSignedImageUrl\(loadedMain\.url\)\)/);
+  assert.match(page, /await loadStudioExampleFile\(await refreshSignedImageUrl\(url\)\)/);
+  assert.match(page, /void refreshSignedImageUrl\(url\)\.then\(fresh => \{ if \(fresh !== url\) setLightbox/);
+  assert.doesNotMatch(page, /onExpand=\{setLightbox\}|onExpand: setLightbox/);
+});

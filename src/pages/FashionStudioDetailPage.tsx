@@ -34,7 +34,7 @@ import toast from 'react-hot-toast';
 import { studioProviderPrompt } from '../lib/studioFunctionPrompt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { cloudflareDataPlane, type ArtifactPersistenceContext } from '../lib/cloudflareApi';
-import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
+import { refreshSignedImageUrl, resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import { canSelectConfirmedBrand } from '../lib/authBrandSelection';
 import { createFashionStudioThumbnailController, fashionStudioThumbnailScopeKey, type FashionStudioThumbnailState } from '../lib/fashionStudioThumbnails';
@@ -461,6 +461,11 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   const [loadedReference, setLoadedReference] = useState({ identity: '', url: '' });
   const providerContextRef = useRef({ hasReference: false, referenceCount: 0, points: 1 });
   const [lightbox, setLightbox] = useState('');
+  /** 全画面表示 shows the node's image at once and swaps in a freshly signed URL if the kept one had expired. */
+  const openLightbox = (url: string) => {
+    setLightbox(url);
+    void refreshSignedImageUrl(url).then(fresh => { if (fresh !== url) setLightbox(current => (current === url ? fresh : current)); });
+  };
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [savedPrompts, setSavedPrompts] = useState<string[]>(() => {
@@ -690,19 +695,21 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
       if (retry) outcome = await generationController.retry();
       else {
         if (!detail.roles.main.objectId || detail.roles.reference.status === 'ambiguous') throw new Error('fashion_studio_generation_input_unverified');
+        // The page may have been open longer than the images' signed URLs live: sign them again before they are read.
+        const mainUrl = await refreshSignedImageUrl(loadedMain.url);
         const promptText = edit ? edit.prompt : studioFunctionPromptText(fn, prompt.trim(), settings, regionPoints.length);
         const sourceOf = (item: { slot: number; candidates: readonly string[] }) => item.slot === 0 && loadedReference.identity === referenceIdentity && loadedReference.url ? loadedReference.url : item.candidates[0];
         // テキストで生成 sends every reference (up to nine); 範囲指定 one per fusion point plus the coloured guide; 下着 the model image.
         const chosen = edit ? shownReferences.filter(item => item.slot === 0) : fn === 'text' ? textReferences : fn === 'region' ? regionPoints : fn === 'underwear' && referenceAvailable ? shownReferences.filter(item => item.slot === 0) : [];
-        const references = chosen.map(sourceOf);
-        if (!edit && fn === 'region') references.push(await regionGuideUrl(loadedMain.url, regionPoints.map(point => regionMaskFor(point.slot))));
+        const references = await Promise.all(chosen.map(item => refreshSignedImageUrl(sourceOf(item))));
+        if (!edit && fn === 'region') references.push(await regionGuideUrl(mainUrl, regionPoints.map(point => regionMaskFor(point.slot))));
         assertContext();
         providerContextRef.current = { hasReference: chosen.length > 0, referenceCount: chosen.length, points: Math.max(1, regionPoints.length) };
         // 範囲指定 has no 生成設定 on Light's form, so it keeps the main image's frame at 2K.
         const editOptions = edit ? edit.editOptions : fn === 'region' ? undefined : studioEditOptions(settings);
         const inputIdentity = JSON.stringify([scopeKey, mainIdentity, fn, promptText, references, editOptions ?? null]);
         if (logicalAttemptRef.current?.identity !== inputIdentity) logicalAttemptRef.current = { identity: inputIdentity, key: crypto.randomUUID() };
-        const main = { objectId: detail.roles.main.objectId, imageUrl: loadedMain.url, verified: true };
+        const main = { objectId: detail.roles.main.objectId, imageUrl: mainUrl, verified: true };
         outcome = await generationController.start({ scope, logicalAttemptKey: logicalAttemptRef.current.key,
           main, referenceImageUrls: references, prompt: promptText,
           ...(editOptions ? { editOptions } : {}),
@@ -719,7 +726,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
             setActivity({ scopeKey, value: 'generating' }); toast(STUDIO_FLUX_REDRAW_NOTICE);
             providerContextRef.current = { hasReference: fluxReferences.length > 0, referenceCount: fluxReferences.length, points: 1 };
             // Without a ratio that route frames the result like its second image, so 自動 sends the main image's own frame.
-            const size = editOptions?.aspectRatio || !fluxReferences.length ? null : await naturalImageSize(loadedMain.url).catch(() => null);
+            const size = editOptions?.aspectRatio || !fluxReferences.length ? null : await naturalImageSize(mainUrl).catch(() => null);
             assertContext();
             const fluxOptions = { ...(editOptions ?? {}), ...(size ? { aspectRatio: closestStudioAspectRatio(size.width, size.height) } : {}) };
             logicalAttemptRef.current = { identity: `${inputIdentity}:flux`, key: crypto.randomUUID() };
@@ -833,7 +840,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     let initial: ImageData | null = null;
     const current = regionMaskFor(slot);
     if (current) {
-      try { const size = await naturalImageSize(loadedMain.url); initial = await regionMaskImageData(current, size.width, size.height); } catch { initial = null; }
+      try { const size = await naturalImageSize(await refreshSignedImageUrl(loadedMain.url)); initial = await regionMaskImageData(current, size.width, size.height); } catch { initial = null; }
     }
     // Light's 簡易エディター shows the point's reference beside the main image (参考にしたい領域を描いてください).
     const point = shownReferences.find(item => item.slot === slot);
@@ -1178,7 +1185,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   const downloadNodeImage = async (url: string) => {
     if (!url) return;
     try {
-      const file = await loadStudioExampleFile(url);
+      const file = await loadStudioExampleFile(await refreshSignedImageUrl(url));
       const href = URL.createObjectURL(file);
       const anchor = document.createElement('a');
       anchor.href = href; anchor.download = `heavy-chain-${Date.now()}.${imageExtension(file.type)}`; anchor.click();
@@ -1517,7 +1524,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
       return <div key={key} className="fashion-studio-node" data-studio-node={key} data-selected={selectedKey === key} style={nodeStyle(key)}>
         <FashionStudioImageNode candidates={item.candidates} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="生成結果"
           testId={index === resultItems.length - 1 ? 'fashion-studio-saved-result-image' : 'fashion-studio-history-result-image'} className="fashion-studio-source-result-node" objectId={item.objectId}
-          selected={selectedKey === key} onExpand={embedded ? embedded.onExpand : setLightbox} onUrl={url => { nodeUrls[key] = url; }} />
+          selected={selectedKey === key} onExpand={embedded ? embedded.onExpand : openLightbox} onUrl={url => { nodeUrls[key] = url; }} />
       </div>;
     });
     /** Windows over the page (a form on a project's canvas opens them over the whole page, not inside the moved canvas). */
@@ -1638,21 +1645,21 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
                 {previewRoles.reference && detail.roles.reference.status === 'available' && <DetailRoleImage candidates={detail.roles.reference.candidates} scopeKey={scopeKey} role="reference-preload" assertContext={assertContext} alt="" className="" onReady={() => setPreviewLoaded(current => ({ ...current, reference: referenceIdentity }))} />}
               </div> : null}
               <div className="fashion-studio-node" data-studio-node="main" data-selected={selectedKey === 'main'} style={{ transform: `translate(${shownPositions.main?.x ?? 0}px, ${shownPositions.main?.y ?? 0}px)` }}>
-                <FashionStudioImageNode candidates={mainImage} scopeKey={scopeKey} role="main" holdUrl={exampleHold.main} assertContext={assertContext} alt="メイン画像" testId="fashion-studio-saved-main-image" className="fashion-studio-source-main-node" objectId={detail.roles.main.objectId} selected={selectedKey === 'main'} onExpand={setLightbox} />
+                <FashionStudioImageNode candidates={mainImage} scopeKey={scopeKey} role="main" holdUrl={exampleHold.main} assertContext={assertContext} alt="メイン画像" testId="fashion-studio-saved-main-image" className="fashion-studio-source-main-node" objectId={detail.roles.main.objectId} selected={selectedKey === 'main'} onExpand={openLightbox} />
               </div>
               {formNode}
               {showExampleResult && settings.example && <div className="fashion-studio-node" data-studio-node="sample" data-selected={selectedKey === 'sample'} style={{ transform: `translate(${shownPositions.sample?.x ?? 0}px, ${shownPositions.sample?.y ?? 0}px)` }}>
-                <FashionStudioImageNode candidates={[]} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="仕上がりのサンプル" testId="fashion-studio-example-result-image" className="fashion-studio-source-result-node" objectId={null} selected={selectedKey === 'sample'} label="仕上がりのサンプルをご覧ください。" staticUrl={STUDIO_EXAMPLES[settings.example].result} onExpand={setLightbox} />
+                <FashionStudioImageNode candidates={[]} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="仕上がりのサンプル" testId="fashion-studio-example-result-image" className="fashion-studio-source-result-node" objectId={null} selected={selectedKey === 'sample'} label="仕上がりのサンプルをご覧ください。" staticUrl={STUDIO_EXAMPLES[settings.example].result} onExpand={openLightbox} />
               </div>}
               {resultNodes}
               {canvasImages.map(image => <div key={image.key} className="fashion-studio-node" data-studio-node={image.key} data-selected={selectedKey === image.key} style={nodeStyle(image.key)}>
                 <FashionStudioImageNode candidates={image.candidates} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="画像" testId="fashion-studio-canvas-image"
-                  className="fashion-studio-source-result-node" objectId={image.id} selected={selectedKey === image.key} onExpand={setLightbox} onUrl={url => { nodeUrlsRef.current[image.key] = url; }} />
+                  className="fashion-studio-source-result-node" objectId={image.id} selected={selectedKey === image.key} onExpand={openLightbox} onUrl={url => { nodeUrlsRef.current[image.key] = url; }} />
                 {/* Openverse / Wikimedia images keep their author and licence with them. */}
                 {image.credit && <div className="fashion-studio-canvas-credit"><FoundImageCredit image={{ id: image.id, thumbUrl: '', ...image.credit }} /></div>}
               </div>)}
               {childForms.map(form => <FashionStudioDetailPage key={form.id} embedded={{ formId: form.id, documentId: form.documentId, fn: form.fn, edit: form.edit, positions: shownPositions,
-                selectedKey, nodeUrls: nodeUrlsRef.current, apis: childApisRef.current, onReport: reportChild, autoRun: freshForms.has(form.id), guideFile: childFilesRef.current[form.id], onExpand: setLightbox }} />)}
+                selectedKey, nodeUrls: nodeUrlsRef.current, apis: childApisRef.current, onReport: reportChild, autoRun: freshForms.has(form.id), guideFile: childFilesRef.current[form.id], onExpand: openLightbox }} />)}
             </div>
           </div>
           {/* Light's snap guides run across the canvas in #5FB7FB dashes. */}

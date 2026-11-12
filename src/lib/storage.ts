@@ -44,6 +44,11 @@ const SIGNED_URL_REUSE_MARGIN_MS = 5 * 60 * 1000;
 const SIGNED_URL_CACHE_PREFIX = 'heavy:signed-media:v1:';
 const signedUrlMemory = new Map<string, Map<string, { url: string; reuseUntil: number }>>();
 const signedUrlInFlight = new Map<string, Promise<string | null>>();
+// Signed read URLs this page has handed out, back to their storage path. A page left open keeps the URL it was given
+// (a canvas node, the Fashion Studio's tools) while a reused URL can have only minutes left, so it can be signed again
+// before the image is read once more (2026-11-12 production: クリッピング said 画像を読み込めませんでした 11 minutes
+// after a reload, because the node's URL had been reused 5 minutes before it expired).
+const signedUrlPaths = new Map<string, string>();
 
 const signedUrlCacheFor = (userId: string) => {
   let cache = signedUrlMemory.get(userId);
@@ -90,7 +95,7 @@ const createSignedMediaUrl = async (path: string): Promise<string | null> => {
   try { userId = (await auth.getSession()).data.session?.user?.id ?? null; } catch { userId = null; }
   const cache = userId ? signedUrlCacheFor(userId) : null;
   const cached = cache?.get(path);
-  if (cached && cached.reuseUntil > Date.now()) return cached.url;
+  if (cached && cached.reuseUntil > Date.now()) { signedUrlPaths.set(cached.url, path); return cached.url; }
   // Two parts of a page asking for the same image at once share one signature request.
   const flightKey = `${userId ?? ''}\u0000${path}`;
   const inFlight = signedUrlInFlight.get(flightKey);
@@ -98,6 +103,7 @@ const createSignedMediaUrl = async (path: string): Promise<string | null> => {
   const request = (async () => {
     const result = await mediaGateway.createSignedReadUrl({ bucket: 'generated-images', objectPath: path, expiresInSeconds: SIGNED_URL_TTL_SECONDS });
     if (!result.ok) return null;
+    signedUrlPaths.set(result.url, path);
     if (cache && userId) {
       cache.set(path, { url: result.url, reuseUntil: Date.now() + SIGNED_URL_TTL_SECONDS * 1000 - SIGNED_URL_REUSE_MARGIN_MS });
       persistSignedUrlCache(userId, cache);
@@ -187,6 +193,19 @@ export async function resolveGeneratedImageUrl(source: string) {
   const result = await resolveGeneratedImageUrlWithStatus(source);
   if (!result.ok) throw result.error;
   return result.url;
+}
+
+/** A signed read URL kept since it was handed out may have expired or be about to (a reused one can have five minutes
+ * left). Before an image is read again — an editor opens it, it is downloaded, saved or sent to another page — sign it
+ * again when needed. URLs this page did not sign (data:, blob:, outside images) come back unchanged. */
+export async function refreshSignedImageUrl(url: string): Promise<string> {
+  const path = signedUrlPaths.get(url);
+  if (!path) return url;
+  try {
+    return (await createSignedMediaUrl(path)) ?? url;
+  } catch {
+    return url;
+  }
 }
 
 export async function withSignedImageUrls<T extends Pick<GeneratedImage, 'storage_path' | 'image_url'>>(images: T[]) {
