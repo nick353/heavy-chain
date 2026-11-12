@@ -57,6 +57,7 @@ import { MaskPaintDialog } from '../components/lightchain/MaskPaintDialog';
 import { studioExampleHoldUrls, studioExamplePreviewRoles, withStudioExamplePreview, type StudioExamplePreview } from '../lib/fashionStudioExamplePreview';
 import { StudioFunctionIcon } from '../components/lightchain/StudioFunctionIcon';
 import { StudioHelpDialog, StudioMinimap, StudioShortcutsPanel, StudioZoomControl } from '../components/lightchain/StudioCanvasControls';
+import { StudioFeedbackBar } from '../components/lightchain/StudioFeedbackBar';
 
 const FASHION_STUDIO_PROJECT_ICON = '/lightchain-assets/icons/fashion-studio.png';
 
@@ -1275,7 +1276,8 @@ export function FashionStudioDetailPage() {
             </div>
             {resultKeys.includes(selectedKey!) && <div className="fashion-studio-node-feedback" data-studio-chrome data-testid="fashion-studio-node-feedback"
               style={{ left: selectedImageRect.left + selectedImageRect.width / 2, top: selectedImageRect.top + selectedImageRect.height + 13 }}>
-              <button type="button" disabled={!inputsReady || detail.roles.main.status !== 'available' || loadedMain.identity !== mainIdentity} onClick={() => void generate()}>再生成</button>
+              <StudioFeedbackBar documentId={projectCode} objectId={resultItems[resultKeys.indexOf(selectedKey!)]?.objectId ?? ''} fn={studioFunction}
+                regenerateDisabled={!inputsReady || detail.roles.main.status !== 'available' || loadedMain.identity !== mainIdentity} onRegenerate={() => void generate()} />
             </div>}
           </>}
         </section>
