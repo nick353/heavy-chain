@@ -501,10 +501,29 @@ const EC_SITES = new Set(['rakuten.co.jp', 'amazon.co.jp', 'amazon.com', 'zozo.j
   'dhgate.com', 'aliexpress.com', 'kakaku.com', 'brandear.jp', 'thebase.in', 'tsuku2.jp', 'modaoperandi.com']);
 const SNS_SITES = new Set(['instagram.com', 'tiktok.com', 'x.com', 'twitter.com', 'pinterest.com', 'pinterest.jp', 'threads.net', 'threads.com', 'facebook.com',
   'reddit.com', 'youtube.com', 'youtu.be', 'xiaohongshu.com', 'weibo.com', 'douyin.com', 'kuaishou.com', 'wear.jp', 'lemon8-app.com']);
+const cut = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
+// Shops that live under a site that is not a shop as a whole (shopping.yahoo.co.jp under yahoo.co.jp).
+const EC_HOSTS = new Set(['shopping.yahoo.co.jp', 'paypaymall.yahoo.co.jp', 'store.shopping.yahoo.co.jp']);
 /** The 区分 of a source in the report's index, from its site (Light: EC実商品 / SNS / トレンド予測 …; Heavy's research is a web search). */
 export function agentSourceKind(url: string): 'EC' | 'SNS' | 'ウェブ' {
   const site = agentSourceSite(url);
-  return EC_SITES.has(site) ? 'EC' : SNS_SITES.has(site) ? 'SNS' : 'ウェブ';
+  let host = '';
+  try { host = new URL(url).hostname.toLowerCase().replace(/^www\./, ''); } catch { /* not a URL */ }
+  return EC_SITES.has(site) || EC_HOSTS.has(host) ? 'EC' : SNS_SITES.has(site) ? 'SNS' : 'ウェブ';
+}
+/**
+ * The ソース cell as Light writes it: the site, then where on it in parentheses (「ZOZOTOWN IEDIT(goods/102817265)」). Heavy
+ * writes the registered site and the page's path (「zozo.jp(ranking/category/tops/vest/all-sales-women.html)」).
+ */
+export function agentSourceLabel(url: string): string {
+  const site = agentSourceSite(url);
+  let path = '';
+  try {
+    const parsed = new URL(url);
+    path = `${parsed.pathname}${parsed.search}`.replace(/^\/+|\/+$/g, '');
+    try { path = decodeURIComponent(path); } catch { /* keep it encoded */ }
+  } catch { return url; }
+  return path ? `${site}(${cut(path, 48)})` : site;
 }
 const localDate = (value?: string) => {
   const date = value ? new Date(value) : null;
@@ -512,17 +531,15 @@ const localDate = (value?: string) => {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
-const cut = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
 function reportSourceIndex(research: ParsedResearch | null, collectedAt?: string): string {
   const head = '<div class="index-head"><h2>ソース一覧</h2><span class="index-label">SOURCE INDEX</span></div>';
   if (!research?.sources.length) return `<section class="index">${head}<p class="muted">${research?.search === 'ok' ? '参照した資料はありません。' : 'ウェブ検索を使えませんでした。この調査結果はAIモデルの知識に基づいています。'}</p></section>`;
   const collected = localDate(collectedAt);
   const rows = research.sources.slice(0, AGENT_REPORT_SOURCES_MAX).map((source, index) => {
-    const site = agentSourceSite(source.url);
-    const title = source.title && source.title !== source.url ? ` ${cut(source.title, 60)}` : '';
+    // 内容: the sentence the research cited from the page, or else the page's title.
     const content = source.quote ? cleanAgentQuote(source.quote).replace(/\*\*/g, '') : source.title !== source.url ? source.title : '';
     const kind = `${agentSourceKind(source.url)}${index === 0 && collected ? `(収集 ${collected})` : ''}`;
-    return `<tr><td>S${String(index + 1).padStart(2, '0')}</td><td>${escapeHtml(`${site}${title}`)}<br><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">ソースを見る</a></td>`
+    return `<tr><td>S${String(index + 1).padStart(2, '0')}</td><td>${escapeHtml(agentSourceLabel(source.url))}<br><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">ソースを見る</a></td>`
       + `<td>${escapeHtml(cut(content, 160))}</td><td>${escapeHtml(kind)}</td></tr>`;
   }).join('');
   return `<section class="index">${head}<table><thead><tr><th>ID</th><th>ソース</th><th>内容</th><th>区分</th></tr></thead><tbody>${rows}</tbody></table>`

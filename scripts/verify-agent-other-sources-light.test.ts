@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { formatAgentResearchContent } from '../cloudflare/heavy-api/src/designAssistant.ts';
-import { AGENT_REPORT_SOURCES_MAX, agentRoundSources, agentSourceKind, buildAgentResearchReportHtml, type AgentTask } from '../src/features/agent/agentFlow.ts';
+import { AGENT_REPORT_SOURCES_MAX, agentRoundSources, agentSourceKind, agentSourceLabel, buildAgentResearchReportHtml, type AgentTask } from '../src/features/agent/agentFlow.ts';
 import * as dialogueModule from '../src/features/agent/agentDialogue.ts';
 
 // Light's sources outside テーマ企画, read on 2026-11-12 (jp.linkaigc.com/agent, nothing pressed that changes anything):
@@ -33,10 +33,10 @@ test('the research report ends with Light\'s source index: ID / ソース / 内�
   const html = buildAgentResearchReportHtml(researchTask(content));
   assert.match(html, /<h2>ソース一覧<\/h2><span class="index-label">SOURCE INDEX<\/span>/);
   assert.match(html, /<thead><tr><th>ID<\/th><th>ソース<\/th><th>内容<\/th><th>区分<\/th><\/tr><\/thead>/);
-  assert.match(html, /<tr><td>S01<\/td><td>rakuten\.co\.jp リネン ワンピース 楽天市場<br><a href="https:\/\/item\.rakuten\.co\.jp\/shop\/linen-1\/" target="_blank" rel="noopener noreferrer">ソースを見る<\/a><\/td><td>リネン ワンピース 楽天市場<\/td><td>EC\(収集 2026-11-12\)<\/td><\/tr>/);
-  assert.match(html, /<td>S02<\/td><td>instagram\.com #officewear on Instagram<br><a href="https:\/\/www\.instagram\.com\/explore\/tags\/officewear\/"[^>]*>ソースを見る<\/a><\/td><td>[^<]*<\/td><td>SNS<\/td>/);
+  assert.match(html, /<tr><td>S01<\/td><td>rakuten\.co\.jp\(shop\/linen-1\)<br><a href="https:\/\/item\.rakuten\.co\.jp\/shop\/linen-1\/" target="_blank" rel="noopener noreferrer">ソースを見る<\/a><\/td><td>リネン ワンピース 楽天市場<\/td><td>EC\(収集 2026-11-12\)<\/td><\/tr>/);
+  assert.match(html, /<td>S02<\/td><td>instagram\.com\(explore\/tags\/officewear\)<br><a href="https:\/\/www\.instagram\.com\/explore\/tags\/officewear\/"[^>]*>ソースを見る<\/a><\/td><td>[^<]*<\/td><td>SNS<\/td>/);
   // The cited sentence is the 内容, without the Markdown marks; the link is the page, not the site's entrance (テーマ企画 only).
-  assert.match(html, /<td>S03<\/td><td>whowhatwear\.com Spring 2027 trends<br><a href="https:\/\/www\.whowhatwear\.com\/trends-ss27"[^>]*>ソースを見る<\/a><\/td><td>Key Shades: soft blue and brown<\/td><td>ウェブ<\/td>/);
+  assert.match(html, /<td>S03<\/td><td>whowhatwear\.com\(trends-ss27\)<br><a href="https:\/\/www\.whowhatwear\.com\/trends-ss27"[^>]*>ソースを見る<\/a><\/td><td>Key Shades: soft blue and brown<\/td><td>ウェブ<\/td>/);
   assert.match(html, /※ 収集日はウェブ検索でページを集めた日であり、各ページの公開日ではありません。/);
   // Production's research step keeps no time: the date is the scope's (the research starts when it is confirmed).
   const research = { requestId: 'r', state: 'completed' as const, content };
@@ -51,7 +51,7 @@ test('the index keeps at most 15 rows, in the research\'s order, and escapes wha
   const html = buildAgentResearchReportHtml(researchTask(content));
   assert.equal(AGENT_REPORT_SOURCES_MAX, 15);
   assert.equal(html.split('>ソースを見る</a>').length - 1, 15);
-  assert.match(html, /<td>S15<\/td><td>example15\.com Page &lt;15&gt;/);
+  assert.match(html, /<td>S15<\/td><td>example15\.com\(a\?b=15\)<br>[^]*?<\/td><td>Page &lt;15&gt;<\/td>/);
   assert.doesNotMatch(html, /S16|example16\.com/);
   assert.match(html, /href="https:\/\/www\.example1\.com\/a\?b=1"/);
   assert.doesNotMatch(html, /Page <1>/);
@@ -65,10 +65,20 @@ test('with no page, the index says so; a failed search says it was not used', ()
   assert.match(failed, /<h2>ソース一覧<\/h2>[\s\S]*ウェブ検索を使えませんでした。/);
 });
 
+test('the ソース is the site and where on it, as Light writes 「ZOZOTOWN IEDIT(goods/102817265)」', () => {
+  assert.equal(agentSourceLabel('https://zozo.jp/shop/iedit/goods/102817265/'), 'zozo.jp(shop/iedit/goods/102817265)');
+  assert.equal(agentSourceLabel('https://www.lemaire.fr/'), 'lemaire.fr');
+  assert.equal(agentSourceLabel('https://shopping.yahoo.co.jp/ranking/keyword/?p=%E3%82%A6%E3%82%A3%E3%83%B3%E3%83%89'), 'yahoo.co.jp(ranking/keyword/?p=ウィンド)');
+  assert.equal(agentSourceLabel('https://e.com/%E0%A4%A'), 'e.com(%E0%A4%A)');
+  assert.equal(agentSourceLabel(`https://e.com/${'a'.repeat(80)}`), `e.com(${'a'.repeat(47)}…)`);
+  assert.equal(agentSourceLabel('not a url'), 'not a url');
+});
+
 test('the 区分 comes from the site: EC, SNS or ウェブ', () => {
   const cases: Array<[string, string]> = [
     ['https://item.rakuten.co.jp/x/', 'EC'], ['https://zozo.jp/shop/iedit/goods/102817265/', 'EC'], ['https://detail.tmall.com/item.htm?id=1', 'EC'],
-    ['https://www.amazon.com/dp/1', 'EC'], ['https://search.kakaku.com/x/', 'EC'],
+    ['https://www.amazon.com/dp/1', 'EC'], ['https://search.kakaku.com/x/', 'EC'], ['https://shopping.yahoo.co.jp/ranking/keyword/?p=a', 'EC'],
+    ['https://news.yahoo.co.jp/articles/1', 'ウェブ'],
     ['https://www.instagram.com/p/1/', 'SNS'], ['https://www.youtube.com/watch?v=1', 'SNS'], ['https://www.tiktok.com/@a', 'SNS'], ['https://wear.jp/a/', 'SNS'],
     ['https://www.vogue.com/x', 'ウェブ'], ['https://ja.wikipedia.org/wiki/x', 'ウェブ'], ['not a url', 'ウェブ'],
   ];
