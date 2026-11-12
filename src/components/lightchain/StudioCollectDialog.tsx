@@ -3,6 +3,7 @@ import { ChevronRight, Folder, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cloudflareDataPlane } from '../../lib/cloudflareApi';
 import { saveWorkspaceArtifactBestEffort } from '../../lib/localWorkspaceArtifacts';
+import { refreshSignedImageUrl } from '../../lib/storage';
 import { useAuthStore } from '../../stores/authStore';
 import {
   STUDIO_COLLECT_TEXT as TEXT, buildStudioCollectArtifact, studioCollectChildren, studioCollectFolders, studioCollectGroupName, studioCollectImageDataUrl,
@@ -88,7 +89,7 @@ export function StudioCollectDialog({ imageUrl, title, sourceStoragePath, onClos
     if (!selected || !brandId || !userId || busy) return;
     setBusy('save');
     try {
-      const dataUrl = await studioCollectImageDataUrl(imageUrl);
+      const dataUrl = await studioCollectImageDataUrl(await refreshSignedImageUrl(imageUrl));
       const persistenceContext = await cloudflareDataPlane?.captureArtifactPersistenceContext();
       const result = await saveWorkspaceArtifactBestEffort(
         buildStudioCollectArtifact({ brandId, userId, imageUrl: dataUrl, title, folder: selected, sourceStoragePath }),

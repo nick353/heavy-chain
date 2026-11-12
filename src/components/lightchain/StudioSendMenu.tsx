@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronRight, SendHorizontal } from 'lucide-react';
 import { STUDIO_SEND_GROUPS, studioSendHref } from '../../lib/studioSendMenu';
+import { refreshSignedImageUrl } from '../../lib/storage';
 
 /**
  * スタジオの帯の「送る」。本家と同じく印のボタン（説明「送る」）を押すと右にメニューが開き
@@ -23,9 +24,15 @@ export function StudioSendMenu({ imageUrl, disabled = false, className }: { imag
   }, [open, close]);
   useEffect(() => { if (disabled) close(); }, [disabled, close]);
 
+  // The image's signed URL may have expired while the page was open, so it is signed again first. The tab opens at once
+  // (inside the click, so it is not blocked) and goes to the destination when the URL is ready.
   const send = (path: string) => {
     close();
-    window.open(studioSendHref(path, imageUrl), '_blank');
+    const tab = window.open('', '_blank');
+    void refreshSignedImageUrl(imageUrl).then(url => {
+      const href = studioSendHref(path, url);
+      if (tab) tab.location.href = href; else window.open(href, '_blank');
+    });
   };
 
   const itemClass = 'flex w-full items-center gap-2 rounded-lg px-2 py-3.5 text-left text-sm text-white/90 hover:bg-white/[0.08]';
