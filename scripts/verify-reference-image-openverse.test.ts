@@ -63,12 +63,13 @@ test('over the keyless rate limit (429) or on a failure, the same search goes to
 test('when Openverse finds too few images that name the query, Wikimedia fills the rest and the named ones come first (#244)', async () => {
   const fetcher = (async (input: RequestInfo | URL) => {
     const url = new URL(String(input));
-    if (url.host === 'api.openverse.org') return json({ results: [openverseItem('w', 'Great Western Windmill', 'by'), openverseItem('s', 'Smocked blouse', 'by')] });
+    if (url.host === 'api.openverse.org') return json({ results: [openverseItem('w', 'Great Western Windmill', 'by'), openverseItem('s', 'Smocked blouse', 'by'), openverseItem('p', 'Portrait of a seamstress', 'by')] });
     const search = url.searchParams.get('gsrsearch');
     return json(search === 'smocked filetype:bitmap' ? { query: { pages: { 7: commonsPage(7, 'A traditional smock') } } } : { batchcomplete: '' });
   }) as typeof fetch;
   const found = await searchReferenceImages('smocked', { fetcher, limit: 3 });
-  assert.deepEqual(found.map((image) => image.title), ['Smocked blouse', 'A traditional smock', 'Great Western Windmill']);
+  // The others still fill the last place; a windmill is plainly about something else and is left out (2026-11-12).
+  assert.deepEqual(found.map((image) => image.title), ['Smocked blouse', 'A traditional smock', 'Portrait of a seamstress']);
 });
 
 test('every source failing is a failure (the screen says no images were found)', async () => {
