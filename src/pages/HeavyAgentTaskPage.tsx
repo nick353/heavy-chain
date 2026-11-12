@@ -22,6 +22,8 @@ import {
   agentReportPrompt, agentReportRound, buildAgentAiReportHtml, readAgentReport,
   YAHOO_ATTRIBUTION_HTML, agentDirectionSearches, agentJapanMarket, agentProduct, agentYen, type AgentProduct,
   agentStructurePrompt, agentStyleImagePrompt, agentUsesMerchFlow, agentWording, buildAgentDesignHtml, buildAgentFinalHtml, buildAgentStructureHtml, parseAgentFinal, parseAgentStructure, AGENT_STYLE_COUNT,
+  AGENT_HEARING_AGAIN, AGENT_HEARING_FIRST, AGENT_HEARING_ITEMS, agentHearingPrompt, agentHearingState, agentHearingTitle, parseAgentHearing,
+  agentBuildPlanItemImages, agentPaletteColors, buildAgentThemePlanHtml,
   type AgentAssistantStep, type AgentAttachment, type AgentImageStep, type AgentNote, type AgentNoteStage, type AgentResearchScope, type AgentStyleImage, type AgentTask, type AgentTaskDocument,
 } from '../features/agent/agentTasks';
 
@@ -30,7 +32,7 @@ const api = () => { if (!cloudflareDataPlane) throw new Error('cloudflare_api_no
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
-type AssistantKind = 'theme' | 'plan' | 'requirements' | 'research' | 'note' | 'structure' | 'design' | 'final' | 'dialogue' | 'report';
+type AssistantKind = 'theme' | 'plan' | 'requirements' | 'research' | 'note' | 'structure' | 'design' | 'final' | 'dialogue' | 'report' | 'hearing';
 type AssistantMode = 'agent' | 'agent-research' | 'agent-report' | undefined;
 
 function readImageReceipt(receipt: Record<string, unknown>) {
@@ -334,6 +336,7 @@ export default function HeavyAgentTaskPage() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [hearingDraft, setHearingDraft] = useState('');
   const [report, setReport] = useState<ReportDoc | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [pendingAttachments, setPendingAttachments] = useState<AgentAttachment[]>([]);
@@ -405,7 +408,7 @@ export default function HeavyAgentTaskPage() {
   }, [brandId, taskId]);
 
   const conversationFor = useCallback((kind: AssistantKind, step: AgentAssistantStep) => agentConversationId(taskId,
-    ['theme', 'note', 'structure', 'design', 'final', 'dialogue'].includes(kind) ? `${kind}-${step.requestId.slice(0, 8)}` : kind), [taskId]);
+    ['theme', 'note', 'structure', 'design', 'final', 'dialogue', 'hearing'].includes(kind) ? `${kind}-${step.requestId.slice(0, 8)}` : kind), [taskId]);
 
   const runAssistant = useCallback(async (kind: AssistantKind, step: AgentAssistantStep, prompt: string | null, apply: (task: AgentTask, step: AgentAssistantStep) => AgentTask, mode?: AssistantMode,
     history: Array<{ role: 'user' | 'assistant'; content: string }> = []) => {
@@ -443,6 +446,15 @@ export default function HeavyAgentTaskPage() {
   const applyRound = (requestId: string) => (task: AgentTask, result: AgentAssistantStep): AgentTask => ({ ...task, rounds: task.rounds.map((round) => round.step.requestId !== requestId ? round
     : { ...round, step: result, ...(result.state === 'completed' && result.content ? parseThemeResponse(result.content) : { summary: '', themes: [] }) }) });
   const applyNote = (noteId: string) => (task: AgentTask, result: AgentAssistantStep): AgentTask => ({ ...task, notes: (task.notes ?? []).map((note) => note.id === noteId ? { ...note, reply: result } : note) });
+
+  // Light's テーマ企画 asks for the category, field, brand and season before its search (no web search here).
+  const applyHearing = (requestId: string) => (task: AgentTask, result: AgentAssistantStep): AgentTask => (task.hearing
+    ? { ...task, hearing: { ...task.hearing, steps: task.hearing.steps.map((step) => (step.requestId === requestId ? result : step)) } } : task);
+  const startHearing = useCallback(async () => {
+    const step: AgentAssistantStep = { requestId: crypto.randomUUID(), state: 'running' };
+    const saved = await commit((task) => ({ ...task, hearing: { steps: [...(task.hearing?.steps ?? []), step], answers: task.hearing?.answers ?? [] } }));
+    await runAssistant('hearing', step, agentHearingPrompt(saved.task), applyHearing(step.requestId), 'agent');
+  }, [commit, runAssistant]);
 
   const startRequirements = useCallback(async () => {
     const step: AgentAssistantStep = { requestId: crypto.randomUUID(), state: 'running' };
@@ -643,6 +655,19 @@ export default function HeavyAgentTaskPage() {
       if (task.research.state === 'running') { const step = task.research; guard(() => runAssistant('research', step, null, (current, result) => ({ ...current, research: result }), 'agent-research')); return; }
       if (task.research.state !== 'completed') return;
     }
+    // Light's テーマ企画 first asks for what its plan needs, then names the task after the answers (with a brand).
+    if (agentThemeSearches(task) && !task.rounds.length && !task.research && task.hearing) {
+      const hearing = agentHearingState(task);
+      if (hearing.kind === 'start') { guard(startHearing, 'タスクを開始できませんでした。', 'start'); return; }
+      if (hearing.kind === 'running') { const step = hearing.step; guard(() => runAssistant('hearing', step, null, applyHearing(step.requestId), 'agent')); return; }
+      if (hearing.kind !== 'done') return;
+      if (task.hearing.title === undefined) {
+        const title = agentHearingTitle(hearing.parsed);
+        const rename = title && doc.title !== title && isAutomaticAgentTaskTitle(doc.title, task);
+        guard(() => commit((current) => (current.hearing ? { ...current, hearing: { ...current.hearing, title } } : current), rename ? { title } : undefined));
+        return;
+      }
+    }
     // Light's テーマ企画 searches the web before its first themes; Heavy runs that search as the task's research step.
     if (agentThemeSearches(task) && !task.rounds.length) {
       if (!task.research) { guard(startResearch, '調査を開始できませんでした。', 'research'); return; }
@@ -706,8 +731,13 @@ export default function HeavyAgentTaskPage() {
     const parsed = parsePlanResponse(task.plan.content);
     if (parsed.title && doc.title !== parsed.title && isAutomaticAgentTaskTitle(doc.title, task)) { const title = parsed.title; guard(() => commit((current) => current, { title })); return; }
     if (!task.image) { const theme = task.choice.theme; guard(() => startImage(parsed.imagePrompt ?? `Apparel planning mood board for a womenswear collection, ${theme}, fabric swatches, color palette, editorial photo`)); return; }
-    if (task.image.state === 'running') { const step = task.image; guard(() => reconcileImage(step)); }
-  }, [doc, brandId, status, tick, guard, startRequirements, startResearch, startThemeRound, startPlan, startImage, reconcileImage, runAssistant, commit, startStructure, startDesign, startFinal, startDialogue, startDialogueGeneration]);
+    if (task.image.state === 'running') { const step = task.image; guard(() => reconcileImage(step)); return; }
+    // Heavy's own continuation of テーマ企画 (Light's cannot be run past the themes): one design picture per main item.
+    if (agentThemeSearches(task) && !task.designs) {
+      const items = agentBuildPlanItemImages(task, () => crypto.randomUUID());
+      if (items.length) guard(() => commit((current) => (current.designs ? current : { ...current, designs: agentBuildPlanItemImages(current, () => crypto.randomUUID()) })));
+    }
+  }, [doc, brandId, status, tick, guard, startRequirements, startHearing, startResearch, startThemeRound, startPlan, startImage, reconcileImage, runAssistant, commit, startStructure, startDesign, startFinal, startDialogue, startDialogueGeneration]);
 
   // The direction and style images run beside the text steps, two at a time.
   useEffect(() => {
@@ -798,6 +828,19 @@ export default function HeavyAgentTaskPage() {
     guard(() => commit((task) => ({ ...task, scope: { regions: scope.regions, ec: scope.ec, sns: scope.sns, other: scope.other.trim(), at: new Date().toISOString() } })), '調査範囲を保存できませんでした。');
   };
 
+  /** Light's 「デザイン依頼」 answer to テーマ企画's questions (the card's box, or the input under the conversation). */
+  const answerHearing = (value: string) => {
+    const answer = value.trim();
+    if (!answer || !doc) return false;
+    if (busy.current) { setNotice('ほかの処理が終わってから送信してください。'); return false; }
+    setNotice(null);
+    guard(() => commit((current) => (current.hearing && agentHearingState(current).kind === 'ask'
+      ? { ...current, hearing: { ...current.hearing, answers: [...current.hearing.answers, { text: answer.slice(0, 600), at: new Date().toISOString() }] } } : current)), '送信できませんでした。');
+    return true;
+  };
+  /** A failed question is dropped; the next one is asked again from the same answers. */
+  const retryHearing = () => { setNotice(null); guard(() => commit((current) => (current.hearing ? { ...current, hearing: { ...current.hearing, steps: current.hearing.steps.slice(0, -1) } } : current))); };
+
   const task = doc?.task ?? null;
   const conversation = task?.flow === 'conversation';
   const noteStage = (current: AgentTask): AgentNoteStage => (current.flow === 'conversation' && !current.aligned ? 'requirements'
@@ -869,6 +912,7 @@ export default function HeavyAgentTaskPage() {
     }, '再試行できませんでした。');
   };
   const sendComposer = () => {
+    if (!dialogue && hearingAsk) { if (answerHearing(draft)) setDraft(''); return; }
     if (!dialogue) { sendNote(); return; }
     const value = draft.trim();
     if ((!value && !pendingAttachments.length) || attaching) return;
@@ -880,20 +924,24 @@ export default function HeavyAgentTaskPage() {
   const merch = Boolean(task && agentUsesMerchFlow(task));
   const wording = task ? agentWording(task) : null;
   const done = Boolean(task && (dialogue ? task.dialogueStart && (task.designs ?? []).length > 0 && (task.designs ?? []).every((image) => image.state !== 'pending' && image.state !== 'running')
-    : merch ? task.final?.state === 'completed' : task.image?.state === 'completed'));
+    : merch ? task.final?.state === 'completed' : task.image?.state === 'completed' && !(task.designs ?? []).some((image) => image.state === 'pending' || image.state === 'running')));
   const stepFailed = (state?: string) => state === 'failed' || state === 'unknown';
   const notes = task?.notes ?? [];
   const designs = task?.designs ?? [];
   const designsBusy = designs.some((image) => image.state === 'pending' || image.state === 'running');
   const designsSettled = designs.length > 0 && !designsBusy;
-  const working = Boolean(task && (task.requirements?.state === 'running' || task.research?.state === 'running' || task.plan?.state === 'running'
+  const hearingState = task ? agentHearingState(task) : { kind: 'none' as const };
+  const hearingAsk = hearingState.kind === 'ask';
+  /** テーマ企画's questions are still open: the search has not started. */
+  const hearingOpen = Boolean(task?.hearing && !task.research && !task.rounds.length && (hearingState.kind !== 'done' || task.hearing.title === undefined));
+  const working = Boolean(task && (hearingState.kind === 'running' || task.requirements?.state === 'running' || task.research?.state === 'running' || task.plan?.state === 'running'
     || task.image?.state === 'running' || task.rounds.at(-1)?.step.state === 'running' || notes.some((note) => note.reply.state === 'running')
     || task.structure?.state === 'running' || task.design?.state === 'running' || task.final?.state === 'running' || designsBusy
     || (task.turns ?? []).some((turn) => turn.step?.state === 'running')));
-  const waitingOnUser = Boolean(conversation && task?.requirements?.state === 'completed' && (!task.aligned || !task.scope));
+  const waitingOnUser = Boolean((conversation && task?.requirements?.state === 'completed' && (!task.aligned || !task.scope)) || hearingAsk);
   const statusLabel = !task ? '' : done ? '完了'
     : dialogue ? (working ? '作成中' : ['failed', 'unknown'].includes((task.turns ?? []).at(-1)?.step?.state ?? '') ? '失敗' : '確認待ち')
-    : [task.plan?.state, task.image?.state, task.research?.state, task.requirements?.state, task.structure?.state, task.design?.state, task.final?.state].some(stepFailed) ? '失敗'
+    : [task.plan?.state, task.image?.state, task.research?.state, task.requirements?.state, task.structure?.state, task.design?.state, task.final?.state].some(stepFailed) || hearingState.kind === 'failed' ? '失敗'
       : task.choice ? '作成中' : task.rounds.at(-1)?.step.state === 'completed' || waitingOnUser ? '確認待ち' : '調査中';
   const research = task?.research?.state === 'completed' && task.research.content ? parseAgentResearch(task.research.content) : null;
   const roundSources = task && !conversation ? agentRoundSources(task) : null;
@@ -917,6 +965,7 @@ export default function HeavyAgentTaskPage() {
   const final = task?.final?.state === 'completed' && task.final.content ? parseAgentFinal(task.final.content) : null;
   /** The task's reports, newest first (Light's タスク成果物). */
   const deliverables: Array<{ key: string; title: string; html: () => string | { html: string; slides: boolean } }> = task && wording ? [
+    ...(!merch && agentThemeSearches(task) && plan ? [{ key: 'theme-plan', title: 'テーマ企画書', html: () => buildAgentThemePlanHtml(task, doc?.title ?? 'テーマ企画書', imageUrl, urlsByKey) }] : []),
     ...(merch && final ? [{ key: 'final', title: wording.finalReport.title, html: () => buildAgentFinalHtml(task, urlsByKey) }] : []),
     ...(merch && designsSettled ? [{ key: 'design', title: wording.designReport.title, html: () => buildAgentDesignHtml(task, urlsByKey) }] : []),
     ...(merch && task.structure?.state === 'completed' ? [{ key: 'structure', title: wording.structureReport.title, html: () => buildAgentStructureHtml(task) }] : []),
@@ -992,9 +1041,41 @@ export default function HeavyAgentTaskPage() {
                   <Notes notes={notes} stage="research" />
                 </>
               )}
+              {/* Light's テーマ企画 questions: what its plan needs, under a 「デザイン依頼」 card answered in words. */}
+              {!conversation && !dialogue && (task.hearing?.steps ?? []).map((step, index, steps) => {
+                const answer = task.hearing?.answers[index];
+                const last = index === steps.length - 1;
+                const asked = step.state === 'completed' ? parseAgentHearing(step.content ?? '').missing : [];
+                return (
+                  <Fragment key={step.requestId}>
+                    {step.state === 'running' && <StepSpinner label="考え中…" />}
+                    {last && stepFailed(step.state) && <ErrorRow onRetry={retryHearing}>確認の質問を作成できませんでした（{step.errorCode ?? step.state}）。</ErrorRow>}
+                    {asked.length > 0 && (answer || (last && hearingAsk)) && (
+                      <article className="space-y-3" data-testid="agent-hearing">
+                        <p>{index === 0 ? AGENT_HEARING_FIRST : AGENT_HEARING_AGAIN}</p>
+                        <ul className="list-disc space-y-1 pl-5">{asked.map((item) => <li key={item}>{AGENT_HEARING_ITEMS[item - 1]}</li>)}</ul>
+                        <div className="rounded-2xl border border-white/10 bg-[#202426] p-4" data-testid="agent-hearing-request">
+                          <div className="mb-3 flex items-center justify-between">
+                            <span className="flex items-center gap-2 text-base font-medium text-white"><Box className="h-5 w-5 text-cyan-300" />デザイン依頼</span>
+                            <span className={`rounded-md border px-2 py-0.5 text-xs ${answer ? 'border-emerald-400/60 text-emerald-300' : 'border-amber-400/70 text-amber-300'}`}>{answer ? '確認済み' : '確認待ち'}</span>
+                          </div>
+                          {answer ? <p className="whitespace-pre-wrap text-sm text-neutral-200" data-testid="agent-hearing-answer">{answer.text}</p> : (
+                            <form onSubmit={(event) => { event.preventDefault(); if (answerHearing(hearingDraft)) setHearingDraft(''); }}>
+                              <textarea value={hearingDraft} onChange={(event) => setHearingDraft(event.target.value)} rows={3} aria-label="デザイン依頼への回答"
+                                placeholder="例：シャツ、スカート／ウィメンズ／指定なし／SPRING-SUMMER 2027"
+                                className="block w-full resize-none rounded-xl border border-white/10 bg-[#171b1c] px-3 py-2 text-sm leading-6 text-white outline-none placeholder:text-neutral-500 focus:border-cyan-300/50" />
+                              <div className="mt-3 flex justify-end"><button type="submit" disabled={!hearingDraft.trim() || working} className="h-8 rounded-lg bg-cyan-300 px-4 text-sm font-medium text-neutral-950 disabled:cursor-not-allowed disabled:bg-[#687174] disabled:text-neutral-400">送信</button></div>
+                            </form>
+                          )}
+                        </div>
+                      </article>
+                    )}
+                  </Fragment>
+                );
+              })}
               {/* The first round only appears once the request is admitted; show progress before that too. */}
               {!conversation && agentThemeSearches(task) && task.rounds.length === 0 && stepFailed(task.research?.state) && <ErrorRow onRetry={retryResearch}>調査に失敗しました（{task.research?.errorCode ?? task.research?.state}）。</ErrorRow>}
-              {(!conversation || task.research?.state === 'completed') && task.rounds.length === 0 && !done && !notice && !stepFailed(task.research?.state)
+              {(!conversation || task.research?.state === 'completed') && task.rounds.length === 0 && !done && !notice && !stepFailed(task.research?.state) && !hearingOpen
                 && <StepSpinner label={agentThemeSearches(task) ? '市場とトレンドを調べ、テーマを考えています…（ウェブ検索で資料を集めています。1〜3分かかります）' : '市場とトレンドを整理し、テーマを考えています…'} />}
               {task.rounds.map((round, index) => {
                 const last = index === task.rounds.length - 1;
@@ -1125,12 +1206,25 @@ export default function HeavyAgentTaskPage() {
               {plan && (
                 <article className="space-y-5 rounded-2xl border border-white/10 bg-[#202426] p-6" data-testid="agent-plan">
                   <h2 className="text-lg font-semibold text-white">{plan.title ?? doc?.title}</h2>
-                  {plan.sections.map((section) => (
-                    <section key={section.heading}>
-                      <h3 className="mb-1 text-sm font-semibold text-cyan-200">{section.heading}</h3>
-                      <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-neutral-200">{section.items.map((item, index) => <li key={index}>{item}</li>)}</ul>
-                    </section>
-                  ))}
+                  {plan.sections.map((section) => {
+                    // Heavy's own: the palette's colors as swatches (the plan gives each a code).
+                    const colors = /カラー/.test(section.heading) ? section.items.flatMap(agentPaletteColors) : [];
+                    return (
+                      <section key={section.heading}>
+                        <h3 className="mb-1 text-sm font-semibold text-cyan-200">{section.heading}</h3>
+                        {colors.length > 0 && (
+                          <div className="mb-2 flex flex-wrap gap-3" data-testid="agent-plan-swatches">
+                            {colors.map((color, index) => (
+                              <span key={`${color.hex}-${index}`} className="flex items-center gap-1.5 text-xs text-neutral-300">
+                                <span aria-hidden="true" className="h-5 w-5 rounded border border-white/20" style={{ background: color.hex }} />{color.name ? `${color.name} ${color.hex}` : color.hex}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-neutral-200">{section.items.map((item, index) => <li key={index}>{item}</li>)}</ul>
+                      </section>
+                    );
+                  })}
                 </article>
               )}
               {task.image?.state === 'running' && <StepSpinner label="企画ビジュアルを生成しています…" />}
@@ -1140,6 +1234,27 @@ export default function HeavyAgentTaskPage() {
                   {imageUrl ? <img src={imageUrl} alt="企画ビジュアル" className="w-full object-contain" /> : <div className="h-64 animate-pulse bg-white/5" />}
                   <figcaption className="px-4 py-2 text-xs text-neutral-400">企画ビジュアル</figcaption>
                 </figure>
+              )}
+              {/* Heavy's own continuation of テーマ企画: one design picture per main item, and the plan as one page to show or keep. */}
+              {!merch && agentThemeSearches(task) && designs.length > 0 && (
+                <section className="space-y-2" data-testid="agent-plan-designs">
+                  <h3 className="text-sm font-semibold text-cyan-200">主力アイテムのデザイン案</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {designs.map((image) => (
+                      <figure key={image.key} className="space-y-1">
+                        {image.state === 'completed' && imageUrls[image.requestId] ? <img src={imageUrls[image.requestId]} alt={image.name} className="aspect-[3/4] w-full rounded-xl object-cover" />
+                          : stepFailed(image.state) ? <button type="button" onClick={() => retryStyleImage(image.requestId)} className="flex aspect-[3/4] w-full items-center justify-center rounded-xl border border-white/10 text-xs text-amber-300 hover:bg-white/5">生成に失敗しました。再生成</button>
+                            : <div className="aspect-[3/4] w-full animate-pulse rounded-xl bg-white/5" />}
+                        <figcaption className="text-xs text-neutral-400">{image.name}</figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                  <p className="text-xs text-neutral-500">AI画像はデザインの参考案であり、生産仕様の事実ではありません。</p>
+                </section>
+              )}
+              {!merch && agentThemeSearches(task) && plan && done && (
+                <ReportCard testId="agent-theme-plan-report" title="テーマ企画書" note="企画書・カラーパレット・企画ビジュアル・主力アイテムのデザイン案・参考資料を1つにまとめた資料です。"
+                  onOpen={() => showDeliverable('theme-plan')} onDownload={() => saveDeliverable('theme-plan')} />
               )}
               <Notes notes={notes} stage="plan" />
                 </>

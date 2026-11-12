@@ -3,6 +3,7 @@
  * runtime imports, so tests read it directly. `agentTasks.ts` re-exports everything here.
  */
 import { AGENT_PRODUCT_LINE, YAHOO_ATTRIBUTION_HTML, agentJapanMarket, agentYen, parseAgentProducts, type AgentProduct } from './agentProducts.ts';
+import { agentHearingLines, type AgentHearing } from './agentHearing.ts';
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
@@ -90,6 +91,8 @@ export type AgentTask = {
   dialogueStart?: { after: string; plan: string; at: string } | null;
   /** Light's research report as slides its AI writes (2026-11-12): one per directions round (`round` is its request). */
   report?: { round: string; step: AgentAssistantStep } | null;
+  /** Light's テーマ企画 asks for the category, field, brand and season before it searches (tasks made since 2026-11-12). */
+  hearing?: AgentHearing | null;
 };
 export type AgentTaskDocument = { id: string; title: string; revision: number; updatedAt: string; task: AgentTask; snapshot: Record<string, unknown> };
 
@@ -225,6 +228,7 @@ const contextLines = (task: AgentTask) => [
   task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile.slice(0, 1000)}` : '',
   `依頼: ${task.prompt.slice(0, 2000)}`,
   ...agentAttachmentLines(task, 1800),
+  ...agentHearingLines(task),
 ];
 /**
  * A request the server turned away (bad or oversized input, a conflicting resend) or a request it never stored (404 on
@@ -523,6 +527,7 @@ export function themePrompt(task: AgentTask): string {
     `あなたはアパレル企業の企画担当アシスタントです。業務シーン: ${task.scene}（${task.subtype}）。目的: ${sceneGuide[task.scene]}。`,
     task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile.slice(0, 1000)}` : '',
     `依頼: ${task.prompt.slice(0, 2000)}`,
+    ...agentHearingLines(task),
     effectiveAgentRequirements(task) ? `確認済みの要件:\n${effectiveAgentRequirements(task).slice(0, 2000)}` : '',
     ...noteLines(task),
     researchContext(task),
@@ -558,14 +563,39 @@ export function planPrompt(task: AgentTask, theme: string): string {
     `あなたはアパレル企業の企画担当アシスタントです。業務シーン: ${task.scene}（${task.subtype}）。`,
     task.profile ? `会社・ブランドの業務プリファレンス: ${task.profile.slice(0, 1000)}` : '',
     `依頼: ${task.prompt.slice(0, 2000)}`,
+    ...agentHearingLines(task),
     effectiveAgentRequirements(task) ? `確認済みの要件:\n${effectiveAgentRequirements(task).slice(0, 2000)}` : '',
     ...noteLines(task),
     researchContext(task),
     `採用されたテーマ: ${theme.slice(0, 2000)}`,
     `このテーマで${task.subtype}の企画書を日本語で作成してください。`,
     '次の見出しを順に使い、各見出しの下は「- 」で始まる箇条書きで書いてください: 「## タイトル」（1行の企画名）「## コンセプト」「## カラーパレット」「## 推奨素材」「## 主要デザイン要素」「## 主力アイテム」「## コーディネート提案」。',
+    // Heavy's own (Light's テーマ企画 cannot be run past the themes on this account): swatches need each color's code, and each
+    // main item gets a design picture, as 新商品企画 draws one per style.
+    '「## カラーパレット」の各色は「色名(#RRGGBB)」のように16進のカラーコードを添えてください。',
     '最後に「[画像プロンプト]」と書いた行の次に、この企画のムードボード画像を生成するための英語のプロンプトを1行だけ書いてください。画像プロンプトにはブランド名・人名・「style」という単語を使わないでください。',
+    agentThemeSearches(task)
+      ? `続けて「[アイテム画像]」と書いた行の次に、「## 主力アイテム」の各アイテム（最大${AGENT_PLAN_ITEM_IMAGES}点）について「- アイテム名｜その1点のデザイン画を作るための英語の短い説明（服の種類・色・素材・ディテール。人物・ブランド名・「style」という単語は使わない）」の行を書いてください。`
+      : '',
   ].filter(Boolean).join('\n');
+}
+
+/** テーマ企画's main items drawn one each (Heavy's own continuation after the themes). */
+export const AGENT_PLAN_ITEM_IMAGES = 5;
+/** The plan's 「[アイテム画像]」 lines: an item name and an English description each (at most 5, after the mood board prompt). */
+export function parsePlanItemImages(content: string): Array<{ name: string; prompt: string }> {
+  const at = content.search(/\[アイテム画像\]|【アイテム画像】/);
+  if (at < 0) return [];
+  return content.slice(at).split('\n').slice(1).map(raw => raw.trim()).filter(raw => /^[-・*]\s*/.test(raw))
+    .map(raw => raw.replace(/^[-・*]\s*/, '').replace(/\*\*/g, '').split('｜').map(part => part.trim()))
+    .filter(parts => parts.length >= 2 && parts[0] && parts[1])
+    .map(parts => ({ name: parts[0].slice(0, 60), prompt: agentImagePrompt(parts.slice(1).join(' ')) }))
+    .slice(0, AGENT_PLAN_ITEM_IMAGES);
+}
+/** The swatch colors a palette line names (「フェードブルー(#A9BFD6)」), in order. */
+export function agentPaletteColors(text: string): Array<{ name: string; hex: string }> {
+  return [...text.matchAll(/([^\s、,，:：()（）/／]{1,20})?\s*[(（]?\s*(#[0-9a-fA-F]{6})\b\s*[)）]?/g)]
+    .map(match => ({ name: (match[1] ?? '').trim(), hex: match[2].toUpperCase() }));
 }
 
 /**
