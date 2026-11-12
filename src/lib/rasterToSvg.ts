@@ -92,7 +92,7 @@ export function isLineArt(pixels: RasterPixels): boolean {
 }
 
 const LINE_INK_LEVEL = 200;
-function binarize(pixels: RasterPixels): { palette: Rgb[]; labels: Uint8Array } {
+export function binarizeLineArt(pixels: RasterPixels): { palette: Rgb[]; labels: Uint8Array } {
   const { width, height, data } = pixels;
   const labels = new Uint8Array(width * height);
   const ink = [0, 0, 0, 0];
@@ -189,7 +189,7 @@ const loopArea = (loop: Point[]) => Math.abs(loop.reduce((sum, [x, y], i) => {
 
 export function tracePixelsToSvg(pixels: RasterPixels, options: TraceOptions = {}): { svg: string; colors: string[]; pathCount: number } {
   const { width, height } = pixels;
-  const { palette, labels } = (options.lineArt ?? isLineArt(pixels)) ? binarize(pixels) : quantize(pixels, options.colors ?? DEFAULT_COLORS);
+  const { palette, labels } = (options.lineArt ?? isLineArt(pixels)) ? binarizeLineArt(pixels) : quantize(pixels, options.colors ?? DEFAULT_COLORS);
   const background = borderLabel(labels, width, height);
   const minArea = options.minArea ?? DEFAULT_MIN_AREA;
   const paths: string[] = [];

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Copy, Download, Eraser, FileText, Grid3x3, History, LayoutGrid, Loader2, Palette, RotateCcw, Send, Star, X } from 'lucide-react';
+import { ChevronLeft, Copy, Download, Eraser, FileText, Grid3x3, History, LayoutGrid, Loader2, Palette, PenTool, RotateCcw, Send, Star, X, ZoomIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { downloadValidatedImage } from '../../lib/imageDownload';
@@ -7,6 +7,8 @@ import { downloadImagesAsZip, upscaleImage } from '../../lib/clientImageOps';
 import { extractPalette, hexToRgb, makeSeamless, recolorPixels, removeBackground, REPEAT_LAYOUTS, rgbToHex, type RepeatLayout, type Rgb } from '../../features/graphicDesign/graphicTools';
 import { blobToFile, drawRepeatUnit, pixelsToBlob, pixelsToCanvas, readPixels, repeatSheetBlob, type Pixels } from '../../features/graphicDesign/graphicToolsCanvas';
 import { graphicFileName } from '../../features/graphicDesign/graphicResult';
+import { VECTOR_COLOR_CHOICES, VECTOR_DETAILS, type VectorDetail, type VectorTraceResult } from '../../lib/vectorTrace';
+import { saveSvgFile, traceImageUrlToVector } from '../../lib/vectorTraceClient';
 import {
   createGraphicDocument, GRAPHIC_SEND_TARGETS, loadRunCandidates, registerCandidate, setCandidateFavorite, type GraphicCandidate,
 } from '../../features/graphicDesign/graphicResultActions';
@@ -15,9 +17,9 @@ import {
  * AIグラフィックデザインの生成後の画面（独自）。本家はこのアカウントで生成が「権限がありません」で生成後の画面を比べられないため、
  * 本家の説明動画の生成後の画面（‹ 戻る・◀・☆・デザインドキュメントの作成・緑のダウンロード・大きな案と4案のサムネイル）に
  * 合わせ、服の柄を作る人が次にしたい道具（似た案を増やす・総柄にする・配色を替える・リピートで確認・背景を消す・
- * ほかの道具へ送る・2倍の大きさ・4案まとめて）を足した。
+ * ほかの道具へ送る・2倍の大きさ・4案まとめて・SVGにする）を足した。
  */
-type Tool = 'recolor' | 'repeat' | 'cutout';
+type Tool = 'recolor' | 'repeat' | 'cutout' | 'svg';
 const PREVIEW_EDGE = 1024;
 const TITLE = 'AIグラフィックデザイン';
 
@@ -128,7 +130,9 @@ export function GraphicResultView({ brandId, userId, jobId, fallbackUrl, locked,
       </div>
 
       <div className="relative mt-3 flex min-h-0 flex-1 gap-3">
-        {tool && selected ? (
+        {tool === 'svg' && selected ? (
+          <GraphicSvgStage key={`svg-${selected.id}`} candidate={selected} index={selectedIndex} onClose={() => setTool(null)} />
+        ) : tool && tool !== 'svg' && selected ? (
           <GraphicToolStage key={`${tool}-${selected.id}`} tool={tool} candidate={selected} index={selectedIndex} locked={locked} onClose={() => setTool(null)} onUseAsReference={onUseAsReference} />
         ) : (
           <div className="relative flex min-w-0 flex-1 items-center justify-center">
@@ -157,14 +161,74 @@ export function GraphicResultView({ brandId, userId, jobId, fallbackUrl, locked,
         <button type="button" aria-pressed={tool === 'recolor'} disabled={!selected} onClick={() => setTool(tool === 'recolor' ? null : 'recolor')} className={`${toolButton} ${tool === 'recolor' ? 'bg-white/[0.08] text-[#20d0c4]' : ''}`}><Palette aria-hidden="true" className="h-4 w-4" />配色を替える</button>
         <button type="button" aria-pressed={tool === 'repeat'} disabled={!selected} onClick={() => setTool(tool === 'repeat' ? null : 'repeat')} className={`${toolButton} ${tool === 'repeat' ? 'bg-white/[0.08] text-[#20d0c4]' : ''}`}><LayoutGrid aria-hidden="true" className="h-4 w-4" />リピートで確認</button>
         <button type="button" aria-pressed={tool === 'cutout'} disabled={!selected} onClick={() => setTool(tool === 'cutout' ? null : 'cutout')} className={`${toolButton} ${tool === 'cutout' ? 'bg-white/[0.08] text-[#20d0c4]' : ''}`}><Eraser aria-hidden="true" className="h-4 w-4" />背景を消す</button>
+        <button type="button" aria-pressed={tool === 'svg'} disabled={!selected} onClick={() => setTool(tool === 'svg' ? null : 'svg')} className={`${toolButton} ${tool === 'svg' ? 'bg-white/[0.08] text-[#20d0c4]' : ''}`}><PenTool aria-hidden="true" className="h-4 w-4" />SVGにする</button>
       </div>
     </div>
   );
 }
 
+/**
+ * SVGにする: the proposal's outlines traced into a real vector SVG in the browser (VTracer, see lib/vectorTrace). Before
+ * 2026-11-12 the only way to an SVG was 送る → ベクター化, which redrew the image with AI and traced it as 640px
+ * pixel-edge polygons.
+ */
+function GraphicSvgStage({ candidate, index, onClose }: { candidate: GraphicCandidate; index: number; onClose: () => void }) {
+  const [colors, setColors] = useState<number>(8);
+  const [detail, setDetail] = useState<VectorDetail>('normal');
+  const [zoomed, setZoomed] = useState(false);
+  const [state, setState] = useState<{ status: 'tracing' } | { status: 'ready'; result: VectorTraceResult; url: string; ms: number } | { status: 'error' }>({ status: 'tracing' });
+
+  useEffect(() => {
+    let cancelled = false;
+    let url: string | null = null;
+    setState({ status: 'tracing' });
+    const started = performance.now();
+    traceImageUrlToVector(candidate.image_url, { colors, detail, lineArt: false }).then((result) => {
+      if (cancelled) return;
+      url = URL.createObjectURL(new Blob([result.svg], { type: 'image/svg+xml' }));
+      setState({ status: 'ready', result, url, ms: Math.round(performance.now() - started) });
+    }).catch(() => { if (!cancelled) setState({ status: 'error' }); });
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [candidate.image_url, colors, detail]);
+
+  const ready = state.status === 'ready' ? state : null;
+  return (
+    <>
+      <div className={`flex min-w-0 flex-1 overflow-auto rounded-lg bg-white ${zoomed ? '' : 'items-center justify-center'}`} data-testid="graphic-tool-stage-svg" data-svg-status={state.status}>
+        {state.status === 'error' ? <p role="alert" className="m-auto text-sm text-rose-600">SVGに変換できませんでした</p>
+          : !ready ? <span role="status" className="m-auto flex items-center gap-2 text-sm text-neutral-500"><Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />線をなぞっています…</span>
+          : <img src={ready.url} alt="SVGにした案" data-testid="graphic-svg-preview" className={zoomed ? 'max-w-none' : 'max-h-full max-w-full object-contain'} style={zoomed ? { width: `${ready.result.traceWidth * 4}px` } : undefined} />}
+      </div>
+      <aside className="flex w-60 shrink-0 flex-col gap-3 overflow-y-auto rounded-lg bg-[#171b1c] p-4 text-sm" aria-label="SVGにする" data-testid="graphic-tool-svg">
+        <div className="flex items-center justify-between"><h3 className="text-sm font-medium text-white">SVGにする</h3><button type="button" aria-label="閉じる" onClick={onClose} className="text-neutral-400 hover:text-white"><X aria-hidden="true" className="h-4 w-4" /></button></div>
+        <p className="text-xs leading-5 text-neutral-400">色ごとの形の輪郭を曲線でなぞったSVGです。拡大しても輪郭がにじまず、Illustrator・Figmaで色ごとに編集できます。</p>
+        <div>
+          <div className="text-xs text-neutral-400">色数</div>
+          <div className="mt-2 flex rounded-lg bg-white/[0.06] p-0.5" role="radiogroup" aria-label="色数">
+            {VECTOR_COLOR_CHOICES.map((count) => (
+              <button key={count} type="button" role="radio" aria-checked={colors === count} disabled={state.status === 'tracing'} onClick={() => setColors(count)} className={`h-7 flex-1 rounded-md text-xs ${colors === count ? 'bg-[#20d0c4] text-neutral-950' : 'text-neutral-300'}`}>{count}</button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-neutral-400">細かさ</div>
+          <div className="mt-2 flex rounded-lg bg-white/[0.06] p-0.5" role="radiogroup" aria-label="細かさ">
+            {VECTOR_DETAILS.map((item) => (
+              <button key={item.id} type="button" role="radio" aria-checked={detail === item.id} disabled={state.status === 'tracing'} onClick={() => setDetail(item.id)} className={`h-7 flex-1 rounded-md text-xs ${detail === item.id ? 'bg-[#20d0c4] text-neutral-950' : 'text-neutral-300'}`}>{item.label}</button>
+            ))}
+          </div>
+        </div>
+        <p className="text-xs text-neutral-300" data-testid="graphic-svg-stats">{ready ? `${ready.result.colors.length}色・${ready.result.pathCount}個の形（${Math.round(ready.result.svg.length / 1024)}KB）` : state.status === 'tracing' ? '変換中…' : ''}</p>
+        <button type="button" aria-pressed={zoomed} disabled={!ready} onClick={() => setZoomed(!zoomed)} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-white/30`}><ZoomIn aria-hidden="true" className="h-3.5 w-3.5" />{zoomed ? '全体を見る' : '4倍に拡大して見る'}</button>
+        <button type="button" disabled={!ready} onClick={() => ready && saveSvgFile(ready.result.svg, graphicFileName(index, 'ベクター', 'svg'))} className={`${panelButton} bg-[#20d0c4] font-medium text-neutral-950`}><Download aria-hidden="true" className="h-3.5 w-3.5" />SVGでダウンロード</button>
+      </aside>
+    </>
+  );
+}
+
 /** One open tool: the preview takes the image's place and its settings sit in a panel on the right. */
 function GraphicToolStage({ tool, candidate, index, locked, onClose, onUseAsReference }: {
-  tool: Tool; candidate: GraphicCandidate; index: number; locked: boolean; onClose: () => void; onUseAsReference: (file: File) => void;
+  tool: Exclude<Tool, 'svg'>; candidate: GraphicCandidate; index: number; locked: boolean; onClose: () => void; onUseAsReference: (file: File) => void;
 }) {
   const [source, setSource] = useState<Pixels | null>(null);
   const [failed, setFailed] = useState(false);
