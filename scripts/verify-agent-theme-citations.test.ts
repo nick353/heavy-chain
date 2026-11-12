@@ -90,16 +90,17 @@ test('the task page runs テーマ企画\'s research before its first round and 
   // Light's テーマ企画 panel has 概要 and 参考資料 only: its research is not a タスク成果物.
   assert.match(page, /\.\.\.\(research && !agentThemeSearches\(task\) \? \[\{ key: 'research'/);
   // 参考資料 shows the site, then the cited sentence (the title only when there is none).
-  assert.match(page, /\{source\.quote \?\? source\.title\}/);
+  assert.match(page, /\{source\.quote \? <SourceQuote text=\{source\.quote\} \/> : source\.title\}/);
   assert.match(flow, /if \(agentThemeSearches\(task\)\) return agentThemeResearchPrompt\(task\);/);
 });
 
 // Production 2026-11-12 (research 498af21f): the cited text comes as the page's Markdown, so 参考資料 showed
 // 「** The key directions…」 and 「# 9 Trends … ## Spring/Summer 2027 Trends ### By Hand」. Light shows plain sentences.
-test('the cited sentence is shown without Markdown emphasis or heading marks, in テーマ企画 and in the chat', () => {
+test('the cited sentence is shown without heading marks, in テーマ企画 and in the chat (its ** pairs stay for the bold)', () => {
   assert.equal(cleanAgentQuote('** The key directions for Spring Summer 2027 are nature-inspired textures'), 'The key directions for Spring Summer 2027 are nature-inspired textures');
   assert.equal(cleanAgentQuote('# 9 Trends Set to Define Spring 2027 Fashion ## Spring/Summer 2027 Trends ### By Hand Today, designers'), '9 Trends Set to Define Spring 2027 Fashion Spring/Summer 2027 Trends By Hand Today, designers');
-  assert.equal(cleanAgentQuote('Light — washed and airy **Key Shades:** The light palette'), 'Light — washed and airy Key Shades: The light palette');
+  // Light shows the bold in bold (2026-11-12), so a ** pair stays; the task page draws it (verify-agent-sources-bold-home).
+  assert.equal(cleanAgentQuote('Light — washed and airy **Key Shades:** The light palette'), 'Light — washed and airy **Key Shades:** The light palette');
   // A hashtag is the page's own word and stays.
   assert.equal(cleanAgentQuote('夏の定番 #リネン ワンピース'), '夏の定番 #リネン ワンピース');
   const content = '## トレンド\n- 自然由来\n\n[出典]\n- Trendalytics | https://trendalytics.co/x | ** The key directions for Spring Summer 2027\n- 見出しだけ | https://example.com/h | ##\n\n[検索] ok';

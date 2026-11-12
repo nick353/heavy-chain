@@ -163,12 +163,16 @@ export type ResearchResult = {
   searchUsed: boolean; searchErrors: string[];
   usage: Record<string, number> | null; model: string;
 };
-/** A cited span of the report as one line: no `[調査結果]` marker, heading lines, list marks or Markdown emphasis. */
+/**
+ * A cited span of the report as one line: no `[調査結果]` marker, heading lines, list marks or `__`. Its `**` bold stays:
+ * Light's テーマ企画 shows the bold of its sentence in bold (read 2026-11-12: 「**気候適応と快適性の追求:** 沖縄の…」), and the
+ * task page drops a `**` that has no partner.
+ */
 export function researchClaimText(value: string): string {
   const marker = value.lastIndexOf('[調査結果]');
   return (marker >= 0 ? value.slice(marker + '[調査結果]'.length) : value).split('\n')
     .map(line => line.replace(/^\s*#{1,6}\s.*$/, '').replace(/^\s*(?:[・•]\s*|(?:[-*]|\d+[.)．])\s+)/, '').trim())
-    .filter(Boolean).join(' ').replace(/\*\*|__/g, '').replace(/\s+/g, ' ').trim();
+    .filter(Boolean).join(' ').replace(/__/g, '').replace(/\s+/g, ' ').trim();
 }
 type ContentBlock = Record<string, unknown> & { type: string };
 const httpUrl = (value: unknown): value is string => typeof value === 'string' && /^https?:\/\//i.test(value) && value.length <= 2048;
@@ -282,9 +286,13 @@ export async function callClaudeResearch(
     // A block that ends before the marker starts is Claude's narration before the report.
     if (marker >= 0 && claim.end <= marker) continue;
     const sentence = researchClaimText(claim.text);
-    if (!sentence || seen.has(sentence)) continue;
-    seen.add(sentence);
-    claims.push({ url: claim.url, title: titled(claim.url, claim.title), quote: sentence.length > 160 ? `${sentence.slice(0, 159)}…` : sentence });
+    // The same sentence once, with or without its bold; a span of only `**` marks is no sentence.
+    const plain = sentence.replace(/\*\*/g, '').trim();
+    if (!plain || seen.has(plain)) continue;
+    seen.add(plain);
+    // A cut never leaves half of a `**`.
+    const cut = sentence.length > 160 ? `${sentence.slice(0, 159).replace(/(^|[^*])\*$/, '$1')}…` : sentence;
+    claims.push({ url: claim.url, title: titled(claim.url, claim.title), quote: cut });
     if (claims.length >= AGENT_THEME_SOURCES_MAX) break;
   }
   return {
