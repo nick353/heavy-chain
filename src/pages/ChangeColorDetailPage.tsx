@@ -11,6 +11,7 @@ import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts'
 import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { watermarkImageBlobIfOn } from '../lib/imageDownload';
 import { projectNameFromFile } from '../lib/projectNames';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 /**
  * Light `/editor/changeColor/detail` = "色変更", measured at 1440×900 on 2026-10-07: first visit shows the
@@ -86,12 +87,17 @@ function ChangeColorWorkspace() {
     setGuide(choice);
     setGuideStep(choice === 'shown' ? 1 : 0);
   };
+  const acceptFile = (file: File) => {
+    if (file.size > 20 * 1024 * 1024) return;
+    return workspace.upload('primary', file);
+  };
   const pick = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file || file.size > 20 * 1024 * 1024) return;
-    void workspace.upload('primary', file);
+    if (file) void acceptFile(file);
   };
+  // 「送る」（?imgUrl=）で送られた画像も、同じ入り口から元画像に入れる。
+  useIncomingImageFile(acceptFile, { ready: workspace.inputsSettled });
   /** スポイト: the browser EyeDropper when available, otherwise sample the clicked pixel of the source image. */
   const startEyedropper = async () => {
     const Dropper = (window as unknown as { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper;

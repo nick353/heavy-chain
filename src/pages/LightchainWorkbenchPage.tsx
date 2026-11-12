@@ -131,6 +131,7 @@ import { HEAVY_IMAGE_PROVIDER } from '../lib/heavyImageProvider';
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
 import { buildLocalCanvasAssetReference, isLocalCanvasAssetReference, putLocalCanvasAsset, resolveLocalCanvasAsset, type LocalCanvasAssetResolution } from '../lib/canvasLocalAssets';
 import { thumbnailImageUrl } from '../lib/mediaThumbnail';
+import { useIncomingImageFile } from '../lib/incomingImage';
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
 type LightchainVisibleCategoryId = 'recommended' | 'planning' | 'fitting' | 'graphics';
@@ -3402,11 +3403,13 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
   const handleMaterialSlotUpload = async (slot: MaterialSlotKey, event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    try { await uploadMaterialSlotFile(slot, file); } finally { event.target.value = ''; }
+  };
+  const uploadMaterialSlotFile = async (slot: MaterialSlotKey, file: File) => {
     const scope = workbenchScopeRef.current;
 
     if (file.size > 20 * 1024 * 1024) {
       toast.error('素材画像は20MB以下にしてください');
-      event.target.value = '';
       return;
     }
 
@@ -3447,10 +3450,10 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
       if (applied) toast.success('素材画像を読み込み、編集レイヤーを準備しました');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '画像を読み込めませんでした');
-    } finally {
-      event.target.value = '';
     }
   };
+  // 「送る」（?imgUrl=）で送られた画像も、アップロードと同じ入り口から1枚目（衣服の画像）に入れる。
+  useIncomingImageFile((file) => uploadMaterialSlotFile('primary', file), { ready: isAuthInitialized && !isAuthLoading && Boolean(user?.id) && brandState.status !== 'pending' });
 
   const handleUseMaterialAsset = (item: MaterialTabItem) => {
     // Capture the slot before closing the dialog. The dialog and slot controls
