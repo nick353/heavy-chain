@@ -272,7 +272,7 @@ function GraphicToolStage({ tool, candidate, index, locked, onClose, onUseAsRefe
             <label className="text-xs text-neutral-400">1枚の大きさ
               <input type="range" min={64} max={400} step={8} value={tileSize} onChange={(event) => setTileSize(Number(event.target.value))} className="mt-2 w-full accent-[#20d0c4]" aria-label="1枚の大きさ" />
             </label>
-            <p className="text-xs leading-5 text-neutral-500">端の4分の1を反対側となじませて、並べたときの継ぎ目を消します。ミラーは反転して並べるので継ぎ目が出ません。</p>
+            <p className="text-xs leading-5 text-neutral-500">端の4分の1を反対側の続きに替え、柄の少ない所を通る線でつなぐので、並べても継ぎ目が出ず、柄も薄く重なりません。ミラーは反転して並べるので継ぎ目が出ません。</p>
             <button type="button" disabled={working || !source} onClick={() => act(async () => { await download(await pixelsToBlob(await fullSize()), seamless ? 'リピート用' : 'タイル'); })} className={`${panelButton} bg-[#20d0c4] font-medium text-neutral-950`}>{working ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" /> : <Download aria-hidden="true" className="h-3.5 w-3.5" />}1枚分をダウンロード</button>
             <button type="button" disabled={working || !source} onClick={() => act(async () => { await download(await repeatSheetBlob(pixelsToCanvas(await fullSize()), layout, 3), `${REPEAT_LAYOUTS.find((item) => item.id === layout)?.label}3x3`); })} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-white/30`}>並べた画像（3×3）をダウンロード</button>
             <button type="button" disabled={working || locked || !source} onClick={() => useAsReference('リピート用')} className={`${panelButton} border border-white/15 text-neutral-200 hover:border-[#20d0c4]`}>参考画像にして作り直す</button>
