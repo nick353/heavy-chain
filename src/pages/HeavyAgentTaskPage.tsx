@@ -14,7 +14,7 @@ import { AgentDialogueView } from '../features/agent/AgentDialogueView';
 import type { AssistantQuestion } from '../features/designDetail/assistantQuestions';
 import {
   AGENT_SCOPE_REGIONS, DEFAULT_AGENT_SCOPE, agentConversationId, agentImagePrompt, agentMissingNames, agentNotePrompt,
-  agentQuoteParts, agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentSourceHome, agentSourceSite, agentScopeSummary, agentThemeEvidence, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
+  agentQuoteParts, agentRequestRejection, agentRequirementsPrompt, agentResearchPrompt, agentRoundSources, agentScopeOptions, agentSourceHome, agentSourceSite, agentScopeSummary, agentThemeEvidence, agentThemeRoundSearches, agentThemeSearches, assistantStepFrom, agentStepContentMax, AGENT_STEP_CONTENT_MAX, buildAgentResearchReportHtml, isAutomaticAgentTaskTitle, parseAgentDirection,
   loadAgentTask, parseAgentRequirements, parseAgentResearch, parsePlanResponse, parseThemeResponse, planPrompt, pruneAgentScope, themePrompt, updateAgentTask,
   agentBuildDesignImages, agentBuildDirectionImages, agentChosenCodes, agentDesignPrompt, agentDesignProgress, agentFinalPrompt, agentImageLabel, agentReferenceImages,
   agentBuildDialogueImages, agentDialogueAspect, agentDialogueHistory, agentDialogueImagePrompt, agentDialogueIsStart, agentDialogueMode, agentDialoguePlan, agentDialoguePrompt,
@@ -395,10 +395,10 @@ export default function HeavyAgentTaskPage() {
   }, [taskId, brandId]);
 
   /** Reads an assistant request until it settles; returns the final step (never re-sends). */
-  const pollAssistant = useCallback(async (step: AgentAssistantStep, conversationId: string): Promise<AgentAssistantStep> => {
+  const pollAssistant = useCallback(async (step: AgentAssistantStep, conversationId: string, maxChars?: number): Promise<AgentAssistantStep> => {
     for (let attempt = 0; attempt < 100 && mounted.current; attempt += 1) {
       const receipt = await api().readDesignAssistantRequest({ requestId: step.requestId, brandId: brandId!, projectId: taskId, conversationId });
-      if (receipt.state !== 'running') return assistantStepFrom(receipt, step.requestId);
+      if (receipt.state !== 'running') return assistantStepFrom(receipt, step.requestId, maxChars);
       await wait(3000);
     }
     return step;
@@ -418,9 +418,9 @@ export default function HeavyAgentTaskPage() {
         // Light sends the attached images along with every step; Heavy sends the newest ones as references.
         const references = docRef.current && kind !== 'report' ? agentReferenceImages(docRef.current.task) : [];
         const receipt = await api().sendDesignAssistantRequest({ requestId: step.requestId, brandId, projectId: taskId, conversationId, prompt, history, references, ...(mode ? { mode } : {}) });
-        result = assistantStepFrom(receipt, step.requestId);
+        result = assistantStepFrom(receipt, step.requestId, agentStepContentMax(kind));
       }
-      if (result.state === 'running') result = await pollAssistant(result, conversationId);
+      if (result.state === 'running') result = await pollAssistant(result, conversationId, agentStepContentMax(kind));
       if (result.state !== 'running') await commit((task) => apply(task, result));
     } catch (error) {
       // Turned away or never stored: waiting will not settle it, so the step fails and its retry appears (production
@@ -724,6 +724,7 @@ export default function HeavyAgentTaskPage() {
   // Light's research report is slides its AI writes with the directions in them: once the directions arrive Heavy asks the
   // server's Claude for them beside the other steps (the page never waits on it; the fixed report opens until they come).
   const reportStarting = useRef<string | null>(null);
+  const reportReread = useRef(new Set<string>());
   useEffect(() => {
     if (!doc || !brandId || status !== 'ready') return;
     const round = agentReportRound(doc.task);
@@ -735,6 +736,11 @@ export default function HeavyAgentTaskPage() {
     };
     if (current?.round === round) {
       if (current.step.state === 'running' && !inFlight.current.has(current.step.requestId)) void runAssistant('report', current.step, null, applyReport, 'agent-report');
+      // Slides saved before the task kept long replies were cut at 12,000 characters: read the whole reply back once.
+      else if (current.step.state === 'completed' && current.step.content?.length === AGENT_STEP_CONTENT_MAX && !reportReread.current.has(current.step.requestId)) {
+        reportReread.current.add(current.step.requestId);
+        void runAssistant('report', { ...current.step, state: 'running' }, null, applyReport, 'agent-report');
+      }
       return;
     }
     if (reportStarting.current === round) return;

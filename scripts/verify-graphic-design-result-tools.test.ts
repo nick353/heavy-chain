@@ -63,6 +63,30 @@ test('リピートで確認: つなぎ目をなじませる removes the jump at 
   assert.deepEqual(repeatUnit('mirror').placements.map((p) => [p.flipX, p.flipY]), [[false, false], [true, false], [false, true], [true, true]]);
 });
 
+test('リピートで確認: the seam is a cut through the ground, so no motif is faded into a half-transparent double', () => {
+  // 独自: the first version crossfaded the outer quarter with the shifted copy, and on production (2026-11-12, run
+  // b40fce55) the half-drop preview showed pale doubled flowers along every tile edge. A print's ground lets the cut
+  // pass between the motifs, so every pixel is the ground or a motif color, never a mix.
+  const S = 96;
+  const discs: Array<[number, number]> = [[10, 24], [86, 60], [40, 40], [28, 78], [66, 14], [58, 88], [14, 50], [80, 34]];
+  const dots = image(S, S, (x, y) => (discs.some(([cx, cy]) => (x - cx) ** 2 + (y - cy) ** 2 < 25) ? [20, 40, 120, 255] : [255, 255, 255, 255]));
+  const out = makeSeamless(dots, S, S);
+  let mixed = 0; let motif = 0;
+  for (let i = 0; i < out.length; i += 4) {
+    const px = Array.from(out.slice(i, i + 4)).join(',');
+    if (px === '20,40,120,255') motif++;
+    else if (px !== '255,255,255,255') mixed++;
+  }
+  assert.equal(mixed, 0, `${mixed} faded pixels`);
+  assert.ok(motif > 0);
+  // The tile's edges are neighbours in the image (columns 47 and 48), so the repeat is continuous; the middle rows keep
+  // pass 1's result, whose edge columns are the half-shifted copy.
+  for (let y = 24; y <= 70; y++) {
+    assert.deepEqual(at(out, S, 0, y), at(dots, S, 48, y), `row ${y}`);
+    assert.deepEqual(at(out, S, S - 1, y), at(dots, S, 47, y), `row ${y}`);
+  }
+});
+
 test('背景を消す: the ground around the print becomes transparent, white inside a motif stays, edges lose the white tint', () => {
   // A navy ring with a white hole: the hole is not connected to the edge, so it stays white.
   const ring = image(W, H, (x, y) => {
