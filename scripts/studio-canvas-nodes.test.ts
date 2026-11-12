@@ -7,7 +7,7 @@ import { readStudioLayout, withStudioLayout } from '../src/lib/studioCanvas.ts';
 import {
   STUDIO_CANVAS_IMAGE_ROLE, STUDIO_CANVAS_LIMIT_MESSAGE, STUDIO_MAX_CANVAS_IMAGES, STUDIO_MAX_CHILD_FORMS, isStudioChildDocument, isStudioFormKey, newStudioFormId,
   readStudioCanvasImages, readStudioForms, readStudioParent, studioCanvasImageKey, studioCanvasImageObject, studioChildFormIdOf, studioChildFormKey, studioChildNodeKey,
-  studioNodeBeside, withStudioCanvasImage, withStudioForm, withStudioParent,
+  studioNodeBeside, studioSettleNewNodes, withStudioCanvasImage, withStudioForm, withStudioParent,
 } from '../src/lib/studioCanvasNodes.ts';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -140,6 +140,22 @@ test('a new node lands 100 Light units right of its image, a random 0-300 lower,
   assert.deepEqual(studioNodeBeside(null, [source, blocker], { width: 448, height: 600 }, () => 0), { x: 855, y: 0 });
 });
 
+test('a result without a saved place steps down past a node it would cover; saved nodes and a touching row stay put', () => {
+  const sizes = { form: { width: 310, height: 500 }, r1: { width: 448, height: 600 }, r2: { width: 448, height: 600 }, clip: { width: 448, height: 600 } };
+  // The form's results touch in a row; the クリッピング image was put beside the first result before the second came.
+  const positions = { form: { x: 0, y: 0 }, r1: { x: 400, y: 0 }, r2: { x: 848, y: 0 }, clip: { x: 900, y: 80 } };
+  const order = ['form', 'r1', 'clip', 'r2'];
+  assert.deepEqual(studioSettleNewNodes(positions, sizes, order, new Set(['r2'])), { ...positions, r2: { x: 848, y: 725 } });
+  // r1 touching r2 is not an overlap; with nothing in the way nothing moves.
+  const free = { form: { x: 0, y: 0 }, r1: { x: 400, y: 0 }, r2: { x: 848, y: 0 } };
+  assert.deepEqual(studioSettleNewNodes(free, sizes, ['form', 'r1', 'r2'], new Set(['r1', 'r2'])), free);
+  // A result with a saved place is never moved, and an unmeasured one keeps its line-up place.
+  assert.deepEqual(studioSettleNewNodes(positions, sizes, order, new Set()), positions);
+  assert.deepEqual(studioSettleNewNodes(positions, { ...sizes, r2: { width: 448, height: 0 } }, order, new Set(['r2'])), positions);
+  // The page settles only results (its own and its forms') that have no saved place.
+  assert.match(page, /const newResultKeys = new Set\(\[\.\.\.resultNodeKeys, \.\.\.childForms\.flatMap\(form => childResultKeys\(form\)\)\]\.filter\(key => !savedPositions\[key\]\)\);\n\s*const basePositions = studioSettleNewNodes\(\{ \.\.\.studioNodePositions\(nodeSpecs, savedPositions\), \.\.\.extraPositions \}, sizes, nodeKeys, newResultKeys\);/);
+});
+
 test('the image toolbar is Light\'s, and its functions add a form to this canvas instead of opening a new project', () => {
   const toolbar = page.slice(page.indexOf('data-testid="fashion-studio-node-toolbar"'), page.indexOf('data-testid="fashion-studio-node-feedback"'));
   const order = ['>クリッピング</button>', 'STUDIO_TOOLBAR_FUNCTIONS.map', '<StudioImageEditMenu', 'aria-label="画像検索"', 'aria-label="お気に入り"', 'aria-label="ダウンロード"', '<StudioSendMenu'];
@@ -238,7 +254,9 @@ test('簡易エディター is Light\'s floating bar over a dark page: the chose
   assert.match(read('../src/components/lightchain/StudioMaskSurface.tsx'), /const pad = 24;/);
   assert.match(maskEditor, /activePane === id \? 'border-\[#20d0c4\]' : 'border-\[#4b5053\]'/);
   assert.match(maskEditor, /'参考にしたい領域を描画してください' : '調整したい領域を描画してください'/);
-  assert.match(maskEditor, /\{panes\.length > 1 && activePane !== id && \(\n\s*<div className="pointer-events-none absolute inset-0/);
+  // The pane not in use is darkened as a whole, title included, about 78% like Light's, with the hint in its middle.
+  assert.match(maskEditor, /<\/div>\n(?:\s*\{\/\*.*\*\/\}\n)?\s*\{panes\.length > 1 && activePane !== id && \(\n\s*<div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black\/\[0\.78\] text-sm text-white">\{paneHint\(id\)\}<\/div>\n\s*\)\}\n\s*<\/section>/);
+  assert.match(maskEditor, /rounded-xl border-2 bg-\[#25292c\]/);
   // 抽出・お気に入り・保存 are teal fills like Light.
   const clipping = read('../src/components/lightchain/StudioClippingDialog.tsx');
   assert.equal(clipping.match(/className="h-9 rounded-md bg-\[#20d0c4\] px-4 text-sm text-\[#0f1718\]/g)?.length, 2);
@@ -304,9 +322,11 @@ test('画像編集 and 送る light up while their list is open, like Light (a l
   assert.match(page, /<StudioSendMenu imageUrl=\{url\} className="fashion-studio-node-toolbar-trigger" \/>/);
 });
 
-test('the 画像編集 list is Light\'s size and look: 190 wide on #303538, 37px rows of 12px words, a round NEW, Light\'s marks', () => {
-  assert.match(editMenu, /className=\{`absolute top-full z-40 mt-1\.5 w-\[190px\] rounded-xl border border-white\/10 bg-\[#303538\] p-1 shadow-2xl/);
-  assert.match(editMenu, /const itemClass = 'flex h-\[37px\] w-full items-center gap-2 rounded-lg px-3\.5 text-left text-xs /);
+test('the 画像編集 list is Light\'s size and look: about 190 wide on #303538, 37px rows of 12px words, a round NEW, Light\'s marks', () => {
+  assert.match(editMenu, /className=\{`absolute top-full z-40 mt-1\.5 w-\[194px\] rounded-xl border border-white\/10 bg-\[#303538\] p-1 shadow-2xl/);
+  assert.match(editMenu, /const itemClass = 'flex h-\[37px\] w-full items-center gap-2 rounded-lg pl-3\.5 pr-3 text-left text-xs /);
+  // The longest item, ワンクリックで背景削除 (11 characters of 12px), fits on its line: 194 - 2 border - 8 padding - 14 - 12 - 16 icon - 8 gap = 134.
+  assert.ok(194 - 2 - 8 - 14 - 12 - 16 - 8 >= 11 * 12);
   assert.match(editMenu, /\{item\.badge && <span className="rounded-full px-2 py-0\.5 text-xs font-medium leading-4 text-\[#0b2a33\]"/);
   assert.match(editMenu, /repair: StudioRepairIcon, partial: StudioPartialEditIcon, upscale: StudioUpscaleIcon, 'remove-background': StudioRemoveBackgroundIcon, clipping: StudioClippingIcon, crop: Crop, expand: Scaling, erase: Eraser,/);
   // The windows show the same mark at their top left as the list (Light's windows do).

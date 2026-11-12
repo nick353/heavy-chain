@@ -170,8 +170,9 @@ export function StudioImageEditMenu({
   };
   const closeDialog = () => { setDialog(null); onClose?.(); };
 
-  // 本家の一覧は幅190・地 #303538・1行37px・文字12px（2026-11-12 本家の本番で開いて画素で測った）。
-  const itemClass = 'flex h-[37px] w-full items-center gap-2 rounded-lg px-3.5 text-left text-xs text-white/95 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40';
+  // 本家の一覧は幅190・地 #303538・1行37px・文字12px（2026-11-12 本家の本番で開いて画素で測った）。いちばん長い
+  // 「ワンクリックで背景削除」（12px×11字）が切れずに1行に入るよう、幅は194・右の余白は12px（本番で190だと末尾が「…」になった）。
+  const itemClass = 'flex h-[37px] w-full items-center gap-2 rounded-lg pl-3.5 pr-3 text-left text-xs text-white/95 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40';
   return (
     <div ref={rootRef} className="relative inline-flex" data-testid="studio-image-edit-menu">
       <button
@@ -186,7 +187,7 @@ export function StudioImageEditMenu({
         <WandSparkles aria-hidden="true" className="h-4 w-4" />{label}
       </button>
       {menuOpen && (
-        <div role="menu" aria-label={label} className={`absolute top-full z-40 mt-1.5 w-[190px] rounded-xl border border-white/10 bg-[#303538] p-1 shadow-2xl ${align === 'end' ? 'right-0' : 'left-0'}`}>
+        <div role="menu" aria-label={label} className={`absolute top-full z-40 mt-1.5 w-[194px] rounded-xl border border-white/10 bg-[#303538] p-1 shadow-2xl ${align === 'end' ? 'right-0' : 'left-0'}`}>
           {STUDIO_EDIT_MENU.map(item => {
             const Icon = TOOL_ICON[item.id];
             const off = disabledTools.includes(item.id);

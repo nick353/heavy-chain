@@ -209,8 +209,8 @@ export function StudioMaskEditor({
         <div className="mt-[102px] flex gap-10">
           {panes.map(({ id, pane, title }) => (
             <section key={id} aria-label={title}
-              className={`relative flex h-[min(515px,calc(87vh-180px))] min-h-[320px] w-[520px] flex-col overflow-hidden rounded-xl border-2 bg-[#222628] ${panes.length > 1 ? 'max-w-[calc(50vw-32px)]' : 'max-w-[calc(100vw-24px)]'} ${activePane === id ? 'border-[#20d0c4]' : 'border-[#4b5053]'}`}>
-              <h3 className={`h-[46px] shrink-0 border-b border-white/10 text-center text-sm leading-[44px] ${activePane === id ? 'text-[#20d0c4]' : 'text-white/40'}`}>{title}</h3>
+              className={`relative flex h-[min(515px,calc(87vh-180px))] min-h-[320px] w-[520px] flex-col overflow-hidden rounded-xl border-2 bg-[#25292c] ${panes.length > 1 ? 'max-w-[calc(50vw-32px)]' : 'max-w-[calc(100vw-24px)]'} ${activePane === id ? 'border-[#20d0c4]' : 'border-[#4b5053]'}`}>
+              <h3 className={`h-[46px] shrink-0 border-b border-white/10 text-center text-sm leading-[44px] ${activePane === id ? 'text-[#20d0c4]' : 'text-white/90'}`}>{title}</h3>
               {/* 余白は面の中の24pxだけ（本家の窓は画像の上下左右が約24px。2026-11-12 本番で並べて測った。ここにも余白を付けると画像が一回り小さくなっていた）。 */}
               <div className="relative min-h-0 flex-1">
                 <StudioMaskSurface
@@ -228,13 +228,14 @@ export function StudioMaskEditor({
                   onBusyChange={setBusy}
                   testId={`${testId}-${id}`}
                 />
-                {panes.length > 1 && activePane !== id && (
-                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/45 text-sm text-white">{paneHint(id)}</div>
-                )}
                 {busy && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm text-white" role="status">{busy}</div>
                 )}
               </div>
+              {/* 使っていない側は、本家と同じく題も含めた面の全体を約78%暗くし、真ん中に案内を出す（2026-11-12 本家の本番で画素を測った）。 */}
+              {panes.length > 1 && activePane !== id && (
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/[0.78] text-sm text-white">{paneHint(id)}</div>
+              )}
             </section>
           ))}
         </div>
