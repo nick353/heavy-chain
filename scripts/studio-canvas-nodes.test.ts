@@ -323,14 +323,21 @@ test('the toolbar icons are Light\'s own 20×20 toolbar icons, the same ten as L
   assert.match(editMenu, /\{triggerIcon \?\? <WandSparkles aria-hidden="true" className="h-4 w-4" \/>\}\{label\}\n\s*<\/button>/);
 });
 
-test('the toolbar is Light\'s size: 42 high, 32px buttons with 20px marks and 14px white words of weight 500, 32px dividers, teal on hover', () => {
-  assert.match(css, /\.fashion-studio-node-toolbar \{\n(?:\s*\/\*[^]*?\*\/\n)?\s*height: 42px;\n\s*gap: 4px;\n\s*border-color: rgb\(255 255 255 \/ 10%\);\n\s*border-radius: 12px;\n\s*color: #fff;\n\s*font-size: 14px;\n\s*font-weight: 500;\n\s*line-height: 16px;/);
+test('the toolbar is Light\'s size: 42 high, 32px buttons with 20px marks and 12px white words of weight 500, 32px square mark buttons, 32px dividers, teal on hover', () => {
+  assert.match(css, /\.fashion-studio-node-toolbar \{\n(?:\s*\/\*[^]*?\*\/\n)?\s*height: 42px;\n\s*gap: 4px;\n\s*border-color: rgb\(255 255 255 \/ 10%\);\n\s*border-radius: 12px;\n\s*color: #fff;\n\s*font-size: 12px;\n\s*font-weight: 500;\n\s*line-height: 16px;/);
   assert.match(css, /\.fashion-studio-node-toolbar > button,\n\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger \{\n\s*height: 32px;\n\s*gap: 4px;\n\s*padding: 0 8px;\n\}/);
   assert.match(css, /\.fashion-studio-node-toolbar > button > svg,\n\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger > svg \{\n\s*width: 20px;\n\s*height: 20px;/);
   assert.match(css, /\.fashion-studio-node-toolbar > button:hover:not\(:disabled\),\n\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger:hover:not\(:disabled\) \{\n\s*color: #20d0c4;\n\}/);
   assert.match(css, /\.fashion-studio-node-toolbar > \.fashion-studio-node-toolbar-divider \{\n\s*height: 32px;\n\s*margin: 0;/);
   // 4 + 32 + 4 inside, 1px lines: 42.
   assert.equal(4 + 32 + 4 + 2, 42);
+  // Light measured on screen (2026-11-12): テキストで生成 is a 124 wide button, its words 84 wide (7 × 12px); the mark buttons are 32 square.
+  assert.equal(8 + 20 + 4 + 7 * 12 + 8, 124);
+  assert.match(css, /\.fashion-studio-node-toolbar > button\[aria-label\],\n\.fashion-studio-node-toolbar \.fashion-studio-node-toolbar-trigger\[aria-label="送る"\] \{\n\s*width: 32px;\n\s*justify-content: center;\n\s*padding: 0;\n\}/);
+  assert.match(css, /\.fashion-studio-node-toolbar > \.fashion-studio-node-toolbar-divider:first-of-type \{\n\s*margin-left: 4px;\n\}/);
+  // Only the mark buttons carry an aria-label: クリッピング and the function buttons show their words.
+  const toolbar = page.slice(page.indexOf('data-testid="fashion-studio-node-toolbar"'), page.indexOf('data-testid="fashion-studio-node-feedback"'));
+  assert.equal((toolbar.match(/<button type="button" aria-label=/g) ?? []).length, 3);
   // Light draws the studio in its body font, so Japanese comes out in PingFang SC.
   assert.match(css, /\.fashion-studio-project-detail-parity \{\n[^}]*font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",/);
   assert.doesNotMatch(css, /\.fashion-studio-project-detail-parity \{\n[^}]*font-family: Inter/);
@@ -386,4 +393,15 @@ test('a signed image URL kept while the page is open is signed again before the 
   assert.match(page, /await loadStudioExampleFile\(await refreshSignedImageUrl\(url\)\)/);
   assert.match(page, /void refreshSignedImageUrl\(url\)\.then\(fresh => \{ if \(fresh !== url\) setLightbox/);
   assert.doesNotMatch(page, /onExpand=\{setLightbox\}|onExpand: setLightbox/);
+});
+
+test('the 👍👎 bar under a result is Light\'s size: 42 high, 32px square thumbs with 16px white marks, 32px buttons of 12px words, 32px dividers', () => {
+  assert.match(css, /\.fashion-studio-node-feedback \{\n\s*height: 42px;\n\s*border-color: rgb\(255 255 255 \/ 10%\);\n\s*border-radius: 12px;\n\s*color: #fff;\n\}/);
+  assert.match(css, /\.fashion-studio-node-feedback \[data-testid="studio-feedback-bar"\] \{ gap: 4px; \}/);
+  assert.match(css, /\.fashion-studio-node-feedback \[data-testid="studio-feedback-bar"\] > button,\n\.fashion-studio-node-feedback \[data-testid="studio-feedback-improve"\] \{\n\s*height: 32px;\n\s*padding: 0 8px;\n\s*font-size: 12px;\n\s*font-weight: 500;/);
+  assert.match(css, /\.fashion-studio-node-feedback \.fashion-studio-feedback-icon > svg \{ width: 16px; height: 16px; \}/);
+  assert.match(css, /\.fashion-studio-node-feedback \.fashion-studio-feedback-icon \{\n\s*width: 32px;\n\s*justify-content: center;\n\s*padding: 0;\n\s*color: inherit;\n\}/);
+  assert.match(css, /\.fashion-studio-node-feedback \[data-testid="studio-feedback-bar"\] > \.fashion-studio-node-toolbar-divider \{ height: 32px; margin: 0;/);
+  // Light measured on screen (2026-11-12): 1 + (4 + 32 + 4 + 32 + 4) + 1 + (4 + 124 + 4) + 1 + (4 + 52 + 4) + 1 = 272, where フィードバックする is 9 × 12 + 16 and 再生成 3 × 12 + 16.
+  assert.equal(1 + (4 + 32 + 4 + 32 + 4) + 1 + (4 + (9 * 12 + 16) + 4) + 1 + (4 + (3 * 12 + 16) + 4) + 1, 272);
 });

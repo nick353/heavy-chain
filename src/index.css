@@ -765,14 +765,15 @@
 }
 
 .fashion-studio-node-toolbar {
-  /* 本家の帯（2026-11-12 本家の本番の帯の作りと画素で測った）: 枠は角12px・白10%の線、中は4px の余白と4px の間、
-     ボタンは高さ32px・左右8px・印20px・文字14px（行16px・太さ500・白）、区切りは高さ32px。合わせて高さ42px。 */
+  /* 本家の帯（2026-11-12 本家の本番の帯の作りと、画面の上の大きさで測った）: 枠は角12px・白10%の線、中は4px の余白と4px の間、
+     ボタンは高さ32px・左右8px・印20px・文字12px（行16px・太さ500・白。「テキストで生成」の字の幅が84px）、印だけのボタンは32px 四方、
+     区切りは高さ32px。合わせて高さ42px。 */
   height: 42px;
   gap: 4px;
   border-color: rgb(255 255 255 / 10%);
   border-radius: 12px;
   color: #fff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 16px;
   box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
@@ -813,6 +814,14 @@
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+/* 本家の印だけのボタン（画像検索・お気に入り・ダウンロード・送る）は32px 四方。 */
+.fashion-studio-node-toolbar > button[aria-label],
+.fashion-studio-node-toolbar .fashion-studio-node-toolbar-trigger[aria-label="送る"] {
+  width: 32px;
+  justify-content: center;
+  padding: 0;
 }
 
 /* 本家は帯のボタンに乗ると、地を明るくして印と文字を青緑にする。 */
@@ -900,11 +909,16 @@
   background: #3d4346;
 }
 
-/* 本家の帯の区切りは帯の中の高さいっぱい（32px）で、左右の間は帯の4px だけ。色は線と同じ白10%。 */
+/* 本家の帯の区切りは帯の中の高さいっぱい（32px）で、左右の間は帯の4px だけ。色は線と同じ白10%。
+   クリッピングの後ろだけは、本家の中の空の要素の分だけ左が4px 広い（クリッピングの右から区切りまで8px）。 */
 .fashion-studio-node-toolbar > .fashion-studio-node-toolbar-divider {
   height: 32px;
   margin: 0;
   background: rgb(255 255 255 / 10%);
+}
+
+.fashion-studio-node-toolbar > .fashion-studio-node-toolbar-divider:first-of-type {
+  margin-left: 4px;
 }
 
 /* 生成結果の 👍👎「フィードバックする」（本家の feedback 部品: 印は 32px の正方形、窓は 理由 368px・要望 280px） */
@@ -912,11 +926,31 @@
   width: 32px;
   justify-content: center;
   padding: 0;
-  color: #a8b0b3;
+  color: inherit;
 }
 .fashion-studio-node-feedback .fashion-studio-feedback-icon:hover:not(:disabled),
 .fashion-studio-node-feedback .fashion-studio-feedback-icon[aria-pressed="true"] { color: #20d0c4; }
 .fashion-studio-node-feedback button.is-active { background: rgb(255 255 255 / 10%); color: #20d0c4; }
+/* 本家の 👍👎 の帯（2026-11-12 本家の本番で、画面の上の大きさを測った。幅272・高さ42）: 中は4px の余白と4px の間、
+   👍👎 は32px 四方に16px の白い印、「フィードバックする」「再生成」は高さ32・左右8px・文字12px（太さ500・白）、区切りは高さ32px。 */
+.fashion-studio-node-feedback {
+  height: 42px;
+  border-color: rgb(255 255 255 / 10%);
+  border-radius: 12px;
+  color: #fff;
+}
+.fashion-studio-node-feedback [data-testid="studio-feedback-bar"] { gap: 4px; }
+.fashion-studio-node-feedback [data-testid="studio-feedback-bar"] > button,
+.fashion-studio-node-feedback [data-testid="studio-feedback-improve"] {
+  height: 32px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+.fashion-studio-node-feedback [data-testid="studio-feedback-bar"] > .fashion-studio-feedback-icon { padding: 0; }
+.fashion-studio-node-feedback .fashion-studio-feedback-icon > svg { width: 16px; height: 16px; }
+.fashion-studio-node-feedback [data-testid="studio-feedback-bar"] > .fashion-studio-node-toolbar-divider { height: 32px; margin: 0; background: rgb(255 255 255 / 10%); }
 .fashion-studio-feedback-popover {
   position: absolute;
   z-index: 30;
@@ -1425,7 +1459,9 @@ html[data-studio-theme="light"] header button:hover { background: rgba(0, 0, 0, 
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-reason { border-color: rgba(0, 0, 0, 0.12); color: #6b7175; }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-reason.is-selected { border-color: #0fa89e; color: #0b7fbf; }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-feedback-remark { border-color: rgba(0, 0, 0, 0.12); background: #f3f4f5; }
-.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-icon { color: #6b7175; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback [data-testid="studio-feedback-bar"] > .fashion-studio-feedback-icon { color: #111817; }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback { border-color: rgba(0, 0, 0, 0.05); }
+.fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback [data-testid="studio-feedback-bar"] > .fashion-studio-node-toolbar-divider { background: rgba(0, 0, 0, 0.05); }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-icon:is(:hover, [aria-pressed="true"]) { color: #0fa89e; }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-primary:hover:not(:disabled) { background: #3ddbd0; }
 .fashion-studio-project-detail-parity[data-studio-theme="light"] .fashion-studio-node-feedback .fashion-studio-feedback-secondary { background: #e9ebec; color: #1c1f21; }
