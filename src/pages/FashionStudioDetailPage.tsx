@@ -68,7 +68,7 @@ import { FoundImageCredit } from '../features/designDetail/FoundImageCredit';
 import type { FoundImage } from '../features/designDetail/referenceImageSearch';
 import { incomingFileDataUrl, useIncomingImageFile } from '../lib/incomingImage';
 import { STUDIO_CANVAS_IMAGE_FEATURE, STUDIO_CANVAS_IMAGE_ROLE, STUDIO_CANVAS_LIMIT_MESSAGE, STUDIO_MAX_CANVAS_IMAGES, STUDIO_MAX_CHILD_FORMS, isStudioFormKey, newStudioFormId,
-  studioCanvasImageKey, studioCanvasImageObject, studioChildFormIdOf, studioChildFormKey, studioChildNodeKey, studioNodeBeside, withStudioCanvasImage, withStudioForm, withStudioParent,
+  studioCanvasImageKey, studioCanvasImageObject, studioChildFormIdOf, studioChildFormKey, studioChildNodeKey, studioNodeBeside, studioSettleNewNodes, withStudioCanvasImage, withStudioForm, withStudioParent,
   type StudioCanvasImageCredit, type StudioCanvasImageKind, type StudioChildForm, type StudioEditRequest } from '../lib/studioCanvasNodes';
 
 const FASHION_STUDIO_PROJECT_ICON = '/lightchain-assets/icons/fashion-studio.png';
@@ -956,7 +956,9 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     extraSpecs.push(resultSpec(image.key));
   }
   const nodeKeys = [...nodeSpecs, ...extraSpecs].map(spec => spec.key);
-  const basePositions = { ...studioNodePositions(nodeSpecs, savedPositions), ...extraPositions };
+  // Results without a saved place step down past a node they would cover (studioSettleNewNodes); everything else stays put.
+  const newResultKeys = new Set([...resultNodeKeys, ...childForms.flatMap(form => childResultKeys(form))].filter(key => !savedPositions[key]));
+  const basePositions = studioSettleNewNodes({ ...studioNodePositions(nodeSpecs, savedPositions), ...extraPositions }, sizes, nodeKeys, newResultKeys);
   const [nodeDrag, setNodeDrag] = useState<{ scopeKey: string; key: string; point: StudioPoint } | null>(null);
   const [snapLines, setSnapLines] = useState<StudioSnapLine[]>([]);
   const nodeDragRef = useRef<{ pointerId: number; key: string; startX: number; startY: number; origin: StudioPoint; point: StudioPoint; moved: boolean } | null>(null);

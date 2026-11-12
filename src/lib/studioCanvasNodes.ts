@@ -202,3 +202,32 @@ export const studioNodeBeside = (source: Omit<StudioRect, 'id'> | null, others: 
   }
   return { x: Math.round(point.x), y: Math.round(point.y) };
 };
+
+/** Results line up to the right of their form like Light's (touching, no gap). A result that has no saved place yet and
+ * would land on top of another node (a free image or form placed there earlier) steps down past it, the way a node added
+ * from the toolbar does (studioNodeBeside). Found in production on 2026-11-12: a form's second result covered the
+ * クリッピング image that had been put beside the first. Nodes with a saved place never move; results touching each
+ * other in their row are not an overlap. */
+export const studioSettleNewNodes = (positions: StudioPositions, sizes: Readonly<Record<string, { width: number; height: number }>>,
+  order: readonly string[], moving: ReadonlySet<string>): StudioPositions => {
+  const rectAt = (key: string): Omit<StudioRect, 'id'> | null => {
+    const size = sizes[key], point = positions[key];
+    return size && size.height > 0 && point ? { x: point.x, y: point.y, width: size.width, height: size.height } : null;
+  };
+  const placed = order.filter(key => !moving.has(key)).map(rectAt).filter((rect): rect is Omit<StudioRect, 'id'> => rect !== null);
+  const settled: StudioPositions = { ...positions };
+  for (const key of order) {
+    if (!moving.has(key)) continue;
+    let rect = rectAt(key);
+    if (!rect) continue;
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+      const current: Omit<StudioRect, 'id'> = rect;
+      const hit = placed.find(other => overlaps(current, other, 0));
+      if (!hit) break;
+      rect = { ...current, y: hit.y + hit.height + 45 };
+    }
+    settled[key] = { x: rect.x, y: rect.y };
+    placed.push(rect);
+  }
+  return settled;
+};
