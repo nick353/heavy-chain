@@ -10,7 +10,7 @@ import { graphicFileName } from '../../features/graphicDesign/graphicResult';
 import { VECTOR_COLOR_CHOICES, VECTOR_DETAILS, type VectorDetail, type VectorTraceResult } from '../../lib/vectorTrace';
 import { saveSvgFile, traceImageUrlToVector } from '../../lib/vectorTraceClient';
 import {
-  createGraphicDocument, GRAPHIC_SEND_TARGETS, loadRunCandidates, registerCandidate, setCandidateFavorite, type GraphicCandidate,
+  createGraphicDocument, GRAPHIC_SEND_TARGETS, loadRunCandidates, registerCandidate, setCandidateFavorite, type GraphicCandidate, type GraphicSendTarget,
 } from '../../features/graphicDesign/graphicResultActions';
 
 /**
@@ -73,9 +73,8 @@ export function GraphicResultView({ brandId, userId, jobId, fallbackUrl, locked,
     toast.success(favorite ? 'お気に入りに追加しました' : 'お気に入りから外しました');
   }, 'お気に入りを保存できませんでした');
 
-  const sendTo = (target: typeof GRAPHIC_SEND_TARGETS[number]) => selected && brandId && void run('send', async () => {
-    const artifactId = await registerCandidate(brandId, userId, selected, TITLE);
-    navigate(target.href(artifactId));
+  const sendTo = (target: GraphicSendTarget) => selected && brandId && void run('send', async () => {
+    navigate(target.href(target.source === 'image' ? selected.id : await registerCandidate(brandId, userId, selected, TITLE)));
   }, 'ほかのツールに送れませんでした');
 
   const createDocument = () => brandId && candidates.length > 0 && void run('document', async () => {

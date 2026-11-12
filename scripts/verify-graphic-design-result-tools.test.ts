@@ -8,6 +8,7 @@ import {
 import { candidatePlan } from '../src/lib/imageCandidatePlan.ts';
 import { candidateGrid, graphicFileName } from '../src/features/graphicDesign/graphicResult.ts';
 import { upscaleLimit } from '../src/lib/clientImageOps.ts';
+import { designDetailHrefForLegacyCanvas } from '../src/lib/legacyCanvasRoute.ts';
 
 // 独自（本家で流せないため想像で作った）: Light's AIグラフィックデザイン answers 「権限がありません」 on this account, so its
 // result screen cannot be compared. Light's own demo video of the tool (graphic-design.mp4) shows four proposals per run,
@@ -181,4 +182,15 @@ test('a tool\'s spinner sits on the button that is working (参考画像にし�
   for (const key of ['recolor', 'tile', 'sheet', 'cutout']) assert.match(view, new RegExp(`act\\('${key}', async`));
   assert.doesNotMatch(view, /\{working \? <Loader2/);
   assert.match(view, /const makeReference = \(suffix: string\) => act\('reference',/);
+});
+
+test('Canvasで一部を修正 opens the proposal itself on the canvas (it arrived only as 画像1 in the hidden assistant panel)', () => {
+  // Production 2026-11-12: sent as a library artifact, the design page showed its empty 「Hello！」 start screen and the
+  // image waited as 「画像1」 in the collapsed panel. A saved image opens as its own Canvas project instead, selected.
+  const actions = readFileSync('src/features/graphicDesign/graphicResultActions.ts', 'utf8');
+  assert.match(actions, /id: 'canvas', label: 'Canvasで一部を修正', source: 'image', href: \(imageId: string\) => `\/canvas\/new\?galleryImageId=\$\{encodeURIComponent\(imageId\)\}`/);
+  for (const id of ['printing', 'vector', 'fabric']) assert.match(actions, new RegExp(`id: '${id}', label: '[^']+', source: 'library'`));
+  const view = readFileSync('src/components/lightchain/GraphicResultView.tsx', 'utf8');
+  assert.match(view, /navigate\(target\.href\(target\.source === 'image' \? selected\.id : await registerCandidate\(brandId, userId, selected, TITLE\)\)\)/);
+  assert.equal(designDetailHrefForLegacyCanvas('new', '?galleryImageId=ai-70af0b9a-9fef-4be9-9a38-367e192cdc6e-0'), '/designProduction/detail?openImageId=ai-70af0b9a-9fef-4be9-9a38-367e192cdc6e-0');
 });
