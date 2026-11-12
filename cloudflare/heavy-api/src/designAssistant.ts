@@ -296,7 +296,18 @@ export function mergeShopResearch(main: ResearchResult, shop: ResearchResult | n
   if (!shop) return main;
   const plain = (value?: string) => (value ?? '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
   const seen = new Set(main.claims.map(claim => plain(claim.quote)));
-  const claims = shop.claims.filter(claim => plain(claim.quote) && !/^#|通販の実商品$/.test(plain(claim.quote)) && !seen.has(plain(claim.quote))).slice(0, AGENT_SHOP_MAX_CLAIMS);
+  // Claude cites only the part of a product's line that the page states (production 2026-11-12, テーマ企画 8d3316ef: the 8
+  // cited spans were 「価格は$950」 alone), so each cited span stands for its whole line: the product, the shop and the price.
+  const lines = shop.text.split('\n').map(line => line.replace(/^\s*(?:[-・*•]|\d+[.)．])\s*/, '').trim()).filter(line => line && !line.startsWith('#'));
+  const lineOf = (quote: string) => { const span = plain(quote).replace(/…$/, ''); return (span && lines.find(line => plain(line).includes(span))) || quote; };
+  const cut = (value: string) => (value.length > 160 ? `${value.slice(0, 159).replace(/(^|[^*])\*$/, '$1')}…` : value);
+  const used = new Set<string>();
+  const claims = shop.claims.map(claim => ({ ...claim, quote: cut(lineOf(claim.quote ?? '')) })).filter((claim) => {
+    const key = plain(claim.quote);
+    if (!key || /^#|通販の実商品$/.test(key) || seen.has(key) || used.has(key)) return false;
+    used.add(key);
+    return true;
+  }).slice(0, AGENT_SHOP_MAX_CLAIMS);
   // The receipt says how many cited products the shop search added (0: it cost its tokens and added nothing).
   const both = shopUsage(main.usage, shop.usage);
   const usage = both ? { ...both, shop_claims: claims.length } : both;

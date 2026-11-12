@@ -117,6 +117,21 @@ test('a failed shop search leaves the research as it was, and is never retried w
   assert.equal(sent.length, 1);
 });
 
+test('a cited span stands for its whole product line (the product, the shop and the price), once per line', () => {
+  // Production 2026-11-12 (テーマ企画 8d3316ef): Claude cited only 「価格は$950」 of each line, and 8 such fragments were added.
+  const main: ResearchResult = { text: '## トレンド\n- a', sources: [], claims: [], searchUsed: true, searchErrors: [], usage: null, model: 'm' };
+  const url = 'https://www.net-a-porter.com/us/en/product/1103942/zimmermann/corsage-appliqued-linen-and-silk-blend-blouse';
+  const shop: ResearchResult = {
+    text: '## 通販の実商品\n- ZIMMERMANN コルサージュ付きリネンブラウス（NET-A-PORTER）、価格は$950、リネン51%・シルク49%\n- 同じページの別の行、価格は$875\n[商品検索] 女性 ブラウス',
+    sources: [{ url, title: 'blouse' }],
+    claims: [{ url, title: 'blouse', quote: '価格は$950' }, { url, title: 'blouse', quote: 'リネン51%・シルク49%' }, { url, title: 'blouse', quote: '価格は$875' }, { url, title: 'blouse', quote: '行にない文' }],
+    searchUsed: true, searchErrors: [], usage: null, model: 'm',
+  };
+  const merged = mergeShopResearch(main, shop);
+  assert.deepEqual(merged.claims.map(claim => claim.quote), ['ZIMMERMANN コルサージュ付きリネンブラウス（NET-A-PORTER）、価格は$950、リネン51%・シルク49%', '同じページの別の行、価格は$875', '行にない文']);
+  assert.match(merged.text, /## 通販の実商品\n- ZIMMERMANN コルサージュ付きリネンブラウス（NET-A-PORTER）、価格は\$950、リネン51%・シルク49%\n- 同じページの別の行、価格は\$875\n- 行にない文$/);
+});
+
 test('merging keeps 20 pages and 25 sentences, the shop ones included; a shop search that cited nothing adds only its cost', () => {
   const pages = (prefix: string, count: number) => Array.from({ length: count }, (_, i) => ({ url: `https://${prefix}${i}.example/`, title: `${prefix}${i}`, quote: `${prefix} の文 ${i}` }));
   const research = (sources: ReturnType<typeof pages>, extra: Partial<ResearchResult> = {}): ResearchResult => ({ text: '## トレンド\n- a', sources, claims: sources, searchUsed: true, searchErrors: [], usage: { prompt_tokens: 10, completion_tokens: 1, total_tokens: 11 }, model: 'm', ...extra });
