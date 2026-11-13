@@ -293,8 +293,9 @@ function StudioNodeMenu({ x, y, image, onClose, onDownload, onCopy, onDuplicate,
   }, [onClose]);
   const height = image ? 196 : 151;
   const left = Math.min(x, window.innerWidth - 318), top = Math.min(y, window.innerHeight - height - 8);
-  const row = 'flex h-[45px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-white hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40';
-  const chip = 'ml-auto rounded bg-white/[0.08] px-1.5 py-0.5 text-xs text-white/70';
+  // Light's rows are 12px words on one line (2026-11-13: 「キャンバス内コピーして貼り付け」 and its Ctrl/⌘ + D fit in 294px).
+  const row = 'flex h-[45px] w-full items-center gap-2 whitespace-nowrap rounded-lg px-2.5 text-left text-xs text-white hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40';
+  const chip = 'ml-auto shrink-0 whitespace-nowrap rounded bg-white/[0.08] px-1 py-0.5 text-xs text-white/70';
   return createPortal(<div ref={ref} role="menu" aria-label="ノードの操作" data-studio-chrome="" data-testid="fashion-studio-node-menu" onContextMenu={event => event.preventDefault()}
     className="fixed z-[60] w-[310px] rounded-xl border border-white/10 bg-[#292d2f] p-2 shadow-2xl" style={{ left, top }}>
     {image && <><button type="button" role="menuitem" className={row} onClick={onDownload}><Download aria-hidden="true" className="h-4 w-4" />ダウンロード</button>
@@ -1078,9 +1079,10 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     queueLayoutSave(next);
     pushCanvasOp('layout');
   };
-  /** Light's 取り消し / やり直し cover moves and deletions in the order they were made; this keeps that order (the moves
-   * themselves stay in the layout history, a deletion is undone by showing its nodes again). */
-  type StudioCanvasOp = 'layout' | { deleted: string[] };
+  /** Light's 取り消し / やり直し cover moves, additions and deletions in the order they were made; this keeps that order
+   * (the moves themselves stay in the layout history, a deletion is undone by showing its nodes again and an addition by
+   * hiding the new node, which the next open tidies away like a deletion). */
+  type StudioCanvasOp = 'layout' | { deleted: string[] } | { added: string[] };
   const canvasOpsRef = useRef<{ scopeKey: string; past: StudioCanvasOp[]; future: StudioCanvasOp[] }>({ scopeKey: '', past: [], future: [] });
   const [, setCanvasOpsVersion] = useState(0);
   const canvasOps = () => {
@@ -1106,7 +1108,12 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     const op = direction === 'undo' ? ops.past[ops.past.length - 1] : ops.future[ops.future.length - 1];
     if (!op) return;
     if (op === 'layout') stepLayoutHistory(direction);
-    else if (!await writeProject(async () => snapshot => direction === 'undo' ? withStudioNodesRestored(snapshot, op.deleted) : withStudioNodesDeleted(snapshot, op.deleted), { quiet: true })) return;
+    else {
+      const hide = 'added' in op ? direction === 'undo' : direction === 'redo';
+      const keys = 'added' in op ? op.added : op.deleted;
+      if (hide) viewportInteractionRef.current?.select(null);
+      if (!await writeProject(async () => snapshot => hide ? withStudioNodesDeleted(snapshot, keys) : withStudioNodesRestored(snapshot, keys), { quiet: true })) return;
+    }
     if (direction === 'undo') { ops.past = ops.past.slice(0, -1); ops.future = [...ops.future, op]; }
     else { ops.future = ops.future.slice(0, -1); ops.past = [...ops.past, op]; }
     setCanvasOpsVersion(value => value + 1);
@@ -1318,7 +1325,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
         credit: options.credit ?? null, operationId: requestId });
       return snapshot => withStudioCanvasImage(snapshot, object, { [key]: point });
     });
-    if (saved) viewportInteractionRef.current?.select(key);
+    if (saved) { viewportInteractionRef.current?.select(key); pushCanvasOp({ added: [key] }); }
     return saved;
   };
   /** The image toolbar's テキストで生成・範囲指定で生成・下着のフィッティング・3D画像に変換 (and the 画像編集 tools that run on the
@@ -1353,7 +1360,8 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     if (!await writeProject(async () => snapshot => withStudioForm(snapshot, form, { [formKey]: anchor }))) return;
     pendingChildRef.current = null;
     setFreshForms(current => new Set(current).add(child.formId));
-    if (!child.edit) viewportInteractionRef.current?.select(formKey);
+    // A 画像編集 form runs at once and is not drawn: only a drawn form's addition can be undone.
+    if (!child.edit) { viewportInteractionRef.current?.select(formKey); pushCanvasOp({ added: [formKey] }); }
   };
   // ── Deleting and copying nodes (Light's right-click menu and keys, 2026-11-13) ─────────────────────────────────────
   const [nodeMenu, setNodeMenu] = useState<{ key: string; x: number; y: number; image: boolean } | null>(null);
