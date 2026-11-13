@@ -261,6 +261,8 @@ export function removeBackground(data: Uint8ClampedArray, width: number, height:
 
 /** Light's demo draws four proposals per run; the server plans at most 4 candidates per request. */
 export const GRAPHIC_CANDIDATE_COUNT = 4;
+/** 生成中の案内。#301 で候補を同時に作るようになり、本番の実測は約47秒（前は162〜180秒）。 */
+export const GRAPHIC_RUNNING_NOTE = `生成中です…（${GRAPHIC_CANDIDATE_COUNT}案を同時に作っています。1分ほどかかります）`;
 
 /**
  * One direction per proposal (the server adds 「variation n of 4; follow this direction」 to that candidate). Without them
