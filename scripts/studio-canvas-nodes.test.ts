@@ -506,4 +506,6 @@ test('adding an image or a form can be undone and redone like Light, and the men
   // Light's menu: 12px words on one line, the shortcut chip never wraps.
   assert.match(page, /const row = 'flex h-\[45px\] w-full items-center gap-2 whitespace-nowrap[^']*text-xs text-white/);
   assert.match(page, /const chip = 'ml-auto shrink-0 whitespace-nowrap/);
+  // The marks keep Light's 16px size when the longest row is full (2026-11-13 production: the copy mark shrank).
+  assert.match(page, /const row = '[^']*\[&>svg\]:shrink-0/);
 });

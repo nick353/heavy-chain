@@ -294,7 +294,7 @@ function StudioNodeMenu({ x, y, image, onClose, onDownload, onCopy, onDuplicate,
   const height = image ? 196 : 151;
   const left = Math.min(x, window.innerWidth - 318), top = Math.min(y, window.innerHeight - height - 8);
   // Light's rows are 12px words on one line (2026-11-13: 「キャンバス内コピーして貼り付け」 and its Ctrl/⌘ + D fit in 294px).
-  const row = 'flex h-[45px] w-full items-center gap-2 whitespace-nowrap rounded-lg px-2.5 text-left text-xs text-white hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40';
+  const row = 'flex h-[45px] w-full items-center gap-2 whitespace-nowrap rounded-lg [&>svg]:shrink-0 px-2.5 text-left text-xs text-white hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40';
   const chip = 'ml-auto shrink-0 whitespace-nowrap rounded bg-white/[0.08] px-1 py-0.5 text-xs text-white/70';
   return createPortal(<div ref={ref} role="menu" aria-label="ノードの操作" data-studio-chrome="" data-testid="fashion-studio-node-menu" onContextMenu={event => event.preventDefault()}
     className="fixed z-[60] w-[310px] rounded-xl border border-white/10 bg-[#292d2f] p-2 shadow-2xl" style={{ left, top }}>
