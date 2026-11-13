@@ -475,14 +475,15 @@ test('account-wide monthly admission cap is shared across brands',async t=>{
   assert.equal(s.calls.length,2);
 });
 
-test('provider exception remains unknown; later candidates are not submitted and same-ID recovery never reinfers',async t=>{
+// 2026-11-12: candidates are drawn at the same time, so every candidate is already sent when one fails.
+test('provider exceptions stay unknown per candidate (all were sent together) and same-ID recovery never reinfers',async t=>{
   const s=imageSetup(); t.after(()=>s.db.sql.close()); s.setHook(async()=>{throw new Error('binding response lost');});
   const id=crypto.randomUUID(); const input={...s.input(),count:3};
   const result=await json(await s.call(url+'generate-image','alice',input,id));
-  assert.equal(result.success,false); assert.equal(result.state,'unknown'); assert.equal(result.usage.estimatedMicroUSD,null); assert.equal(result.usage.unknownEstimateCount,1);
-  assert.equal(s.calls.length,1); assert.equal(s.bucket.puts,0);
-  await json(await s.call(url+'generate-image','alice',input,id)); await json(await s.call('/v1/image-ai/requests/'+id)); assert.equal(s.calls.length,1);
-  const usage=await json(await s.call('/v1/image-ai/usage?brand_id=brand')); assert.equal(usage.remainingUnits,24); assert.equal(usage.uncertainImages,1);
+  assert.equal(result.success,false); assert.equal(result.state,'unknown'); assert.equal(result.usage.estimatedMicroUSD,null); assert.equal(result.usage.unknownEstimateCount,3);
+  assert.equal(s.calls.length,3); assert.equal(s.bucket.puts,0);
+  await json(await s.call(url+'generate-image','alice',input,id)); await json(await s.call('/v1/image-ai/requests/'+id)); assert.equal(s.calls.length,3);
+  const usage=await json(await s.call('/v1/image-ai/usage?brand_id=brand')); assert.equal(usage.remainingUnits,22); assert.equal(usage.uncertainImages,3);
   assert.equal(s.db.sql.prepare('SELECT admitted_units FROM heavy_ai_daily').get()!.admitted_units,3);
   assert.equal(s.db.sql.prepare('SELECT admitted_centi_neurons FROM heavy_ai_daily').get()!.admitted_centi_neurons,7815);
 });
@@ -585,41 +586,42 @@ test('OpenAI observes a connected edit beyond 90s and persists once with GET and
   assert.equal(calls,1); assert.equal(s.bucket.puts,1);
 });
 
-test('OpenAI serial candidates retain their own observation window and the same-owner admission fence past 210s', async t => {
+/** Lets queued promise work run (setImmediate is not among the mocked timers) until the condition holds. */
+const until = async (ok: () => boolean, label = 'condition') => {
+  for (let turn = 0; turn < 2000 && !ok(); turn++) await new Promise(resolve => setImmediate(resolve));
+  assert.ok(ok(), label);
+};
+
+test('OpenAI parallel candidates each keep their own 180s observation window and the same-owner admission fence while one runs', async t => {
   const s = openAIObservationSetup(t);
   t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-10-01T00:00:00Z')});
-  const release: Array<() => void> = []; const entered: Array<() => void> = [];
-  const arrivals = [0,1].map(index => new Promise<void>(resolve => { entered[index] = resolve; }));
-  let calls = 0;
-  globalThis.fetch = async () => { const index = calls++; return new Promise(resolve => {
-    release[index] = () => resolve(openAIObservationResponse()); entered[index]();
-  }); };
+  const release: Array<() => void> = []; let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Promise(resolve => { release.push(() => resolve(openAIObservationResponse())); }); };
   const id = crypto.randomUUID(); const input = {...s.input(),count:2};
-  const pending = s.call(url+'generate-image','alice',input,id); await arrivals[0];
-  t.mock.timers.tick(120000); release[0](); await arrivals[1];
-  t.mock.timers.tick(90001);
+  const pending = s.call(url+'generate-image','alice',input,id);
+  await until(() => calls === 2, 'both candidates are sent before either answers');
+  t.mock.timers.tick(120000); release[0]();
+  await until(() => s.bucket.puts === 1, 'the first answer is stored while the second still runs');
   const receipt = await json(await s.call('/v1/image-ai/requests/'+id));
   assert.equal(receipt.state,'running'); assert.equal(receipt.persistedCandidateCount,1);
   assert.equal((await s.call(url+'generate-image','alice',s.input(),crypto.randomUUID())).status,429);
   assert.equal((await json(await s.call(url+'generate-image','alice',input,id))).state,'running');
-  assert.equal(calls,2);
-  t.mock.timers.tick(89998); release[1]();
+  t.mock.timers.tick(59999); release[1]();
   const result = await json(await pending); assert.equal(result.success,true); assert.equal(result.persistedCandidateCount,2);
   assert.equal(calls,2); assert.equal(s.bucket.puts,2);
 });
 
-test('OpenAI 180s timeout is sanitized, stops the batch and never adopts a late provider result or rewrites terminal unknown', async t => {
+test('OpenAI 180s timeout is sanitized for every candidate in flight and never adopts a late provider result or rewrites terminal unknown', async t => {
   const s = openAIObservationSetup(t);
   t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-10-01T00:00:00Z')});
-  let release!: () => void; let entered!: () => void;
-  const arrived = new Promise<void>(resolve => { entered = resolve; }); let calls = 0;
-  globalThis.fetch = async () => { calls++; return new Promise(resolve => { release = () => resolve(openAIObservationResponse()); entered(); }); };
+  const releases: Array<() => void> = []; const release = () => releases.forEach(item => item()); let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Promise(resolve => { releases.push(() => resolve(openAIObservationResponse())); }); };
   const id = crypto.randomUUID(); const input = {...s.input(),count:3};
-  const pending = s.call(url+'generate-image','alice',input,id); await arrived;
+  const pending = s.call(url+'generate-image','alice',input,id); await until(() => calls === 3);
   t.mock.timers.tick(179999); assert.equal((await json(await s.call('/v1/image-ai/requests/'+id))).state,'running');
   t.mock.timers.tick(1); const result = await json(await pending);
   assert.equal(result.state,'unknown'); assert.equal(result.error,'image_provider_timeout');
-  assert.equal(result.usage.attemptedImages,1); assert.equal(result.usage.unknownEstimateCount,1);
+  assert.equal(result.usage.attemptedImages,3); assert.equal(result.usage.unknownEstimateCount,3);
   const snapshot = () => ({
     request:s.db.sql.prepare('SELECT * FROM heavy_ai_requests WHERE request_id=?').get(id),
     candidates:s.db.sql.prepare('SELECT * FROM heavy_ai_candidates WHERE request_id=? ORDER BY candidate_index').all(id),
@@ -627,17 +629,16 @@ test('OpenAI 180s timeout is sanitized, stops the batch and never adopts a late 
   });
   const before = snapshot(); release(); t.mock.timers.tick(500000);
   await json(await s.call('/v1/image-ai/requests/'+id)); await json(await s.call(url+'generate-image','alice',input,id));
-  assert.deepEqual(snapshot(),before); assert.equal(calls,1); assert.equal(s.bucket.puts,0);
+  assert.deepEqual(snapshot(),before); assert.equal(calls,3); assert.equal(s.bucket.puts,0);
 });
 
 test('stale GET expires an abandoned OpenAI observation without letting a late connected result overwrite unknown or reach R2', async t => {
   const s = openAIObservationSetup(t); const now = Date.parse('2026-10-01T00:00:00Z');
   t.mock.timers.enable({apis:['Date','setTimeout'],now});
-  let release!: () => void; let entered!: () => void; let calls = 0;
-  const arrived = new Promise<void>(resolve => { entered = resolve; });
-  globalThis.fetch = async () => { calls++; return new Promise(resolve => { release = () => resolve(openAIObservationResponse()); entered(); }); };
+  const releases: Array<() => void> = []; const release = () => releases.forEach(item => item()); let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Promise(resolve => { releases.push(() => resolve(openAIObservationResponse())); }); };
   const id = crypto.randomUUID(); const input = {...s.input(),count:2};
-  const pending = s.call(url+'generate-image','alice',input,id); await arrived;
+  const pending = s.call(url+'generate-image','alice',input,id); await until(() => calls === 2);
   // Advance only the wall clock to model a suspended/delayed timer callback.
   t.mock.timers.setTime(now+210001);
   const stale = await json(await s.call('/v1/image-ai/requests/'+id));
@@ -646,7 +647,7 @@ test('stale GET expires an abandoned OpenAI observation without letting a late c
     candidates:s.db.sql.prepare('SELECT * FROM heavy_ai_candidates WHERE request_id=? ORDER BY candidate_index').all(id)});
   const before = snapshot(); t.mock.timers.setTime(now+220000); release();
   const late = await json(await pending); assert.equal(late.state,'unknown'); assert.equal(late.error,'image_outcome_unknown');
-  assert.deepEqual(snapshot(),before); assert.equal(calls,1); assert.equal(s.bucket.puts,0);
+  assert.deepEqual(snapshot(),before); assert.equal(calls,2); assert.equal(s.bucket.puts,0);
   assert.equal(s.db.sql.prepare('SELECT count(*) n FROM generated_images').get()!.n,0);
 });
 
@@ -687,12 +688,12 @@ test('OpenAI error receipts keep unusable output uncertain, fail explicit reject
     const id = crypto.randomUUID(); const input = {...s.input(),count:2};
     const result = await json(await s.call(url+'generate-image','alice',input,id));
     assert.equal(result.success,false); assert.equal(result.state,state); assert.equal(result.error,error);
-    assert.equal(result.usage.attemptedImages,1); assert(!JSON.stringify(result).includes(secret));
+    assert.equal(result.usage.attemptedImages,2); assert(!JSON.stringify(result).includes(secret));
     await json(await s.call('/v1/image-ai/requests/'+id)); await json(await s.call(url+'generate-image','alice',input,id));
-    assert.equal(calls,1); assert.equal(s.bucket.puts,0); assert.equal(s.db.sql.prepare('SELECT count(*) n FROM generated_images').get()!.n,0);
+    assert.equal(calls,2); assert.equal(s.bucket.puts,0); assert.equal(s.db.sql.prepare('SELECT count(*) n FROM generated_images').get()!.n,0);
     const stored = s.db.sql.prepare('SELECT error_code,descriptor FROM heavy_ai_candidates WHERE request_id=? ORDER BY candidate_index').all(id);
     assert(!JSON.stringify(stored).includes(secret));
-    assert.deepEqual(JSON.parse(stored[0].descriptor as string).providerError,diagnostics);
+    for (const candidate of stored) assert.deepEqual(JSON.parse(candidate.descriptor as string).providerError,diagnostics);
   });
 });
 
@@ -895,4 +896,95 @@ test('the innerwear fitting keeps the model photo frame, not the garment photo f
   const { width, height, ...input }=s.input() as Record<string, unknown>; void width; void height;
   const fitted=parseImageInput('edit-image',{...input,generationRoute:'innerwear',imageUrls:[ref(512,288),ref(288,384)]} as never,{ provider:'workers_ai', model:INNERWEAR_IMAGE_MODEL } as never);
   assert.deepEqual([fitted.width,fitted.height],[768,1024]);
+});
+
+// 2026-11-12: a request's candidates are drawn at the same time (AIグラフィックデザインの4案 took ~35 s each, ~2 min 40 s in all).
+test('AIグラフィックデザインの4案: the queued job sends all four candidates before any answers, and stores each once', async t => {
+  const s = openAIObservationSetup(t); const sent: string[] = [];
+  Object.assign(s.env,{ IMAGE_JOB_QUEUE: { send: async (body: { requestId: string }) => { sent.push(body.requestId); } } });
+  const releases: Array<() => void> = []; let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Promise(resolve => { releases.push(() => resolve(openAIObservationResponse())); }); };
+  const id = crypto.randomUUID();
+  const pending = s.call(url+'generate-image','alice',{...s.input(),count:4},id);
+  await until(() => sent.length === 1);
+  const job = processImageJob(s.env as never,id);
+  await until(() => calls === 4, 'all four candidates are sent before any answers');
+  const running = s.db.sql.prepare('SELECT state,attempted_at FROM heavy_ai_candidates WHERE request_id=? ORDER BY candidate_index').all(id);
+  assert.deepEqual(running.map(row => row.state),['running','running','running','running']);
+  assert(running.every(row => typeof row.attempted_at === 'string'));
+  releases.forEach(release => release()); await job;
+  assert.equal(calls,4); assert.equal(s.db.sql.prepare('SELECT state FROM heavy_ai_requests WHERE request_id=?').get(id)!.state,'completed');
+  assert.equal(s.db.sql.prepare('SELECT count(*) n FROM generated_images').get()!.n,4);
+  await processImageJob(s.env as never,id); assert.equal(calls,4,'a redelivered message sends nothing again');
+  const result = await json(await pending); assert.equal(result.success,true); assert.equal(result.persistedCandidateCount,4);
+});
+
+test('one candidate refused and one with an unknown outcome do not stop the others; recovery never reinfers', async t => {
+  const s = imageSetup(); t.after(() => s.db.sql.close());
+  s.setHook(async form => {
+    const index = Number(form.get('seed')) - 172903;
+    if (index === 1) throw new Error('binding response lost');
+    if (index === 2) throw new Error('AiError: AiError: Your output has been flagged. (parallel)');
+    return { image: Buffer.from(s.output).toString('base64') };
+  });
+  const id = crypto.randomUUID(); const input = {...s.input(),count:4};
+  const result = await json(await s.call(url+'generate-image','alice',input,id));
+  assert.equal(result.success,false); assert.equal(result.state,'unknown'); assert.equal(result.persistenceStatus,'partial');
+  assert.deepEqual(result.images.map((image: Json) => image.candidateIndex),[0,3]);
+  assert.deepEqual(result.failedCandidates,[{candidateIndex:1,state:'unknown',error:'image_outcome_unknown'},
+    {candidateIndex:2,state:'failed',error:'image_provider_moderation_blocked'}]);
+  assert.equal(s.calls.length,4); assert.equal(s.bucket.puts,2);
+  await json(await s.call('/v1/image-ai/requests/'+id)); await json(await s.call(url+'generate-image','alice',input,id));
+  assert.equal(s.calls.length,4); assert.equal(s.bucket.puts,2);
+  // The refused candidate costs no unit; the unknown one stays reserved.
+  assert.equal(s.db.sql.prepare('SELECT quota_units FROM heavy_ai_requests WHERE request_id=?').get(id)!.quota_units,3);
+});
+
+test('an OpenAI candidate that times out does not hold back the others', async t => {
+  const s = openAIObservationSetup(t);
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-10-01T00:00:00Z')});
+  let calls = 0;
+  globalThis.fetch = async () => (++calls === 1 ? new Promise<Response>(() => {}) : openAIObservationResponse());
+  const id = crypto.randomUUID();
+  const pending = s.call(url+'generate-image','alice',{...s.input(),count:2},id);
+  await until(() => calls === 2 && s.bucket.puts === 1, 'the answered candidate is stored while the other still runs');
+  assert.equal((await json(await s.call('/v1/image-ai/requests/'+id))).persistedCandidateCount,1);
+  t.mock.timers.tick(180000);
+  const result = await json(await pending);
+  assert.equal(result.state,'unknown'); assert.equal(result.error,'image_provider_timeout'); assert.equal(result.images.length,1);
+  assert.deepEqual(result.failedCandidates.map((item: Json) => item.error),['image_provider_timeout']);
+});
+
+test('logout while two candidates are drawn stores neither and settles the request once both have answered', async t => {
+  const s = imageSetup(); t.after(() => s.db.sql.close()); let entered = 0;
+  s.setHook(async () => {
+    entered++; await until(() => entered === 2, 'both candidates reach the provider');
+    s.revoked.add('alice'); return { image: Buffer.from(s.output).toString('base64') };
+  });
+  const id = crypto.randomUUID();
+  assert.equal((await s.call(url+'generate-image','alice',{...s.input(),count:2},id)).status,401);
+  assert.equal(s.calls.length,2); assert.equal(s.bucket.puts,0);
+  assert.equal(s.db.sql.prepare('SELECT count(*) n FROM generated_images').get()!.n,0);
+  assert.equal(s.db.sql.prepare('SELECT state FROM heavy_ai_requests WHERE request_id=?').get(id)!.state,'unknown');
+  assert.equal((await s.call('/v1/image-ai/requests/'+id)).status,401);
+});
+
+const jpegOfSize = (width: number, height: number) => {
+  const bytes = new Uint8Array([255,216,255,192,0,17,8,0,0,0,0,3,1,34,0,2,17,1,3,17,1,255,218,255,217]);
+  new DataView(bytes.buffer).setUint16(7,height); new DataView(bytes.buffer).setUint16(9,width); return bytes;
+};
+
+test('画質 4K: candidates are drawn together but resized one at a time (the 4K PNG step holds about 25 MB each)', async t => {
+  const s = openAIObservationSetup(t); let calls = 0; let active = 0; let most = 0; const sizes: unknown[] = [];
+  globalThis.fetch = async () => { calls++; return openAIObservationResponse(); };
+  (s.env as unknown as Record<string,unknown>).IMAGES = { input: () => ({ transform: (size: { width: number; height: number }) => ({ output: async () => {
+    active++; most = Math.max(most,active); sizes.push(size);
+    for (let turn = 0; turn < 20; turn++) await new Promise(resolve => setImmediate(resolve));
+    active--; return { response: () => new Response(jpegOfSize(size.width,size.height) as BufferSource) };
+  } }) }) };
+  const result = await json(await s.call(url+'generate-image','alice',{...s.input(),count:2,resolution:'4k'},crypto.randomUUID()));
+  assert.equal(result.success,true); assert.equal(calls,2);
+  assert.equal(most,1,'one 4K resize at a time');
+  assert.deepEqual(sizes,[{width:4096,height:4096,fit:'cover'},{width:4096,height:4096,fit:'cover'}]);
+  assert.deepEqual(result.images.map((image: Json) => [image.width,image.height]),[[4096,4096],[4096,4096]]);
 });

@@ -318,3 +318,23 @@ test('a safety refusal is a recorded rejection and image requests ask for low mo
   await assert.rejects(runOpenAIImage(env, 'generate-image', input([]), 0, refusal as typeof fetch));
   assert.equal(json?.moderation, 'low');
 });
+
+// 2026-11-12: a request's candidates are drawn at the same time; each would otherwise copy every reference into its own Blob.
+test('candidates drawn together share one Blob per reference instead of each copying every reference', async () => {
+  const references: ImageInput['references'] = [0, 1].map(index => ({ bytes: pngFixture(8, 8, [index * 60, 20, 20]), contentType: 'image/png', width: 8, height: 8 }));
+  const shared: ImageInput = { ...input(references), candidates: [0, 1].map(index => ({ prompt: 'studio product image', descriptor: { candidateIndex: index }, seed: index })) };
+  const OriginalBlob = globalThis.Blob; let copies = 0;
+  class CountingBlob extends OriginalBlob {
+    constructor(parts?: BlobPart[], options?: BlobPropertyBag) { super(parts, options); if (parts?.some(part => part instanceof Uint8Array)) copies++; }
+  }
+  globalThis.Blob = CountingBlob as typeof Blob;
+  try {
+    const image = pngFixture(8, 8);
+    const forms: FormData[] = [];
+    const reply = async (_url: string | URL | Request, init?: RequestInit) => { forms.push(init?.body as FormData); return Response.json({ data: [{ b64_json: Buffer.from(image).toString('base64') }] }); };
+    await Promise.all([0, 1].map(index => runOpenAIImage(env({ OPENAI_IMAGE_MODEL: undefined }), 'edit-image', shared, index, reply)));
+    assert.equal(forms.length, 2);
+    assert.deepEqual(forms.map(form => form.getAll('image[]').length), [2, 2]);
+    assert.equal(copies, 2, 'two references, copied once each');
+  } finally { globalThis.Blob = OriginalBlob; }
+});
