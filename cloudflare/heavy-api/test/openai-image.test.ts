@@ -338,3 +338,112 @@ test('candidates drawn together share one Blob per reference instead of each cop
     assert.equal(copies, 2, 'two references, copied once each');
   } finally { globalThis.Blob = OriginalBlob; }
 });
+
+// 2026-11-13: studio 画質 4K draws with OpenAI's newest model within 2560x1440's pixel count (larger is "experimental" in the
+// image guide, and #268's 2336x3520 got HTTP 500); only the shortfall to Light's 4096 long edge is enlarged afterwards.
+test('画質 4K sizes: the largest non-experimental size for each frame', async () => {
+  const { direct4KSize, DIRECT_4K_MODEL } = await import('../src/openai-image.ts');
+  assert.equal(DIRECT_4K_MODEL, 'gpt-image-2.6-sunburst');
+  assert.deepEqual(direct4KSize(768, 1024), [1648, 2208]);
+  assert.deepEqual(direct4KSize(1024, 1536), [1552, 2336]);
+  assert.deepEqual(direct4KSize(1024, 576), [2560, 1440]);
+  assert.deepEqual(direct4KSize(576, 1024), [1440, 2560]);
+  assert.deepEqual(direct4KSize(1024, 1024), [1920, 1920]);
+  for (const [w, h] of [[768, 1024], [1024, 768], [1024, 1280], [768, 1152], [1152, 768], [1024, 576], [576, 1024], [1024, 1024], [256, 1920]]) {
+    const [width, height] = direct4KSize(w, h);
+    assert.equal(width % 16, 0); assert.equal(height % 16, 0);
+    assert(Math.max(width, height) <= 3840 && width * height <= 2560 * 1440 && width * height >= 655_360, `${w}x${h} -> ${width}x${height}`);
+    assert(Math.abs(Math.log((width / height) / Math.min(3, Math.max(1 / 3, w / h)))) < 0.02, `${w}x${h} keeps its frame`);
+  }
+  assert.deepEqual(openAIExpectedDimensions(768, 1024, DIRECT_4K_MODEL), [1648, 2208]);
+});
+
+const jpegReply = (width: number, height: number) => {
+  const bytes = new Uint8Array([255, 216, 255, 192, 0, 17, 8, 0, 0, 0, 0, 3, 1, 34, 0, 2, 17, 1, 3, 17, 1, 255, 218, 255, 217]);
+  new DataView(bytes.buffer).setUint16(7, height); new DataView(bytes.buffer).setUint16(9, width);
+  return Buffer.from(bytes).toString('base64');
+};
+const studio4K = (references: ImageInput['references']): ImageInput => ({ ...input(references), width: 768, height: 1024, resolution: '4k' });
+
+test('画質 4K edits ask the newest model for its large size as JPEG at high quality, and keep its tokens', async () => {
+  const reference = { bytes: pngFixture(8, 8), contentType: 'image/png', width: 8, height: 8 };
+  const forms: FormData[] = [];
+  const result = await runOpenAIImage(env({ OPENAI_IMAGE_MODEL: undefined }), 'edit-image', studio4K([reference]), 0, async (url, init) => {
+    assert.equal(String(url), 'https://api.openai.com/v1/images/edits');
+    assert(init?.signal instanceof AbortSignal, 'the large draw can be given up');
+    forms.push(init?.body as FormData);
+    return Response.json({ data: [{ b64_json: jpegReply(1648, 2208) }], usage: { input_tokens: 1300, output_tokens: 6240, input_tokens_details: { image_tokens: 1200, text_tokens: 100 } } },
+      { headers: { 'x-request-id': 'req-direct-4k' } });
+  });
+  assert.equal(forms.length, 1);
+  assert.equal(forms[0].get('model'), 'gpt-image-2.6-sunburst');
+  assert.equal(forms[0].get('size'), '1648x2208');
+  assert.equal(forms[0].get('output_format'), 'jpeg');
+  assert.equal(forms[0].get('output_compression'), '95');
+  assert.equal(forms[0].get('quality'), 'high');
+  assert.equal(forms[0].get('input_fidelity'), null, 'the GPT Image 2 family refuses input_fidelity');
+  assert.equal(forms[0].get('moderation'), 'low');
+  assert.equal(result.providerModel, 'gpt-image-2.6-sunburst');
+  assert.match(result.image, /^data:image\/jpeg;base64,/);
+  assert.deepEqual(result.direct4K, { model: 'gpt-image-2.6-sunburst', size: '1648x2208', outcome: 'drawn',
+    usage: { inputTokens: 1300, outputTokens: 6240, imageInputTokens: 1200, textInputTokens: 100 } });
+});
+
+test('画質 4K: a refusal, HTTP 500, a lost connection or a wrong size falls back to the usual draw; an empty balance or a passing limit does not', async () => {
+  const reference = { bytes: pngFixture(8, 8), contentType: 'image/png', width: 8, height: 8 };
+  const image = pngFixture(8, 8);
+  const sent: Array<{ model: unknown; size: unknown; fidelity: unknown; format: unknown }> = [];
+  const answer = (first: () => Response) => async (_url: string | URL | Request, init?: RequestInit) => {
+    const form = init?.body as FormData;
+    sent.push({ model: form.get('model'), size: form.get('size'), fidelity: form.get('input_fidelity'), format: form.get('output_format') });
+    return sent.length === 1 ? first() : Response.json({ data: [{ b64_json: Buffer.from(image).toString('base64') }] });
+  };
+  for (const [first, reason, status] of [
+    [() => Response.json({ error: { type: 'invalid_request_error', code: 'invalid_request_error', message: 'Invalid size' } }, { status: 400 }), 'rejected', 400],
+    [() => Response.json({ error: { type: 'invalid_request_error', code: 'model_not_found', message: 'no such model' } }, { status: 404 }), 'rejected', 404],
+    // 2026-11-12 (#268): accepted, then HTTP 500 server_error after 54.8 s.
+    [() => Response.json({ error: { type: 'server_error', message: 'The server had an error' } }, { status: 500 }), 'server_error', 500],
+    [() => { throw new TypeError('network connection lost'); }, 'transport', undefined],
+    [() => Response.json({ data: [{ b64_json: jpegReply(1024, 1536) }] }), 'unusable', 200],
+  ] as const) {
+    sent.length = 0;
+    const result = await runOpenAIImage(env({ OPENAI_IMAGE_MODEL: undefined }), 'edit-image', studio4K([reference]), 0, answer(first));
+    assert.deepEqual(sent.map((item) => item.model), ['gpt-image-2.6-sunburst', 'gpt-image-1.5'], reason);
+    assert.deepEqual(sent[1], { model: 'gpt-image-1.5', size: '1024x1536', fidelity: 'high', format: 'png' });
+    assert.equal(result.providerModel, 'gpt-image-1.5');
+    assert.equal(result.direct4K?.outcome, 'fell_back'); assert.equal(result.direct4K?.reason, reason); assert.equal(result.direct4K?.status, status);
+    assert.equal(typeof result.direct4K?.elapsedMs, 'number');
+  }
+  for (const stop of [
+    () => Response.json({ error: { type: 'insufficient_quota', code: 'insufficient_quota', message: 'balance' } }, { status: 429 }),
+  ]) {
+    sent.length = 0;
+    await assert.rejects(runOpenAIImage(env({ OPENAI_IMAGE_MODEL: undefined }), 'edit-image', studio4K([reference]), 0, answer(stop)), OpenAIImageError);
+    assert.equal(sent.length, 1, 'an empty balance would refuse the usual draw too');
+  }
+  // 1K / 2K and requests without a 画質 keep the usual model and size.
+  for (const resolution of ['1k', undefined] as const) {
+    sent.length = 0;
+    const result = await runOpenAIImage(env({ OPENAI_IMAGE_MODEL: undefined }), 'edit-image', { ...studio4K([reference]), resolution }, 0, answer(() => Response.json({ data: [{ b64_json: Buffer.from(image).toString('base64') }] })));
+    assert.deepEqual(sent.map((item) => item.model), ['gpt-image-1.5']); assert.equal(result.direct4K, undefined);
+  }
+});
+
+test('画質 4K: a large draw with no answer within 100 s is given up and the usual draw still fits in the 180 s window', async (t) => {
+  const { DIRECT_4K_WAIT_MS } = await import('../src/openai-image.ts');
+  assert.equal(DIRECT_4K_WAIT_MS, 100_000);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const reference = { bytes: pngFixture(8, 8), contentType: 'image/png', width: 8, height: 8 };
+  const image = pngFixture(8, 8); const models: unknown[] = []; let aborted = false;
+  const pending = runOpenAIImage(env({ OPENAI_IMAGE_MODEL: undefined }), 'edit-image', studio4K([reference]), 0, async (_url, init) => {
+    models.push((init?.body as FormData).get('model'));
+    if (models.length === 1) return new Promise<Response>((_, reject) => init?.signal?.addEventListener('abort', () => { aborted = true; reject(new Error('aborted')); }));
+    return Response.json({ data: [{ b64_json: Buffer.from(image).toString('base64') }] });
+  });
+  for (let turn = 0; turn < 50 && !models.length; turn++) await new Promise((resolve) => setImmediate(resolve));
+  t.mock.timers.tick(99_999); await new Promise((resolve) => setImmediate(resolve)); assert.deepEqual(models, ['gpt-image-2.6-sunburst']);
+  t.mock.timers.tick(1);
+  const result = await pending;
+  assert.equal(aborted, true); assert.deepEqual(models, ['gpt-image-2.6-sunburst', 'gpt-image-1.5']);
+  assert.equal(result.direct4K?.reason, 'timeout'); assert.equal(result.providerModel, 'gpt-image-1.5');
+});
