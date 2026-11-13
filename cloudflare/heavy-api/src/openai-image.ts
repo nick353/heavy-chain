@@ -195,9 +195,15 @@ async function observeResponse(fetchImpl: typeof fetch, url: string, init: Reque
   catch { throw new OpenAIImageError('transport_uncertainty'); }
 }
 
+/** Candidates are drawn at the same time (2026-11-13); they share one Blob per reference instead of each copying it. */
+const referenceBlobs = new WeakMap<Uint8Array, Blob>();
 function referenceBlob(bytes: Uint8Array, mimeType: string): Blob {
   const contentType = normalizeMimeType(mimeType);
-  return new Blob([bytes as BlobPart], { type: contentType });
+  const shared = referenceBlobs.get(bytes);
+  if (shared?.type === contentType) return shared;
+  const blob = new Blob([bytes as BlobPart], { type: contentType });
+  referenceBlobs.set(bytes, blob);
+  return blob;
 }
 
 function promptFor(candidate: Candidate): string {
