@@ -4,8 +4,8 @@ import type { GarmentSegmentationTarget } from '../../features/printing/selectio
 import { cutoutDrawRect } from './printPlacement';
 import { refreshSignedImageUrl } from '../../lib/storage';
 import {
-  ERASE_GUIDE_COLOR, studioAlphaBounds, studioApplyMaskAlpha, studioAutoClip, studioDataUrlToFile, studioFillRectAlpha, studioRectFromDrag, studioScaleRect,
-  type StudioRect, type StudioRgba,
+  ERASE_GUIDE_COLOR, studioAlphaBounds, studioApplyMaskAlpha, studioAutoClip, studioDataUrlToFile, studioFillRectAlpha, studioPenHit, studioPenPathD, studioPenTrace,
+  studioRectFromDrag, studioScaleRect, type StudioPenMode, type StudioPenPoint, type StudioRect, type StudioRgba,
 } from '../../lib/studioImageEdit';
 
 /**
@@ -111,6 +111,8 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
   markerColor?: string | null;
   /** 矩形選択で中の物を認識する（簡易エディター）。false なら矩形をそのまま塗る。 */
   recognizeRect?: boolean;
+  /** パスツールの動き方（本家: 描画＝点を置く・削除＝点を消す・選択＝点を動かす・曲線＝点から引いて曲げる）。 */
+  penMode?: StudioPenMode;
   initialMask?: ImageData | null;
   active?: boolean;
   onChange?: () => void;
@@ -122,20 +124,21 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
   className?: string;
   testId?: string;
 }>(function StudioMaskSurface({
-  imageUrl, tool, mode = 'add', brushSize = 40, markerColor = null, recognizeRect = false, initialMask = null, active = true,
+  imageUrl, tool, mode = 'add', brushSize = 40, markerColor = null, recognizeRect = false, penMode = 'draw', initialMask = null, active = true,
   onChange, onZoomChange, onBusyChange, onPointerActivate, onStroke, className = '', testId = 'studio-mask-surface',
 }, ref) {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
-  const [draft, setDraft] = useState<{ kind: 'lasso' | 'pen'; points: Array<{ x: number; y: number }> } | { kind: 'rect'; rect: StudioRect } | null>(null);
+  const [draft, setDraft] = useState<{ kind: 'lasso'; points: Array<{ x: number; y: number }> } | { kind: 'pen'; points: StudioPenPoint[] } | { kind: 'rect'; rect: StudioRect } | null>(null);
   const [spaceDown, setSpaceDown] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
   const maskRef = useRef<HTMLCanvasElement | null>(null);
   const history = useRef<{ undo: ImageData[]; redo: ImageData[] }>({ undo: [], redo: [] });
   const usedColorsRef = useRef<Set<string>>(new Set());
-  const gesture = useRef<{ kind: 'paint' | 'lasso' | 'rect' | 'pan'; last?: { x: number; y: number }; start?: { x: number; y: number }; client?: { x: number; y: number }; origin?: { x: number; y: number } } | null>(null);
+  const gesture = useRef<{ kind: 'paint' | 'lasso' | 'rect' | 'pan' | 'pen-move' | 'pen-curve'; last?: { x: number; y: number }; start?: { x: number; y: number }; client?: { x: number; y: number }; origin?: { x: number; y: number };
+    index?: number; moved?: boolean } | null>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
 
@@ -331,7 +334,16 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
     if (draft?.kind !== 'pen') return;
     const points = draft.points;
     setDraft(null);
-    fillPolygon(points);
+    const current = maskContext();
+    if (!current || points.length < 3) return;
+    snapshot();
+    paintStyle(current.context);
+    current.context.beginPath();
+    studioPenTrace(current.context, points);
+    current.context.fill();
+    current.context.globalCompositeOperation = 'source-over';
+    if (markerColor && !removing()) usedColorsRef.current.add(markerColor);
+    changed();
   };
   useEffect(() => {
     if (draft?.kind !== 'pen') return;
@@ -356,10 +368,17 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
     const point = pointOnMask(event);
     if (tool === 'pen') {
       const points = draft?.kind === 'pen' ? draft.points : [];
-      const first = points[0];
       const overlay = overlayRef.current;
       const perScreen = overlay && maskRef.current ? maskRef.current.width / overlay.getBoundingClientRect().width : 1;
-      if (first && points.length >= 3 && Math.hypot(point.x - first.x, point.y - first.y) <= 10 * perScreen) { closePen(); return; }
+      const hit = studioPenHit(points, point, 10 * perScreen);
+      if (penMode === 'delete') { if (hit >= 0) setDraft({ kind: 'pen', points: points.filter((_, index) => index !== hit) }); return; }
+      if (penMode === 'select' || penMode === 'curve') {
+        if (hit < 0) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        gesture.current = { kind: penMode === 'select' ? 'pen-move' : 'pen-curve', index: hit, moved: false };
+        return;
+      }
+      if (hit === 0 && points.length >= 3) { closePen(); return; }
       setDraft({ kind: 'pen', points: [...points, point] });
       return;
     }
@@ -385,6 +404,22 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
       return;
     }
     const point = pointOnMask(event);
+    if ((current.kind === 'pen-move' || current.kind === 'pen-curve') && current.index !== undefined) {
+      const index = current.index, curve = current.kind === 'pen-curve';
+      current.moved = true;
+      setDraft(previous => {
+        if (previous?.kind !== 'pen' || !previous.points[index]) return previous;
+        const points = previous.points.map((item, at) => {
+          if (at !== index) return item;
+          // 選択: 点を動かす（曲線の取っ手も一緒に）。曲線: 点から引いた所が取っ手（反対側は点を挟んで同じ長さ）。
+          if (curve) return { ...item, handle: { x: point.x, y: point.y } };
+          const dx = point.x - item.x, dy = point.y - item.y;
+          return { x: point.x, y: point.y, ...(item.handle ? { handle: { x: item.handle.x + dx, y: item.handle.y + dy } } : {}) };
+        });
+        return { kind: 'pen', points };
+      });
+      return;
+    }
     if (current.kind === 'paint' && current.last) { strokeTo(current.last, point); current.last = point; }
     else if (current.kind === 'lasso') setDraft(previous => (previous?.kind === 'lasso' ? { kind: 'lasso', points: [...previous.points, point] } : previous));
     else if (current.kind === 'rect' && current.start) setDraft({ kind: 'rect', rect: studioRectFromDrag(current.start, point, size) });
@@ -394,6 +429,11 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
     gesture.current = null;
     if (!current) return;
     if (current.kind === 'paint') changed();
+    // 曲線で引かずに押しただけなら、その点を角に戻す。
+    if (current.kind === 'pen-curve' && !current.moved && current.index !== undefined) {
+      const index = current.index;
+      setDraft(previous => (previous?.kind === 'pen' ? { kind: 'pen', points: previous.points.map((item, at) => (at === index ? { x: item.x, y: item.y } : item)) } : previous));
+    }
     if (current.kind === 'lasso' && draft?.kind === 'lasso') { const points = draft.points; setDraft(null); fillPolygon(points); }
     if (current.kind === 'rect' && draft?.kind === 'rect') { const rect = draft.rect; setDraft(null); void applyRect(rect); }
   };
@@ -531,10 +571,16 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
           <canvas ref={overlayRef} data-testid={`${testId}-mask`} className="absolute inset-0 size-full" />
           <svg className="pointer-events-none absolute inset-0 size-full" viewBox={`0 0 ${size.width} ${size.height}`} preserveAspectRatio="none" aria-hidden="true">
             {draft?.kind === 'rect' && <rect x={draft.rect.x} y={draft.rect.y} width={draft.rect.width} height={draft.rect.height} fill="rgba(101,211,207,0.18)" stroke="#5fd0c8" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeDasharray="6 4" />}
-            {draft && draft.kind !== 'rect' && (
+            {draft?.kind === 'lasso' && <polyline points={draft.points.map(point => `${point.x},${point.y}`).join(' ')} fill="rgba(101,211,207,0.18)" stroke="#5fd0c8" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeDasharray="6 4" />}
+            {draft?.kind === 'pen' && (
               <>
-                <polyline points={draft.points.map(point => `${point.x},${point.y}`).join(' ')} fill={draft.kind === 'lasso' ? 'rgba(101,211,207,0.18)' : 'none'} stroke="#5fd0c8" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeDasharray="6 4" />
-                {draft.kind === 'pen' && draft.points.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r={Math.max(size.width, size.height) * 0.006} fill={index === 0 ? '#5fd0c8' : '#fff'} stroke="#5fd0c8" vectorEffect="non-scaling-stroke" />)}
+                <path d={studioPenPathD(draft.points, false)} data-testid={`${testId}-pen-path`} fill="none" stroke="#5fd0c8" strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeDasharray="6 4" />
+                {draft.points.map((point, index) => point.handle && <g key={`h${index}`}>
+                  <line x1={2 * point.x - point.handle.x} y1={2 * point.y - point.handle.y} x2={point.handle.x} y2={point.handle.y} stroke="#5fd0c8" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                  <circle cx={point.handle.x} cy={point.handle.y} r={Math.max(size.width, size.height) * 0.004} fill="#5fd0c8" />
+                  <circle cx={2 * point.x - point.handle.x} cy={2 * point.y - point.handle.y} r={Math.max(size.width, size.height) * 0.004} fill="#5fd0c8" />
+                </g>)}
+                {draft.points.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r={Math.max(size.width, size.height) * 0.006} fill={index === 0 ? '#5fd0c8' : '#fff'} stroke="#5fd0c8" vectorEffect="non-scaling-stroke" />)}
               </>
             )}
           </svg>

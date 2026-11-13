@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import {
-  ArrowUp, Brush, BrushCleaning, Check, ChevronDown, ChevronRight, Eraser, Lasso, Minus, PenLine, Plus, Redo2, ScanSearch,
+  ArrowUp, Brush, BrushCleaning, Check, ChevronDown, ChevronRight, Eraser, FolderOpen, ImagePlus, Lasso, Minus, PenLine, Plus, Redo2, Save, ScanSearch,
   SquareDashedMousePointer, Undo2, WandSparkles, X, Zap, ZoomIn, ZoomOut,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,12 +10,14 @@ import { refreshSignedImageUrl } from '../../lib/storage';
 import { StudioEditMenuIcon, type StudioEditMenuIconName } from './StudioEditMenuIcon';
 import { BRAND_LIKENESS_BLOCK_COPY, validateLegalSafetyInput } from '../../lib/legalSafetyGuard';
 import {
-  CROP_CUSTOM, CROP_PRESET_GROUPS, EXPAND_ERRORS, EXPAND_ORIGINAL, EXPAND_PRESET_GROUPS, EXPAND_SCALES, PARTIAL_EDIT_COLORS, STUDIO_EDIT_MENU, STUDIO_ERASE_PROMPT,
-  STUDIO_EXPAND_PROMPT, STUDIO_REPAIR_PROMPT, STUDIO_UPSCALE_TOO_LARGE, presetRatio, studioAspectRatioLabel, studioCenteredCrop, studioDataUrlToFile, studioEditFileName,
+  CROP_CUSTOM, CROP_PRESET_GROUPS, EXPAND_ERRORS, EXPAND_ORIGINAL, EXPAND_PRESET_GROUPS, EXPAND_SCALES, PARTIAL_EDIT_COLORS, PARTIAL_EDIT_MAX_REFERENCES, STUDIO_EDIT_MENU, STUDIO_ERASE_PROMPT,
+  STUDIO_EXPAND_PROMPT, STUDIO_EXPAND_SAME_PROMPT, studioExpandDrag, STUDIO_REPAIR_PROMPT, STUDIO_UPSCALE_TOO_LARGE, presetRatio, studioAspectRatioLabel, studioCenteredCrop, studioDataUrlToFile, studioEditFileName,
   studioExpandOffset, studioExpandScaleEnabled, studioExpandSize, studioPartialEditPrompt, studioResizeCrop, studioUpscaleOptions,
-  type StudioClientEditTool, type StudioCropHandle, type StudioEditToolId, type StudioExpandScale, type StudioRect, type StudioServerEditTool, type StudioUpscaleTarget,
+  type StudioExpandFrame, type StudioClientEditTool, type StudioCropHandle, type StudioEditToolId, type StudioExpandScale, type StudioRect, type StudioServerEditTool, type StudioUpscaleTarget,
 } from '../../lib/studioImageEdit';
 import { STUDIO_MASK_CANDIDATES, StudioMaskSurface, studioImageUrlToFile, type StudioMaskSurfaceHandle, type StudioMaskTool } from './StudioMaskSurface';
+import { StudioPromptLibrary } from './StudioPromptLibrary';
+import { GallerySelector } from '../GallerySelector';
 
 /**
  * 本家の「画像編集」のメニュー（画像を選ぶと出る道具の帯の「画像編集」）と、道具ごとの窓。
@@ -27,6 +29,8 @@ import { STUDIO_MASK_CANDIDATES, StudioMaskSurface, studioImageUrlToFile, type S
 export type StudioServerEditRequest = {
   mainFile: File;
   guideFile?: File;
+  /** 部分編集の参考画像（本家の「素材を選択」で最大3枚）。案内画像の後ろに並べて送る。 */
+  referenceFiles?: File[];
   prompt: string;
   editOptions?: { aspectRatio?: string; resolution?: '1k' | '4k' };
 };
@@ -299,6 +303,18 @@ function BrushEditDialog({ kind, imageUrl, aspect, name, onClose, onClientResult
   const [busy, setBusy] = useState<string | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [instruction, setInstruction] = useState('');
+  /** 部分編集の参考画像（本家: 入力欄の左の印 → 素材を選択、最大3枚）。 */
+  const [references, setReferences] = useState<{ file: File; url: string }[]>([]);
+  const [picker, setPicker] = useState(false);
+  const [library, setLibrary] = useState<{ saveText?: string } | null>(null);
+  useEffect(() => () => references.forEach(item => URL.revokeObjectURL(item.url)), [references]);
+  const addReferences = async (files: File[]) => {
+    setPicker(false);
+    const room = PARTIAL_EDIT_MAX_REFERENCES - references.length;
+    if (room <= 0) { toast.error(`参考画像は${PARTIAL_EDIT_MAX_REFERENCES}枚までです`); return; }
+    const images = files.filter(file => file.type.startsWith('image/')).slice(0, room);
+    setReferences(current => [...current, ...images.map(file => ({ file, url: URL.createObjectURL(file) }))].slice(0, PARTIAL_EDIT_MAX_REFERENCES));
+  };
   const [, setRevision] = useState(0);
   const surface = useRef<StudioMaskSurfaceHandle | null>(null);
 
@@ -326,11 +342,12 @@ function BrushEditDialog({ kind, imageUrl, aspect, name, onClose, onClientResult
         onClose();
         return;
       }
-      const prompt = studioPartialEditPrompt(instruction, current.usedColors());
+      const guideFile = current.isEmpty() ? null : await current.getGuide(name('partial', 'guide'));
+      const prompt = studioPartialEditPrompt(instruction, guideFile ? current.usedColors() : [], references.length);
       if (!prompt) { toast.error('編集内容を入力してください'); return; }
       if (legalBlocked(instruction, prompt)) return;
-      const guideFile = current.isEmpty() ? null : await current.getGuide(name('partial', 'guide'));
-      await onServerEdit('partial', { mainFile: await studioImageUrlToFile(imageUrl, name('partial', 'source')), ...(guideFile ? { guideFile } : {}), prompt, editOptions: { aspectRatio: aspect } });
+      await onServerEdit('partial', { mainFile: await studioImageUrlToFile(imageUrl, name('partial', 'source')), ...(guideFile ? { guideFile } : {}),
+        ...(references.length ? { referenceFiles: references.map(item => item.file) } : {}), prompt, editOptions: { aspectRatio: aspect } });
       onClose();
     } catch (error) { handleError(error); } finally { setBusy(null); }
   };
@@ -366,11 +383,29 @@ function BrushEditDialog({ kind, imageUrl, aspect, name, onClose, onClientResult
       </div>
       <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-6">
         {kind === 'partial' && (
-          <form className="flex h-[72px] w-[400px] max-w-[calc(100vw-32px)] items-center gap-3 rounded-2xl border border-white/15 bg-[#1d2224] px-4 shadow-xl" onSubmit={event => { event.preventDefault(); void generate(); }}>
-            <input aria-label="編集内容" value={instruction} onChange={event => setInstruction(event.target.value)} placeholder={PARTIAL_EDIT_PLACEHOLDER} className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none" />
-            <button type="submit" aria-label="送信" disabled={!instruction.trim() || Boolean(busy)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#14c4bb] text-slate-950 disabled:bg-[#0f5753] disabled:text-white/50"><ArrowUp aria-hidden="true" className="h-5 w-5" /></button>
+          // 本家の入力欄（2026-11-13）: 左に参考画像の追加（40px の四角）、入力、プロンプトを保存・プロンプトライブラリ、送信。
+          <form className="flex min-h-[72px] w-[400px] max-w-[calc(100vw-32px)] flex-col justify-center gap-2 rounded-2xl border border-white/15 bg-[#1d2224] px-4 py-3 shadow-xl" onSubmit={event => { event.preventDefault(); void generate(); }}>
+            {references.length > 0 && <div className="flex gap-2" data-testid="studio-edit-partial-references">
+              {references.map((item, index) => <span key={item.url} className="relative size-10 shrink-0 overflow-hidden rounded-lg border border-white/15">
+                <img src={item.url} alt={`参考画像${index + 1}`} className="h-full w-full object-cover" />
+                <button type="button" aria-label={`参考画像${index + 1}を外す`} onClick={() => setReferences(current => current.filter(other => other !== item))} className="absolute right-0 top-0 flex size-4 items-center justify-center rounded-bl bg-black/70 text-white"><X aria-hidden="true" className="h-3 w-3" /></button>
+              </span>)}
+            </div>}
+            <div className="flex items-center gap-3">
+              <button type="button" aria-label="参考画像を追加" title="参考画像を追加" disabled={references.length >= PARTIAL_EDIT_MAX_REFERENCES} onClick={() => setPicker(true)} className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-white/85 hover:bg-white/[0.1] disabled:opacity-40"><ImagePlus aria-hidden="true" className="h-5 w-5" /></button>
+              <input aria-label="編集内容" value={instruction} onChange={event => setInstruction(event.target.value)} placeholder={PARTIAL_EDIT_PLACEHOLDER} className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none" />
+              <button type="button" aria-label="プロンプトを保存" title="プロンプトを保存" disabled={!instruction.trim()} onClick={() => setLibrary({ saveText: instruction })} className="inline-flex size-6 shrink-0 items-center justify-center text-white/60 hover:text-white disabled:opacity-40"><Save aria-hidden="true" className="h-4 w-4" /></button>
+              <button type="button" aria-label="プロンプトライブラリ" title="プロンプトライブラリ" onClick={() => setLibrary({})} className="inline-flex size-6 shrink-0 items-center justify-center text-white/60 hover:text-white"><FolderOpen aria-hidden="true" className="h-4 w-4" /></button>
+              <button type="submit" aria-label="送信" disabled={!instruction.trim() || Boolean(busy)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#14c4bb] text-slate-950 disabled:bg-[#0f5753] disabled:text-white/50"><ArrowUp aria-hidden="true" className="h-5 w-5" /></button>
+            </div>
           </form>
         )}
+        {kind === 'partial' && picker && <GallerySelector isOpen title="素材を選択" multiple maxSelect={PARTIAL_EDIT_MAX_REFERENCES - references.length} onClose={() => setPicker(false)}
+          onSelect={url => void studioImageUrlToFile(url, name('partial', 'reference')).then(file => addReferences([file])).catch(() => toast.error('画像を読み込めませんでした'))}
+          onMultipleSelect={images => void Promise.all(images.map((image, index) => studioImageUrlToFile(image.url, name('partial', `reference-${index + 1}`)))).then(addReferences).catch(() => toast.error('画像を読み込めませんでした'))}
+          uploadTile={{ accept: 'image/jpeg,image/png,image/webp', multiple: true, onFiles: files => void addReferences(files) }} />}
+        {kind === 'partial' && library && <StudioPromptLibrary initialText={library.saveText} onClose={() => setLibrary(null)}
+          onInsert={text => setInstruction(current => `${current}${current ? ' ' : ''}${text}`)} onReplace={text => setInstruction(text)} />}
         <div className={bar} role="toolbar" aria-label={`${text.title}の道具`}>
           {kind === 'partial' && (
             <>
@@ -568,11 +603,16 @@ function ExpandDialog({ imageUrl, name, onClose, onServerEdit }: {
   const [preset, setPreset] = useState<string>(EXPAND_ORIGINAL);
   const [quality, setQuality] = useState<'1k' | '4k'>('1k');
   const [busy, setBusy] = useState<string | null>(null);
+  /** 枠のつまみで広げた枠（倍率・プリセットを選ぶと消えて、その大きさに戻る）。 */
+  const [custom, setCustom] = useState<StudioExpandFrame | null>(null);
+  const drag = useRef<{ handle: StudioCropHandle; x: number; y: number; frame: StudioExpandFrame } | null>(null);
   const width = image?.naturalWidth ?? 0, height = image?.naturalHeight ?? 0;
   const ratio = presetRatio(preset);
-  const target = studioExpandSize(width, height, scale, ratio);
-  const offset = studioExpandOffset(width, height, target);
+  const sized = studioExpandSize(width, height, scale, ratio);
+  const target = custom ? { width: custom.width, height: custom.height, error: null } : sized;
+  const offset = custom ? { x: custom.x, y: custom.y } : studioExpandOffset(width, height, sized);
   const view = useFitScale(target.width, target.height);
+  // 本家は 1x・元の比率のままでも「生成」を押せる（広げずに描き直す）。
   const unchanged = target.width === width && target.height === height;
 
   useEffect(() => {
@@ -583,10 +623,21 @@ function ExpandDialog({ imageUrl, name, onClose, onServerEdit }: {
   const choosePreset = (label: string) => {
     const next = studioExpandSize(width, height, scale, presetRatio(label));
     if (next.error) { toast.error(EXPAND_ERRORS[next.error]); return; }
-    setPreset(label);
+    setPreset(label); setCustom(null);
+  };
+  const onHandleDown = (handle: StudioCropHandle, event: ReactPointerEvent) => {
+    if (!image || handle === 'move') return;
+    event.stopPropagation();
+    (event.target as Element).setPointerCapture?.(event.pointerId);
+    drag.current = { handle, x: event.clientX, y: event.clientY, frame: { width: target.width, height: target.height, x: offset.x, y: offset.y } };
+  };
+  const onMove = (event: ReactPointerEvent) => {
+    const current = drag.current;
+    if (!current || !image) return;
+    setCustom(studioExpandDrag({ width, height }, current.frame, current.handle, (event.clientX - current.x) / view.scale, (event.clientY - current.y) / view.scale));
   };
   const generate = async () => {
-    if (!image || busy || target.error || unchanged) return;
+    if (!image || busy || target.error) return;
     setBusy('処理中…');
     try {
       const canvas = document.createElement('canvas');
@@ -597,7 +648,7 @@ function ExpandDialog({ imageUrl, name, onClose, onServerEdit }: {
       if (legalBlocked(STUDIO_EXPAND_PROMPT)) return;
       await onServerEdit('expand', {
         mainFile: await toPng(canvas, name('expand', 'canvas')),
-        prompt: STUDIO_EXPAND_PROMPT,
+        prompt: unchanged ? STUDIO_EXPAND_SAME_PROMPT : STUDIO_EXPAND_PROMPT,
         editOptions: { aspectRatio: studioAspectRatioLabel(target.width, target.height), resolution: quality },
       });
       onClose();
@@ -611,12 +662,12 @@ function ExpandDialog({ imageUrl, name, onClose, onServerEdit }: {
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="border-b border-white/[0.08] px-6 py-5">
               <label className="block text-xs text-white/60" htmlFor="studio-expand-scale">拡張倍率</label>
-              <select id="studio-expand-scale" value={scale} onChange={event => setScale(Number(event.target.value) as StudioExpandScale)} className="mt-3 h-9 w-full rounded-md bg-transparent text-sm text-white focus:outline-none">
+              <select id="studio-expand-scale" value={scale} onChange={event => { setScale(Number(event.target.value) as StudioExpandScale); setCustom(null); }} className="mt-3 h-9 w-full rounded-md bg-transparent text-sm text-white focus:outline-none">
                 {EXPAND_SCALES.map(value => <option key={value} value={value} disabled={width > 0 && !studioExpandScaleEnabled(width, height, value, ratio)} className="bg-[#1d2224]">{value}x</option>)}
               </select>
             </div>
             <p className="px-6 pb-2 pt-5 text-xs text-white/60">プリセット</p>
-            <div className="px-2"><PresetList groups={EXPAND_PRESET_GROUPS} value={preset} onChange={choosePreset} /></div>
+            <div className="px-2"><PresetList groups={EXPAND_PRESET_GROUPS} value={custom ? '' : preset} onChange={choosePreset} /></div>
             {target.error && <p className="px-6 py-2 text-xs text-[#ff8a8a]" role="alert">{EXPAND_ERRORS[target.error]}</p>}
           </div>
           <div className="flex gap-2 p-2">
@@ -627,16 +678,16 @@ function ExpandDialog({ imageUrl, name, onClose, onServerEdit }: {
                 {EXPAND_QUALITIES.map(item => <option key={item.value} value={item.value} className="bg-[#1d2224]">{item.label}</option>)}
               </select>
             </label>
-            <button type="button" data-testid="studio-edit-expand-generate" disabled={!image || Boolean(busy) || Boolean(target.error) || unchanged} title={unchanged ? '拡張倍率かプリセットを選ぶと生成できます' : undefined} onClick={() => void generate()} className="h-10 flex-1 rounded-lg bg-[#14c4bb] text-sm font-medium text-slate-950 disabled:opacity-50">生成</button>
+            <button type="button" data-testid="studio-edit-expand-generate" disabled={!image || Boolean(busy) || Boolean(target.error)} onClick={() => void generate()} className="h-10 flex-1 rounded-lg bg-[#14c4bb] text-sm font-medium text-slate-950 disabled:opacity-50">生成</button>
           </div>
         </>
       )}>
-      <div ref={view.ref} className="absolute inset-0 flex items-center justify-center overflow-hidden">
+      <div ref={view.ref} className="absolute inset-0 flex items-center justify-center overflow-hidden" onPointerMove={onMove} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
         {image && (
           <div className="relative shrink-0" style={{ width: target.width * view.scale, height: target.height * view.scale }} data-testid="studio-edit-expand-frame">
             <div aria-hidden="true" className="absolute inset-0" style={{ backgroundImage: 'repeating-conic-gradient(#2a2f31 0% 25%, #1d2224 0% 50%)', backgroundSize: '16px 16px' }} />
             <img src={image ? image.src : imageUrl} alt="拡張する画像" className="absolute select-none" draggable={false} style={{ left: offset.x * view.scale, top: offset.y * view.scale, width: width * view.scale, height: height * view.scale }} />
-            <div className="pointer-events-none absolute inset-0 border border-dashed border-[#14c4bb]"><FrameHandles /></div>
+            <div className="pointer-events-none absolute inset-0 border border-dashed border-[#14c4bb]"><FrameHandles onHandleDown={onHandleDown} /></div>
             <span className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-1.5 py-0.5 text-xs text-white/90">{target.width} x {target.height}</span>
           </div>
         )}
