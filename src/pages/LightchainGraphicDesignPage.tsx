@@ -9,7 +9,7 @@ import { useAuthStore } from '../stores/authStore';
 import { LightchainHistoryPanel } from '../components/lightchain/LightchainHistoryPanel';
 import { assistGroups, assistPromptLines, assistReferenceKey, selectedAssistTags, toggleAssistTag } from '../features/graphicDesign/graphicAssist';
 import { analyzeGraphicReferences } from '../features/graphicDesign/graphicAssistApi';
-import { GRAPHIC_CANDIDATE_COUNT, GRAPHIC_CANDIDATE_DIRECTIONS, graphicFollowUpBrief } from '../features/graphicDesign/graphicTools';
+import { GRAPHIC_CANDIDATE_COUNT, GRAPHIC_CANDIDATE_DIRECTIONS, GRAPHIC_RUNNING_NOTE, graphicFollowUpBrief } from '../features/graphicDesign/graphicTools';
 import { GraphicResultView } from '../components/lightchain/GraphicResultView';
 import type { GraphicCandidate } from '../features/graphicDesign/graphicResultActions';
 
@@ -278,7 +278,7 @@ function LightchainGraphicDesignWorkspace() {
               onBack={() => setShowIntro(true)} onOpenHistory={() => setHistoryOpen(true)} onFollowUp={followUp} onUseAsReference={useAsReference} />
             {(workspace.status === 'running' || workspace.error) && (
               <div className="absolute left-1/2 top-16 z-20 -translate-x-1/2 rounded-full bg-black/75 px-4 py-2 text-sm">
-                {workspace.status === 'running' ? <span role="status" className="text-neutral-200">生成中です…（{GRAPHIC_CANDIDATE_COUNT}案を順に作っています。2〜3分かかります）</span>
+                {workspace.status === 'running' ? <span role="status" className="text-neutral-200">{GRAPHIC_RUNNING_NOTE}</span>
                   : <span role="alert" className="text-rose-300">{workspace.error}</span>}
               </div>
             )}
@@ -288,7 +288,7 @@ function LightchainGraphicDesignWorkspace() {
           <h5 className="text-xl font-bold text-[#20d0c4]">AIグラフィックデザイン</h5>
           <p className="mt-2 w-[328px] text-center text-sm text-neutral-400">AIでグラフィックを作成</p>
           <div className="mt-4 h-[340px] w-full"><video src={GRAPHIC_VIDEO} className="size-full" autoPlay controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture muted playsInline aria-label="AIグラフィックデザイン動画" /></div>
-          {workspace.status === 'running' && <p role="status" className="mt-4 text-sm text-neutral-300">生成中です…（{GRAPHIC_CANDIDATE_COUNT}案を順に作っています。2〜3分かかります）</p>}
+          {workspace.status === 'running' && <p role="status" className="mt-4 text-sm text-neutral-300">{GRAPHIC_RUNNING_NOTE}</p>}
           {heavyBrand.failed && <p role="alert" className="mt-4 text-sm text-rose-300">ワークスペースを準備できません。ページを再読み込みしてください。</p>}
           {workspace.error && <p role="alert" className="mt-4 text-sm text-rose-300">{workspace.error}</p>}
         </div>
