@@ -60,12 +60,15 @@ export const openverseSource: ReferenceImageSource = {
     const response = await (options.fetcher ?? fetch)(`${OPENVERSE_API}?${params}`, { signal: timeout(options, 12_000), credentials: 'omit' });
     if (!response.ok) throw new ReferenceSourceError('openverse', response.status);
     const data = await response.json() as { results?: Array<{ id?: string; title?: string; creator?: string | null; license?: string; license_version?: string;
-      license_url?: string; foreign_landing_url?: string; url?: string; thumbnail?: string; source?: string; filetype?: string | null; tags?: Array<{ name?: string }> | null }> };
+      license_url?: string; foreign_landing_url?: string; url?: string; thumbnail?: string; source?: string; filetype?: string | null; category?: string | null;
+      tags?: Array<{ name?: string }> | null }> };
     if (!Array.isArray(data.results)) throw new ReferenceSourceError('openverse', 502);
     return data.results.flatMap((item) => {
       const license = String(item.license ?? '').toLowerCase();
       if (!item.id || !item.thumbnail || !OPENVERSE_FREE.has(license) || /(^|-)n[cd](-|$)/.test(license)) return [];
       if (item.filetype && !/^(jpe?g|png|webp)$/i.test(item.filetype)) return [];
+      // A scanned painting is not a garment reference (2026-11-13: a painting on linen came up for a linen search).
+      if (item.category === 'digitized_artwork') return [];
       if (!/^https:\/\//.test(item.thumbnail) || (item.url && !/^https:\/\//.test(item.url))) return [];
       const keywords = (Array.isArray(item.tags) ? item.tags : []).map((tag) => String(tag?.name ?? '').trim()).filter(Boolean).slice(0, 40);
       return [{ id: `openverse-${item.id}`, title: plainText(String(item.title ?? '')) || 'Untitled', thumbUrl: item.thumbnail, imageUrl: item.url || undefined,
@@ -190,7 +193,7 @@ const OFF_TOPIC_WORDS = ['concert', 'festival', 'gig', 'band', 'stage', 'singer'
   'choir', 'rapper', 'dj', 'microphone', 'sofa', 'couch', 'armchair', 'chair', 'rug', 'carpet', 'curtain', 'cushion', 'pillow', 'bedskirt', 'quilt', 'duvet',
   'bedding', 'mattress', 'upholstery', 'furniture', 'interior', 'bedroom', 'livingroom', 'tablecloth', 'building', 'architecture', 'church', 'cathedral', 'tower',
   'bridge', 'skyscraper', 'windmill', 'mill', 'station', 'railway', 'train', 'tram', 'bus', 'car', 'truck', 'motorway', 'highway', 'road', 'airport', 'ferris',
-  'district', 'village', 'township', 'county', 'cemetery',
+  'district', 'village', 'township', 'county', 'cemetery', 'crater', 'lunar', 'planet', 'asteroid', 'spacecraft', 'painting', 'oil on',
   'logo', 'icon', 'screenshot', 'website', 'web', 'www', 'diagram', 'chart', 'map', 'visualization', 'infographic', 'clock'];
 
 const plain = (text: string) => text.toLowerCase().replace(/[_-]+/g, ' ');
@@ -253,6 +256,12 @@ export function referenceImageFit(image: Pick<FoundImage, 'title' | 'keywords' |
   const keywordsCloth = keywordHas(keywords, WORN_PATTERN, WORN_WORDS) || keywordHas(keywords, CLOTH_PATTERN, CLOTH_WORDS);
   // A garment query: the garment itself, or another word of the query on a title that names a garment ("draped top" → "Draped silk blouse").
   const named = items.length ? items.some((stem) => titleNamesItem(title, stem)) || (namesWord && FIRM_WORN_PATTERN.test(title)) : namesWord;
+  // A title naming the garment and also something else, whose own categories are not about clothes, is that other thing:
+  // "Jeans crater" (categories "Jeans (lunar crater)", "Photos of the Moon"). A category that repeats the title does not count as clothes.
+  if (named && keywords.length > 0 && offTopic.pattern.test(title)) {
+    const ownKeywords = keywords.filter((keyword) => !offTopic.pattern.test(plain(keyword)));
+    if (!keywordHas(ownKeywords, WORN_PATTERN, WORN_WORDS) && !keywordHas(ownKeywords, CLOTH_PATTERN, CLOTH_WORDS)) return 'off';
+  }
   if (named) return items.length && image.source === 'wikimedia' && keywords.length > 0 && !keywordsCloth ? 'loose' : 'named';
   const cloth = WORN_PATTERN.test(title) || CLOTH_PATTERN.test(title) || keywordsCloth;
   if (!cloth && keywordHas(keywords, offTopic.pattern, offTopic.words)) return 'aside';
