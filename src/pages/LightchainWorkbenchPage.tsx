@@ -6226,7 +6226,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                         className="absolute left-1 top-1 z-20 flex h-6 min-w-[100px] items-center gap-0.5 whitespace-nowrap rounded-md bg-[#244440] pr-1 pl-2 text-sm font-normal leading-5 text-[#7ee1d4]"
                         onClick={() => setAgentTaskTypeOpen((open) => !open)}
                       >
-                        {agentTaskTypeLabel} <ChevronDown aria-hidden="true" className="h-3 w-3" />
+                        {agentTaskTypeLabel} <ChevronDown aria-hidden="true" className={`h-3 w-3 transition-transform ${agentTaskTypeOpen ? 'rotate-180' : ''}`} />
                       </button>
                       {agentTaskTypeOpen && (
                         <div role="listbox" aria-label="商品企画タイプを選択" className="absolute left-[5px] top-[-90px] z-30 flex w-[96px] flex-col gap-1 rounded-xl border border-white/10 bg-[#303536] p-1 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
@@ -6236,7 +6236,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
                               type="button"
                               role="option"
                               aria-selected={agentTaskType === taskType}
-                              className="flex h-8 w-full flex-none items-center rounded-lg px-2 py-0 text-left text-base font-normal leading-5 text-[#dfe8e6] hover:bg-white/10"
+                              className="flex h-8 w-full flex-none items-center whitespace-nowrap rounded-lg px-2 py-0 text-left text-sm font-normal leading-5 text-[#dfe8e6] hover:bg-white/10"
                               onClick={() => {
                                 setAgentTaskType(taskType);
                                 setAgentTaskTypeOpen(false);
