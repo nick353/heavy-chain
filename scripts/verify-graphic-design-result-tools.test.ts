@@ -171,7 +171,9 @@ test('2倍の大きさ really doubles a 1696×2528 proposal (it came out 2748×4
   assert.equal(upscaleLimit(2048, 2048, 2, 6144), 2);
   assert.equal(upscaleLimit(4096, 4096, 2, 6144), 1.5);
   const view = readFileSync('src/components/lightchain/GraphicResultView.tsx', 'utf8');
-  assert.match(view, /upscaleImage\(selected\.image_url, \{ scale: 2, sharpness: 40, denoiseLevel: 0, maxEdge: GRAPHIC_UPSCALE_EDGE \}\)/);
+  // Since 2026-11-13 the super-resolution doubles it; the plain enlargement it falls back to gets the same edge.
+  assert.match(view, /doubleSizeImageUrl\(selected\.image_url, \{[^}]*maxEdge: GRAPHIC_UPSCALE_EDGE \}\)/);
+  assert.match(readFileSync('src/lib/superResolutionClient.ts', 'utf8'), /upscaleImage\(source, \{ scale: 2, sharpness: 40, denoiseLevel: 0, maxEdge: options\.maxEdge \}\)/);
   assert.match(view, /const GRAPHIC_UPSCALE_EDGE = 6144;/);
 });
 

@@ -3,7 +3,8 @@ import { ChevronLeft, Copy, Download, Eraser, FileText, Grid3x3, History, Layout
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { downloadValidatedImage } from '../../lib/imageDownload';
-import { downloadImagesAsZip, upscaleImage } from '../../lib/clientImageOps';
+import { downloadImagesAsZip } from '../../lib/clientImageOps';
+import { doubleSizeImageUrl } from '../../lib/superResolutionClient';
 import { extractPalette, hexToRgb, makeSeamless, recolorPixels, removeBackground, REPEAT_LAYOUTS, rgbToHex, type RepeatLayout, type Rgb } from '../../features/graphicDesign/graphicTools';
 import { blobToFile, drawRepeatUnit, pixelsToBlob, pixelsToCanvas, readPixels, repeatSheetBlob, type Pixels } from '../../features/graphicDesign/graphicToolsCanvas';
 import { graphicFileName } from '../../features/graphicDesign/graphicResult';
@@ -43,6 +44,10 @@ export function GraphicResultView({ brandId, userId, jobId, fallbackUrl, locked,
   const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({});
   const [menu, setMenu] = useState<'send' | 'download' | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [doubleProgress, setDoubleProgress] = useState<number | null>(null);
+  const doubleAbort = useRef<AbortController | null>(null);
+  // Leaving the page stops the GPU work instead of saving a file nobody waits for.
+  useEffect(() => () => doubleAbort.current?.abort(), []);
   const [tool, setTool] = useState<Tool | null>(null);
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
 
@@ -83,9 +88,24 @@ export function GraphicResultView({ brandId, userId, jobId, fallbackUrl, locked,
     navigate(`/board/edit?id=${encodeURIComponent(id)}`);
   }, 'デザインドキュメントを作成できませんでした');
 
-  const downloadSelected = (scale: 1 | 2) => selected && void run(`download-${scale}`, async () => {
-    const url = scale === 1 ? selected.image_url : await upscaleImage(selected.image_url, { scale: 2, sharpness: 40, denoiseLevel: 0, maxEdge: GRAPHIC_UPSCALE_EDGE });
-    await downloadValidatedImage(url, graphicFileName(selectedIndex, scale === 2 ? '2倍' : ''), 'graphic_result_download');
+  const downloadSelected = () => selected && void run('download-1', async () => {
+    await downloadValidatedImage(selected.image_url, graphicFileName(selectedIndex, ''), 'graphic_result_download');
+  }, 'ダウンロードに失敗しました');
+
+  /** 2倍の大きさ: Real-ESRGAN in the browser (about 30–75 s on a laptop GPU, with a progress count and a cancel). */
+  const downloadDouble = () => selected && void run('download-2', async () => {
+    const controller = new AbortController();
+    doubleAbort.current = controller; setDoubleProgress(0);
+    try {
+      const result = await doubleSizeImageUrl(selected.image_url, { signal: controller.signal, onProgress: setDoubleProgress, maxEdge: GRAPHIC_UPSCALE_EDGE });
+      try { await downloadValidatedImage(result.url, graphicFileName(selectedIndex, '2倍'), 'graphic_result_download'); } finally {
+        if (result.url.startsWith('blob:')) window.setTimeout(() => URL.revokeObjectURL(result.url), 5000);
+      }
+      if (result.method === 'plain') toast('このブラウザでは高画質の拡大が使えないため、通常の拡大で保存しました');
+    } catch (error) {
+      if (controller.signal.aborted) { toast('2倍の大きさを取り消しました'); return; }
+      throw error;
+    } finally { doubleAbort.current = null; setDoubleProgress(null); }
   }, 'ダウンロードに失敗しました');
 
   const downloadAll = () => candidates.length > 0 && void run('download-all', async () => {
@@ -118,10 +138,17 @@ export function GraphicResultView({ brandId, userId, jobId, fallbackUrl, locked,
             <button type="button" aria-label="ダウンロード" aria-expanded={menu === 'download'} disabled={!selected || Boolean(busy)} onClick={() => setMenu(menu === 'download' ? null : 'download')} className={`${barButton} w-8 bg-[#20d0c4] text-neutral-950 hover:bg-[#3fe0d5]`}>
               {busy?.startsWith('download') ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Download aria-hidden="true" className="h-4 w-4" />}
             </button>
+            {doubleProgress !== null && (
+              <div role="status" aria-live="polite" data-testid="graphic-double-progress" className="absolute right-0 top-10 z-30 flex w-56 items-center gap-2 rounded-lg border border-white/10 bg-[#171b1c] px-3 py-2 text-xs text-neutral-200 shadow-xl">
+                <Loader2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 animate-spin text-[#20d0c4]" />
+                <span className="flex-1">高画質で2倍に {Math.round(doubleProgress * 100)}%</span>
+                <button type="button" onClick={() => doubleAbort.current?.abort()} className="rounded px-1.5 py-0.5 text-neutral-300 hover:bg-white/10 hover:text-white">取り消す</button>
+              </div>
+            )}
             {menu === 'download' && (
               <div role="menu" className="absolute right-0 top-10 z-30 w-48 rounded-lg border border-white/10 bg-[#171b1c] p-1 shadow-xl">
-                <button type="button" role="menuitem" onClick={() => downloadSelected(1)} className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10">この案をダウンロード</button>
-                <button type="button" role="menuitem" onClick={() => downloadSelected(2)} className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10">2倍の大きさでダウンロード</button>
+                <button type="button" role="menuitem" onClick={downloadSelected} className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10">この案をダウンロード</button>
+                <button type="button" role="menuitem" onClick={downloadDouble} className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10">2倍の大きさでダウンロード</button>
                 <button type="button" role="menuitem" onClick={downloadAll} className="block w-full rounded px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10">{candidates.length}案をまとめて（ZIP）</button>
               </div>
             )}
