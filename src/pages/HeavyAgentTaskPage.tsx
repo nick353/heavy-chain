@@ -11,6 +11,7 @@ import { AgentSidebar } from '../features/agent/AgentSidebar';
 import { AgentAttachMenu, AgentAttachmentChips } from '../features/agent/AgentAttachMenu';
 import { ErrorRow, GeneratedTile, StepList, StepSpinner, UserBubble } from '../features/agent/AgentParts';
 import { AgentDialogueView } from '../features/agent/AgentDialogueView';
+import { inlineReportImages } from '../features/agent/agentReportImages';
 import type { AssistantQuestion } from '../features/designDetail/assistantQuestions';
 import {
   AGENT_SCOPE_REGIONS, DEFAULT_AGENT_SCOPE, agentConversationId, agentImagePrompt, agentMissingNames, agentNotePrompt,
@@ -158,15 +159,35 @@ function SlideFrame({ report }: { report: ReportDoc }) {
     </div>
   );
 }
-/** Light's ダウンロード saves the report as an HTML file named after it. */
-function downloadReport(report: ReportDoc) {
-  const url = URL.createObjectURL(new Blob([report.html], { type: 'text/html;charset=utf-8' }));
+/** One generated image as a JPEG data URL (at most 2048px on the long side, on white), or null when it cannot be read. */
+async function imageAsDataUrl(url: string): Promise<string | null> {
+  const response = await fetch(url, { credentials: 'omit' });
+  if (!response.ok) return null;
+  const bitmap = await createImageBitmap(await response.blob());
+  const scale = Math.min(1, REPORT_IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext('2d');
+  if (!context) { bitmap.close(); return null; }
+  context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL('image/jpeg', 0.9);
+}
+const REPORT_IMAGE_MAX_EDGE = 2048;
+
+/** Light's ダウンロード saves the report as an HTML file named after it. Heavy's pictures are written into the file, because
+ * their signed addresses expire within an hour (a saved report opened later showed empty frames). */
+async function downloadReport(report: ReportDoc) {
+  const { html } = await inlineReportImages(report.html, imageAsDataUrl);
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
   const link = document.createElement('a'); link.href = url; link.download = `${report.title.replace(/[\\/:*?"<>|]/g, '_')}.html`; document.body.appendChild(link); link.click(); link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /** Light's 「オンラインで表示」 opens the report in a window over the page (the HTML in a sandboxed frame), not in a new tab. */
 function ReportModal({ report, onClose }: { report: ReportDoc; onClose: () => void }) {
+  const [saving, setSaving] = useState(false);
   useEffect(() => {
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
     document.addEventListener('keydown', escape);
@@ -179,7 +200,8 @@ function ReportModal({ report, onClose }: { report: ReportDoc; onClose: () => vo
         <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
           <span aria-hidden="true" className="flex size-7 flex-none items-center justify-center rounded-lg bg-[#f2683c] text-white"><Code2 className="h-4 w-4" /></span>
           <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">{report.title}</p>
-          <button type="button" onClick={() => downloadReport(report)} className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-cyan-300 hover:bg-white/10"><Download className="h-4 w-4" />ダウンロード</button>
+          <button type="button" disabled={saving} onClick={() => { setSaving(true); void downloadReport(report).finally(() => setSaving(false)); }} className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-cyan-300 hover:bg-white/10 disabled:opacity-60">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{saving ? '保存中…' : 'ダウンロード'}</button>
           <button type="button" aria-label="閉じる" onClick={onClose} className="rounded-lg p-1.5 text-neutral-300 hover:bg-white/10"><X className="h-4 w-4" /></button>
         </div>
         <div className="relative flex-1 bg-white">
@@ -191,7 +213,8 @@ function ReportModal({ report, onClose }: { report: ReportDoc; onClose: () => vo
   );
 }
 
-function ReportCard({ title, note, testId, writing, onOpen, onDownload }: { title: string; note: string; testId: string; writing?: boolean; onOpen: () => void; onDownload: () => void }) {
+function ReportCard({ title, note, testId, writing, onOpen, onDownload }: { title: string; note: string; testId: string; writing?: boolean; onOpen: () => void; onDownload: () => Promise<void> | void }) {
+  const [saving, setSaving] = useState(false);
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#202426] px-4 py-3" data-testid={testId} data-report-writing={writing ? 'true' : undefined}>
       <span aria-hidden="true" className="flex size-8 flex-none items-center justify-center rounded-lg bg-[#f2683c] text-white">{writing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Code2 className="h-4 w-4" />}</span>
@@ -201,7 +224,7 @@ function ReportCard({ title, note, testId, writing, onOpen, onDownload }: { titl
         {writing ? <p className="truncate text-xs text-neutral-400">スライドを作成しています…（1〜3分。作成中は簡易版を表示します）</p> : note && <p className="truncate text-xs text-neutral-400">{note}</p>}
       </div>
       <button type="button" onClick={onOpen} className="flex-none text-sm text-cyan-300 hover:underline">オンラインで表示</button>
-      <button type="button" onClick={onDownload} className="flex-none text-sm text-cyan-300 hover:underline">ダウンロード</button>
+      <button type="button" disabled={saving} onClick={() => { setSaving(true); void Promise.resolve(onDownload()).finally(() => setSaving(false)); }} className="flex-none text-sm text-cyan-300 hover:underline disabled:opacity-60">{saving ? '保存中…' : 'ダウンロード'}</button>
     </div>
   );
 }
@@ -982,7 +1005,7 @@ export default function HeavyAgentTaskPage() {
   ] : [];
   const reportDoc = (entry: { title: string; html: () => string | { html: string; slides: boolean } }): ReportDoc => { const built = entry.html(); return typeof built === 'string' ? { title: entry.title, html: built } : { title: entry.title, ...built }; };
   const showDeliverable = (key: string) => { const entry = deliverables.find((item) => item.key === key); if (entry) openReport(reportDoc(entry)); };
-  const saveDeliverable = (key: string) => { const entry = deliverables.find((item) => item.key === key); if (entry) downloadReport(reportDoc(entry)); };
+  const saveDeliverable = async (key: string) => { const entry = deliverables.find((item) => item.key === key); if (entry) await downloadReport(reportDoc(entry)); };
   const reportRound = task ? agentReportRound(task) : null;
   const reportState = task ? readAgentReport(task) : null;
   const reportWriting = Boolean(reportRound && (reportState?.round !== reportRound || reportState.step.state === 'running'));
