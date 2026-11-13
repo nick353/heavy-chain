@@ -495,3 +495,15 @@ test('the canvas deletes, copies and undoes nodes the way Light does', () => {
   // Deleted nodes are not drawn and lose their edges.
   assert.match(page, /\.filter\(edge => shownKey\(edge\.source\) && shownKey\(edge\.target\)\)/);
 });
+
+test('adding an image or a form can be undone and redone like Light, and the menu rows stay on one line', () => {
+  // Light's 取り消し lights up after a node is added (2026-11-13): undo hides the new node, redo shows it again.
+  assert.match(page, /type StudioCanvasOp = 'layout' \| \{ deleted: string\[\] \} \| \{ added: string\[\] \}/);
+  assert.match(page, /if \(saved\) \{ viewportInteractionRef\.current\?\.select\(key\); pushCanvasOp\(\{ added: \[key\] \}\); \}/);
+  assert.match(page, /if \(!child\.edit\) \{ viewportInteractionRef\.current\?\.select\(formKey\); pushCanvasOp\(\{ added: \[formKey\] \}\); \}/);
+  assert.match(page, /const hide = 'added' in op \? direction === 'undo' : direction === 'redo';/);
+  assert.match(page, /hide \? withStudioNodesDeleted\(snapshot, keys\) : withStudioNodesRestored\(snapshot, keys\)/);
+  // Light's menu: 12px words on one line, the shortcut chip never wraps.
+  assert.match(page, /const row = 'flex h-\[45px\] w-full items-center gap-2 whitespace-nowrap[^']*text-xs text-white/);
+  assert.match(page, /const chip = 'ml-auto shrink-0 whitespace-nowrap/);
+});
