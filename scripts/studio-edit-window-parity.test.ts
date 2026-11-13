@@ -89,3 +89,15 @@ test('パスツールは本家の4つ（描画・削除・選択・曲線）で�
   assert.match(surface, /studioPenTrace\(current\.context, points\)/);
   assert.match(surface, /penMode === 'delete'/);
 });
+
+// 本家の窓の倍率（2026-11-13）: 押すと 拡大・縮小・画面に合わせる・ズーム 50% / 100% / 200% の一覧が出る。
+test('the window zoom opens Light\'s list: 拡大・縮小・画面に合わせる and 50 / 100 / 200%', () => {
+  for (const label of ['拡大<span', 'Ctrl + / ホイール', '縮小<span', 'Ctrl - / ホイール', '画面に合わせる<span', 'Ctrl 1']) assert.ok(menu.includes(label), label);
+  assert.match(menu, /STUDIO_ZOOM_MENU_PRESETS = \[50, 100, 200\] as const/);
+  assert.match(menu, />ズーム \{percent\}%</);
+  assert.match(menu, /aria-haspopup="menu" aria-expanded=\{open\} aria-label=\{`倍率 \$\{zoom\.percent\}%`\}/);
+  // The brush windows (部分編集・クリッピング・AI削除) and the fitted windows (AIトリミング・AI拡張) both pass fit and zoomTo.
+  assert.match(menu, /fit: \(\) => surface\.current\?\.fit\(\), zoomTo: scale => surface\.current\?\.zoomTo\(scale\)/);
+  assert.match(menu, /fit: \(\) => setFactor\(1\), zoomTo: \(target: number\) =>/);
+  assert.match(surface, /zoomTo: \(scale: number\) => zoomAround\(scale \/ Math\.max\(0\.0001, viewRef\.current\.scale\)\)/);
+});

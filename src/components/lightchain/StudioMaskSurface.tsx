@@ -52,6 +52,8 @@ export type StudioMaskSurfaceHandle = {
   zoomIn: () => void;
   zoomOut: () => void;
   fit: () => void;
+  /** 倍率をこの値（1 = 100%）にする。面の真ん中を中心に。 */
+  zoomTo: (scale: number) => void;
 };
 
 // A node's signed URL may have expired while the page was open: sign it again before reading (refreshSignedImageUrl).
@@ -550,6 +552,7 @@ export const StudioMaskSurface = forwardRef<StudioMaskSurfaceHandle, {
     zoomIn: () => zoomAround(BUTTON_STEP),
     zoomOut: () => zoomAround(1 / BUTTON_STEP),
     fit: fitView,
+    zoomTo: (scale: number) => zoomAround(scale / Math.max(0.0001, viewRef.current.scale)),
   }));
 
   const cursor = spaceDown ? 'cursor-grab' : tool === 'none' ? 'cursor-default' : 'cursor-crosshair';

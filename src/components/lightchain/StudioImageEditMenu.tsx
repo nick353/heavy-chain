@@ -217,7 +217,7 @@ export function StudioImageEditMenu({
 function EditDialogFrame({ icon: Icon, title, zoom, onClose, sidebar, children, testId, busy }: {
   icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' }>;
   title: string;
-  zoom?: { percent: number; zoomIn: () => void; zoomOut: () => void };
+  zoom?: StudioWindowZoom;
   onClose: () => void;
   sidebar?: ReactNode;
   children: ReactNode;
@@ -237,7 +237,7 @@ function EditDialogFrame({ icon: Icon, title, zoom, onClose, sidebar, children, 
           {zoom && (
             <div className="flex h-10 items-center gap-1 rounded-lg bg-[#1d2224] px-1.5">
               <button type="button" aria-label="縮小" onClick={zoom.zoomOut} className="inline-flex h-8 w-8 items-center justify-center rounded text-white/80 hover:bg-white/[0.08]"><ZoomOut aria-hidden="true" className="h-4 w-4" /></button>
-              <span className="w-20 rounded-md bg-black/40 py-1 text-center text-sm text-white/90" aria-live="polite">{zoom.percent}%</span>
+              <StudioZoomMenu zoom={zoom} />
               <button type="button" aria-label="拡大" onClick={zoom.zoomIn} className="inline-flex h-8 w-8 items-center justify-center rounded text-white/80 hover:bg-white/[0.08]"><ZoomIn aria-hidden="true" className="h-4 w-4" /></button>
             </div>
           )}
@@ -272,7 +272,57 @@ function useFitScale(width: number, height: number, reserve = 64) {
   }, []);
   const fit = width > 0 && height > 0 && box.width > 0 ? Math.min(1, (box.width - reserve * 2) / width, (box.height - reserve * 2) / height) : 0;
   const scale = Math.max(0.02, fit * factor);
-  return { ref, scale, percent: Math.round(scale * 100), zoomIn: () => setFactor(value => Math.min(8, value * 1.2)), zoomOut: () => setFactor(value => Math.max(0.2, value / 1.2)) };
+  return { ref, scale, percent: Math.round(scale * 100), zoomIn: () => setFactor(value => Math.min(8, value * 1.2)), zoomOut: () => setFactor(value => Math.max(0.2, value / 1.2)),
+    fit: () => setFactor(1), zoomTo: (target: number) => { if (fit > 0) setFactor(Math.min(8, Math.max(0.2, target / fit))); } };
+}
+
+/** 窓の倍率。fit と zoomTo がある窓は、倍率を押すと本家と同じ一覧が出る。 */
+export type StudioWindowZoom = { percent: number; zoomIn: () => void; zoomOut: () => void; fit?: () => void; zoomTo?: (scale: number) => void };
+/**
+ * 本家の窓の倍率は押すと一覧が出る（2026-11-13 本家の部分編集で開いた）: 拡大 Ctrl + / ホイール・縮小 Ctrl - / ホイール・
+ * 画面に合わせる Ctrl 1・ズーム 50%・ズーム 100%・ズーム 200%。幅は約180、倍率の下に右をそろえて出る。
+ */
+export const STUDIO_ZOOM_MENU_PRESETS = [50, 100, 200] as const;
+function StudioZoomMenu({ zoom }: { zoom: StudioWindowZoom }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const { fit, zoomTo } = zoom;
+  useEffect(() => {
+    if (!open) return;
+    const down = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener('pointerdown', down, true);
+    return () => document.removeEventListener('pointerdown', down, true);
+  }, [open]);
+  useEffect(() => {
+    if (!fit) return;
+    const key = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (event.key === '=' || event.key === '+') { event.preventDefault(); zoom.zoomIn(); }
+      else if (event.key === '-') { event.preventDefault(); zoom.zoomOut(); }
+      else if (event.key === '1') { event.preventDefault(); fit(); }
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [fit, zoom]);
+  const label = <span className="w-20 rounded-md bg-black/40 py-1 text-center text-sm text-white/90" aria-live="polite">{zoom.percent}%</span>;
+  if (!fit || !zoomTo) return label;
+  const row = 'flex h-9 w-full items-center justify-between gap-2 whitespace-nowrap rounded-md px-2.5 text-left text-xs text-white hover:bg-white/[0.08]';
+  const chip = 'shrink-0 rounded bg-white/[0.08] px-1 py-0.5 text-[11px] text-white/60';
+  const choose = (run: () => void) => { run(); setOpen(false); };
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" aria-haspopup="menu" aria-expanded={open} aria-label={`倍率 ${zoom.percent}%`} onClick={() => setOpen(value => !value)}
+        className="w-20 rounded-md bg-black/40 py-1 text-center text-sm text-white/90 hover:bg-black/60">{zoom.percent}%</button>
+      {open && (
+        <div role="menu" aria-label="倍率" className="absolute right-[-44px] top-[calc(100%+12px)] z-[70] w-[180px] rounded-lg border border-white/10 bg-[#1d2224] p-1 shadow-2xl">
+          <button type="button" role="menuitem" className={row} onClick={() => choose(zoom.zoomIn)}>拡大<span className={chip}>Ctrl + / ホイール</span></button>
+          <button type="button" role="menuitem" className={row} onClick={() => choose(zoom.zoomOut)}>縮小<span className={chip}>Ctrl - / ホイール</span></button>
+          <button type="button" role="menuitem" className={row} onClick={() => choose(fit)}>画面に合わせる<span className={chip}>Ctrl 1</span></button>
+          {STUDIO_ZOOM_MENU_PRESETS.map(percent => <button key={percent} type="button" role="menuitem" className={row} onClick={() => choose(() => zoomTo(percent / 100))}>ズーム {percent}%</button>)}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ---- 部分編集・クリッピング・AI削除（下に道具の帯） ----------------------------------------------------------------
@@ -366,7 +416,7 @@ function BrushEditDialog({ kind, imageUrl, aspect, name, onClose, onClientResult
 
   return (
     <EditDialogFrame icon={text.icon} title={text.title} testId={text.testId} onClose={onClose} busy={busy}
-      zoom={{ percent, zoomIn: () => surface.current?.zoomIn(), zoomOut: () => surface.current?.zoomOut() }}>
+      zoom={{ percent, zoomIn: () => surface.current?.zoomIn(), zoomOut: () => surface.current?.zoomOut(), fit: () => surface.current?.fit(), zoomTo: scale => surface.current?.zoomTo(scale) }}>
       <div className="absolute inset-x-0 bottom-[112px] top-0">
         <StudioMaskSurface
           ref={surface}
