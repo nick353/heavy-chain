@@ -4,6 +4,9 @@ import {
   Boxes,
   ChevronDown,
   ChevronRight,
+  Copy,
+  CopyPlus,
+  Download,
   Keyboard,
   Loader2,
   LayoutGrid,
@@ -67,7 +70,8 @@ import { FoundImageCredit } from '../features/designDetail/FoundImageCredit';
 import type { FoundImage } from '../features/designDetail/referenceImageSearch';
 import { incomingFileDataUrl, useIncomingImageFile } from '../lib/incomingImage';
 import { STUDIO_CANVAS_IMAGE_FEATURE, STUDIO_CANVAS_IMAGE_ROLE, STUDIO_CANVAS_LIMIT_MESSAGE, STUDIO_MAX_CANVAS_IMAGES, STUDIO_MAX_CHILD_FORMS, isStudioFormKey, newStudioFormId,
-  studioCanvasImageKey, studioCanvasImageObject, studioChildFormIdOf, studioChildFormKey, studioChildNodeKey, studioNodeBeside, studioSettleNewNodes, withStudioCanvasImage, withStudioForm, withStudioParent,
+  studioCanvasImageKey, studioCanvasImageObject, studioChildFormIdOf, studioChildFormKey, studioChildNodeKey, studioNodeBeside, studioPurgeHidden, studioSettleNewNodes, withStudioCanvasImage, withStudioForm, withStudioHidden,
+  withStudioNodesDeleted, withStudioNodesRestored, withStudioParent, readStudioHidden,
   type StudioCanvasImageCredit, type StudioCanvasImageKind, type StudioChildForm, type StudioEditRequest } from '../lib/studioCanvasNodes';
 
 const FASHION_STUDIO_PROJECT_ICON = '/lightchain-assets/icons/fashion-studio.png';
@@ -114,6 +118,8 @@ const EDITOR_THEME_KEY = 'heavy-editor-theme:v1';
 const readEditorTheme = (): 'dark' | 'light' => { try { return window.localStorage.getItem(EDITOR_THEME_KEY) === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } };
 /** A press on these inside a node uses the control instead of dragging the node. */
 const NODE_DRAG_BLOCKER = 'input, textarea, select, button, a, label, [contenteditable="true"], [role="button"], [role="listbox"], [role="menu"], [role="option"], [data-studio-chrome]';
+/** A right-click in these keeps the browser's own menu (copying text in an instruction). */
+const NODE_DRAG_BLOCKER_MENU = 'input, textarea, [contenteditable="true"]';
 const isTypingTarget = (target: EventTarget | null) => target instanceof HTMLElement
   && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable);
 /** React Flow moves a selected node 5 units per arrow press (×4 with Shift); in Heavy units. */
@@ -124,7 +130,8 @@ const resultNodeKey = (objectId: string | null, index: number) => objectId ? `re
 const STUDIO_TOOLBAR_FUNCTIONS = ['text', 'region', 'underwear', '3d'] as const satisfies readonly StudioFunctionId[];
 /** What a form on the project's canvas tells the project: its result nodes (for positions, edges and the toolbar) and
  * whether it is working (the task count). */
-type StudioChildReport = { resultKeys: string[]; results: { key: string; objectId: string | null }[]; busy: boolean };
+/** `loaded` is set once the form's document has been read (its result list is then known); `mainUrl` is its main image. */
+type StudioChildReport = { resultKeys: string[]; results: { key: string; objectId: string | null }[]; busy: boolean; mainUrl: string; loaded: boolean };
 type StudioChildApi = { generate: () => void; canGenerate: boolean };
 /** A form added to a project's canvas: the page drawn inside the project's canvas for the form's own document. */
 type StudioEmbed = {
@@ -143,6 +150,8 @@ type StudioEmbed = {
   /** The 画像編集 guide image (the marks drawn on the photo), sent as the form's reference before it runs. */
   guideFile?: File;
   onExpand: (url: string) => void;
+  /** Node keys deleted from the project's canvas: this form's deleted nodes are not drawn. */
+  hidden: ReadonlySet<string>;
 };
 /** Light's forms opened from an image start from its designForm defaults: テキスト・3D 1K, 下着 2K, 3D 上装・正面. */
 const primeChildForm = (documentId: string, fn: StudioFunctionId) => {
@@ -151,6 +160,19 @@ const primeChildForm = (documentId: string, fn: StudioFunctionId) => {
     if (fn === 'underwear') window.localStorage.setItem(`heavy-fashion-studio-draft:${documentId}`, STUDIO_UNDERWEAR_NO_MODEL_PROMPT);
   } catch { /* storage unavailable */ }
   writeStudioSettings(documentId, { ...DEFAULT_STUDIO_SETTINGS, quality: fn === 'underwear' ? '2k' : '1k', ...(fn === '3d' ? { garment: '上装' as StudioGarmentArea } : {}) });
+};
+/** キャンバス内コピーして貼り付け of a form: the copy starts with the copied form's function, settings, instruction and masks. */
+const copyChildFormSettings = (fromId: string, documentId: string, fn: StudioFunctionId) => {
+  try {
+    window.localStorage.setItem(studioFunctionKey(documentId), fn);
+    const draft = window.localStorage.getItem(`heavy-fashion-studio-draft:${fromId}`);
+    if (draft !== null) window.localStorage.setItem(`heavy-fashion-studio-draft:${documentId}`, draft);
+    for (let slot = 0; slot < STUDIO_MAX_REGION_POINTS; slot += 1) {
+      const mask = window.localStorage.getItem(regionMaskKey(fromId, slot));
+      if (mask) window.localStorage.setItem(regionMaskKey(documentId, slot), mask);
+    }
+  } catch { /* storage unavailable */ }
+  writeStudioSettings(documentId, readStudioSettings(fromId));
 };
 /** Images sent here with ?imgUrl= (送る from another tool): a new project without one, a new image node with one. */
 function StudioIncomingImage({ onFile, ready }: { onFile: (file: File) => unknown; ready: boolean }) {
@@ -256,6 +278,32 @@ function FashionStudioImageNode({
   );
 }
 
+/** Light's node menu (right-click on a node, 2026-11-13): 310px wide at the pointer, rows 45px, ダウンロード and a line
+ * above the rest for images; a form has no ダウンロード. */
+function StudioNodeMenu({ x, y, image, onClose, onDownload, onCopy, onDuplicate, onDelete }: {
+  x: number; y: number; image: boolean; onClose: () => void; onDownload: () => void; onCopy: () => void; onDuplicate: (() => void) | null; onDelete: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const down = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) onClose(); };
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('pointerdown', down, true); window.addEventListener('keydown', key); window.addEventListener('wheel', onClose, { passive: true });
+    return () => { document.removeEventListener('pointerdown', down, true); window.removeEventListener('keydown', key); window.removeEventListener('wheel', onClose); };
+  }, [onClose]);
+  const height = image ? 196 : 151;
+  const left = Math.min(x, window.innerWidth - 318), top = Math.min(y, window.innerHeight - height - 8);
+  const row = 'flex h-[45px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-white hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40';
+  const chip = 'ml-auto rounded bg-white/[0.08] px-1.5 py-0.5 text-xs text-white/70';
+  return createPortal(<div ref={ref} role="menu" aria-label="ノードの操作" data-studio-chrome="" data-testid="fashion-studio-node-menu" onContextMenu={event => event.preventDefault()}
+    className="fixed z-[60] w-[310px] rounded-xl border border-white/10 bg-[#292d2f] p-2 shadow-2xl" style={{ left, top }}>
+    {image && <><button type="button" role="menuitem" className={row} onClick={onDownload}><Download aria-hidden="true" className="h-4 w-4" />ダウンロード</button>
+      <div className="mx-1 my-0.5 h-px bg-white/10" aria-hidden="true" /></>}
+    <button type="button" role="menuitem" className={row} onClick={onCopy}><Copy aria-hidden="true" className="h-4 w-4" />キャンバス内コピー<span className={chip}>Ctrl/⌘ + C</span></button>
+    <button type="button" role="menuitem" className={row} disabled={!onDuplicate} onClick={() => onDuplicate?.()}><CopyPlus aria-hidden="true" className="h-4 w-4" />キャンバス内コピーして貼り付け<span className={chip}>Ctrl/⌘ + D</span></button>
+    <button type="button" role="menuitem" className={row} onClick={onDelete}><Trash2 aria-hidden="true" className="h-4 w-4" />削除<span className={chip}>←/del</span></button>
+  </div>, document.body);
+}
+
 /**
  * Light Chain uses the same deep-link for a new file and an existing project,
  * but the existing-project state exposes the image-search workbench. Keep the
@@ -303,7 +351,8 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   const answerFluxConsent = (value: boolean) => { const resolve = fluxConsentResolveRef.current; fluxConsentResolveRef.current = null; setFluxConsent(null); resolve?.(value); };
   useEffect(() => () => { fluxConsentResolveRef.current?.(false); fluxConsentResolveRef.current = null; }, []);
   const [generation, setGeneration] = useState<(FashionStudioGenerationOutcome & { scopeKey: string }) | null>(null);
-  const [activity, setActivity] = useState({ scopeKey: '', value: '' });
+  const [activity, setActivityState] = useState({ scopeKey: '', value: '' });
+  const setActivity = setActivityState;
   const [loadedMain, setLoadedMain] = useState({ identity: '', url: '' });
   const mainInputRef = useRef<HTMLInputElement>(null);
   const referenceInputRef = useRef<HTMLInputElement>(null);
@@ -421,7 +470,9 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   /** The function a node toolbar button chose; the new project its image creates opens on that function. */
   const pendingFunctionRef = useRef<StudioFunctionId | null>(null);
   /** A form being added from the image toolbar: its document is created by the upload, then the project lists it. */
-  const pendingChildRef = useRef<{ formId: string; fn: StudioFunctionId; sourceKey: string; edit: StudioEditRequest | null; parentId: string; documentId: string; guideFile?: File } | null>(null);
+  const pendingChildRef = useRef<{ formId: string; fn: StudioFunctionId; sourceKey: string; edit: StudioEditRequest | null; parentId: string; documentId: string; guideFile?: File;
+    /** キャンバス内コピーして貼り付け: the form whose settings and instruction the copy starts from. */
+    copyFrom?: string } | null>(null);
   const [pendingExample, setPendingExample] = useState<{ projectCode: string; fn: StudioFunctionId } | null>(null);
   const exampleReferenceStartedRef = useRef('');
   const [exampleLoad, setExampleLoad] = useState<{ scopeKey: string; loading: StudioFunctionId | null; failed: StudioFunctionId | null }>({ scopeKey: '', loading: null, failed: null });
@@ -887,8 +938,11 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   const childForms = embedded ? [] : detail.forms;
   const childResultKeys = (form: StudioChildForm) => childReports[form.id]?.resultKeys ?? [];
   const canvasImages = embedded ? [] : detail.canvasImages;
+  /** Nodes deleted from the canvas are not drawn, measured, joined or arranged (their places stay saved). */
+  const hiddenSet: ReadonlySet<string> = embedded ? embedded.hidden : new Set(detail.hidden);
+  const shownKey = (key: string) => !hiddenSet.has(key);
   const nodeKeySignature = [...resultNodeKeys, ...childForms.flatMap(form => [form.edit ? '' : studioChildFormKey(form.id), ...childResultKeys(form)]),
-    ...canvasImages.map(image => image.key)].join('|');
+    ...canvasImages.map(image => image.key), ...hiddenSet].join('|');
   const [nodeSizes, setNodeSizes] = useState<{ scopeKey: string; sizes: Record<string, { width: number; height: number }> }>({ scopeKey: '', sizes: {} });
   const sizes = nodeSizes.scopeKey === viewportScopeKey ? nodeSizes.sizes : {};
   useEffect(() => {
@@ -944,7 +998,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     extraPositions[image.key] = savedPositions[image.key] ?? { x: (source?.x ?? 0) + (sizes[image.sourceKey ?? '']?.width || IMAGE_NODE_WIDTH) + 45, y: source?.y ?? 0 };
     extraSpecs.push(resultSpec(image.key));
   }
-  const nodeKeys = [...nodeSpecs, ...extraSpecs].map(spec => spec.key);
+  const nodeKeys = [...nodeSpecs, ...extraSpecs].map(spec => spec.key).filter(shownKey);
   // Results without a saved place step down past a node they would cover (studioSettleNewNodes); everything else stays put.
   const newResultKeys = new Set([...resultNodeKeys, ...childForms.flatMap(form => childResultKeys(form))].filter(key => !savedPositions[key]));
   const basePositions = studioSettleNewNodes({ ...studioNodePositions(nodeSpecs, savedPositions), ...extraPositions }, sizes, nodeKeys, newResultKeys);
@@ -963,7 +1017,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     // An added form hangs off its image and its results off the form; a 画像編集 result hangs straight off the image.
     ...childForms.flatMap(form => form.edit ? childResultKeys(form).map(target => ({ source: form.sourceKey, target }))
       : [{ source: form.sourceKey, target: studioChildFormKey(form.id) }, ...childResultKeys(form).map(target => ({ source: studioChildFormKey(form.id), target }))]),
-    ...canvasImages.filter(image => image.sourceKey).map(image => ({ source: image.sourceKey!, target: image.key }))];
+    ...canvasImages.filter(image => image.sourceKey).map(image => ({ source: image.sourceKey!, target: image.key }))].filter(edge => shownKey(edge.source) && shownKey(edge.target));
   const selectedKey = embedded ? embedded.selectedKey : viewportState.selectedObjectId;
   const [snapEnabled, setSnapEnabled] = useState(readStudioSnapEnabled);
   const [minimapOpen, setMinimapOpen] = useState(false);
@@ -1029,7 +1083,22 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     if (!scope || !projectCode || sameStudioPositions(next, basePositions)) return;
     setLayoutState({ scopeKey: viewportScopeKey, positions: next, history: pushStudioHistory(layoutCurrent.history, basePositions) });
     queueLayoutSave(next);
+    pushCanvasOp('layout');
   };
+  /** Light's 取り消し / やり直し cover moves and deletions in the order they were made; this keeps that order (the moves
+   * themselves stay in the layout history, a deletion is undone by showing its nodes again). */
+  type StudioCanvasOp = 'layout' | { deleted: string[] };
+  const canvasOpsRef = useRef<{ scopeKey: string; past: StudioCanvasOp[]; future: StudioCanvasOp[] }>({ scopeKey: '', past: [], future: [] });
+  const [, setCanvasOpsVersion] = useState(0);
+  const canvasOps = () => {
+    if (canvasOpsRef.current.scopeKey !== viewportScopeKey) canvasOpsRef.current = { scopeKey: viewportScopeKey, past: [], future: [] };
+    return canvasOpsRef.current;
+  };
+  function pushCanvasOp(op: StudioCanvasOp) {
+    const ops = canvasOps();
+    ops.past = [...ops.past, op].slice(-100); ops.future = [];
+    setCanvasOpsVersion(value => value + 1);
+  }
   const stepLayoutHistory = (direction: 'undo' | 'redo') => {
     const step = direction === 'undo' ? undoStudioHistory(layoutCurrent.history, basePositions) : redoStudioHistory(layoutCurrent.history, basePositions);
     if (!step) return;
@@ -1037,7 +1106,18 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     queueLayoutSave(step.positions);
   };
   const canUndo = layoutCurrent.history.past.length > 0;
-  const canRedo = layoutCurrent.history.future.length > 0;
+  const canvasCanUndo = canvasOps().past.length > 0;
+  const canvasCanRedo = canvasOps().future.length > 0;
+  const stepCanvasHistory = async (direction: 'undo' | 'redo') => {
+    const ops = canvasOps();
+    const op = direction === 'undo' ? ops.past[ops.past.length - 1] : ops.future[ops.future.length - 1];
+    if (!op) return;
+    if (op === 'layout') stepLayoutHistory(direction);
+    else if (!await writeProject(async () => snapshot => direction === 'undo' ? withStudioNodesRestored(snapshot, op.deleted) : withStudioNodesDeleted(snapshot, op.deleted), { quiet: true })) return;
+    if (direction === 'undo') { ops.past = ops.past.slice(0, -1); ops.future = [...ops.future, op]; }
+    else { ops.future = ops.future.slice(0, -1); ops.past = [...ops.past, op]; }
+    setCanvasOpsVersion(value => value + 1);
+  };
   // The first fit follows the nodes as their images load, until the person moves the view themselves.
   const fittedRef = useRef('');
   const userViewRef = useRef('');
@@ -1120,8 +1200,14 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     const pressed = event.target as Node | null;
     if (pressed !== document.body && pressed && !pageRef.current?.contains(pressed)) return;
     const mod = event.ctrlKey || event.metaKey;
-    if (mod && !event.altKey && event.key.toLowerCase() === 'z') { event.preventDefault(); stepLayoutHistory(event.shiftKey ? 'redo' : 'undo'); return; }
-    if (event.key === 'Escape') { viewportInteractionRef.current?.select(null); return; }
+    if (mod && !event.altKey && event.key.toLowerCase() === 'z') { event.preventDefault(); void stepCanvasHistory(event.shiftKey ? 'redo' : 'undo'); return; }
+    if (event.key === 'Escape') { setNodeMenu(null); viewportInteractionRef.current?.select(null); return; }
+    // Light's node shortcuts (its right-click menu): ←/del 削除, Ctrl/⌘ + C キャンバス内コピー, Ctrl/⌘ + D コピーして貼り付け,
+    // and Ctrl/⌘ + V pastes what was copied.
+    if ((event.key === 'Delete' || event.key === 'Backspace') && !mod && !event.altKey && selectedKey && deletableKey(selectedKey)) { event.preventDefault(); void deleteNodes([selectedKey]); return; }
+    if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'c' && selectedKey && copyableKey(selectedKey)) { copiedKeyRef.current = selectedKey; return; }
+    if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'v' && copiedKeyRef.current) { event.preventDefault(); void duplicateNode(copiedKeyRef.current); return; }
+    if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'd') { event.preventDefault(); if (selectedKey && copyableKey(selectedKey)) void duplicateNode(selectedKey); return; }
     if (mod && event.key === 'Enter') {
       if (selectedKey === 'form') { event.preventDefault(); void generate(); }
       else if (isStudioFormKey(selectedKey)) { event.preventDefault(); childApisRef.current[studioChildFormIdOf(selectedKey) ?? '']?.generate(); }
@@ -1177,9 +1263,12 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   // ── More nodes on this canvas (Light's addFormEdgeNode / addImageNode / addImageEdgeDirect) ─────────────────────────
   /** Adds nodes to this project's own document: one write at a time with uploads, generation and layout saves (they all
    * compare the revision), read again once on a conflict, then the saved project is shown. `prepare` runs first. */
-  const writeProject = async (prepare: () => Promise<((snapshot: CanvasDocumentSnapshot) => CanvasDocumentSnapshot) | null>): Promise<boolean> => {
+  const writeProject = async (prepare: () => Promise<((snapshot: CanvasDocumentSnapshot) => CanvasDocumentSnapshot) | null>,
+    options: { quiet?: boolean } = {}): Promise<boolean> => {
     if (!scope || !projectCode || embedded || busyRef.current || recoveryRequired || previewActiveRef.current) return false;
     const captured = scopeKey, requested = scope;
+    // A deletion, 取り消し or tidy is instant on Light: it does not show 保存中 / 完了 in the task chip.
+    const setActivity: typeof setActivityState = options.quiet ? () => undefined : setActivityState;
     try {
       assertContext(); busyRef.current = true; setActivity({ scopeKey, value: 'saving' });
       await waitForLayoutSave(); assertContext();
@@ -1190,6 +1279,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
         const current = await getCanvasDocument(projectCode, requested.brandId, context); assertContext();
         if (current.id !== projectCode || current.ownerId !== requested.userId || current.brandId !== requested.brandId) throw new Error('fashion_studio_canvas_document_unverified');
         const snapshot = change(current.snapshot);
+        if (snapshot === current.snapshot) { setActivity({ scopeKey, value: '' }); return true; }
         try {
           const saved = await updateCanvasDocument({ brandId: requested.brandId, documentId: projectCode, title: current.title, snapshot, expectedRevision: current.revision }, context);
           assertContext();
@@ -1241,7 +1331,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   /** The image toolbar's テキストで生成・範囲指定で生成・下着のフィッティング・3D画像に変換 (and the 画像編集 tools that run on the
    * generation route) add a form to this canvas, joined to the image: the form is its own document whose main image is
    * this image, listed in the project. A project saved before this keeps reading as one form. */
-  const addChildForm = async (sourceKey: string, url: string, fn: StudioFunctionId, edit: StudioEditRequest | null = null, guideFile?: File, mainFile?: File) => {
+  const addChildForm = async (sourceKey: string, url: string, fn: StudioFunctionId, edit: StudioEditRequest | null = null, guideFile?: File, mainFile?: File, copyFrom?: string) => {
     if ((!url && !mainFile) || !scope || !projectCode || embedded || busyRef.current || recoveryRequired || previewActiveRef.current) return;
     if (detail.forms.length >= STUDIO_MAX_CHILD_FORMS) { toast.error(STUDIO_CANVAS_LIMIT_MESSAGE); return; }
     let file: File;
@@ -1251,17 +1341,20 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
       catch { toast.error('画像を読み込めませんでした'); return; }
     }
     pendingExampleRef.current = null; pendingFunctionRef.current = null;
-    pendingChildRef.current = { formId: newStudioFormId(), fn, sourceKey, edit, parentId: projectCode, documentId: '', guideFile };
+    pendingChildRef.current = { formId: newStudioFormId(), fn, sourceKey, edit, parentId: projectCode, documentId: '', guideFile, copyFrom };
     if (await uploadFile(file, 'main', true)) await finishPendingChild();
   };
   /** The form's document exists: list it in the project with its place beside the image (also after 保存を再試行). */
   const finishPendingChild = async () => {
     const child = pendingChildRef.current;
     if (!child?.documentId || child.parentId !== projectCode) return;
-    primeChildForm(child.documentId, child.fn);
+    if (child.copyFrom) copyChildFormSettings(child.copyFrom, child.documentId, child.fn); else primeChildForm(child.documentId, child.fn);
     const formKey = studioChildFormKey(child.formId);
-    const source = rectOf(child.sourceKey);
-    const anchor = studioNodeBeside(source, nodeRects, child.edit ? { width: IMAGE_NODE_WIDTH, height: source?.height ?? IMAGE_NODE_WIDTH } : { width: FORM_NODE_WIDTH, height: sizes.form?.height || 560 });
+    // A copy lands beside the form it copies (Light puts it a little right of and below, over the form; Heavy keeps nodes
+    // from covering each other, so it steps down past what it would cover).
+    const copied = child.copyFrom ? rectOf(child.copyFrom === projectCode ? 'form' : studioChildFormKey(detail.forms.find(form => form.documentId === child.copyFrom)?.id ?? '')) : null;
+    const source = copied ?? rectOf(child.sourceKey);
+    const anchor = studioNodeBeside(source, nodeRects, child.edit ? { width: IMAGE_NODE_WIDTH, height: source?.height ?? IMAGE_NODE_WIDTH } : { width: FORM_NODE_WIDTH, height: sizes.form?.height || 560 }, copied ? () => 0 : undefined);
     const form: StudioChildForm = { id: child.formId, documentId: child.documentId, fn: child.fn, sourceKey: child.sourceKey, edit: child.edit };
     if (child.guideFile) childFilesRef.current[child.formId] = child.guideFile;
     if (!await writeProject(async () => snapshot => withStudioForm(snapshot, form, { [formKey]: anchor }))) return;
@@ -1269,6 +1362,67 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     setFreshForms(current => new Set(current).add(child.formId));
     if (!child.edit) viewportInteractionRef.current?.select(formKey);
   };
+  // ── Deleting and copying nodes (Light's right-click menu and keys, 2026-11-13) ─────────────────────────────────────
+  const [nodeMenu, setNodeMenu] = useState<{ key: string; x: number; y: number; image: boolean } | null>(null);
+  const copiedKeyRef = useRef<string | null>(null);
+  /** Every node can be deleted except a 画像編集 result still being made. */
+  const deletableKey = (key: string) => shownKey(key) && nodeKeys.includes(key);
+  /** Images and drawn forms can be copied (a 画像編集 form is not drawn; the waiting node is not an image yet). */
+  const copyableKey = (key: string) => deletableKey(key) && !key.endsWith('/pending');
+  const deleteNodes = async (keys: string[]) => {
+    const targets = keys.filter(deletableKey);
+    if (!targets.length || embedded) return;
+    setNodeMenu(null);
+    if (busyRef.current) { toast.error('処理中です。終わってから削除してください'); return; }
+    viewportInteractionRef.current?.select(null);
+    if (await writeProject(async () => snapshot => withStudioNodesDeleted(snapshot, targets), { quiet: true })) pushCanvasOp({ deleted: targets });
+  };
+  /** キャンバス内コピーして貼り付け: an image becomes a new image node beside it; a form becomes a new form with the same
+   * function, settings and instruction. Light's copied form starts without its main image and edge; a Heavy form is a
+   * document made from its main image, so the copy keeps the main image and the edge from the same image. */
+  const duplicateNode = async (key: string) => {
+    setNodeMenu(null);
+    if (!copyableKey(key)) return;
+    if (isStudioFormKey(key)) {
+      const childId = studioChildFormIdOf(key);
+      const form = childId ? childForms.find(item => item.id === childId) : null;
+      if (key === 'form') await addChildForm('main', nodeImageUrl('main'), studioFunction, null, undefined, undefined, projectCode);
+      else if (form && !form.edit) await addChildForm(form.sourceKey, childReports[form.id]?.mainUrl ?? '', form.fn, null, undefined, undefined, form.documentId);
+      return;
+    }
+    const url = nodeImageUrl(key);
+    if (!url) return;
+    let file: File;
+    try { file = await loadStudioExampleFile(await refreshSignedImageUrl(url)); } catch { toast.error('画像を読み込めませんでした'); return; }
+    const canvasImage = canvasImages.find(image => image.key === key);
+    await addCanvasImage(file, { kind: canvasImage?.kind ?? 'upload', nearKey: key, credit: canvasImage?.credit ?? null });
+  };
+  // The next time a project opens, the nodes deleted before are tidied out of its document (studioPurgeHidden) and the
+  // documents of deleted forms are deleted. Deletions made while the page is open stay undoable until then.
+  const purgeRef = useRef<{ project: string; initial: ReadonlySet<string>; done: boolean }>({ project: '', initial: new Set(), done: true });
+  useEffect(() => {
+    if (embedded || !projectCode || visible?.status !== 'success') return;
+    if (purgeRef.current.project !== projectCode) purgeRef.current = { project: projectCode, initial: new Set(detail.hidden), done: detail.hidden.length === 0 };
+    const purge = purgeRef.current;
+    if (purge.done || busy || recoveryRequired || previewActive) return;
+    // A deleted form's results must be known (its document read) before it can be told apart from one whose results stay.
+    const touched = detail.forms.filter(form => [...purge.initial].some(key => studioChildFormIdOf(key) === form.id));
+    if (touched.some(form => !childReports[form.id]?.loaded)) return;
+    purge.done = true;
+    const childResults = Object.fromEntries(detail.forms.map(form => [form.id, childReports[form.id]?.loaded ? childReports[form.id].resultKeys : undefined]));
+    let deleteDocuments: string[] = [];
+    void writeProject(async () => snapshot => {
+      const hidden = readStudioHidden(snapshot);
+      const plan = studioPurgeHidden(withStudioHidden(snapshot, hidden.filter(key => purge.initial.has(key))), childResults);
+      if (!plan) return snapshot;
+      deleteDocuments = plan.deleteDocuments;
+      return withStudioNodesDeleted(plan.snapshot, hidden.filter(key => !purge.initial.has(key)));
+    }, { quiet: true }).then(saved => {
+      if (!saved || !cloudflareDataPlane) return;
+      for (const documentId of deleteDocuments) void cloudflareDataPlane.deleteCanvasDocument(documentId).catch(() => undefined);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectCode, visible?.status, busy, recoveryRequired, previewActive, childReports, detail.hidden.join('|')]);
   const activityText = ({ preparing: '準備中', generating: '生成中', recovering: '復旧中', saving: '保存中', failure: '失敗', success: '完了' } as Record<string, string>)[activityValue] || 'タスク';
   const activityError = activeUpload?.error || activeGeneration?.error || '';
   useEffect(() => { if (activityError) toast.error(studioErrorMessage(activityError), { id: `studio-error:${activityError}` }); }, [activityError]);
@@ -1285,11 +1439,13 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   const pendingNodeKey = nodeKeyOf('pending');
   const showPendingNode = Boolean(embedded?.edit) && (busy || resultItems.length === 0);
   const childReportKeys = embedded ? [...resultKeys, ...(showPendingNode ? [pendingNodeKey] : [])] : [];
-  const childReportSignature = embedded ? JSON.stringify([childReportKeys, resultItems.map(item => item.objectId), busy]) : '';
+  const childMainUrl = loadedMain.identity === mainIdentity ? loadedMain.url : '';
+  const childReportSignature = embedded ? JSON.stringify([childReportKeys, resultItems.map(item => item.objectId), busy, childMainUrl, visible?.status]) : '';
   useEffect(() => {
     const host = embeddedRef.current;
     if (!host) return;
-    host.onReport(host.formId, { resultKeys: childReportKeys, results: resultItems.map((item, index) => ({ key: resultKeys[index], objectId: item.objectId })), busy });
+    host.onReport(host.formId, { resultKeys: childReportKeys, results: resultItems.map((item, index) => ({ key: resultKeys[index], objectId: item.objectId })), busy,
+      mainUrl: childMainUrl, loaded: visible?.status === 'success' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childReportSignature]);
   useEffect(() => () => { const host = embeddedRef.current; if (host) { host.onReport(host.formId, null); delete host.apis[host.formId]; } }, []);
@@ -1503,6 +1659,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     );
     const resultNodes = resultItems.map((item, index) => {
       const key = resultKeys[index];
+      if (!shownKey(key)) return null;
       return <div key={key} className="fashion-studio-node" data-studio-node={key} data-selected={selectedKey === key} style={nodeStyle(key)}>
         <FashionStudioImageNode candidates={item.candidates} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="生成結果"
           testId={index === resultItems.length - 1 ? 'fashion-studio-saved-result-image' : 'fashion-studio-history-result-image'} className="fashion-studio-source-result-node" objectId={item.objectId}
@@ -1560,8 +1717,8 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
             <DetailRoleImage candidates={mainImage} scopeKey={scopeKey} role="main" assertContext={assertContext} alt="" className="" onReady={url => setLoadedMain({ identity: mainIdentity, url })} />
             {detail.roles.reference.status === 'available' && <DetailRoleImage candidates={detail.roles.reference.candidates} scopeKey={scopeKey} role="reference" assertContext={assertContext} alt="" className=""
               onReady={url => setLoadedReference({ identity: referenceIdentity, url })} />}
-          </div> : formNode}
-          {showPendingNode && <div className="fashion-studio-node" data-studio-node={pendingNodeKey} data-selected={selectedKey === pendingNodeKey} style={nodeStyle(pendingNodeKey)}>
+          </div> : shownKey(formKey) && formNode}
+          {showPendingNode && shownKey(pendingNodeKey) && <div className="fashion-studio-node" data-studio-node={pendingNodeKey} data-selected={selectedKey === pendingNodeKey} style={nodeStyle(pendingNodeKey)}>
             <div className="fashion-studio-pending-node" data-testid="fashion-studio-edit-pending" role="status">
               {busy || (embedded.autoRun && !editRunRef.current) ? <><Loader2 aria-hidden="true" className="h-10 w-10 animate-spin" />生成中</>
                 : <><span>{activityError ? studioErrorMessage(activityError) : '生成されていません'}</span>
@@ -1602,6 +1759,15 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
               interactive: interactiveTarget(event.target), objectId: nodeKey });
             if (handled) { event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); if (interaction?.snapshot().panning) markUserView(); }
           }}
+          onContextMenu={event => {
+            if (!(event.target instanceof Element) || !event.currentTarget.contains(event.target) || event.target.closest(NODE_DRAG_BLOCKER_MENU)) return;
+            const key = event.target.closest<HTMLElement>('[data-studio-node]')?.dataset.studioNode;
+            if (!key || !deletableKey(key)) return;
+            // Light's node menu opens at the pointer: ダウンロード (images) | キャンバス内コピー・コピーして貼り付け・削除.
+            event.preventDefault();
+            viewportInteractionRef.current?.select(key);
+            setNodeMenu({ key, x: event.clientX, y: event.clientY, image: !isStudioFormKey(key) && !key.endsWith('/pending') });
+          }}
           onPointerMove={event => { if (moveNodeDrag(event) || viewportInteractionRef.current?.move({ pointerId: event.pointerId, x: event.clientX, y: event.clientY })) event.preventDefault(); }}
           onPointerUp={event => { if (!endNodeDrag(event.pointerId, true)) viewportInteractionRef.current?.up(event.pointerId); }}
           onPointerCancel={event => { if (!endNodeDrag(event.pointerId, false)) viewportInteractionRef.current?.cancel(); }}
@@ -1626,22 +1792,24 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
                 {previewRoles.main && detail.roles.main.status === 'available' && <DetailRoleImage candidates={detail.roles.main.candidates} scopeKey={scopeKey} role="main-preload" assertContext={assertContext} alt="" className="" onReady={() => setPreviewLoaded(current => ({ ...current, main: mainIdentity }))} />}
                 {previewRoles.reference && detail.roles.reference.status === 'available' && <DetailRoleImage candidates={detail.roles.reference.candidates} scopeKey={scopeKey} role="reference-preload" assertContext={assertContext} alt="" className="" onReady={() => setPreviewLoaded(current => ({ ...current, reference: referenceIdentity }))} />}
               </div> : null}
-              <div className="fashion-studio-node" data-studio-node="main" data-selected={selectedKey === 'main'} style={{ transform: `translate(${shownPositions.main?.x ?? 0}px, ${shownPositions.main?.y ?? 0}px)` }}>
+              {/* A deleted main image is still the form's main image (it stays loaded, unseen). */}
+              <div className="fashion-studio-node" data-studio-node="main" data-selected={selectedKey === 'main'} style={{ transform: `translate(${shownPositions.main?.x ?? 0}px, ${shownPositions.main?.y ?? 0}px)`, ...(shownKey('main') ? {} : { display: 'none' }) }}>
                 <FashionStudioImageNode candidates={mainImage} scopeKey={scopeKey} role="main" holdUrl={exampleHold.main} assertContext={assertContext} alt="メイン画像" testId="fashion-studio-saved-main-image" className="fashion-studio-source-main-node" objectId={detail.roles.main.objectId} selected={selectedKey === 'main'} onExpand={openLightbox} />
               </div>
-              {formNode}
-              {showExampleResult && settings.example && <div className="fashion-studio-node" data-studio-node="sample" data-selected={selectedKey === 'sample'} style={{ transform: `translate(${shownPositions.sample?.x ?? 0}px, ${shownPositions.sample?.y ?? 0}px)` }}>
+              {shownKey('form') ? formNode : <div style={{ display: 'none' }} aria-hidden="true">{formNode}</div>}
+              {showExampleResult && settings.example && shownKey('sample') && <div className="fashion-studio-node" data-studio-node="sample" data-selected={selectedKey === 'sample'} style={{ transform: `translate(${shownPositions.sample?.x ?? 0}px, ${shownPositions.sample?.y ?? 0}px)` }}>
                 <FashionStudioImageNode candidates={[]} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="仕上がりのサンプル" testId="fashion-studio-example-result-image" className="fashion-studio-source-result-node" objectId={null} selected={selectedKey === 'sample'} label="仕上がりのサンプルをご覧ください。" staticUrl={STUDIO_EXAMPLES[settings.example].result} onExpand={openLightbox} />
               </div>}
               {resultNodes}
-              {canvasImages.map(image => <div key={image.key} className="fashion-studio-node" data-studio-node={image.key} data-selected={selectedKey === image.key} style={nodeStyle(image.key)}>
+              {canvasImages.filter(image => shownKey(image.key)).map(image => <div key={image.key} className="fashion-studio-node" data-studio-node={image.key} data-selected={selectedKey === image.key} style={nodeStyle(image.key)}>
                 <FashionStudioImageNode candidates={image.candidates} scopeKey={scopeKey} role="result" assertContext={assertContext} alt="画像" testId="fashion-studio-canvas-image"
                   className="fashion-studio-source-result-node" objectId={image.id} selected={selectedKey === image.key} onExpand={openLightbox} onUrl={url => { nodeUrlsRef.current[image.key] = url; }} />
                 {/* Openverse / Wikimedia images keep their author and licence with them. */}
                 {image.credit && <div className="fashion-studio-canvas-credit"><FoundImageCredit image={{ id: image.id, thumbUrl: '', ...image.credit }} /></div>}
               </div>)}
               {childForms.map(form => <FashionStudioDetailPage key={form.id} embedded={{ formId: form.id, documentId: form.documentId, fn: form.fn, edit: form.edit, positions: shownPositions,
-                selectedKey, nodeUrls: nodeUrlsRef.current, apis: childApisRef.current, onReport: reportChild, autoRun: freshForms.has(form.id), guideFile: childFilesRef.current[form.id], onExpand: openLightbox }} />)}
+                selectedKey, nodeUrls: nodeUrlsRef.current, apis: childApisRef.current, onReport: reportChild, autoRun: freshForms.has(form.id), guideFile: childFilesRef.current[form.id], onExpand: openLightbox,
+                hidden: hiddenSet }} />)}
             </div>
           </div>
           {/* Light's snap guides run across the canvas in #5FB7FB dashes. */}
@@ -1694,14 +1862,19 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
           })()}
         </section>
 
+        {nodeMenu && <StudioNodeMenu x={nodeMenu.x} y={nodeMenu.y} image={nodeMenu.image} onClose={() => setNodeMenu(null)}
+          onDownload={() => { setNodeMenu(null); void downloadNodeImage(nodeImageUrl(nodeMenu.key)); }}
+          onCopy={() => { copiedKeyRef.current = nodeMenu.key; setNodeMenu(null); }}
+          onDuplicate={copyableKey(nodeMenu.key) && !(isStudioFormKey(nodeMenu.key) && childForms.find(form => form.id === studioChildFormIdOf(nodeMenu.key))?.edit) ? () => void duplicateNode(nodeMenu.key) : null}
+          onDelete={() => void deleteNodes([nodeMenu.key])} />}
         <div className="fashion-studio-source-task" data-studio-chrome aria-label="タスク">{activityContent}<span>{runningTasks} <span className="mx-1">進行中</span>⌃</span></div>
         <div className="fashion-studio-source-canvas-toolbar" data-studio-chrome data-testid="lightchain-fashion-studio-canvas-toolbar">
           <button type="button" aria-label="選択" title="選択" aria-pressed={viewportState.mode === 'select'} className={viewportState.mode === 'select' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('select')}><MousePointer2 className="h-4 w-4" /></button>
           <button type="button" aria-label="ドラッグ" title="ドラッグ" aria-pressed={viewportState.mode === 'move'} className={viewportState.mode === 'move' ? 'is-active' : ''} onClick={() => viewportInteractionRef.current?.mode('move')}><Hand className="h-4 w-4" /></button>
           {/* Light's 画像をアップロード adds an image node to the canvas (the form's own button replaces its main image). */}
           <button type="button" aria-label="画像をアップロード" title="画像をアップロード" disabled={!inputsReady || !scope} onClick={() => canvasImageInputRef.current?.click()}><ImagePlus className="h-4 w-4" /></button>
-          <button type="button" aria-label="取り消し(ctrl+z)" title="取り消し(ctrl+z)" disabled={!canUndo} onClick={() => stepLayoutHistory('undo')}><Undo2 className="h-4 w-4" /></button>
-          <button type="button" aria-label="やり直し(ctrl+shift+z)" title="やり直し(ctrl+shift+z)" disabled={!canRedo} onClick={() => stepLayoutHistory('redo')}><Redo2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="取り消し(ctrl+z)" title="取り消し(ctrl+z)" disabled={!canvasCanUndo} onClick={() => void stepCanvasHistory('undo')}><Undo2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="やり直し(ctrl+shift+z)" title="やり直し(ctrl+shift+z)" disabled={!canvasCanRedo} onClick={() => void stepCanvasHistory('redo')}><Redo2 className="h-4 w-4" /></button>
         </div>
         {/* Light's bottom right (2026-11-12): zoom pill, then キャンバスを整理 / ミニマップ / グリッドにスナップ under the minimap, then ヘルプ / ショートカット. */}
         <div className="fashion-studio-source-zoom-controls" data-studio-chrome data-testid="lightchain-fashion-studio-zoom-controls">

@@ -8,6 +8,7 @@ import {
   STUDIO_CANVAS_IMAGE_ROLE, STUDIO_CANVAS_LIMIT_MESSAGE, STUDIO_MAX_CANVAS_IMAGES, STUDIO_MAX_CHILD_FORMS, isStudioChildDocument, isStudioFormKey, newStudioFormId,
   readStudioCanvasImages, readStudioForms, readStudioParent, studioCanvasImageKey, studioCanvasImageObject, studioChildFormIdOf, studioChildFormKey, studioChildNodeKey,
   studioNodeBeside, studioSettleNewNodes, withStudioCanvasImage, withStudioForm, withStudioParent,
+  readStudioHidden, studioPurgeHidden, withStudioHidden, withStudioNodesDeleted, withStudioNodesRestored,
 } from '../src/lib/studioCanvasNodes.ts';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -411,4 +412,86 @@ test('the 👍👎 bar under a result is Light\'s size: 42 high, 32px square thu
   assert.match(css, /\.fashion-studio-node-feedback \[data-testid="studio-feedback-bar"\] > \.fashion-studio-node-toolbar-divider \{ height: 32px; margin: 0;/);
   // Light measured on screen (2026-11-12): 1 + (4 + 32 + 4 + 32 + 4) + 1 + (4 + 124 + 4) + 1 + (4 + 52 + 4) + 1 = 272, where フィードバックする is 9 × 12 + 16 and 再生成 3 × 12 + 16.
   assert.equal(1 + (4 + 32 + 4 + 32 + 4) + 1 + (4 + (9 * 12 + 16) + 4) + 1 + (4 + (3 * 12 + 16) + 4) + 1, 272);
+});
+
+// Light (2026-11-13): a node is deleted with Delete / Backspace or 右クリック → 削除, 取り消し brings it back, and the
+// deletion is saved (a reload does not bring it back). Heavy hides the node in the same write, then tidies the document
+// the next time the project opens.
+const withNodes = () => {
+  const free = studioCanvasImageObject({ id: 'img1', remote: remote(1), kind: 'upload', operationId: 'op-img1' });
+  const kept = studioCanvasImageObject({ id: 'img2', remote: remote(2), kind: 'clip', sourceKey: 'main', operationId: 'op-img2' });
+  let next = withStudioCanvasImage(withStudioCanvasImage(oldProject(), free, { 'node:img1': { x: 10, y: 20 } }), kept, { 'node:img2': { x: 30, y: 40 } });
+  next = withStudioForm(next, { id: 'fa', documentId: 'doc-a', fn: 'text', sourceKey: 'main', edit: null }, { 'fa/form': { x: 1, y: 1 }, 'fa/result:r1': { x: 2, y: 2 } });
+  next = withStudioForm(next, { id: 'fb', documentId: 'doc-b', fn: '3d', sourceKey: 'main', edit: null }, { 'fb/form': { x: 3, y: 3 } });
+  next = withStudioForm(next, { id: 'fe', documentId: 'doc-e', fn: 'text', sourceKey: 'main', edit: { tool: 'repair', prompt: 'Restore' } });
+  next = withStudioForm(next, { id: 'fr', documentId: 'doc-r', fn: 'text', sourceKey: 'main', edit: { tool: 'erase', prompt: 'Erase' } });
+  return next;
+};
+
+test('deleting nodes hides them in the project at once and 取り消し shows them again', () => {
+  const project = withNodes();
+  const deleted = withStudioNodesDeleted(project, ['node:img1', 'fb/form', 'result:result']);
+  assert.deepEqual(readStudioHidden(deleted), ['node:img1', 'fb/form', 'result:result']);
+  assert.deepEqual(extractFashionStudioSavedDetail(deleted).hidden, ['node:img1', 'fb/form', 'result:result']);
+  // Nothing else changes in that write: the roles, the forms, the images and the places all stay.
+  assert.deepEqual(extractFashionStudioSavedDetail(deleted).roles, extractFashionStudioSavedDetail(project).roles);
+  assert.equal(readStudioCanvasImages(deleted).length, 2);
+  assert.equal(readStudioForms(deleted).length, 4);
+  const restored = withStudioNodesRestored(deleted, ['fb/form', 'node:img1']);
+  assert.deepEqual(readStudioHidden(restored), ['result:result']);
+  assert.equal('studioHidden' in withStudioNodesRestored(restored, ['result:result']), false);
+  // Deleting twice keeps one key; malformed lists read as nothing deleted.
+  assert.deepEqual(readStudioHidden(withStudioNodesDeleted(deleted, ['node:img1'])), ['node:img1', 'fb/form', 'result:result']);
+  assert.deepEqual(readStudioHidden({ ...project, studioHidden: { version: 2, keys: ['main'] } }), []);
+  assert.deepEqual(readStudioHidden({ ...project, studioHidden: { version: 1, keys: ['main', 4, '', 'x'.repeat(201)] } }), ['main']);
+  assert.equal(extractFashionStudioSavedDetail(oldProject()).hidden.length, 0);
+});
+
+test('the next open tidies deleted images and forms out of the document and names the form documents to delete', () => {
+  const project = withStudioNodesDeleted(withNodes(), ['node:img1', 'fa/form', 'fb/form', 'fe/result:e1', 'fr/pending', 'result:result']);
+  // fa still has a result shown, fb has none, fe's only result was deleted, fr's waiting node was deleted.
+  const plan = studioPurgeHidden(project, { fa: ['fa/result:r1'], fb: [], fe: ['fe/result:e1'], fr: ['fr/pending'] });
+  assert.ok(plan);
+  assert.deepEqual(plan.deleteDocuments.sort(), ['doc-b', 'doc-e', 'doc-r']);
+  assert.deepEqual(readStudioCanvasImages(plan.snapshot).map(image => image.id), ['img2']);
+  assert.equal(plan.snapshot.objects.some(item => (item as { id?: string }).id === 'img1'), false);
+  assert.deepEqual(readStudioForms(plan.snapshot).map(form => form.id), ['fa']);
+  // A deleted form whose results stay is kept (hidden); the project's own result stays hidden (it is a role).
+  assert.deepEqual(readStudioHidden(plan.snapshot), ['fa/form', 'result:result']);
+  assert.equal(extractFashionStudioSavedDetail(plan.snapshot).roles.result.objectId, 'result');
+  // The places of what left go too; the rest keep theirs.
+  const layout = readStudioLayout(plan.snapshot);
+  assert.equal('node:img1' in layout, false);
+  assert.equal('fb/form' in layout, false);
+  assert.deepEqual(layout['node:img2'], { x: 30, y: 40 });
+  assert.deepEqual(layout['fa/form'], { x: 1, y: 1 });
+});
+
+test('a tidy never removes a form whose results are not known yet, or a 画像編集 still running', () => {
+  const project = withStudioNodesDeleted(withNodes(), ['fb/form']);
+  assert.equal(studioPurgeHidden(project, {}), null);
+  assert.equal(studioPurgeHidden(project, { fb: ['fb/result:x'] }), null);
+  // fe and fr have nothing deleted: a running edit (only its waiting node, or no result yet) stays.
+  const running = withStudioNodesDeleted(withNodes(), ['node:img1']);
+  const plan = studioPurgeHidden(running, { fe: [], fr: ['fr/pending'] });
+  assert.deepEqual(plan?.deleteDocuments, []);
+  assert.deepEqual(readStudioForms(plan!.snapshot).map(form => form.id), ['fa', 'fb', 'fe', 'fr']);
+  assert.equal(studioPurgeHidden(withNodes(), { fb: [] }), null);
+  assert.equal('studioHidden' in withStudioHidden(withNodes(), []), false);
+});
+
+test('the canvas deletes, copies and undoes nodes the way Light does', () => {
+  // Delete / Backspace and Light's Ctrl/⌘ + C, V, D on the selected node; 取り消し / やり直し cover deletions in order.
+  assert.match(page, /event\.key === 'Delete' \|\| event\.key === 'Backspace'/);
+  assert.match(page, /event\.key\.toLowerCase\(\) === 'd'\) \{ event\.preventDefault\(\)/);
+  assert.match(page, /void stepCanvasHistory\(event\.shiftKey \? 'redo' : 'undo'\)/);
+  assert.match(page, /onClick=\{\(\) => void stepCanvasHistory\('undo'\)\}/);
+  // The right-click menu: ダウンロード for images, then キャンバス内コピー・キャンバス内コピーして貼り付け・削除.
+  for (const label of ['ダウンロード', 'キャンバス内コピー<', 'キャンバス内コピーして貼り付け<', '削除<span', 'Ctrl/⌘ + C', 'Ctrl/⌘ + D', '←/del']) assert.ok(page.includes(label), label);
+  assert.match(page, /className="fixed z-\[60\] w-\[310px\]/);
+  // A deletion is written to the project at once; the next open tidies it and deletes the forms' documents.
+  assert.match(page, /withStudioNodesDeleted\(snapshot, targets\), \{ quiet: true \}\)\) pushCanvasOp\(\{ deleted: targets \}\)/);
+  assert.match(page, /cloudflareDataPlane\.deleteCanvasDocument\(documentId\)/);
+  // Deleted nodes are not drawn and lose their edges.
+  assert.match(page, /\.filter\(edge => shownKey\(edge\.source\) && shownKey\(edge\.target\)\)/);
 });
