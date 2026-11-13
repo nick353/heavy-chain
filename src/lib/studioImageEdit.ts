@@ -233,16 +233,25 @@ const NO_MARKS = 'Return only the edited first image, with no guide strokes, tex
 
 export const STUDIO_REPAIR_PROMPT = 'Restore this photo: remove blur, noise, compression artifacts, scratches and small defects, and bring back crisp fine detail in fabric, hair and skin texture. Keep the composition, framing, colors, people, poses and garments exactly as they are, and do not add or remove anything.';
 export const STUDIO_ERASE_PROMPT = `The first image is the photo to edit. The second image is a guide: the areas painted solid teal (${ERASE_GUIDE_COLOR}) in it mark objects to remove from the first image. Remove everything under the teal marks and rebuild those areas from the surrounding background so the result looks untouched. ${KEEP_REST} ${NO_MARKS}`;
+/** AI拡張を 1x・元の比率のまま押したとき（本家は押せる）: 広げずに同じ構図で描き直す。 */
+export const STUDIO_EXPAND_SAME_PROMPT = 'Redraw this photo at the same framing and aspect ratio with crisp, clean detail. Keep the composition, people, poses, garments, background and colors exactly as they are; add or remove nothing, and add no text, borders or watermark.';
 export const STUDIO_EXPAND_PROMPT = 'This photo sits in the middle of a larger canvas whose outer margin is empty and transparent. Fill the whole empty margin by continuing the scene outward with matching background, lighting, perspective and colors, so the result reads as one wider photo. Keep the original photo area unchanged, add no new people, text, borders or watermark.';
 /** 部分編集: 使った色だけを書き、オーナーの指示はそのまま引用する。指示が空なら null。 */
-export function studioPartialEditPrompt(instruction: string, usedColors: readonly string[]): string | null {
+/** 本家の部分編集の参考画像は最大3枚（素材を選択の「選択済み: 0 / 3」）。 */
+export const PARTIAL_EDIT_MAX_REFERENCES = 3;
+export function studioPartialEditPrompt(instruction: string, usedColors: readonly string[], referenceCount = 0): string | null {
   const text = instruction.replace(/\s+/g, ' ').trim();
   if (!text) return null;
   const colors = PARTIAL_EDIT_COLORS.filter(color => usedColors.some(used => used.toLowerCase() === color.hex.toLowerCase()));
+  const count = Math.max(0, Math.min(PARTIAL_EDIT_MAX_REFERENCES, Math.floor(referenceCount)));
+  // 参考画像は案内画像の後ろ（印が無いときは写真のすぐ後ろ）に並ぶ。
+  const first = colors.length ? 3 : 2;
+  const ordinal = (n: number) => ['first', 'second', 'third', 'fourth', 'fifth'][n - 1];
+  const references = count ? ` ${count === 1 ? `The ${ordinal(first)} image is a reference image` : `Images ${first} to ${first + count - 1} are reference images`}: take the look the instruction asks for (garment, pattern, color, material or object) from ${count === 1 ? 'it' : 'them'}.` : '';
   // 印を付けずに送ったとき（本家も送れる）は、写真全体に指示をかける。案内画像は付けない。
-  if (!colors.length) return `Edit this photo following this instruction: "${text}". Change only what the instruction asks for and keep everything else exactly as it is, at the same framing and colors. Return a clean image with no text, borders or watermark.`;
+  if (!colors.length) return `${count ? 'The first image is the photo to edit.' : 'Edit this photo.'}${references} Follow this instruction: "${text}". Change only what the instruction asks for and keep everything else exactly as it is, at the same framing and colors. Return a clean image with no text, borders or watermark.`;
   const marks = colors.map(color => `${color.name} (${color.hex}, called ${color.label} in the instruction)`).join(', ');
-  return `The first image is the photo to edit. The second image is a guide with ${marks} strokes drawn over the photo; the strokes mark where to edit. Apply this instruction only inside the marked areas: "${text}". ${KEEP_REST} ${NO_MARKS}`;
+  return `The first image is the photo to edit. The second image is a guide with ${marks} strokes drawn over the photo; the strokes mark where to edit.${references} Apply this instruction only inside the marked areas: "${text}". ${KEEP_REST} ${NO_MARKS}`;
 }
 
 // ---- ファイル ----------------------------------------------------------------------------------------------
@@ -261,4 +270,61 @@ export function studioDataUrlToFile(dataUrl: string, name: string): File {
   const type = match[1] || 'application/octet-stream';
   const bytes = match[2] ? Uint8Array.from(atob(match[3]), char => char.charCodeAt(0)) : new TextEncoder().encode(decodeURIComponent(match[3]));
   return new File([bytes], name, { type });
+}
+
+// ---- パスツール（本家の簡易エディター: 描画・削除・選択・曲線） ---------------------------------------------------------
+export type StudioPenPoint = { x: number; y: number; /** 曲線の点: 次の線へ出る向きの取っ手（入る向きは点を挟んだ反対側）。 */ handle?: { x: number; y: number } };
+export type StudioPenMode = 'draw' | 'delete' | 'select' | 'curve';
+const mirror = (point: StudioPenPoint) => (point.handle ? { x: 2 * point.x - point.handle.x, y: 2 * point.y - point.handle.y } : point);
+const outOf = (point: StudioPenPoint) => point.handle ?? point;
+/** 点の並びを SVG の path に（曲線の点は三次ベジェ、ほかは直線）。closed なら最初の点へ戻して閉じる。 */
+export function studioPenPathD(points: readonly StudioPenPoint[], closed: boolean): string {
+  if (!points.length) return '';
+  const parts = [`M${points[0].x} ${points[0].y}`];
+  const segment = (from: StudioPenPoint, to: StudioPenPoint) => {
+    if (!from.handle && !to.handle) return `L${to.x} ${to.y}`;
+    const a = outOf(from), b = mirror(to);
+    return `C${a.x} ${a.y} ${b.x} ${b.y} ${to.x} ${to.y}`;
+  };
+  for (let index = 1; index < points.length; index += 1) parts.push(segment(points[index - 1], points[index]));
+  if (closed && points.length > 2) parts.push(segment(points[points.length - 1], points[0]), 'Z');
+  return parts.join(' ');
+}
+/** 同じ形を canvas に描く（塗る前に beginPath 済みの context に足す）。 */
+export function studioPenTrace(context: { moveTo: (x: number, y: number) => void; lineTo: (x: number, y: number) => void; bezierCurveTo: (a: number, b: number, c: number, d: number, x: number, y: number) => void; closePath: () => void },
+  points: readonly StudioPenPoint[]) {
+  if (points.length < 3) return;
+  context.moveTo(points[0].x, points[0].y);
+  const segment = (from: StudioPenPoint, to: StudioPenPoint) => {
+    if (!from.handle && !to.handle) { context.lineTo(to.x, to.y); return; }
+    const a = outOf(from), b = mirror(to);
+    context.bezierCurveTo(a.x, a.y, b.x, b.y, to.x, to.y);
+  };
+  for (let index = 1; index < points.length; index += 1) segment(points[index - 1], points[index]);
+  segment(points[points.length - 1], points[0]);
+  context.closePath();
+}
+/** 押した所に近い点（なければ -1）。radius は作業用マスクの画素。 */
+export function studioPenHit(points: readonly StudioPenPoint[], at: { x: number; y: number }, radius: number): number {
+  let best = -1, bestDistance = radius;
+  points.forEach((point, index) => { const distance = Math.hypot(point.x - at.x, point.y - at.y); if (distance <= bestDistance) { best = index; bestDistance = distance; } });
+  return best;
+}
+
+// ---- AI拡張の枠のつまみ（本家: 枠の辺と角を引いて広げる） ------------------------------------------------------------
+/** 拡張後の枠（width×height）と、その中で元の画像を置く左上（x, y）。 */
+export type StudioExpandFrame = { width: number; height: number; x: number; y: number };
+/**
+ * 枠のつまみを引いたあとの枠。引いた辺だけが動き、反対の辺と元の画像は動かない。元の画像より内へは縮まず、
+ * 1辺は EXPAND_MAX_SIZE（4096）まで。dx・dy は元の画像の画素。
+ */
+export function studioExpandDrag(image: { width: number; height: number }, frame: StudioExpandFrame, handle: StudioCropHandle, dx: number, dy: number): StudioExpandFrame {
+  if (handle === 'move') return frame;
+  let left = -frame.x, top = -frame.y, right = frame.width - frame.x, bottom = frame.height - frame.y;
+  if (handle.includes('w')) left = Math.max(right - EXPAND_MAX_SIZE, Math.min(0, left + dx));
+  if (handle.includes('e')) right = Math.min(left + EXPAND_MAX_SIZE, Math.max(image.width, right + dx));
+  if (handle.includes('n')) top = Math.max(bottom - EXPAND_MAX_SIZE, Math.min(0, top + dy));
+  if (handle.includes('s')) bottom = Math.min(top + EXPAND_MAX_SIZE, Math.max(image.height, bottom + dy));
+  left = Math.round(left); top = Math.round(top); right = Math.round(right); bottom = Math.round(bottom);
+  return { width: right - left, height: bottom - top, x: 0 - left || 0, y: 0 - top || 0 };
 }

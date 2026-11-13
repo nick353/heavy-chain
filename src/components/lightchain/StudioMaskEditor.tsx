@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { BrushCleaning, Brush, CircleMinus, CirclePlus, Lasso, Minus, PenTool, Plus, Redo2, ScanSearch, SquareDashedMousePointer, Undo2 } from 'lucide-react';
+import { BrushCleaning, Brush, CircleMinus, CirclePlus, Lasso, Minus, MousePointer2, PenTool, Plus, Redo2, ScanSearch, Spline, SquareDashedMousePointer, Undo2, X } from 'lucide-react';
+import type { StudioPenMode } from '../../lib/studioImageEdit';
 import toast from 'react-hot-toast';
 import { STUDIO_MASK_CANDIDATES, StudioMaskSurface, type StudioMaskCandidate, type StudioMaskMode, type StudioMaskSurfaceHandle, type StudioMaskTool } from './StudioMaskSurface';
 
@@ -63,6 +64,13 @@ export type StudioMaskEditorApi = {
 };
 
 const BRUSH_MIN = 5, BRUSH_MAX = 150, BRUSH_STEP = 5;
+/** 本家のパスツールの小さな帯（2026-11-13 本家のクリッピングで見た並び: 追加選択｜選択解除｜描画・削除・選択・曲線）。 */
+export const STUDIO_PEN_MODES: ReadonlyArray<{ id: StudioPenMode; label: string; hint: string }> = [
+  { id: 'draw', label: '描画', hint: 'クリックで点を置き、最初の点を押すかダブルクリック・Enter で閉じます' },
+  { id: 'delete', label: '削除', hint: '押した点を消します' },
+  { id: 'select', label: '選択', hint: '点を引いて動かします' },
+  { id: 'curve', label: '曲線', hint: '点から引くと線が曲がります（押すだけで角に戻ります）' },
+];
 
 export function StudioMaskEditor({
   base, reference = null, tools = STUDIO_MASK_EDITOR_TOOLS.map(tool => tool.id), onCancel, actions, emptyMessage = STUDIO_MASK_EDITOR_TEXT.empty,
@@ -82,6 +90,8 @@ export function StudioMaskEditor({
   const [tool, setTool] = useState<StudioMaskEditorTool>(tools.includes('brush') ? 'brush' : tools[0] ?? 'brush');
   const [mode, setMode] = useState<StudioMaskMode>('add');
   const [brushSize, setBrushSize] = useState(40);
+  /** パスツールの小さな帯（本家: 描画・削除・選択・曲線）。 */
+  const [penMode, setPenMode] = useState<StudioPenMode>('draw');
   /** The part last chosen under AIマスク認識 (its radio is filled, like Light's). */
   const [aiPick, setAiPick] = useState<StudioMaskCandidate | null>(null);
   /** The small bar of the chosen tool opens right under that tool's button (Light); its left edge follows the button. */
@@ -202,7 +212,14 @@ export function StudioMaskEditor({
                   <button type="button" aria-label="ブラシを太く" onClick={() => setBrushSize(value => Math.min(BRUSH_MAX, value + BRUSH_STEP))} className={iconButton}><Plus aria-hidden="true" className="h-3.5 w-3.5" /></button>
                 </div>
               )}
-              {tool === 'pen' && <span className="ml-2 whitespace-nowrap pr-2 text-xs text-white/50">クリックで点を置き、最初の点を押すかダブルクリック・Enter で閉じます</span>}
+              {tool === 'pen' && (
+                <div className="ml-1 flex items-center gap-1 border-l border-white/10 pl-2" role="group" aria-label="パスの操作">
+                  {STUDIO_PEN_MODES.map(item => {
+                    const Icon = { draw: PenTool, delete: X, select: MousePointer2, curve: Spline }[item.id];
+                    return <button key={item.id} type="button" onClick={() => setPenMode(item.id)} aria-pressed={penMode === item.id} title={item.hint} className={subButton(penMode === item.id)}><Icon aria-hidden="true" className="h-4 w-4" />{item.label}</button>;
+                  })}
+                </div>
+              )}
             </>}
           </div>
         </div>
@@ -221,6 +238,7 @@ export function StudioMaskEditor({
                   mode={mode}
                   brushSize={brushSize}
                   recognizeRect={recognizeRect}
+                  penMode={penMode}
                   active={activePane === id}
                   onPointerActivate={() => setActivePane(id)}
                   onChange={paneChanged}

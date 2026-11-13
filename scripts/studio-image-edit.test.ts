@@ -38,7 +38,7 @@ test('画像編集メニューは本家と同じ並び・言葉で、画像修�
 test('出口の形: 手元の道具は onClientResult(tool, File)、生成の道具は onServerEdit(tool, { mainFile, guideFile?, prompt, editOptions })', () => {
   assert.match(menuSource, /onClientResult: \(tool: StudioClientEditTool, file: File\) => void \| Promise<void>/);
   assert.match(menuSource, /onServerEdit: \(tool: StudioServerEditTool, request: StudioServerEditRequest\) => void \| Promise<void>/);
-  assert.match(menuSource, /mainFile: File;\s*guideFile\?: File;\s*prompt: string;\s*editOptions\?: \{ aspectRatio\?: string; resolution\?: '1k' \| '4k' \};/);
+  assert.match(menuSource, /mainFile: File;\s*guideFile\?: File;\s*(?:\/\*\*[^*]*\*\/\s*)?referenceFiles\?: File\[\];\s*prompt: string;\s*editOptions\?: \{ aspectRatio\?: string; resolution\?: '1k' \| '4k' \};/);
   for (const tool of ['upscale', 'remove-background', 'clipping', 'crop']) assert.match(menuSource, new RegExp(`onClientResult\\('${tool}'`), tool);
   for (const tool of ['repair', 'partial', 'expand', 'erase']) assert.match(menuSource, new RegExp(`onServerEdit\\('${tool}'`), tool);
   // AI削除と部分編集は案内画像を、AI拡張は余白を足した画像を渡す。

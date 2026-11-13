@@ -66,6 +66,7 @@ import { StudioCollectDialog } from '../components/lightchain/StudioCollectDialo
 import { StudioImageEditMenu, type StudioServerEditRequest } from '../components/lightchain/StudioImageEditMenu';
 import { StudioImageSearchPanel, type StudioImageSearchRequest } from '../components/lightchain/StudioImageSearchPanel';
 import { StudioSendMenu } from '../components/lightchain/StudioSendMenu';
+import { StudioPromptLibrary } from '../components/lightchain/StudioPromptLibrary';
 import { FoundImageCredit } from '../features/designDetail/FoundImageCredit';
 import type { FoundImage } from '../features/designDetail/referenceImageSearch';
 import { incomingFileDataUrl, useIncomingImageFile } from '../lib/incomingImage';
@@ -106,7 +107,6 @@ const examplePrompt = (fn: StudioFunctionId) => fn === 'text' ? STUDIO_TEXT_SAMP
 const regionMaskKey = (projectId: string, slot = 0) => `heavy-fashion-studio-region-mask:${projectId}${slot ? `:slot${slot}` : ''}`;
 const REGION_EXAMPLE_MASK = '/lightchain-assets/flow-examples/directional-mask.png';
 const FLOW_TIP_ICON = '/lightchain-assets/static/flow_tip.png';
-const SAVED_PROMPTS_KEY = 'heavy-fashion-studio-saved-prompts';
 const STUDIO_EXAMPLE_LOADED = 'サンプルを読み込むと、ノードの構成を変更できます。';
 const STUDIO_EXAMPLE_FAILED = 'サンプルの読み込みに失敗しました。もう一度お試しください。';
 /** Light's flow (measured at its 45% fit, 2026-11-11): image nodes 448px wide (CSS), the form 310px; the gaps and the
@@ -147,8 +147,9 @@ type StudioEmbed = {
   onReport: (formId: string, report: StudioChildReport | null) => void;
   /** Run the 画像編集 request once (only right after the project added it, never again on a reload). */
   autoRun: boolean;
-  /** The 画像編集 guide image (the marks drawn on the photo), sent as the form's reference before it runs. */
-  guideFile?: File;
+  /** The 画像編集 inputs sent as the form's references before it runs, in order: the guide (the marks drawn on the
+   * photo) when there is one, then 部分編集's reference images. */
+  inputFiles?: File[];
   onExpand: (url: string) => void;
   /** Node keys deleted from the project's canvas: this form's deleted nodes are not drawn. */
   hidden: ReadonlySet<string>;
@@ -470,7 +471,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   /** The function a node toolbar button chose; the new project its image creates opens on that function. */
   const pendingFunctionRef = useRef<StudioFunctionId | null>(null);
   /** A form being added from the image toolbar: its document is created by the upload, then the project lists it. */
-  const pendingChildRef = useRef<{ formId: string; fn: StudioFunctionId; sourceKey: string; edit: StudioEditRequest | null; parentId: string; documentId: string; guideFile?: File;
+  const pendingChildRef = useRef<{ formId: string; fn: StudioFunctionId; sourceKey: string; edit: StudioEditRequest | null; parentId: string; documentId: string; inputFiles?: File[];
     /** キャンバス内コピーして貼り付け: the form whose settings and instruction the copy starts from. */
     copyFrom?: string } | null>(null);
   const [pendingExample, setPendingExample] = useState<{ projectCode: string; fn: StudioFunctionId } | null>(null);
@@ -500,11 +501,8 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     void refreshSignedImageUrl(url).then(fresh => { if (fresh !== url) setLightbox(current => (current === url ? fresh : current)); });
   };
   const [promptExpanded, setPromptExpanded] = useState(false);
-  const [libraryOpen, setLibraryOpen] = useState(false);
-  const [savedPrompts, setSavedPrompts] = useState<string[]>(() => {
-    try { const value = JSON.parse(window.localStorage.getItem(SAVED_PROMPTS_KEY) ?? '[]'); return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').slice(0, 50) : []; }
-    catch { return []; }
-  });
+  /** Light's プロンプトライブラリ window: opened on its list, or on プロンプトを追加 with the instruction (プロンプトを保存). */
+  const [library, setLibrary] = useState<{ saveText?: string } | null>(null);
   useEffect(() => {
     if (!projectCode) return;
     // A form on a project's canvas keeps the function the project saved for it.
@@ -733,7 +731,8 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
         const promptText = edit ? edit.prompt : studioFunctionPromptText(fn, prompt.trim(), settings, regionPoints.length);
         const sourceOf = (item: { slot: number; candidates: readonly string[] }) => item.slot === 0 && loadedReference.identity === referenceIdentity && loadedReference.url ? loadedReference.url : item.candidates[0];
         // テキストで生成 sends every reference (up to nine); 範囲指定 one per fusion point plus the coloured guide; 下着 the model image.
-        const chosen = edit ? shownReferences.filter(item => item.slot === 0) : fn === 'text' ? textReferences : fn === 'region' ? regionPoints : fn === 'underwear' && referenceAvailable ? shownReferences.filter(item => item.slot === 0) : [];
+        // A 画像編集 sends its guide and 部分編集's reference images in slot order (the order its prompt names them).
+        const chosen = edit ? shownReferences : fn === 'text' ? textReferences : fn === 'region' ? regionPoints : fn === 'underwear' && referenceAvailable ? shownReferences.filter(item => item.slot === 0) : [];
         const references = await Promise.all(chosen.map(item => refreshSignedImageUrl(sourceOf(item))));
         if (!edit && fn === 'region') references.push(await regionGuideUrl(mainUrl, regionPoints.map(point => regionMaskFor(point.slot))));
         assertContext();
@@ -887,18 +886,12 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     const slot = maskDialog?.slot ?? 0; setMaskDialog(null); setRegionMask(mask ? regionMaskToDataUrl(mask) : '', slot);
     if (referencePart) uploadReference(referencePart, slotRole(slot));
   };
-  const savePrompt = () => {
-    const value = prompt.trim();
-    if (!value) { toast.error('保存する指示がありません'); return; }
-    const next = [value, ...savedPrompts.filter(item => item !== value)].slice(0, 50);
-    setSavedPrompts(next);
-    try { window.localStorage.setItem(SAVED_PROMPTS_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
-    toast.success('プロンプトを保存しました');
-  };
+  // Light's プロンプトを保存 does nothing while the instruction is empty; with words it opens プロンプトを追加 filled in.
+  const savePrompt = () => { if (prompt.trim()) setLibrary({ saveText: prompt }); };
   /** Forms on this canvas: their result nodes, whether they work, and their AI生成 (再生成 / Ctrl+Enter). */
   const [childReports, setChildReports] = useState<Record<string, StudioChildReport>>({});
   const childApisRef = useRef<Record<string, StudioChildApi>>({});
-  const childFilesRef = useRef<Record<string, File>>({});
+  const childFilesRef = useRef<Record<string, File[]>>({});
   const [freshForms, setFreshForms] = useState<ReadonlySet<string>>(() => new Set());
   const reportChild = (formId: string, report: StudioChildReport | null) => setChildReports(current => {
     if (!report) { if (!(formId in current)) return current; const next = { ...current }; delete next[formId]; return next; }
@@ -1195,7 +1188,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   const pageRef = useRef<HTMLElement>(null);
   const keyHandlerRef = useRef<(event: KeyboardEvent) => void>(() => undefined);
   keyHandlerRef.current = (event: KeyboardEvent) => {
-    if (!hasProject || maskDialog || promptExpanded || lightbox || canvasPicker || shortcutsOpen || helpOpen || clipTarget || collectTarget || isTypingTarget(event.target)) return;
+    if (!hasProject || maskDialog || promptExpanded || library || lightbox || canvasPicker || shortcutsOpen || helpOpen || clipTarget || collectTarget || isTypingTarget(event.target)) return;
     // Keys pressed in a window opened over the page (画像編集's editors) belong to that window.
     const pressed = event.target as Node | null;
     if (pressed !== document.body && pressed && !pageRef.current?.contains(pressed)) return;
@@ -1331,7 +1324,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
   /** The image toolbar's テキストで生成・範囲指定で生成・下着のフィッティング・3D画像に変換 (and the 画像編集 tools that run on the
    * generation route) add a form to this canvas, joined to the image: the form is its own document whose main image is
    * this image, listed in the project. A project saved before this keeps reading as one form. */
-  const addChildForm = async (sourceKey: string, url: string, fn: StudioFunctionId, edit: StudioEditRequest | null = null, guideFile?: File, mainFile?: File, copyFrom?: string) => {
+  const addChildForm = async (sourceKey: string, url: string, fn: StudioFunctionId, edit: StudioEditRequest | null = null, inputFiles?: File[], mainFile?: File, copyFrom?: string) => {
     if ((!url && !mainFile) || !scope || !projectCode || embedded || busyRef.current || recoveryRequired || previewActiveRef.current) return;
     if (detail.forms.length >= STUDIO_MAX_CHILD_FORMS) { toast.error(STUDIO_CANVAS_LIMIT_MESSAGE); return; }
     let file: File;
@@ -1341,7 +1334,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
       catch { toast.error('画像を読み込めませんでした'); return; }
     }
     pendingExampleRef.current = null; pendingFunctionRef.current = null;
-    pendingChildRef.current = { formId: newStudioFormId(), fn, sourceKey, edit, parentId: projectCode, documentId: '', guideFile, copyFrom };
+    pendingChildRef.current = { formId: newStudioFormId(), fn, sourceKey, edit, parentId: projectCode, documentId: '', inputFiles, copyFrom };
     if (await uploadFile(file, 'main', true)) await finishPendingChild();
   };
   /** The form's document exists: list it in the project with its place beside the image (also after 保存を再試行). */
@@ -1356,7 +1349,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     const source = copied ?? rectOf(child.sourceKey);
     const anchor = studioNodeBeside(source, nodeRects, child.edit ? { width: IMAGE_NODE_WIDTH, height: source?.height ?? IMAGE_NODE_WIDTH } : { width: FORM_NODE_WIDTH, height: sizes.form?.height || 560 }, copied ? () => 0 : undefined);
     const form: StudioChildForm = { id: child.formId, documentId: child.documentId, fn: child.fn, sourceKey: child.sourceKey, edit: child.edit };
-    if (child.guideFile) childFilesRef.current[child.formId] = child.guideFile;
+    if (child.inputFiles?.length) childFilesRef.current[child.formId] = child.inputFiles;
     if (!await writeProject(async () => snapshot => withStudioForm(snapshot, form, { [formKey]: anchor }))) return;
     pendingChildRef.current = null;
     setFreshForms(current => new Set(current).add(child.formId));
@@ -1449,14 +1442,17 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childReportSignature]);
   useEffect(() => () => { const host = embeddedRef.current; if (host) { host.onReport(host.formId, null); delete host.apis[host.formId]; } }, []);
-  /** A 画像編集 form: send the guide (the marks drawn on the photo) as its reference, then run the edit. */
+  /** A 画像編集 form: send its inputs (the guide, then 部分編集's reference images) as its references one by one, then run. */
   const editRunRef = useRef(false);
-  const guideStartedRef = useRef(false);
+  const inputStartedRef = useRef(new Set<number>());
+  const editSlotSaved = (slot: number) => slot === 0 ? detail.roles.reference.status === 'available' : detail.extraReferences.some(item => item.slot === slot && item.status === 'available');
+  const nextEditSlot = () => (embeddedRef.current?.inputFiles ?? []).findIndex((_, slot) => !editSlotSaved(slot));
   const runEdit = async () => {
     const host = embeddedRef.current;
     if (!host?.edit) return;
     if (generationHeld) { await generate(true); return; }
-    if (host.guideFile && detail.roles.reference.status !== 'available') { guideStartedRef.current = true; await uploadFile(host.guideFile, 'reference'); return; }
+    const slot = nextEditSlot();
+    if (slot >= 0 && host.inputFiles) { inputStartedRef.current.add(slot); await uploadFile(host.inputFiles[slot], slotRole(slot)); return; }
     editRunRef.current = true;
     await generate();
   };
@@ -1471,11 +1467,13 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     const host = embeddedRef.current;
     if (!host?.edit || !host.autoRun || editRunRef.current || visible?.status !== 'success' || busy || recoveryRequired || resultItems.length) return;
     if (detail.roles.main.status !== 'available' || loadedMain.identity !== mainIdentity || !loadedMain.url) return;
-    if (host.guideFile && detail.roles.reference.status !== 'available') { if (!guideStartedRef.current) void runEdit(); return; }
-    if (host.guideFile && (loadedReference.identity !== referenceIdentity || !loadedReference.url)) return;
+    const slot = nextEditSlot();
+    if (slot >= 0) { if (!inputStartedRef.current.has(slot)) void runEdit(); return; }
+    if (host.inputFiles?.length && (loadedReference.identity !== referenceIdentity || !loadedReference.url)) return;
     void runEdit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible?.status, busy, recoveryRequired, resultItems.length, detail.roles.main.status, detail.roles.reference.status, loadedMain.identity, loadedMain.url, loadedReference.identity, loadedReference.url, mainIdentity, referenceIdentity]);
+  }, [visible?.status, busy, recoveryRequired, resultItems.length, detail.roles.main.status, detail.roles.reference.status, detail.extraReferences.map(item => `${item.slot}:${item.status}`).join(','),
+    loadedMain.identity, loadedMain.url, loadedReference.identity, loadedReference.url, mainIdentity, referenceIdentity]);
 
   if (hasProject || embedded) {
     const mainImage = view.roles.main.candidates;
@@ -1522,15 +1520,11 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
           <textarea id={promptFieldId} value={prompt} disabled={formLocked || recoveryRequired} onChange={(event) => setPrompt(event.target.value)} maxLength={2000} className="h-full resize-none border-none bg-transparent p-0 text-[30px] leading-[42px] text-white outline-none" aria-label="指令を入力してください。" />
           <div className="flex items-center gap-4 text-neutral-300">
             <button type="button" aria-label="合成指示を全画面で編集" title="全画面で編集" onClick={() => setPromptExpanded(true)}><Maximize2 className="h-[34px] w-[34px]" /></button>
-            <button type="button" aria-label="プロンプトを保存" title="プロンプトを保存" onClick={savePrompt}><Save className="h-[34px] w-[34px]" /></button>
-            <button type="button" aria-label="プロンプトライブラリ" title="プロンプトライブラリ" aria-expanded={libraryOpen} onClick={() => setLibraryOpen(open => !open)}><BookMarked className="h-[34px] w-[34px]" /></button>
+            <button type="button" aria-label="プロンプトを保存" title="プロンプトを保存" disabled={!prompt.trim()} onClick={savePrompt} className="disabled:opacity-40"><Save className="h-[34px] w-[34px]" /></button>
+            <button type="button" aria-label="プロンプトライブラリ" title="プロンプトライブラリ" aria-haspopup="dialog" disabled={formLocked || recoveryRequired} onClick={() => setLibrary({})}><BookMarked className="h-[34px] w-[34px]" /></button>
             <span className="ml-auto text-[30px] text-neutral-400"><span className="text-[#20d0c4]">{prompt.length}</span>/2000</span>
             <button type="button" disabled={formLocked || recoveryRequired} onClick={() => setPrompt('')} className="rounded-xl bg-[#505c5e] px-5 py-2 text-[30px] text-white">全削除</button>
           </div>
-          {libraryOpen && <div className="absolute inset-x-5 bottom-[84px] z-10 max-h-[360px] overflow-y-auto rounded-[24px] border border-[#3d4346] bg-[#262a2b] p-3 text-[28px] shadow-xl" role="listbox" aria-label="保存したプロンプト">
-            {savedPrompts.length ? savedPrompts.map(item => <button key={item} type="button" role="option" aria-selected={item === prompt} onClick={() => { setPrompt(item); setLibraryOpen(false); }} className="block w-full truncate rounded-xl px-4 py-3 text-left text-neutral-200 hover:bg-white/10">{item}</button>)
-              : <p className="px-4 py-3 text-neutral-400">保存したプロンプトはまだありません</p>}
-          </div>}
         </div>
       </div>
     );
@@ -1668,6 +1662,8 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
     });
     /** Windows over the page (a form on a project's canvas opens them over the whole page, not inside the moved canvas). */
     const dialogs = <>
+        {library && <StudioPromptLibrary initialText={library.saveText} onClose={() => setLibrary(null)}
+          onInsert={text => setPrompt(`${prompt}${prompt && !prompt.endsWith('\n') ? '\n' : ''}${text}`.slice(0, 2000))} onReplace={text => setPrompt(text.slice(0, 2000))} />}
         {promptExpanded && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-8" role="dialog" aria-label="合成指示を全画面で編集">
           <div className="flex h-[70vh] w-[min(880px,100%)] flex-col gap-4 rounded-2xl border border-[#3d4346] bg-[#262a2b] p-6">
             <div className="flex items-center justify-between text-base text-neutral-200">合成指示<button type="button" aria-label="閉じる" onClick={() => setPromptExpanded(false)}><X className="h-5 w-5" /></button></div>
@@ -1808,7 +1804,7 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
                 {image.credit && <div className="fashion-studio-canvas-credit"><FoundImageCredit image={{ id: image.id, thumbUrl: '', ...image.credit }} /></div>}
               </div>)}
               {childForms.map(form => <FashionStudioDetailPage key={form.id} embedded={{ formId: form.id, documentId: form.documentId, fn: form.fn, edit: form.edit, positions: shownPositions,
-                selectedKey, nodeUrls: nodeUrlsRef.current, apis: childApisRef.current, onReport: reportChild, autoRun: freshForms.has(form.id), guideFile: childFilesRef.current[form.id], onExpand: openLightbox,
+                selectedKey, nodeUrls: nodeUrlsRef.current, apis: childApisRef.current, onReport: reportChild, autoRun: freshForms.has(form.id), inputFiles: childFilesRef.current[form.id], onExpand: openLightbox,
                 hidden: hiddenSet }} />)}
             </div>
           </div>
@@ -1838,7 +1834,8 @@ export function FashionStudioDetailPage({ embedded }: { embedded?: StudioEmbed }
                 })}
                 <StudioImageEditMenu imageUrl={url} disabled={!toolsReady} fileBaseName="heavy-chain" triggerClassName="fashion-studio-node-toolbar-trigger" triggerIcon={<StudioToolbarIcon name="edit" />}
                   onClientResult={async (tool, file) => { await addCanvasImage(file, { kind: 'edit', sourceKey: key, tool }); }}
-                  onServerEdit={(tool, request: StudioServerEditRequest) => addChildForm(key, url, 'text', { tool, prompt: request.prompt, ...(request.editOptions ? { editOptions: request.editOptions } : {}) }, request.guideFile, request.mainFile)} />
+                  onServerEdit={(tool, request: StudioServerEditRequest) => addChildForm(key, url, 'text', { tool, prompt: request.prompt, ...(request.editOptions ? { editOptions: request.editOptions } : {}) },
+                    [...(request.guideFile ? [request.guideFile] : []), ...(request.referenceFiles ?? [])], request.mainFile)} />
                 <span className="fashion-studio-node-toolbar-divider" aria-hidden="true" />
                 <button type="button" aria-label="画像検索" title="画像検索" disabled={!url} onClick={() => { setSearchRequest({ id: crypto.randomUUID(), imageUrl: url, key }); setSearchOpen(true); }}><StudioToolbarIcon name="search" /></button>
                 <button type="button" aria-label="お気に入り" title="お気に入り" disabled={!url} onClick={() => setCollectTarget({ url })}><StudioToolbarIcon name="collect" /></button>
