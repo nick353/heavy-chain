@@ -136,7 +136,7 @@ test('the page wires Light\'s canvas controls with Light\'s labels', () => {
     assert.ok(page.includes(`aria-label="${label}"`), label);
   }
   // Undo / redo are live (grey only with nothing to undo), not the old disabled placeholders.
-  assert.match(page, /aria-label="取り消し\(ctrl\+z\)" title="取り消し\(ctrl\+z\)" disabled=\{!canUndo\}/);
+  assert.match(page, /aria-label="取り消し\(ctrl\+z\)" title="取り消し\(ctrl\+z\)" disabled=\{!canvasCanUndo\}/);
   assert.doesNotMatch(page, /履歴操作は未接続/);
   // The minimap's own label and arrow keys, and the header moon button.
   assert.match(controls, /aria-label="ミニマップ。矢印キーで表示範囲を動かせます"/);

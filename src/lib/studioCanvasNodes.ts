@@ -231,3 +231,62 @@ export const studioSettleNewNodes = (positions: StudioPositions, sizes: Readonly
   }
   return settled;
 };
+
+// ── Deleting nodes (Light: select a node and press Delete / Backspace, or 右クリック → 削除; 取り消し brings it back) ─────
+/**
+ * A deleted node first joins snapshot.studioHidden in the same write, so it leaves the canvas at once and 取り消し can bring
+ * it back while the page is open (Light's undo covers deletions too, 2026-11-13). The next time the project opens,
+ * studioPurgeHidden tidies the document: a deleted free image leaves snapshot.objects, and a deleted form whose results
+ * are all deleted (or that has none) leaves studioForms and its own document is deleted. The project's own main image,
+ * form and results stay saved (they are the project's roles) and are only hidden.
+ */
+export const STUDIO_MAX_HIDDEN = 400;
+export const readStudioHidden = (snapshot: unknown): string[] => {
+  const hidden = record(record(snapshot).studioHidden);
+  if (hidden.version !== 1 || !Array.isArray(hidden.keys)) return [];
+  return [...new Set(hidden.keys.filter((key): key is string => typeof key === 'string' && key.length > 0 && key.length <= 200))].slice(0, STUDIO_MAX_HIDDEN);
+};
+export const withStudioHidden = <T extends StudioSnapshot>(snapshot: T, keys: readonly string[]): T => {
+  const unique = [...new Set(keys)].filter(key => key.length > 0 && key.length <= 200).slice(0, STUDIO_MAX_HIDDEN);
+  if (unique.length) return { ...snapshot, studioHidden: { version: 1, keys: unique } };
+  const next: Record<string, unknown> = { ...snapshot };
+  delete next.studioHidden;
+  return next as T;
+};
+/** Deleting a node leaves the nodes joined to it in place (Light removes only the node and its edges). */
+export const withStudioNodesDeleted = <T extends StudioSnapshot>(snapshot: T, keys: readonly string[]): T => withStudioHidden(snapshot, [...readStudioHidden(snapshot), ...keys]);
+export const withStudioNodesRestored = <T extends StudioSnapshot>(snapshot: T, keys: readonly string[]): T => {
+  const restore = new Set(keys);
+  return withStudioHidden(snapshot, readStudioHidden(snapshot).filter(key => !restore.has(key)));
+};
+/**
+ * Tidies the deleted nodes out of the document. `childResults` holds each added form's result node keys as its own
+ * document reports them; a form whose results are not known yet is left for a later tidy. Returns the next snapshot and
+ * the form documents to delete (null when nothing changes).
+ */
+export const studioPurgeHidden = <T extends StudioSnapshot>(snapshot: T, childResults: Readonly<Record<string, readonly string[] | undefined>>): { snapshot: T; deleteDocuments: string[] } | null => {
+  const hidden = new Set(readStudioHidden(snapshot));
+  if (!hidden.size) return null;
+  const images = readStudioCanvasImages(snapshot).filter(image => hidden.has(image.key));
+  const forms = readStudioForms(snapshot).filter(form => {
+    const results = childResults[form.id];
+    if (!results) return false;
+    const visibleResults = results.filter(key => !key.endsWith('/pending') && !hidden.has(key));
+    if (visibleResults.length) return false;
+    // A 画像編集 form is never drawn: it goes once its waiting node or all its results were deleted (one still running
+    // with nothing deleted stays).
+    if (form.edit) return results.some(key => hidden.has(key)) || hidden.has(studioChildNodeKey(form.id, 'pending'));
+    return hidden.has(studioChildFormKey(form.id));
+  });
+  if (!images.length && !forms.length) return null;
+  const imageIds = new Set(images.map(image => image.id)), formIds = new Set(forms.map(form => form.id));
+  const gone = (key: string) => (key.startsWith('node:') && imageIds.has(key.slice(5))) || formIds.has(studioChildFormIdOf(key) ?? '');
+  let next: T = { ...snapshot, objects: snapshot.objects.filter(item => !imageIds.has(String(record(item).id))) };
+  const keptForms = readStudioForms(snapshot).filter(form => !formIds.has(form.id))
+    .map(form => ({ id: form.id, documentId: form.documentId, fn: form.fn, sourceKey: form.sourceKey, ...(form.edit ? { edit: form.edit } : {}) }));
+  if (record(snapshot).studioForms) next = { ...next, studioForms: { version: 1, forms: keptForms } };
+  const layout = readStudioLayout(snapshot);
+  next = withStudioLayout(next, Object.fromEntries(Object.entries(layout).filter(([key]) => !gone(key))));
+  next = withStudioHidden(next, [...hidden].filter(key => !gone(key)));
+  return { snapshot: next, deleteDocuments: forms.map(form => form.documentId) };
+};

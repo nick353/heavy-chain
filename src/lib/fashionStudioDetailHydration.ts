@@ -1,6 +1,6 @@
 import { extractFashionStudioThumbnailCandidates } from './fashionStudioThumbnails.ts';
 import { readStudioLayout, type StudioPositions } from './studioCanvas.ts';
-import { readStudioCanvasImages, readStudioForms, readStudioParent, type StudioCanvasImage, type StudioChildForm, type StudioParentLink } from './studioCanvasNodes.ts';
+import { readStudioCanvasImages, readStudioForms, readStudioHidden, readStudioParent, type StudioCanvasImage, type StudioChildForm, type StudioParentLink } from './studioCanvasNodes.ts';
 
 export type FashionStudioDetailRole = 'main' | 'reference' | 'result';
 export type FashionStudioDetailAsset = {
@@ -33,6 +33,8 @@ export type FashionStudioSavedDetail = {
   forms: StudioChildForm[];
   /** Set when this document is a form on another project's canvas. */
   parent: StudioParentLink | null;
+  /** Node keys deleted from the canvas (studioCanvasNodes.ts readStudioHidden); they are not drawn. */
+  hidden: string[];
 };
 const record = (value: unknown): Record<string, unknown> => (
   value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
@@ -40,7 +42,7 @@ const record = (value: unknown): Record<string, unknown> => (
 const emptyAsset = (): FashionStudioDetailAsset => ({ status: 'missing', objectId: null, candidates: [] });
 export const emptyFashionStudioDetail = (): FashionStudioSavedDetail => ({
   roles: { main: emptyAsset(), reference: emptyAsset(), result: emptyAsset() }, prompt: '', extraReferences: [], history: [], layout: {},
-  canvasImages: [], forms: [], parent: null,
+  canvasImages: [], forms: [], parent: null, hidden: [],
 });
 const assetOf = (image: Record<string, unknown>): FashionStudioDetailAsset => {
   const candidates = extractFashionStudioThumbnailCandidates({ objects: [image] });
@@ -75,6 +77,7 @@ export const extractFashionStudioSavedDetail = (snapshot: unknown): FashionStudi
   detail.forms = readStudioForms(snapshot);
   detail.parent = readStudioParent(snapshot);
   detail.canvasImages = readStudioCanvasImages(snapshot);
+  detail.hidden = readStudioHidden(snapshot);
   const objects = record(snapshot).objects;
   if (!Array.isArray(objects)) return detail;
   const matches: Record<FashionStudioDetailRole, Record<string, unknown>[]> = { main: [], reference: [], result: [] };
