@@ -716,6 +716,10 @@ export async function generateModelMatrix(
     generationProvider?: 'openai' | 'workers_ai';
     idempotencyKey?: string;
     assertContext?: () => void | Promise<void>;
+    /** The frame the user asked for (e.g. '1:1'); without it the server reads it from the garment photo. */
+    aspectRatio?: string;
+    /** 画質 1K / 4K (AIフィッティング); omitted is the 2K the server returns by default. */
+    resolution?: '1k' | '4k';
     retainUntilAcknowledged?: boolean;
   }
 ): Promise<ModelMatrixResult> {
