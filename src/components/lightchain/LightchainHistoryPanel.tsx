@@ -188,7 +188,7 @@ export function LightchainHistoryPanel({ onClose, locked = false, toolIds, pendi
           <article data-testid="lightchain-history-pending" className="mb-8 px-4">
             <p className="truncate text-sm"><span className="font-semibold text-white">{pending.title}</span><span className="ml-1 text-neutral-400">{formatDate(pending.startedAt)}</span></p>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <figure className="relative aspect-square overflow-hidden rounded-sm bg-[#d9d9d9]/10">{pending.previewUrl && <img src={pending.previewUrl} alt={`${pending.title} の見本`} className="size-full object-contain" />}</figure>
+              <figure className="relative aspect-square overflow-hidden rounded-sm bg-[#d9d9d9]/10">{pending.previewUrl && <img src={thumbnailImageUrl(pending.previewUrl) ?? pending.previewUrl} alt={`${pending.title} の見本`} className="size-full object-contain" />}</figure>
               <div role="status" className="flex aspect-square flex-col items-center justify-center gap-3 rounded-sm bg-gradient-to-b from-[#4a3a63] via-[#2c4a63] to-[#2e7a70] text-sm text-white/80">
                 <span className="h-0.5 w-28 overflow-hidden rounded-full bg-white/30"><span className="block h-full w-1/2 animate-pulse bg-white/80" /></span>
                 生成中…
@@ -208,7 +208,7 @@ export function LightchainHistoryPanel({ onClose, locked = false, toolIds, pendi
               <button type="button" aria-label={`${entry.title} を削除`} onClick={() => confirmRemove(entry.images, `「${entry.title}」の生成結果 ${entry.images.length} 件`)} disabled={busy} className={headerButton}><Trash2 aria-hidden="true" className="h-4 w-4" /></button>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              {(() => { const preview = entry.images.map((image) => previews?.[image.id]).find(Boolean); return preview ? <figure data-testid="lightchain-history-preview" className="relative aspect-square overflow-hidden rounded-sm bg-[#d9d9d9]/10"><img src={preview} alt={`${entry.title} の見本`} className="size-full object-contain" /></figure> : null; })()}
+              {(() => { const preview = entry.images.map((image) => previews?.[image.id]).find(Boolean); return preview ? <figure data-testid="lightchain-history-preview" className="relative aspect-square overflow-hidden rounded-sm bg-[#d9d9d9]/10"><img src={thumbnailImageUrl(preview) ?? preview} alt={`${entry.title} の見本`} className="size-full object-contain" /></figure> : null; })()}
               {entry.images.map((image) => {
                 const resumeHref = lightchainHistoryResumeHref(image);
                 return (

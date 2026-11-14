@@ -243,6 +243,10 @@ test('AI生成 opens 生成履歴 with the composed preview and a waiting tile f
   const frame = readFileSync(new URL('../src/components/lightchain/LightchainDesignToolFrame.tsx', import.meta.url), 'utf8');
   assert.match(panel, /data-testid="lightchain-history-pending"/);
   assert.match(panel, /data-testid="lightchain-history-preview"/);
+  // Both 見本 tiles ask the gateway for its 384px WebP. The full-size PNG behind a signed URL runs to several MB, so a
+  // tile pointed at it stays blank for seconds after 生成 finishes and reads as a broken image (2026-11-15).
+  assert.match(panel, /<img src=\{thumbnailImageUrl\(preview\) \?\? preview\}/);
+  assert.match(panel, /src=\{thumbnailImageUrl\(pending\.previewUrl\) \?\? pending\.previewUrl\}/);
   assert.match(panel, /if \(!refreshKey\) return;/);
   assert.match(frame, /const historyOpen = historyOpenProp \?\? historyOpenState;/);
   assert.match(page, /setPrintHistoryOpen\(true\);/);
