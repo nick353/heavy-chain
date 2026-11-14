@@ -202,7 +202,12 @@ const LOOSE_WORN_WORDS = new Set(['smock', 'cape', 'cap', 'boot', 'belt', 'suit'
 /** Words that say an image is about clothes or cloth without naming one garment. */
 const CLOTH_WORDS = ['clothing', 'clothes', 'garment', 'apparel', 'fashion', 'wear', 'knitwear', 'menswear', 'womenswear', 'streetwear', 'sportswear', 'outerwear',
   'ootd', 'lookbook', 'runway', 'catwalk', 'model', 'wardrobe', 'sewing', 'sewn', 'handsewn', 'tailor', 'tailoring', 'dressmaking', 'knit', 'knitted', 'knitting',
-  'crochet', 'crocheted', 'embroidery', 'embroidered', 'textile', 'fabric', 'cloth', 'lace', 'weave', 'woven', 'denim', 'linen', 'cotton', 'silk', 'wool', 'leather'];
+  'crochet', 'crocheted', 'embroidery', 'embroidered', 'textile', 'fabric', 'cloth', 'lace', 'weave', 'woven', 'denim', 'linen', 'cotton', 'silk', 'wool', 'leather',
+  // Weave and pattern names, so a swatch titled with the pattern alone ("Pinstripe" for the production search
+  // 2026-11-15) reads as cloth instead of falling to the spare images. "Poplin" is left out on purpose: it is also a
+  // surname, and the species description "Kalops diophrys Poplin and Lund 2002" came up in the same search - adding it
+  // would save that file rather than drop it.
+  'pinstripe', 'herringbone', 'houndstooth', 'gingham', 'chambray', 'twill', 'corduroy', 'tweed', 'seersucker', 'jacquard', 'organza', 'flannel', 'taffeta', 'broadcloth'];
 /** Plainly other subjects: music on a stage, furniture and rooms, buildings, roads and places ("Smock PA Historic District"), logos and charts. */
 const OFF_TOPIC_WORDS = ['concert', 'festival', 'gig', 'band', 'stage', 'singer', 'guitar', 'guitarist', 'drummer', 'drums', 'bassist', 'musician', 'orchestra',
   'choir', 'rapper', 'dj', 'microphone', 'sofa', 'couch', 'armchair', 'chair', 'rug', 'carpet', 'curtain', 'cushion', 'pillow', 'bedskirt', 'quilt', 'duvet',
@@ -228,6 +233,16 @@ const WORN_PATTERN = wordPattern(WORN_WORDS);
 const FIRM_WORN_PATTERN = wordPattern([...WORN_WORDS.filter((word) => !LOOSE_WORN_WORDS.has(word)), 'fashion', 'clothing', 'clothes', 'garment', 'apparel']);
 const CLOTH_PATTERN = wordPattern(CLOTH_WORDS);
 const OFF_TOPIC_PATTERN = wordPattern(OFF_TOPIC_WORDS);
+/**
+ * A species description names the genus, the species, whoever described it and the year: "Kalops diophrys Poplin and
+ * Lund 2002", which Commons returned for the production search 「薄手コットンのシャツ地」 (2026-11-15) because "Poplin"
+ * is also a surname. The plates are line drawings of animals and plants, never cloth, and the word lists above cannot
+ * hold every genus - what gives them away is the shape of the title: words, then a year, and no other number or
+ * punctuation. A letter kept in an archive ("Erica (Thorp) de Berry to Thorp family, 5 May 1918") also ends in a year
+ * but carries brackets, a comma and a day, so it is not one of these. A garment or cloth word anywhere still saves the
+ * title, the way the other-subject words are saved, so "Wedding dress 1890" stays.
+ */
+const SPECIES_PLATE = /^[a-z]{3,} [a-z]{3,}(?: (?:and|&|et) | )(?:[a-z]{2,}(?: (?:and|&|et) | ))*(?:1[7-9]|20)\d{2}$/;
 const offTopicPatterns = new Map<string, { pattern: RegExp; words: string[] }>();
 /** The other-subject words, less those the query itself uses ("vintage map print" keeps maps, "stage costume" stages). */
 function offTopicFor(query: string) {
@@ -299,6 +314,10 @@ export function referenceImageFit(image: Pick<FoundImage, 'title' | 'keywords' |
     if (!keywordHas(ownKeywords, WORN_PATTERN, WORN_WORDS) && !keywordHas(ownKeywords, CLOTH_PATTERN, CLOTH_WORDS)) return 'off';
   }
   if (named) return items.length && image.source === 'wikimedia' && keywords.length > 0 && !keywordsCloth ? 'loose' : 'named';
+  // The shape of a species description, on a title that names nothing of the query and nothing about cloth: a plate of
+  // an animal or a plant. A title that does name a word of the query keeps its place, so a pattern dated in its title
+  // ("Seigaiha pattern Japan 1900" for 「青海波の模様」) is never read this way.
+  if (!cloth && SPECIES_PLATE.test(title)) return 'off';
   if (!cloth && keywordHas(keywords, offTopic.pattern, offTopic.words)) return 'aside';
   return cloth ? 'worn' : 'other';
 }
