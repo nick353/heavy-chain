@@ -108,7 +108,11 @@ test('a Japanese request is searched with its English garment words', async () =
   assert.equal(englishReferenceQuery('スモッキングのパフスリーブ'), 'smocked puff sleeve');
   assert.equal(englishReferenceQuery('ニットのカーディガン'), 'knit cardigan');
   assert.equal(englishReferenceQuery('デニムのワイドパンツ'), 'denim wide pants');
-  assert.equal(englishReferenceQuery('白いTシャツ'), 't-shirt');
+  // Colours, patterns and the word for cloth are searched too (2026-11-14): without them 「ブルー×白の縦ストライプ生地」
+  // reached the English indexes in Japanese and found a butterfly and a fish.
+  assert.equal(englishReferenceQuery('白いTシャツ'), 'white t-shirt');
+  assert.equal(englishReferenceQuery('ブルー×白の縦ストライプ生地'), 'blue white vertical stripe fabric');
+  assert.equal(englishReferenceQuery('青海波の柄'), 'seigaiha wave pattern');
   // English search words (what the screens pass) and Japanese without a known word stay as they are.
   assert.equal(englishReferenceQuery('draped blouse'), 'draped blouse');
   assert.equal(englishReferenceQuery('星空'), '星空');
@@ -148,4 +152,23 @@ test('how a title fits: the garment itself, not a shared adjective; a garment wo
   assert.equal(referenceImageFit({ title: 'Old map of Edo' }, 'linen dress'), 'off');
   // A motif search keeps #244: any word of the query in the title.
   assert.equal(referenceImageFit({ title: 'Blue hydrangea' }, 'hydrangea watercolor blue'), 'named');
+});
+
+// 2026-11-14 (production, 素材検索): 「ブルー×白の縦ストライプ生地」 returned three butterflies and a fish. The word list had no
+// entry for 「生地」, 「ストライプ」 or the colours, so the Japanese query reached the English indexes unchanged — and a query
+// with no English stems made titleNamesQuery hold for every title, so every image ranked first in the index's own order.
+test('a fabric or colour query keeps the cloth and drops the butterfly and the fish that share only its colour and pattern words', () => {
+  const query = englishReferenceQuery('ブルー×白の縦ストライプ生地');
+  assert.equal(query, 'blue white vertical stripe fabric');
+  assert.equal(referenceImageFit({ title: 'Blue striped butterfly on a leaf' }, query), 'other');
+  assert.equal(referenceImageFit({ title: 'Striped fish, blue and white' }, query), 'other');
+  assert.equal(referenceImageFit({ title: 'Blue and white striped cotton fabric' }, query), 'named');
+  assert.equal(referenceImageFit({ title: 'Striped shirt, 1950s' }, query), 'named');
+  assert.equal(referenceImageFit({ title: 'Untitled', keywords: ['handwoven', 'textile'] }, query), 'worn');
+  // A motif named by a noun still ranks first, as #244 asks: the shared word is not only a colour or a pattern.
+  assert.equal(referenceImageFit({ title: 'Blue hydrangea' }, 'hydrangea watercolor blue'), 'named');
+  assert.equal(referenceImageFit({ title: 'Seigaiha wave pattern on paper' }, englishReferenceQuery('青海波の柄')), 'named');
+  // A Japanese query the list cannot translate names nothing at all: cloth leads, the rest keeps the index's order.
+  assert.equal(referenceImageFit({ title: 'Blue striped butterfly' }, '謎の素材'), 'other');
+  assert.equal(referenceImageFit({ title: 'Linen cloth, undyed' }, '謎の素材'), 'worn');
 });

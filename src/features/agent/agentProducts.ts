@@ -67,15 +67,21 @@ export function agentProductGender(text: string): string {
 }
 /**
  * One shop search per direction (「方向性の名前（主なアイテム）｜特徴…」): the customers' gender, a material the direction
- * names and its main item; without a hit, the gender and the item only.
+ * names and its main item; without a hit, the gender and the item only. The item also travels as `needs`, so the
+ * server keeps only the products that name it.
  */
 export function agentDirectionSearches(task: Pick<AgentTask, 'prompt'> & { requirements?: { content?: string } | null }, directions: Array<{ name: string; description: string }>) {
   const gender = agentProductGender(`${task.prompt}\n${task.requirements?.content ?? ''}`);
   return directions.map(direction => {
-    const item = /[（(]([^）)]{1,30})[）)]/.exec(direction.name)?.[1]?.split(/[・、,／/]/)[0]?.trim() || direction.name.replace(/[（(].*$/, '').trim().slice(0, 20);
+    const picked = /[（(]([^）)]{1,30})[）)]/.exec(direction.name)?.[1]?.split(/[・、,／/]/)[0]?.trim() ?? '';
+    const item = picked || direction.name.replace(/[（(].*$/, '').trim().slice(0, 20);
     const material = MATERIALS.find(word => direction.description.includes(word) || direction.name.includes(word)) ?? '';
     const query = [gender, material, item].filter(Boolean).join(' ');
     const fallback = [gender, item].filter(Boolean).join(' ');
-    return { query, ...(fallback !== query ? { fallback } : {}) };
+    // An item written in 「（主なアイテム）」 is what the search is for, and the gender and the material only narrow it, so a
+    // product that never names the item answers another question (production 2026-11-14: a direction card cited
+    // 「水着 ¥2,090」) and the server drops it. A name without 「（…）」 is the direction's concept (「都市の余白」), which no
+    // product name repeats: it is searched as before, with nothing to hold the answers to.
+    return { query, ...(fallback !== query ? { fallback } : {}), ...(picked ? { needs: [picked] } : {}) };
   });
 }
