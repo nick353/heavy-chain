@@ -196,6 +196,15 @@ type CloudflareInvitation = {
   used_at: string | null;
   created_at: string;
 };
+/** MCP（ChatGPT・Claude など）のサインインで、承認ページが見せる中身。 */
+export type CloudflareMcpAuthorizationRequest = {
+  requestId: string;
+  clientName: string;
+  redirectUri: string;
+  scope: string;
+  expiresAt: string;
+};
+
 export type CloudflareSharedImagePayload = {
   success: boolean;
   image?: {
@@ -1264,6 +1273,20 @@ class CloudflareDataPlaneClient {
   }
 
   /** Deletes the signed-in account and everything it owns (heavy-api, then the auth user). */
+  /** MCP（ChatGPT・Claude など）のサインインで、何を承認しようとしているのかを読む。 */
+  async readMcpAuthorizationRequest(requestId: string): Promise<CloudflareMcpAuthorizationRequest> {
+    return this.request(`/mcp-oauth/requests/${encodeURIComponent(requestId)}`);
+  }
+
+  /** 本人の「許可する／しない」を伝え、クライアントへ戻る先を受け取る。 */
+  async decideMcpAuthorization(requestId: string, approve: boolean): Promise<{ redirectTo: string }> {
+    return this.request('/mcp-oauth/approve', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ requestId, approve }),
+    });
+  }
+
   async deleteAccount(): Promise<void> {
     await this.request<void>('/v1/account/delete', {
       method: 'POST',

@@ -13,6 +13,7 @@
  *   毎回の確認が出る（ChatGPT の custom MCP server の仕様）。
  */
 import type { Env } from './index.ts';
+import { looksLikeMcpAccessToken, resolveMcpAccessToken, resourceMetadataUrl } from './mcp-oauth.ts';
 
 /** この Worker 自身の /v1/... を内部で呼ぶ。index.ts が handleRequest を包んで渡す。 */
 export type ApiCall = (request: Request) => Promise<Response>;
@@ -395,7 +396,7 @@ function originAllowed(request: Request, env: Env): boolean {
 
 function bearer(request: Request): string | null {
   const value = request.headers.get('authorization');
-  return value && /^Bearer\s+\S+$/i.test(value) ? value : null;
+  return value?.match(/^Bearer\s+(\S+)$/i)?.[1] ?? null;
 }
 
 function protocolFor(params: unknown): string {
@@ -449,12 +450,23 @@ export async function handleMcpRequest(request: Request, env: Env, api: ApiCall)
   }
   if (request.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
 
-  const authorization = bearer(request);
-  if (!authorization) {
-    // 認証の入口を知らせる。OAuth を足したら resource_metadata をここに載せる。
-    return jsonResponse({ error: 'unauthorized' }, 401, {
-      'www-authenticate': 'Bearer realm="Heavy Chain MCP"',
-    });
+  // 認証の入口（サインインの在りか）を必ず知らせる。クライアントはこれを見て OAuth を始める。
+  const unauthorized = (description: string): Response => jsonResponse(
+    { error: 'unauthorized', error_description: description },
+    401,
+    { 'www-authenticate': `Bearer realm="Heavy Chain MCP", resource_metadata="${resourceMetadataUrl(url.origin)}"` },
+  );
+
+  const presented = bearer(request);
+  if (!presented) return unauthorized('アクセストークンが必要です。');
+
+  // MCP の OAuth で出したトークンなら、封じてあるセッションに解いて、今までと同じ認証を通す。
+  // それ以外は Heavy Chain のセッションそのものとして扱う（手元の道具から直につなぐとき）。
+  let authorization = `Bearer ${presented}`;
+  if (looksLikeMcpAccessToken(presented)) {
+    const grant = await resolveMcpAccessToken(env, presented);
+    if (!grant) return unauthorized('トークンが切れています。サインインし直してください。');
+    authorization = `Bearer ${grant.sessionToken}`;
   }
 
   const raw = await request.text();
