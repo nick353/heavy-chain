@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { handleRequest } from '../src/index.ts';
 import { MCP_TOOL_NAMES } from '../src/mcp.ts';
-import { imageSetup } from './image-ai-fixture.ts';
+import { imageSetup, pngFixture } from './image-ai-fixture.ts';
 
 type Setup = ReturnType<typeof imageSetup>;
 
@@ -39,6 +39,52 @@ async function toolText(response: Response): Promise<{ text: string; isError: bo
   assert.equal(content.length, 1);
   assert.equal(content[0].type, 'text');
   return { text: content[0].text, isError: payload.isError === true };
+}
+
+/**
+ * 試験の土台のモデルは既定で 256x256 を返すが、ツール経由の生成は aspect_ratio から
+ * 1024x1024 を期待するので、そのままだと必ず image_provider_invalid_output で失敗する
+ * （state が completed にならないので、仕上がりの経路が一度も試されない）。
+ */
+function drawsFullSize(setup: Setup, width = 1024, height = 1024): void {
+  const image = Buffer.from(pngFixture(width, height)).toString('base64');
+  setup.setHook(async () => ({ image }));
+}
+
+/** text と image を分けて読む（画像を同梱する道具の試験用）。 */
+async function toolContent(response: Response): Promise<{ text: string; images: Array<Record<string, unknown>>; isError: boolean }> {
+  const payload = await result(response);
+  const content = payload.content as Array<Record<string, unknown>>;
+  const text = content.filter((part) => part.type === 'text').map((part) => String(part.text)).join('\n');
+  const images = content.filter((part) => part.type === 'image');
+  return { text, images, isError: payload.isError === true };
+}
+
+/**
+ * 試験の土台には Cloudflare Images が無いので、この試験の間だけ差し込む。
+ * 本番は wrangler.production.jsonc の images バインディング。渡された設定を calls に残す。
+ */
+function withShrinker(setup: Setup): { calls: Array<Record<string, unknown>> } {
+  const calls: Array<Record<string, unknown>> = [];
+  // 入力のバイトをそのまま返す。生成の経路（enlargeLikeLight・sizeForResolution）も
+  // 同じバインディングを使うので、別の画像を返すと生成そのものが壊れる。
+  // ストリームは一度しか読めないため、バイトを保持して毎回新しい写しを渡す
+  // （sizeForResolution は format を変えて何度も output を呼ぶ）。
+  (setup.env as unknown as Record<string, unknown>).IMAGES = {
+    input: (stream: unknown) => {
+      const bytes = new Response(stream as BodyInit).arrayBuffer();
+      const chain = {
+        transform(options: Record<string, unknown>) { calls.push({ transform: options }); return chain; },
+        async output(options: Record<string, unknown>) {
+          calls.push({ output: options });
+          const buffer = await bytes;
+          return { response: () => new Response(buffer.slice(0)) };
+        },
+      };
+      return chain;
+    },
+  };
+  return { calls };
 }
 
 /**
@@ -312,6 +358,8 @@ test('/mcp 以外の経路は今までどおり（MCP の入口が邪魔をし�
 
 test('create_design は生成を走らせ、追跡用の request_id を返す', async () => {
   const setup = imageSetup();
+  // aspect_ratio 3:4 は 768x1024 を期待する（src/image-ai-contracts.ts の ratios）。
+  drawsFullSize(setup, 768, 1024);
   const { text, isError } = await toolText(await call(setup, 'create_design', {
     brand_id: 'brand', prompt: 'リネンのシャツに藍色の波の柄', aspect_ratio: '3:4', count: 1,
   }));
@@ -371,6 +419,7 @@ test('create_design は、他社ブランドを真似る文章を断る', async 
 
 test('edit_design は、自分のデザインを元に直しの生成を始める', async () => {
   const setup = imageSetup();
+  drawsFullSize(setup);
   await seedDesign(setup, 'design-1');
   const { text, isError } = await toolText(await call(setup, 'edit_design', {
     brand_id: 'brand', source_design_id: 'design-1', prompt: '色を藍色にして',
@@ -404,6 +453,7 @@ test('edit_design は、画像の実体が無いデザインを断る', async ()
 
 test('create_model_shots は、服のデザインから人が着ている絵の生成を始める', async () => {
   const setup = imageSetup();
+  drawsFullSize(setup, 768, 1024);
   await seedDesign(setup, 'design-1');
   const { text, isError } = await toolText(await call(setup, 'create_model_shots', {
     brand_id: 'brand', garment_design_id: 'design-1', body_types: ['regular'], age_groups: ['20s'], gender: 'female',
@@ -541,18 +591,104 @@ test('文章系のツールは、入力の間違いを API を呼ぶ前に断る
 
 test('生成の返り文は、その場で終わったかどうかと食い違わない', async () => {
   const setup = imageSetup();
+  drawsFullSize(setup);
   const { text, isError } = await toolText(await call(setup, 'create_design', { brand_id: 'brand', prompt: 'シャツ' }));
   assert.equal(isError, false, text);
   // 2026-11-15 に本番で実測: create_design の呼び出しの中で state が completed になり、画像の URL まで返った。
   // 終わっているのに「まだ途中」と書くと、モデルが無駄に get_design_request を呼ぶ。
-  const finished = /"state": "completed"/.test(text);
-  if (finished) {
-    assert.match(text, /生成が終わりました/);
-    assert.doesNotMatch(text, /まだ描いている途中/);
-  } else {
-    assert.match(text, /生成を始めました/);
-    assert.match(text, /まだ描いている途中/);
-  }
+  // drawsFullSize を当てているので、この呼び出しの中で completed になる。
+  assert.match(text, /"state": "completed"/);
+  assert.match(text, /生成が終わりました/);
+  assert.doesNotMatch(text, /まだ描いている途中/);
   // どちらの場合も request_id は必ず返す（あとから画面や get_design_request で辿れるように）。
   assert.match(text, /request_id: [0-9a-f-]{36}/);
+});
+
+test('create_design は、できた絵そのものを結果に同梱する', async () => {
+  const setup = imageSetup();
+  drawsFullSize(setup);
+  const shrinker = withShrinker(setup);
+  const { text, images, isError } = await toolContent(await call(setup, 'create_design', {
+    brand_id: 'brand', prompt: 'リネンのシャツ',
+  }));
+  assert.equal(isError, false, text);
+  // URL だけではモデルが中身を見られないので、image の content が必ず付く。
+  assert.equal(images.length, 1, `画像が同梱されていない: ${text}`);
+  assert.equal(images[0].mimeType, 'image/jpeg');
+  assert.ok(String(images[0].data).length > 0);
+  assert.match(text, /写し/);
+  // 長辺512px に収める形で、JPEG にして渡している。
+  const transform = shrinker.calls.find((entry) => entry.transform)?.transform as Record<string, unknown>;
+  assert.deepEqual(transform, { width: 512, height: 512, fit: 'scale-down' });
+  const output = shrinker.calls.find((entry) => entry.output)?.output as Record<string, unknown>;
+  assert.deepEqual(output, { format: 'image/jpeg', quality: 80 });
+});
+
+test('list_designs の with_images は、絵そのものを最大3枚まで付ける', async () => {
+  const setup = imageSetup();
+  withShrinker(setup);
+  for (const id of ['design-1', 'design-2', 'design-3', 'design-4']) await seedDesign(setup, id);
+  const { text, images, isError } = await toolContent(await call(setup, 'list_designs', {
+    brand_id: 'brand', with_images: true,
+  }));
+  assert.equal(isError, false, text);
+  assert.equal(images.length, 3, '3枚に切れていない');
+  for (const image of images) assert.equal(image.mimeType, 'image/jpeg');
+  assert.match(text, /新しい順で3枚/);
+});
+
+test('with_images を渡さなければ画像は付かない（文脈を勝手に食わない）', async () => {
+  const setup = imageSetup();
+  withShrinker(setup);
+  await seedDesign(setup, 'design-1');
+  const plain = await toolContent(await call(setup, 'list_designs', { brand_id: 'brand' }));
+  assert.equal(plain.images.length, 0);
+  const urls = await toolContent(await call(setup, 'list_designs', { brand_id: 'brand', with_image_urls: true }));
+  assert.equal(urls.images.length, 0);
+  assert.match(urls.text, /image_url_signed/);
+});
+
+test('縮小ができない環境でも、結果そのものは返る', async () => {
+  const setup = imageSetup();
+  // IMAGES を差し込まない（本番で images バインディングが外れた場合と同じ）。
+  await seedDesign(setup, 'design-1');
+  const { text, images, isError } = await toolContent(await call(setup, 'list_designs', {
+    brand_id: 'brand', with_images: true,
+  }));
+  assert.equal(isError, false);
+  assert.equal(images.length, 0);
+  assert.match(text, /design-1/);
+  assert.match(text, /写しは作れませんでした/);
+});
+
+test('get_design_request も、仕上がった絵を同梱する', async () => {
+  const setup = imageSetup();
+  drawsFullSize(setup);
+  withShrinker(setup);
+  const started = await toolContent(await call(setup, 'create_design', { brand_id: 'brand', prompt: 'トートバッグ' }));
+  const id = /request_id: ([0-9a-f-]{36})/.exec(started.text)?.[1];
+  assert.ok(id);
+  const followed = await toolContent(await call(setup, 'get_design_request', { request_id: id }));
+  assert.equal(followed.isError, false, followed.text);
+  assert.equal(followed.images.length, 1);
+  assert.equal(followed.images[0].mimeType, 'image/jpeg');
+});
+
+test('with_images の指定が true / false 以外なら断る', async () => {
+  const setup = imageSetup();
+  const { text, isError } = await toolText(await call(setup, 'list_designs', { brand_id: 'brand', with_images: 'yes' }));
+  assert.equal(isError, true);
+  assert.match(text, /with_images/);
+});
+
+test('生成が落ちたときは、失敗として伝えて待たせない', async () => {
+  const setup = imageSetup();
+  // 土台のモデルは 256x256 を返すので、ツール経由の生成は image_provider_invalid_output で落ちる。
+  // これを「生成を始めました／まだ描いている途中」と返すと、モデルが終わらないものを待ち続ける。
+  const { text, isError } = await toolText(await call(setup, 'create_design', { brand_id: 'brand', prompt: 'シャツ' }));
+  assert.match(text, /"state": "failed"/);
+  assert.equal(isError, true, '失敗が失敗として伝わっていない');
+  assert.match(text, /生成に失敗しました/);
+  assert.doesNotMatch(text, /まだ描いている途中/);
+  assert.match(text, /理由があります/);
 });

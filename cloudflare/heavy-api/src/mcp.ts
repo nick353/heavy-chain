@@ -33,6 +33,15 @@ const MAX_BODY_BYTES = 262_144;
 const MAX_RESULT_CHARS = 60_000;
 /** 署名つき画像 URL の有効時間。/v1/media/read の上限に合わせる。 */
 const IMAGE_URL_TTL_SECONDS = 3600;
+/**
+ * モデルに実際に見せる写しの長辺。URL を渡してもモデルは中身を見られないので、
+ * 小さな JPEG にして結果に同梱する（2026-11-15 オーナーの依頼で足した）。
+ */
+const MODEL_IMAGE_SIDE = 512;
+/** 1回の結果に同梱する画像の枚数。文脈を食いつぶさないために切る。 */
+const MAX_MODEL_IMAGES = 3;
+/** 同梱する1枚の上限。512px の JPEG は通常 40〜80KB に収まる。 */
+const MAX_MODEL_IMAGE_BYTES = 400 * 1024;
 /** 1回の list_designs で作る署名つき URL の本数。 */
 const MAX_IMAGE_URLS = 5;
 
@@ -54,11 +63,11 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0
 const INSTRUCTIONS = [
   'Heavy Chain はアパレル（服・雑貨）向けの AI デザインアプリです。',
   'まず list_brands でブランドの id を取り brand_id に渡します。',
-  '絵を描くのは create_design（新しく）・edit_design（あるものを直す）・create_model_shots（人が着ている絵）の3つで、どれも生成の枠を使います。呼ぶ前に内容をユーザーに読み上げて了解を取ってください。仕上がりはふつうその場で返るので、まだ途中と書かれているときだけ get_design_request で追ってください。',
-  'edit_design と create_model_shots には list_designs で取ったデザインの id が必要です。',
-  'improve_prompt と plan_design_set は文章を考えるだけで、絵は描きません。',
-  'search_products には list_projects で取った project_id も必要です。',
-  'list_designs の with_image_urls: true は1時間だけ有効な画像 URL を返します。保存せず取り直します。',
+  '絵を描くのは create_design（新しく）・edit_design（直す）・create_model_shots（着ている絵）の3つで、生成の枠を使います。仕上がりはふつうその場で返り、絵そのものが付きます。まだ途中と書かれているときだけ get_design_request で追います。',
+  'edit_design と create_model_shots には list_designs のデザイン id が必要です。',
+  '見た目で判断するときは list_designs に with_images: true を渡すと絵が付きます。ユーザーに見せる URL は with_image_urls: true。',
+  'improve_prompt と plan_design_set は文章だけで、絵は描きません。',
+  'search_products には list_projects の project_id も必要です。',
 ].join('');
 
 type JsonRpcId = string | number | null;
@@ -73,6 +82,8 @@ interface RpcRequest {
 interface ToolResult {
   text: string;
   isError?: boolean;
+  /** モデルが実際に見るための小さな写し。MCP の content に image として入る。 */
+  images?: Array<{ data: string; mimeType: string }>;
 }
 
 interface ToolContext {
@@ -184,6 +195,64 @@ function apiFailure(name: string, reply: ApiReply): ToolResult {
   };
 }
 
+/** 大きな配列でも落ちないように、少しずつ base64 にする。 */
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 8_192) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 8_192));
+  }
+  return btoa(binary);
+}
+
+/** 長辺 MODEL_IMAGE_SIDE の JPEG に縮める。Cloudflare Images が無い環境では null。 */
+async function shrinkForModel(env: Env, bytes: Uint8Array): Promise<Uint8Array | null> {
+  if (!env.IMAGES) return null;
+  const source = new Response(bytes as BufferSource).body;
+  if (!source) return null;
+  const output = await env.IMAGES.input(source)
+    .transform({ width: MODEL_IMAGE_SIDE, height: MODEL_IMAGE_SIDE, fit: 'scale-down' })
+    .output({ format: 'image/jpeg', quality: 80 });
+  const shrunk = new Uint8Array(await output.response().arrayBuffer());
+  return shrunk.byteLength > 0 && shrunk.byteLength <= MAX_MODEL_IMAGE_BYTES ? shrunk : null;
+}
+
+/**
+ * 保管庫の画像を、モデルが見られる小さな写しにする。
+ * 失敗しても結果そのものは返したいので、例外は飲んで null にする。
+ */
+async function modelImage(context: ToolContext, storagePath: string): Promise<{ data: string; mimeType: string } | null> {
+  try {
+    const object = await context.env.PRIVATE_MEDIA.get(storagePath);
+    if (!object) return null;
+    const bytes = new Uint8Array(await object.arrayBuffer());
+    if (bytes.byteLength === 0) return null;
+    const shrunk = await shrinkForModel(context.env, bytes);
+    return shrunk ? { data: toBase64(shrunk), mimeType: 'image/jpeg' } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 生成の受領書（images[]）や一覧の行から、保管庫の場所を最大 max 件だけ拾う。 */
+function storagePathsFrom(value: unknown, max: number, key: 'storagePath' | 'storage_path'): string[] {
+  const list = isRecord(value) && Array.isArray(value.images) ? value.images
+    : Array.isArray(value) ? value : [];
+  const paths: string[] = [];
+  for (const entry of list) {
+    if (paths.length >= max) break;
+    if (!isRecord(entry)) continue;
+    const path = entry[key];
+    if (typeof path === 'string' && path) paths.push(path);
+  }
+  return paths;
+}
+
+/** 複数の写しをまとめて作る。作れなかったものは黙って落とす。 */
+async function modelImages(context: ToolContext, paths: string[]): Promise<Array<{ data: string; mimeType: string }>> {
+  const made = await Promise.all(paths.map((path) => modelImage(context, path)));
+  return made.filter((image): image is { data: string; mimeType: string } => image !== null);
+}
+
 /**
  * 自分のデザインを、生成の参考に渡せる base64 にする。
  * 所有の確認は必ず /v1/generated-images/{id}（所有者だけ 200）で先に通し、
@@ -201,15 +270,11 @@ async function designAsBase64(context: ToolContext, imageId: string): Promise<{ 
   const bytes = new Uint8Array(await object.arrayBuffer());
   if (bytes.byteLength === 0) return { error: `デザイン ${imageId} の画像が空です。` };
   if (bytes.byteLength > MAX_REFERENCE_BYTES) return { error: `デザイン ${imageId} の画像が大きすぎます（参考に渡せるのは 3MB までです）。` };
-  let binary = '';
-  for (let offset = 0; offset < bytes.length; offset += 8_192) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 8_192));
-  }
   // 型は保管庫の記録を使い、無ければバイトの先頭で見る（decodeImage も imageBlock も型の一致を見る）。
   const stored = typeof object.httpMetadata?.contentType === 'string' ? object.httpMetadata.contentType : '';
   const sniffed = bytes[0] === 0xff && bytes[1] === 0xd8 ? 'image/jpeg' : 'image/png';
   const contentType = stored === 'image/png' || stored === 'image/jpeg' ? stored : sniffed;
-  return { data: btoa(binary), contentType };
+  return { data: toBase64(bytes), contentType };
 }
 
 /** /v1/media/read で1時間だけ有効な画像 URL を作る。失敗しても一覧そのものは返す。 */
@@ -285,9 +350,16 @@ async function startGeneration(
   // 画像の URL まで返ってきた。まだ走っているときだけ request_id で追わせる。
   const state = isRecord(reply.data) && typeof reply.data.state === 'string' ? reply.data.state : '';
   const finished = state === 'completed';
-  const head = finished ? '生成が終わりました' : '生成を始めました';
-  const follow = finished ? '' : `\n\nまだ描いている途中です。get_design_request に request_id ${requestId} を渡すと仕上がりが分かります。`;
-  return { text: `${head}。request_id: ${requestId}\n\n${describe(reply.data)}${follow}` };
+  // 落ちた生成を「まだ途中」と言うと、モデルが終わらないものを待ち続ける。
+  const failed = state === 'failed';
+  const head = finished ? '生成が終わりました' : failed ? '生成に失敗しました' : '生成を始めました';
+  const follow = finished ? ''
+    : failed ? '\n\n下の error と failedCandidates に理由があります。文章を変えて呼び直すか、少し待ってからやり直してください。'
+    : `\n\nまだ描いている途中です。get_design_request に request_id ${requestId} を渡すと仕上がりが分かります。`;
+  // できた絵は、URL だけでなく実物を同梱する。そうしないとモデルは何を描いたか見られない。
+  const images = await modelImages(context, storagePathsFrom(reply.data, MAX_MODEL_IMAGES, 'storagePath'));
+  const note = images.length ? `\n\n下に${images.length}枚の写し（長辺${MODEL_IMAGE_SIDE}px）を付けました。原寸は上の imageUrl から取れます。` : '';
+  return { text: `${head}。request_id: ${requestId}\n\n${describe(reply.data)}${follow}${note}`, images, ...(failed ? { isError: true } : {}) };
 }
 
 const TOOLS: Tool[] = [
@@ -330,7 +402,7 @@ const TOOLS: Tool[] = [
   {
     name: 'list_designs',
     title: '作ったデザインの一覧',
-    description: 'Use this when the user asks what designs they have made, or wants to see or reuse an earlier design. Returns generated images of one brand, newest first. Set with_image_urls to true to also get links that show the pictures.',
+    description: 'Use this when the user asks what designs they have made, or wants to see or reuse an earlier design. Returns generated images of one brand, newest first. Set with_images to true to attach the pictures themselves when you need to look at them; with_image_urls instead gives one-hour links to show the user.',
     readOnly: true,
     inputSchema: {
       type: 'object',
@@ -340,6 +412,7 @@ const TOOLS: Tool[] = [
         order: { type: 'string', enum: ['newest', 'oldest'], description: 'Default newest.' },
         favorite: { type: 'boolean', description: 'Only the designs the user marked as favorite.' },
         with_image_urls: { type: 'boolean', description: `Add a one-hour link for up to ${MAX_IMAGE_URLS} of the returned designs. Default false.` },
+        with_images: { type: 'boolean', description: `Attach the pictures themselves for up to ${MAX_MODEL_IMAGES} of the returned designs, so you can actually look at them. Use this whenever the answer depends on what the designs look like. Default false.` },
       },
       required: ['brand_id'],
       additionalProperties: false,
@@ -352,32 +425,45 @@ const TOOLS: Tool[] = [
       const order = input.order === undefined ? 'newest' : text(input.order, 16);
       if (order !== 'newest' && order !== 'oldest') return { isError: true, text: "order は 'newest' か 'oldest' です。" };
       if (input.favorite !== undefined && typeof input.favorite !== 'boolean') return { isError: true, text: 'favorite は true か false です。' };
-      if (input.with_image_urls !== undefined && typeof input.with_image_urls !== 'boolean') {
-        return { isError: true, text: 'with_image_urls は true か false です。' };
+      for (const key of ['with_image_urls', 'with_images'] as const) {
+        if (input[key] !== undefined && typeof input[key] !== 'boolean') {
+          return { isError: true, text: `${key} は true か false です。` };
+        }
       }
       const query = new URLSearchParams({ brand_id: brand, limit: String(limit), order });
       if (typeof input.favorite === 'boolean') query.set('favorite', String(input.favorite));
       const reply = await callApi(context, 'GET', `/v1/generated-images?${query}`);
       if (!reply.ok) return apiFailure('list_designs', reply);
-      if (input.with_image_urls !== true || !Array.isArray(reply.data)) return { text: describe(reply.data) };
+      const wantsUrls = input.with_image_urls === true;
+      const wantsImages = input.with_images === true;
+      if ((!wantsUrls && !wantsImages) || !Array.isArray(reply.data)) return { text: describe(reply.data) };
 
       const rows = reply.data as Array<Record<string, unknown>>;
-      const withUrls: unknown[] = [];
-      let made = 0;
-      for (const row of rows) {
-        const storagePath = typeof row.storage_path === 'string' ? row.storage_path : null;
-        if (!storagePath || made >= MAX_IMAGE_URLS) { withUrls.push(row); continue; }
-        made += 1;
-        const url = await signedImageUrl(context, storagePath);
-        withUrls.push(url ? { ...row, image_url_signed: url } : row);
+      let body: unknown = rows;
+      if (wantsUrls) {
+        const withUrls: unknown[] = [];
+        let made = 0;
+        for (const row of rows) {
+          const storagePath = typeof row.storage_path === 'string' ? row.storage_path : null;
+          if (!storagePath || made >= MAX_IMAGE_URLS) { withUrls.push(row); continue; }
+          made += 1;
+          const url = await signedImageUrl(context, storagePath);
+          withUrls.push(url ? { ...row, image_url_signed: url } : row);
+        }
+        body = withUrls;
       }
-      return { text: describe(withUrls) };
+      if (!wantsImages) return { text: describe(body) };
+      const images = await modelImages(context, storagePathsFrom(rows, MAX_MODEL_IMAGES, 'storage_path'));
+      const note = images.length
+        ? `\n\n下に、新しい順で${images.length}枚の写し（長辺${MODEL_IMAGE_SIDE}px）を付けました。上の一覧の先頭${images.length}件に対応します。`
+        : '\n\n（写しは作れませんでした。画像の実体がまだ無いか、保管庫から読めませんでした）';
+      return { text: `${describe(body)}${note}`, images };
     },
   },
   {
     name: 'get_design_request',
     title: 'デザイン生成の進み具合',
-    description: 'Use this to check a design generation started earlier, with the request id it returned. While it is still running the state is "running"; when it finishes the result carries the image links.',
+    description: 'Use this to check a design generation started earlier, with the request id it returned. While it is still running the state is "running"; when it has finished the result carries the image links and the finished pictures themselves, so you can look at them.',
     readOnly: true,
     inputSchema: {
       type: 'object',
@@ -390,7 +476,9 @@ const TOOLS: Tool[] = [
       if (!id || !UUID_PATTERN.test(id)) return { isError: true, text: 'request_id は UUID です。' };
       const reply = await callApi(context, 'GET', `/v1/image-ai/requests/${encodeURIComponent(id)}`);
       if (!reply.ok) return apiFailure('get_design_request', reply);
-      return { text: describe(reply.data) };
+      const images = await modelImages(context, storagePathsFrom(reply.data, MAX_MODEL_IMAGES, 'storagePath'));
+      const note = images.length ? `\n\n下に${images.length}枚の写し（長辺${MODEL_IMAGE_SIDE}px）を付けました。` : '';
+      return { text: `${describe(reply.data)}${note}`, images };
     },
   },
   {
@@ -812,8 +900,13 @@ async function runTool(params: unknown, context: ToolContext): Promise<unknown> 
     // ツールの中の失敗は JSON-RPC のエラーではなく、モデルが読める結果として返す（MCP 仕様）。
     result = { isError: true, text: `${name} の実行中に問題が起きました。少し待ってから試してください。` };
   }
+  const content: Array<Record<string, unknown>> = [{ type: 'text', text: result.text }];
+  // 画像は text のあとに置く。URL だけではモデルが中身を見られないので、ここで実物を渡す。
+  for (const image of result.images ?? []) {
+    content.push({ type: 'image', data: image.data, mimeType: image.mimeType });
+  }
   return {
-    content: [{ type: 'text', text: result.text }],
+    content,
     ...(result.isError ? { isError: true } : {}),
   };
 }
