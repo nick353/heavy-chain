@@ -84,6 +84,8 @@ export interface McpGrant {
   subject: string;
   /** consumer-auth のセッショントークン。内部呼び出しの Authorization に入れる。 */
   sessionToken: string;
+  /** クライアントが札を求めた相手（RFC 8707）。null は resource を送らなかったクライアント。 */
+  resource: string | null;
 }
 
 function json(body: unknown, status = 200, extraHeaders?: HeadersInit): Response {
@@ -578,8 +580,22 @@ export async function resolveMcpAccessToken(env: Env, bearer: string): Promise<M
   if (!row || row.revoked_at || expired(row.expires_at)) return null;
   const sessionToken = await unseal(secret, row.session_sealed);
   if (!sessionToken) return null;
-  return { clientId: row.client_id, issuer: row.owner_issuer, subject: row.owner_subject, sessionToken };
+  return { clientId: row.client_id, issuer: row.owner_issuer, subject: row.owner_subject, sessionToken, resource: row.resource };
 }
+
+/**
+ * この札がこの MCP サーバー向けに出されたものか（RFC 8707）。
+ * クライアントが resource を送らなかった札は null で、その場合は受ける（送るのはクライアント側の MUST だが、
+ * 送らない実装もある）。別の相手を名指しした札は、ここで断る。
+ */
+export function grantCoversResource(grant: McpGrant, origin: string): boolean {
+  if (!grant.resource) return true;
+  const expected = new URL(MCP_RESOURCE_PATH, origin).toString();
+  return grant.resource === expected || grant.resource === origin || grant.resource === `${origin}/`;
+}
+
+/** 401 のときにクライアントへ知らせる scope（MCP 仕様の SHOULD）。 */
+export const MCP_SCOPE = SCOPE;
 
 /** MCP のアクセストークンらしい形か（ふだんのセッションと見分けるため）。 */
 export function looksLikeMcpAccessToken(bearer: string): boolean {

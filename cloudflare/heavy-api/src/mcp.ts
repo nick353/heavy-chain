@@ -13,7 +13,7 @@
  *   毎回の確認が出る（ChatGPT の custom MCP server の仕様）。
  */
 import type { Env } from './index.ts';
-import { looksLikeMcpAccessToken, resolveMcpAccessToken, resourceMetadataUrl } from './mcp-oauth.ts';
+import { grantCoversResource, looksLikeMcpAccessToken, MCP_SCOPE, resolveMcpAccessToken, resourceMetadataUrl } from './mcp-oauth.ts';
 
 /** この Worker 自身の /v1/... を内部で呼ぶ。index.ts が handleRequest を包んで渡す。 */
 export type ApiCall = (request: Request) => Promise<Response>;
@@ -450,11 +450,16 @@ export async function handleMcpRequest(request: Request, env: Env, api: ApiCall)
   }
   if (request.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405, { allow: 'POST' });
 
-  // 認証の入口（サインインの在りか）を必ず知らせる。クライアントはこれを見て OAuth を始める。
+  // 認証の入口（サインインの在りか）と、求める scope を必ず知らせる。クライアントはこれを見て OAuth を始める。
+  // scope を載せるのは MCP 仕様 2025-11-25 の SHOULD。Claude Code・Cursor・Gemini CLI はどれも
+  // 401 を見てサインインを始めるので、ここが全クライアント共通の入口になる。
   const unauthorized = (description: string): Response => jsonResponse(
     { error: 'unauthorized', error_description: description },
     401,
-    { 'www-authenticate': `Bearer realm="Heavy Chain MCP", resource_metadata="${resourceMetadataUrl(url.origin)}"` },
+    {
+      'www-authenticate':
+        `Bearer realm="Heavy Chain MCP", resource_metadata="${resourceMetadataUrl(url.origin)}", scope="${MCP_SCOPE}"`,
+    },
   );
 
   const presented = bearer(request);
@@ -466,6 +471,8 @@ export async function handleMcpRequest(request: Request, env: Env, api: ApiCall)
   if (looksLikeMcpAccessToken(presented)) {
     const grant = await resolveMcpAccessToken(env, presented);
     if (!grant) return unauthorized('トークンが切れています。サインインし直してください。');
+    // 別の相手を名指しして出された札は受けない（RFC 8707。札の使い回しへの備え）。
+    if (!grantCoversResource(grant, url.origin)) return unauthorized('このトークンはこのサーバー向けではありません。');
     authorization = `Bearer ${grant.sessionToken}`;
   }
 

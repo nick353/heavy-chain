@@ -248,17 +248,60 @@ test('heavychain.app のセッションが切れると、MCP も止まる', asyn
   assert.match(payload.result.content[0].text, /サインイン/);
 });
 
-test('認証なしの /mcp は、サインインの在りかを教える', async () => {
+test('認証なしの /mcp は、サインインの在りかと求める scope を教える', async () => {
   const setup = oauthSetup();
   const response = await handleRequest(new Request(`${ORIGIN}/mcp`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
   }), setup.env);
   assert.equal(response.status, 401);
+  // scope を載せるのは MCP 仕様 2025-11-25 の SHOULD。Claude Code・Cursor・Gemini CLI は
+  // どれもこの 401 を見てサインインを始めるので、ここが全クライアント共通の入口になる。
   assert.equal(
     response.headers.get('www-authenticate'),
-    `Bearer realm="Heavy Chain MCP", resource_metadata="${ORIGIN}/.well-known/oauth-protected-resource/mcp"`,
+    `Bearer realm="Heavy Chain MCP", resource_metadata="${ORIGIN}/.well-known/oauth-protected-resource/mcp", scope="mcp"`,
   );
+});
+
+test('別の相手を名指しして出された札は受けない（RFC 8707）', async () => {
+  const setup = oauthSetup();
+  const { access } = await signIn(setup);
+  // 承認の道では別の resource は 400 で止まるので、台帳を直に書き換えて札の使い回しを作る。
+  setup.db.sql.prepare('UPDATE mcp_oauth_tokens SET resource = ?').run('https://another.example/mcp');
+  const response = await handleRequest(new Request(`${ORIGIN}/mcp`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'list_brands', arguments: {} } }),
+  }), setup.env);
+  assert.equal(response.status, 401);
+  assert.match(((await response.json()) as { error_description: string }).error_description, /このサーバー向けではありません/);
+});
+
+test('resource を送ってきたクライアントの札は通る', async () => {
+  const setup = oauthSetup();
+  const { body: client } = await registerClient(setup);
+  const authorize = await send(setup, `/mcp-oauth/authorize?response_type=code&client_id=${client.client_id}`
+    + `&redirect_uri=${encodeURIComponent(CALLBACK)}&code_challenge=${await challengeOf(VERIFIER)}`
+    + `&code_challenge_method=S256&resource=${encodeURIComponent(`${ORIGIN}/mcp`)}`);
+  assert.equal(authorize.status, 302, '正しい resource は通るべき');
+  const requestId = new URL(authorize.headers.get('location') ?? '').searchParams.get('request_id');
+  const approve = await send(setup, '/mcp-oauth/approve', {
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer alice' },
+    body: JSON.stringify({ requestId, approve: true }),
+  });
+  const code = new URL(((await approve.json()) as { redirectTo: string }).redirectTo).searchParams.get('code') ?? '';
+  const token = await send(setup, '/mcp-oauth/token', {
+    method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'authorization_code', code, code_verifier: VERIFIER, client_id: client.client_id as string }).toString(),
+  });
+  const { access_token: access } = await token.json() as { access_token: string };
+  const response = await handleRequest(new Request(`${ORIGIN}/mcp`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${access}` },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'list_brands', arguments: {} } }),
+  }), setup.env);
+  const payload = await response.json() as { result: { isError?: boolean } };
+  assert.notEqual(payload.result.isError, true);
 });
 
 test('拒否すると access_denied で戻り、コードは出ない', async () => {
