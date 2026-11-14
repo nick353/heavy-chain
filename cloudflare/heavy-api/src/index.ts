@@ -8,6 +8,7 @@ import { handleFeedbackAdminRequest } from "./feedback-admin.ts";
 import { handleHeavyEntitlementAction, handleImageAIRead, processImageJob } from "./image-ai.ts";
 import { readWorkspaceExecutionSteps } from './workspace-execution.ts';
 import { handleDesignAssistantRequest } from './designAssistant.ts';
+import { OpenverseError, openverseConfigured, openverseImages } from './openverse.ts';
 const MAX_IDENTITY_PART_LENGTH = 512;
 const MAX_CLIENT_REQUEST_ID_LENGTH = 128;
 const MAX_CONTENT_TYPE_LENGTH = 128;
@@ -85,6 +86,10 @@ export interface Env {
   ANTHROPIC_BASE_URL?: string;
   /** Server-only Yahoo!ショッピング 商品検索 v3 Client ID (wrangler secret). Without it the planning agent shows no real products. */
   YAHOO_SHOPPING_APP_ID?: string;
+  /** Server-only Openverse OAuth2 client (wrangler secret for the secret half). Without it the browser searches
+   * Openverse keylessly as before, at 20 searches a minute and 200 a day per visitor. */
+  OPENVERSE_CLIENT_ID?: string;
+  OPENVERSE_CLIENT_SECRET?: string;
 }
 
 interface MediaAsset {
@@ -464,6 +469,17 @@ export async function handleRequest(request: Request, env: Env, ctx?: Pick<Execu
       media: "private-r2",
       heavyEntitlementEnabled: env.HEAVY_IMAGE_ENTITLEMENT_ENABLED?.trim() === "true",
     }));
+  }
+  if (request.method === 'GET' && url.pathname === '/v1/openverse/images') {
+    // The reference image search's relay. Signed in only: this spends the site's own Openverse quota.
+    if (!openverseConfigured(env)) return respond(errorResponse('openverse_not_configured', 503));
+    const auth = await authenticate(request, env);
+    if (isResponse(auth)) return respond(auth);
+    try { return respond(jsonResponse(await openverseImages(env, url.searchParams) as Record<string, unknown>)); }
+    catch (error) {
+      const status = error instanceof OpenverseError ? error.status : 502;
+      return respond(errorResponse(error instanceof OpenverseError ? error.message : 'openverse_failed', status));
+    }
   }
   const feedbackAdminResponse = await handleFeedbackAdminRequest(request, env);
   if (feedbackAdminResponse) return respond(feedbackAdminResponse);

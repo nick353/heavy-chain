@@ -1310,3 +1310,22 @@ class CloudflareDataPlaneClient {
 export const cloudflareDataPlane: CloudflareDataPlaneClient | null = (
   baseURL && isEnabled(import.meta.env.VITE_CLOUDFLARE_API_ENABLED)
 ) ? new CloudflareDataPlaneClient(baseURL) : null;
+
+/**
+ * Openverse の検索を、このアプリのサーバー（鍵つき）経由で呼ぶ。鍵が無い・ログインしていない・ルートが無いときは
+ * null を返し、呼び元（referenceImageSearch.ts）がブラウザから鍵なしで直接呼ぶ今までの道に戻る。
+ */
+export async function openverseRelayRequest(params: URLSearchParams, signal: AbortSignal): Promise<Response | null> {
+  if (!baseURL) return null;
+  let token: string;
+  try { token = await getBearerToken(); } catch { return null; }
+  let response: Response;
+  try {
+    response = await fetch(`${baseURL}/v1/openverse/images?${params}`, {
+      signal, credentials: 'omit', headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+    });
+  } catch { return null; }
+  // 503（サーバーに鍵が無い）・404（ルートが無い反映の途中）・401/403（この閲覧者は入れない）は、鍵なしの道に戻す。
+  if ([401, 403, 404, 503].includes(response.status)) return null;
+  return response;
+}
