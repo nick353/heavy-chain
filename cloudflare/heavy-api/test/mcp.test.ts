@@ -310,7 +310,7 @@ test('/mcp 以外の経路は今までどおり（MCP の入口が邪魔をし�
   assert.equal(brands.status, 200);
 });
 
-test('create_design は生成を始め、追跡用の request_id を返す', async () => {
+test('create_design は生成を走らせ、追跡用の request_id を返す', async () => {
   const setup = imageSetup();
   const { text, isError } = await toolText(await call(setup, 'create_design', {
     brand_id: 'brand', prompt: 'リネンのシャツに藍色の波の柄', aspect_ratio: '3:4', count: 1,
@@ -537,4 +537,22 @@ test('文章系のツールは、入力の間違いを API を呼ぶ前に断る
     assert.equal(isError, true, `通ってしまった: ${name} ${JSON.stringify(args)}`);
     assert.match(text, expected);
   }
+});
+
+test('生成の返り文は、その場で終わったかどうかと食い違わない', async () => {
+  const setup = imageSetup();
+  const { text, isError } = await toolText(await call(setup, 'create_design', { brand_id: 'brand', prompt: 'シャツ' }));
+  assert.equal(isError, false, text);
+  // 2026-11-15 に本番で実測: create_design の呼び出しの中で state が completed になり、画像の URL まで返った。
+  // 終わっているのに「まだ途中」と書くと、モデルが無駄に get_design_request を呼ぶ。
+  const finished = /"state": "completed"/.test(text);
+  if (finished) {
+    assert.match(text, /生成が終わりました/);
+    assert.doesNotMatch(text, /まだ描いている途中/);
+  } else {
+    assert.match(text, /生成を始めました/);
+    assert.match(text, /まだ描いている途中/);
+  }
+  // どちらの場合も request_id は必ず返す（あとから画面や get_design_request で辿れるように）。
+  assert.match(text, /request_id: [0-9a-f-]{36}/);
 });

@@ -53,12 +53,12 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0
 
 const INSTRUCTIONS = [
   'Heavy Chain はアパレル（服・雑貨）向けの AI デザインアプリです。',
-  'どのツールも、まず list_brands でブランドの id を取り brand_id に渡します。',
-  '絵を描くのは create_design（新しく）・edit_design（あるものを直す）・create_model_shots（人が着ている絵）の3つで、どれも生成の枠を使います。呼ぶ前に内容をユーザーに読み上げて了解を取り、始めたら get_design_request で仕上がりを取ってください。',
+  'まず list_brands でブランドの id を取り brand_id に渡します。',
+  '絵を描くのは create_design（新しく）・edit_design（あるものを直す）・create_model_shots（人が着ている絵）の3つで、どれも生成の枠を使います。呼ぶ前に内容をユーザーに読み上げて了解を取ってください。仕上がりはふつうその場で返るので、まだ途中と書かれているときだけ get_design_request で追ってください。',
   'edit_design と create_model_shots には list_designs で取ったデザインの id が必要です。',
   'improve_prompt と plan_design_set は文章を考えるだけで、絵は描きません。',
   'search_products には list_projects で取った project_id も必要です。',
-  'list_designs の with_image_urls: true は1時間だけ有効な画像 URL を返します。保存せず取り直してください。',
+  'list_designs の with_image_urls: true は1時間だけ有効な画像 URL を返します。保存せず取り直します。',
 ].join('');
 
 type JsonRpcId = string | number | null;
@@ -281,7 +281,13 @@ async function startGeneration(
     }
     return apiFailure(name, reply);
   }
-  return { text: `生成を始めました。request_id: ${requestId}\n\n${describe(reply.data)}\n\n仕上がりは get_design_request にこの request_id を渡すと分かります。` };
+  // 実測（2026-11-15、本番で create_design を1回）: この呼び出しの中で state が completed になり、
+  // 画像の URL まで返ってきた。まだ走っているときだけ request_id で追わせる。
+  const state = isRecord(reply.data) && typeof reply.data.state === 'string' ? reply.data.state : '';
+  const finished = state === 'completed';
+  const head = finished ? '生成が終わりました' : '生成を始めました';
+  const follow = finished ? '' : `\n\nまだ描いている途中です。get_design_request に request_id ${requestId} を渡すと仕上がりが分かります。`;
+  return { text: `${head}。request_id: ${requestId}\n\n${describe(reply.data)}${follow}` };
 }
 
 const TOOLS: Tool[] = [
@@ -477,7 +483,7 @@ const TOOLS: Tool[] = [
   {
     name: 'create_design',
     title: 'デザインを生成する',
-    description: 'Use this to generate a new apparel design image from a written description. It spends the brand\'s generation quota, so read the prompt back to the user and get their go-ahead before calling it. The drawing runs in the background: this returns a request_id straight away, and get_design_request then reports the progress and the finished image links.',
+    description: 'Use this to generate a new apparel design image from a written description. It spends the brand\'s generation quota, so read the prompt back to the user and get their go-ahead before calling it. The drawing usually finishes inside this call and the result, image links included, comes back with it; only when the answer says it is still running do you pass the returned request_id to get_design_request.',
     readOnly: false,
     inputSchema: {
       type: 'object',
@@ -503,7 +509,7 @@ const TOOLS: Tool[] = [
   {
     name: 'edit_design',
     title: 'デザインを直す',
-    description: 'Use this to change a design that already exists: recolour it, swap the artwork, change the garment, extend it. Name the design with source_design_id (from list_designs or a finished create_design) and say what to change in prompt. It spends the brand\'s generation quota, so get the user\'s go-ahead first. Returns a request_id; get_design_request then reports the result.',
+    description: 'Use this to change a design that already exists: recolour it, swap the artwork, change the garment, extend it. Name the design with source_design_id (from list_designs or a finished create_design) and say what to change in prompt. It spends the brand\'s generation quota, so get the user\'s go-ahead first. The result usually comes back with this call; only when it says it is still running do you follow it with get_design_request.',
     readOnly: false,
     inputSchema: {
       type: 'object',
@@ -534,7 +540,7 @@ const TOOLS: Tool[] = [
   {
     name: 'create_model_shots',
     title: '人が着ている絵を作る',
-    description: 'Use this to show a design worn by a person: pick the garment with garment_design_id and the server draws it on a model. One call draws up to three combinations of body type and age group, and each one spends quota, so get the user\'s go-ahead first. Returns a request_id; get_design_request then reports the result.',
+    description: 'Use this to show a design worn by a person: pick the garment with garment_design_id and the server draws it on a model. One call draws up to three combinations of body type and age group, and each one spends quota, so get the user\'s go-ahead first. The result usually comes back with this call; only when it says it is still running do you follow it with get_design_request.',
     readOnly: false,
     inputSchema: {
       type: 'object',

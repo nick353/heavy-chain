@@ -126,7 +126,9 @@ HTTP ストリーミングの口は `url` ではなく **`httpUrl`** です。`o
 | **`edit_design`** | 既にあるデザインを直す（色替え・柄替え・描き足し） | `brand_id`・`source_design_id`・`prompt` |
 | **`create_model_shots`** | デザインを人が着ている絵にする（体型・年代・性別を選べる） | `brand_id`・`garment_design_id` |
 
-この3つだけ `readOnlyHint` を**付けていません**。そのため、どのクライアントでも呼ぶ前に確認が出ます（枠を使う操作なので、わざとそうしています）。生成は裏で走るので、返るのは `request_id` だけです。仕上がりは `get_design_request` で取ります。
+この3つだけ `readOnlyHint` を**付けていません**。そのため、どのクライアントでも呼ぶ前に確認が出ます（枠を使う操作なので、わざとそうしています）。
+
+**仕上がりはふつうその場で返ります**（2026-11-15 に本番で実測。`create_design` を1回呼んだら、その呼び出しの中で `state: completed` と 2048×2048 の画像の URL まで返りました。`gpt-image-2`、費用の見積もりは1枚で約0.0011ドル）。混み合っていて途中のときだけ、返った `request_id` を `get_design_request` に渡して追います。
 
 ### 文章を考える（絵は描かない。枠は使わないが、文章のモデルを呼ぶ）
 
@@ -143,7 +145,7 @@ HTTP ストリーミングの口は `url` ではなく **`httpUrl`** です。`o
 | `list_brands` | ブランドの一覧。ほかのツールに渡す `brand_id` をここで取る |
 | `list_projects` | プロジェクト（キャンバス）の一覧 |
 | `list_designs` | 作ったデザインの一覧。`with_image_urls: true` で1時間だけ有効な画像リンクを最大5件 |
-| `get_design_request` | 生成の進み具合と仕上がり |
+| `get_design_request` | 生成の進み具合と仕上がり（その場で返らなかったときだけ使う） |
 | `get_usage` | 生成の使用量と残り |
 | `search_reference_images` | Openverse の参考画像（自由に使える画像だけ） |
 | `search_products` | Yahoo!ショッピングの実在の商品（値段・店・リンク） |
