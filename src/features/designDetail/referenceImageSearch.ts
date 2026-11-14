@@ -41,6 +41,15 @@ const timeout = (options: SearchOptions, ms: number) => options.signal ?? AbortS
 
 // ── Openverse (https://api.openverse.org, keyless: 20 searches a minute and 200 a day per visitor) ─────────────────
 const OPENVERSE_API = 'https://api.openverse.org/v1/images/';
+/**
+ * The owner registered an Openverse client on 2026-11-14, so the search goes through this app's own server when one is
+ * registered here (setOpenverseRelay in main.tsx): the server holds the secret and the limit becomes about 100 a minute
+ * and 10,000 a day for the whole site. The relay returns null when it cannot serve the search (no credentials on the
+ * server, not signed in, or the route is missing), and then the search runs keylessly from this page exactly as before.
+ */
+export type OpenverseRelay = (params: URLSearchParams, signal: AbortSignal) => Promise<Response | null>;
+let openverseRelay: OpenverseRelay | null = null;
+export function setOpenverseRelay(relay: OpenverseRelay | null) { openverseRelay = relay; }
 /** Licences that allow commercial use and changes. */
 const OPENVERSE_FREE = new Set(['by', 'by-sa', 'cc0', 'pdm']);
 export const openverseLicenseName = (license: string, version = '') => {
@@ -57,7 +66,13 @@ export const openverseSource: ReferenceImageSource = {
   name: 'openverse',
   async search(query, limit, options) {
     const params = new URLSearchParams({ q: query, license_type: 'commercial,modification', mature: 'false', page_size: String(Math.min(20, Math.max(limit * 3, 12))) });
-    const response = await (options.fetcher ?? fetch)(`${OPENVERSE_API}?${params}`, { signal: timeout(options, 12_000), credentials: 'omit' });
+    const signal = timeout(options, 12_000);
+    // The relay (this app's server, with the key) first; a caller that brings its own fetcher means its own call.
+    let response: Response | null = null;
+    if (openverseRelay && !options.fetcher) {
+      try { response = await openverseRelay(params, signal); } catch { response = null; }
+    }
+    if (!response) response = await (options.fetcher ?? fetch)(`${OPENVERSE_API}?${params}`, { signal, credentials: 'omit' });
     if (!response.ok) throw new ReferenceSourceError('openverse', response.status);
     const data = await response.json() as { results?: Array<{ id?: string; title?: string; creator?: string | null; license?: string; license_version?: string;
       license_url?: string; foreign_landing_url?: string; url?: string; thumbnail?: string; source?: string; filetype?: string | null; category?: string | null;

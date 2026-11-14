@@ -47,8 +47,12 @@
     "AI_CONCURRENT_IMAGE_JOBS": "8",
     "AI_USER_CONCURRENT_IMAGE_JOBS": "3",
     "PUBLIC_SHARE_ENABLED": "true",
-    "PUBLIC_APP_ORIGIN": "https://heavychain.app"
+    "PUBLIC_APP_ORIGIN": "https://heavychain.app",
+    // Openverse の OAuth2 クライアント ID（2026-11-14 オーナーが登録）。秘密ではないのでここに書く。
+    "OPENVERSE_CLIENT_ID": "WYE7YYfsGmu2fowpYy7Z2UcW3k2fFPFuaKyp0rQN"
   }
+  // Openverse の client_secret（参考画像の検索を 20回/分・200回/日 から 約100回/分・10,000回/日 に）。入れ済み:
+  // npx wrangler secret put OPENVERSE_CLIENT_SECRET --config wrangler.production.jsonc
   // Yahoo!ショッピング 商品検索 v3 の Client ID（企画エージェントの実在の商品）。鍵が無い間は使わない。オーナーが入れる:
   // npx wrangler secret put YAHOO_SHOPPING_APP_ID --config wrangler.production.jsonc
 }
