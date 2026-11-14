@@ -31,6 +31,8 @@ ChatGPT は web で使います。独自 MCP サーバーの追加は有料プ�
 @Heavy Chain このブランドの生成の残りを教えて。
 @Heavy Chain 「オーバーサイズ スウェット」で実際に売っている商品を探して、値段を並べて。
 @Heavy Chain リネンのシャツに藍色の波の柄を、縦長で2枚描いて。
+@Heavy Chain さっきのデザインの色を生成りに変えて。
+@Heavy Chain それを20代の人が着ている絵にして。
 ```
 
 ツールが選ばれないときは、はっきり指示します（公式の助言）。
@@ -114,42 +116,60 @@ HTTP ストリーミングの口は `url` ではなく **`httpUrl`** です。`o
 
 ## 4. 使えるツール
 
-| ツール | すること | かかるもの |
+全部で13個です。**本番で有効な生成の種類（7つ）はすべて出しています。**
+
+### 絵を描く（生成の枠を使う）
+
+| ツール | すること | 要るもの |
 |---|---|---|
-| `list_brands` | ブランドの一覧。ほかのツールに渡す `brand_id` をここで取る | 無料・1秒 |
-| `list_projects` | プロジェクト（キャンバス）の一覧 | 無料・1秒 |
-| `list_designs` | 作ったデザインの一覧。`with_image_urls: true` で1時間だけ有効な画像リンクを最大5件 | 無料・1〜3秒 |
-| **`create_design`** | **デザインを生成する**（文章から新しい画像を描く） | **生成の枠を使う**・数十秒〜数分 |
-| `get_design_request` | 生成の進み具合と仕上がり（画面で始めたものも、`create_design` で始めたものも） | 無料・1秒 |
-| `get_usage` | 生成の使用量と残り | 無料・1秒 |
-| `search_reference_images` | Openverse の参考画像（自由に使える画像だけ） | 無料枠・数秒 |
-| `search_products` | Yahoo!ショッピングの実在の商品（値段・店・リンク） | 無料枠・数秒 |
+| **`create_design`** | 文章から新しいデザインを描く | `brand_id`・`prompt` |
+| **`edit_design`** | 既にあるデザインを直す（色替え・柄替え・描き足し） | `brand_id`・`source_design_id`・`prompt` |
+| **`create_model_shots`** | デザインを人が着ている絵にする（体型・年代・性別を選べる） | `brand_id`・`garment_design_id` |
+
+この3つだけ `readOnlyHint` を**付けていません**。そのため、どのクライアントでも呼ぶ前に確認が出ます（枠を使う操作なので、わざとそうしています）。生成は裏で走るので、返るのは `request_id` だけです。仕上がりは `get_design_request` で取ります。
+
+### 文章を考える（絵は描かない。枠は使わないが、文章のモデルを呼ぶ）
+
+| ツール | すること |
+|---|---|
+| `improve_prompt` | ざっくりした思いつきを、Heavy Chain の画像モデルに合う文章に整える |
+| `plan_design_set` | 複数枚の構成を考える（バナー・デザイン案の束・商品写真・バリエーション・場面・色替え・背景） |
+| `plan_from_message` | 一言から「新しく描く」か「今のを直す」かを決めて、指示文を書く |
+
+### 見る（無料・1〜3秒）
+
+| ツール | すること |
+|---|---|
+| `list_brands` | ブランドの一覧。ほかのツールに渡す `brand_id` をここで取る |
+| `list_projects` | プロジェクト（キャンバス）の一覧 |
+| `list_designs` | 作ったデザインの一覧。`with_image_urls: true` で1時間だけ有効な画像リンクを最大5件 |
+| `get_design_request` | 生成の進み具合と仕上がり |
+| `get_usage` | 生成の使用量と残り |
+| `search_reference_images` | Openverse の参考画像（自由に使える画像だけ） |
+| `search_products` | Yahoo!ショッピングの実在の商品（値段・店・リンク） |
 
 **まず `list_brands`** を呼んで `brand_id` を取るのが決まりです。`search_products` には `list_projects` で取った `project_id` も必要です。
 
-削除・編集はできません（消せるツールは1つも出していません）。
+削除のツールは1つも出していません。
 
-### `create_design` の使い方
+### 絵を描くときに渡せるもの
 
-```
-@Heavy Chain リネンのシャツに藍色の波の柄を、縦長で2枚描いて。
-```
+| | `create_design` | `edit_design` | `create_model_shots` |
+|---|---|---|---|
+| 文章 | `prompt`（必須） | `prompt`（必須。どう直すか） | `description`（任意） |
+| 元のデザイン | — | `source_design_id`（必須） | `garment_design_id`（必須）・`model_design_id`（任意） |
+| 形 | `aspect_ratio` 9種（既定 `1:1`） | 同じ（省略すると元の形を保つ） | 同じ（既定は縦長） |
+| 枚数 | `count` 1〜4（既定1） | 同じ | `body_types` × `age_groups` で3通りまで |
+| 画質 | `resolution` `1k`・`2k`（既定）・`4k` | 同じ | 同じ |
+| ほか | `negative_prompt`・`style` | 同じ | `gender`・`skin_tone`・`hair_style`、`negative_prompt`・`style` |
 
-| 渡せるもの | |
-|---|---|
-| `brand_id` | 必須。`list_brands` で取る |
-| `prompt` | 必須。描きたいもの（12000字まで）。日本語でも英語でもよい |
-| `aspect_ratio` | `1:1`（既定）・`3:4`・`4:3`・`4:5`・`5:4`・`16:9`・`9:16`・`2:3`・`3:2` |
-| `count` | 1〜4枚（既定1）。**枚数の分だけ枠を使います** |
-| `resolution` | `1k`・`2k`（既定）・`4k` |
-| `negative_prompt` | 入れたくないもの |
-| `style` | 画風の指定（例「flat vector」） |
-
-生成は裏で走ります。呼ぶとすぐ `request_id` が返るので、仕上がりは `get_design_request` に渡して取ります。
+`source_design_id`・`garment_design_id`・`model_design_id` には `list_designs` で取った id を渡します。**自分のデザインだけ**で、他の人のものは断られます。元の画像はサーバーが保管庫から読んでモデルに渡すので、画像データを会話に貼る必要はありません。
 
 **他社のロゴ・ブランドを真似る文章と、実在の人物に似せる文章は、サーバーが断ります**（画面から出すときと同じ判定です）。
 
-**このツールには `readOnlyHint` を付けていません。** そのため、どのクライアントでも呼ぶ前に確認が出ます（枠を使う操作なので、わざとそうしています）。
+### 出していないもの
+
+`profile-extract`（資料から事業プロフィールを読み取る）だけ出していません。入力が「アップロードした資料ファイルの束」で、画面のアップロード画面専用の形のため、MCP の引数では渡せません。
 
 ## 5. 安全のしかけ
 
@@ -159,8 +179,9 @@ HTTP ストリーミングの口は `url` ではなく **`httpUrl`** です。`o
 - 画像は**1時間だけ有効なリンク**で返します。リンクは保存せず、必要なときに取り直してください
 - クライアントは**動的クライアント登録**で自分の id を作ります。戻り先は登録したものと完全一致のときだけ受け付けます
 - 読み取りのツールには `readOnlyHint` を付けてあるので、アプリ側で毎回の確認が出ません
-- 生成（`create_design`）には `readOnlyHint` を**付けていない**ので、呼ぶ前にアプリ側の確認が出ます。枠の残りは `get_usage` で見られます
+- 絵を描く3つ（`create_design`・`edit_design`・`create_model_shots`）には `readOnlyHint` を**付けていない**ので、呼ぶ前にアプリ側の確認が出ます。枠の残りは `get_usage` で見られます
 - 消せるツールは1つも出していません。デザインの削除・プロジェクトの削除はできません
+- 元のデザインを編集に使うときは、まず `/v1/generated-images/{id}`（所有者だけ 200 を返す）で持ち主を確かめてから、保管庫のバイトを読みます
 
 ## 6. 出すときに要ること（運用）
 
@@ -190,4 +211,4 @@ npx wrangler deploy --config wrangler.production.jsonc
 | ツールが「権限が足りません」 | `list_brands` で使えるブランドを確かめ、その `brand_id` を渡してください |
 
 中身の決まりは `src/mcp.ts`（MCP の入口とツール）と `src/mcp-oauth.ts`（OAuth）に書いてあります。
-試験は `test/mcp.test.ts`・`test/mcp-oauth.test.ts`（55件）。
+試験は `test/mcp.test.ts`・`test/mcp-oauth.test.ts`（67件）。
