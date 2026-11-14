@@ -16,7 +16,7 @@ export const YAHOO_RESULTS_PER_QUERY = 4;
 export const YAHOO_MAX_QUERIES = 4;
 
 export type ShopProduct = { name: string; url: string; price: number | null; image: string; store: string; query: string; at: string };
-export type ShopSearch = { query: string; fallback?: string };
+export type ShopSearch = { query: string; fallback?: string; needs?: string[] };
 type YahooEnv = { YAHOO_SHOPPING_APP_ID?: string };
 type Fetch = typeof fetch;
 
@@ -46,6 +46,17 @@ export function yahooProduct(hit: unknown, query: string, at: string): ShopProdu
 }
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Does this product answer the search? Yahoo! sorts by its own score and still answers a thin query with whatever it
+ * ranks highest: production 2026-11-14, a 顧客提案 direction card cited 「水着 ¥2,090」, a swimsuit, for a direction about
+ * something else. `needs` is what the search is for (the direction's own item), and a product whose name never names it
+ * is dropped instead of padding the four cards. Without `needs` every product is kept, as before.
+ */
+export function shopProductNamesNeed(name: string, needs: readonly string[] | undefined): boolean {
+  const words = (needs ?? []).map(word => word.trim()).filter(word => word.length >= 2);
+  return !words.length || words.some(word => name.includes(word));
+}
 
 /**
  * Searches each query in turn, one query per second. A query that finds nothing tries its fallback (fewer words). A 429
@@ -80,9 +91,13 @@ export async function searchYahooProducts(
   for (const entry of searches.slice(0, YAHOO_MAX_QUERIES)) {
     const query = clean(entry.query, 60);
     if (!query || stopped) continue;
-    let products = await search(query);
+    const needs = Array.isArray(entry.needs) ? entry.needs.filter((word): word is string => typeof word === 'string') : undefined;
+    const fitting = (found: ShopProduct[] | null) => found && found.filter(product => shopProductNamesNeed(product.name, needs));
+    let products = fitting(await search(query));
     const fallback = clean(entry.fallback, 60);
-    if (products && !products.length && fallback && fallback !== query) products = await search(fallback);
+    // The fallback has fewer words, so it answers more loosely: it runs when the query itself found nothing at all, and
+    // its products are held to the same need.
+    if (products && !products.length && fallback && fallback !== query) products = fitting(await search(fallback));
     if (!products) { stopped = true; results.push({ query, products: [] }); continue; }
     results.push({ query, products });
   }

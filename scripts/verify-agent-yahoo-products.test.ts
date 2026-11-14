@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { YAHOO_ITEM_SEARCH_URL, YAHOO_QUERY_INTERVAL_MS, japanDate, searchYahooProducts, yahooProduct, yahooShoppingConfigured } from '../cloudflare/heavy-api/src/yahooShopping.ts';
+import { YAHOO_ITEM_SEARCH_URL, YAHOO_QUERY_INTERVAL_MS, japanDate, searchYahooProducts, shopProductNamesNeed, yahooProduct, yahooShoppingConfigured } from '../cloudflare/heavy-api/src/yahooShopping.ts';
 
 // The owner chose Yahoo!ショッピング 商品検索 v3 for real products (2026-11-12). The key (Worker secret YAHOO_SHOPPING_APP_ID)
 // is not there yet: without it nothing is called. The answers below follow the spec page's field names
@@ -56,4 +56,43 @@ test('a query that finds nothing tries its fallback; a 429 stops the rest', asyn
   assert.deepEqual(queries, ['レディース 透け感 シャツ', 'レディース シャツ', 'ブラウス']);
   assert.equal(results[0].products[0].query, 'レディース シャツ');
   assert.deepEqual(results.map(result => result.products.length), [1, 0]);
+});
+
+// 2026-11-14 (production, 顧客提案): the fourth direction card cited 「水着 ¥2,090」, a swimsuit, for a direction about
+// something else. Yahoo! sorts by its own score and answers a thin query with whatever it ranks highest, and nothing
+// checked the answers against what was asked for.
+test('a product that does not name the direction\'s item is dropped instead of padding the cards', async () => {
+  assert.equal(shopProductNamesNeed('リネンシャツ レディース', ['シャツ']), true);
+  assert.equal(shopProductNamesNeed('水着 レディース 体型カバー', ['シャツ']), false);
+  // Without a need (a concept name like 「都市の余白」, which no product name repeats) every product is kept, as before.
+  assert.equal(shopProductNamesNeed('水着 レディース', []), true);
+  assert.equal(shopProductNamesNeed('水着 レディース', undefined), true);
+
+  const answers = [
+    yahooHit(1, { name: 'リネンシャツ レディース 長袖' }),
+    yahooHit(2, { name: '水着 レディース 体型カバー' }),
+    yahooHit(3, { name: 'シャツワンピース ゆったり' }),
+  ];
+  const fetchImpl = (async () => yahooAnswer(answers)) as typeof fetch;
+  const held = await searchYahooProducts({ YAHOO_SHOPPING_APP_ID: 'key' },
+    [{ query: 'レディース リネン シャツ', fallback: 'レディース シャツ', needs: ['シャツ'] }],
+    { fetchImpl, sleep: async () => {} });
+  assert.deepEqual(held[0].products.map((product) => product.name), ['リネンシャツ レディース 長袖', 'シャツワンピース ゆったり']);
+
+  const loose = await searchYahooProducts({ YAHOO_SHOPPING_APP_ID: 'key' },
+    [{ query: 'レディース 都市の余白' }], { fetchImpl, sleep: async () => {} });
+  assert.equal(loose[0].products.length, 3);
+
+  // The query answered only with other things: the fallback runs, and its answers are held to the same need.
+  const queries: string[] = [];
+  const twoStep = (async (url: string) => {
+    const query = new URL(url).searchParams.get('query') ?? '';
+    queries.push(query);
+    return yahooAnswer(query.includes('リネン') ? [answers[1]] : [answers[0], answers[1]]);
+  }) as typeof fetch;
+  const after = await searchYahooProducts({ YAHOO_SHOPPING_APP_ID: 'key' },
+    [{ query: 'レディース リネン シャツ', fallback: 'レディース シャツ', needs: ['シャツ'] }],
+    { fetchImpl: twoStep, sleep: async () => {} });
+  assert.deepEqual(queries, ['レディース リネン シャツ', 'レディース シャツ']);
+  assert.deepEqual(after[0].products.map((product) => product.name), ['リネンシャツ レディース 長袖']);
 });

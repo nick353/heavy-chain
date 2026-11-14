@@ -211,6 +211,17 @@ const OFF_TOPIC_WORDS = ['concert', 'festival', 'gig', 'band', 'stage', 'singer'
   'district', 'village', 'township', 'county', 'cemetery', 'crater', 'lunar', 'planet', 'asteroid', 'spacecraft', 'painting', 'oil on',
   'logo', 'icon', 'screenshot', 'website', 'web', 'www', 'diagram', 'chart', 'map', 'visualization', 'infographic', 'clock'];
 
+/**
+ * Words that only describe how something looks — colours, directions, patterns and the word for cloth itself. A title
+ * that shares nothing but these is about its own subject, not about the query: production 2026-11-14,
+ * 「ブルー×白の縦ストライプ生地」 ranked "Blue striped butterfly" and a striped fish first, both sharing only "blue" and
+ * "striped". A motif named by a noun (#244's 「hydrangea watercolor blue」) is not one of these and still ranks first.
+ */
+const MODIFIER_WORDS = ['blue', 'white', 'black', 'red', 'green', 'yellow', 'pink', 'grey', 'gray', 'beige', 'brown', 'navy', 'purple', 'orange',
+  'gold', 'silver', 'light', 'dark', 'pale', 'bright', 'deep', 'vertical', 'horizontal', 'diagonal', 'stripe', 'striped', 'stripes', 'plaid',
+  'checked', 'checkered', 'dotted', 'polka', 'floral', 'plain', 'natural', 'soft', 'fine', 'vintage', 'classic', 'modern', 'simple',
+  'pattern', 'print', 'texture', 'color', 'colour', 'fabric', 'cloth', 'textile', 'material'];
+
 const plain = (text: string) => text.toLowerCase().replace(/[_-]+/g, ' ');
 const wordPattern = (words: readonly string[]) => new RegExp(`(?:^|[^a-z])(?:${words.map((word) => word.replace(/ /g, '\\s')).join('|')})(?:s|es)?(?![a-z])`);
 const WORN_PATTERN = wordPattern(WORN_WORDS);
@@ -232,6 +243,8 @@ function offTopicFor(query: string) {
   return entry;
 }
 const WORN_STEMS = new Set(WORN_WORDS.filter((word) => !word.includes(' ')).map((word) => word.slice(0, 5)));
+/** The modifier words as referenceStems() cuts a query: four letters or more, the first five. */
+const MODIFIER_STEMS = new Set(MODIFIER_WORDS.filter((word) => word.length >= 4).map((word) => word.slice(0, 5)));
 /** Flickr tags run words together ("beachhousefurniture", "fashiondesign"): a long word inside one counts too. */
 const keywordHas = (keywords: readonly string[], pattern: RegExp, words: readonly string[]) => keywords.some((keyword) => {
   const text = plain(keyword);
@@ -267,10 +280,18 @@ export function referenceImageFit(image: Pick<FoundImage, 'title' | 'keywords' |
   const offTopic = offTopicFor(query);
   if (offTopic.pattern.test(title) && !FIRM_WORN_PATTERN.test(title)) return 'off';
   const items = referenceItemStems(query);
-  const namesWord = titleNamesQuery(image.title, referenceStems(query));
+  const stems = referenceStems(query);
+  // A query with no English stems at all (a Japanese query the word list could not translate) names nothing: without
+  // this, titleNamesQuery holds for every title and every image ranks first in the order the index returned it.
+  const namesWord = stems.length > 0 && titleNamesQuery(image.title, stems);
   const keywordsCloth = keywordHas(keywords, WORN_PATTERN, WORN_WORDS) || keywordHas(keywords, CLOTH_PATTERN, CLOTH_WORDS);
+  const cloth = WORN_PATTERN.test(title) || CLOTH_PATTERN.test(title) || keywordsCloth;
+  // A fabric or motif query names no garment, so #244 counts any word of the query in the title. But a title that
+  // shares only colours, directions and pattern words ("Blue striped butterfly" for 「ブルー×白の縦ストライプ生地」)
+  // is about its own subject: it is named only when it is also about clothes or cloth. A motif noun still names it.
+  const onlyModifiers = namesWord && stems.filter((stem) => titleNamesQuery(image.title, [stem])).every((stem) => MODIFIER_STEMS.has(stem));
   // A garment query: the garment itself, or another word of the query on a title that names a garment ("draped top" → "Draped silk blouse").
-  const named = items.length ? items.some((stem) => titleNamesItem(title, stem)) || (namesWord && FIRM_WORN_PATTERN.test(title)) : namesWord;
+  const named = items.length ? items.some((stem) => titleNamesItem(title, stem)) || (namesWord && FIRM_WORN_PATTERN.test(title)) : namesWord && (cloth || !onlyModifiers);
   // A title naming the garment and also something else, whose own categories are not about clothes, is that other thing:
   // "Jeans crater" (categories "Jeans (lunar crater)", "Photos of the Moon"). A category that repeats the title does not count as clothes.
   if (named && keywords.length > 0 && offTopic.pattern.test(title)) {
@@ -278,7 +299,6 @@ export function referenceImageFit(image: Pick<FoundImage, 'title' | 'keywords' |
     if (!keywordHas(ownKeywords, WORN_PATTERN, WORN_WORDS) && !keywordHas(ownKeywords, CLOTH_PATTERN, CLOTH_WORDS)) return 'off';
   }
   if (named) return items.length && image.source === 'wikimedia' && keywords.length > 0 && !keywordsCloth ? 'loose' : 'named';
-  const cloth = WORN_PATTERN.test(title) || CLOTH_PATTERN.test(title) || keywordsCloth;
   if (!cloth && keywordHas(keywords, offTopic.pattern, offTopic.words)) return 'aside';
   return cloth ? 'worn' : 'other';
 }
@@ -294,6 +314,16 @@ const JAPANESE_WORDS: ReadonlyArray<readonly [string, string]> = [
   ['麻', 'linen'], ['コットン', 'cotton'], ['綿', 'cotton'], ['シルク', 'silk'], ['ウール', 'wool'], ['レザー', 'leather'], ['革', 'leather'], ['帽子', 'hat'],
   ['バッグ', 'bag'], ['スニーカー', 'sneakers'], ['サンダル', 'sandals'], ['ブーツ', 'boots'], ['靴', 'shoes'], ['着物', 'kimono'], ['浴衣', 'yukata'], ['制服', 'uniform'],
   ['雨', 'rain'], ['服', 'outfit'],
+  // Fabric, motif and colour words. Without them a query of only these (「ブルー×白の縦ストライプ生地」) reached the
+  // English indexes in Japanese. 「青海波」 comes before 「青」, so the wave pattern is not searched as "blue".
+  ['青海波', 'seigaiha wave pattern'], ['縦ストライプ', 'vertical stripe'], ['横ストライプ', 'horizontal stripe'],
+  ['ストライプ', 'stripe'], ['縞', 'stripe'], ['チェック', 'plaid'], ['格子', 'plaid'], ['水玉', 'polka dot'],
+  ['ドット', 'polka dot'], ['花柄', 'floral'], ['無地', 'plain'], ['テキスタイル', 'textile'],
+  ['生地', 'fabric'], ['布地', 'fabric'], ['布', 'cloth'], ['サテン', 'satin'], ['ベロア', 'velour'], ['ウール', 'wool'],
+  ['ホワイト', 'white'], ['ブラック', 'black'], ['ブルー', 'blue'], ['ネイビー', 'navy'], ['グリーン', 'green'],
+  ['イエロー', 'yellow'], ['ベージュ', 'beige'], ['ブラウン', 'brown'], ['グレー', 'grey'], ['ピンク', 'pink'],
+  ['レッド', 'red'], ['白', 'white'], ['黒', 'black'], ['青', 'blue'], ['赤', 'red'], ['緑', 'green'], ['紺', 'navy'],
+  ['茶', 'brown'], ['灰', 'grey'], ['黄', 'yellow'],
 ];
 /** Longest first, so 「ワイドパンツ」 is wide pants rather than pants, and 「Tシャツ」 a t-shirt rather than a shirt. */
 const JAPANESE_WORDS_LONGEST_FIRST = [...JAPANESE_WORDS].sort((a, b) => b[0].length - a[0].length);

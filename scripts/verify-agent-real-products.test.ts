@@ -42,9 +42,11 @@ test('only plans of the Japanese market search real products, one search per dir
     { name: 'ドレープ・ニュートラル（スカート・パンツ）', description: '落ち感のある素材。' },
     { name: '都市の余白', description: '構築的なシルエット。' },
   ]);
+  // The item in 「（…）」 travels as `needs`, so a product that does not name it is dropped (2026-11-14: 「水着 ¥2,090」 on a
+  // direction about something else). A concept name has no item to hold the answers to.
   assert.deepEqual(searches, [
-    { query: 'レディース リネン シャツ', fallback: 'レディース シャツ' },
-    { query: 'レディース スカート' },
+    { query: 'レディース リネン シャツ', fallback: 'レディース シャツ', needs: ['シャツ'] },
+    { query: 'レディース スカート', needs: ['スカート'] },
     { query: 'レディース 都市の余白' },
   ]);
 });

@@ -350,8 +350,9 @@ const AGENT_PRODUCT_SEARCHES_MAX = 4;
  */
 export async function agentProductsResponse(env: Env, body: unknown, fetchImpl: typeof fetch = fetch, sleep?: (ms: number) => Promise<unknown>): Promise<Response> {
   const searches = record(body) && Array.isArray(body.searches) ? body.searches : null;
-  if (!searches || !searches.length || searches.length > AGENT_PRODUCT_SEARCHES_MAX || !searches.every(entry => record(entry) && keys(entry, ['query', 'fallback'])
-    && text(entry.query, 60) && (entry.fallback === undefined || text(entry.fallback, 60)))) return error('invalid_agent_products_request', 400);
+  if (!searches || !searches.length || searches.length > AGENT_PRODUCT_SEARCHES_MAX || !searches.every(entry => record(entry) && keys(entry, ['query', 'fallback', 'needs'])
+    && text(entry.query, 60) && (entry.fallback === undefined || text(entry.fallback, 60))
+    && (entry.needs === undefined || (Array.isArray(entry.needs) && entry.needs.length > 0 && entry.needs.length <= 4 && entry.needs.every(word => text(word, 60)))))) return error('invalid_agent_products_request', 400);
   if (!yahooShoppingConfigured(env)) return json({ available: false, results: [] });
   const results = await searchYahooProducts(env, searches as ShopSearch[], { fetchImpl, ...(sleep ? { sleep } : {}) });
   return json({ available: true, results });
