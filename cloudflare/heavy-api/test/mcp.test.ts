@@ -6,6 +6,9 @@ import { imageSetup } from './image-ai-fixture.ts';
 
 type Setup = ReturnType<typeof imageSetup>;
 
+/** 書き込みのツール。ここに無いものは読み取りで、readOnlyHint が付く。 */
+const WRITE_TOOLS = new Set(['create_design']);
+
 /** MCP クライアント（ChatGPT・Claude）はサーバー間で呼ぶので Origin を送らない。 */
 function rpc(setup: Setup, body: unknown, options: { user?: string | null; origin?: string } = {}): Promise<Response> {
   const headers = new Headers({ 'content-type': 'application/json' });
@@ -107,9 +110,12 @@ test('tools/list は全部のツールを出し、読み取りには readOnlyHin
   assert.deepEqual(tools.map((tool) => tool.name).sort(), [...MCP_TOOL_NAMES].sort());
   for (const tool of tools) {
     const annotations = tool.annotations as Record<string, unknown>;
-    // ここまでのツールは全部読み取り。書き込みを足すときは、この試験を分けて明示する。
-    assert.equal(annotations.readOnlyHint, true, `${String(tool.name)} の readOnlyHint`);
+    const writes = WRITE_TOOLS.has(String(tool.name));
+    // 書き込みのツールは readOnlyHint を付けない。付けると ChatGPT 側の毎回の確認が出なくなる。
+    assert.equal(annotations.readOnlyHint, !writes, `${String(tool.name)} の readOnlyHint`);
+    // 生成は新しいものを足すだけで、既にあるものを壊さない。
     assert.equal(annotations.destructiveHint, false);
+    assert.equal(annotations.idempotentHint, !writes, `${String(tool.name)} の idempotentHint`);
     assert.ok(tool.description, `${String(tool.name)} に説明が無い`);
     const schema = tool.inputSchema as Record<string, unknown>;
     assert.equal(schema.type, 'object');
@@ -265,4 +271,63 @@ test('/mcp 以外の経路は今までどおり（MCP の入口が邪魔をし�
   assert.equal(health.status, 200);
   const brands = await setup.call('/v1/brands');
   assert.equal(brands.status, 200);
+});
+
+test('create_design は生成を始め、追跡用の request_id を返す', async () => {
+  const setup = imageSetup();
+  const { text, isError } = await toolText(await call(setup, 'create_design', {
+    brand_id: 'brand', prompt: 'リネンのシャツに藍色の波の柄', aspect_ratio: '3:4', count: 1,
+  }));
+  assert.equal(isError, false, text);
+  const id = /request_id: ([0-9a-f-]{36})/.exec(text)?.[1];
+  assert.ok(id, `request_id が返っていない: ${text}`);
+  // 返った id が、そのまま追跡に使える（画面で始めた生成と同じ経路）。
+  const follow = await toolText(await call(setup, 'get_design_request', { request_id: id }));
+  assert.equal(follow.isError, false, follow.text);
+  assert.match(follow.text, new RegExp(id));
+});
+
+test('create_design は、同じ文章でも呼ぶたびに別の生成になる', async () => {
+  const setup = imageSetup();
+  const first = await toolText(await call(setup, 'create_design', { brand_id: 'brand', prompt: '白いトートバッグ' }));
+  const second = await toolText(await call(setup, 'create_design', { brand_id: 'brand', prompt: '白いトートバッグ' }));
+  const ids = [first.text, second.text].map((value) => /request_id: ([0-9a-f-]{36})/.exec(value)?.[1]);
+  assert.ok(ids[0] && ids[1]);
+  assert.notEqual(ids[0], ids[1]);
+});
+
+test('create_design は入力の間違いを、直し方つきで断る', async () => {
+  const setup = imageSetup();
+  const cases: Array<[Record<string, unknown>, RegExp]> = [
+    [{ prompt: 'シャツ' }, /brand_id/],
+    [{ brand_id: 'brand' }, /prompt/],
+    [{ brand_id: 'brand', prompt: '  ' }, /prompt/],
+    [{ brand_id: 'brand', prompt: 'シャツ', aspect_ratio: '7:3' }, /aspect_ratio/],
+    [{ brand_id: 'brand', prompt: 'シャツ', count: 9 }, /count/],
+    [{ brand_id: 'brand', prompt: 'シャツ', count: 1.5 }, /count/],
+    [{ brand_id: 'brand', prompt: 'シャツ', resolution: '8k' }, /resolution/],
+  ];
+  for (const [args, expected] of cases) {
+    const { text, isError } = await toolText(await call(setup, 'create_design', args));
+    assert.equal(isError, true, `通ってしまった: ${JSON.stringify(args)}`);
+    assert.match(text, expected);
+  }
+});
+
+test('create_design は、他人のブランドでは生成しない', async () => {
+  const setup = imageSetup();
+  const { text, isError } = await toolText(await call(setup, 'create_design', {
+    brand_id: 'brand', prompt: 'シャツ',
+  }, 'other'));
+  assert.equal(isError, true);
+  assert.match(text, /list_brands|権限/);
+});
+
+test('create_design は、他社ブランドを真似る文章を断る', async () => {
+  const setup = imageSetup();
+  const { text, isError } = await toolText(await call(setup, 'create_design', {
+    brand_id: 'brand', prompt: 'a hoodie in the style of nike',
+  }));
+  assert.equal(isError, true);
+  assert.match(text, /他社のロゴやブランド/);
 });

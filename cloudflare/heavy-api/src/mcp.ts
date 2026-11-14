@@ -10,7 +10,8 @@
  *   冪等の仕組みが全部そのまま効くので、画面から使ったときと必ず同じ結果になる。
  * - 既存の経路は何も変えない。/mcp を足すだけ。
  * - 読み取りのツールには readOnlyHint を付ける。これが無いツールは ChatGPT 側で「書き込み」として
- *   毎回の確認が出る（ChatGPT の custom MCP server の仕様）。
+ *   毎回の確認が出る（ChatGPT の custom MCP server の仕様）。生成（create_design）は、わざと
+ *   readOnlyHint を付けない。生成の枠を使うので、クライアント側の毎回の確認を残すのが正しい。
  */
 import type { Env } from './index.ts';
 import { grantCoversResource, looksLikeMcpAccessToken, MCP_SCOPE, resolveMcpAccessToken, resourceMetadataUrl } from './mcp-oauth.ts';
@@ -35,6 +36,11 @@ const IMAGE_URL_TTL_SECONDS = 3600;
 /** 1回の list_designs で作る署名つき URL の本数。 */
 const MAX_IMAGE_URLS = 5;
 
+/** 画面と同じアスペクト比の一覧（src/image-ai-contracts.ts の ratios と同じ並び）。 */
+const ASPECT_RATIOS = ['1:1', '3:4', '4:3', '4:5', '5:4', '16:9', '9:16', '2:3', '3:2'];
+/** 画質の一覧（2k が既定）。 */
+const RESOLUTIONS = ['1k', '2k', '4k'];
+
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -44,6 +50,7 @@ const INSTRUCTIONS = [
   'search_products には list_projects で取った project_id も必要です。',
   'デザインの画像を見せるときは list_designs に with_image_urls: true を渡すと、1時間だけ有効な URL が返ります。',
   'その URL は期限が切れるので、保存せず必要なときに取り直してください。',
+  'create_design は生成の枠を使うので、呼ぶ前に文章をユーザーに読み上げて了解を取り、始めたあとは get_design_request で仕上がりを取ってください。',
 ].join('');
 
 type JsonRpcId = string | number | null;
@@ -363,6 +370,71 @@ const TOOLS: Tool[] = [
       });
       if (!reply.ok) return apiFailure('search_products', reply);
       return { text: describe(reply.data) };
+    },
+  },
+  {
+    name: 'create_design',
+    title: 'デザインを生成する',
+    description: 'Use this to generate a new apparel design image from a written description. It spends the brand\'s generation quota, so read the prompt back to the user and get their go-ahead before calling it. The drawing runs in the background: this returns a request_id straight away, and get_design_request then reports the progress and the finished image links.',
+    readOnly: false,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        brand_id: { type: 'string', description: 'The brand id from list_brands.' },
+        prompt: { type: 'string', description: 'What to draw, in English or Japanese. Describe the garment, the artwork and the mood. Do not ask for another company\'s logo or brand, or for a real person\'s likeness: the server refuses those.' },
+        aspect_ratio: { type: 'string', enum: ASPECT_RATIOS, description: 'The shape of the image. Default 1:1.' },
+        count: { type: 'integer', minimum: 1, maximum: 4, description: 'How many variations to draw. Each one spends quota. Default 1.' },
+        resolution: { type: 'string', enum: RESOLUTIONS, description: 'Image size. Default 2k.' },
+        negative_prompt: { type: 'string', description: 'What to keep out of the picture.' },
+        style: { type: 'string', description: 'A style note, for example "flat vector" or "watercolour".' },
+      },
+      required: ['brand_id', 'prompt'],
+      additionalProperties: false,
+    },
+    async run(input, context) {
+      const brand = text(input.brand_id, 128);
+      if (!brand || !ID_PATTERN.test(brand)) return { isError: true, text: 'brand_id が正しくありません。list_brands で取った id を渡してください。' };
+      const prompt = text(input.prompt, 12_000);
+      if (!prompt) return { isError: true, text: 'prompt に描きたいものを書いてください（12000字まで）。' };
+      const body: Record<string, unknown> = { brandId: brand, prompt };
+      if (input.aspect_ratio !== undefined) {
+        const ratio = text(input.aspect_ratio, 8);
+        if (!ratio || !ASPECT_RATIOS.includes(ratio)) return { isError: true, text: `aspect_ratio は ${ASPECT_RATIOS.join('・')} のどれかです。` };
+        body.aspectRatio = ratio;
+      }
+      if (input.count !== undefined) {
+        const count = wholeNumber(input.count, 1, 4);
+        if (count === null) return { isError: true, text: 'count は 1 から 4 までの整数です。' };
+        body.count = count;
+      }
+      if (input.resolution !== undefined) {
+        const resolution = text(input.resolution, 4);
+        if (!resolution || !RESOLUTIONS.includes(resolution)) return { isError: true, text: `resolution は ${RESOLUTIONS.join('・')} のどれかです。` };
+        body.resolution = resolution;
+      }
+      for (const [key, field, max] of [['negative_prompt', 'negativePrompt', 2_000], ['style', 'style', 500]] as const) {
+        if (input[key] === undefined) continue;
+        const value = text(input[key], max);
+        if (!value) return { isError: true, text: `${key} は 1〜${max} 字の文字です。` };
+        body[field] = value;
+      }
+      // 生成は冪等キーで1件に縛られる。ここで作った id が、そのまま追跡用の request_id になる。
+      const requestId = crypto.randomUUID();
+      const reply = await callApi(context, 'POST', '/v1/provider-actions/generate-image', {
+        body,
+        headers: { 'idempotency-key': requestId },
+      });
+      if (!reply.ok) {
+        const code = isRecord(reply.data) && typeof reply.data.error === 'string' ? reply.data.error : '';
+        if (code.startsWith('legal_safety_prompt_blocked')) {
+          return { isError: true, text: 'その文章では描けません。他社のロゴやブランドを真似る指示、実在の人物に似せる指示が入っていると断られます。文章を変えて呼び直してください。' };
+        }
+        if (code.startsWith('heavy_') && reply.status === 403) {
+          return { isError: true, text: `生成が許されませんでした（${code}）。get_usage で枠の残りを確かめ、ブランドの権限が editor 以上かも見てください。` };
+        }
+        return apiFailure('create_design', reply);
+      }
+      return { text: `生成を始めました。request_id: ${requestId}\n\n${describe(reply.data)}\n\n仕上がりは get_design_request にこの request_id を渡すと分かります。` };
     },
   },
 ];
