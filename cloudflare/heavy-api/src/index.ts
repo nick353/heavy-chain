@@ -9,6 +9,7 @@ import { handleHeavyEntitlementAction, handleImageAIRead, processImageJob } from
 import { readWorkspaceExecutionSteps } from './workspace-execution.ts';
 import { handleDesignAssistantRequest } from './designAssistant.ts';
 import { OpenverseError, openverseConfigured, openverseImages } from './openverse.ts';
+import { handleMcpRequest } from './mcp.ts';
 const MAX_IDENTITY_PART_LENGTH = 512;
 const MAX_CLIENT_REQUEST_ID_LENGTH = 128;
 const MAX_CONTENT_TYPE_LENGTH = 128;
@@ -470,6 +471,10 @@ export async function handleRequest(request: Request, env: Env, ctx?: Pick<Execu
       heavyEntitlementEnabled: env.HEAVY_IMAGE_ENTITLEMENT_ENABLED?.trim() === "true",
     }));
   }
+  // MCP（ChatGPT・Claude・Cursor などから Heavy Chain を呼ぶ入口）。ツールの中身はこの Worker の
+  // /v1/... を内部で呼ぶので、画面からの経路は何も変わらない。サーバー間の呼び出しなので CORS は付けない。
+  const mcpResponse = await handleMcpRequest(request, env, (inner) => handleRequest(inner, env, ctx));
+  if (mcpResponse) return mcpResponse;
   if (request.method === 'GET' && url.pathname === '/v1/openverse/images') {
     // The reference image search's relay. Signed in only: this spends the site's own Openverse quota.
     if (!openverseConfigured(env)) return respond(errorResponse('openverse_not_configured', 503));
