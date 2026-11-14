@@ -114,6 +114,7 @@ import {
 } from '../features/canvasSourceMetadata';
 import { resolveHeavyRouteForRow } from '../features/lightchain/heavyRouteMapping';
 import { isHeavyOwnedFeature } from '../lib/heavyCapability';
+import { fittingGenerationOptions } from '../lib/fittingGenerationOptions';
 import {
   isHeavyWorkspaceBrandName,
   isHeavyWorkspaceRuntime,
@@ -3807,6 +3808,7 @@ function LightchainWorkbenchWorkspace({ fittingBatchExecution }: { fittingBatchE
           bodyTypes: [bodyType],
           ageGroups: [ageGroup],
           gender,
+          ...(isFittingDetail ? fittingGenerationOptions(fittingAspectRatio, fittingResolution) ?? {} : {}),
           imageUrl: providerRequestImageUrl,
           modelReferenceImageUrl: materialSlotFiles.secondary?.imageUrl
             ?? fittingModelMatrixReference?.imageUrl,
