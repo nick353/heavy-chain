@@ -118,6 +118,7 @@ const LightchainOrientedDesignPage = lazy(() => import('./pages/LightchainParity
 const LightchainOrientedDesignDetailPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignDetailPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const AccountDeletePage = lazy(() => import('./pages/AccountDeletePage').then((module) => ({ default: module.AccountDeletePage })));
+const McpAuthorizePage = lazy(() => import('./pages/McpAuthorizePage').then((module) => ({ default: module.McpAuthorizePage })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })));
 const BrandSettingsPage = lazy(() => import('./pages/BrandSettingsPage').then((module) => ({ default: module.BrandSettingsPage })));
@@ -835,6 +836,9 @@ function AppRoutes() {
         {/* Signed-in password change uses the same email-code reset as the login screen. */}
         <Route path="/change-password" element={<ProtectedRoute>{lazyPage(<ForgotPasswordPage />)}</ProtectedRoute>} />
         <Route path="/account/delete" element={<ProtectedRoute>{lazyPage(<AccountDeletePage />)}</ProtectedRoute>} />
+        {/* MCP（ChatGPT・Claude など）から「Heavy Chain でサインイン」したときの承認ページ。
+            未ログインなら ProtectedRoute がログインへ送り、ログイン後にここへ戻る。 */}
+        <Route path="/mcp-authorize" element={<ProtectedRoute>{lazyPage(<McpAuthorizePage />)}</ProtectedRoute>} />
         <Route path="/workflows/:workflowId" element={<LegacyWorkflowRedirect />} />
         <Route path="/fitting" element={<LegacyRouteRedirect to="/model" />} />
         <Route
