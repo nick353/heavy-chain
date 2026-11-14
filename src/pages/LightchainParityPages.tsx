@@ -53,7 +53,7 @@ import { PointDetailButton } from '../components/lightchain/PointDetailDialog';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { deleteWorkspaceArtifactsPersisted, listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { DesignArtifactThumbnail, DESIGN_PROJECT_DEFAULT_COVER } from '../components/DesignArtifactThumbnail';
-import { thumbnailImageUrl } from '../lib/mediaThumbnail';
+import { keptPreviewUrl, thumbnailImageUrl } from '../lib/mediaThumbnail';
 import { formatProjectAge, ProjectThumbnail, useFeatureProjects } from './PatternProjectDashboardPage';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { downloadImagesAsZip } from '../lib/clientImageOps';
@@ -683,7 +683,13 @@ function LightchainPrintingWorkspace() {
   const handleGenerate=()=>{
     // Light ignores AI生成 in spot mode until the print has been applied to the garment.
     if(coverage!=='full'&&!printApplied){toast.error('プリントを「適用」して位置を決めてから生成してください');return;}
-    setPrintRun({previewUrl:referenceImage?.url??null,startedAt:new Date().toISOString(),title:coverage==='full'?'プリントイメージ':'プリントイメージ‐ポイントプリントイメージ'});
+    const runGarmentUrl=referenceImage?.url??null;
+    setPrintRun({previewUrl:runGarmentUrl,startedAt:new Date().toISOString(),title:coverage==='full'?'プリントイメージ':'プリントイメージ‐ポイントプリントイメージ'});
+    // An uploaded garment is only an object URL and carries no storage path, and reopening the page on the finished
+    // run fills the slot again, which revokes it — the finished row's 見本 tile then broke (production 2026-11-15).
+    // Copy it at thumbnail size now, while it is certainly still readable, and let 生成中 and the finished row share
+    // that copy. A signed URL is already durable and comes back unchanged.
+    if(runGarmentUrl)void keptPreviewUrl(runGarmentUrl).then(kept=>{if(kept&&kept!==runGarmentUrl)setPrintRun(current=>current&&current.previewUrl===runGarmentUrl?{...current,previewUrl:kept}:current);});
     setPrintHistoryOpen(true);
     return workspace.generate({brief:workspace.brief||(printApplied?printAppliedBrief(coverage==='full'?'full':'spot',applyStateRef.current?.placements.length??1,Boolean(applyEditMaskRef.current)):printImageBrief(coverage==='full'?'full':'spot'))});
   };

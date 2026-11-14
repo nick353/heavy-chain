@@ -254,3 +254,24 @@ test('AI生成 opens 生成履歴 with the composed preview and a waiting tile f
   assert.match(page, /printRunSeenRunning\.current=true/);
   assert.match(page, /if\(!printRunSeenRunning\.current\)\{if\(workspace\.status==='error'\)setPrintRun\(null\);return;\}/);
 });
+
+test('the finished row keeps its own copy of an uploaded garment, which the workspace revokes (2026-11-15)', async () => {
+  // An uploaded garment is only an object URL and carries no storage path (production: the slot's
+  // data-source-storage-path is empty), so there is no signed URL to fall back to. Reopening the page on the finished
+  // run fills the slot again, which revokes that object URL, and the finished row's 見本 tile broke with
+  // ERR_FILE_NOT_FOUND. The run keeps a thumbnail-sized copy at the moment it settles instead.
+  // The copy is made when the run starts, not when it settles: by the time it settles the page may already have
+  // reopened on the finished run and revoked the object URL, leaving nothing to copy.
+  assert.match(page, /const runGarmentUrl=referenceImage\?\.url\?\?null;/);
+  assert.match(page, /if\(runGarmentUrl\)void keptPreviewUrl\(runGarmentUrl\)\.then\(kept=>\{if\(kept&&kept!==runGarmentUrl\)setPrintRun\(/);
+  // 生成中 and the finished row then share that one copy.
+  assert.match(page, /setPrintPreviews\(current=>\(\{\.\.\.current,\[imageId\]:printRun\.previewUrl as string\}\)\)/);
+  // A signed URL is already durable and is handed back untouched, so 見本 still reads the gateway's 384px WebP.
+  const { keptPreviewUrl } = await import('../src/lib/mediaThumbnail.ts');
+  const signed = 'https://api.example.com/v1/media/read?token=abc';
+  assert.equal(await keptPreviewUrl(signed), signed);
+  assert.equal(await keptPreviewUrl('https://example.com/a.png'), 'https://example.com/a.png');
+  // Without a browser to draw in, an object URL cannot be copied: the caller leaves the tile out rather than
+  // showing a broken one.
+  assert.equal(await keptPreviewUrl('blob:https://heavychain.app/abc'), null);
+});
