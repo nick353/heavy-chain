@@ -6,6 +6,9 @@ import { imageSetup } from './image-ai-fixture.ts';
 
 type Setup = ReturnType<typeof imageSetup>;
 
+/** 書き込みのツール。ここに無いものは読み取りで、readOnlyHint が付く。 */
+const WRITE_TOOLS = new Set(['create_design', 'edit_design', 'create_model_shots']);
+
 /** MCP クライアント（ChatGPT・Claude）はサーバー間で呼ぶので Origin を送らない。 */
 function rpc(setup: Setup, body: unknown, options: { user?: string | null; origin?: string } = {}): Promise<Response> {
   const headers = new Headers({ 'content-type': 'application/json' });
@@ -36,6 +39,43 @@ async function toolText(response: Response): Promise<{ text: string; isError: bo
   assert.equal(content.length, 1);
   assert.equal(content[0].type, 'text');
   return { text: content[0].text, isError: payload.isError === true };
+}
+
+/**
+ * 文章系のツール（improve_prompt・plan_design_set・plan_from_message）を試すために、
+ * Claude の鍵を入れて、Anthropic への fetch を差し替える。送られた本文を box に残す。
+ */
+async function withClaude(
+  setup: Setup,
+  answer: unknown,
+  run: (box: { body?: Record<string, unknown> }) => Promise<void>,
+): Promise<{ body?: Record<string, unknown> }> {
+  const overrides = setup.env as unknown as Record<string, unknown>;
+  overrides.ANTHROPIC_API_KEY = 'test-only-key';
+  // 試験の土台は画像の3つだけを許している。本番（wrangler.production.jsonc）は7つ全部なので、それに合わせる。
+  overrides.AI_IMAGE_ALLOWED_ACTIONS = 'generate-image,edit-image,model-matrix,optimize-prompt,chat-plan,image-plan,profile-extract';
+  const box: { body?: Record<string, unknown> } = {};
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (url: unknown, init?: RequestInit) => {
+    box.body = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+    return Response.json({
+      id: 'msg_test', type: 'message', role: 'assistant', model: 'claude-sonnet-5-5', stop_reason: 'end_turn',
+      content: [{ type: 'text', text: JSON.stringify(answer) }],
+    });
+  }) as typeof fetch;
+  try { await run(box); } finally { globalThis.fetch = original; }
+  return box;
+}
+
+/** 画像の実体つきのデザインを1件用意する（edit_design・create_model_shots の元になるもの）。 */
+async function seedDesign(setup: Setup, id: string, options: { user?: string; brand?: string; withBytes?: boolean } = {}) {
+  const user = options.user ?? 'alice';
+  const brand = options.brand ?? 'brand';
+  setup.db.sql.prepare(`INSERT INTO generated_images(id,brand_id,user_id,storage_path,version,is_favorite,prompt,created_at)
+    VALUES(?,?,?,?,?,?,?,?)`).run(id, brand, user, `generated-images/${id}`, 1, 0, 'もとのシャツ', '2026-11-14T00:00:00.000Z');
+  if (options.withBytes !== false) {
+    await setup.bucket.put(`generated-images/${id}`, setup.output, { customMetadata: {}, httpMetadata: { contentType: 'image/png' } });
+  }
 }
 
 test('GET /mcp は 405 で、受信ストリームを持たないことを伝える', async () => {
@@ -107,9 +147,12 @@ test('tools/list は全部のツールを出し、読み取りには readOnlyHin
   assert.deepEqual(tools.map((tool) => tool.name).sort(), [...MCP_TOOL_NAMES].sort());
   for (const tool of tools) {
     const annotations = tool.annotations as Record<string, unknown>;
-    // ここまでのツールは全部読み取り。書き込みを足すときは、この試験を分けて明示する。
-    assert.equal(annotations.readOnlyHint, true, `${String(tool.name)} の readOnlyHint`);
+    const writes = WRITE_TOOLS.has(String(tool.name));
+    // 書き込みのツールは readOnlyHint を付けない。付けると ChatGPT 側の毎回の確認が出なくなる。
+    assert.equal(annotations.readOnlyHint, !writes, `${String(tool.name)} の readOnlyHint`);
+    // 生成は新しいものを足すだけで、既にあるものを壊さない。
     assert.equal(annotations.destructiveHint, false);
+    assert.equal(annotations.idempotentHint, !writes, `${String(tool.name)} の idempotentHint`);
     assert.ok(tool.description, `${String(tool.name)} に説明が無い`);
     const schema = tool.inputSchema as Record<string, unknown>;
     assert.equal(schema.type, 'object');
@@ -265,4 +308,233 @@ test('/mcp 以外の経路は今までどおり（MCP の入口が邪魔をし�
   assert.equal(health.status, 200);
   const brands = await setup.call('/v1/brands');
   assert.equal(brands.status, 200);
+});
+
+test('create_design は生成を始め、追跡用の request_id を返す', async () => {
+  const setup = imageSetup();
+  const { text, isError } = await toolText(await call(setup, 'create_design', {
+    brand_id: 'brand', prompt: 'リネンのシャツに藍色の波の柄', aspect_ratio: '3:4', count: 1,
+  }));
+  assert.equal(isError, false, text);
+  const id = /request_id: ([0-9a-f-]{36})/.exec(text)?.[1];
+  assert.ok(id, `request_id が返っていない: ${text}`);
+  // 返った id が、そのまま追跡に使える（画面で始めた生成と同じ経路）。
+  const follow = await toolText(await call(setup, 'get_design_request', { request_id: id }));
+  assert.equal(follow.isError, false, follow.text);
+  assert.match(follow.text, new RegExp(id));
+});
+
+test('create_design は、同じ文章でも呼ぶたびに別の生成になる', async () => {
+  const setup = imageSetup();
+  const first = await toolText(await call(setup, 'create_design', { brand_id: 'brand', prompt: '白いトートバッグ' }));
+  const second = await toolText(await call(setup, 'create_design', { brand_id: 'brand', prompt: '白いトートバッグ' }));
+  const ids = [first.text, second.text].map((value) => /request_id: ([0-9a-f-]{36})/.exec(value)?.[1]);
+  assert.ok(ids[0] && ids[1]);
+  assert.notEqual(ids[0], ids[1]);
+});
+
+test('create_design は入力の間違いを、直し方つきで断る', async () => {
+  const setup = imageSetup();
+  const cases: Array<[Record<string, unknown>, RegExp]> = [
+    [{ prompt: 'シャツ' }, /brand_id/],
+    [{ brand_id: 'brand' }, /prompt/],
+    [{ brand_id: 'brand', prompt: '  ' }, /prompt/],
+    [{ brand_id: 'brand', prompt: 'シャツ', aspect_ratio: '7:3' }, /aspect_ratio/],
+    [{ brand_id: 'brand', prompt: 'シャツ', count: 9 }, /count/],
+    [{ brand_id: 'brand', prompt: 'シャツ', count: 1.5 }, /count/],
+    [{ brand_id: 'brand', prompt: 'シャツ', resolution: '8k' }, /resolution/],
+  ];
+  for (const [args, expected] of cases) {
+    const { text, isError } = await toolText(await call(setup, 'create_design', args));
+    assert.equal(isError, true, `通ってしまった: ${JSON.stringify(args)}`);
+    assert.match(text, expected);
+  }
+});
+
+test('create_design は、他人のブランドでは生成しない', async () => {
+  const setup = imageSetup();
+  const { text, isError } = await toolText(await call(setup, 'create_design', {
+    brand_id: 'brand', prompt: 'シャツ',
+  }, 'other'));
+  assert.equal(isError, true);
+  assert.match(text, /list_brands|権限/);
+});
+
+test('create_design は、他社ブランドを真似る文章を断る', async () => {
+  const setup = imageSetup();
+  const { text, isError } = await toolText(await call(setup, 'create_design', {
+    brand_id: 'brand', prompt: 'a hoodie in the style of nike',
+  }));
+  assert.equal(isError, true);
+  assert.match(text, /他社のロゴやブランド/);
+});
+
+test('edit_design は、自分のデザインを元に直しの生成を始める', async () => {
+  const setup = imageSetup();
+  await seedDesign(setup, 'design-1');
+  const { text, isError } = await toolText(await call(setup, 'edit_design', {
+    brand_id: 'brand', source_design_id: 'design-1', prompt: '色を藍色にして',
+  }));
+  assert.equal(isError, false, text);
+  const id = /request_id: ([0-9a-f-]{36})/.exec(text)?.[1];
+  assert.ok(id, `request_id が返っていない: ${text}`);
+  // 元の画像が参考として実際にモデルへ渡っている。
+  assert.ok(setup.calls.length > 0, 'モデルが呼ばれていない');
+});
+
+test('edit_design は、他人のデザインを元にできない', async () => {
+  const setup = imageSetup();
+  await seedDesign(setup, 'design-other', { user: 'other' });
+  const { text, isError } = await toolText(await call(setup, 'edit_design', {
+    brand_id: 'brand', source_design_id: 'design-other', prompt: '色を変えて',
+  }));
+  assert.equal(isError, true);
+  assert.match(text, /見つかりません|list_designs/);
+});
+
+test('edit_design は、画像の実体が無いデザインを断る', async () => {
+  const setup = imageSetup();
+  await seedDesign(setup, 'design-empty', { withBytes: false });
+  const { text, isError } = await toolText(await call(setup, 'edit_design', {
+    brand_id: 'brand', source_design_id: 'design-empty', prompt: '色を変えて',
+  }));
+  assert.equal(isError, true);
+  assert.match(text, /保管庫|get_design_request/);
+});
+
+test('create_model_shots は、服のデザインから人が着ている絵の生成を始める', async () => {
+  const setup = imageSetup();
+  await seedDesign(setup, 'design-1');
+  const { text, isError } = await toolText(await call(setup, 'create_model_shots', {
+    brand_id: 'brand', garment_design_id: 'design-1', body_types: ['regular'], age_groups: ['20s'], gender: 'female',
+  }));
+  assert.equal(isError, false, text);
+  assert.match(text, /request_id: [0-9a-f-]{36}/);
+});
+
+test('create_model_shots は、組み合わせが3通りを超えると断る', async () => {
+  const setup = imageSetup();
+  await seedDesign(setup, 'design-1');
+  const { text, isError } = await toolText(await call(setup, 'create_model_shots', {
+    brand_id: 'brand', garment_design_id: 'design-1', body_types: ['slim', 'regular'], age_groups: ['20s', '30s'],
+  }));
+  assert.equal(isError, true);
+  assert.match(text, /3通り/);
+});
+
+test('create_model_shots は、選べない体型・年代・性別を断る', async () => {
+  const setup = imageSetup();
+  await seedDesign(setup, 'design-1');
+  const cases: Array<[Record<string, unknown>, RegExp]> = [
+    [{ body_types: ['tall'] }, /body_types/],
+    [{ body_types: ['slim', 'slim'] }, /body_types/],
+    [{ age_groups: ['60s'] }, /age_groups/],
+    [{ gender: 'other' }, /gender/],
+    [{ skin_tone: 'blue' }, /skin_tone/],
+    [{ hair_style: 'curly' }, /hair_style/],
+  ];
+  for (const [extra, expected] of cases) {
+    const { text, isError } = await toolText(await call(setup, 'create_model_shots', {
+      brand_id: 'brand', garment_design_id: 'design-1', ...extra,
+    }));
+    assert.equal(isError, true, `通ってしまった: ${JSON.stringify(extra)}`);
+    assert.match(text, expected);
+  }
+});
+
+test('edit_design と create_model_shots は、id の形の間違いを API を呼ぶ前に断る', async () => {
+  const setup = imageSetup();
+  const edit = await toolText(await call(setup, 'edit_design', { brand_id: 'brand', source_design_id: '../secret', prompt: 'x' }));
+  assert.equal(edit.isError, true);
+  assert.match(edit.text, /source_design_id/);
+  const shots = await toolText(await call(setup, 'create_model_shots', { brand_id: 'brand', garment_design_id: '' }));
+  assert.equal(shots.isError, true);
+  assert.match(shots.text, /garment_design_id/);
+});
+
+test('improve_prompt は、整えた文章を返す（画像は描かない）', async () => {
+  const setup = imageSetup();
+  const answer = { optimized_prompt: 'linen shirt, indigo wave print, natural light', negative_prompt: 'blurry',
+    style_tags: ['natural'], suggested_settings: { aspect_ratio: '4:5', quality: 'hd' } };
+  const box = await withClaude(setup, answer, async () => {
+    const { text, isError } = await toolText(await call(setup, 'improve_prompt', {
+      brand_id: 'brand', prompt: 'リネンのシャツ 藍色の波', style: 'studio product photo', target_platform: 'Etsy',
+    }));
+    assert.equal(isError, false, text);
+    assert.match(text, /linen shirt, indigo wave print/);
+  });
+  // 画風と出す先が、そのままモデルへの指示に入っている。
+  const user = String((box.body?.messages as Array<{ content: unknown }>)[0].content);
+  assert.match(user, /studio product photo/);
+  assert.match(user, /Etsy/);
+  // 画像の生成は1件も走っていない。
+  assert.equal(setup.calls.length, 0);
+});
+
+test('plan_design_set は、種類ごとに複数枚の構成を返す', async () => {
+  const setup = imageSetup();
+  const answer = { items: [{ key: 'a', prompt: 'front view' }, { key: 'b', prompt: 'back view' }] };
+  await withClaude(setup, answer, async () => {
+    const { text, isError } = await toolText(await call(setup, 'plan_design_set', {
+      brand_id: 'brand', task: 'product-shots', brief: '白いトートバッグの出品用', count: 2,
+    }));
+    assert.equal(isError, false, text);
+    assert.match(text, /front view/);
+  });
+  assert.equal(setup.calls.length, 0);
+});
+
+test('plan_design_set は、参考のデザインを型つきのデータ URL でモデルに渡す', async () => {
+  const setup = imageSetup();
+  await seedDesign(setup, 'design-1');
+  const box = await withClaude(setup, { items: [{ key: 'a', prompt: 'variation' }] }, async () => {
+    const { isError } = await toolText(await call(setup, 'plan_design_set', {
+      brand_id: 'brand', task: 'variations', reference_design_id: 'design-1',
+    }));
+    assert.equal(isError, false);
+  });
+  // プレフィックスを忘れると imageBlock が null を返して画像が黙って落ちるので、ここを必ず確かめる。
+  const content = (box.body?.messages as Array<{ content: unknown }>)[0].content as Array<Record<string, unknown>>;
+  assert.ok(Array.isArray(content), '画像つきの形で送られていない');
+  const image = content.find((part) => part.type === 'image');
+  assert.ok(image, '画像が送られていない');
+  const source = image.source as Record<string, unknown>;
+  assert.equal(source.type, 'base64');
+  assert.equal(source.media_type, 'image/png');
+  assert.ok(String(source.data).length > 0);
+});
+
+test('plan_from_message は、作るか直すかを答える', async () => {
+  const setup = imageSetup();
+  const answer = { mode: 'edit', instruction: '袖を長くする', reply: '袖を長くしますね' };
+  const box = await withClaude(setup, answer, async () => {
+    const { text, isError } = await toolText(await call(setup, 'plan_from_message', {
+      brand_id: 'brand', message: '袖を長くして', has_current_image: true,
+      history: [{ role: 'user', content: 'シャツを作って' }, { role: 'assistant', content: '描きました' }],
+    }));
+    assert.equal(isError, false, text);
+    assert.match(text, /"mode": "edit"/);
+  });
+  const user = String((box.body?.messages as Array<{ content: unknown }>)[0].content);
+  assert.match(user, /Current image exists: yes/);
+  assert.match(user, /シャツを作って/);
+});
+
+test('文章系のツールは、入力の間違いを API を呼ぶ前に断る', async () => {
+  const setup = imageSetup();
+  const cases: Array<[string, Record<string, unknown>, RegExp]> = [
+    ['improve_prompt', { brand_id: 'brand' }, /prompt/],
+    ['improve_prompt', { prompt: 'x' }, /brand_id/],
+    ['plan_design_set', { brand_id: 'brand', task: 'poster' }, /task/],
+    ['plan_design_set', { brand_id: 'brand', task: 'banner', count: 99 }, /count/],
+    ['plan_design_set', { brand_id: 'brand', task: 'banner', reference_design_id: '../x' }, /reference_design_id/],
+    ['plan_from_message', { brand_id: 'brand' }, /message/],
+    ['plan_from_message', { brand_id: 'brand', message: 'x', has_current_image: 'yes' }, /has_current_image/],
+    ['plan_from_message', { brand_id: 'brand', message: 'x', history: [{ role: 'system', content: 'x' }] }, /role/],
+  ];
+  for (const [name, args, expected] of cases) {
+    const { text, isError } = await toolText(await call(setup, name, args));
+    assert.equal(isError, true, `通ってしまった: ${name} ${JSON.stringify(args)}`);
+    assert.match(text, expected);
+  }
 });
